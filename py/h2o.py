@@ -129,20 +129,6 @@ def verboseprint(*args, **kwargs):
         # so we can see problems when hung?
         sys.stdout.flush()
 
-def find_dataset(f):
-    (head, tail) = os.path.split(os.path.abspath('datasets'))
-    verboseprint("find_dataset looking upwards from", head, "for", tail)
-    # don't spin forever 
-    levels = 0
-    while not (os.path.exists(os.path.join(head, tail))):
-        head = os.path.split(head)[0]
-        levels += 1
-        if (levels==10): 
-            raise Exception("unable to find datasets. Did you 'git clone https://github.com/0xdata/datasets.git' parallel to the h2o dir?")
-
-
-    return os.path.join(head, tail, f)
-
 def find_file(base):
     f = base
     if not os.path.exists(f): f = '../' + base
