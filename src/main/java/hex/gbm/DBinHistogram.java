@@ -114,7 +114,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
   // Mean Squared Error: sum(X^2)-Mean^2*n = Var + Mean^2*n*(n-1)
   // But predicting the Mean, so MSE is Var.
-  double mse   ( int b, int c ) { return _Ss[b][c]/_bins[b]; }
+  double mse   ( int b, int c ) { return _Ss[b] == null ? 0 : _Ss[b][c]/_bins[b]; }
   double mseVar( double mean, double var, long n ) { return n==0 ? 0 : var*(n-1)/n; }
   double mseSQ ( double sum , double ssq, long n ) { return ssq - sum*sum/n; }
 
@@ -171,7 +171,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // distance (square-root of sum of distances squared), so the MSE is the mean
   // of the sum of distances-squared.  This is almost exactly the variance.  We
   // compute the squared error per class and sum them.
-  int scoreMSE( double bestMSE[] ) {
+  DTree.Split scoreMSE( int col, String name ) {
     assert _nbins > 1;
 
     // Split zero bins to the left, all bins to the right
@@ -187,23 +187,22 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Now roll the split-point across the bins
     double mseAll=0;
     assert (mseAll = mse(M1,S1,n1))==mseAll || true;
-    int best=0;  double best_mse=Double.MAX_VALUE;
+    DTree.Split best = new DTree.Split(col,-1,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
     for( int b=0; b<_nbins; b++ ) {
       double mse0 = mse(M0,S0,n0);
       double mse1 = mse(M1,S1,n1);
-      double mse  = mse0+mse1;
-      if( mse < best_mse ) { best = b; best_mse = mse; }
-      System.out.println("bin: "+b+", mse0="+mse0+", mse1="+mse1+", best="+best);
+      double mse = (mse0*n0+mse1*n1)/(n0+n1);
+      if( mse < best.mse() )
+        best = new DTree.Split(col,b,n0,n1,mse0,mse1,M0.clone(), M1.clone());
+      //System.out.println(String.format("%s, mse=%5.2f, %s",name,mse,new DTree.Split(col,b,n0,n1,mse0,mse1,M0.clone(), M1.clone())));
       // Move mean/var across split point
-      n0 = add( M0, S0, n0, _Ms[b], _Ss[b],  _bins[b]);
-      n1 = add( M1, S1, n1, _Ms[b], _Ss[b], -_bins[b]);
+      n0 = add( M0, S0, n0, _Ms[b], _Ss[b], _bins[b]);
+      n1 = sub( M1, S1, n1, _Ms[b], _Ss[b], _bins[b]);
     }
     // MSE for the final "split" should equal the first "split" - as both are
     // non-splits: either ALL data to the left or ALL data to the right.
     assert n1==0;
     assert mseAll == mse(M0,S0,n0);
-
-    bestMSE[0] = best_mse;
     return best;
   }
 
@@ -297,6 +296,17 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
         Ss0[c] = s0+s1+delta*delta*n0*n1/(n0+n1); // 2nd moment
       }
     return n0+n1;
+  }
+  long sub( float Ms0[], float Ss0[], long n0, float Ms1[], float Ss1[], long n1 ) {
+    if( Ms1 != null ) 
+      for( int c = 0; c<_nclass; c++ ) {
+        float m0 = Ms0[c],  m1 = Ms1[c];
+        float s0 = Ss0[c],  s1 = Ss1[c];
+        float delta=m1-m0;
+        Ms0[c] = (n0*m0-n1*m1)/(n0-n1); // Mean
+        Ss0[c] = s0-s1-delta*delta*n0*n1/(n0-n1); // 2nd moment
+      }
+    return n0-n1;
   }
 
   // Pretty-print a histogram

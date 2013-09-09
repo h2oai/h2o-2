@@ -48,7 +48,7 @@ public class DRF extends FrameJob {
   }
 
   @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  char nbins = 50;
+  int nbins = 50;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
   }
@@ -164,13 +164,13 @@ public class DRF extends FrameJob {
         Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
         
         // Initially setup as-if an empty-split had just happened
-        DHistogram hs[] = DBinHistogram.initialHist(fr,ncols,nbins,nclass);
+        DHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
         DRFTree forest[] = new DRFTree[0];
 
         // ----
         // Only work on so many trees at once, else get GC issues.
         // Hand the inner loop a smaller set of trees.
-        final int NTREE=2;          // Limit of 5 trees at once
+        final int NTREE=1;          // Limit of 5 trees at once
         int depth=0;
         for( int st = 0; st < ntrees; st+= NTREE ) {
           if( DRF.this.cancelled() ) break;
@@ -183,7 +183,7 @@ public class DRF extends FrameJob {
             int idx = st+t;
             // Make a new Vec to hold the split-number for each row (initially all zero).
             Vec vec = vresponse.makeZero();
-            forest[idx] = someTrees[t] = new DRFTree(fr,ncols,nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
+            forest[idx] = someTrees[t] = new DRFTree(fr,ncols,(char)nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
             if( sample_rate < 1.0 )
               new Sample(someTrees[t],sample_rate).doAll(vec);
             fr.add("NIDs"+t,vec);
@@ -256,7 +256,7 @@ public class DRF extends FrameJob {
       for( int t=0; t<ntrees; t++ ) {
         final int tmax = trees[t]._len; // Number of total splits
         final DTree tree = trees[t];
-        //long sum=0;
+        long sum=0;
         for( int i=leafs[t]; i<tmax; i++ ) {
           DHistogram hs[] = sbh.getFinalHisto(t,i);
           tree.undecided(i)._hs = hs;
@@ -334,14 +334,13 @@ public class DRF extends FrameJob {
 
     // Find the column with the best split (lowest score).
     @Override DTree.Split bestCol( DRFUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,Double.MAX_VALUE);
+      DTree.Split best = new DTree.Split(-1,-1,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
       if( u._hs == null ) return best;
-      DTree.Split s = new DTree.Split();
       for( int i=0; i<u._scoreCols.length; i++ ) {
-        s._col = u._scoreCols[i];
-        u._hs[s._col].scoreMSE(s);
-        if( s._mse < best._mse ) { best._col = s._col;  best._bin = s._bin;  best._mse = s._mse; }
-        if( s._mse <= 0 ) break; // No point in looking further!
+        int col = u._scoreCols[i];
+        DTree.Split s = u._hs[col].scoreMSE(col,u._tree._names[col]);
+        if( s.mse() < best.mse() ) best = s;
+        if( s.mse() <= 0 ) break; // No point in looking further!
       }
       return best;
     }

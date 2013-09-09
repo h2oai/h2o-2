@@ -81,19 +81,26 @@ class DTree extends Iced {
   // Records a column, a bin to split at within the column, and the MSE.
   static class Split { 
     final int _col, _bin;       // Column to split, bin where being split
-    final float _splat;         // Split-At point
     final long _nrows[];        // Rows in each final split
     final double _mses[];       // MSE  of each final split
     final float _preds[][/*nclass*/]; // Prediction (by class) for each split
-    DHistogram _hs[/*cols*/];   // Histogram being split
-    Split( int col, int bin, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[], DHistogram[] hs ) { 
+    Split( int col, int bin, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) { 
       _col = col; 
       _bin = bin; 
-      _splat = ((DBinHistogram)hs[col]).binAt(bin);
       _nrows = new long[] { n0, n1 };
       _mses  = new double[] { mse0, mse1 };
       _preds = new float[][] { preds0, preds1 };
-      _hs = hs;
+    }
+    double mse() {
+      if( _mses[0] == Double.MAX_VALUE ) return Double.MAX_VALUE;
+      double sum=0;
+      long rows=0;
+      for( int i=0; i<_mses.length; i++ ) { sum += _mses[i]*_nrows[i]; rows += _nrows[i]; }
+      return sum/rows;
+    }
+    // Split-at dividing point
+    float splat(DHistogram hs[]) { 
+      return ((DBinHistogram)hs[_col]).binAt(_bin);
     }
 
     // Split a DBinHistogram.  Return null if there is no point in splitting
@@ -103,16 +110,17 @@ class DTree extends Iced {
     // has constant data, or was not being tracked by a prior DBinHistogram
     // (for being constant data from a prior split), then that column will be
     // null in the returned array.
-    public DBinHistogram[] split( int splat, char nbins, int min_rows ) {
+    public DBinHistogram[] split( int splat, char nbins, int min_rows, DHistogram hs[] ) {
       if( _nrows[splat] <= min_rows ) return null; // Too few elements
       if( _mses[splat] <= 1e-8 ) return null; // No point in splitting a perfect prediction
       
       // Build a next-gen split point from the splitting bin
+      final char nclass = (char)_preds[0].length;
       int cnt=0;                  // Count of possible splits
-      DBinHistogram nhists[] = new DBinHistogram[_hs.length]; // A new histogram set
-      for( int j=0; j<_hs.length; j++ ) { // For every column in the new split
-        DHistogram h = _hs[j];            // Old histogram of column
-        if( h == null ) continue;    // Column was not being tracked?
+      DBinHistogram nhists[] = new DBinHistogram[hs.length]; // A new histogram set
+      for( int j=0; j<hs.length; j++ ) { // For every column in the new split
+        DHistogram h = hs[j];            // old histogram of column
+        if( h == null ) continue;        // Column was not being tracked?
         // min & max come from the original column data, since splitting on an
         // unrelated column will not change the j'th columns min/max.
         float min = h._min, max = h._max;
@@ -124,10 +132,36 @@ class DTree extends Iced {
         }
         if( min == max ) continue; // This column will not split again
         if( min >  max ) continue; // Happens for all-NA subsplits
-        nhists[j] = new DBinHistogram(h._name,nbins,(char)_preds[0].length,h._isInt,min,max,_nrows[splat]);
+        nhists[j] = new DBinHistogram(h._name,nbins,nclass,h._isInt,min,max,_nrows[splat]);
         cnt++;                    // At least some chance of splitting
       }
       return cnt == 0 ? null : nhists;
+    }
+
+    public static StringBuilder ary2str( StringBuilder sb, int w, long xs[] ) {
+      sb.append('[');
+      for( long x : xs ) UndecidedNode.p(sb,x,w).append(",");
+      return sb.append(']');
+    }
+    public static StringBuilder ary2str( StringBuilder sb, int w, float xs[] ) {
+      sb.append('[');
+      for( float x : xs ) UndecidedNode.p(sb,(float)x,w).append(",");
+      return sb.append(']');
+    }
+    public static StringBuilder ary2str( StringBuilder sb, int w, double xs[] ) {
+      sb.append('[');
+      for( double x : xs ) UndecidedNode.p(sb,(float)x,w).append(",");
+      return sb.append(']');
+    }
+    @Override public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{"+_col+"/");
+      UndecidedNode.p(sb,_bin,2);
+      ary2str(sb.append(" "),4,_nrows);
+      ary2str(sb.append(", mse="),4,_mses);
+      ary2str(sb.append(", p0="),4,_preds[0]);
+      ary2str(sb.append(", p1="),4,_preds[1]);
+      return sb.append("}").toString();
     }
   }
 
@@ -249,7 +283,7 @@ class DTree extends Iced {
       // If I have 2 identical predictor rows leading to 2 different responses,
       // then this dataset cannot distinguish these rows... and we have to bail
       // out here.
-      if( spl._col == -1 ) {
+      if( spl._col == -1 || spl._bin == 0/*bin 0 is NO SPLIT*/ ) {
         DecidedNode p = n._tree.decided(_pid);
         _col  = p._col;  // Just copy the parent data over, for the predictions
         _splat = p._splat;
@@ -258,9 +292,9 @@ class DTree extends Iced {
         _pred = p._pred;
         return;
       }
-      _col = spl._col;          // Assign split-column choice
-      _splat = spl._splat;      // Split-at value
-      _nids = new int[2];       // Split into 2 subsets
+      _col = spl._col;           // Assign split-column choice
+      _splat = spl.splat(n._hs); // Split-at value
+      _nids = new int[2];        // Split into 2 subsets
       final char nclass  = _tree._nclass;
       final char nbins   = _tree._nbins;
       final int min_rows = _tree._min_rows;
@@ -268,7 +302,7 @@ class DTree extends Iced {
 
       for( int b=0; b<2; b++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = spl.split(b,nbins,min_rows);
+        DHistogram nhists[] = spl.split(b,nbins,min_rows,n._hs);
         assert nhists==null || nhists.length==_tree._ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // If the split has no counts for a bin, that just means no training
@@ -318,17 +352,18 @@ class DTree extends Iced {
     }
 
     StringBuilder printChild( StringBuilder sb, int nid ) {
-      for( int i=0; i<_nids.length; i++ )
-        if( _nids[i]==nid )
-          return sb.append("[").append(_bmin+i*_step).append(" <= ").
-            append(_tree._names[_col]).append(" < ").append(_bmin+(i+1)*_step).append("]");
-      throw H2O.fail();
+      int i = _nids[0]==nid ? 0 : 1;
+      assert _nids[i]==nid;
+      String n = _tree._names[_col];
+      if( i==0 ) sb.append("[ ").append(_splat).append(" <  ").append(n).append("]");
+      else       sb.append("[ ").append(n).append(" <= ").append(_splat).append("]");
+      return sb;
     }  
 
     @Override public StringBuilder toString2(StringBuilder sb, int depth) {
       for( int i=0; i<_nids.length; i++ ) {
         for( int d=0; d<depth; d++ ) sb.append("  ");
-        (_col >= 0 ? sb.append(_tree._names[_col]).append(" < ").append(_bmin+_step*(1+i)) : sb.append("init")).append(":").append(Arrays.toString(_pred[i])).append("\n");
+        (_col >= 0 ? sb.append(_tree._names[_col]).append(" < ").append(i==0?_splat:"infinity") : sb.append("init")).append(":").append(Arrays.toString(_pred[i])).append("\n");
         if( _nids[i] >= 0 ) _tree.node(_nids[i]).toString2(sb,depth+1);
       }
       return sb;

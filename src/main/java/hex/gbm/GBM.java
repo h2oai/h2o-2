@@ -311,17 +311,17 @@ public class GBM extends FrameJob {
 
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
-    @Override int bestCol( GBMUndecidedNode u ) {
+    @Override DTree.Split bestCol( GBMUndecidedNode u ) {
+      DTree.Split best = new DTree.Split(-1,-1,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
       DHistogram hs[] = u._hs;
-      double bs = Double.MAX_VALUE; // Best score
-      int idx = -1;             // Column to split on
-      if( u._hs == null ) return idx;
+      if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;
-        double s = hs[i].score();
-        if( s < bs ) { bs = s; idx = i; }
+        DTree.Split s = hs[i].scoreMSE(i);
+        if( s.mse() < best.mse() ) best = s;
+        if( s.mse() <= 0 ) break; // No point in looking further!
       }
-      return idx;
+      return best;
     }
   }
 

@@ -91,9 +91,9 @@ public class GBMTest extends TestUtil {
     //         });
 
     // Classification tests
-    basicDRF("./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
-             });
+    //basicDRF("./smalldata/test/test_tree.csv","tree.hex",
+    //         new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
+    //         });
     //basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
     //         new PrepData() {
     //           Vec prep(Frame fr) { 
@@ -104,6 +104,9 @@ public class GBMTest extends TestUtil {
     //             return fr.remove("CAPSULE");
     //           }
     //         });
+    basicDRF("./smalldata/iris/iris_wheader.csv","iris.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("class"); } 
+             });
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
     //         });
@@ -134,7 +137,7 @@ public class GBMTest extends TestUtil {
       drf.ntrees = 50;
       drf.max_depth = 50;
       drf.min_rows=1;
-      drf.nbins = 4;
+      drf.nbins = 50;
       drf.mtries = -1;
       drf.seed = (1L<<32)|2;
       drf.serve();              // Start it
