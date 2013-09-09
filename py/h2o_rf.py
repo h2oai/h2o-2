@@ -20,7 +20,7 @@ def pickRandRfParams(paramDict, params):
         # test ask for 100
     return colX
 
-def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
+def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
     if not node:
         node = h2o.nodes[0]
 

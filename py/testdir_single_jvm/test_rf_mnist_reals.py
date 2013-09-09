@@ -106,6 +106,7 @@ class Basic(unittest.TestCase):
             elapsed = time.time() - start
             print "RFView in",  elapsed, "secs", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
             self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             # Predict (on test)****************************************

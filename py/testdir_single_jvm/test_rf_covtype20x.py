@@ -127,9 +127,13 @@ class Basic(unittest.TestCase):
         for trial in range(3):
             # scoring
             start = time.time()
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, timeoutSecs, out_of_bag_error_estimate=0, retryDelaySecs=1)
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, 
+                model_key, ntree, timeoutSecs, out_of_bag_error_estimate=0, retryDelaySecs=1)
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest2)
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'

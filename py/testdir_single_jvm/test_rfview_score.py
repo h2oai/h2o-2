@@ -97,25 +97,41 @@ class Basic(unittest.TestCase):
             # ntree=50&
             # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
             # out_of_bag_error_estimate=1&
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # new web page for predict? throw it in here for now
+
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 0
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 1
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
@@ -123,8 +139,13 @@ class Basic(unittest.TestCase):
 
             kwargs['iterative_cm'] = 1
             kwargs['class_weights'] = '1=1,2=2,3=3,4=4,5=5,6=6,7=7'
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
