@@ -9,7 +9,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-         localhost = h2o.decide_if_localhost()
+        localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(node_count=1)
         else:
