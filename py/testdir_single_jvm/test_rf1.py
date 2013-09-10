@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(node_count=1)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts(node_count=3)
 
     @classmethod
     def tearDownClass(cls):

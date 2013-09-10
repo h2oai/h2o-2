@@ -1711,8 +1711,6 @@ class H2O(object):
         if self.java_extra_args is not None:
             args += [ '%s' % self.java_extra_args ]
 
-        if self.use_debugger:
-            args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8000']
 
         args += ["-ea"]
 
@@ -1738,6 +1736,31 @@ class H2O(object):
             args += [
                 "--port=%d" % self.port,
             ]
+
+        if self.use_debugger:
+            # currently hardwire the base port for debugger to 8000
+            # increment by one for every node we add
+            # sence this order is different than h2o cluster order, print out the ip and port for the user
+            # we could save debugger_port state per node, but not really necessary (but would be more consistent)
+            debuggerBasePort = 8000
+            if self.node_id is None:
+                debuggerPort = debuggerBasePort
+            else:
+                debuggerPort = debuggerBasePort + self.node_id 
+
+            if self.addr:
+                a = self.addr
+            else:
+                a = "localhost"
+
+            if self.port:
+                b = str(self.port)
+            else:
+                b = "h2o determined"
+
+            # I guess we always specify port?
+            print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
+            args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
 
         if self.use_flatfile:
             args += [
@@ -1774,9 +1797,6 @@ class H2O(object):
                 '-hdfs_version=' + self.hdfs_version, 
             ]
 
-        if not self.sigar:
-            args += ['--nosigar']
-
         if self.aws_credentials:
             args += [ '--aws_credentials='+self.aws_credentials ]
 
@@ -1792,7 +1812,7 @@ class H2O(object):
         return args
 
     def __init__(self, 
-        use_this_ip_addr=None, port=54321, capture_output=True, sigar=False, 
+        use_this_ip_addr=None, port=54321, capture_output=True, 
         use_debugger=None, classpath=None,
         use_hdfs=False, use_maprfs=False,
         # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
@@ -1835,7 +1855,6 @@ class H2O(object):
         self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
         self.redirect_import_folder_to_s3n_path = redirect_import_folder_to_s3n_path
 
-        if use_debugger is None: use_debugger = debugger
         self.aws_credentials = aws_credentials
         self.port = port
         # None is legal for self.addr. 
@@ -1853,8 +1872,10 @@ class H2O(object):
         else:
             self.http_addr = get_ip_address()
 
-        self.sigar = sigar
+        # command line should always dominate for enabling
+        if debugger: use_debugger = True
         self.use_debugger = use_debugger
+
         self.classpath = classpath
         self.capture_output = capture_output
 

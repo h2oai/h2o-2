@@ -35,7 +35,6 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'java_heap_GB': None,
         'java_heap_MB': None,
         'java_extra_args': None,
-        'sigar': False,
 
         'timeoutSecs': 60, 
         'retryDelaySecs': 2, 
