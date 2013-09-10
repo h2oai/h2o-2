@@ -164,13 +164,13 @@ public class DRF extends FrameJob {
         Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
         
         // Initially setup as-if an empty-split had just happened
-        DHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
+        DBinHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
         DRFTree forest[] = new DRFTree[0];
 
         // ----
         // Only work on so many trees at once, else get GC issues.
         // Hand the inner loop a smaller set of trees.
-        final int NTREE=1;          // Limit of 5 trees at once
+        final int NTREE=2;          // Limit of 5 trees at once
         int depth=0;
         for( int st = 0; st < ntrees; st+= NTREE ) {
           if( DRF.this.cancelled() ) break;
@@ -305,7 +305,7 @@ public class DRF extends FrameJob {
     final long _seed;           // RNG seed; drives sampling seeds
     final long _seeds[];        // One seed for each chunk, for sampling
     final transient Random _rand; // RNG for split decisions & sampling
-    DRFTree( Frame fr, int ncols, char nbins, char nclass, int min_rows, DHistogram hs[], int mtrys, long seed ) {
+    DRFTree( Frame fr, int ncols, char nbins, char nclass, int min_rows, DBinHistogram hs[], int mtrys, long seed ) {
       super(fr._names, ncols, nbins, nclass, min_rows);
       _mtrys = mtrys;
       _seed = seed;                  // Save for any replay scenarios
@@ -328,7 +328,7 @@ public class DRF extends FrameJob {
   static class DRFDecidedNode extends DecidedNode<DRFUndecidedNode> {
     DRFDecidedNode( DRFUndecidedNode n ) { super(n); }
 
-    @Override DRFUndecidedNode makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists ) {
+    @Override DRFUndecidedNode makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists ) {
       return new DRFUndecidedNode(tree,nid,nhists);
     }
 
@@ -350,7 +350,7 @@ public class DRF extends FrameJob {
   // a list of columns to score on now, and then decide over later.
   // DRF algo: pick a random mtry columns
   static class DRFUndecidedNode extends UndecidedNode {
-    DRFUndecidedNode( DTree tree, int pid, DHistogram hs[] ) { super(tree,pid,hs); }
+    DRFUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
 
     // Randomly select mtry columns to 'score' in following pass over the data.
     @Override int[] scoreCols( DHistogram[] hs ) {
@@ -363,8 +363,7 @@ public class DRF extends FrameJob {
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null ) continue; // Ignore not-tracked cols
         if( hs[i]._min == hs[i]._max ) continue; // predictor min==max, does not distinguish
-        if( hs[i] instanceof DBinHistogram && hs[i].nbins() <= 1 )
-          continue;             // cols with 1 bin (will not split)
+        if( hs[i].nbins() <= 1 ) continue; // cols with 1 bin (will not split)
         cols[len++] = i;        // Gather active column
       }
       int choices = len;        // Number of columns I can choose from
@@ -372,12 +371,12 @@ public class DRF extends FrameJob {
         for( int i=0; i<hs.length; i++ ) {
           String s;
           if( hs[i]==null ) s="null";
-          else if( hs[i]._min == hs[i]._max ) s="min==max=="+hs[i]._min;
-          else if( hs[i] instanceof DBinHistogram && hs[i].nbins() <= 1 )
-            s="nbins="+hs[i].nbins();
-          else s="unk";
+          else if( hs[i]._min == hs[i]._max ) s=hs[i]._name+"=min==max=="+hs[i]._min;
+          else if( hs[i].nbins() <= 1 )       s=hs[i]._name+"=nbins="    +hs[i].nbins();
+          else                                s=hs[i]._name+"=unk";
           System.out.println("No choices, hists="+s);
         }
+        System.out.println(this);
       }
       assert choices > 0;
 

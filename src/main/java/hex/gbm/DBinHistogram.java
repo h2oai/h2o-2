@@ -98,7 +98,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     int idx2  = Math.max(Math.min(idx1,_nbins-1),0); // saturate at bounds
     return idx2;
   }
-  float binAt( int b ) { return b*_step+_bmin; }
+  float binAt( int b ) { return _bmin+b*_step; }
 
   @Override int  nbins(     ) { return _nbins  ; }
   @Override long  bins(int b) { return _bins[b]; }
@@ -125,16 +125,6 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     return sum;
   }
 
-
-  // Mean of response-vector.  Since vector values are already normalized we
-  // just average the vector contents.
-  float mean(int b) {
-    if( _Ms[b] == null ) return 0;
-    float sum=0;
-    for( int c=0; c<_nclass; c++ )
-      sum += _Ms[b][c];
-    return sum/_nclass;
-  }
 
   // Variance of response-vector.  Sum of variances of the vector elements.
   float var( int b ) {
@@ -192,9 +182,9 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       double mse0 = mse(M0,S0,n0);
       double mse1 = mse(M1,S1,n1);
       double mse = (mse0*n0+mse1*n1)/(n0+n1);
-      if( mse < best.mse() )
+      if( mse < best.mse() || (best._bin<((_nbins+1)/2) && mse==best.mse()) )
         best = new DTree.Split(col,b,n0,n1,mse0,mse1,M0.clone(), M1.clone());
-      //System.out.println(String.format("%s, mse=%5.2f, %s",name,mse,new DTree.Split(col,b,n0,n1,mse0,mse1,M0.clone(), M1.clone())));
+      //System.out.println(String.format("%s, mse=%5.2f, bmse=%5.2f %s",name,mse,best.mse(),new DTree.Split(col,b,n0,n1,mse0,mse1,M0.clone(), M1.clone())));
       // Move mean/var across split point
       n0 = add( M0, S0, n0, _Ms[b], _Ss[b], _bins[b]);
       n1 = sub( M1, S1, n1, _Ms[b], _Ss[b], _bins[b]);
@@ -312,9 +302,9 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Pretty-print a histogram
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(_name).append(", ").append(_min).append("-").append(_max).append("\n");
+    sb.append(_name).append(":").append(_min).append("-").append(_max);
     if( _bins != null ) for( int b=0; b<_nbins; b++ ) {
-        sb.append(String.format("cnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));
+        sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));
         for( int c=0; c<_nclass; c++ )
           sb.append(String.format(" %d - %6.2f/%6.2f,", c,
                                   _Ms[b]==null?Float.NaN:mean(b,c),

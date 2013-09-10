@@ -305,7 +305,7 @@ public class GBM extends FrameJob {
     GBMDecidedNode( GBMUndecidedNode n ) { super(n); }
     GBMDecidedNode( DTree t, float[] p ) { super(t,p); }
 
-    @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists ) {
+    @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists ) {
       return new GBMUndecidedNode(tree,nid,nhists);
     }
 
@@ -317,7 +317,7 @@ public class GBM extends FrameJob {
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;
-        DTree.Split s = hs[i].scoreMSE(i);
+        DTree.Split s = hs[i].scoreMSE(i,u._tree._names[i]);
         if( s.mse() < best.mse() ) best = s;
         if( s.mse() <= 0 ) break; // No point in looking further!
       }
@@ -329,7 +329,7 @@ public class GBM extends FrameJob {
   // a list of columns to score on now, and then decide over later.
   // GBM algo: use all columns
   static class GBMUndecidedNode extends UndecidedNode {
-    GBMUndecidedNode( DTree tree, int pid, DHistogram hs[] ) { super(tree,pid,hs); }
+    GBMUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
 
     // Randomly select mtry columns to 'score' in following pass over the data.
     // In GBM, we use all columns (as opposed to RF, which uses a random subset).

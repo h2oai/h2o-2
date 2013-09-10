@@ -111,7 +111,8 @@ class DTree extends Iced {
     // (for being constant data from a prior split), then that column will be
     // null in the returned array.
     public DBinHistogram[] split( int splat, char nbins, int min_rows, DHistogram hs[] ) {
-      if( _nrows[splat] <= min_rows ) return null; // Too few elements
+      if( _nrows[splat] < min_rows ) return null; // Too few elements
+      if( _nrows[splat] <= 1 ) return null;       // Too few elements
       if( _mses[splat] <= 1e-8 ) return null; // No point in splitting a perfect prediction
       
       // Build a next-gen split point from the splitting bin
@@ -145,7 +146,7 @@ class DTree extends Iced {
     }
     public static StringBuilder ary2str( StringBuilder sb, int w, float xs[] ) {
       sb.append('[');
-      for( float x : xs ) UndecidedNode.p(sb,(float)x,w).append(",");
+      for( float x : xs ) UndecidedNode.p(sb,x,w).append(",");
       return sb.append(']');
     }
     public static StringBuilder ary2str( StringBuilder sb, int w, double xs[] ) {
@@ -169,9 +170,9 @@ class DTree extends Iced {
   // histograms) in a single pass over the data.  Does not contain any
   // split-decision.
   static abstract class UndecidedNode extends Node {
-    DHistogram _hs[];            // DHistograms per column
-    int _scoreCols[];            // A list of columns to score; could be null for all
-    UndecidedNode( DTree tree, int pid, DHistogram hs[] ) {
+    DHistogram _hs[];      // DHistograms per column
+    int _scoreCols[];      // A list of columns to score; could be null for all
+    UndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) {
       super(tree,pid,tree.newIdx());
       _hs=hs;
       assert hs.length==tree._ncols;
@@ -271,7 +272,7 @@ class DTree extends Iced {
     final float _pred[/*splat*/][/*class*/];
 
     // Make a correctly flavored Undecided
-    abstract UDN makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists );
+    abstract UDN makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists );
 
     // Pick the best column from the given histograms
     abstract Split bestCol( UDN udn );
@@ -302,7 +303,7 @@ class DTree extends Iced {
 
       for( int b=0; b<2; b++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = spl.split(b,nbins,min_rows,n._hs);
+        DBinHistogram nhists[] = spl.split(b,nbins,min_rows,n._hs);
         assert nhists==null || nhists.length==_tree._ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
         // If the split has no counts for a bin, that just means no training
@@ -353,10 +354,10 @@ class DTree extends Iced {
 
     StringBuilder printChild( StringBuilder sb, int nid ) {
       int i = _nids[0]==nid ? 0 : 1;
-      assert _nids[i]==nid;
+      assert _nids[i]==nid : "No child nid "+nid+"? " +Arrays.toString(_nids);
       String n = _tree._names[_col];
-      if( i==0 ) sb.append("[ ").append(_splat).append(" <  ").append(n).append("]");
-      else       sb.append("[ ").append(n).append(" <= ").append(_splat).append("]");
+      if( i==0 ) sb.append("[ ").append(n).append(" <  ").append(_splat).append("]");
+      else       sb.append("[ ").append(_splat).append(" <= ").append(n).append("]");
       return sb;
     }  
 
