@@ -31,8 +31,7 @@ class Basic(unittest.TestCase):
         for (csvDirname, timeoutSecs) in csvDirlist:
 
             csvPathname = csvDirname + "/*"
-            (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-datasets', 
-                    path=csvPathname, schema='s3n', timeoutSecs = timeoutSecs)
+            (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-datasets', path=csvPathname, schema='s3n')
             s3nFullList = importHDFSResult['succeeded']
             self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 
@@ -43,7 +42,7 @@ class Basic(unittest.TestCase):
             # PARSE****************************************
             hex_key = csvDirname + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='h2o-datasets', path=csvPathname, hex_key=hex_key,
+            parseResult = h2i.import_parse(bucket='h2o-datasets', path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\

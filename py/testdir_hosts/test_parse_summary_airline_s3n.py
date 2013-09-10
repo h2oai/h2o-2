@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
             csvPathname = csvFilename
             hex_key = csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='h2o-airlines-unpacked', path=csvPathname, hex_key=hex_key,
+            parseResult = h2i.import_parse(bucket='h2o-airlines-unpacked', path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
