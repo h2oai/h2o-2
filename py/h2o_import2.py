@@ -208,7 +208,11 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         elif schema=='hdfs':
             h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
             h2o.verboseprint("folderOffset;", folderOffset)
-            folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + folderOffset
+            # no reason to use bucket with hdfs, but just in case people do.
+            if bucket is None:
+                folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + folderOffset
+            else:
+                folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + bucket + "/" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         else: 

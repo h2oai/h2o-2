@@ -79,11 +79,12 @@ class Basic(unittest.TestCase):
 
             print "\n" + csvFilename
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(trees=1, parseResult=parseResult, timeoutSecs=2000, modelKey="rfmodel.hex")
+            modelKey = 'rfmodel.hex'
+            RFview = h2o_cmd.runRFOnly(trees=1, parseResult=parseResult, timeoutSecs=2000, model_key=modelKey)
             # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
             # we should be able to export the model to hdfs
-            e = h2o.nodes[0].export_hdfs(source_key="rfmodel.hex", path="/datasets/rfmodel.hex")
+            e = h2o.nodes[0].export_hdfs(source_key=modelKey, path="/datasets/rfmodel.hex")
 
 if __name__ == '__main__':
     h2o.unit_main()
