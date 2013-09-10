@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = max(timeoutSecs, (8 * (kwargs['max_iter']+1)))
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=timeoutSecs, parseResult=parseResult, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)

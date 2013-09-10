@@ -228,6 +228,9 @@ public abstract class Model extends Iced {
     @Override protected final double score0(double[] data) {
       throw new RuntimeException("should NEVER be called!");
     }
+    public ModelDataAdaptor clone() {
+      return new ModelDataAdaptor(M, _yCol, _xCols, _catMap);
+    }
     @Override public JsonObject toJson() {return M.toJson();}
     // keep only one adaptor layer! (just in case there would be multiple adapt calls...)
     @Override public final Model adapt(ValueArray ary){return M.adapt(ary);}

@@ -107,7 +107,6 @@
 ./n0.doit test_rf_sample.py
 ./n0.doit test_same_parse.py
 ./n0.doit test_script_download.py
-./n0.doit test_sigar.py
 ./n0.doit test_stedo.py
 ./n0.doit test_storeview_diff.py
 ./n0.doit test_storeview_import.py

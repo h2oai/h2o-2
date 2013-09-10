@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
                 'beta_epsilon': 1e-4,
         }
 
-        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=15, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
         (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
         coefficients.append( intercept )
         print 'coefficients: %s' % (str(coefficients))

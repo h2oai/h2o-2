@@ -20,7 +20,7 @@ def pickRandRfParams(paramDict, params):
         # test ask for 100
     return colX
 
-def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
+def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
     if not node:
         node = h2o.nodes[0]
 
@@ -165,7 +165,7 @@ def simpleCheckRFView(node, rfv, noPrint=False, **kwargs):
 def trainRF(trainParseResult, **kwargs):
     # Train RF
     start = time.time()
-    trainResult = h2o_cmd.runRFOnly(parseResult=trainParseResult, **kwargs)
+    trainResult = h2o_cmd.runRF(parseResult=trainParseResult, **kwargs)
     rftime      = time.time()-start 
     h2o.verboseprint("RF train results: ", trainResult)
     h2o.verboseprint("RF computation took {0} sec".format(rftime))

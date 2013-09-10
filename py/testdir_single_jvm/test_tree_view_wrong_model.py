@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         hex_key = csvPathname + ".hex"
         # tree view failed with poker1000, passed with iris
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, model_key="model0", timeoutSecs=10)
+        h2o_cmd.runRF(parseResult=parseResult, trees=1, model_key="model0", timeoutSecs=10)
 
         for n in range(1):
             # Give it the wrong model_key name. This caused a stack track

@@ -38,17 +38,17 @@ public abstract class DPCA {
 
   public static class PCAParams extends Iced {
     public double _tol = 0;
-    public boolean _standardize = true;
+    public boolean _standardized = true;
 
-    public PCAParams(double tol, boolean standardize) {
+    public PCAParams(double tol, boolean standardized) {
       _tol = tol;
-      _standardize = standardize;
+      _standardized = standardized;
     }
 
     public JsonObject toJson() {
       JsonObject res = new JsonObject();
       res.addProperty("tolerance", _tol);
-      res.addProperty("standardize",_standardize);
+      res.addProperty("standardized", _standardized);
       return res;
     }
   }
@@ -64,7 +64,6 @@ public abstract class DPCA {
     public final double[] _propVar;
     public final double[][] _eigVec;
     public final int _num_pc;
-    public final boolean _standardized;
 
     public Status status() {
       return _status;
@@ -90,16 +89,15 @@ public abstract class DPCA {
       _response = 0;
       _pcaParams = null;
       _num_pc = 1;
-      _standardized = true;
     }
 
     public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[] propVar,
         double[][] eigVec, int response, int num_pc, PCAParams pcaps) {
-      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, response, data._standardized, num_pc, pcaps);
+      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, response, num_pc, pcaps);
     }
 
     public PCAModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, double[] sdev,
-        double[] propVar, double[][] eigVec, int response, boolean standardized, int num_pc, PCAParams pcap) {
+        double[] propVar, double[][] eigVec, int response, int num_pc, PCAParams pcap) {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
@@ -109,44 +107,42 @@ public abstract class DPCA {
       _response = response;
       _pcaParams = pcap;
       _num_pc = num_pc;
-      _standardized = standardized;
     }
 
-    public void store() {
-      UKV.put(_selfKey, this);
-    }
+    public void store() { UKV.put(_selfKey, this); }
 
-    @Override protected double score0(double[] data) {
-      throw H2O.unimpl();
-    }
+    @Override public boolean columnFilter(ValueArray.Column C) { return true; }
+
+    @Override protected double score0(double[] data) { throw H2O.unimpl(); }
 
     @Override public JsonObject toJson() {
       JsonObject res = new JsonObject();
       res.addProperty(Constants.VERSION, H2O.VERSION);
       res.addProperty(Constants.TYPE, PCAModel.class.getName());
       res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
-      res.addProperty("standardized", _standardized);
       res.add("PCAParams", _pcaParams.toJson());
 
       // Add standard deviation to output
       JsonObject sdev = new JsonObject();
       JsonObject prop = new JsonObject();
+      if(_sdev != null) {
       for(int i = 0; i < _sdev.length; i++) {
         sdev.addProperty("PC" + i, _sdev[i]);
         prop.addProperty("PC" + i, _propVar[i]);
-      }
+      } }
       res.add("stdDev", sdev);
       res.add("propVar", prop);
 
       // Add eigenvectors to output
       // Singular values ordered in weakly descending order
       JsonArray eigvec = new JsonArray();
+      if(_eigVec != null) {
       for(int i = 0; i < _eigVec.length; i++) {
         JsonObject vec = new JsonObject();
         for(int j = 0; j < _eigVec[i].length; j++)
           vec.addProperty(_va._cols[j]._name, _eigVec[i][j]);
         eigvec.add(vec);
-      }
+      } }
       res.add("eigenvectors", eigvec);
       return res;
     };

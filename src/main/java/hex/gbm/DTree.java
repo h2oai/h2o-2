@@ -29,12 +29,13 @@ import water.api.DocGen;
 class DTree extends Iced {
   final String[] _names; // Column names
   final int _ncols;      // Active training columns
-  final int _nclass;     // #classes, or 0 for regression trees
+  final char _nbins;     // Max number of bins to split over
+  final char _nclass;    // #classes, or 1 for regression trees
   final int _min_rows;   // Fewest allowed rows in any split
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
-  DTree( String[] names, int ncols, int nclass, int min_rows ) { 
-    _names = names; _ncols = ncols; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
+  DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) { 
+    _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
 
   public final Node root() { return _ns[0]; }
 
@@ -77,13 +78,101 @@ class DTree extends Iced {
     abstract public StringBuilder toString2(StringBuilder sb, int depth);
   }
 
+  // Records a column, a bin to split at within the column, and the MSE.
+  static class Split { 
+    final int _col, _bin;       // Column to split, bin where being split
+    final long _nrows[];        // Rows in each final split
+    final double _mses[];       // MSE  of each final split
+    final float _preds[][/*nclass*/]; // Prediction (by class) for each split
+    Split( int col, int bin, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) { 
+      _col = col; 
+      _bin = bin; 
+      _nrows = new long[] { n0, n1 };
+      _mses  = new double[] { mse0, mse1 };
+      _preds = new float[][] { preds0, preds1 };
+    }
+    double mse() {
+      if( _mses[0] == Double.MAX_VALUE ) return Double.MAX_VALUE;
+      double sum=0;
+      long rows=0;
+      for( int i=0; i<_mses.length; i++ ) { sum += _mses[i]*_nrows[i]; rows += _nrows[i]; }
+      return sum/rows;
+    }
+    // Split-at dividing point
+    float splat(DHistogram hs[]) { 
+      return ((DBinHistogram)hs[_col]).binAt(_bin);
+    }
+
+    // Split a DBinHistogram.  Return null if there is no point in splitting
+    // this bin further (such as there's fewer than min_row elements, or zero
+    // errpr in the response column).  Return an array of DBinHistograms (one
+    // per column), which are bounded by the split bin-limits.  If the column
+    // has constant data, or was not being tracked by a prior DBinHistogram
+    // (for being constant data from a prior split), then that column will be
+    // null in the returned array.
+    public DBinHistogram[] split( int splat, char nbins, int min_rows, DHistogram hs[] ) {
+      if( _nrows[splat] < min_rows ) return null; // Too few elements
+      if( _nrows[splat] <= 1 ) return null;       // Too few elements
+      if( _mses[splat] <= 1e-8 ) return null; // No point in splitting a perfect prediction
+      
+      // Build a next-gen split point from the splitting bin
+      final char nclass = (char)_preds[0].length;
+      int cnt=0;                  // Count of possible splits
+      DBinHistogram nhists[] = new DBinHistogram[hs.length]; // A new histogram set
+      for( int j=0; j<hs.length; j++ ) { // For every column in the new split
+        DHistogram h = hs[j];            // old histogram of column
+        if( h == null ) continue;        // Column was not being tracked?
+        // min & max come from the original column data, since splitting on an
+        // unrelated column will not change the j'th columns min/max.
+        float min = h._min, max = h._max;
+        // Tighter bounds on the column getting split: exactly each new
+        // DBinHistogram's bound are the bins' min & max.
+        if( _col==j ) {
+          if( splat == 0 ) max = h.maxs(_bin-1);
+          else             min = h.mins(_bin  );
+        }
+        if( min == max ) continue; // This column will not split again
+        if( min >  max ) continue; // Happens for all-NA subsplits
+        nhists[j] = new DBinHistogram(h._name,nbins,nclass,h._isInt,min,max,_nrows[splat]);
+        cnt++;                    // At least some chance of splitting
+      }
+      return cnt == 0 ? null : nhists;
+    }
+
+    public static StringBuilder ary2str( StringBuilder sb, int w, long xs[] ) {
+      sb.append('[');
+      for( long x : xs ) UndecidedNode.p(sb,x,w).append(",");
+      return sb.append(']');
+    }
+    public static StringBuilder ary2str( StringBuilder sb, int w, float xs[] ) {
+      sb.append('[');
+      for( float x : xs ) UndecidedNode.p(sb,x,w).append(",");
+      return sb.append(']');
+    }
+    public static StringBuilder ary2str( StringBuilder sb, int w, double xs[] ) {
+      sb.append('[');
+      for( double x : xs ) UndecidedNode.p(sb,(float)x,w).append(",");
+      return sb.append(']');
+    }
+    @Override public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{"+_col+"/");
+      UndecidedNode.p(sb,_bin,2);
+      ary2str(sb.append(" "),4,_nrows);
+      ary2str(sb.append(", mse="),4,_mses);
+      ary2str(sb.append(", p0="),4,_preds[0]);
+      ary2str(sb.append(", p1="),4,_preds[1]);
+      return sb.append("}").toString();
+    }
+  }
+
   // An UndecidedNode: Has a DHistogram which is filled in (in parallel with other
   // histograms) in a single pass over the data.  Does not contain any
   // split-decision.
   static abstract class UndecidedNode extends Node {
-    DHistogram _hs[];            // DHistograms per column
-    int _scoreCols[];            // A list of columns to score; could be null for all
-    UndecidedNode( DTree tree, int pid, DHistogram hs[] ) {
+    DHistogram _hs[];      // DHistograms per column
+    int _scoreCols[];      // A list of columns to score; could be null for all
+    UndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) {
       super(tree,pid,tree.newIdx());
       _hs=hs;
       assert hs.length==tree._ncols;
@@ -117,7 +206,13 @@ class DTree extends Iced {
         p(sb,"var" ,varW).append(colPad);
       }
       sb.append('\n');
-      for( int i=0; i<DHistogram.BINS; i++ ) {
+
+      // Max bins
+      int nbins=0;
+      for( int j=0; j<ncols; j++ )
+        if( _hs[j] != null && _hs[j].nbins() > nbins ) nbins = _hs[j].nbins();
+
+      for( int i=0; i<nbins; i++ ) {
         for( int j=0; j<ncols; j++ ) {
           DHistogram h = _hs[j];
           if( h == null ) continue;
@@ -168,128 +263,108 @@ class DTree extends Iced {
   // Does not contain a histogram describing how the decision was made.
   static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
     final int _col;             // Column we split over
-    final float _bmin, _step;   // Binning info of column
+    final float _splat;         // Split At point
     // The following arrays are all based on a bin# extracted from linear
     // interpolation of _col, _min and _step.
     final int   _nids[];          // Children NIDS for an n-way split
     // A prediction class-vector for each split.  Can be NULL if we have a
     // child (which carries his own prediction).
-    final float _pred[/*split*/][/*class*/];
+    final float _pred[/*splat*/][/*class*/];
 
     // Make a correctly flavored Undecided
-    abstract UDN makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists );
+    abstract UDN makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists );
 
     // Pick the best column from the given histograms
-    abstract int bestCol( UDN udn );
+    abstract Split bestCol( UDN udn );
 
     DecidedNode( UDN n ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
-      int col = bestCol(n);         // Best split-point for this tree
+      Split spl = bestCol(n);       // Best split-point for this tree
 
       // If I have 2 identical predictor rows leading to 2 different responses,
       // then this dataset cannot distinguish these rows... and we have to bail
       // out here.
-      if( col == -1 ) {
+      if( spl._col == -1 || spl._bin == 0/*bin 0 is NO SPLIT*/ ) {
         DecidedNode p = n._tree.decided(_pid);
-        //assert checkDistro(p._pred); // Only for GBM
         _col  = p._col;  // Just copy the parent data over, for the predictions
-        _bmin = p._bmin;
-        _step = p._step;
+        _splat = p._splat;
         _nids = new int[p._nids.length];
         Arrays.fill(_nids,-1);  // No further splits
         _pred = p._pred;
         return;
       }
-      _col = col;               // Assign split-column choice
+      _col = spl._col;           // Assign split-column choice
+      _splat = spl.splat(n._hs); // Split-at value
+      _nids = new int[2];        // Split into 2 subsets
+      final char nclass  = _tree._nclass;
+      final char nbins   = _tree._nbins;
+      final int min_rows = _tree._min_rows;
+      _pred = new float[2][nclass];
 
-      // From the splitting Undecided, get the column, min, max
-      DHistogram uhs[] = n._hs; // Histogram from Undecided
-      DBinHistogram splitH = (DBinHistogram)uhs[_col];// DHistogram of the column being split
-      assert splitH._nbins > 1; // Should always be some bins to split between
-      assert splitH._step  > 0;
-      int nbins = splitH._nbins;// Number of split choices
-      _bmin = splitH._bmin;     // Binning info
-      _step = splitH._step;
-      _nids = new int[nbins];
-      int nclass = _tree._nclass;
-      _pred = new float[nbins][nclass];
-      int ncols = _tree._ncols;      // ncols: all predictor columns
-      int min_rows = _tree._min_rows;
-      for( int b=0; b<nbins; b++ ) { // For all split-points
+      for( int b=0; b<2; b++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = splitH.split(col,b,uhs,_tree._names,ncols,min_rows);
-        assert nhists==null || nhists.length==ncols;
+        DBinHistogram nhists[] = spl.split(b,nbins,min_rows,n._hs);
+        assert nhists==null || nhists.length==_tree._ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
-        // Also setup predictions locally
-        for( int c=0; c<nclass; c++ ) // Copy the class counts into the decision
-          _pred[b][c] = splitH.mean(b,c);
         // If the split has no counts for a bin, that just means no training
         // data landed there.  Actual (or test) data certainly can land in that
         // bin - so give it a prediction from the parent.
-        if( splitH._bins[b] == 0 ) {
-          // Tree root (no parent) and no training data?
-          if( _pid == -1 ) {
-            Arrays.fill(_pred[b],0);
-          } else {     // Else get parent & use parent's prediction for our bin
-            _pred[b] = null;
-            DecidedNode p = n._tree.decided(_pid);
-            for( int i=0; i<p._nids.length; i++ )
-              if( p._nids[i]==_nid ) {
-                _pred[b] = p._pred[i];
-                break;
-              }
-            assert _pred[b] != null;
-          }
+        if( spl._nrows[b] > 0 ) {   // Have some rows?
+          _pred[b] = spl._preds[b]; // Take prediction from Split
+        } else if( _pid >= 0 ) {    // Have a parent?
+          int i;                    // Use parents prediction for child
+          DecidedNode p = n._tree.decided(_pid);
+          for( i=0; i<p._nids.length; i++ )
+            if( p._nids[i]==_nid ) // Split-specific prediction
+              break;
+          _pred[b] = p._pred[i];
+        } else {                // Tree root (no parent) and no training data?
+          _pred[b] = new float[nclass]; // Zero prediction
         }
       }
-      //assert checkDistro(_pred) : Arrays.deepToString(_pred); // Only for GBM
     }
   
     // DecidedNode with a pre-cooked response and no children
     DecidedNode( DTree tree, float pred[] ) {
       super(tree,-1,tree.newIdx());
       _col = -1;
-      _bmin = _step = Float.NaN;
+      _splat = Float.NaN;
       _nids = new int[] { -1 }; // 1 bin, no children
       _pred = new float[][] { pred };
     }
 
     // Bin #.
     public int bin( Chunk chks[], int i ) {
-      if( _nids.length == 1 ) return 0;
+      assert _nids.length == 2;
       if( chks[_col].isNA0(i) ) return i%_nids.length; // Missing data: pseudo-random bin select
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
-      // to data which is outside the bin limits, so we must cap at both ends.
-      int idx1 = (int)((d-_bmin)/_step); // Interpolate bin#
-      int bin = Math.max(Math.min(idx1,_nids.length-1),0);// Cap at length
-      return bin;
+      // to data which is outside the bin limits.
+      return d < _splat ? 0 : 1;
     }
 
     public int ns( Chunk chks[], int i ) { return _nids[bin(chks,i)]; }
 
     @Override public String toString() {
       if( _col == -1 ) return "Decided has col = -1";
-      String n= " <= "+_tree._names[_col]+" < ";
-      String s = new String();
-      float f = _bmin;
-      for( int i=0; i<_nids.length; i++ )
-        s += f+n+(f+=_step)+" = "+Arrays.toString(_pred[i])+"\n";
-      return s;
+      return 
+        _tree._names[_col]+" < "+_splat+" = "+Arrays.toString(_pred[0])+"\n"+
+        _splat+" <="+_tree._names[_col]+" = "+Arrays.toString(_pred[1])+"\n";
     }
 
     StringBuilder printChild( StringBuilder sb, int nid ) {
-      for( int i=0; i<_nids.length; i++ )
-        if( _nids[i]==nid )
-          return sb.append("[").append(_bmin+i*_step).append(" <= ").
-            append(_tree._names[_col]).append(" < ").append(_bmin+(i+1)*_step).append("]");
-      throw H2O.fail();
+      int i = _nids[0]==nid ? 0 : 1;
+      assert _nids[i]==nid : "No child nid "+nid+"? " +Arrays.toString(_nids);
+      String n = _tree._names[_col];
+      if( i==0 ) sb.append("[ ").append(n).append(" <  ").append(_splat).append("]");
+      else       sb.append("[ ").append(_splat).append(" <= ").append(n).append("]");
+      return sb;
     }  
 
     @Override public StringBuilder toString2(StringBuilder sb, int depth) {
       for( int i=0; i<_nids.length; i++ ) {
         for( int d=0; d<depth; d++ ) sb.append("  ");
-        (_col >= 0 ? sb.append(_tree._names[_col]).append(" < ").append(_bmin+_step*(1+i)) : sb.append("init")).append(":").append(Arrays.toString(_pred[i])).append("\n");
+        (_col >= 0 ? sb.append(_tree._names[_col]).append(" < ").append(i==0?_splat:"infinity") : sb.append("init")).append(":").append(Arrays.toString(_pred[i])).append("\n");
         if( _nids[i] >= 0 ) _tree.node(_nids[i]).toString2(sb,depth+1);
       }
       return sb;
@@ -334,13 +409,13 @@ class DTree extends Iced {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
     final int _ncols;
-    final short _nclass;        // One for regression, else #classes
+    final char _nclass;         // One for regression, else #classes
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
     // Histograms for every tree, split & active column
     DHistogram _hcs[/*tree id*/][/*tree-relative node-id*/][/*column*/];
-    ScoreBuildHistogram(DTree trees[], int leafs[], int ncols, short nclass, int ymin, Frame fr) {
+    ScoreBuildHistogram(DTree trees[], int leafs[], int ncols, char nclass, int ymin, Frame fr) {
       _trees=trees;
       _leafs=leafs;
       _ncols=ncols;
@@ -633,10 +708,10 @@ class DTree extends Iced {
 
   // Compute class distributions
   static class ClassDist extends MRTask2<ClassDist> {
-    final short _nclass;
+    final char _nclass;
     final int _ymin;
     long _cs[];
-    ClassDist( short nclass, int ymin ) { _nclass = nclass; _ymin = ymin; }
+    ClassDist( char nclass, int ymin ) { _nclass = nclass; _ymin = ymin; }
     @Override public void map( Chunk cr ) {
       _cs = new long[_nclass];
       for( int i=0; i<cr._len; i++ )

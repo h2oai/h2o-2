@@ -24,14 +24,15 @@ class Basic(unittest.TestCase):
         csvPathname = importFolderpath + "/" + csvFilename
 
         for trials in range(2):
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath, timeoutSecs=500)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath, schema='local', 
+                timeoutSecs=500)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None,parseResult['destination_key'])
 
             print "\n" + csvFilename
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(parseResult=parseResult, trees=5, depth=5,
+            RFview = h2o_cmd.runRF(parseResult=parseResult, trees=5, depth=5,
                 timeoutSecs=600, retryDelaySecs=10.0)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 

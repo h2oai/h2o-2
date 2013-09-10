@@ -23,14 +23,14 @@ class Basic(unittest.TestCase):
         csvPathname = 'allstate/claim_prediction_train_set_10000_int.csv.gz'
         kwargs = {'family': 'gaussian', 'y': 'Claim_Amount', 'alpha': 0, 'lambda': 0.5, 'max_iter': 15}
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=150, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=150, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
     def test_B_claim_prediction_binomial(self):
         csvPathname = 'allstate/claim_prediction_train_set_10000_int.csv.gz'
         kwargs = {'family': 'binomial', 'y': 'Claim_Amount', 'case_mode': '>', 'case': 100, 'alpha': 0, 'lambda': 0.5, 'max_iter': 15}
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=150, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=150, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
     def test_C_claim_prediction_binomial(self):
@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'allstate/claim_prediction_train_set_10000_int.csv.gz'
         kwargs = {'family': 'poisson', 'y': 'Claim_Amount', 'alpha': 0, 'lambda': 0.5, 'max_iter': 15}
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=150, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=150, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 if __name__ == '__main__':

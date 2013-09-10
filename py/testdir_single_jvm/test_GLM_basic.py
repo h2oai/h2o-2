@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             print "y:", y
 
             kwargs = {'x': x, 'y':  y}
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=15, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
             # no longer look at STR?
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             sys.stdout.write('.')
@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             print "y:", y
 
             kwargs = {'x': x, 'y':  y, 'n_folds': 5}
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=15, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
             # ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON
             h2o_glm.simpleCheckGLM(self, glm, 'AGE', **kwargs)
             sys.stdout.write('.')

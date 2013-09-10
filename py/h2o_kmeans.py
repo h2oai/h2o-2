@@ -47,6 +47,10 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     inspect = h2o_cmd.runInspect(None, applyDestinationKey)
     h2o_cmd.infoFromInspect(inspect, csvPathname)
 
+    # this was failing
+    summaryResult = h2o_cmd.runSummary(key=applyDestinationKey)
+    h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
+
     kmeansScoreResult = h2o.nodes[0].kmeans_score(
         key=parseResult['destination_key'], model_key=model_key)
     score = kmeansScoreResult['score']

@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
 
     def test_tree_view(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker1000', hex_key='poker1000.hex', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, model_key="model0", timeoutSecs=10)
+        h2o_cmd.runRF(parseResult=parseResult, trees=50, model_key="model0", timeoutSecs=10)
 
         for n in range(1):
             a = h2o_cmd.runRFTreeView(n=n, data_key='poker1000.hex', model_key="model0", timeoutSecs=10)

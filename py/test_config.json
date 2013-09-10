@@ -1,0 +1,16 @@
+[
+    {
+        "config_name": "The Fast Test",
+        "comment1": "be careful with commas here!",
+        "trees": 5,
+        "params": {"ignore": 0, "timeoutSecs": 150},
+        "comment2": "be more careful with no comma here!"
+    },
+    {
+        "config_name": "The Slow Test That Doesn't Work",
+        "trees": 5,
+        "comment": "double quote only!",
+        "params": {"ignore": 0, "timeoutSecs": 150}
+    }
+]
+

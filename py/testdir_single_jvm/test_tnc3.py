@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
         if (1==1):
             print "\nWe're not CM data getting back from RFView.json that we can check!. so look at the browser"
             print 'The good case with ignore="boat,body"'
-            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, trees=5, timeoutSecs=10, ignore="boat,body")
+            rfv = h2o_cmd.runRF(parseResult=parseResult, trees=5, timeoutSecs=10, ignore="boat,body")
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
@@ -74,7 +74,7 @@ class Basic(unittest.TestCase):
 
         if 1==1:
             print "\nNow the bad case (no ignore)"
-            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, trees=5, timeoutSecs=10)
+            rfv = h2o_cmd.runRF(parseResult=parseResult, trees=5, timeoutSecs=10)
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")

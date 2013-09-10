@@ -193,26 +193,55 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
+        n = h2o.nodes[0]
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
             folderURI = "s3://" + folderOffset
+            if not n.aws_credentials:
+                print "aws_credentials: %s" % n.aws_credentials
+                # raise Exception("Something was missing for s3 on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
             importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
+            if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
+                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
+                    (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
+                # raise Exception("Something was missing for s3n on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for s3n on the java -jar cmd line when the cloud was built"
             folderURI = "s3n://" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
+            if not n.use_maprfs:
+                print "use_maprfs: %s" % n.use_maprfs
+                # raise Exception("Something was missing for maprfs on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for maprfs on the java -jar cmd line when the cloud was built"
             folderURI = "maprfs:///" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='hdfs':
-            h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
-            h2o.verboseprint("folderOffset;", folderOffset)
+            # check that some state from the cloud building time was right
+            # the requirements for this may change and require updating
+            if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
+                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
+                    (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
+                # raise Exception("Something was missing for hdfs on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for hdfs on the java -jar cmd line when the cloud was built"
+
             # no reason to use bucket with hdfs, but just in case people do.
-            if bucket is None:
-                folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + folderOffset
+            if bucket:
+                bucketAndOffset = bucket + "/" + folderOffset
             else:
-                folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + bucket + "/" + folderOffset
+                bucketAndOffset = folderOffset
+
+            if n.hdfs_name_node:
+                folderURI = "hdfs://" + n.hdfs_name_node + "/" + folderOffset
+            else:
+                # this is different than maprfs? normally we specify the name though
+                folderURI = "hdfs://" + folderOffset
+
+            h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
+            h2o.verboseprint("folderOffset:", folderOffset)
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         else: 
