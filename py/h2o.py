@@ -50,10 +50,13 @@ def drain(src, dst):
     t.start()
 
 def unit_main():
-    global python_test_name
+    global python_test_name, pythonCmdLineArgs
+    # if I remember correctly there was an issue with using sys.argv[0] 
+    # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
+    pythonCmdLineArgs = "".join(sys.argv[1:])
+    print "\nRunning: python", python_test_name, pythonCmdLineArgs
 
-    print "\nRunning: python", python_test_name
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
     # jenkins with nosetests
@@ -77,6 +80,8 @@ abort_after_import = False
 clone_cloud_json = None
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
+# no command line args if run with just nose
+pythonCmdLineArgs = ""
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -391,11 +396,28 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     h2o_os_util.show_h2o_processes()
 
     with open(h2o_nodes_json, 'rb') as f:
-        nodeStateList = json.load(f)
+        cloneJson = json.load(f)
+
+    # These are supposed to be in the file. 
+    # Just check the first one. if not there, the file must be wrong
+    if not 'cloud_start' in cloneJson:
+        raise Exception("Can't find 'cloud_start' in %s, wrong file? h2o-nodes.json?" % h2o_nodes_json)
+    else:
+        cs = cloneJson['cloud_start']
+        print "Info on the how the cloud we're cloning was apparently started (info from %s)" % h2o_nodes_json
+        print cs['time']
+        print cs['cwd']
+        print cs['python_cmd_line']
+        print cs['config_json']
+        print cs['username']
+        print cs['ip']
+
+        nodeStateList = cloneJson['h2o_nodes']
 
     nodeList = []
     for nodeState in nodeStateList:
         print "\nCloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
+
         newNode = ExternalH2O(nodeState)
         nodeList.append(newNode)
 
@@ -507,10 +529,29 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     print len(nodeList), "total jvms in H2O cloud"
 
     # dump the h2o.nodes state to a json file
+    # include enough extra info to have someone rebuild the cloud if a test fails
+    # that was using that cloud.
     if create_json:
-        p = h2o_util.json_repr(nodes)
+        p = "python %s %s" % (python_test_name, pythonCmdLineArgs)
+        if config_json:
+            c = os.path.abspath(config_json)
+        else:
+            c = "None"
+        q = {   
+                'cloud_start': 
+                    {
+                    'time': str(datetime.datetime.now()),
+                    'cwd': os.getcwd(),
+                    'python_cmd_line': p,
+                    'config_json': c,
+                    'username': getpass.getuser(),
+                    'ip': get_ip_address(),
+                    },
+                'h2o_nodes': h2o_util.json_repr(nodes),
+            }
+
         with open('h2o-nodes.json', 'w+') as f:
-            f.write(json.dumps(p, indent=4))
+            f.write(json.dumps(q, indent=4))
 
     return nodeList
 
