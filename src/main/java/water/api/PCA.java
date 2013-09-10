@@ -6,13 +6,9 @@ import hex.*;
 import hex.DPCA.*;
 import hex.NewRowVecTask.DataFrame;
 import water.*;
-import water.ValueArray.Column;
-import water.api.RequestArguments.Argument;
 import water.util.Log;
 import water.util.RString;
 
-import com.google.common.base.Objects;
-import com.google.common.primitives.Ints;
 import com.google.gson.*;
 
 public class PCA extends Request {
@@ -22,6 +18,8 @@ public class PCA extends Request {
   // protected final Int _numPC = new Int("num_pc", 10, 1, 1000000);
   protected final Real _tol = new Real("tolerance", 0.0, 0, 1, "Omit components with std dev <= tol times std dev of first component");
   protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
+
+  public static final int MAX_COL = 10000;   // Maximum number of columns supported on local PCA
 
   public PCA() {
     _requestHelp = "Compute principal components of a data set.";
@@ -72,7 +70,7 @@ public class PCA extends Request {
         throw new IllegalArgumentException("Cannot ignore all columns");
 
       int numIgnore = ii == null ? 0 : ii.length;
-      if(_key.value() != null && _key.value()._cols.length - numIgnore > _key.value()._numrows-1)
+      if(_key.value() != null && _key.value()._cols.length - numIgnore > _key.value()._numrows - 1)
         // TODO: Degrees of freedom = num_rows - 1 if standardized, num_rows otherwise
         throw new IllegalArgumentException("Cannot have more columns than degrees of freedom = " + String.valueOf(_key.value()._numrows-1));
     }
@@ -88,8 +86,12 @@ public class PCA extends Request {
       // int[] cols = new int[ary._cols.length];
       // for( int i = 0; i < cols.length; i++ ) cols[i] = i;
 
+      int[] cols = createColumns(ary);
+      if(cols.length > MAX_COL)
+        throw new RuntimeException("Cannot run PCA on more than " + MAX_COL + " columns");
       // DataFrame data = DataFrame.makePCAData(ary, cols, true);
-      DataFrame data = DataFrame.makePCAData(ary, createColumns(ary), _standardize.value());
+      DataFrame data = DataFrame.makePCAData(ary, cols, _standardize.value());
+
       PCAJob job = DPCA.startPCAJob(dest, data, pcaParams);
       j.addProperty(JOB, job.self().toString());
       j.addProperty(DEST_KEY, job.dest().toString());
