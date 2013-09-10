@@ -184,4 +184,5 @@ public abstract class Request2 extends Request {
       throw new RuntimeException(e);
     }
   }
+  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putStr2("\"Request2\":\"dummy\""); }
 }

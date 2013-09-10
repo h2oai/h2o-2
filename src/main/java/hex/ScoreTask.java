@@ -1,8 +1,8 @@
 package hex;
 
-
 import water.*;
 import water.ValueArray.Column;
+import water.fvec.Frame;
 import water.util.Utils;
 
 public class ScoreTask extends MRTask {
@@ -44,6 +44,10 @@ public class ScoreTask extends MRTask {
     ValueArray res = new ValueArray(outputKey,t._rpc,8, new Column[]{c});
     DKV.put(outputKey, res);
     return res._key;
+  }
+
+  public static Key score(Model M, Frame data, Key outputKey){
+    throw H2O.unimpl();
   }
 
   @Override public void init(){

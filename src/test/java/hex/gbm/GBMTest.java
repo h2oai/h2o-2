@@ -104,9 +104,9 @@ public class GBMTest extends TestUtil {
     //         });
 
     // Classification tests
-    //basicDRF("./smalldata/test/test_manycol_tree.csv","tree.hex",
-    //         new PrepData() { Vec prep(Frame fr) { return fr.remove(fr.numCols()-1); } 
-    //         });
+    basicDRF("./smalldata/test/test_manycol_tree.csv","tree.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove(fr.numCols()-1); } 
+             });
     //basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
     //         new PrepData() {
     //           Vec prep(Frame fr) { 
@@ -132,16 +132,16 @@ public class GBMTest extends TestUtil {
     //basicDRF("./smalldata/airlines/allyears2k_headers.zip","air.hex",
     //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
     //         });
-    basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
-             //basicDRF("./smalldata/covtype/covtype.20k.data","covtype.hex",
-             new PrepData() {
-               Vec prep(Frame fr) {
-                 for( int ign : IGNS )
-                   UKV.remove(fr.remove(Integer.toString(ign))._key);
-                 // Covtype: predict on last column
-                 return fr.remove(fr.numCols()-1);
-               }
-             });
+    //basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+    //         //basicDRF("./smalldata/covtype/covtype.20k.data","covtype.hex",
+    //         new PrepData() {
+    //           Vec prep(Frame fr) {
+    //             for( int ign : IGNS )
+    //               UKV.remove(fr.remove(Integer.toString(ign))._key);
+    //             // Covtype: predict on last column
+    //             return fr.remove(fr.numCols()-1);
+    //           }
+    //         });
   }
 
   public void basicDRF(String fname, String hexname, PrepData prep) {
@@ -164,6 +164,7 @@ public class GBMTest extends TestUtil {
       drf.seed = (1L<<32)|2;
       drf.serve();              // Start it
       drf.get();                // Block for it
+      System.out.println(new String(drf.writeJSON(new AutoBuffer()).buf()));
 
     } finally {
       UKV.remove(dest);         // Remove whole frame
@@ -175,7 +176,7 @@ public class GBMTest extends TestUtil {
     }
   }
 
-  @Test public void testCovtype() {
+  /*@Test*/ public void testCovtype() {
     //Key okey = loadAndParseFile("covtype.hex", "smalldata/covtype/covtype.20k.data");
     Key okey = loadAndParseFile("covtype.hex", "../datasets/UCI/UCI-large/covtype/covtype.data");
     //Key okey = loadAndParseFile("covtype.hex", "/home/0xdiag/datasets/standard/covtype.data");

@@ -22,7 +22,7 @@ public class DRF extends FrameJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="", required=true, filter=DRFVecSelect.class)
+  @API(help="Response vector", required=true, filter=DRFVecSelect.class)
   Vec vresponse;
   class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
 
@@ -76,6 +76,8 @@ public class DRF extends FrameJob {
   @API(help = "Seed for the random number generator", filter = Default.class)
   long seed = new Random().nextLong();
 
+  @API(help = "The DRF Model")
+  DRFModel drf_model;
 
   // Overall prediction error as I add trees
   transient private float _errs[];
@@ -85,8 +87,10 @@ public class DRF extends FrameJob {
     return m.forest.length/(float)m.N;
   }
   public static class DRFModel extends DTree.TreeModel {
-    public DRFModel(int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm){
-      super(ntrees,forest,errs,domain,ymin,cm);
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    public DRFModel(Key key,int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm){
+      super(key,ntrees,forest,errs,domain,ymin,cm);
     }
     @Override protected double score0(double[] data) {
       throw new RuntimeException("TODO Auto-generated method stub");
@@ -141,7 +145,8 @@ public class DRF extends FrameJob {
     final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
-    DKV.put(outputKey, new DRFModel(ntrees,new DTree[0],null, domain, ymin, null));
+    drf_model = new DRFModel(outputKey,ntrees,new DTree[0],null, domain, ymin, null);
+    DKV.put(outputKey, drf_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
@@ -198,7 +203,8 @@ public class DRF extends FrameJob {
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
           _errs[_errs.length-1] = (float)bs._err/nrows;
-          DKV.put(outputKey, new DRFModel(ntrees,forest, _errs, domain, ymin,bs._cm));
+          drf_model = new DRFModel(outputKey,ntrees,forest, _errs, domain, ymin,bs._cm);
+          DKV.put(outputKey, drf_model);
 
           // Remove temp vectors; cleanup the Frame
           for( int t=0; t<xtrees; t++ )

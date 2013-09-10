@@ -8,6 +8,7 @@ import water.util.Log.Tag.Sys;
 import water.util.Log;
 import water.util.Utils;
 import water.api.DocGen;
+import water.api.Request.API;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -721,21 +722,26 @@ class DTree extends Iced {
   }
 
   public static abstract class TreeModel extends Model {
-    public final int N;         // Expected max trees
-    public final DTree forest[];// Actual trees built (probably < N)
-    public final float [] errs; // Error rate as trees are added
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    @API(help="Expected max trees")                public final int N;
+    @API(help="Actual trees built (probably < N)") public final DTree forest[];
+    @API(help="Error rate as trees are added")     public final float [] errs;
+    @API(help="Class names")                       public final String [] domain;
+    @API(help="Min class - to zero-bias the CM")   public final int ymin;
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be seperate).
-    public final String [] domain; // Actual String domain
-    public final int ymin;         // Smallest class - to zero-bias the CM
-    public final long [/*actual*/][/*predicted*/] cm;
+    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
 
-    public TreeModel(int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm) {
+    public TreeModel(Key key, int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm) {
+      super(key);
       this.N = ntrees; this.forest = forest; this.errs = errs; this.domain = domain; this.ymin = ymin; this.cm = cm;
     }
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
+      DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
+      DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
 
       // Top row of CM
       if( cm != null ) {
