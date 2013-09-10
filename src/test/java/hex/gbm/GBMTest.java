@@ -160,7 +160,7 @@ public class GBMTest extends TestUtil {
       drf.min_rows=1;
       drf.nbins = 1024;
       drf.mtries = -1;
-      drf.sample_rate = 1.0f;   // No sampling
+      drf.sample_rate = 0.66667f;   // No sampling
       drf.seed = (1L<<32)|2;
       drf.serve();              // Start it
       drf.get();                // Block for it
@@ -198,7 +198,7 @@ public class GBMTest extends TestUtil {
 
     // Start the distributed Random Forest
     final Key modelKey = Key.make("model");
-    DRFJob result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 1.0f, null, 1/*verbose*/, 0, false);
+    DRFJob result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 0.66667f, null, 1/*verbose*/, 0, false);
     // Wait for completion on all nodes
     RFModel model = result.get();
     CMJob cmjob = ConfusionTask.make( model, val._key, cols[cols.length-1], null, false);
