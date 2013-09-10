@@ -115,26 +115,40 @@ public abstract class Chunk extends Iced implements Cloneable {
     _chk._chk = _chk;         // Clone has NOT been written into
   }
 
-  // Write into a chunk.  May rewrite/replace chunks if the chunk needs to be
-  // "inflated" to hold larger values.  Returns the input value.
+  /**
+   * Set a long element in a chunk given a 0-based chunk local index.
+   *
+   * Write into a chunk.
+   * May rewrite/replace chunks if the chunk needs to be
+   * "inflated" to hold larger values.  Returns the input value.
+   *
+   * Note that the idx is an int (instead of a long), which tells you
+   * that index 0 is the first row in the chunk, not the whole Vec.
+   */
   public final long set0(int idx, long l) {
     setWrite();
     if( _chk.set_impl(idx,l) ) return l;
     (_chk = inflate_impl(new NewChunk(this))).set_impl(idx,l);
     return l;
   }
+
+  /** Set a double element in a chunk given a 0-based chunk local index. */
   public final double set0(int idx, double d) {
     setWrite();
     if( _chk.set_impl(idx,d) ) return d;
     (_chk = inflate_impl(new NewChunk(this))).set_impl(idx,d);
     return d;
   }
+
+  /** Set a floating element in a chunk given a 0-based chunk local index. */
   public final float set0(int idx, float f) {
     setWrite();
     if( _chk.set_impl(idx,f) ) return f;
     (_chk = inflate_impl(new NewChunk(this))).set_impl(idx,f);
     return f;
   }
+
+  /** Set the element in a chunk as missing given a 0-based chunk local index. */
   public final boolean setNA0(int idx) {
     setWrite();
     if( _chk.setNA_impl(idx) ) return true;
