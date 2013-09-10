@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
             # ("allyears_10.csv", 1800), #119.98GB
         ]
 
-        (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path="mnist/*", schema='s3')
+        (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3')
         s3nFullList = importHDFSResult['succeeded']
         self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 
@@ -45,7 +45,8 @@ class Basic(unittest.TestCase):
             csvPathname = importFolderPath + "/" + testCsvFilename
             hex_key = csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key,
+            # this is schema='local'k
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\

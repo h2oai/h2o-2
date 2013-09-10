@@ -28,7 +28,7 @@ def run_rf(files,configs):
         importFolderPath = "mnist/mnist8m"
         csvPathname = importFolderPath + "/" + files['train']
         hex_key = files['train'] + '.hex'
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key
                         timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=120)
         trainParseWallTime = time.time() - trainParseWallStart
         #End Train File Parse#
@@ -42,7 +42,7 @@ def run_rf(files,configs):
         #RF+RFView (train)#
         kwargs = configs.copy()
         trainRFStart = time.time()
-        rfView = h2o_cmd.runRFOnly(parseResult=parseResult,rfView=True,
+        rfView = h2o_cmd.runRF(parseResult=parseResult,rfView=True,
              timeoutSecs= 3600,pollTimeoutSecs= 60,retryDelaySecs = 2, **kwargs)
         trainViewTime = time.time() - trainRFStart
         #End RF+RFView (train)#
@@ -57,7 +57,7 @@ def run_rf(files,configs):
         importFolderPath = "mnist/mnist8m"
         csvPathname = importFolderPath + "/" + files['test']
         hex_key = files['test'] + '.hex'
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key
                         timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=120)
         testParseWallTime = time.time() - testParseWallStart
         #End Test File Parse#

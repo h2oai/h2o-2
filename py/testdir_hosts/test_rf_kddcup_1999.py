@@ -24,8 +24,8 @@ class Basic(unittest.TestCase):
         # h2b.browseTheCloud()
 
         importFolderPath = 'standard'
-        csvPathname = importFolderPath + "/" + csvFilename
         csvFilename = 'kddcup_1999.data.gz'
+        csvPathname = importFolderPath + "/" + csvFilename
 
         print "Want to see that I get similar results when using H2O RF defaults (no params to json)" +\
             "compared to running with the parameters specified and matching the browser RF query defaults. " +\
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
                 kwargs['out_of_bag_error_estimate'] = 1
 
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
+            RFview = h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")

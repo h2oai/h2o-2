@@ -22,12 +22,12 @@ class Basic(unittest.TestCase):
 
     def test_B_RF_iris2(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, model_key="iris2", timeoutSecs=10, retryDelaySecs=1)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, model_key="iris2", timeoutSecs=10, retryDelaySecs=1)
 
     def test_C_RF_poker100(self):
         # RFview consumes cycles. Only retry once a second, to avoid slowing things down
         parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, model_key="poker100", timeoutSecs=10, retryDelaySecs=1)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, model_key="poker100", timeoutSecs=10, retryDelaySecs=1)
 
     def test_D_GenParity1(self):
         # Create a directory for the created dataset files. ok if already exists
@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
                 # change the model name each iteration, so they stay in h2o
                 model_key = csvFilename + "_" + str(trials)
                 parseResult = h2i.import_parse(path=csvPathname, schema='put')
-                h2o_cmd.runRFOnly(parseResult=parseResult, 
+                h2o_cmd.runRF(parseResult=parseResult, 
                     trees=trees, model_key=model_key, timeoutSecs=timeoutSecs, retryDelaySecs=1)
 
 if __name__ == '__main__':

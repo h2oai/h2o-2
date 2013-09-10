@@ -27,18 +27,19 @@ class Basic(unittest.TestCase):
             ("mnist_training.csv.gz", "mnist_training.csv.gz",    600), 
         ]
 
-        (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path="mnist/*", schema='s3n')
+        importFolderPath = "mnist"
+        csvPathname = importFolderPath + "/*"
+        (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3n')
         s3nFullList = importHDFSResult['succeeded']
         self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 
         trial = 0
-        importFolderPath = "mnist"
         for (trainCsvFilename, testCsvFilename, timeoutSecs) in csvFilelist:
             # PARSE test****************************************
             csvPathname = importFolderPath + "/" + testCsvFilename
             testHexKey = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=testHexKey,
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3n', hex_key=testHexKey,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
@@ -48,7 +49,7 @@ class Basic(unittest.TestCase):
             csvPathname = importFolderPath + "/" + trainCsvFilename
             trainHexKey = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=trainHexKey,
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3n', hex_key=trainHexKey,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
@@ -78,7 +79,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 1800
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
             elapsed = time.time() - start
             print "GLM completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

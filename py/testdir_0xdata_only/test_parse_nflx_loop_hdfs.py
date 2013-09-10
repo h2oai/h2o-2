@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
-        h2o.tear_down_cloud(sandbox_ignore_errors=True)
+        h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
     def test_import_nflx_parse_loop(self):
         print "Using the -.gz files from hdfs"
@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
                     use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
-            # h2o.nodes[0].sandbox_ignore_errors = True
+            # h2o.nodes[0].sandboxIgnoreErrors = True
 
             timeoutSecs = 500
             importFolderPath = "datasets/manyfiles-nflx-gz"

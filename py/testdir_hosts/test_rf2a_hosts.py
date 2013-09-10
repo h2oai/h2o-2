@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         }
 
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=100, timeoutSecs=120, retryDelaySecs=10, **kwargs)
+        h2o_cmd.runRF(parseResult=parseResult, trees=100, timeoutSecs=120, retryDelaySecs=10, **kwargs)
         print "RF end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
 if __name__ == '__main__':

@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             kwargs = {'x': x, 'y': y, 'n_folds': 6}
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=300, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=300, **kwargs)
 
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, 57, **kwargs)

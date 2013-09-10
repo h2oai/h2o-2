@@ -9,7 +9,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(1, java_heap_GB=8)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1)
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=1)
 
     @classmethod
     def tearDownClass(cls):
@@ -19,8 +23,7 @@ class Basic(unittest.TestCase):
         csvFilename = "wine.data"
         timeoutSecs=180
         trialStart = time.time()
-
-        # PARSE ****************************************
+        #parse
         trainKey = csvFilename + "_" + ".hex"
         start = time.time()
         parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename,
@@ -30,7 +33,7 @@ class Basic(unittest.TestCase):
             "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
         print "parse result:", parseResult['destination_key']
 
-        # PCA****************************************
+        #PCA params
         params = { 
             'destination_key': "python_PCA_key",
             'ignore':0,
@@ -39,12 +42,10 @@ class Basic(unittest.TestCase):
             }   
 
         kwargs = params.copy()
-        start = time.time()
-        node = h2o.nodes[0]
-        PCAResult = node.pca(data_key=trainKey, **kwargs)
-        elapsed = time.time() - start
-        print "PCA completed in", elapsed, "seconds.", \
-            "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+        PCAResult = h2o_cmd.runPCA(parseResult=parseResult)
+        print "PCA completed in", PCAResult['python_elapsed'], "seconds.", \
+            "%f pct. of timeout" % (PCAResult['python_%timeout'])
+        #check PCA results
         h2o_pca.simpleCheckPCA(self,PCAResult)
         h2o_pca.resultsCheckPCA(self,PCAResult)
 

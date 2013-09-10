@@ -102,7 +102,7 @@ def exec_expr(node, execExpr, resultKey="Result.hex", timeoutSecs=10, ignoreH2oE
     start = time.time()
     # FIX! Exec has 'escape_nan' arg now. should we test?
     # 5/14/13 removed escape_nan=0
-    resultExec = h2o_cmd.runExecOnly(node, expression=execExpr, 
+    resultExec = h2o_cmd.runExec(node, expression=execExpr, 
         timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError)
     h2o.verboseprint(resultExec)
     h2o.verboseprint('exec took', time.time() - start, 'seconds')

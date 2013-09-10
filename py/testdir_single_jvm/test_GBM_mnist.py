@@ -9,7 +9,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o.build_cloud(1, java_heap_GB=8)
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1,java_heap_GB=8)
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=1,java_heap_GB=8)
 
     @classmethod
     def tearDownClass(cls):
@@ -39,16 +43,15 @@ class Basic(unittest.TestCase):
             'max_depth':8,
             'min_rows':1,
             'vresponse':784
-            }   
+            }
 
         kwargs = params.copy()
+        h2o.beta_features = True
         timeoutSecs = 1800
-        start = time.time()
-        node = h2o.nodes[0]
-        GBMResult = node.gbm(data_key=trainKey, **kwargs)
-        elapsed = time.time() - start
-        print "GBM completed in", elapsed, "seconds.", \
-            "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+        #noPoll -> False when GBM finished
+        GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+        print "GBM training completed in", GBMResult['python_elapsed'], "seconds.", \
+            "%f pct. of timeout" % (GBMResult['python_%timeout'])
 
 if __name__ == '__main__':
     h2o.unit_main()

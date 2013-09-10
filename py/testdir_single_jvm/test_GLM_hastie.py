@@ -24,7 +24,7 @@ def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     kwargs = {'x': x, 'y':  y, 'case': -1, 'thresholds': 0.5}
 
     start = time.time()
-    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+    glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLM in",  (time.time() - start), "secs (python)"
     h2o_glm.simpleCheckGLM(self, glm, 7, **kwargs)
 

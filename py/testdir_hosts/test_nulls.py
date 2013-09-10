@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         # chunk boundary stuff. (i.e. not interesting test for RF)
         csvFilename = 'poker1000'
         csvPathname = 'poker/' + csvFilename
-        fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=true)
+        fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
 
         nulFilename = "syn_nul.data"
         nulPathname = SYNDATASETS_DIR + '/' + nulFilename
@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
                 model_key = csvFilename + "_" + str(trials)
 
                 parseResult = h2i.import_parse(path=nulPathname, schema='put')
-                h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, model_key=model_key, timeoutSecs=timeoutSecs, retryDelaySecs=1)
+                h2o_cmd.runRF(parseResult=parseResult, trees=trees, model_key=model_key, timeoutSecs=timeoutSecs, retryDelaySecs=1)
                 sys.stdout.write('.')
                 sys.stdout.flush()
 

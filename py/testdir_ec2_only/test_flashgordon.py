@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
-        h2o.tear_down_cloud(sandbox_ignore_errors=True)
+        h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
     def test_flashgordon(self):
         # typical size of the michal files
@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
                     enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10)
 
                 # don't raise exception if we find something bad in h2o stdout/stderr?
-                h2o.nodes[0].sandbox_ignore_errors = True
+                h2o.nodes[0].sandboxIgnoreErrors = True
 
                 for trial in range(trialMax):
                     # since we delete the key, we have to re-import every iteration, to get it again

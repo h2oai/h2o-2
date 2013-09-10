@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
     # believe the interesting thing is the NaN in the csv
     def test_A_parse6(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='parse6.csv', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=37, timeoutSecs=10)
+        h2o_cmd.runRF(parseResult=parseResult, trees=37, timeoutSecs=10)
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
             }
         # fails with n_folds
         print "Not doing n_folds with benign. Fails with 'unable to solve?'"
-        gg = h2o_cmd.runGLMGridOnly(parseResult=parseResult, timeoutSecs=120, **kwargs)
+        gg = h2o_cmd.runGLMGrid(parseResult=parseResult, timeoutSecs=120, **kwargs)
         # check the first in the models list. It should be the best
         colNames = [ 'STR','OBS','AGMT','FNDX','HIGD','DEG','CHK',
                      'AGP1','AGMN','NLV','LIV','WT','AGLP','MST' ]
@@ -82,7 +82,7 @@ class Basic(unittest.TestCase):
             'thresholds': '0:1:0.01'
             }
 
-        gg = h2o_cmd.runGLMGridOnly(parseResult=parseResult, timeoutSecs=120, **kwargs)
+        gg = h2o_cmd.runGLMGrid(parseResult=parseResult, timeoutSecs=120, **kwargs)
         colNames = ['D','CAPSULE','AGE','RACE','DPROS','DCAPS','PSA','VOL','GLEASON']
         # h2o_glm.simpleCheckGLMGrid(self, gg, colNames[xList[0]], **kwargs)
         h2o_glm.simpleCheckGLMGrid(self, gg, None, **kwargs)

@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
             'use_non_local_data': 0,
         }
         parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

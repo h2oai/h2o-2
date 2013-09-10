@@ -76,8 +76,8 @@ public class SummaryPage extends Request {
             StringBuilder baseStats = new StringBuilder("<div style='width:100%;overflow:scroll;'><table class='table-bordered'>");
             baseStats.append("<tr><th colspan='" + 100 + "' style='text-align:center;'>Base Stats</th></tr>");
 
-            baseStats.append("<th>&mu;</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td>");
-            baseStats.append("<th>&sigma;</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td>");
+            baseStats.append("<th>avg</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td>");
+            baseStats.append("<th>sd</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td>");
 
             baseStats.append("<th>NAs</th>  <td>" + o.get("na").getAsLong() + "</td>");
             baseStats.append("<th>zeros</th>");

@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansGridOnly(parseResult=parseResult, \
+                kmeans = h2o_cmd.runKMeansGrid(parseResult=parseResult, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans grid end on ", csvPathname, 'took', elapsed, 'seconds.', \

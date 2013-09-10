@@ -123,7 +123,7 @@ class Basic(unittest.TestCase):
             paramsString = json.dumps(params)
 
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs,
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs,
                     benchmarkLogging=benchmarkLogging, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

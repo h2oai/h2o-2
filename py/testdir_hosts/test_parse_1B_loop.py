@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
             for trial in range(trialMax):
                 hex_key = csvFilename + "_" + str(trial) + ".hex"
                 start = time.time()
-                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, 
+                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, 
                     timeoutSecs=timeoutSecs, retryDelaySecs=4, pollTimeoutSecs=60)
                 elapsed = time.time() - start
                 print "Trial #", trial, "completed in", elapsed, "seconds.", \

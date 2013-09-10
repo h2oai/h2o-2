@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
             kwargs = {'n_folds': 0, 'family': 'binomial', 'link': 'familyDefault', 'y': y}
             start = time.time()
             parseResult = h2i.import_parse(bucket='smalldata', path='logreg/umass_statdata/' + csvFilename, schema='put')
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end (w/check) on ", csvFilename, 'took', time.time() - start, 'seconds'
             trial += 1
