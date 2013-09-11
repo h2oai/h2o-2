@@ -89,14 +89,13 @@ public class PCA extends Request {
       if(cols.length > MAX_COL)
         throw new RuntimeException("Cannot run PCA on more than " + MAX_COL + " columns");
 
-      // DataFrame data = DataFrame.makePCAData(ary, cols, true);
       DataFrame data = DataFrame.makePCAData(ary, cols, _standardize.value());
       PCAJob job = DPCA.startPCAJob(dest, data, pcaParams);
       j.addProperty(JOB, job.self().toString());
       j.addProperty(DEST_KEY, job.dest().toString());
 
       Response r = Progress.redirect(j, job.self(), job.dest());
-      r.setBuilder(Constants.DEST_KEY, new KeyElementBuilder());
+      r.setBuilder(DEST_KEY, new KeyElementBuilder());
       return r;
     } catch(RuntimeException e) {
       Log.err(e);
@@ -121,6 +120,9 @@ public class PCA extends Request {
     }
 
     private void modelHTML(PCAModel m, JsonObject json, StringBuilder sb) {
+      sb.append("<div class='alert'>Actions: " + PCAScore.link(m._selfKey, "Score on dataset") + ", "
+          + PCA.link(m._dataKey, "Compute new model") + "</div>");
+
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>");
       sb.append("<tr>");
