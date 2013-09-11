@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(path=csvPathname, schema='put')
 
             h2o.verboseprint("Trial", trial)
-            h2o_cmd.runRF(parseResult=parseResult, trees=237, depth=45, timeoutSecs=120)
+            h2o_cmd.runRF(parseResult=parseResult, trees=237, depth=45, timeoutSecs=480)
 
             # don't change tree count yet
             ## trees += 10
