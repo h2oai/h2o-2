@@ -18,6 +18,8 @@ import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
+import water.fvec.*;
+import water.fvec.Vec.VectorGroup;
 
 import com.google.gson.*;
 
@@ -39,46 +41,53 @@ public abstract class DPCA {
       ChunkProgress progress = UKV.get(progressKey());
       return (progress != null ? progress.progress() : 0);
     }
+  }
 
-    public static double[] datad(ValueArray va, AutoBuffer bits, int row, int[] cols, boolean standardize, double[] res) {
-      for(int c = 0; c < cols.length - 1; c++) {
-        ValueArray.Column C = va._cols[cols[c]];
-        // Use the mean if missing data, then center & normalize
-        double d = (va.isNA(bits, row, C) ? C._mean : va.datad(bits, row, C));
-        if(standardize) {
-          d -= C._mean;
-          d = (C._sigma == 0.0 || Double.isNaN(C._sigma)) ? d : d / C._sigma;
-        }
-        res[c] = d;
-      }
-      return res;
+  public static class StandardizeTask extends MRTask2<StandardizeTask> {
+    final double[] _normSub;
+    final double[] _normMul;
+
+    public StandardizeTask(double[] normSub, double[] normMul) {
+      _normSub = normSub;
+      _normMul = normMul;
     }
 
-    public static double pcspace(double[][] eigenvec, double[] point, double res) {
-      return pcspace(eigenvec, point, res, eigenvec[0].length);
-    }
+    @Override public void map(Chunk ... chunks) {
+      int ncol = _normSub.length;
+      Chunk [] inputs = Arrays.copyOf(chunks, ncol);
+      NewChunk [] outputs = new NewChunk[ncol];
 
-    public static double pcspace(double[][] eigenvec, double[] point, double res, int ncomp) {
-      for(int i = 0; i < point.length; i++) {
-        if(Double.isNaN(point[i]))
-          return Double.NaN;
-        else
-          res += point[i]*eigenvec[i][0];
+      for(int i = ncol; i < chunks.length; ++i) {
+        outputs[i-ncol] = (NewChunk)chunks[i];
       }
-      return res;
-      /*
-      for(int j = 0; j < ncomp; j++) {
-        for(int i = 0; i < point.length; i++) {
-          if(Double.isNaN(point[i])) {
-            res[j] = Double.NaN;
-            break;
-          }
-          else
-            res[j] += point[i]*eigenvec[i][j];
+      int rows = inputs[0]._len;
+      for(int c = 0; c < ncol; c++) {
+        for(int r = 0; r < rows; r++) {
+          double x = inputs[c].at(r);
+          x -= _normSub[c];
+          x *= _normMul[c];
+          outputs[c].addNum(x);
         }
       }
-      return res;
-      */
+    }
+
+    public static Frame standardize(Frame data, double[] normSub, double[] normMul) {
+      int ncol = normSub.length;
+      Vec [] vecs = Arrays.copyOf(data._vecs, 2*ncol);
+      VectorGroup vg = data._vecs[0].group();
+      Key [] keys = vg.addVecs(ncol);
+      for(int i = 0; i < ncol; i++) {
+        vecs[ncol+i] = new AppendableVec(keys[i]);
+      }
+      StandardizeTask tsk = new StandardizeTask(normSub, normMul).doAll(vecs);
+      Vec [] outputVecs = Arrays.copyOfRange(tsk._fr._vecs, ncol, 2*ncol);
+
+      Frame f = new Frame(data.names(), outputVecs);
+      return f;
+    }
+
+    public static Frame standardize(final DataFrame data) {
+      return standardize(data._ary.asFrame(), data._normSub, data._normMul);
     }
   }
 
@@ -111,6 +120,7 @@ public abstract class DPCA {
     public final double[] _sdev;
     public final double[] _propVar;
     public final double[][] _eigVec;
+    public final int _rank;
     public int _num_pc;
 
     public Status status() {
@@ -136,16 +146,17 @@ public abstract class DPCA {
       _eigVec = null;
       _response = 0;
       _pcaParams = null;
+      _rank = 0;
       _num_pc = 1;
     }
 
     public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[] propVar,
-        double[][] eigVec, int response, int num_pc, PCAParams pcaps) {
-      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, response, num_pc, pcaps);
+        double[][] eigVec, int rank, int response, int num_pc, PCAParams pcaps) {
+      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, rank, response, num_pc, pcaps);
     }
 
     public PCAModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, double[] sdev,
-        double[] propVar, double[][] eigVec, int response, int num_pc, PCAParams pcap) {
+        double[] propVar, double[][] eigVec, int rank, int response, int num_pc, PCAParams pcap) {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
@@ -154,6 +165,7 @@ public abstract class DPCA {
       _eigVec = eigVec;
       _response = response;
       _pcaParams = pcap;
+      _rank = rank;
       _num_pc = num_pc;
     }
 
@@ -181,6 +193,7 @@ public abstract class DPCA {
       res.addProperty(Constants.VERSION, H2O.VERSION);
       res.addProperty(Constants.TYPE, PCAModel.class.getName());
       res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
+      res.addProperty("rank", _rank);
       res.add("PCAParams", _pcaParams.toJson());
 
       // Add standard deviation to output
@@ -265,7 +278,7 @@ public abstract class DPCA {
     final double[] propVar = null;
     final double[][] eigVec = null;
 
-    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, eigVec, 0, 0, params));
+    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, eigVec, 0, 0, 0, params));
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
@@ -300,7 +313,7 @@ public abstract class DPCA {
     // Extract eigenvalues and eigenvectors
     // Note: Singular values ordered in weakly descending order by algorithm
     double[] Sval = mySVD.getSingularValues();
-    double[][] eigVec = mySVD.getV().getArray();  // Rows = features, Cols = principal components
+    double[][] eigVec = mySVD.getV().getArray();  // rows = features, cols = principal components
     // DKV.put(EigenvectorMatrix.makeKey(data._ary._key, resKey), new EigenvectorMatrix(eigVec));
 
     // Compute standard deviation
@@ -309,7 +322,7 @@ public abstract class DPCA {
     double dfcorr = data._ary._numrows/(data._ary._numrows - 1.0);
     for(int i = 0; i < Sval.length; i++) {
       if(params._standardized)
-        Sval[i] = dfcorr*Sval[i];    // Correct since degrees of freedom = n-1 when standardized
+        Sval[i] = dfcorr*Sval[i];   // Correct since degrees of freedom = n-1 when standardized
       sdev[i] = Math.sqrt(Sval[i]);
       totVar += Sval[i];
     }
@@ -323,7 +336,7 @@ public abstract class DPCA {
     int ncomp = getNumPC(sdev, params._tol);
     // int ncomp = Math.min(getNumPC(Sval, params._tol), (int)data._nobs-1);
     // int ncomp = Math.min(params._num_pc, Sval.length);
-    PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, eigVec, 0, ncomp, params);
+    PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, eigVec, mySVD.rank(), 0, ncomp, params);
     myModel.store();
     return myModel;
   }
