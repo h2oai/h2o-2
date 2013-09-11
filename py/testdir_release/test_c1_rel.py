@@ -20,7 +20,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ### importFolderPath = 'more1_1200_link'
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
-        if len(h2o.nodes==1):
+        if len(h2o.nodes)==1:
             csvFilenameList= [
                 ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
             ]
