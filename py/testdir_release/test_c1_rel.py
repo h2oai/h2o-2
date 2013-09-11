@@ -16,11 +16,17 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         avgMichalSize = 116561140 
         bucket = 'home-0xdiag-datasets'
-        importFolderPath = 'more1_1200_link'
+        ### importFolderPath = 'more1_1200_link'
+        importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
-        csvFilenameList= [
-            ("*[3][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
-        ]
+        if len(h2o.nodes==1):
+            csvFilenameList= [
+                ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
+            ]
+        else:
+            csvFilenameList= [
+                ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 10 * avgMichalSize, 600),
+            ]
 
         tryHeap = 28
         DO_GLM = False
