@@ -20,13 +20,13 @@ class TestKaggle(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_cs_training(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='kaggle/creditsample-training.csv.gz', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=100, depth=100, timeoutSecs=300, response_variable=1)
+        parseResult = h2i.import_parse(bucket='smalldata', path='kaggle/creditsample-training.csv.gz', schema='put', timeoutSecs=120)
+        h2o_cmd.runRF(parseResult=parseResult, trees=100, depth=100, timeoutSecs=500, response_variable=1)
         # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
     def test_cs_test(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='kaggle/creditsample-training.csv.gz', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=100, depth=100, timeoutSecs=300, response_variable=1)
+        h2o_cmd.runRF(parseResult=parseResult, trees=100, depth=100, timeoutSecs=500, response_variable=1)
         # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
         time.sleep(5)
