@@ -200,6 +200,7 @@ def clean_sandbox_stdout_stderr():
 
 def tmp_file(prefix='', suffix=''):
     return tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
+
 def tmp_dir(prefix='', suffix=''):
     return tempfile.mkdtemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
 

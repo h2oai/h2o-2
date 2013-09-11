@@ -2,12 +2,13 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py','../h2o/py','../../h2o/py'])
 import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b
+import h2o_print as h2p
 
 beginning = time.time()
 def log(msg):
     print "\033[92m[0xdata] \033[0m", msg
 
-
+print "Don't start a test yet..."
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -34,17 +35,23 @@ class Basic(unittest.TestCase):
         # might as well open a browser on it? (because the ip/port will vary
         # maybe just print the ip/port for now
         ## h2b.browseTheCloud()
-        log("To watch cloud in browser follow address:")
-        log("   http://{0}:{1}/Cloud.html".format(h2o.nodes[0].http_addr, h2o.nodes[0].port))
 
         maxTime = 4*3600
         totalTime = 0
         incrTime = 60
-        print "\nSleeping for total of", (maxTime+0.0)/3600, "hours." 
+        h2p.header_print("\nSleeping for total of", (maxTime+0.0)/3600, "hours.")
         print "Will check h2o logs every", incrTime, "seconds"
         print "Should be able to run another test using h2o-nodes.json to clone cloud"
         print "i.e. h2o.build_cloud_with_json()"
-        print "Bad test if a running test shuts down the cloud. I'm supposed to!"
+        print "Bad test if a running test shuts down the cloud. I'm supposed to!\n"
+
+        h2p.ok_green_print("To watch cloud in browser follow address:")
+        h2p.ok_green_print("   http://{0}:{1}/Cloud.html".format(h2o.nodes[0].http_addr, h2o.nodes[0].port))
+        h2p.ok_blue_print("You can start a test (or tests) now!") 
+        h2p.ok_blue_print("Will spin looking at redirected stdout/stderr logs in sandbox for h2o errors every %s secs" % incrTime)
+        h2p.fail_print("This is just for fun")
+        h2p.warning_print("So is this")
+
         while (totalTime<maxTime): # die after 4 hours
             h2o.sleep(incrTime)
             totalTime += incrTime
