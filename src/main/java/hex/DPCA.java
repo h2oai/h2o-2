@@ -52,7 +52,7 @@ public abstract class DPCA {
       _normMul = normMul;
     }
 
-    @Override public void map(Chunk ... chunks) {
+    @Override public void map(Chunk [] chunks) {
       int ncol = _normSub.length;
       Chunk [] inputs = Arrays.copyOf(chunks, ncol);
       NewChunk [] outputs = new NewChunk[ncol];

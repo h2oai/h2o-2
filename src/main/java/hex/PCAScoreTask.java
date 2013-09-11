@@ -23,7 +23,7 @@ public class PCAScoreTask extends MRTask2<PCAScoreTask> {
   // Matrix multiplication A * B, where A is a skinny matrix (# rows >> # cols) and B is a
   // small matrix that fitting on a single node. For PCA scoring, the cols of A (rows of B) are
   // the features of the input dataset, while the cols of B are the principal components.
-  @Override public void map(Chunk ... chunks) {
+  @Override public void map(Chunk [] chunks) {
     Chunk [] inputs = Arrays.copyOf(chunks, _nfeat);
     NewChunk [] outputs = new NewChunk[_ncomp];
 
