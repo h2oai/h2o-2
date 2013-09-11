@@ -124,7 +124,6 @@ public class DRF extends FrameJob {
   // Compute a single DRF tree from the Frame.  Last column is the response
   // variable.  Depth is capped at max_depth.
   @Override protected Response serve() {
-    final Timer t_drf = new Timer();
     final Frame fr = new Frame(source); // Local copy for local hacking
 
     // Doing classification only right now...
@@ -133,7 +132,18 @@ public class DRF extends FrameJob {
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
-    fr.setResponse("Response",vresponse);
+    for( int i=0; i<fr.numCols(); i++ )
+      if( fr._vecs[i]==vresponse )
+        fr.remove(i);
+
+    // Ignore-columns-code goes here....
+
+    buildModel(fr);
+    return DRFProgressPage.redirect(this, self(),dest());
+  }
+
+  private void buildModel( final Frame fr ) {
+    final Timer t_drf = new Timer();
 
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(fr.numCols()),1) : mtries;
     assert 0 <= ntrees && ntrees < 1000000;
@@ -228,7 +238,6 @@ public class DRF extends FrameJob {
         return true;
       }
     }));
-    return DRFProgressPage.redirect(this, self(),dest());
   }
 
   private static class Set1Task extends MRTask2<Set1Task> {

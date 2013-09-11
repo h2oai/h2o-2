@@ -940,7 +940,7 @@ public abstract class DGLM {
     Status _status;
 
     public Status status() {
-      return _status;
+      return _status == null ? Status.NotStarted : _status;
     }
 
     public String error() {
@@ -981,8 +981,8 @@ public abstract class DGLM {
      * @return array of column ids, the last is the response var.
      */
     public int[] selectedColumns() {
-      if( DKV.get(dataKey) == null ) return null;
-      ValueArray ary = DKV.get(dataKey).get();
+      if( DKV.get(_dataKey) == null ) return null;
+      ValueArray ary = DKV.get(_dataKey).get();
       HashSet<String> colNames = new HashSet<String>();
       for( int i = 0; i < _va._cols.length - 1; ++i )
         colNames.add(_va._cols[i]._name);
@@ -1017,20 +1017,20 @@ public abstract class DGLM {
         UKV.remove(v._key);
     }
 
-    public GLMModel() {
-      _status = Status.NotStarted;
-      _colCatMap = null;
-      _beta = null;
-      _normBeta = null;
-      _glmParams = null;
-      _s = null;
-      _standardized = false;
-      _converged = false;
-      _iterations = 0;
-      _time = 0;
-      _solver = null;
-      _dof = _nCols = _nLines = _response = 0;
-    }
+    //public GLMModel() {
+    //  _status = Status.NotStarted;
+    //  _colCatMap = null;
+    //  _beta = null;
+    //  _normBeta = null;
+    //  _glmParams = null;
+    //  _s = null;
+    //  _standardized = false;
+    //  _converged = false;
+    //  _iterations = 0;
+    //  _time = 0;
+    //  _solver = null;
+    //  _dof = _nCols = _nLines = _response = 0;
+    //}
 
     public GLMModel(Status status, float progress, Key k, DataFrame data, double[] beta, double[] normBeta,
         GLMParams glmp, LSMSolver solver, long nLines, long nCols, boolean converged, int iters, long time,
@@ -1042,7 +1042,8 @@ public abstract class DGLM {
     public GLMModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, int response,
         boolean standardized, Sampling s, double[] beta, double[] normBeta, GLMParams glmp, LSMSolver solver,
         long nLines, long nCols, boolean converged, int iters, long time, String[] warnings) {
-      super(k, colIds, ary._key);
+      super(k, ary._key);
+      _va = ary;
       _status = status;
       _colCatMap = colCatMap;
       _beta = beta;
@@ -1067,11 +1068,11 @@ public abstract class DGLM {
     }
 
     public void store() {
-      UKV.put(selfKey, this);
+      UKV.put(_selfKey, this);
     }
 
     public void remove() {
-      UKV.remove(selfKey);
+      UKV.remove(_selfKey);
       if( _vals != null ) for( GLMValidation val : _vals )
         if( val._modelKeys != null ) for( Key k : val._modelKeys )
           UKV.remove(k);
@@ -1087,7 +1088,7 @@ public abstract class DGLM {
       GLMValidationFunc f = new GLMValidationFunc(this, _glmParams, _beta, thresholds,
           ary._cols[modelDataMap[modelDataMap.length - 1]]._mean);
       GLMValidation val = f.apply(job, data);
-      val._modelKey = selfKey;
+      val._modelKey = _selfKey;
       if( _vals == null ) _vals = new GLMValidation[] { val };
       else {
         int n = _vals.length;
@@ -1127,7 +1128,7 @@ public abstract class DGLM {
         }
       }
       if( job.cancelled() ) throw new JobCancelledException();
-      GLMValidation res = new GLMValidation(selfKey, tsk._models, ErrMetric.SUMC, thresholds,
+      GLMValidation res = new GLMValidation(_selfKey, tsk._models, ErrMetric.SUMC, thresholds,
           System.currentTimeMillis() - t1);
       if( _vals == null ) _vals = new GLMValidation[] { res };
       else {
@@ -1147,7 +1148,7 @@ public abstract class DGLM {
       res.addProperty("dof", _dof);
       res.addProperty("nLines", _nLines);
       res.addProperty("nCols", _nCols);
-      res.addProperty(Constants.MODEL_KEY, selfKey.toString());
+      res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
       if( _warnings != null ) {
         JsonArray warnings = new JsonArray();
         for( String w : _warnings )
@@ -1273,7 +1274,7 @@ public abstract class DGLM {
       GLMModel[] models = new GLMModel[modelKeys.length];
       for( int i = 0; i < models.length; ++i )
         models[i] = DKV.get(modelKeys[i]).get();
-      _dataKey = models[0].dataKey;
+      _dataKey = models[0]._dataKey;
       int i = 0;
       boolean solved = true;
       _xvalIterations = 0;

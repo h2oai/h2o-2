@@ -19,7 +19,7 @@ public abstract class Model extends Iced {
 
   /** Key associated with this Model, if any.  */
   @API(help="Key associated with Model")
-  public final Key selfKey;
+  public final Key _selfKey;
   
   /** Dataset key used to *build* the model, for models for which this makes
    *  sense, or null otherwise.  Not all models are built from a dataset (eg
@@ -27,43 +27,46 @@ public abstract class Model extends Iced {
    *  models), so this key has no *mathematical* significance in the model but
    *  is handy during common model-building and for the historical record.  */
   @API(help="Datakey used to *build* the model")
-  public final Key dataKey;
+  public final Key _dataKey;
 
   /** Columns used in the model and are used to match up with scoring data
-   *  columns.  The response-column is NOT part of the model!  */
+   *  columns.  The last name is the response column name. */
   @API(help="Column names used to build the model")
   public final String _names[];
 
   /** Categorical/factor/enum mappings, per column.  Null for non-enum cols. 
-   *  Has 1 more column than names above, to hold response col enums.  */
+   *  The last column holds the response col enums.  */
   @API(help="Column names used to build the model")
   public final String _domain[][];
 
   /** Empty constructor for deserialization */
-  //public Model() { selfKey = null; _names=null; _domain=null; dataKey=null; }
+  //public Model() { _selfKey = null; _names=null; _domain=null; dataKey=null; }
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {
     this(selfKey,dataKey,fr.names(),fr.domains());
-    assert fr.response() != null;
   }
 
   /** Full constructor */
   public Model( Key selfKey, Key dataKey, String names[], String domain[][] ) {
     if( domain == null ) domain=new String[names.length+1][];
     assert domain.length==names.length+1;
-    this.selfKey = selfKey;
-    this.dataKey = dataKey;
-    this._names = names;
-    this._domain = domain;
+    assert names.length > 1;
+    assert names[names.length-1] != null; // Have a valid response-column name?
+    _selfKey = selfKey;
+    _dataKey = dataKey;
+    _names = names;
+    _domain = domain;
   }
 
   /** Simple shallow copy constructor to a new Key */
-  public Model( Key selfKey, Model m ) { this(selfKey,m.dataKey,m._names,m._domain); }
+  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domain); }
 
   /** Called when deleting this model, to cleanup any internal keys */
-  public void delete() { UKV.remove(selfKey); }
+  public void delete() { UKV.remove(_selfKey); }
+
+  public String responseName() { return _names[_names.length-1]; }
 
   /** Bulk score the frame 'fr', producing a single output vector */
   public Vec score( Frame fr, Key key ) {

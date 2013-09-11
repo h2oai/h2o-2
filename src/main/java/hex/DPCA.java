@@ -80,16 +80,16 @@ public abstract class DPCA {
       return Key.make(KEY_PREFIX + Key.make());
     }
 
-    public PCAModel() {
-      _status = Status.NotStarted;
-      _colCatMap = null;
-      _sdev = null;
-      _propVar = null;
-      _eigVec = null;
-      _response = 0;
-      _pcaParams = null;
-      _num_pc = 1;
-    }
+    //public PCAModel() {
+    //  _status = Status.NotStarted;
+    //  _colCatMap = null;
+    //  _sdev = null;
+    //  _propVar = null;
+    //  _eigVec = null;
+    //  _response = 0;
+    //  _pcaParams = null;
+    //  _num_pc = 1;
+    //}
 
     public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[] propVar,
         double[][] eigVec, int response, int num_pc, PCAParams pcaps) {
@@ -98,7 +98,7 @@ public abstract class DPCA {
 
     public PCAModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, double[] sdev,
         double[] propVar, double[][] eigVec, int response, int num_pc, PCAParams pcap) {
-      super(k, colIds, ary._key);
+      super(k, ary._key);
       _status = status;
       _colCatMap = colCatMap;
       _sdev = sdev;

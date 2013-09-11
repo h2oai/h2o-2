@@ -740,8 +740,8 @@ class DTree extends Iced {
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
-      DocGen.HTML.paragraph(sb,"Model Key: "+selfKey);
-      DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(selfKey,"Predict!"));
+      DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
+      DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
 
       // Top row of CM
       if( cm != null ) {

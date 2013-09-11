@@ -18,15 +18,9 @@ public class Frame extends Iced {
   public String[] _names;
   public Vec[] _vecs;
   private Vec _col0;  // First readable vec; fast access to the VecGroup's Chunk layout
-  private boolean _hasResponse; // Last Vec is response variable
 
   public Frame( String[] names, Vec[] vecs ) { _names=names; _vecs=vecs; }
-  public Frame( String[] names, Vec[] vecs, boolean lastIsResponse ) { 
-    this(names,vecs);
-    assert vecs.length > 0 || !lastIsResponse;
-    _hasResponse = lastIsResponse; 
-  }
-  public Frame( Frame fr ) { _names=fr._names.clone(); _vecs=fr._vecs.clone(); _col0 = fr._col0; _hasResponse = fr._hasResponse; }
+  public Frame( Frame fr ) { _names=fr._names.clone(); _vecs=fr._vecs.clone(); _col0 = fr._col0; }
 
   /** Finds the first column with a matching name.  */
   public int find( String name ) {
@@ -42,29 +36,9 @@ public class Frame extends Iced {
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
-    if( _hasResponse ) {        // Keep response as last column
-      String nres = _names[len-1];
-      Vec    vres = _vecs [len-1];
-      _names[len-1] = name;
-      _vecs [len-1] = vec ;
-      name = nres;
-      vec  = vres;
-    }
     _names[len] = name;
     _vecs [len] = vec ;
   }
-
-  /** Sets the response vector, removing any prior response.  Response vector is also
-   *  removed from the Frame, if it appears.  A much simpler API would simply assert
-   *  that the Frame was poorly made!  */
-  public void setResponse( String name, Vec vec ) {
-    if( _hasResponse ) { remove(_vecs.length-1); _hasResponse=false; }
-    for( int i=0; i<_vecs.length; i++ )
-      if( _vecs[i] == vec )
-        remove(i);
-    add(name,vec);              // Append
-    _hasResponse = true;        // Appended Vec is response
-  }  
 
   /** Removes the first column with a matching name.  */
   public Vec remove( String name ) { return remove(find(name)); }
@@ -79,7 +53,6 @@ public class Frame extends Iced {
     _names = Arrays.copyOf(_names,len-1);
     _vecs  = Arrays.copyOf(_vecs ,len-1);
     if( v == _col0 ) _col0 = null;
-    if( idx == len-1 ) _hasResponse = false;
     return v;
   }
 
@@ -87,7 +60,6 @@ public class Frame extends Iced {
   public final String[] names() { return _names; }
   public int  numCols() { return _vecs.length; }
   public long numRows(){ return anyVec().length();}
-  public final Vec response() { return _hasResponse ? _vecs[_vecs.length-1] : null; }
 
   // All the domains for enum columns; null for non-enum columns.
   public String[][] domains() {

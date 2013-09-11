@@ -1,5 +1,6 @@
 package water.api;
 
+import hex.ScoreTask;
 import water.*;
 import water.util.RString;
 import water.util.Log;
