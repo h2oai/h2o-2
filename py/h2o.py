@@ -406,13 +406,13 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     else:
         cs = cloneJson['cloud_start']
         print "Info on the how the cloud we're cloning was apparently started (info from %s)" % h2o_nodes_json
-        print cs['time']
-        print cs['cwd']
-        print cs['python_test_name']
-        print cs['python_cmd_line']
-        print cs['config_json']
-        print cs['username']
-        print cs['ip']
+        # required/legal values in 'cloud_start'. A robust check is good for easy debug when we add stuff
+        # for instance, if you didn't get the right/latest h2o-nodes.json! (we could check how old the cloud start is?)
+        valList = ['time', 'cwd', 'python_test_name', 'python_cmd_line', 'config_json', 'username', 'ip']
+        for v in valList:
+            if v not in cs:
+                raise Exception("Can't find %s in %s, wrong file or version change?" % (v, h2o_nodes_json))
+            print "cloud_start['%s']: %s" % (v, cs[v])
 
         # write out something that shows how the cloud could be rebuilt, since it's a decoupled cloud build.
         build_cloud_rerun_sh = LOG_DIR + "/" + 'build_cloud_rerun.sh'
