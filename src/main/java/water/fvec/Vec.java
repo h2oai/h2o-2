@@ -124,7 +124,7 @@ public class Vec extends Iced {
   public String domain(long i) { return _domain[(int)i]; }
 
   /** Return an array of domains.  This is eagerly manifested for enum or
-   *  catagorical columns.  */
+   *  catagorical columns.  Returns null for non-Enum/factor columns. */
   public String[] domain() { return _domain; }
 
   /** Convert an integer column to an enum column, with just number strings for

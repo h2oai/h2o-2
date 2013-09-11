@@ -118,7 +118,7 @@ public class RFModel extends Model implements Progress {
   public String name(int atree) {
     if( atree == -1 ) atree = size();
     assert atree <= size();
-    return _selfKey.toString() + "[" + atree + "]";
+    return selfKey.toString() + "[" + atree + "]";
   }
 
   /** Return the bits for a particular tree */

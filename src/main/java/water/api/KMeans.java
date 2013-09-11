@@ -104,8 +104,8 @@ public class KMeans extends Request {
     private void modelHTML(KMeansModel m, JsonObject json, StringBuilder sb) {
       JsonArray rows = json.getAsJsonArray(CLUSTERS);
 
-      sb.append("<div class='alert'>Actions: " + KMeansScore.link(m._selfKey, "Score on dataset") + ", "
-          + KMeansApply.link(m._selfKey, "Apply to dataset") + ", " + KMeans.link(m._dataKey, "Compute new model")
+      sb.append("<div class='alert'>Actions: " + KMeansScore.link(m.selfKey, "Score on dataset") + ", "
+          + KMeansApply.link(m.selfKey, "Apply to dataset") + ", " + KMeans.link(m.dataKey, "Compute new model")
           + "</div>");
       DocGen.HTML.section(sb, "Error: " + _m._error);
       sb.append("<span style='display: inline-block;'>");

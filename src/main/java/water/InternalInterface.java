@@ -33,18 +33,15 @@ public class InternalInterface implements water.ExternalInterface {
     }
   }
 
-  public Model adaptModel(Object model, String [] colNames){
-    return ((Model)model).adapt(colNames);
-  }
   // Call to map the columns and score
-  public double scoreModel( Object model,double[] row ) {
+  public double scoreModel( Object model, double[] row ) {
     return ((Model)model).score(row);
   }
 
-  public JsonObject cloudStatus( ) { return new Cloud().serve().toJson(); }
-
-  @Override public double scoreModel(Object model, String[] colNames, double[] row) {
-    return adaptModel(model, colNames).score(row);
+  @Override public double scoreModel(Object model, String[] colNames, String [][] domains, double[] row) {
+    return ((Model)model).score(colNames,domains,row);
   }
+
+  public JsonObject cloudStatus( ) { return new Cloud().serve().toJson(); }
 
 }

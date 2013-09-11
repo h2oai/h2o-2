@@ -120,7 +120,7 @@ public class Inspect extends Request {
     if( f instanceof RFModel ) {
       RFModel rfModel = (RFModel)f;
       JsonObject response = new JsonObject();
-      return RFView.redirect(response, rfModel._selfKey, rfModel._dataKey, true);
+      return RFView.redirect(response, rfModel.selfKey, rfModel.dataKey, true);
     }
     if( f instanceof PCAModel ) {
       PCAModel m = (PCAModel)f;

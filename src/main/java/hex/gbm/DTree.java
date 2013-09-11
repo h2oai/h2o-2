@@ -733,15 +733,15 @@ class DTree extends Iced {
     // model (for now - really should be seperate).
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
 
-    public TreeModel(Key key, int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm) {
-      super(key);
+    public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm) {
+      super(key,dataKey,fr);
       this.N = ntrees; this.forest = forest; this.errs = errs; this.domain = domain; this.ymin = ymin; this.cm = cm;
     }
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
-      DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
-      DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
+      DocGen.HTML.paragraph(sb,"Model Key: "+selfKey);
+      DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(selfKey,"Predict!"));
 
       // Top row of CM
       if( cm != null ) {

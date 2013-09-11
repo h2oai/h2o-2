@@ -981,8 +981,8 @@ public abstract class DGLM {
      * @return array of column ids, the last is the response var.
      */
     public int[] selectedColumns() {
-      if( DKV.get(_dataKey) == null ) return null;
-      ValueArray ary = DKV.get(_dataKey).get();
+      if( DKV.get(dataKey) == null ) return null;
+      ValueArray ary = DKV.get(dataKey).get();
       HashSet<String> colNames = new HashSet<String>();
       for( int i = 0; i < _va._cols.length - 1; ++i )
         colNames.add(_va._cols[i]._name);
@@ -1067,11 +1067,11 @@ public abstract class DGLM {
     }
 
     public void store() {
-      UKV.put(_selfKey, this);
+      UKV.put(selfKey, this);
     }
 
     public void remove() {
-      UKV.remove(_selfKey);
+      UKV.remove(selfKey);
       if( _vals != null ) for( GLMValidation val : _vals )
         if( val._modelKeys != null ) for( Key k : val._modelKeys )
           UKV.remove(k);
@@ -1082,12 +1082,12 @@ public abstract class DGLM {
         throws JobCancelledException {
       int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
-      throw new GLMException("incompatible dataset");
+        throw new GLMException("incompatible dataset");
       DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
       GLMValidationFunc f = new GLMValidationFunc(this, _glmParams, _beta, thresholds,
           ary._cols[modelDataMap[modelDataMap.length - 1]]._mean);
       GLMValidation val = f.apply(job, data);
-      val._modelKey = _selfKey;
+      val._modelKey = selfKey;
       if( _vals == null ) _vals = new GLMValidation[] { val };
       else {
         int n = _vals.length;
@@ -1101,7 +1101,7 @@ public abstract class DGLM {
         throws JobCancelledException {
       int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) )  // This dataset is compatible or not?
-      throw new GLMException("incompatible dataset");
+        throw new GLMException("incompatible dataset");
       final int myNodeId = H2O.SELF.index();
       final int cloudsize = H2O.CLOUD.size();
       Key[] keys = new Key[folds];
@@ -1127,7 +1127,7 @@ public abstract class DGLM {
         }
       }
       if( job.cancelled() ) throw new JobCancelledException();
-      GLMValidation res = new GLMValidation(_selfKey, tsk._models, ErrMetric.SUMC, thresholds,
+      GLMValidation res = new GLMValidation(selfKey, tsk._models, ErrMetric.SUMC, thresholds,
           System.currentTimeMillis() - t1);
       if( _vals == null ) _vals = new GLMValidation[] { res };
       else {
@@ -1147,7 +1147,7 @@ public abstract class DGLM {
       res.addProperty("dof", _dof);
       res.addProperty("nLines", _nLines);
       res.addProperty("nCols", _nCols);
-      res.addProperty(Constants.MODEL_KEY, _selfKey.toString());
+      res.addProperty(Constants.MODEL_KEY, selfKey.toString());
       if( _warnings != null ) {
         JsonArray warnings = new JsonArray();
         for( String w : _warnings )
@@ -1273,7 +1273,7 @@ public abstract class DGLM {
       GLMModel[] models = new GLMModel[modelKeys.length];
       for( int i = 0; i < models.length; ++i )
         models[i] = DKV.get(modelKeys[i]).get();
-      _dataKey = models[0]._dataKey;
+      _dataKey = models[0].dataKey;
       int i = 0;
       boolean solved = true;
       _xvalIterations = 0;

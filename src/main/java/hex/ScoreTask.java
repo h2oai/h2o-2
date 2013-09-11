@@ -46,10 +46,6 @@ public class ScoreTask extends MRTask {
     return res._key;
   }
 
-  public static Key score(Model M, Frame data, Key outputKey){
-    throw H2O.unimpl();
-  }
-
   @Override public void init(){
     _rpc = new int[_nchunks];
     super.init();

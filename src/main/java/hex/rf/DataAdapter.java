@@ -37,7 +37,7 @@ final class DataAdapter  {
 
   DataAdapter(ValueArray ary, RFModel model, int[] modelDataMap, int rows,
               long unique, long seed, int binLimit, double[] classWt) {
-    assert model._dataKey == ary._key;
+    assert model.dataKey == ary._key;
     _seed       = seed+(unique<<16); // This is important to preserve sampling selection!!!
     _binLimit   = binLimit;
     _dataId     = unique;

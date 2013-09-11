@@ -149,6 +149,7 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
+    Key skey = null;
     DRF drf = null;
     try {
       drf = new DRF();
@@ -164,7 +165,10 @@ public class GBMTest extends TestUtil {
       drf.seed = (1L<<32)|2;
       drf.serve();              // Start it
       drf.get();                // Block for it
-      System.out.println(new String(drf.writeJSON(new AutoBuffer()).buf()));
+
+      Vec vec = drf.score(drf.source);
+      skey = vec._key;
+      System.out.println(vec);
 
     } finally {
       UKV.remove(dest);         // Remove whole frame
@@ -172,6 +176,7 @@ public class GBMTest extends TestUtil {
         UKV.remove(drf.dest()); // Remove the model
         UKV.remove(drf.vresponse._key);
         drf.remove();
+        if( skey != null ) UKV.remove(skey);
       }
     }
   }

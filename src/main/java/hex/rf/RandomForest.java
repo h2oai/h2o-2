@@ -202,7 +202,7 @@ public class RandomForest {
 
     Timer t_valid = new Timer();
     // Get training key.
-    Key valKey = model._dataKey;
+    Key valKey = model.dataKey;
     if(ARGS.outOfBagError && !ARGS.stratify){
       Log.debug(Sys.RANDF,"Computing out of bag error");
       CMFinal cm = ConfusionTask.make( model, valKey, classcol, null, true).get(); // block until CM is computed

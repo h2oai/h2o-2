@@ -140,7 +140,7 @@ public class Inspect2 extends Request {
 
       // All Vecs within a frame are compatible, so just read the
       // home-node/data-placement and start-row from 1st Vec
-      Vec c0 = fr.firstReadable();
+      Vec c0 = fr.anyVec();
       int N = c0.nChunks();
       for( int j=0; j<N; j++ ) { // All the chunks
         sb.append("<tr>");       // Row header

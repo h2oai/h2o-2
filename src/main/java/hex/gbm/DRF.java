@@ -1,15 +1,16 @@
 package hex.gbm;
 
-import jsr166y.CountedCompleter;
+import hex.ScoreTask;
 import hex.gbm.DTree.*;
 import hex.rng.MersenneTwisterRNG;
 import java.util.Arrays;
 import java.util.Random;
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.FrameJob;
-import water.api.DocGen;
 import water.api.DRFProgressPage;
+import water.api.DocGen;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -89,13 +90,14 @@ public class DRF extends FrameJob {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public DRFModel(Key key,int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm){
-      super(key,ntrees,forest,errs,domain,ymin,cm);
+    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm){
+      super(key,dataKey,fr,ntrees,forest,errs,domain,ymin,cm);
     }
     @Override protected double score0(double[] data) {
       throw new RuntimeException("TODO Auto-generated method stub");
     }
   }
+  public Vec score( Frame fr ) { return drf_model.score(fr,Key.make());  }
 
   public static final String KEY_PREFIX = "__DRFModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -124,13 +126,14 @@ public class DRF extends FrameJob {
   @Override protected Response serve() {
     final Timer t_drf = new Timer();
     final Frame fr = new Frame(source); // Local copy for local hacking
+
+    // Doing classification only right now...
     if( !vresponse.isEnum() ) vresponse.asEnum();
+
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse )
-        fr.remove(i);
+    fr.setResponse("Response",vresponse);
 
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(fr.numCols()),1) : mtries;
     assert 0 <= ntrees && ntrees < 1000000;
@@ -145,7 +148,8 @@ public class DRF extends FrameJob {
     final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
-    drf_model = new DRFModel(outputKey,ntrees,new DTree[0],null, domain, ymin, null);
+    final Key dataKey = null;
+    drf_model = new DRFModel(outputKey,dataKey,fr,ntrees,new DTree[0],null, domain, ymin, null);
     DKV.put(outputKey, drf_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
@@ -203,7 +207,7 @@ public class DRF extends FrameJob {
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
           _errs[_errs.length-1] = (float)bs._err/nrows;
-          drf_model = new DRFModel(outputKey,ntrees,forest, _errs, domain, ymin,bs._cm);
+          drf_model = new DRFModel(outputKey,dataKey,fr,ntrees,forest, _errs, domain, ymin,bs._cm);
           DKV.put(outputKey, drf_model);
 
           // Remove temp vectors; cleanup the Frame
