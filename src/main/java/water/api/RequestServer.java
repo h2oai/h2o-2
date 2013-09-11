@@ -66,6 +66,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",           "Score");
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",        "Score");
     Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",  "Score");
+    Request.addToNavbar(registerRequest(new PCAScore()),    "PCA",           "Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),       "Predict",   "Score");
     Request.addToNavbar(registerRequest(new GeneratePredictions2()), "Predict2", "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",   "Score");

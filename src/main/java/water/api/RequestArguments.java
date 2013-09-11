@@ -5,6 +5,7 @@ import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
 import hex.*;
+import hex.DPCA.PCAModel;
 import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 
@@ -1596,6 +1597,12 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
+  public class H2OPCAModelKey extends H2OModelKey<PCAModel, TypeaheadPCAModelKeyRequest> {
+    public H2OPCAModelKey(String name, boolean req) {
+      super(new TypeaheadPCAModelKeyRequest(),name, req);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // StringListArgument
   // ---------------------------------------------------------------------------
@@ -1986,7 +1993,7 @@ public class RequestArguments extends RequestStatics {
       ValueArray va = _key.value();
       int [] res = new int[va._cols.length];
       int selected = 0;
-      for(int i = 0; i < va._cols.length; ++i)
+      for(int i = 0; i < va._cols.length; ++i) {
         if(saveIgnore(i, va._cols[i]))
           res[selected++] = i;
         else if((1.0 - (double)va._cols[i]._n/va._numrows) >= _maxNAsRatio) {
@@ -1994,6 +2001,7 @@ public class RequestArguments extends RequestStatics {
           if(_badColumns.get() != null) val = _badColumns.get();
           _badColumns.set(val+1);
         }
+      }
       return Arrays.copyOfRange(res,0,selected);
     }
 

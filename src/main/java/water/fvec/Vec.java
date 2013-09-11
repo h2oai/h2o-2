@@ -164,7 +164,7 @@ public class Vec extends Iced {
     if( _naCnt >= 0 ) return this;
     if( _activeWrites ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     RollupStats rs = new RollupStats().doAll(this);
-    _min  = rs._min;  _max  =rs._max;  
+    _min  = rs._min;  _max  =rs._max;
     _mean = rs._mean; _sigma=rs._sigma;
     _rows = rs._rows; _size =rs._size;
     _isInt= rs._isInt;
@@ -314,7 +314,7 @@ public class Vec extends Iced {
    *
    * @return VectorGroup this vector belongs to.
    */
-  final VectorGroup group() {
+  public final VectorGroup group() {
     Key gKey = groupKey();
     Value v = DKV.get(gKey);
     if(v != null)return v.get(VectorGroup.class);
@@ -411,7 +411,7 @@ public class Vec extends Iced {
    * @author tomasnykodym
    *
    */
-  static class VectorGroup extends Iced{
+  public static class VectorGroup extends Iced{
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
@@ -450,7 +450,7 @@ public class Vec extends Iced {
      * @param n
      * @return arrays of unique keys belonging to this group.
      */
-    Key [] addVecs(final int n){
+    public Key [] addVecs(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
       tsk.invoke(_key);
       Key [] res = new Key[n];
