@@ -1,11 +1,11 @@
 package water;
 
+import com.google.gson.JsonObject;
 import java.util.Arrays;
-
 import water.ValueArray.Column;
 import water.api.Constants;
-
-import com.google.gson.JsonObject;
+import water.api.DocGen;
+import water.api.Request.API;
 
 /**
  * A Model models reality (hopefully).
@@ -14,13 +14,18 @@ import com.google.gson.JsonObject;
  * as used to build the mode.
  */
 public abstract class Model extends Iced {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
   /** Key associated with this Model, if any.  */
+  @API(help="Key associated with Model")
   public final Key _selfKey;
   /** Columns used in the model.  No dataset needs to be mapped to this
    *  ValueArray, it is just used to control for valid column data.  The mean &
    *  sigma are from the training dataset listed below, and are used when
    *  normalizing scoring data.  The Column names are used to match up with
    *  scoring data columns.  The last Column is the response column. */
+  @API(help="Underlying ValueArray, not used in Fluid Vec models")
   public final ValueArray _va;
 
   /** Dataset key used to *build* the model, for models for which this makes
@@ -28,10 +33,13 @@ public abstract class Model extends Iced {
    *  artificial models), or are built from a single dataset (various ensemble
    *  models), so this key has no *mathematical* significance in the model but
    *  is handy during common model-building and for the historical record.  */
+  @API(help="Datakey used to *build* the model")
   public final Key _dataKey;
 
   /** Empty constructor for deserialization */
   public Model() { _selfKey = null; _va = null; _dataKey = null; }
+
+  public Model( Key key ) { _selfKey = key; _va = null; _dataKey = null; }
   /** Default model, built from the selected columns of the given dataset.
    *  Data to be scored on the model has to have all the same columns (in any
    *  order, extra cols are ok).  Last column is the response column, or -1
@@ -59,7 +67,7 @@ public abstract class Model extends Iced {
     C._max = classNames==null ? 0 : classNames.length-1;
     _va = new ValueArray(null,0L,8*Cs.length,Cs);
   }
-  double [] _row; // used for scoring
+
   /** Artificial model.  The 'va' defines the compatible data, but is not
    *  associated with any real dataset.  Data to be scored on the model has to
    *  have all the same columns (in any order, extra cols are ok).  The last

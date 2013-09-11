@@ -19,15 +19,12 @@ public abstract class DocGen {
   public static final ReST ReST = new ReST();
 
   public static void createFile (String fileName, String content) {
-    try
-    {
+    try {
       FileWriter fstream = new FileWriter(fileName, false); //true tells to append data.
       BufferedWriter out = new BufferedWriter(fstream);
       out.write(content);
       out.close();
-    }
-    catch (Exception e)
-    {
+    } catch (Exception e) {
       System.err.println("Error: " + e.getMessage());
     }
   }
@@ -39,6 +36,7 @@ public abstract class DocGen {
     createFile("Parse2.rst", new Parse2().ReSTHelp());
     */
     createFile("GBM.rst", new GBM().ReSTHelp());
+    createFile("DRF.rst", new DRF().ReSTHelp());
   }
 
   public static void main(String[] args) throws Exception {
@@ -46,12 +44,12 @@ public abstract class DocGen {
   }
 
   public static class UserCode {
-      public static void userMain(String[] args) throws Exception {
-          H2O.main(args);
-          TestUtil.stall_till_cloudsize(1);
-          createReSTFilesInCwd();
-          H2O.exit(0);
-      }
+    public static void userMain(String[] args) throws Exception {
+      H2O.main(args);
+      TestUtil.stall_till_cloudsize(1);
+      createReSTFilesInCwd();
+      H2O.exit(0);
+    }
   }
 
   // Class describing meta-info about H2O queries and results.

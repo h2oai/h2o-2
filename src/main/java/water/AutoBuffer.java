@@ -989,7 +989,7 @@ public final class AutoBuffer {
   // ==========================================================================
   // JSON AutoBuffer printers
 
-  private AutoBuffer putStr2( String s ) {
+  public AutoBuffer putStr2( String s ) {
     byte[] b = s.getBytes();
     int off=0;
     for( int i=0; i<b.length; i++ ) {
@@ -1077,7 +1077,7 @@ public final class AutoBuffer {
     return put1(']');
   }
 
-  public AutoBuffer putJSON4f ( float f ) { return putStr2(Float.toString(f)); }
+  public AutoBuffer putJSON4f ( float f ) { return putStr2(Float.isNaN(f)?"\"NaN\"":Float .toString(f)); }
   public AutoBuffer putJSON4f ( String name, float f ) { return putJSONStr(name).put1(':').putJSON4f(f); }
   public AutoBuffer putJSONA4f(String name, float[] a) {
     putJSONStr(name).put1(':');
@@ -1090,7 +1090,7 @@ public final class AutoBuffer {
     return put1(']');
   }
 
-  public AutoBuffer putJSON8d( double d ) { return putStr2(Double .toString(d)); }
+  public AutoBuffer putJSON8d( double d ) { return putStr2(Double.isNaN(d)?"\"NaN\"":Double.toString(d)); }
   public AutoBuffer putJSON8d( String name, double d ) { return putJSONStr(name).put1(':').putJSON8d(d); }
   public AutoBuffer putJSONA8d( double[] a ) {
     if( a == null ) return putNULL();

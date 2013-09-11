@@ -1,5 +1,7 @@
 package water;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -225,8 +227,14 @@ public final class Key extends Iced implements Comparable {
   }
 
   // Custom Serialization Reader: Keys must be interned on construction.
-  @Override public Key read(AutoBuffer bb) { return make(bb.getA1()); }
-  @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_kb); }
+  @Override public final Key read(AutoBuffer bb) { return make(bb.getA1()); }
+  @Override public final AutoBuffer write(AutoBuffer bb) { return bb.putA1(_kb); }
+  @Override public final AutoBuffer writeJSON(AutoBuffer bb) { 
+    String s=toString();
+    try { s = URLEncoder.encode(s,"UTF-8"); }
+    catch( UnsupportedEncodingException e ) {}
+    return bb.putJSONStr(s);
+  }
 
 
   // Expand a KEY_OF_KEYS into an array of keys

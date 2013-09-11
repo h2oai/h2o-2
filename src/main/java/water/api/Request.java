@@ -312,4 +312,5 @@ public abstract class Request extends RequestBuilders {
   public String ReSTHelp() {
     return DocGen.ReST.genHelp(this);
   }
+  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putStr2("\"Request2\":\"dummy\""); }
 }

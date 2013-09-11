@@ -39,7 +39,6 @@ public class GeneratePredictionsPage extends Request {
       ValueArray ary = _dataKey.value();
       Model m = (Model)_modelKey.value();
       Key dest = _dest.value();
-      // return Inspect.redirect(res, ScoreTask.score(m, ary,Key.make("prediction.hex")));
       return Inspect.redirect(res, ScoreTask.score(m, ary, dest));
     }catch(GLMException e){
       Log.err(e);

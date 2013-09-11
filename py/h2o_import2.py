@@ -227,13 +227,21 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                     (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
                 # raise Exception("Something was missing for hdfs on the java -jar cmd line when the cloud was built")
                 print "ERROR: Something was missing for hdfs on the java -jar cmd line when the cloud was built"
-            h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
-            h2o.verboseprint("folderOffset:", folderOffset)
+
+            # no reason to use bucket with hdfs, but just in case people do.
+            if bucket:
+                bucketAndOffset = bucket + "/" + folderOffset
+            else:
+                bucketAndOffset = folderOffset
+
             if n.hdfs_name_node:
                 folderURI = "hdfs://" + n.hdfs_name_node + "/" + folderOffset
             else:
                 # this is different than maprfs? normally we specify the name though
                 folderURI = "hdfs://" + folderOffset
+
+            h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
+            h2o.verboseprint("folderOffset:", folderOffset)
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         else: 
