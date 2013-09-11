@@ -39,18 +39,18 @@ class Basic(unittest.TestCase):
         maxTime = 4*3600
         totalTime = 0
         incrTime = 60
-        h2p.header_print("\nSleeping for total of", (maxTime+0.0)/3600, "hours.")
+        h2p.purple_print("\nSleeping for total of", (maxTime+0.0)/3600, "hours.")
         print "Will check h2o logs every", incrTime, "seconds"
         print "Should be able to run another test using h2o-nodes.json to clone cloud"
         print "i.e. h2o.build_cloud_with_json()"
         print "Bad test if a running test shuts down the cloud. I'm supposed to!\n"
 
-        h2p.ok_green_print("To watch cloud in browser follow address:")
-        h2p.ok_green_print("   http://{0}:{1}/Cloud.html".format(h2o.nodes[0].http_addr, h2o.nodes[0].port))
-        h2p.ok_blue_print("You can start a test (or tests) now!") 
-        h2p.ok_blue_print("Will spin looking at redirected stdout/stderr logs in sandbox for h2o errors every %s secs" % incrTime)
-        h2p.fail_print("This is just for fun")
-        h2p.warning_print("So is this")
+        h2p.green_print("To watch cloud in browser follow address:")
+        h2p.green_print("   http://{0}:{1}/Cloud.html".format(h2o.nodes[0].http_addr, h2o.nodes[0].port))
+        h2p.blue_print("You can start a test (or tests) now!") 
+        h2p.blue_print("Will spin looking at redirected stdout/stderr logs in sandbox for h2o errors every %s secs" % incrTime)
+        h2p.red_print("This is just for fun")
+        h2p.yellow_print("So is this")
 
         while (totalTime<maxTime): # die after 4 hours
             h2o.sleep(incrTime)

@@ -1,4 +1,5 @@
 import h2o, h2o_cmd, re, os
+import h2o_print as h2p
 import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
@@ -157,8 +158,8 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
-        print "\nimport_only:", h2o.python_test_name, "uses put:/" + filePath
-        print "The canonical (real) path is:", os.path.realpath(filePath)
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/" + filePath)
+        h2p.blue_print("The canonical (real) path is:", os.path.realpath(filePath))
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
@@ -168,10 +169,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     if schema=='local' and not \
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
         (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
-        
         filePath = os.path.join(folderPath, pattern)
-        print "\nimport_only:", h2o.python_test_name, "uses local:/" + filePath
-        print "The canonical (real) path is:", os.path.realpath(filePath)
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses local:/" + filePath)
+        h2p.blue_print("The canonical (real) path is:", os.path.realpath(filePath))
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 

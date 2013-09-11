@@ -1,6 +1,7 @@
 import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
+import h2o_print as h2p
 import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
 import errno
@@ -442,7 +443,7 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
         newNode = ExternalH2O(nodeState)
         nodeList.append(newNode)
 
-    print len(nodeList), "total nodes in H2O cloud state ingested from json"
+    h2p.red_print(len(nodeList), "total nodes in H2O cloud state ingested from json")
     nodes[:] = nodeList
     return nodeList
 
