@@ -3,7 +3,6 @@
 # Normally die on first error
 set -e
 
-
 echo "Setting PATH and showing java/python versions"
 date
 export PATH="/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin"
@@ -20,19 +19,25 @@ python --version
 # This is critical:
 # Ensure that all your children are truly dead when you yourself are killed.
 trap "kill -- -$BASHPID" INT TERM EXIT
-
-# get the latest jar from s3
-# has to execute up there
-cd ../..
-./get_s3_jar.sh
-# I'm back!
-cd -
 # The -PID argument tells bash to kill the process group with id $BASHPID, 
 # Process groups have the same id as the spawning process, 
 # The process group id remains even after processes have been reparented. (say by init)
 # The -- gets kill not to interpret this as a signal ..
 
 # don't use kill -9 though to kill this script though!
+
+# get the latest jar from s3
+# has to execute up there
+
+
+# a secret way to skip the download (use any arg)
+if [ $# -eq 0 ]
+then
+    cd ../..
+    ./get_s3_jar.sh
+    # I'm back!
+    cd -
+fi
 
 python ../four_hour_cloud.py &
 CLOUD_PID=$!
