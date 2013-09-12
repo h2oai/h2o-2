@@ -40,7 +40,13 @@ then
 fi
 
 rm -f h2o-nodes.json
-python ../four_hour_cloud.py &
+if [[ $USER == "jenkins" ]]
+then 
+    python ../four_hour_cloud.py -cj ../testdir_hosts/pytest_config-164.json &
+else
+    python ../four_hour_cloud.py &
+fi 
+
 CLOUD_PID=$!
 jobs -l
 

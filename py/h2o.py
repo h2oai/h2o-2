@@ -450,7 +450,9 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
         newNode = ExternalH2O(nodeState)
         nodeList.append(newNode)
 
-    h2p.red_print(len(nodeList), "total nodes in H2O cloud state ingested from json")
+    print ""
+    h2p.red_print("Ingested from json:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
+    print ""
     nodes[:] = nodeList
     return nodeList
 
