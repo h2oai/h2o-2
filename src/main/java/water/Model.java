@@ -37,10 +37,7 @@ public abstract class Model extends Iced {
   /** Categorical/factor/enum mappings, per column.  Null for non-enum cols. 
    *  The last column holds the response col enums.  */
   @API(help="Column names used to build the model")
-  public final String _domain[][];
-
-  /** Empty constructor for deserialization */
-  //public Model() { _selfKey = null; _names=null; _domain=null; dataKey=null; }
+  public final String _domains[][];
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
@@ -49,29 +46,34 @@ public abstract class Model extends Iced {
   }
 
   /** Full constructor */
-  public Model( Key selfKey, Key dataKey, String names[], String domain[][] ) {
-    if( domain == null ) domain=new String[names.length+1][];
-    assert domain.length==names.length;
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][] ) {
+    if( domains == null ) domains=new String[names.length+1][];
+    assert domains.length==names.length;
     assert names.length > 1;
     assert names[names.length-1] != null; // Have a valid response-column name?
     _selfKey = selfKey;
     _dataKey = dataKey;
-    _names = names;
-    _domain = domain;
+    _names  =   names;
+    _domains= domains;
   }
 
   /** Simple shallow copy constructor to a new Key */
-  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domain); }
+  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
 
   /** Called when deleting this model, to cleanup any internal keys */
   public void delete() { UKV.remove(_selfKey); }
 
   public String responseName() { return _names[_names.length-1]; }
 
-  /** Bulk score the frame 'fr', producing a single output vector */
-  public Vec score( Frame fr, Key key ) {
-    Vec v = fr.anyVec().makeZero();
-    fr.add("predict",v);
+  /** Bulk score the frame 'fr', producing a single output vector.  Also passed
+   *  in a flag describing how hard we try to adapt the frame.  */
+  public Vec score( Frame fr, boolean exact ) {
+    Frame fr2 = adapt(fr,exact); // Adapt the Frame layout
+    Vec v = fr2.anyVec().makeZero();
+    // If the model produces a classification/enum, copy the domain into the
+    // result vector.
+    v._domain = _domains[_domains.length-1];
+    fr2.add("predict",v);
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp[] = new double[_names.length];
@@ -79,28 +81,26 @@ public abstract class Model extends Iced {
         for( int i=0; i<p._len; i++ )
           p.set0(i,score0(chks,i,tmp));
       }
-    }.doAll(fr);
-    fr.remove(fr.numCols()-1);
+    }.doAll(fr2);
     return v;
   }
 
   /** Single row scoring, on a compatible (but not adapted) Frame.  Fairly expensive to adapt.  */
-  public final double score( Frame fr, int row ) {
+  public final double score( Frame fr, boolean exact, int row ) {
     double tmp[] = new double[fr.numCols()];
     for( int i=0; i<tmp.length; i++ )
       tmp[i] = fr._vecs[i].at(row);
-    return score(fr.names(),fr.domains(),tmp);
+    return score(fr.names(),fr.domains(),exact,tmp);
   }
 
   /** Single row scoring, on a compatible set of data.  Fairly expensive to adapt. */
-  public final double score( String names[], String domains[][], double row[] ) {
-    return score(adapt(names,domains),row);
+  public final double score( String names[], String domains[][], boolean exact, double row[] ) {
+    return score(adapt(names,domains,exact),row);
   }
 
   /** Single row scoring, on a compatible set of data, given an adaption vector */
   public final double score( int map[][], double row[] ) {
-    int[] resMap = map[map.length-2]; // Response mapping is the almost last array
-    int[] colMap = map[map.length-1]; // Column   mapping is the final array
+    int[] colMap = map[map.length-1]; // Column mapping is the final array
     assert colMap.length == _names.length;
     double tmp[] = new double[_names.length]; // The adapted data
     for( int i=0; i<_names.length; i++ ) {
@@ -108,29 +108,55 @@ public abstract class Model extends Iced {
       double d = colMap[i]==-1 ? Double.NaN : row[colMap[i]];
       if( map[i] != null ) {    // Enum mapping
         int e = (int)d;
-        d = e >= 0 && e < map[i].length ? (double)map[i][e] : Double.NaN;
+        if( e < 0 || e >= map[i].length ) d = Double.NaN; // User data is out of adapt range
+        else { 
+          e = map[i][e];
+          d = e==-1 ? Double.NaN : (double)e;
+        }
       }
       tmp[i] = d;
     }
-    double d = score0(tmp);     // The results.
-    int e = (int)d;             // For enum results
-    // Convert the model's enum result back to the user's enum result
-    return resMap == null ? d : ((e>=0 && e<resMap.length) ? resMap[e] : Double.NaN);
+    return score0(tmp);         // The results.
   }
 
   /** Build an adaption array.  The length is equal to the Model's vector
-   *  length plus a response mapping plus a column mapping.  Each inner array
+   *  length minus the response plus a column mapping.  Each inner array
    *  is a domain map from user domains to model domains - or null for non-enum
-   *  columns.  The extra final int[] is the column mapping itself.  */
-  private int[][] adapt( String names[], String domains[][] ) {
-    throw H2O.unimpl();
+   *  columns.  The extra final int[] is the column mapping itself.  
+   *  If 'exact' is true, will throw if there are:
+   *    any columns in the model but not in the input set; 
+   *    any enums in the data that the model does not understand
+   *    any enums returned by the model that the data does not understand.
+   *  If 'exact' is false, these situations will use or return NA's instead.
+   */
+  private int[][] adapt( String names[], String domains[][], boolean exact ) {
+    // Make sure all are compatible
+    for( int i=0; i<_names.length-1; i++ ) {
+      if( !_names[i].equals(names[i]) ) throw H2O.unimpl();
+      if( _domains[i] != domains[i] ) {
+        if( _domains[i] == null || domains[i] == null ) {
+          if( exact ) 
+            throw new IllegalArgumentException("Model expects "+Arrays.toString(_domains[i])+" but was passed "+Arrays.toString(domains[i]));
+          throw H2O.unimpl();
+        }
+        for( int j=0; j<_names.length; j++ ) {
+          if( !(_domains[i][j].equals(domains[i][j])) )
+            throw H2O.unimpl();
+        }
+      }
+    }
+    // Trivial non-mapping map
+    return new int[names.length][];
   }
 
-  /** Build an adapted Frame from the given Frame.  Useful for efficient bulk scoring
-   *  of a new dataset to an existing model.  Same adaption as above, but expressed
-   *  as a Frame instead of as an int[][].  */
-  public Frame adapt( Frame fr ) {
-    throw H2O.unimpl();
+  /** Build an adapted Frame from the given Frame.  Useful for efficient bulk
+   *  scoring of a new dataset to an existing model.  Same adaption as above,
+   *  but expressed as a Frame instead of as an int[][].     */
+  public Frame adapt( Frame fr, boolean exact ) {
+    int[][] map = adapt(fr.names(),fr.domains(),exact);
+    for( int i=0; i<map.length; i++ )
+      if( map[i] != null ) throw H2O.unimpl();
+    return new Frame(fr);
   }
 
   /** Bulk scoring API for whole chunks.  Chunks are all compatible with the

@@ -97,7 +97,7 @@ public class DRF extends FrameJob {
       throw new RuntimeException("TODO: Score me");
     }
   }
-  public Vec score( Frame fr ) { return drf_model.score(fr,Key.make());  }
+  public Vec score( Frame fr ) { return drf_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__DRFModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
