@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
         # h2b.browseTheCloud()
         importFolderPath = 'standard'
         csvFilename = 'new-poker-hand.full.311M.txt.gz'
-        csvPathname = importFolderpath + "/" + csvFilename
+        csvPathname = importFolderPath + "/" + csvFilename
 
         for trials in range(2):
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath, schema='local', 
