@@ -90,6 +90,16 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     for k,v in kwargs.iteritems():
         paramsToUse[k] = kwargs.setdefault(k, v)
 
+
+    # Let's assume we should set the h2o_remote_buckets_root (only affects
+    # schema=local), to the home directory of whatever remote user
+    # is being used for the hosts. Better than living with a decision
+    # we made from scanning locally (remote might not match local)
+    # assume the remote user has a /home/<username> (linux targets?)
+    # This only affects import folder path name generation by python tests
+    if paramsToUse['username']:
+        paramsToUse['h2o_remote_buckets_root'] = "/home/" + paramsToUse['username']
+
     h2o.verboseprint("All build_cloud_with_hosts params:", paramsToUse)
 
     #********************
