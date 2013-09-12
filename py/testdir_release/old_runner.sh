@@ -73,11 +73,7 @@ ls -lt ./h2o-nodes.json
 # We don't want to hang waiting for the cloud to terminate.
 ../testdir_single_jvm/n0.doit test_shutdown.py
 
-if ps -p $CLOUD_PID > /dev/null
-then
-    echo "$CLOUD_PID is still running after shutdown. Will kill"
-    kill $CLOUD_PID
-fi
+kill $CLOUD_PID
 ps aux | grep four_hour_cloud
 
 # test_c2_rel has about 11 subtests inside it, that will be tracked individually by jenkins
