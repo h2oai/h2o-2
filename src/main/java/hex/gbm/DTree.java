@@ -341,7 +341,8 @@ class DTree extends Iced {
 
     // Bin #.
     public int bin( Chunk chks[], int i ) {
-      assert _nids.length == 2;
+      if( _nids.length == 1 ) return 0;
+      assert _nids.length == 2 : Arrays.toString(_nids)+", pid="+_pid+" and "+this;
       if( chks[_col].isNA0(i) ) return i%_nids.length; // Missing data: pseudo-random bin select
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed

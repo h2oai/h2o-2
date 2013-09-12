@@ -21,7 +21,7 @@ public class GBMTest extends TestUtil {
 
   private abstract class PrepData { abstract Vec prep(Frame fr); }
 
-  /*@Test*/ public void testBasicGBM() {
+  @Test public void testBasicGBM() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
@@ -34,30 +34,30 @@ public class GBMTest extends TestUtil {
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
              });
-    //basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
-    //         new PrepData() {
-    //           Vec prep(Frame fr) { 
-    //             assertEquals(380,fr.numRows());
-    //             // Remove patient ID vector
-    //             UKV.remove(fr.remove("ID")._key); 
-    //             // Prostate: predict on CAPSULE
-    //             return fr.remove("CAPSULE");
-    //           }
-    //         });
-    //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
-    //         });
-    //basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
-    //         });
-    //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
-    //         new PrepData() {
-    //           Vec prep(Frame fr) { 
-    //             assertEquals(581012,fr.numRows());
-    //             // Covtype: predict on last column
-    //             return fr.remove(54);
-    //           }
-    //         });
+    basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
+             new PrepData() {
+               Vec prep(Frame fr) { 
+                 assertEquals(380,fr.numRows());
+                 // Remove patient ID vector
+                 UKV.remove(fr.remove("ID")._key); 
+                 // Prostate: predict on CAPSULE
+                 return fr.remove("CAPSULE");
+               }
+             });
+    basicGBM("./smalldata/cars.csv","cars.hex",
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             });
+    basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+             });
+    basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+             new PrepData() {
+               Vec prep(Frame fr) { 
+                 assertEquals(581012,fr.numRows());
+                 // Covtype: predict on last column
+                 return fr.remove(54);
+               }
+             });
   }
 
   // ==========================================================================
@@ -75,15 +75,15 @@ public class GBMTest extends TestUtil {
       gbm.vresponse = prep.prep(gbm.source);
       gbm.ntrees = 5;
       gbm.max_depth = 8;
-      gbm.learn_rate = 0.1f;
+      gbm.learn_rate = 0.3f;
       gbm.min_rows=1;
-      gbm.nbins = 4;
+      gbm.nbins = 50;
       gbm.serve();              // Start it
       gbm.get();                // Block for it
 
-      Vec vec = gbm.score(gbm.source);
-      skey = vec._key;
-      System.out.println(vec);
+      //Vec vec = gbm.score(gbm.source);
+      //skey = vec._key;
+      //System.out.println(vec);
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
@@ -96,14 +96,14 @@ public class GBMTest extends TestUtil {
     }
   }
 
-  static final int IGNS[] = new int[] {
+  static final int IGNS[] = new int[] { // covtype ignorable columns just while debugging DRF issues
                        6, 7, 8, 9,
     10,11,12,13,14,15,16,17,18,19,
     20,21,22,23,24,25,26,27,28,29,
     30,31,32,33,34,35,36,37,38,39,
     40,41,42,43,44,45,46,47,48,49,
   };
-  @Test public void testBasicDRF() {
+  /*@Test*/ public void testBasicDRF() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
@@ -164,7 +164,7 @@ public class GBMTest extends TestUtil {
       drf.vresponse = prep.prep(drf.source);
       drf.ntrees = 4;
       drf.max_depth = 50;
-      drf.min_rows=1;
+      drf.min_rows = 1;
       drf.nbins = 1024;
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // No sampling
@@ -172,9 +172,9 @@ public class GBMTest extends TestUtil {
       drf.serve();              // Start it
       drf.get();                // Block for it
 
-      Vec vec = drf.score(drf.source);
-      skey = vec._key;
-      System.out.println(vec);
+      //Vec vec = drf.score(drf.source);
+      //skey = vec._key;
+      //System.out.println(vec);
 
     } finally {
       UKV.remove(dest);         // Remove whole frame
@@ -190,7 +190,6 @@ public class GBMTest extends TestUtil {
   /*@Test*/ public void testCovtype() {
     //Key okey = loadAndParseFile("covtype.hex", "smalldata/covtype/covtype.20k.data");
     Key okey = loadAndParseFile("covtype.hex", "../datasets/UCI/UCI-large/covtype/covtype.data");
-    //Key okey = loadAndParseFile("covtype.hex", "/home/0xdiag/datasets/standard/covtype.data");
     ValueArray val = UKV.get(okey);
 
     // setup default values for DRF
