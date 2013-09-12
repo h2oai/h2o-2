@@ -12,17 +12,20 @@ public class GBMModelView extends Request2 {
   Key _modelKey;
   class GBMModelKeyFilter extends H2OKey { public GBMModelKeyFilter() { super("model_key",true); } }
 
+  @API(help="GBM Model")
+  GBMModel gbm_model;
+
   public static Response redirect(Request req, Key modelKey) {
     return new Response(Response.Status.redirect, req, -1, -1, "GBMModelView", "_modelKey", modelKey);
   }
 
   public boolean toHTML(StringBuilder sb){
-    GBMModel m = DKV.get(_modelKey).get();
-    m.generateHTML("GBM Model", sb);
+    gbm_model.generateHTML("GBM Model", sb);
     return true;
   }
 
   @Override protected Response serve() {
+    gbm_model = DKV.get(_modelKey).get();
     return new Response(Response.Status.done,this,-1,-1,null);
   }
 }

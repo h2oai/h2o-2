@@ -18,7 +18,11 @@ class Basic(unittest.TestCase):
     def test_GBM_parseTrain(self):
         #folderpath, filename, keyname, timeout
         bucket = 'home-0xdiag-datasets'
-        files = [('mnist/mnist8m', 'mnist8m-train-1.csv', 'mnist8mtrain.hex', 1800, 0),
+        
+        files = [('airlines', '1988.csv', '1988.hex',1800,'LateAircraftDelay'),
+                 ('mnist', 'mnist_training.csv.gz', 'mnistsmalltrain.hex',1800,784),
+                 ('manyfiles-nflx-gz', 'file_95.dat.gz', 'nflx.hex',1800,541),
+                 ('mnist/mnist8m', 'mnist8m-train-1.csv', 'mnist8mtrain.hex', 1800, 0),
                  ('airlines', '1988_2008.csv', 'airlines.hex', 1800,'LateAircraftDelay'),
                  ('standard', 'covtype200x.data', 'covtype.hex', 1800, 55)
                 ]
@@ -45,7 +49,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             h2o.beta_features = True
             #noPoll -> False when GBM finished
-            GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+            GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,timeoutSecs=timeoutSecs,**kwargs)
             print "GBM training completed in", GBMResult['python_elapsed'], "seconds.", \
                 "%f pct. of timeout" % (GBMResult['python_%timeout'])
 

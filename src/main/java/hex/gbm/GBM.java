@@ -159,7 +159,7 @@ public class GBM extends FrameJob {
         DTree init_tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
-        BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, 0 );
+        BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, 0 );
         _errs = new float[]{(float)bs._err/nrows}; // Errors for exactly 1 tree
         gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
         DKV.put(outputKey, gbm_model);
@@ -171,7 +171,7 @@ public class GBM extends FrameJob {
 
           // Tree-by-tree scoring
           Timer t_score = new Timer();
-          BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth );
+          BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, max_depth );
           _errs = Arrays.copyOf(_errs,_errs.length+1);
           _errs[_errs.length-1] = (float)bs2._err/nrows;
           gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
@@ -341,7 +341,7 @@ public class GBM extends FrameJob {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override DTree.Split bestCol( GBMUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
+      DTree.Split best = new DTree.Split(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
       DHistogram hs[] = u._hs;
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {

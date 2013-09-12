@@ -87,12 +87,14 @@ class DTree extends Iced {
   // Records a column, a bin to split at within the column, and the MSE.
   static class Split { 
     final int _col, _bin;       // Column to split, bin where being split
+    final boolean _equal;       // Split is < or == ?
     final long _nrows[];        // Rows in each final split
     final double _mses[];       // MSE  of each final split
     final float _preds[][/*nclass*/]; // Prediction (by class) for each split
-    Split( int col, int bin, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) { 
+    Split( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) { 
       _col = col; 
       _bin = bin; 
+      _equal = equal;
       _nrows = new long[] { n0, n1 };
       _mses  = new double[] { mse0, mse1 };
       _preds = new float[][] { preds0, preds1 };
@@ -117,6 +119,7 @@ class DTree extends Iced {
     // (for being constant data from a prior split), then that column will be
     // null in the returned array.
     public DBinHistogram[] split( int splat, char nbins, int min_rows, DHistogram hs[] ) {
+      if( _equal ) throw H2O.unimpl();
       if( _nrows[splat] < min_rows ) return null; // Too few elements
       if( _nrows[splat] <= 1 ) return null;       // Too few elements
       if( _mses[splat] <= 1e-8 ) return null; // No point in splitting a perfect prediction
@@ -565,7 +568,7 @@ class DTree extends Iced {
     // OUTPUT fields
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
-    long _err;                  // Total absolute errors
+    long _err, _nrows;          // Total absolute errors, actual rows trained
 
     BulkScore( DTree trees[], int ncols, int nclass, int ymin, float sampleRate, boolean doAvg ) {
       _trees = trees; _ncols = ncols;
@@ -607,13 +610,17 @@ class DTree extends Iced {
       int nids[] = new int[_trees.length];// Shared temp array for better error reporting
       for( int i=0; i<ys._len; i++ ) {
         float err = score0( chks, i, (float)(ys.at0(i)-_ymin), pred, nids, rands );
-        _sum += err*err;        // Squared error
+        if( !Float.isNaN(err) ) { // Skip rows trained in *all* trees for OOBEE
+          _sum += err*err;        // Squared error
+          _nrows++;
+        }
       }
     }
 
     @Override public void reduce( BulkScore t ) {
       _sum += t._sum;
       _err += t._err;
+      _nrows += t._nrows;
       Utils.add(_cm,t._cm);
     }
 
@@ -654,7 +661,7 @@ class DTree extends Iced {
 
       // Having computed the votes across all trees, find the majority class
       // and it's error rate.
-      if( nt == 0 ) return 0;   // OOBEE: all rows trained, so no rows scored
+      if( nt == 0 ) return Float.NaN; // OOBEE: all rows trained, so no rows scored
 
       if( _doAvg )              // Average (or not) sum of trees?
         for( int c=0; c<_nclass; c++ )
@@ -691,12 +698,12 @@ class DTree extends Iced {
       return 1.0f - ypred;       // Error from 0 to 1.0
     }
 
-    public BulkScore report( Sys tag, long nrows, int depth ) {
+    public BulkScore report( Sys tag, int depth ) {
       int lcnt=0;
       for( int t=0; t<_trees.length; t++ ) lcnt += _trees[t]._len;
       Log.info(tag,"============================================================== ");
-      Log.info(tag,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/nrows));
-      Log.info(tag,"Total of "+_err+" errors on "+nrows+" rows, with "+_trees.length+" trees (average of "+((float)lcnt/_trees.length)+" nodes)");
+      Log.info(tag,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/_nrows));
+      Log.info(tag,"Total of "+_err+" errors on "+_nrows+" rows, with "+_trees.length+" trees (average of "+((float)lcnt/_trees.length)+" nodes)");
       return this;
     }
 
@@ -731,7 +738,7 @@ class DTree extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
-    @API(help="Error rate as trees are added")     public final float [] errs;
+    @API(help="MSE rate as trees are added")       public final float [] errs;
     @API(help="Min class - to zero-bias the CM")   public final int ymin;
     @API(help="Actual trees built (probably < N)") public final byte [][] treeBits;
 
@@ -801,13 +808,13 @@ class DTree extends Iced {
       }
 
       if( errs != null ) {
-        DocGen.HTML.section(sb,"Error Rate by Tree");
+        DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Trees</th>");
         for( int i=0; i<errs.length; i++ )
           sb.append("<td>").append(i+1).append("</td>");
         sb.append("</tr>");
-        sb.append("<tr><th class='warning'>Error Rate</th>");
+        sb.append("<tr><th class='warning'>MSE</th>");
         for( int i=0; i<errs.length; i++ )
           sb.append(String.format("<td>%5.3f</td>",errs[i]));
         sb.append("</tr>");
