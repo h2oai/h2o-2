@@ -39,11 +39,24 @@ then
     cd -
 fi
 
+rm -f h2o-nodes.json
 python ../four_hour_cloud.py &
 CLOUD_PID=$!
 jobs -l
 
-# Since we now have the h2o-nodes.json, that means we started the jvms
+echo ""
+echo "Have to wait until h2o-nodes.json is available from the cloud build. Deleted it above."
+echo "spin loop here waiting for it. Since the h2o.jar copy slows each node creation"
+echo "it might be 12 secs per node"
+
+while [ ! -f ./h2o-nodes.json ]
+do
+  sleep 5
+done
+ls -lt ./h2o-nodes.json
+
+
+# We now have the h2o-nodes.json, that means we started the jvms
 # Shouldn't need to wait for h2o cloud here..
 # the test should do the normal cloud-stabilize before it does anything.
 
@@ -65,5 +78,4 @@ jobs -l
 # If we don't wait, the cloud will get torn down.
 jobs -l
 wait $cloud_pid
-
 
