@@ -65,17 +65,9 @@ public class ImportS3 extends Request {
     }
   }
 
-  boolean isBareS3BucketWithoutTrailingSlash(String s) {
-    Pattern p = Pattern.compile("s3://[^/]*");
-    Matcher m = p.matcher(s);
-    boolean b = m.matches();
-    return b;
-  }
-
   @Override
   protected Response serve() {
     String bucket = _bucket.value();
-    if (isBareS3BucketWithoutTrailingSlash(bucket)) { bucket = bucket + "/"; }
     Log.info("ImportS3 processing (" + bucket + ")");
     JsonObject json = new JsonObject();
     JsonArray succ = new JsonArray();
