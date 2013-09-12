@@ -76,7 +76,7 @@ public class GBM extends FrameJob {
       throw new RuntimeException("TODO: Score me");
     }
   }
-  public Vec score( Frame fr ) { return gbm_model.score(fr,Key.make());  }
+  public Vec score( Frame fr ) { return gbm_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__GBMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }

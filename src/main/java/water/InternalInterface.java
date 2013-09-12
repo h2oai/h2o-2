@@ -34,7 +34,7 @@ public class InternalInterface implements water.ExternalInterface {
   }
 
   @Override public double scoreModel(Object model, String[] colNames, String domains[][], double[] row) {
-    return ((Model)model).score(colNames,domains,row);
+    return ((Model)model).score(colNames,domains,false,row);
   }
 
   public JsonObject cloudStatus( ) { return new Cloud().serve().toJson(); }

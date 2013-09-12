@@ -33,7 +33,7 @@ public class GeneratePredictions2 extends Request2 {
 
   @Override protected Response serve() {
     try {
-      Vec vec = model.score(data,prediction_key);
+      Vec vec = model.score(data,true);
       Frame fr = new Frame(new String[]{prediction_key.toString()},new Vec[]{vec});
       UKV.put(prediction_key,fr);
       return Inspect2.redirect(this, prediction_key.toString());
