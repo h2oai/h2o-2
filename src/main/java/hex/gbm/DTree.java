@@ -725,23 +725,33 @@ class DTree extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
-    @API(help="Actual trees built (probably < N)") public final DTree forest[];
     @API(help="Error rate as trees are added")     public final float [] errs;
-    @API(help="Class names")                       public final String [] domain;
     @API(help="Min class - to zero-bias the CM")   public final int ymin;
+    @API(help="Actual trees built (probably < N)") public final byte [][] treeBits;
+
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be seperate).
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
+   
 
-    public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm) {
+    public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm) {
       super(key,dataKey,fr);
-      this.N = ntrees; this.forest = forest; this.errs = errs; this.domain = domain; this.ymin = ymin; this.cm = cm;
+      this.N = ntrees; this.errs = errs; this.ymin = ymin; this.cm = cm;
+      treeBits = new byte[forest.length][];
+      for( int i=0; i<forest.length; i++ )
+        treeBits[i] = forest[i].compress();
+    }
+
+    @Override protected double score0(double[] data) {
+      throw new RuntimeException("TODO: Score me");
     }
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
       DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
+      String[] domain = _domains[_domains.length-1]; // Domain of response col
+      assert ymin+cm.length==domain.length;
 
       // Top row of CM
       if( cm != null ) {

@@ -1046,6 +1046,29 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+  public AutoBuffer putJSON1( byte b ) { return putJSON4(b); }
+  public AutoBuffer putJSONA1( byte ary[] ) {
+    if( ary == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<ary.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSON1(ary[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONAA1(byte ary[][]) {
+    if( ary == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<ary.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONA1(ary[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONAA1(String name,byte ary[][]) {
+    return putJSONStr(name).put1(':').putJSONAA1(ary);
+  }
+
   public AutoBuffer putJSON8 ( long l ) { return putStr2(Long.toString(l)); }
   public AutoBuffer putJSONA8( long ary[] ) {
     if( ary == null ) return putNULL();

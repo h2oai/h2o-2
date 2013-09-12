@@ -85,13 +85,13 @@ public class DRF extends FrameJob {
 
   public float progress(){
     DTree.TreeModel m = DKV.get(dest()).get();
-    return m.forest.length/(float)m.N;
+    return m.treeBits.length/(float)m.N;
   }
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm){
-      super(key,dataKey,fr,ntrees,forest,errs,domain,ymin,cm);
+    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
+      super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
     @Override protected double score0(double[] data) {
       throw new RuntimeException("TODO: Score me");
@@ -164,7 +164,7 @@ public class DRF extends FrameJob {
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
     final Key dataKey = null;
-    drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,new DTree[0],null, domain, ymin, null);
+    drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,new DTree[0],null, ymin, null);
     DKV.put(outputKey, drf_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
@@ -222,7 +222,7 @@ public class DRF extends FrameJob {
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
           _errs[_errs.length-1] = (float)bs._err/nrows;
-          drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,forest, _errs, domain, ymin,bs._cm);
+          drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
           DKV.put(outputKey, drf_model);
 
           // Remove temp vectors; cleanup the Frame
