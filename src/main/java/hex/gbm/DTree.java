@@ -58,6 +58,11 @@ class DTree extends Iced {
   // Override this in, e.g. Random Forest algos, to get a per-chunk RNG
   public Random rngForChunk( int cidx ) { throw H2O.fail(); }
 
+  private byte[] compress() {
+    // TODO!!!
+    return null;
+  }
+
   // Abstract node flavor
   static abstract class Node extends Iced {
     transient DTree _tree;    // Make transient, lest we clone the whole tree

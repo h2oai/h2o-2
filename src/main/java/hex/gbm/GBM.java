@@ -64,13 +64,13 @@ public class GBM extends FrameJob {
 
   public float progress(){
     DTree.TreeModel m = DKV.get(dest()).get();
-    return m.forest.length/(float)m.N;
+    return m.treeBits.length/(float)m.N;
   }
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, String [] domain, int ymin, long [][] cm){
-      super(key,dataKey,fr,ntrees,forest,errs,domain,ymin,cm);
+    public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
+      super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
     @Override protected double score0(double[] data) {
       throw new RuntimeException("TODO: Score me");
@@ -143,7 +143,7 @@ public class GBM extends FrameJob {
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
     final Key dataKey = null;
-    gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,new DTree[0], null, domain, ymin, null);
+    gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,new DTree[0], null, ymin, null);
     DKV.put(outputKey, gbm_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
@@ -161,7 +161,7 @@ public class GBM extends FrameJob {
         DTree forest[] = new DTree[] {init_tree};
         BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, 0 );
         _errs = new float[]{(float)bs._err/nrows}; // Errors for exactly 1 tree
-        gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, domain, ymin,bs._cm);
+        gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
         DKV.put(outputKey, gbm_model);
 
         // Build trees until we hit the limit
@@ -174,7 +174,7 @@ public class GBM extends FrameJob {
           BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth );
           _errs = Arrays.copyOf(_errs,_errs.length+1);
           _errs[_errs.length-1] = (float)bs2._err/nrows;
-          gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, domain, ymin,bs2._cm);
+          gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
           DKV.put(outputKey, gbm_model);
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
