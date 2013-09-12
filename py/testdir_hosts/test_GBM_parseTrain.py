@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             h2o.beta_features = True
             #noPoll -> False when GBM finished
-            GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+            GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,timeoutSecs=timeoutSecs,**kwargs)
             print "GBM training completed in", GBMResult['python_elapsed'], "seconds.", \
                 "%f pct. of timeout" % (GBMResult['python_%timeout'])
 
