@@ -266,7 +266,7 @@ public class Quantiles extends Iced {
       }
       //System.out.print(" ... small -ve Doubles at b=" + b);
 
-      for (e=+19; e>=-323; e--, b+=5) {
+      for (e=-19; e>=-323; e--, b+=5) {
         _bins[b]   = -6.  * Math.pow(10.,e);
         _bins[b+1] = -4.  * Math.pow(10.,e);
         _bins[b+2] = -2.5 * Math.pow(10.,e);
