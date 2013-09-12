@@ -1,8 +1,8 @@
 package water.api;
 
 import hex.DPCA.PCAModel;
-import hex.NewRowVecTask.DataFrame;
 import hex.DPCA;
+import hex.NewRowVecTask.DataFrame;
 import hex.PCAScoreTask;
 
 import com.google.gson.JsonObject;
@@ -24,7 +24,7 @@ public class PCAScore extends Request {
       ValueArray va = _dataKey.value();
       PCAModel model = _modelKey.value();
       int colIds[] = model == null ? null : model.columnMapping(va.colNames());
-      if( !Model.isCompatible(colIds) ) {
+      if( !OldModel.isCompatible(colIds) ) {
         for( int i = 0; i < colIds.length; i++ )
           if( colIds[i] == -1 )
             throw new IllegalArgumentException("Incompatible dataset: " + va._key + " does not have column '"
