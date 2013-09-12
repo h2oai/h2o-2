@@ -23,13 +23,13 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
         # we may use this to force remote paths, so don't look locally for file
         rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
         bucketPath = os.path.join(rootPath, bucket)
-        checkpath = False
+        checkPath = False
 
     elif h2o.nodes[0].remoteH2O and schema!='put' and h2o.nodes[0].h2o_remote_buckets_root:
         # we may use this to force remote paths, so don't look locally for file
         rootPath = h2o.nodes[0].h2o_remote_buckets_root
         bucketPath = os.path.join(rootPath, bucket)
-        checkpath = False
+        checkPath = False
 
     # does it work to use bucket "." to get current directory
     elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
