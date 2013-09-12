@@ -119,7 +119,6 @@ class DTree extends Iced {
     // (for being constant data from a prior split), then that column will be
     // null in the returned array.
     public DBinHistogram[] split( int splat, char nbins, int min_rows, DHistogram hs[] ) {
-      if( _equal ) throw H2O.unimpl();
       if( _nrows[splat] < min_rows ) return null; // Too few elements
       if( _nrows[splat] <= 1 ) return null;       // Too few elements
       if( _mses[splat] <= 1e-8 ) return null; // No point in splitting a perfect prediction
@@ -137,8 +136,12 @@ class DTree extends Iced {
         // Tighter bounds on the column getting split: exactly each new
         // DBinHistogram's bound are the bins' min & max.
         if( _col==j ) {
-          if( splat == 0 ) max = h.maxs(_bin-1);
-          else             min = h.mins(_bin  );
+          if( _equal ) {        // Equality split; no change on unequals-side
+            if( splat == 1 ) max=min = h.mins(_bin); // but know exact bounds on equals-side
+          } else {              // Less-than split
+            if( splat == 0 ) max = h.maxs(_bin-1); // Max from next-smallest bin
+            else             min = h.mins(_bin  ); // Min from this bin
+          }
         }
         if( min == max ) continue; // This column will not split again
         if( min >  max ) continue; // Happens for all-NA subsplits
@@ -272,6 +275,11 @@ class DTree extends Iced {
   // Does not contain a histogram describing how the decision was made.
   static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
     final int _col;             // Column we split over
+    // _equals\_nids[] \   0   1
+    // ----------------+----------
+    //       F         |   <   >=
+    //       T         |  !=   ==
+    final boolean _equal;       // True if equality split, False if less-than split
     final float _splat;         // Split At point
     // The following arrays are all based on a bin# extracted from linear
     // interpolation of _col, _min and _step.
@@ -296,6 +304,7 @@ class DTree extends Iced {
       if( spl._col == -1 || spl._bin == 0/*bin 0 is NO SPLIT*/ ) {
         DecidedNode p = n._tree.decided(_pid);
         _col  = p._col;  // Just copy the parent data over, for the predictions
+        _equal = p._equal;
         _splat = p._splat;
         _nids = new int[p._nids.length];
         Arrays.fill(_nids,-1);  // No further splits
@@ -303,6 +312,7 @@ class DTree extends Iced {
         return;
       }
       _col = spl._col;           // Assign split-column choice
+      _equal = spl._equal;       // Equals-vs-lessthen split
       _splat = spl.splat(n._hs); // Split-at value
       _nids = new int[2];        // Split into 2 subsets
       final char nclass  = _tree._nclass;
@@ -337,6 +347,7 @@ class DTree extends Iced {
     DecidedNode( DTree tree, float pred[] ) {
       super(tree,-1,tree.newIdx());
       _col = -1;
+      _equal = false;
       _splat = Float.NaN;
       _nids = new int[] { -1 }; // 1 bin, no children
       _pred = new float[][] { pred };
@@ -350,13 +361,17 @@ class DTree extends Iced {
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits.
-      return d < _splat ? 0 : 1;
+      return _equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
     public int ns( Chunk chks[], int i ) { return _nids[bin(chks,i)]; }
 
     @Override public String toString() {
       if( _col == -1 ) return "Decided has col = -1";
+      if( _equal ) 
+        return 
+          _tree._names[_col]+" != "+_splat+" = "+Arrays.toString(_pred[0])+"\n"+
+          _tree._names[_col]+" == "+_splat+" = "+Arrays.toString(_pred[1])+"\n";
       return 
         _tree._names[_col]+" < "+_splat+" = "+Arrays.toString(_pred[0])+"\n"+
         _splat+" <="+_tree._names[_col]+" = "+Arrays.toString(_pred[1])+"\n";
@@ -365,16 +380,25 @@ class DTree extends Iced {
     StringBuilder printChild( StringBuilder sb, int nid ) {
       int i = _nids[0]==nid ? 0 : 1;
       assert _nids[i]==nid : "No child nid "+nid+"? " +Arrays.toString(_nids);
-      String n = _tree._names[_col];
-      if( i==0 ) sb.append("[ ").append(n).append(" <  ").append(_splat).append("]");
-      else       sb.append("[ ").append(_splat).append(" <= ").append(n).append("]");
+      sb.append("[").append(_tree._names[_col]);
+      sb.append(_equal 
+                ? (i==0 ? " != " : " == ")
+                : (i==0 ? " <  " : " >= "));
+      sb.append(_splat).append("]");
       return sb;
     }  
 
     @Override public StringBuilder toString2(StringBuilder sb, int depth) {
       for( int i=0; i<_nids.length; i++ ) {
         for( int d=0; d<depth; d++ ) sb.append("  ");
-        (_col >= 0 ? sb.append(_tree._names[_col]).append(" < ").append(i==0?_splat:"infinity") : sb.append("init")).append(":").append(Arrays.toString(_pred[i])).append("\n");
+        if( _col < 0 ) sb.append("init");
+        else {
+          sb.append(_tree._names[_col]);
+          sb.append(_equal 
+                    ? (i==0 ? " != " : " == ")
+                    : (i==0 ? " <  " : " >= "));
+          sb.append(_splat).append(":").append(Arrays.toString(_pred[i])).append("\n");
+        }
         if( _nids[i] >= 0 ) _tree.node(_nids[i]).toString2(sb,depth+1);
       }
       return sb;

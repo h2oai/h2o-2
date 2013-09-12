@@ -110,44 +110,44 @@ public class GBMTest extends TestUtil {
     //         });
 
     // Classification tests
-    basicDRF("./smalldata/test/test_manycol_tree.csv","tree.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove(fr.numCols()-1); } 
-             });
-    basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
-             new PrepData() {
-               Vec prep(Frame fr) { 
-                 assertEquals(380,fr.numRows());
-                 // Remove patient ID vector
-                 UKV.remove(fr.remove("ID")._key); 
-                 // Prostate: predict on CAPSULE
-                 return fr.remove("CAPSULE");
-               }
-             });
-    basicDRF("./smalldata/iris/iris_wheader.csv","iris.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("class"); } 
-             });
-    basicDRF("./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
-             new PrepData() { Vec prep(Frame fr) { 
-               UKV.remove(fr.remove("IsArrDelayed")._key); 
-               return fr.remove("IsDepDelayed"); 
-             }
-             });
-    basicDRF("./smalldata/cars.csv","cars.hex",
-             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
-             });
-    basicDRF("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
-             });
-    //basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
-    //         //basicDRF("./smalldata/covtype/covtype.20k.data","covtype.hex",
+    //basicDRF("./smalldata/test/test_manycol_tree.csv","tree.hex",
+    //         new PrepData() { Vec prep(Frame fr) { return fr.remove(fr.numCols()-1); } 
+    //         });
+    //basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
     //         new PrepData() {
-    //           Vec prep(Frame fr) {
-    //             for( int ign : IGNS )
-    //               UKV.remove(fr.remove(Integer.toString(ign))._key);
-    //             // Covtype: predict on last column
-    //             return fr.remove(fr.numCols()-1);
+    //           Vec prep(Frame fr) { 
+    //             assertEquals(380,fr.numRows());
+    //             // Remove patient ID vector
+    //             UKV.remove(fr.remove("ID")._key); 
+    //             // Prostate: predict on CAPSULE
+    //             return fr.remove("CAPSULE");
     //           }
     //         });
+    //basicDRF("./smalldata/iris/iris_wheader.csv","iris.hex",
+    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("class"); } 
+    //         });
+    //basicDRF("./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
+    //         new PrepData() { Vec prep(Frame fr) { 
+    //           UKV.remove(fr.remove("IsArrDelayed")._key); 
+    //           return fr.remove("IsDepDelayed"); 
+    //         }
+    //         });
+    //basicDRF("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+    //         });
+    //basicDRF("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+    //         });
+    basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+             //basicDRF("./smalldata/covtype/covtype.20k.data","covtype.hex",
+             new PrepData() {
+               Vec prep(Frame fr) {
+                 for( int ign : IGNS )
+                   UKV.remove(fr.remove(Integer.toString(ign))._key);
+                 // Covtype: predict on last column
+                 return fr.remove(fr.numCols()-1);
+               }
+             });
   }
 
   public void basicDRF(String fname, String hexname, PrepData prep) {
@@ -165,7 +165,7 @@ public class GBMTest extends TestUtil {
       drf.ntrees = 50;
       drf.max_depth = 50;
       drf.min_rows = 1;
-      drf.nbins = 1024;
+      drf.nbins = 10;
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // No sampling
       drf.seed = (1L<<32)|2;

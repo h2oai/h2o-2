@@ -207,24 +207,27 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
     // Now look at equal/not-equal splits.  At each loop, remove the current
     // bin from M2/S2/n2 & check MSE - then restore M2/S2/n2.
-    if( false && _isInt && _step == 1.0f ) { // Only for ints & enums
+    if( _isInt && _step == 1.0f ) { // Only for ints & enums
       long n2 = n0;
-      for( int b=0; b<_nbins; b++ ) {
+      for( int b=1; b<_nbins-1; b++ ) { // Notice tigher endpoints: ignore splits that are repeats of above
+        long n3 = _bins[b];
+        if( n3 == 0 ) continue; // Ignore zero-bin splits
+        if( n3 == n2 ) {        // Bad split: all or nothing.
+          best = new DTree.Split(col,b,true,0,n3,0,mseAll,new float[M2.length], M2);
+          break;
+        }
         // Subtract out the chosen bin from the totals
         float M3[] = _Ms[b], S3[] = _Ss[b];
-        long n3 = _bins[b];
         n2 = sub(M2,S2,n2,M3,S3,n3);
         double mse2 = mse(M2,S2,n2);
         double mse3 = mse(M3,S3,n3);
         double mse = (mse2*n2+mse3*n3)/(n2+n3);
-        if( mse < best.mse() ) {
-          System.out.println("Got a better split with "+b+this+", mse="+mse+", best was="+best.mse());
+        if( mse < best.mse() )
           best = new DTree.Split(col,b,true,n2,n3,mse2,mse3,M2.clone(), M3.clone());
-        }
         // Restore the total bins
         n2 = add(M2,S2,n2,M3,S3,n3);
+        assert Math.abs(mseAll - mse(M2,S2,n2)) < 0.00001 : "mseAll="+mseAll+", mse at end="+mse(M2,S2,n2)+", bin="+b+", "+this;
       }
-      assert mseAll == mse(M2,S2,n2);
     }
 
     return best;
@@ -337,14 +340,16 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(_name).append(":").append(_min).append("-").append(_max);
-    if( _bins != null ) for( int b=0; b<_nbins; b++ ) {
+    if( _bins != null ) {
+      for( int b=0; b<_nbins; b++ ) {
         sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));
         for( int c=0; c<_nclass; c++ )
           sb.append(String.format(" %d - %6.2f/%6.2f,", c,
                                   _Ms[b]==null?Float.NaN:mean(b,c),
                                   _Ss[b]==null?Float.NaN:var (b,c)));
-        sb.append('\n');
       }
+      sb.append('\n');
+    }
     return sb.toString();
   }
 
