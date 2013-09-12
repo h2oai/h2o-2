@@ -7,6 +7,12 @@ set -e
 # Ensure that all your children are truly dead when you yourself are killed.
 trap "kill -- -$BASHPID" INT TERM EXIT
 
+# get the latest jar from s3
+# has to execute up there
+cd ../..
+./get_s3_jar.sh
+# I'm back!
+cd -
 # The -PID argument tells bash to kill the process group with id $BASHPID, 
 # Process groups have the same id as the spawning process, 
 # The process group id remains even after processes have been reparented. (say by init)
