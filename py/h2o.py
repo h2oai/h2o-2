@@ -211,11 +211,14 @@ def log(cmd, comment=None):
         # what got sent to h2o
         # f.write(cmd)
         # let's try saving the unencoded url instead..human readable
-        f.write(urlparse.unquote(cmd))
-        if comment:
-            f.write('    #')
-            f.write(comment)
-        f.write("\n")
+        if cmd:
+            f.write(urlparse.unquote(cmd))
+            if comment:
+                f.write('    #')
+                f.write(comment)
+            f.write("\n")
+        elif comment: # for comment-only 
+            f.write(comment + "\n")
 
 def make_syn_dir():
     SYNDATASETS_DIR = './syn_datasets'
@@ -389,6 +392,10 @@ def setup_random_seed(seed=None):
 
 # assume h2o_nodes_json file in the current directory
 def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
+    log("#*********************************************************************")
+    log("Starting new test: " + python_test_name + " at build_cloud_with_json()")
+    log("#*********************************************************************")
+
     print "This only makes sense if h2o is running as defined by", h2o_nodes_json
     print "For now, assuming it's a cloud on this machine, and here's info on h2o processes running here"
     print "No output means no h2o here! Some other info about stuff on the system is printed first though."
@@ -456,6 +463,9 @@ def setup_benchmark_log():
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
     timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
     conservative=False, create_json=False, clone_cloud=None, **kwargs):
+    log("#*********************************************************************")
+    log("Starting new test: " + python_test_name + " at build_cloud()")
+    log("#*********************************************************************")
 
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts

@@ -3,6 +3,20 @@
 # Normally die on first error
 set -e
 
+
+echo "Setting PATH and showing java/python versions"
+date
+export PATH="/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin"
+echo "Checking python/java links and revs first"
+echo "JAVA_HOME: $JAVA_HOME"
+which java
+java -version
+which javac
+javac -version
+echo "PATH: $PATH"
+which python
+python --version
+
 # This is critical:
 # Ensure that all your children are truly dead when you yourself are killed.
 trap "kill -- -$BASHPID" INT TERM EXIT
