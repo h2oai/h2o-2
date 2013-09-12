@@ -463,10 +463,6 @@ def setup_benchmark_log():
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
     timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
     conservative=False, create_json=False, clone_cloud=None, **kwargs):
-    log("#*********************************************************************")
-    log("Starting new test: " + python_test_name + " at build_cloud()")
-    log("#*********************************************************************")
-
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
     # (both come thru here)
@@ -479,6 +475,10 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
 
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
+    log("#*********************************************************************")
+    log("Starting new test: " + python_test_name + " at build_cloud()")
+    log("#*********************************************************************")
+
     # start up h2o to report the java version (once). output to python stdout
     check_h2o_version()
 
