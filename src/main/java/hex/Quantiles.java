@@ -442,11 +442,11 @@ public class Quantiles extends Iced {
       _blast = b;
       _bins[b++] = Double.POSITIVE_INFINITY;
 
-      System.out.println("Pass2 bins:" + Arrays.toString(_bins));
+      //System.out.println("Pass2 bins:" + Arrays.toString(_bins));
     }
 
     @Override public void map(Chunk xs) {
-      System.out.println("Chunk 0x" + xs +" of length=" + xs._len); // printing will distort runtime
+      //DEBUGSystem.out.println("Chunk 0x" + xs +" of length=" + xs._len); // printing will distort runtime
       //PrintChunk("", xs);
 
       // Output
@@ -459,16 +459,16 @@ public class Quantiles extends Iced {
         if (Double.isNaN(value)) continue;
 
         int b = binarySearchInexact(_bins, _bfirst, _blast, value);
-        System.out.println(value + "-> _bin:" + _bins[b] +  " index:" + b);
+        //DEBUGSystem.out.println(value + "-> _bin:" + _bins[b] +  " index:" + b);
         _counts[b]++;
       }
 
       // DEBUG: Print _bins,_counts
-      for (int b=_bfirst; b<_blast; b++) {
+      /*for (int b=_bfirst; b<_blast; b++) {
         if (_bins[b]>0.1 && _bins[b]<=3000) // DEBUG on airline.csv
           System.out.println(_counts[b] + "\t" + _bins[b]);
           //System.out.println(_counts[b] + "\t" + String.format("%+6.5g",_bins[b]));
-      }
+      }*/
     }
 
     // reduce: accumulate bin counts
