@@ -34,30 +34,30 @@ public class GBMTest extends TestUtil {
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
              });
-    basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
-             new PrepData() {
-               Vec prep(Frame fr) { 
-                 assertEquals(380,fr.numRows());
-                 // Remove patient ID vector
-                 UKV.remove(fr.remove("ID")._key); 
-                 // Prostate: predict on CAPSULE
-                 return fr.remove("CAPSULE");
-               }
-             });
-    basicGBM("./smalldata/cars.csv","cars.hex",
-             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
-             });
-    basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
-             });
-    basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
-             new PrepData() {
-               Vec prep(Frame fr) { 
-                 assertEquals(581012,fr.numRows());
-                 // Covtype: predict on last column
-                 return fr.remove(54);
-               }
-             });
+    //basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
+    //         new PrepData() {
+    //           Vec prep(Frame fr) { 
+    //             assertEquals(380,fr.numRows());
+    //             // Remove patient ID vector
+    //             UKV.remove(fr.remove("ID")._key); 
+    //             // Prostate: predict on CAPSULE
+    //             return fr.remove("CAPSULE");
+    //           }
+    //         });
+    //basicGBM("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+    //         });
+    //basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+    //         });
+    //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+    //         new PrepData() {
+    //           Vec prep(Frame fr) { 
+    //             assertEquals(581012,fr.numRows());
+    //             // Covtype: predict on last column
+    //             return fr.remove(54);
+    //           }
+    //         });
   }
 
   // ==========================================================================
@@ -66,6 +66,7 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
+    Key skey = null;
     GBM gbm = null;
     try {
       gbm = new GBM();
@@ -80,12 +81,17 @@ public class GBMTest extends TestUtil {
       gbm.serve();              // Start it
       gbm.get();                // Block for it
 
+      Vec vec = gbm.score(gbm.source);
+      skey = vec._key;
+      System.out.println(vec);
+
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
       if( gbm != null ) {
         UKV.remove(gbm.dest()); // Remove the model
         UKV.remove(gbm.vresponse._key);
         gbm.remove();           // Remove GBM Job
+        if( skey != null ) UKV.remove(skey);
       }
     }
   }

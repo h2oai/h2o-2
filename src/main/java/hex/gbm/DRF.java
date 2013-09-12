@@ -94,7 +94,7 @@ public class DRF extends FrameJob {
       super(key,dataKey,fr,ntrees,forest,errs,domain,ymin,cm);
     }
     @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO Auto-generated method stub");
+      throw new RuntimeException("TODO: Score me");
     }
   }
   public Vec score( Frame fr ) { return drf_model.score(fr,Key.make());  }
@@ -132,18 +132,23 @@ public class DRF extends FrameJob {
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
+    String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse )
+      if( fr._vecs[i]==vresponse ) {
+        vname=fr._names[i];
         fr.remove(i);
+      }
 
     // Ignore-columns-code goes here....
 
-    buildModel(fr);
+    buildModel(fr,vname);
     return DRFProgressPage.redirect(this, self(),dest());
   }
 
-  private void buildModel( final Frame fr ) {
+  private void buildModel( final Frame fr, String vname ) {
     final Timer t_drf = new Timer();
+    final Frame frm = new Frame(fr); // Local copy for local hacking
+    frm.add(vname,vresponse);        // Hardwire response as last vector
 
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(fr.numCols()),1) : mtries;
     assert 0 <= ntrees && ntrees < 1000000;
@@ -159,7 +164,7 @@ public class DRF extends FrameJob {
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
     final Key dataKey = null;
-    drf_model = new DRFModel(outputKey,dataKey,fr,ntrees,new DTree[0],null, domain, ymin, null);
+    drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,new DTree[0],null, domain, ymin, null);
     DKV.put(outputKey, drf_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
@@ -217,7 +222,7 @@ public class DRF extends FrameJob {
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
           _errs[_errs.length-1] = (float)bs._err/nrows;
-          drf_model = new DRFModel(outputKey,dataKey,fr,ntrees,forest, _errs, domain, ymin,bs._cm);
+          drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,forest, _errs, domain, ymin,bs._cm);
           DKV.put(outputKey, drf_model);
 
           // Remove temp vectors; cleanup the Frame
