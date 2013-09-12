@@ -23,35 +23,35 @@ b = bcolors()
 # make these compatible with multiple args like print?
 def green_print(*args):
     # the , at the end means no eol
-    if getpass.getuser()=='kevin':
+    if getpass.getuser()=='jenkins':
         bcolors.disable(b)
     for msg in args:
         print b.GREEN + str(msg) + b.ENDC,
     print
 
 def blue_print(*args):
-    if getpass.getuser()=='kevin':
+    if getpass.getuser()=='jenkins':
         bcolors.disable(b)
     for msg in args:
         print b.BLUE + str(msg) + b.ENDC,
     print
 
 def yellow_print(*args):
-    if getpass.getuser()=='kevin':
+    if getpass.getuser()=='jenkins':
         bcolors.disable(b)
     for msg in args:
         print b.YELLOW + str(msg) + b.ENDC, 
     print
 
 def red_print(*args):
-    if getpass.getuser()=='kevin':
+    if getpass.getuser()=='jenkins':
         bcolors.disable(b)
     for msg in args:
         print b.RED + str(msg) + b.ENDC,
     print
 
 def purple_print(*args):
-    if getpass.getuser()=='kevin':
+    if getpass.getuser()=='jenkins':
         bcolors.disable(b)
     for msg in args:
         print b.PURPLE + str(msg) + b.ENDC,
