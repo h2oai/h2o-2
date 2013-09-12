@@ -29,7 +29,7 @@ public class AppendableVec extends Vec {
     this(Key.make(keyName, (byte) 0, Key.VEC));
   }
 
-  AppendableVec( Key key) {
+  public AppendableVec( Key key) {
     super(key, null);
     _espc = new long[4];
     _chunkTypes = new byte[4];

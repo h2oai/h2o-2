@@ -1,4 +1,6 @@
-# echo/expand
+#!/bin/bash
+set -e
+
 echo "You should be in your h2o dir running this."
 echo ""
 echo "Gets the latest h2o.jar (only + version file) from s3, using s3cmd"
@@ -18,11 +20,17 @@ echo "latest h2o jar version is: $version"
 
 s3cmd ls s3://h2o-release/h2o/master/$version
 
-echo "getting JUST $version/h2o.jar"
-rm -f ./h2o_$version.jar
-s3cmd get s3://h2o-release/h2o/master/$version/h2o.jar h2o_$version.jar
+# a secret way to skip the download (use any arg)
+if [ $# -eq 0 ]
+then
+    echo "getting JUST $version/h2o.jar"
+    rm -f ./h2o_$version.jar
+    s3cmd get s3://h2o-release/h2o/master/$version/h2o.jar h2o_$version.jar
+fi
 
 echo "moving it and overwriting target/h2o.jar"
+# jenkins might not have!:w
+mkdir -p target
 cp -f ./h2o_$version.jar target/h2o.jar
 cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
 

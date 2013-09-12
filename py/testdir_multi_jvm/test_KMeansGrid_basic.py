@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
 
         for csvFilename, timeoutSecs in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/covtype.data',
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/covtype.data', schema='local',
                 timeoutSecs=2000, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "python_source:", parseResult['python_source']

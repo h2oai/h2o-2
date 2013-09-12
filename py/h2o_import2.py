@@ -1,4 +1,5 @@
 import h2o, h2o_cmd, re, os
+import h2o_print as h2p
 import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
@@ -22,13 +23,13 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
         # we may use this to force remote paths, so don't look locally for file
         rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
         bucketPath = os.path.join(rootPath, bucket)
-        checkpath = False
+        checkPath = False
 
     elif h2o.nodes[0].remoteH2O and schema!='put' and h2o.nodes[0].h2o_remote_buckets_root:
         # we may use this to force remote paths, so don't look locally for file
         rootPath = h2o.nodes[0].h2o_remote_buckets_root
         bucketPath = os.path.join(rootPath, bucket)
-        checkpath = False
+        checkPath = False
 
     # does it work to use bucket "." to get current directory
     elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
@@ -157,7 +158,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
-        print "\nimport_only:", h2o.python_test_name, "uses put:/" + filePath
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/%s" % filePath) 
+        h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
+        h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
@@ -167,7 +170,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     if schema=='local' and not \
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
         (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
-        print "\nimport_only:", h2o.python_test_name, "uses local:/" + os.path.join(folderPath, pattern)
+        filePath = os.path.join(folderPath, pattern)
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses local:/%s" % filePath)
+        h2p.green_print("Path h2o will be told to use: %s" % filePath)
+        h2p.blue_print("If local jvms, path resolves locally as:", os.path.realpath(filePath))
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 

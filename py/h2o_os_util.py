@@ -58,21 +58,26 @@ def show_h2o_processes():
             h2oFound = True
             print "\n#**********************************************"
             print p
-            print "pid:", p.pid
-            print "cmdline:", p.cmdline
-            # AccessDenied problem?
-            # print p.getcwd()
-            print "status:", p.status
-            print "username:", p.username
-            print "cpu_percent:", p.get_cpu_percent(interval=1.0)
-            print "memory_percent:", p.get_memory_percent()
-            print p.get_memory_info()
-            # AccessDenied problem
-            # print p.get_io_counters()
-            # AccessDenied problem
-            # p.get_open_files()
-            # AccessDenied problem
-            # print p.get_connections()
+            # process could disappear while we're looking? (fast h2o version java process?)
+            try:
+                print "pid:", p.pid
+                print "cmdline:", p.cmdline
+                # AccessDenied problem?
+                # print p.getcwd()
+                print "status:", p.status
+                print "username:", p.username
+                print "cpu_percent:", p.get_cpu_percent(interval=1.0)
+                print "memory_percent:", p.get_memory_percent()
+                print p.get_memory_info()
+                # AccessDenied problem
+                # print p.get_io_counters()
+                # AccessDenied problem
+                # p.get_open_files()
+                # AccessDenied problem
+                # print p.get_connections()
+            except:
+                pass
+                
 
     if h2oFound:
         print "\n#**********************************************"

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import unittest, time, sys, random
+import unittest, time, sys, random, datetime
 sys.path.extend(['.','..','py','../h2o/py','../../h2o/py'])
 import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b
 import h2o_print as h2p
@@ -7,6 +7,8 @@ import h2o_print as h2p
 beginning = time.time()
 def log(msg):
     print "\033[92m[0xdata] \033[0m", msg
+
+CHECK_WHILE_SLEEPING = False
 
 print "Don't start a test yet..."
 class Basic(unittest.TestCase):
@@ -48,9 +50,15 @@ class Basic(unittest.TestCase):
         h2p.green_print("To watch cloud in browser follow address:")
         h2p.green_print("   http://{0}:{1}/Cloud.html".format(h2o.nodes[0].http_addr, h2o.nodes[0].port))
         h2p.blue_print("You can start a test (or tests) now!") 
-        h2p.blue_print("Will spin looking at redirected stdout/stderr logs in sandbox for h2o errors every %s secs" % incrTime)
-        h2p.red_print("This is just for fun")
-        h2p.yellow_print("So is this")
+
+        h2p.blue_print("Will Check cloud status every %s secs and kill cloud if wrong or no answer" % incrTime)
+        if CHECK_WHILE_SLEEPING:        
+            h2p.blue_print("Will also look at redirected stdout/stderr logs in sandbox every %s secs" % incrTime)
+
+        h2p.red_print("No checking of logs while sleeping, or check of cloud status")
+        h2p.yellow_print("So if H2O stack traces, it's up to you to kill me if 4 hours is too long")
+        h2p.yellow_print("ctrl-c will cause all jvms to die(thru psutil terminate, paramiko channel death or h2o shutdown...")
+
 
         while (totalTime<maxTime): # die after 4 hours
             h2o.sleep(incrTime)
@@ -58,8 +66,11 @@ class Basic(unittest.TestCase):
             # good to touch all the nodes to see if they're still responsive
             # give them up to 120 secs to respond (each individually)
             h2o.verify_cloud_size(timeoutSecs=120)
-            print "Checking sandbox log files"
-            h2o.check_sandbox_for_errors(cloudShutdownIsError=True)
+            if CHECK_WHILE_SLEEPING:        
+                print "Checking sandbox log files"
+                h2o.check_sandbox_for_errors(cloudShutdownIsError=True)
+            else:
+                print str(datetime.datetime.now()), " -- python still here"
 
         start = time.time()
         h2i.delete_keys_at_all_nodes()

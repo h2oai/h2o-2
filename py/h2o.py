@@ -1,6 +1,7 @@
 import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
+import h2o_print as h2p
 import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
 import errno
@@ -12,6 +13,7 @@ import requests, zipfile, StringIO
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
+import stat
 
 def sleep(secs):
     if getpass.getuser()=='jenkins':
@@ -199,6 +201,7 @@ def clean_sandbox_stdout_stderr():
 
 def tmp_file(prefix='', suffix=''):
     return tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
+
 def tmp_dir(prefix='', suffix=''):
     return tempfile.mkdtemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
 
@@ -208,11 +211,14 @@ def log(cmd, comment=None):
         # what got sent to h2o
         # f.write(cmd)
         # let's try saving the unencoded url instead..human readable
-        f.write(urlparse.unquote(cmd))
-        if comment:
-            f.write('    #')
-            f.write(comment)
-        f.write("\n")
+        if cmd:
+            f.write(urlparse.unquote(cmd))
+            if comment:
+                f.write('    #')
+                f.write(comment)
+            f.write("\n")
+        elif comment: # for comment-only 
+            f.write(comment + "\n")
 
 def make_syn_dir():
     SYNDATASETS_DIR = './syn_datasets'
@@ -386,6 +392,10 @@ def setup_random_seed(seed=None):
 
 # assume h2o_nodes_json file in the current directory
 def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
+    log("#*********************************************************************")
+    log("Starting new test: " + python_test_name + " at build_cloud_with_json()")
+    log("#*********************************************************************")
+
     print "This only makes sense if h2o is running as defined by", h2o_nodes_json
     print "For now, assuming it's a cloud on this machine, and here's info on h2o processes running here"
     print "No output means no h2o here! Some other info about stuff on the system is printed first though."
@@ -405,13 +415,32 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     else:
         cs = cloneJson['cloud_start']
         print "Info on the how the cloud we're cloning was apparently started (info from %s)" % h2o_nodes_json
-        print cs['time']
-        print cs['cwd']
-        print cs['python_cmd_line']
-        print cs['config_json']
-        print cs['username']
-        print cs['ip']
+        # required/legal values in 'cloud_start'. A robust check is good for easy debug when we add stuff
+        # for instance, if you didn't get the right/latest h2o-nodes.json! (we could check how old the cloud start is?)
+        valList = ['time', 'cwd', 'python_test_name', 'python_cmd_line', 'config_json', 'username', 'ip']
+        for v in valList:
+            if v not in cs:
+                raise Exception("Can't find %s in %s, wrong file or version change?" % (v, h2o_nodes_json))
+            print "cloud_start['%s']: %s" % (v, cs[v])
 
+        # write out something that shows how the cloud could be rebuilt, since it's a decoupled cloud build.
+        build_cloud_rerun_sh = LOG_DIR + "/" + 'build_cloud_rerun.sh'
+        with open(build_cloud_rerun_sh, 'w') as f:
+            f.write("echo << ! > ./temp_for_build_cloud_rerun.sh\n")
+            f.write("echo 'Rebuilding a cloud built with %s at %s by %s on %s in %s'\n" % \
+                (cs['python_test_name'], cs['time'], cs['username'], cs['ip'], cs['cwd']))
+            f.write("cd %s\n" % cs['cwd'])
+            if cs['config_json']:
+                f.write("%s -cj %s\n" % (cs['python_cmd_line'], cs['config_json']))
+            else:
+                f.write("%s\n" % cs['python_cmd_line'])
+            f.write("!\n")
+            f.write("ssh %s@%s < ./temp_for_build_cloud_rerun.sh\n" % (cs['username'], cs['ip']))
+        # make it executable
+        t = os.stat(build_cloud_rerun_sh)
+        os.chmod(build_cloud_rerun_sh, t.st_mode | stat.S_IEXEC)
+
+        # this is the internal node state for python..h2o.nodes rebuild
         nodeStateList = cloneJson['h2o_nodes']
 
     nodeList = []
@@ -421,7 +450,9 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
         newNode = ExternalH2O(nodeState)
         nodeList.append(newNode)
 
-    print len(nodeList), "total nodes in H2O cloud state ingested from json"
+    print ""
+    h2p.red_print("Ingested from json:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
+    print ""
     nodes[:] = nodeList
     return nodeList
 
@@ -434,7 +465,6 @@ def setup_benchmark_log():
 def build_cloud(node_count=2, base_port=54321, hosts=None, 
     timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
     conservative=False, create_json=False, clone_cloud=None, **kwargs):
-
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
     # (both come thru here)
@@ -447,6 +477,10 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
 
     # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
+    log("#*********************************************************************")
+    log("Starting new test: " + python_test_name + " at build_cloud()")
+    log("#*********************************************************************")
+
     # start up h2o to report the java version (once). output to python stdout
     check_h2o_version()
 
@@ -528,24 +562,54 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     nodes[:] = nodeList
     print len(nodeList), "total jvms in H2O cloud"
 
-    # dump the h2o.nodes state to a json file
-    # include enough extra info to have someone rebuild the cloud if a test fails
+    if config_json:
+        # like cp -p. Save the config file, to sandbox
+        print "Saving the ", config_json, "we used to", LOG_DIR
+        shutil.copy(config_json,  LOG_DIR + "/" + os.path.basename(config_json))
+
+    # Figure out some stuff about how this test was run
+    cs_time = str(datetime.datetime.now())
+    cs_cwd = os.getcwd()
+    cs_python_cmd_line = "python %s %s" % (python_test_name, pythonCmdLineArgs)
+    cs_python_test_name = python_test_name
+    if config_json:
+        cs_config_json = os.path.abspath(config_json)
+    else:
+        cs_config_json = None
+    cs_username = getpass.getuser()
+    cs_ip = get_ip_address()
+
+    # write out something that shows how the test could be rerun (could be a cloud build, a mix, or test only)
+    print "Writing the test_rerun.sh in", LOG_DIR
+    test_rerun_sh = LOG_DIR + "/" + 'test_rerun.sh'
+    with open(test_rerun_sh, 'w') as f:
+        f.write("echo << ! > ./temp_for_test_rerun.sh\n")
+        f.write("echo 'rerunning %s that originally ran at %s by %s on %s in %s'\n" % \
+                (cs_python_test_name, cs_time, cs_username, cs_ip, cs_cwd))
+        f.write("cd %s\n" % cs_cwd)
+        if cs_config_json:
+            f.write("%s -cj %s\n" % (cs_python_cmd_line, cs_config_json))
+        else:
+            f.write("%s\n" % cs_python_cmd_line)
+        f.write("!\n")
+        f.write("ssh %s@%s < temp_for_test_rerun.sh\n" % (cs_username, cs_ip))
+
+    # make it executable
+    t = os.stat(test_rerun_sh)
+    os.chmod(test_rerun_sh, t.st_mode | stat.S_IEXEC)
+# dump the h2o.nodes state to a json file # include enough extra info to have someone rebuild the cloud if a test fails
     # that was using that cloud.
     if create_json:
-        p = "python %s %s" % (python_test_name, pythonCmdLineArgs)
-        if config_json:
-            c = os.path.abspath(config_json)
-        else:
-            c = "None"
         q = {   
                 'cloud_start': 
                     {
-                    'time': str(datetime.datetime.now()),
-                    'cwd': os.getcwd(),
-                    'python_cmd_line': p,
-                    'config_json': c,
-                    'username': getpass.getuser(),
-                    'ip': get_ip_address(),
+                    'time': cs_time,
+                    'cwd': cs_cwd,
+                    'python_test_name': cs_python_test_name,
+                    'python_cmd_line': cs_python_cmd_line,
+                    'config_json': cs_config_json,
+                    'username': cs_username,
+                    'ip': cs_ip,
                     },
                 'h2o_nodes': h2o_util.json_repr(nodes),
             }
