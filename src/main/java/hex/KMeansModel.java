@@ -14,7 +14,7 @@ import water.util.Log.Tag.Sys;
 
 import com.google.gson.*;
 
-public class KMeansModel extends Model implements Progress {
+public class KMeansModel extends OldModel implements Progress {
   public static final String NAME = KMeansModel.class.getSimpleName();
   public double[][] _clusters; // The cluster centers, normalized according to _va
   public double _error; // Sum of min square distances

@@ -37,7 +37,7 @@ public class GeneratePredictionsPage extends Request {
     try {
       JsonObject res = new JsonObject();
       ValueArray ary = _dataKey.value();
-      Model m = (Model)_modelKey.value();
+      OldModel m = (OldModel)_modelKey.value();
       Key dest = _dest.value();
       return Inspect.redirect(res, ScoreTask.score(m, ary, dest));
     }catch(GLMException e){

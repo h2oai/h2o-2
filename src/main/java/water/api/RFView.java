@@ -69,8 +69,8 @@ public class RFView extends /* Progress */ Request {
 
   public static Response redirect(JsonObject fromPageResponse, Key rfModelKey) {
     RFModel rfModel = DKV.get(rfModelKey).get();
-    ValueArray data = DKV.get(rfModel.dataKey).get();
-    return redirect(fromPageResponse, null, rfModelKey, rfModel.dataKey, rfModel._totalTrees, data.numCols()-1, null, true, false );
+    ValueArray data = DKV.get(rfModel._dataKey).get();
+    return redirect(fromPageResponse, null, rfModelKey, rfModel._dataKey, rfModel._totalTrees, data.numCols()-1, null, true, false );
   }
 
   public static Response redirect(JsonObject fromPageResponse, Key rfModel, Key dataKey, boolean oobee) {
@@ -187,7 +187,7 @@ public class RFView extends /* Progress */ Request {
     Response r;
     if (done) {
       r = jobDone(response);
-      r.addHeader("<div class='alert'>" + /*RFScore.link(MODEL_KEY, model.selfKey, "Use this model for scoring.") */ GeneratePredictionsPage.link(model.selfKey, "Predict!")+ " </div>");
+      r.addHeader("<div class='alert'>" + /*RFScore.link(MODEL_KEY, model._selfKey, "Use this model for scoring.") */ GeneratePredictionsPage.link(model._selfKey, "Predict!")+ " </div>");
     } else { r = Response.poll(response, finished, tasks);  }
     r.setBuilder(JSON_CM, new ConfusionMatrixBuilder());
     r.setBuilder(TREES, new TreeListBuilder());

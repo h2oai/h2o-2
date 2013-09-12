@@ -909,7 +909,7 @@ public abstract class DGLM {
     }
   }
 
-  public static class GLMModel extends water.Model {
+  public static class GLMModel extends water.OldModel {
     public enum Status {
       NotStarted, ComputingModel, ComputingValidation, Done, Cancelled, Error
     };
@@ -1042,8 +1042,7 @@ public abstract class DGLM {
     public GLMModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, int response,
         boolean standardized, Sampling s, double[] beta, double[] normBeta, GLMParams glmp, LSMSolver solver,
         long nLines, long nCols, boolean converged, int iters, long time, String[] warnings) {
-      super(k, ary._key);
-      _va = ary;
+      super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
       _beta = beta;

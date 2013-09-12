@@ -22,7 +22,7 @@ public class KMeansApply extends Request {
       ValueArray va = _dataKey.value();
       KMeansModel model = _modelKey.value();
       int colIds[] = model.columnMapping(va.colNames());
-      if( !Model.isCompatible(colIds) ) {
+      if( !OldModel.isCompatible(colIds) ) {
         for( int i = 0; i < colIds.length; i++ )
           if( colIds[i] == -1 )
             throw new IllegalArgumentException("Incompatible dataset: " + va._key + " does not have column '"

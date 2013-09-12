@@ -32,7 +32,7 @@ public abstract class DRF {
     drfJob.start(drfTask);
     drfTask._job = drfJob;
     // Execute the DRF task
-    drfTask.dfork(drfTask._rfmodel.dataKey);
+    drfTask.dfork(drfTask._rfmodel._dataKey);
 
     return drfJob;
   }
@@ -158,7 +158,7 @@ public abstract class DRF {
         long availMem = (long) (OVERHEAD_MAGIC * totalmem) - localChunks; // theoretically available memory
 
         if (availMem > 0) {
-          final ValueArray ary = UKV.get(_rfmodel.dataKey);
+          final ValueArray ary = UKV.get(_rfmodel._dataKey);
           // Try to fill the memory up to ratio 3/8
           int numkeys = Math.min( (int) (availMem / ValueArray.CHUNK_SZ), (int) (ary.chunks()-localCKeys.length));
           Log.info(Sys.RANDF, "Avail. mem: " + PrettyPrint.bytes(availMem));
@@ -191,7 +191,7 @@ public abstract class DRF {
      *  trees.  Round down for later nodes, and round up for earlier nodes.
      */
     private int howManyTrees() {
-      ValueArray ary = DKV.get(_rfmodel.dataKey).get();
+      ValueArray ary = DKV.get(_rfmodel._dataKey).get();
       final long num_chunks = ary.chunks();
       final int  num_nodes  = H2O.CLOUD.size();
       HashSet<H2ONode> nodes = new HashSet();
@@ -214,7 +214,7 @@ public abstract class DRF {
 
     private int[] howManyRPC(Key[] lkeys, Key[] rkeys) {
       int[] result = new int[lkeys.length+rkeys.length];
-      final ValueArray ary = UKV.get(_rfmodel.dataKey);
+      final ValueArray ary = UKV.get(_rfmodel._dataKey);
       int idx = 0;
       for (Key k : lkeys) result[idx++] = ary.rpc(ValueArray.getChunkIndex(k));
       for (Key k : rkeys) result[idx++] = ary.rpc(ValueArray.getChunkIndex(k));

@@ -22,7 +22,7 @@ public class RFTreeView extends Request {
         "&%vaKey=%$vaVal" +
         "&%clzKey=%clzVal'>%body</a>");
     rs.replace("modelKey", MODEL_KEY);
-    rs.replace("modelVal", model.selfKey.toString());
+    rs.replace("modelVal", model._selfKey.toString());
     rs.replace("treeKey", TREE_NUM);
     rs.replace("treeVal", tree);
     rs.replace("vaKey", DATA_KEY);

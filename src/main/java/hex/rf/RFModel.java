@@ -18,7 +18,7 @@ import com.google.gson.*;
  * A model is an ensemble of trees that can be serialized and that can be used
  * to classify data.
  */
-public class RFModel extends Model implements Progress {
+public class RFModel extends OldModel implements Progress {
   /** Number of features these trees are built for */
   public int _features;
   /** Sampling strategy used for model */
@@ -118,7 +118,7 @@ public class RFModel extends Model implements Progress {
   public String name(int atree) {
     if( atree == -1 ) atree = size();
     assert atree <= size();
-    return selfKey.toString() + "[" + atree + "]";
+    return _selfKey.toString() + "[" + atree + "]";
   }
 
   /** Return the bits for a particular tree */

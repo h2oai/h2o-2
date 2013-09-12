@@ -56,7 +56,7 @@ class DABuilder {
   protected  DataAdapter inhaleData(Key[] lkeys, Key[] rkeys) {
     Timer t_inhale = new Timer();
     RFModel rfmodel = _drf._rfmodel;
-    final ValueArray ary = UKV.get(rfmodel.dataKey);
+    final ValueArray ary = UKV.get(rfmodel._dataKey);
 
     // The model columns are dense packed - but there will be columns in the
     // data being ignored.  This is a map from the model's columns to the

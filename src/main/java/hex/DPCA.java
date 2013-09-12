@@ -53,7 +53,7 @@ public abstract class DPCA {
     }
   }
 
-  public static class PCAModel extends water.Model {
+  public static class PCAModel extends water.OldModel {
     String _error;
     Status _status;
     final int[] _colCatMap;
@@ -98,7 +98,7 @@ public abstract class DPCA {
 
     public PCAModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, double[] sdev,
         double[] propVar, double[][] eigVec, int response, int num_pc, PCAParams pcap) {
-      super(k, ary._key);
+      super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
       _sdev = sdev;

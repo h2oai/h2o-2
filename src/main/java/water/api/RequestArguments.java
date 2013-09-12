@@ -1563,7 +1563,7 @@ public class RequestArguments extends RequestStatics {
   }
 
   // -------------------------------------------------------------------------
-  public class H2OModelKey<TM extends Model, TK extends TypeaheadKeysRequest> extends TypeaheadInputText<TM> {
+  public class H2OModelKey<TM extends OldModel, TK extends TypeaheadKeysRequest> extends TypeaheadInputText<TM> {
     public H2OModelKey(TK tkr, String name, boolean req) { super(tkr.getClass(), name, req); }
     @Override protected TM parse(String input) throws IllegalArgumentException {
       if( input!=null && input.length()>0 ) {

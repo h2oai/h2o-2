@@ -1012,11 +1012,24 @@ public final class AutoBuffer {
 
   public AutoBuffer putJSONAStr(String name, String[] fs) {
     putJSONStr(name).put1(':');
+    return putJSONAStr(fs);
+  }
+  public AutoBuffer putJSONAStr(String[] fs) {
     if( fs == null ) return putNULL();
     put1('[');
     for( int i=0; i<fs.length; i++ ) {
       if( i>0 ) put1(',');
       putJSONStr(fs[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONAAStr( String name, String[][] a ) {
+    putJSONStr(name).put1(':');
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONAStr(a[i]);
     }
     return put1(']');
   }

@@ -5,6 +5,7 @@ import water.*;
 import water.util.RString;
 import water.util.Log;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 /**
  * @author cliffc
@@ -32,7 +33,10 @@ public class GeneratePredictions2 extends Request2 {
 
   @Override protected Response serve() {
     try {
-      return Inspect2.redirect(this, ScoreTask.score(model, data, prediction_key).toString());
+      Vec vec = model.score(data,prediction_key);
+      Frame fr = new Frame(new String[]{prediction_key.toString()},new Vec[]{vec});
+      UKV.put(prediction_key,fr);
+      return Inspect2.redirect(this, prediction_key.toString());
     } catch (Throwable t) {
       Log.err(t);
       return Response.error(t.getMessage());

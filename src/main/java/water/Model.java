@@ -51,7 +51,7 @@ public abstract class Model extends Iced {
   /** Full constructor */
   public Model( Key selfKey, Key dataKey, String names[], String domain[][] ) {
     if( domain == null ) domain=new String[names.length+1][];
-    assert domain.length==names.length+1;
+    assert domain.length==names.length;
     assert names.length > 1;
     assert names[names.length-1] != null; // Have a valid response-column name?
     _selfKey = selfKey;
@@ -148,7 +148,7 @@ public abstract class Model extends Iced {
    *  just load the data into the tmp array, then call subclass scoring
    *  logic. */
   protected double score0( Chunk chks[], int row_in_chunk, double[] tmp ) {
-    assert chks.length==_names.length+1; // Last chunk is for the response
+    assert chks.length>=_names.length; // Last chunk is for the response
     for( int i=0; i<_names.length; i++ )
       tmp[i] = chks[i].at0(row_in_chunk);
     return score0(tmp);
