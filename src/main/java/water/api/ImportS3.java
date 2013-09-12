@@ -1,6 +1,8 @@
 package water.api;
 
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import water.DKV;
 import water.Key;
@@ -10,6 +12,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.*;
+import water.util.Log;
 
 public class ImportS3 extends Request {
   public class BucketArg extends TypeaheadInputText<String> {
@@ -62,12 +65,21 @@ public class ImportS3 extends Request {
     }
   }
 
+  boolean isBareS3BucketWithoutTrailingSlash(String s) {
+    Pattern p = Pattern.compile("s3://[^/]*");
+    Matcher m = p.matcher(s);
+    boolean b = m.matches();
+    return b;
+  }
+
   @Override
   protected Response serve() {
+    String bucket = _bucket.value();
+    if (isBareS3BucketWithoutTrailingSlash(bucket)) { bucket = bucket + "/"; }
+    Log.info("ImportS3 processing (" + bucket + ")");
     JsonObject json = new JsonObject();
     JsonArray succ = new JsonArray();
     JsonArray fail = new JsonArray();
-    String bucket = _bucket.value();
     AmazonS3 s3 = PersistS3.getClient();
     ObjectListing currentList = s3.listObjects(bucket);
     processListing(currentList, succ, fail);
