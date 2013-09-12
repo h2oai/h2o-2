@@ -90,10 +90,10 @@ jobs -l
 echo ""
 echo "You can stop this jenkins job now if you want. It's all done"
 
-if wait $cloud_pid
-then
-    echo "$cloud_pid succeeded"
-else
-    echo "$pid failed"
-fi
-
+# if wait $cloud_pid
+# then
+#     echo "$cloud_pid succeeded"
+# else
+#     echo "$pid failed"
+# fi
+# 

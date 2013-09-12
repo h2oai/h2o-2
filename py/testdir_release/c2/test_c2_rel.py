@@ -3,7 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import2 as h2i, h2o_glm, h2o_common
 import h2o_print
 
-DO_GLM = False
+DO_GLM = True
 LOG_MACHINE_STATS = False
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -20,15 +20,16 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
         if len(h2o.nodes)==1:
+            tryHeap = 28
             csvFilenameList= [
                 ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
             ]
         else:
+            tryHeap = 28
             csvFilenameList= [
-                ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 10 * avgMichalSize, 600),
+                ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
             ]
 
-        tryHeap = 28
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
