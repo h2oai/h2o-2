@@ -158,8 +158,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
-        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/" + filePath)
-        h2p.blue_print("The canonical (real) path is:", os.path.realpath(filePath))
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/%s" % filePath) 
+        h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
+        h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
@@ -170,8 +171,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
         (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
         filePath = os.path.join(folderPath, pattern)
-        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses local:/" + filePath)
-        h2p.blue_print("The canonical (real) path is:", os.path.realpath(filePath))
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses local:/%s" % filePath)
+        h2p.green_print("Path h2o will be told to use: %s" % filePath)
+        h2p.blue_print("If local jvms, path resolves locally as:", os.path.realpath(filePath))
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
