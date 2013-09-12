@@ -67,7 +67,7 @@ ls -lt ./h2o-nodes.json
 # This could be a runner, that loops thru a list of tests.
 ../testdir_single_jvm/n0.doit test_c1_rel || true
 
-../testdir_single_jvm/n0.doit test_c1_rel || true
+../testdir_single_jvm/n0.doit test_c2_rel || true
 
 # test_c2_rel has about 11 subtests inside it, that will be tracked individually by jenkins
 # ../testdir_single_jvm/n0.doit test_c2_rel || true
@@ -76,6 +76,9 @@ ls -lt ./h2o-nodes.json
 # also prevents us from overrunning ourselves with cloud building
 
 # If we don't wait, the cloud will get torn down.
+
 jobs -l
+echo ""
+echo "You can stop this jenkins job now if you want. It's all done"
 wait $cloud_pid
 
