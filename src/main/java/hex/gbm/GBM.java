@@ -138,7 +138,7 @@ public class GBM extends FrameJob {
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
     final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
-    assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
+    assert 1 <= nclass && nclass <= 1000; // Arbitrary cutoff for too many classes
     final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
