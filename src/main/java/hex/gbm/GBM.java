@@ -36,19 +36,19 @@ public class GBM extends FrameJob {
   }
 
   @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
-  int min_rows = 5;
+  int min_rows = 10;
   public class MinRowsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
   @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  char nbins = 50;
+  char nbins = 1024;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
   }
 
   @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
-  double learn_rate = 0.1;
+  double learn_rate = 0.2;
   public class LearnRateFilter implements Filter {
     @Override public boolean run(Object value) {
       double learn_rate = (Double)value;
@@ -160,7 +160,7 @@ public class GBM extends FrameJob {
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
         BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, 0 );
-        _errs = new float[]{(float)bs._err/nrows}; // Errors for exactly 1 tree
+        _errs = new float[]{(float)bs._sum/nrows}; // Errors for exactly 1 tree
         gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
         DKV.put(outputKey, gbm_model);
 
@@ -173,7 +173,7 @@ public class GBM extends FrameJob {
           Timer t_score = new Timer();
           BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, max_depth );
           _errs = Arrays.copyOf(_errs,_errs.length+1);
-          _errs[_errs.length-1] = (float)bs2._err/nrows;
+          _errs[_errs.length-1] = (float)bs2._sum/nrows;
           gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
           DKV.put(outputKey, gbm_model);
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);

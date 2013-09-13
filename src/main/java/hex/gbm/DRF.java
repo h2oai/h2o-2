@@ -221,7 +221,7 @@ public class DRF extends FrameJob {
           int old = _errs.length;
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
-          _errs[_errs.length-1] = (float)bs._err/nrows;
+          _errs[_errs.length-1] = (float)bs._sum/nrows;
           drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
           DKV.put(outputKey, drf_model);
 

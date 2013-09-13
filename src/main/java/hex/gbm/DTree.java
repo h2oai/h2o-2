@@ -715,7 +715,8 @@ class DTree extends Iced {
       //System.out.print(" | ");
       //for( int x=_ncols; x<chks.length; x++ )
       //  System.out.print(String.format("%5.2f,",chks[x].at(i)));
-      //System.out.println(" pred="+pred[ycls]+(best==ycls?"":", ERROR"));
+      //System.out.println(" pred="+pred[ycls]+","+Arrays.toString(pred)+(best==ycls?"":", ERROR"));
+      //if( best != ycls ) System.out.println(crashReport(i,sum,pred,nids));
 
       float ypred = pred[ycls];  // Predict max class
       if( ypred > 1.0f ) ypred = 1.0f;
