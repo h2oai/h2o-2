@@ -72,9 +72,6 @@ public class GBM extends FrameJob {
     public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
-    @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO: Score me");
-    }
   }
   public Vec score( Frame fr ) { return gbm_model.score(fr,true);  }
 
@@ -168,7 +165,7 @@ public class GBM extends FrameJob {
         for( int tid=1; tid<ntrees; tid++) {
           if(GBM.this.cancelled())break;
           forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
-
+//          System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
           // Tree-by-tree scoring
           Timer t_score = new Timer();
           BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, max_depth );
@@ -179,6 +176,11 @@ public class GBM extends FrameJob {
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
+        int i = 0;
+        for(DTree t:forest){
+          System.out.println("Tree # " + i++);
+          System.out.println(t.compress().toString());
+        }
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
