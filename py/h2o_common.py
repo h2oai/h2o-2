@@ -4,7 +4,7 @@ import h2o, h2o_hosts, h2o_import2 as h2i
 # typical use in a unittest:
 # class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 # see multiple inheritance at http://docs.python.org/release/1.5/tut/node66.html
-#*********************************************************************************************************
+#************************************************************************************
 class SetupOneJVM14(object):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -22,7 +22,7 @@ class SetupOneJVM14(object):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-#*********************************************************************************************************
+#************************************************************************************
 class SetupThreeJVM4(object):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -40,7 +40,7 @@ class SetupThreeJVM4(object):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-#*********************************************************************************************************
+#************************************************************************************
 class ReleaseCommon(object):
     def tearDown(self):
         print "tearDown"
@@ -72,7 +72,7 @@ class ReleaseCommon(object):
             elapsed = time.time() - start
             print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 
-#*********************************************************************************************************
+#************************************************************************************
 # no log download or key delete
 class ReleaseCommon2(object):
     def tearDown(self):
@@ -87,9 +87,7 @@ class ReleaseCommon2(object):
         h2o.stabilize_cloud(h2o.nodes[0], node_count=len(h2o.nodes), timeoutSecs=90)
 
 
-#*********************************************************************************************************
-
-#*********************************************************************************************************
+#************************************************************************************
 # Notes:
 # http://stackoverflow.com/questions/1323455/python-unit-test-with-base-and-sub-class
 #     
@@ -102,4 +100,4 @@ class ReleaseCommon2(object):
 # each test in derived classes, you have to reverse the order of the base classes, 
 # so that it will be: class SubTest1(CommonTests, unittest.TestCase). 
 # - Denis Golomazov July 17
-#***********************
+#************************************************************************************
