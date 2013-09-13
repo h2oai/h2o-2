@@ -204,12 +204,14 @@ class DTree extends Iced {
   // Records a column, a bin to split at within the column, and the MSE.
   static class Split {
     final int _col, _bin;       // Column to split, bin where being split
+    final boolean _equal;       // Split is < or == ?
     final long _nrows[];        // Rows in each final split
     final double _mses[];       // MSE  of each final split
     final float _preds[][/*nclass*/]; // Prediction (by class) for each split
-    Split( int col, int bin, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) {
+    Split( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) {
       _col = col;
       _bin = bin;
+      _equal = equal;
       _nrows = new long[] { n0, n1 };
       _mses  = new double[] { mse0, mse1 };
       _preds = new float[][] { preds0, preds1 };
@@ -250,8 +252,12 @@ class DTree extends Iced {
         // Tighter bounds on the column getting split: exactly each new
         // DBinHistogram's bound are the bins' min & max.
         if( _col==j ) {
-          if( splat == 0 ) max = h.maxs(_bin-1);
-          else             min = h.mins(_bin  );
+          if( _equal ) {        // Equality split; no change on unequals-side
+            if( splat == 1 ) max=min = h.mins(_bin); // but know exact bounds on equals-side
+          } else {              // Less-than split
+            if( splat == 0 ) max = h.maxs(_bin-1); // Max from next-smallest bin
+            else             min = h.mins(_bin  ); // Min from this bin
+          }
         }
         if( min == max ) continue; // This column will not split again
         if( min >  max ) continue; // Happens for all-NA subsplits
@@ -389,6 +395,11 @@ class DTree extends Iced {
     int _size = 0; // byte size of this subtree
 
     final int _col;             // Column we split over
+    // _equals\_nids[] \   0   1
+    // ----------------+----------
+    //       F         |   <   >=
+    //       T         |  !=   ==
+    final boolean _equal;       // True if equality split, False if less-than split
     final float _splat;         // Split At point
     // The following arrays are all based on a bin# extracted from linear
     // interpolation of _col, _min and _step.
@@ -413,6 +424,7 @@ class DTree extends Iced {
       if( spl._col == -1 || spl._bin == 0/*bin 0 is NO SPLIT*/ ) {
         DecidedNode p = n._tree.decided(_pid);
         _col  = p._col;  // Just copy the parent data over, for the predictions
+        _equal = p._equal;
         _splat = p._splat;
         _nids = new int[p._nids.length];
         Arrays.fill(_nids,-1);  // No further splits
@@ -420,6 +432,7 @@ class DTree extends Iced {
         return;
       }
       _col = spl._col;           // Assign split-column choice
+      _equal = spl._equal;       // Equals-vs-lessthen split
       _splat = spl.splat(n._hs); // Split-at value
       _nids = new int[2];        // Split into 2 subsets
       final char nclass  = _tree._nclass;
@@ -454,6 +467,7 @@ class DTree extends Iced {
     DecidedNode( DTree tree, float pred[] ) {
       super(tree,-1,tree.newIdx());
       _col = -1;
+      _equal = false;
       _splat = Float.NaN;
       _nids = new int[] { -1 }; // 1 bin, no children
       _pred = new float[][] { pred };
@@ -461,12 +475,13 @@ class DTree extends Iced {
 
     // Bin #.
     public int bin( Chunk chks[], int i ) {
-      assert _nids.length == 2;
+      if( _nids.length == 1 ) return 0;
+      assert _nids.length == 2 : Arrays.toString(_nids)+", pid="+_pid+" and "+this;
       if( chks[_col].isNA0(i) ) return i%_nids.length; // Missing data: pseudo-random bin select
       float d = (float)chks[_col].at0(i); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits.
-      return d < _splat ? 0 : 1;
+      return _equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
     public int ns( Chunk chks[], int i ) { return _nids[bin(chks,i)]; }
@@ -510,6 +525,10 @@ class DTree extends Iced {
 
     @Override public String toString() {
       if( _col == -1 ) return "Decided has col = -1";
+      if( _equal )
+        return
+          _tree._names[_col]+" != "+_splat+" = "+Arrays.toString(_pred[0])+"\n"+
+          _tree._names[_col]+" == "+_splat+" = "+Arrays.toString(_pred[1])+"\n";
       return
         _tree._names[_col]+" < "+_splat+" = "+Arrays.toString(_pred[0])+"\n"+
         _splat+" <="+_tree._names[_col]+" = "+Arrays.toString(_pred[1])+"\n";
@@ -518,16 +537,25 @@ class DTree extends Iced {
     StringBuilder printChild( StringBuilder sb, int nid ) {
       int i = _nids[0]==nid ? 0 : 1;
       assert _nids[i]==nid : "No child nid "+nid+"? " +Arrays.toString(_nids);
-      String n = _tree._names[_col];
-      if( i==0 ) sb.append("[ ").append(n).append(" <  ").append(_splat).append("]");
-      else       sb.append("[ ").append(_splat).append(" <= ").append(n).append("]");
+      sb.append("[").append(_tree._names[_col]);
+      sb.append(_equal
+                ? (i==0 ? " != " : " == ")
+                : (i==0 ? " <  " : " >= "));
+      sb.append(_splat).append("]");
       return sb;
     }
 
     @Override public StringBuilder toString2(StringBuilder sb, int depth) {
       for( int i=0; i<_nids.length; i++ ) {
         for( int d=0; d<depth; d++ ) sb.append("  ");
-        (_col >= 0 ? sb.append(_tree._names[_col]).append(" < ").append(i==0?_splat:"infinity") : sb.append("init")).append(":").append(Arrays.toString(_pred[i])).append("\n");
+        if( _col < 0 ) sb.append("init");
+        else {
+          sb.append(_tree._names[_col]);
+          sb.append(_equal
+                    ? (i==0 ? " != " : " == ")
+                    : (i==0 ? " <  " : " >= "));
+          sb.append(_splat).append(":").append(Arrays.toString(_pred[i])).append("\n");
+        }
         if( _nids[i] >= 0 ) _tree.node(_nids[i]).toString2(sb,depth+1);
       }
       return sb;
@@ -767,7 +795,7 @@ class DTree extends Iced {
     // OUTPUT fields
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
-    long _err;                  // Total absolute errors
+    long _err, _nrows;          // Total absolute errors, actual rows trained
 
     BulkScore( DTree trees[], int ncols, int nclass, int ymin, float sampleRate, boolean doAvg ) {
       _trees = trees; _ncols = ncols;
@@ -809,13 +837,17 @@ class DTree extends Iced {
       int nids[] = new int[_trees.length];// Shared temp array for better error reporting
       for( int i=0; i<ys._len; i++ ) {
         float err = score0( chks, i, (float)(ys.at0(i)-_ymin), pred, nids, rands );
-        _sum += err*err;        // Squared error
+        if( !Float.isNaN(err) ) { // Skip rows trained in *all* trees for OOBEE
+          _sum += err*err;        // Squared error
+          _nrows++;
+        }
       }
     }
 
     @Override public void reduce( BulkScore t ) {
       _sum += t._sum;
       _err += t._err;
+      _nrows += t._nrows;
       Utils.add(_cm,t._cm);
     }
 
@@ -856,7 +888,7 @@ class DTree extends Iced {
 
       // Having computed the votes across all trees, find the majority class
       // and it's error rate.
-      if( nt == 0 ) return 0;   // OOBEE: all rows trained, so no rows scored
+      if( nt == 0 ) return Float.NaN; // OOBEE: all rows trained, so no rows scored
 
       if( _doAvg )              // Average (or not) sum of trees?
         for( int c=0; c<_nclass; c++ )
@@ -886,19 +918,20 @@ class DTree extends Iced {
       //System.out.print(" | ");
       //for( int x=_ncols; x<chks.length; x++ )
       //  System.out.print(String.format("%5.2f,",chks[x].at(i)));
-      //System.out.println(" pred="+pred[ycls]+(best==ycls?"":", ERROR"));
+      //System.out.println(" pred="+pred[ycls]+","+Arrays.toString(pred)+(best==ycls?"":", ERROR"));
+      //if( best != ycls ) System.out.println(crashReport(i,sum,pred,nids));
 
       float ypred = pred[ycls];  // Predict max class
       if( ypred > 1.0f ) ypred = 1.0f;
       return 1.0f - ypred;       // Error from 0 to 1.0
     }
 
-    public BulkScore report( Sys tag, long nrows, int depth ) {
+    public BulkScore report( Sys tag, int depth ) {
       int lcnt=0;
       for( int t=0; t<_trees.length; t++ ) lcnt += _trees[t]._len;
       Log.info(tag,"============================================================== ");
-      Log.info(tag,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/nrows));
-      Log.info(tag,"Total of "+_err+" errors on "+nrows+" rows, with "+_trees.length+" trees (average of "+((float)lcnt/_trees.length)+" nodes)");
+      Log.info(tag,"Average squared prediction error for tree of depth "+depth+" is "+(_sum/_nrows));
+      Log.info(tag,"Total of "+_err+" errors on "+_nrows+" rows, with "+_trees.length+" trees (average of "+((float)lcnt/_trees.length)+" nodes)");
       return this;
     }
 
@@ -933,7 +966,7 @@ class DTree extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
-    @API(help="Error rate as trees are added")     public final float [] errs;
+    @API(help="MSE rate as trees are added")       public final float [] errs;
     @API(help="Min class - to zero-bias the CM")   public final int ymin;
     @API(help="Actual trees built (probably < N)") public final byte [][] treeBits;
 
@@ -1003,13 +1036,13 @@ class DTree extends Iced {
       }
 
       if( errs != null ) {
-        DocGen.HTML.section(sb,"Error Rate by Tree");
+        DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Trees</th>");
         for( int i=0; i<errs.length; i++ )
           sb.append("<td>").append(i+1).append("</td>");
         sb.append("</tr>");
-        sb.append("<tr><th class='warning'>Error Rate</th>");
+        sb.append("<tr><th class='warning'>MSE</th>");
         for( int i=0; i<errs.length; i++ )
           sb.append(String.format("<td>%5.3f</td>",errs[i]));
         sb.append("</tr>");

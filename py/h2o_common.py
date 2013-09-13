@@ -19,7 +19,6 @@ class ReleaseCommon(object):
         # normally this is baked into build_cloud, but let's leave it here for now
         h2o.stabilize_cloud(h2o.nodes[0], node_count=len(h2o.nodes), timeoutSecs=90)
 
-
     @classmethod
     def tearDownClass(cls):
         print "tearDownClass"
@@ -36,7 +35,21 @@ class ReleaseCommon(object):
             elapsed = time.time() - start
             print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 
-#***********************
+#*********************************************************************************************************
+# no log download or key delete
+class ReleaseCommon2(object):
+    def tearDown(self):
+        print "tearDown"
+        h2o.check_sandbox_for_errors()
+
+    @classmethod
+    def setUpClass(cls):
+        print "setUpClass"
+        h2o.build_cloud_with_json()
+        # normally this shouldn't be necessary?
+        h2o.stabilize_cloud(h2o.nodes[0], node_count=len(h2o.nodes), timeoutSecs=90)
+
+#*********************************************************************************************************
 # Notes:
 # http://stackoverflow.com/questions/1323455/python-unit-test-with-base-and-sub-class
 #     

@@ -93,7 +93,7 @@ def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
     if not parseResult: raise Exception('No parsed key for GBM specified')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.gbm(data_key=data_key,**kwargs) 
+    return node.gbm(data_key=data_key,timeoutSecs=timeoutSecs,**kwargs) 
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs

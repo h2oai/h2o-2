@@ -36,8 +36,8 @@ def check_port_group(base_port):
 def show_h2o_processes():
     import psutil
     # print "get_users:", psutil.get_users()
-    print "TOTAL_PHYMEM:", psutil.TOTAL_PHYMEM
-    print "NUM_CPUS:", psutil.NUM_CPUS
+    print "total physical dram: %0.2f GB", (psutil.TOTAL_PHYMEM+0)/(1024*1024)
+    print "max cpu threads:", psutil.NUM_CPUS
 
     print "\nReporting on h2o"
     users = set()

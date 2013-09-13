@@ -217,11 +217,11 @@ public class DRF extends FrameJob {
           int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, ncols, nclass, ymin, nrows, sample_rate);
           if( d>depth ) depth=d;    // Actual max depth used
           
-          BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth );
+          BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, depth );
           int old = _errs.length;
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
-          _errs[_errs.length-1] = (float)bs._err/nrows;
+          _errs[_errs.length-1] = (float)bs._sum/nrows;
           drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
           DKV.put(outputKey, drf_model);
 
@@ -311,7 +311,7 @@ public class DRF extends FrameJob {
 
       // If all trees are done, then so are we
       if( !still_splitting ) break;
-      //new BulkScore(trees,ncols,nclass,ymin,(float)sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth );
+      //new BulkScore(trees,ncols,nclass,ymin,(float)sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, depth );
     }
 
     // Print the generated trees
@@ -358,7 +358,7 @@ public class DRF extends FrameJob {
 
     // Find the column with the best split (lowest score).
     @Override DTree.Split bestCol( DRFUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
+      DTree.Split best = new DTree.Split(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
       if( u._hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];

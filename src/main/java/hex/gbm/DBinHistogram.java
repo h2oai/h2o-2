@@ -58,14 +58,18 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     char xbins = (char)Math.max((char)Math.min(nbins,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
-    if( isInt && max-min < xbins )
+    float step;
+    if( isInt && max-min < xbins ) {
       xbins = (char)((long)max-(long)min+1L); // Shrink bins
+      step = 1.0f;                            // Fixed stepsize
+    } else {
+      step = (max-min)/xbins; // Step size for linear interpolation
+      if( step == 0 ) { assert max==min; step = 1.0f; }
+      assert step > 0;
+    }
     _nbins = xbins;
     _nclass = nclass;
     _bmin = min;                // Bin-Min
-    float step = (max-min)/_nbins; // Step size for linear interpolation
-    if( step == 0 ) { assert max==min; step = 1.0f; }
-    assert step > 0;
     _step = step;
   }
   boolean isRegression() { return _nclass==1; }
@@ -174,17 +178,24 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     for( int b=0; b<_nbins; b++ )
       n1 = add(M1,S1,n1,_Ms[b],_Ss[b],_bins[b]);
 
-    // Now roll the split-point across the bins
+    // Make private hackable copies
+    float M2[] = M1.clone();
+    float S2[] = S1.clone();
+
+    // Now roll the split-point across the bins.  There are 2 ways to do this:
+    // split left/right based on being less than some value, or being equal/
+    // not-equal to some value.  Equal/not-equal makes sense for catagoricals
+    // but both splits could work for any integral datatype.  Do the less-than
+    // splits first.
     double mseAll=0;
     assert (mseAll = mse(M1,S1,n1))==mseAll || true;
-    DTree.Split best = new DTree.Split(col,-1,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
+    DTree.Split best = new DTree.Split(col,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
     for( int b=0; b<_nbins; b++ ) {
       double mse0 = mse(M0,S0,n0);
       double mse1 = mse(M1,S1,n1);
       double mse = (mse0*n0+mse1*n1)/(n0+n1);
       if( mse < best.mse() || (best._bin<((_nbins+1)/2) && mse==best.mse()) )
-        best = new DTree.Split(col,b,n0,n1,mse0,mse1,M0.clone(), M1.clone());
-      //System.out.println(String.format("%s, mse=%5.2f, bmse=%5.2f %s",name,mse,best.mse(),new DTree.Split(col,b,n0,n1,mse0,mse1,M0.clone(), M1.clone())));
+        best = new DTree.Split(col,b,false,n0,n1,mse0,mse1,M0.clone(), M1.clone());
       // Move mean/var across split point
       n0 = add( M0, S0, n0, _Ms[b], _Ss[b], _bins[b]);
       n1 = sub( M1, S1, n1, _Ms[b], _Ss[b], _bins[b]);
@@ -193,6 +204,32 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // non-splits: either ALL data to the left or ALL data to the right.
     assert n1==0;
     assert mseAll == mse(M0,S0,n0);
+
+    // Now look at equal/not-equal splits.  At each loop, remove the current
+    // bin from M2/S2/n2 & check MSE - then restore M2/S2/n2.
+    if( _isInt && _step == 1.0f ) { // Only for ints & enums
+      long n2 = n0;
+      for( int b=1; b<_nbins-1; b++ ) { // Notice tigher endpoints: ignore splits that are repeats of above
+        long n3 = _bins[b];
+        if( n3 == 0 ) continue; // Ignore zero-bin splits
+        if( n3 == n2 ) {        // Bad split: all or nothing.
+          best = new DTree.Split(col,b,true,0,n3,0,mseAll,new float[M2.length], M2);
+          break;
+        }
+        // Subtract out the chosen bin from the totals
+        float M3[] = _Ms[b], S3[] = _Ss[b];
+        n2 = sub(M2,S2,n2,M3,S3,n3);
+        double mse2 = mse(M2,S2,n2);
+        double mse3 = mse(M3,S3,n3);
+        double mse = (mse2*n2+mse3*n3)/(n2+n3);
+        if( mse < best.mse() )
+          best = new DTree.Split(col,b,true,n2,n3,mse2,mse3,M2.clone(), M3.clone());
+        // Restore the total bins
+        n2 = add(M2,S2,n2,M3,S3,n3);
+        assert Math.abs(mseAll - mse(M2,S2,n2)) < 0.00001 : "mseAll="+mseAll+", mse at end="+mse(M2,S2,n2)+", bin="+b+", "+this;
+      }
+    }
+
     return best;
   }
 
@@ -303,14 +340,16 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(_name).append(":").append(_min).append("-").append(_max);
-    if( _bins != null ) for( int b=0; b<_nbins; b++ ) {
+    if( _bins != null ) {
+      for( int b=0; b<_nbins; b++ ) {
         sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));
         for( int c=0; c<_nclass; c++ )
           sb.append(String.format(" %d - %6.2f/%6.2f,", c,
                                   _Ms[b]==null?Float.NaN:mean(b,c),
                                   _Ss[b]==null?Float.NaN:var (b,c)));
-        sb.append('\n');
       }
+      sb.append('\n');
+    }
     return sb.toString();
   }
 
