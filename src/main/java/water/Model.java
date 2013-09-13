@@ -63,7 +63,8 @@ public abstract class Model extends Iced {
   /** Called when deleting this model, to cleanup any internal keys */
   public void delete() { UKV.remove(_selfKey); }
 
-  public String responseName() { return _names[_names.length-1]; }
+  public String responseName() { return   _names[  _names.length-1]; }
+  public String[] classNames() { return _domains[_domains.length-1]; }
 
   /** Bulk score the frame 'fr', producing a single output vector.  Also passed
    *  in a flag describing how hard we try to adapt the frame.  */
