@@ -176,11 +176,7 @@ public class GBM extends FrameJob {
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
-        int i = 0;
-        for(DTree t:forest){
-          System.out.println("Tree # " + i++);
-          System.out.println(t.compress().toString());
-        }
+
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
@@ -344,7 +340,7 @@ public class GBM extends FrameJob {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override DTree.Split bestCol( GBMUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
+      DTree.Split best = DTree.Split.make(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
       DHistogram hs[] = u._hs;
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {

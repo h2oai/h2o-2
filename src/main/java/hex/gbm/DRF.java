@@ -358,7 +358,7 @@ public class DRF extends FrameJob {
 
     // Find the column with the best split (lowest score).
     @Override DTree.Split bestCol( DRFUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
+      DTree.Split best = DTree.Split.make(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
       if( u._hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
