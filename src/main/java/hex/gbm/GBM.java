@@ -72,9 +72,6 @@ public class GBM extends FrameJob {
     public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
-    @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO: Score me");
-    }
   }
   public Vec score( Frame fr ) { return gbm_model.score(fr,true);  }
 

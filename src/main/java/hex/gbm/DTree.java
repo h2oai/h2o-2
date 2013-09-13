@@ -95,30 +95,34 @@ class DTree extends Iced {
       AutoBuffer ab = new AutoBuffer(_bits);
       while(true){
         int nodeType = ab.get1();
-        int colId = ab.get1();
+        int colId = ab.get2();
         float splitVal = ab.get4f();
-        if(row[colId] == splitVal || (((nodeType & 4) == 0) && row[colId] > splitVal)){ // go right
+        if(colId == 65535)
+          return scoreBigLeaf(ab, pred);
+        if((((nodeType & 4) == 0) && (row[colId] >= splitVal)) || (((nodeType & 4) == 1) && (row[colId] != splitVal))) { // go right
           // first skip left subtree
           int lmask = nodeType & 27;
+          int skip = 0;
           switch(lmask){
             case 1:
-              ab.position(ab.position() + ab.get1());
+              skip = ab.get1();
               break;
             case 2:
-              ab.position(ab.position() + ab.get2());
+              skip =  ab.get2();
               break;
             case 3:
-              ab.position(ab.position() + ab.get3());
+              skip = ab.get3();
               break;
             case 8: // small leaf
-              ab.position(ab.position()+_nclass < 256?1:2);
+              skip = _nclass < 256?1:2;
               break;
             case 24: // big leaf
-              ab.position(_nclass*4); // skip the p-distribution
+              skip = _nclass*4; // skip the p-distribution
               break;
             default:
               assert false:"illegal lmask value " + lmask;
           }
+          ab.position(ab.position()+skip);
           if((lmask = nodeType & 96) != 0) // leaf
             return lmask == 32?scoreSmallLeaf(ab, pred):scoreBigLeaf(ab, pred);
         } else { // go left
@@ -158,6 +162,8 @@ class DTree extends Iced {
       int nodeType = ab.get1();
       int col = ab.get2();
       float fval = ab.get4f();
+      if(col == 65535)
+        return printBigLeaf(sb, ab);
       String op = (nodeType & 4) == 0?" < ":" == ";
       sb.append(indent(indent) + "if(col[" + col + "]" + op + fval + "){").append("\n");
       if((nodeType & 8) == 0){ // we have left subtree
@@ -1014,7 +1020,14 @@ class DTree extends Iced {
     }
 
     @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO: Score me");
+      int nclasses = treeBits[0]._nclass;
+      float [] pred = new float[nclasses];
+      float [] pred_acc = pred.clone();
+      for(CompressedTree t:treeBits){
+        t.score(data, pred);
+        Utils.add(pred_acc, pred);
+      }
+      return Utils.maxIndex(pred_acc);
     }
 
     public void generateHTML(String title, StringBuilder sb) {
