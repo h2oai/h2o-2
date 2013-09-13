@@ -18,7 +18,7 @@ public class GBM extends FrameJob {
 
   @API(help="", required=true, filter=GBMVecSelect.class)
   Vec vresponse;
-  class GBMVecSelect extends VecSelect { GBMVecSelect() { super("source"); } }
+  class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
@@ -138,7 +138,7 @@ public class GBM extends FrameJob {
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
     final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
-    assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
+    assert 1 <= nclass && nclass <= 1000; // Arbitrary cutoff for too many classes
     final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
@@ -320,6 +320,7 @@ public class GBM extends FrameJob {
       @Override public void map( Chunk chks[] ) {
         Chunk cy = chks[chks.length-1];   // Response as last chunk
         for( int i=0; i<cy._len; i++ ) {  // For all rows
+          if( cy.isNA0(i) ) continue;     // Ignore NA results
           int cls = (int)cy.at80(i)-ymin; // Class
           Chunk res = chks[ncols+cls];    // Residual column for this class
           res.set0(i,1.0f+(float)res.at0(i)); // Fix residual for actual class

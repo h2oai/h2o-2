@@ -2373,7 +2373,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected String[] errors() { return new String[] { "Not a name of column, or a column index" }; }
   }
 
-  /** A Class Vec/Column within a Frame */
+  /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
   public class FrameClassVec extends FrameKeyVec {
     public FrameClassVec(String name, FrameKey key ) { super(name, key); }
     @Override protected String[] selectValues() {
@@ -2388,7 +2388,7 @@ public class RequestArguments extends RequestStatics {
       if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
       return vec;
     }
-    private boolean filter( Vec vec ) { return vec.isInt();  }
+    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && vec.max()<=1000;  }
     @Override protected Vec defaultValue() { return null; }
     @Override protected String[] errors() { return new String[] { "Only integer or enum/factor columns can be classified" }; }
   }

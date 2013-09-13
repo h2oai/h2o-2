@@ -136,6 +136,13 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
+def runGBMView(node=None,model_key=None,timeoutSecs=300,retryDelaySecs=2,noPoll=False,**kwargs):
+    if not node: node = h2o.nodes[0]
+    if not model_key: 
+        raise Exception("\nNo model_key was supplied to the gbm view!")
+    gbmView = node.gbm_view(model_key,timeoutSecs=timeoutSecs)
+    return gbmView
+
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
     noise=None, noPoll=False, noPrint=False, **kwargs):

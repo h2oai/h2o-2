@@ -25,7 +25,7 @@ public class DRF extends FrameJob {
 
   @API(help="Response vector", required=true, filter=DRFVecSelect.class)
   Vec vresponse;
-  class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
+  class DRFVecSelect extends VecClassSelect { DRFVecSelect() { super("source"); } }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 50;
@@ -49,7 +49,7 @@ public class DRF extends FrameJob {
   }
 
   @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  int nbins = 50;
+  int nbins = 100;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
   }
