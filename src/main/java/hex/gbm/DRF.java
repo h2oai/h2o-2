@@ -49,7 +49,7 @@ public class DRF extends FrameJob {
   }
 
   @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  int nbins = 50;
+  int nbins = 100;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
   }
