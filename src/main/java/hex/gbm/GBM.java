@@ -18,7 +18,7 @@ public class GBM extends FrameJob {
 
   @API(help="", required=true, filter=GBMVecSelect.class)
   Vec vresponse;
-  class GBMVecSelect extends VecSelect { GBMVecSelect() { super("source"); } }
+  class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
@@ -315,6 +315,7 @@ public class GBM extends FrameJob {
       @Override public void map( Chunk chks[] ) {
         Chunk cy = chks[chks.length-1];   // Response as last chunk
         for( int i=0; i<cy._len; i++ ) {  // For all rows
+          if( cy.isNA0(i) ) continue;     // Ignore NA results
           int cls = (int)cy.at80(i)-ymin; // Class
           Chunk res = chks[ncols+cls];    // Residual column for this class
           res.set0(i,1.0f+(float)res.at0(i)); // Fix residual for actual class

@@ -93,6 +93,14 @@ public abstract class Request2 extends Request {
                 key = (FrameKey) a;
             arg = new FrameKeyVec(f.getName(), key);
           }
+          else if( VecClassSelect.class.isAssignableFrom(api.filter()) ) {
+            VecClassSelect name = (VecClassSelect) newInstance(api);
+            FrameKey key = null;
+            for( Argument a : _arguments )
+              if( a instanceof FrameKey && name._key.equals(((FrameKey) a)._name) )
+                key = (FrameKey) a;
+            arg = new FrameClassVec(f.getName(), key);
+          }
 
           if( arg != null ) {
             arg._name = f.getName();

@@ -2388,7 +2388,7 @@ public class RequestArguments extends RequestStatics {
       if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
       return vec;
     }
-    private boolean filter( Vec vec ) { return vec.isInt();  }
+    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && vec.max()<=10000;  }
     @Override protected Vec defaultValue() { return null; }
     @Override protected String[] errors() { return new String[] { "Only integer or enum/factor columns can be classified" }; }
   }

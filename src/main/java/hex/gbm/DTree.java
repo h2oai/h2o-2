@@ -754,7 +754,8 @@ class DTree extends Iced {
     @Override public void map( Chunk cr ) {
       _cs = new long[_nclass];
       for( int i=0; i<cr._len; i++ )
-        _cs[(int)cr.at80(i)-_ymin]++;
+        if( !cr.isNA0(i) )
+          _cs[(int)cr.at80(i)-_ymin]++;
     }
     @Override public void reduce( ClassDist cd ) { Utils.add(_cs,cd._cs); }
   }
@@ -789,10 +790,10 @@ class DTree extends Iced {
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
       DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
       String[] domain = _domains[_domains.length-1]; // Domain of response col
-      assert ymin+cm.length==domain.length;
 
       // Top row of CM
       if( cm != null ) {
+        assert ymin+cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");

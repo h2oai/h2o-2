@@ -25,7 +25,7 @@ public class DRF extends FrameJob {
 
   @API(help="Response vector", required=true, filter=DRFVecSelect.class)
   Vec vresponse;
-  class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
+  class DRFVecSelect extends VecClassSelect { DRFVecSelect() { super("source"); } }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 50;
