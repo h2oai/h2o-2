@@ -1,14 +1,17 @@
 package hex.gbm;
 
-import java.util.Arrays;
-import java.util.Random;
+import hex.rf.Tree.TreeVisitor;
+
+import java.util.*;
+
+import javax.management.RuntimeErrorException;
+
 import water.*;
-import water.fvec.*;
-import water.util.Log.Tag.Sys;
-import water.util.Log;
-import water.util.Utils;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.fvec.*;
+import water.util.*;
+import water.util.Log.Tag.Sys;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -35,7 +38,7 @@ class DTree extends Iced {
   final int _min_rows;   // Fewest allowed rows in any split
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
-  DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) { 
+  DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) {
     _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
 
   public final Node root() { return _ns[0]; }
@@ -53,15 +56,127 @@ class DTree extends Iced {
     if( _len == _ns.length ) _ns = Arrays.copyOf(_ns,_len<<1);
     return _len++;
   }
-
   // Return a deterministic chunk-local RNG.  Can be kinda expensive.
   // Override this in, e.g. Random Forest algos, to get a per-chunk RNG
   public Random rngForChunk( int cidx ) { throw H2O.fail(); }
 
-  private byte[] compress() {
-    // TODO!!!
-    return null;
+
+
+  public static class CompressedTree extends Iced {
+    byte [] _bits;
+    int _nclass;
+
+    public void score(double [] row, float [] pred){
+      assert(false);
+      assert pred.length == 1 || pred.length == _nclass + 1;
+      AutoBuffer ab = new AutoBuffer(_bits);
+      int nodeType;
+      int slen = 0;
+      int col;
+      float splitVal;
+      boolean right = false;
+      while((slen = ((nodeType = ab.get1()) & 3)) > 0){ // while not leaf
+        nodeType -= slen;
+        assert nodeType == 8 || nodeType == 16;
+        col = ab.get2();
+        splitVal = ab.get4f();
+        int skip = 0;
+        if(right = (((nodeType == 16) && row[col] >= splitVal) || (nodeType == 32 && row[col] != splitVal))){
+          switch(slen){
+            case 0: // leaf
+               break;
+            case 1:
+              skip = ab.get1();
+              break;
+            case 2:
+              skip = ab.get2();
+              break;
+            case 3:
+              skip = ab.get3();
+              break;
+            default:
+              assert(false);
+          }
+          ab.position(ab.position()+skip);
+        } else
+          ab.position(ab.position()+slen);
+      }
+      col = ab.get2();
+      splitVal = ab.get4f();
+      if(nodeType >= 32){ //
+
+      }
+    }
+    private StringBuilder toString(StringBuilder sb, AutoBuffer ab){
+      sb.append("(");
+      int nodeType = ab.get1();
+      int slen = nodeType & 3;
+      int col = ab.get2();
+      float fval = ab.get4f();
+      sb.append("col[" + col + "] < " + fval + "?");
+      if(slen != 0){ // internal node
+        ab.position(ab.position()+slen); // skip the skip info
+        toString(sb,ab); // left subtree
+        sb.append(":");
+        toString(sb,ab); // right subtree
+      } else { // leaf
+        if(nodeType >= 32){ // we have p-distributions...
+          float [] pred1 = ab.getA4f();
+          float [] pred2 = ab.getA4f();
+          sb.append(Arrays.toString(pred1) + ":" + Arrays.toString(pred2));
+        } else { // just 1 class output
+          int cls0, cls1;
+          if(_nclass < 256){
+            cls0 = ab.get1();
+            cls1 = ab.get1();
+          } else {
+            cls0 = ab.get2();
+            cls1 = ab.get2();
+          }
+          sb.append(cls0 + ":" + cls1);
+        }
+      }
+      sb.append(")");
+      return sb;
+    }
+    public String toString(){
+      StringBuilder sb = new StringBuilder();
+      AutoBuffer ab = new AutoBuffer(_bits);
+      return toString(sb, ab).toString();
+    }
   }
+  public byte [] compress(){
+//    ab.putAStr(_names);
+//    ab.put2(_nbins);
+//    ab.put2(_nclass);
+//    ab.put4(_min_rows);
+//    ab.put4(_len);
+    int sz = _ns[0].size();
+    AutoBuffer ab = new AutoBuffer(sz);
+    int pos = ab.position();
+    _ns[0].compress(ab);
+    assert ab.position() - pos == sz;
+    return ab.buf();
+  }
+
+//  private void readTree(AutoBuffer ab, ArrayList<Node> nodes){
+//    int nodeType = ab.get1();
+//    Node n = new DecidedNode(this,null);
+//    nodes.add(n);
+//  }
+//  @Override public DTree read(AutoBuffer ab){
+//    String [] names = ab.getAStr();
+//    char  nbins = ab.get2();
+//    char nclass = ab.get2();
+//    int min_rows = ab.get4();
+//    DTree res = new DTree(names, names.length, nbins, nclass, min_rows);
+//    ArrayList<Node> nodes = new ArrayList<Node>();
+//    readTree(ab, nodes);
+//    res._ns = nodes.toArray(new Node[nodes.size()]);
+//    return res;
+//  }
+
+
 
   // Abstract node flavor
   static abstract class Node extends Iced {
@@ -73,7 +188,6 @@ class DTree extends Iced {
       _pid=pid;
       tree._ns[_nid=nid] = this;
     }
-
     // Recursively print the decision-line from tree root to this child.
     StringBuilder printLine(StringBuilder sb ) {
       if( _pid==-1 ) return sb.append("[root]");
@@ -82,17 +196,20 @@ class DTree extends Iced {
       return parent.printChild(sb,_nid);
     }
     abstract public StringBuilder toString2(StringBuilder sb, int depth);
+    // byte size of the subtree rooted in this node
+    public AutoBuffer compress(AutoBuffer ab){throw new RuntimeException("should never be called!");}
+    public int size(){throw new RuntimeException("should never be called!");}
   }
 
   // Records a column, a bin to split at within the column, and the MSE.
-  static class Split { 
+  static class Split {
     final int _col, _bin;       // Column to split, bin where being split
     final long _nrows[];        // Rows in each final split
     final double _mses[];       // MSE  of each final split
     final float _preds[][/*nclass*/]; // Prediction (by class) for each split
-    Split( int col, int bin, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) { 
-      _col = col; 
-      _bin = bin; 
+    Split( int col, int bin, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) {
+      _col = col;
+      _bin = bin;
       _nrows = new long[] { n0, n1 };
       _mses  = new double[] { mse0, mse1 };
       _preds = new float[][] { preds0, preds1 };
@@ -105,10 +222,9 @@ class DTree extends Iced {
       return sum/rows;
     }
     // Split-at dividing point
-    float splat(DHistogram hs[]) { 
+    float splat(DHistogram hs[]) {
       return ((DBinHistogram)hs[_col]).binAt(_bin);
     }
-
     // Split a DBinHistogram.  Return null if there is no point in splitting
     // this bin further (such as there's fewer than min_row elements, or zero
     // errpr in the response column).  Return an array of DBinHistograms (one
@@ -120,7 +236,7 @@ class DTree extends Iced {
       if( _nrows[splat] < min_rows ) return null; // Too few elements
       if( _nrows[splat] <= 1 ) return null;       // Too few elements
       if( _mses[splat] <= 1e-8 ) return null; // No point in splitting a perfect prediction
-      
+
       // Build a next-gen split point from the splitting bin
       final char nclass = (char)_preds[0].length;
       int cnt=0;                  // Count of possible splits
@@ -184,6 +300,7 @@ class DTree extends Iced {
       assert hs.length==tree._ncols;
       _scoreCols = scoreCols(hs);
     }
+
 
     // Pick a random selection of columns to compute best score.
     // Can return null for 'all columns'.
@@ -268,6 +385,9 @@ class DTree extends Iced {
   // column.  Includes a split-decision: which child does this Row belong to?
   // Does not contain a histogram describing how the decision was made.
   static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
+    byte _nodeType; // 'S': split, 'E': exclusion, '[': single class leaf, '^': multi-class leaf
+    int _size = 0; // byte size of this subtree
+
     final int _col;             // Column we split over
     final float _splat;         // Split At point
     // The following arrays are all based on a bin# extracted from linear
@@ -329,7 +449,7 @@ class DTree extends Iced {
         }
       }
     }
-  
+
     // DecidedNode with a pre-cooked response and no children
     DecidedNode( DTree tree, float pred[] ) {
       super(tree,-1,tree.newIdx());
@@ -351,9 +471,46 @@ class DTree extends Iced {
 
     public int ns( Chunk chks[], int i ) { return _nids[bin(chks,i)]; }
 
+    private boolean singleClass(){
+      for(float [] dist: _pred){
+        int nzeros = 0;
+        for(float f:dist)if(f != 0) ++nzeros;
+        if(nzeros > 1)return false;
+        assert nzeros == 1;
+      }
+      // DBG: check we have correct distribution or votes
+      for(float [] dist: _pred) for(float f:dist)assert f == 0 || f >= 1;
+      return true;
+    }
+
+    public final int size(){
+      if(_size != 0)return _size;
+      assert _nodeType == 0;
+      int res = 7;
+      if(_nids[0] == -1){ // leaf
+        if(singleClass()){
+          _nodeType = '[';
+          return _size = (res + 2*Utils.byteSize(_tree._nclass));
+        }
+        _nodeType = '^';
+        return _size = res + 2*_tree._nclass*4;
+      } else {
+        _nodeType = 'S';
+        for(int n:_nids)
+          res += _tree.node(n).size();
+        if(res <= 255)
+          res += 1;
+        else if(res <= 65535)
+          res += 2;
+        else
+          res += 3;
+        return _size = res;
+      }
+    }
+
     @Override public String toString() {
       if( _col == -1 ) return "Decided has col = -1";
-      return 
+      return
         _tree._names[_col]+" < "+_splat+" = "+Arrays.toString(_pred[0])+"\n"+
         _splat+" <="+_tree._names[_col]+" = "+Arrays.toString(_pred[1])+"\n";
     }
@@ -365,7 +522,7 @@ class DTree extends Iced {
       if( i==0 ) sb.append("[ ").append(n).append(" <  ").append(_splat).append("]");
       else       sb.append("[ ").append(_splat).append(" <= ").append(n).append("]");
       return sb;
-    }  
+    }
 
     @Override public StringBuilder toString2(StringBuilder sb, int depth) {
       for( int i=0; i<_nids.length; i++ ) {
@@ -387,6 +544,52 @@ class DTree extends Iced {
         }
       }
       return true;
+    }
+
+    public AutoBuffer compress(AutoBuffer ab){
+      int pos = ab.position();
+      if(_nodeType == 0)size();
+      ab.put1(_nodeType);
+      ab.put2((short)_col);
+      ab.put4f(_splat);
+      switch(_nodeType){
+        case '[': // single class leaf,put int the output classes
+          int cls0 = Utils.maxIndex(_pred[0]);
+          int cls1 = Utils.maxIndex(_pred[1]);
+          switch(Utils.byteSize(_tree._nclass)){
+            case 1:
+              ab.put1(cls0);
+              ab.put1(cls1);
+              break;
+            case 2:
+              ab.put2((short)cls0);
+              ab.put2((short)cls1);
+              break;
+            case 4:
+              ab.put4(cls0);
+              ab.put4(cls1);
+              break;
+            default:
+              throw new RuntimeException("unexpected class byte size");
+          }
+          break;
+        case '^': // multi-class leaf, put in the p-distributions
+          ab.putA4f(_pred[0]);
+          ab.putA4f(_pred[1]);
+          break;
+        default: // for other(non-leaf) nodes, write the children
+          for(int i = 0; i < _nids.length-1; ++i){
+            Node child = _tree.node(_nids[i]);
+            int skip = child.size();
+            if(skip <= 254) ab.put1(skip);
+            else ab.put1(-1).put3(skip);
+            child.compress(ab);
+          }
+          _tree.node(_nids[_nids.length-1]).compress(ab);
+          break;
+      }
+      assert _size == ab.position()-pos;
+      return ab;
     }
   }
 
@@ -473,14 +676,14 @@ class DTree extends Iced {
         for( int i=0; i<nids._len; i++ ) {
           int nid = (int)nids.at80(i); // Get Node to decide from
           if( nid==-2 ) continue; // sampled away
-        
+
           // Score row against current decisions & assign new split
           if( leaf > 0 && (nid = tree.decided(nid).ns(chks,i)) != -1 ) // Prior pass exists?
             nids.set0(i,nid);
-        
+
           // Pass 1.9
           if( nid < leaf ) continue; // row already predicts perfectly
-        
+
           // We need private (local) space to gather the histograms.
           // Make local clones of all the histograms that appear in this chunk.
           DHistogram nhs[] = hcs[nid-leaf];
@@ -506,7 +709,7 @@ class DTree extends Iced {
             }
           }
         }
-        
+
         // Pass 2: Build new summary DHistograms on the new child
         // UndecidedNodes every row got assigned into.  Collect counts, mean,
         // variance, min, max per bin, per column.
@@ -600,7 +803,7 @@ class DTree extends Iced {
         for( int t=0; t<_trees.length; t++ )
           rands[t] = _trees[t].rngForChunk(ys.cidx());
       }
- 
+
       // Score all Rows
       float pred[] = new float[_nclass];  // Shared temp array for computing predictions
       int nids[] = new int[_trees.length];// Shared temp array for better error reporting
@@ -737,7 +940,7 @@ class DTree extends Iced {
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be seperate).
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
-   
+
 
     public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm) {
       super(key,dataKey,fr);
