@@ -1,4 +1,4 @@
-import unittest
+import unittest,os,csv
 import random, sys, time, re, itertools
 from pprint import pprint
 sys.path.extend(['.','..','py'])
@@ -23,10 +23,10 @@ class Basic(unittest.TestCase):
         files = [('mnist', 'mnist_training.csv.gz', 'mnistsmalltrain.hex',1800,0)
                 # ('manyfiles-nflx-gz', 'file_95.dat.gz', 'nflx.hex',1800,541),
                 ]
-        ntrees = 2
-        learn_rate = 2
-        max_depth = 2
-        grid = [range(1,ntrees), [(i+0.0)/learn_rate for i in range(1,learn_rate + 1)], range(1,max_depth)] 
+        #ntrees = 20
+        #learn_rate = 5
+        #max_depth = 20
+        grid = [[1,10,100,1000], [0.0,0.01,0.001,0.0001,1], [1,2], [1,10,100]] 
         grid = list(itertools.product(*grid))
         for importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse in files:
             # PARSE train****************************************
@@ -36,27 +36,45 @@ class Basic(unittest.TestCase):
             elapsed = time.time() - start
             print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseResult['destination_key'] 
-            for ntree, learn_rate, max_depth in grid:
+            print "parse result:", parseResult['destination_key']
+            csv_header = ('nJVMs','java_heap_GB', 'dataset', 'ntrees', 'max_depth', 'learn_rate', 'min_rows','trainTime')
+            for ntree, learn_rate, max_depth, min_rows in grid:
+                if not os.path.exists('gbm_grid.csv'):
+                    output = open('gbm_grid.csv', 'w')
+                    output.write(','.join(csv_header)+'\n')
+                else:
+                    output = open('gbm_grid.csv', 'a')
+
+                csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None,
+                        dialect='excel', extrasaction='ignore',delimiter=',')
+                java_heap_GB = h2o.nodes[0].java_heap_GB
+
                 params = {
                  'destination_key': 'GBMKEY',
                  'learn_rate': learn_rate,
                  'ntrees':ntree,
                  'max_depth':max_depth,
-                 'min_rows':1,
+                 'min_rows':min_rows,
                  'vresponse':vresponse
-                 }
+                }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
                 h2o.beta_features = True
                 #noPoll -> False when GBM finished
+                start = time.time()
                 GBMResult = h2o_cmd.runGBM(parseResult=parseResult,noPoll=True,timeoutSecs=timeoutSecs,**kwargs)
-                h2j.pollWaitJobs(pattern="GBMKEY",timeoutSecs=1800,pollTimeoutSecs=1800)
+                h2j.pollWaitJobs(pattern="GBMKEY",timeoutSecs=3600,pollTimeoutSecs=3600)
                 #print "GBM training completed in", GBMResult['python_elapsed'], "seconds.", \
                 #    "%f pct. of timeout" % (GBMResult['python_%timeout'])
                 #print GBMResult
                 GBMView = h2o_cmd.runGBMView(model_key='GBMKEY')
-                pprint(GBMView)
+                print GBMView['gbm_model']['errs']
+                elapsed = time.time() - start
+                row = {'nJVMs':len(h2o.nodes),'java_heap_GB':java_heap_GB,'dataset':'mnist_training.csv.gz',
+                       'learn_rate':learn_rate,'ntrees':ntree,'max_depth':max_depth,
+                       'min_rows':min_rows, 'trainTime':elapsed}
+                print row
+                csvWrt.writerow(row)
 
 if __name__ == '__main__':
     h2o.unit_main()
