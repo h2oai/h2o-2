@@ -18,7 +18,11 @@ python --version
 
 # This is critical:
 # Ensure that all your children are truly dead when you yourself are killed.
-trap "kill -- -$BASHPID" INT TERM EXIT
+# trap "kill -- -$BASHPID" INT TERM EXIT
+# leave out EXIT for now
+trap "kill -- -$BASHPID" INT TERM
+echo "BASHPID: $BASHPID"
+echo "current PID: $$"
 # The -PID argument tells bash to kill the process group with id $BASHPID, 
 # Process groups have the same id as the spawning process, 
 # The process group id remains even after processes have been reparented. (say by init)

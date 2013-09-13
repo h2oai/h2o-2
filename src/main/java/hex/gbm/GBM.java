@@ -18,7 +18,7 @@ public class GBM extends FrameJob {
 
   @API(help="", required=true, filter=GBMVecSelect.class)
   Vec vresponse;
-  class GBMVecSelect extends VecSelect { GBMVecSelect() { super("source"); } }
+  class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
@@ -36,19 +36,19 @@ public class GBM extends FrameJob {
   }
 
   @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
-  int min_rows = 5;
+  int min_rows = 10;
   public class MinRowsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
   @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  char nbins = 50;
+  char nbins = 1024;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
   }
 
   @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
-  double learn_rate = 0.1;
+  double learn_rate = 0.2;
   public class LearnRateFilter implements Filter {
     @Override public boolean run(Object value) {
       double learn_rate = (Double)value;
@@ -71,9 +71,6 @@ public class GBM extends FrameJob {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
-    }
-    @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO: Score me");
     }
   }
   public Vec score( Frame fr ) { return gbm_model.score(fr,true);  }
@@ -138,7 +135,7 @@ public class GBM extends FrameJob {
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
     final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
-    assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
+    assert 1 <= nclass && nclass <= 1000; // Arbitrary cutoff for too many classes
     final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
@@ -160,7 +157,7 @@ public class GBM extends FrameJob {
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
         BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, 0 );
-        _errs = new float[]{(float)bs._err/nrows}; // Errors for exactly 1 tree
+        _errs = new float[]{(float)bs._sum/nrows}; // Errors for exactly 1 tree
         gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
         DKV.put(outputKey, gbm_model);
 
@@ -168,17 +165,22 @@ public class GBM extends FrameJob {
         for( int tid=1; tid<ntrees; tid++) {
           if(GBM.this.cancelled())break;
           forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
-
+//          System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
           // Tree-by-tree scoring
           Timer t_score = new Timer();
           BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, max_depth );
           _errs = Arrays.copyOf(_errs,_errs.length+1);
-          _errs[_errs.length-1] = (float)bs2._err/nrows;
+          _errs[_errs.length-1] = (float)bs2._sum/nrows;
           gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
           DKV.put(outputKey, gbm_model);
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
+        int i = 0;
+        for(DTree t:forest){
+          System.out.println("Tree # " + i++);
+          System.out.println(t.compress().toString());
+        }
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
@@ -315,6 +317,7 @@ public class GBM extends FrameJob {
       @Override public void map( Chunk chks[] ) {
         Chunk cy = chks[chks.length-1];   // Response as last chunk
         for( int i=0; i<cy._len; i++ ) {  // For all rows
+          if( cy.isNA0(i) ) continue;     // Ignore NA results
           int cls = (int)cy.at80(i)-ymin; // Class
           Chunk res = chks[ncols+cls];    // Residual column for this class
           res.set0(i,1.0f+(float)res.at0(i)); // Fix residual for actual class

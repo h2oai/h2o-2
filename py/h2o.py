@@ -1461,6 +1461,14 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")
         return a
 
+    def gbm_view(self,model_key,timeoutSecs=300,print_params=False,**kwargs):
+        params_dict = {
+            '_modelKey': model_key
+        }
+        a = self.__do_json_request('GBMModelView.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\ngbm_view result:", dump_json(a))
+        return a
+
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'data_key': data_key,

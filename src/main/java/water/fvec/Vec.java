@@ -137,6 +137,7 @@ public class Vec extends Iced {
     _domain = new String[(int)max+1];
     for( int i=0; i<(int)max+1; i++ )
       _domain[i] = Integer.toString(i);
+    DKV.put(_key,this);
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
