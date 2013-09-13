@@ -231,8 +231,6 @@ public final class Key extends Iced implements Comparable {
   @Override public final AutoBuffer write(AutoBuffer bb) { return bb.putA1(_kb); }
   @Override public final AutoBuffer writeJSON(AutoBuffer bb) { 
     String s=toString();
-    try { s = URLEncoder.encode(s,"UTF-8"); }
-    catch( UnsupportedEncodingException e ) {}
     return bb.putJSONStr(s);
   }
 
