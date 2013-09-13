@@ -4,6 +4,43 @@ import h2o, h2o_hosts, h2o_import2 as h2i
 # typical use in a unittest:
 # class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 # see multiple inheritance at http://docs.python.org/release/1.5/tut/node66.html
+#*********************************************************************************************************
+class SetupOneJVM14(object):
+    def tearDown(self):
+        h2o.check_sandbox_for_errors()
+
+    @classmethod
+    def setUpClass(cls):
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1, java_heap_GB=14)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
+    @classmethod
+    def tearDownClass(cls):
+        h2o.tear_down_cloud()
+
+#*********************************************************************************************************
+class SetupThreeJVM4(object):
+    def tearDown(self):
+        h2o.check_sandbox_for_errors()
+
+    @classmethod
+    def setUpClass(cls):
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=3, java_heap_GB=4)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
+    @classmethod
+    def tearDownClass(cls):
+        h2o.tear_down_cloud()
+
+#*********************************************************************************************************
 class ReleaseCommon(object):
     def tearDown(self):
         print "tearDown"
@@ -49,41 +86,6 @@ class ReleaseCommon2(object):
         # normally this shouldn't be necessary?
         h2o.stabilize_cloud(h2o.nodes[0], node_count=len(h2o.nodes), timeoutSecs=90)
 
-#*********************************************************************************************************
-class SetupOneJVM14(object):
-    def tearDown(self):
-        h2o.check_sandbox_for_errors()
-
-    @classmethod
-    def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=1, java_heap_GB=14)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
-
-    @classmethod
-    def tearDownClass(cls):
-        h2o.tear_down_cloud()
-
-#*********************************************************************************************************
-class SetupThreeJVM4(object):
-    def tearDown(self):
-        h2o.check_sandbox_for_errors()
-
-    @classmethod
-    def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(node_count=3, java_heap_GB=4)
-        else:
-            h2o_hosts.build_cloud_with_hosts()
-
-    @classmethod
-    def tearDownClass(cls):
-        h2o.tear_down_cloud()
 
 #*********************************************************************************************************
 
