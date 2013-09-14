@@ -10,37 +10,15 @@ import java.util.Random;
 
 import javax.swing.*;
 
-import water.H2O;
-import water.Sample07_NeuralNet_Mnist;
-
 public class MnistCanvas extends Canvas {
-  static NeuralNetTest _test;
+  static final int PIXELS = 784, EDGE = 28;
+
   static Random _rand = new Random();
   static int _level = 1;
+  Trainer _trainer;
 
-  public static void main(String[] args) throws Exception {
-    water.Boot.main(UserCode.class, args);
-  }
-
-  public static class UserCode {
-    // Entry point can be called 'main' or 'userMain'
-    public static void userMain(String[] args) throws Exception {
-      H2O.main(args);
-      Sample07_NeuralNet_Mnist mnist = new Sample07_NeuralNet_Mnist();
-      mnist.init();
-      _test = mnist;
-
-      // Basic visualization of images and weights
-      JFrame frame = new JFrame("H2O");
-      frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-      MnistCanvas canvas = new MnistCanvas();
-      frame.setContentPane(canvas.init());
-      frame.pack();
-      frame.setLocationRelativeTo(null);
-      frame.setVisible(true);
-
-      mnist.run();
-    }
+  MnistCanvas(Trainer trainer) {
+    _trainer = trainer;
   }
 
   JPanel init() {
@@ -63,7 +41,7 @@ public class MnistCanvas extends Canvas {
     bar.add(new JButton("histo") {
       @Override protected void fireActionPerformed(ActionEvent event) {
         Histogram.initFromSwingThread();
-        Histogram.build(_test._trainer.layers());
+        Histogram.build(_trainer.layers());
       }
     });
     JPanel pane = new JPanel();
@@ -76,24 +54,25 @@ public class MnistCanvas extends Canvas {
   }
 
   @Override public void paint(Graphics g) {
-    water.fvec.Frame frame = ((FrameInput) _test._ls[0])._frame;
+    Layer[] ls = _trainer.layers();
+    water.fvec.Frame frame = ((FrameInput) ls[0])._frame;
     int edge = 56, pad = 10;
     int rand = _rand.nextInt((int) frame.numRows());
 
     // Side
     {
-      BufferedImage in = new BufferedImage(Sample07_NeuralNet_Mnist.EDGE, Sample07_NeuralNet_Mnist.EDGE, BufferedImage.TYPE_INT_RGB);
+      BufferedImage in = new BufferedImage(EDGE, EDGE, BufferedImage.TYPE_INT_RGB);
       WritableRaster r = in.getRaster();
 
       // Input
-      int[] pix = new int[Sample07_NeuralNet_Mnist.PIXELS];
+      int[] pix = new int[PIXELS];
       for( int i = 0; i < pix.length; i++ )
         pix[i] = (int) (frame._vecs[i].at8(rand));
-      r.setDataElements(0, 0, Sample07_NeuralNet_Mnist.EDGE, Sample07_NeuralNet_Mnist.EDGE, pix);
+      r.setDataElements(0, 0, EDGE, EDGE, pix);
       g.drawImage(in, pad, pad, null);
 
       // Labels
-      g.drawString("" + frame._vecs[Sample07_NeuralNet_Mnist.PIXELS].at8(rand), 10, 50);
+      g.drawString("" + frame._vecs[PIXELS].at8(rand), 10, 50);
       g.drawString("RBM " + _level, 10, 70);
     }
 
@@ -132,8 +111,8 @@ public class MnistCanvas extends Canvas {
 //    }
 
     // Weights
-    int buf = Sample07_NeuralNet_Mnist.EDGE + pad + pad;
-    Layer layer = _test._trainer.layers()[_level];
+    int buf = EDGE + pad + pad;
+    Layer layer = ls[_level];
     double mean = 0;
     int n = layer._w.length;
     for( int i = 0; i < n; i++ )
@@ -162,10 +141,9 @@ public class MnistCanvas extends Canvas {
           start[i] = ((int) Math.min(-w, 255)) << 16;
       }
 
-      BufferedImage out = new BufferedImage(Sample07_NeuralNet_Mnist.EDGE, Sample07_NeuralNet_Mnist.EDGE,
-          BufferedImage.TYPE_INT_RGB);
+      BufferedImage out = new BufferedImage(EDGE, EDGE, BufferedImage.TYPE_INT_RGB);
       WritableRaster r = out.getRaster();
-      r.setDataElements(0, 0, Sample07_NeuralNet_Mnist.EDGE, Sample07_NeuralNet_Mnist.EDGE, start);
+      r.setDataElements(0, 0, EDGE, EDGE, start);
 
       BufferedImage resized = new BufferedImage(edge, edge, BufferedImage.TYPE_INT_RGB);
       Graphics2D g2 = resized.createGraphics();

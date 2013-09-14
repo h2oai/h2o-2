@@ -4,7 +4,6 @@ import hex.*;
 import hex.Layer.FrameInput;
 import hex.NeuralNet.Error;
 import hex.NeuralNet.NeuralNetScore;
-import hex.Trainer.ThreadedTrainers;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -27,8 +26,11 @@ public class Sample07_NeuralNet_Mnist {
     public static void userMain(String[] args) throws Exception {
       H2O.main(args);
 
-      Frame train = TestUtil.parseFrame("smalldata/mnist/train.csv.gz");
+      //Frame train = TestUtil.parseFrame("smalldata/mnist/train.csv.gz");
+      Frame train = TestUtil.parseFrame("smalldata/mnist/train.csv");
       Frame test = TestUtil.parseFrame("smalldata/mnist/test.csv.gz");
+
+      System.out.println(train.firstReadable().nChunks());
 
       Layer[] ls = new Layer[3];
       ls[0] = new FrameInput(train);
@@ -46,8 +48,8 @@ public class Sample07_NeuralNet_Mnist {
         ls[i].randomize();
 
 //    final Trainer trainer = new Trainer.Direct(_ls);
-      final Trainer trainer = new ThreadedTrainers(ls);
-//    final Trainer trainer = new Trainer.TrainerMR(_ls, 0);
+//    final Trainer trainer = new ThreadedTrainers(ls);
+      final Trainer trainer = new Trainer.MR2(ls, 0);
 //    final Trainer trainer = new Trainer.Distributed(_ls);
 //    final Trainer trainer = new Trainer.OpenCL(_ls);
 
@@ -68,9 +70,9 @@ public class Sample07_NeuralNet_Mnist {
           throw new RuntimeException(e);
         }
 
-        Layer[] clones1 = NeuralNetScore.clone(ls, train);
+        Layer[] clones1 = Layer.clone(ls, train);
         Error trainE = NeuralNetScore.eval(clones1, NeuralNet.EVAL_ROW_COUNT);
-        Layer[] clones2 = NeuralNetScore.clone(ls, test);
+        Layer[] clones2 = Layer.clone(ls, test);
         Error testE = NeuralNetScore.eval(clones2, NeuralNet.EVAL_ROW_COUNT);
         long time = System.nanoTime();
         double delta = (time - lastTime) / 1e9;
@@ -105,6 +107,7 @@ public class Sample07_NeuralNet_Mnist {
     imagesBuf.readInt(); // Cols
 
     System.out.println("Count=" + count);
+    count = 500 * 1000;
     byte[][] rawI = new byte[count][PIXELS];
     byte[] rawL = new byte[count];
     for( int n = 0; n < count; n++ ) {

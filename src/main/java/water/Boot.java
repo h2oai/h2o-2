@@ -89,7 +89,7 @@ public class Boot extends ClassLoader {
   }
 
   public static void main(String[] args) throws Exception {  _init.boot(args); }
-  public static void main(Class main, String[] args) throws Exception {
+  public static void main(Class main, String... args) throws Exception {
     ArrayList<String> l = new ArrayList<String>(Arrays.asList(args));
     l.add(0, "-mainClass");
     l.add(1, main.getName());

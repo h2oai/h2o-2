@@ -39,7 +39,7 @@ import water.*;
  */
 public class Vec extends Iced {
   /** Log-2 of Chunk size. */
-  public static final int LOG_CHK = 20; // Chunks are 1<<20, or 1Meg
+  public static final int LOG_CHK = ValueArray.LOG_CHK; // Same as VA to help conversions
   /** Chunk size.  Bigger increases batch sizes, lowers overhead costs, lower
    * increases fine-grained parallelism. */
   static final long CHUNK_SZ = 1L << LOG_CHK;
@@ -164,8 +164,9 @@ public class Vec extends Iced {
     if( _naCnt >= 0 ) return this;
     if( _activeWrites ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     RollupStats rs = new RollupStats().doAll(this);
-    _min  = rs._min;  _max  =rs._max;  
-    _mean = rs._mean; _sigma=rs._sigma;
+    _min  = rs._min; _max = rs._max;
+    _mean = rs._mean;
+    _sigma = Math.sqrt(rs._sigma / (rs._rows - 1));
     _rows = rs._rows; _size =rs._size;
     _isInt= rs._isInt;
     _naCnt= rs._naCnt;          // Volatile write last to announce all stats ready
@@ -197,18 +198,20 @@ public class Vec extends Iced {
           _sigma += (d - _mean) * (d - _mean);
         }
       }
-      _sigma = Math.sqrt(_sigma / (_rows - 1));
     }
     @Override public void reduce( RollupStats rs ) {
       _min = Math.min(_min,rs._min);
       _max = Math.max(_max,rs._max);
       _naCnt += rs._naCnt;
-      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
       double delta = _mean - rs._mean;
+      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
       _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
       _rows += rs._rows;
       _size += rs._size;
       _isInt &= rs._isInt;
+    }
+    @Override public boolean logVerbose() {
+      return !H2O.DEBUG;
     }
   }
 
@@ -267,6 +270,9 @@ public class Vec extends Iced {
    *  this is a little shift-and-add math.  For variable-sized chunks this is a
    *  table lookup. */
   public long chunk2StartElem( int cidx ) { return _espc[cidx]; }
+
+  /** Number of rows in chunk. Does not fetch chunk content. */
+  public int chunkLen( int cidx ) { return (int) (_espc[cidx + 1] - _espc[cidx]); }
 
   /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
   public Key chunkKey(int cidx ) {

@@ -334,7 +334,7 @@ class DTree extends Iced {
     }
 
     // Init all the internal tree fields after shipping over the wire
-    @Override public void init( ) {
+    @Override public void setupLocal( ) {
       for( DTree dt : _trees )
         for( int j=0; j<dt._len; j++ )
           dt._ns[j]._tree = dt;
@@ -485,7 +485,7 @@ class DTree extends Iced {
     }
 
     // Init all the internal tree fields after shipping over the wire
-    @Override public void init( ) {
+    @Override public void setupLocal( ) {
       for( DTree dt : _trees )
         for( int j=0; j<dt._len; j++ )
           dt._ns[j]._tree = dt;

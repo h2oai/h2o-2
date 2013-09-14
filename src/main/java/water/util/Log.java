@@ -232,9 +232,13 @@ public abstract class Log {
 
     private StringBuilder shortHeader(StringBuilder buf) {
       buf.append(when.startAsShortString()).append(" ");
+      if(H2O.DEBUG) {
+        String host = H2O.SELF_ADDRESS != null ? H2O.SELF_ADDRESS.getHostAddress() : "";
+        buf.append(fixedLength(host + ":" + H2O.API_PORT + " ", 18));
+      }
       if( thread == null ) thread = fixedLength(Thread.currentThread().getName() + " ", 8);
       buf.append(thread);
-      buf.append(kind.toString()).append(" ").append(sys.toString()).append(": ");
+      if(!H2O.DEBUG) buf.append(kind.toString()).append(" ").append(sys.toString()).append(": ");
       return buf;
     }
   }
@@ -387,7 +391,7 @@ public abstract class Log {
     if (l4j == null) {
       // Calling toString has side-effects about how the output looks.  So call
       // it early here, even if we're just going to buffer the event.
-      String s = e.toString();
+      e.toString();
 
       // buffer.
       synchronized (startupLogEventsLock) {
@@ -419,7 +423,7 @@ public abstract class Log {
     }
 
     if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
-    if(printOnOut || printAll) unwrap(System.out, (H2O.DEBUG ? e.toString() : e.toShortString()));
+    if(printOnOut || printAll) unwrap(System.out, e.toShortString());
     e.printMe = false;
   }
   /** We also log events to the store. */
@@ -636,7 +640,7 @@ public abstract class Log {
    * @param n POST code.
    * @param s String to emit.
    */
-  private static final Object postLock = new Object();
+//  private static final Object postLock = new Object();
   public static void POST(int n, String s) {
       // DO NOTHING UNLESS ENABLED BY REMOVING THIS RETURN!
       return;
