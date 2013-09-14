@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
                 ]
                   
         for importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse in files:
-            h2o.beta_features = False #sometimes flag gets set to True; unwanted
+            h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             start = time.time()
             parseResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + csvFilename,
