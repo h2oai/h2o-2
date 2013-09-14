@@ -914,7 +914,7 @@ class H2O(object):
         except:
             if '404' in r:
                 verboseprint(r.text)
-                raise Exception("No json could be decoded as there was a 404 response. Beta features was," str(beta_features), ". Did you mean to have beta_features turned on?")
+                raise Exception("No json could be decoded as there was a 404 response. Do you have beta features turned on? beta_features: ", beta_features)
             verboseprint(r.text)
             raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
         

@@ -15,7 +15,7 @@ public class Timer {
       return format;
     }
   };
-  private static final ThreadLocal<SimpleDateFormat> utcShortFormat = new ThreadLocal<SimpleDateFormat>() {
+  private static final ThreadLocal<SimpleDateFormat> shortFormat = new ThreadLocal<SimpleDateFormat>() {
     @Override protected SimpleDateFormat initialValue() {
       SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss.SSS");
       return format;
@@ -39,6 +39,6 @@ public class Timer {
   /** return the start time of this timer.**/
   public String startAsString() { return dateFormat.get().format(new Date(_start)); }
   /** return the start time of this timer.**/
-  public String startAsShortString() { return utcShortFormat.get().format(new Date(_start)); }
+  public String startAsShortString() { return shortFormat.get().format(new Date(_start)); }
 
 }

@@ -207,14 +207,14 @@ class DTree extends Iced {
       }
       if( Double.isNaN(sum) ) return; // Assume this is intended
       if( sum < 0.5 ) {        // GBM: expect 0.0 distro
-        assert Math.abs(sum)<0.00001 : Arrays.toString(fs);// Really busted?
+        assert Math.abs(sum)<0.0001 : Arrays.toString(fs);// Really busted?
         if( sum != 0.0 ) {     // Not a 0.0?
           sum /= fs.length;    // Recenter the distro around 0
           for( int i=0; i<fs.length; i++ )
             fs[i] -= sum;
         }
       } else {                  // DRF: expect 1.0 distro
-        assert Math.abs(sum-1.0)<0.00001 : Arrays.toString(fs);// Really busted?
+        assert Math.abs(sum-1.0)<0.0001 : Arrays.toString(fs);// Really busted?
         if( fs[max] >= 1.0 ) {  // If max class >= 1.0, force a clean distro
           Arrays.fill(fs,0);    // All zeros, except the 1.0
           fs[max] = 1.0f;       // 
@@ -598,7 +598,7 @@ class DTree extends Iced {
     }
 
     // Init all the internal tree fields after shipping over the wire
-    @Override public void init( ) {
+    @Override public void setupLocal( ) {
       for( DTree dt : _trees )
         for( int j=0; j<dt._len; j++ )
           dt._ns[j]._tree = dt;
@@ -749,7 +749,7 @@ class DTree extends Iced {
     }
 
     // Init all the internal tree fields after shipping over the wire
-    @Override public void init( ) {
+    @Override public void setupLocal( ) {
       for( DTree dt : _trees )
         for( int j=0; j<dt._len; j++ )
           dt._ns[j]._tree = dt;

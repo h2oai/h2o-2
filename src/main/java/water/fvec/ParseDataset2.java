@@ -129,7 +129,7 @@ public final class ParseDataset2 extends Job {
     boolean _run;
     public EnumUpdateTask(String [][] gDomain,Key lDomKey, int [] colIds){_gDomain = gDomain; _eKey = lDomKey;_colIds = colIds;}
 
-    @Override public void init(){
+    @Override public void setupLocal(){
       // compute the emap
       if((_run = MultiFileParseTask._enums.containsKey(_eKey))){
         Enum [] enums = MultiFileParseTask._enums.get(_eKey);

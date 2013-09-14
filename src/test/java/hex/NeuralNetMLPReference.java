@@ -198,8 +198,8 @@ public class NeuralNetMLPReference {
     _nn.InitializeWeights();
   }
 
-  void train(int maxEpochs, float learnRate, float momentum) {
-    _nn.Train(_trainData, maxEpochs, learnRate, momentum);
+  void train(int maxEpochs, float learnRate) {
+    _nn.Train(_trainData, maxEpochs, learnRate, 0);
   }
 
   static void MakeTrainTest(float[][] allData, float[][] trainData, float[][] testData) {

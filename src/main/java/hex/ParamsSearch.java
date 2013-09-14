@@ -9,7 +9,6 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 
 import water.util.Log;
-import water.util.Utils;
 
 /**
  * Looks for parameters on a set of objects and perform random search.
@@ -86,7 +85,7 @@ class ParamsSearch {
       for( int i = 0; i < expanded.size(); i++ ) {
         Class c = expanded.get(i).getClass();
         ArrayList<Field> fields = new ArrayList<Field>();
-        Utils.getAllFields(fields, c);
+        getAllFields(fields, c);
         for( Field f : fields ) {
           f.setAccessible(true);
           if( (f.getModifiers() & Modifier.STATIC) == 0 ) {
@@ -112,6 +111,13 @@ class ParamsSearch {
       for( int i = 0; i < _params.length; i++ )
         modify(expanded, i);
     }
+  }
+
+  static void getAllFields(List<Field> fields, Class<?> type) {
+    for( Field field : type.getDeclaredFields() )
+      fields.add(field);
+    if( type.getSuperclass() != null )
+      getAllFields(fields, type.getSuperclass());
   }
 
   void modify(ArrayList<Object> expanded, int i) throws Exception {
