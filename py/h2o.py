@@ -907,8 +907,17 @@ class H2O(object):
         json_url_history.append(r.url)
         if not beta_features and not r.json():
             raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
-            
-        rjson = r.json()
+
+        rjson = None    
+        
+        try:
+            rjson = r.json()
+        except:
+            if '404' in r.text:
+                verboseprint(r.text)
+                raise Exception("404 error could not find any json. Use -v to print response text.")
+            verboseprint(r.text)
+            raise Exception("Did not receive a json response. Beta features might be causing a problem! Use -v to print response text.")        
 
         for e in ['error', 'Error', 'errors', 'Errors']:
             if e in rjson:
@@ -1808,7 +1817,7 @@ class H2O(object):
 
         # I guess it doesn't matter if we use flatfile for both now
         # defaults to not specifying
-	# FIX! we need to check that it's not outside the limits of the dram of the machine it's running on?
+    # FIX! we need to check that it's not outside the limits of the dram of the machine it's running on?
         if self.java_heap_GB is not None:
             if not (1 <= self.java_heap_GB <= 256):
                 raise Exception('java_heap_GB <1 or >256  (GB): %s' % (self.java_heap_GB))
