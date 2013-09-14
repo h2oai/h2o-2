@@ -310,8 +310,8 @@ public abstract class DPCA {
     double totVar = 0;
     double dfcorr = data._ary._numrows/(data._ary._numrows - 1.0);
     for(int i = 0; i < Sval.length; i++) {
-      if(params._standardized)
-        Sval[i] = dfcorr*Sval[i];   // Correct since degrees of freedom = n-1 when standardized
+      // if(params._standardized)
+        Sval[i] = dfcorr*Sval[i];   // Correct since degrees of freedom = n-1
       sdev[i] = Math.sqrt(Sval[i]);
       totVar += Sval[i];
     }
