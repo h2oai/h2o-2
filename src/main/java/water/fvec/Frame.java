@@ -61,7 +61,9 @@ public class Frame extends Iced {
   public int  numCols() { return _vecs.length; }
   public long numRows(){ return anyVec().length();}
 
-  // All the domains for enum columns; null for non-enum columns.
+  /** 
+   * All the domains for enum columns; null for non-enum columns.
+   */ 
   public String[][] domains() {
     String ds[][] = new String[_vecs.length][];
     for( int i=0; i<_vecs.length; i++ )
