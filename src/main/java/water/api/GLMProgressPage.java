@@ -178,8 +178,8 @@ public class GLMProgressPage extends Request {
     private static String glmParamsHTML( GLMModel m ) {
       StringBuilder sb = new StringBuilder();
       GLMParams glmp = m._glmParams;
-      parm(sb,"family",glmp._family);
-      parm(sb,"link",glmp._link);
+      parm(sb,"family",glmp._family._family);
+      parm(sb,"link",glmp._link._link);
       parm(sb,"&alpha;",m._solver._alpha);
       parm(sb,"&lambda;",m._solver._lambda);
       parm(sb,EPSILON,glmp._betaEps);
