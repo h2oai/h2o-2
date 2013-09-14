@@ -1,11 +1,11 @@
 package water;
 
-import com.google.gson.JsonObject;
 import java.util.Arrays;
 import water.api.Constants;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
+import water.util.Utils;
 
 /**
  * A Model models reality (hopefully).
@@ -65,6 +65,10 @@ public abstract class Model extends Iced {
 
   public String responseName() { return   _names[  _names.length-1]; }
   public String[] classNames() { return _domains[_domains.length-1]; }
+  public int nclasses() { 
+    String cns[] = classNames();
+    return cns==null ? 1 : cns.length;
+  }
 
   /** Bulk score the frame 'fr', producing a single output vector.  Also passed
    *  in a flag describing how hard we try to adapt the frame.  */
@@ -78,16 +82,17 @@ public abstract class Model extends Iced {
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp[] = new double[_names.length];
+        float preds[] = new float[nclasses()];
         Chunk p = chks[chks.length-1];
         for( int i=0; i<p._len; i++ )
-          p.set0(i,score0(chks,i,tmp));
+          p.set0(i,Utils.maxIndex(score0(chks,i,tmp,preds)));
       }
     }.doAll(fr2);
     return v;
   }
 
   /** Single row scoring, on a compatible (but not adapted) Frame.  Fairly expensive to adapt.  */
-  public final double score( Frame fr, boolean exact, int row ) {
+  public final float[] score( Frame fr, boolean exact, int row ) {
     double tmp[] = new double[fr.numCols()];
     for( int i=0; i<tmp.length; i++ )
       tmp[i] = fr._vecs[i].at(row);
@@ -95,12 +100,12 @@ public abstract class Model extends Iced {
   }
 
   /** Single row scoring, on a compatible set of data.  Fairly expensive to adapt. */
-  public final double score( String names[], String domains[][], boolean exact, double row[] ) {
-    return score(adapt(names,domains,exact),row);
+  public final float[] score( String names[], String domains[][], boolean exact, double row[] ) {
+    return score(adapt(names,domains,exact),row,new float[nclasses()]);
   }
 
   /** Single row scoring, on a compatible set of data, given an adaption vector */
-  public final double score( int map[][], double row[] ) {
+  public final float[] score( int map[][], double row[], float[] preds ) {
     int[] colMap = map[map.length-1]; // Column mapping is the final array
     assert colMap.length == _names.length;
     double tmp[] = new double[_names.length]; // The adapted data
@@ -117,7 +122,7 @@ public abstract class Model extends Iced {
       }
       tmp[i] = d;
     }
-    return score0(tmp);         // The results.
+    return score0(tmp,preds);   // The results.
   }
 
   /** Build an adaption array.  The length is equal to the Model's vector
@@ -165,26 +170,28 @@ public abstract class Model extends Iced {
    *  just does row-at-a-time for the whole chunk. */
   protected void score0( Chunk chks[] ) {
     double tmp[] = new double[_names.length];
+    float preds[] = new float[nclasses()];
     int len = chks[0]._len;
     for( int i=0; i<len; i++ )
-      chks[_names.length].set0(i,score0(chks,i,tmp));
+      chks[_names.length].set0(i,Utils.maxIndex(score0(chks,i,tmp,preds)));
   }
 
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,
    *  and expect the last Chunk is for the final score.  Default method is to
    *  just load the data into the tmp array, then call subclass scoring
    *  logic. */
-  protected double score0( Chunk chks[], int row_in_chunk, double[] tmp ) {
+  protected float[] score0( Chunk chks[], int row_in_chunk, double[] tmp, float[] preds ) {
     assert chks.length>=_names.length; // Last chunk is for the response
     for( int i=0; i<_names.length; i++ )
       tmp[i] = chks[i].at0(row_in_chunk);
-    return score0(tmp);
+    return score0(tmp,preds);
   }
 
   /** Subclasses implement the scoring logic.  The data is pre-loaded into a
-   *  re-used temp array, in the order the model expects. */
-  protected abstract double score0(double [] data);
+   *  re-used temp array, in the order the model expects.  The predictions are
+   *  loaded into the re-used temp array, which is also returned.  */
+  protected abstract float[] score0(double data[/*ncols*/], float preds[/*nclasses*/]);
   // Version where the user has just ponied-up an array of data to be scored.
   // Data must be in proper order.  Handy for JUnit tests.
-  public double score(double [] data){ return score0(data);  }
+  public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
 }

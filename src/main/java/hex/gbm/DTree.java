@@ -921,16 +921,11 @@ class DTree extends Iced {
         treeBits[i] = forest[i].compress();
     }
 
-    @Override protected double score0(double[] data) {
-      int nclasses = treeBits[0]._nclass;
-      float [] pred = new float[nclasses];
-      float [] pred_acc = pred.clone();
-      for(CompressedTree t:treeBits){
-        throw H2O.unimpl();
-        //t.score(data, pred);
-        //Utils.add(pred_acc, pred);
-      }
-      return Utils.maxIndex(pred_acc);
+    @Override protected float[] score0(double data[], float preds[]) {
+      Arrays.fill(preds,0);
+      for( CompressedTree t : treeBits )
+        t.addScore(preds, data);
+      return preds;
     }
 
     public void generateHTML(String title, StringBuilder sb) {
@@ -1012,13 +1007,56 @@ class DTree extends Iced {
       final byte [] _bits;
       final int _nclass;
       public CompressedTree( byte [] bits, int nclass ) { _bits = bits; _nclass = nclass; }
+      public float[] addScore( final float preds[], final double row[] ) {
+        // Predictions are stored biased by the minimum class, but the scoring
+        // logic assumes the full class size.  Bias results.
+        int ymin = preds.length - _nclass;
+        Arrays.fill(preds, 0);
+        AutoBuffer ab = new AutoBuffer(_bits);
+        while(true) {
+          int nodeType = ab.get1();
+          int colId = ab.get2();
+          float splitVal = ab.get4f();
+          if( colId == 65535 ) return scoreLeaf(ab, preds, ymin, (nodeType&16)==16);
+
+          boolean equal = ((nodeType&4)==4);
+          // Compute the amount to skip.
+          int lmask =  nodeType & 0x1B;
+          int rmask = (nodeType & 0x60) >> 2;
+          int skip = 0;
+          switch(lmask) {
+          case 1:  skip = ab.get1();  break;
+          case 2:  skip = ab.get2();  break;
+          case 3:  skip = ab.get3();  break;
+          case 8:  skip = _nclass < 256?1:2;  break; // Small leaf
+          case 24: skip = _nclass*4;  break; // skip the p-distribution
+          default: assert false:"illegal lmask value " + lmask;
+          }
+
+          if( ( equal && ((float)row[colId]) == splitVal) ||
+              (!equal && ((float)row[colId]) >= splitVal) ) {
+            ab.position(ab.position()+skip); // Skip right subtree
+            lmask = rmask;                   // And set the leaf bits into common place
+          }
+          if( (lmask&8)==8 ) return scoreLeaf(ab,preds,ymin, (lmask&16)==16);
+        }
+      }
+      
+      private float[] scoreLeaf(AutoBuffer ab, float preds[], int ymin, boolean big) {
+        if( !big )              // Small leaf?
+          preds[ymin+(_nclass < 256 ? ab.get1() : ab.get2())] += 1.0f;
+        else                    // Big leaf
+          for( int i = 0; i < _nclass; ++i )
+            preds[ymin+i] += ab.get4f();
+        return preds;
+      }
     }
     
     /** Abstract visitor class for serialized trees.*/
     public static abstract class TreeVisitor<T extends Exception> {
-      // Override these methods to get walker behavior
-      protected void  pre( int col, float fcmp, boolean equal ) throws T { }
-      protected void  mid( int col, float fcmp, boolean equal ) throws T { }
+      // Override these methods to get walker behavior.  
+      protected void pre ( int col, float fcmp, boolean equal ) throws T { }
+      protected void mid ( int col, float fcmp, boolean equal ) throws T { }
       protected void post( int col, float fcmp, boolean equal ) throws T { }
       protected void leaf( int pclass )                         throws T { }
       protected void leaf( float preds[] )                      throws T { }
@@ -1048,7 +1086,6 @@ class DTree extends Iced {
       }
 
       public final void visit() throws T {
-        int off0 = _ts.position(); // Offset to start of *this* node
         int nodeType = _ts.get1();
         int col = _ts.get2();
         float fcmp = _ts.get4f();
@@ -1066,12 +1103,9 @@ class DTree extends Iced {
         case 24: skip = _ct._nclass*4;  break; // skip the p-distribution
         default: assert false:"illegal lmask value " + lmask;
         }
-        int offl = _ts.position();      // Offset to start of *left* node
-        int offr = _ts.position()+skip; // Offset to start of *right* node
-
-        pre (col,fcmp,equal);
+        pre (col,fcmp,equal);   // Pre-walk
         if( (lmask & 0x8)==8 ) leaf2(lmask);  else  visit();
-        mid (col,fcmp,equal);
+        mid (col,fcmp,equal);   // Mid-walk
         if( (rmask & 0x8)==8 ) leaf2(rmask);  else  visit();
         post(col,fcmp,equal);
       }
@@ -1125,74 +1159,4 @@ class DTree extends Iced {
     }
     return true;
   }
-
-
-//    private int scoreSmallLeaf(AutoBuffer ab, float [] pred){
-//      int c = _nclass < 256?ab.get1():ab.get2();
-//      pred[c] = 1;
-//      return c;
-//    }
-//    private int scoreBigLeaf(AutoBuffer ab, float [] pred){
-//      for(int i = 0; i < _nclass; ++i)
-//        pred[i] = ab.get4f();
-//      return Utils.maxIndex(pred);
-//    }
-//    public int score(double [] row, float [] pred){
-//      assert pred.length == _nclass;
-//      Arrays.fill(pred, 0);
-//      AutoBuffer ab = new AutoBuffer(_bits);
-//      while(true){
-//        int nodeType = ab.get1();
-//        int colId = ab.get2();
-//        float splitVal = ab.get4f();
-//        if(colId == 65535)
-//          return scoreBigLeaf(ab, pred);
-//        if((((nodeType & 4) == 0) && (row[colId] >= splitVal)) || (((nodeType & 4) == 1) && (row[colId] != splitVal))) { // go right
-//          // first skip left subtree
-//          int lmask = nodeType & 27;
-//          int skip = 0;
-//          switch(lmask){
-//            case 1:
-//              skip = ab.get1();
-//              break;
-//            case 2:
-//              skip =  ab.get2();
-//              break;
-//            case 3:
-//              skip = ab.get3();
-//              break;
-//            case 8: // small leaf
-//              skip = _nclass < 256?1:2;
-//              break;
-//            case 24: // big leaf
-//              skip = _nclass*4; // skip the p-distribution
-//              break;
-//            default:
-//              assert false:"illegal lmask value " + lmask;
-//          }
-//          ab.position(ab.position()+skip);
-//          if((lmask = nodeType & 96) != 0) // leaf
-//            return lmask == 32?scoreSmallLeaf(ab, pred):scoreBigLeaf(ab, pred);
-//        } else { // go left
-//          int lmask = nodeType & 27;
-//          switch(lmask){
-//            case 1:
-//              ab.position(ab.position() + 1);
-//              break;
-//            case 2:
-//              ab.position(ab.position() + 2);
-//              break;
-//            case 3:
-//              ab.position(ab.position() + 3);
-//              break;
-//            case 8: // small leaf
-//             return scoreSmallLeaf(ab,pred);
-//            case 24: // big leaf
-//              return scoreBigLeaf(ab, pred);
-//            default:
-//              assert false:"illegal lmask value " + lmask;
-//          }
-//        }
-//      }
-//    }
 }
