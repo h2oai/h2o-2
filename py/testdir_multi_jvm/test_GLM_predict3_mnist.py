@@ -4,7 +4,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i, h2o_glm, h2o_exec as h2e
 
 # translate provides the mapping between original and predicted
 # since GLM is binomial, We predict 0 for 0 and 1 for > 0
-def compare_csv_one_col(csvPathname, msg, translate=None, skipHeader=False):
+# default to last col
+def compare_csv_at_one_col(csvPathname, msg, colIndex=-1,translate=None, skipHeader=False):
     predictOutput = []
     with open(csvPathname, 'rb') as f:
         reader = csv.reader(f)
@@ -16,7 +17,7 @@ def compare_csv_one_col(csvPathname, msg, translate=None, skipHeader=False):
             if skipHeader and rowNum==0:
                 print "Skipping header in this csv"
             else:
-                output = row[0] # just one col, just take it
+                output = row[colIndex]
                 if translate:
                     output = translate[int(output)]
                 # only print first 10 for seeing
@@ -64,9 +65,7 @@ class Basic(unittest.TestCase):
         csvFullname = h2i.find_folder_and_filename(bucket, csvPathname, schema='put', returnFullPath=True)
 
 
-        def predict_and_compare_csvs(model_key):
-
-
+        def predict_and_compare_csvs(model_key, hex_key):
             # have to slice out col 0 (the output) and feed result to predict
             # cols are 0:784 (1 output plus 784 input features
             h2e.exec_expr(execExpr="P.hex="+hex_key+"[1:784]", timeoutSecs=30)
@@ -85,10 +84,10 @@ class Basic(unittest.TestCase):
 
             print "Do a check of the original output col against predicted output"
             translate = {0: 0.0, 1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0, 7: 1.0, 8: 1.0, 9: 1.0}
-            (rowNum1, originalOutput) = compare_csv_one_col(csvSrcOutputPathname,
-                msg="Original", translate=translate, skipHeader=False)
-            (rowNum2, predictOutput)  = compare_csv_one_col(csvPredictPathname, 
-                msg="Predicted", skipHeader=True)
+            (rowNum1, originalOutput) = compare_csv_at_one_col(csvSrcOutputPathname,
+                msg="Original", colIndex=0, translate=translate, skipHeader=False)
+            (rowNum2, predictOutput)  = compare_csv_at_one_col(csvPredictPathname, 
+                msg="Predicted", colIndex=0, skipHeader=True)
 
             # no header on source
             if ((rowNum1+1) != rowNum2):
@@ -158,7 +157,7 @@ class Basic(unittest.TestCase):
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
-        predict_and_compare_csvs(model_key=glm['destination_key'])
+        predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey)
 
         # Elastic
         kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
@@ -166,7 +165,7 @@ class Basic(unittest.TestCase):
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
-        predict_and_compare_csvs(model_key=glm['destination_key'])
+        predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey)
 
         # L1
         kwargs.update({'alpha': 1, 'lambda': 1e-4})
@@ -174,7 +173,7 @@ class Basic(unittest.TestCase):
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
-        predict_and_compare_csvs(model_key=glm['destination_key'])
+        predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey)
 
 if __name__ == '__main__':
     h2o.unit_main()

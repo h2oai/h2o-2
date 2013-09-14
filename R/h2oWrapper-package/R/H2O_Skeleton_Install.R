@@ -1,7 +1,6 @@
-myPackages = rownames(installed.packages())
-if(!"bitops" %in% myPackages) install.packages("bitops")
-if(!"RCurl" %in% myPackages) install.packages("RCurl")
-if(!"rjson" %in% myPackages) install.packages("rjson")
+if(!"bitops" %in% rownames(installed.packages())) install.packages("bitops")
+if(!"RCurl" %in% rownames(installed.packages())) install.packages("RCurl")
+if(!"rjson" %in% rownames(installed.packages())) install.packages("rjson")
 
 library(RCurl)
 library(rjson)

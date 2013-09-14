@@ -98,7 +98,9 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, 
     return execExpr
 
 
-def exec_expr(node, execExpr, resultKey="Result.hex", timeoutSecs=10, ignoreH2oError=False):
+def exec_expr(node=None, execExpr=None, resultKey="Result.hex", timeoutSecs=10, ignoreH2oError=False):
+    if not node:
+        node = h2o.nodes[0]
     start = time.time()
     # FIX! Exec has 'escape_nan' arg now. should we test?
     # 5/14/13 removed escape_nan=0

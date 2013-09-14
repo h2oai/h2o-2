@@ -231,7 +231,6 @@ public final class Key extends Iced implements Comparable {
   @Override public final AutoBuffer write(AutoBuffer bb) { return bb.putA1(_kb); }
   @Override public final AutoBuffer writeJSON(AutoBuffer bb) { return bb.putJSONStr(toString()); }
 
-
   // Expand a KEY_OF_KEYS into an array of keys
   public Key[] flatten() {
     assert (_kb[0]&0xFF)==KEY_OF_KEYS;
