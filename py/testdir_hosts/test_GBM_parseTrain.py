@@ -17,6 +17,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_parseTrain_Acovtype200(self):
+        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         (importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse) = ('standard', 'covtype200x.data', 'covtype.hex', 1800, 54)
         start = time.time()
@@ -48,6 +49,7 @@ class Basic(unittest.TestCase):
         print GBMView['gbm_model']['errs']
 
     def test_GBM_parseTrain_Zallyears(self):
+        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         (importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse) = ('standard', 'allyears.csv', 'allyears.hex',1800,'IsArrDelayed')
         start = time.time()
@@ -79,6 +81,7 @@ class Basic(unittest.TestCase):
         print GBMView['gbm_model']['errs']
 
     def test_GBM_parseTrain_Cnflxf95(self):
+        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         (importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse) = ('manyfiles-nflx-gz', 'file_95.dat.gz', 'nflx.hex',1800,541)
         start = time.time()
@@ -110,7 +113,9 @@ class Basic(unittest.TestCase):
         print GBMView['gbm_model']['errs']
 
     def test_GBM_parseTrain_Bmnist(self):
+        h2o.beta_features = False
         #folderpath, filename, keyname, timeout
+        print "Trying with mnist8m data"
         bucket = 'home-0xdiag-datasets'
         (importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse) = ('mnist', 'mnist8m.csv', 'mnist8m.hex',1800,0)
         start = time.time()
@@ -142,6 +147,7 @@ class Basic(unittest.TestCase):
         print GBMView['gbm_model']['errs']
             
     def test_GBM_parseTrain_Yallyears2k(self):
+        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         (importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse) = ('standard', 'allyears2k.csv', 'allyears2k.hex',1800,'IsArrDelayed')
         start = time.time()
