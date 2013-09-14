@@ -56,7 +56,7 @@ def unit_main():
     # if I remember correctly there was an issue with using sys.argv[0] 
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
-    pythonCmdLineArgs = "".join(sys.argv[1:])
+    pythonCmdLineArgs = " ".join(sys.argv[1:])
     print "\nRunning: python", python_test_name, pythonCmdLineArgs
 
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.

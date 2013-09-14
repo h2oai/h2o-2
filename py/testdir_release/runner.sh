@@ -50,7 +50,7 @@ then
     echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
     ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
 
-    python ../four_hour_cloud.py -cj pytest_config-jenkins.json
+    python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
 else
     python ../four_hour_cloud.py &
 fi 
