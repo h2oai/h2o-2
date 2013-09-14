@@ -12,14 +12,14 @@ import hex.NewRowVecTask.DataFrame;
 import hex.NewRowVecTask.JobCancelledException;
 
 public class PCATest extends TestUtil {
-  public final static double threshold = 0.000001;
+  public final double threshold = 0.000001;
 
-  public static void checkSdev(double[] expected, double[] actual) {
+  public void checkSdev(double[] expected, double[] actual) {
     for(int i = 0; i < actual.length; i++)
       Assert.assertEquals(expected[i], actual[i], threshold);
   }
 
-  public static void checkEigvec(double[][] expected, double[][] actual) {
+  public void checkEigvec(double[][] expected, double[][] actual) {
     int nfeat = actual.length;
     int ncomp = actual[0].length;
     for(int j = 0; j < ncomp; j++) {
@@ -33,7 +33,7 @@ public class PCATest extends TestUtil {
     }
   }
 
-  @Test public static void testBasic() {
+  @Test public void testBasic() {
     Key kdata = Key.make("basicdata.hex");
     ValueArray va = va_maker(kdata,
         new byte []{0, 1, 2, 3, 4, 5, 6, 7},
@@ -51,7 +51,7 @@ public class PCATest extends TestUtil {
     UKV.remove(kpca);
   }
 
-  @Test public static void testLinDep() {
+  @Test public void testLinDep() {
     Key kdata = Key.make("depdata.hex");
     ValueArray va = va_maker(kdata, new double []{0, 1, 2, 3, 4,  5},
                                     new double []{0, 2, 4, 6, 8, 10});
@@ -70,7 +70,7 @@ public class PCATest extends TestUtil {
     UKV.remove(kpca);
   }
 
-  @Test public static void testArrests() throws JobCancelledException {
+  @Test public void testArrests() throws JobCancelledException {
     Key ksrc = loadAndParseFile("arrests.hex", "smalldata/pca_test/USArrests.csv");
     ValueArray va = DKV.get(ksrc).get();
 
@@ -104,7 +104,7 @@ public class PCATest extends TestUtil {
     System.out.println("DONE!");
   }
 
-  static void runTests() throws JobCancelledException {
+  void runTests() throws JobCancelledException {
     System.out.println("testBasic");
     testBasic();
     System.out.println("testLinDep");
@@ -115,7 +115,7 @@ public class PCATest extends TestUtil {
     System.out.println("DONE!!!");
 }
 
-  public static void main(String [] args) throws Exception{
+  public void main(String [] args) throws Exception{
     System.out.println("Running PCATest");
     final int nnodes = 1;
     for( int i = 1; i < nnodes; i++ ) {
