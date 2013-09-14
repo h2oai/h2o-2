@@ -138,7 +138,10 @@ public abstract class Model extends Iced {
   private int[][] adapt( String names[], String domains[][], boolean exact ) {
     // Make sure all are compatible
     for( int i=0; i<_names.length-1; i++ ) {
-      if( !_names[i].equals(names[i]) ) throw H2O.unimpl();
+      if( !_names[i].equals(names[i]) ) {
+        System.out.println(Arrays.toString(_names)+","+Arrays.toString(names));
+        throw H2O.unimpl();
+      }
       if( _domains[i] != domains[i] ) {
         if( _domains[i] == null || domains[i] == null ) {
           if( exact ) 
