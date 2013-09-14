@@ -908,8 +908,16 @@ class H2O(object):
         if not beta_features and not r.json():
             raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
             
-        rjson = r.json()
-
+        rjson = None
+        try:
+            rjson = r.json()
+        except:
+            if '404' in r:
+                verboseprint(r.text)
+                raise Exception("No json could be decoded as there was a 404 response. Do you have beta features turned on? beta_features: ", beta_features)
+            verboseprint(r.text)
+            raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
+        
         for e in ['error', 'Error', 'errors', 'Errors']:
             if e in rjson:
                 verboseprint(dump_json(rjson))

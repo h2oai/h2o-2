@@ -2,7 +2,6 @@ package water;
 
 import java.util.Arrays;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
@@ -162,9 +161,12 @@ public class Job extends Request2 {
     }.fork(LIST);
   }
 
-  public boolean cancelled() { return cancelled(job_key); }
-  public static boolean cancelled(Key self) {
-    return DKV.get(self) == null;
+  public boolean cancelled() {
+    return !running() && end_time == Job.CANCELLED_END_TIME;
+  }
+  public boolean running() { return running(job_key); }
+  public static boolean running(Key self) {
+    return DKV.get(self) != null;
   }
 
   public void remove() {

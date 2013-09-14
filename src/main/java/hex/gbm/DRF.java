@@ -93,8 +93,12 @@ public class DRF extends FrameJob {
     public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
-    @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO: Score me");
+    @Override protected float[] score0(double data[], float preds[]) {
+      super.score0(data,preds);
+      // After adding all trees, divide by tree-count to get a distribution
+      for( int i=0; i<preds.length; i++ )
+        preds[i] /= treeBits.length;
+      return preds;
     }
   }
   public Vec score( Frame fr ) { return drf_model.score(fr,true);  }

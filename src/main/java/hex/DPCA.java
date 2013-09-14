@@ -6,6 +6,7 @@ import java.util.Comparator;
 import org.apache.commons.lang.ArrayUtils;
 
 import jsr166y.CountedCompleter;
+import junit.framework.Assert;
 import hex.DGLM.*;
 import hex.DGLM.GLMModel.Status;
 import hex.KMeans.ClusterDist;
@@ -47,6 +48,7 @@ public abstract class DPCA {
     final double[] _normSub;
     final double[] _normMul;
 
+
     public StandardizeTask(double[] normSub, double[] normMul) {
       _normSub = normSub;
       _normMul = normMul;
@@ -60,6 +62,7 @@ public abstract class DPCA {
       for(int i = ncol; i < chunks.length; ++i) {
         outputs[i-ncol] = (NewChunk)chunks[i];
       }
+
       int rows = inputs[0]._len;
       for(int c = 0; c < ncol; c++) {
         for(int r = 0; r < rows; r++) {
@@ -87,7 +90,10 @@ public abstract class DPCA {
     }
 
     public static Frame standardize(final DataFrame data) {
-      return standardize(data._ary.asFrame(), data._normSub, data._normMul);
+      // Extract only the columns in the associated model
+      Frame subset = data.modelAsFrame();
+      Assert.assertEquals(subset._vecs.length, data._normSub.length);
+      return standardize(subset, data._normSub, data._normMul);
     }
   }
 
@@ -119,6 +125,7 @@ public abstract class DPCA {
     public final PCAParams _pcaParams;
     public final double[] _sdev;
     public final double[] _propVar;
+    public final double[] _cumVar;
     public final double[][] _eigVec;
     public final int _rank;
     public int _num_pc;
@@ -139,18 +146,19 @@ public abstract class DPCA {
     }
 
 
-    public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[] propVar,
+    public PCAModel(Status status, float progress, Key k, DataFrame data, double[] sdev, double[] propVar, double[] cumVar,
         double[][] eigVec, int rank, int response, int num_pc, PCAParams pcaps) {
-      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, eigVec, rank, response, num_pc, pcaps);
+      this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, sdev, propVar, cumVar, eigVec, rank, response, num_pc, pcaps);
     }
 
     public PCAModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, double[] sdev,
-        double[] propVar, double[][] eigVec, int rank, int response, int num_pc, PCAParams pcap) {
+        double[] propVar, double[] cumVar, double[][] eigVec, int rank, int response, int num_pc, PCAParams pcap) {
       super(k, colIds, ary._key);
       _status = status;
       _colCatMap = colCatMap;
       _sdev = sdev;
       _propVar = propVar;
+      _cumVar = cumVar;
       _eigVec = eigVec;
       _response = response;
       _pcaParams = pcap;
@@ -188,13 +196,16 @@ public abstract class DPCA {
       // Add standard deviation to output
       JsonObject sdev = new JsonObject();
       JsonObject prop = new JsonObject();
+      JsonObject cum = new JsonObject();
       if(_sdev != null) {
       for(int i = 0; i < _sdev.length; i++) {
         sdev.addProperty("PC" + i, _sdev[i]);
         prop.addProperty("PC" + i, _propVar[i]);
+        cum.addProperty("PC" + i, _cumVar[i]);
       } }
       res.add("stdDev", sdev);
       res.add("propVar", prop);
+      res.add("cumVar", cum);
 
       // Add eigenvectors to output
       // Singular values ordered in weakly descending order
@@ -265,9 +276,10 @@ public abstract class DPCA {
     final PCAJob job = new PCAJob(data._ary, dest);
     final double[] sdev = null;
     final double[] propVar = null;
+    final double[] cumVar = null;
     final double[][] eigVec = null;
 
-    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, eigVec, 0, 0, 0, params));
+    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, cumVar, eigVec, 0, 0, 0, params));
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
@@ -310,22 +322,24 @@ public abstract class DPCA {
     double totVar = 0;
     double dfcorr = data._ary._numrows/(data._ary._numrows - 1.0);
     for(int i = 0; i < Sval.length; i++) {
-      if(params._standardized)
-        Sval[i] = dfcorr*Sval[i];   // Correct since degrees of freedom = n-1 when standardized
+      // if(params._standardized)
+        Sval[i] = dfcorr*Sval[i];   // Correct since degrees of freedom = n-1
       sdev[i] = Math.sqrt(Sval[i]);
       totVar += Sval[i];
     }
 
     double[] propVar = new double[Sval.length];    // Proportion of total variance
+    double[] cumVar = new double[Sval.length];    // Cumulative proportion of total variance
     for(int i = 0; i < Sval.length; i++) {
       // eigVec[i] = eigV.getMatrix(0,nfeat-1,i,i).getColumnPackedCopy();
       propVar[i] = Sval[i]/totVar;
+      cumVar[i] = i == 0 ? propVar[0] : cumVar[i-1] + propVar[i];
     }
 
     int ncomp = getNumPC(sdev, params._tol);
     // int ncomp = Math.min(getNumPC(Sval, params._tol), (int)data._nobs-1);
     // int ncomp = Math.min(params._num_pc, Sval.length);
-    PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, eigVec, mySVD.rank(), 0, ncomp, params);
+    PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, cumVar, eigVec, mySVD.rank(), 0, ncomp, params);
     myModel.store();
     return myModel;
   }
