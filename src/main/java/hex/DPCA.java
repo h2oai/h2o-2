@@ -6,6 +6,7 @@ import java.util.Comparator;
 import org.apache.commons.lang.ArrayUtils;
 
 import jsr166y.CountedCompleter;
+import junit.framework.Assert;
 import hex.DGLM.*;
 import hex.DGLM.GLMModel.Status;
 import hex.KMeans.ClusterDist;
@@ -47,6 +48,7 @@ public abstract class DPCA {
     final double[] _normSub;
     final double[] _normMul;
 
+
     public StandardizeTask(double[] normSub, double[] normMul) {
       _normSub = normSub;
       _normMul = normMul;
@@ -60,6 +62,7 @@ public abstract class DPCA {
       for(int i = ncol; i < chunks.length; ++i) {
         outputs[i-ncol] = (NewChunk)chunks[i];
       }
+
       int rows = inputs[0]._len;
       for(int c = 0; c < ncol; c++) {
         for(int r = 0; r < rows; r++) {
@@ -87,7 +90,10 @@ public abstract class DPCA {
     }
 
     public static Frame standardize(final DataFrame data) {
-      return standardize(data._ary.asFrame(), data._normSub, data._normMul);
+      // Extract only the columns in the associated model
+      Frame subset = data.modelAsFrame();
+      Assert.assertEquals(subset._vecs.length, data._normSub.length);
+      return standardize(subset, data._normSub, data._normMul);
     }
   }
 
