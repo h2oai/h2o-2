@@ -30,8 +30,8 @@ class Basic(unittest.TestCase):
         trial = 0
         for (csvDirname, timeoutSecs) in csvDirlist:
 
-            (importHDFSResult, importPattern) = h2i.import_only(bucket='home2-0xdiag-datasets', 
-                    path=csvDirname, schema='s3n', timeoutSecs = timeoutSecs)
+            csvPathname = csvDirname + "/*"
+            (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-datasets', path=csvPathname, schema='s3n')
             s3nFullList = importHDFSResult['succeeded']
             self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 
@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             # PARSE****************************************
             hex_key = csvDirname + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='h2o-datasets', path=csvDirname + "/*", hex_key=hex_key,
+            parseResult = h2i.import_parse(bucket='h2o-datasets', path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
             # figures out everything from parseResult['destination_key']
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
-            goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', key=parseResult['destination_key'], timeoutSecs=300)
+            goodX = h2o_glm.goodXFromColumnInfo(y=54, key=parseResult['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
             summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360)

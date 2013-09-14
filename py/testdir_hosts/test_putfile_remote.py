@@ -5,7 +5,9 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 def file_to_put():
     # kbn fails 10/15/12
     # return 'smalldata/poker/poker-hand-testing.data'
-    return h2i.find_folder_and_filename('smalldata', 'poker/poker1000', returnFullPath=true)
+    a = h2i.find_folder_and_filename('smalldata', 'poker/poker1000', returnFullPath=True)
+    print "\nfind_folder_and_filename:", a
+    return a
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -23,6 +25,7 @@ class Basic(unittest.TestCase):
     # Try to put a file to each node in the cloud and checked reported size of the saved file 
     def test_A_putfile_to_all_nodes(self):
         csvfile  = file_to_put()
+        print "csvfile:", csvfile
         origSize = h2o.get_file_size(csvfile)
 
         # Putfile to each node and check the returned size

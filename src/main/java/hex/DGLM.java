@@ -909,7 +909,7 @@ public abstract class DGLM {
     }
   }
 
-  public static class GLMModel extends water.Model {
+  public static class GLMModel extends water.OldModel {
     public enum Status {
       NotStarted, ComputingModel, ComputingValidation, Done, Cancelled, Error
     };
@@ -940,7 +940,7 @@ public abstract class DGLM {
     Status _status;
 
     public Status status() {
-      return _status;
+      return _status == null ? Status.NotStarted : _status;
     }
 
     public String error() {
@@ -1017,20 +1017,20 @@ public abstract class DGLM {
         UKV.remove(v._key);
     }
 
-    public GLMModel() {
-      _status = Status.NotStarted;
-      _colCatMap = null;
-      _beta = null;
-      _normBeta = null;
-      _glmParams = null;
-      _s = null;
-      _standardized = false;
-      _converged = false;
-      _iterations = 0;
-      _time = 0;
-      _solver = null;
-      _dof = _nCols = _nLines = _response = 0;
-    }
+    //public GLMModel() {
+    //  _status = Status.NotStarted;
+    //  _colCatMap = null;
+    //  _beta = null;
+    //  _normBeta = null;
+    //  _glmParams = null;
+    //  _s = null;
+    //  _standardized = false;
+    //  _converged = false;
+    //  _iterations = 0;
+    //  _time = 0;
+    //  _solver = null;
+    //  _dof = _nCols = _nLines = _response = 0;
+    //}
 
     public GLMModel(Status status, float progress, Key k, DataFrame data, double[] beta, double[] normBeta,
         GLMParams glmp, LSMSolver solver, long nLines, long nCols, boolean converged, int iters, long time,
@@ -1082,7 +1082,7 @@ public abstract class DGLM {
         throws JobCancelledException {
       int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) ) // This dataset is compatible or not?
-      throw new GLMException("incompatible dataset");
+        throw new GLMException("incompatible dataset");
       DataFrame data = new DataFrame(ary, modelDataMap, s, false, true);
       GLMValidationFunc f = new GLMValidationFunc(this, _glmParams, _beta, thresholds,
           ary._cols[modelDataMap[modelDataMap.length - 1]]._mean);
@@ -1101,7 +1101,7 @@ public abstract class DGLM {
         throws JobCancelledException {
       int[] modelDataMap = ary.getColumnIds(_va.colNames());//columnMapping(ary.colNames());
       if( !isCompatible(modelDataMap) )  // This dataset is compatible or not?
-      throw new GLMException("incompatible dataset");
+        throw new GLMException("incompatible dataset");
       final int myNodeId = H2O.SELF.index();
       final int cloudsize = H2O.CLOUD.size();
       Key[] keys = new Key[folds];
@@ -1213,7 +1213,8 @@ public abstract class DGLM {
           p += _beta[idx] * d;
         } else {
           int d = (int) data[i]; // Enum value d can be -1 if we got enum values not seen in training
-          if( d > 0 && (idx += d) < _colCatMap[i + 1] ) p += _beta[idx]/* *1.0 */;
+          if(d == 0) continue; // level 0 of factor is skipped (coef==0).
+          if( d > 0 && (idx += d) <= _colCatMap[i + 1] ) p += _beta[idx-1]/* *1.0 */;
           else             // Enum out of range?
           p = Double.NaN;// Can use a zero, or a NaN
         }

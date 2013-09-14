@@ -153,7 +153,7 @@ class Basic(unittest.TestCase):
         for x in range(1,5):
             h2o_hosts.build_cloud_with_hosts(nodes_per_host, use_flatfile=True)
             parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker1000', schema='put')
-            h2o_cmd.runRFOnly(parseResult=parseResult, trees=50, timeoutSecs=10)
+            h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=10)
             h2o.tear_down_cloud()
             h2o.verboseprint("Waiting", nodes_per_host,
                 "seconds to avoid OS sticky port problem")

@@ -332,7 +332,7 @@ class Basic(unittest.TestCase):
 
             kwargs = {'sample': 100, 'depth': 25, 'ntree': 2, 'ignore': ignoreForRf}
             start = time.time()
-            # h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=10, **kwargs)
+            # h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=10, **kwargs)
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             print "trial #", trial, "totalDataRows:", totalDataRows, "parse end on ", csvFilename, \

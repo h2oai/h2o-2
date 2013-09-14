@@ -24,12 +24,12 @@ class Basic(unittest.TestCase):
         if localhost:
             csvFilenameList = [
                 # 68 secs on my laptop?
-                ('covtype20x.data', 480, 'cA'),
+                ('covtype20x.data', 1200, 'cA'),
                 ]
         else:
             # None is okay for hex_key
             csvFilenameList = [
-                ('covtype20x.data', 480,'cA'),
+                ('covtype20x.data', 1200,'cA'),
                 # ('covtype200x.data', 1000,'cE'),
                 ]
 
@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
             }
 
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \

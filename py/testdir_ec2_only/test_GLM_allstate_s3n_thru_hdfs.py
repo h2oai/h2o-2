@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, 
+            glm = h2o_cmd.runGLM(parseResult=parseResult, 
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds',\
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult,
+            glm = h2o_cmd.runGLM(parseResult=parseResult,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (Elastic) end on ", csvFilename, 'took', elapsed, 'seconds',\
@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult,
+            glm = h2o_cmd.runGLM(parseResult=parseResult,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('JStack', None), **kwargs)
             elapsed = time.time() - start
             print "glm (L1) end on ", csvFilename, 'took', elapsed, 'seconds',\

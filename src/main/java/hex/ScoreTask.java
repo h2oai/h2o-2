@@ -1,13 +1,13 @@
 package hex;
 
-
 import water.*;
 import water.ValueArray.Column;
+import water.fvec.Frame;
 import water.util.Utils;
 
 public class ScoreTask extends MRTask {
 
-  final Model _M;
+  final OldModel _M;
   final Key _outKey;
   final int _nchunks;
   private double _min = Double.POSITIVE_INFINITY;
@@ -18,13 +18,13 @@ public class ScoreTask extends MRTask {
 
   private int [] _rpc;
 
-  private ScoreTask(Model M, Key outKey, int nchunks){
+  private ScoreTask(OldModel M, Key outKey, int nchunks){
     _M = M;
     _outKey = outKey;
     _nchunks = nchunks;
   }
 
-  public static Key score(Model M, ValueArray data, Key outputKey){
+  public static Key score(OldModel M, ValueArray data, Key outputKey){
     ScoreTask t = new ScoreTask(M.adapt(data),outputKey,(int)data.chunks());
     t.invoke(data._key);
     Column c = new Column();
@@ -51,12 +51,13 @@ public class ScoreTask extends MRTask {
     super.init();
   }
   @Override public void map(Key key) {
+    final OldModel m = (OldModel)_M.clone();
     ValueArray ary = DKV.get(ValueArray.getArrayKey(key)).get();
     AutoBuffer bits = new AutoBuffer(DKV.get(key).memOrLoad());
     int nrows = bits.remaining()/ary._rowsize;
     AutoBuffer res = new AutoBuffer(nrows<<3);
     for(int i = 0; i< nrows; ++i){
-      double p = _M.score(ary, bits, i);
+      double p = m.score(ary, bits, i);
       if(p < _min)_min = p;
       if(p > _max)_max = p;
 

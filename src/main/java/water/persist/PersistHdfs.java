@@ -285,7 +285,7 @@ public final class PersistHdfs extends Persist {
             JsonElement type = json.get(Constants.TYPE);
             if( type == null ) throw new RuntimeException("Missing type");
             Class c = Class.forName(type.getAsString());
-            Model model = (Model) c.newInstance();
+            OldModel model = (OldModel) c.newInstance();
             model.fromJson(json);
           } else if( pfs.getName().endsWith(Extensions.HEX) ) { // Hex file?
             FSDataInputStream s = fs.open(pfs);

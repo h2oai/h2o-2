@@ -98,7 +98,8 @@ class Basic(unittest.TestCase):
         importFolderPath = "standard"
         for (csvFilename, hex_key) in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, timeoutSecs=2000)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, 
+                timeoutSecs=2000)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

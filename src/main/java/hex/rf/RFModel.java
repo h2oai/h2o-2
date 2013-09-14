@@ -18,7 +18,7 @@ import com.google.gson.*;
  * A model is an ensemble of trees that can be serialized and that can be used
  * to classify data.
  */
-public class RFModel extends Model implements Progress {
+public class RFModel extends OldModel implements Progress {
   /** Number of features these trees are built for */
   public int _features;
   /** Sampling strategy used for model */

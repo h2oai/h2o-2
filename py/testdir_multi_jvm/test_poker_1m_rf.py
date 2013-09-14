@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
     def test_RF_poker_hand_testing_data(self):
         csvPathname = 'poker/poker-hand-testing.data'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=15, timeoutSecs=400, retryDelaySecs=5)
+        h2o_cmd.runRF(parseResult=parseResult, trees=15, timeoutSecs=800, retryDelaySecs=5)
 
 if __name__ == '__main__':
     h2o.unit_main()

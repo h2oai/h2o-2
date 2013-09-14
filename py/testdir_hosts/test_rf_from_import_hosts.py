@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename
             # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname,  timeoutSecs=500)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname,  schema='local', timeoutSecs=500)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # poker and the water.UDP.set3(UDP.java) fail issue..
             # constrain depth to 25
-            RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=parseResult,
+            RFview = h2o_cmd.runRF(trees=1,depth=25,parseResult=parseResult,
                 timeoutSecs=timeoutSecs)
 
             h2b.browseJsonHistoryAsUrlLastMatch("RFView")

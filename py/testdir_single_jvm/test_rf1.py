@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(node_count=1)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts(node_count=3)
 
     @classmethod
     def tearDownClass(cls):
@@ -29,14 +29,14 @@ class Basic(unittest.TestCase):
         timeoutSecs = 20
         csvPathname = 'iris/iris2.csv'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
+        h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
 
     def notest_RF_poker100(self):
         trees = 6
         timeoutSecs = 20
         csvPathname = 'poker/poker100'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
+        h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
 
     def test_GenParity1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             parseResult = h2i.import_parse(path=csvPathname, schema='put')
-            h2o_cmd.runRFOnly(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
+            h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
 
             trees += 10
             timeoutSecs += 2

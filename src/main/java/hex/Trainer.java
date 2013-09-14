@@ -336,15 +336,15 @@ public abstract class Trainer {
     @Override public void run() {
       final Frame frame = ((FrameInput) _ls[0])._frame;
       assert _ls[0]._a.length == frame._vecs.length - 1;
-      assert frame.firstReadable().nChunks() >= cores();
+      assert frame.anyVec().nChunks() >= cores();
 
       // Pre compute stats, otherwise can be done multiple times concurrently
       for( int i = 0; i < frame._vecs.length; i++ )
         frame._vecs[i].min();
 
       int batch = 1000;
-      int rows = Math.max(1, batch / frame.firstReadable().nChunks());
-      int splits = 1 + frame.firstReadable().chunk(0)._len / rows;
+      int rows = Math.max(1, batch / frame.anyVec().nChunks());
+      int splits = 1 + frame.anyVec().chunk(0)._len / rows;
 
       for( int e = 0; _epochs == 0 || e < _epochs; e++ ) {
         for( int split = 0; split < splits; split++ ) {
@@ -495,7 +495,7 @@ public abstract class Trainer {
 
       final Frame frame = ((FrameInput) _ls[0])._frame;
       assert _ls[0]._a.length == frame._vecs.length - 1;
-      assert frame.firstReadable().nChunks() >= cores();
+      assert frame.anyVec().nChunks() >= cores();
 
       // Pre compute stats, otherwise can be done multiple times concurrently
       for( int i = 0; i < frame._vecs.length; i++ )
@@ -622,7 +622,7 @@ public abstract class Trainer {
    */
   public static Frame reChunk(Frame frame) {
     final int splits = cores() * 3; // TODO
-    if( frame.firstReadable().nChunks() >= splits )
+    if( frame.anyVec().nChunks() >= splits )
       return frame;
     Vec[] vecs = new Vec[frame._vecs.length];
     for( int v = 0; v < vecs.length; v++ ) {
@@ -705,7 +705,7 @@ public abstract class Trainer {
 
       final Frame frame = ((FrameInput) _ls[0])._frame;
       assert _ls[0]._a.length == frame._vecs.length - 1;
-      assert frame.firstReadable().nChunks() >= cores();
+      assert frame.anyVec().nChunks() >= cores();
       _counts = new AtomicIntegerArray(frame._vecs[0].nChunks());
 
       Descent2 task = new Descent2();
@@ -909,7 +909,7 @@ public abstract class Trainer {
         counts = t;
       }
       if( n > 0 ) {
-Log.info("sync " + n);
+        Log.info("sync " + n);
         Shuttle s = new Shuttle();
         s._w = new float[_ws.length][];
         s._b = new float[_bs.length][];

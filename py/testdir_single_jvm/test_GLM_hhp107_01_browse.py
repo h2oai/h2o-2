@@ -49,7 +49,7 @@ class Basic(unittest.TestCase):
             kwargs = argcase
             print 'y:', kwargs['y']
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, browseAlso=True, timeoutSecs=200, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, browseAlso=True, timeoutSecs=200, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "\nTrial #", trial
 

@@ -35,7 +35,6 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'java_heap_GB': None,
         'java_heap_MB': None,
         'java_extra_args': None,
-        'sigar': False,
 
         'timeoutSecs': 60, 
         'retryDelaySecs': 2, 
@@ -56,8 +55,13 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         'redirect_import_folder_to_s3n_path': None,
         'disable_h2o_log': False,
         'enable_benchmark_log': False,
-        'fake_cloud': False,
         'h2o_remote_buckets_root': None,
+        'conservative': False,
+        'create_json': False,
+        # pass this from cloud building to the common "release" h2o_test.py classes
+        # for deciding whether keys should be deleted when a test ends.
+        'delete_keys_at_teardown': False, 
+        'clone_cloud': False,
     }
     # initialize the default values
     paramsToUse = {}
@@ -86,6 +90,16 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     for k,v in kwargs.iteritems():
         paramsToUse[k] = kwargs.setdefault(k, v)
 
+
+    # Let's assume we should set the h2o_remote_buckets_root (only affects
+    # schema=local), to the home directory of whatever remote user
+    # is being used for the hosts. Better than living with a decision
+    # we made from scanning locally (remote might not match local)
+    # assume the remote user has a /home/<username> (linux targets?)
+    # This only affects import folder path name generation by python tests
+    if paramsToUse['username']:
+        paramsToUse['h2o_remote_buckets_root'] = "/home/" + paramsToUse['username']
+
     h2o.verboseprint("All build_cloud_with_hosts params:", paramsToUse)
 
     #********************
@@ -100,10 +114,12 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         hosts = []
         for h in paramsToUse['ip']:
             h2o.verboseprint("Connecting to:", h)
+            # expand any ~ or ~user in the string
+            key_filename = paramsToUse['key_filename']
+            if key_filename: # don't try to expand if None
+               key_filename=os.path.expanduser(key_filename)
             hosts.append(h2o.RemoteHost(addr=h, 
-                username=paramsToUse['username'], 
-                password=paramsToUse['password'], 
-                key_filename=paramsToUse['key_filename']))
+                username=paramsToUse['username'], password=paramsToUse['password'], key_filename=key_filename))
 
     # done with these, don't pass to build_cloud
     paramsToUse.pop('ip') # this was the list of ip's from the config file, replaced by 'hosts' to build_cloud
@@ -121,7 +137,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         rand_shuffle=paramsToUse['rand_shuffle']
         )
 
-    if not paramsToUse['fake_cloud'] and hosts is not None:
+    if hosts is not None:
         # this uploads the flatfile too
         h2o.upload_jar_to_remote_hosts(hosts, slow_connection=paramsToUse['slow_connection'])
         # timeout wants to be larger for large numbers of hosts * h2oPerHost

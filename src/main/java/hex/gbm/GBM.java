@@ -1,13 +1,7 @@
 package hex.gbm;
 
-import hex.gbm.DTree.BulkScore;
-import hex.gbm.DTree.ClassDist;
-import hex.gbm.DTree.DecidedNode;
-import hex.gbm.DTree.ScoreBuildHistogram;
-import hex.gbm.DTree.UndecidedNode;
-
+import hex.gbm.DTree.*;
 import java.util.Arrays;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -17,43 +11,14 @@ import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import com.google.gson.JsonObject;
-
 // Gradient Boosted Trees
 public class GBM extends FrameJob {
-  public float progress(){
-    GBMModel m = DKV.get(dest()).get();
-    return m.forest.length/(float)m.N;
-  }
-  public static class GBMModel extends Model{
-    public final String [] domain;
-    public final long [][] cm;
-    public final float [] errs;
-    public final DTree forest[];
-    public final int N;
-
-    public GBMModel(int ntrees, String [] domain, float [] errs, long [][] cm, DTree[] forest){
-      this.N = ntrees; this.domain = domain; this.errs = errs; this.cm = cm; this.forest = forest;
-    }
-    @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO Auto-generated method stub");
-    }
-  }
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help="", required=true, filter=GBMVecSelect.class)
   Vec vresponse;
-  class GBMVecSelect extends VecSelect { GBMVecSelect() { super("source"); } }
-
-  @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
-  double learn_rate = 0.1;
-  public class LearnRateFilter implements Filter {
-    @Override public boolean run(Object value) {
-      double learn_rate = (Double)value;
-      return 0.0 < learn_rate && learn_rate <= 1.0;
-    }
-  }
+  class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
@@ -71,21 +36,44 @@ public class GBM extends FrameJob {
   }
 
   @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
-  int min_rows = 5;
+  int min_rows = 10;
   public class MinRowsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
+  @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
+  char nbins = 1024;
+  public class NBinsFilter implements Filter {
+    @Override public boolean run(Object value) { return (Integer)value >= 2; }
+  }
 
-  // JSON Output Fields
-  @API(help="Class names")
-  public String domain[];
+  @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
+  double learn_rate = 0.2;
+  public class LearnRateFilter implements Filter {
+    @Override public boolean run(Object value) {
+      double learn_rate = (Double)value;
+      return 0.0 < learn_rate && learn_rate <= 1.0;
+    }
+  }
 
-  @API(help="Confusion Matrix[actual_class][predicted_class]")
-  long cm[/*actual*/][/*predicted*/]; // Confusion matrix
+  @API(help = "The GBM Model")
+  GBMModel gbm_model;
 
-  @API(help="Error rate by tree, from 0.0 to 1.0")
-  float errs[/*ntrees*/]; // Error rate, as trees are added
+  // Overall prediction error as I add trees
+  transient private float _errs[];
+
+  public float progress(){
+    DTree.TreeModel m = DKV.get(dest()).get();
+    return m.treeBits.length/(float)m.N;
+  }
+  public static class GBMModel extends DTree.TreeModel {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
+      super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
+    }
+  }
+  public Vec score( Frame fr ) { return gbm_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__GBMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -97,10 +85,6 @@ public class GBM extends FrameJob {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
-  }
-
-  @Override public boolean toHTML( StringBuilder sb ) {
-    return true;
   }
 
   // ==========================================================================
@@ -116,11 +100,11 @@ public class GBM extends FrameJob {
   // Compute a single GBM tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
   @Override protected Response serve() {
-    final Key outputKey = dest();
-    final Timer t_gbm = new Timer();
     final Frame fr = new Frame(source); // Local copy for local hacking
-    if( !vresponse.isEnum() )
-      vresponse.asEnum();
+
+    // Doing classification only right now...
+    if( !vresponse.isEnum() ) vresponse.asEnum();
+
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
@@ -128,14 +112,37 @@ public class GBM extends FrameJob {
       if( fr._vecs[i]==vresponse )
         fr.remove(i);
 
+    String vname="response";
+    for( int i=0; i<fr.numCols(); i++ )
+      if( fr._vecs[i]==vresponse ) {
+        vname=fr._names[i];
+        fr.remove(i);
+      }
+
+    // Ignore-columns-code goes here....
+
+    buildModel(fr,vname);
+    return GBMProgressPage.redirect(this, self(),dest());
+  }
+
+  private void buildModel( final Frame fr, String vname ) {
+    final Timer t_gbm = new Timer();
+    final Frame frm = new Frame(fr); // Local copy for local hacking
+    frm.add(vname,vresponse);        // Hardwire response as last vector
+
+    assert 1 <= min_rows;
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
-    final short nclass = vresponse.isInt() ? (short)(vresponse.max()-ymin+1) : 1;
-    assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
-    domain = nclass > 1 ? vresponse.domain() : null;
-    errs = new float[0];         // No trees yet
-    DKV.put(outputKey, new GBMModel(ntrees, domain, new float[]{-1},cm,new DTree[0]));
+    final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
+    assert 1 <= nclass && nclass <= 1000; // Arbitrary cutoff for too many classes
+    final String domain[] = nclass > 1 ? vresponse.domain() : null;
+    _errs = new float[0];     // No trees yet
+    final Key outputKey = dest();
+    final Key dataKey = null;
+    gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,new DTree[0], null, ymin, null);
+    DKV.put(outputKey, gbm_model);
+
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
         // Add in Vecs after the response column which holds the row-by-row
@@ -146,27 +153,35 @@ public class GBM extends FrameJob {
         // The initial prediction is just the class distribution.  The initial
         // residuals are then basically the actual class minus the average class.
         float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
-        DTree init_tree = new DTree(fr._names,ncols,nclass,min_rows);
+        DTree init_tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
-        cm = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth )._cm;
-        DKV.put(outputKey, new GBMModel(ntrees, domain, preds,cm,forest));
-        // Initial scoring
-        //new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, maxDepth );
+        BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, 0 );
+        _errs = new float[]{(float)bs._sum/nrows}; // Errors for exactly 1 tree
+        gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
+        DKV.put(outputKey, gbm_model);
+
         // Build trees until we hit the limit
         for( int tid=1; tid<ntrees; tid++) {
           if(GBM.this.cancelled())break;
           forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
+//          System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
+          // Tree-by-tree scoring
           Timer t_score = new Timer();
-          cm = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, max_depth )._cm;
-          DKV.put(outputKey, new GBMModel(ntrees, domain, errs,cm,forest));
+          BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, max_depth );
+          _errs = Arrays.copyOf(_errs,_errs.length+1);
+          _errs[_errs.length-1] = (float)bs2._sum/nrows;
+          gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
+          DKV.put(outputKey, gbm_model);
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
+
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
         GBM.this.remove();
+        tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
         ex.printStackTrace();
@@ -174,17 +189,16 @@ public class GBM extends FrameJob {
         return true;
       }
     }));
-    return GBMProgressPage.redirect(this, self(),dest());
   }
 
   // Build the next tree, which is trying to correct the residual error from the prior trees.
-  private DTree[] buildNextTree(Frame fr, DTree forest[], final int ncols, long nrows, final short nclass, int ymin) {
+  private DTree[] buildNextTree(Frame fr, DTree forest[], final int ncols, long nrows, final char nclass, int ymin) {
     // Make a new Vec to hold the split-number for each row (initially all zero).
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
     // Initially setup as-if an empty-split had just happened
-    final DTree tree = new DTree(fr._names,ncols,nclass,min_rows);
-    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nclass)); // The "root" node
+    final DTree tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
+    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nbins,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
     // Add tree to the end of the forest
     forest = Arrays.copyOf(forest,forest.length+1);
@@ -261,12 +275,10 @@ public class GBM extends FrameJob {
     // Remove the NIDs column
     assert fr._names[fr.numCols()-1].equals("NIDs");
     UKV.remove(fr.remove(fr.numCols()-1)._key);
+
     // Print the generated tree
     //System.out.println(tree.root().toString2(new StringBuilder(),0));
-    // Tree-by-tree scoring
-    long err = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth )._err;
-    errs = Arrays.copyOf(errs,errs.length+1);
-    errs[errs.length-1] = (float)err/nrows;
+
     return forest;
   }
 
@@ -278,7 +290,7 @@ public class GBM extends FrameJob {
   //
   // The initial prediction is just the class distribution.  The initial
   // residuals are then basically the actual class minus the average class.
-  private float[] buildResiduals(short nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
+  private float[] buildResiduals(char nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
     // Find the initial prediction - the current average response variable.
     float preds[] = new float[nclass];
     if( nclass == 1 ) {
@@ -301,6 +313,7 @@ public class GBM extends FrameJob {
       @Override public void map( Chunk chks[] ) {
         Chunk cy = chks[chks.length-1];   // Response as last chunk
         for( int i=0; i<cy._len; i++ ) {  // For all rows
+          if( cy.isNA0(i) ) continue;     // Ignore NA results
           int cls = (int)cy.at80(i)-ymin; // Class
           Chunk res = chks[ncols+cls];    // Residual column for this class
           res.set0(i,1.0f+(float)res.at0(i)); // Fix residual for actual class
@@ -320,23 +333,23 @@ public class GBM extends FrameJob {
     GBMDecidedNode( GBMUndecidedNode n ) { super(n); }
     GBMDecidedNode( DTree t, float[] p ) { super(t,p); }
 
-    @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists ) {
+    @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists ) {
       return new GBMUndecidedNode(tree,nid,nhists);
     }
 
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
-    @Override int bestCol( GBMUndecidedNode u ) {
+    @Override DTree.Split bestCol( GBMUndecidedNode u ) {
+      DTree.Split best = DTree.Split.make(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
       DHistogram hs[] = u._hs;
-      double bs = Double.MAX_VALUE; // Best score
-      int idx = -1;             // Column to split on
-      if( u._hs == null ) return idx;
+      if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;
-        double s = hs[i].score();
-        if( s < bs ) { bs = s; idx = i; }
+        DTree.Split s = hs[i].scoreMSE(i,u._tree._names[i]);
+        if( s.mse() < best.mse() ) best = s;
+        if( s.mse() <= 0 ) break; // No point in looking further!
       }
-      return idx;
+      return best;
     }
   }
 
@@ -344,7 +357,7 @@ public class GBM extends FrameJob {
   // a list of columns to score on now, and then decide over later.
   // GBM algo: use all columns
   static class GBMUndecidedNode extends UndecidedNode {
-    GBMUndecidedNode( DTree tree, int pid, DHistogram hs[] ) { super(tree,pid,hs); }
+    GBMUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
 
     // Randomly select mtry columns to 'score' in following pass over the data.
     // In GBM, we use all columns (as opposed to RF, which uses a random subset).

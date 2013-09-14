@@ -1,7 +1,7 @@
 import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_glm, h2o_import2 as h2i
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # FIX! all this fanciness shouldn't be needed. GLM shouldn't be able to learn
@@ -114,7 +114,7 @@ class Basic(unittest.TestCase):
             emsg = None
             for i in range(1):
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison

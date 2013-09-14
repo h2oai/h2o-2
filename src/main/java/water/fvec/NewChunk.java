@@ -29,7 +29,7 @@ public class NewChunk extends Chunk {
     _vec = C._vec;
     _cidx = _vec.elem2ChunkIdx(C._start); // This chunk#
     _len = C._len;
-    if( C.hasFloat() ) {
+    if( C.hasFloat() || C instanceof C0DChunk ) {
       _ds = MemoryManager.malloc8d(_len);
     } else {
       _ls = MemoryManager.malloc8 (_len);
@@ -354,7 +354,7 @@ public class NewChunk extends Chunk {
   }
   @Override public long   at8_impl( int i ) { 
     if( _ls == null ) return (long)_ds[i];
-    assert _xs[i]==0; return _ls[i]; 
+    return _ls[i]*DParseTask.pow10i(_xs[i]); 
   }
   @Override public double atd_impl( int i ) { 
     if( _ds == null ) return at8_impl(i);

@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + 15 * (kwargs['parallel'] and 6 or 10)
             start = time.time()
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-            rfView = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
+            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start
             # just to get the list of per class errors
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, noPrint=True)

@@ -30,7 +30,7 @@ public class Sample07_NeuralNet_Mnist {
       Frame train = TestUtil.parseFrame("smalldata/mnist/train.csv");
       Frame test = TestUtil.parseFrame("smalldata/mnist/test.csv.gz");
 
-      System.out.println(train.firstReadable().nChunks());
+      System.out.println(train.anyVec().nChunks());
 
       Layer[] ls = new Layer[3];
       ls[0] = new FrameInput(train);

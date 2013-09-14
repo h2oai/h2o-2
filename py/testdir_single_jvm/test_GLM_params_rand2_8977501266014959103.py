@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=70, parseResult=parseResult, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()

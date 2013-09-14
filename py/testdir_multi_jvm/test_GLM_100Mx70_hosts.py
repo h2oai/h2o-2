@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
 
             for trial in range(3):
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 elapsed = time.time() - start
                 print "glm", trial, "end on ", csvPathname, 'took', elapsed, 'seconds.',
                 print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

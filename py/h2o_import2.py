@@ -1,11 +1,14 @@
 import h2o, h2o_cmd, re, os
+import h2o_print as h2p
 import getpass
 
+#****************************************************************************************
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
 def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=False):
     checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
+    giveUpAndSearchLocally = False
     if bucket is not None and re.match("/", pathWithRegex):
         h2o.verboseprint("You said bucket:", bucket, "so stripping incorrect leading '/' from", pathWithRegex)
         pathWithRegex = pathWithRegex.lstrip('/')
@@ -18,17 +21,23 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
 
     # only use if the build_cloud was for remote H2O
     # Never use the var for remote, if you're doing a put! (which always sources local)
-    elif h2o.nodes[0].remoteH2O and schema!='put' and os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
-        # we may use this to force remote paths, so don't look locally for file
-        rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
-        bucketPath = os.path.join(rootPath, bucket)
-        checkpath = False
+    elif h2o.nodes[0].remoteH2O and schema!='put' and \
+        (os.environ.get('H2O_REMOTE_BUCKETS_ROOT' or h2o.nodes[0].h2o_remote_buckets_root)):
+        if (bucket=='smalldata' or bucket=='datasets') and schema=='local':
+            msg1 = "\nWARNING: you're using remote nodes, and 'smalldata' or 'datasets' git buckets, with schema!=put"
+            msg2 = "\nThose aren't git pull'ed by the test. Since they are user-maintained, not globally-maintained-by-0xdata,"
+            msg3 = "\nthey may be out of date at those remote nodes?"
+            msg4 = "\nGoing to assume we find a path to them locally, and remote path will be the same"
+            h2p.red_print(msg1, msg2, msg3, msg4)
+            giveUpAndSearchLocally = True
+        else:
+            if os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
+                rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
+            else:
+                rootPath = h2o.nodes[0].h2o_remote_buckets_root
 
-    elif h2o.nodes[0].remoteH2O and schema!='put' and h2o.nodes[0].h2o_remote_buckets_root:
-        # we may use this to force remote paths, so don't look locally for file
-        rootPath = h2o.nodes[0].h2o_remote_buckets_root
-        bucketPath = os.path.join(rootPath, bucket)
-        checkpath = False
+            bucketPath = os.path.join(rootPath, bucket)
+            checkPath = False
 
     # does it work to use bucket "." to get current directory
     elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
@@ -43,6 +52,11 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
             raise Exception("H2O_BUCKETS_ROOT and path used to form %s which doesn't exist." % bucketPath)
 
     else:
+        giveUpAndSearchLocally = True
+        
+
+    #******************************************************************************************
+    if giveUpAndSearchLocally:
         # if we run remotely, we're assuming the import folder path on the remote machine
         # matches what we find on our local machine. But maybe the local user doesn't exist remotely 
         # so using his path won't work. 
@@ -90,6 +104,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
             h2o.verboseprint("search B did find", bucket, "at", rootPath)
             bucketPath = os.path.join(rootPath, bucket)
 
+    #******************************************************************************************
     # if there's no path, just return the bucketPath
     # but what about cases with a header in the folder too? (not putfile)
     if pathWithRegex is None:
@@ -118,6 +133,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
     else:
         return (folderPath, tail)
 
+#***************************************************************************yy
 # passes additional params thru kwargs for parse
 # use_header_file=
 # header=
@@ -157,7 +173,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
-        print "\nimport_only:", h2o.python_test_name, "uses put:/" + filePath
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/%s" % filePath) 
+        h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
+        h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
@@ -167,7 +185,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     if schema=='local' and not \
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
         (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
-        print "\nimport_only:", h2o.python_test_name, "uses local:/" + os.path.join(folderPath, pattern)
+        filePath = os.path.join(folderPath, pattern)
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses local:/%s" % filePath)
+        h2p.green_print("Path h2o will be told to use: %s" % filePath)
+        h2p.blue_print("If local jvms, path resolves locally as:", os.path.realpath(filePath))
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
@@ -193,22 +214,55 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
+        n = h2o.nodes[0]
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
             folderURI = "s3://" + folderOffset
+            if not n.aws_credentials:
+                print "aws_credentials: %s" % n.aws_credentials
+                # raise Exception("Something was missing for s3 on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
             importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
+            if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
+                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
+                    (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
+                # raise Exception("Something was missing for s3n on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for s3n on the java -jar cmd line when the cloud was built"
             folderURI = "s3n://" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
+            if not n.use_maprfs:
+                print "use_maprfs: %s" % n.use_maprfs
+                # raise Exception("Something was missing for maprfs on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for maprfs on the java -jar cmd line when the cloud was built"
             folderURI = "maprfs:///" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='hdfs':
+            # check that some state from the cloud building time was right
+            # the requirements for this may change and require updating
+            if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
+                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
+                    (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
+                # raise Exception("Something was missing for hdfs on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for hdfs on the java -jar cmd line when the cloud was built"
+
+            # no reason to use bucket with hdfs, but just in case people do.
+            if bucket:
+                bucketAndOffset = bucket + "/" + folderOffset
+            else:
+                bucketAndOffset = folderOffset
+
+            if n.hdfs_name_node:
+                folderURI = "hdfs://" + n.hdfs_name_node + "/" + folderOffset
+            else:
+                # this is different than maprfs? normally we specify the name though
+                folderURI = "hdfs://" + folderOffset
+
             h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
-            h2o.verboseprint("folderOffset;", folderOffset)
-            folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + folderOffset
+            h2o.verboseprint("folderOffset:", folderOffset)
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         else: 
@@ -218,6 +272,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     return (importResult, importPattern)
 
 
+#****************************************************************************************
 # can take header, header_from_file, exclude params
 def parse_only(node=None, pattern=None, hex_key=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
@@ -234,6 +289,7 @@ def parse_only(node=None, pattern=None, hex_key=None,
     return parseResult
 
 
+#****************************************************************************************
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
@@ -255,7 +311,13 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
+        # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
+        h2o.check_sandbox_for_errors()
         node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs)
+        # for now, don't worry about error isolating summary 
+    else:
+        # isolate a parse from the next thing
+        h2o.check_sandbox_for_errors()
 
     return parseResult
 
@@ -275,6 +337,7 @@ def find_key(pattern=None):
     return keys[0]['key']
 
 
+#****************************************************************************************
 # the storeViewResult for every node may or may not be the same
 # supposed to be the same? In any case
 # pattern can't be regex to h2o?
@@ -303,6 +366,8 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
     print "\nTotal: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
     return totalDeletedCnt
 
+
+#****************************************************************************************
 # Since we can't trust a single node storeview list, this will get keys that match text
 # for deleting, from a list saved from an import
 def delete_keys_from_import_result(node=None, pattern=None, importResult=None, timeoutSecs=30):

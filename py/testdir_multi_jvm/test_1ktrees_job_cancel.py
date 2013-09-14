@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            rfResult = h2o_cmd.runRFOnly(parseResult=parseResult, trees=1000, depth=2, rfView=False,
+            rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=1000, depth=2, rfView=False,
                 timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
             model_key = rfResult['model_key']

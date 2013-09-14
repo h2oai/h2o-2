@@ -1,12 +1,16 @@
 package hex.gbm;
 
+import hex.ScoreTask;
 import hex.gbm.DTree.*;
 import hex.rng.MersenneTwisterRNG;
 import java.util.Arrays;
 import java.util.Random;
+import jsr166y.CountedCompleter;
 import water.*;
-import water.api.DocGen;
+import water.H2O.H2OCountedCompleter;
 import water.Job.FrameJob;
+import water.api.DRFProgressPage;
+import water.api.DocGen;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -19,9 +23,9 @@ public class DRF extends FrameJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="", required=true, filter=DRFVecSelect.class)
+  @API(help="Response vector", required=true, filter=DRFVecSelect.class)
   Vec vresponse;
-  class DRFVecSelect extends VecSelect { DRFVecSelect() { super("source"); } }
+  class DRFVecSelect extends VecClassSelect { DRFVecSelect() { super("source"); } }
 
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 50;
@@ -38,6 +42,18 @@ public class DRF extends FrameJob {
     @Override public boolean run(Object value) { return 1 <= (Integer)value; }
   }
 
+  @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
+  int min_rows = 5;
+  public class MinRowsFilter implements Filter {
+    @Override public boolean run(Object value) { return (Integer)value >= 1; }
+  }
+
+  @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
+  int nbins = 100;
+  public class NBinsFilter implements Filter {
+    @Override public boolean run(Object value) { return (Integer)value >= 2; }
+  }
+
   @API(help = "Columns to randomly select at each level, or -1 for sqrt(#cols)", filter = MTriesFilter.class)
   int mtries = -1;
   public class MTriesFilter implements Filter {
@@ -47,12 +63,6 @@ public class DRF extends FrameJob {
       if( mtries <=  0 ) return false;
       return mtries <= source.numCols();
     }
-  }
-
-  @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
-  int min_rows = 5;
-  public class MinRowsFilter implements Filter {
-    @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
   @API(help = "Sample rate, from 0. to 1.0", filter = SampleRateFilter.class)
@@ -67,14 +77,31 @@ public class DRF extends FrameJob {
   @API(help = "Seed for the random number generator", filter = Default.class)
   long seed = new Random().nextLong();
 
+  @API(help = "The DRF Model")
+  DRFModel drf_model;
 
-  // JSON Output Fields
-  @API(help="Classes")
-  public String domain[];
+  // Overall prediction error as I add trees
+  transient private float _errs[];
 
-  @API(help="Confusion Matrix")
-  long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
-  public long[][] cm() { return _cm; }
+  public float progress(){
+    DTree.TreeModel m = DKV.get(dest()).get();
+    return m.treeBits.length/(float)m.N;
+  }
+  public static class DRFModel extends DTree.TreeModel {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
+      super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
+    }
+    @Override protected float[] score0(double data[], float preds[]) {
+      super.score0(data,preds);
+      // After adding all trees, divide by tree-count to get a distribution
+      for( int i=0; i<preds.length; i++ )
+        preds[i] /= treeBits.length;
+      return preds;
+    }
+  }
+  public Vec score( Frame fr ) { return drf_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__DRFModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -87,52 +114,6 @@ public class DRF extends FrameJob {
     rs.replace("content", content);
     return rs.toString();
   }
-
-  @Override public boolean toHTML( StringBuilder sb ) {
-    DocGen.HTML.title(sb,description);
-    DocGen.HTML.section(sb,"Confusion Matrix");
-
-    // Top row of CM
-    DocGen.HTML.arrayHead(sb);
-    sb.append("<tr class='warning'>");
-    sb.append("<th>Actual / Predicted</th>"); // Row header
-    for( int i=0; i<domain.length; i++ )
-      sb.append("<th>").append(domain[i]).append("</th>");
-    sb.append("<th>Error</th>");
-    sb.append("</tr>");
-
-    // Main CM Body
-    long tsum=0, terr=0;                   // Total observations & errors
-    for( int i=0; i<domain.length; i++ ) { // Actual loop
-      sb.append("<tr>");
-      sb.append("<th>").append(domain[i]).append("</th>");// Row header
-      long sum=0, err=0;                     // Per-class observations & errors
-      for( int j=0; j<domain.length; j++ ) { // Predicted loop
-        sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
-        sb.append(_cm[i][j]).append("</td>");
-        sum += _cm[i][j];       // Per-class observations
-        if( i != j ) err += _cm[i][j]; // and errors
-      }
-      sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
-      tsum += sum;  terr += err; // Bump totals
-    }
-    sb.append("</tr>");
-
-    // Last row of CM
-    sb.append("<tr>");
-    sb.append("<th>Totals</th>");// Row header
-    for( int j=0; j<domain.length; j++ ) { // Predicted loop
-      long sum=0;
-      for( int i=0; i<domain.length; i++ ) sum += _cm[i][j];
-      sb.append("<td>").append(sum).append("</td>");
-    }
-    sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
-    sb.append("</tr>");
-
-    DocGen.HTML.arrayTail(sb);
-    return true;
-  }
-
 
   // ==========================================================================
 
@@ -147,15 +128,31 @@ public class DRF extends FrameJob {
   // Compute a single DRF tree from the Frame.  Last column is the response
   // variable.  Depth is capped at max_depth.
   @Override protected Response serve() {
-    Timer t_drf = new Timer();
     final Frame fr = new Frame(source); // Local copy for local hacking
+
+    // Doing classification only right now...
     if( !vresponse.isEnum() ) vresponse.asEnum();
+
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
+    String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse )
+      if( fr._vecs[i]==vresponse ) {
+        vname=fr._names[i];
         fr.remove(i);
+      }
+
+    // Ignore-columns-code goes here....
+
+    buildModel(fr,vname);
+    return DRFProgressPage.redirect(this, self(),dest());
+  }
+
+  private void buildModel( final Frame fr, String vname ) {
+    final Timer t_drf = new Timer();
+    final Frame frm = new Frame(fr); // Local copy for local hacking
+    frm.add(vname,vresponse);        // Hardwire response as last vector
 
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(fr.numCols()),1) : mtries;
     assert 0 <= ntrees && ntrees < 1000000;
@@ -164,88 +161,113 @@ public class DRF extends FrameJob {
     assert 1 <= min_rows;
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
-    final int  ymin  = (int)vresponse.min();
-    short nclass = vresponse.isInt() ? (short)(vresponse.max()-ymin+1) : 1;
+    final int ymin = (int)vresponse.min();
+    final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
-    domain = nclass > 1 ? vresponse.domain() : null;
+    final String domain[] = nclass > 1 ? vresponse.domain() : null;
+    _errs = new float[0];     // No trees yet
+    final Key outputKey = dest();
+    final Key dataKey = null;
+    drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,new DTree[0],null, ymin, null);
+    DKV.put(outputKey, drf_model);
 
-    // Fill in the response variable column(s)
-    if( nclass == 1 ) {
-      fr.add("response",vresponse);
-    } else {
-      // A vector of {0,..,0,1,0,...}
-      // A single 1.0 in the actual class.
-      for( int i=0; i<nclass; i++ )
-        fr.add(domain[i],vresponse.makeZero());
-      fr.add("response",vresponse);
-      // Set a single 1.0 in the response for that class
-      new MRTask2() {
-        @Override public void map( Chunk chks[] ) {
-          Chunk cy = chks[chks.length-1];
-          for( int i=0; i<cy._len; i++ ) {
-            if( cy.isNA0(i) ) continue;
-            int cls = (int)cy.at80(i) - ymin;
-            chks[ncols+cls].set0(i,1.0f);
-          }
+    H2O.submitTask(start(new H2OCountedCompleter() {
+      @Override public void compute2() {
+
+        // Fill in the response variable column(s)
+        if( nclass == 1 ) {
+          fr.add("response",vresponse);
+        } else {
+          // A vector of {0,..,0,1,0,...}
+          // A single 1.0 in the actual class.
+          for( int i=0; i<nclass; i++ )
+            fr.add(domain[i],vresponse.makeZero());
+          // Set a single 1.0 in the response for that class
+          fr.add("response",vresponse);
+          new Set1Task(ymin,ncols).doAll(fr);
+          fr.remove(ncols+nclass);
         }
-      }.doAll(fr);
-      fr.remove(ncols+nclass);
-    }
+        
+        // The RNG used to pick split columns
+        Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
+        
+        // Initially setup as-if an empty-split had just happened
+        DBinHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
+        DRFTree forest[] = new DRFTree[0];
 
-    // The RNG used to pick split columns
-    Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
+        // ----
+        // Only work on so many trees at once, else get GC issues.
+        // Hand the inner loop a smaller set of trees.
+        final int NTREE=2;          // Limit of 5 trees at once
+        int depth=0;
+        for( int st = 0; st < ntrees; st+= NTREE ) {
+          if( DRF.this.cancelled() ) break;
+          int xtrees = Math.min(NTREE,ntrees-st);
+          DRFTree someTrees[] = new DRFTree[xtrees];
+          int someLeafs[] = new int[xtrees];
+          forest = Arrays.copyOf(forest,forest.length+xtrees);
+          
+          for( int t=0; t<xtrees; t++ ) {
+            int idx = st+t;
+            // Make a new Vec to hold the split-number for each row (initially all zero).
+            Vec vec = vresponse.makeZero();
+            forest[idx] = someTrees[t] = new DRFTree(fr,ncols,(char)nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
+            if( sample_rate < 1.0 )
+              new Sample(someTrees[t],sample_rate).doAll(vec);
+            fr.add("NIDs"+t,vec);
+          }
+          
+          // Make NTREE trees at once
+          int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, ncols, nclass, ymin, nrows, sample_rate);
+          if( d>depth ) depth=d;    // Actual max depth used
+          
+          BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, depth );
+          int old = _errs.length;
+          _errs = Arrays.copyOf(_errs,st+xtrees);
+          for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
+          _errs[_errs.length-1] = (float)bs._sum/nrows;
+          drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
+          DKV.put(outputKey, drf_model);
 
-    // Initially setup as-if an empty-split had just happened
-    DHistogram hs[] = DBinHistogram.initialHist(fr,ncols,nclass);
-    DRFTree forest[] = new DRFTree[ntrees];
-    Vec[] nids = new Vec[ntrees];
-
-    // ----
-    // Only work on so many trees at once, else get GC issues.
-    // Hand the inner loop a smaller set of trees.
-    final int NTREE=2;          // Limit of 5 trees at once
-    int depth=0;
-    for( int st = 0; st < ntrees; st+= NTREE ) {
-      int xtrees = Math.min(NTREE,ntrees-st);
-      DRFTree someTrees[] = new DRFTree[xtrees];
-      int someLeafs[] = new int[xtrees];
-
-      for( int t=0; t<xtrees; t++ ) {
-        int idx = st+t;
-        // Make a new Vec to hold the split-number for each row (initially all zero).
-        Vec vec = vresponse.makeZero();
-        nids[idx] = vec;
-        forest[idx] = someTrees[t] = new DRFTree(fr,ncols,nclass,min_rows,hs,mtrys,rand.nextLong());
-        if( sample_rate < 1.0 )
-          new Sample(someTrees[t],sample_rate).doAll(vec);
-        fr.add("NIDs"+t,vec);
+          // Remove temp vectors; cleanup the Frame
+          for( int t=0; t<xtrees; t++ )
+            UKV.remove(fr.remove(fr.numCols()-1)._key);
+        }
+        Log.info(Sys.DRF__,"DRF done in "+t_drf);
+        
+        // Remove temp vectors; cleanup the Frame
+        while( fr.numCols() > ncols )
+          UKV.remove(fr.remove(fr.numCols()-1)._key);
+        DRF.this.remove();
+        tryComplete();
       }
+      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+        ex.printStackTrace();
+        DRF.this.cancel(ex.getMessage());
+        return true;
+      }
+    }));
+  }
 
-      // Make NTREE trees at once
-      int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, ncols, nclass, ymin, nrows, sample_rate);
-      if( d>depth ) depth=d;    // Actual max depth used
-
-      // Remove temp vectors; cleanup the Frame
-      for( int t=0; t<xtrees; t++ )
-        UKV.remove(fr.remove(fr.numCols()-1)._key);
+  private static class Set1Task extends MRTask2<Set1Task> {
+    final int _ymin, _ncols;
+    Set1Task( int ymin, int ncols ) { _ymin = ymin; _ncols = ncols; }
+    @Override public void map( Chunk chks[] ) {
+      Chunk cy = chks[chks.length-1];
+      for( int i=0; i<cy._len; i++ ) {
+        if( cy.isNA0(i) ) continue;
+        int cls = (int)cy.at80(i) - _ymin;
+        chks[_ncols+cls].set0(i,1.0f);
+      }
     }
-    Log.info(Sys.DRF__,"DRF done in "+t_drf);
-
-    // One more pass for final prediction error
-    _cm = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth )._cm;
-
-    // Remove temp vectors; cleanup the Frame
-    while( fr.numCols() > ncols )
-      UKV.remove(fr.remove(fr.numCols()-1)._key);
-
-    return new Response(Response.Status.done, this, -1, -1, null);
   }
 
   // ----
   // One Big Loop till the tree is of proper depth.
   // Adds a layer to the tree each pass.
-  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int max_depth, Frame fr, Vec vresponse, int ncols, short nclass, int ymin, long nrows, double sample_rate ) {
-    for( int depth=0; depth<max_depth; depth++ ) {
+  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int max_depth, Frame fr, Vec vresponse, int ncols, char nclass, int ymin, long nrows, double sample_rate ) {
+    int depth=0;
+    for( ; depth<max_depth; depth++ ) {
       Timer t_pass = new Timer();
 
       // Fuse 2 conceptual passes into one:
@@ -262,7 +284,7 @@ public class DRF extends FrameJob {
       for( int t=0; t<ntrees; t++ ) {
         final int tmax = trees[t]._len; // Number of total splits
         final DTree tree = trees[t];
-        //long sum=0;
+        long sum=0;
         for( int i=leafs[t]; i<tmax; i++ ) {
           DHistogram hs[] = sbh.getFinalHisto(t,i);
           tree.undecided(i)._hs = hs;
@@ -292,10 +314,15 @@ public class DRF extends FrameJob {
       }
 
       // If all trees are done, then so are we
-      if( !still_splitting ) return depth;
-      //new BulkScore(trees,ncols,nclass,ymin,(float)sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, nrows, depth );
+      if( !still_splitting ) break;
+      //new BulkScore(trees,ncols,nclass,ymin,(float)sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, depth );
     }
-    return max_depth;
+
+    // Print the generated trees
+    //for( int t=0; t<ntrees; t++ )
+    //  System.out.println(trees[t].root().toString2(new StringBuilder(),0));
+
+    return depth;
   }
 
   // A standard DTree with a few more bits.  Support for sampling during
@@ -306,8 +333,8 @@ public class DRF extends FrameJob {
     final long _seed;           // RNG seed; drives sampling seeds
     final long _seeds[];        // One seed for each chunk, for sampling
     final transient Random _rand; // RNG for split decisions & sampling
-    DRFTree( Frame fr, int ncols, int nclass, int min_rows, DHistogram hs[], int mtrys, long seed ) {
-      super(fr._names, ncols, nclass, min_rows);
+    DRFTree( Frame fr, int ncols, char nbins, char nclass, int min_rows, DBinHistogram hs[], int mtrys, long seed ) {
+      super(fr._names, ncols, nbins, nclass, min_rows);
       _mtrys = mtrys;
       _seed = seed;                  // Save for any replay scenarios
       _rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32),(int)seed});
@@ -329,22 +356,21 @@ public class DRF extends FrameJob {
   static class DRFDecidedNode extends DecidedNode<DRFUndecidedNode> {
     DRFDecidedNode( DRFUndecidedNode n ) { super(n); }
 
-    @Override DRFUndecidedNode makeUndecidedNode(DTree tree, int nid, DHistogram[] nhists ) {
+    @Override DRFUndecidedNode makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists ) {
       return new DRFUndecidedNode(tree,nid,nhists);
     }
 
     // Find the column with the best split (lowest score).
-    @Override int bestCol( DRFUndecidedNode u ) {
-      double bs = Double.MAX_VALUE; // Best score
-      int idx = -1;                 // Column to split on
-      if( u._hs == null ) return idx;
+    @Override DTree.Split bestCol( DRFUndecidedNode u ) {
+      DTree.Split best = DTree.Split.make(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
+      if( u._hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
-        double s = u._hs[col].score();
-        if( s < bs ) { bs = s; idx = col; }
-        if( s <= 0 ) break;     // No point in looking further!
+        DTree.Split s = u._hs[col].scoreMSE(col,u._tree._names[col]);
+        if( s.mse() < best.mse() ) best = s;
+        if( s.mse() <= 0 ) break; // No point in looking further!
       }
-      return idx;
+      return best;
     }
   }
 
@@ -352,7 +378,7 @@ public class DRF extends FrameJob {
   // a list of columns to score on now, and then decide over later.
   // DRF algo: pick a random mtry columns
   static class DRFUndecidedNode extends UndecidedNode {
-    DRFUndecidedNode( DTree tree, int pid, DHistogram hs[] ) { super(tree,pid,hs); }
+    DRFUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
 
     // Randomly select mtry columns to 'score' in following pass over the data.
     @Override int[] scoreCols( DHistogram[] hs ) {
@@ -365,8 +391,7 @@ public class DRF extends FrameJob {
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null ) continue; // Ignore not-tracked cols
         if( hs[i]._min == hs[i]._max ) continue; // predictor min==max, does not distinguish
-        if( hs[i] instanceof DBinHistogram && hs[i].nbins() <= 1 )
-          continue;             // cols with 1 bin (will not split)
+        if( hs[i].nbins() <= 1 ) continue; // cols with 1 bin (will not split)
         cols[len++] = i;        // Gather active column
       }
       int choices = len;        // Number of columns I can choose from
@@ -374,12 +399,12 @@ public class DRF extends FrameJob {
         for( int i=0; i<hs.length; i++ ) {
           String s;
           if( hs[i]==null ) s="null";
-          else if( hs[i]._min == hs[i]._max ) s="min==max=="+hs[i]._min;
-          else if( hs[i] instanceof DBinHistogram && hs[i].nbins() <= 1 )
-            s="nbins="+hs[i].nbins();
-          else s="unk";
+          else if( hs[i]._min == hs[i]._max ) s=hs[i]._name+"=min==max=="+hs[i]._min;
+          else if( hs[i].nbins() <= 1 )       s=hs[i]._name+"=nbins="    +hs[i].nbins();
+          else                                s=hs[i]._name+"=unk";
           System.out.println("No choices, hists="+s);
         }
+        System.out.println(this);
       }
       assert choices > 0;
 

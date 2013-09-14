@@ -28,15 +28,23 @@ class Basic(unittest.TestCase):
 
         # loop, to see if we get same centers
         # should check the means?
-        # FIX! have to fix these to right answers
-        expected = [
+        # both of these centers match what different R/Scikit packages get
+        expected1 = [
                 # expected centers are from R. rest is just from h2o
                 ([310527.2, 13433.89], 11340, None),
                 ([5647967.1, 40487.76], 550, None),
                 ([21765291.7, 93129.26], 14,  None),
             ]
+
+        # this is what we get with Furthest
+        expected2 = [
+                ([351104.74065255735, 15421.749823633158], 11340, 5021682274541967.0) ,
+                ([7292636.589090909, 7575.630909090909], 550, 6373072701775582.0) ,
+                ([34406781.071428575, 244878.0], 14, 123310713697348.92) ,
+            ]
+
         # all are multipliers of expected tuple value
-        allowedDelta = (0.01, 0.01, 0.01)
+        allowedDelta = (0.0001, 0.0001, 0.0001)
         for trial in range(2):
             kwargs = {
                 'k': 3, 
@@ -51,7 +59,7 @@ class Basic(unittest.TestCase):
                 'seed': 265211114317615310
             }
 
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
 
             if 1==0:
@@ -61,7 +69,7 @@ class Basic(unittest.TestCase):
                 # Comment sleep out to get a clean grep.
                 # time.sleep(3600)
 
-            h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
+            h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected2, allowedDelta, trial=trial)
 
 
 

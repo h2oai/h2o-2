@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
             # for fvec only?
             kwargs.update({'max_iter': 50, 'max_iter2': 1, 'iterations': 5})
 
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
@@ -80,7 +80,7 @@ class Basic(unittest.TestCase):
             # for fvec only?
             kwargs.update({'max_iter': 50, 'max_iter2': 1, 'iterations': 5})
 
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)

@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
             kwargs['out_of_bag_error_estimate'] = 1
             kwargs['model_key'] = "model_" + str(trial)
             
-            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
@@ -132,7 +132,10 @@ class Basic(unittest.TestCase):
             rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
-            h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],

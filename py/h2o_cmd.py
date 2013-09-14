@@ -2,28 +2,6 @@ import os, json, unittest, time, shutil, sys, socket
 import h2o
 import h2o_browse as h2b, h2o_rf as h2f
 
-# header, separator, exclude params are passed thru kwargs to node.parse
-def parseFile(node=None, csvPathname=None, key=None, key2=None, 
-    timeoutSecs=30, retryDelaySecs=0.5, pollTimeoutSecs=30,
-    noise=None, noPoll=None, doSummary=True, **kwargs):
-    if not csvPathname: raise Exception('No file name specified')
-    if not node: node = h2o.nodes[0]
-    ### print "parseFile pollTimeoutSecs:", pollTimeoutSecs
-    key = node.put_file(csvPathname, key=key, timeoutSecs=timeoutSecs)
-    if key2 is None:
-        # don't rely on h2o default key name
-        myKey2 = key + '.hex'
-    else:
-        myKey2 = key2
-    p = node.parse(key, myKey2, 
-        timeoutSecs, retryDelaySecs, 
-        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
-
-    # do SummaryPage here too, just to get some coverage
-    if doSummary:
-        node.summary_page(myKey2, timeoutSecs=timeoutSecs)
-    return p
-
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
     noise=None, noPoll=None, **kwargs):
@@ -67,12 +45,12 @@ def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
 
 # since we'll be doing lots of execs on a parsed file, not useful to have parse+exec
 # retryDelaySecs isn't used, 
-def runExecOnly(node=None, timeoutSecs=20, **kwargs):
+def runExec(node=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     # no such thing as GLMView..don't use retryDelaySecs
     return node.exec_query(timeoutSecs, **kwargs)
 
-def runKMeansOnly(node=None, parseResult=None, 
+def runKMeans(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parsed key for KMeans specified')
     if not node: node = h2o.nodes[0]
@@ -80,14 +58,14 @@ def runKMeansOnly(node=None, parseResult=None,
     return node.kmeans(parseResult['destination_key'], None, 
         timeoutSecs, retryDelaySecs, **kwargs)
 
-def runKMeansGridOnly(node=None, parseResult=None,
+def runKMeansGrid(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
     if not parseResult: raise Exception('No parsed key for KMeansGrid specified')
     if not node: node = h2o.nodes[0]
     # no such thing as KMeansGridView..don't use retryDelaySecs
     return node.kmeans_grid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
-def runGLMOnly(node=None, parseResult=None, 
+def runGLM(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
     if not parseResult: raise Exception('No parsed key for GLM specified')
     if not node: node = h2o.nodes[0]
@@ -98,21 +76,33 @@ def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.GLMScore(key, model_key, timeoutSecs, **kwargs)
 
-def runGLMGridOnly(node=None, parseResult=None,
+def runGLMGrid(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
     if not parseResult: raise Exception('No parsed key for GLMGrid specified')
     if not node: node = h2o.nodes[0]
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
+def runPCA(node=None,parseResult=None,timeoutSecs=600, **kwargs):
+    if not parseResult: raise Exception('No parsed key for PCA specified')
+    if not node: node = h2o.nodes[0]
+    data_key = parseResult['destination_key']
+    return node.pca(data_key=data_key,**kwargs)
+
+def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
+    if not parseResult: raise Exception('No parsed key for GBM specified')
+    if not node: node = h2o.nodes[0]
+    data_key = parseResult['destination_key']
+    return node.gbm(data_key=data_key,timeoutSecs=timeoutSecs,**kwargs) 
+
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
-def runRFOnly(node=None, parseResult=None, trees=5, 
+def runRF(node=None, parseResult=None, trees=5, 
         timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
     if not parseResult: raise Exception('No parsed key for RF specified')
     if not node: node = h2o.nodes[0]
     #! FIX! what else is in parseResult that we should check?
-    h2o.verboseprint("runRFOnly parseResult:", parseResult)
+    h2o.verboseprint("runRF parseResult:", parseResult)
     Key = parseResult['destination_key']
     rf = node.random_forest(Key, trees, timeoutSecs, **kwargs)
 
@@ -145,6 +135,13 @@ def runRFOnly(node=None, parseResult=None, trees=5,
 def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
+
+def runGBMView(node=None,model_key=None,timeoutSecs=300,retryDelaySecs=2,noPoll=False,**kwargs):
+    if not node: node = h2o.nodes[0]
+    if not model_key: 
+        raise Exception("\nNo model_key was supplied to the gbm view!")
+    gbmView = node.gbm_view(model_key,timeoutSecs=timeoutSecs)
+    return gbmView
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,

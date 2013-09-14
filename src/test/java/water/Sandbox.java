@@ -33,7 +33,7 @@ public class Sandbox {
 
       Key fkey = NFSFileVec.make(f);
       Frame frame = ParseDataset2.parse(dest, new Key[] { fkey });
-      System.out.println(frame.firstReadable().nChunks());
+      System.out.println(frame.anyVec().nChunks());
 //      Key key = TestUtil.load_test_file(f, "test");
 //      ParseDataset.parse(dest, new Key[] { key });
 //      ValueArray va = (ValueArray) UKV.get(dest);
