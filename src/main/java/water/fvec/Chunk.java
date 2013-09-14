@@ -2,11 +2,14 @@ package water.fvec;
 
 import water.*;
 
-// A compression scheme, over a chunk - a single array of bytes.  The *actual*
-// BigVector header info is in the Vec struct - which contains info to find all
-// the bytes of the distributed vector.  This struct is basically a 1-entry
-// chunk cache of the total vector.  Subclasses of this abstract class
-// implement (possibly empty) compression schemes.
+/** 
+ * A compression scheme, over a chunk - a single array of bytes.  The *actual*
+ * BigVector header info is in the Vec struct - which contains info to find all
+ * the bytes of the distributed vector.  This struct is basically a 1-entry
+ * chunk cache of the total vector.  Subclasses of this abstract class
+ * implement (possibly empty) compression schemes.
+*/
+
 public abstract class Chunk extends Iced implements Cloneable {
   public long _start;         // Start element; filled after AutoBuffer.read
   public int _len;            // Number of elements in this chunk
@@ -54,19 +57,21 @@ public abstract class Chunk extends Iced implements Cloneable {
   }
 
 
-  // The zero-based API.  Somewhere between 10% to 30% faster in a tight-loop
-  // over the data than the generic at() API.  Probably no gain on larger
-  // loops.  The row reference is zero-based on the chunk, and should
-  // range-check by the JIT as expected.
+  /** The zero-based API.  Somewhere between 10% to 30% faster in a tight-loop
+   * over the data than the generic at() API.  Probably no gain on larger
+   * loops.  The row reference is zero-based on the chunk, and should
+   * range-check by the JIT as expected.
+   */
   public final double  at0  ( int i ) { return _chk. atd_impl(i); }
   public final long    at80 ( int i ) { return _chk. at8_impl(i); }
   public final boolean isNA0( int i ) { return _chk.isNA_impl(i); }
 
 
-  // Slightly slower than 'at0' inside a chunk; goes (very) slow outside the
-  // chunk instead of throwing.  First outside-chunk fetches & caches whole
-  // chunk; maybe takes multiple msecs.  2nd & later touches in the same
-  // outside-chunk probably run 100x slower than inside-chunk accesses.
+  /** Slightly slower than 'at0' inside a chunk; goes (very) slow outside the
+   * chunk instead of throwing.  First outside-chunk fetches & caches whole
+   * chunk; maybe takes multiple msecs.  2nd & later touches in the same
+   * outside-chunk probably run 100x slower than inside-chunk accesses.
+   */ 
   public final double at_slow( long i ) {
     long x = i-_start;
     return (0 <= x && x < _len) ? at0((int)x) : _vec.at(i);
@@ -157,7 +162,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   }
 
 
-  // After writing we must call close() to register the bulk changes
+  /** After writing we must call close() to register the bulk changes */
   public void close( int cidx, Futures fs ) {
     if( _chk instanceof NewChunk )_chk = ((NewChunk)_chk).close(fs);
     if( _chk == this ) return;
@@ -166,23 +171,32 @@ public abstract class Chunk extends Iced implements Cloneable {
 
   public int cidx() { return _vec.elem2ChunkIdx(_start); }
 
-  // Chunk-specific readers.
+  /** 
+   * Chunk-specific readers.
+   */ 
   abstract protected double   atd_impl(int idx);
   abstract protected long     at8_impl(int idx);
   abstract protected boolean isNA_impl(int idx);
-  // Chunk-specific writer.  Returns false if the value does not fit in the
-  // current compression scheme.
+  
+  /** 
+   * Chunk-specific writer.  Returns false if the value does not fit in the
+   * current compression scheme.
+   */
   abstract boolean set_impl  (int idx, long l );
   abstract boolean set_impl  (int idx, double d );
   abstract boolean set_impl  (int idx, float f );
   abstract boolean setNA_impl(int idx);
 
-  // Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
-  // chunk and written value is out-of-range for an update-in-place operation.
-  // Bulk copy from the compressed form into the nc._ls array.
+  /**
+   * Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
+   * chunk and written value is out-of-range for an update-in-place operation.
+   * Bulk copy from the compressed form into the nc._ls array.
+   */ 
   abstract NewChunk inflate_impl(NewChunk nc);
   abstract boolean hasFloat();
-  // Chunk-specific implementations of read & write
+  /** 
+   * Chunk-specific implementations of read & write
+   */ 
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);
 
