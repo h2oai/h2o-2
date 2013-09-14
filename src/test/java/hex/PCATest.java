@@ -70,7 +70,7 @@ public class PCATest extends TestUtil {
     UKV.remove(kpca);
   }
 
-  @Test public void testArrests() throws JobCancelledException {
+  /*@Test*/ public void testArrests() throws JobCancelledException {
     Key ksrc = loadAndParseFile("arrests.hex", "smalldata/pca_test/USArrests.csv");
     ValueArray va = DKV.get(ksrc).get();
 
