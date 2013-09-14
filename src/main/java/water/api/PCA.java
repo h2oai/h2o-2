@@ -142,10 +142,16 @@ public class PCA extends Request {
 
       // Row with proportion of variance
       sb.append("<tr class='warning'>");
-      // sb.append("<td>").append("Prop &sigma;<sup>2</sup>").append("</td>");
       sb.append("<td>").append("Prop Var").append("</td>");
       for(int c = 0; c < m._num_pc; c++)
         sb.append("<td>").append(ElementBuilder.format(m._propVar[c])).append("</td>");
+      sb.append("</tr>");
+
+      // Row with cumulative proportion of variance
+      sb.append("<tr class='warning'>");
+      sb.append("<td>").append("Cum Prop Var").append("</td>");
+      for(int c = 0; c < m._num_pc; c++)
+        sb.append("<td>").append(ElementBuilder.format(m._cumVar[c])).append("</td>");
       sb.append("</tr>");
 
       // Each row is component of eigenvector
