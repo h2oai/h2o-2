@@ -229,12 +229,7 @@ public final class Key extends Iced implements Comparable {
   // Custom Serialization Reader: Keys must be interned on construction.
   @Override public final Key read(AutoBuffer bb) { return make(bb.getA1()); }
   @Override public final AutoBuffer write(AutoBuffer bb) { return bb.putA1(_kb); }
-  @Override public final AutoBuffer writeJSON(AutoBuffer bb) { 
-    String s=toString();
-    try { s = URLEncoder.encode(s,"UTF-8"); }
-    catch( UnsupportedEncodingException e ) {}
-    return bb.putJSONStr(s);
-  }
+  @Override public final AutoBuffer writeJSON(AutoBuffer bb) { return bb.putJSONStr(toString()); }
 
 
   // Expand a KEY_OF_KEYS into an array of keys
