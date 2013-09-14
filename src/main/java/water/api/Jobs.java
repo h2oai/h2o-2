@@ -50,7 +50,7 @@ public class Jobs extends Request {
       @Override
       public String elementToString(JsonElement elm, String contextName) {
         String html;
-        if( Job.cancelled(Key.make(elm.getAsString())) )
+        if( !Job.running(Key.make(elm.getAsString())) )
           html = "<button disabled class='btn btn-mini'>X</button>";
         else {
           String keyParam = KEY + "=" + elm.getAsString();
