@@ -42,7 +42,15 @@ fi
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]
 then 
-    python ../four_hour_cloud.py -cj ../testdir_hosts/pytest_config-164.json &
+    # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
+    # only do this if you're jenksin
+    echo "If we use more machines, expand this cleaning list."
+    echo "The possibilities should be relatively static over time"
+    echo "Could be problems if other threads also using that user on these machines at same time"
+    echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
+
+    python ../four_hour_cloud.py -cj pytest_config-jenkins.json
 else
     python ../four_hour_cloud.py &
 fi 
@@ -71,6 +79,9 @@ ls -lt ./h2o-nodes.json
 
 # This could be a runner, that loops thru a list of tests.
 
+echo "If it exists, pytest_config-<username>.json in this dir will be used"
+echo "i.e. pytest_config-jenkins.json"
+echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 ../testdir_single_jvm/n0.doit c1/test_c1_rel.py || true
 ../testdir_single_jvm/n0.doit c2/test_c2_rel.py || true
 # If this one fails, fail this script so the bash dies 

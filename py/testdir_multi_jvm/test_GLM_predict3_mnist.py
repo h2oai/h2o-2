@@ -2,10 +2,33 @@ import unittest, time, sys, csv
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i, h2o_glm, h2o_exec as h2e
 
+# Notes
+# 1) all input mappings for training and test (scoring) are locked into the model. 
+# # This can be column index if no header is present, or column name if header is present.
+# 
+# If a input mapping uses a name, then the test (scoring) can have arbitrary arrangement of 
+# input cols relative to the training data cols. The mapping is resolved using the  header names. 
+# I'm assuming there's no reordering possible without the use of header (named input cols during parse).
+# 
+# 2) The output mapping for scoring never comes from the model. 
+# You have to give it as a parameter, regardless of whether there was a named column or not.
+# Now: assuming I built a model with no header in the dataset
+# If I have no header on the training data set, and no header on the test data set, 
+# and I re-arrange the columns in the test data set, the model will generate the wrong answers. 
+# So I am not allowed to do that. The mapping is fixed, and it's in the model.
+# 
+# So: If all that is correct:
+# If I don't have a header in mnist, and I want to predict, the test data has to be in cols 1:784 like the train data.
+# And if I had a header, then the test data can be arranged any which way.
+# Reusing the training data, exactly as is, for predict, is legal, because col 0 won't be used.
+
+
 # translate provides the mapping between original and predicted
 # since GLM is binomial, We predict 0 for 0 and 1 for > 0
 # default to last col
-def compare_csv_at_one_col(csvPathname, msg, colIndex=-1,translate=None, skipHeader=False):
+
+HAS_HEADER = True
+def compare_csv_at_one_col(csvPathname, msg, colIndex=-1,translate=None, skipHeader=0):
     predictOutput = []
     with open(csvPathname, 'rb') as f:
         reader = csv.reader(f)
@@ -14,7 +37,7 @@ def compare_csv_at_one_col(csvPathname, msg, colIndex=-1,translate=None, skipHea
         for row in reader:
             # print the last col
             # ignore the first row ..header
-            if skipHeader and rowNum==0:
+            if skipHeader==1 and rowNum==0:
                 print "Skipping header in this csv"
             else:
                 output = row[colIndex]
@@ -37,7 +60,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(node_count=1)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -56,11 +79,13 @@ class Basic(unittest.TestCase):
             csvPathname = 'mnist/mnist_testing.csv.gz'
             hexKey = 'mnist.hex'
 
-        predictHexKey = 'predict.hex'
-        predictCsv = 'predict.csv'
+        predictHexKey = 'predict_0.hex'
+        predictCsv = 'predict_0.csv'
+        actualCsv = 'actual_0.csv'
         bucket = 'home-0xdiag-datasets'
 
         csvPredictPathname = SYNDATASETS_DIR + "/" + predictCsv
+        csvSrcOutputPathname = SYNDATASETS_DIR + "/" + actualCsv
         # for using below in csv reader
         csvFullname = h2i.find_folder_and_filename(bucket, csvPathname, schema='put', returnFullPath=True)
 
@@ -68,10 +93,21 @@ class Basic(unittest.TestCase):
         def predict_and_compare_csvs(model_key, hex_key):
             # have to slice out col 0 (the output) and feed result to predict
             # cols are 0:784 (1 output plus 784 input features
-            h2e.exec_expr(execExpr="P.hex="+hex_key+"[1:784]", timeoutSecs=30)
+            # h2e.exec_expr(execExpr="P.hex="+hex_key+"[1:784]", timeoutSecs=30)
+            dataKey = "P.hex"
+            h2e.exec_expr(execExpr=dataKey+"="+hex_key, timeoutSecs=30) # unneeded but interesting
+            if HAS_HEADER:
+                print "Has header in dataset, so should be able to chop out col 0 for predict and get right answer"
+                print "hack for now, can't chop out col 0 in Exec currently"
+                dataKey = hex_key
+            else:
+                print "No header in dataset, can't chop out cols, since col numbers are used for names"
+                dataKey = hex_key
+            
             h2e.exec_expr(execExpr="Z.hex="+hex_key+"[0]", timeoutSecs=30)
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key="P.hex",
+            # predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key="P.hex",
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKey,
                 destination_key=predictHexKey)
             print "generate_predictions end on ", hexKey, " took", time.time() - start, 'seconds'
             h2o.check_sandbox_for_errors()
@@ -82,17 +118,20 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].csv_download(key=predictHexKey, csvPathname=csvPredictPathname)
             h2o.check_sandbox_for_errors()
 
+            # depending what you use, may need to set these to 0 or 1
+            skipSrcOutputHeader = 1
+            skipPredictHeader= 1
             print "Do a check of the original output col against predicted output"
             translate = {0: 0.0, 1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0, 7: 1.0, 8: 1.0, 9: 1.0}
             (rowNum1, originalOutput) = compare_csv_at_one_col(csvSrcOutputPathname,
-                msg="Original", colIndex=0, translate=translate, skipHeader=False)
+                msg="Original", colIndex=0, translate=translate, skipHeader=skipSrcOutputHeader)
             (rowNum2, predictOutput)  = compare_csv_at_one_col(csvPredictPathname, 
-                msg="Predicted", colIndex=0, skipHeader=True)
+                msg="Predicted", colIndex=0, skipHeader=skipPredictHeader)
 
             # no header on source
-            if ((rowNum1+1) != rowNum2):
-                raise Exception("original rowNum1: %s + 1 not same as downloaded predict (w/header) rowNum2: \
-                    %s" % (rowNum1, rowNum2))
+            if ((rowNum1-skipSrcOutputHeader) != (rowNum2-skipPredictHeader)):
+                raise Exception("original rowNum1: %s - %d not same as downloaded predict: rowNum2: %s - %d \
+                    %s" % (rowNum1, skipSrcOutputHeader, rowNum2, skipPredictHeader))
 
             wrong = 0
             wrong0 = 0
