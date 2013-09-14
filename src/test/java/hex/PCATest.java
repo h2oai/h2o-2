@@ -12,14 +12,14 @@ import hex.NewRowVecTask.DataFrame;
 import hex.NewRowVecTask.JobCancelledException;
 
 public class PCATest extends TestUtil {
-  public final static double threshold = 0.000001;
+  public final double threshold = 0.000001;
 
-  public static void checkSdev(double[] expected, double[] actual) {
+  public void checkSdev(double[] expected, double[] actual) {
     for(int i = 0; i < actual.length; i++)
       Assert.assertEquals(expected[i], actual[i], threshold);
   }
 
-  public static void checkEigvec(double[][] expected, double[][] actual) {
+  public void checkEigvec(double[][] expected, double[][] actual) {
     int nfeat = actual.length;
     int ncomp = actual[0].length;
     for(int j = 0; j < ncomp; j++) {
@@ -70,7 +70,7 @@ public class PCATest extends TestUtil {
     UKV.remove(kpca);
   }
 
-  /*@Test*/ public void testArrests() throws JobCancelledException {
+  @Test public void testArrests() throws JobCancelledException {
     Key ksrc = loadAndParseFile("arrests.hex", "smalldata/pca_test/USArrests.csv");
     ValueArray va = DKV.get(ksrc).get();
 
@@ -104,27 +104,27 @@ public class PCATest extends TestUtil {
     System.out.println("DONE!");
   }
 
-  //static void runTests() throws JobCancelledException {
-  //  System.out.println("testBasic");
-  //  testBasic();
-  //  System.out.println("testLinDep");
-  //  testLinDep();
-  //  System.out.println("testArrests");
-  //  testArrests();
-  //  checkLeakedKeys();
-  //  System.out.println("DONE!!!");
-  //}
-  //
-  //public static void main(String [] args) throws Exception{
-  //  System.out.println("Running PCATest");
-  //  final int nnodes = 1;
-  //  for( int i = 1; i < nnodes; i++ ) {
-  //    Node n = new NodeVM(args);
-  //    n.inheritIO();
-  //    n.start();
-  //  }
-  //  H2O.waitForCloudSize(nnodes);
-  //  System.out.println("Cloud formed");
-  //  runTests();
-  //}
+  void runTests() throws JobCancelledException {
+    System.out.println("testBasic");
+    testBasic();
+    System.out.println("testLinDep");
+    testLinDep();
+    System.out.println("testArrests");
+    testArrests();
+    checkLeakedKeys();
+    System.out.println("DONE!!!");
+}
+
+  public void main(String [] args) throws Exception{
+    System.out.println("Running PCATest");
+    final int nnodes = 1;
+    for( int i = 1; i < nnodes; i++ ) {
+      Node n = new NodeVM(args);
+      n.inheritIO();
+      n.start();
+    }
+    H2O.waitForCloudSize(nnodes);
+    System.out.println("Cloud formed");
+    runTests();
+  }
 }
