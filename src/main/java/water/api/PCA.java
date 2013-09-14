@@ -69,9 +69,9 @@ public class PCA extends Request {
       if(ii != null && ii.length >= _key.value()._cols.length)
         throw new IllegalArgumentException("Cannot ignore all columns");
 
+      // Degrees of freedom = number of rows - 1
       int numIgnore = ii == null ? 0 : ii.length;
       if(_key.value() != null && _key.value()._cols.length - numIgnore > _key.value()._numrows - 1)
-        // TODO: Degrees of freedom = num_rows - 1 if standardized, num_rows otherwise
         throw new IllegalArgumentException("Cannot have more columns than degrees of freedom = " + String.valueOf(_key.value()._numrows-1));
     }
   }
