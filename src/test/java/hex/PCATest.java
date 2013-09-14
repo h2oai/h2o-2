@@ -33,7 +33,7 @@ public class PCATest extends TestUtil {
     }
   }
 
-  @Test public static void testBasic() {
+  @Test public void testBasic() {
     Key kdata = Key.make("basicdata.hex");
     ValueArray va = va_maker(kdata,
         new byte []{0, 1, 2, 3, 4, 5, 6, 7},
@@ -51,7 +51,7 @@ public class PCATest extends TestUtil {
     UKV.remove(kpca);
   }
 
-  @Test public static void testLinDep() {
+  @Test public void testLinDep() {
     Key kdata = Key.make("depdata.hex");
     ValueArray va = va_maker(kdata, new double []{0, 1, 2, 3, 4,  5},
                                     new double []{0, 2, 4, 6, 8, 10});
@@ -70,7 +70,7 @@ public class PCATest extends TestUtil {
     UKV.remove(kpca);
   }
 
-  @Test public static void testArrests() throws JobCancelledException {
+  @Test public void testArrests() throws JobCancelledException {
     Key ksrc = loadAndParseFile("arrests.hex", "smalldata/pca_test/USArrests.csv");
     ValueArray va = DKV.get(ksrc).get();
 
@@ -104,27 +104,27 @@ public class PCATest extends TestUtil {
     System.out.println("DONE!");
   }
 
-  static void runTests() throws JobCancelledException {
-    System.out.println("testBasic");
-    testBasic();
-    System.out.println("testLinDep");
-    testLinDep();
-    System.out.println("testArrests");
-    testArrests();
-    checkLeakedKeys();
-    System.out.println("DONE!!!");
-}
-
-  public static void main(String [] args) throws Exception{
-    System.out.println("Running PCATest");
-    final int nnodes = 1;
-    for( int i = 1; i < nnodes; i++ ) {
-      Node n = new NodeVM(args);
-      n.inheritIO();
-      n.start();
-    }
-    H2O.waitForCloudSize(nnodes);
-    System.out.println("Cloud formed");
-    runTests();
-  }
+  //static void runTests() throws JobCancelledException {
+  //  System.out.println("testBasic");
+  //  testBasic();
+  //  System.out.println("testLinDep");
+  //  testLinDep();
+  //  System.out.println("testArrests");
+  //  testArrests();
+  //  checkLeakedKeys();
+  //  System.out.println("DONE!!!");
+  //}
+  //
+  //public static void main(String [] args) throws Exception{
+  //  System.out.println("Running PCATest");
+  //  final int nnodes = 1;
+  //  for( int i = 1; i < nnodes; i++ ) {
+  //    Node n = new NodeVM(args);
+  //    n.inheritIO();
+  //    n.start();
+  //  }
+  //  H2O.waitForCloudSize(nnodes);
+  //  System.out.println("Cloud formed");
+  //  runTests();
+  //}
 }
