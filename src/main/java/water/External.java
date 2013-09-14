@@ -33,8 +33,8 @@ public class External {
   public static Object getBytes( Object val )           { return API.getBytes(val); }
 
   public static Object ingestRFModelFromR(Object key,InputStream is){ return API.ingestRFModelFromR(key,is); }
-  public static double scoreKey  ( Object modelKey, String [] colNames, String domains[][], double[] row ) { return API.scoreKey  (modelKey,colNames,domains,row); }
-  public static double scoreModel( Object model   , String [] colNames, String domains[][], double[] row ) { return API.scoreModel(model   ,colNames,domains,row); }
+  public static float[] scoreKey  ( Object modelKey, String [] colNames, String domains[][], double[] row ) { return API.scoreKey  (modelKey,colNames,domains,row); }
+  public static float[] scoreModel( Object model   , String [] colNames, String domains[][], double[] row ) { return API.scoreModel(model   ,colNames,domains,row); }
 
   public static JsonObject  cloudStatus( )                      { return API.cloudStatus(); }
 }
