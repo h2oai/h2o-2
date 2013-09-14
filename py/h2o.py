@@ -909,15 +909,15 @@ class H2O(object):
             raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
 
         rjson = None    
-        
+
         try:
             rjson = r.json()
         except:
             if '404' in r.text:
                 verboseprint(r.text)
-                raise Exception("404 error could not find any json. Use -v to print response text.")
+                raise Exception("404 error could not find any json. Beta Features are: ", str(beta_features), ". Do you mean to have beta features on?")
             verboseprint(r.text)
-            raise Exception("Did not receive a json response. Beta features might be causing a problem! Use -v to print response text.")        
+            raise Exception("Did not receive a json response. Beta Features are: ", str(beta_features), ". Do you mean to have beta features on?")        
 
         for e in ['error', 'Error', 'errors', 'Errors']:
             if e in rjson:
