@@ -21,7 +21,7 @@ public class GBMTest extends TestUtil {
 
   private abstract class PrepData { abstract Vec prep(Frame fr); }
 
-  /*@Test*/ public void testBasicGBM() {
+  @Test public void testBasicGBM() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
@@ -44,12 +44,12 @@ public class GBMTest extends TestUtil {
                  return fr.remove("CAPSULE");
                }
              });
-    //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
-    //         });
-    //basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
-    //         });
+    basicGBM("./smalldata/cars.csv","cars.hex",
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             });
+    basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+             });
     //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
     //         new PrepData() {
     //           Vec prep(Frame fr) { 
@@ -75,7 +75,7 @@ public class GBMTest extends TestUtil {
       gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       gbm.vresponse = prep.prep(gbm.source);
-      gbm.ntrees = 1;
+      gbm.ntrees = 5;
       gbm.max_depth = 8;
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
@@ -139,16 +139,16 @@ public class GBMTest extends TestUtil {
     basicDRF("./smalldata/airlines/allyears2k_headers.zip","air.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
              });
-    basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
-             //basicDRF("./smalldata/covtype/covtype.20k.data","covtype.hex",
-             new PrepData() {
-               Vec prep(Frame fr) {
-                 for( int ign : IGNS )
-                   UKV.remove(fr.remove(Integer.toString(ign))._key);
-                 // Covtype: predict on last column
-                 return fr.remove(fr.numCols()-1);
-               }
-             });
+    //basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+    //         //basicDRF("./smalldata/covtype/covtype.20k.data","covtype.hex",
+    //         new PrepData() {
+    //           Vec prep(Frame fr) {
+    //             for( int ign : IGNS )
+    //               UKV.remove(fr.remove(Integer.toString(ign))._key);
+    //             // Covtype: predict on last column
+    //             return fr.remove(fr.numCols()-1);
+    //           }
+    //         });
   }
 
   public void basicDRF(String fname, String hexname, PrepData prep) {
