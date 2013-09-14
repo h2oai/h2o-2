@@ -668,7 +668,9 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                 regex1String += '|shutdown command' 
             regex1 = re.compile(regex1String, re.IGNORECASE)
             regex2 = re.compile('Caused',re.IGNORECASE)
-            regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
+            # regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
+            # FIX! temp to avoid the INFO in jan's latest logging. don't print any info?
+            regex3 = re.compile('warn|TCP', re.IGNORECASE)
 
             # there are many hdfs/apache messages with error in the text. treat as warning if they have '[WARN]'
             # i.e. they start with:
@@ -685,15 +687,14 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                 foundBad = False
                 if not ' bytes)' in line:
                     # no multiline FSM on this 
-                    # ignore the [WARN] from 'RestS3Service'
-                    printSingleWarning = regex3.search(line) and not ('[Loaded ' in line) and not ('RestS3Service' in line)
+                    printSingleWarning = regex3.search(line)
                     #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
-                    # FIX! temp to avoid the INFO in jan's latest logging
-                    printSingleWarning = False
 
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
+                        # shows up as param to url for h2o
+                        ('out_of_bag_error_estimate' in line) or
                         # R stdout confusion matrix. Probably need to figure out how to exclude R logs
                         ('Training Error' in line) or
                         ('Error' in line and 'Actual' in line) or
@@ -729,8 +730,10 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                     sys.stdout.write(line)
 
                 if (printSingleWarning):
-                    # don't print this one
-                    if not re.search("Unable to load native-hadoop library for your platform", line):
+                    # don't print these lines
+                    if not (re.search("Unable to load native-hadoop library for your platform", line) or
+                        ('[Loaded ' in line) or 
+                        ('RestS3Service' in line)):
                         sys.stdout.write(line)
 
             sandFile.close()
@@ -1929,7 +1932,8 @@ class H2O(object):
             args += ['--nolog']
 
         # disable logging of requests, as some contain "error", which fails the test
-        args += ['--no_requests_log']
+        ## FIXED. better escape in check_sandbox_for_errors
+        ## args += ['--no_requests_log']
         return args
 
     def __init__(self, 
