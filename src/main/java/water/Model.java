@@ -20,7 +20,7 @@ public abstract class Model extends Iced {
   /** Key associated with this Model, if any.  */
   @API(help="Key associated with Model")
   public final Key _selfKey;
-  
+
   /** Dataset key used to *build* the model, for models for which this makes
    *  sense, or null otherwise.  Not all models are built from a dataset (eg
    *  artificial models), or are built from a single dataset (various ensemble
@@ -34,7 +34,7 @@ public abstract class Model extends Iced {
   @API(help="Column names used to build the model")
   public final String _names[];
 
-  /** Categorical/factor/enum mappings, per column.  Null for non-enum cols. 
+  /** Categorical/factor/enum mappings, per column.  Null for non-enum cols.
    *  The last column holds the response col enums.  */
   @API(help="Column names used to build the model")
   public final String _domains[][];
@@ -65,7 +65,7 @@ public abstract class Model extends Iced {
 
   public String responseName() { return   _names[  _names.length-1]; }
   public String[] classNames() { return _domains[_domains.length-1]; }
-  public int nclasses() { 
+  public int nclasses() {
     String cns[] = classNames();
     return cns==null ? 1 : cns.length;
   }
@@ -115,7 +115,7 @@ public abstract class Model extends Iced {
       if( map[i] != null ) {    // Enum mapping
         int e = (int)d;
         if( e < 0 || e >= map[i].length ) d = Double.NaN; // User data is out of adapt range
-        else { 
+        else {
           e = map[i][e];
           d = e==-1 ? Double.NaN : (double)e;
         }
@@ -128,9 +128,9 @@ public abstract class Model extends Iced {
   /** Build an adaption array.  The length is equal to the Model's vector
    *  length minus the response plus a column mapping.  Each inner array
    *  is a domain map from user domains to model domains - or null for non-enum
-   *  columns.  The extra final int[] is the column mapping itself.  
+   *  columns.  The extra final int[] is the column mapping itself.
    *  If 'exact' is true, will throw if there are:
-   *    any columns in the model but not in the input set; 
+   *    any columns in the model but not in the input set;
    *    any enums in the data that the model does not understand
    *    any enums returned by the model that the data does not understand.
    *  If 'exact' is false, these situations will use or return NA's instead.
@@ -144,7 +144,7 @@ public abstract class Model extends Iced {
       }
       if( _domains[i] != domains[i] ) {
         if( _domains[i] == null || domains[i] == null ) {
-          if( exact ) 
+          if( exact )
             throw new IllegalArgumentException("Model expects "+Arrays.toString(_domains[i])+" but was passed "+Arrays.toString(domains[i]));
           throw H2O.unimpl();
         }
@@ -162,10 +162,24 @@ public abstract class Model extends Iced {
    *  scoring of a new dataset to an existing model.  Same adaption as above,
    *  but expressed as a Frame instead of as an int[][].     */
   public Frame adapt( Frame fr, boolean exact ) {
-    int[][] map = adapt(fr.names(),fr.domains(),exact);
-    for( int i=0; i<map.length; i++ )
-      if( map[i] != null ) throw H2O.unimpl();
-    return new Frame(fr);
+    Vec [] vecs = fr.getVecs(_names);
+    for(int i = 0; i < _names.length-1; ++i)
+      if(vecs[i] == null) throw new RuntimeException("missing column '" + _names[i] + "'!");
+    String [] names = _names.clone();
+    if(vecs[vecs.length-1] == null){
+      vecs = Arrays.copyOf(vecs, vecs.length-1);// no response!
+      names = Arrays.copyOf(names, names.length-1);// no response!
+    }
+    // now do the enum domains...
+    for(int i = 0; i < vecs.length; ++i){
+      if(_domains[i] != vecs[i]._domain) {
+        if(vecs[i]._domain == null)vecs[i].asEnum();
+        else if(_domains[i] == null)throw new RuntimeException("incompatible column: '" + _names[i] + "', expected (trained on) numeric, got categorical");
+        if(!Arrays.deepEquals(vecs[i]._domain, _domains[i]))
+          throw H2O.unimpl(); // domain mapping neeeded!
+      }
+    }
+    return new Frame(names,vecs);
   }
 
   /** Bulk scoring API for whole chunks.  Chunks are all compatible with the
