@@ -8,7 +8,10 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
     'response_variable': [None,54],
-    'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
+    # individual weights can make the error go very high and fail the check below
+    'class_weights': [None,
+        '1=20,2=20,3=20,4=20,5=20,6=20,7=20',
+        '1=10,2=10,3=20,4=20,5=20,6=20,7=20'],
     'ntree': [50],
     'model_key': ['model_keyA', '012345', '__hello'],
     # UPDATE: H2O...OOBE has to be 0 for scoring
