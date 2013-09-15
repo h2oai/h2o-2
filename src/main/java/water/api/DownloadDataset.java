@@ -45,6 +45,8 @@ public class DownloadDataset extends Request {
         if( s.charAt(x)=='.' && !dot ) dot=true;
         else break;
     String suggested_fname = s.substring(x+1).replace(".hex", ".csv");
+    if( !suggested_fname.endsWith(".csv") ) 
+      suggested_fname = suggested_fname+".csv";
     res.addHeader("Content-Disposition", "filename=" + suggested_fname);
     return res;
   }
