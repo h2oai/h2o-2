@@ -1,11 +1,9 @@
 package water.api;
 
-import hex.ScoreTask;
 import water.*;
-import water.util.RString;
-import water.util.Log;
 import water.fvec.Frame;
-import water.fvec.Vec;
+import water.util.Log;
+import water.util.RString;
 
 /**
  * @author cliffc
@@ -21,8 +19,8 @@ public class GeneratePredictions2 extends Request2 {
   public Frame data;
   class dataFilter extends FrameKey { public dataFilter() { super("data"); } }
 
-  @API( help="Prediction key", required=true, filter=Default.class )
-  Key prediction_key;
+  @API( help="Prediction key", filter=Default.class )
+  Key prediction_key = Key.make();
 
 
   public static String link(Key k, String content) {
