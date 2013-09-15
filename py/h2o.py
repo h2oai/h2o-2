@@ -98,16 +98,16 @@ def get_ip_address():
     return ip
 
 def unit_main():
-    global python_test_name, python_cmd_args, python_cmd_ip
+    global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
-    python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_ip = get_ip_address()
-    pythonCmdLine = "python %s %s" % (python_test_name, python_cmd_args)
+    python_cmd_args = " ".join(sys.argv[1:])
+    python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
     # if test was run with nosestests, it wouldn't execute unit_main() so we won't see this
     # so this is correct, for stuff run with 'python ..."
-    print "\nTest: %s    command line: %s" % (python_test_name, pythonCmdLine)
+    print "\nTest: %s    command line: %s" % (python_test_name, python_cmd_line)
     print "Python runs on: %s" % python_cmd_ip
 
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
@@ -136,6 +136,8 @@ python_test_name = inspect.stack()[1][1]
 python_cmd_ip = get_ip_address()
 # no command line args if run with just nose
 python_cmd_args = ""
+# don't really know what it is if nosetests did some stuff. Should be just the test with no args
+python_cmd_line = ""
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
