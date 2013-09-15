@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
         csvFullname = h2i.find_folder_and_filename(bucket, csvPathname, schema='put', returnFullPath=True)
 
 
-        def predict_and_compare_csvs(model_key, hex_key):
+        def predict_and_compare_csvs(model_key, hex_key, translate):
             # have to slice out col 0 (the output) and feed result to predict
             # cols are 0:784 (1 output plus 784 input features
             # h2e.exec_expr(execExpr="P.hex="+hex_key+"[1:784]", timeoutSecs=30)
@@ -122,7 +122,6 @@ class Basic(unittest.TestCase):
             skipSrcOutputHeader = 1
             skipPredictHeader= 1
             print "Do a check of the original output col against predicted output"
-            translate = {0: 0.0, 1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0, 7: 1.0, 8: 1.0, 9: 1.0}
             (rowNum1, originalOutput) = compare_csv_at_one_col(csvSrcOutputPathname,
                 msg="Original", colIndex=0, translate=translate, skipHeader=skipSrcOutputHeader)
             (rowNum2, predictOutput)  = compare_csv_at_one_col(csvPredictPathname, 
@@ -164,9 +163,9 @@ class Basic(unittest.TestCase):
             print "Total:", len(originalOutput)
             pctWrong = (100.0 * wrong)/len(originalOutput)
             print "wrong/Total * 100 ", pctWrong
-            # I looked at what h2o can do for modelling with binomial and it should get better than 25% error?
-            if pctWrong > 28.0:
-                raise Exception("pct wrong too high. Expect < 28% error")
+            # digit 3 with no regularization got around 5%. 0 gets < 2%
+            if pctWrong > 6.0:
+                raise Exception("pct wrong too high. Expect < 6% error")
 
         #*************************************************************************
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
@@ -175,44 +174,61 @@ class Basic(unittest.TestCase):
         print "Does this work? (feeding in same data key)if you're predicting, "
         print "don't you need one less column (the last is output?)"
         print "WARNING: max_iter set to 8 for benchmark comparisons"
-        max_iter = 8
 
-        y = "54"
-        kwargs = {
-            'x': "",
-            'y': y,
-            'family': 'binomial',
-            'link': 'logit',
-            'n_folds': 1,
-            'case_mode': '>',
-            'case': 0, # zero should predict to 0, 2-9 should predict to 1
-            'max_iter': max_iter,
-            'beta_epsilon': 1e-3}
+        # excessive, trying each digit one at a time, but hey a good test
+        # limit the ierations so it doesn't take so long. 4 minutes per digit?
+        max_iter = 4
+        # for y in [0,1,2,3,4,5,6,7,8,9]:
+        # for y in [0,3,7]:
+        for case in [0,3,7]:
 
-        timeoutSecs = 120
-        # L2 
-        start = time.time()
-        kwargs.update({'alpha': 0, 'lambda': 0})
-        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
-        print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-        h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
-        predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey)
+            translate = {}
+            for i in range(10):
+                if i == case: 
+                    translate[i] = 1.0
+                else:
+                    translate[i] = 0.0
 
-        # Elastic
-        kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
-        start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
-        print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-        h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
-        predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey)
+            print "translate:", translate
+            kwargs = {
+                'x': "",
+                'y': 0,
+                'family': 'binomial',
+                'link': 'logit',
+                'n_folds': 1,
+                'case_mode': '=',
+                'case': case, # zero should predict to 1, 2-9 should predict to 0
+                'max_iter': max_iter,
+                'beta_epsilon': 1e-3}
 
-        # L1
-        kwargs.update({'alpha': 1, 'lambda': 1e-4})
-        start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
-        print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-        h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
-        predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey)
+            timeoutSecs = 120
+
+
+            # L2 
+            start = time.time()
+            kwargs.update({'alpha': 0, 'lambda': 0})
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
+            predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey, translate=translate)
+
+            # Elastic
+            kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
+            start = time.time()
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            # okay for some coefficients to go to zero!
+            h2o_glm.simpleCheckGLM(self, glm, 13, allowZeroCoeff=True, **kwargs)
+            predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey, translate=translate)
+
+            # L1
+            kwargs.update({'alpha': 1, 'lambda': 1e-4})
+            start = time.time()
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            # okay for some coefficients to go to zero!
+            h2o_glm.simpleCheckGLM(self, glm, 13, allowZeroCoeff=True, **kwargs)
+            predict_and_compare_csvs(model_key=glm['destination_key'], hex_key=hexKey, translate=translate)
 
 if __name__ == '__main__':
     h2o.unit_main()
