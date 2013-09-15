@@ -35,13 +35,9 @@ public abstract class Request extends RequestBuilders {
     boolean run(Object value);
   }
 
-  /**
-   * NOP filter, use to define a field as input.
-   */
+  /** NOP filter, use to define a field as input.  */
   public class Default implements Filter {
-    @Override public boolean run(Object value) {
-      return true;
-    }
+    @Override public boolean run(Object value) { return true; }
   }
 
   public class TypedKey extends H2OKey {

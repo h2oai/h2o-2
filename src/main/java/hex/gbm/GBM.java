@@ -73,7 +73,7 @@ public class GBM extends FrameJob {
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
   }
-  public Vec score( Frame fr ) { return gbm_model.score(fr,true);  }
+  public Frame score( Frame fr ) { return gbm_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__GBMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -108,10 +108,6 @@ public class GBM extends FrameJob {
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse )
-        fr.remove(i);
-
     String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
       if( fr._vecs[i]==vresponse ) {

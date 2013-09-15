@@ -68,8 +68,8 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    Key skey = null;
     GBM gbm = null;
+    Frame fr = null;
     try {
       gbm = new GBM();
       gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
@@ -83,8 +83,7 @@ public class GBMTest extends TestUtil {
       gbm.serve();              // Start it
       gbm.get();                // Block for it
       
-      Vec vec = gbm.score(gbm.source);
-      skey = vec._key;
+      fr = gbm.score(gbm.source);
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
@@ -92,7 +91,7 @@ public class GBMTest extends TestUtil {
         UKV.remove(gbm.dest()); // Remove the model
         UKV.remove(gbm.vresponse._key);
         gbm.remove();           // Remove GBM Job
-        if( skey != null ) UKV.remove(skey);
+        if( fr != null ) fr.remove();
       }
     }
   }
@@ -156,8 +155,8 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    Key skey = null;
     DRF drf = null;
+    Frame fr = null;
     try {
       drf = new DRF();
       drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
@@ -173,8 +172,7 @@ public class GBMTest extends TestUtil {
       drf.serve();              // Start it
       drf.get();                // Block for it
 
-      Vec vec = drf.score(drf.source);
-      skey = vec._key;
+      fr = drf.score(drf.source);
 
     } finally {
       UKV.remove(dest);         // Remove whole frame
@@ -182,7 +180,7 @@ public class GBMTest extends TestUtil {
         UKV.remove(drf.dest()); // Remove the model
         UKV.remove(drf.vresponse._key);
         drf.remove();
-        if( skey != null ) UKV.remove(skey);
+        if( fr != null ) fr.remove();
       }
     }
   }
