@@ -79,7 +79,7 @@ then
 else
     if [[ $USER == "kevin" ]]
     then
-        python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+        python ../four_hour_cloud.py -cj pytest_config-kevin.json &
     else
         python ../four_hour_cloud.py &
     fi
