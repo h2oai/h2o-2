@@ -2,7 +2,7 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
+import java.util.*;
 
 import water.*;
 import water.fvec.Vec.VectorGroup;
@@ -191,6 +191,126 @@ public class Frame extends Iced {
     for( int i=1; i<_names.length; i++ )
        s += ","+toStr(idx,i);
     return s+"}";
+  }
+
+
+  /**
+   * splits frame into desired fractions via a uniform random draw.  <b> DOES NOT </b> promise such a division, and for small numbers of rows,
+   * you get what you get
+   *
+   * @param fractions.  must sum to 1.0.  eg {0.8, 0.2} to get an 80/20 train/test split
+   *
+   * @return array of frames
+   */
+  public Frame[] splitFrame(double[] fractions){
+
+    double[] splits = new double[ fractions.length ];
+    double cumsum = 0.;
+    for( int i=0; i < fractions.length; i++ ){
+      cumsum += fractions[ i ];
+      splits[ i ] = cumsum;
+    }
+
+    splits[ splits.length - 1 ] = 1.01; // force row to be assigned somewhere, even if the fractions passed in are garbage
+
+    DataSplitter task = new DataSplitter();
+    task._fr = this;
+    task._splits = splits;
+    task.init();
+
+    task.doAll( this );
+
+    Frame[] frames = task.finish();
+    return frames;
+  }
+
+  /**
+   * split a frame into multiple frames, with the data split as desired <br>
+   * NB: this allocates fvecs; caller is responsible for remove-ing them <br>
+   *<br>
+   * TODO: pregenerate random numbers and make deterministic <br>
+   * TODO: allow perfect splitting instead of at-random, particularly for unit tests
+   */
+  public static class DataSplitter extends MRTask2<DataSplitter> {
+    AppendableVec[][] _vecs;
+    double[] _splits;
+
+
+    /**
+     * must be called before doAll to allocate vecs
+     */
+    public void init(){
+      AppendableVec[][] vecs = new AppendableVec[ _splits.length ][];
+      for( int split=0; split < vecs.length; split++ ) {
+        vecs[ split ] = new AppendableVec[ _fr._vecs.length ];
+        for( int column=0; column < vecs[ split ].length; column++ )
+          vecs[ split ][ column ] = new AppendableVec( UUID.randomUUID().toString() );
+      }
+
+      _vecs = vecs;
+    }
+
+    /**
+     * return the new frames
+     */
+    public Frame[] finish(){
+      Frame[] frames = new Frame[ _splits.length ];
+
+      for( int split=0; split < _vecs.length; split++ ){
+        Vec[] vecs = new Vec[ _fr._vecs.length ];
+
+        for( int column=0; column < _vecs[ split ].length; column++ ) {
+          vecs[ column ] = _vecs[ split ][ column ].close( null );
+          if( _fr._vecs[ column ].isEnum() )
+            vecs[ column ]._domain = _fr._vecs[ column ]._domain.clone();
+
+        }
+        frames[ split ] = new Frame( _fr.names(), vecs );
+
+      }
+      return frames;
+    }
+
+
+
+    @Override public void map(Chunk[] cs) {
+      Random random = new Random();
+
+      NewChunk[][] new_chunks = new NewChunk[ _vecs.length ][];
+      for( int split=0; split < _vecs.length; split++ ){
+        new_chunks[ split ] = new NewChunk[ _vecs[ split ].length ];
+        for( int column=0; column < new_chunks[ split ].length; column++ )
+          new_chunks[ split ][ column ] = new NewChunk( _vecs[ split ][ column ], cs[ column ].cidx() );
+      }
+
+      for( int chunk_row = 0; chunk_row < cs[ 0 ]._len; chunk_row++ ){
+        double draw = random.nextDouble();
+        int split = 0;
+        while( draw > _splits[ split ]){ split++; }
+
+        for( int column = 0; column < cs.length; column++ ){
+          if( _fr._vecs[ column ].isEnum() ){
+            if( !cs[ column ].isNA0( chunk_row ) )
+              new_chunks[ split ][ column ].addEnum( (int) cs[ column ].at80( chunk_row ) );
+            else
+              new_chunks[ split ][ column ].addNA();
+
+          } else if( _fr._vecs[ column ].isInt() ){
+            if( !cs[ column ].isNA0( chunk_row ) )
+              new_chunks[ split ][ column ].addNum( cs[ column ].at80( chunk_row ), 0 );
+            else
+              new_chunks[ split ][ column ].addNA();
+
+          } else { // assume double; NaN == NA so should be able to just assign
+              new_chunks[ split ][ column ].addNum( cs[ column ].at0( chunk_row ) );
+          }
+        }
+      }
+
+      for( int split=0; split < new_chunks.length; split++ )
+        for( int column=0; column < new_chunks[ split ].length; column++ )
+          new_chunks[ split ][ column ].close(cs[ column ].cidx(), null);
+    }
   }
 
   public InputStream toCSV(boolean headers) {
