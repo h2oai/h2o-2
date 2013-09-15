@@ -33,6 +33,7 @@ public class GeneratePredictions2 extends Request2 {
 
   @Override protected Response serve() {
     try {
+      if( model == null ) throw new IllegalArgumentException("Model is missing");
       Frame fr = model.score(data,true);
       UKV.put(prediction_key,fr);
       return Inspect2.redirect(this, prediction_key.toString());
