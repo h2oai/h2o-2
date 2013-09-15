@@ -5,7 +5,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 def file_to_put():
     # kbn fails 10/15/12
     # return 'smalldata/poker/poker-hand-testing.data'
-    a = h2i.find_folder_and_filename('smalldata', 'poker/poker1000', returnFullPath=True)
+    a = h2i.find_folder_and_filename('smalldata', 'poker/poker1000', schema='put', returnFullPath=True)
     print "\nfind_folder_and_filename:", a
     return a
 
