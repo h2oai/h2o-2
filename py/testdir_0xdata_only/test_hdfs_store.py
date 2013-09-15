@@ -1,8 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -66,24 +64,21 @@ class Basic(unittest.TestCase):
             csvFilenameList = csvFilenameAll
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
 
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
-        firstglm = {}
-        h2i.setupImportHdfs()
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
+            csvPathname = "datasets/" + csvFilename
             print "Loading", csvFilename, 'from HDFS'
-            parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilename, path='/datasets', timeoutSecs=1000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "parse result:", parseKey['destination_key']
-
-            print "\n" + csvFilename
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=1000)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "parse result:", parseResult['destination_key']
             start = time.time()
-            print "Storing", parseKey['destination_key'], 'to HDFS'
+            print "Storing", parseResult['destination_key'], 'to HDFS'
             ### print "FIX! temporarily disabling since it causes HDFS corruption"
-            storeKey = h2o_cmd.runStore2HDFS(key=parseKey['destination_key'], timeoutSecs=1000)
+            storeKey = h2o_cmd.runStore2HDFS(key=parseResult['destination_key'], timeoutSecs=1000)
             # h2b.browseJsonHistoryAsUrlLastMatch("Parse")
 
 if __name__ == '__main__':

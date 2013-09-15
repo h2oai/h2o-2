@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,8 +22,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_gamma_fail1(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname)
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
         for trial in range(5):
             kwargs = {
                 'standardize': 1, 
@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
                 'n_folds': 1, 
             }
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=120, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=120, parseResult=parseResult, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
             # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter

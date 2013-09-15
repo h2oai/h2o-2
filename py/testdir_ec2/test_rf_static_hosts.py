@@ -29,11 +29,11 @@ class Basic(unittest.TestCase):
         s3dataset = 'covtype.data'
        
         start = time.time()
-        parseKey = h2o_cmd.parseS3File(bucket=s3bucket, filename=s3dataset,timeoutSecs=14800)
+        parseResult = h2o_cmd.parseS3File(bucket=s3bucket, filename=s3dataset,timeoutSecs=14800)
         print "Parsing took {0}".format(time.time()-start)
         
         start = time.time()
-        rf_train = h2o_cmd.runRFOnly(parseKey=parseKey, ntree=100, timeoutSecs=14800, bin_limit=20000, out_of_bag_error_estimate=1,stat_type='ENTROPY',depth=100,exclusive_split_limit=0)
+        rf_train = h2o_cmd.runRF(parseResult=parseResult, ntree=100, timeoutSecs=14800, bin_limit=20000, out_of_bag_error_estimate=1,stat_type='ENTROPY',depth=100,exclusive_split_limit=0)
         print "Computation took {0} sec".format(time.time()-start)
         print h2o_rf.pp_rf_result(rf_train)
 

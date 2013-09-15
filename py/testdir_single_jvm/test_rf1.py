@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(node_count=1)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts(node_count=3)
 
     @classmethod
     def tearDownClass(cls):
@@ -27,14 +27,16 @@ class Basic(unittest.TestCase):
     def notest_RF_iris2(self):
         trees = 6
         timeoutSecs = 20
-        csvPathname = h2o.find_file('smalldata/iris/iris2.csv')
-        h2o_cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
+        csvPathname = 'iris/iris2.csv'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
+        h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
 
     def notest_RF_poker100(self):
         trees = 6
         timeoutSecs = 20
-        csvPathname = h2o.find_file('smalldata/poker/poker100')
-        h2o_cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
+        csvPathname = 'poker/poker100'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
+        h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
 
     def test_GenParity1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -62,7 +64,8 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            h2o_cmd.runRF(trees=trees, timeoutSecs=timeoutSecs, csvPathname=csvPathname)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put')
+            h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
 
             trees += 10
             timeoutSecs += 2

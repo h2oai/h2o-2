@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,11 +27,11 @@ class Basic(unittest.TestCase):
 
         print "\nTemporarily won't run some because NAs cause CM=0"
         for csvFilename in csvFilenameList:
-            csvPathname = h2o.find_file('smalldata/' + csvFilename)
+            csvPathname = csvFilename
             print "RF start on ", csvPathname, "this will probably take a minute.."
             start = time.time()
-            h2o_cmd.runRF(csvPathname=csvPathname, trees=50,
-                    timeoutSecs=300, retryDelaySecs=10)
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')            
+            h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=300, retryDelaySecs=10)
             print "RF end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
 if __name__ == '__main__':

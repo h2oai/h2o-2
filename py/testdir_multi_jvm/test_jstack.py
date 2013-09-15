@@ -1,4 +1,4 @@
-import unittest, time, sys
+import unittest, time, sys, json
 sys.path.extend(['.','..','py'])
 import h2o, h2o_hosts
 
@@ -10,7 +10,7 @@ class JStackApi(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,sigar=True)
+            h2o.build_cloud(3)
         else:
             h2o_hosts.build_cloud_with_hosts()
 

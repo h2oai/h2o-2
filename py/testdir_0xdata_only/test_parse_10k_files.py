@@ -1,9 +1,6 @@
-import unittest, time, sys, time, random, logging, gzip, os
+import unittest, time, sys, time, random, gzip, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
-import h2o_exec as h2e, h2o_jobs
-import h2o, h2o_cmd
-import h2o_browse as h2b
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 def write_syn_dataset_gz(csvPathname, rowCount, headerData, rowData):
     f = gzip.open(csvPathname, 'wb')
@@ -87,10 +84,13 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].redirect_import_folder_to_s3n_path = False
 
             for trial in range(trialMax):
-                importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-                importFullList = importFolderResult['files']
+                # nice to have the list of what got imported, so we delete "just that" down below
+                # doing this just so we can see what we import
+                (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/*")
+
+                importFullList = importResult['files']
                 print "importFullList:", importFullList
-                importFailList = importFolderResult['fails']
+                importFailList = importResult['fails']
                 print "importFailList:", importFailList
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
@@ -98,8 +98,8 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
                 start = time.time()
-                parseKey = h2i.parseImportFolderFile(None, csvFilepattern, importFolderPath, 
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                    hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     noPoll=noPoll,
@@ -127,12 +127,12 @@ class Basic(unittest.TestCase):
                     print l
                     h2o.cloudPerfH2O.message(l)
 
-                print csvFilepattern, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
+                print csvFilepattern, 'parse time:', parseResult['response']['time']
+                print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # BUG here?
                 if not noPoll:
-                    h2o_cmd.get_columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=True)
+                    h2o_cmd.get_columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
                         
                 print "\n" + csvFilepattern
 
@@ -143,7 +143,7 @@ class Basic(unittest.TestCase):
                     GLMkwargs = {'y': 0, 'case': 1, 'case_mode': '>',
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
                     h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()
@@ -155,7 +155,7 @@ class Basic(unittest.TestCase):
                 #**********************************************************************************
 
                 h2o_cmd.checkKeyDistribution()
-                h2o_cmd.deleteCsvKey(csvFilename, importFolderResult)
+                h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
 
                 h2o.tear_down_cloud()
                 if not localhost:

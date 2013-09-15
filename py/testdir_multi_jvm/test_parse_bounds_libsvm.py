@@ -1,9 +1,6 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
-
 from math import floor
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
@@ -79,7 +76,7 @@ class Basic(unittest.TestCase):
             ]
 
         # h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
                 SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = "syn_%s_%s_%s.csv" % (SEEDPERFILE, rowCount, colCount)
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -88,9 +85,10 @@ class Basic(unittest.TestCase):
                 # dict of col sums for comparison to exec col sums below
                 (colNumberMax, synColSumDict) = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
-                print "Parse result['destination_key']:", parseKey['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
+                parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', 
+                    timeoutSecs=timeoutSecs, doSummary=False)
+                print "Parse result['destination_key']:", parseResult['destination_key']
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
                 row_size = inspect['row_size']
@@ -114,11 +112,12 @@ class Basic(unittest.TestCase):
                 # summary respects column limits
                 col_limit = int(floor( 0.3 * colNumberMax ))
 
-                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=col_limit, timeoutSecs=timeoutSecs)
+                summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=col_limit, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
-                self.assertEqual(col_limit, len( summaryResult[ 'summary'][ 'columns' ] ), "summary respects column limit of %d on %d cols" % (col_limit, colNumberMax+1))
+                self.assertEqual(col_limit, len( summaryResult[ 'summary'][ 'columns' ] ), 
+                    "summary doesn't respect column limit of %d on %d cols" % (col_limit, colNumberMax+1))
 
-                summaryResult = h2o_cmd.runSummary(key=key2, max_column_display=10*num_cols, timeoutSecs=timeoutSecs)
+                summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=10*num_cols, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
                 self.assertEqual(colNumberMax+1, num_cols, 
                     msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))

@@ -1,6 +1,6 @@
 import unittest, time, sys, random, json
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_util
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_util, h2o_import as h2i
 import h2o_browse as h2b
 import h2o_jobs
 
@@ -29,12 +29,9 @@ class Basic(unittest.TestCase):
 
     def test_rf_big1_nopoll(self):
         csvFilename = 'hhp_107_01.data.gz'
-        csvPathname = h2o.find_file("smalldata/" + csvFilename)
-        key2 = csvFilename + ".hex"
-        
-        print "\n" + csvPathname
-
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=key2, timeoutSecs=15)
+        hex_key = csvFilename + ".hex"
+        print "\n" + csvFilename
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, hex_key=hex_key, timeoutSecs=15, schema='put')
         firstRfView = None
         # dispatch multiple jobs back to back
         for jobDispatch in range(3):
@@ -58,15 +55,15 @@ class Basic(unittest.TestCase):
 
             # FIX! what model keys do these get?
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            h2o_cmd.runRFOnly(node=randomNode, parseKey=parseKey, model_key=model_key, timeoutSecs=300,
+            h2o_cmd.runRF(node=randomNode, parseResult=parseResult, model_key=model_key, timeoutSecs=300,
                  noPoll=True, **kwargs)
             # FIX! are these already in there?
             rfView = {}
-            rfView['data_key'] = key2
+            rfView['data_key'] = hex_key
             rfView['model_key'] = model_key
             rfView['ntree'] = kwargs['ntree']
 
-            print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
+            print "rf job dispatch end on ", csvFilename, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 
             # we're going to compare rf results to previous as we go along (so we save rf view results
@@ -78,7 +75,6 @@ class Basic(unittest.TestCase):
             data_key = rfView['data_key']
             model_key = rfView['model_key']
             ntree = rfView['ntree']
-            # a = h2o.nodes[0].random_forest_view(data_key, model_key, noPoll=True)
             print "Temporary hack: need to do two rf views minimum, to complete a RF (confusion matrix creation)"
             # allow it to poll to complete
             rfViewResult = h2o_cmd.runRFView(None, data_key, model_key, ntree=ntree, timeoutSecs=60, noPoll=False)

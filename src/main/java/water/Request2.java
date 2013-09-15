@@ -68,7 +68,7 @@ public abstract class Request2 extends Request {
 
           // Key
           else if( f.getType() == Key.class )
-            arg = new H2OKey(f.getName(), api.required());
+            arg = new H2OKey(f.getName(),(Key)defaultValue, api.required());
 
           // Auto-cast from key to Iced field
           else if( Freezable.class.isAssignableFrom(f.getType()) && api.filter() == Default.class )
@@ -92,6 +92,14 @@ public abstract class Request2 extends Request {
               if( a instanceof FrameKey && name._key.equals(((FrameKey) a)._name) )
                 key = (FrameKey) a;
             arg = new FrameKeyVec(f.getName(), key);
+          }
+          else if( VecClassSelect.class.isAssignableFrom(api.filter()) ) {
+            VecClassSelect name = (VecClassSelect) newInstance(api);
+            FrameKey key = null;
+            for( Argument a : _arguments )
+              if( a instanceof FrameKey && name._key.equals(((FrameKey) a)._name) )
+                key = (FrameKey) a;
+            arg = new FrameClassVec(f.getName(), key);
           }
 
           if( arg != null ) {

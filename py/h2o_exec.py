@@ -76,7 +76,7 @@ def checkScalarResult(resultInspect, resultKey):
 
     return min_value
 
-def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, key2=None, m=None):
+def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, m=None):
     # FIX! does this push col2 too far? past the output col?
     # just a string? 
     execExpr = exprTemplate
@@ -88,8 +88,8 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, key2=None, 
         execExpr = re.sub('<n-1>', str(n-1), execExpr)
     if row is not None:
         execExpr = re.sub('<row>', str(row), execExpr)
-    if key2 is not None:
-        execExpr = re.sub('<keyX>', str(key2), execExpr)
+    if keyX is not None:
+        execExpr = re.sub('<keyX>', str(keyX), execExpr)
     if m is not None:
         execExpr = re.sub('<m>', str(m), execExpr)
         execExpr = re.sub('<m-1>', str(m-1), execExpr)
@@ -98,11 +98,13 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, key2=None, 
     return execExpr
 
 
-def exec_expr(node, execExpr, resultKey="Result.hex", timeoutSecs=10, ignoreH2oError=False):
+def exec_expr(node=None, execExpr=None, resultKey="Result.hex", timeoutSecs=10, ignoreH2oError=False):
+    if not node:
+        node = h2o.nodes[0]
     start = time.time()
     # FIX! Exec has 'escape_nan' arg now. should we test?
     # 5/14/13 removed escape_nan=0
-    resultExec = h2o_cmd.runExecOnly(node, expression=execExpr, 
+    resultExec = h2o_cmd.runExec(node, expression=execExpr, 
         timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError)
     h2o.verboseprint(resultExec)
     h2o.verboseprint('exec took', time.time() - start, 'seconds')
@@ -128,7 +130,7 @@ def exec_zero_list(zeroList):
         ### print "\nexecResult:", execResult
 
 
-def exec_expr_list_rand(lenNodes, exprList, key2, 
+def exec_expr_list_rand(lenNodes, exprList, keyX, 
     minCol=0, maxCol=54, minRow=1, maxRow=400000, maxTrials=200, 
     timeoutSecs=10, ignoreH2oError=False):
 
@@ -151,7 +153,7 @@ def exec_expr_list_rand(lenNodes, exprList, key2,
         # FIX! should tune this for covtype20x vs 200x vs covtype.data..but for now
         row = str(random.randint(minRow,maxRow))
 
-        execExpr = fill_in_expr_template(exprTemplate, colX, ((trial+1)%4)+1, row, key2)
+        execExpr = fill_in_expr_template(exprTemplate, colX, ((trial+1)%4)+1, row, keyX)
         execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, "Result.hex", 
             timeoutSecs, ignoreH2oError)
         ### print "\nexecResult:", execResultInspect
@@ -169,7 +171,7 @@ def exec_expr_list_rand(lenNodes, exprList, key2,
         trial += 1
         print "Trial #", trial, "completed\n"
 
-def exec_expr_list_across_cols(lenNodes, exprList, key2, 
+def exec_expr_list_across_cols(lenNodes, exprList, keyX, 
     minCol=0, maxCol=54, timeoutSecs=10, incrementingResult=True):
     colResultList = []
     for colX in range(minCol, maxCol):
@@ -185,11 +187,11 @@ def exec_expr_list_across_cols(lenNodes, exprList, key2,
                 ### print execNode
                 execNode = 0
 
-            execExpr = fill_in_expr_template(exprTemplate, colX, colX, 0, key2)
+            execExpr = fill_in_expr_template(exprTemplate, colX, colX, 0, keyX)
             if incrementingResult: # the Result<col> pattern
                 resultKey = "Result"+str(colX)
             else: # assume it's a re-assign to self
-                resultKey = key2
+                resultKey = keyX
 
             # kbn
 

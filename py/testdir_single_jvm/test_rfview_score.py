@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -8,7 +8,10 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
     'response_variable': [None,54],
-    'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
+    # individual weights can make the error go very high and fail the check below
+    'class_weights': [None,
+        '1=20,2=20,3=20,4=20,5=20,6=20,7=20',
+        '1=10,2=10,3=20,4=20,5=20,6=20,7=20'],
     'ntree': [50],
     'model_key': ['model_keyA', '012345', '__hello'],
     # UPDATE: H2O...OOBE has to be 0 for scoring
@@ -57,15 +60,17 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rfview_score(self):
-        csvPathnameTrain = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathnameTrain = 'UCI/UCI-large/covtype/covtype.data'
         print "Train with:", csvPathnameTrain
-        parseKeyTrain = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
-        dataKeyTrain = parseKeyTrain['destination_key']
+        parseResultTrain = h2i.import_parse(bucket='datasets', path=csvPathnameTrain, schema='put', 
+            hex_key="covtype.hex", timeoutSecs=15)
+        dataKeyTrain = parseResultTrain['destination_key']
 
-        csvPathnameTest = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathnameTest = 'UCI/UCI-large/covtype/covtype.data'
         print "Test with:", csvPathnameTest
-        parseKeyTest = h2o_cmd.parseFile(csvPathname=csvPathnameTrain, key2="covtype.hex", timeoutSecs=15)
-        dataKeyTest = parseKeyTest['destination_key']
+        parseResultTest = h2i.import_parse(bucket='datasets', path=csvPathnameTest, schema='put', 
+            hex_key="covtype.hex", timeoutSecs=15)
+        dataKeyTest = parseResultTest['destination_key']
 
         for trial in range(5):
             # params is mutable. This is default.
@@ -75,8 +80,7 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
             timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKeyTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
-    
+            rfv = h2o_cmd.runRF(parseResult=parseResultTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             ### print "rf response:", h2o.dump_json(rfv)
 
             model_key = rfv['model_key']
@@ -96,25 +100,41 @@ class Basic(unittest.TestCase):
             # ntree=50&
             # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
             # out_of_bag_error_estimate=1&
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # new web page for predict? throw it in here for now
+
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 0
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
             print "predict end on ", dataKeyTest, 'took', elapsed, 'seconds.'
 
             kwargs['iterative_cm'] = 1
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, 
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
@@ -122,8 +142,13 @@ class Basic(unittest.TestCase):
 
             kwargs['iterative_cm'] = 1
             kwargs['class_weights'] = '1=1,2=2,3=3,4=4,5=5,6=6,7=7'
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            start = time.time()
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start

@@ -21,7 +21,6 @@ class Basic(unittest.TestCase):
 
     def test_import_multi_syn_datasets(self):
         # just do the import folder once
-        importFolderPath = '/home/0xdiag/datasets'
 
         print "This imports a folder of csv files..i.e points to syn_datasets with no regex"
         print "Doesn't put anything in syn_datasets. When run with import folder redirected"
@@ -45,28 +44,25 @@ class Basic(unittest.TestCase):
 
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
+        importFolderPath = 'datasets'
 
         # pop open a browser on the cloud
         ### h2b.browseTheCloud()
 
         for csvFilename in csvFilenameList:
-            # have to import each time, because h2o deletes source after parse
-            h2i.setupImportFolder(None, importFolderPath, timeoutSecs=90)
-            # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2="syn_datasets.hex",
-                timeoutSecs=500)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(path=csvPathname, hex_key="syn_datasets.hex", schema='local', timeoutSecs=500)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "from all files num_rows:", "{:,}".format(inspect['num_rows']), \
                 "num_cols:", "{:,}".format(inspect['num_cols'])
 
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             kwargs = {'sample': 75, 'depth': 25, 'ntree': 1}
             start = time.time()
-            RFview = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            RFview = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 

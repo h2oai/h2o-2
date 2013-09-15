@@ -1,7 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
 
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rowData):
@@ -25,7 +24,7 @@ class Basic(unittest.TestCase):
         # fails with 3
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_GB=4,use_flatfile=True)
+            h2o.build_cloud(3, java_heap_GB=4, use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -49,19 +48,19 @@ class Basic(unittest.TestCase):
 
         print "This is the same format/data file used by test_same_parse, but the non-gzed version"
         print "\nSchmoo the # of rows"
-        print "Updating the key and key2 names for each trial"
+        print "Updating the key and hex_key names for each trial"
         for trial in range (200):
             append_syn_dataset(csvPathname, rowData)
             totalRows += 1
 
             start = time.time()
             key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
-            key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
             print "trial #", trial, "totalRows:", totalRows, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
 
-            h2o_cmd.runInspect(key=key2)
+            h2o_cmd.runInspect(key=hex_key)
             # only used this for debug to look at parse (red last row) on failure
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()

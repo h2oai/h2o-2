@@ -3,6 +3,7 @@ package water;
 import java.util.Arrays;
 import java.util.UUID;
 
+import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.api.*;
 import water.fvec.Frame;
@@ -31,6 +32,9 @@ public class Job extends Request2 {
   @API(help = "Job end time")
   public long end_time;
 
+  @API(help = "Exception")
+  public String exception;
+
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
 
   public Key self() { return job_key; }
@@ -39,10 +43,11 @@ public class Job extends Request2 {
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    public FrameJob(String desc, Key dest) { super(desc,dest); }
 
     @API(help = "Source frame", required = true, filter = sourceFilter.class)
     public Frame source;
-    class sourceFilter extends FrameKey { public sourceFilter() { super(""); } }
+    class sourceFilter extends FrameKey { public sourceFilter() { super("source"); } }
   }
 
   public static abstract class HexJob extends Job {
@@ -97,7 +102,7 @@ public class Job extends Request2 {
     job_key = Key.make(name, (byte) 0, Key.JOB, H2O.SELF);
   }
 
-  public <T extends H2OCountedCompleter> T start(T fjtask) {
+  public <T extends H2OCountedCompleter> T start(final T fjtask) {
     _fjtask = fjtask;
     DKV.put(job_key, new Value(job_key, new byte[0]));
     new TAtomic<List>() {
@@ -109,10 +114,11 @@ public class Job extends Request2 {
         return old;
       }
     }.invoke(LIST);
+
     return fjtask;
   }
 
-  // Overriden for Parse
+  // Overridden for Parse
   public float progress() {
     Freezable f = UKV.get(destination_key);
     if( f instanceof Progress )
@@ -122,14 +128,21 @@ public class Job extends Request2 {
 
   // Block until the Job finishes.
   public <T> T get() {
-    _fjtask.join();             // Block until top-level job is done
+    try{
+      _fjtask.join();             // Block until top-level job is done
+    } catch(DistributedException e){
+      // rethrow as a runtime exception to stay consistent with FJ and to keep record on where the exception
+      // was thrown locally
+      throw new RuntimeException(e);
+    }
     T ans = (T) UKV.get(destination_key);
     remove();                   // Remove self-job
     return ans;
   }
 
-  public void cancel() { cancel(job_key); }
-  public static void cancel(final Key self) {
+  public void cancel() { cancel("cancelled by user"); }
+  public void cancel(String msg) { cancel(job_key,msg); }
+  public static void cancel(final Key self, final String exception) {
     DKV.remove(self);
     DKV.write_barrier();
     new TAtomic<List>() {
@@ -139,6 +152,7 @@ public class Job extends Request2 {
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(self) ) {
             jobs[i].end_time = CANCELLED_END_TIME;
+            jobs[i].exception = exception;
             break;
           }
         }
@@ -147,9 +161,12 @@ public class Job extends Request2 {
     }.fork(LIST);
   }
 
-  public boolean cancelled() { return cancelled(job_key); }
-  public static boolean cancelled(Key self) {
-    return DKV.get(self) == null;
+  public boolean cancelled() {
+    return !running() && end_time == Job.CANCELLED_END_TIME;
+  }
+  public boolean running() { return running(job_key); }
+  public static boolean running(Key self) {
+    return DKV.get(self) != null;
   }
 
   public void remove() {
@@ -288,7 +305,7 @@ public class Job extends Request2 {
     final long _count;
     private final Status _status;
     final String _error;
-
+    protected DException _ex;
     public enum Status { Computing, Done, Cancelled, Error };
 
     public Status status() { return _status; }

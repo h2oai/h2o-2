@@ -1,8 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o_browse as h2b
-
-print "This case failed with all rows_skipped?"
+import h2o_browse as h2b, h2o_import as h2i
 import h2o, h2o_cmd, h2o_rf, h2o_hosts
 
 print "Temporarily not using bin_limit=1 to 4"
@@ -26,7 +24,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         kwargs = {
             'response_variable': 54, 
             'features': 7, 
@@ -44,7 +42,9 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
             start = time.time()
-            rfv = h2o_cmd.runRF(timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
+            parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
+            rfv = h2o_cmd.runRF(parseResult=parseResult, 
+                timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
             elapsed = time.time()-start
 
             cm = rfv['confusion_matrix']

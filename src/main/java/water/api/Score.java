@@ -11,7 +11,7 @@ import com.google.gson.JsonObject;
  * Simple web page to guide model validation.
  */
 public class Score extends Request {
-  protected final H2OModelKey<Model,TypeaheadModelKeyRequest> _modelKey;
+  protected final H2OModelKey<OldModel,TypeaheadModelKeyRequest> _modelKey;
 
   public Score() {
     _modelKey = new H2OModelKey(new TypeaheadModelKeyRequest(),MODEL_KEY,true);
@@ -27,7 +27,7 @@ public class Score extends Request {
     Score S = new Score();
     String mstr = parms.getProperty(MODEL_KEY);
     if( mstr == null ) return S;
-    Model M = null;
+    OldModel M = null;
     try { M = S._modelKey.parse(mstr); }
     catch( IllegalArgumentException iae ) { return S; }
 
@@ -54,7 +54,7 @@ public class Score extends Request {
 
   @Override protected Response serve() {
     // The Model being scored
-    Model M = _modelKey.value();
+    OldModel M = _modelKey.value();
     // Extract the datarow from the argument vector.
     // The args are in the same order as the columns, except for the leading model_key.
     // Skips the last column (response column).

@@ -2,10 +2,17 @@ package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import hex.rf.*;
+import hex.rf.ConfusionTask.CMFinal;
+import hex.rf.ConfusionTask.CMJob;
+import hex.rf.DRF.DRFJob;
+import hex.rf.Tree.StatType;
 import java.io.File;
+import java.util.Arrays;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.fvec.*;
 
 public class GBMTest extends TestUtil {
@@ -15,6 +22,15 @@ public class GBMTest extends TestUtil {
   private abstract class PrepData { abstract Vec prep(Frame fr); }
 
   @Test public void testBasicGBM() {
+    // Disabled Regression tests
+    //basicDRF("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         });
+    //basicGBM("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         });
+
+    // Classification tests
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
              });
@@ -28,14 +44,22 @@ public class GBMTest extends TestUtil {
                  return fr.remove("CAPSULE");
                }
              });
-    basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
-             new PrepData() {
-               Vec prep(Frame fr) { 
-                 assertEquals(581012,fr.numRows());
-                 // Covtype: predict on last column
-                 return fr.remove(54);
-               }
+    basicGBM("./smalldata/cars.csv","cars.hex",
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
              });
+    basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+             });
+    //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+    //         new PrepData() {
+    //           Vec prep(Frame fr) { 
+    //             assertEquals(581012,fr.numRows());
+    //             for( int ign : IGNS )
+    //               UKV.remove(fr.remove(Integer.toString(ign))._key);
+    //             // Covtype: predict on last column
+    //             return fr.remove(fr.numCols()-1);
+    //           }
+    //         });
   }
 
   // ==========================================================================
@@ -44,24 +68,51 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
-    UKV.remove(fkey);
-    Vec vresponse = null;
+    Key skey = null;
     GBM gbm = null;
     try {
-      vresponse = prep.prep(fr);
-      gbm = GBM.start(GBM.makeKey(),fr,vresponse,5);
-      gbm.get();                  // Block for result
+      gbm = new GBM();
+      gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
+      UKV.remove(fkey);
+      gbm.vresponse = prep.prep(gbm.source);
+      gbm.ntrees = 5;
+      gbm.max_depth = 8;
+      gbm.learn_rate = 0.2f;
+      gbm.min_rows = 10;
+      gbm.nbins = 100;
+      gbm.serve();              // Start it
+      gbm.get();                // Block for it
+      
+      Vec vec = gbm.score(gbm.source);
+      skey = vec._key;
+
     } finally {
-      UKV.remove(dest);         // Remove whole frame
-      UKV.remove(vresponse._key);
-      if( gbm != null ) gbm.remove();
+      UKV.remove(dest);         // Remove original hex frame key
+      if( gbm != null ) {
+        UKV.remove(gbm.dest()); // Remove the model
+        UKV.remove(gbm.vresponse._key);
+        gbm.remove();           // Remove GBM Job
+        if( skey != null ) UKV.remove(skey);
+      }
     }
   }
 
+  static final int IGNS[] = new int[] { // covtype ignorable columns just while debugging DRF issues
+                       6, 7, 8, 9,
+    10,11,12,13,14,15,16,17,18,19,
+    20,21,22,23,24,25,26,27,28,29,
+    30,31,32,33,34,35,36,37,38,39,
+    40,41,42,43,44,45,46,47,48,49,
+  };
   @Test public void testBasicDRF() {
+    // Disabled Regression tests
+    //basicDRF("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         });
+
+    // Classification tests
     basicDRF("./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
+             new PrepData() { Vec prep(Frame fr) { return fr.remove(fr.numCols()-1); } 
              });
     basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
              new PrepData() {
@@ -73,14 +124,31 @@ public class GBMTest extends TestUtil {
                  return fr.remove("CAPSULE");
                }
              });
-    basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
-             new PrepData() {
-               Vec prep(Frame fr) { 
-                 assertEquals(581012,fr.numRows());
-                 // Covtype: predict on last column
-                 return fr.remove(54);
-               }
+    basicDRF("./smalldata/iris/iris_wheader.csv","iris.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("class"); } 
              });
+    basicDRF("./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
+             new PrepData() { Vec prep(Frame fr) { 
+               UKV.remove(fr.remove("IsArrDelayed")._key); 
+               return fr.remove("IsDepDelayed"); 
+             }
+             });
+    basicDRF("./smalldata/cars.csv","cars.hex",
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             });
+    basicDRF("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+             });
+    //basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+    //         //basicDRF("./smalldata/covtype/covtype.20k.data","covtype.hex",
+    //         new PrepData() {
+    //           Vec prep(Frame fr) {
+    //             for( int ign : IGNS )
+    //               UKV.remove(fr.remove(Integer.toString(ign))._key);
+    //             // Covtype: predict on last column
+    //             return fr.remove(fr.numCols()-1);
+    //           }
+    //         });
   }
 
   public void basicDRF(String fname, String hexname, PrepData prep) {
@@ -88,57 +156,72 @@ public class GBMTest extends TestUtil {
     if( file == null ) return;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
-    UKV.remove(fkey);
-    Vec vresponse = null;
+    Key skey = null;
     DRF drf = null;
     try {
-      vresponse = prep.prep(fr);
-      int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
-      long seed = (1L<<32)|2;
+      drf = new DRF();
+      drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
+      UKV.remove(fkey);
+      drf.vresponse = prep.prep(drf.source);
+      drf.ntrees = 5;
+      drf.max_depth = 50;
+      drf.min_rows = 1;
+      drf.nbins = 10;
+      drf.mtries = -1;
+      drf.sample_rate = 0.66667f;   // No sampling
+      drf.seed = (1L<<32)|2;
+      drf.serve();              // Start it
+      drf.get();                // Block for it
 
-      drf = DRF.start(DRF.makeKey(),fr,vresponse,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
-      drf.get();                  // Block for result
+      Vec vec = drf.score(drf.source);
+      skey = vec._key;
+
     } finally {
       UKV.remove(dest);         // Remove whole frame
-      UKV.remove(vresponse._key);
-      if( drf != null ) drf.remove();
+      if( drf != null ) {
+        UKV.remove(drf.dest()); // Remove the model
+        UKV.remove(drf.vresponse._key);
+        drf.remove();
+        if( skey != null ) UKV.remove(skey);
+      }
     }
   }
 
-  /*@Test*/ public void testCovtypeDRF() {
-    File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
-    if( file == null ) return;  // Silently abort test if the large covtype is missing
-    Key fkey = NFSFileVec.make(file);
-    Key dest = Key.make("cov1.hex");
-    Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
-    UKV.remove(fkey);
-    System.out.println("Parsed into "+fr);
-    for( int i=0; i<fr._vecs.length; i++ )
-      System.out.println("Vec "+i+" = "+fr._vecs[i]);
+  /*@Test*/ public void testCovtype() {
+    //Key okey = loadAndParseFile("covtype.hex", "smalldata/covtype/covtype.20k.data");
+    Key okey = loadAndParseFile("covtype.hex", "../datasets/UCI/UCI-large/covtype/covtype.data");
+    ValueArray val = UKV.get(okey);
 
-    try {
-      assertEquals(581012,fr._vecs[0].length());
-
-      // Confirm that on a multi-JVM test setup, covtype gets spread around
-      Vec c0 = fr.firstReadable();
-      int N = c0.nChunks();
-      H2ONode h2o =  c0.chunkKey(0).home_node(); // A chunkkey home
-      boolean found=false;        // Found another chunkkey home?
-      for( int j=1; j<N; j++ )    // All the chunks
-        if( h2o != c0.chunkKey(j).home_node() ) found = true;
-      assertTrue("Expecting to find distribution",found || H2O.CLOUD.size()==1);
-
-      // Covtype: predict on last column
-      Vec vy = fr.remove(54);
-      int mtrys = Math.max((int)Math.sqrt(fr.numCols()),1);
-      long seed = (1L<<32)|2;
-
-      DRF drf = DRF.start(DRF.makeKey(),fr,vy,/*maxdepth*/50,/*ntrees*/5,mtrys,/*sampleRate*/0.67,seed);
-      drf.get();                  // Block for result
-      UKV.remove(drf.destination_key);
-    } finally {
-      UKV.remove(dest);
+    // setup default values for DRF
+    int ntrees  = 4;
+    int depth   = 50;
+    int gini    = StatType.ENTROPY.ordinal();
+    int seed    = 42;
+    StatType statType = StatType.values()[gini];
+    // Setup all columns, minus an ignored set
+    final int cols[] = new int[val.numCols()-IGNS.length];
+    int x=0;
+    for( int i=0; i<val.numCols(); i++ ) {
+      if( x < IGNS.length && IGNS[x] == i ) x++;
+      else cols[i-x]=i;
     }
+    System.out.println("RF1 cols="+Arrays.toString(cols));
+
+    // Start the distributed Random Forest
+    final Key modelKey = Key.make("model");
+    DRFJob result = hex.rf.DRF.execute(modelKey,cols,val,ntrees,depth,1024,statType,seed, true, null, -1, Sampling.Strategy.RANDOM, 0.66667f, null, 1/*verbose*/, 0, false);
+    // Wait for completion on all nodes
+    RFModel model = result.get();
+    CMJob cmjob = ConfusionTask.make( model, val._key, cols[cols.length-1], null, false);
+    CMFinal cm = cmjob.get(); // block until CM is computed
+    cm.report();
+    UKV.remove(cmjob.dest());
+
+    assertEquals("Number of classes", 7,  model.classes());
+    assertEquals("Number of trees", ntrees, model.size());
+
+    model.deleteKeys();
+    UKV.remove(modelKey);
+    UKV.remove(okey);
   }
 }

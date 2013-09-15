@@ -1,8 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b 
 # trial # 29 with num rows: 4829 parse end on  syn_prostate.csv took 5.05665111542 seconds
 # 4457
 # ERROR
@@ -90,13 +88,13 @@ class parse_rand_schmoo(unittest.TestCase):
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
             # needs a big polling timeout, for the later iterations?
-            key = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=150, pollTimeoutSecs=150)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
-            ### h2o_cmd.runInspect(key=key2)
+            ### h2o_cmd.runInspect(key=hex_key)
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
 

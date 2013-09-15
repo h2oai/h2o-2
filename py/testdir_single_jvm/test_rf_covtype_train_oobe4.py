@@ -43,19 +43,16 @@ class Basic(unittest.TestCase):
 
     def test_rf_covtype_train_oobe4(self):
         print "\nUse randomFilter to sample the dataset, then slice it"
-        importFolderPath = "/home/0xdiag/datasets/standard"
-        # get different results
-        ### csvFilename = 'covtype.shuffled.data'
+        importFolderPath = "standard"
         csvFilename = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilename
-        key2 = csvFilename + ".hex"
+        hex_key = csvFilename + ".hex"
 
-        h2i.setupImportFolder(None, importFolderPath)
         print "\nUsing header=0 on the normal covtype.data"
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, 
             header=0, timeoutSecs=100)
 
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -80,14 +77,14 @@ class Basic(unittest.TestCase):
 
         # Just for test purposes, create these using randomFilter..they overlap, so not valid for really test/train
         # FIX! too many digits (10) in the 2nd param seems to cause stack trace
-        ### execExpr = dataKeyTest + "=randomFilter(" + key2 + "," + str(pct10) + ",12345)"
-        execExpr = dataKeyTest + "=" + key2
+        ### execExpr = dataKeyTest + "=randomFilter(" + hex_key + "," + str(pct10) + ",12345)"
+        execExpr = dataKeyTest + "=" + hex_key
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
-        execExpr = dataKeyTrain + "=randomFilter(" + key2 + "," + str(rowsForPct[9]) + ",12345)"
+        execExpr = dataKeyTrain + "=randomFilter(" + hex_key + "," + str(rowsForPct[9]) + ",12345)"
         # FIX! don't do the randFilter for now. 
         print "This generation of test/train isn't stats-legal since they overlap"
-        execExpr = dataKeyTrain + "=" + key2
+        execExpr = dataKeyTrain + "=" + hex_key
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=10)
 
         # keep the 0 entry empty
@@ -102,7 +99,7 @@ class Basic(unittest.TestCase):
             execExpr = resultKey + "=slice(" + dataKeyTrain + ",1," + str(rowsToUse) + ")"
             print "execExpr:", execExpr
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
-            parseKey['destination_key'] = resultKey
+            parseResult['destination_key'] = resultKey
 
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
@@ -113,7 +110,7 @@ class Basic(unittest.TestCase):
             kwargs['out_of_bag_error_estimate'] = 1
             kwargs['model_key'] = "model_" + str(trial)
             
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
@@ -141,7 +138,10 @@ class Basic(unittest.TestCase):
             rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
-            h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],

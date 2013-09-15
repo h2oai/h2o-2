@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
             ]
 
         ### h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs, timeoutSecs2) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -60,14 +60,15 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             start = time.time()
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=False)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+                timeoutSecs=timeoutSecs, doSummary=False)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
             # We should be able to see the parse result?
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs2)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs2)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \

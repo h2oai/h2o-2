@@ -1,7 +1,6 @@
 import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_kmeans
 
 class Basic(unittest.TestCase):
@@ -26,17 +25,16 @@ class Basic(unittest.TestCase):
 
     def test_parse_bounds_libsvm(self):
         # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/libsvm"
-
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
             # FIX! fails KMeansScore
-            ("tmc2007_train.svm",  "cJ", 30, 1),
-            ("mnist_train.svm", "cM", 30, 1),
-            ("covtype.binary.svm", "cC", 30, 1),
             ("colon-cancer.svm",   "cA", 30, 1),
             ("connect4.svm",       "cB", 30, 1),
+            ("covtype.binary.svm", "cC", 30, 1),
+            # multi-label class
+            # ("tmc2007_train.svm",  "cJ", 30, 1),
+            ("mnist_train.svm", "cM", 30, 1),
             ("duke.svm",           "cD", 30, 1),
             # too many features? 150K inspect timeout?
             # ("E2006.train.svm",    "cE", 30, 1),
@@ -54,22 +52,22 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         firstDone = False
-        for (csvFilename, key2, timeoutSecs, resultMult) in csvFilenameList:
+        importFolderPath = "libsvm"
+        for (csvFilename, hex_key, timeoutSecs, resultMult) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
-            h2i.setupImportFolder(None, importFolderPath)
             csvPathname = importFolderPath + "/" + csvFilename
 
             # PARSE******************************************
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
-                key2=key2, timeoutSecs=2000)
-            print csvPathname, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
+                hex_key=hex_key, timeoutSecs=2000)
+            print csvPathname, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # INSPECT******************************************
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvFilename)
 
             # KMEANS******************************************
@@ -85,18 +83,18 @@ class Basic(unittest.TestCase):
                 }
 
                 # fails if I put this in kwargs..i.e. source = dest
-                # 'destination_key': parseKey['destination_key'],
+                # 'destination_key': parseResult['destination_key'],
 
                 timeoutSecs = 600
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
                 # this does an inspect of the model and prints the clusters
                 h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
-                (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+                (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
 
 

@@ -1,8 +1,6 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_util, h2o_import as h2i
 
 def ch1(n):
     return 0
@@ -40,12 +38,13 @@ class Basic(unittest.TestCase):
     def test_rand_inspect(self):
         ### h2b.browseTheCloud()
         csvFilename = 'covtype.data'
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/'+ csvFilename)
+        csvPathname = 'UCI/UCI-large/covtype/'+ csvFilename
+        hex_key = csvFilename + ".hex"
         print "\n" + csvPathname
 
-        parseKey = h2o_cmd.parseFile(None, csvPathname, key=csvFilename, timeoutSecs=10)
-        destination_key = parseKey['destination_key']
-        print csvFilename, 'parse time:', parseKey['response']['time']
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+        destination_key = parseResult['destination_key']
+        print csvFilename, 'parse time:', parseResult['response']['time']
         print "Parse result['destination_key']:", destination_key 
 
         def inspect_and_check(nodeX,destination_key,offset,view,inspect=None):

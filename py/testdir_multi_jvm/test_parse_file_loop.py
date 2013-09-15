@@ -1,6 +1,6 @@
 import unittest, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -20,14 +20,15 @@ class Basic(unittest.TestCase):
 
     def test_parse_file_loop(self):
         lenNodes = len(h2o.nodes)
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
 
         trial = 0
         for i in range(2):
             for j in range(1,10):
                 # spread the parse around the nodes. Note that keys are produced by H2O, so keys not resused
                 nodeX = random.randint(0,lenNodes-1) 
-                key = h2o_cmd.parseFile(h2o.nodes[nodeX],csvPathname=h2o.find_file("smalldata/logreg/prostate.csv"))
+                parseResult= h2i.import_parse(node=h2o.nodes[nodeX],
+                    bucket='smalldata', path='logreg/prostate.csv', schema='put')
                 trial += 1
 
             # dump some cloud info so we can see keys?

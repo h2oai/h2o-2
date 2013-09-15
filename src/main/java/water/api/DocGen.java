@@ -8,39 +8,48 @@ import water.*;
 import water.api.RequestArguments.Argument;
 import water.util.Log;
 
+import hex.gbm.*;
+
 /**
  * Auto-gen doc support, for JSON & REST API docs
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
 public abstract class DocGen {
-  static final HTML HTML = new HTML();
-  static final ReST ReST = new ReST();
+  public static final HTML HTML = new HTML();
+  public static final ReST ReST = new ReST();
 
   public static void createFile (String fileName, String content) {
-    try
-    {
+    try {
       FileWriter fstream = new FileWriter(fileName, false); //true tells to append data.
       BufferedWriter out = new BufferedWriter(fstream);
       out.write(content);
       out.close();
-    }
-    catch (Exception e)
-    {
+    } catch (Exception e) {
       System.err.println("Error: " + e.getMessage());
     }
   }
 
   public static void createReSTFilesInCwd() {
+    /*
     createFile("ImportFiles.rst", new ImportFiles().ReSTHelp());
     createFile("ImportFiles2.rst", new ImportFiles2().ReSTHelp());
     createFile("Parse2.rst", new Parse2().ReSTHelp());
+    */
+    createFile("GBM.rst", new GBM().ReSTHelp());
+    createFile("DRF.rst", new DRF().ReSTHelp());
   }
 
-  public static void main(String[] args) {
-    H2O.main(args);
-    TestUtil.stall_till_cloudsize(1);
-    createReSTFilesInCwd();
-    H2O.exit(0);
+  public static void main(String[] args) throws Exception {
+    water.Boot.main(UserCode.class, args);
+  }
+
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
+      H2O.main(args);
+      TestUtil.stall_till_cloudsize(1);
+      createReSTFilesInCwd();
+      H2O.exit(0);
+    }
   }
 
   // Class describing meta-info about H2O queries and results.
@@ -94,18 +103,18 @@ public abstract class DocGen {
   // --------------------------------------------------------------------------
   // Abstract text generators, for building pretty docs in either HTML or
   // ReStructuredText form.
-  abstract StringBuilder escape( StringBuilder sb, String s );
-  abstract StringBuilder bodyHead( StringBuilder sb );
-  abstract StringBuilder bodyTail( StringBuilder sb );
-  abstract StringBuilder title( StringBuilder sb, String t );
-  abstract StringBuilder section( StringBuilder sb, String t );
-  abstract StringBuilder listHead( StringBuilder sb );
-  abstract StringBuilder listBullet( StringBuilder sb, String s, String body, int d );
-  abstract StringBuilder listTail( StringBuilder sb );
-  abstract String bold( String s );
-  abstract StringBuilder paraHead( StringBuilder sb );
-  abstract StringBuilder paraTail( StringBuilder sb );
-  StringBuilder paragraph( StringBuilder sb, String s ) {
+  public abstract StringBuilder escape( StringBuilder sb, String s );
+  public abstract StringBuilder bodyHead( StringBuilder sb );
+  public abstract StringBuilder bodyTail( StringBuilder sb );
+  public abstract StringBuilder title( StringBuilder sb, String t );
+  public abstract StringBuilder section( StringBuilder sb, String t );
+  public abstract StringBuilder listHead( StringBuilder sb );
+  public abstract StringBuilder listBullet( StringBuilder sb, String s, String body, int d );
+  public abstract StringBuilder listTail( StringBuilder sb );
+  public abstract String bold( String s );
+  public abstract StringBuilder paraHead( StringBuilder sb );
+  public abstract StringBuilder paraTail( StringBuilder sb );
+  public StringBuilder paragraph( StringBuilder sb, String s ) {
     return paraTail(paraHead(sb).append(s));
   }
 
@@ -244,9 +253,9 @@ public abstract class DocGen {
 
   // --------------------------------------------------------------------------
   // HTML flavored help text
-  static class HTML extends DocGen {
+  public static class HTML extends DocGen {
     @SuppressWarnings("unused")
-    @Override StringBuilder escape(StringBuilder sb, String s ) {
+    @Override public StringBuilder escape(StringBuilder sb, String s ) {
       int len=s.length();
       for( int i=0; i<len; i++ ) {
         char c = s.charAt(i);
@@ -259,23 +268,23 @@ public abstract class DocGen {
       }
       return sb;
     }
-    @Override StringBuilder bodyHead( StringBuilder sb ) {
+    @Override public StringBuilder bodyHead( StringBuilder sb ) {
       return sb.append("<div class='container'>"+
                        "<div class='row-fluid'>"+
                        "<div class='span12'>");
     }
-    @Override StringBuilder bodyTail( StringBuilder sb ) { return sb.append("</div></div></div>"); }
-    @Override StringBuilder title  ( StringBuilder sb, String t ) { return sb.append("<h3>").append(t).append("</h3>\n"); }
-    @Override StringBuilder section( StringBuilder sb, String t ) { return sb.append("<h4>").append(t).append("</h4>\n"); }
-    @Override StringBuilder paraHead( StringBuilder sb ) { return sb.append("<p>"); }
-    @Override StringBuilder paraTail( StringBuilder sb ) { return sb.append("</p>\n"); }
+    @Override public StringBuilder bodyTail( StringBuilder sb ) { return sb.append("</div></div></div>"); }
+    @Override public StringBuilder title  ( StringBuilder sb, String t ) { return sb.append("<h3>").append(t).append("</h3>\n"); }
+    @Override public StringBuilder section( StringBuilder sb, String t ) { return sb.append("<h4>").append(t).append("</h4>\n"); }
+    @Override public StringBuilder paraHead( StringBuilder sb ) { return sb.append("<p>"); }
+    @Override public StringBuilder paraTail( StringBuilder sb ) { return sb.append("</p>\n"); }
 
-    @Override StringBuilder listHead( StringBuilder sb ) { return sb.append("<ul>"); }
-    @Override StringBuilder listBullet( StringBuilder sb, String s, String body, int d ) {
+    @Override public StringBuilder listHead( StringBuilder sb ) { return sb.append("<ul>"); }
+    @Override public StringBuilder listBullet( StringBuilder sb, String s, String body, int d ) {
       return paragraph(sb.append("<li>").append(s).append("</li>"),body).append('\n');
     }
-    @Override StringBuilder listTail( StringBuilder sb ) { return sb.append("</ul>\n"); }
-    @Override String bold( String s ) { return "<b>"+s+"</b>"; }
+    @Override public StringBuilder listTail( StringBuilder sb ) { return sb.append("</ul>\n"); }
+    @Override public String bold( String s ) { return "<b>"+s+"</b>"; }
 
     public StringBuilder arrayHead( StringBuilder sb ) { return arrayHead(sb,null); }
     public StringBuilder arrayHead( StringBuilder sb, String[] headers ) {
@@ -306,22 +315,22 @@ public abstract class DocGen {
       for( int i=0; i<len; i++ ) sb.append(c);
       return cr(cr(sb));
     }
-    @Override StringBuilder escape(StringBuilder sb, String s ) { return sb.append(s); }
-    @Override StringBuilder bodyHead( StringBuilder sb ) { return sb; }
-    @Override StringBuilder bodyTail( StringBuilder sb ) { return sb; }
-    @Override StringBuilder title  ( StringBuilder sb, String t ) { return underLine(sb,t,'='); }
-    @Override StringBuilder section( StringBuilder sb, String t ) { return underLine(sb,t,'-'); }
-    @Override StringBuilder listHead( StringBuilder sb ) { return cr(sb); }
-    @Override StringBuilder listBullet( StringBuilder sb, String s, String body, int d ) {
+    @Override public StringBuilder escape(StringBuilder sb, String s ) { return sb.append(s); }
+    @Override public StringBuilder bodyHead( StringBuilder sb ) { return sb; }
+    @Override public StringBuilder bodyTail( StringBuilder sb ) { return sb; }
+    @Override public StringBuilder title  ( StringBuilder sb, String t ) { return underLine(sb,t,'='); }
+    @Override public StringBuilder section( StringBuilder sb, String t ) { return underLine(sb,t,'-'); }
+    @Override public StringBuilder listHead( StringBuilder sb ) { return cr(sb); }
+    @Override public StringBuilder listBullet( StringBuilder sb, String s, String body, int d ) {
       if( d > 0 ) sb.append("  ");
       cr(sb.append("*  ").append(s));
       if( body.length() > 0 )
         cr(cr(cr(sb).append("   ").append(body)));
       return sb;
     }
-    @Override StringBuilder listTail( StringBuilder sb ) { return cr(sb); }
-    @Override String bold( String s ) { return "**"+s+"**"; }
-    @Override StringBuilder paraHead( StringBuilder sb ) { return sb.append("  "); }
-    @Override StringBuilder paraTail( StringBuilder sb ) { return cr(sb); }
+    @Override public StringBuilder listTail( StringBuilder sb ) { return cr(sb); }
+    @Override public String bold( String s ) { return "**"+s+"**"; }
+    @Override public StringBuilder paraHead( StringBuilder sb ) { return sb.append("  "); }
+    @Override public StringBuilder paraTail( StringBuilder sb ) { return cr(sb); }
   }
 }

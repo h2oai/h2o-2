@@ -63,22 +63,17 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        USEKNOWNFAILURE = False
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_%s_%sx%s.csv' % (SEEDPERFILE,rowCount,colCount)
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            if USEKNOWNFAILURE:
-                csvFilename = 'failtoconverge_100x50.csv'
-                csvPathname = h2o.find_file('smalldata/logreg/' + csvFilename)
-
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             y = colCount
@@ -93,16 +88,12 @@ class Basic(unittest.TestCase):
                     'thresholds': '0:1:0.01',
                     }
 
-            if USEKNOWNFAILURE:
-                kwargs['y'] = 50
-            else:
-                kwargs['y'] = y
-
+            kwargs['y'] = y
             emsg = None
             # FIX! how much should we loop here. 
             for i in range(3):
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison
@@ -113,10 +104,7 @@ class Basic(unittest.TestCase):
                     print "\n", "\ncoefficients in col order:"
                     # since we're loading the x50 file all the time..the real colCount 
                     # should be 50 (0 to 49)
-                    if USEKNOWNFAILURE:
-                        showCols = 50
-                    else:
-                        showCols = colCount
+                    showCols = colCount
                     for c in range(showCols):
                         print "%s:\t%.6e" % (c, coefficients[c])
                     print "intercept:\t %.6e" % intercept

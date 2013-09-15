@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         USEKNOWNFAILURE = False
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_%s_%sx%s.csv' % (SEEDPERFILE,rowCount,colCount)
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -73,12 +73,12 @@ class Basic(unittest.TestCase):
 
             if USEKNOWNFAILURE:
                 csvFilename = 'failtoconverge_100x50.csv'
-                csvPathname = h2o.find_file('smalldata/logreg/' + csvFilename)
+                csvPathname = 'logreg/' + csvFilename
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             y = colCount
@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
             emsg = None
             for i in range(3):
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison

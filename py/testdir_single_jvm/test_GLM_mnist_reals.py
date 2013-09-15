@@ -15,38 +15,17 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(1)
         else:
-            # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts(1, 
-                # this is for our amazon ec hdfs
-                # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-                hdfs_name_node='10.78.14.235:9000',
-                hdfs_version='0.20.2')
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_GLM_mnist_reals(self):
-        importFolderPath = "/home/0xdiag/datasets/mnist"
+        importFolderPath = "mnist"
         csvFilelist = [
             ("mnist_reals_training.csv.gz", "mnist_reals_testing.csv.gz",    600), 
         ]
-        # IMPORT**********************************************
-        # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-        ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
-        if 'files' in importFolderResult:
-            succeededList = importFolderResult['files']
-        else:
-            succeededList = importFolderResult['succeeded']
-
-        ### print "succeededList:", h2o.dump_json(succeededList)
-
-        self.assertGreater(len(succeededList),1,"Should see more than 1 files in the import?")
-        # why does this hang? can't look at storeview after import?
-        print "\nTrying StoreView after the import folder"
-        h2o_cmd.runStoreView(timeoutSecs=30)
-
         trial = 0
         for (trainCsvFilename, testCsvFilename, timeoutSecs) in csvFilelist:
             trialStart = time.time()
@@ -54,31 +33,31 @@ class Basic(unittest.TestCase):
             # PARSE test****************************************
             testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
-                key2=testKey2, timeoutSecs=timeoutSecs)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="mnist/" + testCsvFilename, schema='put', 
+                hex_key=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             print "We won't use this pruning of x on test data. See if it prunes the same as the training"
             y = 0 # first column is pixel value
             print "y:"
-            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+            x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
 
             # PARSE train****************************************
             trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, trainCsvFilename, importFolderPath,
-                key2=trainKey2, timeoutSecs=timeoutSecs)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="mnist/" + trainCsvFilename,
+                hex_key=trainKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
 
             # GLM****************************************
             print "This is the pruned x we'll use"
-            x = h2o_glm.goodXFromColumnInfo(y, key=parseKey['destination_key'], timeoutSecs=300)
+            x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
             print "x:", x
 
             params = {
@@ -103,7 +82,7 @@ class Basic(unittest.TestCase):
 
                 timeoutSecs = 1800
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
                 elapsed = time.time() - start
                 print "GLM completed in", elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

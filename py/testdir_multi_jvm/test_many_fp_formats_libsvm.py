@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_glm
 
 zeroList = [
@@ -186,7 +184,7 @@ class Basic(unittest.TestCase):
             ]
 
         # h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs, distribution) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs, distribution) in tryList:
             # for sel in range(48): # len(caseList)
             for sel in [random.randint(0,47)]: # len(caseList)
                 SEEDPERFILE = random.randint(0, sys.maxint)
@@ -197,11 +195,11 @@ class Basic(unittest.TestCase):
                 # dict of col sums for comparison to exec col sums below
                 (synColSumDict, colNumberMax)  = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distribution)
 
-                selKey2 = key2 + "_" + str(sel)
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs)
-                print csvFilename, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+                selKey2 = hex_key + "_" + str(sel)
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=selKey2, timeoutSecs=timeoutSecs)
+                print csvFilename, 'parse time:', parseResult['response']['time']
+                print "Parse result['destination_key']:", parseResult['destination_key']
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
                 num_cols = inspect['num_cols']
                 num_rows = inspect['num_rows']
                 print "\n" + csvFilename
@@ -209,11 +207,11 @@ class Basic(unittest.TestCase):
                 # SUMMARY****************************************
                 # gives us some reporting on missing values, constant values, 
                 # to see if we have x specified well
-                # figures out everything from parseKey['destination_key']
+                # figures out everything from parseResult['destination_key']
                 # needs y to avoid output column (which can be index or name)
                 # assume all the configs have the same y..just check with the firs tone
                 goodX = h2o_glm.goodXFromColumnInfo(y=0,
-                    key=parseKey['destination_key'], timeoutSecs=300)
+                    key=parseResult['destination_key'], timeoutSecs=300)
 
                 if DO_SUMMARY:
                     summaryResult = h2o_cmd.runSummary(key=selKey2, timeoutSecs=360)

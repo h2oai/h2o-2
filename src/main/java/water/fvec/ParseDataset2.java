@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.zip.*;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.nbhm.NonBlockingHashMap;
@@ -63,6 +64,14 @@ public final class ParseDataset2 extends Job {
       parse_impl(_job, _keys, _setup);
       tryComplete();
     }
+
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      if(_job != null){
+        _job.cancel(ex.toString());
+      }
+      ex.printStackTrace();
+      return true;
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -70,6 +79,7 @@ public final class ParseDataset2 extends Job {
   static class ParseProgress extends Iced {
     final long _total;
     long _value;
+    DException _ex;
     ParseProgress(long val, long total){_value = val; _total = total;}
     // Total number of steps is equal to total bytecount across files
     static ParseProgress make( Key[] fkeys ) {
@@ -78,6 +88,8 @@ public final class ParseDataset2 extends Job {
         total += getVec(fkey).length();
       return new ParseProgress(0,total);
     }
+    public void setException(DException ex){_ex = ex;}
+    public DException getException(){return _ex;}
   }
   static final void onProgress(final long len, final Key progress) {
     new TAtomic<ParseProgress>() {
@@ -117,7 +129,7 @@ public final class ParseDataset2 extends Job {
     boolean _run;
     public EnumUpdateTask(String [][] gDomain,Key lDomKey, int [] colIds){_gDomain = gDomain; _eKey = lDomKey;_colIds = colIds;}
 
-    @Override public void init(){
+    @Override public void setupLocal(){
       // compute the emap
       if((_run = MultiFileParseTask._enums.containsKey(_eKey))){
         Enum [] enums = MultiFileParseTask._enums.get(_eKey);
@@ -139,10 +151,10 @@ public final class ParseDataset2 extends Job {
       if(_run)
       for(int i = 0; i < chks.length; ++i){
         for( int j = 0; j < chks[i]._len; ++j){
+          if( chks[i].isNA0(j) ) continue;
           long l = chks[i].at80(j);
-          if( chks[i].valueIsNA(l) ) continue;
           assert _emap[i][(int)l] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + "chunk=" + chks[i].getClass().getSimpleName();
-          chks[i].set80(j, _emap[i][(int)l]);
+          chks[i].set0(j, _emap[i][(int)l]);
         }
       }
     }
@@ -234,8 +246,6 @@ public final class ParseDataset2 extends Job {
       return;
     }
     MultiFileParseTask uzpt = new MultiFileParseTask(setup,job._progress).invoke(fkeys);
-    if( uzpt._parserr != null )
-      throw new ParseException(uzpt._parserr);
     int [] ecols = uzpt.enumCols();
     String[] names = new String[uzpt._vecs.length];
     for( int i=0; i<names.length; i++ )
@@ -434,12 +444,11 @@ public final class ParseDataset2 extends Job {
       int [] res = new int[_vecs.length];
       int n = 0;
       for(int i = 0; i < _vecs.length; ++i)
-        if(_vecs[i].dtype() == Vec.DType.S)
+        if( _vecs[i].isEnum() )
           res[n++] = i;
       return Arrays.copyOf(res, n);
     }
   }
-
 
   /**
    * Parsed data output specialized for fluid vecs.

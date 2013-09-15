@@ -24,8 +24,6 @@ class Basic(unittest.TestCase):
 
     def test_B_importFolder_files(self):
         # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/standard"
-        h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 1500
 
         csvFilenameAll = [
@@ -43,15 +41,15 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             start = time.time()
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/' + csvFilename,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
             elapsed = time.time() - start
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
             print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(key=parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
             print "\n" + csvFilename
             kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case': 1}
@@ -61,7 +59,7 @@ class Basic(unittest.TestCase):
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)

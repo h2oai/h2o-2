@@ -1,25 +1,37 @@
 package hex;
 
-import water.*;
+import water.H2O;
+import water.TestUtil;
 import water.deploy.Cloud;
 import water.util.Log;
 
-public class MnistDist16x extends MnistCanvas {
+public class MnistDist16x {
   public static void main(String[] args) throws Exception {
-    //water.Boot.main(UserMain.class, args);
-    cloud4();
+    Cloud cloud = new Cloud();
+    for( int i = LOW; i < LOW + LEN; i++ )
+      cloud._publicIPs.add("192.168.1." + (161 + i));
+    cloud._clientRSyncIncludes.add("../libs/jdk");
+    cloud._clientRSyncIncludes.add("smalldata");
+    cloud._clientRSyncIncludes.add("experiments/target");
+    cloud._fannedRSyncIncludes.add("jdk");
+    cloud._fannedRSyncIncludes.add("smalldata");
+    String java = "-ea -Xmx12G -Dh2o.debug";
+    String node = "-mainClass " + MnistDist16x.UserCode.class.getName();
+    cloud.start(java.split(" "), node.split(" "));
   }
 
-  public static class UserMain {
-    public static void main(String[] args) throws Exception {
-      H2O.main(args);
-      TestUtil.stall_till_cloudsize(1);
-      Log.info("blah");
-      // localCloud();
+  static int LOW = 1, LEN = 3;
 
-      Sample07_NeuralNet_Mnist mnist = new Sample07_NeuralNet_Mnist();
-      mnist.init();
-      _test = mnist;
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
+      H2O.main(args);
+
+      Log.info("blah: " + System.getProperty("java.home"));
+
+      TestUtil.stall_till_cloudsize(LEN);
+
+      MnistDist mnist = new MnistDist();
+      mnist.run();
 
       // Basic visualization of images and weights
 //      JFrame frame = new JFrame("H2O");
@@ -29,26 +41,6 @@ public class MnistDist16x extends MnistCanvas {
 //      frame.pack();
 //      frame.setLocationRelativeTo(null);
 //      frame.setVisible(true);
-
-      mnist.run();
     }
-  }
-
-  static void localCloud() {
-    Sandbox.localCloud(2, true, new String[0]);
-  }
-
-  static void cloud4() {
-    Cloud cloud = new Cloud();
-    for( int i = 0; i < 1; i++ )
-      cloud._publicIPs.add("192.168.1." + (161 + i));
-    cloud._clientRSyncIncludes.add("../libs/jdk");
-    cloud._clientRSyncIncludes.add("smalldata");
-    cloud._clientRSyncIncludes.add("experiments/target");
-    cloud._fannedRSyncIncludes.add("jdk");
-    cloud._fannedRSyncIncludes.add("smalldata");
-    String java = "-ea -Xmx12G -Dh2o.debug";
-    String args = "-mainClass " + MnistDist16x.UserMain.class.getName();
-    cloud.start(java.split(" "), args.split(" "));
   }
 }

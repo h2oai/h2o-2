@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i
 
 # a truly uniform sphere
 # http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
         write_syn_dataset(csvPathname, 1000000, SEED)
 
         print "\nStarting", csvFilename
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=csvFilename + ".hex")
 
         for trial in range(10):
             # reuse the same seed, to get deterministic results (otherwise sometimes fails
@@ -103,11 +103,11 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 90
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            (centers, tupleResultList)  = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+            (centers, tupleResultList)  = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
             expected = [
                 ([100, 100, 100], 1000000,   60028168),

@@ -57,25 +57,26 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_change_data_key(self):
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = 'standard'
 
         csvFilenameTrain = 'covtype.data'
-        parseKeyTrain = h2i.parseImportFolderFile(None, csvFilenameTrain, importFolderPath, timeoutSecs=500)
-        print csvFilenameTrain, 'parse time:', parseKeyTrain['response']['time']
-        inspect = h2o_cmd.runInspect(key=parseKeyTrain['destination_key'])
-        dataKeyTrain = parseKeyTrain['destination_key']
+        csvPathname = importFolderPath + "/" + csvFilenameTrain
+        parseResultTrain = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=500)
+        print csvFilenameTrain, 'parse time:', parseResultTrain['response']['time']
+        inspect = h2o_cmd.runInspect(key=parseResultTrain['destination_key'])
+        dataKeyTrain = parseResultTrain['destination_key']
         print "Parse end", dataKeyTrain
 
         # we could train on covtype, and then use covtype20x for test? or vice versa
-        # parseKey = parseKey
+        # parseResult = parseResult
         # dataKeyTest = dataKeyTrain
         csvFilenameTest = 'covtype20x.data'
-        parseKeyTest = h2i.parseImportFolderFile(None, csvFilenameTest, importFolderPath, timeoutSecs=500)
-        print csvFilenameTest, 'parse time:', parseKeyTest['response']['time']
-        print "Parse result['destination_key']:", parseKeyTest['destination_key']
-        inspect = h2o_cmd.runInspect(key=parseKeyTest['destination_key'])
-        dataKeyTest = parseKeyTest['destination_key']
+        csvPathname = importFolderPath + "/" + csvFilenameTest
+        parseResultTest = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=500)
+        print csvFilenameTest, 'parse time:', parseResultTest['response']['time']
+        print "Parse result['destination_key']:", parseResultTest['destination_key']
+        inspect = h2o_cmd.runInspect(key=parseResultTest['destination_key'])
+        dataKeyTest = parseResultTest['destination_key']
 
         print "Parse end", dataKeyTest
 
@@ -101,7 +102,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
 
         start = time.time()
-        rfv = h2o_cmd.runRFOnly(parseKey=parseKeyTrain,
+        rfv = h2o_cmd.runRF(parseResult=parseResultTrain,
             timeoutSecs=timeoutSecs, retryDelaySecs=1, noPoll=True, **kwargs)
         print "rf job dispatch end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
         ### print "rf response:", h2o.dump_json(rfv)
@@ -121,9 +122,13 @@ class Basic(unittest.TestCase):
         for trial in range(3):
             # scoring
             start = time.time()
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, timeoutSecs, out_of_bag_error_estimate=1, retryDelaySecs=1)
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, 
+                model_key, ntree, timeoutSecs, out_of_bag_error_estimate=1, retryDelaySecs=1)
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'

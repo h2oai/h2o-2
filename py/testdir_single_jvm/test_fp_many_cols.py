@@ -2,6 +2,8 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
+H2O_SUPPORTS_OVER_100K_COLS = False
+
 print "Stress the # of cols with fp reals here." 
 print "Can pick fp format but will start with just the first (e0)"
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel):
@@ -114,18 +116,26 @@ class Basic(unittest.TestCase):
             (100, 70000, 'cD', 30, 120),
             (100, 90000, 'cE', 30, 120),
             (100, 100000, 'cF', 30, 120),
-            (100, 200000, 'cG', 30, 120),
-            (100, 300000, 'cH', 30, 120),
-            (100, 400000, 'cI', 30, 120),
-            (100, 500000, 'cJ', 30, 120),
-            (100, 600000, 'cK', 30, 120),
-            (100, 700000, 'cL', 30, 120),
-            (100, 800000, 'cM', 30, 120),
-            (100, 900000, 'cN', 30, 120),
-            (100, 1000000, 'cO', 30, 120),
+        ]
+
+        if not H2O_SUPPORTS_OVER_100K_COLS:
+            print "Restricting number of columns tested to 100,000"
+        else:
+            tryList = tryList + [
+                (100, 200000, 'cG', 30, 120),
+                (100, 300000, 'cH', 30, 120),
+                (100, 400000, 'cI', 30, 120),
+                (100, 500000, 'cJ', 30, 120),
+                (100, 600000, 'cK', 30, 120),
+                (100, 700000, 'cL', 30, 120),
+                (100, 800000, 'cM', 30, 120),
+                (100, 900000, 'cN', 30, 120),
+                (100, 1000000, 'cO', 30, 120),
             ]
+
+
         
-        for (rowCount, colCount, key2, timeoutSecs, timeoutSecs2) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             sel = 0
             csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
@@ -136,15 +146,15 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print csvFilename, "parse starting"
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=True)
             h2o.check_sandbox_for_errors()
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse and summary:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse and summary:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
             # We should be able to see the parse result?
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs2)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs2)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \

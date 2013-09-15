@@ -30,19 +30,19 @@ class Basic(unittest.TestCase):
     def test_exec_filter_slice(self):
         timeoutSecs = 10
         csvFilename = "covtype.data"
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        key2 = "c"
-        parseKey = h2o_cmd.parseFile(None, csvPathname, 'covtype.data', 'c', 10)
-        print csvFilename, 'parse time:', parseKey['response']['time']
-        print "Parse result['desination_key']:", parseKey['destination_key']
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        hex_key = "c"
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, 
+            timeoutSecs=10)
+        print csvFilename, 'parse time:', parseResult['response']['time']
+        print "Parse result['desination_key']:", parseResult['destination_key']
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
         for trial in range(10):
             print "Doing the execs in order, to feed filters into slices"
             nodeX = 0
             for exprTemplate in exprList:
-                execExpr = h2e.fill_in_expr_template(exprTemplate, colX=0, n=0, row=1, key2=key2, m=2)
-
+                execExpr = h2e.fill_in_expr_template(exprTemplate, colX=0, n=0, row=1, keyX=hex_key, m=2)
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
                     resultKey="Result.hex", timeoutSecs=4)
 

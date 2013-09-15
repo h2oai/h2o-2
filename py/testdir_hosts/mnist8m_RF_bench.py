@@ -1,9 +1,6 @@
 import unittest,time,sys,os,csv,socket
 sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts
-import h2o_browse as h2b
-import h2o_import as h2i
-import h2o_rf
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
 from pprint import pprint
 
 csv_header = ('java_heap_GB','dataset','nTrainRows','nTestRows','nCols',
@@ -14,8 +11,6 @@ local_files = {'train':'mnist8m-train-1.csv',
                'test':'mnist8m-test-1.csv'}
 def run_rf(files,configs):
     overallWallStart = time.time()
-    importFolderPath = '/home/0xdiag/datasets/mnist/mnist8m'
-    importFolderResult = h2i.setupImportFolder(None, importFolderPath)
     output = None
     #if not os.path.exists('rfbench.csv'):
     #    output = open('rfbench.csv','w')
@@ -30,15 +25,15 @@ def run_rf(files,configs):
         #Train File Parsing#
         trainParseWallStart = time.time()
         print "Training file is: ", files['train']
-        csvPathname = files['train']
-        destKey = files['train'] + '.hex'
-        parseKey = h2i.parseImportFolderFile(None,csvPathname,
-                        importFolderPath,key2=destKey,
-                        timeoutSecs=300,retryDelaySecs=5,pollTimeoutSecs=120)
+        importFolderPath = "mnist/mnist8m"
+        csvPathname = importFolderPath + "/" + files['train']
+        hex_key = files['train'] + '.hex'
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key
+                        timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=120)
         trainParseWallTime = time.time() - trainParseWallStart
         #End Train File Parse#
 
-        inspect = h2o.nodes[0].inspect(parseKey['destination_key'])
+        inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
         row = {'java_heap_GB':java_heap_GB,'dataset':'mnist8m',
                 'nTrainRows': inspect['num_rows'],'nCols':inspect['num_cols'],
                 #'nIgnoredCols':nIgnoredCols,'ignoredCols':ignoredCols,
@@ -47,7 +42,7 @@ def run_rf(files,configs):
         #RF+RFView (train)#
         kwargs = configs.copy()
         trainRFStart = time.time()
-        rfView = h2o_cmd.runRFOnly(parseKey=parseKey,rfView=True,
+        rfView = h2o_cmd.runRF(parseResult=parseResult,rfView=True,
              timeoutSecs= 3600,pollTimeoutSecs= 60,retryDelaySecs = 2, **kwargs)
         trainViewTime = time.time() - trainRFStart
         #End RF+RFView (train)#
@@ -59,14 +54,14 @@ def run_rf(files,configs):
         #Test File Parsing#
         testParseWallStart = time.time()
         print "Testing file is: ", files['test']
-        csvPathname = files['test']
-        destKey = files['test'] + '.hex'
-        parseKey = h2i.parseImportFolderFile(None,csvPathname,
-                           importFolderPath,key2=destKey,
-                           timeoutSecs=300,retryDelaySecs=5,pollTimeoutSecs=120)
+        importFolderPath = "mnist/mnist8m"
+        csvPathname = importFolderPath + "/" + files['test']
+        hex_key = files['test'] + '.hex'
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key
+                        timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=120)
         testParseWallTime = time.time() - testParseWallStart
         #End Test File Parse#
-        inspect = h2o.nodes[0].inspect(parseKey['destination_key'])
+        inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
         row.update({'nTestRows':inspect['num_rows']})
         row.update({'testParseWallTime':testParseWallTime})
         modelKey = rfView['model_key']
@@ -75,7 +70,7 @@ def run_rf(files,configs):
         kwargs = configs.copy()
         testRFStart = time.time()
         kwargs.update({'model_key':modelKey,'ntree':10})
-        rfView = h2o_cmd.runRFView(data_key=destKey,timeoutSecs=180,
+        rfView = h2o_cmd.runRFView(data_key=hex_key,timeoutSecs=180,
                                        doSimpleCheck=False,**kwargs)
         testViewTime = time.time() - testRFStart
         #End RFView (score on test)#

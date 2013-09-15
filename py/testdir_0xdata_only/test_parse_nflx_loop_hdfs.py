@@ -14,7 +14,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
-        h2o.tear_down_cloud(sandbox_ignore_errors=True)
+        h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
     def test_import_nflx_parse_loop(self):
         print "Using the -.gz files from hdfs"
@@ -34,38 +34,23 @@ class Basic(unittest.TestCase):
                     use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
-            # h2o.nodes[0].sandbox_ignore_errors = True
+            # h2o.nodes[0].sandboxIgnoreErrors = True
 
             timeoutSecs = 500
-            importFolderPath = "/datasets/manyfiles-nflx-gz"
+            importFolderPath = "datasets/manyfiles-nflx-gz"
             for trial in range(trialMax):
-                # since we delete the key, we have to re-import every iteration, to get it again
-                importHdfsResult = h2i.setupImportHdfs(path=importFolderPath)
-                hdfsFullList = importHdfsResult['succeeded']
-                for k in hdfsFullList:
-                    key = k['key']
-                    # just print the first tile
-                    if 'nflx' in key and 'file_1.dat.gz' in key: 
-                        # should be hdfs://home-0xdiag-datasets/manyfiles-nflx-gz/file_1.dat.gz
-                        print "example file we'll use:", key
-
-                ### print "hdfsFullList:", h2o.dump_json(hdfsFullList)
-                # error if none? 
-                self.assertGreater(len(hdfsFullList),8,"Didn't see more than 8 files in hdfs?")
-
-                key2 = csvFilename + "_" + str(trial) + ".hex"
+                hex_key = csvFilename + "_" + str(trial) + ".hex"
                 csvFilePattern = 'file_1.dat.gz'
                 # "key": "hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
 
                 time.sleep(5)
-                print "Loading from hdfs:", importFolderPath + "/" + csvFilePattern
+                csvPathname = importFolderPath + "/" + csvFilePattern
                 start = time.time()
-                parseKey = h2i.parseImportHdfsFile(csvFilename=csvFilePattern, path=importFolderPath,
-                    key2=key2, timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
+                parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=key2, 
+                    timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
                 elapsed = time.time() - start
 
-                print hdfsKey, 'parse time:', parseKey['response']['time']
-                print "parse result:", parseKey['destination_key']
+                print "parse result:", parseResult['destination_key']
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 

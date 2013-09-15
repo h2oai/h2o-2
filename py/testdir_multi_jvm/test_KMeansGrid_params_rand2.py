@@ -49,14 +49,12 @@ class Basic(unittest.TestCase):
                 ('covtype.data', 800),
                 ]
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
+        importFolderPath = "standard"
         for csvFilename, timeoutSecs in csvFilenameList:
-            # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath,
-                timeoutSecs=2000, pollTimeoutSecs=60)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname,
+                timeoutSecs=2000, pollTimeoutSecs=60)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -71,7 +69,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansGridOnly(parseKey=parseKey, \
+                kmeans = h2o_cmd.runKMeansGrid(parseResult=parseResult, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans grid end on ", csvPathname, 'took', elapsed, 'seconds.', \

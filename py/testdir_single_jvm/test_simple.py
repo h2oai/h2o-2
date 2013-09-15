@@ -1,7 +1,7 @@
 import unittest, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -20,9 +20,10 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_poker_1m_rf(self):
-        csvPathname = h2o.find_file('smalldata/poker/poker1000')
-        h2o_cmd.runRF(trees=50, timeoutSecs=10, csvPathname=csvPathname)
+    def test_simple(self):
+        csvPathname = 'poker/poker1000'
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
+        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=10)
 
 if __name__ == '__main__':
     h2o.unit_main()

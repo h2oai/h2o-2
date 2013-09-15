@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel):
@@ -115,7 +113,7 @@ class Basic(unittest.TestCase):
             # (100, 100, 'cE', 30),
             ]
         
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             for sel in range(48): # len(caseList)
                 SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = "syn_%s_%s_%s_%s.csv" % (SEEDPERFILE, sel, rowCount, colCount)
@@ -124,11 +122,12 @@ class Basic(unittest.TestCase):
                 print "Creating random", csvPathname
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel)
 
-                selKey2 = key2 + "_" + str(sel)
-                parseKey = h2o_cmd.parseFile(None, csvPathname, key2=selKey2, timeoutSecs=timeoutSecs)
-                print csvFilename, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+                selKey2 = hex_key + "_" + str(sel)
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=selKey2, 
+                    timeoutSecs=timeoutSecs)
+                print csvFilename, 'parse time:', parseResult['response']['time']
+                print "Parse result['destination_key']:", parseResult['destination_key']
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
                 print "\n" + csvFilename
 
                 # if not h2o.browse_disable:

@@ -17,7 +17,9 @@ class Basic(unittest.TestCase):
 
     def test_parse_covtype20x_loop(self):
         csvFilename = "covtype20x.data"
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
+        csvPathname = importFolderPath + "/" + csvFilename
+
         trialMax = 2
         for tryJvms in [1,2,3,4]:
             for tryHeap in [3]:
@@ -27,25 +29,13 @@ class Basic(unittest.TestCase):
                 timeoutSecs=300
                 for trial in range(trialMax):
                     # since we delete the key, we have to re-import every iteration, to get it again
-                    h2i.setupImportFolder(None, importFolderPath)
-
-                    key2 = csvFilename + "_" + str(trial) + ".hex"
+                    hex_key = csvFilename + "_" + str(trial) + ".hex"
                     start = time.time()
-                    parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, 
+                    parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
                         timeoutSecs=timeoutSecs, retryDelaySecs=4, pollTimeoutSecs=60)
                     elapsed = time.time() - start
                     print "Trial #", trial, "completed in", elapsed, "seconds.", \
                         "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-
-                    print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
-                          "Otherwise it would just parse the cached key."
-                    storeView = h2o.nodes[0].store_view()
-                    ### print "storeView:", h2o.dump_json(storeView)
-                    # h2o removes key after parse now
-                    ## print "Removing", parseKey['python_source_key']
-                    ## removeKeyResult = h2o.nodes[0].remove_key(key=parseKey['python_source_key'])
-                    ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
-
                 # sticky ports?
                 h2o.tear_down_cloud()
                 time.sleep(tryJvms * 5)

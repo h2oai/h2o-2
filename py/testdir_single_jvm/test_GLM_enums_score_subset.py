@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
             (n, 6, 'cI', 300), 
             ]
 
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             # using the comma is nice to ensure no craziness
             colSepHexString = '2c' # comma
             colSepChar = colSepHexString.decode('hex')
@@ -90,35 +90,35 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=30, separator=colSepInt)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             print "\n" + csvFilename
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
-                h2o_cmd.columnInfoFromInspect(parseKey['destination_key'], exceptionOnMissingValues=True)
+                h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
             kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
                 'case_mode': '=', 'case': 0}
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
-            print "glm end on ", parseKey['destination_key'], 'took', time.time() - start, 'seconds'
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
 
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             GLMModel = glm['GLMModel']
             modelKey = GLMModel['model_key']
 
-            parseKey = h2o_cmd.parseFile(None, csvScorePathname, key2="score_" + key2, 
+            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
                 timeoutSecs=30, separator=colSepInt)
 
             start = time.time()
             # score with same dataset (will change to recreated dataset with one less enum
-            glmScore = h2o_cmd.runGLMScore(key=parseKey['destination_key'],
+            glmScore = h2o_cmd.runGLMScore(key=parseResult['destination_key'],
                 model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-            print "glm end on ", parseKey['destination_key'], 'took', time.time() - start, 'seconds'
+            print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             ### print h2o.dump_json(glmScore)
             classErr = glmScore['validation']['classErr']
             auc = glmScore['validation']['auc']

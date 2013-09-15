@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i
 
 def define_params():
     paramDict = {
@@ -42,8 +42,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_params_rand2_4082088627997819015(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key='covtype')
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key='covtype.hex')
         paramDict = define_params()
         for trial in range(40):
             # params is mutable. This is default.
@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             start = time.time()
             timeoutSecs = max(150, params['n_folds']*10 + params['max_iter']*10)
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseKey=parseKey, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=timeoutSecs, parseResult=parseResult, **kwargs)
             elapsed = time.time() - start
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             # FIX! I suppose we have the problem of stdout/stderr not having flushed?

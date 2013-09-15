@@ -1,6 +1,6 @@
 import unittest, random, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 
 # make a dict of lists, with some legal choices for each. None means no value.
 # assume poker1000 datset
@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_loop_random_param_poker1000(self):
-        csvPathname = h2o.find_file('smalldata/poker/poker1000')
+        csvPathname = 'poker/poker1000'
         for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 63, 'parallel': 1, 'use_non_local_data': 1}
@@ -75,7 +75,8 @@ class Basic(unittest.TestCase):
             print kwargs
             # slower if parallel=0
             timeoutSecs = 30 + kwargs['ntree'] * 6 * (kwargs['parallel'] and 1 or 5)
-            h2o_cmd.runRF(timeoutSecs=timeoutSecs, csvPathname=csvPathname, **kwargs)
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs, **kwargs)
+            h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "Trial #", trial, "completed"
 
 if __name__ == '__main__':

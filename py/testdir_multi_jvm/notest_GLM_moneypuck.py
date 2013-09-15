@@ -1,7 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_glm
-import h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,7 +20,7 @@ class Basic(unittest.TestCase):
 
     def test_GLM_moneypuck(self):
         if 1==1:
-            # None is okay for key2
+            # None is okay for hex_key
             csvFilenameList = [
                 # ('hdb-2007-02-05/Goalies.csv',240,'Goalies'),
                 # ('hdb-2007-02-05/GoaliesSC.csv',240,'GoaliesSC'),
@@ -57,13 +56,12 @@ class Basic(unittest.TestCase):
         # a browser window too, just because we can
         h2b.browseTheCloud()
 
-        importFolderPath = '/home/0xdiag/datasets/hockey'
-        h2i.setupImportFolder(None, importFolderPath)
-        for csvFilename, timeoutSecs, key2 in csvFilenameList:
+        importFolderPath = "hockey"
+        for csvFilename, timeoutSecs, hex_key in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, timeoutSecs=2000, key2=key2)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=2000, hex_key=hex_key)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
 
@@ -86,7 +84,7 @@ class Basic(unittest.TestCase):
             if 1==0:
                 kwargs.update({'alpha': 0, 'lambda': 0})
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
                 # assume each one has a header and you have to indirect thru 'column_names'
                 column_names = glm['GLMModel']['column_names']
@@ -98,14 +96,14 @@ class Basic(unittest.TestCase):
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 

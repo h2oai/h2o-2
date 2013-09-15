@@ -1,7 +1,5 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_glm, h2o_util
 
 zeroList = [
@@ -41,13 +39,13 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/libsvm"
+        importFolderPath = "libsvm"
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
-            ("covtype.binary.svm", "cC", 30, 1, 2, True, True),
             ("mnist_train.svm", "cM", 30, 0, 9, False, False),
+            ("covtype.binary.svm", "cC", 30, 1, 2, True, True),
             # multi-label target like 1,2,5 ..not sure what that means
             # ("tmc2007_train.svm",  "cJ", 30, 0, 21.0, False, False),
             # illegal non-ascending cols
@@ -70,19 +68,18 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         firstDone = False
-        for (csvFilename, key2, timeoutSecs, expectedCol0Min, expectedCol0Max, enableDownloadReparse, enableSizeChecks) in csvFilenameList:
+        for (csvFilename, hex_key, timeoutSecs, expectedCol0Min, expectedCol0Max, enableDownloadReparse, enableSizeChecks) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
-            h2i.setupImportFolder(None, importFolderPath)
             csvPathname = importFolderPath + "/" + csvFilename
-            # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2, timeoutSecs=2000)
-            print csvPathname, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
+                hex_key=hex_key, timeoutSecs=2000)
+            print csvPathname, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # INSPECT******************************************
             start = time.time()
-            inspectFirst = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=360)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspectFirst = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspectFirst, csvFilename)
             # look at the min/max for the target col (0) and compare to expected for the dataset
             
@@ -101,13 +98,13 @@ class Basic(unittest.TestCase):
             # SUMMARY****************************************
             # gives us some reporting on missing values, constant values, 
             # to see if we have x specified well
-            # figures out everything from parseKey['destination_key']
+            # figures out everything from parseResult['destination_key']
             # needs y to avoid output column (which can be index or name)
             # assume all the configs have the same y..just check with the firs tone
             if DO_SUMMARY:
                 goodX = h2o_glm.goodXFromColumnInfo(y=0,
-                    key=parseKey['destination_key'], timeoutSecs=300, noPrint=True)
-                summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
+                    key=parseResult['destination_key'], timeoutSecs=300, noPrint=True)
+                summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
             if DO_DOWNLOAD_REPARSE and enableDownloadReparse:
@@ -120,17 +117,17 @@ class Basic(unittest.TestCase):
                 # do a little testing of saving the key as a csv
                 csvDownloadPathname = SYNDATASETS_DIR + "/" + csvFilename + "_csvDownload.csv"
                 print "Trying csvDownload of", csvDownloadPathname
-                h2o.nodes[0].csv_download(key=key2, csvPathname=csvDownloadPathname)
+                h2o.nodes[0].csv_download(key=hex_key, csvPathname=csvDownloadPathname)
 
                 # remove the original parsed key. source was already removed by h2o
-                # don't have to now. we use a new name for key2B
-                # h2o.nodes[0].remove_key(key2)
+                # don't have to now. we use a new name for hex_keyB
+                # h2o.nodes[0].remove_key(hex_key)
                 start = time.time()
-                key2B = key2 + "_B"
-                parseKeyB = h2o_cmd.parseFile(csvPathname=csvDownloadPathname, key2=key2B)
+                hex_keyB = hex_key + "_B"
+                parseResultB = h2o_cmd.parseResult = h2i.import_parse(path=csvDownloadPathname, schema='put', hex_key=hex_keyB)
                 print csvDownloadPathname, "download/reparse (B) parse end. Original data from", \
                     csvFilename, 'took', time.time() - start, 'seconds'
-                inspect = h2o_cmd.runInspect(key=key2B)
+                inspect = h2o_cmd.runInspect(key=hex_keyB)
 
                 missingValuesListB = h2o_cmd.infoFromInspect(inspect, csvPathname)
                 num_colsB = inspect['num_cols']
@@ -178,8 +175,6 @@ class Basic(unittest.TestCase):
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
-
-
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -1,12 +1,10 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans
-import h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans, h2o_browse as h2b, h2o_import as h2i
 
 #uses the wines data from http://archive.ics.uci.edu/ml/datasets/Wine
 #PCA performed to collect data into 2 rows.
 #3 groups, small & easy
-
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -26,12 +24,12 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_KMeans_winesPCA(self):
-        csvPathname = h2o.find_file('smalldata/winesPCA.csv')
+        csvPathname = 'winesPCA.csv'
         start = time.time()
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=10)
         print "parse end on ", csvPathname, 'took', time.time() - start, 'seconds'
         h2o.check_sandbox_for_errors()
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -51,14 +49,14 @@ class Basic(unittest.TestCase):
         for trial in range (10):
             start = time.time()
 
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, \
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, \
                 timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
             elapsed = time.time() - start
             print "kmeans #", trial, "end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
             (centers, tupleResultList) = \
-                h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseKey, 'd', **kwargs)
+                h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
             # tupleResultList has tuples = center, rows_per_cluster, sqr_error_per_cluster
 

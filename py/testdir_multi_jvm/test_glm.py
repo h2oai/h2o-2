@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 # Test of glm comparing result against R-implementation
 # Tested on prostate.csv short (< 1M) and long (multiple chunks)
@@ -22,11 +22,11 @@ class GLMTest(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def process_dataset(self,key,Y, e_coefs, e_ndev, e_rdev, e_aic, **kwargs):
+    def process_dataset(self, parseResult, Y, e_coefs, e_ndev, e_rdev, e_aic, **kwargs):
         # no regularization
         kwargs['alpha'] = 0
         kwargs['lambda'] = 0
-        glm = h2o_cmd.runGLMOnly(parseKey = key, Y = 'CAPSULE', timeoutSecs=10, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, Y = 'CAPSULE', timeoutSecs=10, **kwargs)
 
         GLMModel = glm['GLMModel']
         GLMParams = GLMModel["GLMParams"]
@@ -64,54 +64,55 @@ class GLMTest(unittest.TestCase):
     def test_prostate_gaussian(self):
         errors = []
         # First try on small data (1 chunk)
-        key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate.csv"),key2='prostate_g')
+        parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='prostate_g')
         # R results
         gaussian_coefficients = {"Intercept":-0.8052693, "ID":0.0002764,"AGE":-0.0011601,"RACE":-0.0826932, "DPROS":0.0924781,"DCAPS":0.1089754,"PSA":0.0036211, "VOL":-0.0020560,"GLEASON":0.1515751}
         gaussian_nd  = 91.4
         gaussian_rd  = 65.04
         gaussian_aic = 427.6
-        errors = self.process_dataset(key, 'CAPSULE', gaussian_coefficients, gaussian_nd, gaussian_rd, gaussian_aic, family = 'gaussian')
+        errors = self.process_dataset(parseResult, 'CAPSULE', gaussian_coefficients, gaussian_nd, gaussian_rd, gaussian_aic, family = 'gaussian')
         if errors:
             self.fail(str(errors))
+
         # Now try on larger data (replicated), will be chunked this time, should produce same results
-        key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate_long.csv.gz"), key2='prostate_long_g')
-        errors = self.process_dataset(key, 'CAPSULE', gaussian_coefficients, gaussian_nd, gaussian_rd, gaussian_aic, family = 'gaussian')
+        parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate_long.csv.gz', schema='put', hex_key='prostate_long_g')
+        errors = self.process_dataset(parseResult, 'CAPSULE', gaussian_coefficients, gaussian_nd, gaussian_rd, gaussian_aic, family = 'gaussian')
         if errors:
             self.fail(str(errors))
 
     def test_prostate_binomial(self):
         errors = []
         # First try on small data (1 chunk)
-        key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate.csv"), key2='prostate_b')
+        parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='prostate_b')
         # R results
         binomial_coefficients = {"Intercept":-8.126278, "ID":0.001609,"AGE":-0.008138,"RACE":-0.617597, "DPROS":0.553065,"DCAPS":0.546087,"PSA":0.027297, "VOL":-0.011540,"GLEASON":1.010125}
         binomial_nd  = 512.3
         binomial_rd  = 376.9
         binomial_aic = 394.9
-        errors = self.process_dataset(key, 'CAPSULE', binomial_coefficients, binomial_nd, binomial_rd, binomial_aic, family = 'binomial')
+        errors = self.process_dataset(parseResult, 'CAPSULE', binomial_coefficients, binomial_nd, binomial_rd, binomial_aic, family = 'binomial')
         if errors:
             self.fail(str(errors))
         # Now try on larger data (replicated), will be chunked this time, should produce same results
-        key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate_long.csv.gz"), key2='prostate_long_b')
-        errors = self.process_dataset(key, 'CAPSULE', binomial_coefficients, binomial_nd, binomial_rd, binomial_aic, family = 'binomial')
+        parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate_long.csv.gz', schema='put', hex_key='prostate_long_b')
+        errors = self.process_dataset(parseResult, 'CAPSULE', binomial_coefficients, binomial_nd, binomial_rd, binomial_aic, family = 'binomial')
         if errors:
             self.fail(str(errors))
 
     def test_prostate_poisson(self):
         errors = []
         # First try on small data (1 chunk)
-        key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate.csv"), key2='prostate_p')
+        parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='poisson_p')
         # R results
         poisson_coefficients = {"Intercept":-4.107484, "ID":0.000508,"AGE":-0.004357,"RACE":-0.149412, "DPROS":0.230458,"DCAPS":0.071546,"PSA":0.002944, "VOL":-0.007488,"GLEASON":0.441659}
         poisson_nd  = 278.4
         poisson_rd  = 215.7
         poisson_aic = 539.7
-        errors = self.process_dataset(key, 'CAPSULE', poisson_coefficients, poisson_nd, poisson_rd, poisson_aic, family = 'poisson')
+        errors = self.process_dataset(parseResult, 'CAPSULE', poisson_coefficients, poisson_nd, poisson_rd, poisson_aic, family = 'poisson')
         if errors:
             self.fail(str(errors))
         # Now try on larger data (replicated), will be chunked this time, should produce same results
-        key = h2o_cmd.parseFile(csvPathname=h2o.find_file("smalldata/logreg/prostate_long.csv.gz"), key2='poisson_long_p')
-        errors = self.process_dataset(key, 'CAPSULE', poisson_coefficients, poisson_nd, poisson_rd, poisson_aic, family = 'poisson')
+        parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate_long.csv.gz', schema='put', hex_key='poisson_long_p')
+        errors = self.process_dataset(parseResult, 'CAPSULE', poisson_coefficients, poisson_nd, poisson_rd, poisson_aic, family = 'poisson')
         if errors:
             self.fail(str(errors))
 

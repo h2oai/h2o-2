@@ -37,7 +37,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
 
     dsf.close()
 
-def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs):
+def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs):
     csvPathname = SYNDATASETS_DIR + '/' + csvFilename
     print "Creating random", csvPathname
     write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
@@ -62,18 +62,19 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCo
     start = time.time()
     print "Parse start:", csvPathnameReplgz
     doSummary = False
-    parseKey = h2o_cmd.parseFile(None, csvPathnameReplgz, key2=key2, timeoutSecs=timeoutSecs, pollTimeoutSecs=120, doSummary=doSummary)
-    print csvFilenameReplgz, 'parse time:', parseKey['response']['time']
+    parseResult = h2i.import_parse(path=csvPathnameReplgz, schema='put', hex_key=hex_key, 
+        timeoutSecs=timeoutSecs, pollTimeoutSecs=120, doSummary=doSummary)
+    print csvFilenameReplgz, 'parse time:', parseResult['response']['time']
     if doSummary:
         algo = "Parse and Summary:"
     else:
         algo = "Parse:"
-    print algo , parseKey['destination_key'], "took", time.time() - start, "seconds"
+    print algo , parseResult['destination_key'], "took", time.time() - start, "seconds"
 
     print "Inspecting.."
     start = time.time()
-    inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
-    print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+    inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
+    print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
     h2o_cmd.infoFromInspect(inspect, csvPathname)
     print "\n" + csvPathname, \
         "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -87,11 +88,10 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCo
         (inspect['num_rows'], rowCount))
 
     # hack it in! for test purposees only
-    parseKey['python_source_key'] = csvFilenameReplgz
-    parseKey['num_rows'] = inspect['num_rows']
-    parseKey['num_cols'] = inspect['num_cols']
-    parseKey['value_size_bytes'] = inspect['value_size_bytes']
-    return parseKey
+    parseResult['num_rows'] = inspect['num_rows']
+    parseResult['num_cols'] = inspect['num_cols']
+    parseResult['value_size_bytes'] = inspect['value_size_bytes']
+    return parseResult
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -143,13 +143,13 @@ class Basic(unittest.TestCase):
 
 
         trial = 0
-        for (FILEREPL, rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (FILEREPL, rowCount, colCount, hex_key, timeoutSecs) in tryList:
             trial += 1
 
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            parseKey = make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, key2, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs)
+            parseResult = make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs)
 
             paramDict['response_variable'] = colCount - 1
             paramDict['features'] = 9
@@ -157,9 +157,9 @@ class Basic(unittest.TestCase):
             kwargs = paramDict.copy()
 
             start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
-            print "RF end on ", parseKey['python_source_key'], 'took', elapsed, 'seconds.', \
+            print "RF end on ", parseResult['destination_key'], 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
             classification_error = rfView['confusion_matrix']['classification_error']
@@ -168,8 +168,8 @@ class Basic(unittest.TestCase):
             algo = "RF " 
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
                 num_rows: {:d} num_cols: {:d} value_size_bytes: {:d}'.format(
-                len(h2o.nodes), tryHeap, algo, parseKey['python_source_key'], elapsed, kwargs['ntree'], \
-                classification_error, parseKey['num_rows'], parseKey['num_cols'], parseKey['value_size_bytes'])
+                len(h2o.nodes), tryHeap, algo, parseResult['destination_key'], elapsed, kwargs['ntree'], \
+                classification_error, parseResult['num_rows'], parseResult['num_cols'], parseResult['value_size_bytes'])
             print l
             h2o.cloudPerfH2O.message(l)
 

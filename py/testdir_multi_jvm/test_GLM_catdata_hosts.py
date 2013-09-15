@@ -1,8 +1,6 @@
 import unittest, time, sys, copy
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm
-import h2o_hosts
-import h2o_browse as h2b
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -29,15 +27,13 @@ class Basic(unittest.TestCase):
         ]
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
         # save the first, for all comparisions, to avoid slow drift with each iteration
         validations1 = {}
         for csvFilename in csvFilenameList:
-            csvPathname = h2o.find_file('smalldata/' + csvFilename)
-            # I use this if i want the larger set in my localdir
-            # csvPathname = h2o.find_file('/home/kevin/scikit/datasets/logreg/' + csvFilename)
-
+            csvPathname = csvFilename
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
             print "\n" + csvPathname
 
             start = time.time()
@@ -45,7 +41,7 @@ class Basic(unittest.TestCase):
             # 0 by itself is okay?
             kwargs = {'y': 7, 'x': '1,2,3,4,5,6', 'family': "binomial", 'n_folds': 3, 'lambda': 1e-4}
             timeoutSecs = 200
-            glm = h2o_cmd.runGLM(csvPathname=csvPathname, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, 6, **kwargs)
 
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
@@ -62,9 +58,6 @@ class Basic(unittest.TestCase):
                 h2o_glm.compareToFirstGlm(self, 'err', validations, validations1)
             else:
                 validations1 = copy.deepcopy(validations)
-
-            sys.stdout.write('.')
-            sys.stdout.flush() 
 
 if __name__ == '__main__':
     h2o.unit_main()

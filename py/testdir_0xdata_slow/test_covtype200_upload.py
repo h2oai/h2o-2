@@ -1,7 +1,6 @@
 import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm
-import h2o_exec as h2e, h2o_jobs
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -32,6 +31,9 @@ class Basic(unittest.TestCase):
         benchmarkLogging = ['cpu', 'disk' 'network']
         pollTimeoutSecs = 120
         retryDelaySecs = 10
+        bucket = 'home-0xdiag-datasets'
+        importFolderPath = 'standard'
+
         for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
@@ -42,15 +44,15 @@ class Basic(unittest.TestCase):
                     enable_benchmark_log=True)
 
             for trial in range(trialMax):
-                csvPathname = "/home/0xdiag/datasets/standard/" + csvFilepattern
+                csvPathname = importFolderPath + "/" + csvFilepattern
 
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
 
                 start = time.time()
-                parseKey = h2o_cmd.parseFile(csvPathname=csvPathname,
-                    key2=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=csvFilename + ".hex", 
+                    timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     noPoll=noPoll,
@@ -79,20 +81,20 @@ class Basic(unittest.TestCase):
                     print l
                     h2o.cloudPerfH2O.message(l)
 
-                print csvFilepattern, 'parse time:', parseKey['response']['time']
-                print "Parse result['destination_key']:", parseKey['destination_key']
+                print csvFilepattern, 'parse time:', parseResult['response']['time']
+                print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # BUG here?
                 if not noPoll:
                     # We should be able to see the parse result?
-                    h2o_cmd.check_enums_from_inspect(parseKey)
+                    h2o_cmd.check_enums_from_inspect(parseResult)
                         
                 # use exec to randomFilter out 200 rows for a quick RF. that should work for everyone?
-                origKey = parseKey['destination_key']
+                origKey = parseResult['destination_key']
                 # execExpr = 'a = randomFilter('+origKey+',200,12345678)' 
                 execExpr = 'a = slice('+origKey+',1,200)' 
                 h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
-                # runRFOnly takes the parseKey directly
+                # runRF takes the parseResult directly
                 newParseKey = {'destination_key': 'a'}
 
                 print "\n" + csvFilepattern
@@ -106,7 +108,7 @@ class Basic(unittest.TestCase):
                     GLMkwargs = {'x': x, 'y': 54, 'case': 1, 'case_mode': '>',
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
                     h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()

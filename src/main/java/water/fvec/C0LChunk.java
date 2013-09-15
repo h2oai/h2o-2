@@ -15,9 +15,11 @@ public class C0LChunk extends Chunk {
   }
   @Override protected final long at8_impl( int i ) { return _con; }
   @Override protected final double atd_impl( int i ) {return _con; }
-  @Override boolean set8_impl(int idx, long l) { return l==_con; }
-  @Override boolean set8_impl(int i, double d) { return d==_con; }
-  @Override boolean set4_impl(int i, float f ) { return f==_con; }
+  @Override protected final boolean isNA_impl( int i ) { return false; }
+  @Override boolean set_impl(int idx, long l) { return l==_con; }
+  @Override boolean set_impl(int i, double d) { return d==_con; }
+  @Override boolean set_impl(int i, float f ) { return f==_con; }
+  @Override boolean setNA_impl(int i) { return false; }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C0LChunk read(AutoBuffer bb) {

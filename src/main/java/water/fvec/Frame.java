@@ -3,30 +3,27 @@ package water.fvec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import water.*;
-import water.fvec.Vec.DType;
 import water.fvec.Vec.VectorGroup;
 
 /**
- * A collection of named Vecs. Essentially an R-like data-frame. Multiple
- * Frames can reference the same Vecs. A Frame is a lightweight object, it
- * is meant to be cheaply created and discarded for data munging purposes.
- * E.g. to exclude a Vec from a computation on a Frame, create a new Frame
- * that references all the Vecs but this one.
+ * A collection of named Vecs.  Essentially an R-like data-frame.  Multiple
+ * Frames can reference the same Vecs.  A Frame is a lightweight object, it is
+ * meant to be cheaply created and discarded for data munging purposes.
+ * E.g. to exclude a Vec from a computation on a Frame, create a new Frame that
+ * references all the Vecs but this one.
  */
 public class Frame extends Iced {
   public String[] _names;
   public Vec[] _vecs;
-  public Vec _col0;             // First readable vec
+  private Vec _col0;  // First readable vec; fast access to the VecGroup's Chunk layout
 
-  public Frame( String[] names, Vec[] vecs ) {
-    _names=names; _vecs=vecs;
-  }
+  public Frame( String[] names, Vec[] vecs ) { _names=names; _vecs=vecs; }
+  public Frame( Frame fr ) { _names=fr._names.clone(); _vecs=fr._vecs.clone(); _col0 = fr._col0; }
 
-  /**
-   * Finds a named column.
-   */
+  /** Finds the first column with a matching name.  */
   public int find( String name ) {
     for( int i=0; i<_names.length; i++ )
       if( name.equals(_names[i]) )
@@ -34,25 +31,27 @@ public class Frame extends Iced {
     return -1;
   }
 
-  /**
-   * Adds a named column.
-   */
+  public Vec [] getVecs(String [] names){
+    Vec [] res = new Vec[names.length];
+    HashMap<String,Vec> m = new HashMap<String, Vec>();
+    for(int i = 0; i < _names.length; ++i)m.put(_names[i], _vecs[i]);
+    for(int i = 0; i < names.length; ++i)res[i] = m.get(names[i]);
+    return res;
+  }
+  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
-    // needs a compatibility-check????
-    _names = Arrays.copyOf(_names,_names.length+1);
-    _vecs  = Arrays.copyOf(_vecs ,_vecs .length+1);
-    _names[_names.length-1] = name;
-    _vecs [_vecs .length-1] = vec ;
+    // TODO : needs a compatibility-check!!!
+    final int len = _names.length;
+    _names = Arrays.copyOf(_names,len+1);
+    _vecs  = Arrays.copyOf(_vecs ,len+1);
+    _names[len] = name;
+    _vecs [len] = vec ;
   }
 
-  /**
-   * Removes a named column.
-   */
+  /** Removes the first column with a matching name.  */
   public Vec remove( String name ) { return remove(find(name)); }
 
-  /**
-   * Removes a numbered column.
-   */
+  /** Removes a numbered column. */
   public Vec remove( int idx ) {
     int len = _names.length;
     if( idx < 0 || idx >= len ) return null;
@@ -61,19 +60,25 @@ public class Frame extends Iced {
     System.arraycopy(_vecs ,idx+1,_vecs ,idx,len-idx-1);
     _names = Arrays.copyOf(_names,len-1);
     _vecs  = Arrays.copyOf(_vecs ,len-1);
+    if( v == _col0 ) _col0 = null;
     return v;
   }
 
-  public final Vec[] vecs() {
-    return _vecs;
-  }
+  public final Vec[] vecs() { return _vecs; }
+  public final String[] names() { return _names; }
   public int  numCols() { return _vecs.length; }
-  public long numRows(){ return _vecs[0].length();}
+  public long numRows(){ return anyVec().length();}
 
-  /**
-   * Returns the first readable vector.
-   */
-  public Vec firstReadable() {
+  /** All the domains for enum columns; null for non-enum columns.  */ 
+  public String[][] domains() {
+    String ds[][] = new String[_vecs.length][];
+    for( int i=0; i<_vecs.length; i++ )
+      ds[i] = _vecs[i].domain();
+    return ds;
+  }
+
+  /** Returns the first readable vector. */
+  public Vec anyVec() {
     if( _col0 != null ) return _col0;
     for( Vec v : _vecs )
       if( v != null && v.readable() )
@@ -81,12 +86,10 @@ public class Frame extends Iced {
     return null;
   }
 
-  /**
-   * Check that the vectors are all compatible. All Vecs have their content sharded
-   * using same number of rows per chunk.
-   */
+  /** Check that the vectors are all compatible.  All Vecs have their content
+   *  sharded using same number of rows per chunk.  */
   public void checkCompatible( ) {
-    Vec v0 = firstReadable();
+    Vec v0 = anyVec();
     int nchunks = v0.nChunks();
     for( Vec vec : _vecs ) {
       if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
@@ -125,9 +128,7 @@ public class Frame extends Iced {
     remove(new Futures());
   }
 
-  /**
-   * Actually remove/delete all Vecs from memory, not just from the Frame.
-   */
+  /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   public void remove(Futures fs){
     if(_vecs.length > 0){
       VectorGroup vg = _vecs[0].group();
@@ -156,7 +157,7 @@ public class Frame extends Iced {
     }
     s += "}, "+PrettyPrint.bytes(bs)+"\n";
     // Down
-    Vec v0 = firstReadable();
+    Vec v0 = anyVec();
     if( v0 == null ) return s;
     int nc = v0.nChunks();
     s += "Chunk starts: {";
@@ -204,8 +205,8 @@ public class Frame extends Iced {
           if(i > 0) sb.append(',');
           if(!_vecs[i].isNA(_row)) {
             if(_vecs[i].isEnum()) sb.append('"' + _vecs[i]._domain[(int) _vecs[i].at8(_row)] + '"');
-            else if(_vecs[i].dtype() == DType.F) sb.append(_vecs[i].at(_row));
-            else sb.append(_vecs[i].at8(_row));
+            else if(_vecs[i].isInt()) sb.append(_vecs[i].at8(_row));
+            else sb.append(_vecs[i].at(_row));
           }
         }
         sb.append('\n');

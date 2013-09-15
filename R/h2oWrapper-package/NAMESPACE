@@ -1,0 +1,5 @@
+exportPattern("^[[:alpha:]]+")
+exportMethods(
+    "h2o.initCloud",
+    "h2o.initLocal" 
+)

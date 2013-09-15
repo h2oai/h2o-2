@@ -56,7 +56,7 @@ public class SummaryPage extends Request {
     Response r = Response.done(res);
     r.setBuilder(ROOT_OBJECT, new Builder() {
       @Override public String build(Response response, JsonElement element, String contextName) {
-        StringBuilder pageBldr = new StringBuilder("<div class=container-fluid'><div class='row-fluid'><div class='span2' style='text-align:right;overflow-x:scroll;'><h5>Columns</h5>");
+        StringBuilder pageBldr = new StringBuilder("<div class=container-fluid'><div class='row-fluid' style='position:relative'><div class='span2' style='margin:0;left:0;text-align:right;overflow-x:scroll;position:fixed'><h5>Columns</h5>");
         StringBuilder sb = new StringBuilder("<div class='span10' style='height:90%;overflow-y:scroll'>");
         JsonArray cols = element.getAsJsonObject().get("summary").getAsJsonObject().get("columns").getAsJsonArray();
         Iterator<JsonElement> it = cols.iterator();
@@ -76,8 +76,8 @@ public class SummaryPage extends Request {
             StringBuilder baseStats = new StringBuilder("<div style='width:100%;overflow:scroll;'><table class='table-bordered'>");
             baseStats.append("<tr><th colspan='" + 100 + "' style='text-align:center;'>Base Stats</th></tr>");
 
-            baseStats.append("<th>&mu;</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td>");
-            baseStats.append("<th>&sigma;</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td>");
+            baseStats.append("<th>avg</th><td>" + Utils.p2d(o.get("mean").getAsDouble())+"</td>");
+            baseStats.append("<th>sd</th><td>" + Utils.p2d(o.get("sigma").getAsDouble()) + "</td>");
 
             baseStats.append("<th>NAs</th>  <td>" + o.get("na").getAsLong() + "</td>");
             baseStats.append("<th>zeros</th>");

@@ -1,7 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o_cmd
-import h2o, h2o_hosts
+import h2o_cmd, h2o, h2o_hosts, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,13 +26,12 @@ class Basic(unittest.TestCase):
             self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
 
     def test_B_RF_iris2(self):
-        # FIX! will check some results with RFview
-        RFview = h2o_cmd.runRF( trees = 6, timeoutSecs = 10,
-                csvPathname = h2o.find_file('smalldata/iris/iris2.csv'))
+        parseResult = h2i.import_parse(bucket='smalldata', path='/iris/iris2.csv', schema='put')
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs = 10)
 
     def test_C_RF_poker100(self):
-        h2o_cmd.runRF( trees = 6, timeoutSecs = 10,
-                csvPathname = h2o.find_file('smalldata/poker/poker100'))
+        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put')
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs = 10)
 
     def test_D_GenParity1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -55,14 +53,9 @@ class Basic(unittest.TestCase):
         for x in xrange (11,60,10):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            # FIX! TBD do we always have to kick off the run from node 0?
-            # what if we do another node?
-            # FIX! do we need or want a random delay here?
-            h2o_cmd.runRF( trees=trees, timeoutSecs=timeoutSecs,
-                    csvPathname=csvPathname)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put')
+            h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
             trees += 10
-            sys.stdout.write('.')
-            sys.stdout.flush()
 
 if __name__ == '__main__':
     h2o.unit_main()

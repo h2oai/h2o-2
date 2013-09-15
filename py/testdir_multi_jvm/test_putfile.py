@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         #pass
 
     def test_A_putfile(self):
-        cvsfile    = h2o.find_file(file_to_put())
+        cvsfile    = file_to_put()
         node       = h2o.nodes[0]
         key        = node.put_file(cvsfile)
         resultSize = node.inspect(key)['value_size_bytes']
@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
     
     def test_B_putfile_to_all_nodes(self):
 
-        cvsfile  = h2o.find_file(file_to_put())
+        cvsfile  = file_to_put()
         origSize = h2o.get_file_size(cvsfile)
         for node in h2o.nodes:
             key        = node.put_file(cvsfile)
@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
     print "Disabling test C and D because get_key doesn't seem to work?"
     def notest_C_putfile_and_getfile(self):
 
-        cvsfile = h2o.find_file(file_to_put())
+        cvsfile = file_to_put()
         node    = h2o.nodes[0]
         key     = node.put_file(cvsfile)
         r       = node.get_key(key)
@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
 
     def notest_D_putfile_and_getfile_to_all_nodes(self):
 
-        cvsfile = h2o.find_file(file_to_put())
+        cvsfile = file_to_put()
         for node in h2o.nodes:
             key    = node.put_file(cvsfile)
             r      = node.get_key(key)

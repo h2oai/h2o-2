@@ -22,7 +22,7 @@ public class RReaderTest extends TestUtil {
     Key key = Key.make("irisModel");
     RReader.run(key, new FileInputStream(file));
     RFModel model = UKV.get(key);
-    Model m = model.adapt(iris.colNames());
+    OldModel m = model.adapt(iris.colNames());
 
     // Can I score on the model now?
     double[] row = new double[iris._cols.length];
@@ -52,7 +52,7 @@ public class RReaderTest extends TestUtil {
     // Can I score on the model now?
     double[] row = new double[map.length];
     int errs = 0;
-    Model M = model.adapt(pro);
+    OldModel M = model.adapt(pro);
     for( int i=0; i<pro._numrows; i++ ) {
       for( int j=0; j<map.length; j++ )
         row[j] = pro.datad(i,j);
@@ -83,7 +83,7 @@ public class RReaderTest extends TestUtil {
     // Can I score on the model now?
     long start = System.currentTimeMillis();
     double[] row = new double[map.length];
-    Model M = model.adapt(pro);
+    OldModel M = model.adapt(pro);
     int errs = 0;
     for( int i=0; i<pro._numrows; i++ ) {
       for( int j=0; j<map.length; j++ )

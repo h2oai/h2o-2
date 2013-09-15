@@ -1,7 +1,7 @@
 import sys
 sys.path.extend(['.','..','py'])
 
-import unittest, h2o, h2o_cmd
+import unittest, h2o, h2o_cmd, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,8 +21,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parity_128_4_2_quad(self):
-        h2o_cmd.runRF(None, h2o.find_file('smalldata/parity_128_4_2_quad.data'), trees=6, 
-            timeoutSecs=5)
+        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_2_quad.data', schema='put')
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=5)
 
 if __name__ == '__main__':
     h2o.unit_main()

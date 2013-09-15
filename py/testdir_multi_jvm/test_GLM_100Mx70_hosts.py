@@ -1,7 +1,6 @@
 import unittest
 import random, sys, time, os
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
@@ -48,11 +47,11 @@ class Basic(unittest.TestCase):
                 (100000000, 70, 'cA', 10000), 
                 ]
 
-            for (rowCount, colCount, key2, timeoutSecs) in createList:
+            for (rowCount, colCount, hex_key, timeoutSecs) in createList:
+                SEEDPERFILE = random.randint(0, sys.maxint)
                 csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 print "Creating random", csvPathname
-                SEEDPERFILE = random.randint(0, sys.maxint)
                 write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
             # Have to copy it to /home/0xdiag/datasets!
 
@@ -61,26 +60,24 @@ class Basic(unittest.TestCase):
             csvFilenameList = [
                 # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
                 # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
-                ('rand_logreg_100000000x70.csv.gz', 500, 'rand_100Mx70.hex'),
+                ('rand_logreg_100000000x70.csv', 500, 'rand_100Mx70.hex'),
                 ]
         else:
-            # None is okay for key2
+            # None is okay for hex_key
             csvFilenameList = [
                 # ('rand_logreg_500Kx70.csv.gz', 500, 'rand_500Kx70'),
                 # ('rand_logreg_1Mx70.csv.gz', 500, 'rand_1Mx70'),
-                ('rand_logreg_100000000x70.csv.gz', 500, 'rand_100Mx70.hex'),
+                ('rand_logreg_100000000x70.csv', 500, 'rand_100Mx70.hex'),
                 ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        importFolderPath = '/home/0xdiag/datasets/standard'
-        h2i.setupImportFolder(None, importFolderPath)
-        for csvFilename, timeoutSecs, key2 in csvFilenameList:
-            # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        for csvFilename, timeoutSecs, hex_key in csvFilenameList:
+            csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
                 timeoutSecs=2000, retryDelaySecs=5, initialDelaySecs=10, pollTimeoutSecs=60)
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             csvPathname = importFolderPath + "/" + csvFilename
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
@@ -103,7 +100,7 @@ class Basic(unittest.TestCase):
 
             for trial in range(3):
                 start = time.time()
-                glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 elapsed = time.time() - start
                 print "glm", trial, "end on ", csvPathname, 'took', elapsed, 'seconds.',
                 print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

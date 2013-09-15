@@ -69,6 +69,19 @@ VERSION_PROPERTIES="${CLASSES}/version.properties"
 # Note: /tmp is specific for Linux.
 WIPE_TMP=true
 
+# Calculate MYNAME based on platform.
+if [ ! -z "$LOGNAME" ]; then
+    # Unix
+    MYNAME=`echo ${LOGNAME} | sed 's/ /_/g'`
+else
+    if [ ! -z "$USERNAME" ]; then
+        # Windows
+        MYNAME=`echo ${USERNAME} | sed 's/ /_/g'`
+    else
+        MYNAME="UnknownLogin"
+    fi
+fi
+
 # Load user-specific properties if they are exist.
 # The properties can override the settings above.
 LOCAL_PROPERTIES_FILE="./build.local.conf"
@@ -83,8 +96,7 @@ function clean() {
     rm -fr ${OUTDIR}
     if [ "$WIPE_TMP" = "true" ]; then
         echo " - wiping tmp..."
-        rm -fr /tmp/h2o-temp-*
-        rm -fr /tmp/File*tmp
+        rm -fr /tmp/h2o-"${MYNAME}"/h2o-temp-*
     fi
     mkdir ${OUTDIR}
     mkdir ${CLASSES}
@@ -150,6 +162,11 @@ function build_jar() {
     cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
+    # Pick up R jars
+    if [ -d r_pack_tmp ]; then
+      "$JAR" uf ${JAR_FILE} -C r_pack_tmp  .
+      rm -fr r_pack_tmp
+    fi
     "$ZIP" -qd ${JAR_FILE} javassist.jar 
 }
 
@@ -164,7 +181,7 @@ function build_javadoc() {
     echo "creating javadoc files..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     mkdir -p target/logs
-    "${JAVADOC}" -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
+    "${JAVADOC}" -overview ${SRC}/overview.html -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
 }
 
 function build_package() {
@@ -177,7 +194,15 @@ function junit() {
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
 }
 
-clean
+if [ "$1" = "onlydoc" ]; then
+    build_javadoc
+    exit 0
+fi
+if [ "$1" = "noclean" ]; then
+    shift
+else
+    clean
+fi
 if [ "$1" = "clean" ]; then exit 0; fi
 build_classes
 if [ "$1" = "compile" ]; then exit 0; fi

@@ -43,17 +43,16 @@ class Basic(unittest.TestCase):
 
     def test_rf_covtype_train_oobe2(self):
         print "\nUse randomBitVector and filter to separate the dataset randomly"
-        importFolderPath = "/home/0xdiag/datasets/standard"
+        importFolderPath = "standard"
         csvFilename = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilename
-        key2 = csvFilename + ".hex"
+        hex_key = csvFilename + ".hex"
 
-        h2i.setupImportFolder(None, importFolderPath)
         print "\nUsing header=0 on the normal covtype.data"
-        parseKey = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, key2=key2,
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key,
             header=0, timeoutSecs=100)
 
-        inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
             "    num_cols:", "{:,}".format(inspect['num_cols'])
@@ -88,10 +87,10 @@ class Basic(unittest.TestCase):
         execExpr = "not_rbv=colSwap(rbv,0,rbv[0]==0?1:0)"
         h2o_exec.exec_expr(None, execExpr, resultKey="not_rbv", timeoutSecs=10)
 
-        execExpr = dataKeyTest + "=filter(" + key2 + ",rbv)"
+        execExpr = dataKeyTest + "=filter(" + hex_key + ",rbv)"
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
 
-        execExpr = dataKeyTrain + "=filter(" + key2 + ",not_rbv)"
+        execExpr = dataKeyTrain + "=filter(" + hex_key + ",not_rbv)"
         h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=10)
 
         ### time.sleep(3600)
@@ -106,7 +105,7 @@ class Basic(unittest.TestCase):
             execExpr = resultKey + "=slice(" + dataKeyTrain + ",1," + str(rowsToUse) + ")"
             # execExpr = resultKey + "=slice(" + dataKeyTrain + ",1)"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
-            parseKey['destination_key'] = resultKey
+            parseResult['destination_key'] = resultKey
 
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
@@ -117,7 +116,7 @@ class Basic(unittest.TestCase):
             kwargs['out_of_bag_error_estimate'] = 1
             kwargs['model_key'] = "model_" + str(trial)
             
-            rfv = h2o_cmd.runRFOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            rfv = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
@@ -156,7 +155,10 @@ class Basic(unittest.TestCase):
             rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
 
-            h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
             fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRightList[trial],

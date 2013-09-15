@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts
+import h2o_cmd, h2o, h2o_hosts, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -59,8 +59,9 @@ class Basic(unittest.TestCase):
 
                 # change the model name each iteration, so they stay in h2o
                 model_key = csvFilename + "_" + str(trials)
-                h2o_cmd.runRF(trees=trees, model_key=model_key, timeoutSecs=timeoutSecs, 
-                    retryDelaySecs=1, csvPathname=csvPathname)
+                parseResult = h2i.import_parse(path=csvPathname, schema='put')
+                h2o_cmd.runRF(parseResult=parseResult, trees=trees, model_key=model_key, 
+                    timeoutSecs=timeoutSecs, retryDelaySecs=1)
                 sys.stdout.write('.')
                 sys.stdout.flush()
 

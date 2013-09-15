@@ -2,15 +2,11 @@ package hex;
 
 import hex.Layer.FrameInput;
 import hex.Layer.Input;
-import hex.Trainer.ThreadedTrainers;
-
-import java.text.DecimalFormat;
-
+import hex.Trainer.Threaded;
 import water.*;
 import water.api.DocGen;
 import water.api.Progress2;
 import water.fvec.Frame;
-import water.util.Utils;
 
 public class NeuralNet extends Job {
   static final int API_WEAVER = 1;
@@ -71,14 +67,15 @@ public class NeuralNet extends Job {
    */
   public static class Weights extends Iced {
     float[][] _ws, _bs;
+    long _steps;
 
-    public static Weights get(Layer[] ls) {
+    public static Weights get(Layer[] ls, boolean clone) {
       Weights weights = new Weights();
       weights._ws = new float[ls.length][];
       weights._bs = new float[ls.length][];
       for( int y = 1; y < ls.length; y++ ) {
-        weights._ws[y] = ls[y]._w;
-        weights._bs[y] = ls[y]._b;
+        weights._ws[y] = clone ? ls[y]._w.clone() : ls[y]._w;
+        weights._bs[y] = clone ? ls[y]._b.clone() : ls[y]._b;
       }
       return weights;
     }
@@ -111,13 +108,13 @@ public class NeuralNet extends Job {
     _ls[_ls.length - 1] = new Layer.Softmax();
     _ls[_ls.length - 1]._rate = (float) rate;
     _ls[_ls.length - 1]._l2 = (float) l2;
-    int classes = source._vecs[source._vecs.length - 1].domain().length;
+    int classes = (int) (source._vecs[source._vecs.length - 1].max() + 1);
     _ls[_ls.length - 1].init(_ls[_ls.length - 2], classes);
 
     for( int i = 1; i < _ls.length; i++ )
       _ls[i].randomize();
 
-    final ThreadedTrainers trainer = new ThreadedTrainers(_ls);
+    final Threaded trainer = new Threaded(_ls);
     weights = Key.make(destination_key.toString() + "_weights");
     UKV.put(destination_key, this);
     trainer.start();
@@ -139,7 +136,7 @@ public class NeuralNet extends Job {
           rows_per_second = (int) ((items - lastItems) / delta);
 
           UKV.put(destination_key, NeuralNet.this);
-          UKV.put(weights, Weights.get(_ls));
+          UKV.put(weights, Weights.get(_ls, false));
 
           try {
             Thread.sleep(2000);
@@ -163,8 +160,7 @@ public class NeuralNet extends Job {
     double SqrDist;
 
     @Override public String toString() {
-      DecimalFormat format = new DecimalFormat("0.000");
-      return format.format(100 * Value) + "% (d²:" + SqrDist + ")";
+      return String.format("%.3f", (100 * Value)) + "% (d²:" + String.format("%.2e", SqrDist) + ")";
     }
   }
 
@@ -240,6 +236,10 @@ public class NeuralNet extends Job {
     static public DocGen.FieldDoc[] DOC_FIELDS;
     static final String DOC_GET = "Neural network scoring";
 
+    public NeuralNetScore() {
+      super("Neural Net", null);
+    }
+
     @API(help = "Model", required = true, filter = Default.class)
     public NeuralNet model;
 
@@ -253,25 +253,13 @@ public class NeuralNet extends Job {
     public double sqr_error;
 
     @Override protected Response serve() {
-      Layer[] clones = clone(model._ls, model.source);
+      Layer[] clones = Layer.clone(model._ls, model.source);
       Weights weights = UKV.get(model.weights);
       weights.set(clones);
       Error error = eval(clones, max_rows);
       classification_error = error.Value;
       sqr_error = error.SqrDist;
       return new Response(Response.Status.done, this, -1, -1, null);
-    }
-
-    public static Layer[] clone(Layer[] ls, Frame frame) {
-      FrameInput input = new FrameInput(frame);
-      input.init(null, frame._vecs.length - 1);
-      Layer[] clones = new Layer[ls.length];
-      clones[0] = input;
-      for( int i = 1; i < ls.length; i++ )
-        clones[i] = Utils.deepClone(ls[i], "_w", "_b", "_in");
-      for( int i = 1; i < ls.length; i++ )
-        clones[i]._in = clones[i - 1];
-      return clones;
     }
 
     public static Error eval(Layer[] ls, long max_rows) {

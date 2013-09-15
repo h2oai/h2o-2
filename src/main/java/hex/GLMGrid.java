@@ -44,7 +44,7 @@ public class GLMGrid extends Job {
   // over the 'this' pointer of a GLMGrid and thus serializing it as part
   // of the atomic update.
   private void update(GLMModel m, final int idx, final long runTime, Futures fs) {
-    final Model model = m;
+    final OldModel model = m;
     final Key jobKey = self();
     fs.add(new TAtomic<GLMModels>() {
       final Key _job = jobKey;
@@ -159,7 +159,7 @@ public class GLMGrid extends Job {
             return -1;
           GLMModel m1 = v1.get();
           GLMModel m2 = v2.get();
-          if( m1._glmParams._family == Family.binomial ) {
+          if( m1._glmParams._family._family == Family.binomial ) {
             double cval1 = m1._vals[0].AUC(), cval2 = m2._vals[0].AUC();
             if( cval1 == cval2 ) {
               if( m1._vals[0].classError() != null ) {

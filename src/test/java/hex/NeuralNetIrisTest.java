@@ -18,7 +18,7 @@ import water.util.Log;
 
 public class NeuralNetIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
-  FrameInput _train, _test;
+  Frame _train, _test;
 
   @BeforeClass public static void stall() {
     stall_till_cloudsize(3);
@@ -57,26 +57,15 @@ public class NeuralNetIrisTest extends TestUtil {
     }
 
     int limit = (int) frame.numRows() * 80 / 100;
-    _train = new FrameInput(frame(rows, 0, limit), false);
-    _train.init(null, 4);
-    _test = new FrameInput(frame(rows, limit, (int) frame.numRows() - limit), false);
-    _test.init(null, 4);
+    _train = frame(rows, 0, limit);
+    _test = frame(rows, limit, (int) frame.numRows() - limit);
     UKV.remove(pars);
   }
 
-  @After public void clean() {
-    _train._frame.remove();
-    _test._frame.remove();
-  }
-
-  @Test public void compare() throws Exception {
-    float rate = 0.01f;
-    // We think the momentum implementation for NeuralNetMLPReference
-    // is incorrect, so turn it off
-    float momentum = 0;
-    int epochs = 1000;
+  public Layer[] create(float rate) {
     Layer[] ls = new Layer[3];
-    ls[0] = _train;
+    ls[0] = new FrameInput(_train, false);
+    ls[0].init(null, 4);
     ls[1] = new Layer.Tanh();
     ls[1]._rate = rate;
     ls[1].init(ls[0], 7);
@@ -85,6 +74,18 @@ public class NeuralNetIrisTest extends TestUtil {
     ls[2].init(ls[1], 3);
     for( int i = 1; i < ls.length; i++ )
       ls[i].randomize();
+    return ls;
+  }
+
+  @After public void clean() {
+    _train.remove();
+    _test.remove();
+  }
+
+  @Test public void compare() throws Exception {
+    float rate = 0.01f;
+    int epochs = 1000;
+    Layer[] ls = create(rate);
 
     NeuralNetMLPReference ref = new NeuralNetMLPReference();
     ref.init();
@@ -102,11 +103,11 @@ public class NeuralNetIrisTest extends TestUtil {
     }
 
     // Reference
-    ref.train(epochs, rate, momentum);
+    ref.train(epochs, rate);
 
     // H2O
     Trainer.Direct trainer = new Trainer.Direct(ls);
-    trainer._batches = epochs * (int) _train._frame.numRows();
+    trainer._batches = epochs * (int) _train.numRows();
     trainer._batch = 1;
     trainer.run();
 
@@ -130,8 +131,9 @@ public class NeuralNetIrisTest extends TestUtil {
 
     // Make sure errors are equal
     NeuralNet.Error train = NeuralNetScore.eval(ls, NeuralNet.EVAL_ROW_COUNT);
-    ls[0] = _test;
-    ls[1]._in = _test;
+    ls[0] = new FrameInput(_test, false);
+    ls[0].init(null, 4);
+    ls[1]._in = ls[0];
     NeuralNet.Error test = NeuralNetScore.eval(ls, NeuralNet.EVAL_ROW_COUNT);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
     Assert.assertEquals(trainAcc, train.Value, epsilon);

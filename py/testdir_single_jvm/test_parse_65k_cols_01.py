@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
             ]
 
         h2b.browseTheCloud()
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -54,14 +54,15 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print "Summary should work with 65k"
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=timeoutSecs, doSummary=True)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse and summary:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+                timeoutSecs=timeoutSecs, doSummary=True)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse and summary:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
             # We should be able to see the parse result?
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], timeoutSecs=timeoutSecs)
-            print "Inspect:", parseKey['destination_key'], "took", time.time() - start, "seconds"
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
+            print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -79,7 +80,7 @@ class Basic(unittest.TestCase):
             # we should obey max_column_display
             column_limits = [25, 25000, 50000]
             for column_limit in column_limits:
-                inspect = h2o_cmd.runInspect(None, parseKey['destination_key'], max_column_display=column_limit, timeoutSecs=timeoutSecs)
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=column_limit, timeoutSecs=timeoutSecs)
                 self.assertEqual(len( inspect['cols'] ) , column_limit, "inspect obeys max_column_display = " + str(column_limit))
                 for r in range(0, len( inspect[ 'rows' ] )):
                     # NB: +1 below because each row includes a row header row: #{row}

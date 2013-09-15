@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i
 from operator import itemgetter
 
 # a truly uniform sphere
@@ -86,14 +86,22 @@ class Basic(unittest.TestCase):
         centersList = write_spheres_dataset(csvPathname, CLUSTERS, SPHERE_PTS)
 
         print "\nStarting", csvFilename
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex")
+        parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=csvFilename + ".hex")
 
         # try 5 times, to see if all inits by h2o are good
         for trial in range(5):
-            kwargs = {'k': CLUSTERS, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'syn_spheres100.hex'}
+            # pass SEED so it's repeatable
+            kwargs = {
+                'k': CLUSTERS, 
+                'max_iter': 10,
+                'initialization': 'Furthest', 
+                'cols': None, 
+                'destination_key': 'syn_spheres100.hex', 
+                'seed': SEED
+            }
             timeoutSecs = 30
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
@@ -126,9 +134,6 @@ class Basic(unittest.TestCase):
                 self.assertAlmostEqual(a[2], b[2], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
 
             print "Trial #", trial, "completed"
-
-
-
 
 if __name__ == '__main__':
     h2o.unit_main()

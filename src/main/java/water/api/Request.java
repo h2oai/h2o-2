@@ -72,12 +72,13 @@ public abstract class Request extends RequestBuilders {
 
   public class VecSelect implements Filter {
     public final String _key;
-    protected VecSelect(String key) {
-      _key = key;
-    }
-    @Override public boolean run(Object value) {
-      return true;
-    }
+    protected VecSelect(String key) { _key = key; }
+    @Override public boolean run(Object value) { return true; }
+  }
+  public class VecClassSelect implements Filter {
+    public final String _key;
+    protected VecClassSelect(String key) { _key = key; }
+    @Override public boolean run(Object value) { return true; }
   }
 
   //
@@ -316,4 +317,5 @@ public abstract class Request extends RequestBuilders {
   public String ReSTHelp() {
     return DocGen.ReST.genHelp(this);
   }
+  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putStr2("\"Request2\":\"dummy\""); }
 }

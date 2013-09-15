@@ -1,6 +1,6 @@
 import unittest, random, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 
 # make a dict of lists, with some legal choices for each. None means no value.
 # assume poker1000 datset
@@ -80,7 +80,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2_7066883810153380318(self):
-        csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
+        csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         for trial in range(10):
             # params is mutable. This is default.
             params = {'ntree': 23, 'parallel': 1, 'features': 7}
@@ -88,7 +88,8 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
-            h2o_cmd.runRF(timeoutSecs=timeoutSecs, csvPathname=csvPathname, **kwargs)
+            parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', timeoutSecs=timeoutSecs)
+            h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "Trial #", trial, "completed"
 
 if __name__ == '__main__':

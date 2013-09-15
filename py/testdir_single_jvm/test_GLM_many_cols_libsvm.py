@@ -22,7 +22,6 @@ def write_syn_libsvm_dataset(csvPathname, rowCount, colCount, SEED):
 
     dsf.close()
 
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -55,21 +54,20 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        for (rowCount, colCount, key2, timeoutSecs) in tryList:
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
-            # csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.svm'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random libsvm:", csvPathname
             write_syn_libsvm_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            parseKey = h2o_cmd.parseFile(None, csvPathname, key2=key2, timeoutSecs=10)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['destination_key']:", parseKey['destination_key']
+            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', timeoutSecs=10)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             y = colCount
@@ -80,13 +78,9 @@ class Basic(unittest.TestCase):
             kwargs = {'y': y, 'max_iter': 2, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseKey=parseKey, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-
-            # if not h2o.browse_disable:
-            #     h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-            #     time.sleep(5)
 
 
 if __name__ == '__main__':

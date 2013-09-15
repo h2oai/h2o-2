@@ -1,4 +1,5 @@
 package water;
+
 /**
  * Empty marker class.  Used by the auto-serializer.
  */
@@ -10,12 +11,12 @@ public abstract class Iced implements Freezable, Cloneable {
   private RuntimeException barf() {
     return new RuntimeException(getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
   }
-  @Override public AutoBuffer write(AutoBuffer bb) { throw barf(); }
-  @Override public <T extends Freezable> T read(AutoBuffer bb) { throw barf(); }
+  @Override public AutoBuffer write(AutoBuffer bb) { return bb; }
+  @Override public <T extends Freezable> T read(AutoBuffer bb) { return (T)this; }
   @Override public <T extends Freezable> T newInstance() { throw barf(); }
   @Override public int frozenType() { throw barf(); }
-  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { throw barf(); }
-  public final AutoBuffer writeJSON(AutoBuffer bb) { return writeJSONFields(bb.put1('{')).put1('}'); }
+  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
+  public AutoBuffer writeJSON(AutoBuffer bb) { return writeJSONFields(bb.put1('{')).put1('}'); }
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
 
   public Iced init( Key k ) { return this; }

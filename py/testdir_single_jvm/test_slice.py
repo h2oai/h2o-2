@@ -1,6 +1,6 @@
 import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 zeroList = []
 for i in range(5):
@@ -50,9 +50,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_slice(self):
-        importFolderPath = "/home/0xdiag/datasets/standard"
-        h2o_import.setupImportFolder(None, importFolderPath)
-
+        importFolderPath = "standard"
         csvFilenameAll = [
             ("covtype.data", "cA", 5),
         ]
@@ -60,24 +58,25 @@ class Basic(unittest.TestCase):
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
         lenNodes = len(h2o.nodes)
-        for (csvFilename, key2, timeoutSecs) in csvFilenameList:
+        for (csvFilename, hex_key, timeoutSecs) in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            parseKey = h2o_import.parseImportFolderFile(None, 
-                csvFilename, importFolderPath, key2=key2, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseKey['response']['time']
-            print "Parse result['desination_key']:", parseKey['destination_key']
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put',
+                hex_key=hex_key, timeoutSecs=2000)
+            print csvFilename, 'parse time:', parseResult['response']['time']
+            print "Parse result['desination_key']:", parseResult['destination_key']
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvFilename
             h2e.exec_zero_list(zeroList)
             # try the error case list
             # I suppose we should test the expected error is correct. 
             # Right now just make sure things don't blow up
-            h2e.exec_expr_list_rand(lenNodes, exprErrorCaseList, key2, 
+            h2e.exec_expr_list_rand(lenNodes, exprErrorCaseList, hex_key, 
                 maxCol=53, maxRow=400000, maxTrials=5, 
                 timeoutSecs=timeoutSecs, ignoreH2oError=True)
             # we use colX+1 so keep it to 53
-            h2e.exec_expr_list_rand(lenNodes, exprList, key2, 
+            h2e.exec_expr_list_rand(lenNodes, exprList, hex_key, 
                 maxCol=53, maxRow=400000, maxTrials=100, timeoutSecs=timeoutSecs)
 
 if __name__ == '__main__':

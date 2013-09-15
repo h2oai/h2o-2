@@ -1,10 +1,6 @@
-import random
-
-import unittest, time, sys
+import random, unittest, time, sys
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd
-import h2o_browse as h2b
+import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 # some dates are "wrong"..i.e. the date should be constrained
 # depending on month and year.. Assume 1-31 is legal
@@ -92,9 +88,8 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
         else:
-            import h2o_hosts
             h2o_hosts.build_cloud_with_hosts()
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
@@ -121,14 +116,14 @@ class Basic(unittest.TestCase):
                 rowData = rand_rowData()
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
-            key = csvFilename + "_" + str(trial)
-            key2 = csvFilename + "_" + str(trial) + ".hex"
+            src_key = csvFilename + "_" + str(trial)
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
 
             start = time.time()
-            parseKeyA = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2)
+            parseResultA = h2i.import_parse(path=csvPathname, schema='put', src_key=src_key, hex_key=hex_key)
             print "\nA trial #", trial, "parse end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
-            inspect = h2o_cmd.runInspect(key=key2)
+            inspect = h2o_cmd.runInspect(key=hex_key)
             ### print h2o.dump_json(inspect)
 
             missingValuesListA = h2o_cmd.infoFromInspect(inspect, csvPathname)

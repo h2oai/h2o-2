@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts
+import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import as h2i
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -43,10 +43,10 @@ class Basic(unittest.TestCase):
 
     def test_rf_covtype_train_full(self):
         csvFilename = 'train.csv'
-        csvPathname = h2o.find_dataset('bench/covtype/h2o/' + csvFilename)
+        csvPathname = 'bench/covtype/h2o/' + csvFilename
         print "\nUsing header=1 even though I shouldn't have to. Otherwise I get NA in first row and RF bad\n"
-        parseKey = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", header=1, 
-            timeoutSecs=180)
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=csvFilename + ".hex", 
+            header=1, timeoutSecs=180)
 
         for trial in range(1):
             # params is mutable. This is default.
@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
             timeoutSecs = 30 + kwargs['ntree'] * 20
             start = time.time()
-            rfView = h2o_cmd.runRF(csvPathname=csvPathname, timeoutSecs=timeoutSecs, **kwargs)
+            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

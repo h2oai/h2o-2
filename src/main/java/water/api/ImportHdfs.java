@@ -2,6 +2,8 @@ package water.api;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.Path;
 
@@ -32,11 +34,20 @@ public class ImportHdfs extends Request {
     _path._requestHelp = "HDFS path to import.";
   }
 
+  boolean isBareS3NBucketWithoutTrailingSlash(String s) {
+    Pattern p = Pattern.compile("s3n://[^/]*");
+    Matcher m = p.matcher(s);
+    boolean b = m.matches();
+    return b;
+  }
+
   @Override
   protected Response serve() {
+    String pstr = _path.value();
+    if (isBareS3NBucketWithoutTrailingSlash(_path.value())) { pstr = pstr + "/"; }
+    Log.info("ImportHDFS processing (" + pstr + ")");
     JsonArray succ = new JsonArray();
     JsonArray fail = new JsonArray();
-    String pstr = _path.value();
     try {
       PersistHdfs.addFolder(new Path(pstr), succ, fail);
     } catch( IOException e ) {

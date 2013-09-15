@@ -1,8 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -17,7 +15,6 @@ class Basic(unittest.TestCase):
         else:
             h2o_hosts.build_cloud_with_hosts(
                 use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
-
 
     @classmethod
     def tearDownClass(cls):
@@ -67,20 +64,21 @@ class Basic(unittest.TestCase):
         timeoutSecs = 1000
         # save the first, for all comparisions, to avoid slow drift with each iteration
         firstglm = {}
-        h2i.setupImportHdfs()
+
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             start = time.time()
             print 'Parsing', csvFilename
-            parseKey = h2i.parseImportHdfsFile(
-                csvFilename=csvFilename, path='/datasets', timeoutSecs=timeoutSecs, retryDelaySecs=1.0)
+            csvPathname = "datasets/" + csvFilename
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', 
+                timeoutSecs=timeoutSecs, retryDelaySecs=1.0)
             print csvFilename, '\nparse time (python)', time.time() - start, 'seconds'
-            print csvFilename, '\nparse time (h2o):', parseKey['response']['time']
-            ### print h2o.dump_json(parseKey['response'])
+            print csvFilename, '\nparse time (h2o):', parseResult['response']['time']
+            ### print h2o.dump_json(parseResult['response'])
 
-            print "parse result:", parseKey['destination_key']
+            print "parse result:", parseResult['destination_key']
             # I use this if i want the larger set in my localdir
-            inspect = h2o_cmd.runInspect(None, parseKey['destination_key'])
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             ### print h2o.dump_json(inspect)
             cols = inspect['cols']
