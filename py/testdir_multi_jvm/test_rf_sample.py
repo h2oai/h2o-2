@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i, h2o_browse as h2b
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
 
 def write_syn_dataset(csvPathname, rowCount, headerData, rList):
     dsf = open(csvPathname, "w+")

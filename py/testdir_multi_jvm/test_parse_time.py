@@ -1,6 +1,6 @@
 import unittest, random, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i
+import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import as h2i
 
 # some dates are "wrong"..i.e. the date should be constrained
 # depending on month and year.. Assume 1-31 is legal

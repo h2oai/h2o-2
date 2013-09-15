@@ -1,6 +1,7 @@
 package water;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import water.api.Constants;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -65,33 +66,45 @@ public abstract class Model extends Iced {
 
   public String responseName() { return   _names[  _names.length-1]; }
   public String[] classNames() { return _domains[_domains.length-1]; }
+  public boolean isClassifier() { return classNames() != null ; }
   public int nclasses() {
     String cns[] = classNames();
     return cns==null ? 1 : cns.length;
   }
 
-  /** Bulk score the frame 'fr', producing a single output vector.  Also passed
-   *  in a flag describing how hard we try to adapt the frame.  */
-  public Vec score( Frame fr, boolean exact ) {
+  /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the
+   *  predictions, the remaining Vecs are the probability distributions.  Also
+   *  passed in a flag describing how hard we try to adapt the frame.  */
+  public Frame score( Frame fr, boolean exact ) {
     Frame fr2 = adapt(fr,exact); // Adapt the Frame layout
     Vec v = fr2.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
     v._domain = _domains[_domains.length-1];
     fr2.add("predict",v);
+    if( nclasses() > 1 )
+      for( int c=0; c<nclasses(); c++ )
+        fr2.add(classNames()[c],fr2.anyVec().makeZero());
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp[] = new double[_names.length];
         float preds[] = new float[nclasses()];
-        Chunk p = chks[chks.length-1];
-        for( int i=0; i<p._len; i++ )
-          p.set0(i,Utils.maxIndex(score0(chks,i,tmp,preds)));
+        Chunk p = chks[_names.length-1];
+        for( int i=0; i<p._len; i++ ) {
+          score0(chks,i,tmp,preds);
+          p.set0(i,Utils.maxIndex(preds));
+          if( nclasses() > 1 )
+            for( int c=0; c<nclasses(); c++ )
+              chks[_names.length+c].set0(i,preds[c]);
+        }
       }
     }.doAll(fr2);
-    return v;
+    // Return just the output columns
+    int x=_names.length-1, y=fr2.numCols();
+    return new Frame(Arrays.copyOfRange(fr2._names,x,y),Arrays.copyOfRange(fr2._vecs,x,y));
   }
 
-  /** Single row scoring, on a compatible (but not adapted) Frame.  Fairly expensive to adapt.  */
+  /** Single row scoring, on a compatible Frame.  */
   public final float[] score( Frame fr, boolean exact, int row ) {
     double tmp[] = new double[fr.numCols()];
     for( int i=0; i<tmp.length; i++ )
@@ -126,77 +139,78 @@ public abstract class Model extends Iced {
   }
 
   /** Build an adaption array.  The length is equal to the Model's vector
-   *  length minus the response plus a column mapping.  Each inner array
-   *  is a domain map from user domains to model domains - or null for non-enum
-   *  columns.  The extra final int[] is the column mapping itself.
+   *  length minus the response plus a column mapping.  Each inner array is a
+   *  domain map from data domains to model domains - or null for non-enum
+   *  columns, or null for identity mappings.  The extra final int[] is the
+   *  column mapping itself, mapping from model columns to data columns. or -1
+   *  if missing.
    *  If 'exact' is true, will throw if there are:
    *    any columns in the model but not in the input set;
    *    any enums in the data that the model does not understand
-   *    any enums returned by the model that the data does not understand.
+   *    any enums returned by the model that the data does not have a mapping for.
    *  If 'exact' is false, these situations will use or return NA's instead.
    */
   private int[][] adapt( String names[], String domains[][], boolean exact ) {
+    int map[][] = new int[_names.length][];
+
+    // Build the column mapping: cmap[model_col] == user_col, or -1 if missing.
+    int cmap[] = map[_names.length-1] = new int[_names.length-1];
+    HashMap<String,Integer> m = new HashMap<String, Integer>();
+    for( int d = 0; d <  names.length  ; ++d) m.put(names[d], d);
+    for( int c = 0; c < _names.length-1; ++c) {
+      Integer I = m.get(_names[c]);
+      cmap[c] = I==null ? -1 : I; // Check for data missing model column
+    }
+
     // Make sure all are compatible
-    for( int i=0; i<_names.length-1; i++ ) {
-      if( !_names[i].equals(names[i]) ) {
-        System.out.println(Arrays.toString(_names)+","+Arrays.toString(names));
-        throw H2O.unimpl();
+    for( int c=0; c<cmap.length; c++ ) {
+      int d = cmap[c];          // Matching data column
+      if( d == -1 ) {           // Column was missing from data
+        if( exact ) throw new IllegalArgumentException("Model requires a column called "+_names[c]);
+        continue;               // Cannot check domains of missing columns
       }
-      if( _domains[i] != domains[i] ) {
-        if( _domains[i] == null || domains[i] == null ) {
-          if( exact )
-            throw new IllegalArgumentException("Model expects "+Arrays.toString(_domains[i])+" but was passed "+Arrays.toString(domains[i]));
-          throw H2O.unimpl();
-        }
-        for( int j=0; j<_names.length; j++ ) {
-          if( !(_domains[i][j].equals(domains[i][j])) )
-            throw H2O.unimpl();
-        }
+
+      // Now do domain mapping
+      if( _domains[c] == domains[d] ) { // Domains trivially equal?
+      } else if( _domains[c] == null && domains[d] != null ) {
+        throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) numeric, was passed a categorical");
+      } else if( _domains[c] != null && domains[d] == null ) {
+        if( exact )
+          throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) categorical, was passed a numeric");
+        throw H2O.unimpl();     // Attempt an asEnum?
+      } else if( !Arrays.deepEquals(_domains[c], domains[d]) ) {
+        throw H2O.unimpl();     // Domain mapping needed!
+      } else {
+        // null mapping is equal to identity mapping
       }
     }
-    // Trivial non-mapping map
-    return new int[names.length][];
+    return map;
   }
 
   /** Build an adapted Frame from the given Frame.  Useful for efficient bulk
    *  scoring of a new dataset to an existing model.  Same adaption as above,
-   *  but expressed as a Frame instead of as an int[][].     */
+   *  but expressed as a Frame instead of as an int[][].  The returned Frame
+   *  does not have a response column.  */
   public Frame adapt( Frame fr, boolean exact ) {
-    Vec [] vecs = fr.getVecs(_names);
-    for(int i = 0; i < _names.length-1; ++i)
-      if(vecs[i] == null) throw new RuntimeException("missing column '" + _names[i] + "'!");
-    String [] names = _names.clone();
-    if(vecs[vecs.length-1] == null){
-      vecs = Arrays.copyOf(vecs, vecs.length-1);// no response!
-      names = Arrays.copyOf(names, names.length-1);// no response!
-    }
-    // now do the enum domains...
-    for(int i = 0; i < vecs.length; ++i){
-      if(_domains[i] != vecs[i]._domain) {
-        if(vecs[i]._domain == null)vecs[i].asEnum();
-        else if(_domains[i] == null)throw new RuntimeException("incompatible column: '" + _names[i] + "', expected (trained on) numeric, got categorical");
-        if(!Arrays.deepEquals(vecs[i]._domain, _domains[i]))
-          throw H2O.unimpl(); // domain mapping neeeded!
+    int map[][] = adapt(fr.names(),fr.domains(),exact);
+    int cmap[] =     map[_names.length-1];
+    Vec vecs[] = new Vec[_names.length-1];
+    for( int c=0; c<cmap.length; c++ ) {
+      int d = cmap[c];          // Data index
+      if( d == -1 ) throw H2O.unimpl(); // Swap in a new all-NA Vec
+      else if( map[c] == null ) {       // No or identity domain map?
+        vecs[c] = fr._vecs[d];          // Just use the Vec as-is
+      } else {
+        throw H2O.unimpl();     // Domain mapping needed!
       }
     }
-    return new Frame(names,vecs);
-  }
-
-  /** Bulk scoring API for whole chunks.  Chunks are all compatible with the
-   *  model, and expect the last Chunk is for the final score.  Default method
-   *  just does row-at-a-time for the whole chunk. */
-  protected void score0( Chunk chks[] ) {
-    double tmp[] = new double[_names.length];
-    float preds[] = new float[nclasses()];
-    int len = chks[0]._len;
-    for( int i=0; i<len; i++ )
-      chks[_names.length].set0(i,Utils.maxIndex(score0(chks,i,tmp,preds)));
+    return new Frame(Arrays.copyOf(_names,_names.length-1),vecs);
   }
 
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,
-   *  and expect the last Chunk is for the final score.  Default method is to
-   *  just load the data into the tmp array, then call subclass scoring
-   *  logic. */
+   *  and expect the last Chunks are for the final distribution & prediction.
+   *  Default method is to just load the data into the tmp array, then call
+   *  subclass scoring logic. */
   protected float[] score0( Chunk chks[], int row_in_chunk, double[] tmp, float[] preds ) {
     assert chks.length>=_names.length; // Last chunk is for the response
     for( int i=0; i<_names.length; i++ )

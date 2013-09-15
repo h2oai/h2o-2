@@ -3,7 +3,6 @@ package water.fvec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.HashMap;
 
 import water.*;
 import water.fvec.Vec.VectorGroup;
@@ -30,15 +29,8 @@ public class Frame extends Iced {
         return i;
     return -1;
   }
-
-  public Vec [] getVecs(String [] names){
-    Vec [] res = new Vec[names.length];
-    HashMap<String,Vec> m = new HashMap<String, Vec>();
-    for(int i = 0; i < _names.length; ++i)m.put(_names[i], (Vec)_vecs[i].clone());
-    for(int i = 0; i < names.length; ++i)res[i] = m.get(names[i]);
-    return res;
-  }
-  /** Appends a named column, keeping the last Vec as the response */
+ 
+ /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
     // TODO : needs a compatibility-check!!!
     final int len = _names.length;
@@ -69,9 +61,7 @@ public class Frame extends Iced {
   public int  numCols() { return _vecs.length; }
   public long numRows(){ return anyVec().length();}
 
-  /** 
-   * All the domains for enum columns; null for non-enum columns.
-   */ 
+  /** All the domains for enum columns; null for non-enum columns.  */ 
   public String[][] domains() {
     String ds[][] = new String[_vecs.length][];
     for( int i=0; i<_vecs.length; i++ )
@@ -130,9 +120,7 @@ public class Frame extends Iced {
     remove(new Futures());
   }
 
-  /**
-   * Actually remove/delete all Vecs from memory, not just from the Frame.
-   */
+  /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   public void remove(Futures fs){
     if(_vecs.length > 0){
       VectorGroup vg = _vecs[0].group();

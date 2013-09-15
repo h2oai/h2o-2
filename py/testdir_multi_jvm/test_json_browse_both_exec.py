@@ -1,6 +1,6 @@
 import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts, h2o_import as h2i
 # Result from exec is an interesting key because it changes shape depending on the operation
 # it's hard to overwrite keys with other operations. so exec gives us that, which allows us
 # to test key atomicity. (value plus size plus other aspects)

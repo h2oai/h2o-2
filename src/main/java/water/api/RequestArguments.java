@@ -2348,12 +2348,9 @@ public class RequestArguments extends RequestStatics {
           return k2;
         }
       }
-
       // If not VA and not Frame, then it's an error.
-      if (! v.isFrame()) {
+      if (! v.isFrame())
         throw new IllegalArgumentException(input+":"+errors()[1]);
-      }
-
       return k;
     }
     @Override protected String queryDescription() { return "An existing H2O Frame key."; }

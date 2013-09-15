@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 # Test of glm comparing result against R-implementation
 # Tested on prostate.csv short (< 1M) and long (multiple chunks)

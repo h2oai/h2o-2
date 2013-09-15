@@ -16,9 +16,10 @@ public class GeneratePredictions2 extends Request2 {
 
   @API( help="Model", required=true, filter=Default.class )
   Model model;
-  
-  @API(help = "Data frame", required = true, filter = Default.class)
-  Frame data;
+
+  @API(help = "Data frame", required = true, filter = dataFilter.class)
+  public Frame data;
+  class dataFilter extends FrameKey { public dataFilter() { super("data"); } }
 
   @API( help="Prediction key", required=true, filter=Default.class )
   Key prediction_key;
@@ -33,8 +34,8 @@ public class GeneratePredictions2 extends Request2 {
 
   @Override protected Response serve() {
     try {
-      Vec vec = model.score(data,true);
-      Frame fr = new Frame(new String[]{prediction_key.toString()},new Vec[]{vec});
+      if( model == null ) throw new IllegalArgumentException("Model is missing");
+      Frame fr = model.score(data,true);
       UKV.put(prediction_key,fr);
       return Inspect2.redirect(this, prediction_key.toString());
     } catch (Throwable t) {

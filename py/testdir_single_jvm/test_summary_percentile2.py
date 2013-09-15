@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy

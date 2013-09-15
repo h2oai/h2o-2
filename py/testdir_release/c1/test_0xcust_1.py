@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 print "You need the special config json, and the private key, that lets you run h2o as <the user>"
 print "You want the private key to avoid putting a password into cleartext"
