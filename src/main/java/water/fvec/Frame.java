@@ -3,6 +3,7 @@ package water.fvec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import water.*;
 import water.fvec.Vec.VectorGroup;
@@ -30,6 +31,13 @@ public class Frame extends Iced {
     return -1;
   }
 
+  public Vec [] getVecs(String [] names){
+    Vec [] res = new Vec[names.length];
+    HashMap<String,Vec> m = new HashMap<String, Vec>();
+    for(int i = 0; i < _names.length; ++i)m.put(_names[i], (Vec)_vecs[i].clone());
+    for(int i = 0; i < names.length; ++i)res[i] = m.get(names[i]);
+    return res;
+  }
   /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
     // TODO : needs a compatibility-check!!!
