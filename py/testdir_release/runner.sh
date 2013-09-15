@@ -3,6 +3,32 @@
 # Normally die on first error
 set -e
 
+#**************************************
+# do some bash parameters, just in case we have future expansion
+# -n is no download of the jar
+no_download=0
+while getopts nf: flag
+do
+    case $flag in
+        n)
+              echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
+              no_download=1
+              ;;
+        f)
+             file=$OPTARG
+             echo "filename is $file (fake)"
+             ;;
+        ?)
+            exit
+            ;;
+    esac
+done
+shift $(( OPTIND - 1 ))  # shift past the last flag or argument
+echo remaining parameters to Bash are $*
+
+#**************************************
+
+
 echo "Setting PATH and showing java/python versions"
 date
 export PATH="/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin"
@@ -31,7 +57,7 @@ echo "current PID: $$"
 # Get the latest jar from s3. Has to execute up in h2o
 
 # a secret way to skip the download (use any arg)
-if [ $# -eq 0 ]
+if [ $no_download -eq 0 ]
 then
     cd ../..
     ./get_s3_jar.sh
