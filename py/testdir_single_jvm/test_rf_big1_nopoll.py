@@ -80,7 +80,6 @@ class Basic(unittest.TestCase):
             data_key = rfView['data_key']
             model_key = rfView['model_key']
             ntree = rfView['ntree']
-            # a = h2o.nodes[0].random_forest_view(data_key, model_key, noPoll=True)
             print "Temporary hack: need to do two rf views minimum, to complete a RF (confusion matrix creation)"
             # allow it to poll to complete
             rfViewResult = h2o_cmd.runRFView(None, data_key, model_key, ntree=ntree, timeoutSecs=60, noPoll=False)

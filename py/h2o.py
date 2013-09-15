@@ -53,7 +53,7 @@ def drain(src, dst):
 
 def unit_main():
     global python_test_name, pythonCmdLineArgs
-    # if I remember correctly there was an issue with using sys.argv[0] 
+    # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
     pythonCmdLineArgs = " ".join(sys.argv[1:])
@@ -159,7 +159,7 @@ def iter_chunked_file(file, chunk_size=2048):
 # shutil.rmtree doesn't work on windows if the files are read only.
 # On unix the parent dir has to not be readonly too.
 # May still be issues with owner being different, like if 'system' is the guy running?
-# Apparently this escape function on errors is the way shutil.rmtree can 
+# Apparently this escape function on errors is the way shutil.rmtree can
 # handle the permission issue. (do chmod here)
 # But we shouldn't have read-only files. So don't try to handle that case.
 def handleRemoveError(func, path, exc):
@@ -186,7 +186,7 @@ def clean_sandbox():
     if not os.path.exists(LOG_DIR):
         os.mkdir(LOG_DIR)
 
-# who knows if this one is ok with windows...doesn't rm dir, just 
+# who knows if this one is ok with windows...doesn't rm dir, just
 # the stdout/stderr files
 def clean_sandbox_stdout_stderr():
     if os.path.exists(LOG_DIR):
@@ -217,7 +217,7 @@ def log(cmd, comment=None):
                 f.write('    #')
                 f.write(comment)
             f.write("\n")
-        elif comment: # for comment-only 
+        elif comment: # for comment-only
             f.write(comment + "\n")
 
 def make_syn_dir():
@@ -255,7 +255,7 @@ def get_ip_address():
 
     ipa = None
     for ips in socket.gethostbyname_ex(socket.gethostname())[2]:
-         # only take the first 
+         # only take the first
          if ipa is None and not ips.startswith("127."):
             ipa = ips[:]
             verboseprint("get_ip case 4:", ipa)
@@ -263,7 +263,7 @@ def get_ip_address():
                 print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
                 print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
 
-    verboseprint("get_ip_address:", ip) 
+    verboseprint("get_ip_address:", ip)
     return ip
 
 # can't have a list of cmds, because cmd is a list
@@ -304,7 +304,7 @@ def spawn_cmd_and_wait(name, cmd, capture_output=True, timeout=None, **kwargs):
     (ps, stdout, stderr) = spawn_cmd(name, cmd, capture_output, **kwargs)
     spawn_wait(ps, stdout, stderr, capture_output, timeout)
 
-def kill_process_tree(pid, including_parent=True):    
+def kill_process_tree(pid, including_parent=True):
     parent = psutil.Process(pid)
     for child in parent.get_children(recursive=True):
         child.kill()
@@ -327,7 +327,7 @@ nodes = []
 # the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
 # FIX! default to random_shuffle for now..then switch to not.
 def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True):
-    # always create the flatfile. 
+    # always create the flatfile.
     ports_per_node = 2
     pff = open(flatfile_name(), "w+")
     # doing this list outside the loops so we can shuffle for better test variation
@@ -342,7 +342,7 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
                 hostPortList.append("/" + h.addr + ":" + str(base_port + ports_per_node*i))
 
     # note we want to shuffle the full list of host+port
-    if rand_shuffle: 
+    if rand_shuffle:
         random.shuffle(hostPortList)
     for hp in hostPortList:
         pff.write(hp + "\n")
@@ -369,7 +369,7 @@ def decide_if_localhost():
     if config_json:
         print "* Using config JSON you passed as -cj argument:", config_json
         return False
-    if os.path.exists(hostsFile): 
+    if os.path.exists(hostsFile):
         print "* Using matching username config JSON file discovered in this directory: {0}.".format(hostsFile)
         return False
     if 'hosts' in os.getcwd():
@@ -408,7 +408,7 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     with open(h2o_nodes_json, 'rb') as f:
         cloneJson = json.load(f)
 
-    # These are supposed to be in the file. 
+    # These are supposed to be in the file.
     # Just check the first one. if not there, the file must be wrong
     if not 'cloud_start' in cloneJson:
         raise Exception("Can't find 'cloud_start' in %s, wrong file? h2o-nodes.json?" % h2o_nodes_json)
@@ -457,18 +457,18 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     return nodeList
 
 def setup_benchmark_log():
-    # an object to keep stuff out of h2o.py        
+    # an object to keep stuff out of h2o.py
     global cloudPerfH2O
     cloudPerfH2O = h2o_perf.PerfH2O(python_test_name)
 
 # node_count is per host if hosts is specified.
-def build_cloud(node_count=2, base_port=54321, hosts=None, 
-    timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True, 
+def build_cloud(node_count=2, base_port=54321, hosts=None,
+    timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
     conservative=False, create_json=False, clone_cloud=None, **kwargs):
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
     # (both come thru here)
-    # clone_cloud is just another way to get the effect (maybe ec2 config file thru 
+    # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
     if clone_cloud_json or clone_cloud:
         nodeList = build_cloud_with_json(
@@ -485,12 +485,12 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     check_h2o_version()
 
     # keep this param in kwargs, because we pass it to the H2O node build, so state
-    # is created that polling and other normal things can check, to decide to dump 
+    # is created that polling and other normal things can check, to decide to dump
     # info to benchmark.log
     if kwargs.setdefault('enable_benchmark_log', False):
         setup_benchmark_log()
 
-    ports_per_node = 2 
+    ports_per_node = 2
     nodeList = []
     try:
         # if no hosts list, use psutil method on local host.
@@ -499,9 +499,9 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # this jvm startup shuffle is independent from the flatfile shuffle
         portList = [base_port + ports_per_node*i for i in range(node_count)]
         if hosts is None:
-            # if use_flatfile, we should create it, 
+            # if use_flatfile, we should create it,
             # because tests will just call build_cloud with use_flatfile=True
-            # best to just create it all the time..may or may not be used 
+            # best to just create it all the time..may or may not be used
             write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
             if rand_shuffle: random.shuffle(portList)
@@ -531,10 +531,10 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         verboseprint("Attempting Cloud stabilize of", totalNodes, "nodes on", hostCount, "hosts")
         start = time.time()
         # UPDATE: best to stabilize on the last node!
-        stabilize_cloud(nodeList[0], len(nodeList), 
+        stabilize_cloud(nodeList[0], len(nodeList),
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time()-start, " secs")
-        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList), 
+        verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList),
             hostCount, (time.time() - start)))
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
@@ -600,8 +600,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
 # dump the h2o.nodes state to a json file # include enough extra info to have someone rebuild the cloud if a test fails
     # that was using that cloud.
     if create_json:
-        q = {   
-                'cloud_start': 
+        q = {
+                'cloud_start':
                     {
                     'time': cs_time,
                     'cwd': cs_cwd,
@@ -621,13 +621,13 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
 
 def upload_jar_to_remote_hosts(hosts, slow_connection=False):
     def prog(sofar, total):
-        # output is bad for jenkins. 
+        # output is bad for jenkins.
         username = getpass.getuser()
         if username!='jenkins':
             p = int(10.0 * sofar / total)
             sys.stdout.write('\rUploading jar [%s%s] %02d%%' % ('#'*p, ' '*(10-p), 100*sofar/total))
             sys.stdout.flush()
-        
+
     if not slow_connection:
         for h in hosts:
             f = find_file('target/h2o.jar')
@@ -653,7 +653,7 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
     # FIX! wait for h2o to flush to files? how?
     # Dump any assertion or error line to the screen
     # Both "passing" and failing tests??? I guess that's good.
-    # if you find a problem, just keep printing till the end, in that file. 
+    # if you find a problem, just keep printing till the end, in that file.
     # The stdout/stderr is shared for the entire cloud session?
     # so don't want to dump it multiple times?
     errLines = []
@@ -665,7 +665,7 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
             # oh well...if so ..it's a bug! "killing" is temp to detect jar mismatch error
             regex1String = 'found multiple|exception|error|ERRR|assert|killing|killed|required ports'
             if cloudShutdownIsError:
-                regex1String += '|shutdown command' 
+                regex1String += '|shutdown command'
             regex1 = re.compile(regex1String, re.IGNORECASE)
             regex2 = re.compile('Caused',re.IGNORECASE)
             # regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
@@ -679,14 +679,14 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
             # if we started due to "warning" ...then if we hit exception, we don't want to stop
             # we want that to act like a new beginning. Maybe just treat "warning" and "info" as
             # single line events? that's better
-            printing = 0 # "printing" is per file. 
+            printing = 0 # "printing" is per file.
             lines = 0 # count per file! errLines accumulates for multiple files.
             for line in sandFile:
                 # JIT reporting looks like this..don't detect that as an error
                 printSingleWarning = False
                 foundBad = False
                 if not ' bytes)' in line:
-                    # no multiline FSM on this 
+                    # no multiline FSM on this
                     printSingleWarning = regex3.search(line)
                     #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
 
@@ -703,7 +703,7 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                         # R
                         ('class.error' in line) or
                         # original RF
-                        ('error rate' in line) or ('[Loaded ' in line) or 
+                        ('error rate' in line) or ('[Loaded ' in line) or
                         ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
 
                 if (printing==0 and foundBad):
@@ -716,13 +716,13 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                     # is on a line with "Caused" in it ("Caused by")
                     # only use caused for overriding an end condition
                     foundCaused = regex2.search(line)
-                    # since the "at ..." lines may have the "bad words" in them, we also don't want 
+                    # since the "at ..." lines may have the "bad words" in them, we also don't want
                     # to stop if a line has " *at " at the beginning.
-                    # Update: Assertion can be followed by Exception. 
+                    # Update: Assertion can be followed by Exception.
                     # Make sure we keep printing for a min of 4 lines
                     foundAt = re.match(r'[\t ]+at ',line)
                     if foundBad and (lines>10) and not (foundCaused or foundAt):
-                        printing = 2 
+                        printing = 2
 
                 if (printing==1):
                     # to avoid extra newline from print. line already has one
@@ -733,7 +733,7 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                     # don't print these lines
                     if not (re.search("Unable to load native-hadoop library", line) or
                         ('Multiple local IPs detected' in line) or
-                        ('[Loaded ' in line) or 
+                        ('[Loaded ' in line) or
                         ('RestS3Service' in line)):
 
                         sys.stdout.write(line)
@@ -742,12 +742,12 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
     sys.stdout.flush()
 
     # already has \n in each line
-    # doing this kludge to put multiple line message in the python traceback, 
+    # doing this kludge to put multiple line message in the python traceback,
     # so it will be reported by jenkins. The problem with printing it to stdout
     # is that we're in the tearDown class, and jenkins won't have this captured until
     # after it thinks the test is done (tearDown is separate from the test)
     # we probably could have a tearDown with the test rather than the class, but we
-    # would have to update all tests. 
+    # would have to update all tests.
     if len(errLines)!=0:
         # check if the lines all start with INFO: or have "apache" in them
         justInfo = True
@@ -758,11 +758,11 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
             emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr (including R stdout/stderr).\n" + \
                      "Could have occurred at any prior time\n\n"
             emsg2 = "".join(errLines)
-            if nodes: 
+            if nodes:
                 nodes[0].sandbox_error_report(True)
 
             # Can build a cloud that ignores all sandbox things that normally fatal the test
-            # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter. 
+            # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter.
             # we need the sandbox_ignore_errors, for the test teardown_cloud..the state disappears!
             if sandboxIgnoreErrors or (nodes and nodes[0].sandbox_ignore_errors):
                 pass
@@ -770,7 +770,7 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                 raise Exception(python_test_name + emsg1 + emsg2)
 
 def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
-    if sleep_at_tear_down: 
+    if sleep_at_tear_down:
         print "Opening browser to cloud, and sleeping for 3600 secs, before cloud teardown (for debug)"
         import h2o_browse
         h2b.browseTheCloud()
@@ -785,7 +785,7 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors)
         nodeList[:] = []
 
-# don't need any more? 
+# don't need any more?
 # Used before to make sure cloud didn't go away between unittest defs
 def touch_cloud(nodeList=None):
     if not nodeList: nodeList = nodes
@@ -812,11 +812,11 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
         consensusStr = (",".join(map(str,cloudConsensus)))
         sizeStr =   (",".join(map(str,cloudSizes)))
         if (s != expectedSize):
-            raise Exception("Inconsistent cloud size." + 
+            raise Exception("Inconsistent cloud size." +
                 "nodeList report size: %s consensus: %s instead of %d." % \
                 (sizeStr, consensusStr, expectedSize))
     return (sizeStr, consensusStr, expectedSize)
-    
+
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
     node.wait_for_node_to_accept_connections(timeoutSecs)
 
@@ -834,12 +834,12 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
             emsg = "\nH2O didn't include a list of nodes in get_cloud response after initial cloud build"
             raise Exception(emsg)
 
-        # only print it when you get consensus 
+        # only print it when you get consensus
         if cloud_size!=node_count:
             verboseprint("\nNodes in cloud while building:")
             for ci in c['nodes']:
                 verboseprint(ci['name'])
-        
+
         if (cloud_size > node_count):
             emsg = (
                 "\n\nERROR: cloud_size: %d reported via json is bigger than we expect: %d" % (cloud_size, node_count) +
@@ -850,10 +850,10 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25):
                 "\nIf you try again, and it still fails, go to those IPs and kill the zombie h2o's." +
                 "\nIf you think you really have an intermittent cloud build, report it." +
                 "\n" +
-                "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?" 
+                "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?"
                 )
             raise Exception(emsg)
-        
+
         a = (cloud_size==node_count) and consensus
         if a:
             verboseprint("\tLocked won't happen until after keys are written")
@@ -871,9 +871,9 @@ class H2O(object):
         # always use the new api port
         if port is None: port = self.port
         u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
-        return u 
+        return u
 
-    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, 
+    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None,
         cmd='get', extraComment=None, ignoreH2oError=False, **kwargs):
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
@@ -902,9 +902,9 @@ class H2O(object):
             r = requests.post(url, timeout=timeout, params=params, **kwargs)
         else:
             r = requests.get(url, timeout=timeout, params=params, **kwargs)
-        
+
         # fatal if no response
-        if not beta_features and not r: 
+        if not beta_features and not r:
             raise Exception("Maybe bad url? no r in __do_json_request in %s:" % inspect.stack()[1][3])
 
         # this is used to open a browser on results, or to redo the operation in the browser
@@ -912,7 +912,7 @@ class H2O(object):
         json_url_history.append(r.url)
         if not beta_features and not r.json():
             raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
-            
+
         rjson = None
         try:
             rjson = r.json()
@@ -922,7 +922,7 @@ class H2O(object):
                 raise Exception("No json could be decoded as there was a 404 response. Do you have beta features turned on? beta_features: ", beta_features)
             verboseprint(r.text)
             raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
-        
+
         for e in ['error', 'Error', 'errors', 'Errors']:
             if e in rjson:
                 verboseprint(dump_json(rjson))
@@ -981,7 +981,7 @@ class H2O(object):
 
     def put_value(self, value, key=None, repl=None):
         return self.__do_json_request(
-            'PutValue.json', 
+            'PutValue.json',
             params={"value": value, "key": key, "replication_factor": repl},
             extraComment = str(value) + "," + str(key) + "," + str(repl))
 
@@ -1000,7 +1000,7 @@ class H2O(object):
 
         verboseprint("\nput_file response: ", dump_json(resp))
         return key
-    
+
     def get_key(self, key, timeoutSecs=30):
         params = {'key': key}
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
@@ -1013,12 +1013,13 @@ class H2O(object):
     # noise is a 2-tuple ("StoreView", none) for url plus args for doing during poll to create noise
     # so we can create noise with different urls!, and different parms to that url
     # no noise if None
-    def poll_url(self, response, 
+    def poll_url(self, response,
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False):
-        ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs 
+        ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
 
+        # rfView doesn't have the redirect_request and redirect_request_args
         url = self.__url(response['redirect_request'])
         params = response['redirect_request_args']
         # no need to recreate the string for messaging, in the loop..
@@ -1072,14 +1073,14 @@ class H2O(object):
                 check_sandbox_for_errors()
 
             if (create_noise):
-                # this guarantees the loop is done, so we don't need to worry about 
+                # this guarantees the loop is done, so we don't need to worry about
                 # a 'return r' being interpreted from a noise response
                 status = 'poll'
             else:
                 status = r['response']['status']
 
             if ((time.time()-start)>timeoutSecs):
-                # show what we're polling with 
+                # show what we're polling with
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
                        "status: %s, url: %s?%s" % (status, urlUsed, paramsUsedStr)
                 raise Exception(emsg)
@@ -1092,7 +1093,7 @@ class H2O(object):
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
         return r
-    
+
     def kmeans_apply(self, data_key, model_key, destination_key,
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         **kwargs):
@@ -1112,7 +1113,7 @@ class H2O(object):
             print dump_json(a)
             raise Exception('H2O kmeans redirect is not Progress. KMeansApply json response precedes.')
         a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nKMeansApply result:", dump_json(a))
 
@@ -1146,9 +1147,9 @@ class H2O(object):
             time.sleep(5)
         return a
 
-    # additional params include: cols=. 
+    # additional params include: cols=.
     # don't need to include in params_dict it doesn't need a default
-    def kmeans(self, key, key2=None, 
+    def kmeans(self, key, key2=None,
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         # defaults
@@ -1165,7 +1166,7 @@ class H2O(object):
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
         print "\nKMeans params list:", params_dict
-        a = self.__do_json_request('KMeans2.json' if beta_features else 'KMeans.json', 
+        a = self.__do_json_request('KMeans2.json' if beta_features else 'KMeans.json',
             timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
@@ -1177,7 +1178,7 @@ class H2O(object):
             return a
 
         a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("\nKMeans result:", dump_json(a))
@@ -1188,7 +1189,7 @@ class H2O(object):
             time.sleep(5)
         return a
 
-    def kmeans_grid(self, key, key2=None, 
+    def kmeans_grid(self, key, key2=None,
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         **kwargs):
         # defaults
@@ -1209,7 +1210,7 @@ class H2O(object):
             print dump_json(a)
             raise Exception('H2O kmeans_grid redirect is not Progress. KMeans json response precedes.')
         a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nKMeansGrid result:", dump_json(a))
 
@@ -1219,14 +1220,14 @@ class H2O(object):
             time.sleep(5)
         return a
 
-    # params: 
-    # header=1, 
+    # params:
+    # header=1,
     # header_from_file
     # separator=1 (hex encode?
     # exclude=
     # noise is a 2-tuple: ("StoreView",params_dict)
-    
-    def parse(self, key, key2=None, 
+
+    def parse(self, key, key2=None,
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
@@ -1258,7 +1259,7 @@ class H2O(object):
 
         # Check that the response has the right Progress url it's going to steer us to.
         verboseprint("Parse2" if beta_features else "Parse" + " result:", dump_json(a))
-        
+
         # FIX! not using h2o redirect info for Parse2 yet
         if not beta_features and a['response']['redirect_request']!='Progress':
             raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
@@ -1270,7 +1271,7 @@ class H2O(object):
         # no noise if None
         verboseprint('Parse noise:', noise)
         a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
 
@@ -1311,7 +1312,7 @@ class H2O(object):
         return a
 
     # can take a useful 'filter'
-    # FIX! current hack to h2o to make sure we get "all" rather than just 
+    # FIX! current hack to h2o to make sure we get "all" rather than just
     # default 20 the browser gets. set to max # by default (1024)
     # There is a offset= param that's useful also, and filter=
     def store_view(self, timeoutSecs=60, **kwargs):
@@ -1321,7 +1322,7 @@ class H2O(object):
         params_dict.update(kwargs)
 
         print "\nStoreView params list:", params_dict
-        a = self.__do_json_request('StoreView.json', 
+        a = self.__do_json_request('StoreView.json',
             params=params_dict,
             timeout=timeoutSecs)
         # print dump_json(a)
@@ -1336,14 +1337,15 @@ class H2O(object):
         return a
 
     # only model keys can be exported?
+
     def export_hdfs(self, source_key, path):
-        a = self.__do_json_request('ExportHdfs.json', 
+        a = self.__do_json_request('ExportHdfs.json',
             params={"source_key": source_key, "path": path})
         verboseprint("\nexport_hdfs result:", dump_json(a))
         return a
 
     def export_s3(self, source_key, bucket, obj):
-        a = self.__do_json_request('ExportS3.json', 
+        a = self.__do_json_request('ExportS3.json',
             params={"source_key": source_key, "bucket": bucket, "object": obj})
         verboseprint("\nexport_s3 result:", dump_json(a))
         return a
@@ -1352,7 +1354,7 @@ class H2O(object):
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
     def import_files(self, path, timeoutSecs=180):
         a = self.__do_json_request('ImportFiles2.json' if beta_features else 'ImportFiles.json',
-            timeout=timeoutSecs, 
+            timeout=timeoutSecs,
             params={"path": path}
         )
         verboseprint("\nimport_files result:", dump_json(a))
@@ -1378,7 +1380,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request('Exec.json', 
+        a = self.__do_json_request('Exec.json',
             timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a
@@ -1405,15 +1407,17 @@ class H2O(object):
         verboseprint("\njobs_cancel result:", dump_json(a))
         return a
 
-
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
-    def random_forest(self, data_key, trees, timeoutSecs=300, print_params=True, **kwargs):
+    def random_forest(self, data_key, trees, 
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
+        noise=None, benchmarkLogging=None, print_params=True, noPoll=False, rfView=True, **kwargs):
+
         params_dict = {
             'data_key': data_key,
             'ntree':  trees,
             'model_key': None,
             # new default. h2o defaults to 0, better for tracking oobe problems
-            'out_of_bag_error_estimate': 1, 
+            'out_of_bag_error_estimate': 1,
             'response_variable': None,
             'sample': None,
             }
@@ -1425,7 +1429,7 @@ class H2O(object):
                 params_dict['sample_rate'] = None
             else:
                 params_dict['sample_rate'] = (kwargs['sample'] + 0.0)/ 100 # has to be modified?
-            
+
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
 
@@ -1433,12 +1437,48 @@ class H2O(object):
             print "\nrandom_forest parameters:", params_dict
             sys.stdout.flush()
 
-        a = self.__do_json_request('DRF2.json' if beta_features else 'RF.json', 
+        rf = self.__do_json_request('DRF2.json' if beta_features else 'RF.json',
             timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nrandom_forest result:", dump_json(a))
-        return a
+        verboseprint("\nrandom_forest result:", dump_json(rf))
+        
+        # FIX! will we always get a redirect?
+        if rf['response']['redirect_request']!='RFView':
+            print dump_json(rf)
+            raise Exception('H2O RF redirect is not RFView. RF json response precedes.')
 
-    def random_forest_view(self, data_key, model_key, timeoutSecs=300, print_params=False, **kwargs):
+        # noPoll and rfView=False are similar?
+        if (noPoll or not rfView) or (beta_features and rfView==False):
+            # just return for now
+            return rf
+
+        # FIX! check all of these somehow?
+        # if we model_key was given to rf via **kwargs, remove it, since we're passing 
+        # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
+        data_key  = rf['data_key']
+        model_key = rf['model_key']
+        rfCloud = rf['response']['h2o']
+        # this is important. it's the only accurate value for how many trees RF was asked for.
+        ntree    = rf['ntree']
+        response_variable = rf['response_variable']
+
+        # Since I may not have passed a model_key or ntree to h2o, I have to learn what h2o used
+        # and be sure to pass that to RFView. just update params_dict. If I provided them
+        # I'm trusting h2o to have given them back to me correctly. Maybe fix that at some point.
+        params_dict.update({'ntree': ntree, 'model_key': model_key})
+
+        # data_key/model_key/ntree are all in **params_dict
+        rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs, 
+            retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging, print_params=print_params, noPoll=noPoll, 
+            useRFScore=False, **params_dict) 
+
+        return rfViewResult
+
+    def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300, 
+            retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
+            noise=None, benchmarkLogging=None, print_params=False, noPoll=False, 
+            useRFScore=False, **kwargs): 
+
         # not supported yet
         if beta_features:
             print "random_forest_view not supported in H2O fvec yet. hacking done response"
@@ -1449,9 +1489,12 @@ class H2O(object):
         params_dict = {
             'data_key': data_key,
             'model_key': model_key,
-            'out_of_bag_error_estimate': 1, 
+            'out_of_bag_error_estimate': 1,
+            'iterative_cm': 0,
+            # is ntree not expected here?
+            'ntree': None,
             'class_weights': None,
-            'response_variable': None, 
+            'response_variable': None,
             'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
@@ -1462,17 +1505,76 @@ class H2O(object):
             if k in params_dict:
                 params_dict[k] = kwargs[k]
 
+        if params_dict['ntree'] is None:
+            raise Exception("random_forest_view got no ntree: %s . Why? apparently need to pass a ntree to h2o")
+        # well assume we got the gold standard from the initial rf request
+        ntree = params_dict['ntree']
+
         if print_params:
             print "\nrandom_forest_view parameters:", params_dict
             sys.stdout.flush()
 
-        a = self.__do_json_request('DRFView2.json' if beta_features else 'RFView.json', 
+        if useRFScore:
+            whichToUse = 'DRFScore2' if beta_features else 'RFScore'
+        else:
+            whichToUse = 'DRFView2' if beta_features else 'RFView'
+
+        a = self.__do_json_request(whichToUse + ".json",
             timeout=timeoutSecs, params=params_dict)
         verboseprint("\nrandom_forest_view result:", dump_json(a))
 
+        if noPoll:
+            return a
+
+        # add a fake redirect_request and redirect_request_args
+        # to the RF response, to make it look like everyone else
+        response = a['response']
+        response['redirect_request'] = whichToUse + ".json"
+        response['redirect_request_args'] = params_dict
+
+        # no redirect_response in rfView? so need to pass params here
+        # FIX! do we have to do a 2nd if it's done in the first?
+        rfView = self.poll_url(response,
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
+
+        # above we get this from what we're told from rf and passed to rfView
+        ## ntree = rfView['ntree']
+        verboseprint("RFView done:", dump_json(rfView))
+        status = rfView['response']['status']
+        if status != 'done': raise Exception('Unexpected status: ' + status)
+
+        numberBuilt = rfView['trees']['number_built']
+        if numberBuilt!=ntree:
+            raise Exception("RFview done but number_built!=ntree: %s %s" % (numberBuilt, ntree))
+
+        # can't check this? These are returned in the middle but not at the end
+        ## progress = rfView['response']['progress']
+        ## progressTotal = rfView['response']['progress_total']
+        ##    progress<0 or progressTotal<0 or progress>progressTotal or \
+
+        # want to double check all this because it's new
+        # and we had problems with races/doneness before
+        errorInResponse = \
+            numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
+            ntree!=rfView['ntree']
+
+        if errorInResponse:
+            raise Exception("\nBad values in %s.json\n" % whichToUse +
+                "progress: %s, progressTotal: %s, ntree: %s, numberBuilt: %s, status: %s" % \
+                (progress, progressTotal, ntree, numberBuilt, status))
+
         if (browseAlso | browse_json):
-            h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-        return a
+            h2b.browseJsonHistoryAsUrlLastMatch(whichToUse)
+        return rfView
+
+    def random_forest_score(self, data_key, model_key,
+        timeoutSecs=60, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
+        **kwargs):
+        rfView = random_forest_view(useRFScore=True, *args, **kwargs)
+        return rfView
+
 
     def gbm_view(self,model_key,timeoutSecs=300,print_params=False,**kwargs):
         params_dict = {
@@ -1513,7 +1615,7 @@ class H2O(object):
         verboseprint("\nInspect of " + resultKey, dump_json(a))
         return a
 
-    def random_forest_treeview(self, tree_number, data_key, model_key, 
+    def random_forest_treeview(self, tree_number, data_key, model_key,
         timeoutSecs=10, ignoreH2oError=False, **kwargs):
         params_dict = {
             'tree_number': tree_number,
@@ -1524,7 +1626,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict.update(kwargs)
 
-        a = self.__do_json_request('RFTreeView.json', timeout=timeoutSecs, params=params_dict, 
+        a = self.__do_json_request('RFTreeView.json', timeout=timeoutSecs, params=params_dict,
             ignoreH2oError=ignoreH2oError)
 
         verboseprint("\nrandom_forest_treeview result:", dump_json(a))
@@ -1536,13 +1638,13 @@ class H2O(object):
 
     def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, noPoll=False, **kwargs):
         params_dict = {
-            'destination_key':None,
-            'source':data_key,
-            'learn_rate':None,
-            'ntrees':None,
-            'max_depth':None,
-            'min_rows':None,
-            'vresponse':None
+            'destination_key': None,
+            'source': data_key,
+            'learn_rate': None,
+            'ntrees': None,
+            'max_depth': None,
+            'min_rows': None,
+            'vresponse': None
         }
         params_dict.update(kwargs)
         start = time.time()
@@ -1552,7 +1654,7 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs) 
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nGBM result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
@@ -1640,7 +1742,7 @@ class H2O(object):
         log('Start ' + url);
         print "\nDownloading h2o log(s) using:", url
         r = requests.get(url, timeout=timeoutSecs, **kwargs)
-        if not r or not r.ok: 
+        if not r or not r.ok:
             raise Exception("Maybe bad url? no r in log_download %s in %s:" % inspect.stack()[1][3])
 
         z = zipfile.ZipFile(StringIO.StringIO(r.content))
@@ -1648,7 +1750,7 @@ class H2O(object):
         print "z.printdir:", z.printdir()
 
         nameList = z.namelist()
-        # the first is the h2ologs dir name. 
+        # the first is the h2ologs dir name.
         h2oLogDir = logDir + "/" + nameList.pop(0)
 
         # it's a zip of zipped files
@@ -1660,12 +1762,12 @@ class H2O(object):
         return resultList
 
     # kwargs used to pass many params
-    def GLM_shared(self, key, 
+    def GLM_shared(self, key,
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
         parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict = { 
+        params_dict = {
             'parallel': 1,
             'family': 'binomial',
             'key': key,
@@ -1678,10 +1780,10 @@ class H2O(object):
         print "\n"+parentName, "params list:", params_dict
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
         verboseprint(parentName, dump_json(a))
-        return a 
+        return a
 
-    def GLM(self, key, 
-        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180, 
+    def GLM(self, key,
+        timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
@@ -1694,7 +1796,7 @@ class H2O(object):
             return a
 
         a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLM done:", dump_json(a))
@@ -1707,7 +1809,7 @@ class H2O(object):
         return a
 
     # this only exists in new. old will fail
-    def GLMGrid(self, key, 
+    def GLMGrid(self, key,
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
@@ -1721,7 +1823,7 @@ class H2O(object):
             return a
 
         a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLMGrid done:", dump_json(a))
@@ -1739,10 +1841,10 @@ class H2O(object):
     # thresholds=0%3A1%3A0.01
     def GLMScore(self, key, model_key, timeoutSecs=100, **kwargs):
         browseAlso = kwargs.pop('browseAlso',False)
-        # i guess key and model_key could be in kwargs, but 
+        # i guess key and model_key could be in kwargs, but
         # maybe separate is more consistent with the core key behavior
         # elsewhere
-        params_dict = { 
+        params_dict = {
             'key': key,
             'model_key': model_key,
         }
@@ -1757,7 +1859,7 @@ class H2O(object):
             print "Redoing the GLMScore through the browser, no results saved though"
             h2b.browseJsonHistoryAsUrlLastMatch('GLMScore')
             time.sleep(5)
-        return a 
+        return a
 
     def stabilize(self, test_func, error, timeoutSecs=10, retryDelaySecs=0.5):
         '''Repeatedly test a function waiting for it to return True.
@@ -1780,7 +1882,7 @@ class H2O(object):
             time.sleep(retryDelaySecs)
             numberOfRetries += 1
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
-            # to find the badness?. can check_sandbox_for_errors at any time 
+            # to find the badness?. can check_sandbox_for_errors at any time
             if ((numberOfRetries%50)==0):
                 check_sandbox_for_errors()
 
@@ -1844,11 +1946,11 @@ class H2O(object):
             args += ["-Djava.library.path=/opt/mapr/lib"]
 
         if self.classpath:
-            entries = [ find_file('build/classes'), find_file('lib/javassist.jar') ] 
+            entries = [ find_file('build/classes'), find_file('lib/javassist.jar') ]
             entries += glob.glob(find_file('lib')+'/*/*.jar')
             entries += glob.glob(find_file('lib')+'/*/*/*.jar')
             args += ['-classpath', os.pathsep.join(entries), 'water.Boot']
-        else: 
+        else:
             args += ["-jar", self.get_h2o_jar()]
 
         # H2O should figure it out, if not specified
@@ -1872,7 +1974,7 @@ class H2O(object):
             if self.node_id is None:
                 debuggerPort = debuggerBasePort
             else:
-                debuggerPort = debuggerBasePort + self.node_id 
+                debuggerPort = debuggerBasePort + self.node_id
 
             if self.addr:
                 a = self.addr
@@ -1897,7 +1999,7 @@ class H2O(object):
             '--ice_root=%s' % self.get_ice_dir(),
             # if I have multiple jenkins projects doing different h2o clouds, I need
             # I need different ports and different cloud name.
-            # does different cloud name prevent them from joining up 
+            # does different cloud name prevent them from joining up
             # (even if same multicast ports?)
             # I suppose I can force a base address. or run on another machine?
             '--name=' + cloud_name()
@@ -1913,14 +2015,14 @@ class H2O(object):
             args += [
                 # it's fine if hdfs_name has a ":9000" port or something too
                 '-hdfs hdfs://' + self.hdfs_name_node,
-                '-hdfs_version=' + self.hdfs_version, 
+                '-hdfs_version=' + self.hdfs_version,
             ]
 
         if self.use_maprfs:
             args += [
                 # 3 slashes?
                 '-hdfs maprfs:///' + self.hdfs_name_node,
-                '-hdfs_version=' + self.hdfs_version, 
+                '-hdfs_version=' + self.hdfs_version,
             ]
 
         if self.aws_credentials:
@@ -1938,20 +2040,20 @@ class H2O(object):
         ## args += ['--no_requests_log']
         return args
 
-    def __init__(self, 
-        use_this_ip_addr=None, port=54321, capture_output=True, 
+    def __init__(self,
+        use_this_ip_addr=None, port=54321, capture_output=True,
         use_debugger=None, classpath=None,
         use_hdfs=False, use_maprfs=False,
-        # hdfs_version="cdh4", hdfs_name_node="192.168.1.151", 
-        # hdfs_version="cdh3", hdfs_name_node="192.168.1.176", 
+        # hdfs_version="cdh4", hdfs_name_node="192.168.1.151",
+        # hdfs_version="cdh3", hdfs_name_node="192.168.1.176",
         hdfs_version=None, hdfs_name_node=None, hdfs_config=None,
         aws_credentials=None,
-        use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None, 
+        use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
         use_home_for_ice=False, node_id=None, username=None,
         random_udp_drop=False,
         redirect_import_folder_to_s3_path=None,
         redirect_import_folder_to_s3n_path=None,
-        disable_h2o_log=False, 
+        disable_h2o_log=False,
         enable_benchmark_log=False,
         h2o_remote_buckets_root=None,
         delete_keys_at_teardown=False,
@@ -1965,7 +2067,7 @@ class H2O(object):
                 hdfs_0xdata_visible = True
             except:
                 hdfs_0xdata_visible = False
-     
+
             # different defaults, depending on where we're running
             if hdfs_name_node is None:
                 if hdfs_0xdata_visible:
@@ -1984,9 +2086,9 @@ class H2O(object):
 
         self.aws_credentials = aws_credentials
         self.port = port
-        # None is legal for self.addr. 
+        # None is legal for self.addr.
         # means we won't give an ip to the jar when we start.
-        # Or we can say use use_this_ip_addr=127.0.0.1, or the known address 
+        # Or we can say use use_this_ip_addr=127.0.0.1, or the known address
         # if use_this_addr is None, use 127.0.0.1 for urls and json
         # Command line arg 'ipaddr' dominates:
         if ipaddr:
@@ -2085,7 +2187,7 @@ class LocalH2O(H2O):
             return -1
 
     def terminate(self):
-        # send a shutdown request first. 
+        # send a shutdown request first.
         # since local is used for a lot of buggy new code, also do the ps kill.
         # try/except inside shutdown_all now
         self.shutdown_all()
@@ -2094,7 +2196,7 @@ class LocalH2O(H2O):
         self.terminate_self_only()
 
     def wait(self, timeout=0):
-        if self.rc is not None: 
+        if self.rc is not None:
             return self.rc
         try:
             self.rc = self.ps.wait(timeout)
@@ -2118,8 +2220,8 @@ class RemoteHost(object):
             m.update(getpass.getuser())
             dest = '/tmp/' +m.hexdigest() +"-"+ os.path.basename(f)
 
-            # sigh. we rm/create sandbox in build_cloud now 
-            # (because nosetests doesn't exec h2o_main and we 
+            # sigh. we rm/create sandbox in build_cloud now
+            # (because nosetests doesn't exec h2o_main and we
             # don't want to code "clean_sandbox()" in all the tests.
             # So: we don't have a sandbox here, or if we do, we're going to delete it.
             # Just don't log anything until build_cloud()? that should be okay?
@@ -2198,7 +2300,7 @@ class RemoteHost(object):
     def __str__(self):
         return 'ssh://%s@%s' % (self.username, self.addr)
 
-        
+
 #*****************************************************************
 class RemoteH2O(H2O):
     '''An H2O instance launched by the python framework on a specified host using openssh'''
@@ -2224,7 +2326,7 @@ class RemoteH2O(H2O):
 
         self.channel = host.open_channel()
         ### FIX! TODO...we don't check on remote hosts yet
-       
+
         # this fires up h2o over there
         cmd = ' '.join(self.get_args())
         # UPDATE: somehow java -jar on cygwin target (xp) can't handle /tmp/h2o*jar
@@ -2296,14 +2398,15 @@ class RemoteH2O(H2O):
     def terminate(self):
         self.shutdown_all()
         self.terminate_self_only()
-    
+
 #*****************************************************************
 class ExternalH2O(H2O):
     '''A cloned H2O instance assumed to be created by others, that we can interact with via json requests (urls)
-       Gets initialized with state from json created by another build_cloud, so all methods should work 'as-if" 
+       Gets initialized with state from json created by another build_cloud, so all methods should work 'as-if"
        the cloud was built by the test (normally).
        The normal build_cloud() parameters aren't passed here, the final node state is! (and used for init)
-       The list should be complete, as long as created by build_cloud(create_json=True) or build_cloud_with_hosts(create_json=True)
+       The list should be complete, as long as created by build_cloud(create_json=True) or
+       build_cloud_with_hosts(create_json=True)
        Obviously, no psutil or paramiko work done here.
     '''
     def __init__(self, nodeState):

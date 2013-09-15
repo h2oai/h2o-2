@@ -40,6 +40,7 @@
 ./n0.doit test_GLM_many_cols_4.py
 ./n0.doit test_GLM_many_cols_int2cat.py
 ./n0.doit test_GLM_many_cols_tridist.py
+./n0.doit test_GLM_predict3_mnist.py
 ./n0.doit test_GLM_prob_cols_4.py
 ./n0.doit test_glm.py
 ./n0.doit test_import_covtype_parse_1jvm.py
@@ -107,6 +108,7 @@
 ./n0.doit test_rf_sample.py
 ./n0.doit test_same_parse.py
 ./n0.doit test_script_download.py
+./n0.doit test_SetupThreeJVM4.py
 ./n0.doit test_stedo.py
 ./n0.doit test_storeview_diff.py
 ./n0.doit test_storeview_import.py
