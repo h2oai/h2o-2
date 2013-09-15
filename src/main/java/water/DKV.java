@@ -142,9 +142,12 @@ public abstract class DKV {
   static public String calcConvertedFrameKeyString(String valueArrayKeyString) {
     return valueArrayKeyString + ".autoframe";
   }
+  static public String unconvertFrameKeyString(String s) {
+    return s.substring(0,s.length()-".autoframe".length());
+  }
 
   /** Return true if a string is a calculated Frame Key string; false otherwise. */
-  static private boolean isConvertedFrameKeyString(String s) {
+  static public boolean isConvertedFrameKeyString(String s) {
     return s.endsWith(".autoframe");
   }
 }

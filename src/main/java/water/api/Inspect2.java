@@ -85,7 +85,8 @@ public class Inspect2 extends Request {
               "<br/>Build models using " +
               DRF.link(src_key.value(), "Distributed Random Forest") +", "+
               GBM.link(src_key.value(), "Distributed GBM") +", "+
-              hex.LR2.link(src_key.value(), "Linear Regression") +
+              hex.LR2.link(src_key.value(), "Linear Regression") + ", "+
+              DownloadDataset.link(src_key.value(), "Download as CSV")+
               "</div>");
 
     // Start of where the pagination table goes.  For now, just the info button.
