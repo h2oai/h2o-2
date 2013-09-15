@@ -1,6 +1,6 @@
 import unittest, random, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col

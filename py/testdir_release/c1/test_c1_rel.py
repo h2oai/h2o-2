@@ -1,6 +1,6 @@
 import unittest, sys
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_import2 as h2i, h2o_common, h2o_print
+import h2o, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print
 
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"

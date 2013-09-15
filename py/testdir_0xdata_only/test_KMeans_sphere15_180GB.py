@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, json
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i
 import socket
 
 # kevin@mr-0xb1:~/h2o/py/testdir_hosts$ ls -ltr /home3/0xdiag/datasets/kmeans_big

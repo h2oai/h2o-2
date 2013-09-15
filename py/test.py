@@ -1,7 +1,7 @@
 import unittest, time, sys
 # not needed, but in case you move it down to subdir
 sys.path.extend(['.','..'])
-import h2o, h2o_cmd, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_import as h2i
 import h2o_browse as h2b
 
 class Basic(unittest.TestCase):

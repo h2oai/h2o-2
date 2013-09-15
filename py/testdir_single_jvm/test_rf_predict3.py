@@ -1,6 +1,6 @@
 import unittest, time, sys, csv
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e
 
 HAS_HEADER=False
 # translate provides the mapping between original and predicted

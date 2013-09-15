@@ -1,5 +1,5 @@
 import time
-import h2o, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_hosts, h2o_import as h2i
 
 # typical use in a unittest:
 # class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
