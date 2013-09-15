@@ -731,9 +731,11 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
 
                 if (printSingleWarning):
                     # don't print these lines
-                    if not (re.search("Unable to load native-hadoop library for your platform", line) or
+                    if not (re.search("Unable to load native-hadoop library", line) or
+                        ('Multiple local IPs detected' in line) or
                         ('[Loaded ' in line) or 
                         ('RestS3Service' in line)):
+
                         sys.stdout.write(line)
 
             sandFile.close()
