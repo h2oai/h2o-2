@@ -164,7 +164,7 @@ public abstract class Model extends Iced {
   public Frame adapt( Frame fr, boolean exact ) {
     Vec [] vecs = fr.getVecs(_names);
     for(int i = 0; i < _names.length-1; ++i)
-      if(vecs[i] == null) throw new RuntimeException("missing column '" + _names[i] + "'!");
+      if(vecs[i] == null) throw new IllegalArgumentException("missing column '" + _names[i] + "'!");
     String [] names = _names.clone();
     if(vecs[vecs.length-1] == null){
       vecs = Arrays.copyOf(vecs, vecs.length-1);// no response!
@@ -174,7 +174,7 @@ public abstract class Model extends Iced {
     for(int i = 0; i < vecs.length; ++i){
       if(_domains[i] != vecs[i]._domain) {
         if(vecs[i]._domain == null)vecs[i].asEnum();
-        else if(_domains[i] == null)throw new RuntimeException("incompatible column: '" + _names[i] + "', expected (trained on) numeric, got categorical");
+        else if(_domains[i] == null)throw new IllegalArgumentException("incompatible column: '" + _names[i] + "', expected (trained on) numeric, got categorical");
         if(!Arrays.deepEquals(vecs[i]._domain, _domains[i]))
           throw H2O.unimpl(); // domain mapping neeeded!
       }

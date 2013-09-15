@@ -59,7 +59,7 @@ public class Vec extends Iced {
   private boolean _activeWrites;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
   double _min, _max, _mean, _sigma;
-  long _rows, _size;
+  long _size;
   boolean _isInt;
   volatile long _naCnt=-1;      // Also flag for "rollup stats computed"
 
@@ -167,8 +167,10 @@ public class Vec extends Iced {
     RollupStats rs = new RollupStats().doAll(this);
     _min  = rs._min; _max = rs._max; _mean = rs._mean;
     _sigma = Math.sqrt(rs._sigma / (rs._rows - 1));
-    _rows = rs._rows; _size =rs._size;
+    _size =rs._size;
     _isInt= rs._isInt;
+    if( rs._rows == 0 )   // All rows missing?  Then no rollups
+      _min = _max = _mean = _sigma = Double.NaN;
     _naCnt= rs._naCnt;          // Volatile write last to announce all stats ready
     return this;
   }
