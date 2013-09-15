@@ -99,47 +99,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-
-    def test_A_c2_rel_short(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
-
     def test_B_c2_rel_long(self):
         self.sub_c2_rel_long()
-
-    def test_C_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_D_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_E_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_F_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_G_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_H_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_I_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_J_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_K_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_L_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_M_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
 
 if __name__ == '__main__':
     h2o.unit_main()
