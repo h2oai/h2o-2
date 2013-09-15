@@ -1011,7 +1011,6 @@ class DTree extends Iced {
         // Predictions are stored biased by the minimum class, but the scoring
         // logic assumes the full class size.  Bias results.
         int ymin = preds.length - _nclass;
-        Arrays.fill(preds, 0);
         AutoBuffer ab = new AutoBuffer(_bits);
         while(true) {
           int nodeType = ab.get1();
