@@ -14,9 +14,7 @@ public class ByteVec extends Vec {
 
   public C1NChunk elem2BV( int cidx ) { return (C1NChunk)super.elem2BV(cidx); }
 
-  /** 
-   * Open a stream view over the underlying data
-   */
+  /** Open a stream view over the underlying data  */
   public InputStream openStream(final Key progress) {
     return new InputStream() {
       private int _cidx, _sz;

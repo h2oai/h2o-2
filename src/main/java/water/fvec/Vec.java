@@ -236,8 +236,7 @@ public class Vec extends Iced {
     }.invoke(_key);
   }
 
-  /** Stop writing into this Vec.  Rollup stats will again (lazily) be
-   * computed. */
+  /** Stop writing into this Vec.  Rollup stats will again (lazily) be computed. */
   public void postWrite() {
     if( _activeWrites ) {
       _activeWrites=false;
@@ -430,9 +429,7 @@ public class Vec extends Iced {
 
     /**
      * Task to atomically add vectors into existing group.
-     *
      * @author tomasnykodym
-     *
      */
     private static class AddVecs2GroupTsk extends TAtomic<VectorGroup>{
       final Key _key;

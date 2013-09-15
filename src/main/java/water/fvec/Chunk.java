@@ -171,17 +171,13 @@ public abstract class Chunk extends Iced implements Cloneable {
 
   public int cidx() { return _vec.elem2ChunkIdx(_start); }
 
-  /** 
-   * Chunk-specific readers.
-   */ 
+  /** Chunk-specific readers.  */ 
   abstract protected double   atd_impl(int idx);
   abstract protected long     at8_impl(int idx);
   abstract protected boolean isNA_impl(int idx);
   
-  /** 
-   * Chunk-specific writer.  Returns false if the value does not fit in the
-   * current compression scheme.
-   */
+  /** Chunk-specific writer.  Returns false if the value does not fit in the
+   *  current compression scheme.  */
   abstract boolean set_impl  (int idx, long l );
   abstract boolean set_impl  (int idx, double d );
   abstract boolean set_impl  (int idx, float f );
@@ -194,9 +190,7 @@ public abstract class Chunk extends Iced implements Cloneable {
    */ 
   abstract NewChunk inflate_impl(NewChunk nc);
   abstract boolean hasFloat();
-  /** 
-   * Chunk-specific implementations of read & write
-   */ 
+  /** Chunk-specific implementations of read & write  */ 
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);
 
