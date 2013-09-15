@@ -11,13 +11,13 @@ while getopts nf: flag
 do
     case $flag in
         n)
-              echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
-              no_download=1
-              ;;
+            echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
+            no_download=1
+            ;;
         f)
-             file=$OPTARG
-             echo "filename is $file (fake)"
-             ;;
+            file=$OPTARG
+            echo "filename is $file (fake)"
+            ;;
         ?)
             exit
             ;;
@@ -27,7 +27,6 @@ shift $(( OPTIND - 1 ))  # shift past the last flag or argument
 echo remaining parameters to Bash are $*
 
 #**************************************
-
 
 echo "Setting PATH and showing java/python versions"
 date
@@ -78,7 +77,12 @@ then
 
     python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
 else
-    python ../four_hour_cloud.py &
+    if [[ $USER == "kevin" ]]
+    then
+        python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+    else
+        python ../four_hour_cloud.py &
+    fi
 fi 
 
 CLOUD_PID=$!

@@ -15,6 +15,16 @@ import requests, zipfile, StringIO
 from subprocess import Popen, PIPE
 import stat
 
+def verboseprint(*args, **kwargs):
+    if verbose:
+        for x in args: # so you don't have to create a single string
+            print x,
+        for x in kwargs: # so you don't have to create a single string
+            print x,
+        print
+        # so we can see problems when hung?
+        sys.stdout.flush()
+
 def sleep(secs):
     if getpass.getuser()=='jenkins':
         period = max(secs,120)
@@ -51,13 +61,54 @@ def drain(src, dst):
     t.daemon = True
     t.start()
 
+# Hackery: find the ip address that gets you to Google's DNS
+# Trickiness because you might have multiple IP addresses (Virtualbox), or Windows.
+# we used to not like giving ip 127.0.0.1 to h2o?
+def get_ip_address():
+    if ipaddr:
+        verboseprint("get_ip case 1:", ipaddr)
+        return ipaddr
+
+    import socket
+    ip = '127.0.0.1'
+    # this method doesn't work if vpn is enabled..it gets the vpn ip
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8',0))
+        ip = s.getsockname()[0]
+        verboseprint("get_ip case 2:", ip)
+    except:
+        pass
+
+    if ip.startswith('127'):
+        ip = socket.getaddrinfo(socket.gethostname(), None)[0][4][0]
+        verboseprint("get_ip case 3:", ip)
+
+    ipa = None
+    for ips in socket.gethostbyname_ex(socket.gethostname())[2]:
+         # only take the first
+         if ipa is None and not ips.startswith("127."):
+            ipa = ips[:]
+            verboseprint("get_ip case 4:", ipa)
+            if ip != ipa:
+                print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
+
+    verboseprint("get_ip_address:", ip)
+    return ip
+
 def unit_main():
-    global python_test_name, pythonCmdLineArgs
+    global python_test_name, python_cmd_args, python_cmd_ip
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
-    pythonCmdLineArgs = " ".join(sys.argv[1:])
-    print "\nRunning: python", python_test_name, pythonCmdLineArgs
+    python_cmd_args = " ".join(sys.argv[1:])
+    python_cmd_ip = get_ip_address()
+    pythonCmdLine = "python %s %s" % (python_test_name, python_cmd_args)
+    # if test was run with nosestests, it wouldn't execute unit_main() so we won't see this
+    # so this is correct, for stuff run with 'python ..."
+    print "\nTest: %s    command line: %s" % (python_test_name, pythonCmdLine)
+    print "Python runs on: %s" % python_cmd_ip
 
     # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
     # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
@@ -82,8 +133,9 @@ abort_after_import = False
 clone_cloud_json = None
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
+python_cmd_ip = get_ip_address()
 # no command line args if run with just nose
-pythonCmdLineArgs = ""
+python_cmd_args = ""
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -126,15 +178,6 @@ def parse_our_args():
     sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
     # sys.argv[1:] = args.unittest_args
 
-def verboseprint(*args, **kwargs):
-    if verbose:
-        for x in args: # so you don't have to create a single string
-            print x,
-        for x in kwargs: # so you don't have to create a single string
-            print x,
-        print
-        # so we can see problems when hung?
-        sys.stdout.flush()
 
 def find_file(base):
     f = base
@@ -229,42 +272,6 @@ def make_syn_dir():
 
 def dump_json(j):
     return json.dumps(j, sort_keys=True, indent=2)
-
-# Hackery: find the ip address that gets you to Google's DNS
-# Trickiness because you might have multiple IP addresses (Virtualbox), or Windows.
-# we used to not like giving ip 127.0.0.1 to h2o?
-def get_ip_address():
-    if ipaddr:
-        verboseprint("get_ip case 1:", ipaddr)
-        return ipaddr
-
-    import socket
-    ip = '127.0.0.1'
-    # this method doesn't work if vpn is enabled..it gets the vpn ip
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('8.8.8.8',0))
-        ip = s.getsockname()[0]
-        verboseprint("get_ip case 2:", ip)
-    except:
-        pass
-
-    if ip.startswith('127'):
-        ip = socket.getaddrinfo(socket.gethostname(), None)[0][4][0]
-        verboseprint("get_ip case 3:", ip)
-
-    ipa = None
-    for ips in socket.gethostbyname_ex(socket.gethostname())[2]:
-         # only take the first
-         if ipa is None and not ips.startswith("127."):
-            ipa = ips[:]
-            verboseprint("get_ip case 4:", ipa)
-            if ip != ipa:
-                print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
-                print "You might have a vpn active. Best to use '-ip "+ipa+"' to get python and h2o the same."
-
-    verboseprint("get_ip_address:", ip)
-    return ip
 
 # can't have a list of cmds, because cmd is a list
 # cmdBefore gets executed first, and we wait for it to complete
@@ -570,14 +577,14 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # Figure out some stuff about how this test was run
     cs_time = str(datetime.datetime.now())
     cs_cwd = os.getcwd()
-    cs_python_cmd_line = "python %s %s" % (python_test_name, pythonCmdLineArgs)
+    cs_python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
     cs_python_test_name = python_test_name
     if config_json:
         cs_config_json = os.path.abspath(config_json)
     else:
         cs_config_json = None
     cs_username = getpass.getuser()
-    cs_ip = get_ip_address()
+    cs_ip = python_cmd_ip
 
     # write out something that shows how the test could be rerun (could be a cloud build, a mix, or test only)
     print "Writing the test_rerun.sh in", LOG_DIR
