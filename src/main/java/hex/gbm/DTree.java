@@ -194,37 +194,6 @@ class DTree extends Iced {
       ary2str(sb.append(", p1="),4,_preds[1]);
       return sb.append("}").toString();
     }
-    
-    // Due to roundoff error, we often get "ugly" distributions.  Correct where
-    // obvious.
-    void correctDistro( float fs[] ) {
-      if( fs == null ) return;
-      double sum=0;
-      int max=0;
-      for( int i=0; i<fs.length; i++ ) {
-        sum += fs[i];
-        if( fs[i] > max ) max = i;
-      }
-      if( Double.isNaN(sum) ) return; // Assume this is intended
-      if( sum < 0.5 ) {        // GBM: expect 0.0 distro
-        assert Math.abs(sum)<0.0001 : Arrays.toString(fs);// Really busted?
-        if( sum != 0.0 ) {     // Not a 0.0?
-          sum /= fs.length;    // Recenter the distro around 0
-          for( int i=0; i<fs.length; i++ )
-            fs[i] -= sum;
-        }
-      } else {                  // DRF: expect 1.0 distro
-        assert Math.abs(sum-1.0)<0.0001 : Arrays.toString(fs);// Really busted?
-        if( fs[max] >= 1.0 ) {  // If max class >= 1.0, force a clean distro
-          Arrays.fill(fs,0);    // All zeros, except the 1.0
-          fs[max] = 1.0f;       // 
-        } else                  // Else adjust the max to clean out error
-          fs[max] += 1.0-sum;
-      }
-      sum=0;
-      for( float f : fs ) sum+=f;
-      assert Math.abs((sum < 0.5 ? 0 : 1)-sum)<0.000001 : Arrays.toString(fs);
-    }
   }
 
   // --------------------------------------------------------------------------
@@ -925,6 +894,8 @@ class DTree extends Iced {
       Arrays.fill(preds,0);
       for( CompressedTree t : treeBits )
         t.addScore(preds, data);
+      correctDistro(preds);
+      assert checkDistro(preds) : "Funny distro";
       return preds;
     }
 
@@ -1011,7 +982,6 @@ class DTree extends Iced {
         // Predictions are stored biased by the minimum class, but the scoring
         // logic assumes the full class size.  Bias results.
         int ymin = preds.length - _nclass;
-        Arrays.fill(preds, 0);
         AutoBuffer ab = new AutoBuffer(_bits);
         while(true) {
           int nodeType = ab.get1();
@@ -1147,16 +1117,48 @@ class DTree extends Iced {
     return new TreeModel.CompressedTree(ab.buf(),_nclass);
   }
 
-  static private boolean checkDistro( float[/*split*/][/*class*/] fss ) {
-    for( float fs[] : fss ) {
-      if( fs == null ) continue;
-      float sum=0;
-      for( float f : fs ) sum += f;
-      if( Math.abs(sum-(sum < 0.5 ? 0.0 : 1.0)) > 0.00001 ) {
-        System.out.println("crap distro: "+Arrays.toString(fs)+"="+sum);
-        return false;
-      }
+  // Due to roundoff error, we often get "ugly" distributions.  Correct where obvious.
+  static private void correctDistro( float fs[] ) {
+    if( fs == null ) return;
+    double sum=0;
+    int max=0;
+    for( int i=0; i<fs.length; i++ ) {
+      sum += fs[i];
+      if( fs[i] > max ) max = i;
     }
+    if( Double.isNaN(sum) ) return; // Assume this is intended
+    if( sum < 0.5 ) {        // GBM: expect 0.0 distro
+      assert Math.abs(sum)<0.0001 : Arrays.toString(fs);// Really busted?
+      if( sum != 0.0 ) {     // Not a 0.0?
+        sum /= fs.length;    // Recenter the distro around 0
+        for( int i=0; i<fs.length; i++ )
+          fs[i] -= sum;
+      }
+    } else {                  // DRF: expect 1.0 distro
+      assert Math.abs(sum-1.0)<0.0001 : Arrays.toString(fs);// Really busted?
+      if( fs[max] >= 1.0 ) {  // If max class >= 1.0, force a clean distro
+        Arrays.fill(fs,0);    // All zeros, except the 1.0
+        fs[max] = 1.0f;       // 
+      } else                  // Else adjust the max to clean out error
+        fs[max] += 1.0-sum;
+    }
+    sum=0;
+    for( float f : fs ) sum+=f;
+    assert Math.abs((sum < 0.5 ? 0 : 1)-sum)<0.000001 : Arrays.toString(fs);
+  }
+
+  static private boolean checkDistro( float[/*class*/] fs ) {
+    float sum=0;
+    for( float f : fs ) sum += f;
+    if( Math.abs(sum-(sum < 0.5 ? 0.0 : 1.0)) > 0.00001 ) {
+      System.out.println("crap distro: "+Arrays.toString(fs)+"="+sum);
+      return false;
+    }
+    return true;
+  }
+  static private boolean checkDistro( float[/*split*/][/*class*/] fss ) {
+    for( float fs[] : fss )
+      if( fs != null && !checkDistro(fs) ) return false;
     return true;
   }
 }

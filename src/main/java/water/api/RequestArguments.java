@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import water.*;
 import water.ValueArray.Column;
 import water.util.*;
+import water.api.Parse.ExistingCSVKey;
 import water.api.Request.Filter;
 import water.fvec.*;
 
@@ -1480,6 +1481,16 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   // H2OKey
   // ---------------------------------------------------------------------------
+  // key with autocompletion and autoconversion to frame
+  public class H2OKey2 extends TypeaheadInputText<Key> {
+    public final Key _defaultValue;
+    public H2OKey2(String name, boolean required) { this(name,null,required); }
+    public H2OKey2(String name, Key key) { this(name,key,false); }
+    public H2OKey2(String name, Key key, boolean req) { super(TypeaheadKeysRequest.class,name, req); _defaultValue = key; }
+    @Override protected Key parse(String input) { return Key.make(input); }
+    @Override protected Key defaultValue() { return _defaultValue; }
+    @Override protected String queryDescription() { return "Valid H2O key"; }
+  }
   public class H2OKey extends InputText<Key> {
     public final Key _defaultValue;
     public H2OKey(String name, boolean required) { this(name,null,required); }
@@ -2292,12 +2303,13 @@ public class RequestArguments extends RequestStatics {
   /** Conversion number is only for logging. */
   static AtomicInteger conversionNumber = new AtomicInteger(0);
 
+
   /**
    * A Frame Key
    * If necessary, a conversion (i.e. a "casting") of ValueArray to Frame
    * is performed.
    * */
-  public class FrameKey extends H2OKey {
+  public class FrameKey extends H2OKey2 {
     public FrameKey() { this(""); }
     public FrameKey(String name) { super(name,true); }
     @Override protected Key parse(String input) {
@@ -2336,12 +2348,9 @@ public class RequestArguments extends RequestStatics {
           return k2;
         }
       }
-
       // If not VA and not Frame, then it's an error.
-      if (! v.isFrame()) {
+      if (! v.isFrame())
         throw new IllegalArgumentException(input+":"+errors()[1]);
-      }
-
       return k;
     }
     @Override protected String queryDescription() { return "An existing H2O Frame key."; }
