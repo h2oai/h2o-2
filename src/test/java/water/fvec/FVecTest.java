@@ -217,5 +217,27 @@ public class FVecTest extends TestUtil {
         out.set0(i,in1.at80(i)+in2.at80(i));
     }
   }
+
+  // ==========================================================================
+  @Test public void testLargeCats() {
+    File file = TestUtil.find_test_file("./smalldata/categoricals/40k_categoricals.csv.gz");
+    Key fkey = NFSFileVec.make(file);
+    Key okey = Key.make("cat.hex");
+    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
+    UKV.remove(fkey);
+    Vec vz = null;
+    try {
+      assertEquals(fr._vecs[0].length(),40000); // Count of rows
+      assertEquals(fr._vecs[0].domain().length,40000);
+
+    } finally {
+      if( vz != null ) UKV.remove(vz._key);
+      fr.remove();
+      UKV.remove(okey);
+    }
+  }
+
+
+
 }
 
