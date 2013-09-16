@@ -6,6 +6,43 @@ setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, cl
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
+setGeneric("h2o.gbm", function( data,destination,y,ntrees = 10,max_depth=8,learn_rate=.2,min_rows=10) { standardGeneric("h2o.gbm") })
+
+
+setMethod("h2o.gbm", signature( data="H2OParsedData", destination="character",y="character",ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
+          function(data, destination, y, ntrees, max_depth, learn_rate, min_rows) {
+            
+	    res=h2o.__remoteSend(data@h2o, "GBM.json",destination_key=destination,source=data@key,vresponse=y,ntrees=ntrees, max_depth=max_depth,learn_rate=learn_rate,min_rows=min_rows)
+            while(h2o.__poll(data@h2o, res$job_key) != -1) { 
+		Sys.sleep(1) 
+	    }
+	    res2=h2o.__remoteSend(data@h2o, "GBMModelView.json",'_modelKey'=destination)
+	    result=list()
+	    categories=length(res2$gbm_model$cm)
+	    cf_matrix = matrix(unlist(res2$gbm_model$cm),nrow=categories )
+	    colnames(cf_matrix)=c(1:categories)
+	    rownames(cf_matrix)=c(1:categories)
+	    result$confusion= cf_matrix
+	    mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=ntrees)
+	    colnames(mse_matrix)=c(1:ntrees)
+	    rownames(mse_matrix)="MSE"
+	    result$err=mse_matrix
+	    resGBM=new("H2OGBMModel", key=destination, data=data, model=result)
+	    resGBM
+	})
+
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character",y="character",ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
+          function(data, destination, y, ntrees, max_depth, learn_rate, min_rows) {
+            if(!(missing(ntrees) || class(ntrees) == "numeric"))
+              stop(paste("ntrees cannot be of class", class(ntrees)))
+            else if(!(missing(max_depth) || class(max_depth) == "numeric"))
+              stop(paste("max_depth cannot be of class", class(max_depth)))
+            else if(!(missing(learn_rate) || class(learn_rate) == "numeric"))
+              stop(paste("learn_rate cannot be of class", class(learn_rate)))
+	    else if(!(missing(min_rows) || class(min_rows) == "numeric"))
+              stop(paste("min_rows cannot be of class", class(min_rows)))
+            h2o.gbm(data,destination, y, ntrees, max_depth, learn_rate, min_rows) 
+          })
 
 setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical"), function(data, tol, standardize) {
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, tolerance=tol, standardize=as.numeric(standardize))
