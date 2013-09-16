@@ -1,6 +1,6 @@
 import unittest,time,sys,os,csv,socket
 sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_rf
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
 from pprint import pprint
 
 csv_header = ('java_heap_GB','dataset','nTrainRows','nTestRows','nCols',

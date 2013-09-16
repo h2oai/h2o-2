@@ -9,21 +9,6 @@ package water;
  * @version 1.0
  */
 public abstract class DKV {
-  /**
-   * Return the calculated name of a Frame Key given a ValueArray Key.
-   */
-  static public String calcConvertedFrameKeyString (String valueArrayKeyString) {
-    String s = valueArrayKeyString + ".autoframe";
-    return s;
-  }
-
-  /**
-   * Return true if a string is a calculated Frame Key string; false otherwise.
-   */
-  static private boolean isConvertedFrameKeyString (String s) {
-    return s.endsWith(".autoframe");
-  }
-
   // This put is a top-level user-update, and not a reflected or retried
   // update.  i.e., The User has initiated a change against the K/V store.
   // This is a WEAK update: it is not strongly ordered with other updates
@@ -151,4 +136,18 @@ public abstract class DKV {
     }
   }
   static public Value get( Key key ) { return get(key,Integer.MAX_VALUE,H2O.GET_KEY_PRIORITY); }
+
+
+  /** Return the calculated name of a Frame Key given a ValueArray Key. */
+  static public String calcConvertedFrameKeyString(String valueArrayKeyString) {
+    return valueArrayKeyString + ".autoframe";
+  }
+  static public String unconvertFrameKeyString(String s) {
+    return s.substring(0,s.length()-".autoframe".length());
+  }
+
+  /** Return true if a string is a calculated Frame Key string; false otherwise. */
+  static public boolean isConvertedFrameKeyString(String s) {
+    return s.endsWith(".autoframe");
+  }
 }

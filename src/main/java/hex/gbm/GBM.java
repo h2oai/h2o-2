@@ -20,6 +20,11 @@ public class GBM extends FrameJob {
   Vec vresponse;
   class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
 
+  @API(help="columns to ignore",required=false,filter=GBMMultiVecSelect.class)
+  int [] ignored_cols = new int []{};
+  class GBMMultiVecSelect extends MultiVecSelect { GBMMultiVecSelect() { super("source");} }
+
+
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
   public class NtreesFilter implements Filter {
@@ -42,7 +47,7 @@ public class GBM extends FrameJob {
   }
 
   @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  char nbins = 1024;
+  int nbins = 1024;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
   }
@@ -73,7 +78,7 @@ public class GBM extends FrameJob {
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
   }
-  public Vec score( Frame fr ) { return gbm_model.score(fr,true);  }
+  public Frame score( Frame fr ) { return gbm_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__GBMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -101,25 +106,19 @@ public class GBM extends FrameJob {
   // variable.  Depth is capped at maxDepth.
   @Override protected Response serve() {
     final Frame fr = new Frame(source); // Local copy for local hacking
-
+    fr.remove(ignored_cols);
     // Doing classification only right now...
     if( !vresponse.isEnum() ) vresponse.asEnum();
 
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse )
-        fr.remove(i);
-
     String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
       if( fr._vecs[i]==vresponse ) {
         vname=fr._names[i];
         fr.remove(i);
       }
-
-    // Ignore-columns-code goes here....
 
     buildModel(fr,vname);
     return GBMProgressPage.redirect(this, self(),dest());
@@ -153,7 +152,7 @@ public class GBM extends FrameJob {
         // The initial prediction is just the class distribution.  The initial
         // residuals are then basically the actual class minus the average class.
         float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
-        DTree init_tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
+        DTree init_tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
         BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, 0 );
@@ -197,8 +196,8 @@ public class GBM extends FrameJob {
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
     // Initially setup as-if an empty-split had just happened
-    final DTree tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
-    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nbins,nclass)); // The "root" node
+    final DTree tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
+    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
     // Add tree to the end of the forest
     forest = Arrays.copyOf(forest,forest.length+1);

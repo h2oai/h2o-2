@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans, h2o_browse as h2b, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans, h2o_browse as h2b, h2o_import as h2i
 
 #uses the wines data from http://archive.ics.uci.edu/ml/datasets/Wine
 #PCA performed to collect data into 2 rows.

@@ -94,14 +94,18 @@ public class DRF extends FrameJob {
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
     @Override protected float[] score0(double data[], float preds[]) {
-      super.score0(data,preds);
+      Arrays.fill(preds,0);
+      for( CompressedTree t : treeBits )
+        t.addScore(preds, data);
       // After adding all trees, divide by tree-count to get a distribution
       for( int i=0; i<preds.length; i++ )
         preds[i] /= treeBits.length;
+      DTree.correctDistro(preds);
+      assert DTree.checkDistro(preds) : "Funny distro";
       return preds;
     }
   }
-  public Vec score( Frame fr ) { return drf_model.score(fr,true);  }
+  public Frame score( Frame fr ) { return drf_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__DRFModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }

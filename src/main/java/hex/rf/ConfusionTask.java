@@ -14,7 +14,7 @@ import water.util.Log.Tag.Sys;
 import com.google.common.primitives.Ints;
 
 /**
- * Confusion Matrix. Incrementally computes a Confusion Matrix for a KEY_OF_KEYS
+ * Confusion Matrix. Incrementally computes a Confusion Matrix for a forest
  * of Trees, vs a given input dataset. The set of Trees can grow over time. Each
  * request from the Confusion compute on any new trees (if any), and report a
  * matrix. Cheap if all trees already computed.

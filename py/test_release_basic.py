@@ -1,6 +1,6 @@
 import unittest, time, random, sys
 sys.path.extend(['.','..','py','../h2o/py','../../h2o/py'])
-import h2o, h2o_common, h2o_cmd, h2o_import2 as h2i
+import h2o, h2o_common, h2o_cmd, h2o_import as h2i
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 

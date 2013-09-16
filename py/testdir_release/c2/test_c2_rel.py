@@ -1,6 +1,6 @@
 import unittest, sys, time
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_import2 as h2i, h2o_glm, h2o_common
+import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common
 import h2o_print
 
 DO_GLM = True
@@ -20,12 +20,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
         if len(h2o.nodes)==1:
-            tryHeap = 28
             csvFilenameList= [
                 ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
             ]
         else:
-            tryHeap = 28
             csvFilenameList= [
                 ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
             ]
