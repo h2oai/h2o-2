@@ -1984,7 +1984,8 @@ public class RequestArguments extends RequestStatics {
       };
     }
 
-    public boolean saveIgnore(int i, ValueArray.Column ca) {
+    // public boolean saveIgnore(int i, ValueArray.Column ca) {
+    @Override public boolean shouldIgnore(int i, ValueArray.Column ca) {
       if(ca._min == ca._max) {
         if(_constantColumns.get() == null)
           _constantColumns.set(new TreeSet<String>());
@@ -1996,7 +1997,7 @@ public class RequestArguments extends RequestStatics {
         _nonNumColumns.get().add(Objects.firstNonNull(ca._name, String.valueOf(i)));
         return true;
       }
-      return false;
+      return super.shouldIgnore(i, ca);
     }
 
     String _comment = "";
@@ -2005,12 +2006,21 @@ public class RequestArguments extends RequestStatics {
       int [] res = new int[va._cols.length];
       int selected = 0;
       for(int i = 0; i < va._cols.length; ++i) {
-        if(saveIgnore(i, va._cols[i]))
+        /*if(saveIgnore(i, va._cols[i]))
           res[selected++] = i;
         else if((1.0 - (double)va._cols[i]._n/va._numrows) >= _maxNAsRatio) {
           int val = 0;
           if(_badColumns.get() != null) val = _badColumns.get();
           _badColumns.set(val+1);
+        }*/
+        if(!shouldIgnore(i, va._cols[i])) {
+          if((1.0 - (double)va._cols[i]._n/va._numrows) <= _maxNAsRatio)
+            res[selected++] = i;
+          else {
+            int val = 0;
+            if(_badColumns.get() != null) val = _badColumns.get();
+            _badColumns.set(val+1);
+          }
         }
       }
       return Arrays.copyOfRange(res,0,selected);

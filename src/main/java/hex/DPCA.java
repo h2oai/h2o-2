@@ -44,7 +44,6 @@ public abstract class DPCA {
     final double[] _normSub;
     final double[] _normMul;
 
-
     public StandardizeTask(double[] normSub, double[] normMul) {
       _normSub = normSub;
       _normMul = normMul;
@@ -189,7 +188,7 @@ public abstract class DPCA {
       res.addProperty("rank", _rank);
       res.add("PCAParams", _pcaParams.toJson());
 
-      // Add standard deviation to output
+      // Add standard deviation and proportion of variance to output
       JsonObject sdev = new JsonObject();
       JsonObject prop = new JsonObject();
       JsonObject cum = new JsonObject();
