@@ -58,7 +58,7 @@ public class GLMGrid extends Job {
       }
       @Override public void onSuccess() {
         // we're done, notify
-        if(done) DKV.remove(_job);
+        if(done) remove();
       };
     }.fork(dest()));
   }
