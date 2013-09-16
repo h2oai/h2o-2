@@ -25,6 +25,7 @@ public class Parse extends Request {
 
   public Parse() {
     _excludeExpression.setRefreshOnChange();
+    _header.setRefreshOnChange();
   }
 
 //  private static String toHTML(ParseSetupGuessException e){
