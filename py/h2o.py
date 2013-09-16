@@ -926,6 +926,10 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
+            if not isinstance(r,(list,dict)): 
+                verboseprint(r.text)
+                raise Exception("h2o json responses should always be lists or dicts, see previous for text")
+            
             if '404' in r:
                 verboseprint(r.text)
                 raise Exception("No json could be decoded as there was a 404 response. Do you have beta features turned on? beta_features: ", beta_features)
@@ -1645,7 +1649,8 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, noPoll=False, **kwargs):
+    def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
             'source': data_key,
@@ -1656,6 +1661,10 @@ class H2O(object):
             'vresponse': None
         }
         params_dict.update(kwargs)
+        if print_params:
+            print "\ngbm parameters:", params_dict
+            sys.stdout.flush()
+
         start = time.time()
         a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)
         if noPoll:

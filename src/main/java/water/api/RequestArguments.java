@@ -2382,6 +2382,93 @@ public class RequestArguments extends RequestStatics {
     @Override protected String[] errors() { return new String[] { "Not a name of column, or a column index" }; }
   }
 
+
+  public class FrameKeyMultiVec extends MultipleSelect<int[]> {
+    final FrameKey _key;
+    final FrameClassVec _response;
+    protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
+    protected Frame fr() { return DKV.get(_key.value()).get(); }
+
+    public FrameKeyMultiVec(String name, FrameKey key, FrameClassVec response) {
+      super(name);
+      addPrerequisite(_key = key);
+      addPrerequisite(_response = response);
+    }
+    public boolean shouldIgnore(int i, Frame fr ) { return _response.value() == fr._vecs[i]; }
+    public void checkLegality(Vec v) throws IllegalArgumentException { }
+    protected Comparator<Integer> colComp(final ValueArray ary){
+      return null;
+    }
+    transient ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
+
+    @Override protected String queryElement() {
+      Frame fr = fr();
+      ArrayList<Integer> cols = Lists.newArrayList();
+      for (int i = 0; i < fr.numCols(); ++i)
+        if( !shouldIgnore(i, fr) )
+          cols.add(i);
+      _selectedCols = cols;
+      return super.queryElement();
+    }
+
+    // "values" to send back and for in URLs.  Use numbers for density (shorter URLs).
+    @Override protected final String[] selectValues() {
+      String [] res = new String[_selectedCols.size()];
+      int idx = 0;
+      for(int i : _selectedCols) res[idx++] = String.valueOf(i);
+      return res;
+    }
+
+    // "names" to select in the boxes.
+    @Override protected String[] selectNames() {
+      Frame fr = fr();
+      String [] res = new String[_selectedCols.size()];
+      int idx = 0;
+      for(int i:_selectedCols) res[idx++] = fr._names[i];
+      return res;
+    }
+
+    @Override protected boolean isSelected(String value) {
+      Frame fr = fr();
+      int[] val = value();
+      if (val == null) return false;
+      for(int i = 0; i < fr.numCols(); ++i)
+        if(fr._names[i].equals(value))Ints.contains(val, i);
+      return false;
+    }
+
+    @Override protected int[] parse(String input) throws IllegalArgumentException {
+      Frame fr = fr();
+      ArrayList<Integer> al = new ArrayList();
+      for (String col : input.split(",")) {
+        col = col.trim();
+        int idx = -1;
+        try {
+         idx = Integer.valueOf(col);
+        }catch(NumberFormatException e){
+          for(int i = 0; i < fr.numCols(); ++i)
+            if(fr._names[i].equals(col))idx = i;
+        }
+        if (0 > idx || idx > fr.numCols())
+          throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
+        if (al.contains(idx))
+          throw new IllegalArgumentException("Column "+col+" is already ignored.");
+        checkLegality(fr._vecs[idx]);
+        al.add(idx);
+      }
+      if(al.size() == fr.numCols()-1)throw new IllegalArgumentException("Can not ignore all columns!");
+      return Ints.toArray(al);
+    }
+
+    @Override protected int[] defaultValue() {
+      return new int[0];
+    }
+
+    @Override protected String queryDescription() {
+      return "Columns to ignore";
+    }
+  }
+
   /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
   public class FrameClassVec extends FrameKeyVec {
     public FrameClassVec(String name, FrameKey key ) { super(name, key); }

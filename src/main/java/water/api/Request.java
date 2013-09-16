@@ -71,11 +71,20 @@ public abstract class Request extends RequestBuilders {
     protected VecSelect(String key) { _key = key; }
     @Override public boolean run(Object value) { return true; }
   }
+
+  public class MultiVecSelect implements Filter {
+    public final String _key;
+    protected MultiVecSelect(String key) { _key = key;}
+    @Override public boolean run(Object value) { return true; }
+  }
+
   public class VecClassSelect implements Filter {
     public final String _key;
     protected VecClassSelect(String key) { _key = key; }
     @Override public boolean run(Object value) { return true; }
   }
+
+
 
   //
 
