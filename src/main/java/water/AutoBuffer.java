@@ -700,7 +700,7 @@ public final class AutoBuffer {
   // Utility functions to read & write arrays
   public byte[] getA1( ) {
     int len = get4();
-    assert len < 10000000 : "getA1 size=0x"+Integer.toHexString(len);
+    //assert len < 10000000 : "getA1 size=0x"+Integer.toHexString(len);
     return len == -1 ? null : getA1(len);
   }
   public byte[] getA1( int len ) {
