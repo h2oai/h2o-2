@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs
 import time, random
 
 class Basic(unittest.TestCase):
@@ -36,17 +36,25 @@ class Basic(unittest.TestCase):
         csvFilenameList = csvFilenameAll
 
         # pop open a browser on the cloud
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
 
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
-            (importResult, importPattern) = h2i.import_only(path=importFolderPath+"/"+csvFilename, timeoutSecs=50)
-            parseResult = h2i.import_parse(path=importFolderPath+"/"+csvFilename, schema='put', timeoutSecs=500)
+            csvPathname = importFolderPath + "/" + csvFilename 
+            
+            (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=50)
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key='c.hex', 
+                timeoutSecs=500, noPoll=True, doSummary=False) # can't do summary until parse result is correct json
+            print "\nparseResult", h2o.dump_json(parseResult)
             if not h2o.beta_features:
                 print csvFilename, 'parse time:', parseResult['response']['time']
-            print "Parse result['destination_key']:", parseResult['destination_key']
-            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=30)
+                print "Parse result['destination_key']:", parseResult['destination_key']
+                inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=30)
 
+            h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+            inspect = h2o_cmd.runInspect(key='c.hex', timeoutSecs=30)
+            # hack it because no response from Parse2
+            parseResult = {'destination_key': 'c.hex'}
             if not h2o.beta_features:
                 RFview = h2o_cmd.runRF(trees=1,depth=25,parseResult=parseResult, timeoutSecs=timeoutSecs)
 
