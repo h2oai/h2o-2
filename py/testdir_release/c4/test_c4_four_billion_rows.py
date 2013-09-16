@@ -20,7 +20,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             # Parse*********************************
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
-                timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=180)
             elapsed = time.time() - start
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
