@@ -1,23 +1,11 @@
 import unittest, time, sys, random
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i
+sys.path.extend(['.','..','../..','py'])
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_common
 
-class Basic(unittest.TestCase):
-    def tearDown(self):
-        h2o.check_sandbox_for_errors()
+print "Assumes you ran ../build_for_clone.py in this directory"
+print "Using h2o-nodes.json. Also the sandbox dir"
 
-    @classmethod
-    def setUpClass(cls):
-        global localhost
-        localhost = h2o.decide_if_localhost()
-        if (localhost):
-            h2o.build_cloud(1,java_heap_GB=14)
-        else:
-            h2o_hosts.build_cloud_with_hosts(base_port=54325, java_heap_GB=100)
-
-    @classmethod
-    def tearDownClass(cls):
-        h2o.tear_down_cloud()
+class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_four_billion_rows(self):
         timeoutSecs = 1500
