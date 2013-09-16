@@ -12,11 +12,11 @@ setGeneric("h2o.gbm", function( data,destination,y,ntrees = 10,max_depth=8,learn
 setMethod("h2o.gbm", signature( data="H2OParsedData", destination="character",y="character",ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
           function(data, destination, y, ntrees, max_depth, learn_rate, min_rows) {
             
-	    res=h2o.__remoteSend(data@h2o, "GBM.json",destination_key=destination,source=data@key,vresponse=y,ntrees=ntrees, max_depth=max_depth,learn_rate=learn_rate,min_rows=min_rows)
+	    res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM,destination_key=destination,source=data@key,vresponse=y,ntrees=ntrees, max_depth=max_depth,learn_rate=learn_rate,min_rows=min_rows)
             while(h2o.__poll(data@h2o, res$job_key) != -1) { 
 		Sys.sleep(1) 
 	    }
-	    res2=h2o.__remoteSend(data@h2o, "GBMModelView.json",'_modelKey'=destination)
+	    res2=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView,'_modelKey'=destination)
 	    result=list()
 	    categories=length(res2$gbm_model$cm)
 	    cf_matrix = matrix(unlist(res2$gbm_model$cm),nrow=categories )
