@@ -3,6 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs
 import time, random
 
+DELETE_KEYS = True
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -59,41 +61,43 @@ class Basic(unittest.TestCase):
             # no pattern waits for all
             h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
 
-            if not h2o.beta_features:
+            # hack it because no response from Parse2
+            if h2o.beta_features:
+                parseResult = {'destination_key': 'c.hex'}
+
+            else:
                 print csvFilename, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=30)
 
             h2o.beta_features = True
             inspect = h2o_cmd.runInspect(key='c.hex', timeoutSecs=30)
-
             h2o.check_sandbox_for_errors()
-
-            # hack it because no response from Parse2
-            parseResult = {'destination_key': 'c.hex'}
-
-            # placeholder stuff from GLM
-            # this is for the nflx datasets
-            x = range(542) # don't include the output column
-            # remove the output too! (378)
-            for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, 378]:
-                x.remove(i)
-            x = ",".join(map(str,x))
-
-            GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
-                'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
-
 
             # have to avoid this on nflx data. colswap with exec
             # Exception: rjson error in gbm: Argument 'vresponse' error: Only integer or enum/factor columns can be classified
             if importFolderPath=='manyfiles-nflx-gz':
                 execExpr = 'c.hex=colSwap(c.hex,378,(c.hex[378]>15 ? 1 : 0))'
                 resultExec = h2o_cmd.runExec(expression=execExpr)
+                x = range(542) # don't include the output column
+                # remove the output too! (378)
+                xIgnore = []
+                # BUG if you add unsorted 378 to end. remove for now
+                for i in [4, 3, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, 378]:
+                    x.remove(i)
+                    xIgnore.append(i)
+
+                x = ",".join(map(str,x))
+                xIgnore = ",".join(map(str,xIgnore))
+            else:
+                # leave one col ignored, just to see?
+                xIgnore = 0
 
             params = {
                 'destination_key': "GBMKEY",
+                'ignored_cols': xIgnore,
                 'learn_rate': .1,
-                'ntrees': 1,
+                'ntrees': 2,
                 'max_depth': 8,
                 'min_rows': 1,
                 'vresponse': vresponse
@@ -102,25 +106,20 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             h2o.beta_features = True
             timeoutSecs = 1800
-            #noPoll -> False when GBM finished
+            start = time.time()
             GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-            print "GBM training completed in", GBMResult['python_elapsed'], "seconds.", \
-                "%f pct. of timeout" % (GBMResult['python_%timeout'])
-
             # wait for it to show up in jobs?
             time.sleep(2)
             # no pattern waits for all
             h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
-
+            elapsed = time.time() - start
+            print "GBM training completed in", elapsed, "seconds.", "%f pct. of timeout" % (GBMResult['python_%timeout'])
+            print "\nGBMResult:", GBMResult
+            # print "\nGBMResult:", h2o.dump_json(GBMResult)
 
             h2o.check_sandbox_for_errors()
 
-            ## h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-            ## time.sleep(10)
-
-            # just to make sure we test this
-            # FIX! currently the importResult is empty for fvec
-            if 1==0:
+            if DELETE_KEYS:
                 h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
 
             sys.stdout.write('.')
