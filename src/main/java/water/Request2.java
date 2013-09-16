@@ -27,6 +27,7 @@ public abstract class Request2 extends Request {
           if( !Modifier.isStatic(field.getModifiers()) )
             fields.add(field);
 
+      HashMap<String,FrameClassVec> classVecs = new HashMap<String, FrameClassVec>();
       for( Field f : fields ) {
         Annotation[] as = f.getAnnotations();
         API api = find(as, API.class);
@@ -99,9 +100,17 @@ public abstract class Request2 extends Request {
             for( Argument a : _arguments )
               if( a instanceof FrameKey && name._key.equals(((FrameKey) a)._name) )
                 key = (FrameKey) a;
-            arg = new FrameClassVec(f.getName(), key);
+            classVecs.put(name._key, (FrameClassVec)(arg = new FrameClassVec(f.getName(), key)));
           }
-
+          else if( MultiVecSelect.class.isAssignableFrom(api.filter()) ) {
+            MultiVecSelect name = (MultiVecSelect) newInstance(api);
+            FrameKey key = null;
+            FrameClassVec response = classVecs.get(name._key);
+            for( Argument a : _arguments )
+              if( a instanceof FrameKey && name._key.equals(((FrameKey) a)._name) )
+                key = (FrameKey) a;
+            arg = new FrameKeyMultiVec(f.getName(), key,response);
+          }
           if( arg != null ) {
             arg._name = f.getName();
             arg._required = api.required();

@@ -20,6 +20,11 @@ public class GBM extends FrameJob {
   Vec vresponse;
   class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
 
+  @API(help="columns to ignore",required=false,filter=GBMMultiVecSelect.class)
+  int [] ignored_cols = new int []{};
+  class GBMMultiVecSelect extends MultiVecSelect { GBMMultiVecSelect() { super("source");} }
+
+
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
   public class NtreesFilter implements Filter {
@@ -101,7 +106,7 @@ public class GBM extends FrameJob {
   // variable.  Depth is capped at maxDepth.
   @Override protected Response serve() {
     final Frame fr = new Frame(source); // Local copy for local hacking
-
+    fr.remove(ignored_cols);
     // Doing classification only right now...
     if( !vresponse.isEnum() ) vresponse.asEnum();
 
@@ -115,8 +120,8 @@ public class GBM extends FrameJob {
         fr.remove(i);
       }
 
-    // Ignore-columns-code goes here....
 
+    System.out.println("selected predictors = " + Arrays.toString(fr._names));
     buildModel(fr,vname);
     return GBMProgressPage.redirect(this, self(),dest());
   }
