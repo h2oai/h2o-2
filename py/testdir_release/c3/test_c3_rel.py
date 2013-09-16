@@ -3,7 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common
 import h2o_print
 
-DO_GLM = True
+DO_GLM = False
 LOG_MACHINE_STATS = False
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -25,7 +25,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             ]
         else:
             csvFilenameList= [
-                ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+                ("*[1-2][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800),
             ]
 
 
@@ -99,47 +99,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-
-    def test_A_c2_rel_short(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
-
     def test_B_c2_rel_long(self):
         self.sub_c2_rel_long()
-
-    def test_C_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_D_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_E_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_F_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_G_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_H_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_I_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_J_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_K_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_L_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def test_M_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
 
 if __name__ == '__main__':
     h2o.unit_main()
