@@ -120,8 +120,6 @@ public class GBM extends FrameJob {
         fr.remove(i);
       }
 
-
-    System.out.println("selected predictors = " + Arrays.toString(fr._names));
     buildModel(fr,vname);
     return GBMProgressPage.redirect(this, self(),dest());
   }
