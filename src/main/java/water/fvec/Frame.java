@@ -47,6 +47,7 @@ public class Frame extends Iced {
   public Vec [] remove( int [] idxs ) {
     for(int i :idxs)if(i < 0 || i > _vecs.length)
       throw new ArrayIndexOutOfBoundsException();
+    Arrays.sort(idxs);
     Vec [] res = new Vec[idxs.length];
     Vec [] rem = new Vec[_vecs.length-idxs.length];
     String [] names = new String[rem.length];
