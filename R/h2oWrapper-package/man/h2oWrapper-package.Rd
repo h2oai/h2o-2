@@ -12,7 +12,7 @@ This wrapper connects to an H2O instance and installs the corresponding R packag
 \tabular{ll}{
 Package: \tab h2oWrapper\cr
 Type: \tab Package\cr
-Version: \tab 1.0\cr
+Version: \tab 1.7.0.99999\cr
 Date: \tab 2013-09-13\cr
 License: \tab Apache-2\cr
 Depends: \tab R (>= 2.13.0), RCurl, rjson\cr
@@ -31,8 +31,6 @@ Maintainer: Anqi Fu <anqi@0xdata.com>
   \item \href{https://github.com/0xdata/h2o}{H2O on Github}
   }
 }
-~~ Optionally other standard keywords, one per line, from file KEYWORDS in the R ~~
-~~ documentation directory ~~
 \keyword{ package }
 \examples{
 h2o.initLocal()
