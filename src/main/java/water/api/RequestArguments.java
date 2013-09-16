@@ -2397,9 +2397,9 @@ public class RequestArguments extends RequestStatics {
       if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
       return vec;
     }
-    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && vec.max()<=1000;  }
+    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && (vec.max()-vec.min() <= 1000);  }
     @Override protected Vec defaultValue() { return null; }
-    @Override protected String[] errors() { return new String[] { "Only integer or enum/factor columns can be classified" }; }
+    @Override protected String[] errors() { return new String[] { "Only positive integer or enum/factor columns can be classified, with a limit of 1000 classes" }; }
   }
 
   /** Select a range of Vecs from a Frame */
