@@ -27,12 +27,13 @@ public class PCAScoreTask extends MRTask2<PCAScoreTask> {
     for(int i = _nfeat; i < chunks.length; ++i) {
       outputs[i-_nfeat] = (NewChunk)chunks[i];
     }
+
     int rows = inputs[0]._len;
     for(int r = 0; r < rows; r++) {
-     for(int c = 0; c < _ncomp; c++) {
+      for(int c = 0; c < _ncomp; c++) {
        double x = 0;
        for(int d = 0; d < _nfeat; d++)
-         x += inputs[d].at(r)*_smatrix[d][c];
+         x += inputs[d].at0(r)*_smatrix[d][c];
        outputs[c].addNum(x);
      }
     }
