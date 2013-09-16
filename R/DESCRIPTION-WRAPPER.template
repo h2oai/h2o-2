@@ -1,7 +1,7 @@
 Package: h2oWrapper
 Type: Package
 Title: Installer for H2O R Interface
-Version: 1.0
+Version: SUBST_PROJECT_VERSION
 Date: 2013-09-13
 Author: Anqi Fu
 Maintainer: Anqi Fu <anqi@0xdata.com>
