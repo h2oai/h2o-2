@@ -19,7 +19,7 @@ setMethod("h2o.gbm", signature( data="H2OParsedData", destination="character",y=
 	    res2=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView,'_modelKey'=destination)
 	    result=list()
 	    categories=length(res2$gbm_model$cm)
-	    cf_matrix = matrix(unlist(res2$gbm_model$cm),nrow=categories )
+	    cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
 	    colnames(cf_matrix)=c(1:categories)
 	    rownames(cf_matrix)=c(1:categories)
 	    result$confusion= cf_matrix
