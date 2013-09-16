@@ -222,4 +222,44 @@ public class GBMTest extends TestUtil {
     UKV.remove(modelKey);
     UKV.remove(okey);
   }
+
+
+  // Adapt a trained model to a test dataset with different enums
+  /*@Test*/ public void testModelAdapt() {
+    File file1 = TestUtil.find_test_file("./smalldata/kaggle/KDDTrain.arff.gz");
+    Key fkey1 = NFSFileVec.make(file1);
+    Key dest1 = Key.make("KDDTrain.hex");
+    File file2 = TestUtil.find_test_file("./smalldata/kaggle/KDDTest.arff.gz");
+    Key fkey2 = NFSFileVec.make(file2);
+    Key dest2 = Key.make("KDDTest.hex");
+    GBM gbm = null;
+    Frame fr = null;
+    try {
+      gbm = new GBM();
+      gbm.source = ParseDataset2.parse(dest1,new Key[]{fkey1});
+      UKV.remove(fkey1);
+      gbm.vresponse = gbm.source.remove(41); // Response is col 41
+      gbm.ntrees = 2;
+      gbm.max_depth = 8;
+      gbm.learn_rate = 0.2f;
+      gbm.min_rows = 10;
+      gbm.nbins = 100;
+      gbm.serve();              // Start it
+      gbm.get();                // Block for it
+
+      // The test data set has a few more enums than the train
+      Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});      
+      Frame preds = gbm.score(ftest);
+
+    } finally {
+      UKV.remove(dest1);        // Remove original hex frame key
+      if( gbm != null ) {
+        UKV.remove(gbm.dest()); // Remove the model
+        UKV.remove(gbm.vresponse._key);
+        gbm.remove();           // Remove GBM Job
+        if( fr != null ) fr.remove();
+      }
+    }
+  }
+
 }

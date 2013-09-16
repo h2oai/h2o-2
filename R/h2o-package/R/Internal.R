@@ -38,6 +38,9 @@ h2o.__PAGE_RFVIEW = "RFView.json"
 h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
 h2o.__PAGE_GLMGrid = "GLMGrid.json"
 h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
+h2o.__PAGE_GBM = "GBM.json"
+h2o.__PAGE_GBMModelView = "GBMModelView.json"
+
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip

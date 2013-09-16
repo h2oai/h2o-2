@@ -171,15 +171,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
         return keys;
       }
     }
-    assert !has_key_of_keys(args);
     return args;
-  }
-
-  private static boolean has_key_of_keys( Key[] args ) {
-    for( Key k : args )
-      if( k._kb[0] == Key.KEY_OF_KEYS )
-        return true;
-    return false;
   }
 
   public Futures getFutures() {

@@ -1118,7 +1118,7 @@ class DTree extends Iced {
   }
 
   // Due to roundoff error, we often get "ugly" distributions.  Correct where obvious.
-  static private void correctDistro( float fs[] ) {
+  static void correctDistro( float fs[] ) {
     if( fs == null ) return;
     double sum=0;
     int max=0;
@@ -1147,7 +1147,7 @@ class DTree extends Iced {
     assert Math.abs((sum < 0.5 ? 0 : 1)-sum)<0.000001 : Arrays.toString(fs);
   }
 
-  static private boolean checkDistro( float[/*class*/] fs ) {
+  static boolean checkDistro( float[/*class*/] fs ) {
     float sum=0;
     for( float f : fs ) sum += f;
     if( Math.abs(sum-(sum < 0.5 ? 0.0 : 1.0)) > 0.00001 ) {
@@ -1156,7 +1156,7 @@ class DTree extends Iced {
     }
     return true;
   }
-  static private boolean checkDistro( float[/*split*/][/*class*/] fss ) {
+  static boolean checkDistro( float[/*split*/][/*class*/] fss ) {
     for( float fs[] : fss )
       if( fs != null && !checkDistro(fs) ) return false;
     return true;

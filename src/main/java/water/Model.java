@@ -171,15 +171,27 @@ public abstract class Model extends Iced {
       }
 
       // Now do domain mapping
-      if( _domains[c] == domains[d] ) { // Domains trivially equal?
-      } else if( _domains[c] == null && domains[d] != null ) {
+      String ms[] = _domains[c];  // Model enum
+      String ds[] =  domains[d];  // Data  enum
+      if( ms == ds ) { // Domains trivially equal?
+      } else if( ms == null && ds != null ) {
         throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) numeric, was passed a categorical");
-      } else if( _domains[c] != null && domains[d] == null ) {
+      } else if( ms != null && ds == null ) {
         if( exact )
           throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) categorical, was passed a numeric");
         throw H2O.unimpl();     // Attempt an asEnum?
-      } else if( !Arrays.deepEquals(_domains[c], domains[d]) ) {
-        throw H2O.unimpl();     // Domain mapping needed!
+      } else if( !Arrays.deepEquals(ms, ds) ) {
+        int emap[] = map[c] = new int[ds.length];
+        HashMap<String,Integer> md = new HashMap<String, Integer>();
+        for( int i = 0; i < ms.length; i++) md.put(ms[i], i);
+        for( int i = 0; i < ds.length; i++) {
+          Integer I = md.get(ds[i]);
+          if( I==null && exact ) 
+            throw new IllegalArgumentException("Column "+_names[c]+" was not trained with factor '"+ds[i]+"' which appears in the data");
+          emap[i] = I==null ? -1 : I;
+        }
+        for( int i = 0; i < ds.length; i++)
+          assert emap[i]==-1 || ms[emap[i]].equals(ds[i]);
       } else {
         // null mapping is equal to identity mapping
       }
