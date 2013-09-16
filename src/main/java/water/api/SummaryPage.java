@@ -56,8 +56,8 @@ public class SummaryPage extends Request {
     Response r = Response.done(res);
     r.setBuilder(ROOT_OBJECT, new Builder() {
       @Override public String build(Response response, JsonElement element, String contextName) {
-        StringBuilder pageBldr = new StringBuilder("<div class=container-fluid'><div class='row-fluid'><div class='span2' style='text-align:right;overflow-x:scroll;'><h5>Columns</h5>");
-        StringBuilder sb = new StringBuilder("<div class='span10' style='height:90%;overflow-y:scroll'>");
+        StringBuilder pageBldr = new StringBuilder("<div class=container-fluid'><div class='row-fluid'><div class='span2' style='overflow-y:scroll;height:100%;left:0;position:fixed;text-align:right;overflow-x:scroll;'><h5>Columns</h5>");
+        StringBuilder sb = new StringBuilder("<div class='span10' style='float:right;height:90%;overflow-y:scroll'>");
         JsonArray cols = element.getAsJsonObject().get("summary").getAsJsonObject().get("columns").getAsJsonArray();
         Iterator<JsonElement> it = cols.iterator();
 

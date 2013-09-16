@@ -47,7 +47,7 @@ public class GBM extends FrameJob {
   }
 
   @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  char nbins = 1024;
+  int nbins = 1024;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
   }
@@ -154,7 +154,7 @@ public class GBM extends FrameJob {
         // The initial prediction is just the class distribution.  The initial
         // residuals are then basically the actual class minus the average class.
         float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
-        DTree init_tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
+        DTree init_tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
         BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, 0 );
@@ -198,8 +198,8 @@ public class GBM extends FrameJob {
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
     // Initially setup as-if an empty-split had just happened
-    final DTree tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
-    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nbins,nclass)); // The "root" node
+    final DTree tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
+    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
     // Add tree to the end of the forest
     forest = Arrays.copyOf(forest,forest.length+1);
