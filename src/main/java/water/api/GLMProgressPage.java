@@ -362,7 +362,7 @@ public class GLMProgressPage extends Request {
       sb.append("</td></tr>");
     }
 
-    private static void confusionHTML( ConfusionMatrix cm, StringBuilder sb) {
+    private static void confusionHTML( hex.ConfusionMatrix cm, StringBuilder sb) {
       if( cm == null ) return;
       sb.append("<table class='table table-bordered table-condensed'>");
       sb.append("<tr><th>Actual / Predicted</th><th>false</th><th>true</th><th>Err</th></tr>");
