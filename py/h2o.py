@@ -98,13 +98,14 @@ def get_ip_address():
     return ip
 
 def unit_main():
-    global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip
+    global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
     python_cmd_ip = get_ip_address()
     python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
+    python_username = getpass.getuser()
     # if test was run with nosestests, it wouldn't execute unit_main() so we won't see this
     # so this is correct, for stuff run with 'python ..."
     print "\nTest: %s    command line: %s" % (python_test_name, python_cmd_line)
@@ -138,6 +139,7 @@ python_cmd_ip = get_ip_address()
 python_cmd_args = ""
 # don't really know what it is if nosetests did some stuff. Should be just the test with no args
 python_cmd_line = ""
+python_username = getpass.getuser()
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -585,7 +587,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         cs_config_json = os.path.abspath(config_json)
     else:
         cs_config_json = None
-    cs_username = getpass.getuser()
+    cs_username = python_username
     cs_ip = python_cmd_ip
 
     # write out something that shows how the test could be rerun (could be a cloud build, a mix, or test only)
@@ -702,6 +704,8 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
+                        # ignore the long, long lines that the JStack prints as INFO
+                        ('stack_traces' in line) or
                         # shows up as param to url for h2o
                         ('out_of_bag_error_estimate' in line) or
                         # R stdout confusion matrix. Probably need to figure out how to exclude R logs
@@ -741,6 +745,7 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                 if (printSingleWarning):
                     # don't print these lines
                     if not (re.search("Unable to load native-hadoop library", line) or
+                        ('stack_traces' in line) or
                         ('Multiple local IPs detected' in line) or
                         ('[Loaded ' in line) or
                         ('RestS3Service' in line)):
