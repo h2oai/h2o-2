@@ -926,6 +926,10 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
+            if not isinstance(r,(list,dict)): 
+                verboseprint(r.text)
+                raise Exception("h2o json responses should always be lists or dicts, see previous for text")
+            
             if '404' in r:
                 verboseprint(r.text)
                 raise Exception("No json could be decoded as there was a 404 response. Do you have beta features turned on? beta_features: ", beta_features)

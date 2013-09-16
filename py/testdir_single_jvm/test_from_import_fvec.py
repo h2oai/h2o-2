@@ -29,8 +29,10 @@ class Basic(unittest.TestCase):
         importFolderPath = 'standard'
         timeoutSecs = 500
         csvFilenameAll = [
-            "covtype.data",
-            "covtype20x.data",
+            # ("manyfiles-nflx-gz", "file_1.dat"),
+            ("manyfiles-nflx-gz", "file_1.dat.gz"),
+            ("standard", "covtype.data"),
+            ("standard", "covtype20x.data"),
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
@@ -38,13 +40,16 @@ class Basic(unittest.TestCase):
         # pop open a browser on the cloud
         # h2b.browseTheCloud()
 
-        for csvFilename in csvFilenameList:
+        for (importFolderPath, csvFilename) in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             csvPathname = importFolderPath + "/" + csvFilename 
             
             (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=50)
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key='c.hex', 
                 timeoutSecs=500, noPoll=True, doSummary=False) # can't do summary until parse result is correct json
+
+            h2o.check_sandbox_for_errors()
+
             print "\nparseResult", h2o.dump_json(parseResult)
             if not h2o.beta_features:
                 print csvFilename, 'parse time:', parseResult['response']['time']
@@ -53,10 +58,15 @@ class Basic(unittest.TestCase):
 
             h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
             inspect = h2o_cmd.runInspect(key='c.hex', timeoutSecs=30)
+
+            h2o.check_sandbox_for_errors()
+
             # hack it because no response from Parse2
             parseResult = {'destination_key': 'c.hex'}
             if not h2o.beta_features:
                 RFview = h2o_cmd.runRF(trees=1,depth=25,parseResult=parseResult, timeoutSecs=timeoutSecs)
+
+            h2o.check_sandbox_for_errors()
 
             ## h2b.browseJsonHistoryAsUrlLastMatch("RFView")
             ## time.sleep(10)
