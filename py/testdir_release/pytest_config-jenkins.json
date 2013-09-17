@@ -15,6 +15,7 @@
     "use_hdfs": true,
 
     "use_flatfile": true,
+    "cloud_name": "jenkins-164",
 
     "ip": [
         "192.168.1.164"
