@@ -69,7 +69,7 @@ public class GBM extends FrameJob {
 
   public float progress(){
     DTree.TreeModel m = DKV.get(dest()).get();
-    return m.treeBits.length/(float)m.N;
+    return (float)m.treeBits.length/(float)m.N;
   }
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -162,9 +162,9 @@ public class GBM extends FrameJob {
 
         // Build trees until we hit the limit
         for( int tid=1; tid<ntrees; tid++) {
-          if(GBM.this.cancelled())break;
+          if( cancelled() ) break;
           forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
-//          System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
+          // System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
           // Tree-by-tree scoring
           Timer t_score = new Timer();
           BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, max_depth );
@@ -179,7 +179,7 @@ public class GBM extends FrameJob {
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
-        GBM.this.remove();
+        remove();
         tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
@@ -200,6 +200,7 @@ public class GBM extends FrameJob {
     new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
     // Add tree to the end of the forest
+    DTree[] oldForest = forest;
     forest = Arrays.copyOf(forest,forest.length+1);
     forest[forest.length-1] = tree;
 
@@ -208,6 +209,7 @@ public class GBM extends FrameJob {
     // Adds a layer to the tree each pass.
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
+      if( cancelled() ) return oldForest;
 
       // Fuse 2 conceptual passes into one:
       // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments

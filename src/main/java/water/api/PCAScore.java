@@ -8,9 +8,7 @@ import hex.PCAScoreTask;
 import com.google.gson.JsonObject;
 
 import water.*;
-import water.api.RequestArguments.*;
 import water.fvec.Frame;
-import water.fvec.Vec;
 import water.util.RString;
 
 public class PCAScore extends Request {
