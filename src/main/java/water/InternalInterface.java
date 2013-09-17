@@ -19,7 +19,7 @@ public class InternalInterface implements water.ExternalInterface {
   }
 
   // All-in-one call to lookup a model, map the columns and score
-  @Override public double scoreKey( Object modelKey, String [] colNames, String domains[][], double[] row ) {
+  @Override public float[] scoreKey( Object modelKey, String [] colNames, String domains[][], double[] row ) {
     Key key = (Key)modelKey;
     String sk = key.toString();
     Value v = DKV.get(key);
@@ -33,7 +33,7 @@ public class InternalInterface implements water.ExternalInterface {
     }
   }
 
-  @Override public double scoreModel(Object model, String[] colNames, String domains[][], double[] row) {
+  @Override public float[] scoreModel(Object model, String[] colNames, String domains[][], double[] row) {
     return ((Model)model).score(colNames,domains,false,row);
   }
 

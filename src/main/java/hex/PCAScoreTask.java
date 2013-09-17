@@ -1,10 +1,7 @@
 package hex;
 
 import hex.NewRowVecTask.DataFrame;
-
 import java.util.Arrays;
-
-import Jama.Matrix;
 import water.*;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
@@ -30,12 +27,13 @@ public class PCAScoreTask extends MRTask2<PCAScoreTask> {
     for(int i = _nfeat; i < chunks.length; ++i) {
       outputs[i-_nfeat] = (NewChunk)chunks[i];
     }
+
     int rows = inputs[0]._len;
     for(int r = 0; r < rows; r++) {
-     for(int c = 0; c < _ncomp; c++) {
+      for(int c = 0; c < _ncomp; c++) {
        double x = 0;
        for(int d = 0; d < _nfeat; d++)
-         x += inputs[d].at(r)*_smatrix[d][c];
+         x += inputs[d].at0(r)*_smatrix[d][c];
        outputs[c].addNum(x);
      }
     }
@@ -64,15 +62,19 @@ public class PCAScoreTask extends MRTask2<PCAScoreTask> {
     return f;
   }
 
-  public static Frame score(Frame lmatrix, double[][] smatrix, int ncol, Key destKey) {
-    return score(lmatrix, smatrix, smatrix.length, ncol, destKey);
-  }
-
   public static Frame score(Frame lmatrix, double[][] smatrix, Key destKey) {
     return score(lmatrix, smatrix, smatrix.length, smatrix[0].length, destKey);
   }
 
+  public static Frame score(Frame lmatrix, double[][] smatrix, int ncol, Key destKey) {
+    return score(lmatrix, smatrix, smatrix.length, ncol, destKey);
+  }
+
   public static Frame score(final DataFrame lmatrix, double[][] smatrix, Key destKey) {
     return score(lmatrix._ary.asFrame(), smatrix, destKey);
+  }
+
+  public static Frame score(final DataFrame lmatrix, double[][] smatrix, int ncol, Key destKey) {
+    return score(lmatrix._ary.asFrame(), smatrix, ncol, destKey);
   }
 }

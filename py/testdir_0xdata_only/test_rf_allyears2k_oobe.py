@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import as h2i
 
 # output is last col (we created the last two cols at 0xdata? not in orig dataset)
 paramDict = {

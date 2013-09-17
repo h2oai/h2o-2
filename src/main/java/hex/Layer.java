@@ -5,7 +5,8 @@ import hex.rng.MersenneTwisterRNG;
 import java.util.Random;
 
 import water.Iced;
-import water.fvec.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
 
 /**
  * Neural network layer.
@@ -42,20 +43,27 @@ public abstract class Layer extends Iced {
   // Optional visible units bias, e.g. for pre-training
   transient float[] _v, _gv;
 
-  public void init(Layer in, int units) {
-    _w = new float[units * in._a.length];
-    _b = new float[units];
+  public final void init(Layer in, int units) {
+    init(in, units, true);
+  }
+
+  public void init(Layer in, int units, boolean weights) {
     _a = new float[units];
     _e = new float[units];
-    _wSpeed = new float[_w.length];
-    _bSpeed = new float[_b.length];
     _in = in;
+
+    if( weights ) {
+      _w = new float[units * in._a.length];
+      _b = new float[units];
+    }
 
     if( _momentum != 0 ) {
       _wPrev = new float[_w.length];
       _bPrev = new float[_b.length];
       for( int i = 0; i < _w.length; i++ )
         _wPrev[i] = _w[i];
+      _wSpeed = new float[_w.length];
+      _bSpeed = new float[_b.length];
     }
 
     if( _perWeight != 0 ) {
@@ -73,7 +81,7 @@ public abstract class Layer extends Iced {
       }
     }
 
-    adjust(0);
+    anneal(0);
   }
 
   public void randomize() {
@@ -89,15 +97,17 @@ public abstract class Layer extends Iced {
 
   abstract void bprop();
 
-  public final void adjust(long n) {
+  public final void anneal(long n) {
+    _r = _rate / (1 + _rateAnnealing * n);
+    _m = _momentum * (n + 1) / ((n + 1) + _momentumAnnealing);
+  }
+
+  public final void momentum(long n) {
     for( int i = 0; i < _w.length; i++ )
       adjust(i, _w, _wPrev, _wInit, _wMult);
 
     for( int i = 0; i < _b.length; i++ )
       adjust(i, _b, _bPrev, _bInit, _bMult);
-
-    _r = _rate / (1 + _rateAnnealing * n);
-    _m = _momentum * (n + 1) / ((n + 1) + _momentumAnnealing);
   }
 
   private final void adjust(int i, float[] w, float[] prev, float[] init, float[] mult) {
@@ -135,7 +145,9 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Input extends Layer {
-    @Override public void init(Layer in, int units) {
+    long _row, _len;
+
+    @Override public void init(Layer in, int units, boolean weights) {
       _a = new float[units];
     }
 
@@ -145,14 +157,18 @@ public abstract class Layer extends Iced {
       throw new UnsupportedOperationException();
     }
 
-    abstract long move();
+    public final long move() {
+      return _row = _row == _len - 1 ? 0 : _row + 1;
+    }
   }
 
   public static class FrameInput extends Input {
     Frame _frame;
-    long _row;
     boolean _normalize;
     transient Chunk[] _caches;
+
+    // TODO temp until stats are propagated with vecs
+    float[] _means, _sigmas;
 
     public FrameInput() {
     }
@@ -164,6 +180,14 @@ public abstract class Layer extends Iced {
     public FrameInput(Frame frame, boolean normalize) {
       _frame = frame;
       _normalize = normalize;
+      _len = frame.numRows();
+
+      _means = new float[frame._vecs.length - 1];
+      _sigmas = new float[_means.length];
+      for( int i = 0; i < _means.length; i++ ) {
+        _means[i] = (float) frame._vecs[i].mean();
+        _sigmas[i] = (float) frame._vecs[i].sigma();
+      }
     }
 
     @Override int label() {
@@ -175,9 +199,8 @@ public abstract class Layer extends Iced {
         Chunk chunk = chunk(i, _row);
         double d = chunk.at(_row);
         if( _normalize ) {
-          Vec v = _frame._vecs[i];
-          d -= v.mean();
-          d = v.sigma() > 1e-4 ? d / v.sigma() : d;
+          d -= _means[i];
+          d = _sigmas[i] > 1e-4 ? d / _sigmas[i] : d;
         }
         _a[i] = (float) d;
       }
@@ -191,42 +214,32 @@ public abstract class Layer extends Iced {
         return c;
       return _caches[i] = _frame._vecs[i].chunk(n);
     }
-
-    @Override public long move() {
-      return _row = _row == _frame.numRows() - 1 ? 0 : _row + 1;
-    }
   }
 
   public static class ChunksInput extends Input {
     Chunk[] _chunks;
-    int _row;
-    boolean _normalize;
+    float[] _means, _sigmas;
 
     public ChunksInput() {
     }
 
-    public ChunksInput(Chunk[] chunks, boolean normalize) {
+    public ChunksInput(Chunk[] chunks, float[] means, float[] sigmas) {
       _chunks = chunks;
-      _normalize = normalize;
+      _means = means;
+      _sigmas = sigmas;
     }
 
     @Override int label() {
-      return (int) _chunks[_chunks.length - 1].at80(_row);
+      return (int) _chunks[_chunks.length - 1].at80((int) _row);
     }
 
     @Override void fprop() {
       for( int i = 0; i < _a.length; i++ ) {
-        double d = _chunks[i].at0(_row);
-        if( _normalize ) {
-          Vec v = _chunks[i]._vec;
-          d = (d - v.mean()) / v.sigma();
-        }
+        double d = _chunks[i].at0((int) _row);
+        d -= _means[i];
+        d = _sigmas[i] > 1e-4 ? d / _sigmas[i] : d;
         _a[i] = (float) d;
       }
-    }
-
-    @Override public long move() {
-      throw new UnsupportedOperationException();
     }
   }
 
@@ -259,8 +272,12 @@ public abstract class Layer extends Iced {
           int w = o * _in._a.length + i;
           _in._e[i] += g * _w[w];
           _w[w] += u * _in._a[i];
+//          if( _wGroup != null )
+//            _w[w] += (_wGroup[w] - _w[w]) * _cohesiveness * _in._a[i];
         }
         _b[o] += u;
+//        if( _bGroup != null )
+//          _b[o] += (_bGroup[o] - _b[o]) * _cohesiveness;
       }
     }
   }
@@ -290,8 +307,12 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
           _w[w] += u * _in._a[i];
+//          if( _wGroup != null )
+//            _w[w] += (_wGroup[w] - _w[w]) * _cohesiveness * _in._a[i];
         }
         _b[o] += u;
+//        if( _bGroup != null )
+//          _b[o] += (_bGroup[o] - _b[o]) * _cohesiveness;
       }
     }
   }
@@ -312,7 +333,7 @@ public abstract class Layer extends Iced {
   }
 
   public static class Rectifier extends Layer {
-    @Override public  void randomize() {
+    @Override public void randomize() {
       super.randomize();
 
       for( int i = 0; i < _b.length; i++ )
@@ -347,6 +368,28 @@ public abstract class Layer extends Iced {
         _b[o] += u;
       }
     }
+  }
+
+  // Cloning
+
+  @Override public Layer clone() {
+    return (Layer) super.clone();
+  }
+
+  public static Layer[] clone(Layer[] ls, Frame frame) {
+    FrameInput input = new FrameInput(frame);
+    input.init(null, frame._vecs.length - 1, false);
+    return clone(ls, input);
+  }
+
+  public static Layer[] clone(Layer[] ls, Input input) {
+    Layer[] clones = new Layer[ls.length];
+    clones[0] = input;
+    for( int y = 1; y < ls.length; y++ ) {
+      clones[y] = ls[y].clone();
+      clones[y].init(clones[y - 1], ls[y]._b.length, false);
+    }
+    return clones;
   }
 
   // If layer is a RBM

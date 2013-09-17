@@ -85,7 +85,7 @@ public class DRF extends FrameJob {
 
   public float progress(){
     DTree.TreeModel m = DKV.get(dest()).get();
-    return m.treeBits.length/(float)m.N;
+    return (float)m.treeBits.length/(float)m.N;
   }
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -93,11 +93,19 @@ public class DRF extends FrameJob {
     public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
-    @Override protected double score0(double[] data) {
-      throw new RuntimeException("TODO: Score me");
+    @Override protected float[] score0(double data[], float preds[]) {
+      Arrays.fill(preds,0);
+      for( CompressedTree t : treeBits )
+        t.addScore(preds, data);
+      // After adding all trees, divide by tree-count to get a distribution
+      for( int i=0; i<preds.length; i++ )
+        preds[i] /= treeBits.length;
+      DTree.correctDistro(preds);
+      assert DTree.checkDistro(preds) : "Funny distro";
+      return preds;
     }
   }
-  public Vec score( Frame fr ) { return drf_model.score(fr,true);  }
+  public Frame score( Frame fr ) { return drf_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__DRFModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -197,7 +205,7 @@ public class DRF extends FrameJob {
         final int NTREE=2;          // Limit of 5 trees at once
         int depth=0;
         for( int st = 0; st < ntrees; st+= NTREE ) {
-          if( DRF.this.cancelled() ) break;
+          if( cancelled() ) break;
           int xtrees = Math.min(NTREE,ntrees-st);
           DRFTree someTrees[] = new DRFTree[xtrees];
           int someLeafs[] = new int[xtrees];
@@ -234,7 +242,7 @@ public class DRF extends FrameJob {
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
-        DRF.this.remove();
+        remove();
         tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
@@ -358,7 +366,7 @@ public class DRF extends FrameJob {
 
     // Find the column with the best split (lowest score).
     @Override DTree.Split bestCol( DRFUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
+      DTree.Split best = DTree.Split.make(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
       if( u._hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];

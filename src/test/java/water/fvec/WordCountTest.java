@@ -51,7 +51,7 @@ public class WordCountTest extends TestUtil {
   private static class WordCount extends MRTask2<WordCount> {
     public static NonBlockingHashMap<VStr,VStr> WORDS;
     public NonBlockingHashMap<VStr,VStr> _words;
-    @Override public void init() { WORDS = new NonBlockingHashMap(); }
+    @Override public void setupLocal() { WORDS = new NonBlockingHashMap(); }
     private static int isChar( int b ) {
       if( 'A'<=b && b<='Z' ) return b-'A'+'a';
       if( 'a'<=b && b<='z' ) return b;

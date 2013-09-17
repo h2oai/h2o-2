@@ -2,11 +2,13 @@ import h2o, h2o_cmd, re, os
 import h2o_print as h2p
 import getpass
 
+#****************************************************************************************
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
 def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=False):
     checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
+    giveUpAndSearchLocally = False
     if bucket is not None and re.match("/", pathWithRegex):
         h2o.verboseprint("You said bucket:", bucket, "so stripping incorrect leading '/' from", pathWithRegex)
         pathWithRegex = pathWithRegex.lstrip('/')
@@ -19,17 +21,23 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
 
     # only use if the build_cloud was for remote H2O
     # Never use the var for remote, if you're doing a put! (which always sources local)
-    elif h2o.nodes[0].remoteH2O and schema!='put' and os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
-        # we may use this to force remote paths, so don't look locally for file
-        rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
-        bucketPath = os.path.join(rootPath, bucket)
-        checkPath = False
+    elif h2o.nodes[0].remoteH2O and schema!='put' and \
+        (os.environ.get('H2O_REMOTE_BUCKETS_ROOT' or h2o.nodes[0].h2o_remote_buckets_root)):
+        if (bucket=='smalldata' or bucket=='datasets') and schema=='local':
+            msg1 = "\nWARNING: you're using remote nodes, and 'smalldata' or 'datasets' git buckets, with schema!=put"
+            msg2 = "\nThose aren't git pull'ed by the test. Since they are user-maintained, not globally-maintained-by-0xdata,"
+            msg3 = "\nthey may be out of date at those remote nodes?"
+            msg4 = "\nGoing to assume we find a path to them locally, and remote path will be the same"
+            h2p.red_print(msg1, msg2, msg3, msg4)
+            giveUpAndSearchLocally = True
+        else:
+            if os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
+                rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
+            else:
+                rootPath = h2o.nodes[0].h2o_remote_buckets_root
 
-    elif h2o.nodes[0].remoteH2O and schema!='put' and h2o.nodes[0].h2o_remote_buckets_root:
-        # we may use this to force remote paths, so don't look locally for file
-        rootPath = h2o.nodes[0].h2o_remote_buckets_root
-        bucketPath = os.path.join(rootPath, bucket)
-        checkPath = False
+            bucketPath = os.path.join(rootPath, bucket)
+            checkPath = False
 
     # does it work to use bucket "." to get current directory
     elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
@@ -44,6 +52,11 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
             raise Exception("H2O_BUCKETS_ROOT and path used to form %s which doesn't exist." % bucketPath)
 
     else:
+        giveUpAndSearchLocally = True
+        
+
+    #******************************************************************************************
+    if giveUpAndSearchLocally:
         # if we run remotely, we're assuming the import folder path on the remote machine
         # matches what we find on our local machine. But maybe the local user doesn't exist remotely 
         # so using his path won't work. 
@@ -91,6 +104,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
             h2o.verboseprint("search B did find", bucket, "at", rootPath)
             bucketPath = os.path.join(rootPath, bucket)
 
+    #******************************************************************************************
     # if there's no path, just return the bucketPath
     # but what about cases with a header in the folder too? (not putfile)
     if pathWithRegex is None:
@@ -119,6 +133,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
     else:
         return (folderPath, tail)
 
+#***************************************************************************yy
 # passes additional params thru kwargs for parse
 # use_header_file=
 # header=
@@ -188,10 +203,8 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         # strip leading / in head if present
         if bucket and head!="":
             folderOffset = bucket + "/" + head
-            print 1
         elif bucket:
             folderOffset = bucket
-            print 2
         else:
             folderOffset = head
 
@@ -257,6 +270,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     return (importResult, importPattern)
 
 
+#****************************************************************************************
 # can take header, header_from_file, exclude params
 def parse_only(node=None, pattern=None, hex_key=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
@@ -273,6 +287,7 @@ def parse_only(node=None, pattern=None, hex_key=None,
     return parseResult
 
 
+#****************************************************************************************
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
@@ -320,6 +335,7 @@ def find_key(pattern=None):
     return keys[0]['key']
 
 
+#****************************************************************************************
 # the storeViewResult for every node may or may not be the same
 # supposed to be the same? In any case
 # pattern can't be regex to h2o?
@@ -332,7 +348,7 @@ def delete_keys(node=None, pattern=None, timeoutSecs=30):
     for k in keys:
         node.remove_key(k['key'])
     deletedCnt = len(keys)
-    print "Deleted", deletedCnt, "keys at", node
+    # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return deletedCnt
 
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
@@ -345,9 +361,40 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
     for node in reversed(h2o.nodes):
         deletedCnt = delete_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
         totalDeletedCnt += deletedCnt
-    print "\nTotal: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
+
+    if pattern:
+        print "Total: Deleted", totalDeletedCnt, "keys with filter=", pattern, "at", len(h2o.nodes), "nodes"
+    else:
+        print "Total: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
     return totalDeletedCnt
 
+
+def count_keys(node=None, pattern=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    kwargs = {'filter': pattern}
+    storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
+    nodeCnt = len(storeViewResult['keys'])
+    print nodeCnt, "keys at %s:%s" % (node.http_addr, node.port)
+    return nodeCnt
+
+def count_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    totalCnt = 0
+    # do it in reverse order, since we always talk to 0 for other stuff
+    # this will be interesting if the others don't have a complete set
+    # theoretically, the deletes should be 0 after the first node 
+    # since the deletes should be global
+    for node in reversed(h2o.nodes):
+        nodeCnt = count_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
+        totalCnt += nodeCnt
+    if pattern:
+        print "Total: ", totalCnt, "keys with filter=", pattern, "at", len(h2o.nodes), "nodes"
+    else:
+        print "Total: ", totalCnt, "keys at", len(h2o.nodes), "nodes"
+    return totalCnt
+
+
+#****************************************************************************************
 # Since we can't trust a single node storeview list, this will get keys that match text
 # for deleting, from a list saved from an import
 def delete_keys_from_import_result(node=None, pattern=None, importResult=None, timeoutSecs=30):
@@ -359,7 +406,7 @@ def delete_keys_from_import_result(node=None, pattern=None, importResult=None, t
         for k in kDict:
             key = k['key']
             if (pattern in key) or pattern is None:
-                print "\nRemoving", key
+                print "Removing", key
                 removeKeyResult = node.remove_key(key=key)
                 deletedCnt += 1
     elif 'keys' in importResult:
@@ -367,7 +414,7 @@ def delete_keys_from_import_result(node=None, pattern=None, importResult=None, t
         for k in kDict:
             key = k
             if (pattern in key) or pattern is None:
-                print "\nRemoving", key
+                print "Removing", key
                 removeKeyResult = node.remove_key(key=key)
                 deletedCnt += 1
     else:

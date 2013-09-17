@@ -1,7 +1,7 @@
 import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
 from math import floor
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     # we can do all sorts of methods off the r object

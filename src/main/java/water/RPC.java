@@ -1,6 +1,6 @@
 package water;
 
-import java.io.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
-import water.DException.DistributedException;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
 import water.util.Log;

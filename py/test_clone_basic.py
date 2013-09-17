@@ -2,7 +2,7 @@
 # some typical imports. Also the sys.path is extended since we're in h2o-perf, next to h2o
 import unittest, time, sys, random
 sys.path.extend(['.','..','py','../h2o/py','../../h2o/py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i, h2o_kmeans
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_kmeans
 
 class Basic(unittest.TestCase):
     def tearDown(self):

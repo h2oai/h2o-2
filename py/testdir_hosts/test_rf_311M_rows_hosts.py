@@ -1,6 +1,6 @@
 import unittest, sys, time
 sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
 # Uses your username specific json: pytest_config-<username>.json
 # copy pytest_config-simple.json and modify to your needs.
@@ -16,7 +16,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_poker_311M(self):
+    def test_rf_311M_rows_hosts(self):
         # since we'll be waiting, pop a browser
         # h2b.browseTheCloud()
         importFolderPath = 'standard'
@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         csvPathname = importFolderPath + "/" + csvFilename
 
         for trials in range(2):
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath, schema='local', 
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', 
                 timeoutSecs=500)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']

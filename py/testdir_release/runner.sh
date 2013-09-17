@@ -3,6 +3,31 @@
 # Normally die on first error
 set -e
 
+#**************************************
+# do some bash parameters, just in case we have future expansion
+# -n is no download of the jar
+no_download=0
+while getopts nf: flag
+do
+    case $flag in
+        n)
+            echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
+            no_download=1
+            ;;
+        f)
+            file=$OPTARG
+            echo "filename is $file (fake)"
+            ;;
+        ?)
+            exit
+            ;;
+    esac
+done
+shift $(( OPTIND - 1 ))  # shift past the last flag or argument
+echo remaining parameters to Bash are $*
+
+#**************************************
+
 echo "Setting PATH and showing java/python versions"
 date
 export PATH="/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin"
@@ -31,7 +56,7 @@ echo "current PID: $$"
 # Get the latest jar from s3. Has to execute up in h2o
 
 # a secret way to skip the download (use any arg)
-if [ $# -eq 0 ]
+if [ $no_download -eq 0 ]
 then
     cd ../..
     ./get_s3_jar.sh
@@ -42,9 +67,34 @@ fi
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]
 then 
-    python ../four_hour_cloud.py -cj ../testdir_hosts/pytest_config-164.json &
+    # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
+    # only do this if you're jenksin
+    echo "If we use more machines, expand this cleaning list."
+    echo "The possibilities should be relatively static over time"
+    echo "Could be problems if other threads also using that user on these machines at same time"
+    echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
+    echo "Who cleans up on the target 172-180 machines?"
+    
+    ### ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
+    # I guess we're setup to do this with keys No one is contended with me on those machines
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.172 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.173 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.174 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.175 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.176 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.177 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.178 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.179 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.180 rm -f -r /home/0xcustomer/ice*
+
+    python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
 else
-    python ../four_hour_cloud.py &
+    if [[ $USER == "kevin" ]]
+    then
+        python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+    else
+        python ../four_hour_cloud.py &
+    fi
 fi 
 
 CLOUD_PID=$!
@@ -71,8 +121,18 @@ ls -lt ./h2o-nodes.json
 
 # This could be a runner, that loops thru a list of tests.
 
-../testdir_single_jvm/n0.doit c1/test_c1_rel.py || true
-../testdir_single_jvm/n0.doit c2/test_c2_rel.py || true
+echo "If it exists, pytest_config-<username>.json in this dir will be used"
+echo "i.e. pytest_config-jenkins.json"
+echo "Used to run as 0xcust.., with multi-node targets (possibly)"
+DOIT=../testdir_single_jvm/n0.doit
+
+$DOIT c6/test_c6_hdfs.py || true
+$DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
+$DOIT c1/test_c1_rel.py || true
+$DOIT c2/test_c2_rel.py || true
+$DOIT c3/test_c3_rel.py || true
+$DOIT c4/test_c4_four_billion_rows.py || true
+
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 ../testdir_single_jvm/n0.doit test_shutdown.py

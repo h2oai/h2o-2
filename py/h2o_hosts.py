@@ -62,6 +62,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         # for deciding whether keys should be deleted when a test ends.
         'delete_keys_at_teardown': False, 
         'clone_cloud': False,
+        'cloud_name': None,
     }
     # initialize the default values
     paramsToUse = {}
@@ -114,10 +115,12 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
         hosts = []
         for h in paramsToUse['ip']:
             h2o.verboseprint("Connecting to:", h)
+            # expand any ~ or ~user in the string
+            key_filename = paramsToUse['key_filename']
+            if key_filename: # don't try to expand if None
+               key_filename=os.path.expanduser(key_filename)
             hosts.append(h2o.RemoteHost(addr=h, 
-                username=paramsToUse['username'], 
-                password=paramsToUse['password'], 
-                key_filename=paramsToUse['key_filename']))
+                username=paramsToUse['username'], password=paramsToUse['password'], key_filename=key_filename))
 
     # done with these, don't pass to build_cloud
     paramsToUse.pop('ip') # this was the list of ip's from the config file, replaced by 'hosts' to build_cloud

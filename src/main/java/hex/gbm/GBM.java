@@ -20,6 +20,11 @@ public class GBM extends FrameJob {
   Vec vresponse;
   class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
 
+  @API(help="columns to ignore",required=false,filter=GBMMultiVecSelect.class)
+  int [] ignored_cols = new int []{};
+  class GBMMultiVecSelect extends MultiVecSelect { GBMMultiVecSelect() { super("source");} }
+
+
   @API(help = "Number of trees", filter = NtreesFilter.class)
   int ntrees = 10;
   public class NtreesFilter implements Filter {
@@ -42,7 +47,7 @@ public class GBM extends FrameJob {
   }
 
   @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  char nbins = 1024;
+  int nbins = 1024;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
   }
@@ -64,7 +69,7 @@ public class GBM extends FrameJob {
 
   public float progress(){
     DTree.TreeModel m = DKV.get(dest()).get();
-    return m.treeBits.length/(float)m.N;
+    return (float)m.treeBits.length/(float)m.N;
   }
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -73,7 +78,7 @@ public class GBM extends FrameJob {
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
   }
-  public Vec score( Frame fr ) { return gbm_model.score(fr,true);  }
+  public Frame score( Frame fr ) { return gbm_model.score(fr,true);  }
 
   public static final String KEY_PREFIX = "__GBMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
@@ -101,25 +106,19 @@ public class GBM extends FrameJob {
   // variable.  Depth is capped at maxDepth.
   @Override protected Response serve() {
     final Frame fr = new Frame(source); // Local copy for local hacking
-
+    fr.remove(ignored_cols);
     // Doing classification only right now...
     if( !vresponse.isEnum() ) vresponse.asEnum();
 
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse )
-        fr.remove(i);
-
     String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
       if( fr._vecs[i]==vresponse ) {
         vname=fr._names[i];
         fr.remove(i);
       }
-
-    // Ignore-columns-code goes here....
 
     buildModel(fr,vname);
     return GBMProgressPage.redirect(this, self(),dest());
@@ -153,7 +152,7 @@ public class GBM extends FrameJob {
         // The initial prediction is just the class distribution.  The initial
         // residuals are then basically the actual class minus the average class.
         float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
-        DTree init_tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
+        DTree init_tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
         DTree forest[] = new DTree[] {init_tree};
         BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, 0 );
@@ -163,9 +162,9 @@ public class GBM extends FrameJob {
 
         // Build trees until we hit the limit
         for( int tid=1; tid<ntrees; tid++) {
-          if(GBM.this.cancelled())break;
+          if( cancelled() ) break;
           forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
-//          System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
+          // System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
           // Tree-by-tree scoring
           Timer t_score = new Timer();
           BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, max_depth );
@@ -176,15 +175,11 @@ public class GBM extends FrameJob {
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
-        int i = 0;
-        for(DTree t:forest){
-          System.out.println("Tree # " + i++);
-          System.out.println(t.compress().toString());
-        }
+
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
-        GBM.this.remove();
+        remove();
         tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
@@ -201,10 +196,11 @@ public class GBM extends FrameJob {
     Vec vnids = vresponse.makeZero();
     fr.add("NIDs",vnids);
     // Initially setup as-if an empty-split had just happened
-    final DTree tree = new DTree(fr._names,ncols,nbins,nclass,min_rows);
-    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,nbins,nclass)); // The "root" node
+    final DTree tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
+    new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass)); // The "root" node
     int leaf = 0; // Define a "working set" of leaf splits, from here to tree._len
     // Add tree to the end of the forest
+    DTree[] oldForest = forest;
     forest = Arrays.copyOf(forest,forest.length+1);
     forest[forest.length-1] = tree;
 
@@ -213,6 +209,7 @@ public class GBM extends FrameJob {
     // Adds a layer to the tree each pass.
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
+      if( cancelled() ) return oldForest;
 
       // Fuse 2 conceptual passes into one:
       // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments
@@ -344,7 +341,7 @@ public class GBM extends FrameJob {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override DTree.Split bestCol( GBMUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
+      DTree.Split best = DTree.Split.make(-1,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
       DHistogram hs[] = u._hs;
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {

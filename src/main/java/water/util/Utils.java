@@ -5,7 +5,6 @@ import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 
 import java.io.*;
-import java.lang.reflect.*;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
@@ -477,76 +476,6 @@ public class Utils {
       Utils.close(is);
     }
     return bs;
-  }
-
-  public static <T> T newInstance(T o) {
-    Class c = o.getClass();
-    try {
-      Constructor ctor = c.getDeclaredConstructor();
-      ctor.setAccessible(true);
-      return (T) ctor.newInstance();
-    } catch( Exception e ) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public static <T> T clone(T o) {
-    return clone(o, false);
-  }
-
-  public static <T> T deepClone(T o, String... except) {
-    return clone(o, true, except);
-  }
-
-  private static <T> T clone(T o, boolean deep, String... except) {
-    Class c = o.getClass();
-    try {
-      Constructor ctor = c.getDeclaredConstructor();
-      ctor.setAccessible(true);
-      Object clone = ctor.newInstance();
-      ArrayList<Field> fields = new ArrayList<Field>();
-      HashSet<String> excepts = new HashSet<String>(Arrays.asList(except));
-      getAllFields(fields, c);
-      for( Field f : fields ) {
-        f.setAccessible(true);
-        if( !Modifier.isStatic(f.getModifiers()) ) {
-          Object v = f.get(o);
-          boolean except_ = excepts.remove(f.getName());
-          if( v != null ) {
-            if( !deep || except_ )
-              f.set(clone, v);
-            else if( v instanceof Number ) f.set(clone, v);
-            else if( v instanceof Boolean ) f.set(clone, v);
-            else if( v instanceof float[] ) f.set(clone, ((float[]) v).clone());
-            else if( v instanceof int[] ) f.set(clone, ((int[]) v).clone());
-            else if( v instanceof float[][] ) {
-              float[][] a = (float[][]) v;
-              float[][] t = new float[a.length][];
-              for( int i = 0; i < a.length; i++ )
-                t[i] = a[i].clone();
-              f.set(clone, t);
-            } else if( v instanceof int[][] ) {
-              int[][] a = (int[][]) v;
-              int[][] t = new int[a.length][];
-              for( int i = 0; i < a.length; i++ )
-                t[i] = a[i].clone();
-              f.set(clone, t);
-            }
-            // TODO other types
-            else throw new RuntimeException("Field " + f + " cannot be cloned");
-          }
-        }
-      }
-      return (T) clone;
-    } catch( Exception e ) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public static void getAllFields(List<Field> fields, Class<?> type) {
-    for( Field field : type.getDeclaredFields() )
-      fields.add(field);
-    if( type.getSuperclass() != null ) getAllFields(fields, type.getSuperclass());
   }
 
   /**

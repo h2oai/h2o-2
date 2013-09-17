@@ -1,9 +1,46 @@
 import time
-import h2o, h2o_import2 as h2i
+import h2o, h2o_hosts, h2o_import as h2i
 
 # typical use in a unittest:
 # class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 # see multiple inheritance at http://docs.python.org/release/1.5/tut/node66.html
+#************************************************************************************
+class SetupOneJVM14(object):
+    def tearDown(self):
+        h2o.check_sandbox_for_errors()
+
+    @classmethod
+    def setUpClass(cls):
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1, java_heap_GB=14)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
+    @classmethod
+    def tearDownClass(cls):
+        h2o.tear_down_cloud()
+
+#************************************************************************************
+class SetupThreeJVM4(object):
+    def tearDown(self):
+        h2o.check_sandbox_for_errors()
+
+    @classmethod
+    def setUpClass(cls):
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=3, java_heap_GB=4)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
+    @classmethod
+    def tearDownClass(cls):
+        h2o.tear_down_cloud()
+
+#************************************************************************************
 class ReleaseCommon(object):
     def tearDown(self):
         print "tearDown"
@@ -35,7 +72,7 @@ class ReleaseCommon(object):
             elapsed = time.time() - start
             print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 
-#*********************************************************************************************************
+#************************************************************************************
 # no log download or key delete
 class ReleaseCommon2(object):
     def tearDown(self):
@@ -49,7 +86,8 @@ class ReleaseCommon2(object):
         # normally this shouldn't be necessary?
         h2o.stabilize_cloud(h2o.nodes[0], node_count=len(h2o.nodes), timeoutSecs=90)
 
-#*********************************************************************************************************
+
+#************************************************************************************
 # Notes:
 # http://stackoverflow.com/questions/1323455/python-unit-test-with-base-and-sub-class
 #     
@@ -62,4 +100,4 @@ class ReleaseCommon2(object):
 # each test in derived classes, you have to reverse the order of the base classes, 
 # so that it will be: class SubTest1(CommonTests, unittest.TestCase). 
 # - Denis Golomazov July 17
-#***********************
+#************************************************************************************

@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -16,17 +16,18 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_parseTrain(self):
-        #folderpath, filename, keyname, timeout
+        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
-        
-        files = [#('airlines', '1988.csv', '1988.hex',1800,'LateAircraftDelay'),
-                 ('mnist', 'mnist_training.csv.gz', 'mnistsmalltrain.hex',1800,0),
-                 ('manyfiles-nflx-gz', 'file_95.dat.gz', 'nflx.hex',1800,541),
-                 ('mnist/mnist8m', 'mnist8m-train-1.csv', 'mnist8mtrain.hex', 1800, 0),
-                 ('airlines', '1988_2008.csv', 'airlines.hex', 1800,'LateAircraftDelay'),
-                 ('standard', 'covtype200x.data', 'covtype.hex', 1800, 54)
+       
+        files = [('standard', 'covtype200x.data', 'covtype.hex', 1800, 54),
+                 ('mnist', 'mnist8m.csv', 'mnist8m.hex',1800,0),
+                 ('manyfiles-nflx-gz', 'file_95.dat.gz', 'nflx.hex',1800,256),
+                 ('standard', 'allyears2k.csv', 'allyears2k.hex',1800,'IsArrDelayed'),
+                 ('standard', 'allyears.csv', 'allyears2k.hex',1800,'IsArrDelayed')
                 ]
+                  
         for importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse in files:
+            h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             start = time.time()
             parseResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + csvFilename,
@@ -40,8 +41,8 @@ class Basic(unittest.TestCase):
             params = { 
                 'destination_key': "GBMKEY",
                 'learn_rate':.1,
-                'ntrees':10,
-                'max_depth':8,
+                'ntrees':1,
+                'max_depth':1,
                 'min_rows':1,
                 'vresponse':vresponse
             }   

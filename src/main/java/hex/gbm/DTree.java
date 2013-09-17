@@ -1,11 +1,7 @@
 package hex.gbm;
 
 import hex.rf.Tree.TreeVisitor;
-
 import java.util.*;
-
-import javax.management.RuntimeErrorException;
-
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -61,146 +57,7 @@ class DTree extends Iced {
   public Random rngForChunk( int cidx ) { throw H2O.fail(); }
 
 
-
-  // tree encoding:
-  //    tree: 1B nodeType, 2B colId, 4B splitVal, left, right
-  //    left: (tree-size tree)| prediction
-  //    right: tree | prediction
-  //    nodeType: (from lsb): 2 bits skip-tree-size-size, 1 bit operator flag (0 -> <, 1 -> == ), 1 bit left leaf flag, 1 bit left leaf type flag, 1 bit right leaf flag, 1 bit right leaf type flag
-  //    prediction: 1 or 2 bytes (small leaf) or array of floats with len=nclass
-  public static class CompressedTree extends Iced {
-    final byte [] _bits;
-    final String [] _names;
-    final int _nclass;
-
-    public CompressedTree(String [] names,byte [] bits, int nclass){
-      _names = names;
-      _bits = bits;
-      _nclass = nclass;
-    }
-
-    private int scoreSmallLeaf(AutoBuffer ab, float [] pred){
-      int c = _nclass < 256?ab.get1():ab.get2();
-      pred[c] = 1;
-      return c;
-    }
-    private int scoreBigLeaf(AutoBuffer ab, float [] pred){
-      for(int i = 0; i < _nclass; ++i)
-        pred[i] = ab.get4f();
-      return Utils.maxIndex(pred);
-    }
-    public int score(double [] row, float [] pred){
-      assert pred.length == _nclass;
-      Arrays.fill(pred, 0);
-      AutoBuffer ab = new AutoBuffer(_bits);
-      while(true){
-        int nodeType = ab.get1();
-        int colId = ab.get2();
-        float splitVal = ab.get4f();
-        if(colId == 65535)
-          return scoreBigLeaf(ab, pred);
-        if((((nodeType & 4) == 0) && (row[colId] >= splitVal)) || (((nodeType & 4) == 1) && (row[colId] != splitVal))) { // go right
-          // first skip left subtree
-          int lmask = nodeType & 27;
-          int skip = 0;
-          switch(lmask){
-            case 1:
-              skip = ab.get1();
-              break;
-            case 2:
-              skip =  ab.get2();
-              break;
-            case 3:
-              skip = ab.get3();
-              break;
-            case 8: // small leaf
-              skip = _nclass < 256?1:2;
-              break;
-            case 24: // big leaf
-              skip = _nclass*4; // skip the p-distribution
-              break;
-            default:
-              assert false:"illegal lmask value " + lmask;
-          }
-          ab.position(ab.position()+skip);
-          if((lmask = nodeType & 96) != 0) // leaf
-            return lmask == 32?scoreSmallLeaf(ab, pred):scoreBigLeaf(ab, pred);
-        } else { // go left
-          int lmask = nodeType & 27;
-          switch(lmask){
-            case 1:
-              ab.position(ab.position() + 1);
-              break;
-            case 2:
-              ab.position(ab.position() + 2);
-              break;
-            case 3:
-              ab.position(ab.position() + 3);
-              break;
-            case 8: // small leaf
-             return scoreSmallLeaf(ab,pred);
-            case 24: // big leaf
-              return scoreBigLeaf(ab, pred);
-            default:
-              assert false:"illegal lmask value " + lmask;
-          }
-        }
-      }
-    }
-    private StringBuilder printBigLeaf(StringBuilder sb, AutoBuffer ab){
-      sb.append("pDistribution = [");
-      for(int i = 0; i < _nclass-1; ++i)
-        sb.append(ab.get4f() + ",");
-      return sb.append(ab.get4f() + "];");
-    }
-    private String indent(int n){
-      byte [] res = new byte[4*n];
-      Arrays.fill(res, (byte)' ');
-      return new String(res);
-    }
-    private StringBuilder toString(StringBuilder sb, AutoBuffer ab, int indent){
-      int nodeType = ab.get1();
-      int col = ab.get2();
-      float fval = ab.get4f();
-      if(col == 65535)
-        return printBigLeaf(sb, ab);
-      String op = (nodeType & 4) == 0?" < ":" == ";
-      sb.append(indent(indent) + "if(col[" + col + "]" + op + fval + "){").append("\n");
-      if((nodeType & 8) == 0){ // we have left subtree
-        int slen = nodeType&3;
-        int skip = slen == 1?ab.get1():slen == 2?ab.get2():ab.get3();
-        //ab.position(ab.position()+(nodeType&7)); // skip the skip info
-        int pos = ab.position();
-        toString(sb,ab,indent+1); // left subtree
-        assert ab.position() - pos == skip;
-      } else if((nodeType & 16) == 0)  // left is small leaf
-          sb.append(indent(indent+1) + "Class=" + _names[(_nclass < 256?ab.get1():ab.get2())] + "\n");
-      else printBigLeaf(sb.append(indent(indent+1)), ab).append("\n");// big leaf
-      if(col != 65535){ // else special case for first tree which does not have second child
-        sb.append(indent(indent) + "} else {\n");
-        if((nodeType & 32) == 0)
-          toString(sb,ab,indent+1);
-        else if((nodeType & 64) == 0)
-          sb.append(indent(indent+1)+"Class=" + _names[(_nclass < 256?ab.get1():ab.get2())]+";\n");
-        else printBigLeaf(sb.append(indent(indent+1)), ab).append("\n");
-      }
-      return sb.append(indent(indent) + "}\n");
-    }
-    public String toString(){
-      StringBuilder sb = new StringBuilder();
-      AutoBuffer ab = new AutoBuffer(_bits);
-      return toString(sb, ab,0).toString();
-    }
-  }
-  public CompressedTree compress(){
-    int sz = _ns[0].size();
-    AutoBuffer ab = new AutoBuffer(sz);
-    int pos = ab.position();
-    _ns[0].compress(ab);
-    assert ab.position() - pos == sz;
-    return new CompressedTree(_names,ab.buf(),_nclass);
-  }
-
+  // --------------------------------------------------------------------------
   // Abstract node flavor
   static abstract class Node extends Iced {
     transient DTree _tree;    // Make transient, lest we clone the whole tree
@@ -219,13 +76,9 @@ class DTree extends Iced {
       return parent.printChild(sb,_nid);
     }
     abstract public StringBuilder toString2(StringBuilder sb, int depth);
-    // byte size of the subtree rooted in this node
-    public AutoBuffer compress(AutoBuffer ab){throw new RuntimeException("should never be called!");}
-    public int size(){
-      throw new RuntimeException("size() should never be called on class " + getClass().getSimpleName());
-    }
   }
 
+  // --------------------------------------------------------------------------
   // Records a column, a bin to split at within the column, and the MSE.
   static class Split {
     final int _col, _bin;       // Column to split, bin where being split
@@ -233,14 +86,38 @@ class DTree extends Iced {
     final long _nrows[];        // Rows in each final split
     final double _mses[];       // MSE  of each final split
     final float _preds[][/*nclass*/]; // Prediction (by class) for each split
-    Split( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) {
+
+    private Split( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, float preds0[], float preds1[] ) {
       _col = col;
       _bin = bin;
       _equal = equal;
       _nrows = new long[] { n0, n1 };
       _mses  = new double[] { mse0, mse1 };
       _preds = new float[][] { preds0, preds1 };
+      correctDistro(preds0);
+      correctDistro(preds1);
+      assert checkDistro( _preds );
     }
+    // Return a Split with a float distr
+    public static Split make( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, float f0[], float f1[] ) { 
+      return new Split(col,bin,equal,n0,n1,mse0,mse1,f0,f1);
+    }
+    // Convert a double distribution to a float distribution
+    public static Split make( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, double preds0[], float f1[] ) {
+      float f0[] = new float[f1.length];
+      if( preds0 != null ) 
+        for( int i=0; i<f1.length; i++ )
+          f0[i] = (float)preds0[i];
+      return make(col,bin,equal,n0,n1,mse0,mse1,f0,f1);
+    }
+
+    public static Split make( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, double preds0[], double preds1[] ) {
+      float f1[] = new float[preds1.length];
+      for( int i=0; i<preds1.length; i++ )
+        f1[i] = (float)preds1[i];
+      return make(col,bin,equal,n0,n1,mse0,mse1,preds0,f1);
+    }
+
     double mse() {
       if( _mses[0] == Double.MAX_VALUE ) return Double.MAX_VALUE;
       double sum=0;
@@ -319,6 +196,7 @@ class DTree extends Iced {
     }
   }
 
+  // --------------------------------------------------------------------------
   // An UndecidedNode: Has a DHistogram which is filled in (in parallel with other
   // histograms) in a single pass over the data.  Does not contain any
   // split-decision.
@@ -412,13 +290,11 @@ class DTree extends Iced {
     }
   }
 
+  // --------------------------------------------------------------------------
   // Internal tree nodes which split into several children over a single
   // column.  Includes a split-decision: which child does this Row belong to?
   // Does not contain a histogram describing how the decision was made.
   static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
-    byte _nodeType; // 'S': split, 'E': exclusion, '[': single class leaf, '^': multi-class leaf
-    int _size = 0; // byte size of this subtree
-
     final int _col;             // Column we split over
     // _equals\_nids[] \   0   1
     // ----------------+----------
@@ -432,6 +308,9 @@ class DTree extends Iced {
     // A prediction class-vector for each split.  Can be NULL if we have a
     // child (which carries his own prediction).
     final float _pred[/*splat*/][/*class*/];
+
+    transient byte _nodeType; // Complex encoding: see the compressed struct comments
+    transient int _size = 0;  // Compressed byte size of this subtree
 
     // Make a correctly flavored Undecided
     abstract UDN makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists );
@@ -549,100 +428,91 @@ class DTree extends Iced {
       return sb;
     }
 
-    static private boolean checkDistro( float[/*split*/][/*class*/] fss ) {
-      for( float fs[] : fss ) {
-        if( fs == null ) continue;
-        float sum=0;
-        for( float f : fs ) sum += f;
-        if( !(-0.0001 < sum && sum < 0.0001) ) {
-          System.out.println("crap distro: "+Arrays.toString(fs)+"="+sum);
-          return false;
-        }
-      }
-      return true;
-    }
-
+    // Check that this distribution is but a single class
     private boolean singleClass(int bin){
       int nzeros = 0;
-      for(float f: _pred[bin])if(f != 0) ++nzeros;
-      assert nzeros > 0;
-      if(nzeros != 1)return false;
-      // DBG: check we have correct distribution or votes
-      for(float f:_pred[bin])assert f == 0 || f >= 1;
-      return true;
+      float sum=0;              // For asserts
+      for( float f: _pred[bin] ) { sum += f; if(f != 0) ++nzeros; }
+      assert Math.abs(sum-(sum < 0.5 ? 0 : 1)) < 0.00001f : "Not a prob distro? "+Arrays.toString(_pred[bin]);
+      return nzeros == 1;
     }
 
-    private int leafSz(int i){
-      assert(getSubTree(i)==null); // leaf
-      int res = 0;
-      if(singleClass(i)){
-        _nodeType |= (byte)(8 << i*2);
-        res += (_tree._nclass < 256)?1:2;
+    // Return a DecidedNode child or null.  Can be null if there is no tree node
+    // or because there is an UndecidedNode (happens at max-tree-depth).
+    private DecidedNode getSubTree(int i){
+      Node n;
+      return (_nids[i] != -1) && ((n = _tree.node(_nids[i])) instanceof DecidedNode)
+          ? (DecidedNode)n : null;
+    }
+
+    // Size of child-i (must be a leaf).
+    // Also sets _nodeType.
+    private int leafSz( int i ) {
+      assert getSubTree(i)==null; // leaf
+      if( singleClass(i) ) {
+        _nodeType |= (byte)( 8 << i*2);
+        return (_tree._nclass < 256)?1:2;
       } else {
         _nodeType |= (byte)(24 << i*2);
         int sz = 4*(_tree._nclass);
         if(sz > 255)_nodeType |= (sz < 65535)?2:3;
-        res += sz;
+        return sz;
       }
-      return res;
     }
 
+    // Size of this subtree
     public final int size(){
-      DecidedNode child;
-      if(_size != 0)return _size;
+      if( _size != 0 ) return _size; // Cached size
+
       assert _nodeType == 0:"unexpected node type: " + _nodeType;
-      if(_equal)_nodeType |= (byte)4;
+      if( _equal ) _nodeType |= (byte)4;
+
       int res = 7; // 1B node type + flags, 2B colId, 4B float split val
       // left child
-      if((child = getSubTree(0)) != null){
+      DecidedNode child;
+      if((child = getSubTree(0)) != null) {
         int lsz = child.size();
-        int slen = lsz < 256?1:lsz < 65535?2:3;
-        _nodeType |= slen;
+        int slen = lsz < 256 ? 1 : (lsz < 65535 ? 2 : 3);
+        _nodeType |= slen;      // Set the size-skip bits
         res += lsz + slen;
-      }else
+      } else
         res += leafSz(0);
       // right child
       if(_nids.length > 1)
-        res +=((child = getSubTree(1)) != null)?child.size():leafSz(1);
+        res += ((child = getSubTree(1)) != null) ? child.size() : leafSz(1);
       assert res != 0;
-      return _size = res;
+      return (_size = res);
     }
 
-    private AutoBuffer compressLeaf(AutoBuffer ab, int i){
+    // Insert just the predictions: a single byte/short if we are predicting a
+    // single class, or else the full distribution.
+    private AutoBuffer compressLeaf(AutoBuffer ab, int i) {
       // just put the predictions in
-      if(singleClass(i)){
-        if(_tree._nclass < 256)
-          ab.put1(Utils.maxIndex(_pred[i]));
-        else
-          ab.put2((short)Utils.maxIndex(_pred[i]));
+      if( singleClass(i) ) {
+        int c = Utils.maxIndex(_pred[i]); // The One non-zero Class
+        if(_tree._nclass < 256) ab.put1(       c);
+        else                    ab.put2((short)c);
       } else for(float f:_pred[i])
-        ab.put4f(f);
+               ab.put4f(f);
       return ab;
     }
 
-    private DecidedNode getSubTree(int i){
-      Node n;
-      return (_nids[i] != -1) && ((n = _tree.node(_nids[i])) instanceof DecidedNode)
-          ?(DecidedNode)n:null;
-    }
-    public AutoBuffer compress(AutoBuffer ab){
+    // Compress this tree into the AutoBuffer
+    public AutoBuffer compress(AutoBuffer ab) {
       int pos = ab.position();
-      if(_nodeType == 0)size();
-      ab.put1(_nodeType);
+      if( _nodeType == 0 ) size(); // Sets _nodeType & _size both
+      ab.put1(_nodeType);          // Includes left-child skip-size bits
       ab.put2((short)_col);
       ab.put4f(_splat);
       int last = _nids.length-1;
       assert last <= 1; // can not handle more than 2 nodes
       DecidedNode child;
-      for(int i = 0; i < last; ++i){
-        if((child = getSubTree(i)) != null){ // we have left subtree, set the skip sz
+      for( int i = 0; i < last; ++i ) {
+        if((child = getSubTree(i)) != null) { // we have left subtree, set the skip sz
           int sz = child.size();
-          if(sz < 256)
-            ab.put1(sz);
-          else if (sz < 65535)
-            ab.put2((short)sz);
-          else
-            ab.put3(sz);
+          if(sz < 256)         ab.put1(       sz);
+          else if (sz < 65535) ab.put2((short)sz);
+          else                 ab.put3(       sz);
           // now write the subtree in
           child.compress(ab);
         } else compressLeaf(ab, i);
@@ -697,7 +567,7 @@ class DTree extends Iced {
     }
 
     // Init all the internal tree fields after shipping over the wire
-    @Override public void init( ) {
+    @Override public void setupLocal( ) {
       for( DTree dt : _trees )
         for( int j=0; j<dt._len; j++ )
           dt._ns[j]._tree = dt;
@@ -848,7 +718,7 @@ class DTree extends Iced {
     }
 
     // Init all the internal tree fields after shipping over the wire
-    @Override public void init( ) {
+    @Override public void setupLocal( ) {
       for( DTree dt : _trees )
         for( int j=0; j<dt._len; j++ )
           dt._ns[j]._tree = dt;
@@ -998,6 +868,7 @@ class DTree extends Iced {
     @Override public void reduce( ClassDist cd ) { Utils.add(_cs,cd._cs); }
   }
 
+  // --------------------------------------------------------------------------
   public static abstract class TreeModel extends Model {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -1019,15 +890,13 @@ class DTree extends Iced {
         treeBits[i] = forest[i].compress();
     }
 
-    @Override protected double score0(double[] data) {
-      int nclasses = treeBits[0]._nclass;
-      float [] pred = new float[nclasses];
-      float [] pred_acc = pred.clone();
-      for(CompressedTree t:treeBits){
-        t.score(data, pred);
-        Utils.add(pred_acc, pred);
-      }
-      return Utils.maxIndex(pred_acc);
+    @Override protected float[] score0(double data[], float preds[]) {
+      Arrays.fill(preds,0);
+      for( CompressedTree t : treeBits )
+        t.addScore(preds, data);
+      correctDistro(preds);
+      assert checkDistro(preds) : "Funny distro";
+      return preds;
     }
 
     public void generateHTML(String title, StringBuilder sb) {
@@ -1092,5 +961,204 @@ class DTree extends Iced {
         DocGen.HTML.arrayTail(sb);
       }
     }
+
+    // --------------------------------------------------------------------------
+    // Highly compressed tree encoding:
+    //    tree: 1B nodeType, 2B colId, 4B splitVal, left-tree-size, left, right
+    //    nodeType: (from lsb): 
+    //        2 bits ( 1,2) skip-tree-size-size, 
+    //        1 bit  ( 4) operator flag (0 -> <, 1 -> == ), 
+    //        1 bit  ( 8) left leaf flag, 
+    //        1 bit  (16) left leaf type flag, 
+    //        1 bit  (32) right leaf flag, 
+    //        1 bit  (64) right leaf type flag
+    //    left, right: tree | prediction
+    //    prediction: 1 or 2 bytes (small leaf) or array of floats with len=nclass
+    public static class CompressedTree extends Iced {
+      final byte [] _bits;
+      final int _nclass;
+      public CompressedTree( byte [] bits, int nclass ) { _bits = bits; _nclass = nclass; }
+      public float[] addScore( final float preds[], final double row[] ) {
+        // Predictions are stored biased by the minimum class, but the scoring
+        // logic assumes the full class size.  Bias results.
+        int ymin = preds.length - _nclass;
+        AutoBuffer ab = new AutoBuffer(_bits);
+        while(true) {
+          int nodeType = ab.get1();
+          int colId = ab.get2();
+          float splitVal = ab.get4f();
+          if( colId == 65535 ) return scoreLeaf(ab, preds, ymin, (nodeType&16)==16);
+
+          boolean equal = ((nodeType&4)==4);
+          // Compute the amount to skip.
+          int lmask =  nodeType & 0x1B;
+          int rmask = (nodeType & 0x60) >> 2;
+          int skip = 0;
+          switch(lmask) {
+          case 1:  skip = ab.get1();  break;
+          case 2:  skip = ab.get2();  break;
+          case 3:  skip = ab.get3();  break;
+          case 8:  skip = _nclass < 256?1:2;  break; // Small leaf
+          case 24: skip = _nclass*4;  break; // skip the p-distribution
+          default: assert false:"illegal lmask value " + lmask;
+          }
+
+          if( ( equal && ((float)row[colId]) == splitVal) ||
+              (!equal && ((float)row[colId]) >= splitVal) ) {
+            ab.position(ab.position()+skip); // Skip right subtree
+            lmask = rmask;                   // And set the leaf bits into common place
+          }
+          if( (lmask&8)==8 ) return scoreLeaf(ab,preds,ymin, (lmask&16)==16);
+        }
+      }
+      
+      private float[] scoreLeaf(AutoBuffer ab, float preds[], int ymin, boolean big) {
+        if( !big )              // Small leaf?
+          preds[ymin+(_nclass < 256 ? ab.get1() : ab.get2())] += 1.0f;
+        else                    // Big leaf
+          for( int i = 0; i < _nclass; ++i )
+            preds[ymin+i] += ab.get4f();
+        return preds;
+      }
+    }
+    
+    /** Abstract visitor class for serialized trees.*/
+    public static abstract class TreeVisitor<T extends Exception> {
+      // Override these methods to get walker behavior.  
+      protected void pre ( int col, float fcmp, boolean equal ) throws T { }
+      protected void mid ( int col, float fcmp, boolean equal ) throws T { }
+      protected void post( int col, float fcmp, boolean equal ) throws T { }
+      protected void leaf( int pclass )                         throws T { }
+      protected void leaf( float preds[] )                      throws T { }
+      long  result( ) { return 0; } // Override to return simple results
+
+      protected final TreeModel _tm;
+      protected final CompressedTree _ct;
+      private final AutoBuffer _ts;
+      private final float _preds[]; // Reused to hold a
+      public TreeVisitor( TreeModel tm, CompressedTree ct ) { 
+        _tm = tm;
+        _ts = new AutoBuffer((_ct=ct)._bits); 
+        _preds = new float[ct._nclass+tm.ymin]; 
+      }
+      
+      // Call either the single-class leaf or the full-prediction leaf
+      private final void leaf2( int mask ) throws T {
+        assert (mask& 8)== 8;   // Is a leaf
+        if( (mask&16) == 0 )    // Small leaf?
+          // Call the leaf with a single class prediction
+          leaf(_tm.ymin+(_ct._nclass < 256 ? _ts.get1() : _ts.get2()));
+        else {
+          for( int i = 0; i < _ct._nclass; ++i )
+            _preds[_tm.ymin+i] = _ts.get4f();
+          leaf(_preds);
+        }
+      }
+
+      public final void visit() throws T {
+        int nodeType = _ts.get1();
+        int col = _ts.get2();
+        float fcmp = _ts.get4f();
+        if( col==65535 ) { leaf2(nodeType); return; }
+        boolean equal = ((nodeType&4)==4);
+        // Compute the amount to skip.
+        int lmask =  nodeType & 0x1B;
+        int rmask = (nodeType & 0x60) >> 2;
+        int skip = 0;
+        switch(lmask) {
+        case 1:  skip = _ts.get1();  break;
+        case 2:  skip = _ts.get2();  break;
+        case 3:  skip = _ts.get3();  break;
+        case 8:  skip = _ct._nclass < 256?1:2;  break; // Small leaf
+        case 24: skip = _ct._nclass*4;  break; // skip the p-distribution
+        default: assert false:"illegal lmask value " + lmask;
+        }
+        pre (col,fcmp,equal);   // Pre-walk
+        if( (lmask & 0x8)==8 ) leaf2(lmask);  else  visit();
+        mid (col,fcmp,equal);   // Mid-walk
+        if( (rmask & 0x8)==8 ) leaf2(rmask);  else  visit();
+        post(col,fcmp,equal);
+      }
+    }
+    
+    StringBuilder toString(CompressedTree ct, final StringBuilder sb ) {
+      new TreeVisitor<RuntimeException>(this,ct) {
+        int _depth;
+        @Override protected void pre( int col, float fcmp, boolean equal ) {
+          for( int i=0; i<_depth; i++ ) sb.append("  ");
+          sb.append(_names[col]).append(equal?"==":"< ").append(fcmp).append('\n');
+          _depth++;
+        }
+        @Override protected void post( int col, float fcmp, boolean equal ) { _depth--; }
+        @Override protected void leaf( int pclass ) {
+          for( int i=0; i<_depth; i++ ) sb.append("  ");
+          sb.append("[").append(classNames()[pclass]).append("]\n");
+        }
+        @Override protected void leaf( float preds[]  ) {
+          for( int i=0; i<_depth; i++ ) sb.append("  ");
+          String domain[] = classNames();
+          sb.append("[");
+          for( int c=_tm.ymin; c<preds.length; c++ )
+            sb.append(domain[c]).append('=').append(preds[c]).append(',');
+          sb.append("]\n");
+        }
+      }.visit();
+      return sb;
+    }
+  }
+
+  // Build a compressed-tree struct
+  public TreeModel.CompressedTree compress() {
+    int sz = decided(0).size();
+    AutoBuffer ab = new AutoBuffer(sz);
+    int pos = ab.position();    // For asserts
+    decided(0).compress(ab);        // Compress whole tree
+    assert ab.position() - pos == sz;
+    return new TreeModel.CompressedTree(ab.buf(),_nclass);
+  }
+
+  // Due to roundoff error, we often get "ugly" distributions.  Correct where obvious.
+  static void correctDistro( float fs[] ) {
+    if( fs == null ) return;
+    double sum=0;
+    int max=0;
+    for( int i=0; i<fs.length; i++ ) {
+      sum += fs[i];
+      if( fs[i] > max ) max = i;
+    }
+    if( Double.isNaN(sum) ) return; // Assume this is intended
+    if( sum < 0.5 ) {        // GBM: expect 0.0 distro
+      assert Math.abs(sum)<0.0001 : Arrays.toString(fs);// Really busted?
+      if( sum != 0.0 ) {     // Not a 0.0?
+        sum /= fs.length;    // Recenter the distro around 0
+        for( int i=0; i<fs.length; i++ )
+          fs[i] -= sum;
+      }
+    } else {                  // DRF: expect 1.0 distro
+      assert Math.abs(sum-1.0)<0.0001 : Arrays.toString(fs);// Really busted?
+      if( fs[max] >= 1.0 ) {  // If max class >= 1.0, force a clean distro
+        Arrays.fill(fs,0);    // All zeros, except the 1.0
+        fs[max] = 1.0f;       // 
+      } else                  // Else adjust the max to clean out error
+        fs[max] += 1.0-sum;
+    }
+    sum=0;
+    for( float f : fs ) sum+=f;
+    assert Math.abs((sum < 0.5 ? 0 : 1)-sum)<0.000001 : Arrays.toString(fs);
+  }
+
+  static boolean checkDistro( float[/*class*/] fs ) {
+    float sum=0;
+    for( float f : fs ) sum += f;
+    if( Math.abs(sum-(sum < 0.5 ? 0.0 : 1.0)) > 0.00001 ) {
+      System.out.println("crap distro: "+Arrays.toString(fs)+"="+sum);
+      return false;
+    }
+    return true;
+  }
+  static boolean checkDistro( float[/*split*/][/*class*/] fss ) {
+    for( float fs[] : fss )
+      if( fs != null && !checkDistro(fs) ) return false;
+    return true;
   }
 }

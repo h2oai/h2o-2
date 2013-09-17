@@ -1,6 +1,6 @@
 package hex;
 
-import hex.Trainer.ThreadedTrainers;
+import hex.Trainer.Threaded;
 import water.Sample07_NeuralNet_Mnist;
 import water.util.Utils;
 
@@ -29,7 +29,7 @@ public class MnistSearch extends Sample07_NeuralNet_Mnist {
       search.run(_ls[1], _ls[2]);
 
       for( int i = 0; i < 10; i++ ) {
-        Trainer trainer = new ThreadedTrainers(_ls);
+        Trainer trainer = new Threaded(_ls);
         trainer._batch = 10;
         //trainer._batches = (int) _train._count / trainer._batch;
         trainer._batches = 100;

@@ -122,8 +122,14 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   double mseVar( double mean, double var, long n ) { return n==0 ? 0 : var*(n-1)/n; }
   double mseSQ ( double sum , double ssq, long n ) { return ssq - sum*sum/n; }
 
-  float mse( float Ms[], float Ss[], long n ) {
-    float sum=0;
+  double mse( float Ms[], float Ss[], long n ) {
+    double sum=0;
+    for( int i=0; i<_nclass; i++ )
+      if( n > 0 ) sum += (double)Ss[i]/n;
+    return sum;
+  }
+  double mse( double Ms[], double Ss[], long n ) {
+    double sum=0;
     for( int i=0; i<_nclass; i++ )
       if( n > 0 ) sum += Ss[i]/n;
     return sum;
@@ -170,17 +176,17 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
     // Split zero bins to the left, all bins to the right
     // Left stack of bins
-    float M0[] = new float[_nclass], S0[] = new float[_nclass];
+    double M0[] = new double[_nclass], S0[] = new double[_nclass];
     long n0 = 0;
     // Right stack of bins
-    float M1[] = new float[_nclass], S1[] = new float[_nclass];
+    double M1[] = new double[_nclass], S1[] = new double[_nclass];
     long n1 = 0;
     for( int b=0; b<_nbins; b++ )
       n1 = add(M1,S1,n1,_Ms[b],_Ss[b],_bins[b]);
 
     // Make private hackable copies
-    float M2[] = M1.clone();
-    float S2[] = S1.clone();
+    double M2[] = M1.clone();
+    double S2[] = S1.clone();
 
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
@@ -189,13 +195,13 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // splits first.
     double mseAll=0;
     assert (mseAll = mse(M1,S1,n1))==mseAll || true;
-    DTree.Split best = new DTree.Split(col,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,null,null);
+    DTree.Split best = DTree.Split.make(col,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
     for( int b=0; b<_nbins; b++ ) {
       double mse0 = mse(M0,S0,n0);
       double mse1 = mse(M1,S1,n1);
       double mse = (mse0*n0+mse1*n1)/(n0+n1);
       if( mse < best.mse() || (best._bin<((_nbins+1)/2) && mse==best.mse()) )
-        best = new DTree.Split(col,b,false,n0,n1,mse0,mse1,M0.clone(), M1.clone());
+        best = DTree.Split.make(col,b,false,n0,n1,mse0,mse1,M0,M1);
       // Move mean/var across split point
       n0 = add( M0, S0, n0, _Ms[b], _Ss[b], _bins[b]);
       n1 = sub( M1, S1, n1, _Ms[b], _Ss[b], _bins[b]);
@@ -207,30 +213,59 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
     // Now look at equal/not-equal splits.  At each loop, remove the current
     // bin from M2/S2/n2 & check MSE - then restore M2/S2/n2.
+    double M2orig[] = M2.clone();
+    double S2orig[] = S2.clone();
     if( _isInt && _step == 1.0f ) { // Only for ints & enums
       long n2 = n0;
       for( int b=1; b<_nbins-1; b++ ) { // Notice tigher endpoints: ignore splits that are repeats of above
         long n3 = _bins[b];
         if( n3 == 0 ) continue; // Ignore zero-bin splits
         if( n3 == n2 ) {        // Bad split: all or nothing.
-          best = new DTree.Split(col,b,true,0,n3,0,mseAll,new float[M2.length], M2);
+          best = DTree.Split.make(col,b,true,0L,n3,0.0,mseAll,null, M2);
           break;
         }
         // Subtract out the chosen bin from the totals
-        float M3[] = _Ms[b], S3[] = _Ss[b];
-        n2 = sub(M2,S2,n2,M3,S3,n3);
-        double mse2 = mse(M2,S2,n2);
-        double mse3 = mse(M3,S3,n3);
+        n2 = sub(M2,S2,n2,_Ms[b],_Ss[b],n3);
+        double mse2 = mse( M2   , S2   ,n2);
+        double mse3 = mse(_Ms[b],_Ss[b],n3);
         double mse = (mse2*n2+mse3*n3)/(n2+n3);
         if( mse < best.mse() )
-          best = new DTree.Split(col,b,true,n2,n3,mse2,mse3,M2.clone(), M3.clone());
-        // Restore the total bins
-        n2 = add(M2,S2,n2,M3,S3,n3);
+          best = DTree.Split.make(col,b,true,n2,n3,mse2,mse3,M2, _Ms[b]);
+        // Restore M2/S2/n2
+        n2 += n3;
+        System.arraycopy(M2orig,0,M2,0,M2.length);
+        System.arraycopy(S2orig,0,S2,0,S2.length);
         assert Math.abs(mseAll - mse(M2,S2,n2)) < 0.00001 : "mseAll="+mseAll+", mse at end="+mse(M2,S2,n2)+", bin="+b+", "+this;
       }
     }
 
     return best;
+  }
+
+  // Recursive mean & variance
+  //    http://www.johndcook.com/standard_deviation.html
+  //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+  long add( double Ms0[], double Ss0[], long n0, float Ms1[], float Ss1[], long n1 ) {
+    if( Ms1 != null ) 
+      for( int c = 0; c<_nclass; c++ ) {
+        double m0 = Ms0[c],  m1 = Ms1[c];
+        double s0 = Ss0[c],  s1 = Ss1[c];
+        double delta=m1-m0;
+        Ms0[c] = (n0*m0+n1*m1)/(n0+n1); // Mean
+        Ss0[c] = s0+s1+delta*delta*n0*n1/(n0+n1); // 2nd moment
+      }
+    return n0+n1;
+  }
+  long sub( double Ms0[], double Ss0[], long n0, float Ms1[], float Ss1[], long n1 ) {
+    if( Ms1 != null ) 
+      for( int c = 0; c<_nclass; c++ ) {
+        double m0 = Ms0[c],  m1 = Ms1[c];
+        double s0 = Ss0[c],  s1 = Ss1[c];
+        double delta=m1-m0;
+        Ms0[c] = (n0*m0-n1*m1)/(n0-n1); // Mean
+        Ss0[c] = s0-s1-delta*delta*n0*n1/(n0-n1); // 2nd moment
+      }
+    return n0-n1;
   }
 
   // Add one row to a bin found via simple linear interpolation.
@@ -286,7 +321,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     Vec[] vs = fr._vecs;
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
-      hists[j] = v.min()==v.max() ? null
+      hists[j] = (v.naCnt()==v.length() || v.min()==v.max()) ? null
         : new DBinHistogram(fr._names[j],nbins,nclass,v.isInt(),(float)v.min(),(float)v.max(),v.length());
     }
     return hists;
@@ -306,34 +341,15 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       assert _Ms[b] != null || k1 == 0;
       if( h._Ms[b] == null ) { assert k2 == 0; }
       else if( _Ms[b] == null ) { assert k1==0;  _Ms[b] = h._Ms[b];  _Ss[b] = h._Ss[b]; }
-      add(_Ms[b],_Ss[b],k1,h._Ms[b],h._Ss[b],k2);
+      else 
+        for( int c = 0; c<_nclass; c++ ) {
+          float m0 = _Ms[b][c],  m1 = h._Ms[b][c];
+          float s0 = _Ss[b][c],  s1 = h._Ss[b][c];
+          float delta=m1-m0;
+          _Ms[b][c] = (k1*m0+k2*m1)/(k1+k2); // Mean
+          _Ss[b][c] = s0+s1+delta*delta*k1*k2/(k1+k2); // 2nd moment
+        }
     }
-  }
-
-  // Recursive mean & variance
-  //    http://www.johndcook.com/standard_deviation.html
-  //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-  long add( float Ms0[], float Ss0[], long n0, float Ms1[], float Ss1[], long n1 ) {
-    if( Ms1 != null ) 
-      for( int c = 0; c<_nclass; c++ ) {
-        float m0 = Ms0[c],  m1 = Ms1[c];
-        float s0 = Ss0[c],  s1 = Ss1[c];
-        float delta=m1-m0;
-        Ms0[c] = (n0*m0+n1*m1)/(n0+n1); // Mean
-        Ss0[c] = s0+s1+delta*delta*n0*n1/(n0+n1); // 2nd moment
-      }
-    return n0+n1;
-  }
-  long sub( float Ms0[], float Ss0[], long n0, float Ms1[], float Ss1[], long n1 ) {
-    if( Ms1 != null ) 
-      for( int c = 0; c<_nclass; c++ ) {
-        float m0 = Ms0[c],  m1 = Ms1[c];
-        float s0 = Ss0[c],  s1 = Ss1[c];
-        float delta=m1-m0;
-        Ms0[c] = (n0*m0-n1*m1)/(n0-n1); // Mean
-        Ss0[c] = s0-s1-delta*delta*n0*n1/(n0-n1); // 2nd moment
-      }
-    return n0-n1;
   }
 
   // Pretty-print a histogram

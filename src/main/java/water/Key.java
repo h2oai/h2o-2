@@ -38,8 +38,6 @@ public final class Key extends Iced implements Comparable {
 
   public static final byte ARRAYLET_CHUNK = 0;
 
-  public static final byte KEY_OF_KEYS = 1;
-
   public static final byte BUILT_IN_KEY = 2; // C.f. Constants.BUILT_IN_KEY_*
 
   public static final byte JOB = 3;
@@ -229,22 +227,7 @@ public final class Key extends Iced implements Comparable {
   // Custom Serialization Reader: Keys must be interned on construction.
   @Override public final Key read(AutoBuffer bb) { return make(bb.getA1()); }
   @Override public final AutoBuffer write(AutoBuffer bb) { return bb.putA1(_kb); }
-  @Override public final AutoBuffer writeJSON(AutoBuffer bb) { 
-    String s=toString();
-    try { s = URLEncoder.encode(s,"UTF-8"); }
-    catch( UnsupportedEncodingException e ) {}
-    return bb.putJSONStr(s);
-  }
-
-
-  // Expand a KEY_OF_KEYS into an array of keys
-  public Key[] flatten() {
-    assert (_kb[0]&0xFF)==KEY_OF_KEYS;
-    Value val = DKV.get(this);
-    if( val == null ) return null;
-    return ((Key.Ary)val.get())._keys;
-  }
-
+  @Override public final AutoBuffer writeJSON(AutoBuffer bb) { return bb.putJSONStr(toString()); }
 
   // User keys must be all ASCII, but we only check the 1st byte
   public boolean user_allowed() {

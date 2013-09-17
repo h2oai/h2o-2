@@ -29,7 +29,7 @@ public class NewChunk extends Chunk {
     _vec = C._vec;
     _cidx = _vec.elem2ChunkIdx(C._start); // This chunk#
     _len = C._len;
-    if( C.hasFloat() ) {
+    if( C.hasFloat() || C instanceof C0DChunk ) {
       _ds = MemoryManager.malloc8d(_len);
     } else {
       _ls = MemoryManager.malloc8 (_len);
@@ -126,14 +126,14 @@ public class NewChunk extends Chunk {
       if( sz < Enum.MAX_ENUM_SIZE ) {
         if(sz < 255){ // we can fit into 1Byte
           byte [] bs = MemoryManager.malloc1(_len);
-          for(int i = 0; i < _len; ++i)bs[i] = ((_xs[i] >= 0)?(byte)(0xFF&_xs[i]):(byte)0xFF);
-          int [] vals = new int[256];
-          for(int i = 0; i < bs.length; ++i)if(bs[i] >= 0)++vals[bs[i]];
+          for(int i = 0; i < _len; ++i) bs[i] = (byte)(_xs[i] >= 0 ? (0xFF&_xs[i]) : C1Chunk._NA);
           return new C1Chunk(bs);
-        } else if(sz < 65535){ // 2 bytes
+        } else if( sz < 65535 ) { // 2 bytes
           byte [] bs = MemoryManager.malloc1(_len << 1);
-          for(int i = 0; i < _len; ++i)UDP.set2(bs, i << 1, ((_xs[i] >= 0)?(short)_xs[i]:(short)C2Chunk._NA));
-          return new C2Chunk(bs);
+          int bias = sz < 32767 ? 0 : -(Short.MIN_VALUE+1);
+          for(int i = 0; i < _len; ++i) 
+            UDP.set2(bs, i << 1, (short)((_xs[i] >= 0)? _xs[i]+bias : C2Chunk._NA));
+          return sz < 32767 ? new C2Chunk(bs) : new C2SChunk(bs,bias,1);
         } else throw H2O.unimpl();
       }
     }
@@ -354,7 +354,7 @@ public class NewChunk extends Chunk {
   }
   @Override public long   at8_impl( int i ) { 
     if( _ls == null ) return (long)_ds[i];
-    assert _xs[i]==0; return _ls[i]; 
+    return _ls[i]*DParseTask.pow10i(_xs[i]); 
   }
   @Override public double atd_impl( int i ) { 
     if( _ds == null ) return at8_impl(i);

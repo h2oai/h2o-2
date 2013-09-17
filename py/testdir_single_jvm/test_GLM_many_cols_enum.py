@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 
 # FIX! add cases with shuffled data!
 import h2o, h2o_cmd, h2o_hosts, h2o_glm
-import h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
+import h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
     # do we need more than one random generator?

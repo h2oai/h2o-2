@@ -2,7 +2,6 @@ package water;
 
 import jsr166y.CountedCompleter;
 import water.fvec.*;
-import water.util.Log;
 
 /**
  * Map/Reduce style distributed computation.
@@ -55,7 +54,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
 
   /** Override to do any remote initialization on the 1st remote instance of
    *  this object, for initializing node-local shared data structures.  */
-  public void init() { }
+  protected void setupLocal() { }
+  /** Override to do any remote cleaning on the last remote instance of
+   *  this object, for disposing of node-local shared data structures.  */
+  protected void closeLocal() { }
 
   /** Internal field to track a range of remote nodes/JVMs to work on */
   protected int _nlo, _nhi;           // Range of NODEs to work on - remotely
@@ -101,7 +103,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     fr.checkCompatible();       // Check for compatible vectors
     _fr = fr;                   // Record vectors to work on
     _nlo = 0;  _nhi = H2O.CLOUD.size(); // Do Whole Cloud
-    setupLocal();               // Local setup
+    setupLocal0();               // Local setup
     H2O.submitTask(this);       // Begin normal execution on a FJ thread
     return self();
   }
@@ -119,14 +121,14 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Called once on remote at top level, probably with a subset of the cloud.
    *  Called internal by D/F/J.  Not expected to be user-called.  */
   @Override public final void dinvoke(H2ONode sender) {
-    setupLocal();               // Local setup
+    setupLocal0();               // Local setup
     compute2();                 // Do The Main Work
     // nothing here... must do any post-work-cleanup in onCompletion
   }
 
   // Setup for local work: fire off any global work to cloud neighbors; do all
   // chunks; call user's init.
-  private final void setupLocal() {
+  private final void setupLocal0() {
     _topLocal = true;
     // Check for global vs local work
     if( _nlo >= 0 && _nlo < _nhi-1 ) { // Have global work?
@@ -141,7 +143,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // block on.
     if( _fr.hasAppendables() )
       _fs = new Futures();
-    init();                     // Setup any user's shared local structures
+    setupLocal();                     // Setup any user's shared local structures
   }
 
   // Make an RPC call to some node in the middle of the given range.  Add a
@@ -224,7 +226,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // Gather/reduce remote work.
   // Block for other queued pending tasks.
   // Copy any final results into 'this', such that a return of 'this' has the results.
-  private void postLocal() {
+  private final void postLocal() {
     reduce3(_nleft);            // Reduce global results from neighbors.
     reduce3(_nrite);
     if( _fs != null )           // Block on all other pending tasks, also
@@ -235,6 +237,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     if( _res == null ) _nlo = -1; // Flag for no local results *at all*
     else if( _res != this )       // There is a local result, and its not self
       copyOver(_res);             // So copy into self
+    closeLocal();
     if( nlo==0 && nhi == H2O.CLOUD.size() ) // All-done on head of whole MRTask tree?
       _fr.closeAppendables();   // Final close ops on any new appendable vec
   }

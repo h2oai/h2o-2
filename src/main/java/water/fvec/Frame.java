@@ -30,7 +30,7 @@ public class Frame extends Iced {
     return -1;
   }
 
-  /** Appends a named column, keeping the last Vec as the response */
+ /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
     // TODO : needs a compatibility-check!!!
     final int len = _names.length;
@@ -43,6 +43,31 @@ public class Frame extends Iced {
   /** Removes the first column with a matching name.  */
   public Vec remove( String name ) { return remove(find(name)); }
 
+  /** Removes a numbered column. */
+  public Vec [] remove( int [] idxs ) {
+    for(int i :idxs)if(i < 0 || i > _vecs.length)
+      throw new ArrayIndexOutOfBoundsException();
+    Arrays.sort(idxs);
+    Vec [] res = new Vec[idxs.length];
+    Vec [] rem = new Vec[_vecs.length-idxs.length];
+    String [] names = new String[rem.length];
+    int j = 0;
+    int k = 0;
+    int l = 0;
+    for(int i = 0; i < _vecs.length; ++i)
+      if(j < idxs.length && i == idxs[j]){
+        ++j;
+        res[k++] = _vecs[i];
+      } else {
+        rem[l] = _vecs[i];
+        names[l] = _names[i];
+        ++l;
+      }
+    _vecs = rem;
+    _names = names;
+    assert l == rem.length && k == idxs.length;
+    return res;
+  }
   /** Removes a numbered column. */
   public Vec remove( int idx ) {
     int len = _names.length;
@@ -61,7 +86,7 @@ public class Frame extends Iced {
   public int  numCols() { return _vecs.length; }
   public long numRows(){ return anyVec().length();}
 
-  // All the domains for enum columns; null for non-enum columns.
+  /** All the domains for enum columns; null for non-enum columns.  */
   public String[][] domains() {
     String ds[][] = new String[_vecs.length][];
     for( int i=0; i<_vecs.length; i++ )
@@ -120,9 +145,7 @@ public class Frame extends Iced {
     remove(new Futures());
   }
 
-  /**
-   * Actually remove/delete all Vecs from memory, not just from the Frame.
-   */
+  /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   public void remove(Futures fs){
     if(_vecs.length > 0){
       VectorGroup vg = _vecs[0].group();

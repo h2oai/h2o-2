@@ -8,10 +8,7 @@ import hex.PCAScoreTask;
 import com.google.gson.JsonObject;
 
 import water.*;
-import water.api.RequestArguments.HexColumnSelect;
-import water.api.RequestArguments.HexPCAColumnSelect;
 import water.fvec.Frame;
-import water.fvec.Vec;
 import water.util.RString;
 
 public class PCAScore extends Request {
@@ -19,6 +16,7 @@ public class PCAScore extends Request {
   protected final H2OHexKey _dataKey = new H2OHexKey(KEY);
   protected final H2OKey _destKey = new H2OKey(DEST_KEY, true);
   protected final Int _numPC = new Int("num_pc", 2, 1, 1000000);   // TODO: Set default to # of features
+  // protected final Real _tol = new Real("tolerance", 0.0, 0, 1, "Omit components with std dev <= tol times std dev of first component");
 
   @Override protected void queryArgumentValueSet(water.api.RequestArguments.Argument arg, java.util.Properties inputArgs) {
     if( arg == _dataKey ) {     // Check for dataset compatibility
@@ -58,18 +56,14 @@ public class PCAScore extends Request {
       ValueArray ary = _dataKey.value();
       PCAModel m = _modelKey.value();
 
-      int[] cols = new int[ary._cols.length];
-      for(int i = 0; i < cols.length; i++) cols[i] = i;
-      DataFrame temp = DataFrame.makePCAData(ary, cols, m._pcaParams._standardized);
-      Frame data = DPCA.StandardizeTask.standardize(temp);
-
       // Extract subset of data that matches features of model
-      int colIds[] = m.columnMapping(ary.colNames());
-      Vec[] vecs = new Vec[colIds.length];
-      for(int i = 0; i < colIds.length; i++)
-        vecs[i] = data._vecs[colIds[i]];
-      Frame subset = new Frame(ary.colNames(), vecs);
-      PCAScoreTask.score(subset, m._eigVec, _numPC.value(), _destKey.value());
+      int colMap[] = m.columnMapping(ary.colNames());
+      boolean standardize = m._pcaParams._standardized;
+      final DataFrame orig = DataFrame.makePCAData(ary, colMap, standardize);
+
+      // Note: Standardize automatically removes columns not in modelDataMap
+      Frame data = standardize ? DPCA.StandardizeTask.standardize(orig) : orig.modelAsFrame();
+      PCAScoreTask.score(data, m._eigVec, _numPC.value(), _destKey.value());
 
       JsonObject redir = new JsonObject();
       // if( job != null ) redir.addProperty(JOB, job.toString());
