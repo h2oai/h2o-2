@@ -41,9 +41,9 @@ def sleep(secs):
 def flatfile_name():
     return('pytest_flatfile-%s' %getpass.getuser())
 
+# only usable after you've built a cloud (junit, watch out)
 def cloud_name():
-    return('pytest-%s-%s' % (getpass.getuser(), os.getpid()))
-    # return('pytest-%s' % getpass.getuser())
+    return nodes[0].cloud_name
 
 def __drain(src, dst):
     for l in src:
@@ -2022,7 +2022,9 @@ class H2O(object):
             # does different cloud name prevent them from joining up
             # (even if same multicast ports?)
             # I suppose I can force a base address. or run on another machine?
-            '--name=' + cloud_name()
+            ]
+        args += [
+            '--name=' + self.cloud_name
             ]
 
         # ignore the other -hdfs args if the config is used?
@@ -2077,6 +2079,7 @@ class H2O(object):
         enable_benchmark_log=False,
         h2o_remote_buckets_root=None,
         delete_keys_at_teardown=False,
+        cloud_name=None,
         ):
 
         if use_hdfs:
@@ -2159,6 +2162,11 @@ class H2O(object):
         self.enable_benchmark_log = enable_benchmark_log
         self.h2o_remote_buckets_root = h2o_remote_buckets_root
         self.delete_keys_at_teardown = delete_keys_at_teardown
+
+        if cloud_name:
+            self.cloud_name = cloud_name
+        else:
+            self.cloud_name = 'pytest-%s-%s' % (getpass.getuser(), os.getpid())
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)
