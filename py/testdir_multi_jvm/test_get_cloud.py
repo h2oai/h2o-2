@@ -22,50 +22,33 @@ class JStackApi(unittest.TestCase):
     def test_jstack(self):
         # Ask each node for jstack statistics. do it 100 times
         SLEEP_AFTER = False
-        JSTACK_ALL_NODES = False
+        GET_CLOUD_ALL_NODES = True
         TRIALMAX = 25
         NODE = 1
-        PRINT_JSTACK = False
+        PRINT_GET_CLOUD = True
         eList = []
         xList = []
         sList = []
         for trial in range(TRIALMAX):
             print "Starting Trial", trial
             print "Just doing node[%s]" % NODE
-            statsFirst = None
+            getCloudFirst = None
             for i,n in enumerate(h2o.nodes):
-                if JSTACK_ALL_NODES or i==NODE: # just track times on 0
+                if GET_CLOUD_ALL_NODES or i==NODE: # just track times on 0
                     # we just want the string
                     start = time.time()
-                    stats = n.jstack()
+                    getCloud = n.get_cloud()
                     elapsed = int(1000 * (time.time() - start)) # milliseconds
-                    print "Jstack completes to node", i, "in", "%s"  % elapsed, "millisecs"
-                    statsString = json.dumps(stats)
+                    print "get_cloud completes to node", i, "in", "%s"  % elapsed, "millisecs"
+                    getCloudString = json.dumps(getCloud)
 
-                    if PRINT_JSTACK:
-                        # statsString = re.sub(r'at \\n','at ',statsString)
-                        # statsString = re.sub(r'\\n','\n',statsString)
-                        statsString = re.sub(r'\\n','\n',statsString)
-                        statsString = re.sub(r'\\t','\t',statsString)
-                        # statsString = re.sub(r'\\t','\t',statsString)
-                        
-                        procs = statsString.split(' ')
-                        # look for interesting ones
-                        i = 0
-                        while i < len(procs):
-                            if 'JStack' in procs[i]:
-                                # print the next 10
-                                print "\n" + procs[i]
-                                for j in range(10):
-                                    print procs[i+j]
-                                i = i + 10
-                            else:
-                                i = i + 1
+                    if PRINT_GET_CLOUD:
+                        print h2o.dump_json(getCloud)
                 
-                    h2o.verboseprint(json.dumps(stats,indent=2))
+                    h2o.verboseprint(json.dumps(getCloud,indent=2))
 
                     if i==NODE: # just track times on 0
-                        sList.append(len(statsString))
+                        sList.append(len(getCloudString))
                         xList.append(trial)
                         eList.append(elapsed)
 
@@ -84,16 +67,16 @@ class JStackApi(unittest.TestCase):
                 plt.figure()
                 plt.plot (xList, eList)
                 plt.xlabel('trial')
-                plt.ylabel('Jstack completion latency (millisecs)')
-                plt.title('Back to Back Jstack requests to node['+str(NODE)+']')
+                plt.ylabel('get_cloud completion latency (millisecs)')
+                plt.title('Back to Back get_cloud requests to node['+str(NODE)+']')
                 plt.draw()
 
                 plt.figure()
                 plt.plot (xList, sList)
                 plt.xlabel('trial')
-                plt.ylabel('node['+str(NODE)+'] Jstack response string length')
-                plt.title('Back to Back Jstack requests to node['+str(NODE)+']')
-                plt.title('Back to Back Jstack')
+                plt.ylabel('node['+str(NODE)+'] get_cloud response string length')
+                plt.title('Back to Back get_cloud requests to node['+str(NODE)+']')
+                plt.title('Back to Back get_cloud')
                 plt.draw()
 
                 plt.show()
