@@ -2402,9 +2402,10 @@ public class RequestArguments extends RequestStatics {
     public FrameKeyMultiVec(String name, FrameKey key, FrameClassVec response) {
       super(name);
       addPrerequisite(_key = key);
-      addPrerequisite(_response = response);
+      if((_response = response) != null)
+        addPrerequisite(_response);
     }
-    public boolean shouldIgnore(int i, Frame fr ) { return _response.value() == fr._vecs[i]; }
+    public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr._vecs[i]; }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
     protected Comparator<Integer> colComp(final ValueArray ary){
       return null;

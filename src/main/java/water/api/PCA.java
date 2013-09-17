@@ -67,7 +67,7 @@ public class PCA extends Request {
   }
 
   @Override protected void queryArgumentValueSet(Argument arg, Properties inputArgs) {
-    /*if(arg == _ignore) {
+    /* if(arg == _ignore) {
       int[] ii = _ignore.value();
       if(ii != null && ii.length >= _key.value()._cols.length)
         throw new IllegalArgumentException("Cannot ignore all columns");
@@ -76,7 +76,7 @@ public class PCA extends Request {
       int numIgnore = ii == null ? 0 : ii.length;
       if(_key.value() != null && _key.value()._cols.length - numIgnore > _key.value()._numrows - 1)
         throw new IllegalArgumentException("Cannot have more columns than degrees of freedom = " + String.valueOf(_key.value()._numrows-1));
-    }*/
+    } */
     if(arg == _x) {
       int[] ii = _x.value();
       if(ii == null) throw new IllegalArgumentException("Cannot ignore all columns");
