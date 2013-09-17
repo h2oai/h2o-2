@@ -8,6 +8,8 @@ import water.*;
 import water.api.RequestArguments.Argument;
 import water.util.Log;
 
+import hex.gbm.*;
+
 /**
  * Auto-gen doc support, for JSON & REST API docs
  * @author <a href="mailto:cliffc@0xdata.com"></a>
@@ -17,31 +19,37 @@ public abstract class DocGen {
   public static final ReST ReST = new ReST();
 
   public static void createFile (String fileName, String content) {
-    try
-    {
+    try {
       FileWriter fstream = new FileWriter(fileName, false); //true tells to append data.
       BufferedWriter out = new BufferedWriter(fstream);
       out.write(content);
       out.close();
-    }
-    catch (Exception e)
-    {
+    } catch (Exception e) {
       System.err.println("Error: " + e.getMessage());
     }
   }
 
   public static void createReSTFilesInCwd() {
+    /*
     createFile("ImportFiles.rst", new ImportFiles().ReSTHelp());
     createFile("ImportFiles2.rst", new ImportFiles2().ReSTHelp());
     createFile("Parse2.rst", new Parse2().ReSTHelp());
+    */
+    createFile("GBM.rst", new GBM().ReSTHelp());
+    createFile("DRF.rst", new DRF().ReSTHelp());
   }
 
-  public static void main(String[] args) {
-    H2O.main(args);
+  public static void main(String[] args) throws Exception {
+    water.Boot.main(UserCode.class, args);
+  }
 
-    waitForCloudSize(1, 10000);
-    createReSTFilesInCwd();
-    H2O.exit(0);
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
+      H2O.main(args);
+      waitForCloudSize(1, 10000);
+      createReSTFilesInCwd();
+      H2O.exit(0);
+    }
   }
 
   static void waitForCloudSize(int size, int ms) {

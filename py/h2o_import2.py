@@ -1,9 +1,10 @@
 import h2o, h2o_cmd, re, os
+import h2o_print as h2p
 import getpass
 
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
-def find_folder_and_filename(bucket, pathWithRegex, schema=None):
+def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=False):
     checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
     if bucket is not None and re.match("/", pathWithRegex):
@@ -22,10 +23,16 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None):
         # we may use this to force remote paths, so don't look locally for file
         rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
         bucketPath = os.path.join(rootPath, bucket)
-        checkpath = False
+        checkPath = False
+
+    elif h2o.nodes[0].remoteH2O and schema!='put' and h2o.nodes[0].h2o_remote_buckets_root:
+        # we may use this to force remote paths, so don't look locally for file
+        rootPath = h2o.nodes[0].h2o_remote_buckets_root
+        bucketPath = os.path.join(rootPath, bucket)
+        checkPath = False
 
     # does it work to use bucket "." to get current directory
-    elif os.environ.get('H2O_BUCKETS_ROOT'):
+    elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
         rootPath = os.environ.get('H2O_BUCKETS_ROOT')
         print "Using H2O_BUCKETS_ROOT environment variable:", rootPath
 
@@ -48,8 +55,15 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None):
         username = getpass.getuser()
         h2oUsername = h2o.nodes[0].username
         h2o.verboseprint("username:", username, "h2oUsername:", h2oUsername)
+
+        # bucket named "datasets" is special. Don't want to find it in /home/0xdiag/datasets
+        # needs to be the git clone 'datasets'. Find it by walking upwards below
+        # disable it from this looking in home dir. Could change priority order?
         # resolved in order, looking for bucket (ln -s will work) in these home dirs.
-        if h2oUsername != username:
+
+        if bucket=='datasets': # special case 
+            possibleUsers = []
+        elif h2oUsername != username:
             possibleUsers = [username, h2oUsername, "0xdiag"]
         else:
             possibleUsers = [username, "0xdiag"]
@@ -80,7 +94,10 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None):
     # if there's no path, just return the bucketPath
     # but what about cases with a header in the folder too? (not putfile)
     if pathWithRegex is None:
-        return (bucketPath, None)
+        if returnFullPath:
+            return bucketPath
+        else:
+            return (bucketPath, None)
 
     # if there is a "/" in the path, that means it's not just a pattern
     # split it
@@ -96,7 +113,11 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None):
         tail = pathWithRegex
         
     h2o.verboseprint("folderPath:", folderPath, "tail:", tail)
-    return (folderPath, tail)
+
+    if returnFullPath:
+        return os.path.join(folderPath, tail)
+    else:
+        return (folderPath, tail)
 
 # passes additional params thru kwargs for parse
 # use_header_file=
@@ -135,15 +156,27 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             raise Exception("path= didn't say what file to put")
 
         (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
-        h2o.verboseprint("folderPath:", folderPath, "filename:", filename)
         filePath = os.path.join(folderPath, filename)
-        h2o.verboseprint('filePath:', filePath)
+        h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/%s" % filePath) 
+        h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
+        h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
+        if h2o.abort_after_import:
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
+    
         key = node.put_file(filePath, key=src_key, timeoutSecs=timeoutSecs)
         return (None, key)
 
     if schema=='local' and not \
             (node.redirect_import_folder_to_s3_path or node.redirect_import_folder_to_s3n_path):
         (folderPath, pattern) = find_folder_and_filename(bucket, path, schema)
+        filePath = os.path.join(folderPath, pattern)
+        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses local:/%s" % filePath)
+        h2p.green_print("Path h2o will be told to use: %s" % filePath)
+        h2p.blue_print("If local jvms, path resolves locally as:", os.path.realpath(filePath))
+        if h2o.abort_after_import:
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
+
         folderURI = 'nfs:/' + folderPath
         importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
 
@@ -155,27 +188,66 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         # strip leading / in head if present
         if bucket and head!="":
             folderOffset = bucket + "/" + head
+            print 1
         elif bucket:
             folderOffset = bucket
+            print 2
         else:
             folderOffset = head
 
+        print "\nimport_only:", h2o.python_test_name, schema, "uses", schema + "://" + folderOffset + "/" + pattern
+        if h2o.abort_after_import:
+            raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
+
+        n = h2o.nodes[0]
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
             folderURI = "s3://" + folderOffset
+            if not n.aws_credentials:
+                print "aws_credentials: %s" % n.aws_credentials
+                # raise Exception("Something was missing for s3 on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
             importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
+            if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
+                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
+                    (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
+                # raise Exception("Something was missing for s3n on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for s3n on the java -jar cmd line when the cloud was built"
             folderURI = "s3n://" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
-            folderURI = "hdfs:///" + folderOffset
+            if not n.use_maprfs:
+                print "use_maprfs: %s" % n.use_maprfs
+                # raise Exception("Something was missing for maprfs on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for maprfs on the java -jar cmd line when the cloud was built"
+            folderURI = "maprfs:///" + folderOffset
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         elif schema=='hdfs':
+            # check that some state from the cloud building time was right
+            # the requirements for this may change and require updating
+            if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
+                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
+                    (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
+                # raise Exception("Something was missing for hdfs on the java -jar cmd line when the cloud was built")
+                print "ERROR: Something was missing for hdfs on the java -jar cmd line when the cloud was built"
+
+            # no reason to use bucket with hdfs, but just in case people do.
+            if bucket:
+                bucketAndOffset = bucket + "/" + folderOffset
+            else:
+                bucketAndOffset = folderOffset
+
+            if n.hdfs_name_node:
+                folderURI = "hdfs://" + n.hdfs_name_node + "/" + folderOffset
+            else:
+                # this is different than maprfs? normally we specify the name though
+                folderURI = "hdfs://" + folderOffset
+
             h2o.verboseprint(h2o.nodes[0].hdfs_name_node)
-            h2o.verboseprint("folderOffset;", folderOffset)
-            folderURI = "hdfs://" + h2o.nodes[0].hdfs_name_node + "/" + folderOffset
+            h2o.verboseprint("folderOffset:", folderOffset)
             importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
 
         else: 
@@ -222,7 +294,13 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
 
     # do SummaryPage here too, just to get some coverage
     if doSummary:
+        # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
+        h2o.check_sandbox_for_errors()
         node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs)
+        # for now, don't worry about error isolating summary 
+    else:
+        # isolate a parse from the next thing
+        h2o.check_sandbox_for_errors()
 
     return parseResult
 
@@ -230,7 +308,7 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
 # returns full key name, from current store view
 def find_key(pattern=None):
     found = None
-    kwargs = {'filter': None}
+    kwargs = {'filter': pattern}
     storeViewResult = h2o.nodes[0].store_view(**kwargs)
     keys = storeViewResult['keys']
     if len(keys) == 0:

@@ -674,7 +674,7 @@ NEXT_CHAR:
       }
       if(lines.size() == 1)
         data[0] = determineTokens(lines.get(0), sep);
-      ncols = data[0].length;
+      ncols = (setup._ncols > 0)?setup._ncols:data[0].length;
       hasHeader = (checkHeader && allStrings(data[0])) || setup._header;
     } else {
       if(setup._separator == AUTO_SEP) // first guess the separator

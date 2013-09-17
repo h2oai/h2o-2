@@ -1,9 +1,6 @@
-import unittest, time, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
-import h2o_browse as h2b
-import h2o_import as h2i
-import time, random
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -23,26 +20,18 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_four_billion_rows(self):
-        # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/billions"
-        h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 1500
 
-        csvFilenameAll = [
+        importFolderPath = "billions"
+        csvFilenameList = [
             "four_billion_rows.csv",
             ]
-        # csvFilenameList = random.sample(csvFilenameAll,1)
-        csvFilenameList = csvFilenameAll
-
-        # pop open a browser on the cloud
-        ### h2b.browseTheCloud()
-
         for csvFilename in csvFilenameList:
-            # creates csvFilename.hex from file in importFolder dir 
+            csvPathname = importFolderPath + "/" + csvFilename
             start = time.time()
 
             # Parse*********************************
-            parseResult = h2i.parseImportFolderFile(None, csvFilename, importFolderPath, 
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local'
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
             elapsed = time.time() - start
             print csvFilename, 'parse time:', parseResult['response']['time']
@@ -93,7 +82,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 900
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
 
             # GLM*********************************
             print "\n" + csvFilename
@@ -105,7 +94,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 900
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "glm (L2) end on ", csvFilename, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_glm.simpleCheckGLM(self, glm, colX, **kwargs)

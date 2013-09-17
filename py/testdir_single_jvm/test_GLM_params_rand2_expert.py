@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
     def test_GLM_params_rand2_newargs(self):
         csvPathname = 'covtype/covtype.20k.data'
         hex_key = 'covtype.20k.hex'
-        parseResult = h2o.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
         paramDict = define_params()
 
         for trial in range(50):
@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=70, parseResult=parseResult, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()

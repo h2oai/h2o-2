@@ -42,7 +42,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GLM_params_rand2_8977501266014959103(self):
-        # csvPathname = h2o.find_dataset('UCI/UCI-large/covtype/covtype.data')
         csvPathname = 'covtype/covtype.20k.data'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
         paramDict = define_params()
@@ -52,7 +51,7 @@ class Basic(unittest.TestCase):
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=70, parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=70, parseResult=parseResult, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()

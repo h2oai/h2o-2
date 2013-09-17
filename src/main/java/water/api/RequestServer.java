@@ -58,13 +58,17 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLMGrid",       "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",        "Model");
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeansGrid",    "Model");
+    Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",    "Model");
+    Request.addToNavbar(registerRequest(new hex.gbm.GBM()), "GBM (Beta)",    "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",       "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest", "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",           "Score");
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",        "Score");
     Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",  "Score");
+    Request.addToNavbar(registerRequest(new PCAScore()),    "PCA",           "Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),       "Predict",   "Score");
+    Request.addToNavbar(registerRequest(new GeneratePredictions2()), "Predict2", "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",   "Score");
 
 
@@ -88,48 +92,53 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
 
-    Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2",  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",        "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new hex.gbm.DRF()), "DRF2"         ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new hex.gbm.GBM()), "GBM2"         ,  "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
-    //Request.addToNavbar(registerRequest(new water.api.Quantiles()), "Quantiles",    "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
-    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network Score", "Beta (FluidVecs!)");
+    if(H2O.OPT_ARGS.beta != null) {
+      Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2",  "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,  "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",        "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,  "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.gbm.DRF()), "DRF2"         ,  "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
+      //Request.addToNavbar(registerRequest(new water.api.Quantiles()), "Quantiles",    "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network", "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network Score", "Beta (FluidVecs!)");
+    }
 
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
-    registerRequest(new DownloadDataset());
     registerRequest(new Cancel());
+    registerRequest(new DRFModelView());
+    registerRequest(new DRFProgressPage());
+    registerRequest(new DownloadDataset());
     registerRequest(new Exec());
     registerRequest(new ExportS3Progress());
+    registerRequest(new GBMModelView());
+    registerRequest(new GBMProgressPage());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
     registerRequest(new GetVector());
     registerRequest(new LogView.LogDownload());
-    registerRequest(new RReaderProgress());
+    registerRequest(new NeuralNetProgress());
     registerRequest(new PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());
-    registerRequest(new NeuralNetProgress());
     registerRequest(new PutValue());
     registerRequest(new PutVector());
+    registerRequest(new RFTreeView());
+    registerRequest(new RFView());
+    registerRequest(new RPackage());
+    registerRequest(new RReaderProgress());
     registerRequest(new Remove());
     registerRequest(new RemoveAck());
-    registerRequest(new RFView());
-    registerRequest(new RFTreeView());
     registerRequest(new RunScript());
-    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
-    registerRequest(new TypeaheadHexKeyRequest());
-    registerRequest(new TypeaheadFileRequest());
-    registerRequest(new TypeaheadS3BucketRequest());
-    registerRequest(new TypeaheadHdfsPathRequest());
-    registerRequest(new TypeaheadRFModelKeyRequest());
-    registerRequest(new TypeaheadGLMModelKeyRequest());
     registerRequest(new SetColumnNames());
-    registerRequest(new RPackage());
+    registerRequest(new TypeaheadFileRequest());
+    registerRequest(new TypeaheadGLMModelKeyRequest());
+    registerRequest(new TypeaheadHdfsPathRequest());
+    registerRequest(new TypeaheadHexKeyRequest());
+    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
+    registerRequest(new TypeaheadRFModelKeyRequest());
+    registerRequest(new TypeaheadS3BucketRequest());
     // testing hooks
     registerRequest(new TestPoll());
     registerRequest(new TestRedirect());

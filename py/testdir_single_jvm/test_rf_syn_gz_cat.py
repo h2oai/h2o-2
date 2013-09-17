@@ -88,7 +88,6 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, co
         (inspect['num_rows'], rowCount))
 
     # hack it in! for test purposees only
-    parseResult['python_source_key'] = csvFilenameReplgz
     parseResult['num_rows'] = inspect['num_rows']
     parseResult['num_cols'] = inspect['num_cols']
     parseResult['value_size_bytes'] = inspect['value_size_bytes']
@@ -158,9 +157,9 @@ class Basic(unittest.TestCase):
             kwargs = paramDict.copy()
 
             start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
-            print "RF end on ", parseResult['python_source_key'], 'took', elapsed, 'seconds.', \
+            print "RF end on ", parseResult['destination_key'], 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
             classification_error = rfView['confusion_matrix']['classification_error']
@@ -169,7 +168,7 @@ class Basic(unittest.TestCase):
             algo = "RF " 
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
                 num_rows: {:d} num_cols: {:d} value_size_bytes: {:d}'.format(
-                len(h2o.nodes), tryHeap, algo, parseResult['python_source_key'], elapsed, kwargs['ntree'], \
+                len(h2o.nodes), tryHeap, algo, parseResult['destination_key'], elapsed, kwargs['ntree'], \
                 classification_error, parseResult['num_rows'], parseResult['num_cols'], parseResult['value_size_bytes'])
             print l
             h2o.cloudPerfH2O.message(l)

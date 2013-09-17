@@ -16,13 +16,15 @@ public class C2SChunk extends Chunk {
   }
   @Override protected final long at8_impl( int i ) {
     long res = UDP.get2(_mem,(i<<1)+OFF);
-    return (res == _NA)?_vec._iNA:(long)((res + _bias)*_scale);
+    if( res == _NA ) throw new IllegalArgumentException("at8 but value is missing");
+    return (long)((res + _bias)*_scale);
   }
   @Override protected final double atd_impl( int i ) {
     long res = UDP.get2(_mem,(i<<1)+OFF);
     return (res == _NA)?Double.NaN:(res + _bias)*_scale;
   }
-  @Override boolean set8_impl(int idx, long l) { 
+  @Override protected final boolean isNA_impl( int i ) { return UDP.get2(_mem,(i<<1)+OFF) == _NA; }
+  @Override boolean set_impl(int idx, long l) { 
     long res = (long)(l/_scale)-_bias; // Compressed value
     double d = (res+_bias)*_scale;     // Reverse it
     if( (long)d != l ) return false;   // Does not reverse cleanly?
@@ -30,11 +32,9 @@ public class C2SChunk extends Chunk {
     UDP.set2(_mem,(idx<<1)+OFF,(short)res);
     return true; 
   }
-  @Override boolean set8_impl(int i, double d) { 
-    throw H2O.unimpl();
-    //return false; 
-  }
-  @Override boolean set4_impl(int i, float f ) { return false; }
+  @Override boolean set_impl(int i, double d) { throw H2O.unimpl(); }
+  @Override boolean set_impl(int i, float f ) { return false; }
+  @Override boolean setNA_impl(int idx) { UDP.set2(_mem,(idx<<1)+OFF,(short)_NA); return true; }
   @Override boolean hasFloat() { return _scale < 1.0; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C2SChunk read(AutoBuffer bb) {

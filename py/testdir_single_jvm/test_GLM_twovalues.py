@@ -90,12 +90,12 @@ class GLM_twovalues(unittest.TestCase):
                 rowDataTrue, rowDataFalse, str(outputTrue), str(outputFalse))
 
             start = time.time()
-            key = csvFilename + "_" + str(trial)
+            hex_key = csvFilename + "_" + str(trial)
             kwargs = {'case': case, 'y': 10, 'family': 'binomial', 'alpha': 0, 'beta_epsilon': 0.0002}
 
             # default takes 39 iterations? play with alpha/beta
-            parseResult = h2i.import_parse(path=csvPathname, schema='put')
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, key=key)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
+            glm = h2o_cmd.runGLM(parseResult=parseResult)
             h2o_glm.simpleCheckGLM(self, glm, 0, **kwargs)
 
             # check that the number of entries in coefficients is right (12 with intercept)

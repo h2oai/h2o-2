@@ -1,11 +1,11 @@
 import unittest, time, sys, time, itertools
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 def file_to_put():
     # kbn fails 10/15/12
     # return 'smalldata/poker/poker-hand-testing.data'
-    return h2o.find_file('smalldata/poker/poker1000')
+    return h2i.find_folder_and_filename('smalldata', 'poker/poker1000', returnFullPath=True)
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
 
     # Try to put a file to each node in the cloud and checked reported size of the saved file 
     def test_A_putfile_to_all_nodes(self):
-        csvfile  = h2o.find_file(file_to_put())
+        csvfile  = file_to_put()
         origSize = h2o.get_file_size(csvfile)
 
         # Putfile to each node and check the returned size
@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
 
     # Try to put a file, get file and diff original file and returned file.
     def test_B_putfile_and_getfile_to_all_nodes(self):
-        csvfile = h2o.find_file(file_to_put())
+        csvfile = file_to_put()
         nodeTry = 0
         for node in h2o.nodes:
             sys.stdout.write('.')

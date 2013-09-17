@@ -4,9 +4,9 @@
 
     "username": "0xdiag", 
     "password": "0xdiag", 
+    "h2o_remote_buckets_root": "/home/0xdiag",
     "h2o_per_host": 2, 
     "base_port": 57321,
-    "sigar": false,
 
     "ip": [
         "192.168.0.35", 

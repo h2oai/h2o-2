@@ -1,8 +1,7 @@
 import unittest
 import random, sys
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_rf, h2o_hosts
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import2 as h2i
 
 # RF train parameters
 paramsTrainRF = { 
@@ -33,33 +32,26 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        h2o_hosts.build_cloud_with_hosts(node_count=1)
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1)
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=1)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def loadTrainData(self):
-        trainFile   = h2o.find_file('smalldata/iris/iris2.csv')
-        trainKey    = h2o_cmd.parseFile(csvPathname=trainFile)
-
-        return trainKey
-    
-    def loadScoreData(self):
-        scoreFile   = h2o.find_file('smalldata/iris/iris2.csv')
-        scoreKey    = h2o_cmd.parseFile(csvPathname=scoreFile)
-
-        return scoreKey
-
     def test_rf_iris(self):
         # Train RF
-        trainParseKey = self.loadTrainData()
+        trainParseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', hex_key='train_iris2.hex', schema='put')
         kwargs = paramsTrainRF.copy()
-        trainResult = h2o_rf.trainRF(trainParseKey, **kwargs)
+        trainResult = h2o_rf.trainRF(trainParseResult, **kwargs)
 
-        scoreParseKey = self.loadScoreData()
+        scoreParseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', hex_key='score_iris2.hex', schema='put')
         kwargs = paramsTestRF.copy()
-        scoreResult  = h2o_rf.scoreRF(scoreParseKey, trainResult, **kwargs)
+        scoreResult  = h2o_rf.scoreRF(scoreParseResult, trainResult, **kwargs)
 
         print "\nTrain\n=========={0}".format(h2o_rf.pp_rf_result(trainResult))
         print "\nScoring\n========={0}".format(h2o_rf.pp_rf_result(scoreResult))

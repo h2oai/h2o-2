@@ -18,7 +18,7 @@ import water.util.Log;
 public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable {
 
   /** The Vectors to work on. */
-  protected Frame _fr;       // Vectors to work on
+  public Frame _fr;
 
   /** Override with your map implementation.  This overload is given a single
    *  <strong>local</strong> Chunk.  It is meant for map/reduce jobs that use a
@@ -94,7 +94,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   }
 
   /** Invokes the map/reduce computation over the given Frame. This call is
-   *  asynchronous. It return 'this', on which getResult() can be invoked
+   *  asynchronous.  It returns 'this', on which getResult() can be invoked
    *  later to wait on the computation.  */
   public final T dfork( Frame fr ) {
     // Use first readable vector to gate home/not-home
@@ -136,7 +136,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       if( _nlo   < selfidx ) _nleft = remote_compute(_nlo, selfidx );
       if( selfidx+1 < _nhi ) _nrite = remote_compute(selfidx+1,_nhi);
     }
-    _lo = 0;  _hi = _fr.firstReadable().nChunks(); // Do All Chunks
+    _lo = 0;  _hi = _fr.anyVec().nChunks(); // Do All Chunks
     // If we have any output vectors, make a blockable Futures for them to
     // block on.
     if( _fr.hasAppendables() )
@@ -175,7 +175,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     }
     // Zero or 1 chunks, and further chunk might not be homed here
     if( _hi > _lo ) {           // Single chunk?
-      Vec v0 = _fr.firstReadable();
+      Vec v0 = _fr.anyVec();
       if( v0.chunkKey(_lo).home() ) { // And chunk is homed here?
 
         // Make decompression chunk headers for these chunks

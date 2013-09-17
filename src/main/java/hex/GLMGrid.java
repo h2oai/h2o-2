@@ -44,7 +44,7 @@ public class GLMGrid extends Job {
   // over the 'this' pointer of a GLMGrid and thus serializing it as part
   // of the atomic update.
   private void update(GLMModel m, final int idx, final long runTime, Futures fs) {
-    final Model model = m;
+    final OldModel model = m;
     final Key jobKey = self();
     fs.add(new TAtomic<GLMModels>() {
       final Key _job = jobKey;

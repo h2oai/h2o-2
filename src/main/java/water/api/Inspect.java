@@ -2,6 +2,8 @@ package water.api;
 
 import hex.DGLM.GLMModel;
 import hex.*;
+import hex.DPCA.PCAModel;
+import hex.gbm.GBM.GBMModel;
 import hex.rf.RFModel;
 
 import java.util.HashMap;
@@ -29,9 +31,9 @@ public class Inspect extends Request {
 
   static {
     _displayNames.put(ENUM_DOMAIN_SIZE, "Enum Domain");
-    _displayNames.put(MEAN, "&mu;");
+    _displayNames.put(MEAN, "avg");
     _displayNames.put(NUM_MISSING_VALUES, "Missing");
-    _displayNames.put(VARIANCE, "&sigma;");
+    _displayNames.put(VARIANCE, "sd");
   }
 
   // Constructor called from 'Exec' query instead of the direct view links
@@ -120,10 +122,20 @@ public class Inspect extends Request {
       JsonObject response = new JsonObject();
       return RFView.redirect(response, rfModel._selfKey, rfModel._dataKey, true);
     }
+    if( f instanceof PCAModel ) {
+      PCAModel m = (PCAModel)f;
+      JsonObject res = new JsonObject();
+      res.add(PCAModel.NAME, m.toJson());
+      Response r = Response.done(res);
+      r.setBuilder(PCAModel.NAME, new PCA.Builder(m));
+      return r;
+    }
     if( f instanceof Job.Fail ) {
       UKV.remove(val._key);   // Not sure if this is a good place to do this
       return Response.error(((Job.Fail)f)._message);
     }
+    if(f instanceof GBMModel)
+      return GBMModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
   }
 
@@ -265,26 +277,10 @@ public class Inspect extends Request {
     if( rowIdx < 0 || rowIdx >= v.length() )
       return;
     String name = f._names[colIdx] != null ? f._names[colIdx] : "" + colIdx;
-    switch(v.dtype()) {
-      case bad:
-        obj.addProperty(name, "Bad");
-        break;
-      case U:
-        obj.addProperty(name, "Unknown");
-        break;
-      case NA:
-        obj.addProperty(name, "NA");
-        break;
-      case S:
-        // TODO enums
-        break;
-      case I:
-        obj.addProperty(name, v.at8(rowIdx));
-        break;
-      case F:
-        obj.addProperty(name, v.at(rowIdx));
-        break;
-    }
+    if( v.isNA(rowIdx) ) obj.addProperty(name, "NA");
+    else if( v.isEnum() ) obj.addProperty(name, v.domain((int)v.at8(rowIdx)));
+    else if( v.isInt() ) obj.addProperty(name, v.at8(rowIdx));
+    else obj.addProperty(name, v.at(rowIdx));
   }
 
   private final String html(Key key, long rows, int cols, int bytesPerRow, long bytes) {

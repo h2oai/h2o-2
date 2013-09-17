@@ -1,8 +1,6 @@
 import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm
-import h2o_jobs
-import logging
+import h2o, h2o_cmd, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm, h2o_jobs, logging
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -17,7 +15,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
-        h2o.tear_down_cloud(sandbox_ignore_errors=True)
+        h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
     def test_parse_nflx_loop_s3n_hdfs(self):
         DO_GLM = True
@@ -83,15 +81,9 @@ class Basic(unittest.TestCase):
                 # jea = "-Dh2o.find-ByteBuffer-leaks=true"
                 h2o_hosts.build_cloud_with_hosts(h2oPerNode, java_heap_GB=tryHeap,
                     # java_extra_args=jea,
-                    enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10,
-                    # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-                    # this is for our amazon ec hdfs
-                    # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-                    hdfs_name_node='10.78.14.235:9000',
-                    hdfs_version='0.20.2')
-
+                    enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10)
                 # don't raise exception if we find something bad in h2o stdout/stderr?
-                h2o.nodes[0].sandbox_ignore_errors = True
+                h2o.nodes[0].sandboxIgnoreErrors = True
 
                 for trial in range(trialMax):
                     # import a list of folders, one at a time (hdfs import can't take pattern match
@@ -156,7 +148,6 @@ class Basic(unittest.TestCase):
                             src_key = URI + csvFilepattern
                             hex_key = csvFilename + "_" + str(trial) + ".hex"
                             print "Loading", protocol, "key:", src_key, "to", hex_key
-                            parse3Key = h2o.nodes[0].parse(src_key, hex_key,
                             parse3Result = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/*",
                                 timeoutSecs=timeoutSecs, 
                                 retryDelaySecs=retryDelaySecs,
@@ -210,7 +201,7 @@ class Basic(unittest.TestCase):
                             GLMkwargs = {'x': x, 'y': y, 'case': 15, 'case_mode': '>', 'family': 'binomial',
                                 'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                             start = time.time()
-                            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, 
+                            glm = h2o_cmd.runGLM(parseResult=parseResult, 
                                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                 pollTimeoutSecs=pollTimeoutSecs,
                                 benchmarkLogging=benchmarkLogging, **GLMkwargs)
@@ -226,7 +217,7 @@ class Basic(unittest.TestCase):
                                 'thresholds': '0.5'
                                 }
                             start = time.time()
-                            glm = h2o_cmd.runGLMGridOnly(parseResult=parseResult,
+                            glm = h2o_cmd.runGLMGrid(parseResult=parseResult,
                                 timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                 pollTimeoutSecs=pollTimeoutSecs,
                                 benchmarkLogging=benchmarkLogging, **GLMkwargs)

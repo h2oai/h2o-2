@@ -18,8 +18,8 @@ public interface ExternalInterface {
   public byte[] getBytes ( Object val );
 
   public Object ingestRFModelFromR(Object key, InputStream is);
-  public double scoreKey  ( Object modelKey, String [] colNames, double[] row );
-  public double scoreModel( Object model   , String [] colNames, double[] row );
+  public double scoreKey  ( Object modelKey, String [] colNames, String [][] domains, double[] row );
+  public double scoreModel( Object model   , String [] colNames, String [][] domains, double[] row );
 
   public JsonObject  cloudStatus( );
 }

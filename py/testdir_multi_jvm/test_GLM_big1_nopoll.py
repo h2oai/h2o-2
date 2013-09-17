@@ -30,10 +30,10 @@ class Basic(unittest.TestCase):
         glmInitial = []
         # dispatch multiple jobs back to back
         start = time.time()
-        for jobDispatch in range(40):
+        for jobDispatch in range(10):
             kwargs = {'x': x, 'y': y, 'n_folds': 1}
             # FIX! what model keys do these get?
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=300, noPoll=True, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=300, noPoll=True, **kwargs)
             glmInitial.append(glm)
             print "glm job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch

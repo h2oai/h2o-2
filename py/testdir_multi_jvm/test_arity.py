@@ -19,8 +19,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_arit_rf(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='test/arit.csv')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=20, timeoutSecs=300)
+        parseResult = h2i.import_parse(bucket='smalldata', path='test/arit.csv', schema='put')
+        h2o_cmd.runRF(parseResult=parseResult, trees=20, timeoutSecs=300)
 
 if __name__ == '__main__':
     h2o.unit_main()

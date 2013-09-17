@@ -4,10 +4,11 @@ setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
-setClass("H2OGLMModel", representation(xval="list"), contains="H2OModel")
+setClass("H2OGLMModel", contains="H2OModel")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ORForestModel", contains="H2OModel")
 setClass("H2OGLMGridModel", contains="H2OModel")
+setClass("H2OPCAModel", contains="H2OModel")
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -31,32 +32,9 @@ setMethod("show", "H2OGLMModel", function(object) {
   
   model = object@model
   print(round(model$coefficients,5))
-  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
-  cat("\nNull Deviance:    ", round(model$null.deviance,1))
-  cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
-  
-  if(model$family == "binomial") {
-    cat("\n\nAvg Training Error:", model$training.err)
-    cat("\nBest Threshold:", model$threshold, " AUC:", model$auc)
-    cat("\n\nConfusion Matrix:\n"); print(model$confusion)
-  }
-  
-  if(length(object@xval) > 0) {
-    if(model$family == "binomial") {
-      cat("\nCross-Validation:\n")
-      xval = sapply(object@xval, function(x) {
-        c(x@model$threshold, x@model$auc, x@model$confusion[1,3], x@model$confusion[2,3])
-      })
-      xval = t(xval)
-      colnames(xval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
-    } else {
-      cat("\n\nCross-Validation:\n")
-      xval = data.frame(sapply(object@xval, function(x) { x@model$training.err }))
-      colnames(xval) = "Error"
-    }
-    rownames(xval) = paste("Model", 1:nrow(xval))
-    print(xval)
-  }
+  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
+  cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
@@ -80,6 +58,15 @@ setMethod("show", "H2ORForestModel", function(object) {
   cat("\nNumber of trees:", model$ntree)
   cat("\n\nOOB estimate of error rate: ", round(100*model$oob_err, 2), "%", sep = "")
   cat("\nConfusion matrix:\n"); print(model$confusion)
+})
+
+setMethod("show", "H2OPCAModel", function(object) {
+  print(object@data)
+  cat("PCA Model Key:", object@key)
+  
+  model = object@model
+  cat("\n\nStandard deviations:\n", model$sdev)
+  cat("\n\nRotation:\n"); print(model$rotation)
 })
 
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("+", e1, e2) })
@@ -214,6 +201,18 @@ setMethod("summary", "H2OParsedData", function(object) {
   result
 })
 
+setMethod("summary", "H2OPCAModel", function(object) {
+  # We probably want to compute all this on the Java side for speedup
+  myVar = object@model$sdev^2
+  myProp = myVar/sum(myVar)
+  result = rbind(object@model$sdev, myProp, cumsum(myProp))   # Need to limit decimal places to 4
+  colnames(result) = paste("PC", seq(1, length(myVar)), sep="")
+  rownames(result) = c("Standard deviation", "Proportion of Variance", "Cumulative Proportion")
+  
+  cat("Importance of components:\n")
+  print(result)
+})
+
 setMethod("as.data.frame", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=nrow(x))
   temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
@@ -246,3 +245,22 @@ setMethod("show", "H2OGLMGridModel", function(object) {
   model = object@model
   print(model$Summary)
   })
+
+
+
+setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
+setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
+   function(data, col) {
+      newCol = paste("factor(", data@key, "[", col, "])", sep="")
+      expr = paste("colSwap(", data@key, ",", col, ",", newCol, ")", sep="")
+      res = h2o.__exec(data@h2o, paste(data@key, expr, sep="="))
+      data
+})
+
+setMethod("h2o.factor", signature(data="H2OParsedData", col="character"), 
+   function(data, col) {
+      ind = match(col, colnames(data))
+      if(is.na(ind)) stop("Column ", col, " does not exist in ", data@key)
+      h2o.factor(data, ind-1)
+})
+

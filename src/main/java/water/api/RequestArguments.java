@@ -5,12 +5,14 @@ import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
 import hex.*;
+import hex.DPCA.PCAModel;
 import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import water.*;
 import water.ValueArray.Column;
@@ -1562,7 +1564,7 @@ public class RequestArguments extends RequestStatics {
   }
 
   // -------------------------------------------------------------------------
-  public class H2OModelKey<TM extends Model, TK extends TypeaheadKeysRequest> extends TypeaheadInputText<TM> {
+  public class H2OModelKey<TM extends OldModel, TK extends TypeaheadKeysRequest> extends TypeaheadInputText<TM> {
     public H2OModelKey(TK tkr, String name, boolean req) { super(tkr.getClass(), name, req); }
     @Override protected TM parse(String input) throws IllegalArgumentException {
       if( input!=null && input.length()>0 ) {
@@ -1592,6 +1594,12 @@ public class RequestArguments extends RequestStatics {
   public class H2OKMeansModelKey extends H2OModelKey<KMeansModel, TypeaheadKMeansModelKeyRequest> {
     public H2OKMeansModelKey(String name, boolean req) {
       super(new TypeaheadKMeansModelKeyRequest(),name, req);
+    }
+  }
+
+  public class H2OPCAModelKey extends H2OModelKey<PCAModel, TypeaheadPCAModelKeyRequest> {
+    public H2OPCAModelKey(String name, boolean req) {
+      super(new TypeaheadPCAModelKeyRequest(),name, req);
     }
   }
 
@@ -1860,7 +1868,6 @@ public class RequestArguments extends RequestStatics {
       return res;
     }
 
-
     @Override protected Comparator<Integer> colComp(final ValueArray ary){
       ValueArray va = _key.value();
       final double ratio = 1.0/va._numrows;
@@ -1882,8 +1889,7 @@ public class RequestArguments extends RequestStatics {
     transient ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
     transient ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
 
-    @Override
-    public boolean shouldIgnore(int i, ValueArray.Column ca ) {
+    @Override public boolean shouldIgnore(int i, ValueArray.Column ca ) {
       if(ca._min == ca._max){
         if(_constantColumns.get() == null)
           _constantColumns.set(new TreeSet<String>());
@@ -1910,14 +1916,107 @@ public class RequestArguments extends RequestStatics {
 
       return Arrays.copyOfRange(res,0,selected);
     }
-    @Override
-    public String queryComment(){
-      if(_constantColumns.get() == null || _constantColumns.get().isEmpty())return "";
+
+    @Override public String queryComment(){
+      if(_constantColumns.get() == null || _constantColumns.get().isEmpty()) return "";
       TreeSet<String> ignoredCols = _constantColumns.get();
       if(_badColumns.get() != null && _badColumns.get() > 0)
-        return "<div class='alert'><b> There were " + _badColumns.get() + " bad columns not selected by default. Ignoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
+        return "<div class='alert'><b>There were " + _badColumns.get() + " bad columns not selected by default. Ignoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
       else
         return "<div class='alert'><b>Ignoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
+    }
+  }
+
+  // By default, ignore all constant or non-numeric columns, and warn about bad columns with >= 25% NAs
+  public class HexPCAColumnSelect extends HexColumnSelect {
+    double _maxNAsRatio = 0.25;
+    transient ThreadLocal<TreeSet<String>> _constantColumns = new ThreadLocal<TreeSet<String>>();
+    transient ThreadLocal<TreeSet<String>> _nonNumColumns = new ThreadLocal<TreeSet<String>>();
+    transient ThreadLocal<Integer> _badColumns = new ThreadLocal<Integer>();
+
+    public HexPCAColumnSelect(String name, H2OHexKey key) {
+      super(name, key);
+    }
+
+    @Override protected String queryDescription() { return "Columns to ignore"; }
+
+    @Override public String [] selectNames(){
+      ValueArray va = _key.value();
+      String [] res = new String [_selectedCols.size()];
+      int idx = 0;
+      for(int cid: _selectedCols){
+        Column c = va._cols[cid];
+        double ratio = c._n/(double)va._numrows;
+        if(ratio < 0.99) {
+          res[idx++] = c._name  + " (" + Math.round((1-ratio)*100) + "% NAs)";
+        } else
+          res[idx++] = c._name;
+      }
+      return res;
+    }
+
+    @Override protected Comparator<Integer> colComp(final ValueArray ary){
+      ValueArray va = _key.value();
+      final double ratio = 1.0/va._numrows;
+      return new Comparator<Integer>() {
+        @Override
+        public int compare(Integer x, Integer y) {
+          Column xc = ary._cols[x];
+          Column yc = ary._cols[y];
+          double xRatio = xc._n*ratio;
+          double yRatio = yc._n*ratio;
+          if(xRatio > 0.9 && yRatio > 0.9) return 0;
+          if(xRatio <= 0.9 && yRatio <= 0.9) return Double.compare(1-xRatio, 1-yRatio);
+          if(xRatio <= 0.9) return 1;
+          return -1;
+        }
+      };
+    }
+
+    public boolean saveIgnore(int i, ValueArray.Column ca) {
+      if(ca._min == ca._max) {
+        if(_constantColumns.get() == null)
+          _constantColumns.set(new TreeSet<String>());
+        _constantColumns.get().add(Objects.firstNonNull(ca._name, String.valueOf(i)));
+        return true;
+      } else if(ca._domain != null) {
+        if(_nonNumColumns.get() == null)
+          _nonNumColumns.set(new TreeSet<String>());
+        _nonNumColumns.get().add(Objects.firstNonNull(ca._name, String.valueOf(i)));
+        return true;
+      }
+      return false;
+    }
+
+    String _comment = "";
+    @Override protected int[] defaultValue() {
+      ValueArray va = _key.value();
+      int [] res = new int[va._cols.length];
+      int selected = 0;
+      for(int i = 0; i < va._cols.length; ++i) {
+        if(saveIgnore(i, va._cols[i]))
+          res[selected++] = i;
+        else if((1.0 - (double)va._cols[i]._n/va._numrows) >= _maxNAsRatio) {
+          int val = 0;
+          if(_badColumns.get() != null) val = _badColumns.get();
+          _badColumns.set(val+1);
+        }
+      }
+      return Arrays.copyOfRange(res,0,selected);
+    }
+
+    @Override public String queryComment() {
+      TreeSet<String> nonNumCols = _nonNumColumns.get();
+      TreeSet<String> constCols = _constantColumns.get();
+
+      String msg = "";
+      if(_badColumns.get() != null && _badColumns.get() > 0)
+        msg += "<b>There are " + _badColumns.get() + " columns with more than " + _maxNAsRatio*100 + "% of NAs.</b><br/>\n";
+      if(constCols != null && !constCols.isEmpty())
+        msg += "<b>Ignoring " + constCols.size() + " constant columns</b>: " + constCols.toString() + "<br/>\n";
+      if(nonNumCols != null && !nonNumCols.isEmpty())
+        msg += "<b>Ignoring " + nonNumCols.size() + " non-numeric columns</b>: " + nonNumCols.toString();
+      return msg == "" ? msg : "<div class='alert'>" + msg + "</div>";
     }
   }
 
@@ -2187,17 +2286,62 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   // Fluid Vec Arguments
   // ---------------------------------------------------------------------------
-  /** A Frame Key */
+  /** Locally synchronize VA to FVec conversions within this node. */
+  final static Object conversionLock = new Object();
+
+  /** Conversion number is only for logging. */
+  static AtomicInteger conversionNumber = new AtomicInteger(0);
+
+  /**
+   * A Frame Key
+   * If necessary, a conversion (i.e. a "casting") of ValueArray to Frame
+   * is performed.
+   * */
   public class FrameKey extends H2OKey {
     public FrameKey() { this(""); }
     public FrameKey(String name) { super(name,true); }
     @Override protected Key parse(String input) {
       Key k = Key.make(input);
       Value v = DKV.get(k);
+
+      // If the key does not exist, return an error.
       if( v == null )
         throw new IllegalArgumentException(input+":"+errors()[0]);
-      if( v.type() != TypeMap.onLoad(Frame.class.getName()) )
+
+      // If the key exists but it refers to a ValueArray, then see if we have
+      // a cached conversion in DKV already.
+      if (v.isArray()) {
+        // Serialize conversions to one at a time.
+        synchronized (conversionLock) {
+          ValueArray va = v.get();
+          String frameKeyString = DKV.calcConvertedFrameKeyString(input);
+          Key k2 = Key.make(frameKeyString);
+          Value v2 = DKV.get(k2);
+          if (v2 != null) {
+            // If the thing that aliases with the cached conversion name is not
+            // a Frame, then throw an error.
+            if (! v2.isFrame()) {
+              throw new IllegalArgumentException(input+":"+errors()[1]);
+            }
+            Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+            return k2;
+          }
+
+          // No cached conversion.  Make one and store it in DKV.
+          int cn = conversionNumber.getAndIncrement();
+          Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
+          Frame f2 = va.asFrame();
+          DKV.put(k2,f2);
+          Log.info("Conversion " + cn + " complete.");
+          return k2;
+        }
+      }
+
+      // If not VA and not Frame, then it's an error.
+      if (! v.isFrame()) {
         throw new IllegalArgumentException(input+":"+errors()[1]);
+      }
+
       return k;
     }
     @Override protected String queryDescription() { return "An existing H2O Frame key."; }
@@ -2229,7 +2373,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected String[] errors() { return new String[] { "Not a name of column, or a column index" }; }
   }
 
-  /** A Class Vec/Column within a Frame */
+  /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
   public class FrameClassVec extends FrameKeyVec {
     public FrameClassVec(String name, FrameKey key ) { super(name, key); }
     @Override protected String[] selectValues() {
@@ -2244,9 +2388,7 @@ public class RequestArguments extends RequestStatics {
       if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
       return vec;
     }
-    private boolean filter( Vec vec ) {
-      return vec.dtype() == Vec.DType.I || vec.dtype() == Vec.DType.S;
-    }
+    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && vec.max()<=1000;  }
     @Override protected Vec defaultValue() { return null; }
     @Override protected String[] errors() { return new String[] { "Only integer or enum/factor columns can be classified" }; }
   }
@@ -2294,7 +2436,7 @@ public class RequestArguments extends RequestStatics {
       for( int i=0; i<len(is); i++ ) {
         Vec vec = fr.vecs()[is[i]];
         String name = fr._names[is[i]];
-        double ratio = (double)vec.NAcnt()/vec.length();
+        double ratio = (double)vec.naCnt()/vec.length();
         res[i] = name + (ratio > 0.01 ? (" (" + Math.round(ratio*100) + "% NAs)") : "");
       }
       return res;

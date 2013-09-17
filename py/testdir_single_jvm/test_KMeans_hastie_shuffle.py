@@ -34,7 +34,7 @@ def kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows, timeoutSecs=30
         'seed': 265211114317615310,
     }
     start = time.time()
-    kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, \
+    kmeans = h2o_cmd.runKMeans(parseResult=parseResult, \
         timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
     elapsed = time.time() - start
     print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
@@ -91,11 +91,13 @@ class Basic(unittest.TestCase):
         # This test also adds file shuffling, to see that row order doesn't matter
         csvFilename = "1mx10_hastie_10_2.data.gz"
         csvPathname = 'logreg/' + csvFilename
-        kmeans_doit(self, csvFilename, 'datasets', csvPathname, num_rows=1000000, timeoutSecs=60)
+        bucket = 'datasets'
+        kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows=1000000, timeoutSecs=60)
+        fullPathname = h2i.find_folder_and_filename(bucket, csvPathname, returnFullPath=True)
 
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
-        h2o_util.file_gunzip(csvPathname, pathname1x)
+        h2o_util.file_gunzip(fullPathname, pathname1x)
         
         filename1xShuf = "hastie_1x.data_shuf"
         pathname1xShuf = SYNDATASETS_DIR + '/' + filename1xShuf
@@ -114,7 +116,7 @@ class Basic(unittest.TestCase):
         filename4x = "hastie_4x.data"
         pathname4x = SYNDATASETS_DIR + '/' + filename4x
         h2o_util.file_cat(pathname2xShuf, pathname2xShuf, pathname4x)
-        kmeans_doit(self, filename4x, pathname4x, num_rows=4000000, timeoutSecs=120)
+        kmeans_doit(self, filename4x, None, pathname4x, num_rows=4000000, timeoutSecs=120)
 
 if __name__ == '__main__':
     h2o.unit_main()

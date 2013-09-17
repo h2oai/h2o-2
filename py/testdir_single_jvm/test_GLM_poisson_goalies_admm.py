@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print "May not solve. Expanded categorical columns causing a large # cols, small # of rows"
-            glm = h2o_cmd.runGLMOnly(timeoutSecs=timeoutSecs, parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=timeoutSecs, parseResult=parseResult, **kwargs)
             elapsed = time.time()-start
             print "glm end on ", csvPathname, "Trial #", trial, "completed in", elapsed, "seconds.",\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

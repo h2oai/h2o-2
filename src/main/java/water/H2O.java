@@ -50,7 +50,14 @@ public final class H2O {
   public static H2ONode SELF = null;
   public static InetAddress SELF_ADDRESS;
 
-  public static final String DEFAULT_ICE_ROOT = "/tmp";
+  public static String DEFAULT_ICE_ROOT() {
+    String username = System.getProperty("user.name");
+    if (username == null) username = "";
+    String u2 = username.replaceAll(" ", "_");
+    if (u2.length() == 0) u2 = "unknown";
+    return "/tmp/h2o-" + u2;
+  }
+
   public static URI ICE_ROOT;
 
   // Initial arguments
@@ -212,7 +219,7 @@ public final class H2O {
   public int D( Key key, int repl ) {
     if( repl >= size() ) return -1;
 
-    // Distribution of Fluid Vectors is a special case.  
+    // Distribution of Fluid Vectors is a special case.
     // Fluid Vectors are grouped into vector groups, each of which must have
     // the same distribution of chunks so that MRTask2 run over group of
     // vectors will keep data-locality.  The fluid vecs from the same group
@@ -607,6 +614,7 @@ public final class H2O {
     public String h = null;
     public String help = null;
     public String version = null;
+    public String beta = null;
   }
 
   public static void printHelp() {
@@ -639,7 +647,7 @@ public final class H2O {
     "\n" +
     "    -ice_root <fileSystemPath>\n" +
     "          The directory where H2O spills temporary data to disk.\n" +
-    "          (The default is '" + DEFAULT_ICE_ROOT + "'.)\n" +
+    "          (The default is '" + DEFAULT_ICE_ROOT() + "'.)\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
@@ -740,7 +748,7 @@ public final class H2O {
     printAndLogVersion();
 
     // Get ice path before loading Log or Persist class
-    String ice = DEFAULT_ICE_ROOT;
+    String ice = DEFAULT_ICE_ROOT();
     if( OPT_ARGS.ice_root != null ) ice = OPT_ARGS.ice_root.replace("\\", "/");
     try {
       ICE_ROOT = new URI(ice);

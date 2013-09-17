@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'tnc3.csv'
         print "\n" + csvPathname
         hex_key = "tnc3.hex"
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put', 
             timeoutSecs=10, header=1)
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
         if (1==1):
             print "\nWe're not CM data getting back from RFView.json that we can check!. so look at the browser"
             print 'The good case with ignore="boat,body"'
-            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, trees=5, timeoutSecs=10, ignore="boat,body")
+            rfv = h2o_cmd.runRF(parseResult=parseResult, trees=5, timeoutSecs=10, ignore="boat,body")
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
@@ -74,7 +74,7 @@ class Basic(unittest.TestCase):
 
         if 1==1:
             print "\nNow the bad case (no ignore)"
-            rfv = h2o_cmd.runRFOnly(parseResult=parseResult, trees=5, timeoutSecs=10)
+            rfv = h2o_cmd.runRF(parseResult=parseResult, trees=5, timeoutSecs=10)
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")

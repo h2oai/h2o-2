@@ -1,7 +1,6 @@
 import unittest, time, sys, random, logging
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm
-import h2o_exec as h2e, h2o_jobs
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -24,6 +23,7 @@ class Basic(unittest.TestCase):
         covtype200xSize = 15033863400
         synSize =  183
         if 1==0:
+            bucket = 'home-0xdiag-datasets'
             importFolderPath = 'more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -40,6 +40,7 @@ class Basic(unittest.TestCase):
             ]
 
         if 1==1:
+            bucket = 'home-0xdiag-datasets'
             importFolderPath = 'more1_1200_link'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -83,6 +84,7 @@ class Basic(unittest.TestCase):
             ]
 
         if 1==0:
+            bucket = 'home-0xdiag-datasets'
             importFolderPath = 'manyfiles-nflx-gz'
             print "Using .gz'ed files in", importFolderPath
             csvFilenameAll = [
@@ -92,6 +94,7 @@ class Basic(unittest.TestCase):
             ]
 
         if 1==0: 
+            bucket = 'home-0xdiag-datasets'
             importFolderPath = 'standard'
             print "Using .gz'ed files in", importFolderPath
             # all exactly the same prior to gzip!
@@ -120,21 +123,6 @@ class Basic(unittest.TestCase):
                 ("manyfiles-nflx-gz/file_[12]?[0-9][0-9].dat.gz", "file_300.dat.gz", 50 * avgMichalSize, 700),
                 ("manyfiles-nflx-gz/file_*.dat.gz", "file_384.dat.gz", 100 * avgMichalSize, 1200),
                 ("covtype200x.data", "covtype200x.data", covtype200xSize, 700),
-
-                # do it twice
-                # ("covtype.data", "covtype.data"),
-                # ("covtype20x.data", "covtype20x.data"),
-                # "covtype200x.data",
-                # "100million_rows.csv",
-                # "200million_rows.csv",
-                # "a5m.csv",
-                # "a10m.csv",
-                # "a100m.csv",
-                # "a200m.csv",
-                # "a400m.csv",
-                # "a600m.csv",
-                # "billion_rows.csv.gz",
-                # "new-poker-hand.full.311M.txt.gz",
                 ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
@@ -167,7 +155,7 @@ class Basic(unittest.TestCase):
         jea = ' -Dlog.printAll=true'
 
 
-        for i,(csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
+        for i, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(2,java_heap_GB=tryHeap, base_port=base_port,
@@ -186,7 +174,8 @@ class Basic(unittest.TestCase):
             ### base_port += 2
 
             for trial in range(trialMax):
-                (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=importFolderPath+"/*")
+                csvPathname = importFolderPath + "/" + csvFilepattern
+                (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
                 importFullList = importResult['files']
                 importFailList = importResult['fails']
                 print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
@@ -195,8 +184,9 @@ class Basic(unittest.TestCase):
                 h2o.cloudPerfH2O.change_logfile(csvFilename)
                 h2o.cloudPerfH2O.message("")
                 h2o.cloudPerfH2O.message("Parse " + csvFilename + " Start--------------------------------")
+                csvPathname = importFolderPath + "/" + csvFilepattern
                 start = time.time()
-                parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/*",
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                     hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
@@ -208,7 +198,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes2, timeoutSecs) = csvFilenameList[i+1]
-                        parseResult = h2i.import_parse(path=importFolderPath+"/*",
+                        csvPathname = importFolderPath + "/" + csvFilepattern
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
@@ -219,7 +210,8 @@ class Basic(unittest.TestCase):
                         time.sleep(1)
                         h2o.check_sandbox_for_errors()
                         (csvFilepattern, csvFilename, totalBytes3, timeoutSecs) = csvFilenameList[i+2]
-                        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/*",
+                        csvPathname = importFolderPath + "/" + csvFilepattern
+                        parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                             hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
                             retryDelaySecs=retryDelaySecs,
                             pollTimeoutSecs=pollTimeoutSecs,
@@ -265,14 +257,14 @@ class Basic(unittest.TestCase):
                 # execExpr = 'a = randomFilter('+origKey+',200,12345678)' 
                 execExpr = 'a = slice('+origKey+',1,200)' 
                 h2e.exec_expr(h2o.nodes[0], execExpr, "a", timeoutSecs=30)
-                # runRFOnly takes the parseResult directly
+                # runRF takes the parseResult directly
                 newParseKey = {'destination_key': 'a'}
 
                 print "\n" + csvFilepattern
                 # poker and the water.UDP.set3(UDP.java) fail issue..
                 # constrain depth to 25
                 print "Temporarily hacking to do nothing instead of RF on the parsed file"
-                ### RFview = h2o_cmd.runRFOnly(trees=1,depth=25,parseResult=newParseKey, timeoutSecs=timeoutSecs)
+                ### RFview = h2o_cmd.runRF(trees=1,depth=25,parseResult=newParseKey, timeoutSecs=timeoutSecs)
                 ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
                 #**********************************************************************************
@@ -289,7 +281,7 @@ class Basic(unittest.TestCase):
                     GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
                     h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()

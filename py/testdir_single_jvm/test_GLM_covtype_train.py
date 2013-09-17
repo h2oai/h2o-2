@@ -77,7 +77,7 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
 
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 

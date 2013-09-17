@@ -8,11 +8,12 @@ import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
 import water.util.*;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
 
 import com.google.gson.*;
 
-public class KMeansModel2 extends Model {
+public class KMeansModel2 extends OldModel {
   public double[][] _clusters; // The cluster centers, normalized according to _va
   public double _error; // Sum of min square distances
   public KMeans2 _job;

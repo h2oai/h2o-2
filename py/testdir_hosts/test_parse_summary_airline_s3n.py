@@ -1,8 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -17,52 +15,42 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(1)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts(1, 
-                # this is for our amazon ec hdfs
-                # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-                hdfs_name_node='10.78.14.235:9000',
-                hdfs_version='0.20.2')
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_parse_summary_airline_s3n(self):
-        URI = "s3n://h2o-airlines-unpacked/"
         csvFilelist = [
             ("allyears2k.csv",   300), #4.4MB
             ("year1987.csv",     600), #130MB
             ("allyears.csv",     900), #12GB
             # ("allyears_10.csv", 1800), #119.98GB
         ]
-        # IMPORT**********************************************
-        # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
-        importHDFSResult = h2o.nodes[0].import_hdfs(URI)
-        ### print "importHDFSResult:", h2o.dump_json(importHDFSResult)
-        s3nFullList = importHDFSResult['succeeded']
-        ### print "s3nFullList:", h2o.dump_json(s3nFullList)
 
-        self.assertGreater(len(s3nFullList),8,"Should see more than 8 files in s3n?")
-        if 1==0: # slow?
-            print "\nTrying StoreView after the import hdfs"
-            h2o_cmd.runStoreView(timeoutSecs=120)
+        print "Need the trailing / on the bucket, to avoid 'Path must be absolute error'"
+        (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-airlines-unpacked/', path="*", schema='s3n')
+        s3nFullList = importHDFSResult['succeeded']
+        self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
+
+        print "\nTrying StoreView after the import hdfs"
+        h2o_cmd.runStoreView(timeoutSecs=120)
 
         trial = 0
         for (csvFilename, timeoutSecs) in csvFilelist:
             trialStart = time.time()
             csvPathname = csvFilename
-            s3nKey = URI + csvPathname
 
             # PARSE****************************************
-            key2 = csvFilename + "_" + str(trial) + ".hex"
-            print "Loading s3n key: ", s3nKey, 'thru HDFS'
+            csvPathname = csvFilename
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2o.nodes[0].parse(s3nKey, key2,
+            parseResult = h2i.import_parse(bucket='h2o-airlines-unpacked', path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
-            print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
+            print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            print "parse result:", parseResult['destination_key']
 
             # INSPECT******************************************
             # We should be able to see the parse result?
@@ -78,13 +66,12 @@ class Basic(unittest.TestCase):
             goodX = h2o_glm.goodXFromColumnInfo(y='IsArrDelayed', key=parseResult['destination_key'], timeoutSecs=300)
 
             # SUMMARY****************************************
-            summaryResult = h2o_cmd.runSummary(key=key2, timeoutSecs=360)
+            summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360)
             h2o_cmd.infoFromSummary(summaryResult)
 
             # STOREVIEW***************************************
-            if 1==0: # slow
-                print "\nTrying StoreView after the parse"
-                h2o_cmd.runStoreView(timeoutSecs=120)
+            print "\nTrying StoreView after the parse"
+            h2o_cmd.runStoreView(timeoutSecs=120)
 
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds."
             trial += 1

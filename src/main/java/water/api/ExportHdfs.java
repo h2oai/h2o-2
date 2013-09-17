@@ -28,7 +28,7 @@ public class ExportHdfs extends Request {
       if( model != null ) {
         // Add extension, used during import
         if( !path.endsWith(Extensions.JSON) ) path += Extensions.JSON;
-        data = model.toJson().toString().getBytes("UTF-8");
+        data = model.writeJSON(new AutoBuffer()).buf();
       }
       if( data != null ) PersistHdfs.store(new Path(path), data);
       else throw new UnsupportedOperationException("Only models can be exported");

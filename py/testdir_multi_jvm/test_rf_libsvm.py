@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
             csvPathname = "libsvm/" + csvFilename
 
             # PARSE******************************************
-            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=hex_key, timeoutSecs=2000)
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=2000)
             print csvPathname, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
@@ -76,7 +76,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 600
             start = time.time()
-            rf = h2o_cmd.runRFOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            rf = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "rf end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

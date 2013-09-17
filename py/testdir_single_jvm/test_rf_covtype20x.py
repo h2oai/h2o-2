@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
         
         # make a 3rd key so the predict is uncached too!
         execExpr = dataKeyTest2 + "=" + dataKeyTest
-        resultExec = h2o_cmd.runExecOnly(expression=execExpr, timeoutSecs=15)
+        resultExec = h2o_cmd.runExec(expression=execExpr, timeoutSecs=15)
 
         # train
         # this does RFView to understand when RF completes, so the time reported for RFView here, should be 
@@ -107,14 +107,14 @@ class Basic(unittest.TestCase):
         timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
 
         start = time.time()
-        rfv = h2o_cmd.runRFOnly(parseResult=parseResultTrain,
+        rfv = h2o_cmd.runRF(parseResult=parseResultTrain,
             timeoutSecs=timeoutSecs, retryDelaySecs=1, noPoll=True, **kwargs)
         print "rf job dispatch end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
         ### print "rf response:", h2o.dump_json(rfv)
 
 
         start = time.time()
-        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=180, pollTimeoutSecs=500, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=500, retryDelaySecs=5)
         print "rf job end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
         print "\nRFView start after job completion"
@@ -127,9 +127,13 @@ class Basic(unittest.TestCase):
         for trial in range(3):
             # scoring
             start = time.time()
-            h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree, timeoutSecs, out_of_bag_error_estimate=0, retryDelaySecs=1)
+            rfView = h2o_cmd.runRFView(None, dataKeyTest, 
+                model_key, ntree, timeoutSecs, out_of_bag_error_estimate=0, retryDelaySecs=1)
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
+            # FIX! should update this expected classification error
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest2)
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'

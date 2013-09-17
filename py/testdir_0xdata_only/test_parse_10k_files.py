@@ -1,9 +1,6 @@
-import unittest, time, sys, time, random, logging, gzip, os
+import unittest, time, sys, time, random, gzip, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm
-import h2o_exec as h2e, h2o_jobs
-import h2o, h2o_cmd
-import h2o_browse as h2b
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_hosts, h2o_glm, h2o_exec as h2e, h2o_jobs
 
 def write_syn_dataset_gz(csvPathname, rowCount, headerData, rowData):
     f = gzip.open(csvPathname, 'wb')
@@ -146,7 +143,7 @@ class Basic(unittest.TestCase):
                     GLMkwargs = {'y': 0, 'case': 1, 'case_mode': '>',
                         'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
                     start = time.time()
-                    glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
                     h2o_glm.simpleCheckGLM(self, glm, None, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()

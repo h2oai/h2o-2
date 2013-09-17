@@ -19,7 +19,7 @@ class glm_same_parse(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_prostate_then_prostate_long_parse(self):
-        print "\nput and parse of same file, but both key and key2 are the h2o defaults..always different"
+        print "\nput and parse of same file, but both src_key and hex_key are the h2o defaults..always different"
         for trial in range (10):
             start = time.time()
             parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate_long.csv.gz', schema='put')

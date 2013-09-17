@@ -1,8 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm
-import h2o_browse as h2b
-import h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import2 as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -17,47 +15,28 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(1)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
-            h2o_hosts.build_cloud_with_hosts(1, 
-                # this is for our amazon ec hdfs
-                # see https://github.com/0xdata/h2o/wiki/H2O-and-s3n
-                hdfs_name_node='10.78.14.235:9000',
-                hdfs_version='0.20.2')
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_parse_covtype20x_s3n_thru_hdfs(self):
+        bucket = 'home-0xdiag-datasets'
+        importFolderPath = 'standard'
         csvFilename = "covtype20x.data"
-        csvPathname = csvFilename
-        # csvFilename = "train_set.csv"
-        # csvPathname = "allstate/ + csvFilename
-        # https://s3.amazonaws.com/home-0xdiag-datasets/allstate/train_set.csv
-        URI = "s3n://home-0xdiag-datasets/"
-        s3nKey = URI + csvPathname
-
+        csvPathname = importFolderPath + "/" + csvFilename
+        timeoutSecs = 500
         trialMax = 3
-
         for trial in range(trialMax):
             trialStart = time.time()
-            # since we delete the key, we have to re-import every iteration
-            # s3n URI thru HDFS is not typical.
-            importHDFSResult = h2o.nodes[0].import_hdfs(URI)
-            s3nFullList = importHDFSResult['succeeded']
-            ### print "s3nFullList:", h2o.dump_json(s3nFullList)
-            self.assertGreater(len(s3nFullList),1,"Didn't see more than 1 file in s3n?")
-
-            key2 = csvFilename + "_" + str(trial) + ".hex"
-            print "Loading s3n key: ", s3nKey, 'thru HDFS'
-            timeoutSecs = 500
+            hex_key = csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2o.nodes[0].parse(s3nKey, key2,
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=60)
             elapsed = time.time() - start
-            print s3nKey, 'h2o reported parse time:', parseResult['response']['time']
             print "parse end on ", s3nKey, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-
             print "parse result:", parseResult['destination_key']
 
             kwargs = {
@@ -74,7 +53,7 @@ class Basic(unittest.TestCase):
             # L2 
             kwargs.update({'alpha': 0, 'lambda': 0})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, 
+            glm = h2o_cmd.runGLM(parseResult=parseResult, 
                 initialDelaySecs=15, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time()
             print "glm (L2) end on ", csvPathname, 'took', elapsed, 'seconds',\
@@ -85,7 +64,7 @@ class Basic(unittest.TestCase):
             # Elastic
             kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time()
             print "glm (Elastic) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -95,24 +74,14 @@ class Basic(unittest.TestCase):
             # L1
             kwargs.update({'alpha': 1.0, 'lambda': 1e-4})
             start = time.time()
-            glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time()
             print "glm (L1) end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, 13, **kwargs)
             h2o.check_sandbox_for_errors()
 
-            print "Deleting key in H2O so we get it from S3 (if ec2) or nfs again.", \
-                  "Otherwise it would just parse the cached key."
-            storeView = h2o.nodes[0].store_view()
-            ### print "storeView:", h2o.dump_json(storeView)
-            # h2o removes key after parse now
-            ### print "Removing", s3nKey
-            ### removeKeyResult = h2o.nodes[0].remove_key(key=s3nKey)
-            ### print "removeKeyResult:", h2o.dump_json(removeKeyResult)
-
             print "Trial #", trial, "completed in", time.time() - trialStart, "seconds.", \
-
 
 if __name__ == '__main__':
     h2o.unit_main()

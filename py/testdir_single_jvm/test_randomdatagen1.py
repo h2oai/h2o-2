@@ -28,14 +28,13 @@ class Basic(unittest.TestCase):
         # have to give the separator == comma...otherwise H2O can't deduce it on this dataset
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
             timeoutSecs=10, header=1, separator=44)
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, response_variable=2, timeoutSecs=20)
+        h2o_cmd.runRF(parseResult=parseResult, trees=1, response_variable=2, timeoutSecs=20)
 
     def test_B_randomdata2_1_lineend(self):
         csvPathname = 'datagen1.csv'
-        print "Using datagen1.csv to create", SYNDATASETS_DIR, "/datagen1.csv with different line ending" 
         # change lineend, case 1
-        (folderPath, filename) = h2i.find_folder_and_filename('smalldata', csvPathname)
-        csvPathname1 = folderPath + "/" + filename
+        csvPathname1 = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
+        print "Using datagen1.csv to create", SYNDATASETS_DIR, "/datagen1.csv with different line ending" 
         csvPathname2 = SYNDATASETS_DIR + '/datagen1_crlf.csv'
 
         infile = open(csvPathname1, 'r') 
@@ -51,7 +50,7 @@ class Basic(unittest.TestCase):
 
         parseResult = h2i.import_parse(path=csvPathname2, schema='put', 
             timeoutSecs=10, header=1, separator=44)
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=1, response_variable=2, timeoutSecs=20)
+        h2o_cmd.runRF(parseResult=parseResult, trees=1, response_variable=2, timeoutSecs=20)
 
 
 if __name__ == '__main__':

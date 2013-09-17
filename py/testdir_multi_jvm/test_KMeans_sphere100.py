@@ -1,7 +1,6 @@
 import unittest, time, sys, random, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_browse as h2b
-import h2o_util
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_browse as h2b, h2o_util, h2o_import2 as h2i
 
 # a truly uniform sphere
 # http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
@@ -16,7 +15,7 @@ JUMP_RANDOM_ALL_DIRS = True
 # should do this, but does it make h2o kmeans fail?
 SHUFFLE_SPHERES = True
 R_NOISE = True
-ALLOWED_CENTER_DELTA = 1
+ALLOWED_CENTER_DELTA = 3
 
 def get_xyz_sphere(R):
     u = random.random() # 0 to 1
@@ -149,7 +148,7 @@ class Basic(unittest.TestCase):
             csvPathname2 = csvPathname
 
         print "\nStarting", csvFilename
-        parseResult = h2o_cmd.parseFile(csvPathname=csvPathname2, key2=csvFilename2 + ".hex")
+        parseResult = h2i.import_parse(path=csvPathname2, schema='put', hex_key=csvFilename2 + ".hex")
 
         ### h2b.browseTheCloud()
 
@@ -165,7 +164,7 @@ class Basic(unittest.TestCase):
             }
             timeoutSecs = 100
             start = time.time()
-            kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

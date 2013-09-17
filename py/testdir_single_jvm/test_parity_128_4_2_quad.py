@@ -21,8 +21,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parity_128_4_2_quad(self):
-        parseResult = h2i.import_only(bucket='smalldata', path='parity_128_4_2_quad.data', schema='put')
-        h2o_cmd.runRFOnly(parseResult=parseResult, trees=6, timeoutSecs=5)
+        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_2_quad.data', schema='put')
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=5)
 
 if __name__ == '__main__':
     h2o.unit_main()

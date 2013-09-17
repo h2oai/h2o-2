@@ -209,12 +209,15 @@ public class Weaver {
 
     CtField fielddoc=null;
     CtField getdoc=null;
+    boolean callsuper = true;
+    for( CtClass base : _serBases )
+      if( cc.getSuperclass() == base ) callsuper = false;
 
     // ---
     // Auto-gen JSON output to AutoBuffers
-    make_body(cc,ctfs,false,
+    make_body(cc,ctfs,callsuper,
               "public water.AutoBuffer writeJSONFields(water.AutoBuffer ab) {\n",
-              "  super.writeJSONFields(ab);\n",
+              "  super.writeJSONFields(ab)",
               "  ab.putJSON%z(\"%s\",%s)",
               "  ab.putEnumJSON(\"%s\",%s)",
               "  ab.putJSON%z(\"%s\",%s)",
@@ -432,7 +435,7 @@ public class Weaver {
     sb.append(header);
     if( callsuper ) sb.append(supers);
     boolean debug_print = false;
-    boolean first = true;
+    boolean first = !callsuper;
     for( CtField ctf : ctfs ) {
       int mods = ctf.getModifiers();
       if( javassist.Modifier.isTransient(mods) || javassist.Modifier.isStatic(mods) ) {

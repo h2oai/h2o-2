@@ -1,4 +1,6 @@
-
+import unittest, time, sys, copy
+sys.path.extend(['.','..','py'])
+import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import2 as h2i
 ## Dataset created from this:
 #
 # from sklearn.datasets import make_hastie_10_2
@@ -9,13 +11,10 @@
 # y.shape = (i,1)
 # Y = np.hstack((X,y))
 # np.savetxt('./1mx' + str(f) + '_hastie_10_2.data', Y, delimiter=',', fmt='%.2f');
-import unittest, time, sys, copy
-sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts
 
-def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
+def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting parse of", csvFilename
-    parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key2=csvFilename + ".hex", timeoutSecs=10)
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=csvFilename + ".hex", timeoutSecs=10)
     y = "10"
     x = ""
     # NOTE: hastie has two values, -1 and 1. To make H2O work if two valued and not 0,1 have
@@ -36,7 +35,7 @@ def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
 
     start = time.time() 
     print "\nStarting GLMGrid of", csvFilename
-    glmGridResult = h2o_cmd.runGLMGridOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+    glmGridResult = h2o_cmd.runGLMGrid(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLMGrid in",  (time.time() - start), "secs (python)"
 
     # still get zero coeffs..best model is AUC = 0.5 with intercept only.
@@ -45,7 +44,6 @@ def glm_doit(self, csvFilename, csvPathname, timeoutSecs=30):
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
-
 
     @classmethod
     def setUpClass(cls):
@@ -66,19 +64,20 @@ class Basic(unittest.TestCase):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)
+        bucket = 'datasets'
         csvFilename = "1mx10_hastie_10_2.data.gz"
-        csvPathname = h2o.find_dataset('logreg' + '/' + csvFilename)
-        glm_doit(self,csvFilename, csvPathname, timeoutSecs=300)
+        csvPathname = 'logreg' + '/' + csvFilename
+        glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=300)
 
+        fullPathname = h2i.find_folder_and_filename('datasets', csvPathname, returnFullPath=True)
         filename1x = "hastie_1x.data"
         pathname1x = SYNDATASETS_DIR + '/' + filename1x
-        h2o_util.file_gunzip(csvPathname, pathname1x)
+        h2o_util.file_gunzip(fullPathname, pathname1x)
 
         filename2x = "hastie_2x.data"
         pathname2x = SYNDATASETS_DIR + '/' + filename2x
         h2o_util.file_cat(pathname1x,pathname1x,pathname2x)
-        glm_doit(self,filename2x, pathname2x, timeoutSecs=300)
-
+        glm_doit(self, filename2x, None, pathname2x, timeoutSecs=300)
 
 if __name__ == '__main__':
     h2o.unit_main()

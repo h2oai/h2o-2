@@ -1,8 +1,7 @@
 import unittest
 import random, sys, time
 sys.path.extend(['.','..','py'])
-
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_exec as h2e
 
 zeroList = [
         'Result0 = 0',
@@ -22,7 +21,7 @@ exprList = [
         'Result<n>.hex = sum(<keyX>[<col1>]) + Result.hex',
     ]
 
-def exec_list(exprList, lenNodes, csvFilename, key2):
+def exec_list(exprList, lenNodes, csvFilename, hex_key):
         h2e.exec_zero_list(zeroList)
         # start with trial = 1 because trial-1 is used to point to Result0 which must be initted
         trial = 1
@@ -34,7 +33,7 @@ def exec_list(exprList, lenNodes, csvFilename, key2):
                 # FIX! should tune this for covtype20x vs 200x vs covtype.data..but for now
                 row = str(random.randint(1,400000))
 
-                execExpr = h2e.fill_in_expr_template(exprTemplate, colX, trial, row, key2)
+                execExpr = h2e.fill_in_expr_template(exprTemplate, colX, trial, row, hex_key)
                 execResultInspect = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
                     resultKey="Result"+str(trial)+".hex", timeoutSecs=60)
 
@@ -79,8 +78,6 @@ class Basic(unittest.TestCase):
 
     def test_exec_import_hosts_bigfiles(self):
         # just do the import folder once
-        importFolderPath = "/home/0xdiag/datasets/standard"
-        h2i.setupImportFolder(None, importFolderPath)
         timeoutSecs = 4000
 
         #    "covtype169x.data",
@@ -96,17 +93,18 @@ class Basic(unittest.TestCase):
             ("billion_rows.csv.gz", "b"),
             ]
 
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
-        for (csvFilename, key2) in csvFilenameList:
-            # creates csvFilename.hex from file in importFolder dir 
-            parseResult = h2i.parseImportFolderFile(None, 
-                csvFilename, importFolderPath, key2=key2, timeoutSecs=2000)
+        importFolderPath = "standard"
+        for (csvFilename, hex_key) in csvFilenameList:
+            csvPathname = importFolderPath + "/" + csvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, 
+                timeoutSecs=2000)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
-            exec_list(exprList, lenNodes, csvFilename, key2)
+            exec_list(exprList, lenNodes, csvFilename, hex_key)
 
 
 if __name__ == '__main__':

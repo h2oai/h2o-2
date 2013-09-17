@@ -1,80 +1,99 @@
 # Model-building operations and algorithms
-setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5) { standardGeneric("h2o.glm") })
+setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
+setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE) { standardGeneric("h2o.prcomp") })
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 
-setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
-          function(x, y, data, family, nfolds, alpha, lambda) {
-            # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda)
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0)
-            # while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical"), function(data, tol, standardize) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, tolerance=tol, standardize=as.numeric(standardize))
+  while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  destKey = res$destination_key
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
+  res = res$PCAModel
+  
+  result = list()
+  result$standardized = standardize
+  result$sdev = as.numeric(unlist(res$stdDev))
+  # result$rotation = do.call(rbind, res$eigenvectors)
+  temp = t(do.call(rbind, res$eigenvectors))
+  colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
+  result$rotation = format(as.data.frame(temp), nsmall = 10)
+  
+  new("H2OPCAModel", key=destKey, data=data, model=result)
+})
+
+setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="ANY"), 
+  function(data, tol, standardize) {
+    if(!(missing(tol) || class(tol) == "numeric"))
+      stop("tol cannot be of class", class(tol))
+    if(!(missing(standardize) || class(standardize) == "logical"))
+      stop("standardize cannot be of class", class(standardize))
+    h2o.prcomp(data, tol, standardize)
+  })
+
+# internally called glm to allow games with method dispatch
+h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
+            if( family == 'tweedie' ){
+                if ( tweedie.p < 1 || tweedie.p > 2 )
+                    stop('tweedie.p must be in (1,2)')
+            } else {
+                if( !(missing(tweedie.p) || is.na(tweedie.p) ) )
+                    stop('tweedie.p may only be set for family tweedie')
+            }
+
+            if( family != 'tweedie' )
+                res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0)
+            else
+                res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0, tweedie_power=tweedie.p)
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=res$destination_key)
             res = res$GLMModel
             
-            # Put model results in a pretty format
-            parseGLMResults = function(res) {
-              # Parameters matching those in R
-              result = list()
-              result$coefficients = unlist(res$coefficients)
-              result$rank = res$nCols
-              result$family = family   # Need to convert to family object
-              result$deviance = res$validations[[1]]$resDev
-              result$aic = res$validations[[1]]$aic
-              result$null.deviance = res$validations[[1]]$nullDev
-              result$iter = res$iterations
-              result$df.residual = res$dof
-              result$df.null = res$dof + result$rank
-              result$y = y
-              result$x = x
+            result = list()
+            result$coefficients = unlist(res$coefficients)
+            result$rank = res$nCols
+            result$family = family   # Need to convert to family object
+            result$deviance = res$validations[[1]]$resDev
+            result$aic = res$validations[[1]]$aic
+            result$null.deviance = res$validations[[1]]$nullDev
+            result$iter = res$iterations
+            result$df.residual = res$dof
+            result$df.null = res$dof + result$rank
+            result$y = y
+            result$x = x
+            result$tweedie.p = ifelse( missing(tweedie.p), 'NA', tweedie.p )
             
-              # Additional parameters from H2O
-              result$auc = res$validations[[1]]$auc
-              result$training.err = res$validations[[1]]$err
-              result$threshold = res$validations[[1]]$threshold
-            
-              # Build confusion matrix
-              if(family == "binomial") {
-                temp = res$validations[[1]]$cm
-                temp[[1]] = NULL; temp = lapply(temp, function(x) { x[[1]] = NULL; x })
-                result$confusion = t(matrix(unlist(temp), nrow = length(temp)))
-                myNames = c("False", "True", "Error")
-                dimnames(result$confusion) = list(Actual = myNames, Predicted = myNames)
-              }
-              result
-            }
-            
-            # Save cross-validation models as separate objects in a list
-            xtemp = res$validations[[1]]$xval_models
-            if(is.null(xtemp)) cross = list()    # Should this be empty list or null when nfolds = 0?
-            else {
-              cross = lapply(1:length(xtemp), function(i) {
-                xres = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xtemp[i])
-                new("H2OGLMModel", key=xtemp[i], data=data, model=parseGLMResults(xres$GLMModel), xval=list())
-              })
-            }
-            
-            resGLMModel = new("H2OGLMModel", key=destKey, data=data, model=parseGLMResults(res), xval=cross)
+            resGLMModel = new("H2OGLMModel", key=destKey, data=data, model=result)
             resGLMModel
-          })
+}
 
-setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY"),
-          function(x, y, data, family, nfolds, alpha, lambda) {
+
+setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+  function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) {
             if(!(missing(nfolds) || class(nfolds) == "numeric"))
               stop(paste("nfolds cannot be of class", class(nfolds)))
             else if(!(missing(alpha) || class(alpha) == "numeric"))
               stop(paste("alpha cannot be of class", class(alpha)))
             else if(!(missing(lambda) || class(lambda) == "numeric"))
               stop(paste("lambda cannot be of class", class(lambda)))
-            h2o.glm(x, y, data, family, nfolds, alpha, lambda) 
-          })
 
-# setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", iter.max="numeric"),
-#          function(data, centers, iter.max) {
+            if ( !(missing( tweedie.p ) || class( tweedie.p ) == 'numeric' ) )
+              stop(paste('tweedie.p cannot be of class', class(tweedie.p)))
+
+            if( missing(tweedie.p) && family != 'tweedie' )
+                h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda) 
+            else 
+                h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda, tweedie.p) 
+          }
+)
+
+
+
+
 setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols="character", iter.max="numeric"),
           function(data, centers, cols, iter.max) {
             # Build K-means model
@@ -208,7 +227,6 @@ setMethod("predict", signature(object="H2OGLMModel"),
           result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
           result
         })
-
 
 setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {

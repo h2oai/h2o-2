@@ -1,6 +1,6 @@
 import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts
+import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
 
 def writeRows(csvPathname,row,eol,repeat):
     f = open(csvPathname, 'w')
@@ -48,11 +48,10 @@ class Basic(unittest.TestCase):
             trialMax = 100
             for trial in range(trialMax):
                 # have to repeat the put because h2o deletes the source key now after parse
-                key = csvFilename + "_" + str(trial)
-                key2 = csvFilename + "_" + str(trial) + ".hex"
+                hex_key = csvFilename + "_" + str(trial) + ".hex"
                 # just parse, without polling, except for last one..will that make prior ones complete too?
                 noPoll = trial!=(trialMax-1)
-                parseResult = h2o_cmd.parseFile(csvPathname=csvPathname, key=key, key2=key2, timeoutSecs=30)
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
 
                 if not trial%10:
                     sys.stdout.write('.')
@@ -65,9 +64,6 @@ class Basic(unittest.TestCase):
         # and wait a minute to make sure all tcp_wait ports clear out
         print "Sleeping for 120 secs so the next jenkins job doesn't see all our tcp_wait ports"
         time.sleep(120)
-
-
-
 
 if __name__ == '__main__':
     h2o.unit_main()

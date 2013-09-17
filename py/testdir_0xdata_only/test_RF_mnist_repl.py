@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import2 as h2i, h2o_glm, h2o_util, h2o_rf
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -23,7 +23,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_RF_mnist_both(self):
-        importFolderPath = "/home/0xdiag/datasets/mnist_repl"
         csvFilelist = [
             # ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, 784834182943470027),
             ("mnist_training.csv.gz", "mnist_testing_0.csv.gz", 600, None, '*mnist_training*gz'),
@@ -32,27 +31,19 @@ class Basic(unittest.TestCase):
             ("mnist_training.csv.gz", "mnist_testing_0.csv.gz", 600, None, '*mnist_training*gz'),
         ]
         # IMPORT**********************************************
-        # since H2O deletes the source key, we should re-import every iteration if we re-use the src in the list
-        importFolderResult = h2i.setupImportFolder(None, importFolderPath)
-        ### print "importHDFSResult:", h2o.dump_json(importFolderResult)
-        succeededList = importFolderResult['files']
-        ### print "succeededList:", h2o.dump_json(succeededList)
-
-        self.assertGreater(len(succeededList),1,"Should see more than 1 files in the import?")
-        # why does this hang? can't look at storeview after import?
-        print "\nTrying StoreView after the import folder"
-        h2o_cmd.runStoreView(timeoutSecs=30)
 
         trial = 0
         allDelta = []
+        importFolderPath = "mnist_repl"
         for (trainCsvFilename, testCsvFilename, timeoutSecs, rfSeed, parsePattern) in csvFilelist:
             trialStart = time.time()
 
             # PARSE test****************************************
-            testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
+            testKey = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, testCsvFilename, importFolderPath,
-                key2=testKey2, timeoutSecs=timeoutSecs)
+            csvPathname = importFolderPath + "/" + testCsvFilename
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
+                hex_key=testKey, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -65,10 +56,10 @@ class Basic(unittest.TestCase):
 
             # PARSE train****************************************
             print "Use multi-file parse to grab both the mnist_testing.csv.gz and mnist_training.csv.gz for training"
-            trainKey2 = trainCsvFilename + "_" + str(trial) + ".hex"
+            trainKey = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.parseImportFolderFile(None, parsePattern, importFolderPath,
-                key2=trainKey2, timeoutSecs=timeoutSecs)
+            csvPathname = importFolderPath + "/" + parsePattern
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=parsePattern, schema='local',
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -110,7 +101,7 @@ class Basic(unittest.TestCase):
             print "Trying rf"
             timeoutSecs = 1800
             start = time.time()
-            rfView = h2o_cmd.runRFOnly(parseResult=parseResult, rfView=False,
+            rfView = h2o_cmd.runRF(parseResult=parseResult, rfView=False,
                 timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \
@@ -122,7 +113,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # FIX! 1 on oobe causes stack trace?
             kwargs = {'response_variable': y}
-            rfView = h2o_cmd.runRFView(data_key=testKey2, model_key=modelKey, ntree=ntree, out_of_bag_error_estimate=0, 
+            rfView = h2o_cmd.runRFView(data_key=testKey, model_key=modelKey, ntree=ntree, out_of_bag_error_estimate=0, 
                 timeoutSecs=60, pollTimeoutSecs=60, noSimpleCheck=False, **kwargs)
             elapsed = time.time() - start
             print "RFView in",  elapsed, "secs", \
@@ -153,7 +144,7 @@ class Basic(unittest.TestCase):
 
             # Predict (on test)****************************************
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=testKey2, timeoutSecs=timeoutSecs)
+            predict = h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=testKey, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "generate_predictions in",  elapsed, "secs", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

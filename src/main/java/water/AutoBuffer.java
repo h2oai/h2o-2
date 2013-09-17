@@ -989,7 +989,7 @@ public final class AutoBuffer {
   // ==========================================================================
   // JSON AutoBuffer printers
 
-  private AutoBuffer putStr2( String s ) {
+  public AutoBuffer putStr2( String s ) {
     byte[] b = s.getBytes();
     int off=0;
     for( int i=0; i<b.length; i++ ) {
@@ -1012,11 +1012,24 @@ public final class AutoBuffer {
 
   public AutoBuffer putJSONAStr(String name, String[] fs) {
     putJSONStr(name).put1(':');
+    return putJSONAStr(fs);
+  }
+  public AutoBuffer putJSONAStr(String[] fs) {
     if( fs == null ) return putNULL();
     put1('[');
     for( int i=0; i<fs.length; i++ ) {
       if( i>0 ) put1(',');
       putJSONStr(fs[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONAAStr( String name, String[][] a ) {
+    putJSONStr(name).put1(':');
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONAStr(a[i]);
     }
     return put1(']');
   }
@@ -1033,6 +1046,29 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+  public AutoBuffer putJSON1( byte b ) { return putJSON4(b); }
+  public AutoBuffer putJSONA1( byte ary[] ) {
+    if( ary == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<ary.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSON1(ary[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONAA1(byte ary[][]) {
+    if( ary == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<ary.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONA1(ary[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONAA1(String name,byte ary[][]) {
+    return putJSONStr(name).put1(':').putJSONAA1(ary);
+  }
+
   public AutoBuffer putJSON8 ( long l ) { return putStr2(Long.toString(l)); }
   public AutoBuffer putJSONA8( long ary[] ) {
     if( ary == null ) return putNULL();
@@ -1077,7 +1113,7 @@ public final class AutoBuffer {
     return put1(']');
   }
 
-  public AutoBuffer putJSON4f ( float f ) { return putStr2(Float.toString(f)); }
+  public AutoBuffer putJSON4f ( float f ) { return putStr2(Float.isNaN(f)?"\"NaN\"":Float .toString(f)); }
   public AutoBuffer putJSON4f ( String name, float f ) { return putJSONStr(name).put1(':').putJSON4f(f); }
   public AutoBuffer putJSONA4f(String name, float[] a) {
     putJSONStr(name).put1(':');
@@ -1090,7 +1126,7 @@ public final class AutoBuffer {
     return put1(']');
   }
 
-  public AutoBuffer putJSON8d( double d ) { return putStr2(Double .toString(d)); }
+  public AutoBuffer putJSON8d( double d ) { return putStr2(Double.isNaN(d)?"\"NaN\"":Double.toString(d)); }
   public AutoBuffer putJSON8d( String name, double d ) { return putJSONStr(name).put1(':').putJSON8d(d); }
   public AutoBuffer putJSONA8d( double[] a ) {
     if( a == null ) return putNULL();

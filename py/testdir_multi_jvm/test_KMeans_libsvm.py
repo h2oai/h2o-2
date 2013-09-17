@@ -25,17 +25,16 @@ class Basic(unittest.TestCase):
 
     def test_parse_bounds_libsvm(self):
         # just do the import folder once
-        importFolderPath = "libsvm"
-
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
             # FIX! fails KMeansScore
-            ("tmc2007_train.svm",  "cJ", 30, 1),
-            ("mnist_train.svm", "cM", 30, 1),
-            ("covtype.binary.svm", "cC", 30, 1),
             ("colon-cancer.svm",   "cA", 30, 1),
             ("connect4.svm",       "cB", 30, 1),
+            ("covtype.binary.svm", "cC", 30, 1),
+            # multi-label class
+            # ("tmc2007_train.svm",  "cJ", 30, 1),
+            ("mnist_train.svm", "cM", 30, 1),
             ("duke.svm",           "cD", 30, 1),
             # too many features? 150K inspect timeout?
             # ("E2006.train.svm",    "cE", 30, 1),
@@ -53,6 +52,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         firstDone = False
+        importFolderPath = "libsvm"
         for (csvFilename, hex_key, timeoutSecs, resultMult) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
             csvPathname = importFolderPath + "/" + csvFilename
@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
 
                 timeoutSecs = 600
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansOnly(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+                kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 elapsed = time.time() - start
                 print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)

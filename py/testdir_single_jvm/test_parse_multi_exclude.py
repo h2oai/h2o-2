@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
             (340, 500, 'cE', 60, '*x[1-4]*'),
             ]
 
-        h2b.browseTheCloud()
+        ## h2b.browseTheCloud()
         cnum = 0
         # create them all first
         for (rowCount, colCount, hex_key, timeoutSecs, excludePattern) in tryList:
@@ -85,7 +85,7 @@ class Basic(unittest.TestCase):
             h2i.import_only(path=SYNDATASETS_DIR + '/*')
 
             # pattern match all, then use exclude
-            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*', schema='put', 
+            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*', schema='local', 
                 hex_key=hex_key, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']

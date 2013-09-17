@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'logreg' + '/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         kwargs = params
-        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=120, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=120, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
     def test_GLM_syn_2659x1049x2enum(self):
@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'logreg' + '/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         kwargs = params
-        glm = h2o_cmd.runGLMOnly(parseResult=parseResult, timeoutSecs=240, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=240, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
 if __name__ == '__main__':

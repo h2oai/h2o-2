@@ -19,32 +19,24 @@ public class InternalInterface implements water.ExternalInterface {
   }
 
   // All-in-one call to lookup a model, map the columns and score
-  public double scoreKey( Object modelKey, String [] colNames, double[] row ) {
+  @Override public double scoreKey( Object modelKey, String [] colNames, String domains[][], double[] row ) {
     Key key = (Key)modelKey;
     String sk = key.toString();
     Value v = DKV.get(key);
     if (v == null)
       throw new IllegalArgumentException("Key "+sk+" not found!");
     try {
-      return scoreModel(v.get(),colNames,row);
+      return scoreModel(v.get(),colNames,domains,row);
     } catch(Throwable t) {
       Log.err(t);
       throw new IllegalArgumentException("Key "+sk+" is not a Model key");
     }
   }
 
-  public Model adaptModel(Object model, String [] colNames){
-    return ((Model)model).adapt(colNames);
-  }
-  // Call to map the columns and score
-  public double scoreModel( Object model,double[] row ) {
-    return ((Model)model).score(row);
+  @Override public double scoreModel(Object model, String[] colNames, String domains[][], double[] row) {
+    return ((Model)model).score(colNames,domains,false,row);
   }
 
   public JsonObject cloudStatus( ) { return new Cloud().serve().toJson(); }
-
-  @Override public double scoreModel(Object model, String[] colNames, double[] row) {
-    return adaptModel(model, colNames).score(row);
-  }
 
 }
