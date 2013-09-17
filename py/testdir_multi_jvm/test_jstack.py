@@ -22,7 +22,7 @@ class JStackApi(unittest.TestCase):
     def test_jstack(self):
         # Ask each node for jstack statistics. do it 100 times
         SLEEP_AFTER = False
-        JSTACK_ALL_NODES = False
+        JSTACK_ALL_NODES = True
         TRIALMAX = 25
         NODE = 1
         PRINT_JSTACK = False
@@ -31,15 +31,19 @@ class JStackApi(unittest.TestCase):
         sList = []
         for trial in range(TRIALMAX):
             print "Starting Trial", trial
-            print "Just doing node[%s]" % NODE
+            if JSTACK_ALL_NODES:
+                print "Sending JStack to each node[%s]" % NODE
+            else:
+                print "Just sending JStack to node[%s]" % NODE
             statsFirst = None
             for i,n in enumerate(h2o.nodes):
                 if JSTACK_ALL_NODES or i==NODE: # just track times on 0
                     # we just want the string
                     start = time.time()
-                    stats = n.jstack()
+                    stats = n.jstack(timeoutSecs=30)
                     elapsed = int(1000 * (time.time() - start)) # milliseconds
                     print "Jstack completes to node", i, "in", "%s"  % elapsed, "millisecs"
+                    ## print h2o.dump_json(stats)
                     statsString = json.dumps(stats)
 
                     if PRINT_JSTACK:
@@ -74,26 +78,35 @@ class JStackApi(unittest.TestCase):
                         print "Sleeping for", delay, "sec"
                         time.sleep(delay)
 
-        if h2o.python_username=='kevin':
+        # if h2o.python_username=='kevin':
+        if 1==1:
             import pylab as plt
             if eList:
                 print "xList", xList
                 print "eList", eList
                 print "sList", sList
 
+                label = "Repeated JStack"
+                if SLEEP_AFTER:
+                    label += " SLEEP_AFTER"
+                if JSTACK_ALL_NODES:
+                    label += " JSTACK_ALL_NODES"
+                if NODE:
+                    label += " just plotting for " + str(NODE)
+
+
                 plt.figure()
                 plt.plot (xList, eList)
                 plt.xlabel('trial')
                 plt.ylabel('Jstack completion latency (millisecs)')
-                plt.title('Back to Back Jstack requests to node['+str(NODE)+']')
+                plt.title(label)
                 plt.draw()
 
                 plt.figure()
                 plt.plot (xList, sList)
                 plt.xlabel('trial')
                 plt.ylabel('node['+str(NODE)+'] Jstack response string length')
-                plt.title('Back to Back Jstack requests to node['+str(NODE)+']')
-                plt.title('Back to Back Jstack')
+                plt.title(label)
                 plt.draw()
 
                 plt.show()

@@ -69,6 +69,9 @@ h2o.startLauncher <- function() {
 h2o.checkPackage <- function(myURL) {
   temp = postForm(paste(myURL, "RPackage.json", sep="/"), style = "POST")
   res = fromJSON(temp)
+  if (!is.null(res$error))
+    stop(paste(myURL," returned the following error:\n", h2o.__formatError(res$error)))
+  
   H2OVersion = res$version
   myFile = res$filename
   serverMD5 = res$md5_hash
@@ -90,4 +93,12 @@ h2o.checkPackage <- function(myURL) {
       warning("Mismatched MD5 hash! Check you have downloaded complete R package.")
     install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
   }
+}
+
+h2o.__formatError <- function(error, prefix="  ") {
+  result = ""
+  items = strsplit(error,"\n")[[1]];
+  for (i in 1:length(items))
+    result = paste(result, prefix, items[i], "\n", sep="")
+  result
 }
