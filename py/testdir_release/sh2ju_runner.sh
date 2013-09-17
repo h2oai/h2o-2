@@ -9,7 +9,7 @@ else
     # use in jenkins:
     # http://manolocarrasco.blogspot.com/2010/02/hudson-publish-bach.html
     pushd ~
-    wget http://shell2junit.googlecode.com/files/shell2junit-1.0.0.zip .
+    wget http://shell2junit.googlecode.com/files/shell2junit-1.0.0.zip
     unzip shell2junit-1.0.0.zip 
     ls -lt shell2junit/sh2ju_example.sh  
     ls -lt shell2junit/sh2ju.sh    
