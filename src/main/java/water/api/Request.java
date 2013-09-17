@@ -322,5 +322,7 @@ public abstract class Request extends RequestBuilders {
   public String ReSTHelp() {
     return DocGen.ReST.genHelp(this);
   }
-  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putStr2("\"Request2\":\"dummy\""); }
+  // Dummy write of a leading field, so the auto-gen JSON can just add commas
+  // before each succeeding field.
+  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putJSON4("Request2",0); }
 }

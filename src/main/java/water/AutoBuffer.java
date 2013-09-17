@@ -993,11 +993,14 @@ public final class AutoBuffer {
     byte[] b = s.getBytes();
     int off=0;
     for( int i=0; i<b.length; i++ ) {
-      if( b[i] == '\\' ) {      // Double up backslashes
+      if( b[i] == '\\' || b[i] == '"') { // Double up backslashes, escape quotes
         putA1(b,off,i);         // Everything so far (no backslashes)
         put1('\\');             // The extra backslash
         off=i;                  // Advance the "so far" variable
       }
+      // Replace embedded newline & tab with quoted newlines
+      if( b[i] == '\n' ) { putA1(b,off,i); put1('\\'); put1('n'); off=i+1; }
+      if( b[i] == '\t' ) { putA1(b,off,i); put1('\\'); put1('t'); off=i+1; }
     }
     return putA1(b,off,b.length);
   }

@@ -35,7 +35,7 @@ public class JStackCollectorTask extends DRemoteTask<JStackCollectorTask> {
     if (t.isDaemon()) sb.append(" daemon");
     sb.append(" prio=").append(t.getPriority());
     sb.append(" tid=").append(t.getId());
-    sb.append("\n  java.lang.Thread.State: ").append(t.getState());
+    sb.append(" java.lang.Thread.State: ").append(t.getState());
     sb.append('\n');
   }
 
