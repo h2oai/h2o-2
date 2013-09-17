@@ -9,7 +9,6 @@ public class Inspect2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  private static int viewsz = 100;
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET = "Inspect a fluid-vec frame";
@@ -211,12 +210,7 @@ public class Inspect2 extends Request {
   }
 
 
-
-//  sb.append("<div style='text-align:center;'>");
-//  sb.append("<span class='pagination'><ul><li>"+"<a href='"+
-//            RequestStatics.encodeRedirectArgs(null,new String[]{"src_key",skey.toString(),"offset",off>=0?"-1":"0"})+
-//            "'>"+(off>=0?"info":"rows")+"</a>"+"</li></ul></span>&nbsp;&nbsp;");
-//  sb.append("</div>");
+  private static int viewsz = 100;
 
   protected String pagination(long max) {
     final long offset = this.offset.value();
