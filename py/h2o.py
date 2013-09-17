@@ -1296,8 +1296,8 @@ class H2O(object):
     def netstat(self):
         return self.__do_json_request('Network.json')
 
-    def jstack(self):
-        return self.__do_json_request("JStack.json")
+    def jstack(self, timeoutSecs=30):
+        return self.__do_json_request("JStack.json", timeout=timeoutSecs)
 
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
