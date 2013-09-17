@@ -1332,7 +1332,7 @@ class H2O(object):
     # There is a offset= param that's useful also, and filter=
     def store_view(self, timeoutSecs=60, print_params=False, **kwargs):
         params_dict = {
-            'view': 1024,
+            'view': 20,
             }
         params_dict.update(kwargs)
         if print_params:
