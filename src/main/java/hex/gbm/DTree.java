@@ -526,6 +526,25 @@ class DTree extends Iced {
     }
   }
 
+  // Convenvience accessor for a complex chunk layout.
+  // Wish I could name the array elements nicer...
+  static Chunk chk_resp( Chunk chks[], int ncols, char nclass ) {
+    assert chks.length >= ncols+1/*response*/+nclass/*working set*/+nclass/*total preds (sum of trees)*/;
+    return chks[ncols];
+  }
+  static Chunk chk_work( Chunk chks[], int ncols, char nclass, int c ) {
+    assert chks.length >= ncols+1/*response*/+nclass/*working set*/+nclass/*total preds (sum of trees)*/;
+    return chks[ncols+1+c];
+  }
+  static Chunk chk_pred( Chunk chks[], int ncols, char nclass, int c ) {
+    assert chks.length >= ncols+1/*response*/+nclass/*working set*/+nclass/*total preds (sum of trees)*/;
+    return chks[ncols+1+nclass+c];
+  }
+  static Chunk chk_nids( Chunk chks[], int ncols, char nclass, int ntrees, int t ) {
+    assert chks.length == ncols+1/*response*/+nclass/*working set*/+nclass/*total preds (sum of trees)*/+ntrees;
+    return chks[ncols+1+nclass+nclass+t];
+  }
+
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
   //
@@ -586,9 +605,6 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk[] chks ) {
-      assert _ncols+_nclass/*response-vector*/+_trees.length == chks.length
-        : "Missing columns?  ncols="+_ncols+", "+_nclass+" for response-vector, ntrees="+_trees.length+", and found "+chks.length+" vecs";
-
       // We need private (local) space to gather the histograms.
       // Make local clones of all the histograms that appear in this chunk.
       _hcs = new DHistogram[_trees.length][][];
@@ -599,7 +615,7 @@ class DTree extends Iced {
         final int leaf = _leafs[t];
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[t] = new DHistogram[tree._len-leaf][];
-        final Chunk nids = chks[_ncols+_nclass/*response-vector*/+t];
+        final Chunk nids = chk_nids(chks,_ncols,_nclass,_trees.length,t);
 
         // Pass 1: Score a prior partially-built tree model, and make new Node
         // assignments to every row.  This involves pulling out the current
@@ -684,8 +700,9 @@ class DTree extends Iced {
   // Compute sum-squared-error.  Should use the recursive-mean technique.
   public static class BulkScore extends MRTask2<BulkScore> {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
+    final int _doneTrees; // _doneTrees already added in, only do the remaining
     final int _ncols;     // Number of predictor columns
-    final int _nclass;    // Number of classes
+    final char _nclass;   // Number of classes
     // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
     // e.g. prostate classes range 0-1 so this is 0
     final int _ymin;
@@ -695,26 +712,15 @@ class DTree extends Iced {
     // training data is handy, i.e., scoring during & after training.
     // Pass in a 1.0 if turned off.
     final float _sampleRate;
-    // Scoring is based on average of all trees - or just the plain sum?
-    final boolean _doAvg;
     // OUTPUT fields
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
     long _err, _nrows;          // Total absolute errors, actual rows trained
 
-    BulkScore( DTree trees[], int ncols, int nclass, int ymin, float sampleRate, boolean doAvg ) {
-      _trees = trees; _ncols = ncols;
+    BulkScore( DTree trees[], int doneTrees, int ncols, char nclass, int ymin, float sampleRate ) {
+      _trees = trees; _doneTrees = doneTrees; _ncols = ncols;
       _nclass = nclass; _ymin = ymin;
-      _sampleRate = sampleRate; _doAvg = doAvg;
-    }
-
-    // Compare the vresponse Vec passed in against our prediction.
-    public BulkScore doIt( Frame fr, Vec vresp ) {
-      assert fr.numCols() >= _ncols+_nclass;
-      fr.add("response",vresp);
-      doAll(fr);
-      fr.remove(fr.numCols()-1);
-      return this;
+      _sampleRate = sampleRate;
     }
 
     // Init all the internal tree fields after shipping over the wire
@@ -725,7 +731,8 @@ class DTree extends Iced {
     }
 
     @Override public void map( Chunk chks[] ) {
-      Chunk ys = chks[chks.length-1]; // Response
+      Chunk ys = chk_resp(chks,_ncols,_nclass); // Response
+      // Prediction vector @ chks.length-_nclass to chks.length-1
       _cm = new long[_nclass][_nclass];
 
       // Get an array of RNGs to replay the sampling in reverse, only for OOBEE.
@@ -738,10 +745,8 @@ class DTree extends Iced {
       }
 
       // Score all Rows
-      float pred[] = new float[_nclass];  // Shared temp array for computing predictions
-      int nids[] = new int[_trees.length];// Shared temp array for better error reporting
-      for( int i=0; i<ys._len; i++ ) {
-        float err = score0( chks, i, (float)(ys.at0(i)-_ymin), pred, nids, rands );
+      for( int row=0; row<ys._len; row++ ) {
+        float err = score0( chks, row, (float)(ys.at0(row)-_ymin), rands );
         if( !Float.isNaN(err) ) { // Skip rows trained in *all* trees for OOBEE
           _sum += err*err;        // Squared error
           _nrows++;
@@ -761,60 +766,52 @@ class DTree extends Iced {
     // vector we return the Euclidean distance.  If the response is a single
     // class variable we instead return the squared-error of the prediction for
     // the class.  We also count absolute errors when we predict the majority class.
-    private float score0( Chunk chks[], int i, float y, float pred[], int nids[], Random rands[] ) {
-      Arrays.fill(pred,0);      // Recycled temp array
-      int nt = 0;               // Number of trees not sampled-away
+    private float score0( Chunk chks[], int row, float y, Random rands[] ) {
+      if( Float.isNaN(y) ) return Float.NaN; // Ignore missing response vars
+      int ycls = (int)y;        // Response class from 0 to nclass-1
+      assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
+      int best= -1;             // Find largest class
+      float best_score = Float.MIN_VALUE;
+      float score = Float.NaN;
 
-      // For all trees
-      for( int t=0; t<_trees.length; t++ ) {
-        nids[t] = -1;           // Reset shared temp array
+      // For all remaining trees
+      for( int t=_doneTrees; t<_trees.length; t++ ) {
         // For OOBEE error, do not score rows on trees trained on that row
         if( rands != null && !(rands[t].nextFloat() >= _sampleRate) ) continue;
-        if( Float.isNaN(y) ) continue; // Ignore missing response vars
-        nt++;
         final DTree tree = _trees[t];
         // "score" this row on this tree.  Apply the tree decisions at each
         // point, walking down the tree to a leaf.
         DecidedNode prev = null;
         Node node = tree.root();
-        int nid = 0;
         while( node instanceof DecidedNode ) { // While tree-walking
-          nids[t] = nid;
           prev = (DecidedNode)node;
-          nid = prev.ns(chks,i);
-          if( nid == -1 ) break;
-          node = tree.node(nid);
-          assert node._tree==tree;
+          int nid = prev.ns(chks,row); // Get node's split decision
+          if( nid == -1 ) break;       // Decision is: take prediction Here
+          node = tree.node(nid);       // Else work down 1 tree level
         }
+
         // We hit the end of the tree walk.  Get this tree's prediction.
-        int bin = prev.bin(chks,i);    // Which bin did we decide on?
-        Utils.add(pred,prev._pred[bin]); // Add the prediction vectors, tree-by-tree
+        int bin = prev.bin(chks,row);    // Which bin did we decide on?
+        float preds[] = prev._pred[bin]; // Prediction vector
+        for( int c=0; c<_nclass; c++ ) { // Add into the 
+          Chunk C = chk_pred(chks,_ncols,_nclass,c);
+          float f = (float)(C.at0(row)+preds[c]);
+          C.set0(row,f);        // Set incremented score back in
+          if( f > best_score ) { best = c; best_score = f; }
+          if( c == ycls ) score = f; // Also capture prediction for correct class
+        }
       } // End of for-all trees
 
       // Having computed the votes across all trees, find the majority class
       // and it's error rate.
-      if( nt == 0 ) return Float.NaN; // OOBEE: all rows trained, so no rows scored
-
-      if( _doAvg )              // Average (or not) sum of trees?
-        for( int c=0; c<_nclass; c++ )
-          pred[c] /= nt;        // Average every prediction across trees
+      if( Float.isNaN(score) ) return Float.NaN; // OOBEE: all rows trained, so no rows scored
 
       // Regression?
       if( _nclass == 1 )        // Single-class ==> Regression?
-        return y-pred[0];       // Prediction: sum of trees
+        throw H2O.unimpl(); // set directly into 
+      //return y-pred[0];       // Prediction: sum of trees
 
       // Classification?
-      // Pick max class in predicted response vector
-      int best=0;               // Find largest class
-      float sum=pred[0];        // Also compute sum of classes
-      for( int c=1; c<_nclass; c++ ) {
-        sum += pred[c];
-        if( pred[c] > pred[best] ) best=c;
-      }
-
-      //assert 1-.00001 <= sum && sum <= 1+.00001 : crashReport(i,sum,pred,nids); // Only for GBM
-      int ycls = (int)y;         // Response class from 0 to nclass-1
-      assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
       if( best != ycls ) _err++; // Absolute prediction error; off-diagonal sum
       _cm[ycls][best]++;         // Confusion Matrix
 
@@ -824,11 +821,8 @@ class DTree extends Iced {
       //for( int x=_ncols; x<chks.length; x++ )
       //  System.out.print(String.format("%5.2f,",chks[x].at(i)));
       //System.out.println(" pred="+pred[ycls]+","+Arrays.toString(pred)+(best==ycls?"":", ERROR"));
-      //if( best != ycls ) System.out.println(crashReport(i,sum,pred,nids));
 
-      float ypred = pred[ycls];  // Predict max class
-      if( ypred > 1.0f ) ypred = 1.0f;
-      return 1.0f - ypred;       // Error from 0 to 1.0
+      return 1.0f - Math.min(score,1.0f); // Error from 0 to 1.0
     }
 
     public BulkScore report( Sys tag, int depth ) {
@@ -840,17 +834,17 @@ class DTree extends Iced {
       return this;
     }
 
-    private String crashReport( int row, float sum, float[] pred, int[] nids ) {
-      String s = "Expect predictions to be a probability distribution but found "+Arrays.toString(pred)+"="+sum+", scoring row "+row+"\n";
-      for( int t=0; t<nids.length; t++ ) {
-        if( nids[t]== -1 ) s += "Skipping tree "+t+"\n";
-        else {
-          DecidedNode dn = _trees[t].decided(nids[t]);
-          s += "Tree "+t+" = "+dn + "\n";
-        }
-      }
-      return s;
-    }
+    //private String crashReport( int row, float sum, float[] pred, int[] nids ) {
+    //  String s = "Expect predictions to be a probability distribution but found "+Arrays.toString(pred)+"="+sum+", scoring row "+row+"\n";
+    //  for( int t=0; t<nids.length; t++ ) {
+    //    if( nids[t]== -1 ) s += "Skipping tree "+t+"\n";
+    //    else {
+    //      DecidedNode dn = _trees[t].decided(nids[t]);
+    //      s += "Tree "+t+" = "+dn + "\n";
+    //    }
+    //  }
+    //  return s;
+    //}
   }
 
   // Compute class distributions

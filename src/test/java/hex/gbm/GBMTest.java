@@ -165,7 +165,7 @@ public class GBMTest extends TestUtil {
       drf.ntrees = 5;
       drf.max_depth = 50;
       drf.min_rows = 1;
-      drf.nbins = 10;
+      drf.nbins = 100;
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // No sampling
       drf.seed = (1L<<32)|2;
