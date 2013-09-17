@@ -14,6 +14,8 @@
     "hdfs_version": "cdh3",
     "use_hdfs": true,
 
+    "cloud_name": "kevin_cloud",
+    "base_port": 54355,
     "use_flatfile": true,
 
     "ip": [

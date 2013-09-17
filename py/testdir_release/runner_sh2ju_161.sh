@@ -1,6 +1,4 @@
-#!/bin/bash
-
-# This is critical:
+#/bin/sh
 # Ensure that all your children are truly dead when you yourself are killed.
 # trap "kill -- -$BASHPID" INT TERM EXIT
 # leave out EXIT for now
@@ -8,6 +6,32 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
+SH2JU=~/shell2junit/sh2ju.sh
+echo "Checking that sh2ju.sh exists in the right place"
+if [ -f $SH2JU ]
+then
+    echo "$SH2JU exists."
+else
+    # http://code.google.com/p/shell2junit
+    # use in jenkins:
+    # http://manolocarrasco.blogspot.com/2010/02/hudson-publish-bach.html
+    pushd ~
+    wget http://shell2junit.googlecode.com/files/shell2junit-1.0.0.zip
+    unzip shell2junit-1.0.0.zip 
+    ls -lt shell2junit/sh2ju_example.sh  
+    ls -lt shell2junit/sh2ju.sh    
+    popd
+
+    if [ -f $SH2JU ]
+    then
+        echo "$SH2JU exists."
+    fi
+fi
+
+#### Include the library
+source $SH2JU
+
+# This gets the h2o.jar
 source ./runner_setup.sh
 
 rm -f h2o-nodes.json
@@ -19,15 +43,21 @@ then
     echo "The possibilities should be relatively static over time"
     echo "Could be problems if other threads also using that user on these machines at same time"
     echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
+    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.161 rm -f -r /home/0xcustomer/ice*
 
-    python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+    python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
+    CLOUD_IP=192.168.1.161
+    CLOUD_PORT=54355
 else
     if [[ $USER == "kevin" ]]
     then
         python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+        CLOUD_IP=127.1.1.1
+        CLOUD_PORT=54355
     else
         python ../four_hour_cloud.py &
+        CLOUD_IP=127.1.1.1
+        CLOUD_PORT=54321
     fi
 fi 
 
@@ -58,14 +88,45 @@ ls -lt ./h2o-nodes.json
 echo "If it exists, pytest_config-<username>.json in this dir will be used"
 echo "i.e. pytest_config-jenkins.json"
 echo "Used to run as 0xcust.., with multi-node targets (possibly)"
-DOIT=../testdir_single_jvm/n0.doit
 
-# $DOIT c6/test_c6_hdfs.py || true
-# $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
-$DOIT c1/test_c1_rel.py || true
-$DOIT c2/test_c2_rel.py || true
-$DOIT c3/test_c3_rel.py || true
-# $DOIT c4/test_c4_four_billion_rows.py || true
+#### Clean old reports
+juLogClean
+#******************************************************
+# EXAMPLES
+#******************************************************
+
+#### Success command
+juLog  -name=myTrueCommand true || true
+#### Failure
+juLog  -name=myFalseCommand false || true
+#### Sleep
+juLog  -name=mySleepCommand sleep 5 || true
+#### The test fails because the word 'world' is found in command output
+juLog  -name=myErrorCommand -ierror=world   echo Hello World || true
+#### A sql command
+juLog  -name=myLsCommand /bin/ls || true
+
+#### A call to a customized method
+myCmd() {
+    ls -l $*
+    return 0
+}
+juLog  -name=myCustomizedMethod myCmd '*.sh' || true
+
+#******************************************************
+
+H2O_R_HOME=../../R
+# these are hardwired in the config json used above for the cloud
+CLOUD_IP=192.168.1.161
+CLOUD_PORT=54355
+myR() {
+    rScript = $H2O_R_HOME/$1
+    rLibrary = $H2o_r_home/$2
+    R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT
+    return 0
+}
+juLog  -name=H2O_Load.R 'test_R_RF_diff_class.R' 'H2O_Load.R' || true
+
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
@@ -88,3 +149,5 @@ jobs -l
 echo ""
 echo "You can stop this jenkins job now if you want. It's all done"
 # 
+
+
