@@ -85,7 +85,7 @@ public class DRF extends FrameJob {
 
   public float progress(){
     DTree.TreeModel m = DKV.get(dest()).get();
-    return m.treeBits.length/(float)m.N;
+    return (float)m.treeBits.length/(float)m.N;
   }
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -205,7 +205,7 @@ public class DRF extends FrameJob {
         final int NTREE=2;          // Limit of 5 trees at once
         int depth=0;
         for( int st = 0; st < ntrees; st+= NTREE ) {
-          if( DRF.this.cancelled() ) break;
+          if( cancelled() ) break;
           int xtrees = Math.min(NTREE,ntrees-st);
           DRFTree someTrees[] = new DRFTree[xtrees];
           int someLeafs[] = new int[xtrees];
@@ -242,7 +242,7 @@ public class DRF extends FrameJob {
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
-        DRF.this.remove();
+        remove();
         tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {

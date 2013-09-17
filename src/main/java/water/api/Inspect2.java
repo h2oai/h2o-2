@@ -77,7 +77,7 @@ public class Inspect2 extends Request {
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+
-                        PrettyPrint.bytes(byteSize)+" bytes, "+
+                        PrettyPrint.bytes(byteSize)+" bytes (compressed), "+
                         (naCnt== 0 ? "no":PrettyPrint.bytes(naCnt))+" missing elements");
 
     sb.append("<div class='alert'>" +
