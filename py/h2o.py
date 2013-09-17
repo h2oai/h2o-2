@@ -931,14 +931,11 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
-            if not isinstance(r,(list,dict)): 
-                verboseprint(r.text)
-                raise Exception("h2o json responses should always be lists or dicts, see previous for text")
-            
-            if '404' in r:
-                verboseprint(r.text)
-                raise Exception("No json could be decoded as there was a 404 response. Do you have beta features turned on? beta_features: ", beta_features)
             verboseprint(r.text)
+            if not isinstance(r,(list,dict)): 
+                raise Exception("h2o json responses should always be lists or dicts, see previous for text")
+            if '404' in r:
+                raise Exception("json got 404 response. Do you have beta features turned on? beta_features: ", beta_features)
             raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
 
         for e in ['error', 'Error', 'errors', 'Errors']:
@@ -1333,13 +1330,14 @@ class H2O(object):
     # FIX! current hack to h2o to make sure we get "all" rather than just
     # default 20 the browser gets. set to max # by default (1024)
     # There is a offset= param that's useful also, and filter=
-    def store_view(self, timeoutSecs=60, **kwargs):
+    def store_view(self, timeoutSecs=60, print_params=False, **kwargs):
         params_dict = {
             'view': 1024,
             }
         params_dict.update(kwargs)
+        if print_params:
+            print "\nStoreView params list:", params_dict
 
-        print "\nStoreView params list:", params_dict
         a = self.__do_json_request('StoreView.json',
             params=params_dict,
             timeout=timeoutSecs)
@@ -1355,7 +1353,6 @@ class H2O(object):
         return a
 
     # only model keys can be exported?
-
     def export_hdfs(self, source_key, path):
         a = self.__do_json_request('ExportHdfs.json',
             params={"source_key": source_key, "path": path})
