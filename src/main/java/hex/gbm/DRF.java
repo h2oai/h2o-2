@@ -97,9 +97,15 @@ public class DRF extends FrameJob {
       Arrays.fill(preds,0);
       for( CompressedTree t : treeBits )
         t.addScore(preds, data);
+      float sum=0;
+      for( float f : preds ) sum += f;
+      // We have an (near)integer sum of votes - one per voting tree.  If OOBEE
+      // was used, the votes will be roughly equal to one minus the sampling
+      // ratio.  Estimate the number of votes.
+      int votes = Math.round(sum);
       // After adding all trees, divide by tree-count to get a distribution
       for( int i=0; i<preds.length; i++ )
-        preds[i] /= treeBits.length;
+        preds[i] /= votes;
       DTree.correctDistro(preds);
       assert DTree.checkDistro(preds) : "Funny distro";
       return preds;
@@ -177,20 +183,23 @@ public class DRF extends FrameJob {
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
+        fr.add("response",vresponse);
 
         // Fill in the response variable column(s)
         if( nclass == 1 ) {
-          fr.add("response",vresponse);
+          throw H2O.unimpl();
         } else {
           // A vector of {0,..,0,1,0,...}
           // A single 1.0 in the actual class.
           for( int i=0; i<nclass; i++ )
-            fr.add(domain[i],vresponse.makeZero());
-          // Set a single 1.0 in the response for that class
-          fr.add("response",vresponse);
-          new Set1Task(ymin,ncols).doAll(fr);
-          fr.remove(ncols+nclass);
+            fr.add("Resp-"+domain[i],vresponse.makeZero());
         }
+        // Build a set of predictions that's the sum across all trees.
+        for( int i=0; i<nclass; i++ )   // All Zero cols
+          fr.add("Pred-"+domain[i],vresponse.makeZero());
+        // Set a single 1.0 in the response for that class
+        if( nclass > 1 )
+          new Set1Task(ymin,ncols,nclass).doAll(fr);
         
         // The RNG used to pick split columns
         Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
@@ -213,9 +222,10 @@ public class DRF extends FrameJob {
           
           for( int t=0; t<xtrees; t++ ) {
             int idx = st+t;
-            // Make a new Vec to hold the split-number for each row (initially all zero).
-            Vec vec = vresponse.makeZero();
             forest[idx] = someTrees[t] = new DRFTree(fr,ncols,(char)nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
+            Vec vec = vresponse.makeZero();
+            // Make a new Vec to hold the split-number for each row (initially
+            // all zero).  If sampling, flag out some rows for OOBEE scoring.
             if( sample_rate < 1.0 )
               new Sample(someTrees[t],sample_rate).doAll(vec);
             fr.add("NIDs"+t,vec);
@@ -225,7 +235,7 @@ public class DRF extends FrameJob {
           int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, ncols, nclass, ymin, nrows, sample_rate);
           if( d>depth ) depth=d;    // Actual max depth used
           
-          BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, depth );
+          BulkScore bs = new BulkScore(forest,forest.length-xtrees,ncols,nclass,ymin,sample_rate).doAll(fr).report( Sys.DRF__, depth );
           int old = _errs.length;
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
@@ -255,13 +265,14 @@ public class DRF extends FrameJob {
 
   private static class Set1Task extends MRTask2<Set1Task> {
     final int _ymin, _ncols;
-    Set1Task( int ymin, int ncols ) { _ymin = ymin; _ncols = ncols; }
+    final char _nclass;
+    Set1Task( int ymin, int ncols, char nclass ) { _ymin = ymin; _ncols = ncols; _nclass=nclass; }
     @Override public void map( Chunk chks[] ) {
-      Chunk cy = chks[chks.length-1];
+      Chunk cy = DTree.chk_resp(chks,_ncols,_nclass);
       for( int i=0; i<cy._len; i++ ) {
         if( cy.isNA0(i) ) continue;
         int cls = (int)cy.at80(i) - _ymin;
-        chks[_ncols+cls].set0(i,1.0f);
+        DTree.chk_work(chks,_ncols,_nclass,cls).set0(i,1.0f);
       }
     }
   }
@@ -319,7 +330,6 @@ public class DRF extends FrameJob {
 
       // If all trees are done, then so are we
       if( !still_splitting ) break;
-      //new BulkScore(trees,ncols,nclass,ymin,(float)sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, depth );
     }
 
     // Print the generated trees
@@ -430,7 +440,7 @@ public class DRF extends FrameJob {
   static class Sample extends MRTask2<Sample> {
     final DRFTree _tree;
     final float _rate;
-    Sample( DRFTree tree, double rate ) { _tree = tree; _rate = (float)rate; }
+    Sample( DRFTree tree, float rate ) { _tree = tree; _rate = rate; }
     @Override public void map( Chunk nids ) {
       Random rand = _tree.rngForChunk(nids.cidx());
       for( int i=0; i<nids._len; i++ )

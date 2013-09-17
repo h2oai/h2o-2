@@ -144,6 +144,9 @@ public class GBM extends FrameJob {
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
+        // Keep the response in the basic working frame
+        fr.add("response",vresponse);
+
         // Add in Vecs after the response column which holds the row-by-row
         // residuals: the (actual minus prediction), for each class.  The
         // prediction is a probability distribution across classes: every class is
@@ -152,10 +155,12 @@ public class GBM extends FrameJob {
         // The initial prediction is just the class distribution.  The initial
         // residuals are then basically the actual class minus the average class.
         float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
+        // The Initial Tree, containing just these predictions.
         DTree init_tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
         new GBMDecidedNode(init_tree,preds);
+        // The Initial Forest containing just the initial tree
         DTree forest[] = new DTree[] {init_tree};
-        BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, 0 );
+        BulkScore bs = new BulkScore(forest,0,ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, 0 );
         _errs = new float[]{(float)bs._sum/nrows}; // Errors for exactly 1 tree
         gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
         DKV.put(outputKey, gbm_model);
@@ -167,7 +172,7 @@ public class GBM extends FrameJob {
           // System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
           // Tree-by-tree scoring
           Timer t_score = new Timer();
-          BulkScore bs2 = new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, max_depth );
+          BulkScore bs2 = new BulkScore(forest,tid,ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, max_depth );
           _errs = Arrays.copyOf(_errs,_errs.length+1);
           _errs[_errs.length-1] = (float)bs2._sum/nrows;
           gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
@@ -193,8 +198,7 @@ public class GBM extends FrameJob {
   // Build the next tree, which is trying to correct the residual error from the prior trees.
   private DTree[] buildNextTree(Frame fr, DTree forest[], final int ncols, long nrows, final char nclass, int ymin) {
     // Make a new Vec to hold the split-number for each row (initially all zero).
-    Vec vnids = vresponse.makeZero();
-    fr.add("NIDs",vnids);
+    fr.add("NIDs",vresponse.makeZero());
     // Initially setup as-if an empty-split had just happened
     final DTree tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
     new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass)); // The "root" node
@@ -237,9 +241,6 @@ public class GBM extends FrameJob {
         //System.out.println(dn);
       }
 
-      // Level-by-level scoring, within a tree.
-      //new BulkScore(forest,ncols,nclass,ymin,1.0f,false).doIt(fr,vresponse).report( Sys.GBM__, nrows, depth );
-
       // If we did not make any new splits, then the tree is split-to-death
       if( tmax == tree._len ) break;
     }
@@ -260,14 +261,15 @@ public class GBM extends FrameJob {
     // Replace the old residual columns with new residuals.
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        Chunk ns = chks[chks.length-1];
-        for( int i=0; i<ns._len; i++ ) {  // For all rows
-          DecidedNode node = tree.decided((int)ns.at80(i));
+        Chunk nids = DTree.chk_nids(chks,ncols,nclass,1,0);
+        for( int i=0; i<nids._len; i++ ) {  // For all rows
+          DecidedNode node = tree.decided((int)nids.at80(i));
           float preds[] = node._pred[node.bin(chks,i)];
           for( int c=0; c<nclass; c++ ) {
-            double actual = chks[ncols+c].at0(i);
+            Chunk cres = DTree.chk_work(chks,ncols,nclass,c);
+            double actual = cres.at0(i);
             double residual = actual-preds[c];
-            chks[ncols+c].set0(i,(float)residual);
+            cres.set0(i,(float)residual);
           }
         }
       }
@@ -291,7 +293,8 @@ public class GBM extends FrameJob {
   //
   // The initial prediction is just the class distribution.  The initial
   // residuals are then basically the actual class minus the average class.
-  private float[] buildResiduals(char nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
+  private float[] buildResiduals(final char nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
+    String[] domain = vresponse.domain();
     // Find the initial prediction - the current average response variable.
     float preds[] = new float[nclass];
     if( nclass == 1 ) {
@@ -299,29 +302,29 @@ public class GBM extends FrameJob {
       throw H2O.unimpl();
     } else {
       long cs[] = new ClassDist(nclass,ymin).doAll(vresponse)._cs;
-      String[] domain = vresponse.domain();
       for( int i=0; i<nclass; i++ ) {
         preds[i] = (float)cs[i]/nrows; // Prediction is just class average
         fr.add("Residual-"+domain[i],vresponse.makeCon(-preds[i]));
       }
     }
+    // Build a set of predictions that's the sum across all trees.
+    for( int i=0; i<nclass; i++ )   // All Zero cols
+      fr.add("Pred-"+domain[i],vresponse.makeZero());
 
     // Compute initial residuals with no trees: prediction-actual e.g. if the
     // class choices are A,B,C with equal probability, and the row is actually
     // a 'B', the residual is {-0.33,1-0.33,-0.33}
-    fr.add("response",vresponse);
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        Chunk cy = chks[chks.length-1];   // Response as last chunk
+        Chunk cy = DTree.chk_resp(chks,ncols,nclass);
         for( int i=0; i<cy._len; i++ ) {  // For all rows
           if( cy.isNA0(i) ) continue;     // Ignore NA results
           int cls = (int)cy.at80(i)-ymin; // Class
-          Chunk res = chks[ncols+cls];    // Residual column for this class
+          Chunk res = DTree.chk_work(chks,ncols,nclass,cls);    // Residual column for this class
           res.set0(i,1.0f+(float)res.at0(i)); // Fix residual for actual class
         }
       }
     }.doAll(fr);
-    fr.remove(ncols+nclass);    // Remove last (response) col
 
     return preds;
   }
