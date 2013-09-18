@@ -27,52 +27,23 @@ public class DRF extends FrameJob {
   Vec vresponse;
   class DRFVecSelect extends VecClassSelect { DRFVecSelect() { super("source"); } }
 
-  @API(help = "Number of trees", filter = NtreesFilter.class)
+  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
   int ntrees = 50;
-  public class NtreesFilter implements Filter {
-    @Override public boolean run(Object value) {
-      int ntrees = (Integer)value;
-      return 1 <= ntrees && ntrees <= 1000000;
-    }
-  }
 
-  @API(help = "Maximum tree depth", filter = MaxDepthFilter.class)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
   int max_depth = 50;
-  public class MaxDepthFilter implements Filter {
-    @Override public boolean run(Object value) { return 1 <= (Integer)value; }
-  }
 
-  @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
-  int min_rows = 5;
-  public class MinRowsFilter implements Filter {
-    @Override public boolean run(Object value) { return (Integer)value >= 1; }
-  }
+  @API(help = "Fewest allowed observations in a leaf", filter = Default.class, lmin=1)
+  int min_rows = 10;
 
-  @API(help = "Build a histogram of this many bins, then split at the best point", filter = NBinsFilter.class)
-  int nbins = 100;
-  public class NBinsFilter implements Filter {
-    @Override public boolean run(Object value) { return (Integer)value >= 2; }
-  }
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
+  int nbins = 1024;
 
-  @API(help = "Columns to randomly select at each level, or -1 for sqrt(#cols)", filter = MTriesFilter.class)
+  @API(help = "Columns to randomly select at each level, or -1 for sqrt(#cols)", filter = Default.class, lmin=-1, lmax=100000)
   int mtries = -1;
-  public class MTriesFilter implements Filter {
-    @Override public boolean run(Object value) {
-      int mtries = (Integer)value;
-      if( mtries == -1 ) return true;
-      if( mtries <=  0 ) return false;
-      return mtries <= source.numCols();
-    }
-  }
 
-  @API(help = "Sample rate, from 0. to 1.0", filter = SampleRateFilter.class)
+  @API(help = "Sample rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   float sample_rate = 0.6666667f;
-  public class SampleRateFilter implements Filter {
-    @Override public boolean run(Object value) {
-      float sample_rate = (Float)value;
-      return 0.0 < sample_rate && sample_rate <= 1.0;
-    }
-  }
 
   @API(help = "Seed for the random number generator", filter = Default.class)
   long seed = new Random().nextLong();
