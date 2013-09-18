@@ -120,8 +120,8 @@ H2O_R_HOME=../../R
 CLOUD_IP=192.168.1.161
 CLOUD_PORT=54355
 myR() {
-    rScript = $H2O_R_HOME/$1
-    rLibrary = $H2o_r_home/$2
+    rScript = $H2O_R_HOME/tests/$1
+    rLibrary = $H2o_R_HOME/$2
     R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT
     return 0
 }
