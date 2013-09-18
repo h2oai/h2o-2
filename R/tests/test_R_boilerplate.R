@@ -2,6 +2,7 @@
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) != 1)
   stop("Usage: R -f test_R_boilerplate.R --args H2OServer:Port")
+
 argsplit = strsplit(args[1], ":")[[1]]
 myIP = argsplit[1]
 myPort = as.numeric(argsplit[2])
