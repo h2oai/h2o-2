@@ -127,12 +127,17 @@ myR() {
     export H2OWrapperDir=../../target/R/
 
     H2O_R_HOME=../../R
-    rScript = $H2O_R_HOME/tests/$1
-    rLibrary = $H2o_R_HOME/$2
+    rScript=$H2O_R_HOME/tests/$1
+    # ../../R/tests/test_R_RF_diff_class.R
+    rLibrary=$H2O_R_HOME/$2
+    echo $rScript
+    echo $rLibrary
+    which R
+    R --version
     R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT
     return 0
 }
-juLog  -name=H2O_Load.R 'test_R_RF_diff_class.R' 'H2O_Load.R' || true
+juLog  -name=H2O_Load.R myR 'test_R_RF_diff_class.R' 'H2O_Load.R' || true
 
 
 # If this one fails, fail this script so the bash dies 
