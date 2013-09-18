@@ -17,7 +17,7 @@ public class Inspect2 extends Request {
   final FrameKey src_key = new FrameKey("src_key");
 
   @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data")
-  private final LongInt offset = new LongInt("offset", 0L, -1, Long.MAX_VALUE, "");
+  private final LongInt offset = new LongInt("offset", -1, Long.MAX_VALUE);
   @API(help="Number of data rows.") long numRows;
   @API(help="Number of data columns.") int numCols;
   @API(help="byte size in memory.") long byteSize;

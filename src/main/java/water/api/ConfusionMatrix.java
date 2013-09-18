@@ -17,7 +17,7 @@ public class ConfusionMatrix extends Request2 {
   class actualFilter extends FrameKey { public actualFilter() { super("actual"); } }
 
   @API(help="Column of the actual results (will display vertically)", required=true, filter=actualVecSelect.class)
-  Vec vactual;
+  public Vec vactual;
   class actualVecSelect extends VecClassSelect { actualVecSelect() { super("actual"); } }
 
   @API(help = "", required = true, filter = predictFilter.class)
@@ -25,11 +25,11 @@ public class ConfusionMatrix extends Request2 {
   class predictFilter extends FrameKey { public predictFilter() { super("predict"); } }
 
   @API(help="Column of the predicted results (will display horizontally)", required=true, filter=predictVecSelect.class)
-  Vec vpredict;
+  public Vec vpredict;
   class predictVecSelect extends VecClassSelect { predictVecSelect() { super("predict"); } }
 
   @API(help="Confusion Matrix (or co-occurrence matrix)")
-  long cm[][];
+  public long cm[][];
 
   //public static String link(Key k, String content) {
   //  RString rs = new RString("<a href='ConfusionMatrix.query?model=%$key'>%content</a>");
@@ -38,7 +38,7 @@ public class ConfusionMatrix extends Request2 {
   //  return rs.toString();
   //}
 
-  @Override protected Response serve() {
+  @Override public Response serve() {
     try {
       if( vactual==null || vpredict==null )
         throw new IllegalArgumentException("Missing actual or predict?");
@@ -75,7 +75,7 @@ public class ConfusionMatrix extends Request2 {
     @Override public void reduce( CM cm ) { Utils.add(_cm,cm._cm); }
   }
 
-  private static String[] show( long xs[], String ds[] ) {
+  public static String[] show( long xs[], String ds[] ) {
     String ss[] = new String[xs.length];
     for( int i=0; i<ds.length; i++ )
       if( xs[i] > 0 || (ds[i] != null && ds[i].length() > 0) && !Integer.toString(i).equals(ds[i]) )
@@ -116,7 +116,7 @@ public class ConfusionMatrix extends Request2 {
       if( adomain[a] == null ) continue;
       sb.append("<tr>");
       sb.append("<th>").append(adomain[a]).append("</th>");// Row header
-      long correct=-1;
+      long correct=0;
       for( int p=0; p<pdomain.length; p++ ) { // Predicted loop
         if( pdomain[p] == null ) continue;
         boolean onDiag = adomain[a].equals(pdomain[p]);

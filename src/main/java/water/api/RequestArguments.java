@@ -1164,36 +1164,20 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class LongInt extends InputText<Long> {
-    public final transient Long _defaultValue;
+    public final transient long _defaultValue;
     public final long _min;
     public final long _max;
     public final String _comment;
 
-    public LongInt(String name) {
-      this(name, Long.MIN_VALUE, Long.MAX_VALUE);
+    public LongInt(String name, long min, long max) { this(name,false,0,min,max,""); }
+    public LongInt(String name, long defaultValue, String comment) {
+      this(name, false, defaultValue, Long.MIN_VALUE, Long.MAX_VALUE, comment);
     }
-
-    public LongInt(String name, long min, long max) {
-      super(name,true);
-      _defaultValue = null;
-      _min = min;
-      _max = max;
-      _comment = "";
-    }
-
-    public LongInt(String name, Long defaultValue, String comment) {
-      this(name, false, defaultValue, null, null, comment);
-    }
-
-    public LongInt(String name, Long defaultValue, long min, long max, String comment) {
-      this(name, false, defaultValue, min, max, comment);
-    }
-
-    public LongInt(String name, boolean req, Long defaultValue, Long min, Long max, String comment) {
+    public LongInt(String name, boolean req, long defaultValue, long min, long max, String comment) {
       super(name, req);
       _defaultValue = defaultValue;
-      _min = min != null ? min : Long.MIN_VALUE;
-      _max = max != null ? max : Long.MAX_VALUE;
+      _min = min;
+      _max = max;
       _comment = comment;
     }
 
@@ -1201,19 +1185,15 @@ public class RequestArguments extends RequestStatics {
       try {
         long i = Long.parseLong(input);
         if ((i< _min) || (i > _max))
-          throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
+          throw new IllegalArgumentException(_name+"Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
         return i;
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Value "+input+" is not a valid long integer.");
+        throw new IllegalArgumentException(_name+"Value "+input+" is not a valid long integer.");
       }
     }
 
-    @Override protected Long defaultValue() {
-      return _defaultValue;
-    }
-
+    @Override protected Long defaultValue() { return _defaultValue; }
     @Override protected String queryComment() { return _comment; }
-
     @Override protected String queryDescription() {
       return ((_min == Long.MIN_VALUE) && (_max == Long.MAX_VALUE))
               ? "Integer value"

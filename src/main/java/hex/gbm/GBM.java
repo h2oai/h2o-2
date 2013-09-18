@@ -25,41 +25,20 @@ public class GBM extends FrameJob {
   class GBMMultiVecSelect extends MultiVecSelect { GBMMultiVecSelect() { super("source");} }
 
 
-  @API(help = "Number of trees", filter = NtreesFilter.class)
+  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
   int ntrees = 10;
-  public class NtreesFilter implements Filter {
-    @Override public boolean run(Object value) {
-      int ntrees = (Integer)value;
-      return 1 <= ntrees && ntrees <= 1000000;
-    }
-  }
 
-  @API(help = "Maximum tree depth", filter = MaxDepthFilter.class)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=0, lmax=10000)
   int max_depth = 8;
-  public class MaxDepthFilter implements Filter {
-    @Override public boolean run(Object value) { return 1 <= (Integer)value; }
-  }
 
-  @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
+  @API(help = "Fewest allowed observations in a leaf", filter = Default.class, lmin=1)
   int min_rows = 10;
-  public class MinRowsFilter implements Filter {
-    @Override public boolean run(Object value) { return (Integer)value >= 1; }
-  }
 
-  @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
   int nbins = 1024;
-  public class NBinsFilter implements Filter {
-    @Override public boolean run(Object value) { return (Integer)value >= 2; }
-  }
 
-  @API(help = "Learning rate, from 0. to 1.0", filter = LearnRateFilter.class)
+  @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   double learn_rate = 0.2;
-  public class LearnRateFilter implements Filter {
-    @Override public boolean run(Object value) {
-      double learn_rate = (Double)value;
-      return 0.0 < learn_rate && learn_rate <= 1.0;
-    }
-  }
 
   @API(help = "The GBM Model")
   GBMModel gbm_model;
