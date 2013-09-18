@@ -5,7 +5,9 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+
 import water.*;
+import water.fvec.ParseDataset2.ParseProgressMonitor;
 
 
 public abstract class CustomParser extends Iced {
@@ -105,7 +107,7 @@ public abstract class CustomParser extends Iced {
     public CustomParser parser(){
       switch(this._pType){
         case CSV:
-          return new CsvParser(this,false);
+          return new CsvParser(this);
         case SVMLight:
           return new SVMLightParser(this);
         case XLS:
@@ -136,13 +138,10 @@ public abstract class CustomParser extends Iced {
     }
   }
   public boolean isCompatible(CustomParser p){return _setup == p._setup || (_setup != null && _setup.isCompatible(p._setup));}
-  public void parallelParse(int cidx, final DataIn din, final DataOut dout) {throw new UnsupportedOperationException();}
+  public DataOut parallelParse(int cidx, final DataIn din, final DataOut dout) {throw new UnsupportedOperationException();}
   public boolean parallelParseSupported(){return false;}
-  // ------------------------------------------------------------------------
-  // Zipped file; no parallel decompression; decompress into local chunks,
-  // parse local chunks; distribute chunks later.
-  public void streamParse( final InputStream is, final DataOut dout) throws Exception {
-    // All output into a fresh pile of NewChunks, one per column
+
+  public DataOut streamParse( final InputStream is, final DataOut dout) throws Exception {
     if(_setup._pType.parallelParseSupported){
       StreamData din = new StreamData(is);
       int cidx=0;
@@ -152,6 +151,34 @@ public abstract class CustomParser extends Iced {
     } else {
       throw H2O.unimpl();
     }
+    return dout;
+  }
+  // ------------------------------------------------------------------------
+  // Zipped file; no parallel decompression; decompress into local chunks,
+  // parse local chunks; distribute chunks later.
+  public DataOut streamParse( final InputStream is, final StreamDataOut dout, ParseProgressMonitor pmon) throws Exception {
+    // All output into a fresh pile of NewChunks, one per column
+    if(_setup._pType.parallelParseSupported){
+      StreamData din = new StreamData(is);
+      int cidx=0;
+      StreamDataOut nextChunk = dout;
+      long lastProgress = pmon.progress();
+      while( is.available() > 0 ){
+        if(pmon.progress() > lastProgress){
+          lastProgress = pmon.progress();
+          nextChunk.close();
+          if(dout != nextChunk)dout.reduce(nextChunk);
+          nextChunk = nextChunk.nextChunk();
+        }
+        parallelParse(cidx++,din,nextChunk);
+      }
+      parallelParse(cidx++,din,nextChunk);     // Parse the remaining partial 32K buffer
+      nextChunk.close();
+      if(dout != nextChunk)dout.reduce(nextChunk);
+    } else {
+      throw H2O.unimpl();
+    }
+    return dout;
   }
   protected static final boolean isWhitespace(byte c) {
     return (c == CHAR_SPACE) || (c == CHAR_TAB);
@@ -184,6 +211,13 @@ public abstract class CustomParser extends Iced {
     public void invalidValue(int line, int col);
   }
 
+  public interface StreamDataOut extends DataOut {
+    public StreamDataOut nextChunk();
+    public StreamDataOut reduce(StreamDataOut dout);
+    public StreamDataOut close();
+    public StreamDataOut close(Futures fs);
+  }
+
   public static class StreamData implements CustomParser.DataIn {
     final transient InputStream _is;
     private byte[] _bits0 = new byte[32*1024];
@@ -205,8 +239,10 @@ public abstract class CustomParser extends Iced {
           if( len == -1 ) break;
           off += len;
         }
+        assert off == bits.length || _is.available() <= 0;
       } catch( IOException ioe ) {
         //_parserr = ioe.toString(); }
+        throw new RuntimeException(ioe);
       }
       if( off == bits.length ) return bits;
       // Final read is short; cache the short-read

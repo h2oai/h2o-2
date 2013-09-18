@@ -443,9 +443,11 @@ public class Vec extends Iced {
         return new VectorGroup(_key, _finalN = (_addN + old._len));
       }
     }
-    public void reserveKeys(final int n){
+    // reserve range of keys and return index of first new available key
+    public int reserveKeys(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
       tsk.invoke(_key);
+      return tsk._finalN - n + 1;
     }
     /**
      * Gets the next n keys of this group.
