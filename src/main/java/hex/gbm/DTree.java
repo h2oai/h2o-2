@@ -662,18 +662,23 @@ class DTree extends Iced {
         // Pass 2: Build new summary DHistograms on the new child
         // UndecidedNodes every row got assigned into.  Collect counts, mean,
         // variance, min, max per bin, per column.
-        for( int i=0; i<nids._len; i++ ) { // For all rows
-          int nid = (int)nids.at80(i);     // Get Node to decide from
+        float work[] = new float[_nclass];
+        for( int row=0; row<nids._len; row++ ) { // For all rows
+          int nid = (int)nids.at80(row);         // Get Node to decide from
           if( nid<leaf ) continue; // row already predicts perfectly or sampled away
           DHistogram nhs[] = hcs[nid-leaf];
+
+          // Peel out the existing distribution for the row
+          for( int c=0; c<_nclass; c++ )
+            work[c] = (float)DTree.chk_work(chks,_ncols,_nclass,c).at0(row);
 
           for( int j=0; j<_ncols; j++) { // For all columns
             DHistogram nh = nhs[j];
             if( nh == null ) continue; // Not tracking this column?
-            float f = (float)chks[j].at0(i);
+            float f = (float)chks[j].at0(row);
             nh.incr(f);         // Small histogram
             if( nh instanceof DBinHistogram ) // Big histogram
-              ((DBinHistogram)nh).incr(i,f,chks,_ncols);
+              ((DBinHistogram)nh).incr(row,f,work);
           }
         }
       }

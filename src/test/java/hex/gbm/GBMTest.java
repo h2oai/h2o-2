@@ -225,7 +225,7 @@ public class GBMTest extends TestUtil {
   }
 
   // Test-on-Train.  Slow test, needed to build a good model.
-  /*@Test*/ public void testGBMTrainTest() {
+  @Test public void testGBMTrainTest() {
     File file1 = TestUtil.find_test_file("..//classifcation1Train.txt");
     Key fkey1 = NFSFileVec.make(file1);
     Key dest1 = Key.make("train.hex");
@@ -241,10 +241,10 @@ public class GBMTest extends TestUtil {
       UKV.remove(fr.remove("agentId")._key); // Remove unique ID; too predictive
       gbm.vresponse = fr.remove("outcome");  // Train on the outcome
       gbm.source = fr;
-      gbm.ntrees = 20;
-      gbm.max_depth = 4;
+      gbm.ntrees = 50;
+      gbm.max_depth = 10;
       gbm.learn_rate = 0.2f;
-      gbm.min_rows = 100;
+      gbm.min_rows = 10;
       gbm.nbins = 100;
       gbm.serve();              // Start it
       gbm.get();                // Block for it
@@ -270,8 +270,8 @@ public class GBMTest extends TestUtil {
         for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
         acts[a] = sum;
       }
-      String adomain[] = CM.show(acts ,CM.vactual .domain());
-      String pdomain[] = CM.show(preds,CM.vpredict.domain());
+      String adomain[] = ConfusionMatrix.show(acts ,CM.vactual .domain());
+      String pdomain[] = ConfusionMatrix.show(preds,CM.vpredict.domain());
 
       StringBuilder sb = new StringBuilder();
       sb.append("Act/Prd\t");
