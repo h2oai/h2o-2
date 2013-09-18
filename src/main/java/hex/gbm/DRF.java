@@ -48,7 +48,7 @@ public class DRF extends FrameJob {
     @Override public boolean run(Object value) { return (Integer)value >= 1; }
   }
 
-  @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = NBinsFilter.class)
   int nbins = 100;
   public class NBinsFilter implements Filter {
     @Override public boolean run(Object value) { return (Integer)value >= 2; }
