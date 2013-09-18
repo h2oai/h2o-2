@@ -166,8 +166,6 @@ public abstract class Request2 extends Request {
 
   public void set(Argument arg, Object value) {
     try {
-      System.out.println("Q"+arg);
-      System.out.println("Q"+arg._field+" name="+arg._name);
       if( arg._field.getType() == Key.class && value instanceof ValueArray )
         value = ((ValueArray) value)._key;
       //
