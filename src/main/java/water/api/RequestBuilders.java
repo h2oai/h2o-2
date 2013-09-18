@@ -68,7 +68,8 @@ public class RequestBuilders extends RequestQueries {
       boolean done = response._req.toHTML(sb);
       if(!done) {
         JsonParser parser = new JsonParser();
-        JsonObject o = (JsonObject) parser.parse(new String(response._req.writeJSON(new AutoBuffer()).buf()));
+        String json = new String(response._req.writeJSON(new AutoBuffer()).buf());
+        JsonObject o = (JsonObject) parser.parse(json);
         sb.append(builder.build(response, o, ""));
       }
     } else sb.append(builder.build(response,response._response,""));

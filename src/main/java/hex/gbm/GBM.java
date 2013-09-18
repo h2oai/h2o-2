@@ -108,10 +108,6 @@ public class GBM extends FrameJob {
     // While I'd like the Frames built custom for each call, with excluded
     // columns already removed - for now check to see if the response column is
     // part of the frame and remove it up front.
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse )
-        fr.remove(i);
-
     String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
       if( fr._vecs[i]==vresponse ) {

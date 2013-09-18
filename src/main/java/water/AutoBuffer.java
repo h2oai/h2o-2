@@ -1102,13 +1102,26 @@ public final class AutoBuffer {
   public AutoBuffer putJSONAA8( String name, long ary[][] ) { return putJSONStr(name).put1(':').putJSONAA8(ary); }
   public AutoBuffer putJSON4 ( int i ) { return putStr2(Integer.toString(i)); }
   public AutoBuffer putJSON4 ( String name, int i ) { return putJSONStr(name).put1(':').putJSON4(i); }
-  public AutoBuffer putJSONA4(String name, int[] a) {
-    putJSONStr(name).put1(':');
+  public AutoBuffer putJSONA4( int[] a) {
     if( a == null ) return putNULL();
     put1('[');
     for( int i=0; i<a.length; i++ ) {
       if( i>0 ) put1(',');
       putJSON4(a[i]);
+    }
+    return put1(']');
+  }
+  public AutoBuffer putJSONA4(String name, int[] a) {
+    putJSONStr(name).put1(':');
+    return putJSONA4(a);
+  }
+  public AutoBuffer putJSONAA4(String name, int[][] a) {
+    putJSONStr(name).put1(':');
+    if( a == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<a.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONA4(a[i]);
     }
     return put1(']');
   }

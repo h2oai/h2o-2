@@ -5,7 +5,7 @@ import water.fvec.*;
 import hex.gbm.DRF;
 import hex.gbm.GBM;
 
-public class Inspect2 extends Request {
+public class Inspect2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -13,11 +13,11 @@ public class Inspect2 extends Request {
   // for GET.
   static final String DOC_GET = "Inspect a fluid-vec frame";
 
-  @API(help="An existing H2O Frame key.")
-  final FrameKey src_key = new FrameKey("src_key");
+  @API(help="An existing H2O Frame key.", required=true, filter=Default.class)
+  Frame src_key;
 
-  @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data")
-  private final LongInt offset = new LongInt("offset", 0L, -1, Long.MAX_VALUE, "");
+  @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data", filter=Default.class)
+  long offset;
 
   @API(help="Number of data rows.") long numRows;
   @API(help="Number of data columns.") int numCols;
@@ -53,22 +53,19 @@ public class Inspect2 extends Request {
 
   // Just validate the frame, and fill in the summary bits
   @Override protected Response serve() {
-    Frame fr = DKV.get(src_key.value()).get();
-    if( fr == null ) return RequestServer._http404.serve();
-    numRows = fr.numRows();
-    numCols = fr.numCols();
-    byteSize = fr.byteSize();
+    if( src_key == null ) return RequestServer._http404.serve();
+    numRows = src_key.numRows();
+    numCols = src_key.numCols();
+    byteSize = src_key.byteSize();
     cols = new ColSummary[numCols];
     for( int i=0; i<cols.length; i++ )
-      cols[i] = new ColSummary(fr._names[i],fr._vecs[i]);
+      cols[i] = new ColSummary(src_key._names[i],src_key._vecs[i]);
 
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    final Key skey = src_key.value();
-    final Frame fr = DKV.get(skey).get();
-    final long off = offset.value();
+    Key skey = Key.make(input("src_key"));
 
     // Missing/NA count
     long naCnt = 0;
@@ -83,16 +80,16 @@ public class Inspect2 extends Request {
     sb.append("<div class='alert'>" +
               //"View " + SummaryPage2.link(key, "Summary") +
               "<br/>Build models using " +
-              DRF.link(src_key.value(), "Distributed Random Forest") +", "+
-              GBM.link(src_key.value(), "Distributed GBM") +", "+
-              hex.LR2.link(src_key.value(), "Linear Regression") +
+              DRF.link(skey, "Distributed Random Forest") +", "+
+              GBM.link(skey, "Distributed GBM") +", "+
+              hex.LR2.link(skey, "Linear Regression") +
               "</div>");
 
     // Start of where the pagination table goes.  For now, just the info button.
     sb.append("<div style='text-align:center;'>");
     sb.append("<span class='pagination'><ul><li>"+"<a href='"+
-              RequestStatics.encodeRedirectArgs(null,new String[]{"src_key",skey.toString(),"offset",off>=0?"-1":"0"})+
-              "'>"+(off>=0?"info":"rows")+"</a>"+"</li></ul></span>&nbsp;&nbsp;");
+              RequestStatics.encodeRedirectArgs(null,new String[]{"src_key",skey.toString(),"offset",offset>=0?"-1":"0"})+
+              "'>"+(offset>=0?"info":"rows")+"</a>"+"</li></ul></span>&nbsp;&nbsp;");
     sb.append("</div>");
 
     DocGen.HTML.arrayHead(sb);
@@ -106,13 +103,13 @@ public class Inspect2 extends Request {
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x1(fr._vecs[i],-1,cols[i].min)).append("</td>");
+      sb.append("<td>").append(x1(src_key._vecs[i],-1,cols[i].min)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Max").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x1(fr._vecs[i],-1,cols[i].max)).append("</td>");
+      sb.append("<td>").append(x1(src_key._vecs[i],-1,cols[i].max)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
@@ -130,17 +127,17 @@ public class Inspect2 extends Request {
       sb.append("</tr>");
     }
 
-    if( off == -1 ) {           // Info display
+    if( offset == -1 ) {           // Info display
       sb.append("<tr class='warning'>");
       // An extra row holding vec's compressed bytesize
       sb.append("<td>").append("Size").append("</td>");
       for( int i=0; i<cols.length; i++ )
-        sb.append("<td>").append(PrettyPrint.bytes(fr._vecs[i].byteSize())).append("</td>");
+        sb.append("<td>").append(PrettyPrint.bytes(src_key._vecs[i].byteSize())).append("</td>");
       sb.append("</tr>");
 
       // All Vecs within a frame are compatible, so just read the
       // home-node/data-placement and start-row from 1st Vec
-      Vec c0 = fr.anyVec();
+      Vec c0 = src_key.anyVec();
       int N = c0.nChunks();
       for( int j=0; j<N; j++ ) { // All the chunks
         sb.append("<tr>");       // Row header
@@ -149,7 +146,7 @@ public class Inspect2 extends Request {
           .append(", ").append(c0.chunk2StartElem(j)).append("</td>");
         for( int i=0; i<cols.length; i++ ) {
           // Report chunk-type (compression scheme)
-          String clazz = fr._vecs[i].elem2BV(j).getClass().getSimpleName();
+          String clazz = src_key._vecs[i].elem2BV(j).getClass().getSimpleName();
           String trim = clazz.replaceAll("Chunk","");
           sb.append("<td>").append(trim).append("</td>");
         }
@@ -163,7 +160,7 @@ public class Inspect2 extends Request {
         sb.append("<tr>");      // Row header
         sb.append("<td>").append(j).append("</td>");
         for( int i=0; i<cols.length; i++ ) // Columns w/in row
-          sb.append("<td>").append(x0(fr._vecs[i],j)).append("</td>");
+          sb.append("<td>").append(x0(src_key._vecs[i],j)).append("</td>");
         sb.append("</tr>");
       }
     }

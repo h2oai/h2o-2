@@ -1,7 +1,7 @@
 package water;
 
 import java.util.Arrays;
-import water.api.Constants;
+
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
@@ -20,7 +20,7 @@ public abstract class Model extends Iced {
   /** Key associated with this Model, if any.  */
   @API(help="Key associated with Model")
   public final Key _selfKey;
-  
+
   /** Dataset key used to *build* the model, for models for which this makes
    *  sense, or null otherwise.  Not all models are built from a dataset (eg
    *  artificial models), or are built from a single dataset (various ensemble
@@ -34,7 +34,7 @@ public abstract class Model extends Iced {
   @API(help="Column names used to build the model")
   public final String _names[];
 
-  /** Categorical/factor/enum mappings, per column.  Null for non-enum cols. 
+  /** Categorical/factor/enum mappings, per column.  Null for non-enum cols.
    *  The last column holds the response col enums.  */
   @API(help="Column names used to build the model")
   public final String _domains[][];
@@ -42,7 +42,7 @@ public abstract class Model extends Iced {
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),fr.domains());
+    this(selfKey,dataKey,fr.names(),domains(fr));
   }
 
   /** Full constructor */
@@ -53,8 +53,28 @@ public abstract class Model extends Iced {
     assert names[names.length-1] != null; // Have a valid response-column name?
     _selfKey = selfKey;
     _dataKey = dataKey;
-    _names  =   names;
-    _domains= domains;
+    _names   = names;
+    _domains = domains;
+  }
+
+  private static String[][] domains(Frame fr) {
+    String[][] domains = fr.domains();
+    if(domains[domains.length-1] == null)
+      domains[domains.length-1] = responseDomain(fr);
+    return domains;
+  }
+  /** If response column is not an enum, use numbers */
+  public static String[] responseDomain(Frame fr) {
+    Vec resp = fr._vecs[fr._vecs.length-1];
+    String[] domain = resp._domain;
+    if(resp._domain == null) {
+      int min = (int) resp.min();
+      int max = (int) resp.max();
+      domain = new String[max - min + 1];
+      for( int i = 0; i < domain.length; i++ )
+        domain[i] = "" + (min + i);
+    }
+    return domain;
   }
 
   /** Simple shallow copy constructor to a new Key */
@@ -65,7 +85,7 @@ public abstract class Model extends Iced {
 
   public String responseName() { return   _names[  _names.length-1]; }
   public String[] classNames() { return _domains[_domains.length-1]; }
-  public int nclasses() { 
+  public int nclasses() {
     String cns[] = classNames();
     return cns==null ? 1 : cns.length;
   }
@@ -115,7 +135,7 @@ public abstract class Model extends Iced {
       if( map[i] != null ) {    // Enum mapping
         int e = (int)d;
         if( e < 0 || e >= map[i].length ) d = Double.NaN; // User data is out of adapt range
-        else { 
+        else {
           e = map[i][e];
           d = e==-1 ? Double.NaN : (double)e;
         }
@@ -128,9 +148,9 @@ public abstract class Model extends Iced {
   /** Build an adaption array.  The length is equal to the Model's vector
    *  length minus the response plus a column mapping.  Each inner array
    *  is a domain map from user domains to model domains - or null for non-enum
-   *  columns.  The extra final int[] is the column mapping itself.  
+   *  columns.  The extra final int[] is the column mapping itself.
    *  If 'exact' is true, will throw if there are:
-   *    any columns in the model but not in the input set; 
+   *    any columns in the model but not in the input set;
    *    any enums in the data that the model does not understand
    *    any enums returned by the model that the data does not understand.
    *  If 'exact' is false, these situations will use or return NA's instead.
@@ -141,7 +161,7 @@ public abstract class Model extends Iced {
       if( !_names[i].equals(names[i]) ) throw H2O.unimpl();
       if( _domains[i] != domains[i] ) {
         if( _domains[i] == null || domains[i] == null ) {
-          if( exact ) 
+          if( exact )
             throw new IllegalArgumentException("Model expects "+Arrays.toString(_domains[i])+" but was passed "+Arrays.toString(domains[i]));
           throw H2O.unimpl();
         }

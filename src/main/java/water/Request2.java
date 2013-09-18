@@ -3,12 +3,103 @@ package water;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import water.api.Request;
-import water.api.RequestArguments;
+import water.api.*;
 import water.fvec.Frame;
+import water.util.Log;
 
 public abstract class Request2 extends Request {
+  transient Properties _parms;
+
+  public String input(String fieldName) {
+    return _parms.getProperty(fieldName);
+  }
+
+  public class TypeaheadKey extends TypeaheadInputText<Key> {
+    transient Key _defaultValue;
+    transient Class _type;
+
+    public TypeaheadKey() {
+      this(null);
+    }
+
+    public TypeaheadKey(Class type) {
+      super(TypeaheadKeysRequest.class, "", true);
+      _type = type;
+      setRefreshOnChange();
+    }
+
+    public void setValue(Key key) {
+      record()._value = key;
+      record()._originalValue = key.toString();
+    }
+
+    @Override protected Key parse(String input) {
+      Key k = Key.make(input);
+      if( _type != null ) {
+        Value v = DKV.get(k);
+        if( v != null && !compatible(_type, v.get()) )
+          throw new IllegalArgumentException(input + ":" + errors()[0]);
+      }
+      return k;
+    }
+
+    @Override protected Key defaultValue() {
+      return _defaultValue;
+    }
+
+    @Override protected String queryDescription() {
+      return "A key" + (_type != null ? " of type " + _type.getSimpleName() : "");
+    }
+
+    @Override protected String[] errors() {
+      return new String[] { "Key is not a " + _type.getSimpleName() };
+    }
+  }
+
+  /**
+   * Fields that depends on another, e.g. select Vec from a Frame.
+   */
+  public class Dependent implements Filter {
+    public final String _ref;
+
+    protected Dependent(String name) {
+      _ref = name;
+    }
+
+    @Override public boolean run(Object value) {
+      return true;
+    }
+  }
+
+  public class ColumnSelect extends Dependent {
+    protected ColumnSelect(String key) {
+      super(key);
+    }
+  }
+
+  public class VecSelect extends Dependent {
+    protected VecSelect(String key) {
+      super(key);
+    }
+  }
+
+  public class VecClassSelect extends Dependent {
+    protected VecClassSelect(String key) {
+      super(key);
+    }
+  }
+
+  public class VecsSelect extends Dependent {
+    protected VecsSelect(String key) {
+      super(key);
+    }
+  }
+
+  /**
+   * Iterates over fields and their annotations, and creates argument handlers.
+   */
   @Override protected void registered() {
     try {
       ArrayList<Class> classes = new ArrayList<Class>();
@@ -67,39 +158,39 @@ public abstract class Request2 extends Request {
           }
 
           // Key
-          else if( f.getType() == Key.class )
-            arg = new H2OKey(f.getName(),(Key)defaultValue, api.required());
+          else if( f.getType() == Key.class ) {
+            TypeaheadKey t = new TypeaheadKey();
+            t._defaultValue = (Key) defaultValue;
+            arg = t;
+          }
 
           // Auto-cast from key to Iced field
           else if( Freezable.class.isAssignableFrom(f.getType()) && api.filter() == Default.class )
-            arg = new H2OKey(f.getName(), api.required());
+            arg = new TypeaheadKey(f.getType());
 
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
             ColumnSelect name = (ColumnSelect) newInstance(api);
             H2OHexKey key = null;
             for( Argument a : _arguments )
-              if( a instanceof H2OHexKey && name._key.equals(((H2OHexKey) a)._name) )
+              if( a instanceof H2OHexKey && name._ref.equals(((H2OHexKey) a)._name) )
                 key = (H2OHexKey) a;
             arg = new HexAllColumnSelect(f.getName(), key);
           }
 
           //
-          else if( VecSelect.class.isAssignableFrom(api.filter()) ) {
-            VecSelect name = (VecSelect) newInstance(api);
-            FrameKey key = null;
+          else if( Dependent.class.isAssignableFrom(api.filter()) ) {
+            Dependent d = (Dependent) newInstance(api);
+            Argument ref = null;
             for( Argument a : _arguments )
-              if( a instanceof FrameKey && name._key.equals(((FrameKey) a)._name) )
-                key = (FrameKey) a;
-            arg = new FrameKeyVec(f.getName(), key);
-          }
-          else if( VecClassSelect.class.isAssignableFrom(api.filter()) ) {
-            VecClassSelect name = (VecClassSelect) newInstance(api);
-            FrameKey key = null;
-            for( Argument a : _arguments )
-              if( a instanceof FrameKey && name._key.equals(((FrameKey) a)._name) )
-                key = (FrameKey) a;
-            arg = new FrameClassVec(f.getName(), key);
+              if( d._ref.equals(a._name) )
+                ref = a;
+            if( VecSelect.class.isAssignableFrom(api.filter()) )
+              arg = new FrameKeyVec(f.getName(), (TypeaheadKey) ref);
+            else if( VecClassSelect.class.isAssignableFrom(api.filter()) )
+              arg = new FrameClassVec(f.getName(), (TypeaheadKey) ref);
+            else if( VecsSelect.class.isAssignableFrom(api.filter()) )
+              arg = new FrameVecSelect(f.getName(), (TypeaheadKey) ref);
           }
 
           if( arg != null ) {
@@ -149,13 +240,27 @@ public abstract class Request2 extends Request {
     try {
       request = getClass().newInstance();
       request._arguments = _arguments;
+      request._parms = parms;
     } catch( Exception e ) {
       throw new RuntimeException(e);
     }
     return request;
   }
 
-  public void set(Argument arg, Object value) {
+  /*
+   * Arguments to fields casts.
+   */
+
+  private static boolean compatible(Class type, Object o) {
+    if( type == Frame.class && o instanceof ValueArray )
+      return true;
+    return type.isInstance(o);
+  }
+
+  public void set(Argument arg, String input, Object value) {
+    if( arg._field.getType() != Key.class && value instanceof Key )
+      value = UKV.get((Key) value);
+
     try {
       if( arg._field.getType() == Key.class && value instanceof ValueArray )
         value = ((ValueArray) value)._key;
@@ -167,15 +272,7 @@ public abstract class Request2 extends Request {
         value = ((Double) value).floatValue();
       //
       else if( arg._field.getType() == Frame.class && value instanceof ValueArray )
-        value = ((ValueArray) value).asFrame();
-      //
-      else if( arg._field.getType() == Frame.class && value instanceof Key )
-        value = UKV.get((Key) value);
-      //
-      else if( arg._field.getType() != Key.class && //
-          Freezable.class.isAssignableFrom(arg._field.getType()) && //
-          value instanceof Key )
-        value = UKV.get((Key) value);
+        value = asFrame(input, (ValueArray) value);
       //
       else if( value instanceof NumberSequence ) {
         double[] ds = ((NumberSequence) value)._arr;
@@ -190,6 +287,38 @@ public abstract class Request2 extends Request {
       arg._field.set(this, value);
     } catch( Exception e ) {
       throw new RuntimeException(e);
+    }
+  }
+
+  /** Locally synchronize VA to FVec conversions within this node. */
+  final static Object conversionLock = new Object();
+
+  /** Conversion number is only for logging. */
+  final static AtomicInteger conversionNumber = new AtomicInteger(0);
+
+  private static Frame asFrame(String input, ValueArray va) {
+    synchronized( conversionLock ) {
+      String frameKeyString = DKV.calcConvertedFrameKeyString(input);
+      Key k2 = Key.make(frameKeyString);
+      Value v2 = DKV.get(k2);
+      if( v2 != null ) {
+        // If the thing that aliases with the cached conversion name is not
+        // a Frame, then throw an error.
+        if( !v2.isFrame() ) {
+          throw new IllegalArgumentException(k2 + " is not a frame.");
+        }
+        Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+        return v2.get();
+      }
+
+      // No cached conversion.  Make one and store it in DKV.
+      int cn = conversionNumber.getAndIncrement();
+      Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString
+          + ")...");
+      Frame frame = va.asFrame();
+      DKV.put(k2, frame);
+      Log.info("Conversion " + cn + " complete.");
+      return frame;
     }
   }
 }
