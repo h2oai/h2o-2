@@ -115,11 +115,18 @@ juLog  -name=myCustomizedMethod myCmd '*.sh' || true
 
 #******************************************************
 
-H2O_R_HOME=../../R
-# these are hardwired in the config json used above for the cloud
-CLOUD_IP=192.168.1.161
-CLOUD_PORT=54355
 myR() {
+    # these are hardwired in the config json used above for the cloud
+    CLOUD_IP=192.168.1.161
+    CLOUD_PORT=54355
+
+    # requires a make!
+    # normally h2oWrapper_VERSION.tar.gz requires a make
+    # get_s3_jar.sh now downloads it. We need to tell anqi's wrapper where to find it.
+    # with an environment variable
+    export H2OWrapperDir=../../target/R/
+
+    H2O_R_HOME=../../R
     rScript = $H2O_R_HOME/tests/$1
     rLibrary = $H2o_R_HOME/$2
     R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT
