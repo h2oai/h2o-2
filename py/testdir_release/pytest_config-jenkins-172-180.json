@@ -7,19 +7,27 @@
     "use_home_for_ice": true,
 
     "key_filename": "~/.0xcustomer/0xcustomer_id_rsa",
-    "h2o_per_host": 2, 
-    "java_heap_GB": 12, 
+    "h2o_per_host": 1, 
+    "java_heap_GB": 24, 
 
     "hdfs_name_node": "192.168.1.176",
     "hdfs_version": "cdh3",
     "use_hdfs": true,
 
-    "cloud_name": "kevin_cloud",
-    "base_port": 54321,
     "use_flatfile": true,
+    "base_port": 54355,
+    "cloud_name": "jenkins-172-180",
 
     "ip": [
-        "192.168.0.37"
+        "192.168.1.172",
+        "192.168.1.173",
+        "192.168.1.174",
+        "192.168.1.175",
+        "192.168.1.176",
+        "192.168.1.177",
+        "192.168.1.178",
+        "192.168.1.179",
+        "192.168.1.180"
     ]
 }
 

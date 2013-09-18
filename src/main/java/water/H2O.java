@@ -179,6 +179,7 @@ public final class H2O {
       if( idx == 256 ) idx=1; // wrap, avoiding zero
       CLOUDS[idx] = CLOUD = new H2O(h2os,hash,idx);
     }
+    SELF._heartbeat._cloud_size=(char)CLOUD.size();
     Paxos.print("Announcing new Cloud Membership: ",_memary);
   }
 
@@ -203,7 +204,7 @@ public final class H2O {
   public static void waitForCloudSize(int x, long ms) {
     long start = System.currentTimeMillis();
     while( System.currentTimeMillis() - start < ms ) {
-      if( CLOUD.size() >= x )
+      if( CLOUD.size() >= x && Paxos._commonKnowledge )
         break;
       try { Thread.sleep(100); } catch( InterruptedException ie ) { }
     }

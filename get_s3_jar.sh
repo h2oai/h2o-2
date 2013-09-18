@@ -26,13 +26,29 @@ then
     echo "getting JUST $version/h2o.jar"
     rm -f ./h2o_$version.jar
     s3cmd get s3://h2o-release/h2o/master/$version/h2o.jar h2o_$version.jar
+    # get the R h2o wrapper also
 fi
+# always get it! install in R, that installs a function to go to the jar
+# checks that the version number in h2o.jar matches the version number in h2o R package
+# which looks like this. The wrapper will get this for me. It will get the right version
+# s3://h2o-release/h2o/master/1033/R/h2o_1.7.0.1033.tar.gz
 
-echo "moving it and overwriting target/h2o.jar"
+# this should be just one file. the name changes though. I don't know the full name
+s3cmd ls  s3://h2o-release/h2o/master/1033/R/h2oWrapper*
+echo "Getting rid of any current h2oWrapper* files here"
+rm -f h2oWrapper*
+s3cmd get s3://h2o-release/h2o/master/1033/R/h2oWrapper* 
+
+echo "moving h2o.jar and overwriting target/h2o.jar"
 # jenkins might not have!:w
 mkdir -p target
 cp -f ./h2o_$version.jar target/h2o.jar
 cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
+
+echo "moving h2oWrapper* and overwriting target/R/h2oWrapper*"
+mkdir -p target/R
+rm -f target/R/h2oWrapper*
+cp -f ./h2oWrapper*  target/R
 
 echo ""
 echo "Done. Go forth and run tests. If you build.sh or makefile, the h2o.jar will be overwritten"

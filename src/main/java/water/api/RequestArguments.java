@@ -1164,36 +1164,20 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class LongInt extends InputText<Long> {
-    public final transient Long _defaultValue;
+    public final transient long _defaultValue;
     public final long _min;
     public final long _max;
     public final String _comment;
 
-    public LongInt(String name) {
-      this(name, Long.MIN_VALUE, Long.MAX_VALUE);
+    public LongInt(String name, long min, long max) { this(name,false,0,min,max,""); }
+    public LongInt(String name, long defaultValue, String comment) {
+      this(name, false, defaultValue, Long.MIN_VALUE, Long.MAX_VALUE, comment);
     }
-
-    public LongInt(String name, long min, long max) {
-      super(name,true);
-      _defaultValue = null;
-      _min = min;
-      _max = max;
-      _comment = "";
-    }
-
-    public LongInt(String name, Long defaultValue, String comment) {
-      this(name, false, defaultValue, null, null, comment);
-    }
-
-    public LongInt(String name, Long defaultValue, long min, long max, String comment) {
-      this(name, false, defaultValue, min, max, comment);
-    }
-
-    public LongInt(String name, boolean req, Long defaultValue, Long min, Long max, String comment) {
+    public LongInt(String name, boolean req, long defaultValue, long min, long max, String comment) {
       super(name, req);
       _defaultValue = defaultValue;
-      _min = min != null ? min : Long.MIN_VALUE;
-      _max = max != null ? max : Long.MAX_VALUE;
+      _min = min;
+      _max = max;
       _comment = comment;
     }
 
@@ -1201,19 +1185,15 @@ public class RequestArguments extends RequestStatics {
       try {
         long i = Long.parseLong(input);
         if ((i< _min) || (i > _max))
-          throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
+          throw new IllegalArgumentException(_name+"Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
         return i;
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Value "+input+" is not a valid long integer.");
+        throw new IllegalArgumentException(_name+"Value "+input+" is not a valid long integer.");
       }
     }
 
-    @Override protected Long defaultValue() {
-      return _defaultValue;
-    }
-
+    @Override protected Long defaultValue() { return _defaultValue; }
     @Override protected String queryComment() { return _comment; }
-
     @Override protected String queryDescription() {
       return ((_min == Long.MIN_VALUE) && (_max == Long.MAX_VALUE))
               ? "Integer value"
@@ -1984,7 +1964,8 @@ public class RequestArguments extends RequestStatics {
       };
     }
 
-    public boolean saveIgnore(int i, ValueArray.Column ca) {
+    // public boolean saveIgnore(int i, ValueArray.Column ca) {
+    @Override public boolean shouldIgnore(int i, ValueArray.Column ca) {
       if(ca._min == ca._max) {
         if(_constantColumns.get() == null)
           _constantColumns.set(new TreeSet<String>());
@@ -1996,7 +1977,7 @@ public class RequestArguments extends RequestStatics {
         _nonNumColumns.get().add(Objects.firstNonNull(ca._name, String.valueOf(i)));
         return true;
       }
-      return false;
+      return super.shouldIgnore(i, ca);
     }
 
     String _comment = "";
@@ -2005,12 +1986,21 @@ public class RequestArguments extends RequestStatics {
       int [] res = new int[va._cols.length];
       int selected = 0;
       for(int i = 0; i < va._cols.length; ++i) {
-        if(saveIgnore(i, va._cols[i]))
+        /*if(saveIgnore(i, va._cols[i]))
           res[selected++] = i;
         else if((1.0 - (double)va._cols[i]._n/va._numrows) >= _maxNAsRatio) {
           int val = 0;
           if(_badColumns.get() != null) val = _badColumns.get();
           _badColumns.set(val+1);
+        }*/
+        if(!shouldIgnore(i, va._cols[i])) {
+          if((1.0 - (double)va._cols[i]._n/va._numrows) <= _maxNAsRatio)
+            res[selected++] = i;
+          else {
+            int val = 0;
+            if(_badColumns.get() != null) val = _badColumns.get();
+            _badColumns.set(val+1);
+          }
         }
       }
       return Arrays.copyOfRange(res,0,selected);
@@ -2392,9 +2382,10 @@ public class RequestArguments extends RequestStatics {
     public FrameKeyMultiVec(String name, FrameKey key, FrameClassVec response) {
       super(name);
       addPrerequisite(_key = key);
-      addPrerequisite(_response = response);
+      if((_response = response) != null)
+        addPrerequisite(_response);
     }
-    public boolean shouldIgnore(int i, Frame fr ) { return _response.value() == fr._vecs[i]; }
+    public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr._vecs[i]; }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
     protected Comparator<Integer> colComp(final ValueArray ary){
       return null;

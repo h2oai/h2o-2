@@ -46,13 +46,13 @@ public abstract class Request2 extends Request {
           // Real
           else if( f.getType() == float.class || f.getType() == double.class ) {
             double val = ((Number) defaultValue).doubleValue();
-            arg = new Real(f.getName(), api.required(), val, null, null, api.help());
+            arg = new Real(f.getName(), api.required(), val, api.dmin(), api.dmax(), api.help());
           }
 
           // LongInt
           else if( f.getType() == int.class || f.getType() == long.class ) {
             long val = ((Number) defaultValue).longValue();
-            arg = new LongInt(f.getName(), api.required(), val, null, null, api.help());
+            arg = new LongInt(f.getName(), api.required(), val, api.lmin(), api.lmax(), api.help());
           }
 
           // Bool

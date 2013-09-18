@@ -9,7 +9,6 @@ public class Inspect2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  private static int viewsz = 100;
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET = "Inspect a fluid-vec frame";
@@ -18,7 +17,7 @@ public class Inspect2 extends Request {
   final FrameKey src_key = new FrameKey("src_key");
 
   @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data")
-  private final LongInt offset = new LongInt("offset", 0L, -1, Long.MAX_VALUE, "");
+  private final LongInt offset = new LongInt("offset", -1, Long.MAX_VALUE);
   @API(help="Number of data rows.") long numRows;
   @API(help="Number of data columns.") int numCols;
   @API(help="byte size in memory.") long byteSize;
@@ -77,7 +76,7 @@ public class Inspect2 extends Request {
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+
-                        PrettyPrint.bytes(byteSize)+" bytes, "+
+                        PrettyPrint.bytes(byteSize)+" bytes (compressed), "+
                         (naCnt== 0 ? "no":PrettyPrint.bytes(naCnt))+" missing elements");
 
     sb.append("<div class='alert'>" +
@@ -211,12 +210,7 @@ public class Inspect2 extends Request {
   }
 
 
-
-//  sb.append("<div style='text-align:center;'>");
-//  sb.append("<span class='pagination'><ul><li>"+"<a href='"+
-//            RequestStatics.encodeRedirectArgs(null,new String[]{"src_key",skey.toString(),"offset",off>=0?"-1":"0"})+
-//            "'>"+(off>=0?"info":"rows")+"</a>"+"</li></ul></span>&nbsp;&nbsp;");
-//  sb.append("</div>");
+  private static int viewsz = 100;
 
   protected String pagination(long max) {
     final long offset = this.offset.value();

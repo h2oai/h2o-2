@@ -9,15 +9,11 @@ import jsr166y.CountedCompleter;
 import junit.framework.Assert;
 import hex.DGLM.*;
 import hex.DGLM.GLMModel.Status;
-import hex.KMeans.ClusterDist;
-import hex.KMeansModel.KMeansApply;
-import hex.KMeansModel.KMeansScore;
 import hex.NewRowVecTask.DataFrame;
 import hex.NewRowVecTask.JobCancelledException;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
-import water.ValueArray.Column;
 import water.api.Constants;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
@@ -48,7 +44,6 @@ public abstract class DPCA {
     final double[] _normSub;
     final double[] _normMul;
 
-
     public StandardizeTask(double[] normSub, double[] normMul) {
       _normSub = normSub;
       _normMul = normMul;
@@ -66,7 +61,7 @@ public abstract class DPCA {
       int rows = inputs[0]._len;
       for(int c = 0; c < ncol; c++) {
         for(int r = 0; r < rows; r++) {
-          double x = inputs[c].at(r);
+          double x = inputs[c].at0(r);
           x -= _normSub[c];
           x *= _normMul[c];
           outputs[c].addNum(x);
@@ -193,7 +188,7 @@ public abstract class DPCA {
       res.addProperty("rank", _rank);
       res.add("PCAParams", _pcaParams.toJson());
 
-      // Add standard deviation to output
+      // Add standard deviation and proportion of variance to output
       JsonObject sdev = new JsonObject();
       JsonObject prop = new JsonObject();
       JsonObject cum = new JsonObject();

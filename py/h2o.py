@@ -41,9 +41,9 @@ def sleep(secs):
 def flatfile_name():
     return('pytest_flatfile-%s' %getpass.getuser())
 
+# only usable after you've built a cloud (junit, watch out)
 def cloud_name():
-    return('pytest-%s-%s' % (getpass.getuser(), os.getpid()))
-    # return('pytest-%s' % getpass.getuser())
+    return nodes[0].cloud_name
 
 def __drain(src, dst):
     for l in src:
@@ -98,13 +98,14 @@ def get_ip_address():
     return ip
 
 def unit_main():
-    global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip
+    global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
     python_cmd_ip = get_ip_address()
     python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
+    python_username = getpass.getuser()
     # if test was run with nosestests, it wouldn't execute unit_main() so we won't see this
     # so this is correct, for stuff run with 'python ..."
     print "\nTest: %s    command line: %s" % (python_test_name, python_cmd_line)
@@ -138,6 +139,7 @@ python_cmd_ip = get_ip_address()
 python_cmd_args = ""
 # don't really know what it is if nosetests did some stuff. Should be just the test with no args
 python_cmd_line = ""
+python_username = getpass.getuser()
 
 def parse_our_args():
     parser = argparse.ArgumentParser()
@@ -585,7 +587,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         cs_config_json = os.path.abspath(config_json)
     else:
         cs_config_json = None
-    cs_username = getpass.getuser()
+    cs_username = python_username
     cs_ip = python_cmd_ip
 
     # write out something that shows how the test could be rerun (could be a cloud build, a mix, or test only)
@@ -702,6 +704,8 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
+                        # ignore the long, long lines that the JStack prints as INFO
+                        ('stack_traces' in line) or
                         # shows up as param to url for h2o
                         ('out_of_bag_error_estimate' in line) or
                         # R stdout confusion matrix. Probably need to figure out how to exclude R logs
@@ -741,6 +745,7 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
                 if (printSingleWarning):
                     # don't print these lines
                     if not (re.search("Unable to load native-hadoop library", line) or
+                        ('stack_traces' in line) or
                         ('Multiple local IPs detected' in line) or
                         ('[Loaded ' in line) or
                         ('RestS3Service' in line)):
@@ -926,14 +931,11 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
-            if not isinstance(r,(list,dict)): 
-                verboseprint(r.text)
-                raise Exception("h2o json responses should always be lists or dicts, see previous for text")
-            
-            if '404' in r:
-                verboseprint(r.text)
-                raise Exception("No json could be decoded as there was a 404 response. Do you have beta features turned on? beta_features: ", beta_features)
             verboseprint(r.text)
+            if not isinstance(r,(list,dict)): 
+                raise Exception("h2o json responses should always be lists or dicts, see previous for text")
+            if '404' in r:
+                raise Exception("json got 404 response. Do you have beta features turned on? beta_features: ", beta_features)
             raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
 
         for e in ['error', 'Error', 'errors', 'Errors']:
@@ -1294,8 +1296,8 @@ class H2O(object):
     def netstat(self):
         return self.__do_json_request('Network.json')
 
-    def jstack(self):
-        return self.__do_json_request("JStack.json")
+    def jstack(self, timeoutSecs=30):
+        return self.__do_json_request("JStack.json", timeout=timeoutSecs)
 
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
@@ -1328,13 +1330,14 @@ class H2O(object):
     # FIX! current hack to h2o to make sure we get "all" rather than just
     # default 20 the browser gets. set to max # by default (1024)
     # There is a offset= param that's useful also, and filter=
-    def store_view(self, timeoutSecs=60, **kwargs):
+    def store_view(self, timeoutSecs=60, print_params=False, **kwargs):
         params_dict = {
-            'view': 1024,
+            'view': 20,
             }
         params_dict.update(kwargs)
+        if print_params:
+            print "\nStoreView params list:", params_dict
 
-        print "\nStoreView params list:", params_dict
         a = self.__do_json_request('StoreView.json',
             params=params_dict,
             timeout=timeoutSecs)
@@ -1350,7 +1353,6 @@ class H2O(object):
         return a
 
     # only model keys can be exported?
-
     def export_hdfs(self, source_key, path):
         a = self.__do_json_request('ExportHdfs.json',
             params={"source_key": source_key, "path": path})
@@ -2020,7 +2022,9 @@ class H2O(object):
             # does different cloud name prevent them from joining up
             # (even if same multicast ports?)
             # I suppose I can force a base address. or run on another machine?
-            '--name=' + cloud_name()
+            ]
+        args += [
+            '--name=' + self.cloud_name
             ]
 
         # ignore the other -hdfs args if the config is used?
@@ -2075,6 +2079,7 @@ class H2O(object):
         enable_benchmark_log=False,
         h2o_remote_buckets_root=None,
         delete_keys_at_teardown=False,
+        cloud_name=None,
         ):
 
         if use_hdfs:
@@ -2157,6 +2162,11 @@ class H2O(object):
         self.enable_benchmark_log = enable_benchmark_log
         self.h2o_remote_buckets_root = h2o_remote_buckets_root
         self.delete_keys_at_teardown = delete_keys_at_teardown
+
+        if cloud_name:
+            self.cloud_name = cloud_name
+        else:
+            self.cloud_name = 'pytest-%s-%s' % (getpass.getuser(), os.getpid())
 
     def __str__(self):
         return '%s - http://%s:%d/' % (type(self), self.http_addr, self.port)

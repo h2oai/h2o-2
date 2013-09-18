@@ -214,7 +214,7 @@ setMethod("h2o.randomForest", signature(y="character", x_ignore="character", dat
             
             # Must check confusion matrix is finished calculating!
             cf = res$confusion_matrix
-            cf_matrix = cbind(matrix(unlist(cf$scores), nrow=length(cf$header)), unlist(cf$classes_errors))
+            cf_matrix = cbind(t(matrix(unlist(cf$scores), nrow=length(cf$header))), unlist(cf$classes_errors))
             rownames(cf_matrix) = cf$header
             colnames(cf_matrix) = c(cf$header, "class.error")
             result$confusion = cf_matrix

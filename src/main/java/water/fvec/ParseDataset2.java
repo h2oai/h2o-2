@@ -155,7 +155,9 @@ public final class ParseDataset2 extends Job {
         for( int j = 0; j < chks[i]._len; ++j){
           if( chks[i].isNA0(j) ) continue;
           long l = chks[i].at80(j);
-          assert _emap[i][(int)l] >= 0:H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + "chunk=" + chks[i].getClass().getSimpleName();
+          assert l >= 0 && l < _emap[i].length : "Found OOB index "+l+" pulling from "+chks[i].getClass().getSimpleName();
+          assert _emap[i][(int)l] >= 0 : 
+          H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + "chunk=" + chks[i].getClass().getSimpleName();
           chks[i].set0(j, _emap[i][(int)l]);
         }
       }

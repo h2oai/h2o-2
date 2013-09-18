@@ -273,7 +273,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Compute response-vector mean & variance.
   // Response-vector is specified as _nclass values in Chunks, from ychk to
   // ychk+_nclass-1.
-  void incr( int row, float d, Chunk[] chks, int ychk ) {
+  void incr( int row, float d, float work[] ) {
     int b = bin(d);             // Compute bin# via linear interpolation
     // Lazily allocate storage the first time a bin recieves any counts.
     float Ms[] = _Ms[b];
@@ -290,13 +290,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Recursive mean & variance of response vector
     //    http://www.johndcook.com/standard_deviation.html
     for( int c=0; c<_nclass; c++ ) {
-      Chunk chk = chks[ychk+c];
-      float y;
-      if( chk instanceof C4FChunk ) { // Help inline common case
-        y = (float)((C4FChunk)chk).at0(row);
-      } else {
-        y = (float)chk.at0(row);
-      }
+      float y = work[c];
       float oldM = Ms[c];   // Old mean
       float newM = Ms[c] = oldM + (y-oldM)/k;
       Ss[c] += (y-oldM)*(y-newM);

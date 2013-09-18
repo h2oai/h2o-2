@@ -8,9 +8,7 @@ import hex.PCAScoreTask;
 import com.google.gson.JsonObject;
 
 import water.*;
-import water.api.RequestArguments.*;
 import water.fvec.Frame;
-import water.fvec.Vec;
 import water.util.RString;
 
 public class PCAScore extends Request {
@@ -69,9 +67,9 @@ public class PCAScore extends Request {
 
       JsonObject redir = new JsonObject();
       // if( job != null ) redir.addProperty(JOB, job.toString());
-      redir.addProperty(KEY, _destKey.value().toString());
+      redir.addProperty("src_key", _destKey.value().toString());
       // return Progress.redirect(response, job.job_key, _destKey.value());
-      return Response.redirect(res, Inspect.class, redir);
+      return Response.redirect(res, Inspect2.class, redir);
     } catch( Error e ) {
       return Response.error(e.getMessage());
     }
