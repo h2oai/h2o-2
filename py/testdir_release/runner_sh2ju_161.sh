@@ -115,17 +115,31 @@ juLog  -name=myCustomizedMethod myCmd '*.sh' || true
 
 #******************************************************
 
-H2O_R_HOME=../../R
-# these are hardwired in the config json used above for the cloud
-CLOUD_IP=192.168.1.161
-CLOUD_PORT=54355
 myR() {
-    rScript = $H2O_R_HOME/$1
-    rLibrary = $H2o_r_home/$2
+    # these are hardwired in the config json used above for the cloud
+    CLOUD_IP=192.168.1.161
+    CLOUD_PORT=54355
+
+    # requires a make!
+    # normally h2oWrapper_VERSION.tar.gz requires a make
+    # get_s3_jar.sh now downloads it. We need to tell anqi's wrapper where to find it.
+    # with an environment variable
+    export H2OWrapperDir=../../target/R/
+
+    H2O_R_HOME=../../R
+    rScript=$H2O_R_HOME/tests/$1
+    # ../../R/tests/test_R_RF_diff_class.R
+    rLibrary=$H2O_R_HOME/$2
+    echo $rScript
+    echo $rLibrary
+    which R
+    R --version
+    echo "Running this cmd:"
+    echo "R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT"
     R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT
     return 0
 }
-juLog  -name=H2O_Load.R 'test_R_RF_diff_class.R' 'H2O_Load.R' || true
+juLog  -name=H2O_Load.R myR 'test_R_RF_diff_class.R' 'H2O_Load.R' || true
 
 
 # If this one fails, fail this script so the bash dies 
