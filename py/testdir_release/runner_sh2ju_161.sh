@@ -134,6 +134,8 @@ myR() {
     echo $rLibrary
     which R
     R --version
+    echo "Running this cmd:"
+    echo "R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT"
     R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT
     return 0
 }
