@@ -15,11 +15,12 @@
     "use_hdfs": true,
 
     "use_flatfile": true,
-    "base_port": 54355,
-    "cloud_name": "jenkins-161",
+    "base_port": 54321,
+    "cloud_name": "jenkins-161and164",
 
     "ip": [
-        "192.168.1.161"
+        "192.168.1.161",
+        "192.168.1.164"
     ]
 }
 

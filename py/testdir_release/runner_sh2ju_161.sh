@@ -45,9 +45,10 @@ then
     echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
     ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.161 rm -f -r /home/0xcustomer/ice*
 
+    # HACK this is really 161 plus 164. this allows us to talk to localhost:54321 accidently (R)
     python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
     CLOUD_IP=192.168.1.161
-    CLOUD_PORT=54355
+    CLOUD_PORT=54321
 else
     if [[ $USER == "kevin" ]]
     then
@@ -117,8 +118,8 @@ juLog  -name=myCustomizedMethod myCmd '*.sh' || true
 
 myR() {
     # these are hardwired in the config json used above for the cloud
-    CLOUD_IP=192.168.1.161
-    CLOUD_PORT=54355
+    # CLOUD_IP=192.168.1.161
+    # CLOUD_PORT=54355
 
     # requires a make!
     # normally h2oWrapper_VERSION.tar.gz requires a make
@@ -137,8 +138,9 @@ myR() {
     echo "Running this cmd:"
     echo "R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT"
     R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT
-    return 0
+    # exit # status is last command
 }
+
 juLog  -name=H2O_Load.R myR 'test_R_RF_diff_class.R' 'H2O_Load.R' || true
 
 
