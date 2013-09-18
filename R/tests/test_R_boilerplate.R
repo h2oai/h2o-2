@@ -18,9 +18,9 @@ library(tools)
 
 # Check if H2O R wrapper package is installed
 if(!"h2oWrapper" %in% rownames(installed.packages())) {
-  wrapEnv = Sys.getenv("H2OWrapperPath")
+  wrapEnv = Sys.getenv("H2OWrapperDir")
   wrapName = list.files(defaultPath, pattern="h2oWrapper")[1]
-  wrapPath = ifelse(wrapEnv == "", paste(defaultPath, wrapName, sep="/"), wrapEnv)
+  wrapPath = paste(ifelse(wrapEnv == "", defaultPath, wrapEnv), wrapName, sep="/")
   
   if(!file.exists(wrapPath))
     stop(paste("h2oWrapper package does not exist at", wrapPath))
