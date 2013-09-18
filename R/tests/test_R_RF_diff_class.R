@@ -10,7 +10,7 @@ argsplit = strsplit(args[2], ":")[[1]]
 localH2O = new("H2OClient", ip=argsplit[1], port=as.numeric(argsplit[2]))
 
 # library(h2o)
-localH2O = new("H2OClient", ip="localhost", port=54321)
+# localH2O = new("H2OClient", ip="localhost", port=54321)
 
 # Test of random forest using iris data set, different classes
 iris.hex = h2o.importURL(localH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/iris/iris22.csv", "iris.hex")

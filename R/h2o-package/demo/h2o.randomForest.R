@@ -1,6 +1,7 @@
 # This is a demo of H2O's Random Forest (classification) function
 # It imports a data set, parses it, and prints a summary
 # Then, it runs RF with 50 trees, maximum depth of 100, using the iris class as the response
+# Note: This demo runs H2O on localhost:54321
 library(h2o)
 localH2O = new("H2OClient", ip="localhost", port=54321)
 h2o.checkClient(localH2O)
