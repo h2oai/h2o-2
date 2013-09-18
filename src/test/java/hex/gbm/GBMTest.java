@@ -22,7 +22,7 @@ public class GBMTest extends TestUtil {
 
   private abstract class PrepData { abstract Vec prep(Frame fr); }
 
-  /*@Test*/ public void testBasicGBM() {
+  @Test public void testBasicGBM() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
@@ -104,7 +104,7 @@ public class GBMTest extends TestUtil {
     30,31,32,33,34,35,36,37,38,39,
     40,41,42,43,44,45,46,47,48,49,
   };
-  /*@Test*/ public void testBasicDRF() {
+  @Test public void testBasicDRF() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
@@ -227,6 +227,7 @@ public class GBMTest extends TestUtil {
   // Test-on-Train.  Slow test, needed to build a good model.
   @Test public void testGBMTrainTest() {
     File file1 = TestUtil.find_test_file("..//classifcation1Train.txt");
+    if( file1 == null ) return; // Silently ignore if file not found
     Key fkey1 = NFSFileVec.make(file1);
     Key dest1 = Key.make("train.hex");
     File file2 = TestUtil.find_test_file("..//classification1Test.txt");
@@ -241,7 +242,7 @@ public class GBMTest extends TestUtil {
       UKV.remove(fr.remove("agentId")._key); // Remove unique ID; too predictive
       gbm.vresponse = fr.remove("outcome");  // Train on the outcome
       gbm.source = fr;
-      gbm.ntrees = 50;
+      gbm.ntrees = 5;
       gbm.max_depth = 10;
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
@@ -262,6 +263,7 @@ public class GBMTest extends TestUtil {
       CM.vpredict = fpreds._vecs[fpreds.find("predict")];
       CM.serve();               // Start it, do it
 
+      // Really crappy cut-n-paste of what should be in the ConfusionMatrix class itself
       long cm[][] = CM.cm;
       long acts [] = new long[cm   .length];
       long preds[] = new long[cm[0].length];
