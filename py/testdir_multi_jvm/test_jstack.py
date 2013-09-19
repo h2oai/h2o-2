@@ -78,8 +78,11 @@ class JStackApi(unittest.TestCase):
                         print "Sleeping for", delay, "sec"
                         time.sleep(delay)
 
+        # check that you can read the logs?
+        namelist = h2o.nodes[0].log_download()
+
         # if h2o.python_username=='kevin':
-        if 1==1:
+        if 1==0:
             import pylab as plt
             if eList:
                 print "xList", xList

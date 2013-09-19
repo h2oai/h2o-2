@@ -12,7 +12,7 @@ def plotit(xList, eList, sList):
         print "eList", eList
         print "sList", sList
 
-        label = "(errsLast) 1 jvm x 28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=10 max_depth=5 min_rows = 10"
+        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 max_depth=5 min_rows = 10"
         plt.figure()
         plt.plot (xList, eList)
         plt.xlabel('trees')
@@ -20,7 +20,7 @@ def plotit(xList, eList, sList):
         plt.title(label)
         plt.draw()
 
-        label = "(time) 1 jvm x 28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=10 max_depth=5 min_rows = 10"
+        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=10 max_depth=5 min_rows = 10"
         plt.figure()
         plt.plot (xList, sList)
         plt.xlabel('trees')
