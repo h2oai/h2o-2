@@ -2326,8 +2326,9 @@ public class RequestArguments extends RequestStatics {
     @Override protected String[] selectValues() {
       ArrayList<String> as = new ArrayList();
       Vec vecs[] = fr().vecs();
+      String[] names = fr()._names;
       for( int i=0; i<vecs.length; i++ )
-        if( filter(vecs[i]) ) as.add(fr()._names[i]);
+        if( filter(vecs[i]) ) as.add(names[i]);
       return as.toArray(new String[as.size()]);
     }
     @Override protected Vec parse(String input) throws IllegalArgumentException {
