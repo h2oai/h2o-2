@@ -1,4 +1,4 @@
-setGeneric("h2oWrapper.init", function(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = TRUE) { standardGeneric("h2oWrapper.init") })
+setGeneric("h2oWrapper.init", function(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE) { standardGeneric("h2oWrapper.init") })
 
 # Install H2O R package dependencies
 # MUST RUN THIS ON FIRST INSTALLATION!!
@@ -97,7 +97,7 @@ h2oWrapper.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
   temp = postForm(paste(myURL, h2o.__PAGE_RPACKAGE, sep="/"), style = "POST")
   res = fromJSON(temp)
   if (!is.null(res$error))
-    stop(paste(myURL," returned the following error:\n", h2o.__formatError(res$error)))
+    stop(paste(myURL," returned the following error:\n", h2oWrapper.__formatError(res$error)))
   
   H2OVersion = res$version
   myFile = res$filename
@@ -108,7 +108,7 @@ h2oWrapper.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
     cat("H2O R package and server version", H2OVersion, "match\n")
   else if(h2oWrapper.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {    
     if("h2o" %in% myPackages) {
-      cat("Removing old H2O R package version", H2OVersion, "\n")
+      cat("Removing old H2O R package version", packageVersion("h2o"), "\n")
       remove.packages("h2o")
     }
     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
@@ -119,6 +119,8 @@ h2oWrapper.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
     if(as.character(serverMD5) != as.character(md5sum(paste(getwd(), myFile, sep="/"))))
       warning("Mismatched MD5 hash! Check you have downloaded complete R package.")
     install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
+    file.remove(paste(getwd(), myFile, sep="/"))
+    cat("\nSuccess\nYou may now type 'library(h2o)' to load the R package\n\n")
   }
 }
 
@@ -137,7 +139,7 @@ h2oWrapper.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
 
 h2o.__PAGE_RPACKAGE = "RPackage.json"
 
-h2o.__formatError <- function(error, prefix="  ") {
+h2oWrapper.__formatError <- function(error, prefix="  ") {
   result = ""
   items = strsplit(error,"\n")[[1]];
   for (i in 1:length(items))
