@@ -102,8 +102,6 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new KMeans2());
       registerRequest(new hex.gbm.DRF());
       registerRequest(new hex.LR2());
-      registerRequest(new NeuralNet());
-      registerRequest(new NeuralNetScore());
     }
     else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
