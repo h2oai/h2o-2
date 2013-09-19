@@ -161,7 +161,7 @@ public class GBM extends FrameJob {
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
 
         // Remove temp vectors; cleanup the Frame
-        while( fr.numCols() > ncols )
+        while( fr.numCols() > ncols+1/*Leave response*/ )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
         remove();
         tryComplete();
