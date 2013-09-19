@@ -63,13 +63,8 @@ public class PCAScore extends Request {
 
       // Note: Standardize automatically removes columns not in modelDataMap
       Frame data = standardize ? DPCA.StandardizeTask.standardize(orig) : orig.modelAsFrame();
-      PCAScoreTask.score(data, m._eigVec, _numPC.value(), _destKey.value());
-
-      JsonObject redir = new JsonObject();
-      // if( job != null ) redir.addProperty(JOB, job.toString());
-      redir.addProperty("src_key", _destKey.value().toString());
-      // return Progress.redirect(response, job.job_key, _destKey.value());
-      return Response.redirect(res, Inspect2.class, redir);
+      Job job = PCAScoreTask.score(data, m._eigVec, _numPC.value(), ary._key, _destKey.value());
+      return Progress2.redirect(this, job.job_key, job.dest());
     } catch( Error e ) {
       return Response.error(e.getMessage());
     }

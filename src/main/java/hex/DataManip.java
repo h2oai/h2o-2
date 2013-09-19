@@ -73,5 +73,4 @@ public class DataManip extends FrameJob {
     redir.addProperty("src_key", destination_key.toString());
     return Response.redirect(res, Inspect2.class, redir);
   }
-
 }
