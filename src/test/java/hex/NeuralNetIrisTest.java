@@ -106,7 +106,7 @@ public class NeuralNetIrisTest extends TestUtil {
     trainer.run();
 
     // Make sure outputs are equal
-    float epsilon = 1e-6f;
+    float epsilon = 1e-4f;
     for( int o = 0; o < ls[2]._a.length; o++ ) {
       float a = ref._nn.outputs[o];
       float b = ls[2]._a[o];

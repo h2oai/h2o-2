@@ -3,11 +3,9 @@ package water;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import water.api.*;
 import water.fvec.Frame;
-import water.util.Log;
 
 public abstract class Request2 extends Request {
   transient Properties _parms;
@@ -276,7 +274,7 @@ public abstract class Request2 extends Request {
         value = ((Double) value).floatValue();
       //
       else if( arg._field.getType() == Frame.class && value instanceof ValueArray )
-        value = asFrame(input, (ValueArray) value);
+        value = ((ValueArray) value).asFrame(input);
       //
       else if( value instanceof NumberSequence ) {
         double[] ds = ((NumberSequence) value)._arr;
@@ -291,38 +289,6 @@ public abstract class Request2 extends Request {
       arg._field.set(this, value);
     } catch( Exception e ) {
       throw new RuntimeException(e);
-    }
-  }
-
-  /** Locally synchronize VA to FVec conversions within this node. */
-  final static Object conversionLock = new Object();
-
-  /** Conversion number is only for logging. */
-  final static AtomicInteger conversionNumber = new AtomicInteger(0);
-
-  private static Frame asFrame(String input, ValueArray va) {
-    synchronized( conversionLock ) {
-      String frameKeyString = DKV.calcConvertedFrameKeyString(input);
-      Key k2 = Key.make(frameKeyString);
-      Value v2 = DKV.get(k2);
-      if( v2 != null ) {
-        // If the thing that aliases with the cached conversion name is not
-        // a Frame, then throw an error.
-        if( !v2.isFrame() ) {
-          throw new IllegalArgumentException(k2 + " is not a frame.");
-        }
-        Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
-        return v2.get();
-      }
-
-      // No cached conversion.  Make one and store it in DKV.
-      int cn = conversionNumber.getAndIncrement();
-      Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString
-          + ")...");
-      Frame frame = va.asFrame();
-      DKV.put(k2, frame);
-      Log.info("Conversion " + cn + " complete.");
-      return frame;
     }
   }
 }
