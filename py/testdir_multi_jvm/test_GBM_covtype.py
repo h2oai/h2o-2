@@ -12,18 +12,18 @@ def plotit(xList, eList, sList):
         print "eList", eList
         print "sList", sList
 
-        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 max_depth=5 min_rows = 10"
+        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=40 min_rows = 10"
         plt.figure()
         plt.plot (xList, eList)
-        plt.xlabel('trees')
+        plt.xlabel('max_depth')
         plt.ylabel('error')
         plt.title(label)
         plt.draw()
 
-        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=10 max_depth=5 min_rows = 10"
+        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=40 min_rows = 10"
         plt.figure()
         plt.plot (xList, sList)
-        plt.xlabel('trees')
+        plt.xlabel('max_depth')
         plt.ylabel('time')
         plt.title(label)
         plt.draw()
@@ -84,15 +84,17 @@ class Basic(unittest.TestCase):
             sList = []
             # GBM (train)****************************************
             # for depth in [5]:
-            depth = 5
-            for ntrees in [10,20,40,80,160]:
+            # depth = 5
+            # for ntrees in [10,20,40,80,160]:
+            ntrees = 40
+            for max_depth in [5,10,20,40]:
             # for ntrees in [1,2,3,4]:
                 params = {
                     'destination_key': "GBMKEY",
                     'learn_rate': .2,
                     'nbins': 1024,
                     'ntrees': ntrees,
-                    'max_depth': depth,
+                    'max_depth': max_depth,
                     'min_rows': 10,
                     'vresponse': vresponse,
                     # 'ignored_cols': 
@@ -116,7 +118,8 @@ class Basic(unittest.TestCase):
                 errsLast = GBMView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                xList.append(ntrees)
+                # xList.append(ntrees)
+                xList.append(max_depth)
                 eList.append(errsLast)
                 sList.append(elapsed)
 
