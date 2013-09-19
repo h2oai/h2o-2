@@ -104,7 +104,6 @@ class Basic(unittest.TestCase):
                 h2o_cmd.runInspect(key=parseResult['destination_key'])
                 ### h2o_cmd.runSummary(key=parseResult['destination_key'])
                 start = time.time()
-                print "Start time is: ", time.time()
                 GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,timeoutSecs=timeoutSecs,**kwargs)
                 # hack
                 if h2o.beta_features:
