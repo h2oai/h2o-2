@@ -9,6 +9,8 @@ import java.util.*;
 import water.*;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
+import water.fvec.Frame;
+import water.fvec.Vec;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -93,7 +95,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
       _normSub = new double[colIds.length];
       _normMul = new double[colIds.length];
       Arrays.fill(_normMul, 1);
-      if(standardize )for(int i = 0; i < colIds.length; ++i){
+      if(standardize) for(int i = 0; i < colIds.length; ++i){
         Column col = ary._cols[colIds[i]];
         if(col._domain == null){
           int ii = _colCatMap[i];
@@ -186,6 +188,17 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
       }
       newBeta[newBeta.length-1] -= norm;
       return newBeta;
+    }
+    // Returns frame with only columns specified in model
+    public Frame modelAsFrame() {
+      Frame temp = _ary.asFrame();
+      Vec[] vecs = new Vec[_modelDataMap.length];
+      String[] names = new String[_modelDataMap.length];
+      for(int i = 0; i < _modelDataMap.length; i++) {
+        vecs[i] = temp._vecs[_modelDataMap[i]];
+        names[i] = temp._names[_modelDataMap[i]];
+      }
+      return new Frame(names, vecs);
     }
   }
 

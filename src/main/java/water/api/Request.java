@@ -19,29 +19,24 @@ public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface API {
     String help();
-
     boolean required() default false;
-
     int since() default 1;
-
     int until() default Integer.MAX_VALUE;
-
     Class<? extends Filter> filter() default Filter.class;
-
     Class<? extends Filter>[] filters() default {};
+    long   lmin() default Long  .MIN_VALUE;
+    long   lmax() default Long  .MAX_VALUE;
+    double dmin() default Double.MIN_VALUE;
+    double dmax() default Double.MAX_VALUE;
   }
 
   public interface Filter {
     boolean run(Object value);
   }
 
-  /**
-   * NOP filter, use to define a field as input.
-   */
+  /** NOP filter, use to define a field as input.  */
   public class Default implements Filter {
-    @Override public boolean run(Object value) {
-      return true;
-    }
+    @Override public boolean run(Object value) { return true; }
   }
 
   //
@@ -280,5 +275,7 @@ public abstract class Request extends RequestBuilders {
   public String ReSTHelp() {
     return DocGen.ReST.genHelp(this);
   }
-  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putStr2("\"Request2\":\"dummy\""); }
+  // Dummy write of a leading field, so the auto-gen JSON can just add commas
+  // before each succeeding field.
+  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putJSON4("Request2",0); }
 }

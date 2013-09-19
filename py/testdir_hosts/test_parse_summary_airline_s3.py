@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_summary_airline_s3n(self):
+    def test_parse_summary_airline_s3(self):
         csvFilelist = [
             ("allyears2k.csv",   300), #4.4MB
             ("year1987.csv",     600), #130MB
@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
             # ("allyears_10.csv", 1800), #119.98GB
         ]
 
-        (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3')
+        (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path='*', schema='s3')
         s3nFullList = importHDFSResult['succeeded']
         self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 

@@ -15,9 +15,9 @@ Type: \tab Package\cr
 Version: \tab 1.0\cr
 Date: \tab 2013-09-13\cr
 License: \tab Apache-2\cr
-Depends: \tab R (>= 2.13.0), RCurl, rjson\cr
+Depends: \tab R (>= 2.13.0), RCurl, rjson, tools\cr
 }
-First, you must have H2O installed and running on a computer/cluster. See the references for more details. If H2O is running on your local machine, call \code{h2o.initLocal} with the IP and port that H2O is communicating on. By default, this is \url{http://localhost:54321}. If H2O is running on the cloud, call \code{h2o.initCloud} with the IP and port of the remote machine.
+First, you must have H2O installed and running on a computer/cluster. See the references for more details. If H2O is running on your local machine, call \code{h2oWrapper.init} with the IP and port that H2O is communicating on. By default, this is \url{http://localhost:54321}. If H2O is running on a cluster, you must provide the IP and port of the remote machine.
 }
 \author{
 Anqi Fu
@@ -31,11 +31,19 @@ Maintainer: Anqi Fu <anqi@0xdata.com>
   \item \href{https://github.com/0xdata/h2o}{H2O on Github}
   }
 }
-~~ Optionally other standard keywords, one per line, from file KEYWORDS in the R ~~
-~~ documentation directory ~~
 \keyword{ package }
 \examples{
-h2o.initLocal()
-h2o.initLocal(ip = "localhost", port = 54321)
-h2o.initCloud(ip = "192.168.1.164", port = 54321)
+# Install H2O R package dependencies
+h2oWrapper.installDepPkgs()
+
+# Check connection with H2O and ensure local H2O R package matches server version
+myIP = "localhost"
+myPort = 54321
+h2oWrapper.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+
+# Attach H2O R package and run GLM demo
+library(h2o)
+??h2o
+demo(package = "h2o")
+demo(h2o.glm)
 }

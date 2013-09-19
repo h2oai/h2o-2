@@ -14,7 +14,8 @@ import com.google.gson.*;
 public class PCA extends Request {
   protected final H2OKey _dest = new H2OKey(DEST_KEY, PCAModel.makeKey());
   protected final H2OHexKey _key = new H2OHexKey(KEY);
-  protected final HexColumnSelect _ignore = new HexPCAColumnSelect(IGNORE, _key);
+  // protected final HexColumnSelect _ignore = new HexPCAColumnSelect(IGNORE, _key);
+  protected final HexColumnSelect _x = new HexPCAColumnSelect(X, _key);
   // protected final Int _numPC = new Int("num_pc", 10, 1, 1000000);
   protected final Real _tol = new Real("tolerance", 0.0, 0, 1, "Omit components with std dev <= tol times std dev of first component");
   protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
@@ -23,7 +24,8 @@ public class PCA extends Request {
 
   public PCA() {
     _requestHelp = "Compute principal components of a data set.";
-    _ignore._requestHelp = "A list of ignored columns (specified by name or 0-based index).";
+    // _ignore._requestHelp = "A list of ignored columns (specified by name or 0-based index).";
+    _x._requestHelp = "A list of columns to analyze (specified by name or 0-based index).";
     // _numPC._requestHelp = "Number of principal components to return.";
     _tol._requestHelp = "Components omitted if their standard deviations are <= tol times standard deviation of first component.";
   }
@@ -53,8 +55,9 @@ public class PCA extends Request {
 
   private int[] createColumns(ValueArray ary) {
     BitSet bs = new BitSet();
-    bs.set(0, ary._cols.length);
-    for( int i : _ignore.value() ) bs.clear(i);
+    // bs.set(0, ary._cols.length);
+    // for( int i : _ignore.value() ) bs.clear(i);
+    for(int i : _x.value()) bs.set(i);
     int cols[] = new int[bs.cardinality()];
     int idx = 0;
     for(int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i+1))
@@ -64,7 +67,7 @@ public class PCA extends Request {
   }
 
   @Override protected void queryArgumentValueSet(Argument arg, Properties inputArgs) {
-    if(arg == _ignore) {
+    /* if(arg == _ignore) {
       int[] ii = _ignore.value();
       if(ii != null && ii.length >= _key.value()._cols.length)
         throw new IllegalArgumentException("Cannot ignore all columns");
@@ -72,6 +75,15 @@ public class PCA extends Request {
       // Degrees of freedom = number of rows - 1
       int numIgnore = ii == null ? 0 : ii.length;
       if(_key.value() != null && _key.value()._cols.length - numIgnore > _key.value()._numrows - 1)
+        throw new IllegalArgumentException("Cannot have more columns than degrees of freedom = " + String.valueOf(_key.value()._numrows-1));
+    } */
+    if(arg == _x) {
+      int[] ii = _x.value();
+      if(ii == null) throw new IllegalArgumentException("Cannot ignore all columns");
+
+      // Degrees of freedom = number of rows - 1
+      int numSelect = ii == null ? 0 : ii.length;
+      if(_key.value() != null && numSelect > _key.value()._numrows - 1)
         throw new IllegalArgumentException("Cannot have more columns than degrees of freedom = " + String.valueOf(_key.value()._numrows-1));
     }
   }
@@ -142,10 +154,16 @@ public class PCA extends Request {
 
       // Row with proportion of variance
       sb.append("<tr class='warning'>");
-      // sb.append("<td>").append("Prop &sigma;<sup>2</sup>").append("</td>");
       sb.append("<td>").append("Prop Var").append("</td>");
       for(int c = 0; c < m._num_pc; c++)
         sb.append("<td>").append(ElementBuilder.format(m._propVar[c])).append("</td>");
+      sb.append("</tr>");
+
+      // Row with cumulative proportion of variance
+      sb.append("<tr class='warning'>");
+      sb.append("<td>").append("Cum Prop Var").append("</td>");
+      for(int c = 0; c < m._num_pc; c++)
+        sb.append("<td>").append(ElementBuilder.format(m._cumVar[c])).append("</td>");
       sb.append("</tr>");
 
       // Each row is component of eigenvector

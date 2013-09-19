@@ -22,7 +22,7 @@ public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();
   private static final long                    INFO_PAGE     = -1;
   private final H2OExistingKey                 _key          = new H2OExistingKey(KEY);
-  private final LongInt                        _offset       = new LongInt(OFFSET, 0L, INFO_PAGE, Long.MAX_VALUE, "");
+  private final LongInt                        _offset       = new LongInt(OFFSET, INFO_PAGE, Long.MAX_VALUE);
   private final Int                            _view         = new Int(VIEW, 100, 0, 10000);
   private final Str                            _producer     = new Str(JOB, null);
   private final Int                            _max_column   = new Int(COLUMNS_DISPLAY, MAX_COLUMNS_TO_DISPLAY);
@@ -300,6 +300,7 @@ public class Inspect extends Request {
         		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
     }
     sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
+          + PCA.link(key, "PCA") + ", "
           + RF.link(key, "Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", "

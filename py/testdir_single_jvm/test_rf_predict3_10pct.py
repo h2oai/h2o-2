@@ -1,6 +1,6 @@
 import unittest, time, sys, csv
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
 # translate provides the mapping between original and predicted
 def compare_csv_last_col(csvPathname, msg, translate=None, skipHeader=False):

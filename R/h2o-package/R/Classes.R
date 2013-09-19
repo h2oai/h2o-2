@@ -9,6 +9,7 @@ setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ORForestModel", contains="H2OModel")
 setClass("H2OGLMGridModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
+setClass("H2OGBMModel", contains="H2OModel")
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -247,6 +248,14 @@ setMethod("show", "H2OGLMGridModel", function(object) {
   })
 
 
+setMethod("show", "H2OGBMModel", function(object) {
+  print(object@data)
+  cat("GBM Model Key:", object@key)
+  
+  model = object@model
+  cat("\nConfusion matrix:\n"); print(model$confusion)
+  cat("\n\nMean Squared error by tree:\n"); print(model$err)
+})
 
 setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
 setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),

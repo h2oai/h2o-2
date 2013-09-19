@@ -16,7 +16,7 @@ public class Inspect2 extends Request2 {
   @API(help="An existing H2O Frame key.", required=true, filter=Default.class)
   Frame src_key;
 
-  @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data", filter=Default.class)
+  @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data", filter=Default.class, lmin=-1, lmax=Long.MAX_VALUE)
   long offset;
 
   @API(help="Number of data rows.") long numRows;
@@ -74,7 +74,7 @@ public class Inspect2 extends Request2 {
 
     DocGen.HTML.title(sb,skey.toString());
     DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+
-                        PrettyPrint.bytes(byteSize)+" bytes, "+
+                        PrettyPrint.bytes(byteSize)+" bytes (compressed), "+
                         (naCnt== 0 ? "no":PrettyPrint.bytes(naCnt))+" missing elements");
 
     sb.append("<div class='alert'>" +
@@ -82,15 +82,12 @@ public class Inspect2 extends Request2 {
               "<br/>Build models using " +
               DRF.link(skey, "Distributed Random Forest") +", "+
               GBM.link(skey, "Distributed GBM") +", "+
-              hex.LR2.link(skey, "Linear Regression") +
+              hex.LR2.link(skey, "Linear Regression") + ",<br>"+
+              DownloadDataset.link(skey, "Download as CSV") +
               "</div>");
 
     // Start of where the pagination table goes.  For now, just the info button.
-    sb.append("<div style='text-align:center;'>");
-    sb.append("<span class='pagination'><ul><li>"+"<a href='"+
-              RequestStatics.encodeRedirectArgs(null,new String[]{"src_key",skey.toString(),"offset",offset>=0?"-1":"0"})+
-              "'>"+(offset>=0?"info":"rows")+"</a>"+"</li></ul></span>&nbsp;&nbsp;");
-    sb.append("</div>");
+    sb.append(pagination(src_key.numRows(), skey));
 
     DocGen.HTML.arrayHead(sb);
     // Column labels
@@ -155,12 +152,12 @@ public class Inspect2 extends Request2 {
 
     } else {                    // Row/data display
       // First N rows
-      int N = (int)Math.min(100,numRows);
+      int N = (int)Math.min(100,numRows-offset);
       for( int j=0; j<N; j++ ) {// N rows
         sb.append("<tr>");      // Row header
-        sb.append("<td>").append(j).append("</td>");
+        sb.append("<td>").append(offset+j).append("</td>");
         for( int i=0; i<cols.length; i++ ) // Columns w/in row
-          sb.append("<td>").append(x0(src_key._vecs[i],j)).append("</td>");
+          sb.append("<td>").append(x0(src_key._vecs[i],offset+j)).append("</td>");
         sb.append("</tr>");
       }
     }
@@ -172,10 +169,10 @@ public class Inspect2 extends Request2 {
 
   // ---
   // Return a well-formated string for this kind of Vec
-  private String x0( Vec v, int row ) { return x1(v,row,v.at(row)); }
+  private String x0( Vec v, long row ) { return x1(v,row,v.at(row)); }
 
   // Format a row, OR the min/max
-  private String x1( Vec v, int row, double d ) {
+  private String x1( Vec v, long row, double d ) {
     if( (row >= 0 && v.isNA(row)) || Double.isNaN(d) )
       return "-";               // Display of missing elements
     if( v.isEnum() ) return row >= 0 ? v.domain(v.at8(row)) : Long.toString((long)d);
@@ -200,4 +197,41 @@ public class Inspect2 extends Request2 {
       s = s.substring(0,s.length()-1);
     return s;
   }
+
+  public String link(String txt,Key k, long offset, long max){
+    if(offset != this.offset && 0 <= offset && offset <= max)return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=" + offset + "'>" + txt + "</a>";
+    return "<span>" + txt + "</span>";
+  }
+
+  private String infoLink(Key k){
+    return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=-1'>info</a>";
+  }
+
+
+  private static int viewsz = 100;
+
+  protected String pagination(long max, Key skey) {
+    final long offset = this.offset;
+    StringBuilder sb = new StringBuilder();
+    sb.append("<div style='text-align:center;'>");
+    sb.append("<span class='pagination'><ul>");
+    sb.append("<li>" + infoLink(skey) + "</li>");
+    long lastOffset = (max / viewsz) * viewsz;
+    long lastIdx = (max / viewsz);
+    long currentIdx = offset / viewsz;
+    long startIdx = Math.max(currentIdx-5,0);
+    long endIdx = Math.min(startIdx + 11, lastIdx);
+    if (offset == -1)
+      currentIdx = -1;
+    sb.append("<li>" + link("|&lt;",skey,0,lastOffset) + "</li>");
+    sb.append("<li>" + link("&lt;",skey,offset-viewsz,lastOffset) + "</li>");
+    for (long i = startIdx; i <= endIdx; ++i)
+      sb.append("<li>" + link(String.valueOf(i),skey,i*viewsz,lastOffset) + "</li>");
+    sb.append("<li>" + link("&gt;",skey,offset+viewsz,lastOffset) + "</li>");
+    sb.append("<li>" + link("&gt;|",skey,lastOffset,lastOffset) + "</li>");
+    sb.append("</ul></span>");
+    sb.append("</div>");
+    return sb.toString();
+  }
+
 }

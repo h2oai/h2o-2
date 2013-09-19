@@ -1,11 +1,12 @@
 import unittest, time, sys, random, math, json
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i
 import socket
 
 # kevin@mr-0xb1:~/h2o/py/testdir_hosts$ ls -ltr /home3/0xdiag/datasets/kmeans_big
 # -rw-rw-r-- 1 0xdiag 0xdiag 183538602156 Aug 24 11:43 syn_sphere15_2711545732row_6col_180GB_from_7x.csv
 # -rwxrwxr-x 1 0xdiag 0xdiag         1947 Aug 24 12:21 sphere15_makeit
+DO_KMEANS = True
 FROM_HDFS = 'CDH3'
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -100,6 +101,9 @@ class Basic(unittest.TestCase):
             h2o.cloudPerfH2O.message(l)
 
             # KMeans ****************************************
+            if not DO_KMEANS:
+                continue
+
             print "col 0 is enum in " + csvFilename + " but KMeans should skip that automatically?? or no?"
             kwargs = {
                 'k': 15, 

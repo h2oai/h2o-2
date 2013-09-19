@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
                 print "Checking sandbox log files"
                 h2o.check_sandbox_for_errors(cloudShutdownIsError=True)
             else:
-                print str(datetime.datetime.now()), " -- python still here"
+                print str(datetime.datetime.now()), h2o.python_cmd_line, "still here"
 
         start = time.time()
         h2i.delete_keys_at_all_nodes()

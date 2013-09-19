@@ -524,9 +524,7 @@ public class ValueArray extends Iced implements Cloneable {
   public InputStream openStream() {return openStream(null);}
   public InputStream openStream(ProgressMonitor p) {return new VAStream(this, p);}
 
-  /**
-   * Convert to a Frame.
-   */
+  /** Convert to a Frame.  */
   public Frame asFrame() {
     String[] names = new String[_cols.length];
     AppendableVec[] avs = new AppendableVec[_cols.length];
@@ -534,11 +532,7 @@ public class ValueArray extends Iced implements Cloneable {
       names[i] = _cols[i]._name;
       avs[i] = new AppendableVec(UUID.randomUUID().toString());
     }
-    Converter task = new Converter();
-    task._vaKey = _key;
-    task._vecs = avs;
-    task.invoke(_key);
-    avs = task._vecs;
+    avs = new Converter(_key,avs).invoke(_key)._vecs;
     Vec[] vecs = new Vec[avs.length];
     for(int i = 0; i < avs.length; ++i) {
       vecs[i] = avs[i].close(null);
@@ -548,9 +542,9 @@ public class ValueArray extends Iced implements Cloneable {
   }
 
   static class Converter extends MRTask<Converter> {
-    Key _vaKey;
-    AppendableVec[] _vecs;
-
+    final Key _vaKey;
+    final AppendableVec[] _vecs;
+    Converter( Key vaKey, AppendableVec vecs[] ) { _vaKey=vaKey; _vecs = vecs; }
     @Override public void map(Key key) {
       ValueArray va = DKV.get(_vaKey).get();
       AutoBuffer bits = va.getChunk(key);

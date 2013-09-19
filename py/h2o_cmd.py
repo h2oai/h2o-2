@@ -17,7 +17,6 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = s3_key + '.hex'
     else:
         myKeyForParseResult = keyForParseResult
-    # do SummaryPage here too, just to get some coverage
     p = node.parse(s3_key, myKeyForParseResult, 
         timeoutSecs, retryDelaySecs, 
         pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
@@ -104,33 +103,7 @@ def runRF(node=None, parseResult=None, trees=5,
     #! FIX! what else is in parseResult that we should check?
     h2o.verboseprint("runRF parseResult:", parseResult)
     Key = parseResult['destination_key']
-    rf = node.random_forest(Key, trees, timeoutSecs, **kwargs)
-
-    if h2o.beta_features and rfView==False:
-        # just return for now
-        return rf
-    # FIX! check all of these somehow?
-    # if we model_key was given to rf via **kwargs, remove it, since we're passing 
-    # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
-    data_key  = rf['data_key']
-    kwargs.pop('model_key', None)
-    model_key = rf['model_key']
-    rfCloud = rf['response']['h2o']
-
-    # same thing. if we use random param generation and have ntree in kwargs, get rid of it.
-    kwargs.pop('ntree', None)
-
-    # this is important. it's the only accurate value for how many trees RF was asked for.
-    ntree    = rf['ntree']
-    response_variable = rf['response_variable']
-    if rfView:
-        # ugly..we apparently pass/use response_variable in RFView, gets passed thru kwargs here
-        # print kwargs['response_variable']
-        rfViewResult = runRFView(node, data_key, model_key, ntree, 
-            timeoutSecs, retryDelaySecs, noise=noise, noPrint=noPrint, **kwargs)
-        return rfViewResult
-    else:
-        return rf
+    return node.random_forest(Key, trees, timeoutSecs, **kwargs)
 
 def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
@@ -148,55 +121,19 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
     noise=None, noPoll=False, noPrint=False, **kwargs):
     if not node: node = h2o.nodes[0]
 
-    def test(n, tries=None):
-        rfView = n.random_forest_view(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
-        status = rfView['response']['status']
-        numberBuilt = rfView['trees']['number_built']
+    # kind of wasteful re-read, but maybe good for testing
+    rfView = node.random_forest_view(data_key, model_key, ntree=ntree, timeoutSecs=timeoutSecs, noise=noise, **kwargs)
+    if doSimpleCheck:
+        h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
+    return rfView
 
-        if status == 'done': 
-            if numberBuilt!=ntree: 
-                raise Exception("RFview done but number_built!=ntree: %s %s" % (numberBuilt, ntree))
-            return True
-        if status != 'poll': raise Exception('Unexpected status: ' + status)
-
-        progress = rfView['response']['progress']
-        progressTotal = rfView['response']['progress_total']
-
-        # want to double check all this because it's new
-        # and we had problems with races/doneness before
-        errorInResponse = \
-            numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
-            progress<0 or progressTotal<0 or progress>progressTotal or \
-            ntree!=rfView['ntree']
-            ## progressTotal!=ntree or
-            # rfView better always agree with what RF ntree was
-
-        if errorInResponse:
-            raise Exception("\nBad values in response during RFView polling.\n" + 
-                "progress: %s, progressTotal: %s, ntree: %s, numberBuilt: %s, status: %s" % \
-                (progress, progressTotal, ntree, numberBuilt, status))
-
-        # don't print the useless first poll.
-        # UPDATE: don't look for done. look for not poll was missing completion when looking for done
-        if (status=='poll'):
-            if numberBuilt==0:
-                h2o.verboseprint(".")
-            else:
-                h2o.verboseprint("\nRFView polling #", tries,
-                    "Status: %s. %s trees done of %s desired" % (status, numberBuilt, ntree))
-
-        return (status!='poll')
-
-    if noPoll:
-        return None
-
-    node.stabilize(
-            test,
-            'random forest reporting %d trees' % ntree,
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
+def runRFScore(node=None, data_key=None, model_key=None, ntree=None, 
+    timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
+    noise=None, noPoll=False, noPrint=False, **kwargs):
+    if not node: node = h2o.nodes[0]
 
     # kind of wasteful re-read, but maybe good for testing
-    rfView = node.random_forest_view(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
+    rfView = node.random_forest_score(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
     if doSimpleCheck:
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
@@ -204,12 +141,11 @@ def runRFView(node=None, data_key=None, model_key=None, ntree=None,
 def runStoreView(node=None, timeoutSecs=30, **kwargs):
     if not node: node = h2o.nodes[0]
     storeView = node.store_view(timeoutSecs, **kwargs)
-    print "\n"
     for s in storeView['keys']:
         print "StoreView: key:", s['key']
         if 'rows' in s: 
             h2o.verboseprint("StoreView: rows:", s['rows'], "value_size_bytes:", s['value_size_bytes'])
-    print 'storeView has', len(storeView['keys']), 'keys'
+    h2o.verboseprint('storeView has', len(storeView['keys']), 'keys')
     return storeView
 
 def port_live(ip, port):

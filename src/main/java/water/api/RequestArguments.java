@@ -1165,36 +1165,20 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
 
   public class LongInt extends InputText<Long> {
-    public final transient Long _defaultValue;
+    public final transient long _defaultValue;
     public final long _min;
     public final long _max;
     public final String _comment;
 
-    public LongInt(String name) {
-      this(name, Long.MIN_VALUE, Long.MAX_VALUE);
+    public LongInt(String name, long min, long max) { this(name,false,0,min,max,""); }
+    public LongInt(String name, long defaultValue, String comment) {
+      this(name, false, defaultValue, Long.MIN_VALUE, Long.MAX_VALUE, comment);
     }
-
-    public LongInt(String name, long min, long max) {
-      super(name,true);
-      _defaultValue = null;
-      _min = min;
-      _max = max;
-      _comment = "";
-    }
-
-    public LongInt(String name, Long defaultValue, String comment) {
-      this(name, false, defaultValue, null, null, comment);
-    }
-
-    public LongInt(String name, Long defaultValue, long min, long max, String comment) {
-      this(name, false, defaultValue, min, max, comment);
-    }
-
-    public LongInt(String name, boolean req, Long defaultValue, Long min, Long max, String comment) {
+    public LongInt(String name, boolean req, long defaultValue, long min, long max, String comment) {
       super(name, req);
       _defaultValue = defaultValue;
-      _min = min != null ? min : Long.MIN_VALUE;
-      _max = max != null ? max : Long.MAX_VALUE;
+      _min = min;
+      _max = max;
       _comment = comment;
     }
 
@@ -1202,19 +1186,15 @@ public class RequestArguments extends RequestStatics {
       try {
         long i = Long.parseLong(input);
         if ((i< _min) || (i > _max))
-          throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
+          throw new IllegalArgumentException(_name+"Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
         return i;
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Value "+input+" is not a valid long integer.");
+        throw new IllegalArgumentException(_name+"Value "+input+" is not a valid long integer.");
       }
     }
 
-    @Override protected Long defaultValue() {
-      return _defaultValue;
-    }
-
+    @Override protected Long defaultValue() { return _defaultValue; }
     @Override protected String queryComment() { return _comment; }
-
     @Override protected String queryDescription() {
       return ((_min == Long.MIN_VALUE) && (_max == Long.MAX_VALUE))
               ? "Integer value"
@@ -1482,6 +1462,16 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   // H2OKey
   // ---------------------------------------------------------------------------
+  // key with autocompletion and autoconversion to frame
+  public class H2OKey2 extends TypeaheadInputText<Key> {
+    public final Key _defaultValue;
+    public H2OKey2(String name, boolean required) { this(name,null,required); }
+    public H2OKey2(String name, Key key) { this(name,key,false); }
+    public H2OKey2(String name, Key key, boolean req) { super(TypeaheadKeysRequest.class,name, req); _defaultValue = key; }
+    @Override protected Key parse(String input) { return Key.make(input); }
+    @Override protected Key defaultValue() { return _defaultValue; }
+    @Override protected String queryDescription() { return "Valid H2O key"; }
+  }
   public class H2OKey extends InputText<Key> {
     public final Key _defaultValue;
     public H2OKey(String name, boolean required) { this(name,null,required); }
@@ -1975,7 +1965,8 @@ public class RequestArguments extends RequestStatics {
       };
     }
 
-    public boolean saveIgnore(int i, ValueArray.Column ca) {
+    // public boolean saveIgnore(int i, ValueArray.Column ca) {
+    @Override public boolean shouldIgnore(int i, ValueArray.Column ca) {
       if(ca._min == ca._max) {
         if(_constantColumns.get() == null)
           _constantColumns.set(new TreeSet<String>());
@@ -1987,7 +1978,7 @@ public class RequestArguments extends RequestStatics {
         _nonNumColumns.get().add(Objects.firstNonNull(ca._name, String.valueOf(i)));
         return true;
       }
-      return false;
+      return super.shouldIgnore(i, ca);
     }
 
     String _comment = "";
@@ -1996,12 +1987,21 @@ public class RequestArguments extends RequestStatics {
       int [] res = new int[va._cols.length];
       int selected = 0;
       for(int i = 0; i < va._cols.length; ++i) {
-        if(saveIgnore(i, va._cols[i]))
+        /*if(saveIgnore(i, va._cols[i]))
           res[selected++] = i;
         else if((1.0 - (double)va._cols[i]._n/va._numrows) >= _maxNAsRatio) {
           int val = 0;
           if(_badColumns.get() != null) val = _badColumns.get();
           _badColumns.set(val+1);
+        }*/
+        if(!shouldIgnore(i, va._cols[i])) {
+          if((1.0 - (double)va._cols[i]._n/va._numrows) <= _maxNAsRatio)
+            res[selected++] = i;
+          else {
+            int val = 0;
+            if(_badColumns.get() != null) val = _badColumns.get();
+            _badColumns.set(val+1);
+          }
         }
       }
       return Arrays.copyOfRange(res,0,selected);
@@ -2335,123 +2335,98 @@ public class RequestArguments extends RequestStatics {
       if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
       return vec;
     }
-    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && vec.max()<=1000;  }
+    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && (vec.max()-vec.min() <= 1000);  }
     @Override protected Vec defaultValue() {
       Frame fr = fr();
       return fr != null ? fr._vecs[fr._vecs.length - 1] : null;
     }
-    @Override protected String[] errors() { return new String[] { "Only integer or enum/factor columns can be classified" }; }
+    @Override protected String[] errors() { return new String[] { "Only positive integer or enum/factor columns can be classified, with a limit of 1000 classes" }; }
   }
 
-  /** Select a range of Vecs from a Frame */
-  public class FrameVecSelect extends MultipleSelect<int[]> {
-    public final TypeaheadKey _key;
-    //int _selectedCols[] = new int[2]; // All the columns I'm willing to show the user
-    public FrameVecSelect(String name, TypeaheadKey key) {
+  public class FrameKeyMultiVec extends MultipleSelect<int[]> {
+    final TypeaheadKey _key;
+    final FrameClassVec _response;
+    protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
+    protected Frame fr() { return DKV.get(_key.value()).get(); }
+
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response) {
       super(name);
       addPrerequisite(_key = key);
+      if((_response = response) != null)
+        addPrerequisite(_response);
     }
-    protected Frame fr() { return DKV.get(_key.value()).get(); }
-    public boolean shouldIgnore (Vec vec) { return false; }
-    public void    checkLegality(Vec vec) throws IllegalArgumentException { }
-
-    private int[] allCols() {
-      int is[] = new int[2];
-      Vec vecs[] = fr().vecs();
-      for( int i = 0; i < vecs.length; ++i )
-        if( !shouldIgnore(vecs[i]) )
-          is = add(is,i);
-      return is;
+    public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr._vecs[i]; }
+    public void checkLegality(Vec v) throws IllegalArgumentException { }
+    protected Comparator<Integer> colComp(final ValueArray ary){
+      return null;
     }
+    transient ArrayList<Integer> _selectedCols; // All the columns I'm willing to show the user
 
-    // Select which columns I'll show the user
     @Override protected String queryElement() {
-      //_selectedCols = allCols();
+      Frame fr = fr();
+      ArrayList<Integer> cols = Lists.newArrayList();
+      for (int i = 0; i < fr.numCols(); ++i)
+        if( !shouldIgnore(i, fr) )
+          cols.add(i);
+      _selectedCols = cols;
       return super.queryElement();
     }
 
     // "values" to send back and for in URLs.  Use numbers for density (shorter URLs).
     @Override protected final String[] selectValues() {
-      int is[] = allCols();
-      String [] res = new String[len(is)];
-      for( int i=0; i<len(is); i++ ) res[i] = String.valueOf(is[i]);
+      String [] res = new String[_selectedCols.size()];
+      int idx = 0;
+      for(int i : _selectedCols) res[idx++] = String.valueOf(i);
       return res;
     }
 
     // "names" to select in the boxes.
     @Override protected String[] selectNames() {
       Frame fr = fr();
-      int is[] = allCols();
-      String [] res = new String[len(is)];
-      for( int i=0; i<len(is); i++ ) {
-        Vec vec = fr.vecs()[is[i]];
-        String name = fr._names[is[i]];
-        double ratio = (double)vec.naCnt()/vec.length();
-        res[i] = name + (ratio > 0.01 ? (" (" + Math.round(ratio*100) + "% NAs)") : "");
-      }
+      String [] res = new String[_selectedCols.size()];
+      int idx = 0;
+      for(int i:_selectedCols) res[idx++] = fr._names[i];
       return res;
     }
 
     @Override protected boolean isSelected(String value) {
+      Frame fr = fr();
       int[] val = value();
       if (val == null) return true;
-      int idx = fr().find(value);
-      return Arrays.binarySearch(val,idx) >= 0;
+      for(int i = 0; i < fr.numCols(); ++i)
+        if(fr._names[i].equals(value))Ints.contains(val, i);
+      return false;
     }
 
     @Override protected int[] parse(String input) throws IllegalArgumentException {
-      int is[] = new int[2];
-      for( String col : input.split(",") ) {
+      Frame fr = fr();
+      ArrayList<Integer> al = new ArrayList();
+      for (String col : input.split(",")) {
+        col = col.trim();
+        int idx = -1;
         try {
-          int idx = Integer.valueOf(col.trim());
-          if (idx < 0 || idx >= fr().vecs().length )
-            throw new IllegalArgumentException("Column "+col+" not part of Frame "+_key);
-          if( find(is,idx) != -1 )
-            throw new IllegalArgumentException("Column "+col+" is already selected.");
-          checkLegality(fr().vecs()[idx]);
-          is = add(is,idx);
-        } catch( NumberFormatException nfe ) {
-          throw new IllegalArgumentException("Column #"+col+" is not a number.");
+         idx = Integer.valueOf(col);
+        }catch(NumberFormatException e){
+          for(int i = 0; i < fr.numCols(); ++i)
+            if(fr._names[i].equals(col))idx = i;
         }
+        if (0 > idx || idx > fr.numCols())
+          throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
+        if (al.contains(idx))
+          throw new IllegalArgumentException("Column "+col+" is already ignored.");
+        checkLegality(fr._vecs[idx]);
+        al.add(idx);
       }
-      return Arrays.copyOf(is,len(is));
+      if(al.size() == fr.numCols()-1)throw new IllegalArgumentException("Can not ignore all columns!");
+      return Ints.toArray(al);
     }
 
-    // By default, everything is selected.  For some reason I cannot get the
-    // browser to start with these selected.
     @Override protected int[] defaultValue() {
-      int[] is = allCols();
-      return Arrays.copyOf(is,len(is));
+      return new int[0];
     }
-    @Override protected String queryDescription() { return "Columns to select"; }
-    // A weenie experimental ArrayList<Integer> API using primitive ints
-    protected void clr(int[] is) { is[is.length-1]=0; }
-    protected int len(int[] is) { return is[is.length-1]; }
-    protected int find(int[] is, int x) {
-      for( int i=0; i<len(is); i++ )
-        if( is[i]==x ) return i;
-      return -1;
-    }
-    protected int[] add(int[] is, int x) {
-      int len = len(is);
-      if( len==is.length-1 ) is=Arrays.copyOf(is,(len+1)<<1);
-      is[len] = x;
-      is[is.length-1] = len+1;
-      return is;
-    }
-  }
 
-  /** Select any/all Vecs, excluding a certain one */
-  public class FrameNonClassVecSelect extends FrameVecSelect {
-    public final FrameKeyVec _classVec;
-    public FrameNonClassVecSelect(String name, TypeaheadKey key, FrameKeyVec classVec) {
-      super(name, key);
-      addPrerequisite(_classVec = classVec);
-    }
-    @Override public boolean shouldIgnore(Vec vec) { return vec == _classVec.value(); }
-    @Override public void checkLegality(Vec vec) throws IllegalArgumentException {
-      if( vec == _classVec.value() )
-        throw new IllegalArgumentException("Class Vec cannot be selected");
+    @Override protected String queryDescription() {
+      return "Columns to ignore";
     }
   }
 }

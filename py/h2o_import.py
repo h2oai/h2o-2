@@ -120,6 +120,15 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
     elif "/" in pathWithRegex:
         (head, tail) = os.path.split(pathWithRegex)
         folderPath = os.path.abspath(os.path.join(bucketPath, head))
+        # try a couple times with os.stat in between, in case it's not automounting
+        retry = 0
+        while checkPath and (not os.path.exists(folderPath)) and retry<5:
+            # we can't stat an actual file, because we could have a regex at the end of the pathname
+            print "Retrying", folderPath, "in case there's a autofs mount problem"
+            os.stat(folderPath)
+            retry += 1
+            time.sleep(1)
+        
         if checkPath and not os.path.exists(folderPath):
             raise Exception("%s doesn't exist. %s under %s may be wrong?" % (folderPath, head, bucketPath))
     else:
@@ -203,10 +212,8 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         # strip leading / in head if present
         if bucket and head!="":
             folderOffset = bucket + "/" + head
-            print 1
         elif bucket:
             folderOffset = bucket
-            print 2
         else:
             folderOffset = head
 
@@ -350,7 +357,7 @@ def delete_keys(node=None, pattern=None, timeoutSecs=30):
     for k in keys:
         node.remove_key(k['key'])
     deletedCnt = len(keys)
-    print "Deleted", deletedCnt, "keys at", node
+    # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return deletedCnt
 
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
@@ -363,8 +370,37 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
     for node in reversed(h2o.nodes):
         deletedCnt = delete_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
         totalDeletedCnt += deletedCnt
-    print "\nTotal: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
+
+    if pattern:
+        print "Total: Deleted", totalDeletedCnt, "keys with filter=", pattern, "at", len(h2o.nodes), "nodes"
+    else:
+        print "Total: Deleted", totalDeletedCnt, "keys at", len(h2o.nodes), "nodes"
     return totalDeletedCnt
+
+
+def count_keys(node=None, pattern=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    kwargs = {'filter': pattern}
+    storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
+    nodeCnt = len(storeViewResult['keys'])
+    print nodeCnt, "keys at %s:%s" % (node.http_addr, node.port)
+    return nodeCnt
+
+def count_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
+    if not node: node = h2o.nodes[0]
+    totalCnt = 0
+    # do it in reverse order, since we always talk to 0 for other stuff
+    # this will be interesting if the others don't have a complete set
+    # theoretically, the deletes should be 0 after the first node 
+    # since the deletes should be global
+    for node in reversed(h2o.nodes):
+        nodeCnt = count_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
+        totalCnt += nodeCnt
+    if pattern:
+        print "Total: ", totalCnt, "keys with filter=", pattern, "at", len(h2o.nodes), "nodes"
+    else:
+        print "Total: ", totalCnt, "keys at", len(h2o.nodes), "nodes"
+    return totalCnt
 
 
 #****************************************************************************************
@@ -379,7 +415,7 @@ def delete_keys_from_import_result(node=None, pattern=None, importResult=None, t
         for k in kDict:
             key = k['key']
             if (pattern in key) or pattern is None:
-                print "\nRemoving", key
+                print "Removing", key
                 removeKeyResult = node.remove_key(key=key)
                 deletedCnt += 1
     elif 'keys' in importResult:
@@ -387,7 +423,7 @@ def delete_keys_from_import_result(node=None, pattern=None, importResult=None, t
         for k in kDict:
             key = k
             if (pattern in key) or pattern is None:
-                print "\nRemoving", key
+                print "Removing", key
                 removeKeyResult = node.remove_key(key=key)
                 deletedCnt += 1
     else:

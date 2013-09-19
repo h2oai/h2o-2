@@ -19,7 +19,7 @@ public class GBMModelView extends Request2 {
     return new Response(Response.Status.redirect, req, -1, -1, "GBMModelView", "_modelKey", modelKey);
   }
 
-  public boolean toHTML(StringBuilder sb){
+  @Override public boolean toHTML(StringBuilder sb){
     gbm_model.generateHTML("GBM Model", sb);
     return true;
   }

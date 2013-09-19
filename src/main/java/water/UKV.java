@@ -31,9 +31,6 @@ public abstract class UKV {
       for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
         DKV.remove(ary.getChunkKey(i),fs);
     }
-    if( key._kb[0] == Key.KEY_OF_KEYS ) // Key-of-keys?
-      for( Key k : key.flatten() )      // Then recursively delete
-        remove(k,fs);
   }
   static public void put( Key key, Iced val, Futures fs ) { put(key,new Value(key, val),fs); }
 
@@ -53,9 +50,6 @@ public abstract class UKV {
       for( long i=0; i<ary.chunks(); i++ ) // Delete all the chunks
         DKV.remove(ary.getChunkKey(i),fs);
     }
-    if( key._kb[0] == Key.KEY_OF_KEYS ) // Key-of-keys?
-      for( Key k : key.flatten() )      // Then recursively delete
-        remove(k,fs);
     if( key._kb[0] == Key.VEC ) {
       water.fvec.Vec vec = val.get();
       for( int i=0; i<vec.nChunks(); i++ )

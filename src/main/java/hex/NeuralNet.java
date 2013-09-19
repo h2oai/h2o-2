@@ -29,7 +29,7 @@ public class NeuralNet extends FrameJob {
 //@formatter:off
   @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
   public int[] cols;
-  class colsFilter extends VecsSelect { public colsFilter() { super("source"); } }
+  class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
   @API(help="Column to use as class", required=true, filter=responseFilter.class)
   public Vec response;
@@ -135,6 +135,7 @@ public class NeuralNet extends FrameJob {
       }
     };
     thread.start();
+    trainer.join();
   }
 
   @Override public float progress() {
@@ -230,6 +231,10 @@ public class NeuralNet extends FrameJob {
   }
 
   public static class NeuralNetProgress extends Progress2 {
+    @Override protected String name() {
+      return DOC_GET;
+    }
+
     @Override public boolean toHTML(StringBuilder sb) {
       NeuralNetModel model = UKV.get(Key.make(dst_key.value()));
       if( model != null ) {
@@ -254,6 +259,10 @@ public class NeuralNet extends FrameJob {
         }
       }
       return true;
+    }
+
+    @Override protected Response jobDone(final Job job, final String dst) {
+      return new Response(Response.Status.done, this, 0, 0, null);
     }
   }
 

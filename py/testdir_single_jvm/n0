@@ -55,6 +55,8 @@
 ./n0.doit test_GLM_poisson_goalies_gg.py
 ./n0.doit test_GLM_poisson_rand2.py
 ./n0.doit test_GLM_poisson_timeout_fail.py
+./n0.doit test_GLM_predict3_10pct.py
+./n0.doit test_GLM_predict3.py
 ./n0.doit test_GLM_princeton.py
 ./n0.doit test_GLM_score_same.py
 ./n0.doit test_GLM_syn_2659x1049.py
@@ -87,7 +89,6 @@
 ./n0.doit test_parse_multi_header_single.py
 ./n0.doit test_parse_small_many.py
 ./n0.doit test_parse_syn_gz_cat.py
-./n0.doit test_parse_tab_data_comma_header.py
 ./n0.doit test_PCA_UCIwine.py
 ./n0.doit test_players_NA.py
 ./n0.doit test_put_parse4.py
@@ -106,9 +107,9 @@
 ./n0.doit test_rf_covtype_train_oobe2.py
 ./n0.doit test_rf_covtype_train_oobe3.py
 ./n0.doit test_rf_covtype_train_oobe4.py
-./n0.doit test_RF_mnist_both.py
-./n0.doit test_RF_mnist.py
-./n0.doit test_RF_mnist_reals.py
+./n0.doit test_rf_mnist_both.py
+./n0.doit test_rf_mnist.py
+./n0.doit test_rf_mnist_reals.py
 ./n0.doit test_rf_model_key_unique.py
 ./n0.doit test_rf_noise.py
 ./n0.doit test_rf_params_rand1.py
@@ -118,6 +119,9 @@
 ./n0.doit test_rf_params_rand2_ncaa.py
 ./n0.doit test_rf_params_rand2_nostrata.py
 ./n0.doit test_rf_params_rand2.py
+./n0.doit test_rf_predict3_10pct.py
+./n0.doit test_rf_predict3_iris.py
+./n0.doit test_rf_predict3.py
 ./n0.doit test_rf_predict.py
 ./n0.doit test_rf_strata_rand1.py
 ./n0.doit test_rf_syn_gz_cat.py
@@ -125,14 +129,10 @@
 ./n0.doit test_R_GLM_basic.py
 ./n0.doit test_R_KMeans_basic.py
 ./n0.doit test_R_RF_basic.py
+./n0.doit test_SetupOneJVM14.py
 ./n0.doit test_simple.py
 ./n0.doit test_slice.py
-./n0.doit test_small_parse_overlap_diff_dest_nopoll.py
-./n0.doit test_small_parse_overlap_same_dest_del_nopoll.py
-./n0.doit test_small_parse_overlap_same_dest_nopoll.py
-./n0.doit test_small_parse_sequential_diff_dest.py
-./n0.doit test_small_parse_sequential_same_dest_del.py
-./n0.doit test_small_parse_sequential_same_dest.py
+./n0.doit test_small_parse.py
 ./n0.doit test_summary_percentile2.py
 ./n0.doit test_summary_percentile.py
 ./n0.doit test_tnc3.py

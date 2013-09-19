@@ -1,11 +1,9 @@
 package water.api;
 
-import hex.ScoreTask;
 import water.*;
-import water.util.RString;
-import water.util.Log;
 import water.fvec.Frame;
-import water.fvec.Vec;
+import water.util.Log;
+import water.util.RString;
 
 /**
  * @author cliffc
@@ -16,12 +14,12 @@ public class GeneratePredictions2 extends Request2 {
 
   @API( help="Model", required=true, filter=Default.class )
   Model model;
-  
-  @API(help = "Data frame", required = true, filter = Default.class)
-  Frame data;
 
-  @API( help="Prediction key", required=true, filter=Default.class )
-  Key prediction_key;
+  @API(help = "Data frame", required = true, filter = Default.class)
+  public Frame data;
+
+  @API( help="Prediction key", filter=Default.class )
+  Key prediction_key = Key.make();
 
 
   public static String link(Key k, String content) {
@@ -33,8 +31,8 @@ public class GeneratePredictions2 extends Request2 {
 
   @Override protected Response serve() {
     try {
-      Vec vec = model.score(data,true);
-      Frame fr = new Frame(new String[]{prediction_key.toString()},new Vec[]{vec});
+      if( model == null ) throw new IllegalArgumentException("Model is missing");
+      Frame fr = model.score(data,true);
       UKV.put(prediction_key,fr);
       return Inspect2.redirect(this, prediction_key.toString());
     } catch (Throwable t) {

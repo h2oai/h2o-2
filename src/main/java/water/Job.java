@@ -234,6 +234,7 @@ public class Job extends Request2 {
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
         run();
+        remove();
         tryComplete();
       }
     };

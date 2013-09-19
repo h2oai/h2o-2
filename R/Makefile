@@ -10,6 +10,7 @@ ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
 	R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
+	R CMD Rd2pdf --force --output="h2oWrapper-package/h2oWrapper_package.pdf" --title="Package 'h2oWrapper'" --no-index --no-preview h2oWrapper-package/man 1> /dev/null
 endif
 	R CMD build h2o-package
 	echo h2o_$(PROJECT_VERSION).tar.gz > info.txt
@@ -27,9 +28,15 @@ endif
 	mkdir -p ../target/R
 	cp -p README.txt ../target/R
 	mv h2o_$(PROJECT_VERSION).tar.gz ../target/R
+	
+	R CMD build h2oWrapper-package
+	mv h2oWrapper_1.0.tar.gz ../target/R
 
 clean:
 	rm -f h2o-package/DESCRIPTION
 	rm -f h2o-package/h2o_package.pdf
 	rm -f h2o-package/man/h2o-package.Rd
 	rm -f h2o_*.tar.gz
+	
+	rm -f h2oWrapper-package/h2oWrapper_package.pdf
+	rm -f h2oWrapper_*.tar.gz

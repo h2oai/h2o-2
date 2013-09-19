@@ -72,7 +72,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
     Request.addToNavbar(registerRequest(new GeneratePredictions2()),     "Predict2",      "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
-
+    Request.addToNavbar(registerRequest(new ConfusionMatrix()), "ConfusionMatrix",        "Score");
 
     //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
     registerRequest(new Plot());
@@ -94,14 +94,24 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
     Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
 
-    if(H2O.OPT_ARGS.beta != null) {
-      Request.addToNavbar(registerRequest(new ImportFiles2()),"Import Files2",  "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Parse2()),      "Parse2"       ,  "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Inspect2()),    "Inspect",        "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2"      ,  "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new hex.gbm.DRF()), "DRF2"         ,  "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new hex.LR2()), "Linear Regression2", "Beta (FluidVecs!)");
-      //Request.addToNavbar(registerRequest(new water.api.Quantiles()), "Quantiles",    "Beta (FluidVecs!)");
+    // Beta things should be reachable by the API and web redirects, but not put in the menu.
+    if(H2O.OPT_ARGS.beta == null) {
+      registerRequest(new ImportFiles2());
+      registerRequest(new Parse2());
+      registerRequest(new Inspect2());
+      registerRequest(new KMeans2());
+      registerRequest(new hex.gbm.DRF());
+      registerRequest(new hex.LR2());
+      registerRequest(new NeuralNet());
+      registerRequest(new NeuralNetScore());
+    }
+    else {
+      Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
     }
 
     // internal handlers
@@ -111,6 +121,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new DRFProgressPage());
     registerRequest(new DownloadDataset());
     registerRequest(new Exec());
+    registerRequest(new DataManip());
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());

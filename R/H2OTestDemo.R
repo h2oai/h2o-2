@@ -48,3 +48,10 @@ prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o
 prostate.pca = h2o.prcomp(prostate.hex)
 print(prostate.pca)
 summary(prostate.pca)
+
+# Test of gbm using iris data set
+iris.hex = h2o.importFile(localH2O, path = "../smalldata/iris/iris.csv", key = "iris.hex")
+iris.sum = summary(iris.hex)
+print(iris.sum)
+iris.gbm=h2o.gbm(data=iris.hex,destination="iris",y="4",ntrees=10,max_depth=8,learn_rate=.2,min_rows=10)
+print(iris.gbm)

@@ -1,6 +1,6 @@
 import unittest, time, sys, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import2 as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import as h2i
 
 USE_LOCAL=True
 

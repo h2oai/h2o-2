@@ -1,6 +1,6 @@
 import unittest, sys, time
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_import2 as h2i, h2o_glm, h2o_common
+import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common
 import h2o_print
 
 DO_GLM = True
@@ -20,12 +20,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
         if len(h2o.nodes)==1:
-            tryHeap = 28
             csvFilenameList= [
                 ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
             ]
         else:
-            tryHeap = 28
             csvFilenameList= [
                 ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
             ]
@@ -109,37 +107,37 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     def test_B_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_C_c2_rel_long(self):
+    def notest_C_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_D_c2_rel_long(self):
+    def notest_D_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_E_c2_rel_long(self):
+    def notest_E_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_F_c2_rel_long(self):
+    def notest_F_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_G_c2_rel_long(self):
+    def notest_G_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_H_c2_rel_long(self):
+    def notest_H_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_I_c2_rel_long(self):
+    def notest_I_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_J_c2_rel_long(self):
+    def notest_J_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_K_c2_rel_long(self):
+    def notest_K_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_L_c2_rel_long(self):
+    def notest_L_c2_rel_long(self):
         self.sub_c2_rel_long()
 
-    def test_M_c2_rel_long(self):
+    def notest_M_c2_rel_long(self):
         self.sub_c2_rel_long()
 
 

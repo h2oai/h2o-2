@@ -91,8 +91,8 @@ public abstract class Request2 extends Request {
     }
   }
 
-  public class VecsSelect extends Dependent {
-    protected VecsSelect(String key) {
+  public class MultiVecSelect extends Dependent {
+    protected MultiVecSelect(String key) {
       super(key);
     }
   }
@@ -118,6 +118,7 @@ public abstract class Request2 extends Request {
           if( !Modifier.isStatic(field.getModifiers()) )
             fields.add(field);
 
+      HashMap<String, FrameClassVec> classVecs = new HashMap<String, FrameClassVec>();
       for( Field f : fields ) {
         Annotation[] as = f.getAnnotations();
         API api = find(as, API.class);
@@ -136,13 +137,13 @@ public abstract class Request2 extends Request {
           // Real
           else if( f.getType() == float.class || f.getType() == double.class ) {
             double val = ((Number) defaultValue).doubleValue();
-            arg = new Real(f.getName(), api.required(), val, null, null, api.help());
+            arg = new Real(f.getName(), api.required(), val, api.dmin(), api.dmax(), api.help());
           }
 
           // LongInt
           else if( f.getType() == int.class || f.getType() == long.class ) {
             long val = ((Number) defaultValue).longValue();
-            arg = new LongInt(f.getName(), api.required(), val, null, null, api.help());
+            arg = new LongInt(f.getName(), api.required(), val, api.lmin(), api.lmax(), api.help());
           }
 
           // Bool
@@ -187,10 +188,13 @@ public abstract class Request2 extends Request {
                 ref = a;
             if( VecSelect.class.isAssignableFrom(api.filter()) )
               arg = new FrameKeyVec(f.getName(), (TypeaheadKey) ref);
-            else if( VecClassSelect.class.isAssignableFrom(api.filter()) )
+            else if( VecClassSelect.class.isAssignableFrom(api.filter()) ) {
               arg = new FrameClassVec(f.getName(), (TypeaheadKey) ref);
-            else if( VecsSelect.class.isAssignableFrom(api.filter()) )
-              arg = new FrameVecSelect(f.getName(), (TypeaheadKey) ref);
+              classVecs.put(d._ref, (FrameClassVec) arg);
+            } else if( MultiVecSelect.class.isAssignableFrom(api.filter()) ) {
+              FrameClassVec response = classVecs.get(d._ref);
+              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response);
+            }
           }
 
           if( arg != null ) {
