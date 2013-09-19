@@ -2297,7 +2297,7 @@ public class RequestArguments extends RequestStatics {
       super(name, true);
       addPrerequisite(_key=key);
     }
-    protected Frame fr() { return DKV.get(_key.value()).get(); }
+    protected Frame fr() { return ValueArray.asFrame(_key.value()); }
     @Override protected String[] selectValues() { return fr()._names;  }
     @Override protected String selectedItemValue() {
       Vec defaultVec = defaultValue();
@@ -2347,7 +2347,9 @@ public class RequestArguments extends RequestStatics {
     final TypeaheadKey _key;
     final FrameClassVec _response;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
-    protected Frame fr() { return DKV.get(_key.value()).get(); }
+    protected Frame fr() {
+      return ValueArray.asFrame(_key.value());
+    }
 
     public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response) {
       super(name);
