@@ -44,10 +44,10 @@ public abstract class Layer extends Iced {
   transient float[] _v, _gv;
 
   public final void init(Layer in, int units) {
-    init(in, units, true);
+    init(in, units, true, 0);
   }
 
-  public void init(Layer in, int units, boolean weights) {
+  public void init(Layer in, int units, boolean weights, long step) {
     _a = new float[units];
     _e = new float[units];
     _in = in;
@@ -81,7 +81,7 @@ public abstract class Layer extends Iced {
       }
     }
 
-    anneal(0);
+    anneal(step);
   }
 
   public void randomize() {
@@ -147,7 +147,7 @@ public abstract class Layer extends Iced {
   public static abstract class Input extends Layer {
     long _row, _len;
 
-    @Override public void init(Layer in, int units, boolean weights) {
+    @Override public void init(Layer in, int units, boolean weights, long step) {
       _a = new float[units];
     }
 
@@ -163,30 +163,33 @@ public abstract class Layer extends Iced {
   }
 
   public static class FrameInput extends Input {
-    Frame _frame;
-    boolean _normalize;
+    public Frame _frame;
     transient Chunk[] _caches;
 
     // TODO temp until stats are propagated with vecs
-    float[] _means, _sigmas;
+    public float[] _means, _sigmas;
 
     public FrameInput() {
     }
 
     public FrameInput(Frame frame) {
-      this(frame, true);
+      this(frame, null, null);
     }
 
-    public FrameInput(Frame frame, boolean normalize) {
+    public FrameInput(Frame frame, float[] means, float[] sigmas) {
       _frame = frame;
-      _normalize = normalize;
       _len = frame.numRows();
 
-      _means = new float[frame._vecs.length - 1];
-      _sigmas = new float[_means.length];
-      for( int i = 0; i < _means.length; i++ ) {
-        _means[i] = (float) frame._vecs[i].mean();
-        _sigmas[i] = (float) frame._vecs[i].sigma();
+      if( means != null ) {
+        _means = means;
+        _sigmas = sigmas;
+      } else {
+        _means = new float[frame._vecs.length - 1];
+        _sigmas = new float[_means.length];
+        for( int i = 0; i < _means.length; i++ ) {
+          _means[i] = (float) frame._vecs[i].mean();
+          _sigmas[i] = (float) frame._vecs[i].sigma();
+        }
       }
     }
 
@@ -198,10 +201,8 @@ public abstract class Layer extends Iced {
       for( int i = 0; i < _a.length; i++ ) {
         Chunk chunk = chunk(i, _row);
         double d = chunk.at(_row);
-        if( _normalize ) {
-          d -= _means[i];
-          d = _sigmas[i] > 1e-4 ? d / _sigmas[i] : d;
-        }
+        d -= _means[i];
+        d = _sigmas[i] > 1e-4 ? d / _sigmas[i] : d;
         _a[i] = (float) d;
       }
     }
@@ -217,7 +218,7 @@ public abstract class Layer extends Iced {
   }
 
   public static class ChunksInput extends Input {
-    Chunk[] _chunks;
+    transient Chunk[] _chunks;
     float[] _means, _sigmas;
 
     public ChunksInput() {
@@ -272,12 +273,8 @@ public abstract class Layer extends Iced {
           int w = o * _in._a.length + i;
           _in._e[i] += g * _w[w];
           _w[w] += u * _in._a[i];
-//          if( _wGroup != null )
-//            _w[w] += (_wGroup[w] - _w[w]) * _cohesiveness * _in._a[i];
         }
         _b[o] += u;
-//        if( _bGroup != null )
-//          _b[o] += (_bGroup[o] - _b[o]) * _cohesiveness;
       }
     }
   }
@@ -306,25 +303,8 @@ public abstract class Layer extends Iced {
         float u = _r * g;
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
-          _w[w] += u * _in._a[i];
-//          if( _wGroup != null )
-//            _w[w] += (_wGroup[w] - _w[w]) * _cohesiveness * _in._a[i];
-        }
-        _b[o] += u;
-//        if( _bGroup != null )
-//          _b[o] += (_bGroup[o] - _b[o]) * _cohesiveness;
-      }
-    }
-  }
-
-  public static class TanhDeep extends Tanh {
-    @Override void bprop() {
-      for( int o = 0; o < _a.length; o++ ) {
-        float g = _e[o] * (1 - _a[o] * _a[o]);
-        float u = _r * g;
-        for( int i = 0; i < _in._a.length; i++ ) {
-          int w = o * _in._a.length + i;
-          _in._e[i] += g * _w[w]; // Deep: also set previous error
+          if( _in._e != null )
+            _in._e[i] += g * _w[w];
           _w[w] += u * _in._a[i];
         }
         _b[o] += u;
@@ -376,18 +356,12 @@ public abstract class Layer extends Iced {
     return (Layer) super.clone();
   }
 
-  public static Layer[] clone(Layer[] ls, Frame frame) {
-    FrameInput input = new FrameInput(frame);
-    input.init(null, frame._vecs.length - 1, false);
-    return clone(ls, input);
-  }
-
-  public static Layer[] clone(Layer[] ls, Input input) {
+  public static Layer[] clone(Layer[] ls, Input input, long step) {
     Layer[] clones = new Layer[ls.length];
     clones[0] = input;
     for( int y = 1; y < ls.length; y++ ) {
       clones[y] = ls[y].clone();
-      clones[y].init(clones[y - 1], ls[y]._b.length, false);
+      clones[y].init(clones[y - 1], ls[y]._b.length, false, step);
     }
     return clones;
   }

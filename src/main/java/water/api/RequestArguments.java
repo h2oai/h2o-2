@@ -4,22 +4,23 @@ import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.*;
 import hex.DPCA.PCAModel;
+import hex.*;
 import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import water.*;
+import water.Request2.TypeaheadKey;
 import water.ValueArray.Column;
-import water.util.*;
-import water.api.Parse.ExistingCSVKey;
 import water.api.Request.Filter;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Check;
+import water.util.RString;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
@@ -510,7 +511,7 @@ public class RequestArguments extends RequestStatics {
           record._valid = true;
 
           if(callInstance instanceof Request2)
-            ((Request2) callInstance).set(this, record._value);
+            ((Request2) callInstance).set(this, input, record._value);
         } catch (IllegalArgumentException e) {
           //record._value = defaultValue();
           throw e;
@@ -2287,78 +2288,25 @@ public class RequestArguments extends RequestStatics {
   // ---------------------------------------------------------------------------
   // Fluid Vec Arguments
   // ---------------------------------------------------------------------------
-  /** Locally synchronize VA to FVec conversions within this node. */
-  final static Object conversionLock = new Object();
-
-  /** Conversion number is only for logging. */
-  static AtomicInteger conversionNumber = new AtomicInteger(0);
-
-
-  /**
-   * A Frame Key
-   * If necessary, a conversion (i.e. a "casting") of ValueArray to Frame
-   * is performed.
-   * */
-  public class FrameKey extends H2OKey2 {
-    public FrameKey() { this(""); }
-    public FrameKey(String name) { super(name,true); }
-    @Override protected Key parse(String input) {
-      Key k = Key.make(input);
-      Value v = DKV.get(k);
-
-      // If the key does not exist, return an error.
-      if( v == null )
-        throw new IllegalArgumentException(input+":"+errors()[0]);
-
-      // If the key exists but it refers to a ValueArray, then see if we have
-      // a cached conversion in DKV already.
-      if (v.isArray()) {
-        // Serialize conversions to one at a time.
-        synchronized (conversionLock) {
-          ValueArray va = v.get();
-          String frameKeyString = DKV.calcConvertedFrameKeyString(input);
-          Key k2 = Key.make(frameKeyString);
-          Value v2 = DKV.get(k2);
-          if (v2 != null) {
-            // If the thing that aliases with the cached conversion name is not
-            // a Frame, then throw an error.
-            if (! v2.isFrame()) {
-              throw new IllegalArgumentException(input+":"+errors()[1]);
-            }
-            Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
-            return k2;
-          }
-
-          // No cached conversion.  Make one and store it in DKV.
-          int cn = conversionNumber.getAndIncrement();
-          Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
-          Frame f2 = va.asFrame();
-          DKV.put(k2,f2);
-          Log.info("Conversion " + cn + " complete.");
-          return k2;
-        }
-      }
-      // If not VA and not Frame, then it's an error.
-      if (! v.isFrame())
-        throw new IllegalArgumentException(input+":"+errors()[1]);
-      return k;
-    }
-    @Override protected String queryDescription() { return "An existing H2O Frame key."; }
-    @Override protected String[] errors() { return new String[] { "Key not found", "Key is not a valid Frame key" }; }
-  }
 
   /** A Fluid Vec, via a column name in a Frame */
   public class FrameKeyVec extends InputSelect<Vec> {
-    final FrameKey _key;
+    final TypeaheadKey _key;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
-    public FrameKeyVec(String name, FrameKey key) {
+    public FrameKeyVec(String name, TypeaheadKey key) {
       super(name, true);
       addPrerequisite(_key=key);
     }
     protected Frame fr() { return DKV.get(_key.value()).get(); }
     @Override protected String[] selectValues() { return fr()._names;  }
     @Override protected String selectedItemValue() {
-      return value()==null || fr()==null ? "" : fr()._names[_colIdx.get()];
+      Vec defaultVec = defaultValue();
+      Frame fr = fr();
+      if( defaultVec != null && fr != null )
+        for( int i = 0; i < fr._vecs.length; i++ )
+          if( fr._vecs[i] == defaultVec )
+            return fr._names[i];
+      return value()==null || fr==null ? "" : fr._names[_colIdx.get()];
     }
     @Override protected Vec parse(String input) throws IllegalArgumentException {
       int cidx = fr().find(input);
@@ -2372,14 +2320,36 @@ public class RequestArguments extends RequestStatics {
     @Override protected String[] errors() { return new String[] { "Not a name of column, or a column index" }; }
   }
 
+  /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
+  public class FrameClassVec extends FrameKeyVec {
+    public FrameClassVec(String name, TypeaheadKey key ) { super(name, key); }
+    @Override protected String[] selectValues() {
+      ArrayList<String> as = new ArrayList();
+      Vec vecs[] = fr().vecs();
+      for( int i=0; i<vecs.length; i++ )
+        if( filter(vecs[i]) ) as.add(fr()._names[i]);
+      return as.toArray(new String[as.size()]);
+    }
+    @Override protected Vec parse(String input) throws IllegalArgumentException {
+      Vec vec = super.parse(input);
+      if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
+      return vec;
+    }
+    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && (vec.max()-vec.min() <= 1000);  }
+    @Override protected Vec defaultValue() {
+      Frame fr = fr();
+      return fr != null ? fr._vecs[fr._vecs.length - 1] : null;
+    }
+    @Override protected String[] errors() { return new String[] { "Only positive integer or enum/factor columns can be classified, with a limit of 1000 classes" }; }
+  }
 
   public class FrameKeyMultiVec extends MultipleSelect<int[]> {
-    final FrameKey _key;
+    final TypeaheadKey _key;
     final FrameClassVec _response;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() { return DKV.get(_key.value()).get(); }
 
-    public FrameKeyMultiVec(String name, FrameKey key, FrameClassVec response) {
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response) {
       super(name);
       addPrerequisite(_key = key);
       if((_response = response) != null)
@@ -2422,7 +2392,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected boolean isSelected(String value) {
       Frame fr = fr();
       int[] val = value();
-      if (val == null) return false;
+      if (val == null) return true;
       for(int i = 0; i < fr.numCols(); ++i)
         if(fr._names[i].equals(value))Ints.contains(val, i);
       return false;
@@ -2457,138 +2427,6 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected String queryDescription() {
       return "Columns to ignore";
-    }
-  }
-
-  /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
-  public class FrameClassVec extends FrameKeyVec {
-    public FrameClassVec(String name, FrameKey key ) { super(name, key); }
-    @Override protected String[] selectValues() {
-      ArrayList<String> as = new ArrayList();
-      Vec vecs[] = fr().vecs();
-      for( int i=0; i<vecs.length; i++ )
-        if( filter(vecs[i]) ) as.add(fr()._names[i]);
-      return as.toArray(new String[as.size()]);
-    }
-    @Override protected Vec parse(String input) throws IllegalArgumentException {
-      Vec vec = super.parse(input);
-      if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
-      return vec;
-    }
-    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && (vec.max()-vec.min() <= 1000);  }
-    @Override protected Vec defaultValue() { return null; }
-    @Override protected String[] errors() { return new String[] { "Only positive integer or enum/factor columns can be classified, with a limit of 1000 classes" }; }
-  }
-
-  /** Select a range of Vecs from a Frame */
-  public class FrameVecSelect extends MultipleSelect<int[]> {
-    public final FrameKey _key;
-    //int _selectedCols[] = new int[2]; // All the columns I'm willing to show the user
-    public FrameVecSelect(String name, FrameKey key) {
-      super(name);
-      addPrerequisite(_key = key);
-    }
-    protected Frame fr() { return DKV.get(_key.value()).get(); }
-    public boolean shouldIgnore (Vec vec) { return false; }
-    public void    checkLegality(Vec vec) throws IllegalArgumentException { }
-
-    private int[] allCols() {
-      int is[] = new int[2];
-      Vec vecs[] = fr().vecs();
-      for( int i = 0; i < vecs.length; ++i )
-        if( !shouldIgnore(vecs[i]) )
-          is = add(is,i);
-      return is;
-    }
-
-    // Select which columns I'll show the user
-    @Override protected String queryElement() {
-      //_selectedCols = allCols();
-      return super.queryElement();
-    }
-
-    // "values" to send back and for in URLs.  Use numbers for density (shorter URLs).
-    @Override protected final String[] selectValues() {
-      int is[] = allCols();
-      String [] res = new String[len(is)];
-      for( int i=0; i<len(is); i++ ) res[i] = String.valueOf(is[i]);
-      return res;
-    }
-
-    // "names" to select in the boxes.
-    @Override protected String[] selectNames() {
-      Frame fr = fr();
-      int is[] = allCols();
-      String [] res = new String[len(is)];
-      for( int i=0; i<len(is); i++ ) {
-        Vec vec = fr.vecs()[is[i]];
-        String name = fr._names[is[i]];
-        double ratio = (double)vec.naCnt()/vec.length();
-        res[i] = name + (ratio > 0.01 ? (" (" + Math.round(ratio*100) + "% NAs)") : "");
-      }
-      return res;
-    }
-
-    @Override protected boolean isSelected(String value) {
-      int[] val = value();
-      if (val == null) return false;
-      int idx = fr().find(value);
-      return Arrays.binarySearch(val,idx) >= 0;
-    }
-
-    @Override protected int[] parse(String input) throws IllegalArgumentException {
-      int is[] = new int[2];
-      for( String col : input.split(",") ) {
-        try {
-          int idx = Integer.valueOf(col.trim());
-          if (idx < 0 || idx >= fr().vecs().length )
-            throw new IllegalArgumentException("Column "+col+" not part of Frame "+_key);
-          if( find(is,idx) != -1 )
-            throw new IllegalArgumentException("Column "+col+" is already selected.");
-          checkLegality(fr().vecs()[idx]);
-          is = add(is,idx);
-        } catch( NumberFormatException nfe ) {
-          throw new IllegalArgumentException("Column #"+col+" is not a number.");
-        }
-      }
-      return Arrays.copyOf(is,len(is));
-    }
-
-    // By default, everything is selected.  For some reason I cannot get the
-    // browser to start with these selected.
-    @Override protected int[] defaultValue() {
-      int[] is = allCols();
-      return Arrays.copyOf(is,len(is));
-    }
-    @Override protected String queryDescription() { return "Columns to select"; }
-    // A weenie experimental ArrayList<Integer> API using primitive ints
-    protected void clr(int[] is) { is[is.length-1]=0; }
-    protected int len(int[] is) { return is[is.length-1]; }
-    protected int find(int[] is, int x) {
-      for( int i=0; i<len(is); i++ )
-        if( is[i]==x ) return i;
-      return -1;
-    }
-    protected int[] add(int[] is, int x) {
-      int len = len(is);
-      if( len==is.length-1 ) is=Arrays.copyOf(is,(len+1)<<1);
-      is[len] = x;
-      is[is.length-1] = len+1;
-      return is;
-    }
-  }
-
-  /** Select any/all Vecs, excluding a certain one */
-  public class FrameNonClassVecSelect extends FrameVecSelect {
-    public final FrameKeyVec _classVec;
-    public FrameNonClassVecSelect(String name, FrameKey key, FrameKeyVec classVec) {
-      super(name, key);
-      addPrerequisite(_classVec = classVec);
-    }
-    @Override public boolean shouldIgnore(Vec vec) { return vec == _classVec.value(); }
-    @Override public void checkLegality(Vec vec) throws IllegalArgumentException {
-      if( vec == _classVec.value() )
-        throw new IllegalArgumentException("Class Vec cannot be selected");
     }
   }
 }

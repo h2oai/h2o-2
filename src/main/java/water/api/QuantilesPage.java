@@ -14,7 +14,7 @@ public class QuantilesPage extends Request2 {
   // for GET.
   static final String DOC_GET = "Quantiles (epsilon-approximate) on arbitrary column";
 
-  @API(help="Data Frame", required=true, filter=FrameKey.class)
+  @API(help="Data Frame", required=true, filter=Default.class)
   Frame frm;
 
   /* BUG: API will not accept plain VecSelect here:
@@ -40,7 +40,7 @@ public class QuantilesPage extends Request2 {
   @API(help="Quantile_f", required=true, filter=Default.class)
   double quantile_f = .95;
 
-  @API(help="Quantiles") 
+  @API(help="Quantiles")
   double[] quantiles = new double[]{quantile_a, quantile_b, quantile_c, quantile_d, quantile_e, quantile_f};
 
   @API(help="Pass 1 msec")     long pass1time;

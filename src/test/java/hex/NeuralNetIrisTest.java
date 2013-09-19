@@ -10,7 +10,8 @@ import java.util.UUID;
 
 import junit.framework.Assert;
 
-import org.junit.*;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import water.*;
 import water.fvec.*;
@@ -37,7 +38,11 @@ public class NeuralNetIrisTest extends TestUtil {
     return new Frame(null, vecs);
   }
 
-  @Before public void load() {
+  @Test public void compare() throws Exception {
+    NeuralNetMLPReference ref = new NeuralNetMLPReference();
+    ref.init();
+
+    // Parse Iris and shuffle the same way as ref
     Key file = NFSFileVec.make(new File(PATH));
     Key pars = Key.make();
     Frame frame = ParseDataset2.parse(pars, new Key[] { file });
@@ -60,11 +65,14 @@ public class NeuralNetIrisTest extends TestUtil {
     _train = frame(rows, 0, limit);
     _test = frame(rows, limit, (int) frame.numRows() - limit);
     UKV.remove(pars);
-  }
 
-  public Layer[] create(float rate) {
+    //
+
+    float rate = 0.01f;
+    int epochs = 1000;
+    FrameInput input = new FrameInput(_train);
     Layer[] ls = new Layer[3];
-    ls[0] = new FrameInput(_train, false);
+    ls[0] = input;
     ls[0].init(null, 4);
     ls[1] = new Layer.Tanh();
     ls[1]._rate = rate;
@@ -74,21 +82,7 @@ public class NeuralNetIrisTest extends TestUtil {
     ls[2].init(ls[1], 3);
     for( int i = 1; i < ls.length; i++ )
       ls[i].randomize();
-    return ls;
-  }
 
-  @After public void clean() {
-    _train.remove();
-    _test.remove();
-  }
-
-  @Test public void compare() throws Exception {
-    float rate = 0.01f;
-    int epochs = 1000;
-    Layer[] ls = create(rate);
-
-    NeuralNetMLPReference ref = new NeuralNetMLPReference();
-    ref.init();
     Layer l = ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
       for( int i = 0; i < l._in._a.length; i++ )
@@ -112,7 +106,7 @@ public class NeuralNetIrisTest extends TestUtil {
     trainer.run();
 
     // Make sure outputs are equal
-    float epsilon = 1e-4f;
+    float epsilon = 1e-6f;
     for( int o = 0; o < ls[2]._a.length; o++ ) {
       float a = ref._nn.outputs[o];
       float b = ls[2]._a[o];
@@ -130,16 +124,19 @@ public class NeuralNetIrisTest extends TestUtil {
     }
 
     // Make sure errors are equal
-    NeuralNet.Error train = NeuralNetScore.eval(ls, NeuralNet.EVAL_ROW_COUNT);
-    ls[0] = new FrameInput(_test, false);
+    NeuralNet.Error train = NeuralNetScore.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    ls[0] = new FrameInput(_test, input._means, input._sigmas);
     ls[0].init(null, 4);
     ls[1]._in = ls[0];
-    NeuralNet.Error test = NeuralNetScore.eval(ls, NeuralNet.EVAL_ROW_COUNT);
+    NeuralNet.Error test = NeuralNetScore.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
     Assert.assertEquals(trainAcc, train.Value, epsilon);
     float testAcc = ref._nn.Accuracy(ref._testData);
     Assert.assertEquals(testAcc, test.Value, epsilon);
 
     Log.info("H2O and Reference equal, train: " + train + ", test: " + test);
+
+    _train.remove();
+    _test.remove();
   }
 }

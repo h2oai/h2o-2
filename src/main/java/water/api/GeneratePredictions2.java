@@ -15,9 +15,8 @@ public class GeneratePredictions2 extends Request2 {
   @API( help="Model", required=true, filter=Default.class )
   Model model;
 
-  @API(help = "Data frame", required = true, filter = dataFilter.class)
+  @API(help = "Data frame", required = true, filter = Default.class)
   public Frame data;
-  class dataFilter extends FrameKey { public dataFilter() { super("data"); } }
 
   @API( help="Prediction key", filter=Default.class )
   Key prediction_key = Key.make();

@@ -39,52 +39,6 @@ public abstract class Request extends RequestBuilders {
     @Override public boolean run(Object value) { return true; }
   }
 
-  public class TypedKey extends H2OKey {
-    Class _type;
-    public TypedKey(Class type) { super("",true); _type = type; }
-    @Override protected Key parse(String input) {
-      Key k = Key.make(input);
-      Value v = DKV.get(k);
-      if( v == null )
-        throw new IllegalArgumentException(input+":"+errors()[0]);
-      if( v.type() != TypeMap.onLoad(_type.getName()) )
-        throw new IllegalArgumentException(input+":"+errors()[1]);
-      return k;
-    }
-    @Override protected String queryDescription() { return "An existing H2O Frame key."; }
-    @Override protected String[] errors() { return new String[] { "Key not found", "Key is not a " + _type.getSimpleName() }; }
-  }
-
-  public class ColumnSelect implements Filter {
-    public final String _key;
-    protected ColumnSelect(String key) {
-      _key = key;
-    }
-    @Override public boolean run(Object value) {
-      return true;
-    }
-  }
-
-  public class VecSelect implements Filter {
-    public final String _key;
-    protected VecSelect(String key) { _key = key; }
-    @Override public boolean run(Object value) { return true; }
-  }
-
-  public class MultiVecSelect implements Filter {
-    public final String _key;
-    protected MultiVecSelect(String key) { _key = key;}
-    @Override public boolean run(Object value) { return true; }
-  }
-
-  public class VecClassSelect implements Filter {
-    public final String _key;
-    protected VecClassSelect(String key) { _key = key; }
-    @Override public boolean run(Object value) { return true; }
-  }
-
-
-
   //
 
   public String _requestHelp;

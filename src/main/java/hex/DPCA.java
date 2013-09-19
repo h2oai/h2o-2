@@ -27,7 +27,7 @@ public abstract class DPCA {
   /* Track PCA job progress */
   public static class PCAJob extends ChunkProgressJob {
     public PCAJob(ValueArray data, Key dest) {
-      super("PCA(" + data._key.toString() + ")", dest, data.chunks() * 2);
+      super("PCA(" + data._key.toString() + ")", dest, data.chunks());
     }
 
     public boolean isDone() {

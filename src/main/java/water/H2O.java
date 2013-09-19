@@ -796,7 +796,7 @@ public final class H2O {
   }
 
   // Default location of the AWS credentials file
-  private static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
+  public static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
   public static PropertiesCredentials getAWSCredentials() throws IOException {
     File credentials = new File(Objects.firstNonNull(OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
     return new PropertiesCredentials(credentials);

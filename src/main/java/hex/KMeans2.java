@@ -32,7 +32,5 @@ public class KMeans2 extends KMeansShared {
 //    Random rand = Utils.getRNG(seed - 1);
 //    // Initialize first cluster to random row
 //    double[][] clusters = new double[1][];
-//
-//    remove();
   }
 }

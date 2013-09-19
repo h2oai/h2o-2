@@ -40,7 +40,7 @@ public class Progress2 extends Request {
 
   @Override public boolean toHTML( StringBuilder sb ) {
     Job jjob = Job.findJob(Key.make(job.value()));
-    DocGen.HTML.title(sb,jjob.description);
+    DocGen.HTML.title(sb,jjob!=null?jjob.description:null);
     DocGen.HTML.section(sb,dst_key.value());
     return true;
   }

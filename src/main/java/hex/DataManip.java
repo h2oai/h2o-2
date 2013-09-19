@@ -25,7 +25,7 @@ public class DataManip extends FrameJob {
   static final String DOC_GET = "Basic manipulation of 2 data frames.";
   public enum Operation { cbind, rbind };
 
-  @API(help="Data Frame 2", required=true, filter=FrameKey.class)
+  @API(help="Data Frame 2", required=true, filter=Default.class)
   Frame source2;
 
   @API(help="Columns to Bind", required=true, filter=DataMultiVecSelect.class)
@@ -73,5 +73,4 @@ public class DataManip extends FrameJob {
     redir.addProperty("src_key", destination_key.toString());
     return Response.redirect(res, Inspect2.class, redir);
   }
-
 }

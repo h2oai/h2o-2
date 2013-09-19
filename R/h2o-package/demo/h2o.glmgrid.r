@@ -1,3 +1,4 @@
+# Note: This demo runs H2O on localhost:54321
 library(h2o)
 localH2O = new("H2OClient", ip = "localhost", port = 54321)
 h2o.checkClient(localH2O)
