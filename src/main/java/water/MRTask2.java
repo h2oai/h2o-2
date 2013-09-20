@@ -322,13 +322,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
     long ns = _nodes|(1L<<H2O.SELF.index()); // Save before copyOver crushes them
-    if( _res == null ) _nodes = -1; // Flag for no local results *at all*
+    if( _res == null ) _nodes = 1L<<63; // Flag for no local results *at all*
     else if( _res != this ) {     // There is a local result, and its not self
       _res._profile = _profile;   // Use my profile (not childs)
       copyOver(_res);             // So copy into self
     }
     closeLocal();
-    if( ns == (1L<<H2O.CLOUD.size()) ) // All-done on head of whole MRTask tree?
+    if( ns == (1L<<H2O.CLOUD.size())-1 ) // All-done on head of whole MRTask tree?
       _fr.closeAppendables();   // Final close ops on any new appendable vec
   }
 
@@ -340,7 +340,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( _res == null ) _res = mrt;
-    else if( mrt._nodes != -1 ) _res.reduce4(mrt);
+    else if( mrt._nodes != (1L<<63) ) _res.reduce4(mrt);
   }
 
   /** Call user's reduction.  Also reduce any new AppendableVecs.  Called
