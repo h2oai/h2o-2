@@ -3,20 +3,12 @@ package water.fvec;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.*;
-import java.util.Arrays;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.sun.media.jai.codecimpl.util.MathJAI;
 
 import water.*;
 import water.deploy.Node;
 import water.deploy.NodeVM;
-import water.parser.CustomParser.ParserSetup;
 
 public class ParserTest2 extends TestUtil {
   private double[] d(double... ds) { return ds; }

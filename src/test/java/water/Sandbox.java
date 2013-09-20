@@ -5,7 +5,8 @@ import java.io.File;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
-import water.parser.ParseDataset;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
 import water.util.Utils;
 
 public class Sandbox {
@@ -16,29 +17,27 @@ public class Sandbox {
 
   public static class UserCode {
     public static void userMain(String[] args) throws Exception {
-      localCloud(2, true, args);
+      localCloud(1, true, args);
 
-      File f = new File("smalldata/mnist/train.csv.gz");
-      //File f = new File("smalldata/covtype/covtype.20k.data");
+      File f = new File("smalldata/mnist/test.csv.gz");
+      // File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
       // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
 
-//      File f = new File("smalldata/mnist/train.csv.gz");
-//      Key dest = Key.make("train.hex");
-//      Key fkey = NFSFileVec.make(f);
-//      ParseDataset2.parse(dest, new Key[] { fkey });
-//
-//      f = new File("smalldata/mnist/test.csv.gz");
+      Key dest = Key.make("train.hex");
+      Key fkey = NFSFileVec.make(f);
+      ParseDataset2.parse(dest, new Key[] { fkey });
+
 //      dest = Key.make("test.hex");
 //      fkey = NFSFileVec.make(f);
 //      ParseDataset2.parse(dest, new Key[] { fkey });
 
-      Key key = TestUtil.load_test_file(f, "test");
-      Key dest = Key.make("test.hex");
-      ParseDataset.parse(dest, new Key[] { key });
-      ValueArray va = (ValueArray) UKV.get(dest);
+//      Key key = TestUtil.load_test_file(f, "test");
+//      Key dest = Key.make("test.hex");
+//      ParseDataset.parse(dest, new Key[] { key });
+//      ValueArray va = (ValueArray) UKV.get(dest);
 
       Utils.readConsole();
 
