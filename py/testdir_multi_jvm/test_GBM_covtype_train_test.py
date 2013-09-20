@@ -19,7 +19,7 @@ def plotit(xList, eList, sList):
         ### plt.rc('font', **font)
         plt.rcdefaults()
 
-        label = "1jvmx28GB covtype train 90/test 10 GBM learn_rate=.2 nbins=1024 ntrees=40 min_rows = 10"
+        label = "1jvmx28GB covtype train 90/test 10 GBM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
         plt.figure()
         plt.plot (xList, eList)
         plt.xlabel('max_depth')
@@ -27,7 +27,7 @@ def plotit(xList, eList, sList):
         plt.title(label)
         plt.draw()
 
-        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=40 min_rows = 10"
+        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
         plt.figure()
         plt.plot (xList, sList)
         plt.xlabel('max_depth')
@@ -109,7 +109,6 @@ class Basic(unittest.TestCase):
             # for depth in [5]:
             # depth = 5
             # for ntrees in [10,20,40,80,160]:
-            ntrees = 40
             ntrees = 10
             for max_depth in [5,10,20,40]:
             # for max_depth in [5,10,20,40]:
@@ -182,7 +181,6 @@ class Basic(unittest.TestCase):
                 # These will move into the h2o_gbm.py
                 pctWrong = h2o_gbm.pp_cm_summary(cm);
                 print "Last line of this cm is really NAs, not CM"
-                # print "\nTest\n==========\n{0}".format
                 print "\nTest\n==========\n"
                 print h2o_gbm.pp_cm(cm)
 
