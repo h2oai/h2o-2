@@ -21,7 +21,7 @@ def pp_cm(jcm, header=None):
             err = 0.0
         fl = '{0:<8}'.format(header[c])
         for num in line: fl = '{0}|{1:<8}'.format(fl, num)
-        fl = '{0}|{1:<8}'.format(fl, err)
+        fl = '{0}|{1:<8.2f}'.format(fl, err)
         cm = "{0}\n{1}".format(cm, fl)
         c += 1
     return cm
