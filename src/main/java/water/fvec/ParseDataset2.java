@@ -206,6 +206,7 @@ public final class ParseDataset2 extends Job {
           for(int i = 0; i < _gEnums.length; ++i)
             _gEnums[i] = _gEnums[i].clone();
         }
+        MultiFileParseTask._enums.remove(_k);
       }
     }
 
@@ -276,8 +277,6 @@ public final class ParseDataset2 extends Job {
     }
     Vec v = getVec(fkeys[0]);
     MultiFileParseTask uzpt = new MultiFileParseTask(v.group(),setup,job._progress).invoke(fkeys);
-
-    System.out.println(Arrays.toString(uzpt._chunk2Enum));
     Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(setup._ncols),uzpt._dout.closeVecs());
     // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
     SVFTask t = new SVFTask(fr);
@@ -346,7 +345,6 @@ public final class ParseDataset2 extends Job {
     MultiFileParseTask(VectorGroup vg,  CustomParser.ParserSetup setup, Key progress ) {
       _vg = vg; _setup = setup; _progress = progress;
       _vecIdStart = _vg.reserveKeys(setup._pType == ParserType.SVMLight?100000000:setup._ncols);
-      System.out.println("vec id start = " + _vecIdStart);
     }
 
     @Override
@@ -356,10 +354,8 @@ public final class ParseDataset2 extends Job {
       for(int i = 0; i < keys.length; ++i){
         _fileChunkOffsets.put(keys[i],new IcedInt(len));
         Vec v = getVec(keys[i]);
-        System.out.println(keys[i] + " has " + v.nChunks() + " chunks!");
         len += v.nChunks();
       }
-      System.out.println("There should be " + len + " chunks!");
       _chunk2Enum = MemoryManager.malloc4(len);
       Arrays.fill(_chunk2Enum, -1);
       return super.dfork(keys);
@@ -422,7 +418,6 @@ public final class ParseDataset2 extends Job {
           // set this node as the one which rpocessed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
             _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
-          System.out.println("Chunks");
           break;
         }
         case GZIP:
@@ -432,9 +427,7 @@ public final class ParseDataset2 extends Job {
           // set this node as the one which rpocessed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
             _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
-          System.out.println("GZ Chunks " + chunkStartIdx + " to " + (chunkStartIdx +  vec.nChunks()) + ": " + Arrays.toString(_chunk2Enum));
           break;
-
         }
       } catch( IOException ioe ) {
         throw new RuntimeException(ioe);
