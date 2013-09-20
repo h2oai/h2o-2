@@ -169,10 +169,10 @@ public class Inspect2 extends Request2 {
 
   // ---
   // Return a well-formated string for this kind of Vec
-  private String x0( Vec v, long row ) { return x1(v,row,v.at(row)); }
+  public static String x0( Vec v, long row ) { return x1(v,row,v.at(row)); }
 
   // Format a row, OR the min/max
-  private String x1( Vec v, long row, double d ) {
+  public static String x1( Vec v, long row, double d ) {
     if( (row >= 0 && v.isNA(row)) || Double.isNaN(d) )
       return "-";               // Display of missing elements
     if( v.isEnum() ) return row >= 0 ? v.domain(v.at8(row)) : Long.toString((long)d);
@@ -184,7 +184,7 @@ public class Inspect2 extends Request2 {
     return Double.toString(d);
   }
 
-  private String x2( double d, double scale ) {
+  public static String x2( double d, double scale ) {
     String s = Double.toString(d);
     // Double math roundoff error means sometimes we get very long trailing
     // strings of junk 0's with 1 digit at the end... when we *know* the data
