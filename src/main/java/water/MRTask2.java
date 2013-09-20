@@ -60,7 +60,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   protected void closeLocal() { }
 
   /** Internal field to track a range of remote nodes/JVMs to work on */
-  protected int _nlo, _nhi;           // Range of NODEs to work on - remotely
+  protected long _nodes;        // Bitset of NODEs to work on - remotely
   /** Internal field to track the left & right remote nodes/JVMs to work on */
   transient protected RPC<T> _nleft, _nrite;
   /** Internal field to track if this is a top-level local call */
@@ -95,9 +95,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // If we split the job left/right, then we get a total recording of the
     // last job, and the exec time & completion time of 1st job done.
     long _time1st, _done1st;
+    int _size_rez0, _size_rez1; // i/o size in bytes during reduce
     MRProfile _last;
     long sumTime() { return _onCdone - (_localstart==0 ? _mapstart : _localstart); }
-    void gather( MRProfile p ) {
+    void gather( MRProfile p, int size_rez ) {
       p._clz=null;
       if( _last == null ) _last=p;
       else {
@@ -106,6 +107,9 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         _last = last;
         if( first._onCdone > _done1st ) { _time1st = first.sumTime(); _done1st = first._onCdone; }
       }
+      if( size_rez !=0 )        // Record i/o result size 
+        if( _size_rez0 == 0 ) {      _size_rez0=size_rez; }
+        else { assert _size_rez1==0; _size_rez1=size_rez; }
       assert _last._onCdone >= _done1st;
     }
 
@@ -114,12 +118,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       if( d==0 ) sb.append(_clz).append("\n");
       for( int i=0; i<d; i++ ) sb.append("  ");
       if( _localstart != 0 ) sb.append("Node local ").append(_localdone - _localstart).append("ms, ");
-      if( _userstart == 0 ) {
+      if( _userstart == 0 ) {   // Forked job?
         sb.append("Slow wait ").append(_mapstart-_localdone).append("ms + work ").append(_last.sumTime()).append("ms, ");
         sb.append("Fast work ").append(_time1st).append("ms + wait ").append(_onCstart-_done1st).append("ms\n");
-        _last.toString(sb,d+1);
+        _last.toString(sb,d+1); // Nested slow-path print
         for( int i=0; i<d; i++ ) sb.append("  ");
-      } else {
+        sb.append("join-i/o ").append(_onCstart-_last._onCdone).append("ms, ");
+      } else {                  // Leaf map call?
         sb.append("Map ").append(_mapdone - _mapstart).append("ms (prep ").append(_userstart - _mapstart);
         sb.append("ms, user ").append(_closestart-_userstart);
         sb.append("ms, closeChk ").append(_mapdone-_closestart).append("ms), ");
@@ -129,7 +134,8 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       if( _remoteBlkDone!=0 ) {
         sb.append(", remBlk ").append(_remoteBlkDone-_reducedone).append("ms, locBlk ");
         sb.append(_localBlkDone-_remoteBlkDone).append("ms, close ");
-        sb.append(_onCdone-_localBlkDone).append("ms");
+        sb.append(_onCdone-_localBlkDone).append("ms, size ");
+        sb.append(PrettyPrint.bytes(_size_rez0)).append("+").append(PrettyPrint.bytes(_size_rez1));
       }
       sb.append(")\n");
       return sb;
@@ -162,7 +168,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
     _fr = fr;                   // Record vectors to work on
-    _nlo = 0;  _nhi = H2O.CLOUD.size(); // Do Whole Cloud
+    _nodes = (1L<<H2O.CLOUD.size())-1; // Do Whole Cloud
     setupLocal0();              // Local setup
     H2O.submitTask(this);       // Begin normal execution on a FJ thread
     return self();
@@ -194,14 +200,17 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _profile._localstart = System.currentTimeMillis();
     _topLocal = true;
     // Check for global vs local work
-    if( _nlo >= 0 && _nlo < _nhi-1 ) { // Have global work?
-      // Note: some top-level calls have no other global work, so
-      // "topLocal==true" does not imply "nlo < nhi-1".
-      int selfidx = H2O.SELF.index();
+    int selfidx = H2O.SELF.index();
+    _nodes &= ~(1L<<selfidx);   // Remove self from work set
+    if( _nodes != 0 ) { // Have global work?
+      int bc = Long.bitCount(_nodes); // How many nodes to hand out work to
+      long xs=_nodes;
+      for( int i=0; i<bc>>1; i++ ) xs &= (xs-1); // Remove 1/2 the bits
+      long ys = _nodes & ~xs;   // Complement sets
       _profile._rpcLstart = System.currentTimeMillis();
-      if( _nlo   < selfidx ) _nleft = remote_compute(_nlo, selfidx );
+      if( xs!=0 ) _nleft = remote_compute(xs);
       _profile._rpcRstart = System.currentTimeMillis();
-      if( selfidx+1 < _nhi ) _nrite = remote_compute(selfidx+1,_nhi);
+      if( ys!=0 ) _nrite = remote_compute(ys);
       _profile._rpcRdone  = System.currentTimeMillis();
     }
     _lo = 0;  _hi = _fr.anyVec().nChunks(); // Do All Chunks
@@ -215,15 +224,14 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
 
   // Make an RPC call to some node in the middle of the given range.  Add a
   // pending completion to self, so that we complete when the RPC completes.
-  private final RPC<T> remote_compute( int lo, int hi ) {
-    int mid = (hi+lo)>>>1;
+  private final RPC<T> remote_compute( long ns ) {
+    int node = Long.numberOfTrailingZeros(ns);
     T rpc = clone();
-    rpc._nlo = lo;
-    rpc._nhi = hi;
+    rpc._nodes = ns;
     addToPendingCount(1);       // Not complete until the RPC returns
     // Set self up as needing completion by this RPC: when the ACK comes back
     // we'll get a wakeup.
-    return new RPC(H2O.CLOUD._memary[mid], rpc).addCompleter(this).call();
+    return new RPC(H2O.CLOUD._memary[node], rpc).addCompleter(this).call();
   }
 
   /** Called from FJ threads to do local work.  The first called Task (which is
@@ -236,12 +244,12 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       final int mid = (_lo+_hi)>>>1; // Mid-point
       _left = clone();
       _rite = clone();
+      _left._profile = new MRProfile(this);
+      _rite._profile = new MRProfile(this);
       _left._hi = mid;          // Reset mid-point
       _rite._lo = mid;          // Also set self mid-point
       addToPendingCount(1);     // One fork awaiting completion
-      _left._profile = new MRProfile(this);
       _left.fork();             // Runs in another thread/FJ instance
-      _rite._profile = new MRProfile(this);
       _rite.compute2();         // Runs in THIS F/J thread
       _profile._mapdone = System.currentTimeMillis();
       return;                   // Not complete until the fork completes
@@ -293,7 +301,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // Collect all pending Futures from both parties as well.
   private void reduce2( MRTask2<T> mrt ) {
     if( mrt == null ) return;
-    _profile.gather(mrt._profile);
+    _profile.gather(mrt._profile,0);
     if( _res == null ) _res = mrt._res;
     else if( mrt._res != null ) _res.reduce4(mrt._res);
     if( _fs == null ) _fs = mrt._fs;
@@ -313,14 +321,14 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _profile._localBlkDone = System.currentTimeMillis();
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
-    int nlo = _nlo, nhi = _nhi;   // Save these before copyOver crushes them
-    if( _res == null ) _nlo = -1; // Flag for no local results *at all*
+    long ns = _nodes|(1L<<H2O.SELF.index()); // Save before copyOver crushes them
+    if( _res == null ) _nodes = 1L<<63; // Flag for no local results *at all*
     else if( _res != this ) {     // There is a local result, and its not self
       _res._profile = _profile;   // Use my profile (not childs)
       copyOver(_res);             // So copy into self
     }
     closeLocal();
-    if( nlo==0 && nhi == H2O.CLOUD.size() ) // All-done on head of whole MRTask tree?
+    if( ns == (1L<<H2O.CLOUD.size())-1 ) // All-done on head of whole MRTask tree?
       _fr.closeAppendables();   // Final close ops on any new appendable vec
   }
 
@@ -329,10 +337,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     if( rpc == null ) return;
     T mrt = rpc.get();          // This is a blocking remote call
     assert mrt._fs == null;     // No blockable results from remote
-    _profile.gather(mrt._profile);
+    _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( _res == null ) _res = mrt;
-    else if( mrt._nlo != -1 ) _res.reduce4(mrt);
+    else if( mrt._nodes != (1L<<63) ) _res.reduce4(mrt);
   }
 
   /** Call user's reduction.  Also reduce any new AppendableVecs.  Called

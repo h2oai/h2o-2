@@ -84,6 +84,7 @@ public final class AutoBuffer {
         addr = (Inet4Address) address;
       }
     }
+    _size = _bb.position();
     _bb.flip();                 // Set limit=amount read, and position==0
 
     if( addr == null ) throw new RuntimeException("Unhandled socket type: " + sad);
@@ -138,6 +139,7 @@ public final class AutoBuffer {
 
   // Read from UDP multicast.  Same as the byte[]-read variant, except there is an H2O.
   public AutoBuffer( DatagramPacket pack ) {
+    _size = pack.getLength();
     _bb = ByteBuffer.wrap(pack.getData(), 0, pack.getLength()).order(ByteOrder.nativeOrder());
     _bb.position(0);
     _read = true;
@@ -444,7 +446,8 @@ public final class AutoBuffer {
         if( res == -1 )
           throw new TCPIsUnreliableException(new EOFException("Reading "+sz+" bytes, AB="+this));
         if( res ==  0 ) throw new RuntimeException("Reading zero bytes - so no progress?");
-      } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
+        _size += res;            // What we read
+      } catch( IOException e ) { // Dunno how to handle so crash-n-burn
         // Linux/Ubuntu message for a reset-channel
         if( e.getMessage().equals("An existing connection was forcibly closed by the remote host") )
           throw new TCPIsUnreliableException(e);
@@ -455,7 +458,6 @@ public final class AutoBuffer {
       }
     }
     _time_io_ns += (System.nanoTime()-ns);
-    _size += _bb.position();    // What we read
     _bb.flip();                 // Prep for handing out bytes
     _firstPage = false;         // First page of data is gone gone gone
     return _bb;

@@ -18,6 +18,7 @@ public class GBMGrid extends FrameJob {
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET = "Grid search for GBM";
+  static int KEYS_INDEX = 7;
 
 //@formatter:off
   @API(help="", required=true, filter=GBMVecSelect.class)
@@ -90,6 +91,7 @@ public class GBMGrid extends FrameJob {
       names.add("learn_rate");
       names.add("model build time (s)");
       names.add("seconds per tree");
+      assert names.size() == KEYS_INDEX;
       names.add("model key");
       names.add("model number");
       names.add("model quality score");
@@ -101,7 +103,7 @@ public class GBMGrid extends FrameJob {
             for( int nbinsI = 0; nbinsI < nbins.length; nbinsI++ ) {
               for( int learn_rateI = 0; learn_rateI < learn_rate.length; learn_rateI++ ) {
                 final GBM job = new GBM();
-                job.destination_key = currentModel;
+                UKV.put(currentModel, job.destination_key);
                 job.source = source;
                 job.vresponse = vresponse;
                 job.ignored_cols = ignored_cols;
@@ -111,53 +113,53 @@ public class GBMGrid extends FrameJob {
                 job.nbins = nbins[nbinsI];
                 job.learn_rate = learn_rate[learn_rateI];
                 job.run();
+                n++;
 
-                Thread t = new Thread("GBMGrid watchdog") {
-                  public void run() {
-                    while( job.running() ) {
-                      if( cancelled() ) {
-                        job.cancel();
-                        break;
-                      }
-                      try {
-                        Thread.sleep(10);
-                      } catch( InterruptedException e ) {
-                        throw new RuntimeException(e);
-                      }
-                    }
+                int index = data.size();
+                for( ;; ) {
+                  if( cancelled() ) {
+                    job.cancel();
+                    return;
                   }
-                };
-                t.start();
-                job.get();
-                if( cancelled() )
-                  return;
-
-                ArrayList<String> values = new ArrayList<String>();
-                values.add("" + job.ntrees);
-                values.add("" + job.max_depth);
-                values.add("" + job.min_rows);
-                values.add("" + job.nbins);
-                values.add("" + job.learn_rate);
-                double model_build_time = (job.end_time - job.start_time) / 1000;
-                values.add("" + model_build_time);
-                double seconds_per_tree = model_build_time / job.ntrees;
-                values.add("" + seconds_per_tree);
-                values.add("" + job.self());
-                values.add("" + n++);
-                values.add("" + new Random().nextDouble());
-                data.add(values);
-
-                Collections.sort(data, new Comparator<List<String>>() {
-                  @Override public int compare(List<String> o1, List<String> o2) {
-                    return Double.compare( //
-                        Double.parseDouble(o1.get(o1.size() - 1)), //
-                        Double.parseDouble(o2.get(o2.size() - 1)));
+                  boolean running = job.running();
+                  ArrayList<String> values = new ArrayList<String>();
+                  values.add("" + job.ntrees);
+                  values.add("" + job.max_depth);
+                  values.add("" + job.min_rows);
+                  values.add("" + job.nbins);
+                  values.add("" + job.learn_rate);
+                  double model_build_time = (System.currentTimeMillis() - job.start_time) / 1000;
+                  values.add("" + model_build_time);
+                  double seconds_per_tree = model_build_time / job.ntrees;
+                  values.add("" + seconds_per_tree);
+                  values.add("" + job.destination_key);
+                  values.add("" + n);
+                  values.add("" + (running ? -1 : new Random().nextDouble()));
+                  if( index == data.size() )
+                    data.add(values);
+                  else
+                    data.set(index, values);
+                  if( !running ) {
+                    Collections.sort(data, new Comparator<List<String>>() {
+                      @Override public int compare(List<String> o1, List<String> o2) {
+                        return Double.compare( //
+                            Double.parseDouble(o1.get(o1.size() - 1)), //
+                            Double.parseDouble(o2.get(o2.size() - 1)));
+                      }
+                    });
                   }
-                });
-                FrameWithProgress frame = new FrameWithProgress(names.toArray(new String[0]), vecs(names, data));
-                frame.currentJob = n;
-                frame.totalJobs = count;
-                UKV.put(destination_key, frame);
+                  FrameWithProgress frame = new FrameWithProgress(names.toArray(new String[0]), vecs(names, data));
+                  frame.currentJob = n;
+                  frame.totalJobs = count;
+                  UKV.put(destination_key, frame);
+                  if( !running )
+                    break;
+                  try {
+                    Thread.sleep(1000);
+                  } catch( InterruptedException e ) {
+                    throw new RuntimeException(e);
+                  }
+                }
               }
             }
           }
@@ -165,6 +167,7 @@ public class GBMGrid extends FrameJob {
       }
     } finally {
       UKV.remove(currentModel);
+      remove();
     }
   }
 
@@ -203,10 +206,13 @@ public class GBMGrid extends FrameJob {
         DocGen.HTML.section(sb, "Building model: " + frame.currentJob + " of " + frame.totalJobs);
       GBMGrid grid = (GBMGrid) Job.findJob(Key.make(job.value()));
       GBMModel model = null;
-      if( grid.currentModel != null )
-        model = UKV.get(grid.currentModel);
+      if( grid.currentModel != null ) {
+        Key dest = UKV.get(grid.currentModel);
+        if( dest != null )
+          model = UKV.get(dest);
+      }
       if( model != null )
-        DocGen.HTML.section(sb, "Building tree: "+model.numTrees()+" of "+model.N+" for current model");
+        DocGen.HTML.section(sb, "Building tree: " + (model.numTrees() + 1) + " of " + model.N + " for current model");
       if( frame != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
@@ -215,8 +221,18 @@ public class GBMGrid extends FrameJob {
         sb.append("</tr>");
         for( int j = 0; j < frame.numRows(); j++ ) {
           sb.append("<tr>");
-          for( int i = 0; i < frame._vecs.length; i++ )
-            sb.append("<td>").append(Inspect2.x0(frame._vecs[i], j)).append("</td>");
+          for( int i = 0; i < frame._vecs.length; i++ ) {
+            sb.append("<td>");
+            String txt = Inspect2.x0(frame._vecs[i], j);
+            if( i == KEYS_INDEX ) {
+              String key = frame._vecs[i]._domain[(int) frame._vecs[i].at8(j)];
+              sb.append(GBMModelView.link(txt, Key.make(key)));
+            } else
+              sb.append(txt);
+            if( i == KEYS_INDEX )
+              sb.append("</a>");
+            sb.append("</td>");
+          }
           sb.append("</tr>");
         }
         DocGen.HTML.arrayTail(sb);
