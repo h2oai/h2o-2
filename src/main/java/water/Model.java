@@ -2,7 +2,7 @@ package water;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import water.api.Constants;
+
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
@@ -43,7 +43,7 @@ public abstract class Model extends Iced {
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),fr.domains());
+    this(selfKey,dataKey,fr.names(),domains(fr));
   }
 
   /** Full constructor */
@@ -54,8 +54,28 @@ public abstract class Model extends Iced {
     assert names[names.length-1] != null; // Have a valid response-column name?
     _selfKey = selfKey;
     _dataKey = dataKey;
-    _names  =   names;
-    _domains= domains;
+    _names   = names;
+    _domains = domains;
+  }
+
+  private static String[][] domains(Frame fr) {
+    String[][] domains = fr.domains();
+    if(domains[domains.length-1] == null)
+      domains[domains.length-1] = responseDomain(fr);
+    return domains;
+  }
+  /** If response column is not an enum, use numbers */
+  public static String[] responseDomain(Frame fr) {
+    Vec resp = fr._vecs[fr._vecs.length-1];
+    String[] domain = resp._domain;
+    if(resp._domain == null) {
+      int min = (int) resp.min();
+      int max = (int) resp.max();
+      domain = new String[max - min + 1];
+      for( int i = 0; i < domain.length; i++ )
+        domain[i] = "" + (min + i);
+    }
+    return domain;
   }
 
   /** Simple shallow copy constructor to a new Key */
@@ -186,7 +206,7 @@ public abstract class Model extends Iced {
         for( int i = 0; i < ms.length; i++) md.put(ms[i], i);
         for( int i = 0; i < ds.length; i++) {
           Integer I = md.get(ds[i]);
-          if( I==null && exact ) 
+          if( I==null && exact )
             throw new IllegalArgumentException("Column "+_names[c]+" was not trained with factor '"+ds[i]+"' which appears in the data");
           emap[i] = I==null ? -1 : I;
         }

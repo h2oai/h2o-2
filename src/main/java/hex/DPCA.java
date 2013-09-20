@@ -27,7 +27,7 @@ public abstract class DPCA {
   /* Track PCA job progress */
   public static class PCAJob extends ChunkProgressJob {
     public PCAJob(ValueArray data, Key dest) {
-      super("PCA(" + data._key.toString() + ")", dest, data.chunks() * 2);
+      super("PCA(" + data._key.toString() + ")", dest, data.chunks());
     }
 
     public boolean isDone() {
@@ -37,58 +37,6 @@ public abstract class DPCA {
     @Override public float progress() {
       ChunkProgress progress = UKV.get(progressKey());
       return (progress != null ? progress.progress() : 0);
-    }
-  }
-
-  public static class StandardizeTask extends MRTask2<StandardizeTask> {
-    final double[] _normSub;
-    final double[] _normMul;
-
-    public StandardizeTask(double[] normSub, double[] normMul) {
-      _normSub = normSub;
-      _normMul = normMul;
-    }
-
-    @Override public void map(Chunk [] chunks) {
-      int ncol = _normSub.length;
-      Chunk [] inputs = Arrays.copyOf(chunks, ncol);
-      NewChunk [] outputs = new NewChunk[ncol];
-
-      for(int i = ncol; i < chunks.length; ++i) {
-        outputs[i-ncol] = (NewChunk)chunks[i];
-      }
-
-      int rows = inputs[0]._len;
-      for(int c = 0; c < ncol; c++) {
-        for(int r = 0; r < rows; r++) {
-          double x = inputs[c].at0(r);
-          x -= _normSub[c];
-          x *= _normMul[c];
-          outputs[c].addNum(x);
-        }
-      }
-    }
-
-    public static Frame standardize(Frame data, double[] normSub, double[] normMul) {
-      int ncol = normSub.length;
-      Vec [] vecs = Arrays.copyOf(data._vecs, 2*ncol);
-      VectorGroup vg = data._vecs[0].group();
-      Key [] keys = vg.addVecs(ncol);
-      for(int i = 0; i < ncol; i++) {
-        vecs[ncol+i] = new AppendableVec(keys[i]);
-      }
-      StandardizeTask tsk = new StandardizeTask(normSub, normMul).doAll(vecs);
-      Vec [] outputVecs = Arrays.copyOfRange(tsk._fr._vecs, ncol, 2*ncol);
-
-      Frame f = new Frame(data.names(), outputVecs);
-      return f;
-    }
-
-    public static Frame standardize(final DataFrame data) {
-      // Extract only the columns in the associated model
-      Frame subset = data.modelAsFrame();
-      Assert.assertEquals(subset._vecs.length, data._normSub.length);
-      return standardize(subset, data._normSub, data._normMul);
     }
   }
 

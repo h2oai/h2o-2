@@ -221,7 +221,7 @@ public class DRF extends FrameJob {
         Log.info(Sys.DRF__,"DRF done in "+t_drf);
         
         // Remove temp vectors; cleanup the Frame
-        while( fr.numCols() > ncols )
+        while( fr.numCols() > ncols+1/*Leave response*/ )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
         remove();
         tryComplete();

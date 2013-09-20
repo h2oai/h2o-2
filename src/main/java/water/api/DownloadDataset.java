@@ -1,14 +1,14 @@
 package water.api;
 
 import java.util.Properties;
+
 import water.*;
 import water.fvec.Frame;
-import water.persist.*;
 
 /**
  * @author tomasnykodym
  */
-public class DownloadDataset extends Request {
+public class DownloadDataset extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -16,8 +16,8 @@ public class DownloadDataset extends Request {
   // for GET.
   static final String DOC_GET = "Download a Frame as a CSV file";
 
-  @API(help="An existing H2O Frame or VA key.")
-  final FrameKey src_key = new FrameKey("src_key");
+  @API(help="An existing H2O Frame or VA key.", filter=Default.class)
+  Key src_key;
 
   @Override public String href() { return "downloadCsv"; }
 
@@ -29,14 +29,13 @@ public class DownloadDataset extends Request {
   @Override final public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
     // Needs to be done also for help to initialize or argument records
     checkArguments(args, type);
-    Key k = src_key.value();
-    Frame fr = DKV.get(k).get();
+    Frame fr = DKV.get(src_key).get();
     NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY,fr.toCSV(true));
     // Clean up Key name back to something resembling a file system name.  Hope
     // the user's browser actually asks for what to do with the suggested
     // filename.  Without this code, my FireFox would claim something silly
     // like "no helper app installed", then fail the download.
-    String s = k.toString();
+    String s = src_key.toString();
     if( DKV.isConvertedFrameKeyString(s) ) s = DKV.unconvertFrameKeyString(s);
     int x = s.length()-1;
     boolean dot=false;
@@ -45,7 +44,7 @@ public class DownloadDataset extends Request {
         if( s.charAt(x)=='.' && !dot ) dot=true;
         else break;
     String suggested_fname = s.substring(x+1).replace(".hex", ".csv");
-    if( !suggested_fname.endsWith(".csv") ) 
+    if( !suggested_fname.endsWith(".csv") )
       suggested_fname = suggested_fname+".csv";
     res.addHeader("Content-Disposition", "filename=" + suggested_fname);
     return res;

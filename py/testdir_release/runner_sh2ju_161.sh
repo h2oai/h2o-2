@@ -114,6 +114,17 @@ myCmd() {
 }
 juLog  -name=myCustomizedMethod myCmd '*.sh' || true
 
+myRInstall() {
+    which R
+    R --version
+    H2O_R_HOME=../../R
+
+    echo "FIX: We didn't get h2oWrapper.R from S3"
+    echo "Okay to run every time for now"
+    R CMD BATCH $H2O_R_HOME/h2oWrapper-package/R/h2oWrapper.R
+}
+juLog  -name=myRInstall myRInstall || true
+
 #******************************************************
 
 myR() {
@@ -125,23 +136,24 @@ myR() {
     # normally h2oWrapper_VERSION.tar.gz requires a make
     # get_s3_jar.sh now downloads it. We need to tell anqi's wrapper where to find it.
     # with an environment variable
-    export H2OWrapperDir=../../target/R/
 
+    which R
+    R --version
     H2O_R_HOME=../../R
+    export H2OWrapperDir=$H2O_R_HOME/h2oWrapper-package/R
+    echo "H2OWrapperDir env. variable should be $H2OWrapperDir"
+
     rScript=$H2O_R_HOME/tests/$1
-    # ../../R/tests/test_R_RF_diff_class.R
     rLibrary=$H2O_R_HOME/$2
     echo $rScript
     echo $rLibrary
-    which R
-    R --version
     echo "Running this cmd:"
-    echo "R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT"
-    R -f $rScript --args $rLibrary $CLOUD_IP:$CLOUD_PORT
+    echo "R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
+    R -f $rScript --args $CLOUD_IP:$CLOUD_PORT
     # exit # status is last command
 }
 
-juLog  -name=H2O_Load.R myR 'test_R_RF_diff_class.R' 'H2O_Load.R' || true
+juLog  -name=H2O_Load.R myR 'test_R_RF_diff_class.R' || true
 
 
 # If this one fails, fail this script so the bash dies 

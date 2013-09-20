@@ -5,9 +5,7 @@ import java.util.*;
 
 import org.apache.commons.codec.binary.Base64;
 
-import water.Arguments;
 import water.H2O;
-import water.deploy.Cloud.Master;
 import water.util.Log;
 import water.util.Utils;
 
@@ -15,74 +13,67 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.*;
 
-public abstract class EC2 {
+/**
+ * Runs EC2 instances. This class is intended for debug purposes only. The recommended
+ * infrastructure for H2O's deployment on AWS is documented here:<br>
+ * https://github.com/0xdata/h2o/wiki/How-to-run-H2O-tests-on-EC2-clusters
+ */
+public class EC2 {
   private static final String USER = System.getProperty("user.name");
   private static final String NAME = USER + "-H2O-Cloud";
 
-  public static class Config extends Arguments.Opt {
-    String region = "us-east-1";
-    String type = "m1.xlarge";
-    String secg = "default";
-    boolean confirm = true;
-    String incl; // additional rsync includes
-    String excl; // additional rsync excludes
-    String java_args;
-  }
+  /**
+   * AWS credentials file with format: <br>
+   * accessKey=XXXXXXXXXXXXXXXXXXXX <br>
+   * secretKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+   */
+  public String AWSCredentials = H2O.DEFAULT_CREDENTIALS_LOCATION;
+  public int boxCount;
+  public String region = "us-east-1";
+  public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
+  public String type = "m1.xlarge";
+  public String securityGroup = "default";
+  public boolean confirm = true;
+  public Set<String> rsyncIncludes = new HashSet<String>();
+  public Set<String> rsyncExcludes = new HashSet<String>();
+  public String[] javaArgs;
+  public String[] userArgs;
 
-  public static void main(String[] args) throws Exception {
-    try {
-      H2O.getAWSCredentials();
-    } catch( Exception ex ) {
-      System.out.println("Please add AWS credentials to './AwsCredentials.properties'");
-      System.out.println("File format is:");
-      System.out.println("accessKey=XXXXXXXXXXXXXXXXXXXX");
-      System.out.println("secretKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-      return;
-    }
-    Config config;
-    int count;
-    String[] remaining;
-    try {
-      Arguments arguments = new Arguments(args);
-      config = new Config();
-      arguments.extract(config);
-      remaining = Arrays.copyOfRange(args, arguments.firstFlag(), args.length);
-      count = Integer.parseInt(remaining[0]);
-      remaining = Arrays.copyOfRange(remaining, 1, remaining.length);
-    } catch( Exception ex ) {
-      Config defaults = new Config();
-      System.out.println("Usage: h2o_on_ec2 [options] <machine_count> args");
-      System.out.println();
-      System.out.println("Options and default values:");
-      System.out.println("  -region=" + defaults.region);
-      System.out.println("  -type=" + defaults.type);
-      System.out.println("  -secg=" + defaults.secg + " (Security Group, must allow ssh (TCP 22))");
-      System.out.println("  -confirm=" + defaults.confirm + " (Confirm before starting new instances)");
-      System.out.println("  -incl='' (additional rsync includes, e.g. py:smalldata)");
-      System.out.println("  -excl='' (additional rsync excludes, e.g. sandbox:*.pyc)");
-      System.out.println("  -java_args='' (java args for cluster JVMs)");
-      return;
-    }
-    run(config, count, remaining);
-  }
+//@formatter:off
+  static String cloudConfig = "" +
+      l("#cloud-config") +
+      l("users:") +
+      l("  - name: " + USER) +
+      l("    sudo: ALL=(ALL) NOPASSWD:ALL") +
+      l("    ssh-authorized-keys:") +
+      l("      - " + pubKey()) +
+      l("    shell: /bin/bash") +
+      l("") +
+      l("runcmd:") +
+      l("  - iptables -I INPUT -p tcp --dport 22 -j DROP") +
+      l("  - echo 'fs.file-max = 524288' > /etc/sysctl.d/increase-max-fd.conf") +
+      l("  - sysctl -w fs.file-max=524288") +
+      l("  - echo '* soft nofile 524288' > /etc/security/limits.d/increase-max-fd-soft.conf") +
+      l("  - echo '* hard nofile 524288' > /etc/security/limits.d/increase-max-fd-hard.conf") +
+//      l("  - apt-get update") +
+//      l("  - apt-get -y install openjdk-7-jdk") +
+//      l("  - apt-get -y install openvpn") +
+      l("  - iptables -D INPUT 1") +
+      l("");
+  static String l(String line) { return line + "\n"; }
+  //@formatter:on
 
-  public static void run(Config config, int count, String[] args) throws Exception {
-    Cloud c = resize(config.region, config.type, config.secg, config.confirm, count);
-    String[] includes = config.incl != null ? config.incl.split(File.pathSeparator) : null;
-    String[] excludes = config.excl != null ? config.excl.split(File.pathSeparator) : null;
-    String[] java = config.java_args != null ? config.java_args.split(" ") : null;
-    args = Utils.add(args, "-mainClass", Master.class.getName());
-    c._clientRSyncIncludes.addAll(Arrays.asList(includes));
-    c._clientRSyncExcludes.addAll(Arrays.asList(excludes));
-    c.start(java, args);
+  public void run() throws Exception {
+    Cloud c = resize();
+    c._clientRSyncIncludes.addAll(rsyncIncludes);
+    c._clientRSyncExcludes.addAll(rsyncExcludes);
+    c.start(javaArgs, userArgs);
   }
 
   /**
    * Create or terminate EC2 instances. Uses their Name tag to find existing ones.
-   *
-   * @return Public IPs
    */
-  public static Cloud resize(String region, String type, String secg, boolean confirm, int count) throws IOException {
+  public Cloud resize() throws Exception {
     AmazonEC2Client ec2 = new AmazonEC2Client(H2O.getAWSCredentials());
     ec2.setEndpoint("ec2." + region + ".amazonaws.com");
     DescribeInstancesResult describeInstancesResult = ec2.describeInstances();
@@ -101,54 +92,35 @@ public abstract class EC2 {
         }
       }
     }
-    System.out.println("Found " + instances.size() + " EC2 instances.");
+    System.out.println("Found " + instances.size() + " EC2 instances for user " + USER);
 
-    if( instances.size() > count ) {
-      for( int i = 0; i < instances.size() - count; i++ ) {
+    if( instances.size() > boxCount ) {
+      for( int i = 0; i < instances.size() - boxCount; i++ ) {
         // TODO terminate
       }
-    } else if( instances.size() < count ) {
-      int launchCount = count - instances.size();
+    } else if( instances.size() < boxCount ) {
+      int launchCount = boxCount - instances.size();
       System.out.println("Creating " + launchCount + " EC2 instances.");
       if( confirm ) {
         System.out.println("Please confirm [y/n]");
         String s = Utils.readConsole();
         if( s == null || !s.equalsIgnoreCase("y") )
-          throw new RuntimeException("Aborted");
+          throw new Exception("Aborted");
       }
 
       RunInstancesRequest request = new RunInstancesRequest();
       request.withInstanceType(type);
-      if( region.startsWith("us-east-1") )
-        request.withImageId("ami-fc75ee95");
-      else if( region.startsWith("us-west-1") )
-        request.withImageId("ami-64d1fc21");
-      else if( region.startsWith("us-west-2") ) // Oregon
-        request.withImageId("ami-52bf2b62");
-      else if( region.startsWith("eu-west-1") )
-        request.withImageId("ami-5e93992a");
-      else if( region.startsWith("ap-southeast-1") ) // Singapore
-        request.withImageId("ami-ac9ed2fe");
-      else if( region.startsWith("ap-southeast-2") ) // Sydney
-        request.withImageId("ami-283eaf12");
-      else if( region.startsWith("ap-northeast-1") ) // Tokyo
-        request.withImageId("ami-153fbf14");
-      else if( region.startsWith("sa-east-1") ) // Sao Paulo
-        request.withImageId("ami-db6bb0c6");
-
+      request.withImageId(image);
       request.withMinCount(launchCount).withMaxCount(launchCount);
-      request.withSecurityGroupIds(secg);
-      // TODO what's the right way to have boxes in same availability zone?
-      // maybe start a first one and add others to same
-      // request.withPlacement(new Placement(region + "c"));
-      request.withUserData(new String(Base64.encodeBase64(cloudConfig().getBytes())));
+      request.withSecurityGroupIds(securityGroup);
+      request.withUserData(new String(Base64.encodeBase64(cloudConfig.getBytes())));
 
       RunInstancesResult runInstances = ec2.runInstances(request);
       ArrayList<String> ids = new ArrayList<String>();
       for( Instance instance : runInstances.getReservation().getInstances() )
         ids.add(instance.getInstanceId());
 
-      List<Instance> created = wait(ec2, ids, secg);
+      List<Instance> created = wait(ec2, ids);
       System.out.println("Created " + created.size() + " EC2 instances.");
       instances.addAll(created);
     }
@@ -166,29 +138,6 @@ public abstract class EC2 {
     cloud._privateIPs.addAll(Arrays.asList(prv));
     return cloud;
   }
-
-//@formatter:off
-  private static String cloudConfig() {
-    return "#cloud-config\n" +
-      "apt_update: false\n" +
-      "runcmd:\n" +
-      " - grep -q 'fs.file-max = 524288' /etc/sysctl.conf || echo -e '\\nfs.file-max = 524288' >> /etc/sysctl.conf\n" +
-      " - sysctl -w fs.file-max=524288\n" +
-      " - echo -e '* soft nofile 524288\\n* hard nofile 524288' > /etc/security/limits.d/increase-max-fd.conf\n" +
-      // " - echo -e 'iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8080' >> /etc/rc.d/rc.local\n" +
-      // " - yum -y remove java-1.6.0-openjdk\n" +
-      // " - yum -y install java-1.7.0-openjdk\n" +
-      " - useradd " + USER + "\n" +
-      " - mkdir -p /home/" + USER + "/.ssh" + "\n" +
-      " - cd /home/" + USER + "\n" +
-      " - echo -e '\\n" + USER + " ALL=(ALL) NOPASSWD:ALL\\n' >> /etc/sudoers\n" +
-      // " - wget http://h2o_rsync.s3.amazonaws.com/h2o_rsync.zip\n" +
-      // " - unzip h2o_rsync.zip\n" +
-      " - chown -R " + USER + ':' + USER + " /home/" + USER + "\n" +
-      " - echo '" + pubKey() + "' >> .ssh/authorized_keys\n" +
-      "";
-  }
-//@formatter:on
 
   private static String pubKey() {
     BufferedReader r = null;
@@ -208,8 +157,9 @@ public abstract class EC2 {
     }
   }
 
-  private static List<Instance> wait(AmazonEC2Client ec2, List<String> ids, String secg) {
-    System.out.println("Establishing ssh connections, make sure security group '" + secg + "' allows incoming TCP 22.");
+  private List<Instance> wait(AmazonEC2Client ec2, List<String> ids) {
+    System.out.println("Establishing ssh connections, make sure security group '" //
+        + securityGroup + "' allows incoming TCP 22.");
     boolean tagsDone = false;
     for( ;; ) {
       try {

@@ -30,11 +30,11 @@ public class IrisMisc extends NeuralNetIrisTest {
           test1.run();
         }
       };
-      Thread t2 = new Thread() {
-        public void run() {
-          test2.run();
-        }
-      };
+//      Thread t2 = new Thread() {
+//        public void run() {
+//          test2.run();
+//        }
+//      };
 
       t1.start();
 //      t2.start();

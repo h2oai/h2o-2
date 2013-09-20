@@ -60,7 +60,7 @@ public class RequestBuilders extends RequestQueries {
     sb.append(buildResponseHeader(response));
     Builder builder = response.getBuilderFor(ROOT_OBJECT);
     if (builder == null) {
-      sb.append("<h3>"+getClass().getSimpleName()+"</h3>");
+      sb.append("<h3>"+name()+"</h3>");
       builder = OBJECT_BUILDER;
     }
     for( String h : response.getHeaders() ) sb.append(h);
@@ -68,7 +68,8 @@ public class RequestBuilders extends RequestQueries {
       boolean done = response._req.toHTML(sb);
       if(!done) {
         JsonParser parser = new JsonParser();
-        JsonObject o = (JsonObject) parser.parse(new String(response._req.writeJSON(new AutoBuffer()).buf()));
+        String json = new String(response._req.writeJSON(new AutoBuffer()).buf());
+        JsonObject o = (JsonObject) parser.parse(json);
         sb.append(builder.build(response, o, ""));
       }
     } else sb.append(builder.build(response,response._response,""));
@@ -76,6 +77,9 @@ public class RequestBuilders extends RequestQueries {
     return sb.toString();
   }
 
+  protected String name() {
+    return getClass().getSimpleName();
+  }
 
   private static final String _responseHeader =
             "<table class='table table-bordered'><tr><td><table style='font-size:12px;margin:0px;' class='table-borderless'>"

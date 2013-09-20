@@ -57,7 +57,10 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public T invoke( Key... keys ) {
     try { dfork(keys).get(); }
     catch(ExecutionException eex) { // skip the execution part
-      throw new DException(eex.getCause()).toEx();
+      Throwable tex = eex.getCause();
+      if( tex instanceof Error ) throw (Error)tex;
+      if( tex instanceof DistributedException ) throw (DistributedException)tex;
+      throw new RuntimeException(tex);
     }
     catch(InterruptedException  iex) { Log.errRTExcept(iex); }
     catch(CancellationException cex) { Log.errRTExcept(cex); }

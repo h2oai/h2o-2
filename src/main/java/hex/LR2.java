@@ -13,7 +13,7 @@ public class LR2 extends Request2 {
   // for GET.
   static final String DOC_GET = "Linear Regression between 2 columns";
 
-  @API(help="Data Frame", required=true, filter=FrameKey.class)
+  @API(help="Data Frame", required=true, filter=Default.class)
   Frame source;
 
   @API(help="Column X", required=true, filter=LR2VecSelect.class)

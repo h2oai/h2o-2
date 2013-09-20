@@ -50,8 +50,13 @@ class Basic(unittest.TestCase):
         timeoutSecs = 1800
         #noPoll -> False when GBM finished
         GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+        # hack!
+        if h2o.beta_features:
+            h2o_jobs.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=5)
+
         print "GBM training completed in", GBMResult['python_elapsed'], "seconds.", \
             "%f pct. of timeout" % (GBMResult['python_%timeout'])
+
 
 if __name__ == '__main__':
     h2o.unit_main()

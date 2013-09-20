@@ -161,7 +161,7 @@ public class GBM extends FrameJob {
         Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
 
         // Remove temp vectors; cleanup the Frame
-        while( fr.numCols() > ncols )
+        while( fr.numCols() > ncols+1/*Leave response*/ )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
         remove();
         tryComplete();
@@ -203,6 +203,7 @@ public class GBM extends FrameJob {
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(new DTree[]{tree},new int[]{leaf},ncols,nclass,ymin,fr).doAll(fr);
+      //System.out.println(sbh.profString());
 
       // Reassign the new DHistogram back into the DTree
       final int tmax = tree._len; // Number of total splits
