@@ -15,6 +15,19 @@ import requests, zipfile, StringIO
 from subprocess import Popen, PIPE
 import stat
 
+def check_params_update_kwargs(params_dict, kw, function, print_params):
+    # only update params_dict..don't add
+    # throw away anything else as it should come from the model (propagating what RF used)
+    for k in kw:
+        if k in params_dict:
+            params_dict[k] = kw[k]
+        else:
+            raise Exception("illegal parameter %s in %s" % (k, function))
+
+    if print_params:
+        print "\n%s parameters:" % function, params_dict
+        sys.stdout.flush()
+
 def verboseprint(*args, **kwargs):
     if verbose:
         for x in args: # so you don't have to create a single string
@@ -1636,31 +1649,27 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictionsPage")
 
         # it will redirect to an inspect, so let's get that inspect stuff
-        resultKey = a['response']['redirect_request_args']['key']
-        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
-            timeout=timeoutSecs, params={"key": resultKey})
-        verboseprint("\nInspect of " + resultKey, dump_json(a))
+        # FIX! not supported in json yet if beta_features
+        if beta_features:
+            print "generate_predictions response:", dump_json(a)
+        else:
+            resultKey = a['response']['redirect_request_args']['key']
+            a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
+                timeout=timeoutSecs, params={"key": resultKey})
+            verboseprint("\nInspect of " + resultKey, dump_json(a))
+
         return a
 
-    def predict_confusion_matrix(self, actual, vactual, predict, vpredict, timeoutSecs=300, print_params=False, **kwargs):
+    def predict_confusion_matrix(self, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'actual': None,
             'vactual': None,
             'predict': None,
             'vpredict': None,
         }
-        # only update params_dict..don't add
-        # throw away anything else as it should come from the model (propagating what RF used)
-        for k in kwargs:
-            if k in params_dict:
-                params_dict[k] = kwargs[k]
-            else:
-                raise Exception("illegal parameter in predict_confusion_matrix %s" % k)
-
-        if print_params:
-            print "\npredict_confusion_matrix parameters:", params_dict
-            sys.stdout.flush()
-
+        # everyone should move to using this, and a full list in params_dict
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'predict_confusion_matrix', print_params)
         a = self.__do_json_request('ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nprediction_confusion_matrix result:", dump_json(a))
         return a
@@ -1691,17 +1700,16 @@ class H2O(object):
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
+            'vresponse': None,
             'source': data_key,
             'learn_rate': None,
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'vresponse': None
+            'nbins': None,
         }
-        params_dict.update(kwargs)
-        if print_params:
-            print "\ngbm parameters:", params_dict
-            sys.stdout.flush()
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'gbm', print_params)
 
         start = time.time()
         a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)
@@ -1709,6 +1717,7 @@ class H2O(object):
             a['python_elapsed'] = time.time() - start
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
+
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nGBM result:", dump_json(a))
