@@ -72,7 +72,6 @@ echo "target/h2o-sources.jar is not touched, so it is out-of-step (but not used)
 
 ls -ltr ./latest_h2o_jar_version
 cat ./latest_h2o_jar_version
-ls -ltr ./h2o_$version.jar
-ls -ltr ./target/h2o.jar
+ls -ltr ./h2o*$version/h2o.jar target/h2o.jar
 
 
