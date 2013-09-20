@@ -67,10 +67,13 @@ public abstract class Model extends Iced {
   /** If response column is not an enum, use numbers */
   public static String[] responseDomain(Frame fr) {
     Vec resp = fr._vecs[fr._vecs.length-1];
-    String[] domain = resp._domain;
-    if(resp._domain == null) {
-      int min = (int) resp.min();
-      int max = (int) resp.max();
+    return responseDomain(resp);
+  }
+  public static String[] responseDomain(Vec vec) {
+    String[] domain = vec._domain;
+    if(vec._domain == null) {
+      int min = (int) vec.min();
+      int max = (int) vec.max();
       domain = new String[max - min + 1];
       for( int i = 0; i < domain.length; i++ )
         domain[i] = "" + (min + i);

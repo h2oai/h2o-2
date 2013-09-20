@@ -901,7 +901,7 @@ class DTree extends Iced {
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
-      DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
+      DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM

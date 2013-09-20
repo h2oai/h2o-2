@@ -94,11 +94,12 @@ public class NeuralNet extends FrameJob {
     ls[ls.length - 1] = new Layer.Softmax();
     ls[ls.length - 1]._rate = (float) rate;
     ls[ls.length - 1]._l2 = (float) l2;
-    int classes = (int) (response.max() + 1);
-    ls[ls.length - 1].init(ls[ls.length - 2], classes);
+    ls[ls.length - 1].init(ls[ls.length - 2], Model.responseDomain(frame).length);
     for( int i = 1; i < ls.length; i++ )
       ls[i].randomize();
-    UKV.put(destination_key, new NeuralNetModel(destination_key, sourceKey, frame, ls));
+
+    NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+    UKV.put(destination_key, model);
 
     final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
     trainer.start();
@@ -217,7 +218,7 @@ public class NeuralNet extends FrameJob {
         layers[y].init(layers[y - 1], bs[y].length, false, 0);
       }
       input._chunks = chunks;
-      input._row = rowInChunk;
+      input._pos = rowInChunk;
       for( int i = 0; i < layers.length; i++ )
         layers[i].fprop();
       float[] out = layers[layers.length - 1]._a;
@@ -312,7 +313,7 @@ public class NeuralNet extends FrameJob {
       if( max_rows != 0 )
         len = Math.min(len, max_rows);
       int correct = 0;
-      for( input._row = 0; input._row < len; input._row++ )
+      for( input._pos = 0; input._pos < len; input._pos++ )
         if( correct(ls, error, confusion) )
           correct++;
       error.Value = (len - (double) correct) / len;

@@ -11,6 +11,7 @@ import java.util.HashMap;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
+import water.api.RequestBuilders.Response;
 import water.fvec.*;
 import water.parser.*;
 import water.parser.CustomParser.PSetupGuess;
@@ -61,6 +62,10 @@ public class Inspect extends Request {
 
   public static Response redirect(JsonObject resp, Key dest) {
     return redirect(resp, null, dest);
+  }
+
+  public static Response redirect(Request req, Key dest) {
+    return new Response(Response.Status.redirect, req, -1, -1, "Inspect", KEY, dest );
   }
 
   @Override protected boolean log() {

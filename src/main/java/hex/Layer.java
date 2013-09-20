@@ -5,8 +5,9 @@ import hex.rng.MersenneTwisterRNG;
 import java.util.Random;
 
 import water.Iced;
+import water.Model;
 import water.fvec.Chunk;
-import water.fvec.Frame;
+import water.fvec.Vec;
 
 /**
  * Neural network layer.
@@ -43,18 +44,21 @@ public abstract class Layer extends Iced {
   // Optional visible units bias, e.g. for pre-training
   transient float[] _v, _gv;
 
-  public final void init(Layer in, int units) {
-    init(in, units, true, 0);
+  protected Layer(int units) {
+    _a = new float[units];
   }
 
-  public void init(Layer in, int units, boolean weights, long step) {
-    _a = new float[units];
-    _e = new float[units];
+  public final void init(Layer in, int units) {
+    init(in, true, 0);
+  }
+
+  public void init(Layer in, boolean weights, long step) {
+    _e = new float[_a.length];
     _in = in;
 
     if( weights ) {
-      _w = new float[units * in._a.length];
-      _b = new float[units];
+      _w = new float[_a.length * in._a.length];
+      _b = new float[_a.length];
     }
 
     if( _momentum != 0 ) {
@@ -145,106 +149,119 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Input extends Layer {
-    long _row, _len;
+    long _pos, _len;
 
-    @Override public void init(Layer in, int units, boolean weights, long step) {
-      _a = new float[units];
+    public Input(int units) {
+      super(units);
     }
 
-    abstract int label();
+    @Override public void init(Layer in, boolean weights, long step) {
+      throw new UnsupportedOperationException();
+    }
 
     @Override void bprop() {
       throw new UnsupportedOperationException();
     }
 
     public final long move() {
-      return _row = _row == _len - 1 ? 0 : _row + 1;
+      return _pos = _pos == _len - 1 ? 0 : _pos + 1;
     }
   }
 
-  public static class FrameInput extends Input {
-    public Frame _frame;
+  public static class VecsInput extends Input {
+    Vec[] _vecs;
     transient Chunk[] _caches;
+    float[] _subs, _muls;
 
-    // TODO temp until stats are propagated with vecs
-    public float[] _means, _sigmas;
-
-    public FrameInput() {
+    public VecsInput(Vec[] vecs) {
+      this(vecs, null);
     }
 
-    public FrameInput(Frame frame) {
-      this(frame, null, null);
-    }
+    public VecsInput(Vec[] vecs, VecsInput stats) {
+      super(expand(vecs));
+      _vecs = vecs;
+      _len = vecs[0].length();
 
-    public FrameInput(Frame frame, float[] means, float[] sigmas) {
-      _frame = frame;
-      _len = frame.numRows();
-
-      if( means != null ) {
-        _means = means;
-        _sigmas = sigmas;
+      if( stats != null ) {
+        assert stats._subs.length == _a.length;
+        _subs = stats._subs;
+        _muls = stats._muls;
       } else {
-        _means = new float[frame._vecs.length - 1];
-        _sigmas = new float[_means.length];
-        for( int i = 0; i < _means.length; i++ ) {
-          _means[i] = (float) frame._vecs[i].mean();
-          _sigmas[i] = (float) frame._vecs[i].sigma();
+        _subs = new float[_a.length];
+        _muls = new float[_a.length];
+        int n = 0;
+        for( int v = 0; v < vecs.length; v++ ) {
+          if( vecs[v].domain() != null ) {
+            for( int i = 0; i < vecs[v].domain().length; i++ )
+              stats(vecs[v], _subs, _muls, n++);
+          } else
+            stats(vecs[v], _subs, _muls, n++);
         }
       }
     }
 
-    @Override int label() {
-      return (int) _frame._vecs[_frame.numCols() - 1].at8(_row);
+    static int expand(Vec[] vecs) {
+      int n = 0;
+      for( int i = 0; i < vecs.length; i++ ) {
+        n += vecs[i].domain() != null ? vecs[i].domain().length : 1;
+      }
+      return n;
+    }
+
+    static void stats(Vec vec, float[] subs, float[] muls, int n) {
+      subs[n] = (float) vec.mean();
+      double sigma = vec.sigma();
+      muls[n] = (float) (sigma > 1e-6 ? 1 / sigma : 1);
     }
 
     @Override void fprop() {
       for( int i = 0; i < _a.length; i++ ) {
-        Chunk chunk = chunk(i, _row);
-        double d = chunk.at(_row);
-        d -= _means[i];
-        d = _sigmas[i] > 1e-4 ? d / _sigmas[i] : d;
+        Chunk chunk = chunk(i, _pos);
+        double d = chunk.at(_pos);
+        d -= _subs[i];
+        d *= _muls[i];
         _a[i] = (float) d;
       }
     }
 
     private final Chunk chunk(int i, long n) {
       if( _caches == null )
-        _caches = new Chunk[_frame._vecs.length];
+        _caches = new Chunk[_vecs.length];
       Chunk c = _caches[i];
       if( c != null && c._start <= n && n < c._start + c._len )
         return c;
-      return _caches[i] = _frame._vecs[i].chunk(n);
+      return _caches[i] = _vecs[i].chunk(n);
     }
   }
 
   public static class ChunksInput extends Input {
     transient Chunk[] _chunks;
-    float[] _means, _sigmas;
+    float[] _subs, _muls;
 
-    public ChunksInput() {
-    }
-
-    public ChunksInput(Chunk[] chunks, float[] means, float[] sigmas) {
+    public ChunksInput(Chunk[] chunks, VecsInput stats) {
+      super(stats._subs.length);
       _chunks = chunks;
-      _means = means;
-      _sigmas = sigmas;
-    }
-
-    @Override int label() {
-      return (int) _chunks[_chunks.length - 1].at80((int) _row);
+      _subs = stats._subs;
+      _muls = stats._muls;
     }
 
     @Override void fprop() {
       for( int i = 0; i < _a.length; i++ ) {
-        double d = _chunks[i].at0((int) _row);
-        d -= _means[i];
-        d = _sigmas[i] > 1e-4 ? d / _sigmas[i] : d;
+        double d = _chunks[i].at0((int) _pos);
+        d -= _subs[i];
+        d = _muls[i] > 1e-4 ? d / _muls[i] : d;
         _a[i] = (float) d;
       }
     }
   }
 
-  public static class Softmax extends Layer {
+  public static abstract class Softmax extends Layer {
+    Softmax(int units) {
+      super(units);
+    }
+
+    abstract int label();
+
     @Override void fprop() {
       float max = Float.NEGATIVE_INFINITY;
       for( int o = 0; o < _a.length; o++ ) {
@@ -265,9 +282,12 @@ public abstract class Layer extends Iced {
     }
 
     @Override void bprop() {
+      int label = label();
       for( int o = 0; o < _a.length; o++ ) {
+        float t = o == label ? 1 : 0;
+        float e = t - _a[o];
         // Gradient is error * derivative of Softmax: (1 - x) * x
-        float g = _e[o] * (1 - _a[o]) * _a[o];
+        float g = e * (1 - _a[o]) * _a[o];
         float u = _r * g;
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
@@ -279,7 +299,41 @@ public abstract class Layer extends Iced {
     }
   }
 
+  public static class VecSoftmax extends Softmax {
+    Vec _vec;
+    Input _input;
+
+    public VecSoftmax(Vec vec, Input input) {
+      super(Model.responseDomain(vec).length);
+      _vec = vec;
+      _input = input;
+    }
+
+    @Override int label() {
+      return (int) _vec.at8(_input._pos);
+    }
+  }
+
+  public static class ChunkSoftmax extends Softmax {
+    Chunk _chunk;
+    Input _input;
+
+    public ChunkSoftmax(Chunk chunk, Input input) {
+      super(Model.responseDomain(chunk._vec).length);
+      _chunk = chunk;
+      _input = input;
+    }
+
+    @Override int label() {
+      return (int) _chunk.at80((int) _input._pos);
+    }
+  }
+
   public static class Tanh extends Layer {
+    public Tanh(int units) {
+      super(units);
+    }
+
     @Override void fprop() {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
@@ -313,6 +367,10 @@ public abstract class Layer extends Iced {
   }
 
   public static class Rectifier extends Layer {
+    public Rectifier(int units) {
+      super(units);
+    }
+
     @Override public void randomize() {
       super.randomize();
 
@@ -361,7 +419,8 @@ public abstract class Layer extends Iced {
     clones[0] = input;
     for( int y = 1; y < ls.length; y++ ) {
       clones[y] = ls[y].clone();
-      clones[y].init(clones[y - 1], ls[y]._b.length, false, step);
+      clones[y]._a = new float[ls[y]._a.length];
+      clones[y].init(clones[y - 1], false, step);
     }
     return clones;
   }
