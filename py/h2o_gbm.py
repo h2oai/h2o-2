@@ -6,7 +6,7 @@ import re, random, math
 def pp_cm(jcm, header=None):
     # header = jcm['header']
     # hack col index header for now..where do we get it?
-    header = ['%s'%i for i in jcm[0]]
+    header = ['"%s"'%i for i in range(len(jcm[0]))]
     # cm = '   '.join(header)
     cm = '{0:<8}'.format('')
     for h in header: cm = '{0}|{1:<8}'.format(cm, h)
