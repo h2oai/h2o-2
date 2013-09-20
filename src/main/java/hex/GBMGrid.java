@@ -200,14 +200,13 @@ public class GBMGrid extends FrameJob {
       if( frame == null )
         DocGen.HTML.section(sb, "Building a first model");
       else
-        DocGen.HTML.section(sb, "Building model: " + frame.currentJob + " out of " + frame.totalJobs);
+        DocGen.HTML.section(sb, "Building model: " + frame.currentJob + " of " + frame.totalJobs);
       GBMGrid grid = (GBMGrid) Job.findJob(Key.make(job.value()));
       GBMModel model = null;
       if( grid.currentModel != null )
         model = UKV.get(grid.currentModel);
       if( model != null )
-        DocGen.HTML
-            .section(sb, "Building tree: " + model.treesBuiltSoFar + " out of " + model.N + " for current model");
+        DocGen.HTML.section(sb, "Building tree: "+model.numTrees()+" of "+model.N+" for current model");
       if( frame != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");

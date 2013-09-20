@@ -54,9 +54,6 @@ public class GBM extends FrameJob {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    @API(help = "Current number of trees")
-    public int treesBuiltSoFar;
-
     public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
@@ -163,7 +160,6 @@ public class GBM extends FrameJob {
           _errs = Arrays.copyOf(_errs,_errs.length+1);
           _errs[_errs.length-1] = (float)bs2._sum/nrows;
           gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
-          gbm_model.treesBuiltSoFar=tid;
           DKV.put(outputKey, gbm_model);
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
