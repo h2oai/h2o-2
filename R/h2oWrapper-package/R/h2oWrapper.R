@@ -1,4 +1,4 @@
-setGeneric("h2oWrapper.init", function(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE) { standardGeneric("h2oWrapper.init") })
+setGeneric("h2oWrapper.init", function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE) { standardGeneric("h2oWrapper.init") })
 
 # Install H2O R package dependencies
 # MUST RUN THIS ON FIRST INSTALLATION!!

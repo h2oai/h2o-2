@@ -1930,7 +1930,7 @@ public class RequestArguments extends RequestStatics {
       super(name, key);
     }
 
-    @Override protected String queryDescription() { return "Columns to ignore"; }
+    @Override protected String queryDescription() { return "Columns to include"; }
 
     @Override public String [] selectNames(){
       ValueArray va = _key.value();
