@@ -1,7 +1,7 @@
 import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
-import h2o_browse as h2b
+import h2o_browse as h2b, h2o_gbm
 
 def plotit(xList, eList, sList):
     if h2o.python_username!='kevin':
@@ -111,7 +111,7 @@ class Basic(unittest.TestCase):
             # for ntrees in [10,20,40,80,160]:
             ntrees = 40
             ntrees = 10
-            for max_depth in [5,10,20]:
+            for max_depth in [5,10,20,40]:
             # for max_depth in [5,10,20,40]:
             # for ntrees in [1,2,3,4]:
                 params = {
@@ -144,9 +144,13 @@ class Basic(unittest.TestCase):
                 gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
                 # errrs from end of list? is that the last tree?
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
-                cm = gbmTrainView['gbm_model']['cm']
-                print "GBM 'cm'", cm
                 print "GBM 'errsLast'", errsLast
+
+                cm = gbmTrainView['gbm_model']['cm']
+                pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
+                print "Last line of this cm might be NAs, not CM"
+                print "\nTrain\n==========\n"
+                print h2o_gbm.pp_cm(cm)
 
                 # GBM test****************************************
                 predictKey = 'Predict.hex'
@@ -171,63 +175,16 @@ class Basic(unittest.TestCase):
                     vpredict='predict', # choices are 0 and 'predict'
                     )
 
-                # gbmTestView = h2o_cmd.runGBMView(model_key=modelKey)
-                gbmTestView = gbmPredictCMResult
-                ### print "gbmTestView:", h2o.dump_json(gbmTestView)
-
                 # errrs from end of list? is that the last tree?
-                # errsLast = gbmTestView['gbm_model']['errs'][-1]
-
                 # all we get is cm
                 cm = gbmPredictCMResult['cm']
 
-                print "GBM 'errsLast'", errsLast
-
-                # hack cut and past for now (should be in h2o_gbm.py?
-                scoresList = cm
-                totalScores = 0
-                totalRight = 0
-                # individual scores can be all 0 if nothing for that output class
-                # due to sampling
-                classErrorPctList = []
-                predictedClassDict = {} # may be missing some? so need a dict?
-                for classIndex,s in enumerate(scoresList):
-                    classSum = sum(s)
-                    if classSum == 0 :
-                        # why would the number of scores for a class be 0? does RF CM have entries for non-existent classes
-                        # in a range??..in any case, tolerate. (it shows up in test.py on poker100)
-                        print "class:", classIndex, "classSum", classSum, "<- why 0?"
-                    else:
-                        # H2O should really give me this since it's in the browser, but it doesn't
-                        classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
-                        totalRight += s[classIndex]
-                        classErrorPct = 100 - classRightPct
-                        classErrorPctList.append(classErrorPct)
-                        ### print "s:", s, "classIndex:", classIndex
-                        print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
-
-                        # gather info for prediction summary
-                        for pIndex,p in enumerate(s):
-                            if pIndex not in predictedClassDict:
-                                predictedClassDict[pIndex] = p
-                            else:
-                                predictedClassDict[pIndex] += p
-
-                    totalScores += classSum
-
-                print "Predicted summary:"
-                # FIX! Not sure why we weren't working with a list..hack with dict for now
-                for predictedClass,p in predictedClassDict.items():
-                    print str(predictedClass)+":", p
-
-                # this should equal the num rows in the dataset if full scoring? (minus any NAs)
-                print "totalScores:", totalScores
-                print "totalRight:", totalRight
-                if totalScores != 0:  pctRight = 100.0 * totalRight/totalScores
-                else: pctRight = 0.0
-                print "pctRight:", "%5.2f" % pctRight
-                pctWrong = 100 - pctRight
-                print "pctWrong:", "%5.2f" % pctWrong
+                # These will move into the h2o_gbm.py
+                pctWrong = h2o_gbm.pp_cm_summary(cm);
+                print "Last line of this cm is really NAs, not CM"
+                # print "\nTest\n==========\n{0}".format
+                print "\nTest\n==========\n"
+                print h2o_gbm.pp_cm(cm)
 
                 # xList.append(ntrees)
                 xList.append(max_depth)
@@ -236,6 +193,7 @@ class Basic(unittest.TestCase):
 
             h2o.beta_features = False
             plotit(xList, eList, sList)
+
 
 if __name__ == '__main__':
     h2o.unit_main()

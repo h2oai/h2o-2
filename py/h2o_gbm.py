@@ -1,6 +1,81 @@
 import h2o_cmd, h2o
 import re, random, math
 
+
+# pretty print a cm that the C
+def pp_cm(jcm, header=None):
+    # header = jcm['header']
+    # hack col index header for now..where do we get it?
+    header = ['%s'%i for i in jcm[0]]
+    # cm = '   '.join(header)
+    cm = '{0:<8}'.format('')
+    for h in header: cm = '{0}|{1:<8}'.format(cm, h)
+    cm = '{0}|{1:<8}'.format(cm, 'error')
+    c = 0
+    for line in jcm:
+        lineSum  = sum(line)
+        errorSum = lineSum - line[c]
+        if (lineSum>0):
+            err = float(errorSum) / lineSum
+        else:
+            err = 0.0
+        fl = '{0:<8}'.format(header[c])
+        for num in line: fl = '{0}|{1:<8}'.format(fl, num)
+        fl = '{0}|{1:<8.2f}'.format(fl, err)
+        cm = "{0}\n{1}".format(cm, fl)
+        c += 1
+    return cm
+
+def pp_cm_summary(cm):
+    # hack cut and past for now (should be in h2o_gbm.py?
+    scoresList = cm
+    totalScores = 0
+    totalRight = 0
+    # individual scores can be all 0 if nothing for that output class
+    # due to sampling
+    classErrorPctList = []
+    predictedClassDict = {} # may be missing some? so need a dict?
+    for classIndex,s in enumerate(scoresList):
+        classSum = sum(s)
+        if classSum == 0 :
+            # why would the number of scores for a class be 0? 
+            # in any case, tolerate. (it shows up in test.py on poker100)
+            print "class:", classIndex, "classSum", classSum, "<- why 0?"
+        else:
+            # H2O should really give me this since it's in the browser, but it doesn't
+            classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
+            totalRight += s[classIndex]
+            classErrorPct = 100 - classRightPct
+            classErrorPctList.append(classErrorPct)
+            ### print "s:", s, "classIndex:", classIndex
+            print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
+
+            # gather info for prediction summary
+            for pIndex,p in enumerate(s):
+                if pIndex not in predictedClassDict:
+                    predictedClassDict[pIndex] = p
+                else:
+                    predictedClassDict[pIndex] += p
+
+        totalScores += classSum
+
+    print "Predicted summary:"
+    # FIX! Not sure why we weren't working with a list..hack with dict for now
+    for predictedClass,p in predictedClassDict.items():
+        print str(predictedClass)+":", p
+
+    # this should equal the num rows in the dataset if full scoring? (minus any NAs)
+    print "totalScores:", totalScores
+    print "totalRight:", totalRight
+    if totalScores != 0:  pctRight = 100.0 * totalRight/totalScores
+    else: pctRight = 0.0
+    print "pctRight:", "%5.2f" % pctRight
+    pctWrong = 100 - pctRight
+    print "pctWrong:", "%5.2f" % pctWrong
+
+    return pctWrong
+
+
 # I just copied and changed GBM to GBM. Have to update to match GBM params and responses
 
 def pickRandGbmParams(paramDict, params):
