@@ -464,11 +464,11 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( _done ) return ab.close(false,false); // Ignore duplicate response packet
       UDPTimeOutThread.PENDING.remove(this);
       _dt.read(ab);             // Read the answer (under lock?)
+      _size_rez = ab.size();    // Record received size
       ab.close(true,false);     // Also finish the read (under lock?)
       _dt.onAck();              // One time only execute (before sending ACKACK)
       _done = true;             // Only read one (of many) response packets
       ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
-      _size_rez = ab.size();    // Record received size
       notifyAll();              // And notify in any case
       final Exception e = _dt.getDException();
       // Also notify any and all pending completion-style tasks
@@ -480,7 +480,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
                   task.completeExceptionally(e);
                 else try {
                   task.tryComplete();
-                } catch(Throwable e){
+                } catch(Throwable e) {
                   task.completeExceptionally(e);
                 }
               }

@@ -337,7 +337,6 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     if( rpc == null ) return;
     T mrt = rpc.get();          // This is a blocking remote call
     assert mrt._fs == null;     // No blockable results from remote
-    assert rpc.size_rez() != 0;
     _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( _res == null ) _res = mrt;
