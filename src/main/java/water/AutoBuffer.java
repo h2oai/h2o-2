@@ -53,7 +53,7 @@ public final class AutoBuffer {
 
   // Total size written out from 'new' to 'close'.  Only updated when actually
   // reading or writing data, or after close().  For profiling only.
-  public int _size;
+  public int _size, _zeros, _arys;
   // More profiling: start->close msec, plus nano's spent in blocking I/O
   // calls.  The difference between (close-start) and i/o msec is the time the
   // i/o thread spends doing other stuff (e.g. allocating Java objects or
@@ -255,6 +255,7 @@ public final class AutoBuffer {
   // writer does a close().
   public final int close() { return close(true,false); }
   public final int close(boolean expect_tcp, boolean failed) {
+    if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
     assert _h2o != null || _chan != null; // Byte-array backed should not be closed
     // Extra asserts on closing TCP channels: we should always know & expect
     // TCP channels, and read them fully.  If we close a TCP channel that is
@@ -340,6 +341,7 @@ public final class AutoBuffer {
   boolean readMode() { return _read; }
   // Size in bytes sent, after a close()
   int size() { return _size; }
+  int zeros() { return _zeros; }
 
   // Available bytes in this buffer to read
   public int remaining() { return _bb.remaining(); }
@@ -459,6 +461,7 @@ public final class AutoBuffer {
     }
     _time_io_ns += (System.nanoTime()-ns);
     _bb.flip();                 // Prep for handing out bytes
+    for( int i=0; i < _bb.limit(); i++ ) if( _bb.get(i)==0 ) _zeros++;
     _firstPage = false;         // First page of data is gone gone gone
     return _bb;
   }
@@ -491,6 +494,7 @@ public final class AutoBuffer {
     try {
       if( _chan == null )
         tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
+      for( int i=0; i < _bb.limit(); i++ ) if( _bb.get(i)==0 ) _zeros++;
       long ns = System.nanoTime();
       while( _bb.hasRemaining() ) {
         _chan.write(_bb);
@@ -581,19 +585,35 @@ public final class AutoBuffer {
     put2((short)f.frozenType());
     return f.write(this);
   }
+
+  // Put a compressed array length
+  public AutoBuffer putlen( int len ) {
+    if( len==-1 ) return put1(255);
+    return len < 254 ? put1(len) : put1(254).put4(len);
+  }
+  // Get a compressed array length
+  public int getlen( ) {
+    int len = get1();
+    if( len==255 ) return -1;
+    return len==254 ? get4() : len;
+  }
+
   public AutoBuffer putA(Iced[] fs) {
-    if( fs == null ) return put4(-1);
-    put4(fs.length);
+    _arys++;
+    if( fs == null ) return putlen(-1);
+    putlen(fs.length);
     for( Iced f : fs ) put(f);
     return this;
   }
   public AutoBuffer putAA(Iced[][] fs) {
+    _arys++;
     if( fs == null ) return put4(-1);
     put4(fs.length);
     for( Iced[] f : fs ) putA(f);
     return this;
   }
   public AutoBuffer putAAA(Iced[][][] fs) {
+    _arys++;
     if( fs == null ) return put4(-1);
     put4(fs.length);
     for( Iced[][] f : fs ) putAA(f);
@@ -611,12 +631,14 @@ public final class AutoBuffer {
     return TypeMap.newInstance(id).read(this);
   }
   public <T extends Iced> T[] getA(Class<T> tc) {
-    int len = get4(); if( len == -1 ) return null;
+    _arys++;
+    int len = getlen(); if( len == -1 ) return null;
     T[] ts = (T[]) Array.newInstance(tc, len);
     for( int i = 0; i < len; ++i ) ts[i] = get();
     return ts;
   }
   public <T extends Iced> T[][] getAA(Class<T> tc) {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     Class<T[]> tcA = (Class<T[]>) Array.newInstance(tc, 0).getClass();
     T[][] ts = (T[][]) Array.newInstance(tcA, len);
@@ -624,6 +646,7 @@ public final class AutoBuffer {
     return ts;
   }
   public <T extends Iced> T[][][] getAAA(Class<T> tc) {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     Class<T[]  > tcA  = (Class<T[]  >) Array.newInstance(tc , 0).getClass();
     Class<T[][]> tcAA = (Class<T[][]>) Array.newInstance(tcA, 0).getClass();
@@ -633,12 +656,14 @@ public final class AutoBuffer {
   }
 
   public AutoBuffer putAStr(String[] fs)    {
+    _arys++;
     if( fs == null ) return put4(-1);
     put4(fs.length);
     for( String s : fs ) putStr(s);
     return this;
   }
   public String[] getAStr() {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     String[] ts = new String[len];
     for( int i = 0; i < len; ++i ) ts[i] = getStr();
@@ -646,12 +671,14 @@ public final class AutoBuffer {
   }
 
   public AutoBuffer putAAStr(String[][] fs)    {
+    _arys++;
     if( fs == null ) return put4(-1);
     put4(fs.length);
     for( String[] s : fs ) putAStr(s);
     return this;
   }
   public String[][] getAAStr() {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     String[][] ts = new String[len][];
     for( int i = 0; i < len; ++i ) ts[i] = getAStr();
@@ -701,8 +728,8 @@ public final class AutoBuffer {
   // -----------------------------------------------
   // Utility functions to read & write arrays
   public byte[] getA1( ) {
-    int len = get4();
-    //assert len < 10000000 : "getA1 size=0x"+Integer.toHexString(len);
+    _arys++;
+    int len = getlen();
     return len == -1 ? null : getA1(len);
   }
   public byte[] getA1( int len ) {
@@ -718,6 +745,7 @@ public final class AutoBuffer {
   }
 
   public short[] getA2( ) {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     short[] buf = MemoryManager.malloc2(len);
     int sofar = 0;
@@ -733,6 +761,7 @@ public final class AutoBuffer {
   }
 
   public int[] getA4( ) {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     int[] buf = MemoryManager.malloc4(len);
     int sofar = 0;
@@ -747,6 +776,7 @@ public final class AutoBuffer {
     return buf;
   }
   public float[] getA4f( ) {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     float[] buf = MemoryManager.malloc4f(len);
     int sofar = 0;
@@ -761,6 +791,7 @@ public final class AutoBuffer {
     return buf;
   }
   public long[] getA8( ) {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     long[] buf = MemoryManager.malloc8(len);
     int sofar = 0;
@@ -775,6 +806,7 @@ public final class AutoBuffer {
     return buf;
   }
   public double[] getA8d( ) {
+    _arys++;
     int len = get4(); if( len == -1 ) return null;
     double[] buf = MemoryManager.malloc8d(len);
     int sofar = 0;
@@ -789,42 +821,49 @@ public final class AutoBuffer {
     return buf;
   }
   public byte[][] getAA1( ) {
+    _arys++;
     int len = get4();  if( len == -1 ) return null;
     byte[][] ary  = new byte[len][];
     for( int i=0; i<len; i++ ) ary[i] = getA1();
     return ary;
   }
   public short[][] getAA2( ) {
+    _arys++;
     int len = get4();  if( len == -1 ) return null;
     short[][] ary  = new short[len][];
     for( int i=0; i<len; i++ ) ary[i] = getA2();
     return ary;
   }
   public int[][] getAA4( ) {
+    _arys++;
     int len = get4();  if( len == -1 ) return null;
     int[][] ary  = new int[len][];
     for( int i=0; i<len; i++ ) ary[i] = getA4();
     return ary;
   }
   public float[][] getAA4f( ) {
+    _arys++;
     int len = get4();  if( len == -1 ) return null;
     float[][] ary  = new float[len][];
     for( int i=0; i<len; i++ ) ary[i] = getA4f();
     return ary;
   }
   public long[][] getAA8( ) {
+    _arys++;
     int len = get4();  if( len == -1 ) return null;
     long[][] ary  = new long[len][];
     for( int i=0; i<len; i++ ) ary[i] = getA8();
     return ary;
   }
   public double[][] getAA8d( ) {
+    _arys++;
     int len = get4();  if( len == -1 ) return null;
     double[][] ary  = new double[len][];
     for( int i=0; i<len; i++ ) ary[i] = getA8d();
     return ary;
   }
   public int[][][] getAAA4( ) {
+    _arys++;
     int len = get4();  if( len == -1 ) return null;
     int[][][] ary  = new int[len][][];
     for( int i=0; i<len; i++ ) ary[i] = getAA4();
@@ -837,7 +876,10 @@ public final class AutoBuffer {
   }
 
   public AutoBuffer putA1( byte[] ary ) {
-    return ary == null ? put4(-1) : put4(ary.length).putA1(ary,ary.length);
+    _arys++;
+    if( ary == null ) return putlen(-1);
+    putlen(ary.length);
+    return ary == null ? this : putA1(ary,ary.length);
   }
   public AutoBuffer putA1( byte[] ary, int length ) { return putA1(ary,0,length); }
   public AutoBuffer putA1( byte[] ary, int sofar, int length ) {
@@ -850,6 +892,7 @@ public final class AutoBuffer {
     return this;
   }
   public AutoBuffer putA2( short[] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     int sofar = 0;
@@ -864,6 +907,7 @@ public final class AutoBuffer {
     return this;
   }
   public AutoBuffer putA4( int[] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     int sofar = 0;
@@ -878,6 +922,7 @@ public final class AutoBuffer {
     return this;
   }
   public AutoBuffer putA8( long[] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     int sofar = 0;
@@ -892,6 +937,7 @@ public final class AutoBuffer {
     return this;
   }
   public AutoBuffer putA4f( float[] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     int sofar = 0;
@@ -906,6 +952,7 @@ public final class AutoBuffer {
     return this;
   }
   public AutoBuffer putA8d( double[] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     int sofar = 0;
@@ -921,42 +968,49 @@ public final class AutoBuffer {
   }
 
   public AutoBuffer putAA1( byte[][] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putA1(ary[i]);
     return this;
   }
   public AutoBuffer putAA2( short[][] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putA2(ary[i]);
     return this;
   }
   public AutoBuffer putAA4( int[][] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putA4(ary[i]);
     return this;
   }
   public AutoBuffer putAA4f( float[][] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putA4f(ary[i]);
     return this;
   }
   public AutoBuffer putAA8( long[][] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putA8(ary[i]);
     return this;
   }
   public AutoBuffer putAA8d( double[][] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putA8d(ary[i]);
     return this;
   }
   public AutoBuffer putAAA4( int[][][] ary ) {
+    _arys++;
     if( ary == null ) return put4(-1);
     put4(ary.length);
     for( int i=0; i<ary.length; i++ ) putAA4(ary[i]);
