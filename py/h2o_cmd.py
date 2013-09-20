@@ -6,8 +6,8 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
     noise=None, noPoll=None, **kwargs):
     ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
-    if not bucket  : raise Exception('No S3 bucket specified')
-    if not filename: raise Exception('No filename in bucket specified')
+    if not bucket  : raise Exception('No S3 bucket')
+    if not filename: raise Exception('No filename in bucket')
     if not node: node = h2o.nodes[0]
     
     import_result = node.import_s3(bucket)
@@ -26,18 +26,18 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
     return p
 
 def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
-    if not key: raise Exception('No key for Inspect specified')
+    if not key: raise Exception('No key for Inspect')
     if not node: node = h2o.nodes[0]
     return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
 
 def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
-    if not key: raise Exception('No key for Summary specified')
+    if not key: raise Exception('No key for Summary')
     if not node: node = h2o.nodes[0]
     return node.summary_page(key, timeoutSecs=timeoutSecs, **kwargs)
 
 # Not working in H2O yet, but support the test
 def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
-    if not key: raise Exception('No key for Inspect specified')
+    if not key: raise Exception('No key for Inspect')
     if not node: node = h2o.nodes[0]
     # FIX! currently there is no such thing as a timeout on node.inspect
     return node.Store2HDFS(key, **kwargs)
@@ -51,7 +51,7 @@ def runExec(node=None, timeoutSecs=20, **kwargs):
 
 def runKMeans(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, **kwargs):
-    if not parseResult: raise Exception('No parsed key for KMeans specified')
+    if not parseResult: raise Exception('No parseResult for KMeans')
     if not node: node = h2o.nodes[0]
     print parseResult['destination_key']
     return node.kmeans(parseResult['destination_key'], None, 
@@ -59,14 +59,14 @@ def runKMeans(node=None, parseResult=None,
 
 def runKMeansGrid(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
-    if not parseResult: raise Exception('No parsed key for KMeansGrid specified')
+    if not parseResult: raise Exception('No parseResult for KMeansGrid')
     if not node: node = h2o.nodes[0]
     # no such thing as KMeansGridView..don't use retryDelaySecs
     return node.kmeans_grid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
 def runGLM(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
-    if not parseResult: raise Exception('No parsed key for GLM specified')
+    if not parseResult: raise Exception('No parseResult for GLM')
     if not node: node = h2o.nodes[0]
     return node.GLM(parseResult['destination_key'], 
         timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
@@ -77,28 +77,33 @@ def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
 
 def runGLMGrid(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
-    if not parseResult: raise Exception('No parsed key for GLMGrid specified')
+    if not parseResult: raise Exception('No parseResult for GLMGrid')
     if not node: node = h2o.nodes[0]
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
-def runPCA(node=None,parseResult=None,timeoutSecs=600, **kwargs):
-    if not parseResult: raise Exception('No parsed key for PCA specified')
+def runPCA(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+    if not parseResult: raise Exception('No parseResult for PCA')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.pca(data_key=data_key,**kwargs)
+    return node.pca(data_key=data_key, **kwargs)
 
 def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
-    if not parseResult: raise Exception('No parsed key for GBM specified')
+    if not parseResult: raise Exception('No parseResult for GBM')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.gbm(data_key=data_key,timeoutSecs=timeoutSecs,**kwargs) 
+    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs,**kwargs) 
+
+def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwargs):
+    if not data_key: raise Exception('No data_key for run Predict')
+    if not node: node = h2o.nodes[0]
+    return node.generate_predictions(data_key, model_key, timeoutSecs=timeoutSecs,**kwargs) 
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
 def runRF(node=None, parseResult=None, trees=5, 
         timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
-    if not parseResult: raise Exception('No parsed key for RF specified')
+    if not parseResult: raise Exception('No parseResult for RF')
     if not node: node = h2o.nodes[0]
     #! FIX! what else is in parseResult that we should check?
     h2o.verboseprint("runRF parseResult:", parseResult)

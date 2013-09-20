@@ -40,58 +40,6 @@ public abstract class DPCA {
     }
   }
 
-  public static class StandardizeTask extends MRTask2<StandardizeTask> {
-    final double[] _normSub;
-    final double[] _normMul;
-
-    public StandardizeTask(double[] normSub, double[] normMul) {
-      _normSub = normSub;
-      _normMul = normMul;
-    }
-
-    @Override public void map(Chunk [] chunks) {
-      int ncol = _normSub.length;
-      Chunk [] inputs = Arrays.copyOf(chunks, ncol);
-      NewChunk [] outputs = new NewChunk[ncol];
-
-      for(int i = ncol; i < chunks.length; ++i) {
-        outputs[i-ncol] = (NewChunk)chunks[i];
-      }
-
-      int rows = inputs[0]._len;
-      for(int c = 0; c < ncol; c++) {
-        for(int r = 0; r < rows; r++) {
-          double x = inputs[c].at0(r);
-          x -= _normSub[c];
-          x *= _normMul[c];
-          outputs[c].addNum(x);
-        }
-      }
-    }
-
-    public static Frame standardize(Frame data, double[] normSub, double[] normMul) {
-      int ncol = normSub.length;
-      Vec [] vecs = Arrays.copyOf(data._vecs, 2*ncol);
-      VectorGroup vg = data._vecs[0].group();
-      Key [] keys = vg.addVecs(ncol);
-      for(int i = 0; i < ncol; i++) {
-        vecs[ncol+i] = new AppendableVec(keys[i]);
-      }
-      StandardizeTask tsk = new StandardizeTask(normSub, normMul).doAll(vecs);
-      Vec [] outputVecs = Arrays.copyOfRange(tsk._fr._vecs, ncol, 2*ncol);
-
-      Frame f = new Frame(data.names(), outputVecs);
-      return f;
-    }
-
-    public static Frame standardize(final DataFrame data) {
-      // Extract only the columns in the associated model
-      Frame subset = data.modelAsFrame();
-      Assert.assertEquals(subset._vecs.length, data._normSub.length);
-      return standardize(subset, data._normSub, data._normMul);
-    }
-  }
-
   /* Store parameters that go into PCA calculation */
   public static class PCAParams extends Iced {
     public double _tol = 0;

@@ -744,11 +744,12 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
 
                 if (printSingleWarning):
                     # don't print these lines
-                    if not (re.search("Unable to load native-hadoop library", line) or
+                    if not (
+                        ('Unable to load native-hadoop library' in line) or
                         ('stack_traces' in line) or
                         ('Multiple local IPs detected' in line) or
                         ('[Loaded ' in line) or
-                        ('RestS3Service' in line)):
+                        ('RestS3Service' in line) ):
 
                         sys.stdout.write(line)
 
@@ -931,7 +932,7 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
-            verboseprint(r.text)
+            print(r.text)
             if not isinstance(r,(list,dict)): 
                 raise Exception("h2o json responses should always be lists or dicts, see previous for text")
             if '404' in r:
@@ -1591,7 +1592,7 @@ class H2O(object):
         return rfView
 
 
-    def gbm_view(self,model_key,timeoutSecs=300,print_params=False,**kwargs):
+    def gbm_view(self,model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             '_modelKey': model_key
         }
@@ -1600,11 +1601,19 @@ class H2O(object):
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
-        params_dict = {
-            'data_key': data_key,
-            'model_key': model_key,
-            'destination_key': destination_key,
-            }
+        if beta_features:
+            params_dict = {
+                'data': data_key,
+                'model': model_key,
+                'prediction_key': destination_key,
+                }
+        else:
+            params_dict = {
+                'data_key': data_key,
+                'model_key': model_key,
+                'destination_key': destination_key,
+                }
+
         browseAlso = kwargs.pop('browseAlso',False)
 
         # only update params_dict..don't add
@@ -1617,7 +1626,10 @@ class H2O(object):
             print "\ngenerate_predictions parameters:", params_dict
             sys.stdout.flush()
 
-        a = self.__do_json_request('GeneratePredictionsPage.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request(
+            'GeneratePredictions2.json' if beta_features else 'GeneratePredictionsPage.json', 
+            timeout=timeoutSecs, 
+            params=params_dict)
         verboseprint("\ngenerate_predictions result:", dump_json(a))
 
         if (browseAlso | browse_json):
@@ -1629,6 +1641,30 @@ class H2O(object):
             timeout=timeoutSecs, params={"key": resultKey})
         verboseprint("\nInspect of " + resultKey, dump_json(a))
         return a
+
+    def predict_confusion_matrix(self, actual, vactual, predict, vpredict, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'actual': None,
+            'vactual': None,
+            'predict': None,
+            'vpredict': None,
+        }
+        # only update params_dict..don't add
+        # throw away anything else as it should come from the model (propagating what RF used)
+        for k in kwargs:
+            if k in params_dict:
+                params_dict[k] = kwargs[k]
+            else:
+                raise Exception("illegal parameter in predict_confusion_matrix %s" % k)
+
+        if print_params:
+            print "\npredict_confusion_matrix parameters:", params_dict
+            sys.stdout.flush()
+
+        a = self.__do_json_request('ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nprediction_confusion_matrix result:", dump_json(a))
+        return a
+
 
     def random_forest_treeview(self, tree_number, data_key, model_key,
         timeoutSecs=10, ignoreH2oError=False, **kwargs):

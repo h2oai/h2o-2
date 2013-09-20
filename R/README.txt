@@ -58,8 +58,8 @@ This returns output like the following:
 
 **Minimize** the terminal window, and open R. 
 
-In the R console install the library by entering the following command at the 
-prompt:
+In the R console, install the H2O wrapper library by entering the following command 
+at the prompt:
 
   >install.packages("/Users/UserName/Desktop/h2o_file_name/R/filename.tar.gz", 
                     repos = NULL, type = "source")
@@ -70,29 +70,22 @@ the extension ".tar.gz."
 For example, a user at 0x data enters the following into her R console at the 
 command prompt:
 
-  >install.packages("/Users/Irene/Desktop/h2o-1.5.6137/R/h2o_1.5.6.137.tar.gz", 
+  >install.packages("/Users/Irene/Desktop/h2o-1.7.0.1034/R/h2oWrapper_1.7.0.1034.tar.gz", 
                     repos = NULL, type = "source")
 
 Which returns the following output:
 
-  * installing *source* package �h2o� ...
+  * installing *source* package ‘h2oWrapper’ ...
   ** R
-  ** demo
-  ** inst
   ** preparing package for lazy loading
-  Creating a generic function for colnames from package base in package h2o
-  Creating a generic function for nrow from package base in package h2o
-  Creating a generic function for ncol from package base in package h2o
-  Creating a generic function for summary from package base in package h2o
-  Creating a generic function for as.data.frame from package base in package h2o
   ** help
   *** installing help indices
   ** building package indices
   ** testing if installed package can be loaded
-  * DONE (h2o)
+  * DONE (h2oWrapper)
  
 
-**R Studio users** can install the H2O package by finding the tabbed menu 
+**R Studio users** can install the H2O wrapper package by finding the tabbed menu 
 "File; Plots; Packages; Help" and choosing *Packages*. 
 Clicking on *Install Packages* brings up an installation helper. 
 Choose *Package Archive File (tgz; .tar.gz)* in the *"Install From"* field. 
@@ -102,23 +95,52 @@ Click browse and follow the helper to specify Desktop -> h2o file -> R ->
 
 All R users (both console and R Studio) enter the command: 
 
-  > require(h2o)
+  > require(h2oWrapper)
 
-which returns the following output:
-
-  Loading required package: h2o
-  Loading required package: RCurl
-  Loading required package: bitops
-  Loading required package: rjson
+The H2O wrapper library connects to an instance of H2O and installs the correct version
+of the H2O R package that allows you to run H2O algorithms from within R.
 
 In the R terminal enter:
 
-  > localH2O = new("H2OClient")
-  > h2o.checkClient(localH2O)
+  > h2oWrapper.installDepPkgs()
+
+This installs RCurl, rjson and other package dependencies from CRAN. Then, enter:
+
+  > h2oWrapper.init()
 
 Which returns the following output:
 
-  Successfully connected to http://127.0.0.1:54321 
+  Successfully connected to http://127.0.0.1:54321
+  Downloading and installing H2O R package version 1.7.0.1034
+  
+  * installing *source* package ‘h2o’ ...
+  ** R
+  ** demo
+  ** inst
+  ** preparing package for lazy loading
+  Creating a generic function for ‘mean’ from package ‘base’ in package ‘h2o’
+  Creating a generic function for ‘colnames’ from package ‘base’ in package ‘h2o’
+  Creating a generic function for ‘nrow’ from package ‘base’ in package ‘h2o’
+  Creating a generic function for ‘ncol’ from package ‘base’ in package ‘h2o’
+  Creating a generic function for ‘summary’ from package ‘base’ in package ‘h2o’
+  Creating a generic function for ‘as.data.frame’ from package ‘base’ in package ‘h2o’
+  Creating a generic function for ‘head’ from package ‘utils’ in package ‘h2o’
+  Creating a generic function for ‘tail’ from package ‘utils’ in package ‘h2o’
+  Creating a generic function for ‘predict’ from package ‘stats’ in package ‘h2o’
+  ** help
+  *** installing help indices
+  ** building package indices
+  ** testing if installed package can be loaded
+  * DONE (h2o)
+
+  Success
+  You may now type 'library(h2o)' to load the R package
+
+The H2O R package has been installed. In the R terminal, enter:
+
+  > require(h2o)
+  > localH2O = new("H2OClient")
+  > h2o.checkClient(localH2O)
 
 Users can now run H2O from their R console. Additional R documentation can be 
 found here
