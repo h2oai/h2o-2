@@ -21,6 +21,7 @@ public class Frame extends Iced {
 
   public Frame( String[] names, Vec[] vecs ) { _names=names; _vecs=vecs; }
   public Frame( Frame fr ) { _names=fr._names.clone(); _vecs=fr._vecs.clone(); _col0 = fr._col0; }
+  public Frame(Vec... vecs){_vecs = vecs;}
 
   /** Finds the first column with a matching name.  */
   public int find( String name ) {

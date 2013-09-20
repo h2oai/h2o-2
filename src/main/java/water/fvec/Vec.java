@@ -440,14 +440,14 @@ public class Vec extends Iced {
       private AddVecs2GroupTsk(Key key, int n){_key = key; _addN = _finalN = n;}
       @Override public VectorGroup atomic(VectorGroup old) {
         if(old == null) return new VectorGroup(_key, ++_finalN);
-        return new VectorGroup(_key, _finalN = (_addN + old._len));
+        return new VectorGroup(_key, _finalN = (_addN + old._len + 1));
       }
     }
     // reserve range of keys and return index of first new available key
     public int reserveKeys(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
       tsk.invoke(_key);
-      return tsk._finalN - n + 1;
+      return tsk._finalN - n;
     }
     /**
      * Gets the next n keys of this group.

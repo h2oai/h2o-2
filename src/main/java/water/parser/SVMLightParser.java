@@ -97,6 +97,7 @@ public class SVMLightParser extends CustomParser{
           c = bits[offset];
         }
       }
+      //dout.newLine();
       int linestart = 0;
 //      String linePrefix = "";
   MAIN_LOOP:

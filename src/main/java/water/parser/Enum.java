@@ -26,6 +26,7 @@ import water.nbhm.NonBlockingHashMap;
 public final class Enum extends Iced implements Cloneable{
   public static final int MAX_ENUM_SIZE = 65000;
   AtomicInteger _id = new AtomicInteger();
+  int _maxId = -1;
   long _nElems;
   volatile NonBlockingHashMap<ValueString, Integer> _map;
   public Enum(){_map = new NonBlockingHashMap<ValueString, Integer>();}
@@ -35,13 +36,9 @@ public final class Enum extends Iced implements Cloneable{
     _map = map;
   }
   public Enum clone(){
-//    AutoBuffer ab = new AutoBuffer();
-//    write(ab);
-//    ab.flipForReading();
-//    Enum res = new Enum(_colId);
-//    res.read(ab);
-//    return res;
-    return new Enum(_id.get(),_nElems,(NonBlockingHashMap<ValueString,Integer>)_map.clone());
+    NonBlockingHashMap<ValueString,Integer> map = _map;
+    if(map != null)map = (NonBlockingHashMap<ValueString,Integer>)map.clone();
+    return new Enum(_id.get(),_nElems,map);
   }
   /**
    * Add key to this map (treated as hash set in this case).
@@ -99,7 +96,7 @@ public final class Enum extends Iced implements Cloneable{
     }
     kill(); // too many values, enum should be killed!
   }
-  public int maxId(){return _id.get();}
+  public int maxId(){return _maxId == -1?_id.get():_maxId;}
   public int size() { return _map.size(); }
   public boolean isKilled() { return _map == null; }
   public void kill() { _map = null; }
@@ -130,6 +127,7 @@ public final class Enum extends Iced implements Cloneable{
   public AutoBuffer write( AutoBuffer ab ) {
     if( _map == null ) return ab.put1(1); // Killed map marker
     ab.put1(0);                           // Not killed
+    ab.put4(maxId());
     for( ValueString key : _map.keySet() )
       ab.put2((char)key._length).putA1(key._buf,key._length).put4(_map.get(key));
     return ab.put2((char)65535); // End of map marker
@@ -139,6 +137,7 @@ public final class Enum extends Iced implements Cloneable{
     assert _map == null || _map.size()==0;
     _map = null;
     if( ab.get1() == 1 ) return this; // Killed?
+    _maxId = ab.get4();
     _map = new NonBlockingHashMap<ValueString, Integer>();
     int len = 0;
     while( (len = ab.get2()) != 65535 ) // Read until end-of-map marker
