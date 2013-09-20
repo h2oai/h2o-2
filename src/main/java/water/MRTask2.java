@@ -95,9 +95,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // If we split the job left/right, then we get a total recording of the
     // last job, and the exec time & completion time of 1st job done.
     long _time1st, _done1st;
+    int _size_rez0, _size_rez1; // i/o size in bytes during reduce
     MRProfile _last;
     long sumTime() { return _onCdone - (_localstart==0 ? _mapstart : _localstart); }
-    void gather( MRProfile p ) {
+    void gather( MRProfile p, int size_rez ) {
       p._clz=null;
       if( _last == null ) _last=p;
       else {
@@ -106,6 +107,9 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         _last = last;
         if( first._onCdone > _done1st ) { _time1st = first.sumTime(); _done1st = first._onCdone; }
       }
+      if( size_rez !=0 )        // Record i/o result size 
+        if( _size_rez0 == 0 ) _size_rez0=size_rez;
+        else                  _size_rez1=size_rez;
       assert _last._onCdone >= _done1st;
     }
 
@@ -114,12 +118,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       if( d==0 ) sb.append(_clz).append("\n");
       for( int i=0; i<d; i++ ) sb.append("  ");
       if( _localstart != 0 ) sb.append("Node local ").append(_localdone - _localstart).append("ms, ");
-      if( _userstart == 0 ) {
+      if( _userstart == 0 ) {   // Forked job?
         sb.append("Slow wait ").append(_mapstart-_localdone).append("ms + work ").append(_last.sumTime()).append("ms, ");
         sb.append("Fast work ").append(_time1st).append("ms + wait ").append(_onCstart-_done1st).append("ms\n");
-        _last.toString(sb,d+1);
+        _last.toString(sb,d+1); // Nested slow-path print
         for( int i=0; i<d; i++ ) sb.append("  ");
-      } else {
+        sb.append("join-i/o ").append(_onCstart-_last._onCdone).append("ms, ");
+      } else {                  // Leaf map call?
         sb.append("Map ").append(_mapdone - _mapstart).append("ms (prep ").append(_userstart - _mapstart);
         sb.append("ms, user ").append(_closestart-_userstart);
         sb.append("ms, closeChk ").append(_mapdone-_closestart).append("ms), ");
@@ -129,7 +134,8 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       if( _remoteBlkDone!=0 ) {
         sb.append(", remBlk ").append(_remoteBlkDone-_reducedone).append("ms, locBlk ");
         sb.append(_localBlkDone-_remoteBlkDone).append("ms, close ");
-        sb.append(_onCdone-_localBlkDone).append("ms");
+        sb.append(_onCdone-_localBlkDone).append("ms, size ");
+        sb.append(PrettyPrint.bytes(_size_rez0)).append("+").append(PrettyPrint.bytes(_size_rez1));
       }
       sb.append(")\n");
       return sb;
@@ -236,12 +242,12 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       final int mid = (_lo+_hi)>>>1; // Mid-point
       _left = clone();
       _rite = clone();
+      _left._profile = new MRProfile(this);
+      _rite._profile = new MRProfile(this);
       _left._hi = mid;          // Reset mid-point
       _rite._lo = mid;          // Also set self mid-point
       addToPendingCount(1);     // One fork awaiting completion
-      _left._profile = new MRProfile(this);
       _left.fork();             // Runs in another thread/FJ instance
-      _rite._profile = new MRProfile(this);
       _rite.compute2();         // Runs in THIS F/J thread
       _profile._mapdone = System.currentTimeMillis();
       return;                   // Not complete until the fork completes
@@ -293,7 +299,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // Collect all pending Futures from both parties as well.
   private void reduce2( MRTask2<T> mrt ) {
     if( mrt == null ) return;
-    _profile.gather(mrt._profile);
+    _profile.gather(mrt._profile,0);
     if( _res == null ) _res = mrt._res;
     else if( mrt._res != null ) _res.reduce4(mrt._res);
     if( _fs == null ) _fs = mrt._fs;
@@ -329,7 +335,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     if( rpc == null ) return;
     T mrt = rpc.get();          // This is a blocking remote call
     assert mrt._fs == null;     // No blockable results from remote
-    _profile.gather(mrt._profile);
+    _profile.gather(mrt._profile,rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( _res == null ) _res = mrt;
     else if( mrt._nlo != -1 ) _res.reduce4(mrt);
