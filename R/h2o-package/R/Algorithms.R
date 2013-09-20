@@ -55,9 +55,12 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardi
   result$standardized = standardize
   result$sdev = as.numeric(unlist(res$stdDev))
   # result$rotation = do.call(rbind, res$eigenvectors)
-  temp = t(do.call(rbind, res$eigenvectors))
+  # temp = t(do.call(rbind, res$eigenvectors))
+  nfeat = length(res$eigenvectors[[1]])
+  temp = matrix(unlist(res$eigenvectors), nrow = nfeat)
+  rownames(temp) = names(res$eigenvectors[[1]])
   colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
-  result$rotation = format(as.data.frame(temp), nsmall = 10)
+  result$rotation = temp
   
   new("H2OPCAModel", key=destKey, data=data, model=result)
 })
