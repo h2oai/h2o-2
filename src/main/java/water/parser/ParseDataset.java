@@ -451,7 +451,7 @@ public final class ParseDataset extends Job {
         DParseTask dpt = null;
         switch(localSetup._pType){
           case CSV:
-            parser = new CsvParser(localSetup, false);
+            parser = new CsvParser(localSetup);
             dpt = new DParseTask();
             break;
           case SVMLight:

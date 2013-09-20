@@ -1,6 +1,8 @@
 package water.api;
 
 import java.io.File;
+
+import water.Key;
 import water.util.FileIntegrityChecker;
 
 public class ImportFiles2 extends ImportFiles {
@@ -9,7 +11,7 @@ public class ImportFiles2 extends ImportFiles {
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
-  static final String DOC_GET = 
+  static final String DOC_GET =
     "Map a file from the local host filesystem into H2O memory.  Data is "+
     "loaded lazily, when the Key is read (usually in a Parse2 command, to build " +
     "a Frame key).  (Warning: Every host in the cluster must have this file visible locally!)";
@@ -17,6 +19,7 @@ public class ImportFiles2 extends ImportFiles {
   @Override FileIntegrityChecker load(File path) {
     return FileIntegrityChecker.check(path, true);
   }
-  // Auto-link to Parse2
+
+  @Override protected String parseLink(String k, String txt) { return Parse2.link(k, txt); }
   @Override String parse() { return "Parse2.query"; }
 }

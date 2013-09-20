@@ -472,4 +472,45 @@ public class Utils {
       return null;
     }
   }
+
+  public static class IcedInt extends Iced {
+    public final int _val;
+    public IcedInt(int v){_val = v;}
+  }
+  /**
+   * Simple wrapper around HashMap with support for H2O serialization
+   * @author tomasnykodym
+   * @param <T>
+   */
+  public static class IcedHashMap<K extends Iced, V extends Iced> extends HashMap<K,V> implements Freezable {
+    private static final int I;
+    static {
+      I = TypeMap.onLoad(IcedHashMap.class.getName());
+    }
+    @Override public AutoBuffer write(AutoBuffer bb) {
+      bb.put4(size());
+      for(Map.Entry<K, V> e:entrySet())bb.put(e.getKey()).put(e.getValue());
+      return bb;
+    }
+    @Override public IcedHashMap<K,V> read(AutoBuffer bb) {
+      int n = bb.get4();
+      for(int i = 0; i < n; ++i)
+        put(bb.<K>get(),bb.<V>get());
+      return this;
+    }
+
+    @Override public <T2 extends Freezable> T2 newInstance() {
+      return (T2)new IcedHashMap<K,V>();
+    }
+    @Override public int frozenType() {
+      return I;
+    }
+    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
+      return bb;
+    }
+    @Override public FieldDoc[] toDocField() {
+      return null;
+    }
+  }
+
 }
