@@ -89,6 +89,7 @@ public class GBMGrid extends FrameJob {
       names.add("nbins");
       names.add("learn_rate");
       names.add("model build time (s)");
+      names.add("seconds per tree");
       names.add("model key");
       names.add("model number");
       names.add("model quality score");
@@ -137,7 +138,10 @@ public class GBMGrid extends FrameJob {
                 values.add("" + job.min_rows);
                 values.add("" + job.nbins);
                 values.add("" + job.learn_rate);
-                values.add("" + ((job.end_time - job.start_time) / 1000));
+                double model_build_time = (job.end_time - job.start_time) / 1000;
+                values.add("" + model_build_time);
+                double seconds_per_tree = model_build_time / job.ntrees;
+                values.add("" + seconds_per_tree);
                 values.add("" + job.self());
                 values.add("" + n++);
                 values.add("" + new Random().nextDouble());
