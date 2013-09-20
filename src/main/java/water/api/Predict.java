@@ -25,7 +25,7 @@ public class Predict extends Request2 {
     rs.replace("content", content);
     return rs.toString();
   }
-gg
+
   @Override protected Response serve() {
     try {
       if( model == null )

@@ -2,7 +2,9 @@ package water.fvec;
 
 import water.*;
 
-// The empty-compression function, where data is in 'int's.
+/**
+ * The empty-compression function, where data is in 'double's.
+ */
 public class C8DChunk extends Chunk {
   C8DChunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>3; }
   @Override protected final long   at8_impl( int i ) {
@@ -20,7 +22,7 @@ public class C8DChunk extends Chunk {
     UDP.set8d(_mem,i<<3,d);
     return true;
   }
-  @Override boolean set_impl(int i, float f ) { 
+  @Override boolean set_impl(int i, float f ) {
     UDP.set8d(_mem,i<<3,f);
     return true;
   }

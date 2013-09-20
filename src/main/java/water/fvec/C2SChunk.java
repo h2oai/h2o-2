@@ -3,7 +3,9 @@ package water.fvec;
 import water.*;
 import water.parser.DParseTask;
 
-// The scale/bias function, where data is in SIGNED bytes before scaling
+/**
+ * The scale/bias function, where data is in SIGNED bytes before scaling.
+ */
 public class C2SChunk extends Chunk {
   static private final long _NA = Short.MIN_VALUE;
   static final int OFF=8+4;
@@ -24,13 +26,13 @@ public class C2SChunk extends Chunk {
     return (res == _NA)?Double.NaN:(res + _bias)*_scale;
   }
   @Override protected final boolean isNA_impl( int i ) { return UDP.get2(_mem,(i<<1)+OFF) == _NA; }
-  @Override boolean set_impl(int idx, long l) { 
+  @Override boolean set_impl(int idx, long l) {
     long res = (long)(l/_scale)-_bias; // Compressed value
     double d = (res+_bias)*_scale;     // Reverse it
     if( (long)d != l ) return false;   // Does not reverse cleanly?
     if( !(Short.MIN_VALUE < res && res <= Short.MAX_VALUE) ) return false; // Out-o-range for a short array
     UDP.set2(_mem,(idx<<1)+OFF,(short)res);
-    return true; 
+    return true;
   }
   @Override boolean set_impl(int i, double d) { throw H2O.unimpl(); }
   @Override boolean set_impl(int i, float f ) { return false; }

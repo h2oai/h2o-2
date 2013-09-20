@@ -11,9 +11,12 @@ import water.fvec.Vec;
 
 /**
  * Neural network layer.
+ *
+ * @author cypof
  */
 public abstract class Layer extends Iced {
   // Initial parameters
+  public int _units;
   public float _rate;
   public float _rateAnnealing;
 
@@ -45,20 +48,29 @@ public abstract class Layer extends Iced {
   transient float[] _v, _gv;
 
   protected Layer(int units) {
-    _a = new float[units];
+    _units = units;
   }
 
-  public final void init(Layer in, int units) {
-    init(in, true, 0);
+  public final void init(Layer[] ls, int index) {
+    init(ls, index, true, 0);
   }
 
-  public void init(Layer in, boolean weights, long step) {
-    _e = new float[_a.length];
-    _in = in;
+  public void init(Layer[] ls, int index, boolean weights, long step) {
+    _a = new float[_units];
+    _e = new float[_units];
+    _in = ls[index - 1];
 
     if( weights ) {
-      _w = new float[_a.length * in._a.length];
-      _b = new float[_a.length];
+      _w = new float[_units * _in._units];
+      _b = new float[_units];
+
+      // deeplearning.net tutorial (TODO special ones for rectifier & softmax?)
+      // TODO only subset of inputs?
+      Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      float min = (float) -Math.sqrt(6. / (_in._units + _units));
+      float max = (float) +Math.sqrt(6. / (_in._units + _units));
+      for( int i = 0; i < _w.length; i++ )
+        _w[i] = rand(rand, min, max);
     }
 
     if( _momentum != 0 ) {
@@ -86,15 +98,6 @@ public abstract class Layer extends Iced {
     }
 
     anneal(step);
-  }
-
-  public void randomize() {
-    // deeplearning.net tutorial (TODO figure out one for rectifiers)
-    Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-    float min = (float) -Math.sqrt(6. / (_in._a.length + _a.length));
-    float max = (float) +Math.sqrt(6. / (_in._a.length + _a.length));
-    for( int i = 0; i < _w.length; i++ )
-      _w[i] = rand(rand, min, max);
   }
 
   abstract void fprop();
@@ -155,8 +158,8 @@ public abstract class Layer extends Iced {
       super(units);
     }
 
-    @Override public void init(Layer in, boolean weights, long step) {
-      throw new UnsupportedOperationException();
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      _a = new float[_units];
     }
 
     @Override void bprop() {
@@ -183,12 +186,12 @@ public abstract class Layer extends Iced {
       _len = vecs[0].length();
 
       if( stats != null ) {
-        assert stats._subs.length == _a.length;
+        assert stats._subs.length == _units;
         _subs = stats._subs;
         _muls = stats._muls;
       } else {
-        _subs = new float[_a.length];
-        _muls = new float[_a.length];
+        _subs = new float[_units];
+        _muls = new float[_units];
         int n = 0;
         for( int v = 0; v < vecs.length; v++ ) {
           if( vecs[v].domain() != null ) {
@@ -228,7 +231,7 @@ public abstract class Layer extends Iced {
       if( _caches == null )
         _caches = new Chunk[_vecs.length];
       Chunk c = _caches[i];
-      if( c != null && c._start <= n && n < c._start + c._len )
+      if( c != null && c._vec == _vecs[i] && c._start <= n && n < c._start + c._len )
         return c;
       return _caches[i] = _vecs[i].chunk(n);
     }
@@ -255,7 +258,20 @@ public abstract class Layer extends Iced {
     }
   }
 
-  public static abstract class Softmax extends Layer {
+  public static abstract class Output extends Layer {
+    Input _input;
+
+    Output(int units) {
+      super(units);
+    }
+
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
+      _input = (Input) ls[0];
+    }
+  }
+
+  public static abstract class Softmax extends Output {
     Softmax(int units) {
       super(units);
     }
@@ -301,12 +317,10 @@ public abstract class Layer extends Iced {
 
   public static class VecSoftmax extends Softmax {
     Vec _vec;
-    Input _input;
 
-    public VecSoftmax(Vec vec, Input input) {
+    public VecSoftmax(Vec vec) {
       super(Model.responseDomain(vec).length);
       _vec = vec;
-      _input = input;
     }
 
     @Override int label() {
@@ -316,12 +330,10 @@ public abstract class Layer extends Iced {
 
   public static class ChunkSoftmax extends Softmax {
     Chunk _chunk;
-    Input _input;
 
-    public ChunkSoftmax(Chunk chunk, Input input) {
+    public ChunkSoftmax(Chunk chunk) {
       super(Model.responseDomain(chunk._vec).length);
       _chunk = chunk;
-      _input = input;
     }
 
     @Override int label() {
@@ -371,13 +383,15 @@ public abstract class Layer extends Iced {
       super(units);
     }
 
-    @Override public void randomize() {
-      super.randomize();
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
 
-      for( int i = 0; i < _b.length; i++ )
-        _b[i] = 1;
-      for( int i = 0; _v != null && i < _v.length; i++ )
-        _v[i] = 1;
+      if( weights ) {
+        for( int i = 0; i < _b.length; i++ )
+          _b[i] = 1;
+        for( int i = 0; _v != null && i < _v.length; i++ )
+          _v[i] = 1;
+      }
     }
 
     @Override void fprop() {
@@ -417,11 +431,10 @@ public abstract class Layer extends Iced {
   public static Layer[] clone(Layer[] ls, Input input, long step) {
     Layer[] clones = new Layer[ls.length];
     clones[0] = input;
-    for( int y = 1; y < ls.length; y++ ) {
+    for( int y = 1; y < ls.length; y++ )
       clones[y] = ls[y].clone();
-      clones[y]._a = new float[ls[y]._a.length];
-      clones[y].init(clones[y - 1], false, step);
-    }
+    for( int y = 0; y < ls.length; y++ )
+      clones[y].init(clones, y, false, step);
     return clones;
   }
 

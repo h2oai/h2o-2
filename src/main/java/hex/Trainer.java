@@ -21,6 +21,8 @@ import com.jogamp.opencl.CLMemory.Mem;
 
 /**
  * Trains a neural network.
+ *
+ * @author cypof
  */
 public abstract class Trainer {
   public Trainer() {
@@ -137,7 +139,6 @@ public abstract class Trainer {
 
       for( int t = 0; t < _trainers.length; t++ ) {
         final Input input = (Input) ls[0].clone();
-        input._a = new float[ls[0]._a.length];
         input._pos = input._len * t / _trainers.length;
         Layer[] clones = Layer.clone(ls, input, 0);
 
@@ -592,7 +593,7 @@ public abstract class Trainer {
           queue.putReadBuffer(a[_ls.length - 1], true);
           for( int y = 1; y < fprops.length - 1; y++ )
             queue.put1DRangeKernel(resets[y], 0, _ls[y]._a.length, group);
-          softmax(input, a[a.length - 1].getBuffer(), e[e.length - 1].getBuffer());
+//          softmax(input, a[a.length - 1].getBuffer(), e[e.length - 1].getBuffer());
           queue.putWriteBuffer(a[_ls.length - 1], false);
           queue.putWriteBuffer(e[_ls.length - 1], false);
 
@@ -611,20 +612,20 @@ public abstract class Trainer {
       throw new UnsupportedOperationException();
     }
 
-    static void softmax(Input input, FloatBuffer a, FloatBuffer e) {
-      float max = Float.NEGATIVE_INFINITY;
-      for( int o = 0; o < a.capacity(); o++ )
-        if( max < a.get(o) )
-          max = a.get(o);
-      float scale = 0;
-      for( int o = 0; o < a.capacity(); o++ ) {
-        a.put(o, (float) Math.exp(a.get(o) - max));
-        scale += a.get(o);
-      }
-      for( int o = 0; o < a.capacity(); o++ ) {
-        a.put(o, a.get(o) / scale);
-        e.put(o, (o == input.label() ? 1 : 0) - a.get(o));
-      }
-    }
+//    static void softmax(Input input, FloatBuffer a, FloatBuffer e) {
+//      float max = Float.NEGATIVE_INFINITY;
+//      for( int o = 0; o < a.capacity(); o++ )
+//        if( max < a.get(o) )
+//          max = a.get(o);
+//      float scale = 0;
+//      for( int o = 0; o < a.capacity(); o++ ) {
+//        a.put(o, (float) Math.exp(a.get(o) - max));
+//        scale += a.get(o);
+//      }
+//      for( int o = 0; o < a.capacity(); o++ ) {
+//        a.put(o, a.get(o) / scale);
+//        e.put(o, (o == input.label() ? 1 : 0) - a.get(o));
+//      }
+//    }
   }
 }

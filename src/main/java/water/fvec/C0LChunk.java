@@ -4,7 +4,9 @@ import java.util.Arrays;
 import water.AutoBuffer;
 import water.UDP;
 
-// The constant column
+/**
+ * The constant 'long' column.
+ */
 public class C0LChunk extends Chunk {
   static final int OFF=8+4;
   long _con;
@@ -29,9 +31,9 @@ public class C0LChunk extends Chunk {
     _len = UDP.get4(_mem,8);
     return this;
   }
-  @Override NewChunk inflate_impl(NewChunk nc) { 
-    if( nc._ls != null ) Arrays.fill(nc._ls,_con); 
+  @Override NewChunk inflate_impl(NewChunk nc) {
+    if( nc._ls != null ) Arrays.fill(nc._ls,_con);
     else                 Arrays.fill(nc._ds,_con);
-    return nc; 
+    return nc;
   }
 }
