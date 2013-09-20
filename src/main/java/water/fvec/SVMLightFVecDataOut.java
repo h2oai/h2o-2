@@ -9,17 +9,12 @@ import water.parser.Enum;
 
 
 public class SVMLightFVecDataOut extends FVecDataOut {
-  final VectorGroup _vg;
-  private int _colIdx;
-  private final int _cidx;
-  private AppendableVec [] _vecs = new AppendableVec[0];
-
-  SVMLightFVecDataOut(Chunk in, Enum [] enums){
-    super(new NewChunk[0],enums);
+  protected final VectorGroup _vg;
+  public SVMLightFVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
+    super(vg,cidx,0,vg.reserveKeys(10000000),enums);
     _nvs = new NewChunk[0];
-    _vg = in._vec.group();
-    _vg.reserveKeys(1000000); // reserve million keys
-    _cidx = in.cidx();
+    _vg = vg;
+    _col = 0;
   }
 
   private void addColumns(int ncols){
@@ -36,36 +31,18 @@ public class SVMLightFVecDataOut extends FVecDataOut {
     }
   }
   @Override public void addNumCol(int colIdx, long number, int exp) {
+    assert colIdx >= _col;
     addColumns(colIdx+1);
-    assert colIdx >= _colIdx;
-    for(int i = _colIdx; i < colIdx; ++i)
+    for(int i = _col; i < colIdx; ++i)
       super.addNumCol(i, 0, 0);
     super.addNumCol(colIdx, number, exp);
-    _colIdx = colIdx+1;
+    _col = colIdx+1;
   }
   @Override
   public void newLine() {
-    if(_colIdx < _nCols)addNumCol(_nCols-1, 0,0);
+    if(_col < _nCols)addNumCol(_nCols-1, 0,0);
     super.newLine();
-    _colIdx = 0;
+    _col = 0;
   }
-  public void reduce(SVMLightFVecDataOut dout){
-    if(dout._vecs.length > _vecs.length){
-      AppendableVec [] v = _vecs;
-      _vecs = dout._vecs;
-      dout._vecs = v;
-    }
-    for(int i = 0; i < dout._vecs.length; ++i)
-      _vecs[i].reduce(dout._vecs[i]);
-  }
-  public void close(Futures fs){
-    for(NewChunk nv:_nvs)
-      nv.close(_cidx, fs);
-  }
-  public Vec [] closeVecs(Futures fs){
-    Vec [] res = new Vec[_vecs.length];
-    for(int i = 0; i < _vecs.length; ++i)
-      res[i] = _vecs[i].close(fs);
-    return res;
-  }
+
 }

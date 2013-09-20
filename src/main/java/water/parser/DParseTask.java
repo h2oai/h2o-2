@@ -521,62 +521,58 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   @Override public void map(Key key) {
     if(_job.cancelled())
       return;
-    try{
-      _map = true;
-      Key aryKey = null;
-      boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
-      if(arraylet) {
-        aryKey = ValueArray.getArrayKey(key);
-        _chunkId = (int)ValueArray.getChunkIndex(key);
-      }
-      switch (_phase) {
-      case ONE:
-        // initialize the column statistics
-        phaseOneInitialize();
-        // perform the parse
-        _parser.clone().parallelParse(_chunkId, new VAChunkDataIn(key), this);
-        if(arraylet) {
-          long idx = _chunkId+1;
-          int idx2 = (int)idx;
-          assert idx2 == idx;
-          if(idx2 >= _nrows.length){
-            System.err.println("incorrect index/array size for key = " + key + ": " + _nrows.length + " <= " + idx2 + ", aryKey = " + aryKey + ", chunks# = " + DKV.get(aryKey).get(ValueArray.class).chunks());
-            assert false;
-          }
-          assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_numRows+")";
-          _nrows[idx2] = _myrows;
-        } else
-          _nrows[1] = _myrows;
-        _numRows = _myrows;
-        break;
-      case TWO:
-        assert (_ncolumns != 0);
-        assert (_phase == Pass.TWO);
-        // initialize statistics - invalid rows, sigma and row size
-        phaseTwoInitialize();
-        // calculate the first row and the number of rows to parse
-        long firstRow = _nrows[_chunkId];
-        long lastRow = _nrows[_chunkId+1];
-        int rowsToParse = (int)(lastRow - firstRow);
-        // create the output streams
-        _outputStreams2 = createRecords(firstRow, rowsToParse);
-        assert (_outputStreams2.length > 0);
-        _ab = _outputStreams2[0].initialize();
-        // perform the second parse pass
-        _parser.clone().parallelParse(_chunkId, new VAChunkDataIn(key), this);
-        // store the last stream if not stored during the parse
-        if( _ab != null )
-          _outputStreams2[_outputIdx].store();
-        getFutures().blockForPending();
-        break;
-      default:
-        assert (false);
-      }
-      assert _ncolumns == _colTypes.length;
-      ParseDataset.onProgress(key,_job._progress);
-    }catch(Throwable t){
-      t.printStackTrace();
+    _map = true;
+    Key aryKey = null;
+    boolean arraylet = key._kb[0] == Key.ARRAYLET_CHUNK;
+    if(arraylet) {
+      aryKey = ValueArray.getArrayKey(key);
+      _chunkId = (int)ValueArray.getChunkIndex(key);
     }
+    switch (_phase) {
+    case ONE:
+      // initialize the column statistics
+      phaseOneInitialize();
+      // perform the parse
+      _parser.clone().parallelParse(_chunkId, new VAChunkDataIn(key), this);
+      if(arraylet) {
+        long idx = _chunkId+1;
+        int idx2 = (int)idx;
+        assert idx2 == idx;
+        if(idx2 >= _nrows.length){
+          System.err.println("incorrect index/array size for key = " + key + ": " + _nrows.length + " <= " + idx2 + ", aryKey = " + aryKey + ", chunks# = " + DKV.get(aryKey).get(ValueArray.class).chunks());
+          assert false;
+        }
+        assert (_nrows[idx2] == 0) : idx+": "+Arrays.toString(_nrows)+" ("+_nrows[idx2]+" -- "+_numRows+")";
+        _nrows[idx2] = _myrows;
+      } else
+        _nrows[1] = _myrows;
+      _numRows = _myrows;
+      break;
+    case TWO:
+      assert (_ncolumns != 0);
+      assert (_phase == Pass.TWO);
+      // initialize statistics - invalid rows, sigma and row size
+      phaseTwoInitialize();
+      // calculate the first row and the number of rows to parse
+      long firstRow = _nrows[_chunkId];
+      long lastRow = _nrows[_chunkId+1];
+      int rowsToParse = (int)(lastRow - firstRow);
+      // create the output streams
+      _outputStreams2 = createRecords(firstRow, rowsToParse);
+      assert (_outputStreams2.length > 0);
+      _ab = _outputStreams2[0].initialize();
+      // perform the second parse pass
+      _parser.clone().parallelParse(_chunkId, new VAChunkDataIn(key), this);
+      // store the last stream if not stored during the parse
+      if( _ab != null )
+        _outputStreams2[_outputIdx].store();
+      getFutures().blockForPending();
+      break;
+    default:
+      assert (false);
+    }
+    assert _ncolumns == _colTypes.length;
+    ParseDataset.onProgress(key,_job._progress);
   }
 
   @Override

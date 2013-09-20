@@ -535,10 +535,10 @@ public class ValueArray extends Iced implements Cloneable {
   /** Conversion number is only for logging. */
   final static AtomicInteger conversionNumber = new AtomicInteger(0);
 
-  public static Frame asFrame(Key key) {
-    Object o = DKV.get(key).get();
+  public static Frame asFrame(Value value) {
+    Object o = value.get();
     if(o instanceof ValueArray)
-      return ((ValueArray) o).asFrame(key.toString());
+      return ((ValueArray) o).asFrame(value._key.toString());
     return (Frame) o;
   }
 

@@ -37,32 +37,30 @@ public class CsvParser extends CustomParser {
 
   private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
 
-  public final boolean _skip;
 
-  public CsvParser(ParserSetup setup, boolean skip) {
+  public CsvParser(ParserSetup setup) {
     super(setup);
-    _skip = skip;
     CHAR_SEPARATOR = setup._separator;
   }
 
   public CsvParser clone(){
-    return new CsvParser(_setup == null?null:_setup.clone(), _skip);
+    return new CsvParser(_setup == null?null:_setup.clone());
   }
 
   @Override public boolean parallelParseSupported(){return true;}
 
   @SuppressWarnings("fallthrough")
-  @Override public final void parallelParse(int cidx, final CustomParser.DataIn din, final CustomParser.DataOut dout) {
+  @Override public final DataOut parallelParse(int cidx, final CustomParser.DataIn din, final CustomParser.DataOut dout) {
     ValueString _str = new ValueString();
     byte[] bits = din.getChunkData(cidx);
-    if( bits == null ) return;
+    if( bits == null ) return dout;
     final byte[] bits0 = bits;  // Bits for chunk0
     boolean firstChunk = true;  // Have not rolled into the 2nd chunk
     byte[] bits1 = null;        // Bits for chunk1, loaded lazily.
     int offset = 0;             // General cursor into the giant array of bytes
     // Starting state.  Are we skipping the first (partial) line, or not?  Skip
     // a header line, or a partial line if we're in the 2nd and later chunks.
-    int state = (_setup._header || cidx > 0 || _skip) ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
+    int state = (_setup._header || cidx > 0) ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
     int quotes = 0;
     long number = 0;
     int exp = 0;
@@ -80,7 +78,7 @@ public class CsvParser extends CustomParser {
         if    ((offset+1 < bits.length) && (bits[offset] == CHAR_CR) && (bits[offset+1] == CHAR_LF)) ++offset;
         ++offset;
         if (offset >= bits.length)
-          return;
+          return dout;
         c = bits[offset];
       }
     }
@@ -445,6 +443,7 @@ NEXT_CHAR:
     } // end MAIN_LOOP
     if (colIdx == 0)
       dout.rollbackLine();
+    return dout;
   }
 
   // ==========================================================================

@@ -78,6 +78,66 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  task.  Pragmatically, we block on a finer grained basis. */
   transient protected Futures _fs; // More things to block on
 
+  // Profiling support.  Time for each subpart of a single M/R task, plus any
+  // nested MRTasks.  All numbers are CTM stamps or millisecond times.
+  private static class MRProfile extends Iced {
+    String _clz;
+    public MRProfile(MRTask2 mrt) { 
+      _clz = mrt.getClass().toString(); 
+      _localdone = System.currentTimeMillis();
+    }
+    // See where these are set to understand their meaning.  If we split the
+    // job, then _lstart & _rstart are the start of left & right jobs.  If we
+    // do NOT split, then _rstart is 0 and _lstart is for the user map job(s).
+    long _localstart, _rpcLstart, _rpcRstart, _rpcRdone, _localdone; // Local setup, RPC network i/o times
+    long _mapstart, _userstart, _closestart, _mapdone; // MAP phase
+    long _onCstart, _reducedone, _remoteBlkDone, _localBlkDone, _onCdone; // REDUCE phase
+    // If we split the job left/right, then we get a total recording of the
+    // last job, and the exec time & completion time of 1st job done.
+    long _time1st, _done1st;
+    MRProfile _last;
+    long sumTime() { return _onCdone - (_localstart==0 ? _mapstart : _localstart); }
+    void gather( MRProfile p ) {
+      p._clz=null;
+      if( _last == null ) _last=p;
+      else {
+        MRProfile first = _last._onCdone <= p._onCdone ? _last : p;
+        MRProfile  last = _last._onCdone >  p._onCdone ? _last : p;
+        _last = last;
+        if( first._onCdone > _done1st ) { _time1st = first.sumTime(); _done1st = first._onCdone; }
+      }
+      assert _last._onCdone >= _done1st;
+    }
+
+    @Override public String toString() { return toString(new StringBuilder(),0).toString(); }
+    private StringBuilder toString(StringBuilder sb, int d) {
+      if( d==0 ) sb.append(_clz).append("\n");
+      for( int i=0; i<d; i++ ) sb.append("  ");
+      if( _localstart != 0 ) sb.append("Node local ").append(_localdone - _localstart).append("ms, ");
+      if( _userstart == 0 ) {
+        sb.append("Slow wait ").append(_mapstart-_localdone).append("ms + work ").append(_last.sumTime()).append("ms, ");
+        sb.append("Fast work ").append(_time1st).append("ms + wait ").append(_onCstart-_done1st).append("ms\n");
+        _last.toString(sb,d+1);
+        for( int i=0; i<d; i++ ) sb.append("  ");
+      } else {
+        sb.append("Map ").append(_mapdone - _mapstart).append("ms (prep ").append(_userstart - _mapstart);
+        sb.append("ms, user ").append(_closestart-_userstart);
+        sb.append("ms, closeChk ").append(_mapdone-_closestart).append("ms), ");
+      }
+      sb.append("Red ").append(_onCdone - _onCstart).append("ms (locRed ");
+      sb.append(_reducedone-_onCstart).append("ms");
+      if( _remoteBlkDone!=0 ) {
+        sb.append(", remBlk ").append(_remoteBlkDone-_reducedone).append("ms, locBlk ");
+        sb.append(_localBlkDone-_remoteBlkDone).append("ms, close ");
+        sb.append(_onCdone-_localBlkDone).append("ms");
+      }
+      sb.append(")\n");
+      return sb;
+    }
+  }
+  MRProfile _profile;
+  public String profString() { return _profile.toString(); }
+
   // Support for fluid-programming with strong types
   private final T self() { return (T)this; }
 
@@ -103,7 +163,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     fr.checkCompatible();       // Check for compatible vectors
     _fr = fr;                   // Record vectors to work on
     _nlo = 0;  _nhi = H2O.CLOUD.size(); // Do Whole Cloud
-    setupLocal0();               // Local setup
+    setupLocal0();              // Local setup
     H2O.submitTask(this);       // Begin normal execution on a FJ thread
     return self();
   }
@@ -121,7 +181,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Called once on remote at top level, probably with a subset of the cloud.
    *  Called internal by D/F/J.  Not expected to be user-called.  */
   @Override public final void dinvoke(H2ONode sender) {
-    setupLocal0();               // Local setup
+    setupLocal0();              // Local setup
     compute2();                 // Do The Main Work
     // nothing here... must do any post-work-cleanup in onCompletion
   }
@@ -129,14 +189,20 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // Setup for local work: fire off any global work to cloud neighbors; do all
   // chunks; call user's init.
   private final void setupLocal0() {
+    assert _profile==null;
+    _profile = new MRProfile(this);
+    _profile._localstart = System.currentTimeMillis();
     _topLocal = true;
     // Check for global vs local work
     if( _nlo >= 0 && _nlo < _nhi-1 ) { // Have global work?
       // Note: some top-level calls have no other global work, so
       // "topLocal==true" does not imply "nlo < nhi-1".
       int selfidx = H2O.SELF.index();
+      _profile._rpcLstart = System.currentTimeMillis();
       if( _nlo   < selfidx ) _nleft = remote_compute(_nlo, selfidx );
+      _profile._rpcRstart = System.currentTimeMillis();
       if( selfidx+1 < _nhi ) _nrite = remote_compute(selfidx+1,_nhi);
+      _profile._rpcRdone  = System.currentTimeMillis();
     }
     _lo = 0;  _hi = _fr.anyVec().nChunks(); // Do All Chunks
     // If we have any output vectors, make a blockable Futures for them to
@@ -144,6 +210,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     if( _fr.hasAppendables() )
       _fs = new Futures();
     setupLocal();                     // Setup any user's shared local structures
+    _profile._localdone = System.currentTimeMillis();
   }
 
   // Make an RPC call to some node in the middle of the given range.  Add a
@@ -164,6 +231,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  internal by F/J.  Not expected to be user-called.  */
   @Override public final void compute2() {
     assert _left == null && _rite == null && _res == null;
+    _profile._mapstart = System.currentTimeMillis();
     if( _hi-_lo >= 2 ) { // Multi-chunk case: just divide-and-conquer to 1 chunk
       final int mid = (_lo+_hi)>>>1; // Mid-point
       _left = clone();
@@ -171,8 +239,11 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       _left._hi = mid;          // Reset mid-point
       _rite._lo = mid;          // Also set self mid-point
       addToPendingCount(1);     // One fork awaiting completion
+      _left._profile = new MRProfile(this);
       _left.fork();             // Runs in another thread/FJ instance
+      _rite._profile = new MRProfile(this);
       _rite.compute2();         // Runs in THIS F/J thread
+      _profile._mapdone = System.currentTimeMillis();
       return;                   // Not complete until the fork completes
     }
     // Zero or 1 chunks, and further chunk might not be homed here
@@ -187,6 +258,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
             bvs[i] = _fr._vecs[i].elem2BV(_lo);
 
         // Call all the various map() calls that apply
+        _profile._userstart = System.currentTimeMillis();
         if( _fr._vecs.length == 1 ) map(bvs[0]);
         if( _fr._vecs.length == 2 && bvs[0] instanceof NewChunk) map((NewChunk)bvs[0], bvs[1]);
         if( _fr._vecs.length == 2 ) map(bvs[0], bvs[1]);
@@ -194,28 +266,34 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         if( true                  ) map(bvs );
         _res = self();          // Save results since called map() at least once!
         // Further D/K/V put any new vec results.
+        _profile._closestart = System.currentTimeMillis();
         for( Chunk bv : bvs ) bv.close(_lo,_fs);
       }
     }
+    _profile._mapdone = System.currentTimeMillis();
     tryComplete();              // And this task is complete
   }
 
   /** OnCompletion - reduce the left & right into self.  Called internal by
    *  F/J.  Not expected to be user-called. */
   @Override public final void onCompletion( CountedCompleter caller ) {
+    _profile._onCstart = System.currentTimeMillis();
     // Reduce results into 'this' so they collapse going up the execution tree.
     // NULL out child-references so we don't accidentally keep large subtrees
     // alive since each one may be holding large partial results.
     reduce2(_left); _left = null;
     reduce2(_rite); _rite = null;
     // Only on the top local call, have more completion work
+    _profile._reducedone = System.currentTimeMillis();
     if( _topLocal ) postLocal();
+    _profile._onCdone = System.currentTimeMillis();
   }
 
   // Call 'reduce' on pairs of mapped MRTask2's.
   // Collect all pending Futures from both parties as well.
   private void reduce2( MRTask2<T> mrt ) {
     if( mrt == null ) return;
+    _profile.gather(mrt._profile);
     if( _res == null ) _res = mrt._res;
     else if( mrt._res != null ) _res.reduce4(mrt._res);
     if( _fs == null ) _fs = mrt._fs;
@@ -229,14 +307,18 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   private final void postLocal() {
     reduce3(_nleft);            // Reduce global results from neighbors.
     reduce3(_nrite);
+    _profile._remoteBlkDone = System.currentTimeMillis();
     if( _fs != null )           // Block on all other pending tasks, also
       _fs.blockForPending();
+    _profile._localBlkDone = System.currentTimeMillis();
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
     int nlo = _nlo, nhi = _nhi;   // Save these before copyOver crushes them
     if( _res == null ) _nlo = -1; // Flag for no local results *at all*
-    else if( _res != this )       // There is a local result, and its not self
+    else if( _res != this ) {     // There is a local result, and its not self
+      _res._profile = _profile;   // Use my profile (not childs)
       copyOver(_res);             // So copy into self
+    }
     closeLocal();
     if( nlo==0 && nhi == H2O.CLOUD.size() ) // All-done on head of whole MRTask tree?
       _fr.closeAppendables();   // Final close ops on any new appendable vec
@@ -247,6 +329,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     if( rpc == null ) return;
     T mrt = rpc.get();          // This is a blocking remote call
     assert mrt._fs == null;     // No blockable results from remote
+    _profile.gather(mrt._profile);
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( _res == null ) _res = mrt;
     else if( mrt._nlo != -1 ) _res.reduce4(mrt);
@@ -282,6 +365,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     x._nleft = x._nrite = null;
     x. _left = x. _rite = null;
     x._fs = null;         // Clone does not depend on extent futures
+    x._profile = null;    // Clone needs its own profile
     x.setPendingCount(0); // Volatile write for completer field; reset pending count also
     return x;
   }

@@ -27,6 +27,9 @@ public abstract class DKV {
   static public Value put( Key key, Iced v, Futures fs ) {
     return put(key,new Value(key,v),fs);
   }
+  static public Value put( Key key, Iced v, Futures fs,boolean donCache ) {
+    return put(key,new Value(key,v),fs,donCache);
+  }
 
   // Remove this Key
   static public Value remove( Key key ) { return remove(key,null); }

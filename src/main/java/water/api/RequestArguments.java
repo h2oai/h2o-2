@@ -1930,7 +1930,7 @@ public class RequestArguments extends RequestStatics {
       super(name, key);
     }
 
-    @Override protected String queryDescription() { return "Columns to ignore"; }
+    @Override protected String queryDescription() { return "Columns to include"; }
 
     @Override public String [] selectNames(){
       ValueArray va = _key.value();
@@ -2297,16 +2297,26 @@ public class RequestArguments extends RequestStatics {
       super(name, true);
       addPrerequisite(_key=key);
     }
-    protected Frame fr() { return ValueArray.asFrame(_key.value()); }
+    protected Frame fr() {
+      Value v = DKV.get(_key.value());
+      if(v != null)
+        return ValueArray.asFrame(v);
+      return null;
+    }
     @Override protected String[] selectValues() { return fr()._names;  }
     @Override protected String selectedItemValue() {
-      Vec defaultVec = defaultValue();
       Frame fr = fr();
-      if( defaultVec != null && fr != null )
-        for( int i = 0; i < fr._vecs.length; i++ )
-          if( fr._vecs[i] == defaultVec )
-            return fr._names[i];
-      return value()==null || fr==null ? "" : fr._names[_colIdx.get()];
+      if( value() == null || fr == null ) {
+        if(!refreshOnChange()) { // Not if has dependencies, or page doesn't refresh
+          Vec defaultVec = defaultValue();
+          if( defaultVec != null && fr != null )
+            for( int i = 0; i < fr._vecs.length; i++ )
+              if( fr._vecs[i] == defaultVec )
+                return fr._names[i];
+        }
+        return "";
+      }
+      return fr._names[_colIdx.get()];
     }
     @Override protected Vec parse(String input) throws IllegalArgumentException {
       int cidx = fr().find(input);
@@ -2325,9 +2335,12 @@ public class RequestArguments extends RequestStatics {
     public FrameClassVec(String name, TypeaheadKey key ) { super(name, key); }
     @Override protected String[] selectValues() {
       ArrayList<String> as = new ArrayList();
-      Vec vecs[] = fr().vecs();
-      for( int i=0; i<vecs.length; i++ )
-        if( filter(vecs[i]) ) as.add(fr()._names[i]);
+      Frame fr = fr();
+      if(fr != null) {
+        Vec vecs[] = fr.vecs();
+        for( int i=0; i<vecs.length; i++ )
+          if( filter(vecs[i]) ) as.add(fr()._names[i]);
+      }
       return as.toArray(new String[as.size()]);
     }
     @Override protected Vec parse(String input) throws IllegalArgumentException {
@@ -2348,9 +2361,10 @@ public class RequestArguments extends RequestStatics {
     final FrameClassVec _response;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
-      return ValueArray.asFrame(_key.value());
+      Value v = DKV.get(_key.value());
+      if(v == null) throw new IllegalArgumentException("Frame not found");
+      return ValueArray.asFrame(v);
     }
-
     public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response) {
       super(name);
       addPrerequisite(_key = key);

@@ -66,10 +66,10 @@ public class SVMLightParser extends CustomParser{
   @Override
   public boolean isCompatible(CustomParser p){return p instanceof SVMLightParser;}
   @SuppressWarnings("fallthrough")
-  @Override public final void parallelParse(int cidx, final CustomParser.DataIn din, final CustomParser.DataOut dout) {
+  @Override public final DataOut parallelParse(int cidx, final CustomParser.DataIn din, final CustomParser.DataOut dout) {
       ValueString _str = new ValueString();
       byte[] bits = din.getChunkData(cidx);
-      if( bits == null ) return;
+      if( bits == null ) return dout;
       final byte[] bits0 = bits;  // Bits for chunk0
       boolean firstChunk = true;  // Have not rolled into the 2nd chunk
       byte[] bits1 = null;        // Bits for chunk1, loaded lazily.
@@ -93,10 +93,11 @@ public class SVMLightParser extends CustomParser{
           if    ((offset+1 < bits.length) && (bits[offset] == CHAR_CR) && (bits[offset+1] == CHAR_LF)) ++offset;
           ++offset;
           if (offset >= bits.length)
-            return;
+            return dout;
           c = bits[offset];
         }
       }
+      //dout.newLine();
       int linestart = 0;
 //      String linePrefix = "";
   MAIN_LOOP:
@@ -364,6 +365,7 @@ public class SVMLightParser extends CustomParser{
         }
         c = bits[offset];
       } // end MAIN_LOOP
+      return dout;
   }
   private static class InspectDataOut extends Iced implements DataOut {
     public int _nlines;

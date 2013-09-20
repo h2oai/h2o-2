@@ -17,31 +17,31 @@ public class GBM extends FrameJob {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help="", required=true, filter=GBMVecSelect.class)
-  Vec vresponse;
+  public Vec vresponse;
   class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
 
   @API(help="columns to ignore",required=false,filter=GBMMultiVecSelect.class)
-  int [] ignored_cols = new int []{};
+  public int [] ignored_cols = new int []{};
   class GBMMultiVecSelect extends MultiVecSelect { GBMMultiVecSelect() { super("source");} }
 
 
   @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
-  int ntrees = 10;
+  public int ntrees = 10;
 
   @API(help = "Maximum tree depth", filter = Default.class, lmin=0, lmax=10000)
-  int max_depth = 8;
+  public int max_depth = 8;
 
   @API(help = "Fewest allowed observations in a leaf", filter = Default.class, lmin=1)
-  int min_rows = 10;
+  public int min_rows = 10;
 
   @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
-  int nbins = 1024;
+  public int nbins = 1024;
 
   @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
-  double learn_rate = 0.2;
+  public double learn_rate = 0.2;
 
   @API(help = "The GBM Model")
-  GBMModel gbm_model;
+  public GBMModel gbm_model;
 
   // Overall prediction error as I add trees
   transient private float _errs[];
@@ -53,6 +53,7 @@ public class GBM extends FrameJob {
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
     public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
@@ -84,6 +85,11 @@ public class GBM extends FrameJob {
   // Compute a single GBM tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
   @Override protected Response serve() {
+    run();
+    return GBMProgressPage.redirect(this, self(),dest());
+  }
+
+  public void run() {
     final Frame fr = new Frame(source); // Local copy for local hacking
     fr.remove(ignored_cols);
     // Doing classification only right now...
@@ -100,7 +106,6 @@ public class GBM extends FrameJob {
       }
 
     buildModel(fr,vname);
-    return GBMProgressPage.redirect(this, self(),dest());
   }
 
   private void buildModel( final Frame fr, String vname ) {
@@ -203,6 +208,7 @@ public class GBM extends FrameJob {
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(new DTree[]{tree},new int[]{leaf},ncols,nclass,ymin,fr).doAll(fr);
+      //System.out.println(sbh.profString());
 
       // Reassign the new DHistogram back into the DTree
       final int tmax = tree._len; // Number of total splits

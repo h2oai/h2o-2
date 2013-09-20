@@ -132,6 +132,10 @@ public abstract class Request2 extends Request {
           if( Argument.class.isAssignableFrom(api.filter()) )
             arg = (Argument) newInstance(api);
 
+          // String
+          else if( f.getType() == String.class )
+            arg = new Str(f.getName(), (String) defaultValue);
+
           // Real
           else if( f.getType() == float.class || f.getType() == double.class ) {
             double val = ((Number) defaultValue).doubleValue();

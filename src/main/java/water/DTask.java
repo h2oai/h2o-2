@@ -52,12 +52,17 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
     return _exception != null;
   }
 
-  public RuntimeException getDException() {
-    if(!hasException())return null;
+  public DistributedException getDException() {
+    if( !hasException() ) return null;
+    String msg = _msg;
+    if( !_exception.equals(DistributedException.class.getName()) ) {
+      msg = " from " + _eFromNode + "; " + _exception;
+      if( _msg != null ) msg = msg+": "+_msg;
+    }
+    DistributedException dex = new DistributedException(msg,null);
     StackTraceElement [] stk = new StackTraceElement[_cls.length];
     for(int i = 0; i < _cls.length; ++i)
       stk[i] = new StackTraceElement(_cls[i],_mth[i], _fname[i], _lineNum[i]);
-    DistributedException dex = new DistributedException("DistributedException("  + _exception + ") from " + _eFromNode + ": " +  _msg, null);
     dex.setStackTrace(stk);
     return dex;
   }

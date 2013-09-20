@@ -15,6 +15,19 @@ import requests, zipfile, StringIO
 from subprocess import Popen, PIPE
 import stat
 
+def check_params_update_kwargs(params_dict, kw, function, print_params):
+    # only update params_dict..don't add
+    # throw away anything else as it should come from the model (propagating what RF used)
+    for k in kw:
+        if k in params_dict:
+            params_dict[k] = kw[k]
+        else:
+            raise Exception("illegal parameter %s in %s" % (k, function))
+
+    if print_params:
+        print "\n%s parameters:" % function, params_dict
+        sys.stdout.flush()
+
 def verboseprint(*args, **kwargs):
     if verbose:
         for x in args: # so you don't have to create a single string
@@ -744,11 +757,12 @@ def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=Fal
 
                 if (printSingleWarning):
                     # don't print these lines
-                    if not (re.search("Unable to load native-hadoop library", line) or
+                    if not (
+                        ('Unable to load native-hadoop library' in line) or
                         ('stack_traces' in line) or
                         ('Multiple local IPs detected' in line) or
                         ('[Loaded ' in line) or
-                        ('RestS3Service' in line)):
+                        ('RestS3Service' in line) ):
 
                         sys.stdout.write(line)
 
@@ -931,7 +945,7 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
-            verboseprint(r.text)
+            print(r.text)
             if not isinstance(r,(list,dict)): 
                 raise Exception("h2o json responses should always be lists or dicts, see previous for text")
             if '404' in r:
@@ -1591,7 +1605,7 @@ class H2O(object):
         return rfView
 
 
-    def gbm_view(self,model_key,timeoutSecs=300,print_params=False,**kwargs):
+    def gbm_view(self,model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             '_modelKey': model_key
         }
@@ -1600,11 +1614,19 @@ class H2O(object):
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
-        params_dict = {
-            'data_key': data_key,
-            'model_key': model_key,
-            'destination_key': destination_key,
-            }
+        if beta_features:
+            params_dict = {
+                'data': data_key,
+                'model': model_key,
+                'prediction_key': destination_key,
+                }
+        else:
+            params_dict = {
+                'data_key': data_key,
+                'model_key': model_key,
+                'destination_key': destination_key,
+                }
+
         browseAlso = kwargs.pop('browseAlso',False)
 
         # only update params_dict..don't add
@@ -1617,18 +1639,41 @@ class H2O(object):
             print "\ngenerate_predictions parameters:", params_dict
             sys.stdout.flush()
 
-        a = self.__do_json_request('GeneratePredictionsPage.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request(
+            'GeneratePredictions2.json' if beta_features else 'GeneratePredictionsPage.json', 
+            timeout=timeoutSecs, 
+            params=params_dict)
         verboseprint("\ngenerate_predictions result:", dump_json(a))
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictionsPage")
 
         # it will redirect to an inspect, so let's get that inspect stuff
-        resultKey = a['response']['redirect_request_args']['key']
-        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
-            timeout=timeoutSecs, params={"key": resultKey})
-        verboseprint("\nInspect of " + resultKey, dump_json(a))
+        # FIX! not supported in json yet if beta_features
+        if beta_features:
+            print "generate_predictions response:", dump_json(a)
+        else:
+            resultKey = a['response']['redirect_request_args']['key']
+            a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
+                timeout=timeoutSecs, params={"key": resultKey})
+            verboseprint("\nInspect of " + resultKey, dump_json(a))
+
         return a
+
+    def predict_confusion_matrix(self, timeoutSecs=300, print_params=True, **kwargs):
+        params_dict = {
+            'actual': None,
+            'vactual': None,
+            'predict': None,
+            'vpredict': None,
+        }
+        # everyone should move to using this, and a full list in params_dict
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'predict_confusion_matrix', print_params)
+        a = self.__do_json_request('ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nprediction_confusion_matrix result:", dump_json(a))
+        return a
+
 
     def random_forest_treeview(self, tree_number, data_key, model_key,
         timeoutSecs=10, ignoreH2oError=False, **kwargs):
@@ -1655,17 +1700,16 @@ class H2O(object):
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
+            'vresponse': None,
             'source': data_key,
             'learn_rate': None,
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'vresponse': None
+            'nbins': None,
         }
-        params_dict.update(kwargs)
-        if print_params:
-            print "\ngbm parameters:", params_dict
-            sys.stdout.flush()
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'gbm', print_params)
 
         start = time.time()
         a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)
@@ -1673,6 +1717,7 @@ class H2O(object):
             a['python_elapsed'] = time.time() - start
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
+
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nGBM result:", dump_json(a))

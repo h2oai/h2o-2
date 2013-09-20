@@ -57,13 +57,13 @@ public class PCAScore extends Request {
       PCAModel m = _modelKey.value();
 
       // Extract subset of data that matches features of model
-      int colMap[] = m.columnMapping(ary.colNames());
+      int[] colMap = m.columnMapping(ary.colNames());
       boolean standardize = m._pcaParams._standardized;
-      final DataFrame orig = DataFrame.makePCAData(ary, colMap, standardize);
+      final DataFrame data = DataFrame.makePCAData(ary, colMap, standardize);
 
-      // Note: Standardize automatically removes columns not in modelDataMap
-      Frame data = standardize ? DPCA.StandardizeTask.standardize(orig) : orig.modelAsFrame();
-      Job job = PCAScoreTask.score(data, m._eigVec, _numPC.value(), ary._key, _destKey.value());
+      // Frame data_std = standardize ? PCAScoreTask.standardize(data) : data.modelAsFrame();
+      // Job job = PCAScoreTask.mult(data_std, m._eigVec, _numPC.value(), ary._key, _destKey.value());
+      Job job = PCAScoreTask.score(data, m._eigVec, _numPC.value(), ary._key, _destKey.value(), standardize);
       return Progress2.redirect(this, job.job_key, job.dest());
     } catch( Error e ) {
       return Response.error(e.getMessage());

@@ -880,7 +880,6 @@ class DTree extends Iced {
     // model (for now - really should be seperate).
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
 
-
     public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm) {
       super(key,dataKey,fr);
       this.N = ntrees; this.errs = errs; this.ymin = ymin; this.cm = cm;
@@ -888,6 +887,9 @@ class DTree extends Iced {
       for( int i=0; i<forest.length; i++ )
         treeBits[i] = forest[i].compress();
     }
+
+    // Number of trees actually in the model (instead of expected/planned)
+    public int numTrees() { return treeBits.length; }
 
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);

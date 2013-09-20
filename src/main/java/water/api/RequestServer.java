@@ -1,8 +1,10 @@
 package water.api;
 
 import hex.*;
+import hex.GBMGrid.GBMGridProgress;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
+import hex.gbm.GBM;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -38,7 +40,6 @@ public class RequestServer extends NanoHTTPD {
     _http404 = registerRequest(new HTTP404());
     _http500 = registerRequest(new HTTP500());
 
-
     Request.addToNavbar(registerRequest(new Inspect()),     "Inspect",                    "Data");
     Request.addToNavbar(registerRequest(new StoreView()),   "View All",                   "Data");
     Request.addToNavbar(registerRequest(new Parse()),       "Parse",                      "Data");
@@ -55,11 +56,12 @@ public class RequestServer extends NanoHTTPD {
 
     Request.addToNavbar(registerRequest(new RF()),          "Random Forest",              "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
-    Request.addToNavbar(registerRequest(new GLMGrid()),     "GLMGrid",                    "Model");
+    Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
-    Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeansGrid",                 "Model");
+    Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeans Grid",                "Model");
     Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
-    Request.addToNavbar(registerRequest(new hex.gbm.GBM()), "GBM (Beta)",                 "Model");
+    Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
+    Request.addToNavbar(registerRequest(new GBMGrid()),     "GBM Grid (Beta)",            "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",                    "Model");
 
@@ -67,12 +69,12 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",                     "Score");
     Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",               "Score");
-    Request.addToNavbar(registerRequest(new PCAScore()),    "PCA",                        "Score");
+    Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
     Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (Beta)",   "Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
     Request.addToNavbar(registerRequest(new Predict()),     "Predict2",      "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
-    Request.addToNavbar(registerRequest(new ConfusionMatrix()), "ConfusionMatrix",        "Score");
+    Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",       "Score");
 
     //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
     registerRequest(new Plot());
@@ -123,6 +125,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
+    registerRequest(new GBMGridProgress());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
     registerRequest(new GetVector());

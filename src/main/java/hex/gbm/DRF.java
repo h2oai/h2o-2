@@ -1,22 +1,23 @@
 package hex.gbm;
 
-import hex.ScoreTask;
-import hex.gbm.DTree.*;
+import hex.gbm.DTree.BulkScore;
+import hex.gbm.DTree.DecidedNode;
+import hex.gbm.DTree.ScoreBuildHistogram;
+import hex.gbm.DTree.UndecidedNode;
 import hex.rng.MersenneTwisterRNG;
+
 import java.util.Arrays;
 import java.util.Random;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.FrameJob;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
+import water.fvec.*;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.Log;
-import water.util.RString;
 
 // Random Forest Trees
 public class DRF extends FrameJob {
@@ -171,10 +172,10 @@ public class DRF extends FrameJob {
         // Set a single 1.0 in the response for that class
         if( nclass > 1 )
           new Set1Task(ymin,ncols,nclass).doAll(fr);
-        
+
         // The RNG used to pick split columns
         Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
-        
+
         // Initially setup as-if an empty-split had just happened
         DBinHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
         DRFTree forest[] = new DRFTree[0];
@@ -190,7 +191,7 @@ public class DRF extends FrameJob {
           DRFTree someTrees[] = new DRFTree[xtrees];
           int someLeafs[] = new int[xtrees];
           forest = Arrays.copyOf(forest,forest.length+xtrees);
-          
+
           for( int t=0; t<xtrees; t++ ) {
             int idx = st+t;
             forest[idx] = someTrees[t] = new DRFTree(fr,ncols,(char)nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
@@ -201,11 +202,11 @@ public class DRF extends FrameJob {
               new Sample(someTrees[t],sample_rate).doAll(vec);
             fr.add("NIDs"+t,vec);
           }
-          
+
           // Make NTREE trees at once
           int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, ncols, nclass, ymin, nrows, sample_rate);
           if( d>depth ) depth=d;    // Actual max depth used
-          
+
           BulkScore bs = new BulkScore(forest,forest.length-xtrees,ncols,nclass,ymin,sample_rate).doAll(fr).report( Sys.DRF__, depth );
           int old = _errs.length;
           _errs = Arrays.copyOf(_errs,st+xtrees);
@@ -219,7 +220,7 @@ public class DRF extends FrameJob {
             UKV.remove(fr.remove(fr.numCols()-1)._key);
         }
         Log.info(Sys.DRF__,"DRF done in "+t_drf);
-        
+
         // Remove temp vectors; cleanup the Frame
         while( fr.numCols() > ncols+1/*Leave response*/ )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
