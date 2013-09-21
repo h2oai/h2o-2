@@ -17,7 +17,7 @@ Date: \tab 2013-07-16\cr
 License: \tab Apache-2\cr
 Depends: \tab R (>= 2.13.0), RCurl, rjson\cr
 }
-This package allows the user to run basic H2O commands using R commands. In order to use it, you must first have H2O running (See \href{http://0xdata.com/h2o/docs/}{How to Start H2O}). Load the library and create a \code{\linkS4class{H2OClient}} object with the server IP and port. The command \code{\link{importFile}} will import and parse a delimited data file, returning an \code{\linkS4class{H2OParsedData}} object.
+This package allows the user to run basic H2O commands using R commands. In order to use it, you must first have H2O running (See \href{http://0xdata.com/h2o/docs/}{How to Start H2O}). Load the library and create a \code{\linkS4class{H2OClient}} object with the server IP and port. The command \code{\link{h2o.importFile}} will import and parse a delimited data file, returning an \code{\linkS4class{H2OParsedData}} object.
 
 H2O supports a number of standard statistical models, such as GLM, K-means, and random forest classification. For example, to run GLM, call \code{\link{h2o.glm}} with the parsed data and parameters (response variable, error distribution) as arguments. (The operation will be done on the server associated with the data object). 
 
