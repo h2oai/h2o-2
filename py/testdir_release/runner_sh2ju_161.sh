@@ -98,13 +98,14 @@ juLogClean
 
 #### Success command
 juLog  -name=myTrueCommand true || true
-#### Failure
-juLog  -name=myFalseCommand false || true
+#### Failure (just to test that jenkins reports failure)
+### juLog  -name=myFalseCommand false || true
 #### Sleep
 juLog  -name=mySleepCommand sleep 5 || true
 #### The test fails because the word 'world' is found in command output
-juLog  -name=myErrorCommand -ierror=world   echo Hello World || true
-#### A sql command
+#### (just to test that jenkins reports failure)
+#### juLog  -name=myErrorCommand -ierror=world   echo Hello World || true
+#### a simple command
 juLog  -name=myLsCommand /bin/ls || true
 
 #### A call to a customized method
