@@ -1,6 +1,42 @@
 import h2o_cmd, h2o
 import re, random, math
 
+def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fListTitle=None, fList=None, fLabel=None):
+    if h2o.python_username!='kevin':
+        return
+
+    import pylab as plt
+    print "xList", xList
+    print "eList", eList
+    print "fList", fList
+
+    font = {'family' : 'normal',
+            'weight' : 'normal',
+            'size'   : 26}
+    ### plt.rc('font', **font)
+    plt.rcdefaults()
+
+    if eList:
+        if eListTitle:
+            plt.title(eListTitle)
+        plt.figure()
+        plt.plot (xList, eList)
+        plt.xlabel(xLabel)
+        plt.ylabel(eLabel)
+        plt.draw()
+
+    if fList:
+        if fListTitle:
+            plt.title(fListTitle)
+        plt.figure()
+        plt.plot (xList, fList)
+        plt.xlabel(xLabel)
+        plt.ylabel(fLabel)
+        plt.draw()
+
+    if eList or fList:
+        plt.show()
+
 
 # pretty print a cm that the C
 def pp_cm(jcm, header=None):

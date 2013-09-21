@@ -3,41 +3,6 @@ import random, sys, time, re
 sys.path.extend(['.','..','py'])
 import h2o_browse as h2b, h2o_gbm
 
-def plotit(xList, eList, sList):
-    if h2o.python_username!='kevin':
-        return
-    
-    import pylab as plt
-    if eList:
-        print "xList", xList
-        print "eList", eList
-        print "sList", sList
-
-        font = {'family' : 'normal',
-                'weight' : 'normal',
-                'size'   : 26}
-        ### plt.rc('font', **font)
-        plt.rcdefaults()
-
-        label = "1jvmx28GB covtype train 90/test 10 GBM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
-        plt.figure()
-        plt.plot (xList, eList)
-        plt.xlabel('max_depth')
-        plt.ylabel('pctWrong')
-        plt.title(label)
-        plt.draw()
-
-        label = "1jvmx28GB Covtype GBM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
-        plt.figure()
-        plt.plot (xList, sList)
-        plt.xlabel('max_depth')
-        plt.ylabel('time')
-        plt.title(label)
-        plt.draw()
-
-        plt.show()
-
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -58,9 +23,7 @@ class Basic(unittest.TestCase):
     def test_GBM_covtype_train_test(self):
         h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
-
         modelKey = 'GBMModelKey'
-
         files = [
                 ('standard', 'covtype.shuffled.90pct.data', 'covtype.train.hex', 1800, 54, 'covtype.shuffled.10pct.data', 'covtype.test.hex')
                 ]
@@ -73,7 +36,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             xList = []
             eList = []
-            sList = []
+            fList = []
 
             # Parse (train)****************************************
             print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
@@ -105,14 +68,9 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "test parse result:", parseTestResult['destination_key']
 
-            # GBM (train)****************************************
-            # for depth in [5]:
-            # depth = 5
-            # for ntrees in [10,20,40,80,160]:
+            # GBM (train iterate)****************************************
             ntrees = 10
             for max_depth in [5,10,20,40]:
-            # for max_depth in [5,10,20,40]:
-            # for ntrees in [1,2,3,4]:
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,
@@ -126,7 +84,7 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
 
                 h2o.beta_features = True
-                # translate it
+                # translate it (only really need to do once . out of loop?
                 h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
                 ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
@@ -187,11 +145,15 @@ class Basic(unittest.TestCase):
                 # xList.append(ntrees)
                 xList.append(max_depth)
                 eList.append(pctWrong)
-                sList.append(trainElapsed)
+                fList.append(trainElapsed)
 
             h2o.beta_features = False
-            plotit(xList, eList, sList)
-
+            xLabel = 'max_depth'
+            eLabel = 'pctWrong'
+            fLabel = 'trainElapsed'
+            eListTitle = "1jvmx28GB predict/CM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
+            fListTitle = "1jvmx28GB train time learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
+            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
 
 if __name__ == '__main__':
     h2o.unit_main()

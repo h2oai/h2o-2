@@ -82,7 +82,7 @@ class parse_rand_schmoo(unittest.TestCase):
 
             # do a little testing of saving the key as a csv
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
-            h2o.nodes[0].csv_download(key=hex_key, csvPathname=csvDownloadPathname)
+            h2o.nodes[0].csv_download(src_key=hex_key, csvPathname=csvDownloadPathname)
 
             # remove the original parsed key. source was already removed by h2o
             h2o.nodes[0].remove_key(hex_key)
