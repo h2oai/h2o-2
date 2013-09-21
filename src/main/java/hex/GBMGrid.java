@@ -134,7 +134,7 @@ public class GBMGrid extends FrameJob {
                   values.add("" + seconds_per_tree);
                   values.add("" + job.destination_key);
                   values.add("" + n);
-                  values.add("" + (running ? -1 : new Random().nextDouble()));
+                  values.add("" + (running ? -1 : 0));		// TODO ADD SCORE FOR THIS MODEL.
                   if( index == data.size() )
                     data.add(values);
                   else
