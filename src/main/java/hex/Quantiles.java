@@ -14,7 +14,8 @@ import water.fvec.*;
  * The 9 methods used in R stats::quantile() are defined in:
  * "Sample quantiles in statistical packages" - Hyndman & Fan - ASA 1996
  *
- * TODO: could preinitialize the bins to cover col (min,max)
+ * Future improvements:
+ * Could preinitialize the bins to cover the range vec.min(),.max(), when available
  */
 
 public class Quantiles extends Iced {
@@ -33,6 +34,9 @@ public class Quantiles extends Iced {
   //  Mantissa: 53 bits.
   //  long mantissa = (bits & 0x000fffffffffffffL) | 0x0010000000000000L;
 
+  public Quantiles(Vec vec, double[] quantiles) {
+    this(vec, quantiles[0], quantiles[1], quantiles[2], quantiles[3], quantiles[4], quantiles[5]);
+  }
   public Quantiles(Vec vec, double quantile_a, double quantile_b,
       double quantile_c, double quantile_d, double quantile_e, double quantile_f) {
 
@@ -49,7 +53,7 @@ public class Quantiles extends Iced {
     qbot = new double[NQ];
     qtop = new double[NQ];
 
-    // If vec is available, look up its min, max
+    // TODO: Future optimization if vec is available (this is not always guaranteed), could initialize bounds on quantiles from vec.min(),max()
     assert vec != null;
     if (vec==null) {
       System.out.println("Vec" + vec + "unavailable");
@@ -61,15 +65,13 @@ public class Quantiles extends Iced {
       }
     }
 
-
     // Pass 1
     long start = System.currentTimeMillis();
     QuantilesTask qt1 = new QuantilesTask().doAll(vec);
     calculateResults(qt1, quantile);
     long pass1 = System.currentTimeMillis();
     //pass1time = pass1 - start;
-    System.out.println("pass1 quantiles: " + Arrays.toString(qval));
-
+    System.out.println("Pass1 quantiles: " + Arrays.toString(qval) + "\n");
 
     // Pass 2
     start = System.currentTimeMillis();
@@ -83,51 +85,46 @@ public class Quantiles extends Iced {
 
     // Get count of non-NA values
     long _n = 0;
-    for (int b=0; b<t._bins.length; b++) {
+    for (int b=0; b<t._bins.length; b++)
       _n += t._counts[b];
-    }
-    System.out.println("Total bincount _n=" + _n);
 
-    qbin[0] = locateQuantile(t._counts, t._bins, _n, quantile[0], 0);
-    qbin[1] = locateQuantile(t._counts, t._bins, _n, quantile[1], 1);
-    qbin[2] = locateQuantile(t._counts, t._bins, _n, quantile[2], 2);
-    qbin[3] = locateQuantile(t._counts, t._bins, _n, quantile[3], 3);
-    qbin[4] = locateQuantile(t._counts, t._bins, _n, quantile[4], 4);
-    qbin[5] = locateQuantile(t._counts, t._bins, _n, quantile[5], 5);
+    // NOTES:
+    // 1) Currently we simply return the bin midpoint: (qbot[i]+qtop[i])/2.
+    // 2) although if we just took qbot[i], we could guarantee exact integer results on integer input
+    // 3a) See the 9 quantile methods in Hyndman & Fan
+    // 3b) 'Correct' result is to take value at corresponding indices phi*n,
+    //     although some some methods use (n-1) or other 'plotting position'
+    // 4) Doing interpolation within a bin (or its neighbors) is slightly tricky.
 
-    // TODO: 'correct' result is to take(/estimate) sample at corresponding indices phi*N
-    // Optionally use one of the 9 averaging schemes as per R/ Hyndman & Fan
-    //double[] res = new double[quantiles.length];
     for (int i=0; i<NQ; i++) {
+      qbin[i] = locateQuantileBinIdx(t._counts, t._bins, _n, quantile[i]);
+
       qbot[i] = t._bins[qbin[i]];
       qtop[i] = t._bins[qbin[i]+1];
-      qval[i] = (qbot[i]+qtop[i])/2.; // NOTE: if we just took qbot[i], we could guarantee integer results
+
+      qval[i] = (qbot[i]+qtop[i])/2.;
     }
   }
 
-  protected int locateQuantile(long[] counts, double[] bins, long n, double quantile, /*UNNEEDED*/ int qi) {
-    // bin-index (b) of this quantile
+  protected int locateQuantileBinIdx(long[] counts, double[] bins, long n, double quantile) {
 
-    // TODO rare special-case where quantile straddles 2 or more bins
-    double phi_times_n = quantile * n; // (n-1)?
-    long phi_times_n_ = (int) Math.round(phi_times_n); // TODO slightly crude round-to-nearest!
+    // Compute the index corresponding to quantile
+    double phi_times_n = quantile * n; // NOTE: some methods use (n-1) or other 'plotting position'
+    long phi_times_n_ = (int) Math.round(phi_times_n);
+      // TODO 1a) interpolate the two nearest values, rather than use nearest index
+      // TODO 1b) that would introduce the very rare special-case where quantile straddles 2 or more bins
 
-    // Locate the bin where this quantile occurs
+    // Now count through the bins, to locate the bin where that index occurs
     int b = 0;
-    long tot = 0;
-    while (tot<phi_times_n_) {
-      tot += counts[b++];
+    for (long i=0; i<phi_times_n_; ) {
+      i += counts[b++];
     }
-    b--; // step back one bin
-
-    // Note: can't meaningfully do interpolation within a bin (or its neighbors), so we just return the midpoint
-    //return (bins[b] + bins[b+1]) / 2.;
-
-    return b;
+    return b-1; // step back one bin
   }
 
   public static class QuantilesTask extends MRTask2<QuantilesTask> {
 
+    // The parameters NQ*NBINS controls the amount of memory used in Pass2
     public final int NQ=6; // no of quantiles
     public final int NBINS=10000; // no of bins we will use for each quantile
 
@@ -139,7 +136,7 @@ public class Quantiles extends Iced {
       this(...);
     }*/
 
-    // pass1: initialize bins to cover entire range
+    // Pass1: initialize bins to cover entire dynamic range of double
     QuantilesTask() {
       _bins = new double[131072]; // TBD allow tweaking size. The contents below only occupy 13534 entries
       //System.out.println("Allocated _bins with length: " + _bins.length);
@@ -409,10 +406,10 @@ public class Quantiles extends Iced {
 
     }
 
-    // pass2 and subsequent: refine _bins based on previous result (qbot[q], qtop[q])
+    // Pass2 and subsequent: refine _bins based on previous result (qbot[q], qtop[q])
     QuantilesTask(double[] qbot, double[] qtop) {
       assert qbot.length>0;
-      System.out.println("TBD pass2 bins:");
+      System.out.println("Pass2 bins:");
       System.out.println("Quantile A: " + qbot[0] + ".." + qtop[0]);
       System.out.println("Quantile B: " + qbot[1] + ".." + qtop[1]);
       System.out.println("Quantile C: " + qbot[2] + ".." + qtop[2]);
@@ -452,23 +449,22 @@ public class Quantiles extends Iced {
       // Output
       _counts = new long[_bins.length];
 
-      double value;  // don't use = MemoryManager.malloc8d(1)
+      double value;  // don't use MemoryManager.malloc8d(1)
       for (int i=0; i<xs._len; i++) {
         value = xs.at0(i);
-
-        if (Double.isNaN(value)) continue;
-
-        int b = binarySearchInexact(_bins, _bfirst, _blast, value);
-        //DEBUGSystem.out.println(value + "-> _bin:" + _bins[b] +  " index:" + b);
-        _counts[b]++;
+        if (!Double.isNaN(value)) {
+          int b = binarySearchInexact(_bins, _bfirst, _blast, value);
+          //System.out.println(value + "-> _bin:" + _bins[b] +  " index:" + b);
+          _counts[b]++;
+        }
       }
 
       // DEBUG: Print _bins,_counts
-      /*for (int b=_bfirst; b<_blast; b++) {
-        if (_bins[b]>0.1 && _bins[b]<=3000) // DEBUG on airline.csv
-          System.out.println(_counts[b] + "\t" + _bins[b]);
+      for (int b=_bfirst; b<_blast; b++) {
+        if (_bins[b]>=0.0 && _bins[b]<=3000) // DEBUG on airline.csv
+          System.out.println(_counts[b] + "\t" + _bins[b]); // DEBUG
           //System.out.println(_counts[b] + "\t" + String.format("%+6.5g",_bins[b]));
-      }*/
+      }
     }
 
     // reduce: accumulate bin counts
@@ -488,7 +484,10 @@ public class Quantiles extends Iced {
   }
 
   private static int binarySearchInexact(double[] _bins, int bfirst, int blast, double val) {
-    // Inexact comparison: bin b contains the interval [ bins(b), bins(b+1) )
+    /**
+     *  Inexact comparison: guaranteed to return bin b for the interval
+     *  [ _bins[b], bins[b+1] ) which contains val
+     */
     int bmin = bfirst;
     int bmax = blast;
     int bmid = (bmin+bmax)/2;
@@ -496,7 +495,7 @@ public class Quantiles extends Iced {
     while((bmin < bmax) && deltab>1) {
       deltab = bmax - bmin;
       bmid = (bmin+bmax)/2;
-      if (val == _bins[bmid]) {
+      if (val == _bins[bmid]) { // Early-termination on exact match
         return bmid;
       } else if (val < _bins[bmid]) {
         if (bmin == bmax-1) return bmin;
