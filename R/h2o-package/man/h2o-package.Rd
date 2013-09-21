@@ -12,7 +12,7 @@ This is a package for running H2O via its REST API from within R.
 \tabular{ll}{
 Package: \tab h2o\cr
 Type: \tab Package\cr
-Version: \tab SUBST_PROJECT_VERSION\cr
+Version: \tab 1.7.0.99999\cr
 Date: \tab 2013-07-16\cr
 License: \tab Apache-2\cr
 Depends: \tab R (>= 2.13.0), RCurl, rjson\cr
