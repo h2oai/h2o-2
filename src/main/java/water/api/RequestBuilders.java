@@ -880,7 +880,10 @@ public class RequestBuilders extends RequestQueries {
     }
 
     @Override public String header(JsonObject object, String objectName) {
-      return "<tr>";
+      //Gson g = new Gson();
+
+      //Log.info(g.toJson(object));
+      return "<tr id='row_"+object.get("row")+"'>";
     }
 
     @Override public String footer(JsonObject object, String objectName) {
