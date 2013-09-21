@@ -3,6 +3,8 @@ package water.api;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 import water.Job;
 import water.Key;
@@ -94,7 +96,17 @@ public class Jobs extends Request {
   private static String date(String utc) {
     if( utc == null || utc.length() == 0 )
       return "";
-    return "<script>document.write(new Date(" + utc + ").toLocaleTimeString())</script>";
+    utc = utc.replaceAll("^\"|\"$","");
+    Calendar cal = Calendar.getInstance();
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss-SSSS");
+    try {
+        cal.setTime(sdf.parse(utc));
+    } catch (Exception e) {
+        System.out.println("Did not work! Message: "+e);
+    }
+    return "<script>document.write(new Date("+cal.get(Calendar.YEAR)+","+String.valueOf(cal.get(Calendar.MONTH)+1)+","+
+            cal.get(Calendar.DAY_OF_MONTH)+","+cal.get(Calendar.HOUR_OF_DAY)+","+cal.get(Calendar.MINUTE)+","+cal.get(Calendar.SECOND)+").toLocaleTimeString())</script>";
+    //return "<script>document.write(new Date(" + utc + ").toLocaleTimeString())</script>"; 
   }
 
   private static String progress(float value) {
