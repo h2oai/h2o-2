@@ -153,7 +153,7 @@ myR() {
     # exit # status is last command
 }
 
-juLog  -name=H2O_Load.R myR 'test_R_RF_diff_class.R' || true
+juLog  -name=runit_RF.R myR 'runit_RF.R' || true
 
 
 # If this one fails, fail this script so the bash dies 
