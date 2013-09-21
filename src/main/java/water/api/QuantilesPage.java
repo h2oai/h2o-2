@@ -22,16 +22,12 @@ public class QuantilesPage extends Request2 {
   @API(help="Data Frame", required=true, filter=FrameKey.class)
   Frame frm;
 
-  /* BUG: API will not accept plain VecSelect here:
-   * java.lang.Exception: Class water.api.Request$VecSelect must have an empty constructor
-   *@API(help="Column", required=true, filter=VecSelect.class)
-   *Vec vec; */
+  // BUG: API will not accept plain VecSelect here; must subclass VecSelect
   @API(help="Column", required=true, filter=QVecSelect.class)
   Vec vec;
-  // Cliff says could add _vec here, initialize it from every map() call
   class QVecSelect extends VecSelect { QVecSelect() { super("frm"); } }
 
-  // API can't handle declaring these as double[] // KMeansGrid: parse double[] from String
+  // API can't handle declaring these as double[]. Could parse double[] from String
   @API(help="Quantile_a", required=true, filter=Default.class)  // BUG: filter=Real.class doesn't appear
   double quantile_a = .05;
   @API(help="Quantile_b", required=true, filter=Default.class)
@@ -45,29 +41,27 @@ public class QuantilesPage extends Request2 {
   @API(help="Quantile_f", required=true, filter=Default.class)
   double quantile_f = .95;
 
-  //transient double[] quantiles = new double[]{quantile_a, quantile_b, quantile_c, quantile_d, quantile_e, quantile_f};
-
   @API(help="Pass 1 msec")     long pass1time;
   @API(help="Pass 2 msec")     long pass2time;
-  @API(help="Pass 3 msec")     long pass3time;
-  @API(help="nrows")           long nrows;
-  @API(help="qval_a")          double qval_a;
-  @API(help="qval_b")          double qval_b;
-  @API(help="qval_c")          double qval_c;
-  @API(help="qval_d")          double qval_d;
-  @API(help="qval_e")          double qval_e;
-  @API(help="qval_f")          double qval_f;
+  //@API(help="nrows")           long nrows;
+  @API(help="qvalue_a")        double qvalue_a;
+  @API(help="qvalue_b")        double qvalue_b;
+  @API(help="qvalue_c")        double qvalue_c;
+  @API(help="qvalue_d")        double qvalue_d;
+  @API(help="qvalue_e")        double qvalue_e;
+  @API(help="qvalue_f")        double qvalue_f;
 
   @Override public Response serve() {
 
-    Quantiles qq = new Quantiles(vec, quantile_a,quantile_b,quantile_c,quantile_d,quantile_e,quantile_f);
+    Quantiles qq = new Quantiles(vec, quantile_a,quantile_b,quantile_c,quantile_d,quantile_e,quantile_f,
+        pass1time,pass2time);
 
-    qval_a = qq.qval[0];
-    qval_b = qq.qval[1];
-    qval_c = qq.qval[2];
-    qval_d = qq.qval[3];
-    qval_e = qq.qval[4];
-    qval_f = qq.qval[5];
+    qvalue_a = qq.qval[0];
+    qvalue_b = qq.qval[1];
+    qvalue_c = qq.qval[2];
+    qvalue_d = qq.qval[3];
+    qvalue_e = qq.qval[4];
+    qvalue_f = qq.qval[5];
 
     return new Response(Response.Status.done, this, -1, -1, null);
   }

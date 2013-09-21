@@ -10,7 +10,7 @@ import water.*;
 import water.fvec.*;
 
 
-public class QuantileTest extends TestUtil {
+public class QuantilesTest extends TestUtil {
 
   /* Custom boilerplate around JUnit testrunner.
    * Note: Do not try to make or run inside Eclipse as a JUnit test, that won't work.
@@ -19,13 +19,13 @@ public class QuantileTest extends TestUtil {
    */
   public static class BootH2O {
     public static void main(String[] args) throws Exception{
-      water.Boot.main(QuantileTest.class, args);
+      water.Boot.main(QuantilesTest.class, args);
     }
   }
   public static void main(String[] args){
     H2O.main(args);
     try {
-      QuantileTest qtest = new QuantileTest();
+      QuantilesTest qtest = new QuantilesTest();
       qtest.testGaussianDoubleSummary_small();
     } catch(Throwable e){
       e.printStackTrace();
@@ -48,16 +48,12 @@ public class QuantileTest extends TestUtil {
 
     // Setup: create a Vec of size n, populate with normal dist over a wide variance
     Vec d = makeRandomDoubleVec(n, 0.1, /*Math.pow(10., Double.MAX_EXPONENT/4.),*/ 1234567890001L);
-    System.out.println("DEBUG: " + d + " length:" + d.length()); // + d.at()
-    for (long i=0; i<d.length(); i+= 1000) {
-      System.out.println("  d[" + i +"]=" + d.at(i));
-    }
 
     // Test for typical quantiles...
     double[] quantilesTypical = new double[] {0.05, 0.1, 0.15, 0.85, 0.9, 0.95};
     Quantiles qq = new Quantiles(d, quantilesTypical);
     System.out.println("Quantiles: " + Arrays.toString(quantilesTypical));
-    System.out.println("Results: " + Arrays.toString(qq.qval));
+    System.out.println("Results: " + Arrays.toString(qq.qval) + "\n");
     // The result values below are for n=512000
     assertEquals(qq.qval[0], -1.2591825e13, 1.);
     assertEquals(qq.qval[1], -4.026675e8, 1.);

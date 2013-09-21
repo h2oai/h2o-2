@@ -8,37 +8,36 @@ import water.fvec.*;
 /**
  * @author smcinerney
  *
- * Quantiles by exact multipass bucket-based method, similar to Summary.
+ * Quantiles by exact multipass bucket-based method.
+ * Error bound is +/- half of bin-size containing quantile.
+ * Error can be made arbitrarily small by increasing number of passes and buckets.
+ * Currently uses 2 passes which is adequate.
  *
  * Reference:
  * The 9 methods used in R stats::quantile() are defined in:
  * "Sample quantiles in statistical packages" - Hyndman & Fan - ASA 1996
  *
  * Future improvements:
- * Could preinitialize the bins to cover the range vec.min(),.max(), when available
+ * 1) If vec.min(),.max(), are available (this is not always guaranteed), could bound initial range of quantiles to vec.min(),max()
+ * 2) Speedup binarySearch by switching based on (sign,exponent,mantissa) bitfields of double
  */
 
 public class Quantiles extends Iced {
 
-  public final int NQ=6; // no of quantiles
-  public int[] qbin; // index of bin containing quantile
-  public double[] qval; // quantile results
-  public double[] qbot, qtop; // lower- and upper-bounds on each quantile, from bin
-  double xmin = Double.NEGATIVE_INFINITY;
-  double xmax = Double.POSITIVE_INFINITY;
+  public final int NQ = 6; // no of quantiles
 
-  // Could switch directly on (sign,exponent) components of double:
-  //  Sign bit: 1 bit.
-  //  Binary exponent, biased by 1023: 11 bits.
-  //  long exponent = ((bits & 0x7ff0000000000000L) >> 52) - 1023; // check this is correct
-  //  Mantissa: 53 bits.
-  //  long mantissa = (bits & 0x000fffffffffffffL) | 0x0010000000000000L;
+  public int[] qbin; // index of bin containing quantile
+  public double[] qval; // actual quantile results
+  public double[] qbot, qtop; // lower- and upper-bounds on each quantile, from bin
+
 
   public Quantiles(Vec vec, double[] quantiles) {
-    this(vec, quantiles[0], quantiles[1], quantiles[2], quantiles[3], quantiles[4], quantiles[5]);
+    this(vec, quantiles[0], quantiles[1], quantiles[2], quantiles[3], quantiles[4], quantiles[5], 0L,0L);
   }
+
   public Quantiles(Vec vec, double quantile_a, double quantile_b,
-      double quantile_c, double quantile_d, double quantile_e, double quantile_f) {
+      double quantile_c, double quantile_d, double quantile_e, double quantile_f,
+      long pass1time, long pass2time) {
 
     double[] quantile = new double[NQ];
     quantile[0] = quantile_a;
@@ -53,15 +52,15 @@ public class Quantiles extends Iced {
     qbot = new double[NQ];
     qtop = new double[NQ];
 
-    // TODO: Future optimization if vec is available (this is not always guaranteed), could initialize bounds on quantiles from vec.min(),max()
+    // Future optimization if vec is available (this is not always guaranteed), could bound initial range of quantiles to vec.min(),max()
     assert vec != null;
     if (vec==null) {
-      System.out.println("Vec" + vec + "unavailable");
+      System.out.println("Vec" + vec + " unavailable");
     } else {
       if (Double.isNaN(vec.min())) {
-        System.out.println("Vec" + vec + "exists but min,max unavailable)");
+        System.out.println("Vec" + vec + " exists but min,max unavailable)");
       } else {
-        System.out.println("Vec" + vec + "has min:" + vec.min() + ", max:" + vec.max());
+        System.out.println("Vec" + vec + "\nhas min:" + vec.min() + ", max:" + vec.max());
       }
     }
 
@@ -70,15 +69,14 @@ public class Quantiles extends Iced {
     QuantilesTask qt1 = new QuantilesTask().doAll(vec);
     calculateResults(qt1, quantile);
     long pass1 = System.currentTimeMillis();
-    //pass1time = pass1 - start;
-    System.out.println("Pass1 quantiles: " + Arrays.toString(qval) + "\n");
+    pass1time = pass1 - start;
 
     // Pass 2
     start = System.currentTimeMillis();
     QuantilesTask qt2 = new QuantilesTask(qbot, qtop).doAll(vec);
     calculateResults(qt2, quantile);
     long pass2 = System.currentTimeMillis();
-    //pass2time = pass1 - start;
+    pass2time = pass1 - start;
   }
 
   protected void calculateResults(QuantilesTask t, double[] quantile) {
@@ -108,7 +106,8 @@ public class Quantiles extends Iced {
 
   protected int locateQuantileBinIdx(long[] counts, double[] bins, long n, double quantile) {
 
-    // Compute the index corresponding to quantile
+    // Compute the index corresponding to quantile...
+
     double phi_times_n = quantile * n; // NOTE: some methods use (n-1) or other 'plotting position'
     long phi_times_n_ = (int) Math.round(phi_times_n);
       // TODO 1a) interpolate the two nearest values, rather than use nearest index
@@ -119,7 +118,7 @@ public class Quantiles extends Iced {
     for (long i=0; i<phi_times_n_; ) {
       i += counts[b++];
     }
-    return b-1; // step back one bin
+    return b-1; // index must be in previous bin
   }
 
   public static class QuantilesTask extends MRTask2<QuantilesTask> {
@@ -130,16 +129,24 @@ public class Quantiles extends Iced {
 
     public long[] _counts;
     public double[] _bins; // don't use MemoryManager.malloc8d(_bins._len);
-    public int _bfirst, _blast;
 
-    /*QuantilesTask(double xmin, double xmax) {
-      this(...);
-    }*/
+    public int _bfirst, _blast; // begin and end bins for binary-search
 
-    // Pass1: initialize bins to cover entire dynamic range of double
+    /**
+     *  Constructor QuantilesTask() is for Pass1:
+     *   initialize bins to cover entire dynamic range of double
+     *
+     *  Constructor QuantilesTask(double[] qbot, double[] qtop)
+     *   is for Pass2 and subsequent: refine bins based on result of previous pass
+     *
+     */
+    // NOTE: future improvement: initialize pass1 bins to only cover vec.min() .. vec.max()
+    //     for which we would need QuantilesTask(double xmin, double xmax)
+    //     For now we assume xmin = Double.NEGATIVE_INFINITY, xmax = Double.POSITIVE_INFINITY
+
     QuantilesTask() {
-      _bins = new double[131072]; // TBD allow tweaking size. The contents below only occupy 13534 entries
-      //System.out.println("Allocated _bins with length: " + _bins.length);
+
+      _bins = new double[131072]; // 1Mb. Could parameterize size. The values below only occupy 13534 entries
       Arrays.fill(_bins, Double.POSITIVE_INFINITY);
 
       _bfirst = 0;
@@ -147,267 +154,78 @@ public class Quantiles extends Iced {
       _bins[0] = Double.NEGATIVE_INFINITY;
       _bins[1] = -Double.MAX_VALUE; // -1.7e308
 
-      //
+      // Coarse-grained buckets between -Double.MAX_VALUE < x < -Long.MAX_VALUE
       int b, e;
-      for (b=2, e=+307; e>=+19; e--, b+=5) {
-        _bins[b]   = -6.  * Math.pow(10.,e);
-        _bins[b+1] = -4.  * Math.pow(10.,e);
-        _bins[b+2] = -2.5 * Math.pow(10.,e);
-        _bins[b+3] = -1.5 * Math.pow(10.,e);
-        _bins[b+4] =     - Math.pow(10.,e);
-      }
-      //System.out.println("\nBin values: ");
-      //System.out.print("-Long.MAX_VALUE at b=" + b);
-      // more fine bins below (double)Long.MAX_VALUE, ~9.22e18
-      for (e=+18 ; e>=-18 ; e--, b+=100) {
-        _bins[b]    = -9.9 * Math.pow(10.,e);
-        _bins[b+1]  = -9.8 * Math.pow(10.,e);
-        _bins[b+2]  = -9.7 * Math.pow(10.,e);
-        _bins[b+3]  = -9.6 * Math.pow(10.,e);
-        _bins[b+4]  = -9.5 * Math.pow(10.,e);
-        _bins[b+5]  = -9.4 * Math.pow(10.,e);
-        _bins[b+6]  = -9.3 * Math.pow(10.,e);
-        _bins[b+7]  = -9.2 * Math.pow(10.,e);
-        _bins[b+8]  = -9.1 * Math.pow(10.,e);
-        _bins[b+9]  = -9.  * Math.pow(10.,e);
-        _bins[b+10] = -8.9 * Math.pow(10.,e);
-        _bins[b+11] = -8.8 * Math.pow(10.,e);
-        _bins[b+12] = -8.7 * Math.pow(10.,e);
-        _bins[b+13] = -8.6 * Math.pow(10.,e);
-        _bins[b+14] = -8.5 * Math.pow(10.,e);
-        _bins[b+15] = -8.4 * Math.pow(10.,e);
-        _bins[b+16] = -8.3 * Math.pow(10.,e);
-        _bins[b+17] = -8.2 * Math.pow(10.,e);
-        _bins[b+18] = -8.1 * Math.pow(10.,e);
-        _bins[b+19] = -8. * Math.pow(10.,e);
-        _bins[b+20] = -7.9 * Math.pow(10.,e);
-        _bins[b+21] = -7.8 * Math.pow(10.,e);
-        _bins[b+22] = -7.7 * Math.pow(10.,e);
-        _bins[b+23] = -7.6 * Math.pow(10.,e);
-        _bins[b+24] = -7.5 * Math.pow(10.,e);
-        _bins[b+25] = -7.4 * Math.pow(10.,e);
-        _bins[b+26] = -7.3 * Math.pow(10.,e);
-        _bins[b+27] = -7.2 * Math.pow(10.,e);
-        _bins[b+28] = -7.1 * Math.pow(10.,e);
-        _bins[b+29] = -7.  * Math.pow(10.,e);
-        _bins[b+30] = -6.9 * Math.pow(10.,e);
-        _bins[b+31] = -6.8 * Math.pow(10.,e);
-        _bins[b+32] = -6.7 * Math.pow(10.,e);
-        _bins[b+33] = -6.6 * Math.pow(10.,e);
-        _bins[b+34] = -6.5 * Math.pow(10.,e);
-        _bins[b+35] = -6.4 * Math.pow(10.,e);
-        _bins[b+36] = -6.3 * Math.pow(10.,e);
-        _bins[b+37] = -6.2 * Math.pow(10.,e);
-        _bins[b+38] = -6.1 * Math.pow(10.,e);
-        _bins[b+39] = -6.  * Math.pow(10.,e);
-        _bins[b+40] = -5.9 * Math.pow(10.,e);
-        _bins[b+41] = -5.8 * Math.pow(10.,e);
-        _bins[b+42] = -5.7 * Math.pow(10.,e);
-        _bins[b+43] = -5.6 * Math.pow(10.,e);
-        _bins[b+44] = -5.5 * Math.pow(10.,e);
-        _bins[b+45] = -5.4 * Math.pow(10.,e);
-        _bins[b+46] = -5.3 * Math.pow(10.,e);
-        _bins[b+47] = -5.2 * Math.pow(10.,e);
-        _bins[b+48] = -5.1 * Math.pow(10.,e);
-        _bins[b+49] = -5.  * Math.pow(10.,e);
-        _bins[b+50] = -4.9 * Math.pow(10.,e);
-        _bins[b+51] = -4.8 * Math.pow(10.,e);
-        _bins[b+52] = -4.7 * Math.pow(10.,e);
-        _bins[b+53] = -4.6 * Math.pow(10.,e);
-        _bins[b+54] = -4.5 * Math.pow(10.,e);
-        _bins[b+55] = -4.4 * Math.pow(10.,e);
-        _bins[b+56] = -4.3 * Math.pow(10.,e);
-        _bins[b+57] = -4.2 * Math.pow(10.,e);
-        _bins[b+58] = -4.1 * Math.pow(10.,e);
-        _bins[b+59] = -4.  * Math.pow(10.,e);
-        _bins[b+60] = -3.9 * Math.pow(10.,e);
-        _bins[b+61] = -3.8 * Math.pow(10.,e);
-        _bins[b+62] = -3.7 * Math.pow(10.,e);
-        _bins[b+63] = -3.6 * Math.pow(10.,e);
-        _bins[b+64] = -3.5 * Math.pow(10.,e);
-        _bins[b+65] = -3.4 * Math.pow(10.,e);
-        _bins[b+66] = -3.3 * Math.pow(10.,e);
-        _bins[b+67] = -3.2 * Math.pow(10.,e);
-        _bins[b+68] = -3.1 * Math.pow(10.,e);
-        _bins[b+69] = -3.  * Math.pow(10.,e);
-        _bins[b+70] = -2.9 * Math.pow(10.,e);
-        _bins[b+71] = -2.8 * Math.pow(10.,e);
-        _bins[b+72] = -2.7 * Math.pow(10.,e);
-        _bins[b+73] = -2.6 * Math.pow(10.,e);
-        _bins[b+74] = -2.5 * Math.pow(10.,e);
-        _bins[b+75] = -2.4 * Math.pow(10.,e);
-        _bins[b+76] = -2.3 * Math.pow(10.,e);
-        _bins[b+77] = -2.2 * Math.pow(10.,e);
-        _bins[b+78] = -2.1 * Math.pow(10.,e);
-        _bins[b+79] = -2.  * Math.pow(10.,e);
-        _bins[b+80] = -1.95 * Math.pow(10.,e);
-        _bins[b+81] = -1.9  * Math.pow(10.,e);
-        _bins[b+82] = -1.85 * Math.pow(10.,e);
-        _bins[b+83] = -1.8  * Math.pow(10.,e);
-        _bins[b+84] = -1.75 * Math.pow(10.,e);
-        _bins[b+85] = -1.7  * Math.pow(10.,e);
-        _bins[b+86] = -1.65 * Math.pow(10.,e);
-        _bins[b+87] = -1.6  * Math.pow(10.,e);
-        _bins[b+88] = -1.55 * Math.pow(10.,e);
-        _bins[b+89] = -1.5  * Math.pow(10.,e);
-        _bins[b+90] = -1.45 * Math.pow(10.,e);
-        _bins[b+91] = -1.4  * Math.pow(10.,e);
-        _bins[b+92] = -1.35 * Math.pow(10.,e);
-        _bins[b+93] = -1.3  * Math.pow(10.,e);
-        _bins[b+94] = -1.25 * Math.pow(10.,e);
-        _bins[b+95] = -1.2  * Math.pow(10.,e);
-        _bins[b+96] = -1.15 * Math.pow(10.,e);
-        _bins[b+97] = -1.1  * Math.pow(10.,e);
-        _bins[b+98] = -1.05 * Math.pow(10.,e);
-        _bins[b+99] = -1.   * Math.pow(10.,e);
-      }
-      //System.out.print(" ... small -ve Doubles at b=" + b);
+      double[] negativeDoubleVals = new double[]{-6., -4., -2.5, -1.5, -1.};
+      for (b=2, e=+307; e>=+19; e--)
+        for (double val: negativeDoubleVals)
+          _bins[b++] = val * Math.pow(10.,e);
 
-      for (e=-19; e>=-323; e--, b+=5) {
-        _bins[b]   = -6.  * Math.pow(10.,e);
-        _bins[b+1] = -4.  * Math.pow(10.,e);
-        _bins[b+2] = -2.5 * Math.pow(10.,e);
-        _bins[b+3] = -1.5 * Math.pow(10.,e);
-        _bins[b+4] = -      Math.pow(10.,e);
-      }
-      //System.out.print(" ... ~ -Double.MIN_VALUE at b=" + b);
+      // NOTE: important reason why we use foreach on lists of literals below, instead
+      // of a simple for-loop; it's to guarantee an exact floating-point match on integer values,
+      // and thus get early termination with binarySearchInexact().
 
+      // Finer-grained bins for -Long.MAX_VALUE,~9.22e18 < x <= -1e-18
+      double[] fineNegativeDoubleVals = new double[]{-9.9,-9.8,-9.7,-9.6,-9.5,-9.4,-9.3,-9.2,-9.1,-9.0,
+        -8.9,-8.8,-8.7,-8.6,-8.5,-8.4,-8.3,-8.2,-8.1,-8., -7.9,-7.8,-7.7,-7.6,-7.5,-7.4,-7.3,-7.2,-7.1,-7.,
+        -6.9,-6.8,-6.7,-6.6,-6.5,-6.4,-6.3,-6.2,-6.1,-6., -5.9,-5.8,-5.7,-5.6,-5.5,-5.4,-5.3,-5.2,-5.1,-5.,
+        -4.9,-4.8,-4.7,-4.6,-4.5,-4.4,-4.3,-4.2,-4.1,-4., -3.9,-3.8,-3.7,-3.6,-3.5,-3.4,-3.3,-3.2,-3.1,-3.,
+        -2.9,-2.8,-2.7,-2.6,-2.5,-2.4,-2.3,-2.2,-2.1,-2.,
+        -1.95,-1.9,-1.85,-1.8,-1.75,-1.7,-1.65,-1.6,-1.55,-1.5,
+        -1.45,-1.4,-1.35,-1.3,-1.25,-1.2,-1.15,-1.1,-1.05,-1.0 };
+      for (e=+18 ; e>=-18 ; e--)
+        for (double val: fineNegativeDoubleVals)
+          _bins[b++] = val * Math.pow(10.,e);
+
+      // Coarse bins for -1e-18 < x < -Double.MIN_VALUE
+      for (e=-19; e>=-323; e--)
+        for (double val: negativeDoubleVals)
+          _bins[b++] = val * Math.pow(10.,e);
+
+      // Zero
       _bins[b++] = 0.0;
-      //System.out.print(" ...ZERO at b="+b);
 
-      for (e=-323; e<=-19; e++, b+=5) {
-        _bins[b]   = +      Math.pow(10.,e);
-        _bins[b+1] = +1.5 * Math.pow(10.,e);
-        _bins[b+2] = +2.5 * Math.pow(10.,e);
-        _bins[b+3] = +4.  * Math.pow(10.,e);
-        _bins[b+4] = +6.  * Math.pow(10.,e);
-      }
-      //System.out.print(" ... +ve small Doubles at b=" + b);
+      // Coarse bins for +Double.MIN_VALUE < x < +1e-18
+      double[] positiveDoubleVals = new double[]{1., 1.5, 2.5, 4., 6.};
+      for (e=-323; e<=-19; e++)
+        for (double val: positiveDoubleVals)
+          _bins[b++] = val * Math.pow(10.,e);
 
-      for (e=-18 ; e<=+18 ; e++, b+=100) { // fine-grained buckets over the range of Long
-        _bins[b]    = +1.   * Math.pow(10.,e);
-        _bins[b+1]  = +1.05 * Math.pow(10.,e);
-        _bins[b+2]  = +1.1  * Math.pow(10.,e);
-        _bins[b+3]  = +1.15 * Math.pow(10.,e);
-        _bins[b+4]  = +1.2  * Math.pow(10.,e);
-        _bins[b+5]  = +1.25 * Math.pow(10.,e);
-        _bins[b+6]  = +1.3  * Math.pow(10.,e);
-        _bins[b+7]  = +1.35 * Math.pow(10.,e);
-        _bins[b+8]  = +1.4  * Math.pow(10.,e);
-        _bins[b+9]  = +1.45 * Math.pow(10.,e);
-        _bins[b+10] = +1.5  * Math.pow(10.,e);
-        _bins[b+11] = +1.55 * Math.pow(10.,e);
-        _bins[b+12] = +1.6  * Math.pow(10.,e);
-        _bins[b+13] = +1.65 * Math.pow(10.,e);
-        _bins[b+14] = +1.7  * Math.pow(10.,e);
-        _bins[b+15] = +1.75 * Math.pow(10.,e);
-        _bins[b+16] = +1.8  * Math.pow(10.,e);
-        _bins[b+17] = +1.85 * Math.pow(10.,e);
-        _bins[b+18] = +1.9  * Math.pow(10.,e);
-        _bins[b+19] = +1.95 * Math.pow(10.,e);
-        _bins[b+20] = +2.   * Math.pow(10.,e);
-        _bins[b+21] = +2.1  * Math.pow(10.,e);
-        _bins[b+22] = +2.2  * Math.pow(10.,e);
-        _bins[b+23] = +2.3  * Math.pow(10.,e);
-        _bins[b+24] = +2.4  * Math.pow(10.,e);
-        _bins[b+25] = +2.5  * Math.pow(10.,e);
-        _bins[b+26] = +2.6  * Math.pow(10.,e);
-        _bins[b+27] = +2.7  * Math.pow(10.,e);
-        _bins[b+28] = +2.8  * Math.pow(10.,e);
-        _bins[b+29] = +2.9  * Math.pow(10.,e);
-        _bins[b+30] = +3.   * Math.pow(10.,e);
-        _bins[b+31] = +3.1  * Math.pow(10.,e);
-        _bins[b+32] = +3.2  * Math.pow(10.,e);
-        _bins[b+33] = +3.3  * Math.pow(10.,e);
-        _bins[b+34] = +3.4  * Math.pow(10.,e);
-        _bins[b+35] = +3.5  * Math.pow(10.,e);
-        _bins[b+36] = +3.6  * Math.pow(10.,e);
-        _bins[b+37] = +3.7  * Math.pow(10.,e);
-        _bins[b+38] = +3.8  * Math.pow(10.,e);
-        _bins[b+39] = +3.9  * Math.pow(10.,e);
-        _bins[b+40] = +4.   * Math.pow(10.,e);
-        _bins[b+41] = +4.1  * Math.pow(10.,e);
-        _bins[b+42] = +4.2  * Math.pow(10.,e);
-        _bins[b+43] = +4.3  * Math.pow(10.,e);
-        _bins[b+44] = +4.4  * Math.pow(10.,e);
-        _bins[b+45] = +4.5  * Math.pow(10.,e);
-        _bins[b+46] = +4.6  * Math.pow(10.,e);
-        _bins[b+47] = +4.7  * Math.pow(10.,e);
-        _bins[b+48] = +4.8  * Math.pow(10.,e);
-        _bins[b+49] = +4.9  * Math.pow(10.,e);
-        _bins[b+50] = +5.   * Math.pow(10.,e);
-        _bins[b+51] = +5.1  * Math.pow(10.,e);
-        _bins[b+52] = +5.2  * Math.pow(10.,e);
-        _bins[b+53] = +5.3  * Math.pow(10.,e);
-        _bins[b+54] = +5.4  * Math.pow(10.,e);
-        _bins[b+55] = +5.5  * Math.pow(10.,e);
-        _bins[b+56] = +5.6  * Math.pow(10.,e);
-        _bins[b+57] = +5.7  * Math.pow(10.,e);
-        _bins[b+58] = +5.8  * Math.pow(10.,e);
-        _bins[b+59] = +5.9  * Math.pow(10.,e);
-        _bins[b+60] = +6.   * Math.pow(10.,e);
-        _bins[b+61] = +6.1  * Math.pow(10.,e);
-        _bins[b+62] = +6.2  * Math.pow(10.,e);
-        _bins[b+63] = +6.3  * Math.pow(10.,e);
-        _bins[b+64] = +6.4  * Math.pow(10.,e);
-        _bins[b+65] = +6.5  * Math.pow(10.,e);
-        _bins[b+66] = +6.6  * Math.pow(10.,e);
-        _bins[b+67] = +6.7  * Math.pow(10.,e);
-        _bins[b+68] = +6.8  * Math.pow(10.,e);
-        _bins[b+69] = +6.9  * Math.pow(10.,e);
-        _bins[b+70] = +7.   * Math.pow(10.,e);
-        _bins[b+71] = +7.1  * Math.pow(10.,e);
-        _bins[b+72] = +7.2  * Math.pow(10.,e);
-        _bins[b+73] = +7.3  * Math.pow(10.,e);
-        _bins[b+74] = +7.4  * Math.pow(10.,e);
-        _bins[b+75] = +7.5  * Math.pow(10.,e);
-        _bins[b+76] = +7.6  * Math.pow(10.,e);
-        _bins[b+77] = +7.7  * Math.pow(10.,e);
-        _bins[b+78] = +7.8  * Math.pow(10.,e);
-        _bins[b+79] = +7.9  * Math.pow(10.,e);
-        _bins[b+80] = +8.   * Math.pow(10.,e);
-        _bins[b+81] = +8.1  * Math.pow(10.,e);
-        _bins[b+82] = +8.2  * Math.pow(10.,e);
-        _bins[b+83] = +8.3  * Math.pow(10.,e);
-        _bins[b+84] = +8.4  * Math.pow(10.,e);
-        _bins[b+85] = +8.5  * Math.pow(10.,e);
-        _bins[b+86] = +8.6  * Math.pow(10.,e);
-        _bins[b+87] = +8.7  * Math.pow(10.,e);
-        _bins[b+88] = +8.8  * Math.pow(10.,e);
-        _bins[b+89] = +8.9  * Math.pow(10.,e);
-        _bins[b+90] = +9.   * Math.pow(10.,e);
-        _bins[b+91] = +9.1  * Math.pow(10.,e);
-        _bins[b+92] = +9.2  * Math.pow(10.,e);
-        _bins[b+93] = +9.3  * Math.pow(10.,e);
-        _bins[b+94] = +9.4  * Math.pow(10.,e);
-        _bins[b+95] = +9.5  * Math.pow(10.,e);
-        _bins[b+96] = +9.6  * Math.pow(10.,e);
-        _bins[b+97] = +9.7  * Math.pow(10.,e);
-        _bins[b+98] = +9.8  * Math.pow(10.,e);
-        _bins[b+99] = +9.9  * Math.pow(10.,e);
-      }
-      //System.out.print(" +Long.MAX_VALUE at b=" + b);
+      // Fine bins for +1e-18 <= x <= +Long.MAX_VALUE,~9.22e18
+      double[] finePositiveDoubleVals = new double[]{1.,1.05,1.1,1.15,1.2,1.25,1.3,1.35,1.4,1.45,
+          1.5,1.55,1.6,1.65,1.7,1.75,1.8,1.85,1.9,1.95,
+          2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7,2.8,2.9, 3.0,3.1,3.2,3.3,3.4,3.5,3.6,3.7,3.8,3.9,
+          4.0,4.1,4.2,4.3,4.4,4.5,4.6,4.7,4.8,4.9, 5.0,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9,
+          6.0,6.1,6.2,6.3,6.4,6.5,6.6,6.7,6.8,6.9, 7.0,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,
+          8.0,8.1,8.2,8.3,8.4,8.5,8.6,8.7,8.8,8.9, 9.0,9.1,9.2,9.3,9.4,9.5,9.6,9.7,9.8,9.9 };
+      for (e=-18 ; e<=+18 ; e++)
+        for (double val: finePositiveDoubleVals)
+        _bins[b++] = val * Math.pow(10.,e);
 
-      for (e=+19; e<=+307; e++, b+=5) {
-        _bins[b]   = +      Math.pow(10.,e);
-        _bins[b+1] = +1.5 * Math.pow(10.,e);
-        _bins[b+2] = +2.5 * Math.pow(10.,e);
-        _bins[b+3] = +4.  * Math.pow(10.,e);
-        _bins[b+4] = +6.  * Math.pow(10.,e);
-      }
-      //System.out.print(" ~ +Double.MAX_VALUE at b="+b);
+      // Coarse-grained buckets between +Long.MAX_VALUE < x < +Double.MAX_VALUE
+      for (e=+19; e<=+307; e++)
+        for (double val: positiveDoubleVals)
+          _bins[b++] = val * Math.pow(10.,e);
+
       _bins[b++] = +Double.MAX_VALUE; // -1.7e308
 
       _blast = b; // store the index of the highest bin in current use
+
+      // Pad any remaining elements in array with +INF
       Arrays.fill(_bins, b, _bins.length-1, Double.POSITIVE_INFINITY);
-      //System.out.println(" ...padded with +INF to b="+b);
 
-      _counts = new long[_bins.length];
-
+      _counts = new long[_bins.length]; // all initialized to zero
     }
 
-    // Pass2 and subsequent: refine _bins based on previous result (qbot[q], qtop[q])
+
+    /**
+     * Pass2 and subsequent: refine _bins based on result of previous pass:
+     *  (qbot[q], qtop[q])
+     *
+     * For each of the NQ=6 quantiles, create NBINS=10000 buckets
+     */
     QuantilesTask(double[] qbot, double[] qtop) {
+
       assert qbot.length>0;
       System.out.println("Pass2 bins:");
       System.out.println("Quantile A: " + qbot[0] + ".." + qtop[0]);
@@ -426,7 +244,7 @@ public class Quantiles extends Iced {
 
       for (int q=0; q<NQ; q++) {
 
-        if (qbot[q]==_bins[b-1]) b--; // handle overlapping bins
+        if (qbot[q]==_bins[b-1]) b--; // handle overlapping bins by stepping back one bin
 
         double bval = qbot[q];
         double bstep = (qtop[q]-qbot[q]) / (double)NBINS;
@@ -439,14 +257,14 @@ public class Quantiles extends Iced {
       _blast = b;
       _bins[b++] = Double.POSITIVE_INFINITY;
 
-      //System.out.println("Pass2 bins:" + Arrays.toString(_bins));
     }
 
-    @Override public void map(Chunk xs) {
-      //DEBUGSystem.out.println("Chunk 0x" + xs +" of length=" + xs._len); // printing will distort runtime
-      //PrintChunk("", xs);
 
-      // Output
+    /**
+     * Map: for each value, increment corresponding bin-count
+     */
+    @Override public void map(Chunk xs) {
+
       _counts = new long[_bins.length];
 
       double value;  // don't use MemoryManager.malloc8d(1)
@@ -454,40 +272,28 @@ public class Quantiles extends Iced {
         value = xs.at0(i);
         if (!Double.isNaN(value)) {
           int b = binarySearchInexact(_bins, _bfirst, _blast, value);
-          //System.out.println(value + "-> _bin:" + _bins[b] +  " index:" + b);
           _counts[b]++;
         }
       }
 
-      // DEBUG: Print _bins,_counts
-      for (int b=_bfirst; b<_blast; b++) {
-        if (_bins[b]>=0.0 && _bins[b]<=3000) // DEBUG on airline.csv
-          System.out.println(_counts[b] + "\t" + _bins[b]); // DEBUG
-          //System.out.println(_counts[b] + "\t" + String.format("%+6.5g",_bins[b]));
-      }
     }
 
-    // reduce: accumulate bin counts
-    @Override public void reduce( QuantilesTask other ) {
-      for (int b=_bfirst; b<_blast; b++) {
-        this._counts[b] += other._counts[b];
-      }
-    }
-  }
-
-  private static void PrintChunk(String msg, Chunk xs) {
-    System.out.print("\n" + msg);
-    for (int i=0; i<xs._len; i++) {
-      System.out.print(xs.at0(i) + ",");
-    }
-    System.out.println();
-  }
-
-  private static int binarySearchInexact(double[] _bins, int bfirst, int blast, double val) {
     /**
-     *  Inexact comparison: guaranteed to return bin b for the interval
-     *  [ _bins[b], bins[b+1] ) which contains val
+     * Reduce: merge bin-counts
      */
+    @Override public void reduce( QuantilesTask other ) {
+      for (int b=_bfirst; b<_blast; b++)
+        this._counts[b] += other._counts[b];
+    }
+
+  }
+
+  /**
+   *  Inexact comparison: guaranteed to return bin b for the interval
+   *  [ _bins[b], bins[b+1] ) which contains val
+   */
+  private static int binarySearchInexact(double[] _bins, int bfirst, int blast, double val) {
+
     int bmin = bfirst;
     int bmax = blast;
     int bmid = (bmin+bmax)/2;
@@ -507,4 +313,13 @@ public class Quantiles extends Iced {
     return bmin;
   }
 
+  private static void PrintChunk(String msg, Chunk xs) {
+    System.out.print("\n" + msg);
+    for (int i=0; i<xs._len; i++) {
+      System.out.print(xs.at0(i) + ",");
+    }
+    System.out.println();
+  }
+
 }
+
