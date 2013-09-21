@@ -45,10 +45,10 @@ then
     echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
     ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.161 rm -f -r /home/0xcustomer/ice*
 
-    # HACK this is really 161 plus 164. this allows us to talk to localhost:54321 accidently (R)
+    # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)
     python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
     CLOUD_IP=192.168.1.161
-    CLOUD_PORT=54321
+    CLOUD_PORT=54377
 else
     if [[ $USER == "kevin" ]]
     then
