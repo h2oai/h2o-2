@@ -15,7 +15,7 @@
     "use_hdfs": true,
 
     "cloud_name": "kevin_cloud",
-    "base_port": 54321,
+    "base_port": 54366,
     "use_flatfile": true,
 
     "ip": [
