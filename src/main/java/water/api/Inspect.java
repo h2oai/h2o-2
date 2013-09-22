@@ -314,6 +314,28 @@ public class Inspect extends Request {
           + cols + " columns"
           + (bytesPerRow != 0 ? (", " + bytesPerRow + " bytes-per-row * " + rows + " rows = " + PrettyPrint.bytes(bytes)) : "")
         + "</font></b></p>");
+      // sb.append(
+      // " <script>$('#inspect').submit( function() {" +
+      // " $('html', 'table').animate({ scrollTop: $('#row_30').offset().top" +
+      // "}, 2000);" +
+      // "return false;" +
+      // "});</script>");
+      String _scrollto = String.valueOf(_offset.value() - 1);
+      sb.append(
+      " <script>$(document).ready(function(){ " +
+      " $('html, body').animate({ scrollTop: $('#row_"+_scrollto+"').offset().top" +
+      "}, 2000);" +
+      "return false;" +
+      "});</script>");
+    //##SPENCERddd##
+    sb.append(
+        "<form class='well form-inline' action='Inspect.html' id='inspect'>" +
+        " <input type='hidden' name='key' value="+key.toString()+">" +
+        " <input type='text' class='input-small span5' placeholder='filter' " +
+        "    name='offset' id='offset' value='"+_offset.value()+"' maxlength='512'>" +
+        " <button type='submit' class='btn btn-primary'>Jump to row!</button>" +
+        "</form>");
+    //##SPENCER
     // @formatter:on
     return sb.toString();
   }

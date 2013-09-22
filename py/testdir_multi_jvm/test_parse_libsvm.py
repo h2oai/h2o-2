@@ -117,7 +117,7 @@ class Basic(unittest.TestCase):
                 # do a little testing of saving the key as a csv
                 csvDownloadPathname = SYNDATASETS_DIR + "/" + csvFilename + "_csvDownload.csv"
                 print "Trying csvDownload of", csvDownloadPathname
-                h2o.nodes[0].csv_download(key=hex_key, csvPathname=csvDownloadPathname)
+                h2o.nodes[0].csv_download(src_key=hex_key, csvPathname=csvDownloadPathname)
 
                 # remove the original parsed key. source was already removed by h2o
                 # don't have to now. we use a new name for hex_keyB

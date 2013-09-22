@@ -7,7 +7,7 @@ setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, cl
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.gbm", function( data,destination,y,ntrees = 10,max_depth=8,learn_rate=.2,min_rows=10) { standardGeneric("h2o.gbm") })
-
+setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predict") })
 
 setMethod("h2o.gbm", signature( data="H2OParsedData", destination="character",y="character",ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
           function(data, destination, y, ntrees, max_depth, learn_rate, min_rows) {
@@ -260,13 +260,21 @@ setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="missing"),
           function(forest, k) { h2o.getTree(forest, k, plot = FALSE) })
 
-setMethod("predict", signature(object="H2OGLMModel"), 
+setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="missing"), 
         function(object) {
           res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=object@data@key)
           res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
           result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
           result
         })
+
+setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="H2OParsedData"), 
+          function(object, newdata) {
+            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
+            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
+            result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
+            result
+          })
 
 setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
           function(x, y, data, family, nfolds, alpha, lambda) {

@@ -1770,9 +1770,9 @@ class H2O(object):
             time.sleep(3) # to be able to see it
         return a
 
-    def csv_download(self, key, csvPathname, timeoutSecs=60, **kwargs):
+    def csv_download(self, src_key, csvPathname, timeoutSecs=60, **kwargs):
         # log it
-        params = {'key': key}
+        params = {'src_key': src_key}
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
         url = self.__url('downloadCsv')
         log('Start ' + url + paramsStr, comment=csvPathname)

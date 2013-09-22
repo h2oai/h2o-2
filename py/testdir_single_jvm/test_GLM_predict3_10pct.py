@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=predictHexKey)
             h2o_cmd.infoFromInspect(inspect, 'predict.hex')
 
-            h2o.nodes[0].csv_download(key=predictHexKey, csvPathname=csvPredictPathname)
+            h2o.nodes[0].csv_download(src_key=predictHexKey, csvPathname=csvPredictPathname)
             h2o.check_sandbox_for_errors()
 
             print "Do a check of the original output col against predicted output"

@@ -239,6 +239,11 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res))
 })
 
+setMethod("plot", "H2OPCAModel", function(x, y, ...) {
+  barplot(x@model$sdev^2)
+  title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
+})
+
 setMethod("show", "H2OGLMGridModel", function(object) {
   print(object@data)
   cat("GLMGrid Model Key:", object@key, "\n\nSummary\n")
