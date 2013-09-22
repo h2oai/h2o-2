@@ -1,24 +1,9 @@
-import unittest, random, sys, time
+import unittest, random, sys, time, getpass
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j
 
-def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
-    r1 = random.Random(SEED)
-    dsf = open(csvPathname, "w+")
-
-    for i in range(rowCount):
-        rowData = []
-        for j in range(colCount):
-            ri = r1.randint(0,1)
-            rowData.append(ri)
-
-        ri = r1.randint(0,1)
-        rowData.append(ri)
-
-        rowDataCsv = ",".join(map(str,rowData))
-        dsf.write(rowDataCsv + "\n")
-
-    dsf.close()
+# FIX! add cases with shuffled data!
+import h2o, h2o_cmd, h2o_hosts, h2o_gbm
+import h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_jobs as h2j
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -26,47 +11,22 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SEED, localhost
+        global SEED, localhost, tryHeap
+        tryHeap = 14
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10, enable_benchmark_log=True)
+            h2o.build_cloud(1, enable_benchmark_log=True, java_heap_GB=tryHeap)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
-        ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GBM_many_cols(self):
-        SYNDATASETS_DIR = h2o.make_syn_dir()
+    def test_GBM_poker_1m(self):
 
-        if localhost:
-            tryList = [
-                (10000, 100, 'cA', 300), 
-                ]
-        else:
-            tryList = [
-                # (10000, 10, 'cB', 300), 
-                # (10000, 50, 'cC', 300), 
-                (10000, 100, 'cD', 300), 
-                (10000, 200, 'cE', 300), 
-                (10000, 300, 'cF', 300), 
-                (10000, 400, 'cG', 300), 
-                (10000, 500, 'cH', 300), 
-                (10000, 1000, 'cI', 300), 
-                ]
-
-        ### h2b.browseTheCloud()
-        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
-            SEEDPERFILE = random.randint(0, sys.maxint)
-            # csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
-            csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
-            csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-            print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
-
+        for trial in range(2):
             # PARSE train****************************************
             h2o.beta_features = False #turn off beta_features
             start = time.time()
@@ -77,11 +37,17 @@ class Basic(unittest.TestCase):
             h2o.beta_features = False
             modelKey = 'GBMModelKey'
 
+            timeoutSecs = 300
+
             # Parse (train)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
-            parseTrainResult = h2i.import_parse(bucket=None, path=csvPathname, schema='put',
+
+            csvPathname = 'poker/poker-hand-testing.data'
+            hex_key = 'poker-hand-testing.data.hex'
+            parseTrainResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
                 hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
+
             # hack
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
@@ -96,7 +62,7 @@ class Basic(unittest.TestCase):
             # Logging to a benchmark file
             algo = "Parse"
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvPathname, elapsed)
             print l
             h2o.cloudPerfH2O.message(l)
 
@@ -139,7 +105,7 @@ class Basic(unittest.TestCase):
                 # Logging to a benchmark file
                 algo = "GBM " + str(ntrees) + " ntrees"
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
+                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvPathname, elapsed)
                 print l
                 h2o.cloudPerfH2O.message(l)
 

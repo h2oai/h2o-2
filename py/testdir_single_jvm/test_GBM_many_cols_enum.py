@@ -102,7 +102,8 @@ class Basic(unittest.TestCase):
             modelKey = 'GBMModelKey'
 
             # Parse (train)****************************************
-            print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
+            if h2o.beta_features:
+                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
             parseTrainResult = h2i.import_parse(bucket=None, path=csvPathname, schema='put',
                 hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
