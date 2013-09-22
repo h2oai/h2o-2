@@ -255,7 +255,7 @@ public final class AutoBuffer {
   // writer does a close().
   public final int close() { return close(true,false); }
   public final int close(boolean expect_tcp, boolean failed) {
-    //if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
+    if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
     assert _h2o != null || _chan != null; // Byte-array backed should not be closed
     // Extra asserts on closing TCP channels: we should always know & expect
     // TCP channels, and read them fully.  If we close a TCP channel that is
@@ -612,17 +612,6 @@ public final class AutoBuffer {
     if( x+z+(len-y) <= (len>>2) ) return;
     NOISE=ctm;
     //new Error("lotta zero: Z"+x+" / x("+z+"/"+(y-x)+") / Z"+(len-y)).printStackTrace();
-  }
-  private void Q(Object A[]) {
-    long ctm = System.currentTimeMillis();
-    if( ctm < NOISE+500) return;
-    if( A==null ) return;
-    int x=0; for( ; x<A.length; x++ ) if( A[x  ]!=null ) break;
-    int y=A.length; for( ; y>x; y-- ) if( A[y-1]!=null ) break;
-    int z=0; for( int i=x; i<y; i++ ) if( A[i  ]==null ) z++;
-    if( x+z+(A.length-y) <= (A.length>>2) ) return;
-    NOISE=ctm;
-    //new Error("lotta NULL: Z"+x+" / x("+z+"/"+(y-x)+") / Z"+(A.length-y)).printStackTrace();
   }
 
   // Put a zero-compressed array.  Compression is:
@@ -1052,22 +1041,8 @@ public final class AutoBuffer {
     putInt(ary.length);
     int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
     int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
-    int z=0, b=0, s=0, j=0; 
-    long sample=0;
-    for( int i=x; i<y; i++ )
-      if( ary[i]==0 ) z++;
-      //else if( ary[i] >= -1 && ary[i] < 253 ) b++;
-      //else if( ary[i] >= -32768 && ary[i] < 32767 ) s++;
-      //else if( ary[i] >= Integer.MIN_VALUE && ary[i] < Integer.MAX_VALUE ) j++;
-      //else sample=ary[i];
+    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
     Q(x,y,z,ary.length);
-    //System.out.println("long Z"+x+"-"+(y-x)+"-Z"+(ary.length-y)+", z="+z+", b="+b+", s="+s+", i="+j+"/"+ary.length+", sample="+sample);
-    //long ctm = System.currentTimeMillis();
-    //if( ctm > NOISE+500) {
-    //  NOISE=ctm;
-    //  new Error().printStackTrace();
-    //}
-
     int sofar = 0;
     while( sofar < ary.length ) {
       LongBuffer sb = _bb.asLongBuffer();
