@@ -255,7 +255,7 @@ public final class AutoBuffer {
   // writer does a close().
   public final int close() { return close(true,false); }
   public final int close(boolean expect_tcp, boolean failed) {
-    if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
+    //if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
     assert _h2o != null || _chan != null; // Byte-array backed should not be closed
     // Extra asserts on closing TCP channels: we should always know & expect
     // TCP channels, and read them fully.  If we close a TCP channel that is
@@ -461,7 +461,7 @@ public final class AutoBuffer {
     }
     _time_io_ns += (System.nanoTime()-ns);
     _bb.flip();                 // Prep for handing out bytes
-    for( int i=0; i < _bb.limit(); i++ ) if( _bb.get(i)==0 ) _zeros++;
+    //for( int i=0; i < _bb.limit(); i++ ) if( _bb.get(i)==0 ) _zeros++;
     _firstPage = false;         // First page of data is gone gone gone
     return _bb;
   }
@@ -494,7 +494,7 @@ public final class AutoBuffer {
     try {
       if( _chan == null )
         tcpOpen(); // This is a big operation.  Open a TCP socket as-needed.
-      for( int i=0; i < _bb.limit(); i++ ) if( _bb.get(i)==0 ) _zeros++;
+      //for( int i=0; i < _bb.limit(); i++ ) if( _bb.get(i)==0 ) _zeros++;
       long ns = System.nanoTime();
       while( _bb.hasRemaining() ) {
         _chan.write(_bb);
@@ -603,15 +603,6 @@ public final class AutoBuffer {
     if( x==255 ) return (short)get2();
     assert x==254;
     return get4();
-  }
-
-  static long NOISE;
-  private void Q(int x, int y, int z, int len) {
-    long ctm = System.currentTimeMillis();
-    if( ctm < NOISE+500) return;
-    if( x+z+(len-y) <= (len>>2) ) return;
-    NOISE=ctm;
-    //new Error("lotta zero: Z"+x+" / x("+z+"/"+(y-x)+") / Z"+(len-y)).printStackTrace();
   }
 
   // Put a zero-compressed array.  Compression is:
@@ -866,16 +857,28 @@ public final class AutoBuffer {
   }
   public long[] getA8( ) {
     _arys++;
-    int len = getInt(); if( len == -1 ) return null;
-    long[] buf = MemoryManager.malloc8(len);
-    int sofar = 0;
-    while( sofar < buf.length ) {
+    // Get the lengths of lead & trailing zero sections, and the non-zero
+    // middle section.
+    int x = getInt(); if( x == -1 ) return null;
+    int y = getInt();           // Non-zero in the middle
+    int z = y==0 ? 0 : getInt();// Trailing zeros
+    long[] buf = MemoryManager.malloc8(x+y+z);
+    switch( get1() ) {       // 1,2,4 or 8 for how the middle section is passed
+    case 1: for( int i=x; i<x+y; i++ ) buf[i] =        get1(); return buf;
+    case 2: for( int i=x; i<x+y; i++ ) buf[i] = (short)get2(); return buf;
+    case 4: for( int i=x; i<x+y; i++ ) buf[i] =        get4(); return buf;
+    case 8: break;
+    default: H2O.fail();
+    }
+
+    int sofar = x;
+    while( sofar < x+y ) {
       LongBuffer as = _bb.asLongBuffer();
-      int more = Math.min(as.remaining(), len - sofar);
+      int more = Math.min(as.remaining(), x+y - sofar);
       as.get(buf, sofar, more);
       sofar += more;
       _bb.position(_bb.position() + as.position()*8);
-      if( sofar < len ) getSp(Math.min(_bb.capacity()-7, (len-sofar)*8));
+      if( sofar < x+y ) getSp(Math.min(_bb.capacity()-7, (x+y-sofar)*8));
     }
     return buf;
   }
@@ -981,10 +984,6 @@ public final class AutoBuffer {
     _arys++;
     if( ary == null ) return putInt(-1);
     putInt(ary.length);
-    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
-    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
-    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
-    Q(x,y,z,ary.length);
     return putA1(ary,ary.length);
   }
   public AutoBuffer putA1( byte[] ary, int length ) { return putA1(ary,0,length); }
@@ -1001,10 +1000,6 @@ public final class AutoBuffer {
     _arys++;
     if( ary == null ) return putInt(-1);
     putInt(ary.length);
-    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
-    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
-    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
-    Q(x,y,z,ary.length);
     int sofar = 0;
     while( sofar < ary.length ) {
       ShortBuffer sb = _bb.asShortBuffer();
@@ -1020,10 +1015,6 @@ public final class AutoBuffer {
     _arys++;
     if( ary == null ) return putInt(-1);
     putInt(ary.length);
-    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
-    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
-    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
-    Q(x,y,z,ary.length);
     int sofar = 0;
     while( sofar < ary.length ) {
       IntBuffer sb = _bb.asIntBuffer();
@@ -1038,19 +1029,42 @@ public final class AutoBuffer {
   public AutoBuffer putA8( long[] ary ) {
     _arys++;
     if( ary == null ) return putInt(-1);
-    putInt(ary.length);
+
+    // Trim leading & trailing zeros.  Pass along the length of leading &
+    // trailing zero sections, and the non-zero section in the middle.
     int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
     int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
-    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
-    Q(x,y,z,ary.length);
-    int sofar = 0;
-    while( sofar < ary.length ) {
+    int nzlen = y-x;
+    putInt(x);
+    putInt(nzlen);
+    if( nzlen > 0 )             // If any trailing nulls
+      putInt(ary.length-y);     // Trailing zeros
+
+    // Size trim the NZ section: pass as bytes or shorts if possible.
+    long min=Long.MAX_VALUE, max=Long.MIN_VALUE;
+    for( int i=x; i<y; i++ ) { if( ary[i]<min ) min=ary[i]; if( ary[i]>max ) max=ary[i]; }
+    if( 0 <= min && max < 256 ) { // Ship as unsigned bytes
+      put1(1);  for( int i=x; i<y; i++ ) put1((int)ary[i]);
+      return this;
+    }
+    if( Short.MIN_VALUE <= min && max < Short.MAX_VALUE ) { // Ship as shorts
+      put1(2);  for( int i=x; i<y; i++ ) put2((short)ary[i]);
+      return this;
+    }
+    if( Integer.MIN_VALUE <= min && max < Integer.MAX_VALUE ) { // Ship as ints
+      put1(4);  for( int i=x; i<y; i++ ) put4((int)ary[i]);
+      return this;
+    }
+
+    put1(8);                    // Ship as full longs
+    int sofar = x;
+    while( sofar < y ) {
       LongBuffer sb = _bb.asLongBuffer();
-      int len = Math.min(ary.length - sofar, sb.remaining());
+      int len = Math.min(y - sofar, sb.remaining());
       sb.put(ary, sofar, len);
       sofar += len;
       _bb.position(_bb.position() + sb.position()*8);
-      if( sofar < ary.length ) sendPartial();
+      if( sofar < y ) sendPartial();
     }
     return this;
   }
@@ -1058,10 +1072,6 @@ public final class AutoBuffer {
     _arys++;
     if( ary == null ) return putInt(-1);
     putInt(ary.length);
-    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
-    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
-    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
-    Q(x,y,z,ary.length);
     int sofar = 0;
     while( sofar < ary.length ) {
       FloatBuffer sb = _bb.asFloatBuffer();
@@ -1077,10 +1087,6 @@ public final class AutoBuffer {
     _arys++;
     if( ary == null ) return putInt(-1);
     putInt(ary.length);
-    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
-    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
-    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
-    Q(x,y,z,ary.length);
     int sofar = 0;
     while( sofar < ary.length ) {
       DoubleBuffer sb = _bb.asDoubleBuffer();

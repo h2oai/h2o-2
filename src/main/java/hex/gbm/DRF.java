@@ -266,6 +266,7 @@ public class DRF extends FrameJob {
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs,ncols,nclass,ymin,fr).doAll(fr);
+      //System.out.println(sbh.profString());
 
       // Reassign the new DHistograms back into the DTrees
       for( int t=0; t<ntrees; t++ ) {
