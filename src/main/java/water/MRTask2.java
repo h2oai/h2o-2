@@ -322,7 +322,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
     long ns = _nodes|(1L<<H2O.SELF.index()); // Save before copyOver crushes them
-    if( _res == null ) _nodes = 1L<<63; // Flag for no local results *at all*
+    if( _res == null ) _nodes = -1L; // Flag for no local results *at all*
     else if( _res != this ) {     // There is a local result, and its not self
       _res._profile = _profile;   // Use my profile (not childs)
       copyOver(_res);             // So copy into self
@@ -339,8 +339,9 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     assert mrt._fs == null;     // No blockable results from remote
     _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
-    if( _res == null ) _res = mrt;
-    else if( mrt._nodes != (1L<<63) ) _res.reduce4(mrt);
+    if( mrt._nodes != -1L )     // Any results at all?
+      if( _res == null ) _res = mrt;
+      else _res.reduce4(mrt);
   }
 
   /** Call user's reduction.  Also reduce any new AppendableVecs.  Called
