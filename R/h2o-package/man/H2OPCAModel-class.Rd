@@ -21,7 +21,7 @@ Objects can be created by calls of the form \code{new("H2OPCAModel", ...)}.
     \item{\code{standardized}: }{A logical value indicating whether the data was centered and scaled.}
     \item{\code{sdev}: }{The standard deviations of the principal components (i.e., the square roots of the eigenvalues of the covariance/correlation matrix).}
     \item{\code{rotation}: }{The matrix of variable loadings (i.e., a matrix whose columns contain the eigenvectors).}}
-    }}
+    }
   }
 }
 \section{Methods}{

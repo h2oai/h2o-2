@@ -17,7 +17,7 @@ test.GLM.benign <- function() {
   benign.sum = summary(benign.hex)
   print(benign.sum)
   
-  benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
+  benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv", cainfo="cacert.pem"), header = TRUE)
   benign.data = na.omit(benign.data)
 
   myY = "3"; myY.r = as.numeric(myY) + 1
