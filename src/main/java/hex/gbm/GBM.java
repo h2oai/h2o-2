@@ -208,7 +208,7 @@ public class GBM extends FrameJob {
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(new DTree[]{tree},new int[]{leaf},ncols,nclass,ymin,fr).doAll(fr);
-      System.out.println(sbh.profString());
+      //System.out.println(sbh.profString());
 
       // Reassign the new DHistogram back into the DTree
       final int tmax = tree._len; // Number of total splits

@@ -255,7 +255,7 @@ public final class AutoBuffer {
   // writer does a close().
   public final int close() { return close(true,false); }
   public final int close(boolean expect_tcp, boolean failed) {
-    if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
+    //if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
     assert _h2o != null || _chan != null; // Byte-array backed should not be closed
     // Extra asserts on closing TCP channels: we should always know & expect
     // TCP channels, and read them fully.  If we close a TCP channel that is
@@ -586,37 +586,98 @@ public final class AutoBuffer {
     return f.write(this);
   }
 
-  // Put a compressed array length
-  public AutoBuffer putlen( int len ) {
-    if( len==-1 ) return put1(255);
-    return len < 254 ? put1(len) : put1(254).put4(len);
+  // Put a (compressed) integer.  Specifically values in the range -1 to ~250
+  // will take 1 byte, values near a Short will take 1+2 bytes, values near an
+  // Int will take 1+4 bytes, and bigger values 1+8 bytes.  This compression is
+  // optimized for small integers (including -1 which is often used as a "array
+  // is null" flag when passing the array length).
+  public AutoBuffer putInt( int x ) {
+    if( 0 <= (x+1)&& (x+1) <= 253 ) return put1(x+1);
+    if( Short.MIN_VALUE <= x && x <= Short.MAX_VALUE ) return put1(255).put2((short)x);
+    return put1(254).put4(x);
   }
-  // Get a compressed array length
-  public int getlen( ) {
-    int len = get1();
-    if( len==255 ) return -1;
-    return len==254 ? get4() : len;
+  // Get a (compressed) integer.  See above for the compression strategy and reasoning.
+  public int getInt( ) {
+    int x = get1();
+    if( x <= 253 ) return x-1;
+    if( x==255 ) return (short)get2();
+    assert x==254;
+    return get4();
   }
+
+  static long NOISE;
+  private void Q(int x, int y, int z, int len) {
+    long ctm = System.currentTimeMillis();
+    if( ctm < NOISE+500) return;
+    if( x+z+(len-y) <= (len>>2) ) return;
+    NOISE=ctm;
+    //new Error("lotta zero: Z"+x+" / x("+z+"/"+(y-x)+") / Z"+(len-y)).printStackTrace();
+  }
+  private void Q(Object A[]) {
+    long ctm = System.currentTimeMillis();
+    if( ctm < NOISE+500) return;
+    if( A==null ) return;
+    int x=0; for( ; x<A.length; x++ ) if( A[x  ]!=null ) break;
+    int y=A.length; for( ; y>x; y-- ) if( A[y-1]!=null ) break;
+    int z=0; for( int i=x; i<y; i++ ) if( A[i  ]==null ) z++;
+    if( x+z+(A.length-y) <= (A.length>>2) ) return;
+    NOISE=ctm;
+    //new Error("lotta NULL: Z"+x+" / x("+z+"/"+(y-x)+") / Z"+(A.length-y)).printStackTrace();
+  }
+
+  // Put a zero-compressed array.  Compression is:
+  //  If null : putInt(-1)
+  //  Else
+  //    putInt(# of leading nulls)
+  //    putInt(# of non-nulls)
+  //    If # of non-nulls is > 0, putInt( # of trailing nulls)
+  public long putZA( Object[] A ) {
+    if( A==null ) { putInt(-1); return 0; }
+    int x=0; for( ; x<A.length; x++ ) if( A[x  ]!=null ) break;
+    int y=A.length; for( ; y>x; y-- ) if( A[y-1]!=null ) break;
+    putInt(x);                  // Leading zeros to skip
+    putInt(y-x);                // Mixed non-zero guts in middle
+    if( y > x )                 // If any trailing nulls
+      putInt(A.length-y);       // Trailing zeros
+    return ((long)x<<32)|(y-x); // Return both leading zeros, and middle non-zeros
+  }
+  // Get the lengths of a zero-compressed array.
+  // Returns -1 if null.
+  // Returns a long of (leading zeros | middle non-zeros).
+  // If there are non-zeros, caller has to read the trailing zero-length.
+  public long getZA( ) {
+    int x=getInt();             // Length of leading zeros
+    if( x == -1 ) return -1;    // or a null
+    int nz=getInt();            // Non-zero in the middle
+    return ((long)x<<32)|(long)nz; // Return both ints
+  }
+
 
   public AutoBuffer putA(Iced[] fs) {
     _arys++;
-    if( fs == null ) return putlen(-1);
-    putlen(fs.length);
-    for( Iced f : fs ) put(f);
+    long xy = putZA(fs);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) put(fs[i]);
     return this;
   }
   public AutoBuffer putAA(Iced[][] fs) {
     _arys++;
-    if( fs == null ) return put4(-1);
-    put4(fs.length);
-    for( Iced[] f : fs ) putA(f);
+    long xy = putZA(fs);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putA(fs[i]);
     return this;
   }
   public AutoBuffer putAAA(Iced[][][] fs) {
     _arys++;
-    if( fs == null ) return put4(-1);
-    put4(fs.length);
-    for( Iced[][] f : fs ) putAA(f);
+    long xy = putZA(fs);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putAA(fs[i]);
     return this;
   }
 
@@ -632,56 +693,80 @@ public final class AutoBuffer {
   }
   public <T extends Iced> T[] getA(Class<T> tc) {
     _arys++;
-    int len = getlen(); if( len == -1 ) return null;
-    T[] ts = (T[]) Array.newInstance(tc, len);
-    for( int i = 0; i < len; ++i ) ts[i] = get();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    T[] ts = (T[]) Array.newInstance(tc, x+y+z);
+    for( int i = x; i < x+y; ++i ) ts[i] = get();
     return ts;
   }
   public <T extends Iced> T[][] getAA(Class<T> tc) {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
     Class<T[]> tcA = (Class<T[]>) Array.newInstance(tc, 0).getClass();
-    T[][] ts = (T[][]) Array.newInstance(tcA, len);
-    for( int i = 0; i < len; ++i ) ts[i] = getA(tc);
+    T[][] ts = (T[][]) Array.newInstance(tcA, x+y+z);
+    for( int i = x; i < x+y; ++i ) ts[i] = getA(tc);
     return ts;
   }
   public <T extends Iced> T[][][] getAAA(Class<T> tc) {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
     Class<T[]  > tcA  = (Class<T[]  >) Array.newInstance(tc , 0).getClass();
     Class<T[][]> tcAA = (Class<T[][]>) Array.newInstance(tcA, 0).getClass();
-    T[][][] ts = (T[][][]) Array.newInstance(tcAA, len);
-    for( int i = 0; i < len; ++i ) ts[i] = getAA(tc);
+    T[][][] ts = (T[][][]) Array.newInstance(tcAA, x+y+z);
+    for( int i = x; i < x+y; ++i ) ts[i] = getAA(tc);
     return ts;
   }
 
   public AutoBuffer putAStr(String[] fs)    {
     _arys++;
-    if( fs == null ) return put4(-1);
-    put4(fs.length);
-    for( String s : fs ) putStr(s);
+    long xy = putZA(fs);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putStr(fs[i]);
     return this;
   }
   public String[] getAStr() {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
-    String[] ts = new String[len];
-    for( int i = 0; i < len; ++i ) ts[i] = getStr();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    String[] ts = new String[x+y+z];
+    for( int i = x; i < x+y; ++i ) ts[i] = getStr();
     return ts;
   }
 
   public AutoBuffer putAAStr(String[][] fs)    {
     _arys++;
-    if( fs == null ) return put4(-1);
-    put4(fs.length);
-    for( String[] s : fs ) putAStr(s);
+    long xy = putZA(fs);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putAStr(fs[i]);
     return this;
   }
   public String[][] getAAStr() {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
-    String[][] ts = new String[len][];
-    for( int i = 0; i < len; ++i ) ts[i] = getAStr();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    String[][] ts = new String[x+y+z][];
+    for( int i = x; i < x+y; ++i ) ts[i] = getAStr();
     return ts;
   }
 
@@ -729,7 +814,7 @@ public final class AutoBuffer {
   // Utility functions to read & write arrays
   public byte[] getA1( ) {
     _arys++;
-    int len = getlen();
+    int len = getInt();
     return len == -1 ? null : getA1(len);
   }
   public byte[] getA1( int len ) {
@@ -746,7 +831,7 @@ public final class AutoBuffer {
 
   public short[] getA2( ) {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
+    int len = getInt(); if( len == -1 ) return null;
     short[] buf = MemoryManager.malloc2(len);
     int sofar = 0;
     while( sofar < buf.length ) {
@@ -762,7 +847,7 @@ public final class AutoBuffer {
 
   public int[] getA4( ) {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
+    int len = getInt(); if( len == -1 ) return null;
     int[] buf = MemoryManager.malloc4(len);
     int sofar = 0;
     while( sofar < buf.length ) {
@@ -777,7 +862,7 @@ public final class AutoBuffer {
   }
   public float[] getA4f( ) {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
+    int len = getInt(); if( len == -1 ) return null;
     float[] buf = MemoryManager.malloc4f(len);
     int sofar = 0;
     while( sofar < buf.length ) {
@@ -792,7 +877,7 @@ public final class AutoBuffer {
   }
   public long[] getA8( ) {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
+    int len = getInt(); if( len == -1 ) return null;
     long[] buf = MemoryManager.malloc8(len);
     int sofar = 0;
     while( sofar < buf.length ) {
@@ -807,7 +892,7 @@ public final class AutoBuffer {
   }
   public double[] getA8d( ) {
     _arys++;
-    int len = get4(); if( len == -1 ) return null;
+    int len = getInt(); if( len == -1 ) return null;
     double[] buf = MemoryManager.malloc8d(len);
     int sofar = 0;
     while( sofar < len ) {
@@ -822,64 +907,96 @@ public final class AutoBuffer {
   }
   public byte[][] getAA1( ) {
     _arys++;
-    int len = get4();  if( len == -1 ) return null;
-    byte[][] ary  = new byte[len][];
-    for( int i=0; i<len; i++ ) ary[i] = getA1();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    byte[][] ary  = new byte[x+y+z][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getA1();
     return ary;
   }
   public short[][] getAA2( ) {
     _arys++;
-    int len = get4();  if( len == -1 ) return null;
-    short[][] ary  = new short[len][];
-    for( int i=0; i<len; i++ ) ary[i] = getA2();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    short[][] ary  = new short[x+y+z][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getA2();
     return ary;
   }
   public int[][] getAA4( ) {
     _arys++;
-    int len = get4();  if( len == -1 ) return null;
-    int[][] ary  = new int[len][];
-    for( int i=0; i<len; i++ ) ary[i] = getA4();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    int[][] ary  = new int[x+y+z][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getA4();
     return ary;
   }
   public float[][] getAA4f( ) {
     _arys++;
-    int len = get4();  if( len == -1 ) return null;
-    float[][] ary  = new float[len][];
-    for( int i=0; i<len; i++ ) ary[i] = getA4f();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    float[][] ary  = new float[x+y+z][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getA4f();
     return ary;
   }
   public long[][] getAA8( ) {
     _arys++;
-    int len = get4();  if( len == -1 ) return null;
-    long[][] ary  = new long[len][];
-    for( int i=0; i<len; i++ ) ary[i] = getA8();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    long[][] ary  = new long[x+y+z][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getA8();
     return ary;
   }
   public double[][] getAA8d( ) {
     _arys++;
-    int len = get4();  if( len == -1 ) return null;
-    double[][] ary  = new double[len][];
-    for( int i=0; i<len; i++ ) ary[i] = getA8d();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    double[][] ary  = new double[x+y+z][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getA8d();
     return ary;
   }
   public int[][][] getAAA4( ) {
     _arys++;
-    int len = get4();  if( len == -1 ) return null;
-    int[][][] ary  = new int[len][][];
-    for( int i=0; i<len; i++ ) ary[i] = getAA4();
+    long xy = getZA();
+    if( xy == -1 ) return null;
+    int x=(int)(xy>>32);         // Leading nulls
+    int y=(int)xy;               // Middle non-zeros
+    int z = y==0 ? 0 : getInt(); // Trailing nulls
+    int[][][] ary  = new int[x+y+z][][];
+    for( int i=x; i<x+y; i++ ) ary[i] = getAA4();
     return ary;
   }
 
   public String getStr( ) {
-    int len = get2();
-    return len == 65535 ? null : new String(getA1(len));
+    int len = getInt();
+    return len == -1 ? null : new String(getA1(len));
   }
 
   public AutoBuffer putA1( byte[] ary ) {
     _arys++;
-    if( ary == null ) return putlen(-1);
-    putlen(ary.length);
-    return ary == null ? this : putA1(ary,ary.length);
+    if( ary == null ) return putInt(-1);
+    putInt(ary.length);
+    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
+    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
+    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
+    Q(x,y,z,ary.length);
+    return putA1(ary,ary.length);
   }
   public AutoBuffer putA1( byte[] ary, int length ) { return putA1(ary,0,length); }
   public AutoBuffer putA1( byte[] ary, int sofar, int length ) {
@@ -893,8 +1010,12 @@ public final class AutoBuffer {
   }
   public AutoBuffer putA2( short[] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
+    if( ary == null ) return putInt(-1);
+    putInt(ary.length);
+    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
+    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
+    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
+    Q(x,y,z,ary.length);
     int sofar = 0;
     while( sofar < ary.length ) {
       ShortBuffer sb = _bb.asShortBuffer();
@@ -908,8 +1029,12 @@ public final class AutoBuffer {
   }
   public AutoBuffer putA4( int[] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
+    if( ary == null ) return putInt(-1);
+    putInt(ary.length);
+    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
+    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
+    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
+    Q(x,y,z,ary.length);
     int sofar = 0;
     while( sofar < ary.length ) {
       IntBuffer sb = _bb.asIntBuffer();
@@ -923,8 +1048,26 @@ public final class AutoBuffer {
   }
   public AutoBuffer putA8( long[] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
+    if( ary == null ) return putInt(-1);
+    putInt(ary.length);
+    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
+    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
+    int z=0, b=0, s=0, j=0; 
+    long sample=0;
+    for( int i=x; i<y; i++ )
+      if( ary[i]==0 ) z++;
+      //else if( ary[i] >= -1 && ary[i] < 253 ) b++;
+      //else if( ary[i] >= -32768 && ary[i] < 32767 ) s++;
+      //else if( ary[i] >= Integer.MIN_VALUE && ary[i] < Integer.MAX_VALUE ) j++;
+      //else sample=ary[i];
+    Q(x,y,z,ary.length);
+    //System.out.println("long Z"+x+"-"+(y-x)+"-Z"+(ary.length-y)+", z="+z+", b="+b+", s="+s+", i="+j+"/"+ary.length+", sample="+sample);
+    //long ctm = System.currentTimeMillis();
+    //if( ctm > NOISE+500) {
+    //  NOISE=ctm;
+    //  new Error().printStackTrace();
+    //}
+
     int sofar = 0;
     while( sofar < ary.length ) {
       LongBuffer sb = _bb.asLongBuffer();
@@ -938,8 +1081,12 @@ public final class AutoBuffer {
   }
   public AutoBuffer putA4f( float[] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
+    if( ary == null ) return putInt(-1);
+    putInt(ary.length);
+    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
+    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
+    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
+    Q(x,y,z,ary.length);
     int sofar = 0;
     while( sofar < ary.length ) {
       FloatBuffer sb = _bb.asFloatBuffer();
@@ -953,8 +1100,12 @@ public final class AutoBuffer {
   }
   public AutoBuffer putA8d( double[] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
+    if( ary == null ) return putInt(-1);
+    putInt(ary.length);
+    int x=0; for( ; x<ary.length; x++ ) if( ary[x  ]!=0 ) break;
+    int y=ary.length; for( ; y>x; y-- ) if( ary[y-1]!=0 ) break;
+    int z=0; for( int i=x; i<y; i++ )   if( ary[i  ]==0 ) z++;
+    Q(x,y,z,ary.length);
     int sofar = 0;
     while( sofar < ary.length ) {
       DoubleBuffer sb = _bb.asDoubleBuffer();
@@ -969,58 +1120,71 @@ public final class AutoBuffer {
 
   public AutoBuffer putAA1( byte[][] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
-    for( int i=0; i<ary.length; i++ ) putA1(ary[i]);
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putA1(ary[i]);
     return this;
   }
   public AutoBuffer putAA2( short[][] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
-    for( int i=0; i<ary.length; i++ ) putA2(ary[i]);
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putA2(ary[i]);
     return this;
   }
   public AutoBuffer putAA4( int[][] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
-    for( int i=0; i<ary.length; i++ ) putA4(ary[i]);
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putA4(ary[i]);
     return this;
   }
   public AutoBuffer putAA4f( float[][] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
-    for( int i=0; i<ary.length; i++ ) putA4f(ary[i]);
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putA4f(ary[i]);
     return this;
   }
   public AutoBuffer putAA8( long[][] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
-    for( int i=0; i<ary.length; i++ ) putA8(ary[i]);
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putA8(ary[i]);
     return this;
   }
   public AutoBuffer putAA8d( double[][] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
-    for( int i=0; i<ary.length; i++ ) putA8d(ary[i]);
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putA8d(ary[i]);
     return this;
   }
   public AutoBuffer putAAA4( int[][][] ary ) {
     _arys++;
-    if( ary == null ) return put4(-1);
-    put4(ary.length);
-    for( int i=0; i<ary.length; i++ ) putAA4(ary[i]);
+    long xy = putZA(ary);
+    if( xy == -1 ) return this;
+    int x=(int)(xy>>32);
+    int y=(int)xy;
+    for( int i=x; i<x+y; i++ ) putAA4(ary[i]);
     return this;
   }
-  // Put a String as 2bytes of length then string bytes (not chars!)
+  // Put a String as bytes (not chars!)
   public AutoBuffer putStr( String s ) {
-    if( s==null ) return put2((char)65535);
-    byte[] b = s.getBytes();
-    return put2((char)b.length).putA1(b,b.length);
+    if( s==null ) return putInt(-1);
+    return putA1(s.getBytes());
   }
 
   public AutoBuffer putEnum( Enum x ) {

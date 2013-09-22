@@ -132,6 +132,7 @@ public class TypeMap {
 
   static public String className(int id) {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
+    assert CLAZZES[id] != null : "No class matching id "+id;
     return CLAZZES[id];
   }
   static public Class clazz(int id) {
