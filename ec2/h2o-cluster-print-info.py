@@ -6,8 +6,8 @@ import boto
 import boto.ec2
 
 
-# Environment variables you MUST set.
-# -----------------------------------
+# Environment variables you MUST set (either here or by passing them in).
+# -----------------------------------------------------------------------
 #
 # os.environ['AWS_ACCESS_KEY_ID'] = '...'
 # os.environ['AWS_SECRET_ACCESS_KEY'] = '...'
