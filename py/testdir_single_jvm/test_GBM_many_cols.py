@@ -113,7 +113,7 @@ class Basic(unittest.TestCase):
             # GBM(train iterate)****************************************
             h2o.beta_features = True
             ntrees = 100
-            for max_depth in [5]:
+            for max_depth in [5,10,20,40]:
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,
@@ -139,7 +139,7 @@ class Basic(unittest.TestCase):
                 # Logging to a benchmark file
                 algo = "GBM " + str(ntrees) + " ntrees"
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
+                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, trainElapsed)
                 print l
                 h2o.cloudPerfH2O.message(l)
 
@@ -165,8 +165,8 @@ class Basic(unittest.TestCase):
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'
-            eListTitle = "1jvmx28GB GBM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
-            fListTitle = "1jvmx28GB GBM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
+            eListTitle = ""
+            fListTitle = ""
             h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
 
 if __name__ == '__main__':
