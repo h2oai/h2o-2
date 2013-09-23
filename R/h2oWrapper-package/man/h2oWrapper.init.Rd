@@ -32,11 +32,7 @@ A logical value indicating whether to prompt the user to install the H2O R packa
 This method first checks if H2O is connectable. If it cannot connect and \code{startH2O = TRUE} with IP of localhost, it will attempt to start the H2O launcher GUI, which is installed with the H2O InstallBuilder executable. Otherwise, it stops immediately with an error. Once connected, the method checks to see if the local H2O R package version matches the version of H2O running on the server. If there is a mismatch and the user indicates she wishes to upgrade, it will remove the local H2O R package and download/install the H2O R package from the server.
 }
 \value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
+Once the package is successfully installed, this method will load it and return a \code{H2OClient} object containing the IP address and port number of the H2O server. See the \href{http://docs.0xdata.com/userguide/topR.html}{H2O R package documentation} for more details, or type \code{??h2o}.
 }
 \references{
 %% ~put references to the literature/web site here ~
@@ -55,13 +51,13 @@ This method first checks if H2O is connectable. If it cannot connect and \code{s
 }
 \examples{
 # Automatically install H2O R package from server if version mismatch
-h2oWrapper.init(ip = "localhost", port = 54321)
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321)
 
 # Prompt to install H2O R package from server if version mismatch
-h2oWrapper.init(ip = "localhost", port = 54321, silentUpgrade = FALSE, promptUpgrade = TRUE)
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, silentUpgrade = FALSE, promptUpgrade = TRUE)
 
 # Don't check if local H2O R package matches version from server
-h2oWrapper.init(ip = "localhost", port = 54321, startH2O = FALSE, silentUpgrade = FALSE, promptUpgrade = FALSE)
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = FALSE, silentUpgrade = FALSE, promptUpgrade = FALSE)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

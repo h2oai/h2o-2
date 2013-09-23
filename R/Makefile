@@ -23,13 +23,11 @@ endif
 	# Add to resources directory
 	mkdir -p ../lib/resources/R
 	mv info.txt ../lib/resources/R/info.txt
-	cp -p h2o_$(PROJECT_VERSION).tar.gz ../lib/resources/R	
+	mv h2o_$(PROJECT_VERSION).tar.gz ../lib/resources/R	
 
+	R CMD build h2oWrapper-package
 	mkdir -p ../target/R
 	cp -p README.txt ../target/R
-	mv h2o_$(PROJECT_VERSION).tar.gz ../target/R
-	
-	R CMD build h2oWrapper-package
 	mv h2oWrapper_1.0.tar.gz ../target/R
 
 clean:
