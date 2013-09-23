@@ -132,7 +132,7 @@ public class FVecTest extends TestUtil {
     ParseDataset.parse(vkey, new Key[]{rkey});
     UKV.remove(rkey);
     ValueArray ary = UKV.get(vkey);
-    assertEquals(ary.numRows(),fr._vecs[0].length());
+    assertEquals(ary.numRows(),fr.vecs()[0].length());
 
     try {
       int errs=0;
@@ -140,7 +140,7 @@ public class FVecTest extends TestUtil {
       for( long i=0; i<rows; i++ ) {
         if( errs > 1 ) break;
         for( int j=0; j<ary._cols.length; j++ ) {
-          double d1 = fr._vecs[j].at(i);
+          double d1 = fr.vecs()[j].at(i);
           double d2 = ary.datad(i,j);
           if( Math.abs((d1-d2)/d1) > 0.0000001  ) {
             System.out.println("Row "+i);
@@ -170,7 +170,7 @@ public class FVecTest extends TestUtil {
     UKV.remove(fkey);
     try {
       assertEquals(fr.numCols(),1050); // Count of columns
-      assertEquals(fr._vecs[0].length(),2659); // Count of rows
+      assertEquals(fr.numRows(),2659); // Count of rows
 
       double[] sums = new Sum().doAll(fr)._sums;
       assertEquals(3949,sums[0],EPSILON);
@@ -178,8 +178,8 @@ public class FVecTest extends TestUtil {
       assertEquals(3993,sums[2],EPSILON);
 
       // Create a temp column of zeros
-      Vec v0 = fr._vecs[0];
-      Vec v1 = fr._vecs[1];
+      Vec v0 = fr.vecs()[0];
+      Vec v1 = fr.vecs()[1];
       vz = v0.makeZero();
       // Add column 0 & 1 into the temp column
       new PairSum().doAll(vz,v0,v1);
@@ -230,8 +230,8 @@ public class FVecTest extends TestUtil {
     UKV.remove(fkey);
     Vec vz = null;
     try {
-      assertEquals(fr._vecs[0].length(),40000); // Count of rows
-      assertEquals(fr._vecs[0].domain().length,40000);
+      assertEquals(fr.numRows(),40000); // Count of rows
+      assertEquals(fr.vecs()[0].domain().length,40000);
 
     } finally {
       if( vz != null ) UKV.remove(vz._key);
@@ -239,8 +239,4 @@ public class FVecTest extends TestUtil {
       UKV.remove(okey);
     }
   }
-
-
-
 }
-

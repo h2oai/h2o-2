@@ -2310,8 +2310,8 @@ public class RequestArguments extends RequestStatics {
         if(!refreshOnChange()) { // Not if has dependencies, or page doesn't refresh
           Vec defaultVec = defaultValue();
           if( defaultVec != null && fr != null )
-            for( int i = 0; i < fr._vecs.length; i++ )
-              if( fr._vecs[i] == defaultVec )
+            for( int i = 0; i < fr.vecs().length; i++ )
+              if( fr.vecs()[i] == defaultVec )
                 return fr._names[i];
         }
         return "";
@@ -2351,7 +2351,7 @@ public class RequestArguments extends RequestStatics {
     private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && (vec.max()-vec.min() <= 1000);  }
     @Override protected Vec defaultValue() {
       Frame fr = fr();
-      return fr != null ? fr._vecs[fr._vecs.length - 1] : null;
+      return fr != null ? fr.vecs()[fr.vecs().length - 1] : null;
     }
     @Override protected String[] errors() { return new String[] { "Only positive integer or enum/factor columns can be classified, with a limit of 1000 classes" }; }
   }
@@ -2371,7 +2371,7 @@ public class RequestArguments extends RequestStatics {
       if((_response = response) != null)
         addPrerequisite(_response);
     }
-    public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr._vecs[i]; }
+    public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr.vecs()[i]; }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
     protected Comparator<Integer> colComp(final ValueArray ary){
       return null;
@@ -2430,7 +2430,7 @@ public class RequestArguments extends RequestStatics {
           throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
         if (al.contains(idx))
           throw new IllegalArgumentException("Column "+col+" is already ignored.");
-        checkLegality(fr._vecs[idx]);
+        checkLegality(fr.vecs()[idx]);
         al.add(idx);
       }
       if(al.size() == fr.numCols()-1)throw new IllegalArgumentException("Can not ignore all columns!");

@@ -38,7 +38,7 @@ public class ParserTest2 extends TestUtil {
     Assert.assertEquals(expected[0].length,fr.numCols());
     for (int i = 0; i < expected.length; ++i)
       for (int j = 0; j < fr.numCols(); ++j) {
-        double parsedVal = fr._vecs[j].at(i);
+        double parsedVal = fr.vecs()[j].at(i);
         Assert.assertTrue((Double.isNaN(parsedVal) == Double.isNaN(expected[i][j])));
         Assert.assertTrue(Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
       }
@@ -196,7 +196,7 @@ public class ParserTest2 extends TestUtil {
       Key r = Key.make();
       ParseDataset2.parse(r,new Key[]{key});
       Frame fr = DKV.get(r).get();
-      String[] cd = fr._vecs[2]._domain;
+      String[] cd = fr.vecs()[2]._domain;
       Assert.assertEquals(" four",cd[0]);
       Assert.assertEquals("one",cd[1]);
       Assert.assertEquals("three",cd[2]);
@@ -247,11 +247,11 @@ public class ParserTest2 extends TestUtil {
       Key r = Key.make();
       ParseDataset2.parse(r,new Key[]{key});
       Frame fr = DKV.get(r).get();
-      String[] cd = fr._vecs[2]._domain;
+      String[] cd = fr.vecs()[2]._domain;
       Assert.assertEquals("one",cd[0]);
       Assert.assertEquals("three",cd[1]);
       Assert.assertEquals("two",cd[2]);
-      cd = fr._vecs[0]._domain;
+      cd = fr.vecs()[0]._domain;
       Assert.assertEquals("bar",cd[0]);
       Assert.assertEquals("foo",cd[1]);
       Assert.assertEquals("foobar",cd[2]);
@@ -295,7 +295,7 @@ public class ParserTest2 extends TestUtil {
     Key r = Key.make();
     ParseDataset2.parse(r,new Key[]{key});
     Frame fr = DKV.get(r).get();
-    String[] cd = fr._vecs[3]._domain;
+    String[] cd = fr.vecs()[3]._domain;
     Assert.assertEquals("bar",cd[0]);
     Assert.assertEquals("foo",cd[1]);
     testParsed(r, expDouble,key);
@@ -384,20 +384,20 @@ public class ParserTest2 extends TestUtil {
     Key rkey = FVecTest.makeByteVec("na_test",data);
     Key okey = Key.make("na_test.hex");
     Frame fr = ParseDataset2.parse(okey, new Key[]{rkey});
-    int nlines = (int)fr._vecs[0].length();
+    int nlines = (int)fr.numRows();
     // This variable could be declared static, except that that causes an issue
     // with the weaver trying to load these classes before a Cloud is formed.
     Class [] expectedTypes = new Class[]{C1Chunk.class,C1SChunk.class,C2Chunk.class,C2SChunk.class,C4Chunk.class,C4FChunk.class,C8Chunk.class,C8DChunk.class, C1Chunk.class};
-    assertTrue(fr._vecs.length == expectedTypes.length);
+    assertTrue(fr.numCols() == expectedTypes.length);
 //    for(int i = 0; i < expectedTypes.length; ++i)
-//      assertTrue("unpextected vector type, got: " + fr._vecs[i].elem2BV(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr._vecs[i].elem2BV(0)));
+//      assertTrue("unpextected vector type, got: " + fr.vecs()[i].elem2BV(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr.vecs()[i].elem2BV(0)));
     assertEquals(9,nlines);
     for(int i = 0; i < nlines-2; ++i)
-      for( Vec v : fr._vecs )
+      for( Vec v : fr.vecs() )
         assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),
                    !Double.isNaN(v.at(i)) && !v.isNA(i) );
     int j = 0;
-    for( Vec v:fr._vecs ) {
+    for( Vec v:fr.vecs() ) {
       for( int i = nlines-2; i < nlines; ++i ) {
         assertTrue(i + ", " + j + ":" + v.at(i) + ", " + v.isNA(i),
                    Double.isNaN(v.at(i)) && v.isNA(i) );

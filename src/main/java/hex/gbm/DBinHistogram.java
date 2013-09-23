@@ -312,7 +312,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // An initial set of DBinHistograms (one per column) for this column set
   public static DBinHistogram[] initialHist( Frame fr, int ncols, char nbins, char nclass ) {
     DBinHistogram hists[] = new DBinHistogram[ncols];
-    Vec[] vs = fr._vecs;
+    Vec[] vs = fr.vecs();
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
       hists[j] = (v.naCnt()==v.length() || v.min()==v.max()) ? null

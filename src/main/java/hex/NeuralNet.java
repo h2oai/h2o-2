@@ -64,17 +64,17 @@ public class NeuralNet extends FrameJob {
   @Override protected void run() {
     final Key sourceKey = Key.make(input("source"));
     for( int i = cols.length - 1; i >= 0; i-- )
-      if( source._vecs[cols[i]] == response )
+      if( source.vecs()[cols[i]] == response )
         cols = ArrayUtils.remove(cols, i);
     String[] names = new String[cols.length + 1];
     Vec[] vecs = new Vec[cols.length + 1];
     for( int i = 0; i < cols.length; i++ ) {
       names[i] = source._names[cols[i]];
-      vecs[i] = source._vecs[cols[i]];
+      vecs[i] = source.vecs()[cols[i]];
     }
     names[names.length - 1] = "response";
     for( int i = 0; i < source.numCols(); i++ )
-      if( source._vecs[i] == response )
+      if( source.vecs()[i] == response )
         names[names.length - 1] = source._names[i];
     vecs[vecs.length - 1] = response;
     final Frame frame = reChunk(new Frame(names, vecs));
@@ -291,7 +291,7 @@ public class NeuralNet extends FrameJob {
 
     @Override protected Response serve() {
       FrameInput input = new FrameInput(source);
-      int classes = source._vecs.length - 1;
+      int classes = source.numCols() - 1;
       input.init(null, classes, false, 0);
       Layer[] layers = Layer.clone(model.layers, input, 0);
       for( int y = 1; y < layers.length; y++ ) {
@@ -346,7 +346,7 @@ public class NeuralNet extends FrameJob {
     @Override public boolean toHTML(StringBuilder sb) {
       DocGen.HTML.section(sb, "Classification error: " + String.format("%5.2f %%", 100 * classification_error));
       DocGen.HTML.section(sb, "Square error: " + sqr_error);
-      String[] classes = source._vecs[source._vecs.length - 1].domain();
+      String[] classes = source.vecs()[source.numCols() - 1].domain();
       if( classes == null )
         classes = Model.responseDomain(source);
       confusion(sb, "Confusion Matrix", classes, confusionMatrix);
@@ -411,7 +411,7 @@ public class NeuralNet extends FrameJob {
     final int splits = cores() * 2; // More in case of unbalance
     if( frame.anyVec().nChunks() >= splits )
       return frame;
-    Vec[] vecs = new Vec[frame._vecs.length];
+    Vec[] vecs = new Vec[frame.numCols()];
     for( int v = 0; v < vecs.length; v++ ) {
       AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
       long rows = frame.numRows();
@@ -422,16 +422,16 @@ public class NeuralNet extends FrameJob {
         NewChunk chunk = new NewChunk(vec, split);
         for( long r = off; r < lim; r++ ) {
           if( cache == null || r < cache._start || r >= cache._start + cache._len )
-            cache = frame._vecs[v].chunk(r);
+            cache = frame.vecs()[v].chunk(r);
           if( !cache.isNA(r) ) {
-            if( frame._vecs[v]._domain != null )
+            if( frame.vecs()[v]._domain != null )
               chunk.addEnum((int) cache.at8(r));
-            else if( frame._vecs[v].isInt() )
+            else if( frame.vecs()[v].isInt() )
               chunk.addNum(cache.at8(r), 0);
             else
               chunk.addNum(cache.at(r));
           } else {
-            if( frame._vecs[v].isInt() )
+            if( frame.vecs()[v].isInt() )
               chunk.addNA();
             else {
               // Don't use addNA() for doubles, as NewChunk uses separate array
@@ -442,7 +442,7 @@ public class NeuralNet extends FrameJob {
         chunk.close(split, null);
       }
       vecs[v] = vec.close(null);
-      vecs[v]._domain = frame._vecs[v]._domain;
+      vecs[v]._domain = frame.vecs()[v]._domain;
     }
     return new Frame(frame.names(), vecs);
   }

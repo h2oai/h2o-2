@@ -120,7 +120,7 @@ public class DRF extends FrameJob {
     // part of the frame and remove it up front.
     String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse ) {
+      if( fr.vecs()[i]==vresponse ) {
         vname=fr._names[i];
         fr.remove(i);
       }
@@ -325,7 +325,7 @@ public class DRF extends FrameJob {
       _mtrys = mtrys;
       _seed = seed;                  // Save for any replay scenarios
       _rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32),(int)seed});
-      _seeds = new long[fr._vecs[0].nChunks()];
+      _seeds = new long[fr.vecs()[0].nChunks()];
       for( int i=0; i<_seeds.length; i++ )
         _seeds[i] = _rand.nextLong();
       new DRFUndecidedNode(this,-1,hs); // The "root" node

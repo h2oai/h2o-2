@@ -66,7 +66,7 @@ public abstract class Model extends Iced {
   }
   /** If response column is not an enum, use numbers */
   public static String[] responseDomain(Frame fr) {
-    Vec resp = fr._vecs[fr._vecs.length-1];
+    Vec resp = fr.vecs()[fr.vecs().length-1];
     String[] domain = resp._domain;
     if(resp._domain == null) {
       int min = (int) resp.min();
@@ -121,14 +121,14 @@ public abstract class Model extends Iced {
     }.doAll(fr2);
     // Return just the output columns
     int x=_names.length-1, y=fr2.numCols();
-    return new Frame(Arrays.copyOfRange(fr2._names,x,y),Arrays.copyOfRange(fr2._vecs,x,y));
+    return new Frame(Arrays.copyOfRange(fr2._names,x,y),Arrays.copyOfRange(fr2.vecs(),x,y));
   }
 
   /** Single row scoring, on a compatible Frame.  */
   public final float[] score( Frame fr, boolean exact, int row ) {
     double tmp[] = new double[fr.numCols()];
     for( int i=0; i<tmp.length; i++ )
-      tmp[i] = fr._vecs[i].at(row);
+      tmp[i] = fr.vecs()[i].at(row);
     return score(fr.names(),fr.domains(),exact,tmp);
   }
 
@@ -231,7 +231,7 @@ public abstract class Model extends Iced {
       int d = cmap[c];          // Data index
       if( d == -1 ) throw H2O.unimpl(); // Swap in a new all-NA Vec
       else if( map[c] == null ) {       // No or identity domain map?
-        vecs[c] = fr._vecs[d];          // Just use the Vec as-is
+        vecs[c] = fr.vecs()[d];         // Just use the Vec as-is
       } else {
         throw H2O.unimpl();     // Domain mapping needed!
       }
