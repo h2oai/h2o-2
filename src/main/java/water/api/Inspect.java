@@ -327,7 +327,6 @@ public class Inspect extends Request {
       "}, 2000);" +
       "return false;" +
       "});</script>");
-    //##SPENCERddd##
     sb.append(
         "<form class='well form-inline' action='Inspect.html' id='inspect'>" +
         " <input type='hidden' name='key' value="+key.toString()+">" +
@@ -335,7 +334,6 @@ public class Inspect extends Request {
         "    name='offset' id='offset' value='"+_offset.value()+"' maxlength='512'>" +
         " <button type='submit' class='btn btn-primary'>Jump to row!</button>" +
         "</form>");
-    //##SPENCER
     // @formatter:on
     return sb.toString();
   }
