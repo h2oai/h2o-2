@@ -16,12 +16,28 @@ import water.fvec.Vec.VectorGroup;
  */
 public class Frame extends Iced {
   public String[] _names;
-  private Vec[] _vecs;
-  private Vec _col0;  // First readable vec; fast access to the VecGroup's Chunk layout
+  private Key[] _keys;          // Keys for the vectors
+  private transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
+  private transient Vec _col0;  // First readable vec; fast access to the VecGroup's Chunk layout
 
-  public Frame( String[] names, Vec[] vecs ) { _names=names; _vecs=vecs; }
-  public Frame( Frame fr ) { _names=fr._names.clone(); _vecs=fr._vecs.clone(); _col0 = fr._col0; }
-  public Frame(Vec... vecs){_vecs = vecs;}
+  public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
+  public Frame( Vec... vecs ){ this(null,vecs);}
+  public Frame( String[] names, Vec[] vecs ) { 
+    _names=names; 
+    _vecs=vecs; 
+    _keys = new Key[_vecs.length];
+    for( int i=0; i<_vecs.length; i++ ) _keys[i] = _vecs[i]._key;
+  }
+
+  public final Vec[] vecs() { 
+    if( _vecs != null ) return _vecs;
+    _vecs = new Vec[_keys.length];
+    for( int i=0; i<_keys.length; i++ )
+      _vecs[i] = DKV.get(_keys[i]).get();
+    return _vecs; 
+  }
+  // Force a cache-flush & reload, assuming vec mappings were altered remotely
+  public final Vec[] reloadVecs() { _vecs=null; return vecs(); }
 
   /** Finds the first column with a matching name.  */
   public int find( String name ) {
@@ -37,8 +53,10 @@ public class Frame extends Iced {
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
+    _keys  = Arrays.copyOf(_keys ,len+1);
     _names[len] = name;
     _vecs [len] = vec ;
+    _keys [len] = vec._key;
   }
 
   /** Removes the first column with a matching name.  */
@@ -52,6 +70,7 @@ public class Frame extends Iced {
     Vec [] res = new Vec[idxs.length];
     Vec [] rem = new Vec[_vecs.length-idxs.length];
     String [] names = new String[rem.length];
+    Key    [] keys  = new Key   [rem.length];
     int j = 0;
     int k = 0;
     int l = 0;
@@ -60,12 +79,14 @@ public class Frame extends Iced {
         ++j;
         res[k++] = _vecs[i];
       } else {
-        rem[l] = _vecs[i];
+        rem  [l] = _vecs [i];
         names[l] = _names[i];
+        keys [l] = _keys [i];
         ++l;
       }
     _vecs = rem;
     _names = names;
+    _keys = keys;
     assert l == rem.length && k == idxs.length;
     return res;
   }
@@ -76,13 +97,14 @@ public class Frame extends Iced {
     Vec v = _vecs[idx];
     System.arraycopy(_names,idx+1,_names,idx,len-idx-1);
     System.arraycopy(_vecs ,idx+1,_vecs ,idx,len-idx-1);
+    System.arraycopy(_keys ,idx+1,_keys ,idx,len-idx-1);
     _names = Arrays.copyOf(_names,len-1);
     _vecs  = Arrays.copyOf(_vecs ,len-1);
+    _keys  = Arrays.copyOf(_keys ,len-1);
     if( v == _col0 ) _col0 = null;
     return v;
   }
 
-  public final Vec[] vecs() { return _vecs; }
   public final String[] names() { return _names; }
   public int  numCols() { return _vecs.length; }
   public long numRows(){ return anyVec().length();}
@@ -98,8 +120,8 @@ public class Frame extends Iced {
   /** Returns the first readable vector. */
   public Vec anyVec() {
     if( _col0 != null ) return _col0;
-    for( Vec v : _vecs )
-      if( v != null && v.readable() )
+    for( Vec v : vecs() )
+      if( v.readable() )
         return (_col0 = v);
     return null;
   }
@@ -123,21 +145,22 @@ public class Frame extends Iced {
     }
   }
 
-  public void closeAppendables() {closeAppendables(new Futures()).blockForPending();}
+  public void closeAppendables() {closeAppendables(new Futures()).blockForPending(); }
   // Close all AppendableVec
   public Futures closeAppendables(Futures fs) {
     _col0 = null;               // Reset cache
-    for( int i=0; i<_vecs.length; i++ ) {
+    int len = vecs().length;
+    for( int i=0; i<len; i++ ) {
       Vec v = _vecs[i];
-      if( v != null && v instanceof AppendableVec )
-        _vecs[i] = ((AppendableVec)v).close(fs);
+      if( v instanceof AppendableVec )
+        DKV.put(_keys[i],_vecs[i] = ((AppendableVec)v).close(fs),fs);
     }
     return fs;
   }
 
   // True if any Appendables exist
   public boolean hasAppendables() {
-    for( Vec v : _vecs )
+    for( Vec v : vecs() )
       if( v instanceof AppendableVec )
         return true;
     return false;
@@ -157,6 +180,7 @@ public class Frame extends Iced {
     }
     _names = new String[0];
     _vecs = new Vec[0];
+    _keys = new Key[0];
   }
 
   public long byteSize() {

@@ -179,6 +179,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   public final T getResult() {
     join();
     // Do any post-writing work (zap rollup fields, etc)
+    _fr.reloadVecs();
     for( int i=0; i<_fr.numCols(); i++ )
       _fr.vecs()[i].postWrite();
     return self();
