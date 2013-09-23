@@ -1,0 +1,7 @@
+2013-09-23 14:24:54,989 1 jvms, 10GB heap, Parse syn_binary_10000x100.csv   1.27 secs
+2013-09-23 14:25:30,580 1 jvms, 10GB heap, GBM  ntrees=100 max_depth=5 syn_binary_10000x100.csv  35.27 secs
+2013-09-23 14:26:40,719 1 jvms, 10GB heap, GBM  ntrees=100 max_depth=10 syn_binary_10000x100.csv  70.13 secs
+2013-09-23 14:27:45,864 1 jvms, 10GB heap, GBM  ntrees=100 max_depth=20 syn_binary_10000x100.csv  65.13 secs
+2013-09-23 14:28:51,015 1 jvms, 10GB heap, GBM  ntrees=100 max_depth=40 syn_binary_10000x100.csv  65.14 secs
+2013-09-23 14:51:50,022 1 jvms, 10GB heap, Parse syn_binary_10000x100.csv   1.26 secs
+2013-09-23 15:04:57,877 1 jvms, 10GB heap, Parse syn_binary_10000x100.csv   1.27 secs

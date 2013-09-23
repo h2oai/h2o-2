@@ -1194,14 +1194,16 @@ class H2O(object):
         if key2 is not None: params_dict['destination_key'] = key2
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        print "\nKMeans params list:", params_dict
-        a = self.__do_json_request('KMeans2.json' if beta_features else 'KMeans.json',
+        algo = 'KMeans2' if beta_features else 'KMeans'
+
+        print "\n%s params list:" % algo, params_dict
+        a = self.__do_json_request(algo + '.json', 
             timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
-            raise Exception('H2O kmeans redirect is not Progress. KMeans json response precedes.')
+            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
 
         if noPoll:
             return a
@@ -1210,11 +1212,11 @@ class H2O(object):
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
-        verboseprint("\nKMeans result:", dump_json(a))
+        verboseprint("\n%s result:" % algo, dump_json(a))
 
         if (browseAlso | browse_json):
-            print "Redoing the KMeans through the browser, no results saved though"
-            h2b.browseJsonHistoryAsUrlLastMatch('KMeans')
+            print "Redoing the %s through the browser, no results saved though" % algo
+            h2b.browseJsonHistoryAsUrlLastMatch(algo)
             time.sleep(5)
         return a
 
@@ -1264,8 +1266,8 @@ class H2O(object):
         # requests.defaults({max_retries : 4})
         # https://github.com/kennethreitz/requests/issues/719
         # it was closed saying Requests doesn't do retries. (documentation implies otherwise)
-        verboseprint("\nParsing key:", key, "to key2:", key2, "(if None, means default)")
-
+        algo = "Parse2" if beta_features else "Parse"
+        verboseprint("\n %s key: %s to key2: %s (if None, means default)" % (algo, key, key2))
         # other h2o parse parameters, not in the defauls
         # header
         # exclude
@@ -1274,7 +1276,7 @@ class H2O(object):
             'destination_key': key2,
             }
         params_dict.update(kwargs)
-        print "\nParse params list:", params_dict
+        print "\n%s params list:" % algo, params_dict
 
         # h2o requires header=1 if header_from_file is used. Force it here to avoid bad test issues
         if kwargs.get('header_from_file'): # default None
@@ -1283,28 +1285,27 @@ class H2O(object):
         if benchmarkLogging:
             cloudPerfH2O.get_log_save(initOnly=True)
 
-        a = self.__do_json_request('Parse2.json' if beta_features else 'Parse.json',
-            timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request(algo + ".json", timeout=timeoutSecs, params=params_dict)
 
         # Check that the response has the right Progress url it's going to steer us to.
-        verboseprint("Parse2" if beta_features else "Parse" + " result:", dump_json(a))
+        verboseprint(algo + " result:", dump_json(a))
 
         # FIX! not using h2o redirect info for Parse2 yet
         if not beta_features and a['response']['redirect_request']!='Progress':
-            raise Exception('H2O parse redirect is not Progress. Parse json response precedes.')
+            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo) )
 
         if noPoll:
             return a
 
         # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
         # no noise if None
-        verboseprint('Parse noise:', noise)
+        verboseprint(algo + ' noise:', noise)
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
 
-        verboseprint("\nParse2" if beta_features else "\nParse" + " result:", dump_json(a))
+        verboseprint("\n" + algo + " result:", dump_json(a))
         return a
 
     def netstat(self):
@@ -1441,6 +1442,9 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, print_params=True, noPoll=False, rfView=True, **kwargs):
 
+        algo = 'DRF2' if beta_features else 'RF'
+        algoView = 'DRFView2' if beta_features else 'RFView'
+
         params_dict = {
             'data_key': data_key,
             'ntree':  trees,
@@ -1463,17 +1467,17 @@ class H2O(object):
         params_dict.update(kwargs)
 
         if print_params:
-            print "\nrandom_forest parameters:", params_dict
+            print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
-        rf = self.__do_json_request('DRF2.json' if beta_features else 'RF.json',
+        rf = self.__do_json_request(algo + '.json',
             timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nrandom_forest result:", dump_json(rf))
+        verboseprint("\n%s result:" % algo, dump_json(rf))
         
         # FIX! will we always get a redirect?
-        if rf['response']['redirect_request']!='RFView':
+        if rf['response']['redirect_request'] != algoView:
             print dump_json(rf)
-            raise Exception('H2O RF redirect is not RFView. RF json response precedes.')
+            raise Exception('H2O %s redirect is not %s json response precedes.' % (algo, algoView))
 
         # noPoll and rfView=False are similar?
         if (noPoll or not rfView) or (beta_features and rfView==False):
@@ -1513,6 +1517,9 @@ class H2O(object):
             print "random_forest_view not supported in H2O fvec yet. hacking done response"
             r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
             return r
+
+        algo = 'DRFView2' if beta_features else 'RFView'
+        algoScore = 'DRFScore2' if beta_features else 'RFScore'
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {
@@ -1535,22 +1542,22 @@ class H2O(object):
                 params_dict[k] = kwargs[k]
 
         if params_dict['ntree'] is None:
-            raise Exception("random_forest_view got no ntree: %s . Why? apparently need to pass a ntree to h2o")
+            raise Exception('%s got no ntree: %s . Why? h2o needs?' % (algo, params_dict['ntree']))
         # well assume we got the gold standard from the initial rf request
         ntree = params_dict['ntree']
 
         if print_params:
-            print "\nrandom_forest_view parameters:", params_dict
+            print "\n%s parameters:", (algo, params_dict)
             sys.stdout.flush()
 
         if useRFScore:
-            whichToUse = 'DRFScore2' if beta_features else 'RFScore'
+            whichUsed = algoScore
         else:
-            whichToUse = 'DRFView2' if beta_features else 'RFView'
+            whichUsed = algo
 
-        a = self.__do_json_request(whichToUse + ".json",
+        a = self.__do_json_request(whichUsed + ".json",
             timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nrandom_forest_view result:", dump_json(a))
+        verboseprint("\n%s result:" % whichUsed, dump_json(a))
 
         if noPoll:
             return a
@@ -1558,7 +1565,7 @@ class H2O(object):
         # add a fake redirect_request and redirect_request_args
         # to the RF response, to make it look like everyone else
         response = a['response']
-        response['redirect_request'] = whichToUse + ".json"
+        response['redirect_request'] = whichUsed + ".json"
         response['redirect_request_args'] = params_dict
 
         # no redirect_response in rfView? so need to pass params here
@@ -1570,13 +1577,13 @@ class H2O(object):
 
         # above we get this from what we're told from rf and passed to rfView
         ## ntree = rfView['ntree']
-        verboseprint("RFView done:", dump_json(rfView))
+        verboseprint("%s done:" % whichUsed, dump_json(rfView))
         status = rfView['response']['status']
         if status != 'done': raise Exception('Unexpected status: ' + status)
 
         numberBuilt = rfView['trees']['number_built']
         if numberBuilt!=ntree:
-            raise Exception("RFview done but number_built!=ntree: %s %s" % (numberBuilt, ntree))
+            raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
 
         # can't check this? These are returned in the middle but not at the end
         ## progress = rfView['response']['progress']
@@ -1590,12 +1597,12 @@ class H2O(object):
             ntree!=rfView['ntree']
 
         if errorInResponse:
-            raise Exception("\nBad values in %s.json\n" % whichToUse +
+            raise Exception("\nBad values in %s.json\n" % whichUsed +
                 "progress: %s, progressTotal: %s, ntree: %s, numberBuilt: %s, status: %s" % \
                 (progress, progressTotal, ntree, numberBuilt, status))
 
         if (browseAlso | browse_json):
-            h2b.browseJsonHistoryAsUrlLastMatch(whichToUse)
+            h2b.browseJsonHistoryAsUrlLastMatch(whichUsed)
         return rfView
 
     def random_forest_score(self, data_key, model_key,
@@ -1603,7 +1610,6 @@ class H2O(object):
         **kwargs):
         rfView = random_forest_view(useRFScore=True, *args, **kwargs)
         return rfView
-
 
     def gbm_view(self,model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
@@ -1614,6 +1620,9 @@ class H2O(object):
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
+        algo = 'GeneratePredictions2' if beta_features else 'GeneratePredictionsPage'
+        algoView = 'Inspect2' if beta_features else 'Inspect'
+
         if beta_features:
             params_dict = {
                 'data': data_key,
@@ -1628,7 +1637,6 @@ class H2O(object):
                 }
 
         browseAlso = kwargs.pop('browseAlso',False)
-
         # only update params_dict..don't add
         # throw away anything else as it should come from the model (propagating what RF used)
         for k in kwargs:
@@ -1636,26 +1644,26 @@ class H2O(object):
                 params_dict[k] = kwargs[k]
 
         if print_params:
-            print "\ngenerate_predictions parameters:", params_dict
+            print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
         a = self.__do_json_request(
-            'GeneratePredictions2.json' if beta_features else 'GeneratePredictionsPage.json', 
+            algo + '.json',
             timeout=timeoutSecs, 
             params=params_dict)
-        verboseprint("\ngenerate_predictions result:", dump_json(a))
+        verboseprint("\n%s result:" % algo, dump_json(a))
 
         if (browseAlso | browse_json):
-            h2b.browseJsonHistoryAsUrlLastMatch("GeneratePredictionsPage")
+            h2b.browseJsonHistoryAsUrlLastMatch(algo)
 
         # it will redirect to an inspect, so let's get that inspect stuff
         # FIX! not supported in json yet if beta_features
+        # FIX! who checks the redirect is correct?
         if beta_features:
-            print "generate_predictions response:", dump_json(a)
+            print "%s response:" % algo, dump_json(a)
         else:
             resultKey = a['response']['redirect_request_args']['key']
-            a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
-                timeout=timeoutSecs, params={"key": resultKey})
+            a = self.__do_json_request(algoView, timeout=timeoutSecs, params={"key": resultKey})
             verboseprint("\nInspect of " + resultKey, dump_json(a))
 
         return a

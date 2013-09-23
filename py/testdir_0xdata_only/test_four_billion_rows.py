@@ -24,14 +24,15 @@ class Basic(unittest.TestCase):
 
         importFolderPath = "billions"
         csvFilenameList = [
-            "four_billion_rows.csv",
+            ("four_billion_rows.csv", "a.hex"),
+            ("four_billion_rows.csv", "b.hex"),
             ]
-        for csvFilename in csvFilenameList:
+        for (csvFilename, hex_key) in csvFilenameList:
             csvPathname = importFolderPath + "/" + csvFilename
             start = time.time()
 
             # Parse*********************************
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
             elapsed = time.time() - start
             print csvFilename, 'parse time:', parseResult['response']['time']
