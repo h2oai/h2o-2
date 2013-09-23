@@ -329,7 +329,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     }
     closeLocal();
     if( ns == (1L<<H2O.CLOUD.size())-1 ) // All-done on head of whole MRTask tree?
-      _fr.closeAppendables(_fs); // Final close ops on any new appendable vec
+      _fr.closeAppendables(); // Final close ops on any new appendable vec
   }
 
   // Block for RPCs to complete, then reduce global results into self results
