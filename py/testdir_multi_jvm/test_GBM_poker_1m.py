@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
             h2o.beta_features = False
             modelKey = 'GBMModelKey'
 
-            timeoutSecs = 300
+            timeoutSecs = 900
 
             # Parse (train)****************************************
             if h2o.beta_features:
@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
             # GBM(train iterate)****************************************
             h2o.beta_features = True
             ntrees = 100
-            for max_depth in [5]:
+            for max_depth in [10]:
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,
