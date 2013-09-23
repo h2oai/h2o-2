@@ -108,7 +108,7 @@ class Basic(unittest.TestCase):
                 hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 print "Filling in the parseTrainResult['destination_key'] for h2o"
                 parseTrainResult['destination_key'] = trainKey
 
@@ -156,12 +156,12 @@ class Basic(unittest.TestCase):
                     noPoll=h2o.beta_features, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 # hack
                 if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 trainElapsed = time.time() - trainStart
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", csvPathname
 
                 # Logging to a benchmark file
-                algo = "GBM " + str(ntrees) + " ntrees"
+                algo = "GBM " + " ntrees=" + str(ntrees) + " max_depth=" + str(max_depth)
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
                     len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, trainElapsed)
                 print l

@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
                 hex_key=trainKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 print "Filling in the parseTrainResult['destination_key'] for h2o"
                 parseTrainResult['destination_key'] = trainKey
 
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
                 hex_key=testKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 print "Filling in the parseTestResult['destination_key'] for h2o"
                 parseTestResult['destination_key'] = testKey
 
@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
                     noPoll=True, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 # hack
                 if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 trainElapsed = time.time() - trainStart
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", trainFilename
 
@@ -120,7 +120,7 @@ class Basic(unittest.TestCase):
                     timeoutSecs=timeoutSecs, **kwargs)
                 # hack
                 if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
