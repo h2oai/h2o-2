@@ -267,7 +267,7 @@ setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
    function(data, col) {
       newCol = paste("factor(", data@key, "[", col, "])", sep="")
       expr = paste("colSwap(", data@key, ",", col, ",", newCol, ")", sep="")
-      res = h2o.__exec(data@h2o, paste(data@key, expr, sep="="))
+      res = h2o.__exec_dest_key(data@h2o, expr, destKey=data@key)
       data
 })
 

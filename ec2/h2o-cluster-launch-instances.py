@@ -29,8 +29,8 @@ securityGroupName = 'SecurityDisabled'
 # Options you might want to change.
 # ---------------------------------
 
-numInstancesToLaunch = 2
-instanceType = 'm1.large'
+numInstancesToLaunch = 8
+instanceType = 'm2.2xlarge'
 instanceNameRoot = 'H2ORStudioDemo'
 
 
@@ -47,8 +47,8 @@ dryRun = False
 # --------------------------------------------------------
 
 regionName = 'us-east-1'
-amiId = 'ami-634f050a'
-
+amiId = 'ami-17c18b7e'
+# amiId = 'ami-634f050a'                # old stable
 
 #--------------------------------------------------------------------------
 # No need to change anything below here.
