@@ -41,10 +41,9 @@ cd       ${WORKSPACE}/tmp/
 latest=`/bin/cat latest`
 
 # debug
-# /usr/bin/s3cmd get "s3://h2o-release/h2o/master/${latest}/h2o-*${latest}.zip"
-# cp  ~jenkins/seleniumJenkinsTmp/h2o_bak.zip h2o-1.7.0.${latest}.zip
-latest=1037
-cp  ~dan/danhub/h2o_1037_bak.zip h2o-1.7.0.${latest}.zip
+/usr/bin/s3cmd get "s3://h2o-release/h2o/master/${latest}/h2o-*${latest}.zip"
+# latest=1037
+# cp  ~dan/danhub/h2o_1037_bak.zip h2o-1.7.0.${latest}.zip
 # debug
 
 # Keep unzip happy, rm-rf the dir it wants to create:
