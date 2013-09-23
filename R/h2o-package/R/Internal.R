@@ -129,6 +129,15 @@ h2o.__exec <- function(client, expr) {
   res$key
 }
 
+h2o.__exec_dest_key <- function(client, expr, destKey) {
+  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
+  if (type != "character")
+    expr = deparse(substitute(expr))
+  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC, expression=expr, destination_key=destKey)
+  pkg.env$result_count = (pkg.env$result_count + 1) %% RESULT_MAX
+  res$key
+}
+
 h2o.__operator <- function(op, x, y) {
   if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
     stop("Can only operate on single column vectors")
