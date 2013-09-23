@@ -131,26 +131,18 @@ public class GBM extends FrameJob {
         // Keep the response in the basic working frame
         fr.add("response",vresponse);
 
-        // Add in Vecs after the response column which holds the row-by-row
-        // residuals: the (actual minus prediction), for each class.  The
-        // prediction is a probability distribution across classes: every class is
-        // assigned a probability from 0.0 to 1.0, and the sum of probs is 1.0.
-        //
-        // The initial prediction is just the class distribution.  The initial
-        // residuals are then basically the actual class minus the average class.
-        float preds[] = buildResiduals(nclass,fr,ncols,nrows,ymin);
-        // The Initial Tree, containing just these predictions.
-        DTree init_tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
-        new GBMDecidedNode(init_tree,preds);
-        // The Initial Forest containing just the initial tree
-        DTree forest[] = new DTree[] {init_tree};
+        // Build initial residual columns
+        buildResiduals(nclass,fr,ncols,nrows,ymin);
+
+        // The Initial Forest is empty
+        DTree forest[] = new DTree[] {};
         BulkScore bs = new BulkScore(forest,0,ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, 0 );
-        _errs = new float[]{(float)bs._sum/nrows}; // Errors for exactly 1 tree
+        _errs = new float[]{(float)bs._sum/nrows}; // Errors for zero trees
         gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
         DKV.put(outputKey, gbm_model);
 
         // Build trees until we hit the limit
-        for( int tid=1; tid<ntrees; tid++) {
+        for( int tid=0; tid<ntrees; tid++) {
           if( cancelled() ) break;
           forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
           // System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
@@ -278,19 +270,16 @@ public class GBM extends FrameJob {
   //
   // The initial prediction is just the class distribution.  The initial
   // residuals are then basically the actual class minus the average class.
-  private float[] buildResiduals(final char nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
+  private void buildResiduals(final char nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
     String[] domain = vresponse.domain();
     // Find the initial prediction - the current average response variable.
-    float preds[] = new float[nclass];
     if( nclass == 1 ) {
       fr.add("Residual",vresponse.makeCon(vresponse.mean()));
       throw H2O.unimpl();
     } else {
-      long cs[] = new ClassDist(nclass,ymin).doAll(vresponse)._cs;
-      for( int i=0; i<nclass; i++ ) {
-        preds[i] = (float)cs[i]/nrows; // Prediction is just class average
-        fr.add("Residual-"+domain[i],vresponse.makeCon(-preds[i]));
-      }
+      float f = 1.0f/nclass;    // Prediction is same for all classes
+      for( int i=0; i<nclass; i++ )
+        fr.add("Residual-"+domain[i],vresponse.makeCon(-f));
     }
     // Build a set of predictions that's the sum across all trees.
     for( int i=0; i<nclass; i++ )   // All Zero cols
@@ -310,8 +299,6 @@ public class GBM extends FrameJob {
         }
       }
     }.doAll(fr);
-
-    return preds;
   }
 
   // ---
