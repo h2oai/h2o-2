@@ -123,15 +123,16 @@ public class Frame extends Iced {
     }
   }
 
-  public void closeAppendables() {closeAppendables(new Futures());}
+  public void closeAppendables() {closeAppendables(new Futures()).blockForPending();}
   // Close all AppendableVec
-  public void closeAppendables(Futures fs) {
+  public Futures closeAppendables(Futures fs) {
     _col0 = null;               // Reset cache
     for( int i=0; i<_vecs.length; i++ ) {
       Vec v = _vecs[i];
       if( v != null && v instanceof AppendableVec )
         _vecs[i] = ((AppendableVec)v).close(fs);
     }
+    return fs;
   }
 
   // True if any Appendables exist
