@@ -41,6 +41,9 @@ setMethod("h2oWrapper.init", signature(ip="character", port="numeric", startH2O=
   }
   cat("Successfully connected to", myURL, "\n")
   h2oWrapper.checkPackage(myURL, silentUpgrade, promptUpgrade)
+  
+  library(h2o)
+  return(new("H2OClient", ip = myIP, port = myPort))
 })
 
 setMethod("h2oWrapper.init", signature(ip="ANY", port="ANY", startH2O="ANY", silentUpgrade="ANY", promptUpgrade="ANY"), 

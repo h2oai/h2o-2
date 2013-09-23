@@ -39,7 +39,12 @@ h2oWrapper.installDepPkgs()
 # Check connection with H2O and ensure local H2O R package matches server version
 myIP = "localhost"
 myPort = 54321
-h2oWrapper.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+localH2O = h2oWrapper.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+
+# Import iris dataset into H2O and print summary
+irisPath = system.file("extdata", "iris.csv", package="h2o")
+iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
+summary(iris.hex)
 
 # Attach H2O R package and run GLM demo
 library(h2o)
