@@ -19,7 +19,9 @@ At a minimum, you need to specify an ssh key name and a security group name.
 
 % h2o-cluster-launch-instances.py
 % h2o-cluster-distribute-flatfile.sh
-% h2o-cluster-distribute-h2o.sh
+% h2o-cluster-distribute-h2o.sh  --OR--  h2o-cluster-download-h2o.sh
+
+(Download may be faster than distribute, since download pulls from S3.)
 
 
 STEP 2:  Start H2O
