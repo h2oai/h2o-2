@@ -16,7 +16,7 @@ import water.fvec.Vec.VectorGroup;
  */
 public class Frame extends Iced {
   public String[] _names;
-  public Vec[] _vecs;
+  private Vec[] _vecs;
   private Vec _col0;  // First readable vec; fast access to the VecGroup's Chunk layout
 
   public Frame( String[] names, Vec[] vecs ) { _names=names; _vecs=vecs; }

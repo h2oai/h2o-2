@@ -216,16 +216,16 @@ public class GBMGrid extends FrameJob {
       if( frame != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
-        for( int i = 0; i < frame._vecs.length; i++ )
+        for( int i = 0; i < frame.numCols(); i++ )
           sb.append("<td><b>").append(frame._names[i]).append("</b></td>");
         sb.append("</tr>");
         for( int j = 0; j < frame.numRows(); j++ ) {
           sb.append("<tr>");
-          for( int i = 0; i < frame._vecs.length; i++ ) {
+          for( int i = 0; i < frame.numCols(); i++ ) {
             sb.append("<td>");
-            String txt = Inspect2.x0(frame._vecs[i], j);
+            String txt = Inspect2.x0(frame.vecs()[i], j);
             if( i == KEYS_INDEX ) {
-              String key = frame._vecs[i]._domain[(int) frame._vecs[i].at8(j)];
+              String key = frame.vecs()[i]._domain[(int) frame.vecs()[i].at8(j)];
               sb.append(GBMModelView.link(txt, Key.make(key)));
             } else
               sb.append(txt);

@@ -58,13 +58,13 @@ public class Inspect2 extends Request2 {
     numCols = src_key.numCols();
     Futures fs = new Futures();
     for( int i=0; i<numCols; i++ )
-      src_key._vecs[i].rollupStats(fs);
+      src_key.vecs()[i].rollupStats(fs);
     fs.blockForPending();
 
     byteSize = src_key.byteSize();
     cols = new ColSummary[numCols];
     for( int i=0; i<cols.length; i++ )
-      cols[i] = new ColSummary(src_key._names[i],src_key._vecs[i]);
+      cols[i] = new ColSummary(src_key._names[i],src_key.vecs()[i]);
 
     return new Response(Response.Status.done, this, -1, -1, null);
   }
@@ -105,13 +105,13 @@ public class Inspect2 extends Request2 {
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x1(src_key._vecs[i],-1,cols[i].min)).append("</td>");
+      sb.append("<td>").append(x1(src_key.vecs()[i],-1,cols[i].min)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Max").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x1(src_key._vecs[i],-1,cols[i].max)).append("</td>");
+      sb.append("<td>").append(x1(src_key.vecs()[i],-1,cols[i].max)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
@@ -134,7 +134,7 @@ public class Inspect2 extends Request2 {
       // An extra row holding vec's compressed bytesize
       sb.append("<td>").append("Size").append("</td>");
       for( int i=0; i<cols.length; i++ )
-        sb.append("<td>").append(PrettyPrint.bytes(src_key._vecs[i].byteSize())).append("</td>");
+        sb.append("<td>").append(PrettyPrint.bytes(src_key.vecs()[i].byteSize())).append("</td>");
       sb.append("</tr>");
 
       // All Vecs within a frame are compatible, so just read the
@@ -148,7 +148,7 @@ public class Inspect2 extends Request2 {
           .append(", ").append(c0.chunk2StartElem(j)).append("</td>");
         for( int i=0; i<cols.length; i++ ) {
           // Report chunk-type (compression scheme)
-          String clazz = src_key._vecs[i].elem2BV(j).getClass().getSimpleName();
+          String clazz = src_key.vecs()[i].elem2BV(j).getClass().getSimpleName();
           String trim = clazz.replaceAll("Chunk","");
           sb.append("<td>").append(trim).append("</td>");
         }
@@ -162,7 +162,7 @@ public class Inspect2 extends Request2 {
         sb.append("<tr>");      // Row header
         sb.append("<td>").append(offset+j).append("</td>");
         for( int i=0; i<cols.length; i++ ) // Columns w/in row
-          sb.append("<td>").append(x0(src_key._vecs[i],offset+j)).append("</td>");
+          sb.append("<td>").append(x0(src_key.vecs()[i],offset+j)).append("</td>");
         sb.append("</tr>");
       }
     }

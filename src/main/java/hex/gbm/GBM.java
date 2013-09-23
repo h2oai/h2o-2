@@ -100,7 +100,7 @@ public class GBM extends FrameJob {
     // part of the frame and remove it up front.
     String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse ) {
+      if( fr.vecs()[i]==vresponse ) {
         vname=fr._names[i];
         fr.remove(i);
       }

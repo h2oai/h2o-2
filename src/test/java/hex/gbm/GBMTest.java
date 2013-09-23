@@ -258,9 +258,9 @@ public class GBMTest extends TestUtil {
       // Build a confusion matrix
       ConfusionMatrix CM = new ConfusionMatrix();
       CM.actual = ftest;
-      CM.vactual = ftest._vecs[ftest.find("outcome")];
+      CM.vactual = ftest.vecs()[ftest.find("outcome")];
       CM.predict = fpreds;
-      CM.vpredict = fpreds._vecs[fpreds.find("predict")];
+      CM.vpredict = fpreds.vecs()[fpreds.find("predict")];
       CM.serve();               // Start it, do it
 
       // Really crappy cut-n-paste of what should be in the ConfusionMatrix class itself

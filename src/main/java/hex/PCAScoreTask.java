@@ -40,20 +40,13 @@ public abstract class PCAScoreTask {
 
     @Override public void map(Chunk [] chunks) {
       int ncol = _normSub.length;
-      Chunk [] inputs = Arrays.copyOf(chunks, ncol);
-      NewChunk [] outputs = new NewChunk[ncol];
-
-      for(int i = ncol; i < chunks.length; ++i) {
-        outputs[i-ncol] = (NewChunk)chunks[i];
-      }
-
-      int rows = inputs[0]._len;
+      int rows = chunks[0]._len;
       for(int c = 0; c < ncol; c++) {
         for(int r = 0; r < rows; r++) {
-          double x = inputs[c].at0(r);
+          double x = chunks[c].at0(r);
           x -= _normSub[c];
           x *= _normMul[c];
-          outputs[c].addNum(x);
+          chunks[ncol+c].set(r,x);
         }
       }
       if(_job != null) _job.updateProgress(1);
@@ -62,23 +55,18 @@ public abstract class PCAScoreTask {
 
   public static Frame standardize(Frame data, double[] normSub, double[] normMul) {
     int ncol = normSub.length;
-    Vec [] vecs = Arrays.copyOf(data._vecs, 2*ncol);
-    VectorGroup vg = data._vecs[0].group();
-    Key [] keys = vg.addVecs(ncol);
-    for(int i = 0; i < ncol; i++) {
-      vecs[ncol+i] = new AppendableVec(keys[i]);
-    }
+    Vec [] vecs = Arrays.copyOf(data.vecs(), 2*ncol);
+    for(int i = 0; i < ncol; i++)
+      vecs[ncol+i] = vecs[0].makeZero();
     StandardizeTask tsk = new StandardizeTask(null, normSub, normMul).doAll(vecs);
-    Vec [] outputVecs = Arrays.copyOfRange(tsk._fr._vecs, ncol, 2*ncol);
-
-    Frame f = new Frame(data.names(), outputVecs);
-    return f;
+    Vec [] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), ncol, 2*ncol);
+    return new Frame(data.names(), outputVecs);
   }
 
   public static Frame standardize(final DataFrame data) {
     // Extract only the columns in the associated model
     Frame subset = data.modelAsFrame();
-    Assert.assertEquals(subset._vecs.length, data._normSub.length);
+    Assert.assertEquals(subset.numCols(), data._normSub.length);
     return standardize(subset, data._normSub, data._normMul);
   }
 
@@ -99,20 +87,13 @@ public abstract class PCAScoreTask {
     // small matrix that fitting on a single node. For PCA scoring, the cols of A (rows of B) are
     // the features of the input dataset, while the cols of B are the principal components.
     @Override public void map(Chunk [] chunks) {
-      Chunk [] inputs = Arrays.copyOf(chunks, _nfeat);
-      NewChunk [] outputs = new NewChunk[_ncomp];
-
-      for(int i = _nfeat; i < chunks.length; ++i) {
-        outputs[i-_nfeat] = (NewChunk)chunks[i];
-      }
-
-      int rows = inputs[0]._len;
+      int rows = chunks[0]._len;
       for(int r = 0; r < rows; r++) {
         for(int c = 0; c < _ncomp; c++) {
          double x = 0;
          for(int d = 0; d < _nfeat; d++)
-           x += inputs[d].at0(r)*_smatrix[d][c];
-         outputs[c].addNum(x);
+           x += chunks[d].at0(r)*_smatrix[d][c];
+         chunks[_nfeat+c].set(r,x);
         }
       }
       _job.updateProgress(1);
@@ -120,24 +101,21 @@ public abstract class PCAScoreTask {
   }
 
   public static Job mult(final Frame lmatrix, final double[][] smatrix, int nrow, int ncol, final Key dataKey, final Key destKey) {
-    if(smatrix.length != lmatrix._vecs.length)
-      throw new RuntimeException("Mismatched dimensions! Left matrix has " + lmatrix._vecs.length + " columns, while right matrix has " + smatrix.length + " rows");
+    if(smatrix.length != lmatrix.numCols())
+      throw new RuntimeException("Mismatched dimensions! Left matrix has " + lmatrix.numCols() + " columns, while right matrix has " + smatrix.length + " rows");
 
     final int ncomp = Math.min(ncol, smatrix[0].length);
-    final int nfeat = Math.min(nrow, lmatrix._vecs.length);
+    final int nfeat = Math.min(nrow, lmatrix.numCols());
 
     final PCAScoreJob job = new PCAScoreJob(lmatrix, dataKey, destKey, false);
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
-        Vec [] vecs = Arrays.copyOf(lmatrix._vecs, nfeat + ncomp);
-        VectorGroup vg = lmatrix._vecs[0].group();
-        Key [] keys = vg.addVecs(ncomp);
-        for(int i = 0; i < ncomp; i++) {
-          vecs[nfeat+i] = new AppendableVec(keys[i]);
-        }
+        Vec [] vecs = Arrays.copyOf(lmatrix.vecs(), nfeat + ncomp);
+        for(int i = 0; i < ncomp; i++)
+          vecs[nfeat+i] = vecs[0].makeZero();
 
         ScoreTask tsk = new ScoreTask(job, nfeat, ncomp, smatrix).doAll(vecs);
-        Vec [] outputVecs = Arrays.copyOfRange(tsk._fr._vecs, nfeat, nfeat + ncomp);
+        Vec [] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), nfeat, nfeat + ncomp);
         String [] names = new String[ncomp];
         for(int i = 0; i < ncomp; i++) names[i] = "PC" + i;
         Frame f = new Frame(names, outputVecs);
@@ -179,30 +157,27 @@ public abstract class PCAScoreTask {
         // Note: Standardize automatically removes columns not in modelDataMap
         if(standardize) {
           // lmatrix = standardize(origModel, data._normSub, data._normMul);
-          int ncol = origModel._vecs.length;
-          Vec [] vecs = Arrays.copyOf(origModel._vecs, 2*ncol);
-          VectorGroup vg = origModel._vecs[0].group();
-          Key [] keys = vg.addVecs(ncol);
-          for(int i = 0; i < ncol; i++) {
-            vecs[ncol+i] = new AppendableVec(keys[i]);
-          }
+          int ncol = origModel.numCols();
+          Vec [] vecs = Arrays.copyOf(origModel.vecs(), 2*ncol);
+          for(int i = 0; i < ncol; i++)
+            vecs[ncol+i] = vecs[0].makeZero();
           StandardizeTask tsk = new StandardizeTask(job, data._normSub, data._normMul).doAll(vecs);
-          Vec [] outputVecs = Arrays.copyOfRange(tsk._fr._vecs, ncol, 2*ncol);
+          Vec [] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), ncol, 2*ncol);
           lmatrix = new Frame(origModel.names(), outputVecs);
         }
 
         final int ncomp = Math.min(ncol, eigvec[0].length);
-        final int nfeat = Math.min(nrow, lmatrix._vecs.length);
+        final int nfeat = Math.min(nrow, lmatrix.numCols());
 
-        Vec [] vecs = Arrays.copyOf(lmatrix._vecs, nfeat + ncomp);
-        VectorGroup vg = lmatrix._vecs[0].group();
+        Vec [] vecs = Arrays.copyOf(lmatrix.vecs(), nfeat + ncomp);
+        VectorGroup vg = lmatrix.vecs()[0].group();
         Key [] keys = vg.addVecs(ncomp);
         for(int i = 0; i < ncomp; i++) {
           vecs[nfeat+i] = new AppendableVec(keys[i]);
         }
 
         ScoreTask tsk = new ScoreTask(job, nfeat, ncomp, eigvec).doAll(vecs);
-        Vec [] outputVecs = Arrays.copyOfRange(tsk._fr._vecs, nfeat, nfeat + ncomp);
+        Vec [] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), nfeat, nfeat + ncomp);
         String [] names = new String[ncomp];
         for(int i = 0; i < ncomp; i++) names[i] = "PC" + i;
         Frame f = new Frame(names, outputVecs);

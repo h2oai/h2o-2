@@ -101,7 +101,6 @@ public class PCATest extends TestUtil {
     UKV.remove(ksrc);
     UKV.remove(kdst);
     // DKV.remove(kscore);
-    System.out.println("DONE!");
   }
 
   void runTests() throws JobCancelledException {
