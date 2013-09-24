@@ -36,7 +36,12 @@ Maintainer: Anqi Fu <anqi@0xdata.com>
 # Install H2O R package dependencies
 h2oWrapper.installDepPkgs()
 
-# Check connection with H2O and ensure local H2O R package matches server version
+# Check connection with H2O and ensure local H2O R package matches server version.
+#
+# Optionally ask for startH2O to start H2O if it's not already running.
+# Note that for startH2O to work, the IP must be localhost and you must
+# have installed with the Windows or Mac installer package so H2O is in 
+# a known place.  startH2O requires the port to be 54321.
 myIP = "localhost"
 myPort = 54321
 localH2O = h2oWrapper.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
