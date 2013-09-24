@@ -23,7 +23,9 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, SEED='1234567
             rowData.append(ri)
 
         # output column
-        ri = r1.randint(0,1)
+        # ri = r1.randint(0,1)
+        # skew the binomial 0,1 distribution. (by rounding to 0 or 1
+        ri = round(r1.triangular(0,1,0.3), 0)
         rowData.append(ri)
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         dsf.write(rowDataCsv)
@@ -100,8 +102,7 @@ class Basic(unittest.TestCase):
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
-                'case_mode': '=', 'case': 0}
+            kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 'case_mode': '=', 'case': 0}
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
@@ -126,6 +127,10 @@ class Basic(unittest.TestCase):
             print "classErr:", classErr
             print "err:", err
             print "auc:", auc
+            # what is reasonable?
+            self.assertAlmostEqual(err, 0.3, delta=0.15, msg="actual err: %s not close enough to 0.3" % err)
+            self.assertAlmostEqual(auc, 0.5, delta=0.15, msg="actual auc: %s not close enough to 0.5" % auc)
+
 
 if __name__ == '__main__':
     h2o.unit_main()
