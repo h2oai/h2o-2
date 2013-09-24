@@ -19,6 +19,7 @@ import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
+import water.util.Log;
 import water.util.Utils;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
@@ -1789,6 +1790,7 @@ public abstract class DGLM {
   }
   public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
       double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
+    Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals.");
     GLMModel currentModel = null;
     ArrayList<String> warns = new ArrayList<String>();
     long t1 = System.currentTimeMillis();
