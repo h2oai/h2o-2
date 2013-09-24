@@ -6,7 +6,7 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
-SH2JU=./shell2junit/sh2ju.sh
+SH2JU=~/shell2junit/sh2ju.sh
 echo "Checking that sh2ju.sh exists in the right place"
 if [ -f $SH2JU ]
 then

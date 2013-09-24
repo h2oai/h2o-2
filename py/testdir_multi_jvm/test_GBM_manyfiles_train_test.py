@@ -41,7 +41,8 @@ class Basic(unittest.TestCase):
             fList = []
 
             # Parse (train)****************************************
-            print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
+            if h2o.beta_features:
+                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
             csvPathname = importFolderPath + "/" + trainFilename
             parseTrainResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                 hex_key=trainKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
@@ -68,7 +69,9 @@ class Basic(unittest.TestCase):
             num_cols = inspect['num_cols']
 
             # Parse (test)****************************************
-            print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
+            if h2o.beta_features:
+                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
+
             parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
                 hex_key=testKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack

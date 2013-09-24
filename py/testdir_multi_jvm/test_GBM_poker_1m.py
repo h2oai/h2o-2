@@ -25,7 +25,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_poker_1m(self):
-
         for trial in range(2):
             # PARSE train****************************************
             h2o.beta_features = False #turn off beta_features
@@ -34,11 +33,8 @@ class Basic(unittest.TestCase):
             eList = []
             fList = []
 
-            h2o.beta_features = False
             modelKey = 'GBMModelKey'
-
             timeoutSecs = 900
-
             # Parse (train)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
