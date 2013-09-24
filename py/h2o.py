@@ -1437,7 +1437,7 @@ class H2O(object):
         ntree = params_dict['ntree']
 
         if print_params:
-            print "\n%s parameters:", (algo, params_dict)
+            print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
         if useRFScore:

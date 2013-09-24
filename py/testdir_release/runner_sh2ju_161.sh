@@ -97,7 +97,7 @@ echo "i.e. pytest_config-jenkins.json"
 echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 
 #### Clean old reports
-juLogClean
+## juLogClean
 
 #******************************************************
 # Examples
@@ -174,12 +174,14 @@ myR() {
     exit $rExitcode || $pExitcode
 }
 
-# juLog  -name=runit_RF.R myR 'runit_RF.R' || true
-# juLog  -name=runit_PCA.R myR 'runit_PCA.R' || true
-# juLog  -name=runit_kmeans.R myR 'runit_kmeans.R' || true
-# juLog  -name=runit_GLM.R myR 'runit_GLM.R' || true
-# juLog  -name=runit_GBM.R myR 'runit_GBM.R' || true
+# seems like it assumes the regex is present for non-zero exit code cases? (line 92 sh2ju.sh)
+# or ???
 
+juLog  -name=runit_RF.R myR 'runit_RF.R' || true
+juLog  -name=runit_PCA.R myR 'runit_PCA.R' || true
+juLog  -name=runit_kmeans.R myR 'runit_kmeans.R' || true
+juLog  -name=runit_GLM.R myR 'runit_GLM.R' || true
+juLog  -name=runit_GBM.R myR 'runit_GBM.R' || true
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
