@@ -68,6 +68,10 @@ class Basic(unittest.TestCase):
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
 
+            # Make col 378 it something we can do binomial regression on!
+            execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (trainKey, trainKey, trainKey)
+            resultExec = h2o_cmd.runExec(expression=execExpr)
+
             # Parse (test)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
@@ -85,12 +89,16 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "test parse result:", parseTestResult['destination_key']
 
+            # Make col 378 it something we can do binomial regression on!
+            execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (testKey, testKey, testKey)
+            resultExec = h2o_cmd.runExec(expression=execExpr)
 
             # Note ..no inspect of test data here..so translate happens later?
 
             # GBM (train iterate)****************************************
-            if not vresponse:
-                vresponse = num_cols
+            # if not vresponse:
+            #     vresponse = num_cols - 1
+            vresponse = 378
             print "Using the same vresponse %s for train and test (which should have a output value too)" % vresponse
 
             ntrees = 10
