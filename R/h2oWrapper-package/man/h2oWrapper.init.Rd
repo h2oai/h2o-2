@@ -50,7 +50,11 @@ Once the package is successfully installed, this method will load it and return 
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-# Automatically install H2O R package from server if version mismatch
+# Try to create a localhost connection to H2O.  Try to start it if needed.
+# Prompt to install H2O R package from server if version mismatch.
+localH2O = h2oWrapper.init()
+
+# Prompt to install H2O R package from server if version mismatch
 localH2O = h2oWrapper.init(ip = "localhost", port = 54321)
 
 # Prompt to install H2O R package from server if version mismatch
