@@ -175,7 +175,10 @@ public class Vec extends Iced {
   /** Compute the roll-up stats as-needed, and copy into the Vec object */
   Vec rollupStats() {
     if( _naCnt >= 0 ) return this;
-    if( _naCnt == -2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
+    Vec vthis = DKV.get(_key).get();
+    if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
+    if( vthis._naCnt>= 0 ) return vthis;
+
     final RollupStats rs = new RollupStats().doAll(this);
     setRollupStats(rs);
     // Now do this remotely also

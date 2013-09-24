@@ -1029,7 +1029,6 @@ public final class AutoBuffer {
   public AutoBuffer putA8( long[] ary ) {
     _arys++;
     if( ary == null ) return putInt(-1);
-    if( ary.length==19 ) System.out.print("V");
 
     // Trim leading & trailing zeros.  Pass along the length of leading &
     // trailing zero sections, and the non-zero section in the middle.
