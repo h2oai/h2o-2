@@ -1,4 +1,50 @@
 # Test gradient boosting machines in H2O
+# R -f runit_GBM.R --args H2OServer:Port
+# By default, H2OServer = 127.0.0.1 and Port = 54321
+args <- commandArgs(trailingOnly = TRUE)
+if(length(args) > 1)
+  stop("Usage: R -f runit_GBM.R --args H2OServer:Port")
+if(length(args) == 0) {
+  myIP = "127.0.0.1"
+  myPort = 54321
+} else {
+  argsplit = strsplit(args[1], ":")[[1]]
+  myIP = argsplit[1]
+  myPort = as.numeric(argsplit[2])
+}
+defaultPath = "../../target/R"
+
+# Check if H2O R wrapper package is installed
+if(!"h2oWrapper" %in% rownames(installed.packages())) {
+  envPath = Sys.getenv("H2OWrapperDir")
+  wrapDir = ifelse(envPath == "", defaultPath, envPath)
+  wrapName = list.files(wrapDir, pattern="h2oWrapper")[1]
+  wrapPath = paste(wrapDir, wrapName, sep="/")
+  
+  if(!file.exists(wrapPath))
+    stop(paste("h2oWrapper package does not exist at", wrapPath))
+  install.packages(wrapPath, repos = NULL, type = "source")
+}
+
+# Check that H2O R package matches version on server
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()      # Install R package dependencies
+h2oWrapper.init(ip=myIP, port=myPort, startH2O=FALSE, silentUpgrade = TRUE)
+
+# Load H2O R package and run test
+if(!"RUnit" %in% rownames(installed.packages())) install.packages("RUnit")
+if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
+if(!"gbm" %in% rownames(installed.packages())) install.packages("gbm")
+library(RUnit)
+library(glmnet)
+library(gbm)
+library(h2o)
+
+if(Sys.info()['sysname'] == "Windows")
+  options(RCurlOptions = list(cainfo = system.file("CurlSSL", "cacert.pem", package = "RCurl")))
+
+#------------------------------ Begin Tests ------------------------------#
+serverH2O = new("H2OClient", ip=myIP, port=myPort)
 grabRemote <- function(myURL, myFile) {
   temp <- tempfile()
   download.file(myURL, temp, method = "curl")
@@ -8,11 +54,11 @@ grabRemote <- function(myURL, myFile) {
 }
 
 checkGBMModel <- function(myGBM.h2o, myGBM.r) {
+  # Check GBM model against R
 }
 
-test.GBM.ecology <- function() {
+test.GBM.ecology <- function(serverH2O) {
   cat("\nImporting ecology_model.csv data...\n")
-  serverH2O = new("H2OClient", ip=myIP, port=myPort)
   ecology.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv")
   ecology.sum = summary(ecology.hex)
   print(ecology.sum)
@@ -44,3 +90,5 @@ test.GBM.airlines <- function() {
   # allyears.x = subset(allyears.x, select = -ignoreNum)
   # allyears.gbm = gbm.fit(y = allyears.data$IsArrDelayed, x = allyears.x, distribution = "bernoulli", n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
 }
+
+test.GBM.ecology(serverH2O)
