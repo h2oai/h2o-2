@@ -1,6 +1,7 @@
 import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
+import h2o_sandbox
 import h2o_print as h2p
 import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
@@ -78,9 +79,9 @@ def drain(src, dst):
 # Trickiness because you might have multiple IP addresses (Virtualbox), or Windows.
 # we used to not like giving ip 127.0.0.1 to h2o?
 def get_ip_address():
-    if ipaddr:
-        verboseprint("get_ip case 1:", ipaddr)
-        return ipaddr
+    if ipaddr_from_cmd_line:
+        verboseprint("get_ip case 1:", ipaddr_from_cmd_line)
+        return ipaddr_from_cmd_line
 
     import socket
     ip = '127.0.0.1'
@@ -136,7 +137,7 @@ def unit_main():
 browse_disable = True
 browse_json = False
 verbose = False
-ipaddr = None
+ipaddr_from_cmd_line = None
 config_json = None
 debugger = False
 random_udp_drop = False
@@ -172,13 +173,13 @@ def parse_our_args():
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
-    global browse_disable, browse_json, verbose, ipaddr, config_json, debugger, random_udp_drop
+    global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
     global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
     verbose = args.verbose
-    ipaddr = args.ip
+    ipaddr_from_cmd_line = args.ip
     config_json = args.config_json
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
@@ -667,135 +668,24 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
-def check_sandbox_for_errors(sandboxIgnoreErrors=False, cloudShutdownIsError=False):
-    if not os.path.exists(LOG_DIR):
-        return
+def check_sandbox_for_errors(cloudShutdownIsError=False, sandboxIgnoreErrors=False):
     # dont' have both tearDown and tearDownClass report the same found error
     # only need the first
-    if nodes and nodes[0].sandbox_error_report():
+    if nodes and nodes[0].sandbox_error_report(): # gets current state
         return
-    # FIX! wait for h2o to flush to files? how?
-    # Dump any assertion or error line to the screen
-    # Both "passing" and failing tests??? I guess that's good.
-    # if you find a problem, just keep printing till the end, in that file.
-    # The stdout/stderr is shared for the entire cloud session?
-    # so don't want to dump it multiple times?
-    errLines = []
-    for filename in os.listdir(LOG_DIR):
-        if re.search('stdout|stderr',filename):
-            sandFile = open(LOG_DIR + "/" + filename, "r")
-            # just in case error/assert is lower or upper case
-            # FIX! aren't we going to get the cloud building info failure messages
-            # oh well...if so ..it's a bug! "killing" is temp to detect jar mismatch error
-            regex1String = 'found multiple|exception|error|ERRR|assert|killing|killed|required ports'
-            if cloudShutdownIsError:
-                regex1String += '|shutdown command'
-            regex1 = re.compile(regex1String, re.IGNORECASE)
-            regex2 = re.compile('Caused',re.IGNORECASE)
-            # regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
-            # FIX! temp to avoid the INFO in jan's latest logging. don't print any info?
-            regex3 = re.compile('warn|TCP', re.IGNORECASE)
 
-            # there are many hdfs/apache messages with error in the text. treat as warning if they have '[WARN]'
-            # i.e. they start with:
-            # [WARN]
+    # Can build a cloud that ignores all sandbox things that normally fatal the test
+    # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter.
+    # we need the sandbox_ignore_errors, for the test teardown_cloud..the state disappears!
+    ignore = sandboxIgnoreErrors or (nodes and nodes[0].sandbox_ignore_errors)
+    errorFound = h2o_sandbox.check_sandbox_for_errors(
+        LOG_DIR=LOG_DIR,
+        sandboxIgnoreErrors=ignore,
+        cloudShutdownIsError=cloudShutdownIsError,
+        python_test_name=python_test_name)
 
-            # if we started due to "warning" ...then if we hit exception, we don't want to stop
-            # we want that to act like a new beginning. Maybe just treat "warning" and "info" as
-            # single line events? that's better
-            printing = 0 # "printing" is per file.
-            lines = 0 # count per file! errLines accumulates for multiple files.
-            for line in sandFile:
-                # JIT reporting looks like this..don't detect that as an error
-                printSingleWarning = False
-                foundBad = False
-                if not ' bytes)' in line:
-                    # no multiline FSM on this
-                    printSingleWarning = regex3.search(line)
-                    #   13190  280      ###        sun.nio.ch.DatagramChannelImpl::ensureOpen (16 bytes)
-
-                    # don't detect these class loader info messags as errors
-                    #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
-                    foundBad = regex1.search(line) and not (
-                        # ignore the long, long lines that the JStack prints as INFO
-                        ('stack_traces' in line) or
-                        # shows up as param to url for h2o
-                        ('out_of_bag_error_estimate' in line) or
-                        # R stdout confusion matrix. Probably need to figure out how to exclude R logs
-                        ('Training Error' in line) or
-                        ('Error' in line and 'Actual' in line) or
-                        # fvec
-                        ('prediction error' in line) or ('errors on' in line) or
-                        # R
-                        ('class.error' in line) or
-                        # original RF
-                        ('error rate' in line) or ('[Loaded ' in line) or
-                        ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
-
-                if (printing==0 and foundBad):
-                    printing = 1
-                    lines = 1
-                elif (printing==1):
-                    lines += 1
-                    # if we've been printing, stop when you get to another error
-                    # keep printing if the pattern match for the condition
-                    # is on a line with "Caused" in it ("Caused by")
-                    # only use caused for overriding an end condition
-                    foundCaused = regex2.search(line)
-                    # since the "at ..." lines may have the "bad words" in them, we also don't want
-                    # to stop if a line has " *at " at the beginning.
-                    # Update: Assertion can be followed by Exception.
-                    # Make sure we keep printing for a min of 4 lines
-                    foundAt = re.match(r'[\t ]+at ',line)
-                    if foundBad and (lines>10) and not (foundCaused or foundAt):
-                        printing = 2
-
-                if (printing==1):
-                    # to avoid extra newline from print. line already has one
-                    errLines.append(line)
-                    sys.stdout.write(line)
-
-                if (printSingleWarning):
-                    # don't print these lines
-                    if not (
-                        ('Unable to load native-hadoop library' in line) or
-                        ('stack_traces' in line) or
-                        ('Multiple local IPs detected' in line) or
-                        ('[Loaded ' in line) or
-                        ('RestS3Service' in line) ):
-
-                        sys.stdout.write(line)
-
-            sandFile.close()
-    sys.stdout.flush()
-
-    # already has \n in each line
-    # doing this kludge to put multiple line message in the python traceback,
-    # so it will be reported by jenkins. The problem with printing it to stdout
-    # is that we're in the tearDown class, and jenkins won't have this captured until
-    # after it thinks the test is done (tearDown is separate from the test)
-    # we probably could have a tearDown with the test rather than the class, but we
-    # would have to update all tests.
-    if len(errLines)!=0:
-        # check if the lines all start with INFO: or have "apache" in them
-        justInfo = True
-        for e in errLines:
-            justInfo &= re.match("INFO:", e) or ("apache" in e)
-
-        if not justInfo:
-            emsg1 = " check_sandbox_for_errors: Errors in sandbox stdout or stderr (including R stdout/stderr).\n" + \
-                     "Could have occurred at any prior time\n\n"
-            emsg2 = "".join(errLines)
-            if nodes:
-                nodes[0].sandbox_error_report(True)
-
-            # Can build a cloud that ignores all sandbox things that normally fatal the test
-            # Kludge, test will set this directly if it wants, rather than thru build_cloud parameter.
-            # we need the sandbox_ignore_errors, for the test teardown_cloud..the state disappears!
-            if sandboxIgnoreErrors or (nodes and nodes[0].sandbox_ignore_errors):
-                pass
-            else:
-                raise Exception(python_test_name + emsg1 + emsg2)
+    if errorFound and nodes:
+        nodes[0].sandbox_error_report(True) # sets
 
 def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
     if sleep_at_tear_down:
@@ -2027,7 +1917,9 @@ class H2O(object):
             args += ["-jar", self.get_h2o_jar()]
 
         # H2O should figure it out, if not specified
-        if self.addr is not None:
+        # DON"T EVER USE on multi-machine...h2o should always get it right, to be able to run on hadoop 
+        # where it's not told
+        if (self.addr is not None) and (not self.remoteH2O):
             args += [
                 '--ip=%s' % self.addr,
                 ]
@@ -2049,8 +1941,8 @@ class H2O(object):
             else:
                 debuggerPort = debuggerBasePort + self.node_id
 
-            if self.addr:
-                a = self.addr
+            if self.http_addr:
+                a = self.http_addr
             else:
                 a = "localhost"
 
@@ -2166,9 +2058,9 @@ class H2O(object):
         # means we won't give an ip to the jar when we start.
         # Or we can say use use_this_ip_addr=127.0.0.1, or the known address
         # if use_this_addr is None, use 127.0.0.1 for urls and json
-        # Command line arg 'ipaddr' dominates:
-        if ipaddr:
-            self.addr = ipaddr
+        # Command line arg 'ipaddr_from_cmd_line' dominates:
+        if ipaddr_from_cmd_line:
+            self.addr = ipaddr_from_cmd_line
         else:
             self.addr = use_this_ip_addr
 
@@ -2352,6 +2244,9 @@ class RemoteHost(object):
         # To debug paramiko you can use the following code:
         #paramiko.util.log_to_file('/tmp/paramiko.log')
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
+
+        # kbn. trying 9/23/13. Never specify -ip on java command line for multi-node
+        # but self.addr is used elsewhere. so look at self.remoteH2O to disable in get_args()
         self.addr = addr
         self.http_addr = addr
         self.username = username # this works, but it's host state
