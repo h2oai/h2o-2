@@ -56,11 +56,11 @@ else
     if [[ $USER == "kevin" ]]
     then
         python ../four_hour_cloud.py -cj pytest_config-kevin.json &
-        CLOUD_IP=127.1.1.1
+        CLOUD_IP=127.0.0.1
         CLOUD_PORT=54355
     else
         python ../four_hour_cloud.py &
-        CLOUD_IP=127.1.1.1
+        CLOUD_IP=127.0.0.1
         CLOUD_PORT=54321
     fi
 fi 

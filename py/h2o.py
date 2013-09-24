@@ -427,7 +427,7 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     if not os.path.exists(h2o_nodes_json):
         raise Exception("build_cloud_with_json: Can't find "+h2o_nodes_json+" file")
 
-    h2o_os_util.show_h2o_processes()
+    # h2o_os_util.show_h2o_processes()
 
     with open(h2o_nodes_json, 'rb') as f:
         cloneJson = json.load(f)
