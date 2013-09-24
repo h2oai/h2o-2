@@ -61,6 +61,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   // scalar variables
   Pass _phase;
   long _numRows;
+  int _nchunks;
   transient int _myrows;
   int _ncolumns;
   int _rpc;
@@ -336,13 +337,15 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   public void passOne() {
     if((_sourceDataset.isArray())) {
       ValueArray ary = _sourceDataset.get();
-      _nrows = new long[(int)ary.chunks()+1];
+      _nchunks = (int)ary.chunks();
+
     } else
-      _nrows = new long[2];
+      _nchunks = 1;
     // launch the distributed parser on its chunks.
     if(_parser.parallelParseSupported()){
       dfork(_sourceDataset._key);
     } else {
+      _nrows = new long[_nchunks+1];
       createEnums(); // otherwise called in init()
       phaseOneInitialize(); // otherwise called in map
       try{
@@ -472,7 +475,10 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
 
   @Override public void init(){
     super.init();
-    if(_phase == Pass.ONE)createEnums();
+    if(_phase == Pass.ONE){
+      _nrows = new long[_nchunks+1];
+      createEnums();
+    }
   }
   /** Sets the column names and creates the array of the enums for each
    * column.

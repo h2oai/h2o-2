@@ -90,6 +90,20 @@ public class Inspect2 extends Request2 {
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               DownloadDataset.link(skey, "Download as CSV") +
               "</div>");
+    String _scrollto = String.valueOf(offset - 1);
+      sb.append(
+      " <script>$(document).ready(function(){ " +
+      " $('html, body').animate({ scrollTop: $('#row_"+_scrollto+"').offset().top" +
+      "}, 2000);" +
+      "return false;" +
+      "});</script>");
+    sb.append(
+        "<form class='well form-inline' action='Inspect2.html' id='inspect'>" +
+        " <input type='hidden' name='src_key' value="+skey.toString()+">" +
+        " <input type='text' class='input-small span5' placeholder='filter' " +
+        "    name='offset' id='offset' value='"+offset+"' maxlength='512'>" +
+        " <button type='submit' class='btn btn-primary'>Jump to row!</button>" +
+        "</form>");
 
     // Start of where the pagination table goes.  For now, just the info button.
     sb.append(pagination(src_key.numRows(), skey));
@@ -159,7 +173,7 @@ public class Inspect2 extends Request2 {
       // First N rows
       int N = (int)Math.min(100,numRows-offset);
       for( int j=0; j<N; j++ ) {// N rows
-        sb.append("<tr>");      // Row header
+        sb.append("<tr id='row_"+String.valueOf(offset+j)+"'>");      // Row header
         sb.append("<td>").append(offset+j).append("</td>");
         for( int i=0; i<cols.length; i++ ) // Columns w/in row
           sb.append("<td>").append(x0(src_key.vecs()[i],offset+j)).append("</td>");

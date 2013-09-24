@@ -28,10 +28,11 @@ then
     rm -f ./h2o*$version.zip
     s3cmd ls s3://h2o-release/h2o/master/$version/
     # s3cmd get s3://h2o-release/h2o/master/$version/h2o.jar h2o_$version.jar
-    s3cmd get s3://h2o-release/h2o/master/$version/h2o*$version.zip 
-    mv h2o*$version.zip h2o_$version.zip
     # get the R h2o wrapper also
 fi
+# always get?
+s3cmd get s3://h2o-release/h2o/master/$version/h2o*$version.zip 
+mv h2o*$version.zip h2o_$version.zip
 # always get it! install in R, that installs a function to go to the jar
 # checks that the version number in h2o.jar matches the version number in h2o R package
 # which looks like this. The wrapper will get this for me. It will get the right version
