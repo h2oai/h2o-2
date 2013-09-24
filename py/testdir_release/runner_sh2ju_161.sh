@@ -164,6 +164,7 @@ juLog  -name=runit_RF.R myR 'runit_RF.R' || true
 juLog  -name=runit_PCA.R myR 'runit_PCA.R' || true
 juLog  -name=runit_kmeans.R myR 'runit_kmeans.R' || true
 juLog  -name=runit_GLM.R myR 'runit_GLM.R' || true
+juLog  -name=runit_GBM.R myR 'runit_GBM.R' || true
 
 
 # If this one fails, fail this script so the bash dies 
