@@ -1,4 +1,0 @@
-2013-09-23 15:01:02,199 1 jvms, 14GB heap, Parse syn_binary_10000x100.csv   1.22 secs
-2013-09-23 15:01:37,786 1 jvms, 14GB heap, GBM  ntrees=100 max_depth=5 syn_binary_10000x100.csv  35.27 secs
-2013-09-23 15:02:42,943 1 jvms, 14GB heap, GBM  ntrees=100 max_depth=10 syn_binary_10000x100.csv  65.14 secs
-2013-09-23 15:03:53,102 1 jvms, 14GB heap, GBM  ntrees=100 max_depth=20 syn_binary_10000x100.csv  70.14 secs
