@@ -33,9 +33,14 @@ h2oWrapper.init(ip=myIP, port=myPort, startH2O=FALSE, silentUpgrade = TRUE)
 # Load H2O R package and run test
 if(!"RUnit" %in% rownames(installed.packages())) install.packages("RUnit")
 if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
+if(!"gbm" %in% rownames(installed.packages())) install.packages("gbm")
 library(RUnit)
 library(glmnet)
+library(gbm)
 library(h2o)
+
+if(Sys.info()['sysname'] == "Windows")
+  options(RCurlOptions = list(cainfo = system.file("CurlSSL", "cacert.pem", package = "RCurl")))
 
 testSuite = defineTestSuite("h2o", dirs = "tests")
 if(!isValidTestSuite(testSuite)) stop("Not a valid test suite!")

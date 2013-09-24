@@ -17,7 +17,7 @@ test.GLM.benign <- function() {
   benign.sum = summary(benign.hex)
   print(benign.sum)
   
-  benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv", cainfo="cacert.pem"), header = TRUE)
+  benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
   benign.data = na.omit(benign.data)
 
   myY = "3"; myY.r = as.numeric(myY) + 1
@@ -42,6 +42,9 @@ test.GLM.prostate <- function() {
   prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
+  
+  prostate.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"), header = TRUE)
+  prostate.data = na.omit(prostate.data)
   
   myY = "1"; myY.r = as.numeric(myY) + 1
   for(maxx in 3:8) {

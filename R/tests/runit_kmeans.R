@@ -13,7 +13,7 @@ test.KM.benign <- function() {
   benign.sum = summary(benign.hex)
   print(benign.sum)
   
-  benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv", cainfo="cacert.pem"), header = TRUE)
+  benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
   benign.data = na.omit(benign.data)
   
   for(i in 1:5) {
@@ -32,7 +32,7 @@ test.KM.prostate <- function() {
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   
-  prostate.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", cainfo="cacert.pem"), header = TRUE)
+  prostate.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"), header = TRUE)
   prostate.data = na.omit(prostate.data)
   
   for(i in 5:8) {
