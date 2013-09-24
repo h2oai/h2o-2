@@ -175,7 +175,10 @@ public class Vec extends Iced {
   /** Compute the roll-up stats as-needed, and copy into the Vec object */
   Vec rollupStats() {
     if( _naCnt >= 0 ) return this;
-    if( _naCnt == -2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
+    Vec vthis = DKV.get(_key).get();
+    if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
+    if( vthis._naCnt>= 0 ) return vthis;
+
     final RollupStats rs = new RollupStats().doAll(this);
     setRollupStats(rs);
     // Now do this remotely also
@@ -398,7 +401,7 @@ public class Vec extends Iced {
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {
-    String s = "["+length()+(_naCnt<0 ? "" : ","+_min+"/"+_mean+"/"+_max+", "+PrettyPrint.bytes(_size)+", {");
+    String s = "["+length()+(_naCnt<0 ? ", {" : ","+_min+"/"+_mean+"/"+_max+", "+PrettyPrint.bytes(_size)+", {");
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";

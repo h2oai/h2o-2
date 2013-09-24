@@ -21,15 +21,17 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_covtype_train_test(self):
-        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
         files = [
-                ('standard', 'covtype.shuffled.90pct.data', 'covtype.train.hex', 1800, 54, 'covtype.shuffled.10pct.data', 'covtype.test.hex')
+                # None forces num_cols to be used. assumes you set it from Inspect
+                ('manyfiles-nflx-gz', 'file_1.dat.gz', 'file_1.hex', 1800, None, 'file_1.dat.gz', 'file_1_test.hex')
                 ]
 
-        # h2b.browseTheCloud()
+        # if I got to hdfs, it's here
+        # hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz
 
+        # h2b.browseTheCloud()
         for (importFolderPath, trainFilename, trainKey, timeoutSecs, vresponse, testFilename, testKey) in files:
             h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
@@ -41,7 +43,8 @@ class Basic(unittest.TestCase):
             # Parse (train)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
-            parseTrainResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + trainFilename, schema='local',
+            csvPathname = importFolderPath + "/" + trainFilename
+            parseTrainResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                 hex_key=trainKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:
@@ -54,9 +57,25 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "train parse result:", parseTrainResult['destination_key']
 
+            ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
+
+            # if you set beta_features here, the fvec translate will happen with the Inspect not the GBM
+            # h2o.beta_features = True
+            inspect = h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
+            print "\n" + csvPathname, \
+                "    num_rows:", "{:,}".format(inspect['num_rows']), \
+                "    num_cols:", "{:,}".format(inspect['num_cols'])
+            num_rows = inspect['num_rows']
+            num_cols = inspect['num_cols']
+
+            # Make col 378 it something we can do binomial regression on!
+            execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (trainKey, trainKey, trainKey)
+            resultExec = h2o_cmd.runExec(expression=execExpr)
+
             # Parse (test)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
+
             parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
                 hex_key=testKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
@@ -70,7 +89,18 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "test parse result:", parseTestResult['destination_key']
 
+            # Make col 378 it something we can do binomial regression on!
+            execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (testKey, testKey, testKey)
+            resultExec = h2o_cmd.runExec(expression=execExpr)
+
+            # Note ..no inspect of test data here..so translate happens later?
+
             # GBM (train iterate)****************************************
+            # if not vresponse:
+            #     vresponse = num_cols - 1
+            vresponse = 378
+            print "Using the same vresponse %s for train and test (which should have a output value too)" % vresponse
+
             ntrees = 10
             for max_depth in [5,10,20,40]:
                 params = {
@@ -84,11 +114,7 @@ class Basic(unittest.TestCase):
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
-
                 h2o.beta_features = True
-                # translate it (only really need to do once . out of loop?
-                h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
-                ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
                 # GBM train****************************************
                 trainStart = time.time()
@@ -113,7 +139,7 @@ class Basic(unittest.TestCase):
 
                 # GBM test****************************************
                 predictKey = 'Predict.hex'
-                h2o_cmd.runInspect(key=parseTestResult['destination_key'])
+                ### h2o_cmd.runInspect(key=parseTestResult['destination_key'])
                 start = time.time()
                 gbmTestResult = h2o_cmd.runPredict(
                     data_key=parseTestResult['destination_key'], 

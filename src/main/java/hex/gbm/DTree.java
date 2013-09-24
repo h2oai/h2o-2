@@ -775,7 +775,7 @@ class DTree extends Iced {
       if( Float.isNaN(y) ) return Float.NaN; // Ignore missing response vars
       int ycls = (int)y;        // Response class from 0 to nclass-1
       assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+y+", ymin="+_ymin;
-      int best= -1;             // Find largest class
+      int best= 0;              // Find largest class
       float best_score = Float.MIN_VALUE;
       float score = Float.NaN;
 
@@ -806,6 +806,9 @@ class DTree extends Iced {
           if( c == ycls ) score = f; // Also capture prediction for correct class
         }
       } // End of for-all trees
+
+      // No trees means predict avg class
+      if( _trees.length==0 ) { best=0; best_score=score=1.0f/_nclass; }
 
       // Having computed the votes across all trees, find the majority class
       // and it's error rate.
@@ -852,21 +855,6 @@ class DTree extends Iced {
     //}
   }
 
-  // Compute class distributions
-  static class ClassDist extends MRTask2<ClassDist> {
-    final char _nclass;
-    final int _ymin;
-    long _cs[];
-    ClassDist( char nclass, int ymin ) { _nclass = nclass; _ymin = ymin; }
-    @Override public void map( Chunk cr ) {
-      _cs = new long[_nclass];
-      for( int i=0; i<cr._len; i++ )
-        if( !cr.isNA0(i) )
-          _cs[(int)cr.at80(i)-_ymin]++;
-    }
-    @Override public void reduce( ClassDist cd ) { Utils.add(_cs,cd._cs); }
-  }
-
   // --------------------------------------------------------------------------
   public static abstract class TreeModel extends Model {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -892,7 +880,7 @@ class DTree extends Iced {
     public int numTrees() { return treeBits.length; }
 
     @Override protected float[] score0(double data[], float preds[]) {
-      Arrays.fill(preds,0);
+      Arrays.fill(preds,1.0f/nclasses());
       for( CompressedTree t : treeBits )
         t.addScore(preds, data);
       correctDistro(preds);
@@ -953,7 +941,7 @@ class DTree extends Iced {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Trees</th>");
         for( int i=0; i<errs.length; i++ )
-          sb.append("<td>").append(i+1).append("</td>");
+          sb.append("<td>").append(i).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>MSE</th>");
         for( int i=0; i<errs.length; i++ )

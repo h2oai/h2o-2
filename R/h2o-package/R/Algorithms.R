@@ -6,17 +6,16 @@ setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, cl
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
-setGeneric("h2o.gbm", function( data,destination,y,ntrees = 10,max_depth=8,learn_rate=.2,min_rows=10) { standardGeneric("h2o.gbm") })
+setGeneric("h2o.gbm", function(data, destination, y, x_ignore = as.numeric(NA), ntrees = 10, max_depth=8, learn_rate=.2, min_rows=10) { standardGeneric("h2o.gbm") })
 setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predict") })
 
-setMethod("h2o.gbm", signature( data="H2OParsedData", destination="character",y="character",ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-          function(data, destination, y, ntrees, max_depth, learn_rate, min_rows) {
-            
-	    res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM,destination_key=destination,source=data@key,vresponse=y,ntrees=ntrees, max_depth=max_depth,learn_rate=learn_rate,min_rows=min_rows)
-            while(h2o.__poll(data@h2o, res$job_key) != -1) { 
-		Sys.sleep(1) 
-	    }
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
+          function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
+      ignoredFeat = ifelse(length(x_ignore) == 1 && is.na(x_ignore), "", paste(x_ignore, sep="", collapse=","))
+      res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destination, source=data@key, vresponse=y, ignored_cols=ignoredFeat, ntrees=ntrees, max_depth=max_depth, learn_rate=learn_rate, min_rows=min_rows)
+      while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
 	    res2=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView,'_modelKey'=destination)
+      
 	    result=list()
 	    categories=length(res2$gbm_model$cm)
 	    cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
@@ -31,17 +30,19 @@ setMethod("h2o.gbm", signature( data="H2OParsedData", destination="character",y=
 	    resGBM
 	})
 
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character",y="character",ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
-          function(data, destination, y, ntrees, max_depth, learn_rate, min_rows) {
-            if(!(missing(ntrees) || class(ntrees) == "numeric"))
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character",y="character",x_ignore="ANY",ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
+          function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
+            if(!(missing(x_ignore) || class(x_ignore) == "numeric"))
+              stop(paste("ignore cannot be of class", class(x_ignore)))
+            else if(!(missing(ntrees) || class(ntrees) == "numeric"))
               stop(paste("ntrees cannot be of class", class(ntrees)))
             else if(!(missing(max_depth) || class(max_depth) == "numeric"))
               stop(paste("max_depth cannot be of class", class(max_depth)))
             else if(!(missing(learn_rate) || class(learn_rate) == "numeric"))
               stop(paste("learn_rate cannot be of class", class(learn_rate)))
-	    else if(!(missing(min_rows) || class(min_rows) == "numeric"))
+	          else if(!(missing(min_rows) || class(min_rows) == "numeric"))
               stop(paste("min_rows cannot be of class", class(min_rows)))
-            h2o.gbm(data,destination, y, ntrees, max_depth, learn_rate, min_rows) 
+            h2o.gbm(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) 
           })
 
 setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical"), function(data, tol, standardize) {
