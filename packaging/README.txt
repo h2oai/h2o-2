@@ -10,7 +10,7 @@ This package contains:
     R/                       Directory containing H2O package for R.
     R/README.txt             Read this if you are interested in writing R
                              programs that interact with H2O.
-    R/h2o_*.tar.gz           The R package for you to install.
+    R/h2oWrapper*.tar.gz           The R package for you to install.
 
     hadoop/                  Directory containing hadoop integration for H2O.
     hadoop/README.txt        Read this if you want to run H2O on a hadoop
