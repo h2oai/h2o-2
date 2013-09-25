@@ -455,7 +455,7 @@ public final class H2O {
     Key k = null;
     for( Value v : vs ) {
       if( v != null ) {
-        assert k == null || k == v._key;
+        assert k == null || k == v._key : "Mismatched keys: "+k+" vs "+v._key;
         k = v._key;
       }
     }
