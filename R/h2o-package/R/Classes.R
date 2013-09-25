@@ -166,10 +166,10 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   if(missing(i) && missing(j)) return(x)
   if(missing(i) && !missing(j)) {
     if(is.character(j)) return(do.call("$", c(x, j)))
-    expr = paste(x@key, "[", j-1, "]", sep="")
+    expr = paste(h2o.__escape(x@key), "[", j-1, "]", sep="")
   } else {
     if(class(i) == "H2OLogicalData") {
-      opt = paste(x@key, i@key, sep=",")
+      opt = paste(h2o.__escape(x@key), h2o.__escape(i@key), sep=",")
       if(missing(j))
         expr = paste("filter(", opt, ")", sep="")
       else if(is.character(j))
@@ -180,7 +180,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     }
     else if(is.numeric(i)) {
       start = min(i); i_off = i - start + 1;
-      opt = paste(x@key, start-1, max(i_off), sep=",")
+      opt = paste(h2o.__escape(x@key), start-1, max(i_off), sep=",")
       if(missing(j))
         expr = paste("slice(", opt, ")", sep="")
       else if(is.character(j))
@@ -199,7 +199,7 @@ setMethod("$", "H2OParsedData", function(x, name) {
     print("Column", as.character(name), "not present in expression"); return(NULL)
   } else {
     # x[match(name, myNames)]
-    expr = paste(x@key, "$", name, sep="")
+    expr = paste(h2o.__escape(x@key), "$", name, sep="")
     res = h2o.__exec(x@h2o, expr)
     new("H2OParsedData", h2o=x@h2o, key=res)
   }
@@ -281,8 +281,8 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
 setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(n > 0) opt = paste(x@key, nrow(x)-n, sep=",")
-  else opt = paste(x@key, abs(n), sep=",")
+  if(n > 0) opt = paste(h2o.__escape(x@key), nrow(x)-n, sep=",")
+  else opt = paste(h2o.__escape(x@key), abs(n), sep=",")
   res = h2o.__exec(x@h2o, paste("slice(", opt, ")", sep=""))
   as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res))
 })
@@ -295,8 +295,8 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
 setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
 setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
    function(data, col) {
-      newCol = paste("factor(", data@key, "[", col, "])", sep="")
-      expr = paste("colSwap(", data@key, ",", col, ",", newCol, ")", sep="")
+      newCol = paste("factor(", h2o.__escape(data@key), "[", col, "])", sep="")
+      expr = paste("colSwap(", h2o.__escape(data@key), ",", col, ",", newCol, ")", sep="")
       res = h2o.__exec_dest_key(data@h2o, expr, destKey=data@key)
       data
 })
