@@ -12,6 +12,11 @@ echo "current PID: $$"
 
 set -e
 
+# remove any test*xml or TEST*xml in the current dir
+rm -f test.*xml
+rm -f TEST*xml
+
+
 # This gets the h2o.jar
 source ./runner_setup.sh
 
