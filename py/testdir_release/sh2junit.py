@@ -55,8 +55,11 @@ def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
     content  = '<?xml version="1.0" encoding="UTF-8" ?>\n'
     content += '    <testsuite failures="0" name="%s" tests="1" errors="%s" time="%0.4f">\n' % (name, errors, elapsed)
     content += '        <testcase name="%s" time="%0.4f">\n' % (name, elapsed)
-    content += '            <failure type="ScriptError" message="Script Error"></failure>\n'
-
+    if errors != 0 and not sandboxErrorMessage:
+        content += '            <failure type="Non-zero R exit code" message="Non-zero R exit code"></failure>\n'
+    # may or may not be 2 errors (R exit code plus log error
+    if errors != 0 and sandboxErrorMessage:
+        content += '            <failure type="Error in h2o logs" message="Error in h2o logs"></failure>\n'
     content += '            <system-out>\n'
     content += '<![CDATA[\n'
     content += 'spawn stdout**********************************************************\n'

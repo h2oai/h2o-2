@@ -24,6 +24,8 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
     errLines = []
     for filename in os.listdir(LOG_DIR):
         # don't search the R stdout/stderr
+        # this matches the python h2o captured stdout/stderr, and also any downloaded h2o logs
+        # not the commands.log
         if re.search('h2o.*stdout|h2o.*stderr',filename):
             sandFile = open(LOG_DIR + "/" + filename, "r")
             # just in case error/assert is lower or upper case
