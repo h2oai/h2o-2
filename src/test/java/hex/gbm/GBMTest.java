@@ -35,22 +35,22 @@ public class GBMTest extends TestUtil {
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
              });
-    basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
-             new PrepData() {
-               Vec prep(Frame fr) { 
-                 assertEquals(380,fr.numRows());
-                 // Remove patient ID vector
-                 UKV.remove(fr.remove("ID")._key); 
-                 // Prostate: predict on CAPSULE
-                 return fr.remove("CAPSULE");
-               }
-             });
-    basicGBM("./smalldata/cars.csv","cars.hex",
-             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
-             });
-    basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
-             });
+    //basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
+    //         new PrepData() {
+    //           Vec prep(Frame fr) { 
+    //             assertEquals(380,fr.numRows());
+    //             // Remove patient ID vector
+    //             UKV.remove(fr.remove("ID")._key); 
+    //             // Prostate: predict on CAPSULE
+    //             return fr.remove("CAPSULE");
+    //           }
+    //         });
+    //basicGBM("./smalldata/cars.csv","cars.hex",
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+    //         });
+    //basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+    //         });
     //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
     //         new PrepData() {
     //           Vec prep(Frame fr) { 
@@ -104,7 +104,7 @@ public class GBMTest extends TestUtil {
     30,31,32,33,34,35,36,37,38,39,
     40,41,42,43,44,45,46,47,48,49,
   };
-  @Test public void testBasicDRF() {
+  /*@Test*/ public void testBasicDRF() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 

@@ -31,8 +31,8 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
   @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
   public int nbins = 1024;
 
-  // Overall prediction error as I add trees
-  transient protected float _errs[];
+  // Overall prediction Mean Squared Error as I add trees
+  transient protected double _errs[];
 
   public SharedTreeModelBuilder( String name, String keyn ) { super(name,Key.make(keyn+Key.make())); }
 
@@ -59,19 +59,37 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
         fr.remove(i);
       }
 
-    fr.add(vname,vresponse);         // Hardwire response as last vector
-    final Frame frm = new Frame(fr); // Model-Frame; no extra columns
-
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
-    final int  ncols = fr.numCols()-1; // Feature set
+    final int  ncols = fr.numCols(); // Feature set
     final long nrows = fr.numRows();
     final int ymin = (int)vresponse.min();
     final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass <= 1000; // Arbitrary cutoff for too many classes
-    _errs = new float[0];     // No trees yet
+    _errs = new double[0];                // No trees yet
     final Key outputKey = dest();
     final Key dataKey = null;
+    String[] domain = vresponse.domain();
+
+    fr.add(vname,vresponse);         // Hardwire response as last vector
+    final Frame frm = new Frame(fr); // Model-Frame; no extra columns
+
+    // Also add to the basic working Frame these sets:
+    //   nclass Vecs of current forest results (sum across all trees)
+    //   nclass Vecs of working/temp data
+    //   nclass Vecs of NIDs, allowing 1 tree per class
+
+    // Current forest values: results of summing the prior M trees
+    for( int i=0; i<nclass; i++ )
+      fr.add("Tree_"+domain[i], vresponse.makeZero());
+
+    // Initial probability distribution
+    for( int i=0; i<nclass; i++ )
+      fr.add("Work_"+domain[i], vresponse.makeCon(1.0f/nclass));
+
+    // One Tree per class, each tree needs a NIDs
+    for( int i=0; i<nclass; i++ )
+      fr.add("NIDs_"+domain[i], vresponse.makeZero());
 
     // Tail-call position: this forks off in the background, and this call
     // returns immediately.  The actual model build is merely kicked off.

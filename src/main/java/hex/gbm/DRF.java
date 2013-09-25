@@ -39,7 +39,7 @@ public class DRF extends SharedTreeModelBuilder {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, float [] errs, int ymin, long [][] cm){
+    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[] forest, double [] errs, int ymin, long [][] cm){
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
     @Override protected float[] score0(double data[], float preds[]) {
@@ -156,7 +156,7 @@ public class DRF extends SharedTreeModelBuilder {
           int old = _errs.length;
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
-          _errs[_errs.length-1] = (float)bs._sum/nrows;
+          _errs[_errs.length-1] = (double)bs._sum/nrows;
           drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
           DKV.put(outputKey, drf_model);
 
