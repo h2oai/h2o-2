@@ -53,7 +53,7 @@ def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
     # http://junitpdfreport.sourceforge.net/managedcontent/PdfTranslation
 
     content  = '<?xml version="1.0" encoding="UTF-8" ?>\n'
-    content += '    <testsuite failures="0" name="%s" tests="1" errors=%s time="%0.4f">\n' % (name, errors, elapsed)
+    content += '    <testsuite failures="0" name="%s" tests="1" errors="%s" time="%0.4f">\n' % (name, errors, elapsed)
     content += '        <testcase name="%s" time="%0.4f">\n' % (name, elapsed)
     content += '            <failure type="ScriptError" message="Script Error"></failure>\n'
 
