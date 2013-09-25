@@ -2,7 +2,9 @@ package water.fvec;
 
 import water.*;
 
-// The empty-compression function, where data is in 'long's.
+/**
+ * The empty-compression function, where data is in 'long's.
+ */
 public class C8Chunk extends Chunk {
   protected static final long _NA = Long.MIN_VALUE;
   C8Chunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>3; }

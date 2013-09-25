@@ -2,7 +2,9 @@ package water.fvec;
 
 import water.*;
 
-// The empty-compression function, where data is in UNSIGNED bytes
+/**
+ * The empty-compression function, if all elements fit directly on UNSIGNED bytes.
+ */
 public class C1NChunk extends Chunk {
   static final int OFF=0;
   C1NChunk(byte[] bs) { _mem=bs; _start = -1; _len = _mem.length; }

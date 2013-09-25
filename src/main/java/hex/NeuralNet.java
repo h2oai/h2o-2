@@ -1,8 +1,10 @@
 package hex;
 
 import hex.Layer.ChunksInput;
-import hex.Layer.FrameInput;
 import hex.Layer.Input;
+import hex.Layer.Softmax;
+import hex.Layer.VecSoftmax;
+import hex.Layer.VecsInput;
 
 import java.util.UUID;
 
@@ -14,6 +16,11 @@ import water.api.*;
 import water.fvec.*;
 import water.util.RString;
 
+/**
+ * Neural network.
+ *
+ * @author cypof
+ */
 public class NeuralNet extends ModelJob {
   static final int API_WEAVER = 1;
   public static DocGen.FieldDoc[] DOC_FIELDS;
@@ -49,43 +56,42 @@ public class NeuralNet extends ModelJob {
   }
 
   @Override protected void run() {
-    final Key sourceKey = Key.make(input("source"));
     for( int i = cols.length - 1; i >= 0; i-- )
       if( source.vecs()[cols[i]] == response )
         cols = ArrayUtils.remove(cols, i);
-    String[] names = new String[cols.length + 1];
-    Vec[] vecs = new Vec[cols.length + 1];
-    for( int i = 0; i < cols.length; i++ ) {
-      names[i] = source._names[cols[i]];
+    Vec[] vecs = new Vec[cols.length];
+    for( int i = 0; i < cols.length; i++ )
       vecs[i] = source.vecs()[cols[i]];
-    }
-    names[names.length - 1] = "response";
-    for( int i = 0; i < source.numCols(); i++ )
-      if( source.vecs()[i] == response )
-        names[names.length - 1] = source._names[i];
-    vecs[vecs.length - 1] = response;
-    final Frame frame = reChunk(new Frame(names, vecs));
+    vecs = reChunk(vecs);
 
     final Layer[] ls = new Layer[hidden.length + 2];
-    ls[0] = new FrameInput(frame);
-    ls[0].init(null, frame.numCols() - 1);
+    ls[0] = new VecsInput(vecs);
     for( int i = 0; i < hidden.length; i++ ) {
       if( activation == Activation.Rectifier )
-        ls[i + 1] = new Layer.Rectifier();
+        ls[i + 1] = new Layer.Rectifier(hidden[i]);
       else
-        ls[i + 1] = new Layer.Tanh();
+        ls[i + 1] = new Layer.Tanh(hidden[i]);
       ls[i + 1]._rate = (float) rate;
       ls[i + 1]._l2 = (float) l2;
-      ls[i + 1].init(ls[i], hidden[i]);
     }
-    ls[ls.length - 1] = new Layer.Softmax();
+    ls[ls.length - 1] = new VecSoftmax(response);
     ls[ls.length - 1]._rate = (float) rate;
     ls[ls.length - 1]._l2 = (float) l2;
-    int classes = (int) (response.max() + 1);
-    ls[ls.length - 1].init(ls[ls.length - 2], classes);
-    for( int i = 1; i < ls.length; i++ )
-      ls[i].randomize();
-    UKV.put(destination_key, new NeuralNetModel(destination_key, sourceKey, frame, ls));
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].init(ls, i);
+
+    final Key sourceKey = Key.make(input("source"));
+    String[] names = new String[cols.length];
+    for( int i = 0; i < cols.length; i++ )
+      names[i] = source._names[cols[i]];
+    String responseName = "response";
+    for( int i = 0; i < source.numCols(); i++ )
+      if( source.vecs()[i] == response )
+        responseName = source._names[i];
+    final Frame frame = new Frame(names, vecs);
+    frame.add(responseName, response);
+    NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+    UKV.put(destination_key, model);
 
     final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
     trainer.start();
@@ -185,8 +191,8 @@ public class NeuralNet extends ModelJob {
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls) {
       super(selfKey, dataKey, fr);
 
-      FrameInput input = (FrameInput) ls[0];
-      layers = Layer.clone(ls, new ChunksInput(null, input._means, input._sigmas), 0);
+      VecsInput input = (VecsInput) ls[0];
+      layers = Layer.clone(ls, new ChunksInput(null, input), 0);
       ws = new float[ls.length][];
       bs = new float[ls.length][];
       for( int y = 1; y < layers.length; y++ ) {
@@ -204,7 +210,7 @@ public class NeuralNet extends ModelJob {
         layers[y].init(layers[y - 1], bs[y].length, false, 0);
       }
       input._chunks = chunks;
-      input._row = rowInChunk;
+      input._pos = rowInChunk;
       for( int i = 0; i < layers.length; i++ )
         layers[i].fprop();
       float[] out = layers[layers.length - 1]._a;
@@ -278,8 +284,6 @@ public class NeuralNet extends ModelJob {
 
     @Override protected Response serve() {
       FrameInput input = new FrameInput(source);
-      int classes = source.numCols() - 1;
-      input.init(null, classes, false, 0);
       Layer[] layers = Layer.clone(model.layers, input, 0);
       for( int y = 1; y < layers.length; y++ ) {
         layers[y]._w = model.ws[y];
@@ -299,7 +303,7 @@ public class NeuralNet extends ModelJob {
       if( max_rows != 0 )
         len = Math.min(len, max_rows);
       int correct = 0;
-      for( input._row = 0; input._row < len; input._row++ )
+      for( input._pos = 0; input._pos < len; input._pos++ )
         if( correct(ls, error, confusion) )
           correct++;
       error.Value = (len - (double) correct) / len;
@@ -307,13 +311,13 @@ public class NeuralNet extends ModelJob {
     }
 
     private static boolean correct(Layer[] ls, Error error, int[][] confusion) {
-      Input input = (Input) ls[0];
+      Softmax output = (Softmax) ls[ls.length - 1];
       for( int i = 0; i < ls.length; i++ )
         ls[i].fprop();
       float[] out = ls[ls.length - 1]._a;
       error.SqrDist = 0;
       for( int i = 0; i < out.length; i++ ) {
-        float t = i == input.label() ? 1 : 0;
+        float t = i == output.label() ? 1 : 0;
         float d = t - out[i];
         error.SqrDist += d * d;
       }
@@ -326,8 +330,8 @@ public class NeuralNet extends ModelJob {
         }
       }
       if( confusion != null )
-        confusion[input.label()][idx]++;
-      return idx == input.label();
+        confusion[output.label()][idx]++;
+      return idx == output.label();
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
@@ -394,14 +398,13 @@ public class NeuralNet extends ModelJob {
    * Makes sure small datasets are spread over enough chunks to parallelize training. Neural nets
    * can require lots of processing even for small data.
    */
-  public static Frame reChunk(Frame frame) {
+  public static Vec[] reChunk(Vec[] vecs) {
     final int splits = cores() * 2; // More in case of unbalance
-    if( frame.anyVec().nChunks() >= splits )
-      return frame;
-    Vec[] vecs = new Vec[frame.numCols()];
+    if( vecs[0].nChunks() >= splits )
+      return vecs;
     for( int v = 0; v < vecs.length; v++ ) {
       AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
-      long rows = frame.numRows();
+      long rows = vecs[0].length();
       Chunk cache = null;
       for( int split = 0; split < splits; split++ ) {
         long off = rows * (split + 0) / splits;
@@ -409,16 +412,16 @@ public class NeuralNet extends ModelJob {
         NewChunk chunk = new NewChunk(vec, split);
         for( long r = off; r < lim; r++ ) {
           if( cache == null || r < cache._start || r >= cache._start + cache._len )
-            cache = frame.vecs()[v].chunk(r);
+            cache = vecs[v].chunk(r);
           if( !cache.isNA(r) ) {
-            if( frame.vecs()[v]._domain != null )
+            if( vecs[v]._domain != null )
               chunk.addEnum((int) cache.at8(r));
-            else if( frame.vecs()[v].isInt() )
+            else if( vecs[v].isInt() )
               chunk.addNum(cache.at8(r), 0);
             else
               chunk.addNum(cache.at(r));
           } else {
-            if( frame.vecs()[v].isInt() )
+            if( vecs[v].isInt() )
               chunk.addNA();
             else {
               // Don't use addNA() for doubles, as NewChunk uses separate array
@@ -428,9 +431,10 @@ public class NeuralNet extends ModelJob {
         }
         chunk.close(split, null);
       }
-      vecs[v] = vec.close(null);
-      vecs[v]._domain = frame.vecs()[v]._domain;
+      Vec t = vec.close(null);
+      t._domain = vecs[v]._domain;
+      vecs[v] = t;
     }
-    return new Frame(frame.names(), vecs);
+    return vecs;
   }
 }

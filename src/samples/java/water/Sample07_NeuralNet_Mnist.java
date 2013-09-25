@@ -1,8 +1,9 @@
 package water;
 
 import hex.*;
-import hex.Layer.FrameInput;
-import hex.Layer.Input;
+import hex.Layer.Tanh;
+import hex.Layer.VecSoftmax;
+import hex.Layer.VecsInput;
 import hex.NeuralNet.Error;
 import hex.NeuralNet.NeuralNetScore;
 import hex.rng.MersenneTwisterRNG;
@@ -31,40 +32,38 @@ public class Sample07_NeuralNet_Mnist {
     }
   }
 
-  Layer[] build(Input input) {
+  public void run() {
+    // Load data
+    Vec[] train = TestUtil.parseFrame("smalldata/mnist/train.csv.gz")._vecs;
+    Vec[] test = TestUtil.parseFrame("smalldata/mnist/test.csv.gz")._vecs;
+    train = NeuralNet.reChunk(train);
+
+    // Get labels on last column for this dataset
+    Vec trainLabels = train[train.length - 1];
+    train = Utils.remove(train, train.length - 1);
+    Vec testLabels = test[test.length - 1];
+    test = Utils.remove(test, test.length - 1);
+
+    // Build net
     Layer[] ls = new Layer[3];
-    ls[0] = input;
-    ls[1] = new Layer.Tanh();
-    ls[2] = new Layer.Softmax();
+    ls[0] = new VecsInput(train);
+    ls[1] = new Tanh(500);
+    ls[2] = new VecSoftmax(trainLabels);
     ls[1]._rate = .05f;
     ls[2]._rate = .02f;
     ls[1]._l2 = .0001f;
     ls[2]._l2 = .0001f;
     ls[1]._rateAnnealing = 1 / 2e6f;
     ls[2]._rateAnnealing = 1 / 2e6f;
-    ls[1].init(ls[0], 500);
-    ls[2].init(ls[1], 10);
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].init(ls, i);
 
-    for( int i = 1; i < ls.length; i++ )
-      ls[i].randomize();
-    return ls;
-  }
-
-  public void run() {
-    Frame trainFrame = TestUtil.parseFrame("smalldata/mnist/train.csv.gz");
-    Frame testFrame = TestUtil.parseFrame("smalldata/mnist/test.csv.gz");
-    trainFrame = NeuralNet.reChunk(trainFrame);
-
-    // Use train normalization stats for both frames
-    FrameInput train = new FrameInput(trainFrame);
-    FrameInput test = new FrameInput(testFrame, train._means, train._sigmas);
-    train.init(null, PIXELS);
-    test.init(null, PIXELS);
-
-    Layer[] ls = build(train);
     final Trainer trainer = new Trainer.MapReduce(ls);
     trainer.start();
 
+    // Score, both frames use train normalization stats
+    VecsInput scoreTrain = new VecsInput(train, (VecsInput) ls[0]);
+    VecsInput scoreTest = new VecsInput(test, (VecsInput) ls[0]);
     long start = System.nanoTime();
     long lastTime = start;
     long lastItems = 0;

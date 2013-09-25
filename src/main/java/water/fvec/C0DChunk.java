@@ -4,7 +4,9 @@ import java.util.Arrays;
 import water.AutoBuffer;
 import water.UDP;
 
-// The constant column
+/**
+ * The constant 'double' column.
+ */
 public class C0DChunk extends Chunk {
   static final int OFF=8+4;
   double _con;
@@ -13,7 +15,7 @@ public class C0DChunk extends Chunk {
     UDP.set8d(_mem,0,con);
     UDP.set4(_mem,8,len);
   }
-  @Override protected final long at8_impl( int i ) { 
+  @Override protected final long at8_impl( int i ) {
     if( Double.isNaN(_con) ) throw new IllegalArgumentException("at8 but value is missing");
     return (long)_con;          // Possible silent truncation
   }

@@ -1,8 +1,8 @@
 package hex;
 
 import hex.Layer.ChunksInput;
-import hex.Layer.FrameInput;
 import hex.Layer.Input;
+import hex.Layer.VecsInput;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -13,8 +13,7 @@ import java.util.concurrent.atomic.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.fvec.Chunk;
-import water.fvec.Frame;
+import water.fvec.*;
 import water.util.Log;
 
 import com.jogamp.opencl.*;
@@ -22,6 +21,8 @@ import com.jogamp.opencl.CLMemory.Mem;
 
 /**
  * Trains a neural network.
+ *
+ * @author cypof
  */
 public abstract class Trainer {
   public Trainer() {
@@ -57,18 +58,9 @@ public abstract class Trainer {
     }
 
     final void step() {
-      Input input = (Input) _ls[0];
       fprop();
-
       for( int i = 1; i < _ls.length - 1; i++ )
         Arrays.fill(_ls[i]._e, 0);
-      float[] err = _ls[_ls.length - 1]._e;
-      int label = input.label();
-      for( int i = 0; i < err.length; i++ ) {
-        float t = i == label ? 1 : 0;
-        err[i] = t - _ls[_ls.length - 1]._a[i];
-      }
-
       bprop();
     }
 
@@ -90,6 +82,9 @@ public abstract class Trainer {
     }
   }
 
+  /**
+   * Trains NN on current thread.
+   */
   public static class Direct extends Base {
     int _batch = 20;
     int _batches;
@@ -144,8 +139,7 @@ public abstract class Trainer {
 
       for( int t = 0; t < _trainers.length; t++ ) {
         final Input input = (Input) ls[0].clone();
-        input.init(null, ls[0]._a.length, false, 0);
-        input._row = input._len * t / _trainers.length;
+        input._pos = input._len * t / _trainers.length;
         Layer[] clones = Layer.clone(ls, input, 0);
 
         _trainers[t] = new Base(clones);
@@ -224,7 +218,7 @@ public abstract class Trainer {
   /**
    * Distributed trainer. All tasks on a node update the same weights, like Threaded. Updates
    * between nodes are synchronized at regular intervals by exchanging messages between the
-   * initiating machine and others. Requires input layer to be Frame.
+   * initiating machine and others. Requires input to be Frame.
    */
   public static class MapReduce extends Trainer {
     static final ConcurrentHashMap<Key, MapReduce> _instances = new ConcurrentHashMap<Key, MapReduce>();
@@ -251,10 +245,10 @@ public abstract class Trainer {
     }
 
     @Override public long items() {
-      Frame frame = ((FrameInput) _ls[0])._frame;
+      Vec[] vecs = ((VecsInput) _ls[0])._vecs;
       long n = 0;
       for( int i = 0; i < _counts.length(); i++ )
-        n += _counts.get(i) * frame.vecs()[0].chunkLen(i);
+        n += _counts.get(i) * vecs[0].chunkLen(i);
       return n;
     }
 
@@ -267,10 +261,10 @@ public abstract class Trainer {
       _instances.put(_key, this);
       DKV.put(_key, new Value(_key, new byte[0]));
 
-      final Frame frame = ((FrameInput) _ls[0])._frame;
-      assert _ls[0]._a.length == frame.numCols() - 1;
-      assert frame.anyVec().nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
-      _counts = new AtomicIntegerArray(frame.vecs()[0].nChunks());
+      final Vec[] vecs = ((VecsInput) _ls[0])._vecs;
+      assert _ls[0]._a.length == vecs.length - 1;
+      assert vecs[0].nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
+      _counts = new AtomicIntegerArray(vecs[0].nChunks());
 
       _task = new Descent();
       _task._job = _job;
@@ -283,7 +277,7 @@ public abstract class Trainer {
         _task._ws[y] = _ls[y]._w;
         _task._bs[y] = _ls[y]._b;
       }
-      _task.dfork(frame);
+      _task.dfork(new Frame(null, vecs));
     }
 
     @Override public void join() {
@@ -293,6 +287,11 @@ public abstract class Trainer {
     void done() {
       _instances.remove(_key);
       UKV.remove(_key);
+      if( _job != null ) {
+        Job job = Job.findJob(_job);
+        if( job != null )
+          job.remove();
+      }
     }
   }
 
@@ -390,7 +389,7 @@ public abstract class Trainer {
         clones[y].init(clones[y - 1], _node._bs[y].length, false, _node._total);
       }
       Base base = new Base(clones);
-      for( input._row = 0; input._row < _cs[0]._len; input._row++ )
+      for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
         base.step();
       int chunk = _cs[0].cidx();
       _node.stepped(chunk);
@@ -594,7 +593,7 @@ public abstract class Trainer {
           queue.putReadBuffer(a[_ls.length - 1], true);
           for( int y = 1; y < fprops.length - 1; y++ )
             queue.put1DRangeKernel(resets[y], 0, _ls[y]._a.length, group);
-          softmax(input, a[a.length - 1].getBuffer(), e[e.length - 1].getBuffer());
+//          softmax(input, a[a.length - 1].getBuffer(), e[e.length - 1].getBuffer());
           queue.putWriteBuffer(a[_ls.length - 1], false);
           queue.putWriteBuffer(e[_ls.length - 1], false);
 
@@ -613,20 +612,20 @@ public abstract class Trainer {
       throw new UnsupportedOperationException();
     }
 
-    static void softmax(Input input, FloatBuffer a, FloatBuffer e) {
-      float max = Float.NEGATIVE_INFINITY;
-      for( int o = 0; o < a.capacity(); o++ )
-        if( max < a.get(o) )
-          max = a.get(o);
-      float scale = 0;
-      for( int o = 0; o < a.capacity(); o++ ) {
-        a.put(o, (float) Math.exp(a.get(o) - max));
-        scale += a.get(o);
-      }
-      for( int o = 0; o < a.capacity(); o++ ) {
-        a.put(o, a.get(o) / scale);
-        e.put(o, (o == input.label() ? 1 : 0) - a.get(o));
-      }
-    }
+//    static void softmax(Input input, FloatBuffer a, FloatBuffer e) {
+//      float max = Float.NEGATIVE_INFINITY;
+//      for( int o = 0; o < a.capacity(); o++ )
+//        if( max < a.get(o) )
+//          max = a.get(o);
+//      float scale = 0;
+//      for( int o = 0; o < a.capacity(); o++ ) {
+//        a.put(o, (float) Math.exp(a.get(o) - max));
+//        scale += a.get(o);
+//      }
+//      for( int o = 0; o < a.capacity(); o++ ) {
+//        a.put(o, a.get(o) / scale);
+//        e.put(o, (o == input.label() ? 1 : 0) - a.get(o));
+//      }
+//    }
   }
 }
