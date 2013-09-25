@@ -23,19 +23,19 @@ def simpleCheckPCA(self, pca, **kwargs):
         if math.isnan(s):
             raise Exception("sdev", PC, "is NaN:", s)
 
-    print "Checking propVars..."
+    print "Checking propVars...",
     propVars = pcaResult["PCAModel"]["propVar"]
     for PC,propvar in propVars.iteritems():
         if math.isnan(propvar):
             raise Exception("propVar", PC, "is NaN:", propvar)
-
-    print "Checking eigenvectors..."
+    print " Good!"
+    print "Checking eigenvectors...",
     pcs = pcaResult["PCAModel"]["eigenvectors"]
     for i,s in enumerate(pcs):
         for r,e in s.iteritems():
             if math.isnan(e):
                 raise Exception("Component", i, "has NaN:", e, "eigenvector",s)
-
+    print " Good!"
     # shouldn't have any errors
     h2o.check_sandbox_for_errors()
 
@@ -46,12 +46,12 @@ def resultsCheckPCA(self, pca, **kwargs):
     destination_key = pca['destination_key']
     pcaResult = h2o_cmd.runInspect(key=destination_key, **{'view':100})
 
-    print "Checking that propVars sum to 1"
+    print "Checking that propVars sum to 1",
     propVars = pcaResult["PCAModel"]["propVar"]
     sum_ = 1.0
     for PC,propVar in propVars.iteritems(): sum_ -= propVar
     self.assertAlmostEqual(sum_,0,msg="PropVar does not sum to 1.")
-   
+    print " Good!"
     if pcaResult["PCAModel"]["PCAParams"]["tolerance"] != 0.0 or pcaResult["PCAModel"]["PCAParams"]["standardized"] != True: 
         return
     print "Checking that sdevs^2 sums to number of variables"
@@ -62,3 +62,6 @@ def resultsCheckPCA(self, pca, **kwargs):
     if not ((sum_ -.5) < 0 < (sum_ +.5)):
         print "sum(sdevs^2) are not within .5 of 0. sdevs incorrect?"
         h2o.dump_json(sdevs)
+        raise Exception("Standard Deviations are possibly incorrect!")
+    print " Good!"
+    
