@@ -16,7 +16,6 @@ set -e
 rm -f test.*xml
 rm -f TEST*xml
 
-
 # This gets the h2o.jar
 source ./runner_setup.sh
 
@@ -82,13 +81,18 @@ mySetup() {
     # then make the R_LIB_USERS dir
     which R
     R --version
-    rm -f ~/.Renviron
-    rm -f ~/.Rprofile
-    # Set CRAN mirror to a default location
-    echo "options(repos = \"http://cran.stat.ucla.edu\")" > ~/.Rprofile
-    echo "R_LIBS_USER=\"~/.Rlibrary\"" > ~/.Renviron
-    rm -f -r ~/.Rlibrary
-    mkdir -p ~/.Rlibrary
+
+    # don't always remove..other users may have stuff he doesn't want to re-install
+    if [[ $USER == "jenkins" ]]
+    then 
+        # Set CRAN mirror to a default location
+        rm -f ~/.Renviron
+        rm -f ~/.Rprofile
+        echo "options(repos = \"http://cran.stat.ucla.edu\")" > ~/.Rprofile
+        echo "R_LIBS_USER=\"~/.Rlibrary\"" > ~/.Renviron
+        rm -f -r ~/.Rlibrary
+        mkdir -p ~/.Rlibrary
+    fi
 
     echo ".libPaths()" > /tmp/libPaths.cmd
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
@@ -150,7 +154,7 @@ mySetup 'libPaths'
 myR 'runit_RF.R' 35
 myR 'runit_PCA.R' 35
 myR 'runit_GLM.R' 35
-myR 'runit_GBM.R' 35
+myR 'runit_GBM.R' 300
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
