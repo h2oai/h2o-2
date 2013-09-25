@@ -320,9 +320,10 @@ def spawn_wait(ps, stdout, stderr, capture_output=True, timeout=None):
     if rc is None:
         ps.terminate()
         raise Exception("%s %s timed out after %d\nstdout:\n%s\n\nstderr:\n%s" %
-                (name, args, timeout or 0, out, err))
+            (ps.name, ps.cmdline, timeout or 0, out, err))
     elif rc != 0:
-        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (ps.name, ps.cmdline, out, err))
+        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % 
+            (ps.name, ps.cmdline, out, err))
     return rc
 
 def spawn_cmd_and_wait(name, cmd, capture_output=True, timeout=None, **kwargs):
