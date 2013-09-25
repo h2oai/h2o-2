@@ -4,7 +4,7 @@ setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
-setClass("H2OGLMModel", contains="H2OModel")
+setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ORForestModel", contains="H2OModel")
 setClass("H2OGLMGridModel", contains="H2OModel")
@@ -36,6 +36,26 @@ setMethod("show", "H2OGLMModel", function(object) {
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
+  cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
+  
+  if(model$family == "binomial") {
+    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
+    cat("\nConfusion Matrix:\n"); print(model$cm)
+  }
+    
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    if(model$family == "binomial") {
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
+      colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+    } else {
+      modelXval = sapply(object@xval, function(x) { x@model$train.err })
+      modelXval = data.frame(modelXval)
+      colnames(modelXval) = c("Error")
+    }
+    rownames(modelXval) = paste("Model", 0:(nrow(modelXval)-1))
+    print(modelXval)
+  }
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
