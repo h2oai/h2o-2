@@ -4,12 +4,15 @@ setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
-setClass("H2OGLMModel", contains="H2OModel")
+setClass("H2OGrid", representation(key="character", data="H2OParsedData", models="list", sumtable="list", "VIRTUAL"))
+
+setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
+setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ORForestModel", contains="H2OModel")
-setClass("H2OGLMGridModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel")
+setClass("H2OGBMGrid", contains="H2OGrid")
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -36,6 +39,34 @@ setMethod("show", "H2OGLMModel", function(object) {
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
+  cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
+  
+  if(model$family == "binomial") {
+    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
+    cat("\nConfusion Matrix:\n"); print(model$cm)
+  }
+    
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    if(model$family == "binomial") {
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
+      colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+    } else {
+      modelXval = sapply(object@xval, function(x) { x@model$train.err })
+      modelXval = data.frame(modelXval)
+      colnames(modelXval) = c("Error")
+    }
+    rownames(modelXval) = paste("Model", 0:(nrow(modelXval)-1))
+    print(modelXval)
+  }
+})
+
+setMethod("show", "H2OGLMGrid", function(object) {
+  print(object@data)
+  cat("GLMGrid Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
@@ -68,6 +99,23 @@ setMethod("show", "H2OPCAModel", function(object) {
   model = object@model
   cat("\n\nStandard deviations:\n", model$sdev)
   cat("\n\nRotation:\n"); print(model$rotation)
+})
+
+setMethod("show", "H2OGBMModel", function(object) {
+  print(object@data)
+  cat("GBM Model Key:", object@key)
+  
+  model = object@model
+  cat("\nConfusion matrix:\n"); print(model$confusion)
+  cat("\n\nMean Squared error by tree:\n"); print(model$err)
+})
+
+setMethod("show", "H2OGBMGrid", function(object) {
+  print(object@data)
+  cat("GBMGrid Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
 })
 
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("+", e1, e2) })
@@ -242,24 +290,6 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
 setMethod("plot", "H2OPCAModel", function(x, y, ...) {
   barplot(x@model$sdev^2)
   title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
-})
-
-setMethod("show", "H2OGLMGridModel", function(object) {
-  print(object@data)
-  cat("GLMGrid Model Key:", object@key, "\n\nSummary\n")
-  
-  model = object@model
-  print(model$Summary)
-  })
-
-
-setMethod("show", "H2OGBMModel", function(object) {
-  print(object@data)
-  cat("GBM Model Key:", object@key)
-  
-  model = object@model
-  cat("\nConfusion matrix:\n"); print(model$confusion)
-  cat("\n\nMean Squared error by tree:\n"); print(model$err)
 })
 
 setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })

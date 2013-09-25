@@ -1,6 +1,3 @@
-if(!"RCurl" %in% rownames(installed.packages())) install.packages(RCurl)
-if(!"rjson" %in% rownames(installed.packages())) install.packages(rjson)
-
 library(RCurl)
 library(rjson)
 
@@ -39,6 +36,7 @@ h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
 h2o.__PAGE_GLMGrid = "GLMGrid.json"
 h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_GBM = "GBM.json"
+h2o.__PAGE_GBMGrid = "GBMGrid.json"
 h2o.__PAGE_GBMModelView = "GBMModelView.json"
 
 
