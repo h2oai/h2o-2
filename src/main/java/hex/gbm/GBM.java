@@ -148,7 +148,10 @@ public class GBM extends FrameJob {
           // System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
           // Tree-by-tree scoring
           Timer t_score = new Timer();
-          BulkScore bs2 = new BulkScore(forest,tid,ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, max_depth );
+          BulkScore bs2 = new BulkScore(forest,tid,ncols,nclass,ymin,1.0f);
+          bs2.doAll(fr);
+          bs2.doAll(validation != null ? validation : fr);
+          bs2.report( Sys.GBM__, max_depth );
           _errs = Arrays.copyOf(_errs,_errs.length+1);
           _errs[_errs.length-1] = (float)bs2._sum/nrows;
           gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);

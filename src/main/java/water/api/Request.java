@@ -61,10 +61,6 @@ public abstract class Request extends RequestBuilders {
   protected void registered() {
   }
 
-  protected Request create(Properties parms) {
-    return this;
-  }
-
   protected abstract Response serve();
 
   protected Response serve_debug() {
@@ -78,7 +74,10 @@ public abstract class Request extends RequestBuilders {
   public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
     // Needs to be done also for help to initialize or argument records
     String query = checkArguments(args, type);
-    onArgumentsParsed();
+    return serve(server, args, type, query);
+  }
+
+  protected final NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type, String query) {
     switch( type ) {
       case help:
         return wrap(server, HTMLHelp());
@@ -111,9 +110,6 @@ public abstract class Request extends RequestBuilders {
       default:
         throw new RuntimeException("Invalid request type " + type.toString());
     }
-  }
-
-  protected void onArgumentsParsed() {
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String response) {

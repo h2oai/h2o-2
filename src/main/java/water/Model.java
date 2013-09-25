@@ -1,7 +1,11 @@
 package water;
 
+import hex.ConfusionMatrix;
+
 import java.util.Arrays;
 import java.util.HashMap;
+
+import com.google.gson.annotations.Until;
 
 import water.api.DocGen;
 import water.api.Request.API;
@@ -90,6 +94,16 @@ public abstract class Model extends Iced {
   public int nclasses() {
     String cns[] = classNames();
     return cns==null ? 1 : cns.length;
+  }
+
+  /** For classifiers, ratio of mispredicted items on validation set. */
+  public double predictionError() {
+    return -1;
+  }
+
+  /** For classifiers, confusion matrix on validation set. */
+  public ConfusionMatrix cm() {
+    return null;
   }
 
   /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the

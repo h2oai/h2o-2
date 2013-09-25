@@ -7,6 +7,7 @@ import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.api.*;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -41,17 +42,34 @@ public class Job extends Request2 {
   public Key dest() { return destination_key; }
 
   public static abstract class FrameJob extends Job {
-    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
-    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
     public FrameJob(String desc, Key dest) { super(desc,dest); }
 
     @API(help = "Source frame", required = true, filter = Default.class)
     public Frame source;
+
+    @API(help = "Validation frame", filter = Default.class)
+    public Frame validation;
+  }
+
+  public static abstract class ModelJob extends FrameJob {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+    public ModelJob(String desc, Key dest) { super(desc,dest); }
+
+    @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
+    public int[] cols;
+    class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
+
+    @API(help="Column to use as class", required=true, filter=responseFilter.class)
+    public Vec response;
+    class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
   }
 
   public static abstract class HexJob extends Job {
-    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
-    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help = "Source key", required = true, filter = source_keyFilter.class)
     public Key source_key;
@@ -80,7 +98,7 @@ public class Job extends Request2 {
     return list != null ? list._jobs : new Job[0];
   }
 
-  protected Job() {
+  public Job() {
     this(null, null);
   }
 

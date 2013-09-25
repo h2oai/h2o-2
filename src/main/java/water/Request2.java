@@ -240,17 +240,36 @@ public abstract class Request2 extends Request {
     throw new Exception("Class " + api.filter().getName() + " must have an empty constructor");
   }
 
-  // Create an instance per call instead of ThreadLocals
-  @Override protected Request create(Properties parms) {
-    Request2 request;
-    try {
-      request = getClass().newInstance();
-      request._arguments = _arguments;
-      request._parms = parms;
-    } catch( Exception e ) {
-      throw new RuntimeException(e);
+  // Request2 has an instance-per-call model, instead of Request's ThreadLocals
+  @Override public water.NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
+    // Expand grid search related argument sets
+    // TODO: real parser for unified imbricated argument sets, expressions etc.
+    ArrayList<String>[] values = new ArrayList[_arguments.size()];
+    for( int i = 0; i < values.length; i++ ) {
+      String value = args.getProperty(_arguments.get(i)._name);
+      int off = 0;
+      int next = 0;
+      while( (next = value.indexOf('|', off)) >= 0 ) {
+        if( next != off )
+          values[i].add(value.substring(off, next));
+        off = next + 1;
+      }
+      if( off < value.length() )
+        values[i].add(value.substring(off));
     }
-    return request;
+    // Iterate over all argument combinations
+    int[] counters = new int[values.length];
+    for( ;; ) {
+      Request2 request;
+      try {
+        request = getClass().newInstance();
+        request._arguments = _arguments;
+        request._parms = args;
+      } catch( Exception e ) {
+        throw new RuntimeException(e);
+      }
+      return super.serve(server, args, type);
+    }
   }
 
   /*

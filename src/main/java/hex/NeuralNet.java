@@ -9,13 +9,12 @@ import java.util.UUID;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.*;
-import water.Job.FrameJob;
-import water.api.DocGen;
-import water.api.Progress2;
+import water.Job.ModelJob;
+import water.api.*;
 import water.fvec.*;
 import water.util.RString;
 
-public class NeuralNet extends FrameJob {
+public class NeuralNet extends ModelJob {
   static final int API_WEAVER = 1;
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network";
@@ -27,14 +26,6 @@ public class NeuralNet extends FrameJob {
   };
 
 //@formatter:off
-  @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
-  public int[] cols;
-  class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
-
-  @API(help="Column to use as class", required=true, filter=responseFilter.class)
-  public Vec response;
-  class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
-
   @API(help = "Activation function", filter = activationFilter.class)
   public Activation activation;
   class activationFilter extends EnumArgument<Activation> { public activationFilter() { super(Activation.Tanh); } }
@@ -52,10 +43,6 @@ public class NeuralNet extends FrameJob {
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class)
   public int epochs = 100;
-
-// TODO
-//  @API(help = "How much of the training set is used for validation", filter = Default.class)
-//  public double validation_ratio = .2;
 
   public NeuralNet() {
     super(DOC_GET, Key.make(KEY_PREFIX + Key.make()));

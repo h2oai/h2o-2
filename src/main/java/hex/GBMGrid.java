@@ -56,7 +56,7 @@ public class GBMGrid extends FrameJob {
   Key currentModel = Key.make(UUID.randomUUID().toString(), (byte) 1, Key.DFJ_INTERNAL_USER);
 
   public GBMGrid() {
-    super(DOC_GET, Key.make("__GBMGrid_" + Key.make()));
+    super(DOC_GET, Key.make("__GBMGrid_" + UUID.randomUUID().toString()));
     description = DOC_GET;
   }
 
@@ -66,18 +66,6 @@ public class GBMGrid extends FrameJob {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
-  }
-
-  @Override protected void onArgumentsParsed() {
-    String source_key = input("source");
-    if( source_key != null && destination_key == null ) {
-      String n = source_key;
-      int dot = n.lastIndexOf('.');
-      if( dot > 0 )
-        n = n.substring(0, dot);
-      String res = n + Extensions.KMEANS_GRID;
-      destination_key = Key.make(res);
-    }
   }
 
   @Override protected void run() {
@@ -94,7 +82,8 @@ public class GBMGrid extends FrameJob {
       assert names.size() == KEYS_INDEX;
       names.add("model key");
       names.add("model number");
-      names.add("model quality score");
+      names.add("prediction error %");
+      names.add("precision & recall");
       int count = ntrees.length * max_depth.length * min_rows.length * nbins.length * learn_rate.length;
       int n = 0;
       for( int ntreesI = 0; ntreesI < ntrees.length; ntreesI++ ) {
@@ -105,6 +94,7 @@ public class GBMGrid extends FrameJob {
                 final GBM job = new GBM();
                 UKV.put(currentModel, job.destination_key);
                 job.source = source;
+                job.validation = validation;
                 job.vresponse = vresponse;
                 job.ignored_cols = ignored_cols;
                 job.ntrees = ntrees[ntreesI];
@@ -122,6 +112,7 @@ public class GBMGrid extends FrameJob {
                     return;
                   }
                   boolean running = job.running();
+                  GBMModel model = UKV.get(job.destination_key);
                   ArrayList<String> values = new ArrayList<String>();
                   values.add("" + job.ntrees);
                   values.add("" + job.max_depth);
@@ -134,7 +125,11 @@ public class GBMGrid extends FrameJob {
                   values.add("" + seconds_per_tree);
                   values.add("" + job.destination_key);
                   values.add("" + n);
-                  values.add("" + (running ? -1 : 0));		// TODO ADD SCORE FOR THIS MODEL.
+                  values.add("" + (model.cm == null ? -1 : hex.ConfusionMatrix.err(model.cm)));
+                  if( model.cm != null && model.cm.length == 2 )
+                    values.add("" + hex.ConfusionMatrix.precisionAndRecall(model.cm));
+                  else
+                    values.add("" + -1);
                   if( index == data.size() )
                     data.add(values);
                   else
@@ -206,7 +201,7 @@ public class GBMGrid extends FrameJob {
         DocGen.HTML.section(sb, "Building model: " + frame.currentJob + " of " + frame.totalJobs);
       GBMGrid grid = (GBMGrid) Job.findJob(Key.make(job.value()));
       GBMModel model = null;
-      if( grid.currentModel != null ) {
+      if( grid != null && grid.currentModel != null ) {
         Key dest = UKV.get(grid.currentModel);
         if( dest != null )
           model = UKV.get(dest);

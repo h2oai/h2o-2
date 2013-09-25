@@ -6,7 +6,6 @@ import water.*;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.RString;
-import water.util.Utils;
 
 public class KMeansGrid extends KMeansShared {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -32,6 +31,7 @@ public class KMeansGrid extends KMeansShared {
 
   public KMeansGrid() {
     description = DOC_GET;
+    destination_key = Key.make("__KMEANS_GRID_" + UUID.randomUUID().toString());
   }
 
   public static String link(Key k, String content) {
@@ -40,17 +40,6 @@ public class KMeansGrid extends KMeansShared {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
-  }
-
-  @Override protected void onArgumentsParsed() {
-    if( source_key != null && destination_key == null ) {
-      String n = source_key.toString();
-      int dot = n.lastIndexOf('.');
-      if( dot > 0 )
-        n = n.substring(0, dot);
-      String res = n + Extensions.KMEANS_GRID;
-      destination_key = Key.make(res);
-    }
   }
 
   @Override protected void run() {
