@@ -4,8 +4,7 @@ import sys, itertools, os, re
 def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is ???',
     cloudShutdownIsError=False, sandboxIgnoreErrors=False):
     # show the parameters
-    print "check_sandbox_for_errors:", locals()
-
+    ### print "check_sandbox_for_errors:", locals()
     
     # gets set below on error (returned)
     errorFound = False
