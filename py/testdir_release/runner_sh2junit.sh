@@ -77,6 +77,29 @@ echo "i.e. pytest_config-jenkins.json"
 echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 
 #******************************************************
+mySetup() {
+    # we setup .Renviron and delete the old local library if it exists
+    # then make the R_LIB_USERS dir
+    which R
+    R --version
+    rm -f ~/.Renviron
+    rm -f ~/.Rprofile
+    # Set CRAN mirror to a default location
+    echo "options(repos = \"http://cran.stat.ucla.edu\")" > ~/.Rprofile
+    echo "R_LIBS_USER=\"~/.Rlibrary\"" > ~/.Renviron
+    rm -f -r ~/.Rlibrary
+    mkdir -p ~/.Rlibrary
+
+    echo ".libPaths()" > /tmp/libPaths.cmd
+    cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
+    echo "Running this cmd:"
+    echo $cmd
+
+    # don't fail on errors, since we want to check the logs in case that has more info!
+    set +e
+    # everything after -- is positional. grabbed by argparse.REMAINDER
+    ./sh2junit.py -name $1 -timeout 30 -- $cmd || true
+}
 
 myR() {
     # these are hardwired in the config json used above for the cloud
@@ -84,6 +107,12 @@ myR() {
     # CLOUD_PORT=
     # get_s3_jar.sh now downloads it. We need to tell anqi's wrapper where to find it.
     # with an environment variable
+    if [ -z "$2" ] 
+    then
+        timeout=30 # default to 30
+    else
+        timeout=$2
+    fi
 
     which R
     R --version
@@ -107,7 +136,7 @@ myR() {
     # don't fail on errors, since we want to check the logs in case that has more info!
     set +e
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    ./sh2junit.py -name $1 -timeout 30 -- $cmd || true
+    ./sh2junit.py -name $1 -timeout $timeout -- $cmd || true
 }
 
 
@@ -117,10 +146,11 @@ echo "Okay to run h2oWrapper.R every time for now"
 #***********************************************************************
 # This is the list of tests
 #***********************************************************************
-myR 'runit_RF.R'
-myR 'runit_PCA.R'
-myR 'runit_GLM.R'
-myR 'runit_GBM.R'
+mySetup 'libPaths'
+myR 'runit_RF.R' 35
+myR 'runit_PCA.R' 35
+myR 'runit_GLM.R' 35
+myR 'runit_GBM.R' 35
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
