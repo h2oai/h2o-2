@@ -112,7 +112,7 @@ public class GBMGrid extends FrameJob {
                 job.min_rows = min_rows[min_rowsI];
                 job.nbins = nbins[nbinsI];
                 job.learn_rate = learn_rate[learn_rateI];
-                job.run();
+                job.startBuildModel();
                 n++;
 
                 int index = data.size();

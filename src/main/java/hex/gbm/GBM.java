@@ -12,30 +12,9 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 
 // Gradient Boosted Trees
-public class GBM extends FrameJob {
+public class GBM extends SharedTreeModelBuilder {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
-  @API(help="", required=true, filter=GBMVecSelect.class)
-  public Vec vresponse;
-  class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
-
-  @API(help="columns to ignore",required=false,filter=GBMMultiVecSelect.class)
-  public int [] ignored_cols = new int []{};
-  class GBMMultiVecSelect extends MultiVecSelect { GBMMultiVecSelect() { super("source");} }
-
-
-  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
-  public int ntrees = 10;
-
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=0, lmax=10000)
-  public int max_depth = 8;
-
-  @API(help = "Fewest allowed observations in a leaf", filter = Default.class, lmin=1)
-  public int min_rows = 10;
-
-  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
-  public int nbins = 1024;
 
   @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   public double learn_rate = 0.2;
@@ -43,13 +22,6 @@ public class GBM extends FrameJob {
   @API(help = "The GBM Model")
   public GBMModel gbm_model;
 
-  // Overall prediction error as I add trees
-  transient private float _errs[];
-
-  public float progress(){
-    DTree.TreeModel m = DKV.get(dest()).get();
-    return (float)m.treeBits.length/(float)m.N;
-  }
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -60,9 +32,9 @@ public class GBM extends FrameJob {
   }
   public Frame score( Frame fr ) { return gbm_model.score(fr,true);  }
 
+  protected Log.Tag.Sys logTag() { return Sys.GBM__; }
   public static final String KEY_PREFIX = "__GBMModel_";
-  public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
-  public GBM() { super("Distributed GBM",makeKey()); }
+  public GBM() { super("Distributed GBM",KEY_PREFIX); }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -85,51 +57,16 @@ public class GBM extends FrameJob {
   // Compute a single GBM tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
   @Override protected Response serve() {
-    run();
+    startBuildModel();
     return GBMProgressPage.redirect(this, self(),dest());
   }
 
-  public void run() {
-    final Frame fr = new Frame(source); // Local copy for local hacking
-    fr.remove(ignored_cols);
-    // Doing classification only right now...
-    if( !vresponse.isEnum() ) vresponse.asEnum();
-
-    // While I'd like the Frames built custom for each call, with excluded
-    // columns already removed - for now check to see if the response column is
-    // part of the frame and remove it up front.
-    String vname="response";
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr.vecs()[i]==vresponse ) {
-        vname=fr._names[i];
-        fr.remove(i);
-      }
-
-    buildModel(fr,vname);
-  }
-
-  private void buildModel( final Frame fr, String vname ) {
-    final Timer t_gbm = new Timer();
-    final Frame frm = new Frame(fr); // Local copy for local hacking
-    frm.add(vname,vresponse);        // Hardwire response as last vector
-
-    assert 1 <= min_rows;
-    final int  ncols = fr.numCols();
-    final long nrows = fr.numRows();
-    final int ymin = (int)vresponse.min();
-    final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
-    assert 1 <= nclass && nclass <= 1000; // Arbitrary cutoff for too many classes
-    final String domain[] = nclass > 1 ? vresponse.domain() : null;
-    _errs = new float[0];     // No trees yet
-    final Key outputKey = dest();
-    final Key dataKey = null;
+  protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final int ncols, final long nrows, final char nclass, final int ymin, final Timer t_build ) {
     gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,new DTree[0], null, ymin, null);
     DKV.put(outputKey, gbm_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
-        // Keep the response in the basic working frame
-        fr.add("response",vresponse);
 
         // Build initial residual columns
         buildResiduals(nclass,fr,ncols,nrows,ymin);
@@ -155,12 +92,7 @@ public class GBM extends FrameJob {
           DKV.put(outputKey, gbm_model);
           Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
         }
-        Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
-
-        // Remove temp vectors; cleanup the Frame
-        while( fr.numCols() > ncols+1/*Leave response*/ )
-          UKV.remove(fr.remove(fr.numCols()-1)._key);
-        remove();
+        cleanUp(fr,ncols,t_build); // Shared cleanup
         tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {

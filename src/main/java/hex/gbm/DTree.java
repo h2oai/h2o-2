@@ -13,7 +13,7 @@ import water.util.Log.Tag.Sys;
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
 
    This class defines an explicit Tree structure, as a collection of {@code
-   Tree} {@code Node}s.  The Nodes are numbered with a unique {@code _nid}.
+   DTree} {@code Node}s.  The Nodes are numbered with a unique {@code _nid}.
    Users need to maintain their own mapping from their data to a {@code _nid},
    where the obvious technique is to have a Vec of {@code _nid}s (ints), one
    per each element of the data Vecs.
@@ -529,7 +529,7 @@ class DTree extends Iced {
   // Convenvience accessor for a complex chunk layout.
   // Wish I could name the array elements nicer...
   static Chunk chk_resp( Chunk chks[], int ncols, char nclass ) {
-    assert chks.length >= ncols+1/*response*/+nclass/*working set*/+nclass/*total preds (sum of trees)*/;
+    assert chks.length >= ncols+1/*response*/+nclass/*working set*/+nclass/*total preds (sum of trees)*/ : " "+chks.length+" "+ncols+" "+(int)nclass;
     return chks[ncols];
   }
   static Chunk chk_work( Chunk chks[], int ncols, char nclass, int c ) {

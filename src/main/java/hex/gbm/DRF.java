@@ -20,25 +20,9 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 
 // Random Forest Trees
-public class DRF extends FrameJob {
+public class DRF extends SharedTreeModelBuilder {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
-  @API(help="Response vector", required=true, filter=DRFVecSelect.class)
-  Vec vresponse;
-  class DRFVecSelect extends VecClassSelect { DRFVecSelect() { super("source"); } }
-
-  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
-  int ntrees = 50;
-
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
-  int max_depth = 50;
-
-  @API(help = "Fewest allowed observations in a leaf", filter = Default.class, lmin=1)
-  int min_rows = 10;
-
-  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
-  int nbins = 1024;
 
   @API(help = "Columns to randomly select at each level, or -1 for sqrt(#cols)", filter = Default.class, lmin=-1, lmax=100000)
   int mtries = -1;
@@ -52,13 +36,6 @@ public class DRF extends FrameJob {
   @API(help = "The DRF Model")
   DRFModel drf_model;
 
-  // Overall prediction error as I add trees
-  transient private float _errs[];
-
-  public float progress(){
-    DTree.TreeModel m = DKV.get(dest()).get();
-    return (float)m.treeBits.length/(float)m.N;
-  }
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -85,9 +62,9 @@ public class DRF extends FrameJob {
   }
   public Frame score( Frame fr ) { return drf_model.score(fr,true);  }
 
+  protected Log.Tag.Sys logTag() { return Sys.DRF__; }
   public static final String KEY_PREFIX = "__DRFModel_";
-  public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
-  public DRF() { super("Distributed Random Forest",makeKey()); }
+  public DRF() { super("Distributed RF",KEY_PREFIX); }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -110,54 +87,22 @@ public class DRF extends FrameJob {
   // Compute a single DRF tree from the Frame.  Last column is the response
   // variable.  Depth is capped at max_depth.
   @Override protected Response serve() {
-    final Frame fr = new Frame(source); // Local copy for local hacking
-
-    // Doing classification only right now...
-    if( !vresponse.isEnum() ) vresponse.asEnum();
-
-    // While I'd like the Frames built custom for each call, with excluded
-    // columns already removed - for now check to see if the response column is
-    // part of the frame and remove it up front.
-    String vname="response";
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr.vecs()[i]==vresponse ) {
-        vname=fr._names[i];
-        fr.remove(i);
-      }
-
-    // Ignore-columns-code goes here....
-
-    buildModel(fr,vname);
+    startBuildModel();
     return DRFProgressPage.redirect(this, self(),dest());
   }
 
-  private void buildModel( final Frame fr, String vname ) {
-    final Timer t_drf = new Timer();
-    final Frame frm = new Frame(fr); // Local copy for local hacking
-    frm.add(vname,vresponse);        // Hardwire response as last vector
-
-    final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(fr.numCols()),1) : mtries;
-    assert 0 <= ntrees && ntrees < 1000000;
-    assert 1 <= mtrys && mtrys <= fr.numCols() : "Too large mtrys="+mtrys+", ncols="+fr.numCols();
+  protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final int ncols, final long nrows, final char nclass, final int ymin, final Timer t_build ) {
+    final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(ncols),1) : mtries;
+    assert 1 <= mtrys && mtrys <= ncols : "Too large mtrys="+mtrys+", ncols="+ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    assert 1 <= min_rows;
-    final int  ncols = fr.numCols();
-    final long nrows = fr.numRows();
-    final int ymin = (int)vresponse.min();
-    final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
-    assert 1 <= nclass && nclass < 1000; // Arbitrary cutoff for too many classes
-    final String domain[] = nclass > 1 ? vresponse.domain() : null;
-    _errs = new float[0];     // No trees yet
-    final Key outputKey = dest();
-    final Key dataKey = null;
     drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,new DTree[0],null, ymin, null);
     DKV.put(outputKey, drf_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
-        fr.add("response",vresponse);
 
         // Fill in the response variable column(s)
+        final String domain[] = nclass > 1 ? vresponse.domain() : null;
         if( nclass == 1 ) {
           throw H2O.unimpl();
         } else {
@@ -219,12 +164,7 @@ public class DRF extends FrameJob {
           for( int t=0; t<xtrees; t++ )
             UKV.remove(fr.remove(fr.numCols()-1)._key);
         }
-        Log.info(Sys.DRF__,"DRF done in "+t_drf);
-
-        // Remove temp vectors; cleanup the Frame
-        while( fr.numCols() > ncols+1/*Leave response*/ )
-          UKV.remove(fr.remove(fr.numCols()-1)._key);
-        remove();
+        cleanUp(fr,ncols,t_build); // Shared cleanup
         tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {

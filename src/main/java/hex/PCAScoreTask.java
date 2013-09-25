@@ -173,7 +173,7 @@ public abstract class PCAScoreTask {
         VectorGroup vg = lmatrix.vecs()[0].group();
         Key [] keys = vg.addVecs(ncomp);
         for(int i = 0; i < ncomp; i++) {
-          vecs[nfeat+i] = new AppendableVec(keys[i]);
+          vecs[nfeat+i] = vecs[0].makeZero();
         }
 
         ScoreTask tsk = new ScoreTask(job, nfeat, ncomp, eigvec).doAll(vecs);
