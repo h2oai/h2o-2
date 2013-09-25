@@ -1,7 +1,12 @@
-
+#!/usr/bin/python
 import sys, itertools, os, re
+
 def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is ???',
     cloudShutdownIsError=False, sandboxIgnoreErrors=False):
+    # show the parameters
+    print "check_sandbox_for_errors:", locals()
+
+    
     # gets set below on error (returned)
     errorFound = False
 
@@ -126,20 +131,23 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
             if not sandboxIgnoreErrors:
                 raise Exception(errorMessage)
 
-    return errorFound
+    if errorFound:
+        return errorMessage
+    else:
+        return
 
 if __name__ == "__main__":
     # if you call from the command line, we'll just pass the first two positionally.
     # here's a low budget argsparse :) (args are optional!)
     arg_names = ['me', 'LOG_DIR', 'python_test_name', 'cloudShutdownIsError', 'sandboxIgnoreErrors']
     args = dict(itertools.izip_longest(arg_names, sys.argv))
-    errorFound = check_sandbox_for_errors(
+    errorMessage = check_sandbox_for_errors(
         LOG_DIR=args['LOG_DIR'], 
         python_test_name=args['python_test_name'],
         cloudShutdownIsError=args['cloudShutdownIsError'], 
         sandboxIgnoreErrors=args['sandboxIgnoreErrors'])
 
     # it shouldn't return here because it should take the exception)
-    if errorFound:
+    if errorMessage:
         raise Exception('Error found in the logs that we want to consider fatal')
 

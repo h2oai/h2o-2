@@ -1,4 +1,7 @@
 #/bin/sh
+
+# takes a -n argument to disable the s3 download for faster testing
+
 # Ensure that all your children are truly dead when you yourself are killed.
 # http://www.davidpashley.com/articles/writing-robust-shell-scripts/#id2382181
 # trap "kill -- -$BASHPID" INT TERM EXIT
@@ -8,34 +11,6 @@ echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
 set -e
-
-SH2JU=~/shell2junit/sh2ju.sh
-echo "Checking that sh2ju.sh exists in the right place"
-if [ -f $SH2JU ]
-then
-    echo "$SH2JU exists."
-else
-    # http://code.google.com/p/shell2junit
-    # how to use in jenkins:
-    # http://manolocarrasco.blogspot.com/2010/02/hudson-publish-bach.html
-    pushd ~
-    wget http://shell2junit.googlecode.com/files/shell2junit-1.0.0.zip
-    unzip shell2junit-1.0.0.zip 
-    ls -lt shell2junit/sh2ju_example.sh  
-    ls -lt shell2junit/sh2ju.sh    
-    popd
-
-    if [ -f $SH2JU ]
-    then
-        echo "$SH2JU exists."
-    else
-        echo "$SH2JU does not exist. Tried to download it but failed?."
-        exit 1
-    fi
-fi
-
-#### Include the library
-source $SH2JU
 
 # This gets the h2o.jar
 source ./runner_setup.sh
@@ -82,11 +57,11 @@ do
 done
 ls -lt ./h2o-nodes.json
 
-
 # We now have the h2o-nodes.json, that means we started the jvms
 # Shouldn't need to wait for h2o cloud here..
 # the test should do the normal cloud-stabilize before it does anything.
 # n0.doit uses nosetests so the xml gets created on completion. (n0.doit is a single test thing)
+
 # A little '|| true' hack to make sure we don't fail out if this subtest fails
 # test_c1_rel has 1 subtest
 
@@ -96,53 +71,12 @@ echo "If it exists, pytest_config-<username>.json in this dir will be used"
 echo "i.e. pytest_config-jenkins.json"
 echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 
-#### Clean old reports
-## juLogClean
-
-#******************************************************
-# Examples
-#******************************************************
-
-#### Success command
-juLog  -name=myTrueCommand true || true
-#### Failure (just to test that jenkins reports failure)
-### juLog  -name=myFalseCommand false || true
-#### Sleep
-juLog  -name=mySleepCommand sleep 5 || true
-#### The test fails because the word 'world' is found in command output
-#### (just to test that jenkins reports failure)
-#### juLog  -name=myErrorCommand -ierror=world   echo Hello World || true
-#### a simple command
-juLog  -name=myLsCommand /bin/ls || true
-
-#### A call to a customized method
-myCmd() {
-    ls -l $*
-    return 0
-}
-juLog  -name=myCustomizedMethod myCmd '*.sh' || true
-
-#******************************************************
-# End of Examples
-#******************************************************
-myRInstall() {
-    set +e
-    which R
-    R --version
-    H2O_R_HOME=../../R
-    echo "Okay to run h2oWrapper.R every time for now"
-    R CMD BATCH $H2O_R_HOME/h2oWrapper-package/R/h2oWrapper.R
-}
-
-juLog  -name=myRInstall myRInstall || true
-
 #******************************************************
 
 myR() {
     # these are hardwired in the config json used above for the cloud
-    # CLOUD_IP=192.168.1.161
-    # CLOUD_PORT=54355
-
+    # CLOUD_IP=
+    # CLOUD_PORT=
     # get_s3_jar.sh now downloads it. We need to tell anqi's wrapper where to find it.
     # with an environment variable
 
@@ -150,42 +84,46 @@ myR() {
     R --version
     H2O_R_HOME=../../R
     H2O_PYTHON_HOME=../../py
-    export H2OWrapperDir=$H2O_R_HOME/h2oWrapper-package/R
-    echo "H2OWrapperDir env. variable should be $H2OWrapperDir"
+
+    # first test will cause an install
+    # this is where we downloaded to. 
+    # notice no version number
+    # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
+    export H2OWrapperDir=../../h2o-downloaded/R
+    echo "H2OWrapperDir should be $H2OWrapperDir"
+    ls $H2OWrapperDir/h2oWrapper*.tar.gz
 
     rScript=$H2O_R_HOME/tests/$1
-    rLibrary=$H2O_R_HOME/$2
     echo $rScript
-    echo $rLibrary
     echo "Running this cmd:"
-    echo "R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
+    cmd="R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
+    echo $cmd
+
     # don't fail on errors, since we want to check the logs in case that has more info!
     set +e
-    R -f $rScript --args $CLOUD_IP:$CLOUD_PORT
-    rExitcode=$?
-    # check the h2o logs (and R logs) to see if there's any badness! exceptions!
-    # this uses the exact same python check_sandbox_for_errors() stuff as python tests
-    # so it's always up to date! (it also looks at the R logs if they go to sandbox?
-    # where do they go, the way above? I guess we rely on the test causing an exception
-    python $H2O_PYTHON_HOME/h2o_sandbox.py
-    pExitcode=$?
-    set -e
-    # exit # status is last command
-    exit $rExitcode || $pExitcode
+    # everything after -- is positional. grabbed by argparse.REMAINDER
+    ./sh2junit.py -name $1 -timeout 30 -- $cmd || true
 }
 
-# seems like it assumes the regex is present for non-zero exit code cases? (line 92 sh2ju.sh)
-# or ???
 
-juLog  -name=runit_RF.R myR 'runit_RF.R' || true
-juLog  -name=runit_PCA.R myR 'runit_PCA.R' || true
-juLog  -name=runit_kmeans.R myR 'runit_kmeans.R' || true
-juLog  -name=runit_GLM.R myR 'runit_GLM.R' || true
-juLog  -name=runit_GBM.R myR 'runit_GBM.R' || true
+H2O_R_HOME=../../R
+echo "Okay to run h2oWrapper.R every time for now"
 
+#***********************************************************************
+# This is the list of tests
+#***********************************************************************
+myR 'runit_RF.R'
+myR 'runit_PCA.R'
+myR 'runit_GLM.R'
+myR 'runit_GBM.R'
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
+# produces xml too!
 ../testdir_single_jvm/n0.doit test_shutdown.py
+#***********************************************************************
+# End of list of tests
+#***********************************************************************
+
 
 if ps -p $CLOUD_PID > /dev/null
 then
