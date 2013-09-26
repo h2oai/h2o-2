@@ -23,10 +23,12 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
 	    colnames(cf_matrix)=c(1:categories)
 	    rownames(cf_matrix)=c(1:categories)
 	    result$confusion= cf_matrix
-	    mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=ntrees)
-	    colnames(mse_matrix)=c(1:ntrees)
-	    rownames(mse_matrix)="MSE"
-	    result$err=mse_matrix
+      
+	    # mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=ntrees)
+	    # colnames(mse_matrix)=c(1:ntrees)
+	    # rownames(mse_matrix)="MSE"
+	    # result$err=mse_matrix
+      result$err = res2$gbm_model$errs
 	    resGBM=new("H2OGBMModel", key=destination, data=data, model=result)
 	    resGBM
 	})
@@ -382,11 +384,16 @@ setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="missing"),
           result
         })
 
-# setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
-setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="H2OParsedData"),
+setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
+# setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="H2OParsedData"),
           function(object, newdata) {
-            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
-            res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
-            result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-            result
+            if(class(object) == "H2OGLMModel") {
+              res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
+              res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
+              result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
+              result
+            # } else if(class(object) == "H2OPCAModel") {
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, data_key=newdata@key)
+            } else
+              stop(paste("Prediction has not yet been implemented for", class(object)))
           })

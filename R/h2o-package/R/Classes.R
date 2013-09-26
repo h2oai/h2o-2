@@ -106,8 +106,8 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("GBM Model Key:", object@key)
   
   model = object@model
-  cat("\nConfusion matrix:\n"); print(model$confusion)
-  cat("\n\nMean Squared error by tree:\n"); print(model$err)
+  cat("\n\nConfusion matrix:\n"); print(model$confusion)
+  cat("\nMean Squared error by tree:\n"); print(model$err)
 })
 
 setMethod("show", "H2OGBMGrid", function(object) {
