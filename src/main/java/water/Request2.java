@@ -1,11 +1,14 @@
 package water;
 
+import hex.GridSearch;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 
 import water.api.*;
 import water.fvec.Frame;
+import water.util.Utils;
 
 public abstract class Request2 extends Request {
   transient Properties _parms;
@@ -240,35 +243,67 @@ public abstract class Request2 extends Request {
     throw new Exception("Class " + api.filter().getName() + " must have an empty constructor");
   }
 
-  // Request2 has an instance-per-call model, instead of Request's ThreadLocals
-  @Override public water.NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
-    // Expand grid search related argument sets
-    // TODO: real parser for unified imbricated argument sets, expressions etc.
-    ArrayList<String>[] values = new ArrayList[_arguments.size()];
+  // Create an instance per call instead of ThreadLocals
+  @Override protected Request create(Properties parms) {
+    Request2 request;
+    try {
+      request = getClass().newInstance();
+      request._arguments = _arguments;
+      request._parms = parms;
+    } catch( Exception e ) {
+      throw new RuntimeException(e);
+    }
+    return request;
+  }
+
+  // Expand grid search related argument sets
+  @Override protected Response serveGrid() {
+    // TODO: real parser for unified imbricated argument sets, expressions etc
+    String[][] values = new String[_arguments.size()][];
+    boolean gridSearch = false;
     for( int i = 0; i < values.length; i++ ) {
-      String value = args.getProperty(_arguments.get(i)._name);
+      String value = _parms.getProperty(_arguments.get(i)._name);
       int off = 0;
       int next = 0;
       while( (next = value.indexOf('|', off)) >= 0 ) {
         if( next != off )
-          values[i].add(value.substring(off, next));
+          values[i] = Utils.add(values[i], value.substring(off, next));
         off = next + 1;
+        gridSearch = true;
       }
       if( off < value.length() )
-        values[i].add(value.substring(off));
+        values[i] = Utils.add(values[i], value.substring(off));
     }
-    // Iterate over all argument combinations
+    if( !gridSearch )
+      return serve();
+
     int[] counters = new int[values.length];
+    ArrayList<Job> jobs = new ArrayList<Job>();
     for( ;; ) {
-      Request2 request;
-      try {
-        request = getClass().newInstance();
-        request._arguments = _arguments;
-        request._parms = args;
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
+      Job job = (Job) create(_parms);
+      Properties combination = new Properties();
+      for( int i = 0; i < values.length; i++ ) {
+        String value = values[i][counters[i]];
+        combination.setProperty(_arguments.get(i)._name, value);
+        _arguments.get(i).check(job, value);
       }
-      return super.serve(server, args, type);
+      job._parms = combination;
+      jobs.add(job);
+      if(!increment(counters, values))
+        break;
+    }
+    GridSearch grid = new GridSearch();
+    return grid.serve();
+  }
+
+  private static void increment(int[] counters, String[][] values) {
+    for( int i = 0; i < counters.length; i++ ) {
+      if( counters[i] < values[i].length - 1 ) {
+        counters[i]++;
+        break;
+      } else           if(i
+        counters[i] = 0;
+      }
     }
   }
 

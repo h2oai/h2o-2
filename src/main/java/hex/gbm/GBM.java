@@ -1,29 +1,26 @@
 package hex.gbm;
 
-import hex.gbm.DTree.*;
+import hex.gbm.DTree.BulkScore;
+import hex.gbm.DTree.DecidedNode;
+import hex.gbm.DTree.ScoreBuildHistogram;
+import hex.gbm.DTree.UndecidedNode;
+
 import java.util.Arrays;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.Job.FrameJob;
-import water.api.*;
+import water.Job.ModelJob;
+import water.api.DocGen;
+import water.api.GBMProgressPage;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
 // Gradient Boosted Trees
-public class GBM extends FrameJob {
+public class GBM extends ModelJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
-  @API(help="", required=true, filter=GBMVecSelect.class)
-  public Vec vresponse;
-  class GBMVecSelect extends VecClassSelect { GBMVecSelect() { super("source"); } }
-
-  @API(help="columns to ignore",required=false,filter=GBMMultiVecSelect.class)
-  public int [] ignored_cols = new int []{};
-  class GBMMultiVecSelect extends MultiVecSelect { GBMMultiVecSelect() { super("source");} }
-
 
   @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
   public int ntrees = 10;
@@ -90,36 +87,19 @@ public class GBM extends FrameJob {
   }
 
   public void run() {
-    final Frame fr = new Frame(source); // Local copy for local hacking
-    fr.remove(ignored_cols);
-    // Doing classification only right now...
-    if( !vresponse.isEnum() ) vresponse.asEnum();
+    selectCols();
 
-    // While I'd like the Frames built custom for each call, with excluded
-    // columns already removed - for now check to see if the response column is
-    // part of the frame and remove it up front.
-    String vname="response";
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr.vecs()[i]==vresponse ) {
-        vname=fr._names[i];
-        fr.remove(i);
-      }
-
-    buildModel(fr,vname);
-  }
-
-  private void buildModel( final Frame fr, String vname ) {
     final Timer t_gbm = new Timer();
-    final Frame frm = new Frame(fr); // Local copy for local hacking
-    frm.add(vname,vresponse);        // Hardwire response as last vector
+    final Frame fr = new Frame(_names, _train); // Only data
+    final Frame frm = new Frame(fr);            // Data + response
+    frm.add(_responseName, response);
 
     assert 1 <= min_rows;
     final int  ncols = fr.numCols();
     final long nrows = fr.numRows();
-    final int ymin = (int)vresponse.min();
-    final char nclass = vresponse.isInt() ? (char)(vresponse.max()-ymin+1) : 1;
+    final int ymin = (int) response.min();
+    final char nclass = response.isInt() ? (char)(response.max()-ymin+1) : 1;
     assert 1 <= nclass && nclass <= 1000; // Arbitrary cutoff for too many classes
-    final String domain[] = nclass > 1 ? vresponse.domain() : null;
     _errs = new float[0];     // No trees yet
     final Key outputKey = dest();
     final Key dataKey = null;
@@ -129,7 +109,7 @@ public class GBM extends FrameJob {
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
         // Keep the response in the basic working frame
-        fr.add("response",vresponse);
+        fr.add("response",response);
 
         // Build initial residual columns
         buildResiduals(nclass,fr,ncols,nrows,ymin);
@@ -177,7 +157,7 @@ public class GBM extends FrameJob {
   // Build the next tree, which is trying to correct the residual error from the prior trees.
   private DTree[] buildNextTree(Frame fr, DTree forest[], final int ncols, long nrows, final char nclass, int ymin) {
     // Make a new Vec to hold the split-number for each row (initially all zero).
-    fr.add("NIDs",vresponse.makeZero());
+    fr.add("NIDs",response.makeZero());
     // Initially setup as-if an empty-split had just happened
     final DTree tree = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
     new GBMUndecidedNode(tree,-1,DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass)); // The "root" node
@@ -274,19 +254,19 @@ public class GBM extends FrameJob {
   // The initial prediction is just the class distribution.  The initial
   // residuals are then basically the actual class minus the average class.
   private void buildResiduals(final char nclass, final Frame fr, final int ncols, long nrows, final int ymin ) {
-    String[] domain = vresponse.domain();
+    String[] domain = response.domain();
     // Find the initial prediction - the current average response variable.
     if( nclass == 1 ) {
-      fr.add("Residual",vresponse.makeCon(vresponse.mean()));
+      fr.add("Residual",response.makeCon(response.mean()));
       throw H2O.unimpl();
     } else {
       float f = 1.0f/nclass;    // Prediction is same for all classes
       for( int i=0; i<nclass; i++ )
-        fr.add("Residual-"+domain[i],vresponse.makeCon(-f));
+        fr.add("Residual-"+domain[i],response.makeCon(-f));
     }
     // Build a set of predictions that's the sum across all trees.
     for( int i=0; i<nclass; i++ )   // All Zero cols
-      fr.add("Pred-"+domain[i],vresponse.makeZero());
+      fr.add("Pred-"+domain[i],response.makeZero());
 
     // Compute initial residuals with no trees: prediction-actual e.g. if the
     // class choices are A,B,C with equal probability, and the row is actually

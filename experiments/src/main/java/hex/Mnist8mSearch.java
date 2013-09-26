@@ -55,7 +55,7 @@ public class Mnist8mSearch {
   double eval(Layer[] ls, Trainer trainer) {
     int count = 1000, correct = 0;
     for( int n = 0; n < count; n++ ) {
-      if( Mnist8m.eval(ls, n, null) ) {
+      if( Mnist8m.run(ls, n, null) ) {
         correct++;
       }
     }

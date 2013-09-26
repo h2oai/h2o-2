@@ -61,33 +61,32 @@ public abstract class Request extends RequestBuilders {
   protected void registered() {
   }
 
-  protected abstract Response serve();
-
-  protected Response serve_debug() {
-    throw H2O.unimpl();
+  protected Request create(Properties parms) {
+    return this;
   }
+
+  protected Response serveGrid() {
+    return serve();
+  }
+
+  protected abstract Response serve();
 
   protected boolean log() {
     return true;
   }
 
-  public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
+  public NanoHTTPD.Response serve(NanoHTTPD server, Properties parms, RequestType type) {
     // Needs to be done also for help to initialize or argument records
-    String query = checkArguments(args, type);
-    return serve(server, args, type, query);
-  }
-
-  protected final NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type, String query) {
+    String query = checkArguments(parms, type);
     switch( type ) {
       case help:
         return wrap(server, HTMLHelp());
       case json:
       case www:
-      case png:
         if( log() ) {
           String log = getClass().getSimpleName();
-          for( Object arg : args.keySet() ) {
-            String value = args.getProperty((String) arg);
+          for( Object arg : parms.keySet() ) {
+            String value = parms.getProperty((String) arg);
             if( value != null && value.length() != 0 )
               log += " " + arg + "=" + value;
           }
@@ -96,14 +95,11 @@ public abstract class Request extends RequestBuilders {
         if( query != null )
           return wrap(server, query, type);
         long time = System.currentTimeMillis();
-        Response response = serve();
+        Response response = serveGrid();
         response.setTimeStart(time);
         if( type == RequestType.json )
           return response._req == null ? wrap(server, response.toJson()) : wrap(server, new String(response._req
               .writeJSON(new AutoBuffer()).buf()), RequestType.json);
-        return wrap(server, build(response));
-      case debug:
-        response = serve_debug();
         return wrap(server, build(response));
       case query:
         return wrap(server, query);

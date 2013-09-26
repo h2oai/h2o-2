@@ -138,10 +138,13 @@ public abstract class Trainer {
       _resume = new CyclicBarrier(_threads.length + 1);
 
       for( int t = 0; t < _trainers.length; t++ ) {
+        Layer[] clones = new Layer[ls.length];
+        for( int y = 0; y < ls.length; y++ )
+          clones[y] = ls[y].clone();
+        for( int y = 0; y < ls.length; y++ )
+          clones[y].init(clones, y, false, 0);
         final Input input = (Input) ls[0].clone();
         input._pos = input._len * t / _trainers.length;
-        Layer[] clones = Layer.clone(ls, input, 0);
-
         _trainers[t] = new Base(clones);
         final Base trainer = _trainers[t];
 
@@ -262,7 +265,7 @@ public abstract class Trainer {
       DKV.put(_key, new Value(_key, new byte[0]));
 
       final Vec[] vecs = ((VecsInput) _ls[0])._vecs;
-      assert _ls[0]._a.length == vecs.length - 1;
+      assert _ls[0]._a.length == vecs.length;
       assert vecs[0].nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
       _counts = new AtomicIntegerArray(vecs[0].nChunks());
 
@@ -378,15 +381,15 @@ public abstract class Trainer {
 
     @Override public void compute2() {
       Layer[] clones = new Layer[_node._ls.length];
-      FrameInput stats = (FrameInput) _node._ls[0];
-      ChunksInput input = new ChunksInput(_cs, stats._means, stats._sigmas);
+      VecsInput stats = (VecsInput) _node._ls[0];
+      ChunksInput input = new ChunksInput(_cs, stats);
       input.init(null, _cs.length - 1);
       clones[0] = input;
       for( int y = 1; y < _node._ls.length; y++ ) {
         clones[y] = _node._ls[y].clone();
         clones[y]._w = _node._ws[y];
         clones[y]._b = _node._bs[y];
-        clones[y].init(clones[y - 1], _node._bs[y].length, false, _node._total);
+        clones[y].init(clones, y, false, _node._total);
       }
       Base base = new Base(clones);
       for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )

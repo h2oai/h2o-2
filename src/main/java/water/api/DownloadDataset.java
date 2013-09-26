@@ -25,7 +25,6 @@ public class DownloadDataset extends Request2 {
     return  "<a href='/downloadCsv?src_key=" + k.toString() + "'>" + content + "</a>";
   }
 
-  @SuppressWarnings("resource")
   @Override final public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
     // Needs to be done also for help to initialize or argument records
     checkArguments(args, type);

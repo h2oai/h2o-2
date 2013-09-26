@@ -422,20 +422,18 @@ public abstract class Layer extends Iced {
     }
   }
 
-  // Cloning
+  //
 
   @Override public Layer clone() {
     return (Layer) super.clone();
   }
 
-  public static Layer[] clone(Layer[] ls, Input input, long step) {
-    Layer[] clones = new Layer[ls.length];
-    clones[0] = input;
-    for( int y = 1; y < ls.length; y++ )
-      clones[y] = ls[y].clone();
-    for( int y = 0; y < ls.length; y++ )
-      clones[y].init(clones, y, false, step);
-    return clones;
+  public static void copyWeights(Layer[] src, Layer[] dst) {
+    for( int y = 1; y < src.length - 1; y++ ) {
+      assert dst[y]._w == null && dst[y]._b == null;
+      dst[y]._w = src[y]._w;
+      dst[y]._b = src[y]._b;
+    }
   }
 
   // If layer is a RBM

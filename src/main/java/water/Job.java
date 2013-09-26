@@ -3,6 +3,8 @@ package water;
 import java.util.Arrays;
 import java.util.UUID;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.api.*;
@@ -44,19 +46,16 @@ public class Job extends Request2 {
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
-    public FrameJob(String desc, Key dest) { super(desc,dest); }
 
     @API(help = "Source frame", required = true, filter = Default.class)
     public Frame source;
 
-    @API(help = "Validation frame", filter = Default.class)
-    public Frame validation;
+    public FrameJob(String desc, Key dest) { super(desc,dest); }
   }
 
-  public static abstract class ModelJob extends FrameJob {
+  public static abstract class ColumnsJob extends FrameJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
-    public ModelJob(String desc, Key dest) { super(desc,dest); }
 
     @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
     public int[] cols;
@@ -65,6 +64,51 @@ public class Job extends Request2 {
     @API(help="Column to use as class", required=true, filter=responseFilter.class)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
+
+    public ColumnsJob(String desc, Key dest) { super(desc,dest); }
+
+    protected void selectCols() {
+      // Doing classification only right now...
+      if( !response.isEnum() ) response.asEnum();
+
+      for( int i = cols.length - 1; i >= 0; i-- )
+        if( source.vecs()[cols[i]] == response )
+          cols = ArrayUtils.remove(cols, i);
+    }
+
+    protected Vec[] selectVecs(Frame frame) {
+      Vec[] vecs = new Vec[cols.length];
+      for( int i = 0; i < cols.length; i++ )
+        vecs[i] = frame.vecs()[cols[i]];
+      return vecs;
+    }
+  }
+
+  public static abstract class ModelJob extends ColumnsJob {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+    protected transient Vec[] _train, _valid;
+    protected transient String[] _names;
+    protected transient String _responseName;
+
+    @API(help = "Validation frame", filter = Default.class)
+    public Frame validation;
+
+    public ModelJob(String desc, Key dest) { super(desc,dest); }
+
+    @Override protected void selectCols() {
+      super.selectCols();
+      _train = selectVecs(source);
+      if(validation != null)
+        _valid = selectVecs(validation);
+      _names = new String[cols.length];
+      for( int i = 0; i < cols.length; i++ )
+        _names[i] = source._names[cols[i]];
+      _responseName = "response";
+      for( int i = 0; i < source.numCols(); i++ )
+        if( source.vecs()[i] == response )
+          _responseName = source._names[i];
+    }
   }
 
   public static abstract class HexJob extends Job {
