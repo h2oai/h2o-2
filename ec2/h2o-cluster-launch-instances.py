@@ -31,7 +31,7 @@ securityGroupName = 'SecurityDisabled'
 # Options you might want to change.
 # ---------------------------------
 
-numInstancesToLaunch = 1
+numInstancesToLaunch = 3
 instanceType = 'm1.large'
 instanceNameRoot = 'H2ORStudioDemo'
 
