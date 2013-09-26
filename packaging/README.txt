@@ -20,6 +20,10 @@ This package contains:
                              for your version of Hadoop (please contact 
                              0xdata if your version is not here yet).
 
+    ec2/                     Directory containing scripts for Amazon EC2.
+    ec2/README.txt           Read this for instructions on how to run H2O
+                             on EC2.
+
 
 To try out H2O from the command line, type: 
     $ java -Xmx2g -jar h2o.jar
