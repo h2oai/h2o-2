@@ -12,11 +12,11 @@ fi
 h2oBranch=master
 
 echo "Fetching latest build number for branch ${h2oBranch}..."
-curl --silent -o latest https://h2o-release.s3.amazonaws.com/h2o/master/latest
+curl --silent -o latest https://h2o-release.s3.amazonaws.com/h2o/${h2oBranch}/latest
 h2oBuild=`cat latest`
 
 echo "Fetching full version number for build ${h2oBuild}..."
-curl --silent -o project_version https://h2o-release.s3.amazonaws.com/h2o/master/${h2oBuild}/project_version
+curl --silent -o project_version https://h2o-release.s3.amazonaws.com/h2o/${h2oBranch}/${h2oBuild}/project_version
 h2oVersion=`cat project_version`
 
 echo "Downloading H2O version ${h2oVersion} to cluster..."
