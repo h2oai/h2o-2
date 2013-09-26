@@ -2,6 +2,8 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_pca, h2o_jobs as h2j
 
+
+print "\nTHIS IS KIND OF A WASTE SINCE PCA DISCARDS ALL CATEGORICAL COLUMNS\n"
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
     # do we need more than one random generator?
     r1 = random.Random(SEED)
