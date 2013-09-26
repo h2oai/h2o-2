@@ -1618,6 +1618,7 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
+            'ignored_cols': None,
             'nbins': None,
         }
         # only lets these params thru

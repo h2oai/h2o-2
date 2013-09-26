@@ -10,7 +10,10 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
-set -e
+set -o pipefail  # trace ERR through pipes
+set -o errtrace  # trace ERR through 'time command' and other functions
+set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable
+set -o errexit   ## set -e : exit the script if any statement returns a non-true return value
 
 # remove any test*xml or TEST*xml in the current dir
 rm -f test.*xml
@@ -81,7 +84,6 @@ mySetup() {
     # then make the R_LIB_USERS dir
     which R
     R --version
-
     # don't always remove..other users may have stuff he doesn't want to re-install
     if [[ $USER == "jenkins" ]]
     then 
@@ -99,10 +101,8 @@ mySetup() {
     echo "Running this cmd:"
     echo $cmd
 
-    # don't fail on errors, since we want to check the logs in case that has more info!
-    set +e
     # everything after -- is positional. grabbed by argparse.REMAINDER
-    ./sh2junit.py -name $1 -timeout 30 -- $cmd || true
+    ./sh2junit.py -name $1 -timeout 30 -- $cmd
 }
 
 myR() {
@@ -142,6 +142,7 @@ myR() {
     set +e
     # everything after -- is positional. grabbed by argparse.REMAINDER
     ./sh2junit.py -name $1 -timeout $timeout -- $cmd || true
+    set -e
 }
 
 
@@ -151,12 +152,14 @@ echo "Okay to run h2oWrapper.R every time for now"
 #***********************************************************************
 # This is the list of tests
 #***********************************************************************
-mySetup 'libPaths'
-myR 'runit_RF' 35
-myR 'runit_PCA' 35
-myR 'runit_GLM' 35
-myR 'runit_GBM' 300
-# If this one fails, fail this script so the bash dies 
+mySetup libPaths
+
+# can be slow if it had to reinstall all packages?
+myR runit_RF 120
+myR runit_PCA 35
+myR runit_GLM 35
+myR runit_GBM 300
+# If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
 ../testdir_single_jvm/n0.doit test_shutdown.py
