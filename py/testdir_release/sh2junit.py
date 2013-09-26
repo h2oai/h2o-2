@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import sys, psutil, os, tempfile, argparse, time
+import sys, psutil, os, stat, tempfile, argparse, time
 sys.path.extend(['.','..','../..','py'])
 import h2o_sandbox
 
@@ -14,9 +14,15 @@ import h2o_sandbox
 # with name "sh2junit_<name>.xml"
 
 print "Assumes ./sandbox already exists in current dir. Created by cloud building?"
-
 def sandbox_tmp_file(prefix='', suffix=''):
-    return tempfile.mkstemp(prefix=prefix, suffix=suffix, dir='./sandbox')
+    fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir='./sandbox')
+    # make sure the file now exists
+    # os.open(path, 'a').close()
+    # give everyone permission to read it (jenkins running as 
+    # 0xcustomer needs to archive as jenkins
+    permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+    os.chmod(path, permissions)
+    return (fd, path)
 
 #**************************************************************************
 # Example junit xml

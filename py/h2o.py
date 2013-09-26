@@ -264,7 +264,8 @@ def tmp_file(prefix='', suffix=''):
     fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
     # make sure the file now exists
     # os.open(path, 'a').close()
-    # give everyone permission to read it (jenkins running as 0xcustomer needs to archive as jenkins
+    # give everyone permission to read it (jenkins running as 
+    # 0xcustomer needs to archive as jenkins
     permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
     os.chmod(path, permissions)
     return (fd, path)
