@@ -2,6 +2,7 @@
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
+setClass("H2OParsedData2", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", models="list", sumtable="list", "VIRTUAL"))
@@ -26,6 +27,11 @@ setMethod("show", "H2ORawData", function(object) {
 })
 
 setMethod("show", "H2OParsedData", function(object) {
+  print(object@h2o)
+  cat("Parsed Data Key:", object@key, "\n")
+})
+
+setMethod("show", "H2OParsedData2", function(object) {
   print(object@h2o)
   cat("Parsed Data Key:", object@key, "\n")
 })
@@ -251,7 +257,7 @@ setMethod("summary", "H2OParsedData", function(object) {
 })
 
 setMethod("summary", "H2OPCAModel", function(object) {
-  # We probably want to compute all this on the Java side for speedup
+  # TODO: Save propVar and cumVar from the Java output instead of computing here
   myVar = object@model$sdev^2
   myProp = myVar/sum(myVar)
   result = rbind(object@model$sdev, myProp, cumsum(myProp))   # Need to limit decimal places to 4
@@ -308,3 +314,24 @@ setMethod("h2o.factor", signature(data="H2OParsedData", col="character"),
       h2o.factor(data, ind-1)
 })
 
+#----------------- FluidVecs -----------------------#
+setMethod("colnames", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  unlist(lapply(res$cols, function(y) y$name))
+})
+
+setMethod("names", "H2OParsedData2", function(x) { colnames(x) })
+
+setMethod("nrow", "H2OParsedData2", function(x) { 
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numRows })
+
+setMethod("ncol", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numCols })
+
+setMethod("summary", "H2OParsedData2", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_INSPECT2, src_key=object@key)
+  if(is.null(res$cols) || length(res$cols) == 0) return(NULL)
+  myList = lapply(res$cols, function(x) { x$name = NULL; x })
+  myData = matrix(unlist(myList), ncol = ncol(object), dimnames = list(names(myList[[1]]), colnames(object)))
+  data.frame(myData)
+})

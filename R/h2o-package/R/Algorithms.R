@@ -397,24 +397,22 @@ setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="missing"),
           function(forest, k) { h2o.getTree(forest, k, plot = FALSE) })
 
-setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="missing"), 
-        function(object) {
-          res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=object@data@key)
-          res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
-          result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-          result
-        })
-
 setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
-# setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="H2OParsedData"),
           function(object, newdata) {
             if(class(object) == "H2OGLMModel") {
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
-              result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-              result
+              new("H2OParsedData", h2o=object@data@h2o, key=res$key)
             # } else if(class(object) == "H2OPCAModel") {
-            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, data_key=newdata@key)
+            #  numMatch = colnames(newdata) %in% colnames(object@data)
+            #  numPC = length(numMatch[numMatch == TRUE])
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, num_pc=numPC)
+            #  while(h2o.__poll(object@data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
+            #  new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
             } else
               stop(paste("Prediction has not yet been implemented for", class(object)))
           })
+
+setMethod("h2o.predict", signature(object="H2OModel", newdata="missing"), 
+          function(object) { h2o.predict(object, object@data) })

@@ -16,7 +16,8 @@ public class PCA extends Request {
   protected final H2OHexKey _key = new H2OHexKey(KEY);
   // protected final HexColumnSelect _ignore = new HexPCAColumnSelect(IGNORE, _key);
   protected final HexColumnSelect _x = new HexPCAColumnSelect(X, _key);
-  // protected final Int _numPC = new Int("num_pc", 10, 1, 1000000);
+  // protected final Int _numPC = new Int("num_pc", 10, 1, MAX_COL);
+  protected final Int _maxPC = new Int("max_pc", MAX_COL, 1, MAX_COL);
   protected final Real _tol = new Real("tolerance", 0.0, 0, 1, "Omit components with std dev <= tol times std dev of first component");
   protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
 
@@ -27,13 +28,15 @@ public class PCA extends Request {
     // _ignore._requestHelp = "A list of ignored columns (specified by name or 0-based index).";
     _x._requestHelp = "A list of columns to analyze (specified by name or 0-based index).";
     // _numPC._requestHelp = "Number of principal components to return.";
+    _maxPC._requestHelp = "Maximum number of principal components to return.";
     _tol._requestHelp = "Components omitted if their standard deviations are <= tol times standard deviation of first component.";
   }
 
 
   PCAParams getPCAParams() {
     // PCAParams res = new PCAParams(_numPC.value());
-    PCAParams res = new PCAParams(_tol.value(), _standardize.value());
+    // PCAParams res = new PCAParams(_tol.value(), _standardize.value());
+    PCAParams res = new PCAParams(_maxPC.value(), _tol.value(), _standardize.value());
     return res;
   }
 
@@ -131,7 +134,6 @@ public class PCA extends Request {
       return sb.toString();
     }
 
-    
     private void modelHTML(PCAModel m, JsonObject json, StringBuilder sb) {
       sb.append("<script type=\"text/javascript\" src='h2o/js/d3.v3.js'></script>");
       sb.append("<div class='alert'>Actions: " + PCAScore.link(m._selfKey, "Score on dataset") + ", "
@@ -191,7 +193,7 @@ public class PCA extends Request {
         "stroke: black;\n" +
         "shape-rendering: crispEdges;\n" +
       "}\n" +
-      
+
       ".axis text {\n" +
         "font-family: sans-serif;\n" +
         "font-size: 11px;\n" +
@@ -282,7 +284,7 @@ public class PCA extends Request {
          ".attr(\"font-size\", \"11px\")"+
          ".attr(\"fill\", \"red\");"+
         "*/\n"+
-      
+
       "//Create X axis\n"+
       "svg.append(\"g\")"+
         ".attr(\"class\", \"axis\")"+
@@ -294,9 +296,9 @@ public class PCA extends Request {
         ".append(\"text\")"+
         ".attr(\"x\",w/2)"+
         ".attr(\"y\",h - 5)"+
-        ".attr(\"text-anchor\", \"middle\")"+ 
+        ".attr(\"text-anchor\", \"middle\")"+
         ".text(\"Principal Component\");\n"+
-      
+
       "//Create Y axis\n"+
       "svg.append(\"g\")"+
         ".attr(\"class\", \"axis\")"+
@@ -310,7 +312,7 @@ public class PCA extends Request {
         ".attr(\"y\",-5)"+
         ".attr(\"transform\", \"rotate(90)\")"+
         //".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
-        ".attr(\"text-anchor\", \"middle\")"+ 
+        ".attr(\"text-anchor\", \"middle\")"+
         ".text(\"Eigenvalue\");\n"+
 
       "//Title\n"+
@@ -318,7 +320,7 @@ public class PCA extends Request {
         ".append(\"text\")"+
         ".attr(\"x\",w/2)"+
         ".attr(\"y\",padding - 20)"+
-        ".attr(\"text-anchor\", \"middle\")"+ 
+        ".attr(\"text-anchor\", \"middle\")"+
         ".text(\"Scree Plot\");\n");
 
       sb.append("</script>");
@@ -408,7 +410,7 @@ public class PCA extends Request {
          ".attr(\"font-size\", \"11px\")"+
          ".attr(\"fill\", \"red\");"+
         "*/\n"+
-      
+
       "//Create X axis\n"+
       "svg.append(\"g\")"+
         ".attr(\"class\", \"axis\")"+
@@ -420,9 +422,9 @@ public class PCA extends Request {
         ".append(\"text\")"+
         ".attr(\"x\",w/2)"+
         ".attr(\"y\",h - 5)"+
-        ".attr(\"text-anchor\", \"middle\")"+ 
+        ".attr(\"text-anchor\", \"middle\")"+
         ".text(\"Principal Component\");\n"+
-      
+
       "//Create Y axis\n"+
       "svg.append(\"g\")"+
         ".attr(\"class\", \"axis\")"+
@@ -436,7 +438,7 @@ public class PCA extends Request {
         ".attr(\"y\",-5)"+
         ".attr(\"transform\", \"rotate(90)\")"+
         //".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
-        ".attr(\"text-anchor\", \"middle\")"+ 
+        ".attr(\"text-anchor\", \"middle\")"+
         ".text(\"Cumulative Proportion of Variance\");\n"+
 
       "//Title\n"+
@@ -444,7 +446,7 @@ public class PCA extends Request {
         ".append(\"text\")"+
         ".attr(\"x\",w/2)"+
         ".attr(\"y\",padding-20)"+
-        ".attr(\"text-anchor\", \"middle\")"+ 
+        ".attr(\"text-anchor\", \"middle\")"+
         ".text(\"Cumulative Variance Plot\");\n");
 
       sb.append("</script>");
