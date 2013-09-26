@@ -58,6 +58,10 @@ public abstract class Request extends RequestBuilders {
     return RequestType.www;
   }
 
+  protected boolean log() {
+    return true;
+  }
+
   protected void registered() {
   }
 
@@ -65,19 +69,9 @@ public abstract class Request extends RequestBuilders {
     return this;
   }
 
-  protected Response serveGrid() {
-    return serve();
-  }
-
   protected abstract Response serve();
 
-  protected boolean log() {
-    return true;
-  }
-
   public NanoHTTPD.Response serve(NanoHTTPD server, Properties parms, RequestType type) {
-    // Needs to be done also for help to initialize or argument records
-    String query = checkArguments(parms, type);
     switch( type ) {
       case help:
         return wrap(server, HTMLHelp());
@@ -92,20 +86,30 @@ public abstract class Request extends RequestBuilders {
           }
           Log.debug(Sys.HTTPD, log);
         }
-        if( query != null )
-          return wrap(server, query, type);
-        long time = System.currentTimeMillis();
-        Response response = serveGrid();
-        response.setTimeStart(time);
-        if( type == RequestType.json )
-          return response._req == null ? wrap(server, response.toJson()) : wrap(server, new String(response._req
-              .writeJSON(new AutoBuffer()).buf()), RequestType.json);
-        return wrap(server, build(response));
-      case query:
+        return serveGrid(server, parms, type);
+      case query: {
+        for (Argument arg: _arguments)
+          arg.reset();
+        String query = buildQuery(parms,type);
         return wrap(server, query);
+      }
       default:
         throw new RuntimeException("Invalid request type " + type.toString());
     }
+  }
+
+  protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
+    String query = checkArguments(parms, type);
+    if( query != null )
+      return wrap(server, query, type);
+    long time = System.currentTimeMillis();
+    Response response = serve();
+    response.setTimeStart(time);
+    if( type == RequestType.json )
+      return response._req == null ? //
+            wrap(server, response.toJson()) : //
+            wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()), RequestType.json);
+    return wrap(server, build(response));
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String response) {

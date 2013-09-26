@@ -257,25 +257,27 @@ public abstract class Request2 extends Request {
   }
 
   // Expand grid search related argument sets
-  @Override protected Response serveGrid() {
+  protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
     // TODO: real parser for unified imbricated argument sets, expressions etc
     String[][] values = new String[_arguments.size()][];
     boolean gridSearch = false;
-    for( int i = 0; i < values.length; i++ ) {
+    for( int i = 0; i < _arguments.size(); i++ ) {
       String value = _parms.getProperty(_arguments.get(i)._name);
-      int off = 0;
-      int next = 0;
-      while( (next = value.indexOf('|', off)) >= 0 ) {
-        if( next != off )
-          values[i] = Utils.add(values[i], value.substring(off, next));
-        off = next + 1;
-        gridSearch = true;
+      if( value != null ) {
+        int off = 0;
+        int next = 0;
+        while( (next = value.indexOf('|', off)) >= 0 ) {
+          if( next != off )
+            values[i] = Utils.add(values[i], value.substring(off, next));
+          off = next + 1;
+          gridSearch = true;
+        }
+        if( off < value.length() )
+          values[i] = Utils.add(values[i], value.substring(off));
       }
-      if( off < value.length() )
-        values[i] = Utils.add(values[i], value.substring(off));
     }
     if( !gridSearch )
-      return serve();
+      return superServeGrid(server, parms, type);
 
     int[] counters = new int[values.length];
     ArrayList<Job> jobs = new ArrayList<Job>();
@@ -283,28 +285,36 @@ public abstract class Request2 extends Request {
       Job job = (Job) create(_parms);
       Properties combination = new Properties();
       for( int i = 0; i < values.length; i++ ) {
-        String value = values[i][counters[i]];
-        combination.setProperty(_arguments.get(i)._name, value);
-        _arguments.get(i).check(job, value);
+        if( values[i] != null ) {
+          String value = values[i][counters[i]];
+          combination.setProperty(_arguments.get(i)._name, value);
+          _arguments.get(i).reset();
+          _arguments.get(i).check(job, value);
+        }
       }
       job._parms = combination;
       jobs.add(job);
-      if(!increment(counters, values))
+      if( !increment(counters, values) )
         break;
     }
     GridSearch grid = new GridSearch();
-    return grid.serve();
+    grid.jobs = jobs.toArray(new Job[jobs.size()]);
+    return grid.superServeGrid(server, parms, type);
   }
 
-  private static void increment(int[] counters, String[][] values) {
+  public final NanoHTTPD.Response superServeGrid(NanoHTTPD server, Properties parms, RequestType type) {
+    return super.serveGrid(server, parms, type);
+  }
+
+  private static boolean increment(int[] counters, String[][] values) {
     for( int i = 0; i < counters.length; i++ ) {
-      if( counters[i] < values[i].length - 1 ) {
+      if( values[i] != null && counters[i] < values[i].length - 1 ) {
         counters[i]++;
-        break;
-      } else           if(i
+        return true;
+      } else
         counters[i] = 0;
-      }
     }
+    return false;
   }
 
   /*

@@ -2,6 +2,7 @@ package water.api;
 
 import hex.*;
 import hex.GBMGrid.GBMGridProgress;
+import hex.GridSearch.GridSearchProgress;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
@@ -129,6 +130,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
     registerRequest(new GetVector());
+    registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new NeuralNetProgress());
     registerRequest(new PostFile());

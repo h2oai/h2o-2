@@ -68,6 +68,10 @@ public class Inspect extends Request {
     return new Response(Response.Status.redirect, req, -1, -1, "Inspect", KEY, dest );
   }
 
+  public static String link(String txt, Key key) {
+    return "<a href='Inspect.html?key=" + key + "'>" + txt + "</a>";
+  }
+
   @Override protected boolean log() {
     return false;
   }

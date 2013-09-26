@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import water.Job.ModelJob;
 import water.Key;
+import water.UKV;
 import water.api.DocGen;
 import water.util.Log;
 
@@ -24,7 +25,7 @@ public class KMeans2 extends ModelJob {
   public Initialization initialization = Initialization.None;
 
   @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 2, lmax = 100000)
-  public int k;
+  public int k = 2;
 
   @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000)
   public int max_iter = 100;
@@ -44,5 +45,7 @@ public class KMeans2 extends ModelJob {
 
   @Override protected void run() {
     Log.info(DOC_GET + source);
+    UKV.put(destination_key, source);
+    remove();
   }
 }

@@ -57,7 +57,6 @@ public class GBMGrid extends FrameJob {
 
   public GBMGrid() {
     super(DOC_GET, Key.make("__GBMGrid_" + UUID.randomUUID().toString()));
-    description = DOC_GET;
   }
 
   public static String link(Key k, String content) {

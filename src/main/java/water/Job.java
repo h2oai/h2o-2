@@ -292,7 +292,7 @@ public class Job extends Request2 {
 
   // If job is a request
 
-  @Override protected Response serve() {
+  public void startFJ() {
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
         run();
@@ -300,6 +300,10 @@ public class Job extends Request2 {
       }
     };
     H2O.submitTask(start(task));
+  }
+
+  @Override protected Response serve() {
+    startFJ();
     return redirect();
   }
 
