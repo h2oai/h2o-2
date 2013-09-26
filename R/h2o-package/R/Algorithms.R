@@ -12,7 +12,14 @@ setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predi
 
 setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
           function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-      ignoredFeat = ifelse(length(x_ignore) == 1 && is.na(x_ignore), "", paste(x_ignore, sep="", collapse=","))
+      # ignoredFeat = ifelse(length(x_ignore) == 1 && is.na(x_ignore), "", paste(x_ignore - 1, sep="", collapse=","))
+      if(length(x_ignore) == 1 && is.na(x_ignore))
+        ignoredFeat = ""
+      else if(min(x_ignore) < 1 || max(x_ignore) > ncol(data))
+        stop("Column index out of bounds!")
+      else
+        ignoredFeat = paste(x_ignore - 1, sep="", collapse=",")
+      
       res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destination, source=data@key, vresponse=y, ignored_cols=ignoredFeat, ntrees=ntrees, max_depth=max_depth, learn_rate=learn_rate, min_rows=min_rows)
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
 	    res2=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView,'_modelKey'=destination)
@@ -33,9 +40,20 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
 	    resGBM
 	})
 
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
+          function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
+            myCol = colnames(data)
+            if(any(c(y, x_ignore) %in% myCol == FALSE))
+              stop("Column name does not exist!")
+            
+            myCol = myCol[-which(myCol == y)]
+            myIgnore = which(myCol %in% x_ignore)
+            h2o.gbm(data, destination, y, myIgnore, ntrees, max_depth, learn_rate, min_rows)
+          })
+
 setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character",y="character",x_ignore="ANY",ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
           function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-            if(!(missing(x_ignore) || class(x_ignore) == "numeric"))
+            if(!(missing(x_ignore) || class(x_ignore) == "numeric" || class(x_ignore) == "character"))
               stop(paste("ignore cannot be of class", class(x_ignore)))
             else if(!(missing(ntrees) || class(ntrees) == "numeric"))
               stop(paste("ntrees cannot be of class", class(ntrees)))

@@ -7,6 +7,10 @@ h2o.checkClient(localH2O)
 
 australia.hex = h2o.importFile(localH2O, system.file("extdata", "australia.csv", package="h2o"), "australia.hex")
 summary(australia.hex)
+
 australia.pca = h2o.prcomp(australia.hex)
 print(australia.pca)
 plot(australia.pca)
+
+australia.pca2 = h2o.prcomp(australia.hex, tol = 0.5, standardize = FALSE)
+print(australia.pca2)
