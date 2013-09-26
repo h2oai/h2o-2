@@ -131,7 +131,8 @@ myR() {
     echo "H2OWrapperDir should be $H2OWrapperDir"
     ls $H2OWrapperDir/h2oWrapper*.tar.gz
 
-    rScript=$H2O_R_HOME/tests/$1
+    # we want $1 used for -name below, to not have .R suffix
+    rScript=$H2O_R_HOME/tests/$1.R
     echo $rScript
     echo "Running this cmd:"
     cmd="R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
@@ -151,10 +152,10 @@ echo "Okay to run h2oWrapper.R every time for now"
 # This is the list of tests
 #***********************************************************************
 mySetup 'libPaths'
-myR 'runit_RF.R' 35
-myR 'runit_PCA.R' 35
-myR 'runit_GLM.R' 35
-myR 'runit_GBM.R' 300
+myR 'runit_RF' 35
+myR 'runit_PCA' 35
+myR 'runit_GLM' 35
+myR 'runit_GBM' 300
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
