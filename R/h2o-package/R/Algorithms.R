@@ -13,7 +13,7 @@ setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predi
 setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
           function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
       # ignoredFeat = ifelse(length(x_ignore) == 1 && is.na(x_ignore), "", paste(x_ignore - 1, sep="", collapse=","))
-      if(length(x_ignore) == 1 && is.na(x_ignore))
+      if(length(x_ignore) == 1 && any(is.na(x_ignore) == TRUE))
         ignoredFeat = ""
       else if(min(x_ignore) < 1 || max(x_ignore) > ncol(data))
         stop("Column index out of bounds!")
@@ -42,9 +42,9 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
 
 setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
           function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-            if(x_ignore == "")
+            if(length(x_ignore) == 1 && x_ignore == "")
               h2o.gbm(data, destination, y, as.numeric(NA), ntrees, max_depth, learn_rate, min_rows)
-            else if(any(c(y, x_ignore) %in% myCol == FALSE))
+            else if(any(c(y, x_ignore) %in% colnames(data) == FALSE))
               stop("Column name does not exist!")
             else {
               myCol = colnames(data)
