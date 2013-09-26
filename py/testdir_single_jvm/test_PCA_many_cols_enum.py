@@ -2,20 +2,35 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_pca, h2o_jobs as h2j
 
-def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
+def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
+    # do we need more than one random generator?
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
 
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            ri = r1.randint(0,1)
-            rowData.append(ri)
+            ### ri1 = int(r1.triangular(0,2,1.5))
+            ri1 = int(r1.triangular(1,5,2.5))
+            rowData.append(ri1)
 
-        ri = r1.randint(0,1)
-        rowData.append(ri)
+        rowTotal = sum(rowData)
+        ### print rowData
+        if translateList is not None:
+            for i, iNum in enumerate(rowData):
+                # numbers should be 1-5, mapping to a-d
+                rowData[i] = translateList[iNum-1]
 
-        rowDataCsv = ",".join(map(str,rowData))
+        rowAvg = (rowTotal + 0.0)/colCount
+        ### print rowAvg
+        if rowAvg > 2.25:
+            result = 1
+        else:
+            result = 0
+        ### print colCount, rowTotal, result
+        rowDataStr = map(str,rowData)
+        rowDataStr.append(str(result))
+        rowDataCsv = ",".join(rowDataStr)
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
@@ -39,8 +54,9 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_PCA_many_cols(self):
+    def test_PCA_many_cols_enum(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
+        translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
 
         if localhost:
             tryList = [
@@ -67,13 +83,11 @@ class Basic(unittest.TestCase):
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
+            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, translateList)
 
             # PARSE ****************************************
             h2o.beta_features = False #turn off beta_features
             start = time.time()
-
-            #h2o.beta_features = False
             modelKey = 'PCAModelKey'
 
             # Parse ****************************************
