@@ -46,14 +46,15 @@ def sandbox_tmp_file(prefix='', suffix=''):
 def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
     # http://junitpdfreport.sourceforge.net/managedcontent/PdfTranslation
 
+    # not really nosetests..just trying to mimic the python xml
     content  = '<?xml version="1.0" encoding="UTF-8" ?>\n'
-    content += '    <testsuite failures="0" name="%s" tests="1" errors="%s" time="%0.4f">\n' % (name, errors, elapsed)
-    content += '        <testcase name="%s" time="%0.4f">\n' % (name, elapsed)
+    content += '    <testsuite name="nosetests" tests="1" errors="%s" failures="0" skip="0">\n' % (errors)
+    content += '        <testcase classname="%s" name="%s" time="%0.4f">\n' % (name, name, elapsed)
     if errors != 0 and not sandboxErrorMessage:
-        content += '            <failure type="Non-zero R exit code" message="Non-zero R exit code"></failure>\n'
+        content += '            <error type="Non-zero R exit code" message="Non-zero R exit code"></error>\n'
     # may or may not be 2 errors (R exit code plus log error
     if errors != 0 and sandboxErrorMessage:
-        content += '            <failure type="Error in h2o logs" message="Error in h2o logs"></failure>\n'
+        content += '            <error type="Error in h2o logs" message="Error in h2o logs"></error>\n'
     content += '            <system-out>\n'
     content += '<![CDATA[\n'
     content += 'spawn stdout**********************************************************\n'
@@ -75,7 +76,9 @@ def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
     content += '        </testcase>\n'
     content += '    </testsuite>\n'
 
-    f = open('./sh2junit_' + name + '.xml', 'w')
+    # see if adding nosetests makes michal's stuff pick it up??
+    # and "test_" prefix"
+    f = open('./test_' + name + '.nosetests.xml', 'w')
     f.write(content)
     f.close()
 
@@ -221,7 +224,7 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
 
     out = file(outpath).read()
     err = file(errpath).read()
-    create_junit_xml(name, out, err, sandboxErrorMessage, errors=rc, elapsed=elapsed)
+    create_junit_xml(name, out, err, sandboxErrorMessage, errors=errors, elapsed=elapsed)
 
     if not (rc or errors):
         return (errors, outpath, errpath)
