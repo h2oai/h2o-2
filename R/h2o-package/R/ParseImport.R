@@ -3,10 +3,10 @@ setGeneric("h2o.ls", function(object) { standardGeneric("h2o.ls") })
 setGeneric("h2o.rm", function(object, keys) { standardGeneric("h2o.rm") })
 # setGeneric("h2o.importFile", function(object, path, key = "", header, parse = TRUE) { standardGeneric("h2o.importFile") })
 setGeneric("h2o.importFile", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFile") })
-setGeneric("h2o.importFolder", function(object, path, parse = TRUE, sep = "") { standardGeneric("h2o.importFolder") })
+setGeneric("h2o.importFolder", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFolder") })
 # setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE, header, sep = "", col.names) { standardGeneric("h2o.importURL") })
 setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importURL") })
-setGeneric("h2o.importHDFS", function(object, path, parse = TRUE, sep = "") { standardGeneric("h2o.importHDFS") })
+setGeneric("h2o.importHDFS", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importHDFS") })
 setGeneric("h2o.parseRaw", function(data, key = "", header, sep = "", col.names) { standardGeneric("h2o.parseRaw") })
 setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.setColNames") })
 
@@ -94,37 +94,36 @@ setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="
             h2o.importURL(object, path, key, parse, sep)
           })
 
-setMethod("h2o.importFolder", signature(object="H2OClient", path="character", parse="logical", sep="character"),
-          function(object, path, parse, sep) {
+setMethod("h2o.importFolder", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character"),
+          function(object, path, key, parse, sep) {
             # if(!file.exists(path)) stop("Directory does not exist!")
             # res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=normalizePath(path))
             res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=path)
-            myKeys = res$keys
-            myData = vector("list", length(myKeys))
-            for(i in 1:length(myKeys)) {
-              rawData = new("H2ORawData", h2o=object, key=myKeys[i])
-              if(parse) {
-                cat("Parsing key", myKeys[i], "\n")
-                myData[[i]] = h2o.parseRaw(data=rawData, key="", sep=sep)
-              }
-              else myData[[i]] = rawData
+            if(parse) {
+              srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", path, "*", sep=""))
+              rawData = new("H2ORawData", h2o=object, key=srcKey)
+              h2o.parseRaw(data=rawData, key=key, sep=sep) 
+            } else {
+              myData = lapply(res$keys, function(x) { new("H2ORawData", h2o=object, key=x) })
+              if(length(res$keys) == 1) myData[[1]] else myData
             }
-            myData
-          })
+        })
 
-setMethod("h2o.importFolder", signature(object="H2OClient", path="character", parse="ANY", sep="ANY"),
-          function(object, path, parse, sep) {
+setMethod("h2o.importFolder", signature(object="H2OClient", path="character", key="ANY", parse="ANY", sep="ANY"),
+          function(object, path, key, parse, sep) {
+            if(!(missing(key) || class(key) == "character"))
+              stop(paste("key cannot be of class", class(key)))
             if(!(missing(parse) || class(parse) == "logical"))
               stop(paste("parse cannot be of class", class(parse)))
             if(!(missing(sep) || class(sep) == "character"))
               stop(paste("sep cannot be of class", class(sep)))
-            h2o.importFolder(object, path, parse, sep) 
+            h2o.importFolder(object, path, key, parse, sep) 
           })
 
 setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="missing", parse="ANY", sep="ANY"), 
           function(object, path, parse, sep) { 
             # if(!file.exists(path)) stop("File does not exist!")
-            h2o.importFolder(object, path, parse, sep)[[1]]
+            h2o.importFolder(object, path, "", parse, sep)
           })
 
 setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="character", parse="ANY", sep="ANY"), 
@@ -134,30 +133,36 @@ setMethod("h2o.importFile", signature(object="H2OClient", path="character", key=
             h2o.importURL(object, paste("file:///", path, sep=""), key, parse, sep)
           })
 
-setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", parse="ANY", sep="ANY"),
-          function(object, path, parse, sep) {
-            if(!(missing(parse) || class(parse) == "logical"))
-              stop(paste("parse cannot be of class", class(parse)))
-            if(!(missing(sep) || class(sep) == "character"))
-              stop(paste("sep cannot be of class", class(sep)))
-            
+setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character"),
+          function(object, path, key, parse, sep) {
             res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTHDFS, path=path)
-            myData = vector("list", res$num_succeeded)
             if(length(res$failed) > 0) {
               for(i in 1:res$num_failed) 
                 cat(res$failed[[i]]$file, "failed to import")
             }
+            
+            # Return only the files that successfully imported
             if(res$num_succeeded > 0) {
-              for(i in 1:res$num_succeeded) {
-                rawData = new("H2ORawData", h2o=object, key=res$succeeded[[i]]$key)
-                if(parse) {
-                  cat("Parsing key", res$succeeded[[i]]$key, "\n")
-                  myData[[i]] = h2o.parseRaw(data=rawData, key="", sep=sep)
-                }
-                else myData[[i]] = rawData
+              if(parse) {
+                srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", path, "*", sep=""))
+                rawData = new("H2ORawData", h2o=object, key=srcKey)
+                h2o.parseRaw(data=rawData, key=key, sep=sep) 
+              } else {
+                myData = lapply(res$succeeded, function(x) { new("H2ORawData", h2o=object, key=x$key) })
+                if(res$num_succeeded == 1) myData[[1]] else myData
               }
-            }
-            if(res$num_succeeded == 1) myData[[1]] else myData
+            } else stop("All files failed to import!")
+        })
+
+setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", key="ANY", parse="ANY", sep="ANY"),
+          function(object, path, key, parse, sep) {
+            if(!(missing(key) || class(key) == "character"))
+              stop(paste("key cannot be of class", class(key)))
+            if(!(missing(parse) || class(parse) == "logical"))
+              stop(paste("parse cannot be of class", class(parse)))
+            if(!(missing(sep) || class(sep) == "character"))
+              stop(paste("sep cannot be of class", class(sep)))
+            h2o.importHDFS(object, path, key, parse, sep)
           })
 
 setMethod("h2o.parseRaw", signature(data="H2ORawData", key="character", header="logical", sep="character", col.names="H2OParsedData"), 
