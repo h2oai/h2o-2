@@ -75,7 +75,9 @@ def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
     content += '        </testcase>\n'
     content += '    </testsuite>\n'
 
-    f = open('./sh2junit_' + name + '.xml', 'w')
+    # see if adding nosetests makes michal's stuff pick it up??
+    # and "test_" prefix"
+    f = open('./test_' + name + '.nosetests.xml', 'w')
     f.write(content)
     f.close()
 
@@ -221,7 +223,7 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
 
     out = file(outpath).read()
     err = file(errpath).read()
-    create_junit_xml(name, out, err, sandboxErrorMessage, errors=rc, elapsed=elapsed)
+    create_junit_xml(name, out, err, sandboxErrorMessage, errors=errors, elapsed=elapsed)
 
     if not (rc or errors):
         return (errors, outpath, errpath)
