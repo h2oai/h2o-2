@@ -6,7 +6,7 @@ setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE) { standardG
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
-setGeneric("h2o.gbm", function(data, destination, y, x_ignore = as.numeric(NA), ntrees = 10, max_depth=8, learn_rate=.2, min_rows=10) { standardGeneric("h2o.gbm") })
+setGeneric("h2o.gbm", function(data, destination, y, x_ignore = "", ntrees = 10, max_depth=8, learn_rate=.2, min_rows=10) { standardGeneric("h2o.gbm") })
 setGeneric("h2o.gbmgrid", function(data, destination, y, x_ignore = as.numeric(NA), ntrees = c(10,100), max_depth=c(1,5,10), learn_rate=c(0.01,0.1,0.2), min_rows=10) { standardGeneric("h2o.gbmgrid") })
 setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predict") })
 
@@ -42,13 +42,16 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
 
 setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
           function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-            myCol = colnames(data)
-            if(any(c(y, x_ignore) %in% myCol == FALSE))
+            if(x_ignore == "")
+              h2o.gbm(data, destination, y, as.numeric(NA), ntrees, max_depth, learn_rate, min_rows)
+            else if(any(c(y, x_ignore) %in% myCol == FALSE))
               stop("Column name does not exist!")
-            
-            myCol = myCol[-which(myCol == y)]
-            myIgnore = which(myCol %in% x_ignore)
-            h2o.gbm(data, destination, y, myIgnore, ntrees, max_depth, learn_rate, min_rows)
+            else {
+              myCol = colnames(data)
+              myCol = myCol[-which(myCol == y)]
+              myIgnore = which(myCol %in% x_ignore)
+              h2o.gbm(data, destination, y, myIgnore, ntrees, max_depth, learn_rate, min_rows)
+            }
           })
 
 setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character",y="character",x_ignore="ANY",ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
