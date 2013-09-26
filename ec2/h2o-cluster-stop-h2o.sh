@@ -6,9 +6,11 @@ then
     exit 1
 fi
 
+i=0
 for publicDnsName in $(cat nodes-public)
 do
-    echo Stopping on ${publicDnsName}...
+    i=$((i+1))
+    echo Stopping on node ${i}: ${publicDnsName}...
     ssh -o StrictHostKeyChecking=no -i ${AWS_SSH_PRIVATE_KEY_FILE} ec2-user@${publicDnsName} killall -q -v java
 done
 

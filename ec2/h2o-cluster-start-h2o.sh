@@ -8,9 +8,11 @@ then
     exit 1
 fi
 
+i=0
 for publicDnsName in $(cat nodes-public)
 do
-    echo Starting on ${publicDnsName}...
+    i=$((i+1))
+    echo Starting on node ${i}: ${publicDnsName}...
     ssh -o StrictHostKeyChecking=no -i ${AWS_SSH_PRIVATE_KEY_FILE} ec2-user@${publicDnsName} ./start-h2o-bg.sh
 done
 

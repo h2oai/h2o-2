@@ -1,6 +1,3 @@
-if(!"RCurl" %in% rownames(installed.packages())) install.packages(RCurl)
-if(!"rjson" %in% rownames(installed.packages())) install.packages(rjson)
-
 library(RCurl)
 library(rjson)
 
@@ -29,6 +26,7 @@ h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_PCA = "PCA.json"
+h2o.__PAGE_PCASCORE = "PCAScore.json"
 h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"
@@ -39,6 +37,7 @@ h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
 h2o.__PAGE_GLMGrid = "GLMGrid.json"
 h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_GBM = "GBM.json"
+h2o.__PAGE_GBMGrid = "GBMGrid.json"
 h2o.__PAGE_GBMModelView = "GBMModelView.json"
 
 
@@ -141,8 +140,8 @@ h2o.__exec_dest_key <- function(client, expr, destKey) {
 h2o.__operator <- function(op, x, y) {
   if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
     stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
-  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
+  LHS = ifelse(class(x) == "H2OParsedData", h2o.__escape(x@key), x)
+  RHS = ifelse(class(y) == "H2OParsedData", h2o.__escape(y@key), y)
   expr = paste(LHS, op, RHS)
   if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient = y@h2o
@@ -153,9 +152,13 @@ h2o.__operator <- function(op, x, y) {
     new("H2OParsedData", h2o=myClient, key=res)
 }
 
+h2o.__escape <- function(key) {
+  paste("|", key, "|", sep="")
+}
+
 h2o.__func <- function(fname, x, type) {
   if(ncol(x) != 1) stop("Can only operate on single column vectors")
-  expr = paste(fname, "(", x@key, ")", sep="")
+  expr = paste(fname, "(", h2o.__escape(x@key), ")", sep="")
   res = h2o.__exec(x@h2o, expr)
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=res)
   

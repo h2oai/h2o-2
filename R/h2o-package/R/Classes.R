@@ -4,12 +4,15 @@ setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
+setClass("H2OGrid", representation(key="character", data="H2OParsedData", models="list", sumtable="list", "VIRTUAL"))
+
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
+setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ORForestModel", contains="H2OModel")
-setClass("H2OGLMGridModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel")
+setClass("H2OGBMGrid", contains="H2OGrid")
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -58,6 +61,14 @@ setMethod("show", "H2OGLMModel", function(object) {
   }
 })
 
+setMethod("show", "H2OGLMGrid", function(object) {
+  print(object@data)
+  cat("GLMGrid Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
+})
+
 setMethod("show", "H2OKMeansModel", function(object) {
   print(object@data)
   cat("K-Means Model Key:", object@key)
@@ -88,6 +99,23 @@ setMethod("show", "H2OPCAModel", function(object) {
   model = object@model
   cat("\n\nStandard deviations:\n", model$sdev)
   cat("\n\nRotation:\n"); print(model$rotation)
+})
+
+setMethod("show", "H2OGBMModel", function(object) {
+  print(object@data)
+  cat("GBM Model Key:", object@key)
+  
+  model = object@model
+  cat("\n\nConfusion matrix:\n"); print(model$confusion)
+  cat("\nMean Squared error by tree:\n"); print(model$err)
+})
+
+setMethod("show", "H2OGBMGrid", function(object) {
+  print(object@data)
+  cat("GBMGrid Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
 })
 
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("+", e1, e2) })
@@ -138,10 +166,10 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   if(missing(i) && missing(j)) return(x)
   if(missing(i) && !missing(j)) {
     if(is.character(j)) return(do.call("$", c(x, j)))
-    expr = paste(x@key, "[", j-1, "]", sep="")
+    expr = paste(h2o.__escape(x@key), "[", j-1, "]", sep="")
   } else {
     if(class(i) == "H2OLogicalData") {
-      opt = paste(x@key, i@key, sep=",")
+      opt = paste(h2o.__escape(x@key), h2o.__escape(i@key), sep=",")
       if(missing(j))
         expr = paste("filter(", opt, ")", sep="")
       else if(is.character(j))
@@ -152,7 +180,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     }
     else if(is.numeric(i)) {
       start = min(i); i_off = i - start + 1;
-      opt = paste(x@key, start-1, max(i_off), sep=",")
+      opt = paste(h2o.__escape(x@key), start-1, max(i_off), sep=",")
       if(missing(j))
         expr = paste("slice(", opt, ")", sep="")
       else if(is.character(j))
@@ -171,7 +199,7 @@ setMethod("$", "H2OParsedData", function(x, name) {
     print("Column", as.character(name), "not present in expression"); return(NULL)
   } else {
     # x[match(name, myNames)]
-    expr = paste(x@key, "$", name, sep="")
+    expr = paste(h2o.__escape(x@key), "$", name, sep="")
     res = h2o.__exec(x@h2o, expr)
     new("H2OParsedData", h2o=x@h2o, key=res)
   }
@@ -253,8 +281,8 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
 setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(n > 0) opt = paste(x@key, nrow(x)-n, sep=",")
-  else opt = paste(x@key, abs(n), sep=",")
+  if(n > 0) opt = paste(h2o.__escape(x@key), nrow(x)-n, sep=",")
+  else opt = paste(h2o.__escape(x@key), abs(n), sep=",")
   res = h2o.__exec(x@h2o, paste("slice(", opt, ")", sep=""))
   as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res))
 })
@@ -264,29 +292,11 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
   title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
 })
 
-setMethod("show", "H2OGLMGridModel", function(object) {
-  print(object@data)
-  cat("GLMGrid Model Key:", object@key, "\n\nSummary\n")
-  
-  model = object@model
-  print(model$Summary)
-  })
-
-
-setMethod("show", "H2OGBMModel", function(object) {
-  print(object@data)
-  cat("GBM Model Key:", object@key)
-  
-  model = object@model
-  cat("\nConfusion matrix:\n"); print(model$confusion)
-  cat("\n\nMean Squared error by tree:\n"); print(model$err)
-})
-
 setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
 setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
    function(data, col) {
-      newCol = paste("factor(", data@key, "[", col, "])", sep="")
-      expr = paste("colSwap(", data@key, ",", col, ",", newCol, ")", sep="")
+      newCol = paste("factor(", h2o.__escape(data@key), "[", col, "])", sep="")
+      expr = paste("colSwap(", h2o.__escape(data@key), ",", col, ",", newCol, ")", sep="")
       res = h2o.__exec_dest_key(data@h2o, expr, destKey=data@key)
       data
 })
