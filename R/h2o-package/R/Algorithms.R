@@ -47,8 +47,7 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
             else if(any(c(y, x_ignore) %in% colnames(data) == FALSE))
               stop("Column name does not exist!")
             else {
-              myCol = colnames(data)
-              myCol = myCol[-which(myCol == y)]
+              myCol = colnames(data); myCol = myCol[-which(myCol == y)]
               myIgnore = which(myCol %in% x_ignore)
               h2o.gbm(data, destination, y, myIgnore, ntrees, max_depth, learn_rate, min_rows)
             }
@@ -399,9 +398,13 @@ setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="
 
 setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
           function(object, newdata) {
-            if(class(object) == "H2OGLMModel") {
+            if(class(object) == "H2OGLMModel" || class(object) == "H2ORForestModel") {
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
+              new("H2OParsedData", h2o=object@data@h2o, key=res$key)
+            } else if(class(object) == "H2OKMeansModel") {
+              res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
+              while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
               new("H2OParsedData", h2o=object@data@h2o, key=res$key)
             # } else if(class(object) == "H2OPCAModel") {
             #  numMatch = colnames(newdata) %in% colnames(object@data)
