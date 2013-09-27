@@ -241,7 +241,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   public boolean isRawData() {
     if(isFrame()){
       Frame fr = get();
-      return fr._vecs.length == 1 && (fr._vecs[0] instanceof ByteVec);
+      return fr.vecs().length == 1 && (fr.vecs()[0] instanceof ByteVec);
     }
     // either simple value with bytearray, un-parsed value array or byte vec
     return _type == TypeMap.PRIM_B || (isArray() && !isHex()) || isByteVec();
@@ -256,7 +256,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
       return vec.elem2BV(0).getBytes();
     } else if(isFrame()){
       Frame fr = get();
-      return ((ByteVec)fr._vecs[0]).elem2BV(0).getBytes();
+      return ((ByteVec)fr.vecs()[0]).elem2BV(0).getBytes();
     }
     // Return empty array if key has been deleted
     return v != null ? v.memOrLoad() : new byte[0];

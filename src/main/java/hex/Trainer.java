@@ -254,7 +254,7 @@ public abstract class Trainer {
       Frame frame = ((FrameInput) _ls[0])._frame;
       long n = 0;
       for( int i = 0; i < _counts.length(); i++ )
-        n += _counts.get(i) * frame._vecs[0].chunkLen(i);
+        n += _counts.get(i) * frame.vecs()[0].chunkLen(i);
       return n;
     }
 
@@ -268,9 +268,9 @@ public abstract class Trainer {
       DKV.put(_key, new Value(_key, new byte[0]));
 
       final Frame frame = ((FrameInput) _ls[0])._frame;
-      assert _ls[0]._a.length == frame._vecs.length - 1;
+      assert _ls[0]._a.length == frame.numCols() - 1;
       assert frame.anyVec().nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
-      _counts = new AtomicIntegerArray(frame._vecs[0].nChunks());
+      _counts = new AtomicIntegerArray(frame.vecs()[0].nChunks());
 
       _task = new Descent();
       _task._job = _job;

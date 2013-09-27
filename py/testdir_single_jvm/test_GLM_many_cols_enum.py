@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
 
             algo = "Parse"
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                len(h2o.nodes), tryHeap, algo, csvFilename, elapsed)
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
             print l
             h2o.cloudPerfH2O.message(l)
 
@@ -138,7 +138,7 @@ class Basic(unittest.TestCase):
 
             algo = "GLM " + str(iterations) + " iterations"
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                len(h2o.nodes), tryHeap, algo, csvFilename, elapsed)
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
             print l
             h2o.cloudPerfH2O.message(l)
 

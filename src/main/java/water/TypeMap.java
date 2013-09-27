@@ -121,6 +121,7 @@ public class TypeMap {
   }
 
   static public Freezable newFreezable(int id) {
+    assert id >= 0 : "Bad type id "+id;
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
     Freezable f = GOLD[id];
     if( f == null ) {
@@ -132,6 +133,7 @@ public class TypeMap {
 
   static public String className(int id) {
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
+    assert CLAZZES[id] != null : "No class matching id "+id;
     return CLAZZES[id];
   }
   static public Class clazz(int id) {

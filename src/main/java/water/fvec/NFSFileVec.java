@@ -13,7 +13,10 @@ public class NFSFileVec extends ByteVec {
   // Make a new NFSFileVec key which holds the filename implicitly.
   // This name is used by the DVecs to load data on-demand.
   public static Key make(File f) {
-    return make(f, null);
+    Futures fs = new Futures();
+    Key key = make(f, fs);
+    fs.blockForPending();
+    return key;
   }
 
   public static Key make(File f, Futures fs) {

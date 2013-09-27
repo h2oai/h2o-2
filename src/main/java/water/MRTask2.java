@@ -148,7 +148,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   private final T self() { return (T)this; }
 
   /** Returns a Vec from the Frame.  */
-  public final Vec vecs(int i) { return _fr._vecs[i]; }
+  public final Vec vecs(int i) { return _fr.vecs()[i]; }
 
   /** Invokes the map/reduce computation over the given Vecs.  This call is
    *  blocking. */
@@ -179,8 +179,9 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   public final T getResult() {
     join();
     // Do any post-writing work (zap rollup fields, etc)
+    _fr.reloadVecs();
     for( int i=0; i<_fr.numCols(); i++ )
-      _fr._vecs[i].postWrite();
+      _fr.vecs()[i].postWrite();
     return self();
   }
 
@@ -260,17 +261,17 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       if( v0.chunkKey(_lo).home() ) { // And chunk is homed here?
 
         // Make decompression chunk headers for these chunks
-        Chunk bvs[] = new Chunk[_fr._vecs.length];
-        for( int i=0; i<_fr._vecs.length; i++ )
-          if( _fr._vecs[i] != null )
-            bvs[i] = _fr._vecs[i].elem2BV(_lo);
+        Chunk bvs[] = new Chunk[_fr.vecs().length];
+        for( int i=0; i<_fr.vecs().length; i++ )
+          if( _fr.vecs()[i] != null )
+            bvs[i] = _fr.vecs()[i].elem2BV(_lo);
 
         // Call all the various map() calls that apply
         _profile._userstart = System.currentTimeMillis();
-        if( _fr._vecs.length == 1 ) map(bvs[0]);
-        if( _fr._vecs.length == 2 && bvs[0] instanceof NewChunk) map((NewChunk)bvs[0], bvs[1]);
-        if( _fr._vecs.length == 2 ) map(bvs[0], bvs[1]);
-        if( _fr._vecs.length == 3 ) map(bvs[0], bvs[1], bvs[2]);
+        if( _fr.vecs().length == 1 ) map(bvs[0]);
+        if( _fr.vecs().length == 2 && bvs[0] instanceof NewChunk) map((NewChunk)bvs[0], bvs[1]);
+        if( _fr.vecs().length == 2 ) map(bvs[0], bvs[1]);
+        if( _fr.vecs().length == 3 ) map(bvs[0], bvs[1], bvs[2]);
         if( true                  ) map(bvs );
         _res = self();          // Save results since called map() at least once!
         // Further D/K/V put any new vec results.
@@ -322,14 +323,14 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
     long ns = _nodes|(1L<<H2O.SELF.index()); // Save before copyOver crushes them
-    if( _res == null ) _nodes = 1L<<63; // Flag for no local results *at all*
+    if( _res == null ) _nodes = -1L; // Flag for no local results *at all*
     else if( _res != this ) {     // There is a local result, and its not self
       _res._profile = _profile;   // Use my profile (not childs)
       copyOver(_res);             // So copy into self
     }
     closeLocal();
     if( ns == (1L<<H2O.CLOUD.size())-1 ) // All-done on head of whole MRTask tree?
-      _fr.closeAppendables();   // Final close ops on any new appendable vec
+      _fr.closeAppendables(); // Final close ops on any new appendable vec
   }
 
   // Block for RPCs to complete, then reduce global results into self results
@@ -339,17 +340,18 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     assert mrt._fs == null;     // No blockable results from remote
     _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
-    if( _res == null ) _res = mrt;
-    else if( mrt._nodes != (1L<<63) ) _res.reduce4(mrt);
+    if( mrt._nodes != -1L )     // Any results at all?
+      if( _res == null ) _res = mrt;
+      else _res.reduce4(mrt);
   }
 
   /** Call user's reduction.  Also reduce any new AppendableVecs.  Called
    *  internal by F/J.  Not expected to be user-called.  */
   protected void reduce4( T mrt ) {
     // Reduce any AppendableVecs
-    for( int i=0; i<_fr._vecs.length; i++ )
-      if( _fr._vecs[i] instanceof AppendableVec )
-        ((AppendableVec)_fr._vecs[i]).reduce((AppendableVec)mrt._fr._vecs[i]);
+    for( int i=0; i<_fr.vecs().length; i++ )
+      if( _fr.vecs()[i] instanceof AppendableVec )
+        ((AppendableVec)_fr.vecs()[i]).reduce((AppendableVec)mrt._fr.vecs()[i]);
     // User's reduction
     reduce(mrt);
   }

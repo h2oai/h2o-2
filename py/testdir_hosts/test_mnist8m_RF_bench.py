@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=120)
             trainParseWallTime = time.time() - trainParseWallStart
             #End Train File Parse#
-    
+            print "Parsing training file took ", trainParseWallTime ," seconds." 
             inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
             row = {'java_heap_GB':java_heap_GB,'dataset':'mnist8m',
                     'nTrainRows': inspect['num_rows'],'nCols':inspect['num_cols'],
@@ -77,7 +77,7 @@ class Basic(unittest.TestCase):
             trainViewTime = time.time() - trainRFStart
             #End RF+RFView (train)#
             row.update({'trainViewTime':trainViewTime})
-            
+            print "Training time done in: ", trainViewTime 
             h2o_rf.simpleCheckRFView(None, rfView, **kwargs)
             modelKey = rfView['model_key']
             
@@ -91,16 +91,16 @@ class Basic(unittest.TestCase):
                             timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=120)
             testParseWallTime = time.time() - testParseWallStart
             #End Test File Parse#
+            print "Parsing testing file took ", testParseWallTime, " seconds."
             inspect = h2o.nodes[0].inspect(parseResult['destination_key'])
             row.update({'nTestRows':inspect['num_rows']})
             row.update({'testParseWallTime':testParseWallTime})
-            modelKey = rfView['model_key']
             
             #RFView (score on test)#
             kwargs = configs.copy()
             testRFStart = time.time()
             kwargs.update({'model_key':modelKey,'ntree':10,
-                            'out_of_bag_error_estimate': 1})
+                            'out_of_bag_error_estimate': False})
             rfView = h2o_cmd.runRFView(data_key=hex_key,timeoutSecs=3600, doSimpleCheck=False,**kwargs)
             testViewTime = time.time() - testRFStart
             #End RFView (score on test)#
@@ -112,7 +112,6 @@ class Basic(unittest.TestCase):
             row.update({'errRate':errRate})
             print row
             csvWrt.writerow(row)
-            #h2o.nodes[0].remove_key(k)
         finally:
             output.close()
 

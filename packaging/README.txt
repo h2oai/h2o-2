@@ -10,7 +10,7 @@ This package contains:
     R/                       Directory containing H2O package for R.
     R/README.txt             Read this if you are interested in writing R
                              programs that interact with H2O.
-    R/h2o_*.tar.gz           The R package for you to install.
+    R/h2oWrapper*.tar.gz     The R package for you to install.
 
     hadoop/                  Directory containing hadoop integration for H2O.
     hadoop/README.txt        Read this if you want to run H2O on a hadoop
@@ -19,6 +19,10 @@ This package contains:
                              job on a Hadoop cluster.  Choose the right one
                              for your version of Hadoop (please contact 
                              0xdata if your version is not here yet).
+
+    ec2/                     Directory containing scripts for Amazon EC2.
+    ec2/README.txt           Read this for instructions on how to run H2O
+                             on EC2.
 
 
 To try out H2O from the command line, type: 

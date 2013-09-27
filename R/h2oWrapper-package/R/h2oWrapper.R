@@ -14,12 +14,8 @@ h2oWrapper.installDepPkgs <- function() {
   if(!"fpc" %in% myPackages) install.packages("fpc")
   if(!"cluster" %in% myPackages) install.packages("cluster")
   
-  library(RCurl)
-  library(rjson)
-  library(tools)     # Needed to do MD5 checksum
-  
-  library(fpc)
-  library(cluster)
+  myReqPkgs = c("RCurl", "rjson", "tools", "fpc", "cluster")
+  temp = lapply(myReqPkgs, require, character.only = TRUE)
 }
 
 # Checks H2O connection and installs H2O R package matching version on server if indicated by user
@@ -28,6 +24,9 @@ h2oWrapper.installDepPkgs <- function() {
 # 3) If user does want to start H2O, but running non-locally, print an error
 setMethod("h2oWrapper.init", signature(ip="character", port="numeric", startH2O="logical", silentUpgrade="logical", promptUpgrade="logical"), 
           function(ip, port, startH2O, silentUpgrade, promptUpgrade) {
+  myReqPkgs = c("RCurl", "rjson", "tools", "fpc", "cluster")
+  temp = lapply(myReqPkgs, require, character.only = TRUE)
+            
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
     if(!startH2O)
@@ -41,6 +40,9 @@ setMethod("h2oWrapper.init", signature(ip="character", port="numeric", startH2O=
   }
   cat("Successfully connected to", myURL, "\n")
   h2oWrapper.checkPackage(myURL, silentUpgrade, promptUpgrade)
+  
+  library(h2o)
+  return(new("H2OClient", ip = ip, port = port))
 })
 
 setMethod("h2oWrapper.init", signature(ip="ANY", port="ANY", startH2O="ANY", silentUpgrade="ANY", promptUpgrade="ANY"), 
@@ -108,7 +110,7 @@ h2oWrapper.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
     cat("H2O R package and server version", H2OVersion, "match\n")
   else if(h2oWrapper.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {    
     if("h2o" %in% myPackages) {
-      cat("Removing old H2O R package version", packageVersion("h2o"), "\n")
+      cat("Removing old H2O R package version", as.character(packageVersion("h2o")), "\n")
       remove.packages("h2o")
     }
     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
