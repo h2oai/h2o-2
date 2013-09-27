@@ -664,6 +664,7 @@ public final class AutoBuffer {
   public <T extends Freezable> T get(Class<T> t) {
     short id = (short)get2();
     if( id == TypeMap.NULL ) return null;
+    assert id > 0 : "Bad type id "+id;
     return TypeMap.newFreezable(id).read(this);
   }
   public <T extends Iced> T get() {
