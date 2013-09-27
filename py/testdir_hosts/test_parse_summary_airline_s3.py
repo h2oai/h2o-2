@@ -42,7 +42,6 @@ class Basic(unittest.TestCase):
             csvPathname = csvFilename
 
             # PARSE****************************************
-            csvPathname = importFolderPath + "/" + testCsvFilename
             hex_key = csvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             # this is schema='local'k
