@@ -2,19 +2,15 @@ package hex;
 
 import hex.gbm.GBM.GBMModel;
 
-import java.util.ArrayList;
-import java.util.UUID;
+import java.util.*;
 
 import water.*;
 import water.api.*;
+import water.util.Utils;
 
 public class GridSearch extends Job {
 
   public Job[] jobs;
-
-  public GridSearch() {
-    super("", Key.make("__GridSearch_" + UUID.randomUUID().toString()));
-  }
 
   @Override protected void run() {
     UKV.put(destination_key, this);
@@ -61,37 +57,63 @@ public class GridSearch extends Job {
         for( int i = 0; i < args.size(); i++ )
           sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
         sb.append("<td><b>").append("run time (s)").append("</b></td>");
+        String perf = grid.jobs[0].speedDescription();
+        if( perf != null )
+          sb.append("<td><b>").append(perf).append("</b></td>");
         sb.append("<td><b>").append("model key").append("</b></td>");
         sb.append("<td><b>").append("prediction error %").append("</b></td>");
         sb.append("<td><b>").append("precision & recall").append("</b></td>");
         sb.append("</tr>");
 
-        for( int i = 0; i < grid.jobs.length; i++ ) {
+        ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
+        for( Job job : grid.jobs ) {
+          JobInfo info = new JobInfo();
+          info._job = job;
+          Object value = UKV.get(job.destination_key);
+          info._model = value instanceof Model ? (Model) value : null;
+          if( info._model != null )
+            info._cm = info._model.cm();
+          if( info._cm != null )
+            info._error = info._cm.err();
+          infos.add(info);
+        }
+        Collections.sort(infos, new Comparator<JobInfo>() {
+          @Override public int compare(JobInfo a, JobInfo b) {
+            return Double.compare(a._error, b._error);
+          }
+        });
+
+        for( JobInfo info : infos ) {
           sb.append("<tr>");
           for( Argument a : args ) {
             try {
-              sb.append("<td>").append(a._field.get(grid.jobs[i])).append("</td>");
+              Object value = a._field.get(info._job);
+              String s;
+              if( value instanceof int[] )
+                s = Utils.sampleToString((int[]) value, 20);
+              else
+                s = "" + value;
+              sb.append("<td>").append(s).append("</td>");
             } catch( Exception e ) {
               throw new RuntimeException(e);
             }
           }
-          sb.append("<td>").append((System.currentTimeMillis() - grid.jobs[i].start_time) / 1000).append("</td>");
+          sb.append("<td>").append((info._job.runTimeMs()) / 1000).append("</td>");
+          if( perf != null )
+            sb.append("<td>").append(info._job.speedValue()).append("</td>");
 
-          Object value = UKV.get(grid.jobs[i].destination_key);
-          Model model = value instanceof Model ? (Model) value : null;
-          String link = grid.jobs[i].destination_key.toString();
-          if( model instanceof GBMModel )
-            link = GBMModelView.link(link, grid.jobs[i].destination_key);
+          String link = info._job.destination_key.toString();
+          if( info._model instanceof GBMModel )
+            link = GBMModelView.link(link, info._job.destination_key);
           else
-            link = Inspect.link(link, grid.jobs[i].destination_key);
+            link = Inspect.link(link, info._job.destination_key);
           sb.append("<td>").append(link).append("</td>");
 
           String pct = "", f1 = "";
-          if( model != null ) {
-            pct = String.format("%.2f", 100 * model.predictionError()) + "%";
-            ConfusionMatrix cm = model.cm();
-            if( cm != null && cm._arr.length == 2 )
-              f1 = String.format("%.2f", cm.precisionAndRecall());
+          if( info._cm != null ) {
+            pct = String.format("%.2f", 100 * info._error) + "%";
+            if( info._cm._arr.length == 2 )
+              f1 = String.format("%.2f", info._cm.precisionAndRecall());
           }
           sb.append("<td><b>").append(pct).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");
@@ -100,6 +122,13 @@ public class GridSearch extends Job {
         DocGen.HTML.arrayTail(sb);
       }
       return true;
+    }
+
+    static class JobInfo {
+      Job _job;
+      Model _model;
+      ConfusionMatrix _cm;
+      double _error;
     }
 
     static void filter(ArrayList<Argument> args, String... names) {

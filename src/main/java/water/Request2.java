@@ -279,6 +279,13 @@ public abstract class Request2 extends Request {
     if( !gridSearch )
       return superServeGrid(server, parms, type);
 
+    // Ignore destination key so that each job gets its own
+    _parms.remove("destination_key");
+    for( int i = 0; i < _arguments.size(); i++ )
+      if( _arguments.get(i)._name.equals("destination_key") )
+        values[i] = null;
+
+    // Iterate over all argument combinations
     int[] counters = new int[values.length];
     ArrayList<Job> jobs = new ArrayList<Job>();
     for( ;; ) {

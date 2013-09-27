@@ -19,8 +19,8 @@ public class Sandbox {
     public static void userMain(String[] args) throws Exception {
       localCloud(1, true, args);
 
-      //File f = new File("smalldata/mnist/train.csv.gz");
-      File f = new File("smalldata/covtype/covtype.20k.data");
+      File f = new File("smalldata/mnist/train.csv.gz");
+      //File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");

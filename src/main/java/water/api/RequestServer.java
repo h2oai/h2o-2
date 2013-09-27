@@ -1,7 +1,6 @@
 package water.api;
 
 import hex.*;
-import hex.GBMGrid.GBMGridProgress;
 import hex.GridSearch.GridSearchProgress;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
@@ -62,7 +61,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeans Grid",                "Model");
     Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
-    Request.addToNavbar(registerRequest(new GBMGrid()),     "GBM Grid (Beta)",            "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",                    "Model");
 
@@ -126,7 +124,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
-    registerRequest(new GBMGridProgress());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
     registerRequest(new GetVector());

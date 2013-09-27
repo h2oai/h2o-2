@@ -3,10 +3,8 @@ package hex;
 import hex.KMeans.Initialization;
 
 import java.util.Random;
-import java.util.UUID;
 
-import water.Job.ModelJob;
-import water.Key;
+import water.Job.ColumnsJob;
 import water.UKV;
 import water.api.DocGen;
 import water.util.Log;
@@ -16,7 +14,7 @@ import water.util.Log;
  * http://theory.stanford.edu/~sergei/papers/vldb12-kmpar.pdf<br>
  * http://www.youtube.com/watch?v=cigXAxV3XcY
  */
-public class KMeans2 extends ModelJob {
+public class KMeans2 extends ColumnsJob {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "k-means";
@@ -40,7 +38,7 @@ public class KMeans2 extends ModelJob {
   public int iterations;
 
   public KMeans2() {
-    super(DOC_GET, Key.make("__KMEANS_" + UUID.randomUUID().toString()));
+    description = DOC_GET;
   }
 
   @Override protected void run() {

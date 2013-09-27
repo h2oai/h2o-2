@@ -306,7 +306,7 @@ public class Inspect extends Request {
       Job job = Job.findJob(Key.make(_producer.value()));
       if (job!= null)
         sb.append("<div class='alert alert-success'>"
-        		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
+        		+ "<b>Produced in ").append(PrettyPrint.msecs(job.runTimeMs(),true)).append(".</b></div>");
     }
     sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + PCA.link(key, "PCA") + ", "

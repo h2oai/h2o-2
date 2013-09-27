@@ -85,9 +85,7 @@ public class DRF extends FrameJob {
   }
   public Frame score( Frame fr ) { return drf_model.score(fr,true);  }
 
-  public static final String KEY_PREFIX = "__DRFModel_";
-  public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
-  public DRF() { super("Distributed Random Forest",makeKey()); }
+  public DRF() { description = "Distributed Random Forest"; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {

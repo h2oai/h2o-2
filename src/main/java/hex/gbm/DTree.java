@@ -1,7 +1,10 @@
 package hex.gbm;
 
+import hex.ConfusionMatrix;
 import hex.rf.Tree.TreeVisitor;
+
 import java.util.*;
+
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -99,13 +102,13 @@ class DTree extends Iced {
       assert checkDistro( _preds );
     }
     // Return a Split with a float distr
-    public static Split make( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, float f0[], float f1[] ) { 
+    public static Split make( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, float f0[], float f1[] ) {
       return new Split(col,bin,equal,n0,n1,mse0,mse1,f0,f1);
     }
     // Convert a double distribution to a float distribution
     public static Split make( int col, int bin, boolean equal, long n0, long n1, double mse0, double mse1, double preds0[], float f1[] ) {
       float f0[] = new float[f1.length];
-      if( preds0 != null ) 
+      if( preds0 != null )
         for( int i=0; i<f1.length; i++ )
           f0[i] = (float)preds0[i];
       return make(col,bin,equal,n0,n1,mse0,mse1,f0,f1);
@@ -798,7 +801,7 @@ class DTree extends Iced {
         // We hit the end of the tree walk.  Get this tree's prediction.
         int bin = prev.bin(chks,row);    // Which bin did we decide on?
         float preds[] = prev._pred[bin]; // Prediction vector
-        for( int c=0; c<_nclass; c++ ) { // Add into the 
+        for( int c=0; c<_nclass; c++ ) { // Add into the
           Chunk C = chk_pred(chks,_ncols,_nclass,c);
           float f = (float)(C.at0(row)+preds[c]);
           C.set0(row,f);        // Set incremented score back in
@@ -816,7 +819,7 @@ class DTree extends Iced {
 
       // Regression?
       if( _nclass == 1 )        // Single-class ==> Regression?
-        throw H2O.unimpl(); // set directly into 
+        throw H2O.unimpl(); // set directly into
       //return y-pred[0];       // Prediction: sum of trees
 
       // Classification?
@@ -878,6 +881,8 @@ class DTree extends Iced {
 
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
+
+    @Override public ConfusionMatrix cm() { return new ConfusionMatrix(cm); }
 
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,1.0f/nclasses());
@@ -954,12 +959,12 @@ class DTree extends Iced {
     // --------------------------------------------------------------------------
     // Highly compressed tree encoding:
     //    tree: 1B nodeType, 2B colId, 4B splitVal, left-tree-size, left, right
-    //    nodeType: (from lsb): 
-    //        2 bits ( 1,2) skip-tree-size-size, 
-    //        1 bit  ( 4) operator flag (0 -> <, 1 -> == ), 
-    //        1 bit  ( 8) left leaf flag, 
-    //        1 bit  (16) left leaf type flag, 
-    //        1 bit  (32) right leaf flag, 
+    //    nodeType: (from lsb):
+    //        2 bits ( 1,2) skip-tree-size-size,
+    //        1 bit  ( 4) operator flag (0 -> <, 1 -> == ),
+    //        1 bit  ( 8) left leaf flag,
+    //        1 bit  (16) left leaf type flag,
+    //        1 bit  (32) right leaf flag,
     //        1 bit  (64) right leaf type flag
     //    left, right: tree | prediction
     //    prediction: 1 or 2 bytes (small leaf) or array of floats with len=nclass
@@ -1000,7 +1005,7 @@ class DTree extends Iced {
           if( (lmask&8)==8 ) return scoreLeaf(ab,preds,ymin, (lmask&16)==16);
         }
       }
-      
+
       private float[] scoreLeaf(AutoBuffer ab, float preds[], int ymin, boolean big) {
         if( !big )              // Small leaf?
           preds[ymin+(_nclass < 256 ? ab.get1() : ab.get2())] += 1.0f;
@@ -1010,10 +1015,10 @@ class DTree extends Iced {
         return preds;
       }
     }
-    
+
     /** Abstract visitor class for serialized trees.*/
     public static abstract class TreeVisitor<T extends Exception> {
-      // Override these methods to get walker behavior.  
+      // Override these methods to get walker behavior.
       protected void pre ( int col, float fcmp, boolean equal ) throws T { }
       protected void mid ( int col, float fcmp, boolean equal ) throws T { }
       protected void post( int col, float fcmp, boolean equal ) throws T { }
@@ -1025,12 +1030,12 @@ class DTree extends Iced {
       protected final CompressedTree _ct;
       private final AutoBuffer _ts;
       private final float _preds[]; // Reused to hold a
-      public TreeVisitor( TreeModel tm, CompressedTree ct ) { 
+      public TreeVisitor( TreeModel tm, CompressedTree ct ) {
         _tm = tm;
-        _ts = new AutoBuffer((_ct=ct)._bits); 
-        _preds = new float[ct._nclass+tm.ymin]; 
+        _ts = new AutoBuffer((_ct=ct)._bits);
+        _preds = new float[ct._nclass+tm.ymin];
       }
-      
+
       // Call either the single-class leaf or the full-prediction leaf
       private final void leaf2( int mask ) throws T {
         assert (mask& 8)== 8;   // Is a leaf
@@ -1069,7 +1074,7 @@ class DTree extends Iced {
         post(col,fcmp,equal);
       }
     }
-    
+
     StringBuilder toString(CompressedTree ct, final StringBuilder sb ) {
       new TreeVisitor<RuntimeException>(this,ct) {
         int _depth;
@@ -1127,7 +1132,7 @@ class DTree extends Iced {
       assert Math.abs(sum-1.0)<0.0001 : Arrays.toString(fs);// Really busted?
       if( fs[max] >= 1.0 ) {  // If max class >= 1.0, force a clean distro
         Arrays.fill(fs,0);    // All zeros, except the 1.0
-        fs[max] = 1.0f;       // 
+        fs[max] = 1.0f;       //
       } else                  // Else adjust the max to clean out error
         fs[max] += 1.0-sum;
     }

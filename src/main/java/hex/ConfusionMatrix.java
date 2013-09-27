@@ -50,6 +50,10 @@ public final class ConfusionMatrix extends Iced {
     _arr = new long[n][n];
   }
 
+  public ConfusionMatrix(long[][] value) {
+    _arr = value;
+  }
+
   public void add(int i, int j) {
     _arr[i][j]++;
   }
@@ -75,17 +79,13 @@ public final class ConfusionMatrix extends Iced {
   }
 
   public double err() {
-    return err(_arr);
-  }
-
-  public static double err(long[][] cm) {
     long n = 0;
-    for( int a = 0; a < cm.length; ++a )
-      for( int p = 0; p < cm[a].length; ++p )
-        n += cm[a][p];
+    for( int a = 0; a < _arr.length; ++a )
+      for( int p = 0; p < _arr[a].length; ++p )
+        n += _arr[a][p];
     long err = n;
-    for( int d = 0; d < cm.length; ++d )
-      err -= cm[d][d];
+    for( int d = 0; d < _arr.length; ++d )
+      err -= _arr[d][d];
     return (double) err / n;
   }
 

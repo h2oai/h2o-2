@@ -10,15 +10,16 @@ import java.util.Arrays;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.Job.ModelJob;
+import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.api.GBMProgressPage;
-import water.fvec.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
 // Gradient Boosted Trees
-public class GBM extends ModelJob {
+public class GBM extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -57,9 +58,7 @@ public class GBM extends ModelJob {
   }
   public Frame score( Frame fr ) { return gbm_model.score(fr,true);  }
 
-  public static final String KEY_PREFIX = "__GBMModel_";
-  public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
-  public GBM() { super("Distributed GBM",makeKey()); }
+  public GBM() { description = "Distributed GBM"; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -282,6 +281,16 @@ public class GBM extends ModelJob {
         }
       }
     }.doAll(fr);
+  }
+
+  @Override public String speedDescription() {
+    return "seconds per tree";
+  }
+
+  @Override public String speedValue() {
+    double time = runTimeMs() / 1000;
+    double secondsPerTree = time / ntrees;
+    return String.format("%.2f", secondsPerTree);
   }
 
   // ---

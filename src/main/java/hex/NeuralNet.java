@@ -10,7 +10,7 @@ import hex.Layer.VecsInput;
 import java.util.UUID;
 
 import water.*;
-import water.Job.ModelJob;
+import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.api.Progress2;
 import water.fvec.*;
@@ -22,7 +22,7 @@ import water.util.Utils;
  *
  * @author cypof
  */
-public class NeuralNet extends ModelJob {
+public class NeuralNet extends ValidatedJob {
   static final int API_WEAVER = 1;
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network";
@@ -52,7 +52,7 @@ public class NeuralNet extends ModelJob {
   public int epochs = 100;
 
   public NeuralNet() {
-    super(DOC_GET, Key.make("__NeuralNet_" + UUID.randomUUID().toString()));
+    description = DOC_GET;
   }
 
   @Override protected void run() {
@@ -139,6 +139,15 @@ public class NeuralNet extends ModelJob {
     return rs.toString();
   }
 
+  @Override public String speedDescription() {
+    return "items/s";
+  }
+
+  @Override public String speedValue() {
+    NeuralNetModel model = UKV.get(destination_key);
+    return "" + (model == null ? 0 : model.items_per_second);
+  }
+
   public static class Error {
     double Value;
     double SqrDist;
@@ -210,6 +219,10 @@ public class NeuralNet extends ModelJob {
     @Override protected float[] score0(double[] data, float[] preds) {
       throw new UnsupportedOperationException();
     }
+
+    @Override public ConfusionMatrix cm() {
+      return new ConfusionMatrix(confusion_matrix);
+    }
   }
 
   public static class NeuralNetProgress extends Progress2 {
@@ -248,7 +261,7 @@ public class NeuralNet extends ModelJob {
     }
   }
 
-  public static class NeuralNetScore extends ColumnsJob {
+  public static class NeuralNetScore extends ModelJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     static final String DOC_GET = "Neural network scoring";
@@ -269,7 +282,7 @@ public class NeuralNet extends ModelJob {
     public long[][] confusion_matrix;
 
     public NeuralNetScore() {
-      super(DOC_GET, Key.make("__NeuralNetScore_" + UUID.randomUUID().toString()));
+      description = DOC_GET;
     }
 
     @Override protected void run() {

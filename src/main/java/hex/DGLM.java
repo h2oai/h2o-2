@@ -62,41 +62,6 @@ public abstract class DGLM {
     }
   }
 
-  private static final class GetResponseMeanTask extends MRTask<GetResponseMeanTask> {
-    public final int _ycol;
-    public final double _caseVal;
-    public final CaseMode _caseMode;
-    private long _caseCnt;
-    private long _nobs;
-
-    public GetResponseMeanTask(int ycol, CaseMode cm, double caseVal) {
-      _ycol = ycol;
-      _caseMode = cm;
-      _caseVal = caseVal;
-    }
-
-    @Override public void map(Key key) {
-      AutoBuffer bits = new AutoBuffer(DKV.get(key).memOrLoad());
-      ValueArray ary = DKV.get(ValueArray.getArrayKey(key)).get();
-      int nrwos = bits.remaining() / ary._rowsize;
-      Column y = ary._cols[_ycol];
-      for( int i = 0; i < nrwos; ++i ) {
-        if( ary.isNA(bits, i, y) ) continue;
-        ++_nobs;
-        if( _caseMode.isCase(_caseVal, ary.datad(bits, i, y)) ) ++_caseCnt;
-      }
-    }
-
-    @Override public void reduce(GetResponseMeanTask drt) {
-      _caseCnt += drt._caseCnt;
-      _nobs += drt._nobs;
-    }
-
-    public double value() {
-      return (double) _caseCnt / _nobs;
-    }
-  }
-
   public static class LambdaMaxFunc extends RowFunc<LambdaMax> {
     final double _mu;
     final double _var;
@@ -131,8 +96,9 @@ public abstract class DGLM {
   public static class GLMJob extends ChunkProgressJob {
     public GLMJob(ValueArray data, Key dest, int xval, GLMParams params) {
       // approximate the total number of computed chunks as 25 per normal model computation + 10 iterations per xval model)
-      super("GLM(" + data._key.toString() + ")", dest, (params._family._family == Family.gaussian) ? data.chunks() * (xval + 1)
-          : data.chunks() * (20 + 4 * xval));
+      super((params._family._family == Family.gaussian) ? data.chunks() * (xval + 1) : data.chunks() * (20 + 4 * xval));
+      job_key = defaultJobKey("GLM(" + data._key.toString() + ")");
+      destination_key = dest;
     }
 
     public boolean isDone() {

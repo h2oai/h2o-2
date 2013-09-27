@@ -49,8 +49,6 @@ public class Job extends Request2 {
 
     @API(help = "Source frame", required = true, filter = Default.class)
     public Frame source;
-
-    public FrameJob(String desc, Key dest) { super(desc,dest); }
   }
 
   public static abstract class ColumnsJob extends FrameJob {
@@ -60,21 +58,6 @@ public class Job extends Request2 {
     @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
     public int[] cols;
     class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
-
-    @API(help="Column to use as class", required=true, filter=responseFilter.class)
-    public Vec response;
-    class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
-
-    public ColumnsJob(String desc, Key dest) { super(desc,dest); }
-
-    protected void selectCols() {
-      // Doing classification only right now...
-      if( !response.isEnum() ) response.asEnum();
-
-      for( int i = cols.length - 1; i >= 0; i-- )
-        if( source.vecs()[cols[i]] == response )
-          cols = ArrayUtils.remove(cols, i);
-    }
 
     protected Vec[] selectVecs(Frame frame) {
       Vec[] vecs = new Vec[cols.length];
@@ -87,14 +70,30 @@ public class Job extends Request2 {
   public static abstract class ModelJob extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help="Column to use as class", required=true, filter=responseFilter.class)
+    public Vec response;
+    class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
+
+    protected void selectCols() {
+      // Doing classification only right now...
+      if( !response.isEnum() ) response.asEnum();
+
+      for( int i = cols.length - 1; i >= 0; i-- )
+        if( source.vecs()[cols[i]] == response )
+          cols = ArrayUtils.remove(cols, i);
+    }
+  }
+
+  public static abstract class ValidatedJob extends ModelJob {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
     protected transient Vec[] _train, _valid;
     protected transient String[] _names;
     protected transient String _responseName;
 
     @API(help = "Validation frame", filter = Default.class)
     public Frame validation;
-
-    public ModelJob(String desc, Key dest) { super(desc,dest); }
 
     @Override protected void selectCols() {
       super.selectCols();
@@ -143,23 +142,23 @@ public class Job extends Request2 {
   }
 
   public Job() {
-    this(null, null);
-  }
-
-  public Job(String description, Key dest) {
-    this(UUID.randomUUID().toString(), description, dest);
-  }
-
-  protected Job(String keyName, String description, Key dest) {
-    setJobKey(keyName);
-    this.description = description != null ? description : getClass().getSimpleName();
+    job_key = defaultJobKey();
+    destination_key = defaultDestKey();
+    description = getClass().getSimpleName();
     start_time = System.currentTimeMillis();
-    destination_key = dest;
   }
 
-  final void setJobKey(String name) {
+  protected Key defaultJobKey() {
+    return defaultJobKey(UUID.randomUUID().toString());
+  }
+
+  protected static Key defaultJobKey(String name) {
     // Pinned to self, because it should be almost always updated locally
-    job_key = Key.make(name, (byte) 0, Key.JOB, H2O.SELF);
+    return Key.make(name, (byte) 0, Key.JOB, H2O.SELF);
+  }
+
+  protected Key defaultDestKey() {
+    return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
   }
 
   public <T extends H2OCountedCompleter> T start(final T fjtask) {
@@ -288,7 +287,21 @@ public class Job extends Request2 {
   }
 
   /** Returns job execution time in milliseconds */
-  public final long executionTime() { return end_time - start_time; }
+  public final long runTimeMs()
+  {
+    long until = end_time != 0 ? end_time : System.currentTimeMillis();
+    return until - start_time;
+  }
+
+  /** Description of a speed criteria. */
+  public String speedDescription() {
+    return null;
+  }
+
+  /** Value of the described speed criteria. */
+  public String speedValue() {
+    return null;
+  }
 
   // If job is a request
 
@@ -419,9 +432,8 @@ public class Job extends Request2 {
   public static class ChunkProgressJob extends Job {
     Key _progress;
 
-    public ChunkProgressJob(String desc, Key dest, long chunksTotal) {
-      super(desc, dest);
-      _progress = Key.make(Key.make()._kb, (byte) 0, Key.DFJ_INTERNAL_USER, dest.home_node());
+    public ChunkProgressJob(long chunksTotal) {
+      _progress = Key.make(Key.make()._kb, (byte) 0, Key.DFJ_INTERNAL_USER, destination_key.home_node());
       UKV.put(_progress, new ChunkProgress(chunksTotal));
     }
 

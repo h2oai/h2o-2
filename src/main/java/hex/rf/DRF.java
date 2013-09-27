@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 
 import jsr166y.CountedCompleter;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.ValueArray.Column;
@@ -26,9 +25,9 @@ public abstract class DRF {
       Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
 
     // Create DRF remote task
-    final DRFTask drfTask = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
+    DRFTask drfTask = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Create DRF user job & start it
-    final DRFJob  drfJob  = new DRFJob(jobName(drfTask), modelKey);
+    DRFJob  drfJob  = new DRFJob(drfTask);
     drfJob.start(drfTask);
     drfTask._job = drfJob;
     // Execute the DRF task
@@ -65,11 +64,6 @@ public abstract class DRF {
     DKV.write_barrier();
 
     return drf;
-  }
-
-  /** Returns a job name for DRF. */
-  private static String jobName(final DRFTask drf) {
-    return "RandomForest_" + drf._params._ntrees + "trees";
   }
 
   /** Remote task implementation execution RF logic */
@@ -287,9 +281,16 @@ public abstract class DRF {
 
   /** DRF job showing progress with reflect to a number of generated trees. */
   public static class DRFJob extends Job {
+    transient DRFTask _drfTask;
 
-    public DRFJob(String desc, Key dest) {
-      super(desc, dest);
+    public DRFJob(DRFTask drfTask) {
+      _drfTask = drfTask;
+    }
+
+    @Override protected Key defaultJobKey() {
+      if(_drfTask != null)
+        return defaultJobKey("RandomForest_" + _drfTask._params._ntrees + "trees");
+      return super.defaultJobKey();
     }
 
     @Override public H2OCountedCompleter start(H2OCountedCompleter fjtask) {
@@ -298,7 +299,7 @@ public abstract class DRF {
           new TAtomic<RFModel>() {
             @Override public RFModel atomic(RFModel old) {
               if(old == null) return null;
-              old._time = DRFJob.this.executionTime();
+              old._time = DRFJob.this.runTimeMs();
               return old;
             }
           }.invoke(dest());
