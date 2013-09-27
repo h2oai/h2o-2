@@ -209,6 +209,7 @@ public class Frame extends Iced {
     return s;
   }
 
+  // Print a row with headers inlined
   private String toStr( long idx, int col ) {
     return _names[col]+"="+(_vecs[col].isNA(idx) ? "NA" : _vecs[col].at(idx));
   }
@@ -219,6 +220,56 @@ public class Frame extends Iced {
     return s+"}";
   }
 
+  // Print fixed-width row & fixed-width headers (more compressed print
+  // format).  Returns the column formats.
+  public String[] toStringHdr( StringBuilder sb ) {
+    String[] fs = new String[numCols()];
+    for( int c=0; c<fs.length; c++ ) {
+      String n = _names[c];
+      Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+      String f = fs[c] = C.pformat();  // Printable width
+      int w=0;
+      for( int x=0; x<f.length(); x++ )// Get printable width from format
+        if( Character.isDigit(f.charAt(x)) ) w = w*10+(f.charAt(x)-'0');
+        else if( w>0 ) break;
+      int len = sb.length();
+      if( n.length() <= w ) {          // Short name, big digits
+        sb.append(n);
+        for( int i=n.length(); i<w; i++ ) sb.append(' ');
+      } else if( w==1 ) {       // First char only
+        sb.append(n.charAt(0));
+      } else if( w==2 ) {       // First 2 chars only
+        sb.append(n.charAt(0)).append(n.charAt(1));
+      } else {                  // First char dot lastchars; e.g. Compress "Interval" to "I.val"
+        sb.append(n.charAt(0)).append(' ');
+        for( int i=n.length()-(w-2); i<n.length(); i++ )
+          sb.append(n.charAt(i));
+      }
+      assert len+w==sb.length();
+      sb.append(' ');           // Column seperator
+    }
+    sb.append('\n');
+    return fs;
+  }
+  public StringBuilder toString( StringBuilder sb, String[] fs, long idx ) {
+    for( int c=0; c<fs.length; c++ ) {
+      if( _vecs[c].isNA(idx) ) throw H2O.unimpl();
+      else if( _vecs[c].isInt() ) sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+      else                        sb.append(String.format(fs[c],_vecs[c].at (idx)));
+      sb.append(' ');           // Column seperator
+    }
+    sb.append('\n');
+    return sb;
+  }
+  public String toStringAll() {
+    StringBuilder sb = new StringBuilder();
+    String[] fs = toStringHdr(sb);
+    for( int i=0; i<numRows(); i++ )
+      toString(sb,fs,i);
+    return sb.toString();
+  }
+
+  // Return the entire Frame as a CSV stream
   public InputStream toCSV(boolean headers) {
     return new CSVStream(headers);
   }

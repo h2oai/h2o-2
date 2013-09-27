@@ -58,4 +58,5 @@ public class C1SChunk extends Chunk {
     }
     return nc;
   }
+  public int pformat_len0() { return pformat_len0(_scale,3); }
 }

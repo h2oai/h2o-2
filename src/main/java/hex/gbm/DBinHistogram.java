@@ -95,153 +95,65 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   double mean(int b) { return _MSs[b*2+0]; }
   double seco(int b) { return _MSs[b*2+1]; }
   double var (int b) { return _bins[b] > 1 ? seco(b)/(_bins[b]-1) : 0; }
-  
-  //// Mean Squared Error: sum(X^2)-Mean^2*n = Var + Mean^2*n*(n-1)
-  //// But predicting the Mean, so MSE is Var.
-  //double mse   ( int b, int c ) { return _Ss[b] == null ? 0 : _Ss[b][c]/_bins[b]; }
-  //double mseVar( double mean, double var, long n ) { return n==0 ? 0 : var*(n-1)/n; }
-  //double mseSQ ( double sum , double ssq, long n ) { return ssq - sum*sum/n; }
-  //
-  //double mse( float Ms[], float Ss[], long n ) {
-  //  double sum=0;
-  //  for( int i=0; i<_nclass; i++ )
-  //    if( n > 0 ) sum += (double)Ss[i]/n;
-  //  return sum;
-  //}
-  //double mse( double Ms[], double Ss[], long n ) {
-  //  double sum=0;
-  //  for( int i=0; i<_nclass; i++ )
-  //    if( n > 0 ) sum += Ss[i]/n;
-  //  return sum;
-  //}
-  //
-  //
-  //// Variance of response-vector.  Sum of variances of the vector elements.
-  //float var( int b ) {
-  //  float sum=0;
-  //  for( int i=0; i<_nclass; i++ )
-  //    sum += var(b,i);
-  //  return sum;
-  //}
-  //
-  //// MSE of response-vector.  Sum of MSE of the vector elements.
-  //float mse( int b ) {
-  //  float sum=0;
-  //  for( int c=0; c<_nclass; c++ )
-  //    sum += mse(b,c);
-  //  return sum;
-  //}
-  //
-  //// Compute a "score" for a column; lower score "wins" (is a better split).
-  //// Score is the sum of MSE.
-  //float score( ) {
-  //  float sum = 0;
-  //  for( int i=0; i<_bins.length; i++ )
-  //    sum += mse(i);
-  //  return sum;
-  //}
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // Score is the sum of the MSEs when the data is split at a single point.
   // mses[1] == MSE for splitting between bins  0  and 1.
   // mses[n] == MSE for splitting between bins n-1 and n.
-  DTree.Split scoreMSE( int col, String name ) {
-    assert _nbins > 1;
-    throw H2O.unimpl();
-
-    //// Split zero bins to the left, all bins to the right
-    //// Left stack of bins
-    //double M0[] = new double[_nclass], S0[] = new double[_nclass];
-    //long n0 = 0;
-    //// Right stack of bins
-    //double M1[] = new double[_nclass], S1[] = new double[_nclass];
-    //long n1 = 0;
-    //for( int b=0; b<_nbins; b++ )
-    //  n1 = add(M1,S1,n1,_Ms[b],_Ss[b],_bins[b]);
-    //
-    //// Make private hackable copies
-    //double M2[] = M1.clone();
-    //double S2[] = S1.clone();
-    //
-    //// Now roll the split-point across the bins.  There are 2 ways to do this:
-    //// split left/right based on being less than some value, or being equal/
-    //// not-equal to some value.  Equal/not-equal makes sense for catagoricals
-    //// but both splits could work for any integral datatype.  Do the less-than
-    //// splits first.
-    //double mseAll=0;
-    //assert (mseAll = mse(M1,S1,n1))==mseAll || true;
-    //DTree.Split best = DTree.Split.make(col,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
-    //for( int b=0; b<_nbins; b++ ) {
-    //  double mse0 = mse(M0,S0,n0);
-    //  double mse1 = mse(M1,S1,n1);
-    //  double mse = (mse0*n0+mse1*n1)/(n0+n1);
-    //  if( mse < best.mse() || (best._bin<((_nbins+1)/2) && mse==best.mse()) )
-    //    best = DTree.Split.make(col,b,false,n0,n1,mse0,mse1,M0,M1);
-    //  // Move mean/var across split point
-    //  n0 = add( M0, S0, n0, _Ms[b], _Ss[b], _bins[b]);
-    //  n1 = sub( M1, S1, n1, _Ms[b], _Ss[b], _bins[b]);
-    //}
-    //// MSE for the final "split" should equal the first "split" - as both are
-    //// non-splits: either ALL data to the left or ALL data to the right.
-    //assert n1==0;
-    //assert mseAll == mse(M0,S0,n0);
-    //
-    //// Now look at equal/not-equal splits.  At each loop, remove the current
-    //// bin from M2/S2/n2 & check MSE - then restore M2/S2/n2.
-    //double M2orig[] = M2.clone();
-    //double S2orig[] = S2.clone();
-    //if( _isInt && _step == 1.0f ) { // Only for ints & enums
-    //  long n2 = n0;
-    //  for( int b=1; b<_nbins-1; b++ ) { // Notice tigher endpoints: ignore splits that are repeats of above
-    //    long n3 = _bins[b];
-    //    if( n3 == 0 ) continue; // Ignore zero-bin splits
-    //    if( n3 == n2 ) {        // Bad split: all or nothing.
-    //      best = DTree.Split.make(col,b,true,0L,n3,0.0,mseAll,null, M2);
-    //      break;
-    //    }
-    //    // Subtract out the chosen bin from the totals
-    //    n2 = sub(M2,S2,n2,_Ms[b],_Ss[b],n3);
-    //    double mse2 = mse( M2   , S2   ,n2);
-    //    double mse3 = mse(_Ms[b],_Ss[b],n3);
-    //    double mse = (mse2*n2+mse3*n3)/(n2+n3);
-    //    if( mse < best.mse() )
-    //      best = DTree.Split.make(col,b,true,n2,n3,mse2,mse3,M2, _Ms[b]);
-    //    // Restore M2/S2/n2
-    //    n2 += n3;
-    //    System.arraycopy(M2orig,0,M2,0,M2.length);
-    //    System.arraycopy(S2orig,0,S2,0,S2.length);
-    //    assert Math.abs(mseAll - mse(M2,S2,n2)) < 0.00001 : "mseAll="+mseAll+", mse at end="+mse(M2,S2,n2)+", bin="+b+", "+this;
-    //  }
-    //}
-    //assert best._bin > 0 : "Must actually pick a split "+best;
-    //return best;
-  }
-
-  // Recursive mean & variance
+  // Recursive mean & variance:
   //    http://www.johndcook.com/standard_deviation.html
   //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-  //long add( double Ms0[], double Ss0[], long n0, float Ms1[], float Ss1[], long n1 ) {
-  //  if( Ms1 != null ) 
-  //    for( int c = 0; c<_nclass; c++ ) {
-  //      double m0 = Ms0[c],  m1 = Ms1[c];
-  //      double s0 = Ss0[c],  s1 = Ss1[c];
-  //      double delta=m1-m0;
-  //      Ms0[c] = (n0*m0+n1*m1)/(n0+n1); // Mean
-  //      Ss0[c] = s0+s1+delta*delta*n0*n1/(n0+n1); // 2nd moment
-  //    }
-  //  return n0+n1;
-  //}
-  //long sub( double Ms0[], double Ss0[], long n0, float Ms1[], float Ss1[], long n1 ) {
-  //  if( Ms1 != null ) 
-  //    for( int c = 0; c<_nclass; c++ ) {
-  //      double m0 = Ms0[c],  m1 = Ms1[c];
-  //      double s0 = Ss0[c],  s1 = Ss1[c];
-  //      double delta=m1-m0;
-  //      Ms0[c] = (n0*m0-n1*m1)/(n0-n1); // Mean
-  //      Ss0[c] = s0-s1-delta*delta*n0*n1/(n0-n1); // 2nd moment
-  //    }
-  //  return n0-n1;
-  //}
+  DTree.Split scoreMSE( int col, String name ) {
+    assert _nbins > 1;
+
+    // Compute mean/var for cumulative bins from 0 to nbins inclusive.
+    double MS0[] = new double[2*(_nbins+1)];
+    long   ns0[] = new long  [  (_nbins+1)];
+    long   tot   = 0;
+    for( int b=1; b<=_nbins; b++ ) {
+      double m0 = MS0[2*(b-1)+0],  m1 =  _MSs[2*(b-1)+0];
+      double s0 = MS0[2*(b-1)+1],  s1 =  _MSs[2*(b-1)+1];
+      long   k0 = ns0[   b-1   ],  k1 = _bins[   b-1   ];
+      double delta=m1-m0;
+      MS0[2*b+0] = (k0*m0+k1*m1)/(k0+k1); // Mean
+      MS0[2*b+1] = s0+s1+delta*delta*k0*k1/(k0+k1); // 2nd moment
+      ns0[  b  ] = k0+k1;
+      tot += k1;
+    }
+
+    // Compute mean/var for cumulative bins from nbins to 0 inclusive.
+    double MS1[] = new double[2*(_nbins+1)];
+    long   ns1[] = new long  [  (_nbins+1)];
+    for( int b=_nbins-1; b>=0; b-- ) {
+      double m0 = MS1[2*(b+1)+0],  m1 =  _MSs[2*(b+0)+0];
+      double s0 = MS1[2*(b+1)+1],  s1 =  _MSs[2*(b+0)+1];
+      long   k0 = ns1[   b+1   ],  k1 = _bins[   b+0   ];
+      double delta=m1-m0;
+      MS1[2*(b-0)+0] = (k0*m0+k1*m1)/(k0+k1); // Mean
+      MS1[2*(b-0)+1] = s0+s1+delta*delta*k0*k1/(k0+k1); // 2nd moment
+      ns1[  (b-0)  ] = k0+k1;
+      assert ns0[b]+ns1[b]==tot;
+    }
+
+    // Now roll the split-point across the bins.  There are 2 ways to do this:
+    // split left/right based on being less than some value, or being equal/
+    // not-equal to some value.  Equal/not-equal makes sense for catagoricals
+    // but both splits could work for any integral datatype.  Do the less-than
+    // splits first.
+    assert Math.abs(MS0[2*_nbins+1]-MS1[2*0+1]) < 1e-8; // Endpoints have same Var
+    int best=0;                         // The no-split
+    double best_se=Double.MAX_VALUE;    // Best squared error
+    for( int b=1; b<=_nbins-1; b++ ) {
+      double se = (MS0[2*b+1]+MS1[2*b+1]); // Squared Error (not MSE)
+      if( (se < best_se) || // Strictly less error?
+          // Or tied MSE, then pick split towards middle bins
+          best_se == se && best < (_nbins>>1) ) {
+        best_se = se; best = b;
+      }
+    }
+    assert best > 0 : "Must actually pick a split "+best;
+    return new DTree.Split(col,best,false,best_se,ns0[best],ns1[best]);
+  }
 
   // Add one row to a bin found via simple linear interpolation.
   // Compute bin min/max.
@@ -263,14 +175,13 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
   // After having filled in histogram bins, compute tighter min/max bounds.
   @Override public void tightenMinMax() {
-    throw H2O.unimpl();
-    //int n = 0;
-    //while( n < _bins.length && _bins[n]==0 ) n++;   // First non-empty bin
-    //if( n == _bins.length ) return;                 // All bins are empty???
-    //_min = _mins[n];    // Take min from 1st  non-empty bin
-    //int x = _bins.length-1;     // Last bin
-    //while( _bins[x]==0 ) x--;   // Last non-empty bin
-    //_max = _maxs[x];    // Take max from last non-empty bin
+    int n = 0;
+    while( n < _bins.length && _bins[n]==0 ) n++;   // First non-empty bin
+    if( n == _bins.length ) return;                 // All bins are empty???
+    _min = _mins[n];    // Take min from 1st  non-empty bin
+    int x = _bins.length-1;     // Last bin
+    while( _bins[x]==0 ) x--;   // Last non-empty bin
+    _max = _maxs[x];    // Take max from last non-empty bin
   }
 
   // An initial set of DBinHistograms (one per column) for this column set
@@ -279,6 +190,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     Vec[] vs = fr.vecs();
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
+      if( v.isEnum() ) throw H2O.unimpl(); // wrong scoreMSE
       hists[j] = (v.naCnt()==v.length() || v.min()==v.max()) ? null
         : new DBinHistogram(fr._names[j],nbins,v.isInt(),(float)v.min(),(float)v.max(),v.length());
     }

@@ -35,4 +35,7 @@ public class C8DChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }
+  // 3.3333333e33
+  public int pformat_len0() { return 22; }
+  public String pformat0() { return "% 22.15e"; }
 }

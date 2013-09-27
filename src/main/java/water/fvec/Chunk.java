@@ -1,6 +1,7 @@
 package water.fvec;
 
 import water.*;
+import water.parser.DParseTask;
 
 /** 
  * A compression scheme, over a chunk - a single array of bytes.  The *actual*
@@ -164,8 +165,8 @@ public abstract class Chunk extends Iced implements Cloneable {
 
   /** After writing we must call close() to register the bulk changes */
   public void close( int cidx, Futures fs ) {
-    if( _chk instanceof NewChunk )_chk = ((NewChunk)_chk).close(fs);
-    if( _chk == this ) return;
+    if( _chk instanceof NewChunk ) _chk = ((NewChunk)_chk).close(fs);
+    if( _chk == this ) return;            // No change?
     DKV.put(_vec.chunkKey(cidx),_chk,fs); // Write updated chunk back into K/V
   }
 
@@ -183,16 +184,40 @@ public abstract class Chunk extends Iced implements Cloneable {
   abstract boolean set_impl  (int idx, float f );
   abstract boolean setNA_impl(int idx);
 
-  /**
-   * Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
-   * chunk and written value is out-of-range for an update-in-place operation.
-   * Bulk copy from the compressed form into the nc._ls array.
-   */ 
+  /** Chunk-specific bulk inflator back to NewChunk.  Used when writing into a
+   *  chunk and written value is out-of-range for an update-in-place operation.
+   *  Bulk copy from the compressed form into the nc._ls array.   */ 
   abstract NewChunk inflate_impl(NewChunk nc);
   abstract boolean hasFloat();
   /** Chunk-specific implementations of read & write  */ 
   public abstract AutoBuffer write(AutoBuffer bb);
   public abstract Chunk  read (AutoBuffer bb);
+
+  // Support for fixed-width format printing
+  public String pformat () { return pformat0(); }
+  public int pformat_len() { return pformat_len0(); }
+  protected String pformat0() { 
+    assert !hasFloat();         // Floats handled in subclasses
+    return "%"+pformat_len0()+"d";
+  }
+  protected int pformat_len0() { 
+    assert !hasFloat();         // Floats handled in subclasses
+    int len=0;
+    long max = (long)_vec.max();
+    if( max < 0 ) { max = -max; len++; }
+    for( int i=1; i<DParseTask.powers10i.length; i++ )
+      if( max < DParseTask.powers10i[i] )
+        return i+len;
+    return 20;
+  }
+  protected int pformat_len0( double scale, int lg ) {
+    double dx = Math.log10(scale);
+    int x = (int)dx;
+    if( DParseTask.pow10i(x) != scale ) throw H2O.unimpl();
+    int w=lg/*compression limits digits*/+1/*dot*/+1/*e*/+(x<0?1:0)/*neg exp*/+1/*digits of exp*/;
+    return w;
+  }
+
 
   @Override public Chunk clone() { return (Chunk)super.clone(); }
   @Override public String toString() { return getClass().getSimpleName(); }

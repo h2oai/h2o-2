@@ -77,9 +77,9 @@ public class GBMTest extends TestUtil {
       UKV.remove(fkey);
       gbm.vresponse = prep.prep(gbm.source);
       gbm.ntrees = 5;
-      gbm.max_depth = 8;
+      gbm.max_depth = 1;
       gbm.learn_rate = 0.2f;
-      gbm.min_rows = 10;
+      gbm.min_rows = 1;
       gbm.nbins = 100;
       gbm.serve();              // Start it
       gbm.get();                // Block for it
