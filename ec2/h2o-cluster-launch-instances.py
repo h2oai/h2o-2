@@ -31,7 +31,7 @@ securityGroupName = 'SecurityDisabled'
 # Options you might want to change.
 # ---------------------------------
 
-numInstancesToLaunch = 1
+numInstancesToLaunch = 3
 instanceType = 'm1.large'
 instanceNameRoot = 'H2ORStudioDemo'
 
@@ -49,8 +49,8 @@ dryRun = False
 # --------------------------------------------------------
 
 regionName = 'us-east-1'
-amiId = 'ami-17c18b7e'
-# amiId = 'ami-634f050a'                # old stable
+amiId = 'ami-0ff1a466'
+
 
 #--------------------------------------------------------------------------
 # No need to change anything below here.
@@ -124,10 +124,20 @@ for i in range(numInstancesToLaunch):
 fpublic.close()
 fprivate.close()
 
-print
-print 'Distributing flatfile...'
+print 'Sleeping for 60 seconds for ssh to be available...'
+time.sleep(60)
 
 d = os.path.dirname(os.path.realpath(__file__))
+
+print 'Testing ssh access...'
+cmd = d + '/' + 'h2o-cluster-test-ssh.sh'
+rv = os.system(cmd)
+if rv != 0:
+    print 'Failed.'
+    sys.exit(1)
+
+print
+print 'Distributing flatfile...'
 cmd = d + '/' + 'h2o-cluster-distribute-flatfile.sh'
 rv = os.system(cmd)
 if rv != 0:

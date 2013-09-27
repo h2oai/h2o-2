@@ -3,21 +3,36 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_pca, h2o_jobs as h2j
 
 
-DO_PCA_SCORE = True
-def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
+print "\nTHIS IS KIND OF A WASTE SINCE PCA DISCARDS ALL CATEGORICAL COLUMNS\n"
+def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
+    # do we need more than one random generator?
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
 
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            ri = r1.randint(0,1)
-            rowData.append(ri)
+            ### ri1 = int(r1.triangular(0,2,1.5))
+            ri1 = int(r1.triangular(1,5,2.5))
+            rowData.append(ri1)
 
-        ri = r1.randint(0,1)
-        rowData.append(ri)
+        rowTotal = sum(rowData)
+        ### print rowData
+        if translateList is not None:
+            for i, iNum in enumerate(rowData):
+                # numbers should be 1-5, mapping to a-d
+                rowData[i] = translateList[iNum-1]
 
-        rowDataCsv = ",".join(map(str,rowData))
+        rowAvg = (rowTotal + 0.0)/colCount
+        ### print rowAvg
+        if rowAvg > 2.25:
+            result = 1
+        else:
+            result = 0
+        ### print colCount, rowTotal, result
+        rowDataStr = map(str,rowData)
+        rowDataStr.append(str(result))
+        rowDataCsv = ",".join(rowDataStr)
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
@@ -41,16 +56,15 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_PCA_many_cols(self):
+    def test_PCA_many_cols_enum(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
+        translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
 
         if localhost:
             tryList = [
-                (10000, 10, 'cA', 300), 
-                (10000, 50, 'cB', 300), 
-                (10000, 100, 'cC', 300), 
-                # (10000, 500, 'cH', 300), 
-                # (10000, 1000, 'cI', 300), 
+                (10000, 100, 'cA', 300), 
+                (10000, 500, 'cH', 300), 
+                (10000, 1000, 'cI', 300), 
                 ]
         else:
             tryList = [
@@ -71,15 +85,12 @@ class Basic(unittest.TestCase):
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
+            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, translateList)
 
             # PARSE ****************************************
             h2o.beta_features = False #turn off beta_features
             start = time.time()
-
-            #h2o.beta_features = False
             modelKey = 'PCAModelKey'
-            scoreKey = 'PCAScoreKey'
 
             # Parse ****************************************
             if h2o.beta_features:
@@ -122,12 +133,16 @@ class Basic(unittest.TestCase):
                     'tolerance': tolerance,
                     'standardize': 1,
                 }
+                print "Using these parameters for PCA: ", params
                 kwargs = params.copy()
                 #h2o.beta_features = True
-                pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+
+                pcaResult = h2o_cmd.runPCA(parseResult=parseResult,
+                     timeoutSecs=timeoutSecs, **kwargs)
                 print "PCA completed in", pcaResult['python_elapsed'], "seconds. On dataset: ", csvPathname
                 print "Elapsed time was ", pcaResult['python_%timeout'], "% of the timeout"
                 print "Checking PCA results: "
+        
                 h2o_pca.simpleCheckPCA(self,pcaResult)
                 h2o_pca.resultsCheckPCA(self,pcaResult)
 
@@ -137,7 +152,6 @@ class Basic(unittest.TestCase):
                     len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, pcaResult['python_elapsed'])
                 print l
                 h2o.cloudPerfH2O.message(l)
-
                 #h2o.beta_features = True
                 pcaInspect = h2o_cmd.runInspect(key=modelKey)
                 # errrs from end of list? is that the last tree?
@@ -150,26 +164,6 @@ class Basic(unittest.TestCase):
                 print
                 print
                 #h2o.beta_features=False
-
-                if DO_PCA_SCORE:
-                    # just score with same data
-                    score_params = {
-                        'destination_key': scoreKey,
-                        'model_key': modelKey,
-                        'num_pc': 2,
-                        'key':  hex_key,
-                    }
-                    kwargs = score_params.copy()
-                    pcaScoreResult = h2o.nodes[0].pca_score(timeoutSecs=timeoutSecs, **kwargs)
-                    print "PCAScore completed in", pcaResult['python_elapsed'], "seconds. On dataset: ", csvPathname
-                    print "Elapsed time was ", pcaResult['python_%timeout'], "% of the timeout"
-
-                    # Logging to a benchmark file
-                    algo = "PCAScore " + " num_pc=" + str(num_pc)
-                    l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                        len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, pcaResult['python_elapsed'])
-                    print l
-                    h2o.cloudPerfH2O.message(l)
 
 if __name__ == '__main__':
     h2o.unit_main()

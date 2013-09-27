@@ -13,7 +13,7 @@ setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predi
 setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
           function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
       # ignoredFeat = ifelse(length(x_ignore) == 1 && is.na(x_ignore), "", paste(x_ignore - 1, sep="", collapse=","))
-      if(length(x_ignore) == 1 && is.na(x_ignore))
+      if(length(x_ignore) == 1 && any(is.na(x_ignore) == TRUE))
         ignoredFeat = ""
       else if(min(x_ignore) < 1 || max(x_ignore) > ncol(data))
         stop("Column index out of bounds!")
@@ -42,13 +42,12 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
 
 setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
           function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-            if(x_ignore == "")
+            if(length(x_ignore) == 1 && x_ignore == "")
               h2o.gbm(data, destination, y, as.numeric(NA), ntrees, max_depth, learn_rate, min_rows)
-            else if(any(c(y, x_ignore) %in% myCol == FALSE))
+            else if(any(c(y, x_ignore) %in% colnames(data) == FALSE))
               stop("Column name does not exist!")
             else {
-              myCol = colnames(data)
-              myCol = myCol[-which(myCol == y)]
+              myCol = colnames(data); myCol = myCol[-which(myCol == y)]
               myIgnore = which(myCol %in% x_ignore)
               h2o.gbm(data, destination, y, myIgnore, ntrees, max_depth, learn_rate, min_rows)
             }
@@ -138,6 +137,9 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, tweedie.
             modelOrig = h2o.__getGLMResults(resModel, y, family, tweedie.p)
             
             # Get results from cross-validation
+            if(nfolds < 2)
+              return(new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list()))
+            
             res_xval = list()
             for(i in 1:nfolds) {
               xvalKey = resModel$validations[[1]]$xval_models[i]
@@ -397,24 +399,26 @@ setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="missing"),
           function(forest, k) { h2o.getTree(forest, k, plot = FALSE) })
 
-setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="missing"), 
-        function(object) {
-          res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=object@data@key)
-          res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
-          result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-          result
-        })
-
 setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
-# setMethod("h2o.predict", signature(object="H2OGLMModel", newdata="H2OParsedData"),
           function(object, newdata) {
-            if(class(object) == "H2OGLMModel") {
+            if(class(object) == "H2OGLMModel" || class(object) == "H2ORForestModel") {
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
-              result = new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-              result
+              new("H2OParsedData", h2o=object@data@h2o, key=res$key)
+            } else if(class(object) == "H2OKMeansModel") {
+              res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
+              while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+              new("H2OParsedData", h2o=object@data@h2o, key=res$key)
             # } else if(class(object) == "H2OPCAModel") {
-            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, data_key=newdata@key)
+            #  numMatch = colnames(newdata) %in% colnames(object@data)
+            #  numPC = length(numMatch[numMatch == TRUE])
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, num_pc=numPC)
+            #  while(h2o.__poll(object@data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
+            #  new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
             } else
               stop(paste("Prediction has not yet been implemented for", class(object)))
           })
+
+setMethod("h2o.predict", signature(object="H2OModel", newdata="missing"), 
+          function(object) { h2o.predict(object, object@data) })
