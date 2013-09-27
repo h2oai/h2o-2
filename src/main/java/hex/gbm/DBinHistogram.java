@@ -190,9 +190,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
-    // not-equal to some value.  Equal/not-equal makes sense for catagoricals
-    // but both splits could work for any integral datatype.  Do the less-than
-    // splits first.
+    // not-equal to some value.  Equal/not-equal makes sense for catagoricals.
+    // Do the less-than splits first.
     double mseAll=0;
     assert (mseAll = mse(M1,S1,n1))==mseAll || true;
     DTree.Split best = DTree.Split.make(col,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
