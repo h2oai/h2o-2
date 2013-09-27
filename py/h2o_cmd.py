@@ -88,6 +88,12 @@ def runPCA(node=None, parseResult=None, timeoutSecs=600, **kwargs):
     data_key = parseResult['destination_key']
     return node.pca(data_key=data_key, **kwargs)
 
+def runNNet(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+    if not parseResult: raise Exception('No parseResult for NN')
+    if not node: node = h2o.nodes[0]
+    data_key = parseResult['destination_key']
+    return node.neural_net(data_key=data_key, **kwargs)
+
 def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
     if not node: node = h2o.nodes[0]

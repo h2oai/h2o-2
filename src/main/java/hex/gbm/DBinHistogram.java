@@ -237,7 +237,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
         assert Math.abs(mseAll - mse(M2,S2,n2)) < 0.00001 : "mseAll="+mseAll+", mse at end="+mse(M2,S2,n2)+", bin="+b+", "+this;
       }
     }
-    assert best._bin > 0 : "Must produce an actual split "+best;
+    assert best._bin > 0 : "Must actually pick a split "+best;
     return best;
   }
 

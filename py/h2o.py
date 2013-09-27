@@ -1,4 +1,4 @@
-import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
+import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
 import h2o_sandbox
@@ -261,13 +261,22 @@ def clean_sandbox_stdout_stderr():
             os.remove(f)
 
 def tmp_file(prefix='', suffix=''):
-    return tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
+    fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
+    # make sure the file now exists
+    # os.open(path, 'a').close()
+    # give everyone permission to read it (jenkins running as 
+    # 0xcustomer needs to archive as jenkins
+    permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+    os.chmod(path, permissions)
+    return (fd, path)
 
 def tmp_dir(prefix='', suffix=''):
     return tempfile.mkdtemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
 
 def log(cmd, comment=None):
-    with open(LOG_DIR + '/commands.log', 'a') as f:
+    filename = LOG_DIR + '/commands.log'
+    # everyone can read
+    with open(filename, 'a') as f:
         f.write(str(datetime.datetime.now()) + ' -- ')
         # what got sent to h2o
         # f.write(cmd)
@@ -280,6 +289,9 @@ def log(cmd, comment=None):
             f.write("\n")
         elif comment: # for comment-only
             f.write(comment + "\n")
+    # jenkins runs as 0xcustomer, and the file wants to be archived by jenkins who isn't in his group
+    permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+    os.chmod(filename, permissions)
 
 def make_syn_dir():
     SYNDATASETS_DIR = './syn_datasets'
@@ -297,6 +309,7 @@ def spawn_cmd(name, cmd, capture_output=True, **kwargs):
     if capture_output:
         outfd, outpath = tmp_file(name + '.stdout.', '.log')
         errfd, errpath = tmp_file(name + '.stderr.', '.log')
+        # everyone can read
         ps = psutil.Popen(cmd, stdin=None, stdout=outfd, stderr=errfd, **kwargs)
     else:
         outpath = '<stdout>'
@@ -1605,6 +1618,7 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
+            'ignored_cols': None,
             'nbins': None,
         }
         # only lets these params thru
@@ -1624,17 +1638,19 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, noPoll=False, **kwargs):
+    def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
         params_dict = {
-            'destination_key':None,
-            'key':data_key,
-            'ignore':None,
-            'tolerance':None,
-            'standardize':None
+            'destination_key': None,
+            'key': data_key,
+            'ignore': None,
+            'tolerance': None,
+            'standardize': None
         }
-        params_dict.update(kwargs)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'pca', print_params)
         start = time.time()
-        a = self.__do_json_request('PCA.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('PCA.json', timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
             a['python_elapsed'] = time.time() - start
@@ -1644,6 +1660,62 @@ class H2O(object):
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCA result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
+    def pca_score(self, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
+        params_dict = {
+            'model_key': None,
+            'destination_key': None,
+            'key': None,
+            'num_pc': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'pca_score', print_params)
+        start = time.time()
+        a = self.__do_json_request('PCAScore.json',timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            return a
+
+        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nPCAScore result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
+    def neural_net(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': data_key,
+            # this is ignore??
+            'cols': None,
+            'response': None,
+            'activation': None,
+            'hidden': None,
+            'rate': None,
+            'l2': None,
+            'epochs': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
+        start = time.time()
+        a = self.__do_json_request('NeuralNet.json',timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            return a
+
+        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nPCAScore result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a

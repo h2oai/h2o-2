@@ -67,6 +67,7 @@ build_h2o:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
 
 package:
+	echo $(PROJECT_VERSION) > target/project_version
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	mkdir target/h2o-$(PROJECT_VERSION)
 	cp -rp target/R target/h2o-$(PROJECT_VERSION)
@@ -76,6 +77,8 @@ package:
 	cp -p packaging/README.txt target/h2o-$(PROJECT_VERSION)
 	sed "s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g" packaging/index.html > target/index.html
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
+	mkdir target/h2o-$(PROJECT_VERSION)/ec2
+	cp -p ec2/*.py ec2/*.sh ec2/README.txt target/h2o-$(PROJECT_VERSION)/ec2
 	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	rm -fr target/ci

@@ -10,9 +10,10 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=28)
+            h2o.build_cloud(3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -20,12 +21,18 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_covtype_train_test(self):
+    def test_GBM_manyfiles_train_test(self):
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
-        files = [
+        if localhost:
+            files = [
                 # None forces num_cols to be used. assumes you set it from Inspect
-                ('manyfiles-nflx-gz', 'file_1.dat.gz', 'file_1.hex', 1800, None, 'file_1.dat.gz', 'file_1_test.hex')
+                ('manyfiles-nflx-gz', 'file_1.dat.gz', 'file_1.hex', 1800, None, 'file_11.dat.gz', 'file_1_test.hex')
+                ]
+        else:
+            files = [
+                # None forces num_cols to be used. assumes you set it from Inspect
+                ('manyfiles-nflx-gz', 'file_[0-9].dat.gz', 'file_10.hex', 1800, None, 'file_1[0-9].dat.gz', 'file_10_test.hex')
                 ]
 
         # if I got to hdfs, it's here
