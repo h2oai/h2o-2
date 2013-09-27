@@ -137,6 +137,9 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, tweedie.
             modelOrig = h2o.__getGLMResults(resModel, y, family, tweedie.p)
             
             # Get results from cross-validation
+            if(nfolds < 2)
+              return(new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list()))
+            
             res_xval = list()
             for(i in 1:nfolds) {
               xvalKey = resModel$validations[[1]]$xval_models[i]
