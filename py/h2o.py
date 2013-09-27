@@ -374,7 +374,7 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
     if hosts is None:
         ip = get_ip_address()
         for i in range(node_count):
-            hostPortList.append("/" + ip + ":" + str(base_port + ports_per_node*i))
+            hostPortList.append(ip + ":" + str(base_port + ports_per_node*i))
     else:
         for h in hosts:
             for i in range(node_count):
