@@ -193,7 +193,7 @@ public class DRF extends SharedTreeModelBuilder {
       // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs,ncols,nclass,ymin,fr).doAll(fr);
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs,ncols,nclass,ymin).doAll(fr);
       //System.out.println(sbh.profString());
 
       // Reassign the new DHistograms back into the DTrees
@@ -277,7 +277,7 @@ public class DRF extends SharedTreeModelBuilder {
 
     // Find the column with the best split (lowest score).
     @Override DTree.Split bestCol( DRFUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,0L,0L,0,0);
+      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,0L,0L);
       if( u._hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
