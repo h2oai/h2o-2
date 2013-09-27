@@ -23,8 +23,8 @@ public class Progress2 extends Request {
 
   @Override protected Response serve() {
     Job jjob = Job.findJob(Key.make(job.value()));
-    if(jjob == null || jjob.end_time > 0 || jjob.cancelled()) return jobDone(jjob, dst_key.value());
     if(jjob.exception != null)return Response.error(jjob.exception);
+    if(jjob == null || jjob.end_time > 0 || jjob.cancelled()) return jobDone(jjob, dst_key.value());
     return jobInProgress(jjob, dst_key.value());
   }
 

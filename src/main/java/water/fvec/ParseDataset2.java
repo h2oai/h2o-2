@@ -31,7 +31,7 @@ public final class ParseDataset2 extends Job {
     // TODO, get global setup from all files!
     Key k = keys[0];
     ByteVec v = (ByteVec)getVec(k);
-    byte [] bits = v.elem2BV(0)._mem;
+    byte [] bits = v.elem2BV(0).getBytes();
     Compression cpr = Utils.guessCompressionMethod(bits);
     CustomParser.ParserSetup globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), new ParserSetup(),true)._setup;
     return forkParseDataset(okey, keys, globalSetup).get();

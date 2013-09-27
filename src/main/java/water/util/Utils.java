@@ -512,5 +512,9 @@ public class Utils {
       return null;
     }
   }
+  public static final boolean hasNaNsOrInfs(double [] arr){
+    for(double d:arr) if(Double.isNaN(d) || Double.isInfinite(d))return true;
+    return false;
+  }
 
 }
