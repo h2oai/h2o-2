@@ -115,8 +115,12 @@ public class GBM extends SharedTreeModelBuilder {
       double ds[] = new double[_nclass];
       for( int row=0; row<ys._len; row++ ) {
         double sum = score0(chks,ds,row);
-        for( int k=0; k<_nclass; k++ ) // Save as a probability distribution
-          chk_work(chks,k).set0(row,(float)(ds[k]/sum));
+        if( Double.isInfinite(sum) )
+          for( int k=0; k<_nclass; k++ )
+            chk_work(chks,k).set0(row,Double.isInfinite(ds[k])?1.0f:0.0f);
+        else
+          for( int k=0; k<_nclass; k++ ) // Save as a probability distribution
+            chk_work(chks,k).set0(row,(float)(ds[k]/sum));
       }
     }
   }
@@ -140,8 +144,10 @@ public class GBM extends SharedTreeModelBuilder {
       for( int row=0; row<ys._len; row++ ) {
         int y = (int)ys.at80(row)-_ymin; // zero-based response variable
         for( int k=0; k<_nclass; k++ ) {
-          Chunk wk = chk_work(chks,k);
-          wk.set0(row, (y==k?1f:0f)-(float)wk.at0(row) );
+          if( _distribution[k] != 0 ) {
+            Chunk wk = chk_work(chks,k);
+            wk.set0(row, (y==k?1f:0f)-(float)wk.at0(row) );
+          }
         }
       }
     }
@@ -158,8 +164,10 @@ public class GBM extends SharedTreeModelBuilder {
     final DTree[] ktrees = new DTree[_nclass];
     for( int k=0; k<_nclass; k++ ) {
       // Initially setup as-if an empty-split had just happened
-      ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
-      new GBMUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
+      if( _distribution[k] != 0 ) {
+        ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
+        new GBMUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
+      }
     }
 
     // Add ktrees to the end of the forest
@@ -185,7 +193,6 @@ public class GBM extends SharedTreeModelBuilder {
       // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      System.out.println("QQ"+Arrays.toString(leafs));
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs).doAll(fr);
       //System.out.println(sbh.profString());
 
@@ -196,27 +203,20 @@ public class GBM extends SharedTreeModelBuilder {
       boolean did_split=false;
       for( int k=0; k<_nclass; k++ ) {
         DTree tree = ktrees[k]; // Tree for class K
+        if( tree == null ) continue;
         int tmax = tree._len;   // Number of total splits in tree K
         for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
           UndecidedNode udn = tree.undecided(leaf);
           udn._hs = sbh.getFinalHisto(k,leaf);
-
-          // Check for a constant response & stub out the tree
-          DBinHistogram h=null;
-          for( int i=0; i<_ncols; i++ )
-            if( udn._hs[i] instanceof DBinHistogram ) 
-              { h=(DBinHistogram)udn._hs[i]; break; }
-          if( h.isConstantResponse() ) {
-            new GBMLeafNode(tree,-1); // Stub the root
-            tmax = tree._len;           // No new leaves
-            break;                      // Done with this tree
-          }
-
           //System.out.println("Class "+domain[k]+", "+udn);
-          // Replace the Undecided with the Split decision
-          GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn);
-          //System.out.println(dn);
-          did_split = true;
+          if( udn.hasConstantResponse() ) { // Perfect prediction?
+            udn.do_not_split(fr,_ncols,_nclass,k);
+          } else {
+            // Replace the Undecided with the Split decision
+            GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn);
+            //System.out.println(dn);
+            did_split = true;
+          }
         }
         leafs[k]=tmax;          // Setup leafs for next tree level
       }
@@ -229,6 +229,7 @@ public class GBM extends SharedTreeModelBuilder {
     // LeafNodes to hold predictions.
     for( int k=0; k<_nclass; k++ ) {
       DTree tree = ktrees[k];
+      if( tree == null ) continue;
       int leaf = leafs[k] = tree._len;
       for( int nid=0; nid<leaf; nid++ ) {
         if( tree.node(nid) instanceof DecidedNode ) {
@@ -251,9 +252,11 @@ public class GBM extends SharedTreeModelBuilder {
     double m1class = (double)(_nclass-1)/_nclass; // K-1/K
     for( int k=0; k<_nclass; k++ ) {
       final DTree tree = ktrees[k];
+      if( tree == null ) continue;
       for( int i=0; i<tree._len-leafs[k]; i++ ) {
-        assert gp._gss[k][i] != 0 : "Split until an empty leaf? nid="+(leafs[k]+i)+"  tree="+k;
-        double g = learn_rate*m1class*gp._rss[k][i]/gp._gss[k][i];
+        double g = gp._gss[k][i] == 0 // Constant response?
+          ? 1000                      // Cap (exponential) learn, instead of dealing with Inf
+          : learn_rate*m1class*gp._rss[k][i]/gp._gss[k][i];
         ((LeafNode)tree.node(leafs[k]+i))._pred = g;
       }
     }
@@ -268,11 +271,12 @@ public class GBM extends SharedTreeModelBuilder {
         // For all tree/klasses
         for( int k=0; k<_nclass; k++ ) {
           final DTree tree = ktrees[k];
+          if( tree == null ) continue;
           final Chunk nids = chk_nids(chks,k);
           final Chunk ct   = chk_tree(chks,k);
           for( int row=0; row<nids._len; row++ ) {
             int nid = (int)nids.at80(row);
-            ct.set0(row, ct.at0(row) + ((LeafNode)tree.node(nid))._pred);
+            ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
             nids.set0(row,0);
           }            
         }
@@ -280,8 +284,9 @@ public class GBM extends SharedTreeModelBuilder {
     }.doAll(fr);
 
     // Print the generated K trees
-    for( int k=0; k<_nclass; k++ )
-      System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
+    //for( int k=0; k<_nclass; k++ )
+    //  if( ktrees[k] != null ) 
+    //    System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
 
     return forest;
   }
@@ -304,6 +309,7 @@ public class GBM extends SharedTreeModelBuilder {
       // For all tree/klasses
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
+        if( tree == null ) continue;
         final int   leaf = _leafs[k];
         // A leaf-biased array of all active histograms
         final double gs[] = _gss[k] = new double[tree._len-leaf];
@@ -344,15 +350,18 @@ public class GBM extends SharedTreeModelBuilder {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override DTree.Split bestCol( GBMUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
       DHistogram hs[] = u._hs;
-      if( hs == null ) return best;
+      if( hs == null ) 
+        return new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
+      DTree.Split best = null;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;
         DTree.Split s = hs[i].scoreMSE(i);
-        if( s.se() < best.se() ) best = s;
+        if( s == null ) continue;
+        if( best == null || s.se() < best.se() ) best = s;
         if( s.se() <= 0 ) break; // No point in looking further!
       }
+      assert best != null;      // 
       return best;
     }
   }
@@ -374,7 +383,7 @@ public class GBM extends SharedTreeModelBuilder {
     GBMLeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
     // Insert just the predictions: a single byte/short if we are predicting a
     // single class, or else the full distribution.
-    @Override protected AutoBuffer compress(AutoBuffer ab) { return ab.put4f((float)_pred); }
+    @Override protected AutoBuffer compress(AutoBuffer ab) { assert !Double.isNaN(_pred); return ab.put4f((float)_pred); }
     @Override protected int size() { return 4; }
   }
 }

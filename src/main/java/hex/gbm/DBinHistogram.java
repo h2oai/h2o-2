@@ -41,17 +41,18 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   public DBinHistogram( String name, final char nbins, byte isInt, float min, float max, long nelems ) {
     super(name,isInt,min,max);
     assert nelems > 0;
+    assert nbins >= 1;
     assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
-    char xbins = (char)Math.max((char)Math.min(nbins,nelems),1); // Default bin count
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
+    char xbins = nbins;
     float step;
     if( isInt>0 && max-min <= nbins ) {
       assert ((long)min)==min;
       xbins = (char)((long)max-(long)min+1L); // Shrink bins
       step = 1.0f;                            // Fixed stepsize
     } else {
-      step = (max-min)/xbins; // Step size for linear interpolation
+      step = (max-min)/nbins; // Step size for linear interpolation
       if( step == 0 ) { assert max==min; step = 1.0f; }
       assert step > 0;
     }
@@ -82,8 +83,10 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   }
 
   // Interpolate d to find bin#
-  int bin( float d ) {
-    int idx1  = (int)((d-_bmin)/_step);
+  int bin( float col_data ) {
+    if( Float.isNaN(col_data) ) return 0; // Always NAs to bin 0
+    assert col_data <= _max : "Coldata out of range "+col_data+" "+this;
+    int idx1  = (int)((col_data-_bmin)/_step);
     int idx2  = Math.max(Math.min(idx1,_nbins-1),0); // saturate at bounds
     return idx2;
   }
@@ -122,7 +125,11 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       ns0[  b  ] = k0+k1;
       tot += k1;
     }
-    assert Math.abs(MS0[2*_nbins+1]) > 1e-8 : "No variance, why split? "+Arrays.toString(MS0)+" col "+_name+" "+this;
+    // If we see zero variance, we must have a constant response in this
+    // column.  Normally this situation is cut out before we even try to split, but we might
+    // have NA's in THIS column... 
+    if( MS0[2*_nbins+1] == 0 ) { assert isConstantResponse(); return null; }
+    //assert Math.abs(MS0[2*_nbins+1]) > 1e-8 : "No variance, why split? "+Arrays.toString(MS0)+" col "+_name+" "+this;
 
     // Compute mean/var for cumulative bins from nbins to 0 inclusive.
     double MS1[] = new double[2*(_nbins+1)];
@@ -168,7 +175,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     if( _isInt > 0 && _step == 1.0f ) { // For any integral (not float) column
       for( int b=1; b<=_nbins-1; b++ ) {
         if( _bins[b] == 0 ) continue;       // Ignore empty splits
-        assert _mins[b] == _maxs[b];
+        assert _mins[b] == _maxs[b] : "int col, step of 1.0 "+_mins[b]+".."+_maxs[b]+" "+this+" "+Arrays.toString(MS0)+":"+Arrays.toString(ns0);
         //System.out.println("mse0="+MS0[2*(b+0)+1]+", mseX="+_MSs[2*(b+0)+1]+", mse1="+MS1[2*(b+1)+1]);
         
         double m0 = MS0[2*(b+0)+0],  m1 = MS1[2*(b+1)+0];
@@ -200,7 +207,6 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Compute bin min/max.
   // Compute response mean & variance.
   void incr( int row, float col_data, double y ) {
-    if( Float.isNaN(col_data) ) return;
     int b = bin(col_data);      // Compute bin# via linear interpolation
     _bins[b]++;                 // Bump count in bin
     long k = _bins[b];          // Row count for bin b
@@ -259,11 +265,13 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
   // Check for a constant response variable
   public boolean isConstantResponse() {
-    double m = _MSs[0];
+    double m = Double.NaN;
     for( int b=0; b<_nbins; b++ ) {
       if( _bins[b] == 0 ) continue;
-      if( _MSs[2*b+0] != m ) return false;
       if( _MSs[2*b+1] != 0 ) return false;
+      if( _MSs[2*b+0] != m ) 
+        if( Double.isNaN(m) ) m=_MSs[2*b+0]; 
+        else return false;
     }
     return true;
   }
@@ -271,7 +279,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Pretty-print a histogram
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(_name).append(":").append(_min).append("-").append(_max);
+    sb.append(_name).append(":").append(_min).append("-").append(_max+", bmin="+_bmin+" step="+_step+" nbins="+(int)_nbins);
     if( _bins != null ) {
       for( int b=0; b<_nbins; b++ ) {
         sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));

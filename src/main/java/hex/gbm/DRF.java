@@ -282,13 +282,13 @@ public class DRF extends SharedTreeModelBuilder {
 
     // Find the column with the best split (lowest score).
     @Override DTree.Split bestCol( DRFUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,0L,0L);
+      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
       if( u._hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
         DTree.Split s = u._hs[col].scoreMSE(col);
-        if( s._se < best._se ) best = s;
-        if( s._se <= 0 ) break; // No point in looking further!
+        if( s.se() < best.se() ) best = s;
+        if( s.se() <= 0 ) break; // No point in looking further!
       }
       return best;
     }

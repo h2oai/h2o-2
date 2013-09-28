@@ -48,6 +48,10 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
   @API(help = "Minimum class number, generally 0 or 1")
   protected int _ymin;
 
+  @API(help = "Class distribution, ymin based")
+  protected long _distribution[];
+
+
   public SharedTreeModelBuilder( String name, String keyn ) { super(name,Key.make(keyn+Key.make())); }
 
   public float progress(){
@@ -76,7 +80,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
     _ncols = fr.numCols();      // Feature set
-    _nrows = fr.numRows();
+    _nrows = fr.numRows() - vresponse.naCnt();
     _ymin = (int)vresponse.min();
     _nclass = vresponse.isInt() ? (char)(vresponse.max()-_ymin+1) : 1;
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
@@ -88,6 +92,9 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
     fr.add(vname,vresponse);         // Hardwire response as last vector
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
 
+    // Find the class distribution
+    _distribution = new ClassDist().doAll(vresponse)._ys;
+
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
     //   nclass Vecs of working/temp data
@@ -97,13 +104,14 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
     for( int i=0; i<_nclass; i++ )
       fr.add("Tree_"+domain[i], vresponse.makeZero());
 
-    // Initial probability distribution
+    // Initial work columns.  Set-before-use in the algos.
     for( int i=0; i<_nclass; i++ )
-      fr.add("Work_"+domain[i], vresponse.makeCon(1.0f/_nclass));
+      fr.add("Work_"+domain[i], vresponse.makeZero());
 
-    // One Tree per class, each tree needs a NIDs
+    // One Tree per class, each tree needs a NIDs.  For empty classes use a -1
+    // NID signifying an empty regression tree.
     for( int i=0; i<_nclass; i++ )
-      fr.add("NIDs_"+domain[i], vresponse.makeZero());
+      fr.add("NIDs_"+domain[i], vresponse.makeCon(_distribution[i]==0?-1:0));
 
     // Tail-call position: this forks off in the background, and this call
     // returns immediately.  The actual model build is merely kicked off.
@@ -165,7 +173,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
     }
 
     // Init all the internal tree fields after shipping over the wire
-    @Override public void setupLocal( ) { for( DTree dt : _trees ) dt.init_tree(); }
+    @Override public void setupLocal( ) { for( DTree dt : _trees ) if( dt != null ) dt.init_tree(); }
 
     public DHistogram[] getFinalHisto( int k, int nid ) {
       DHistogram hs[] = _hcs[k][nid-_leafs[k]];
@@ -187,6 +195,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
       // For all klasses
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
+        if( tree == null ) continue; // Ignore unused classes
         final int leaf   = _leafs[k];
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[k] = new DHistogram[tree._len-leaf][];
@@ -243,14 +252,14 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
           if( nid<leaf ) continue; // row already predicts perfectly or sampled away
           DHistogram nhs[] = hcs[nid-leaf];
 
-          double y = wrks.at(row);       // Response for this row
+          double y = wrks.at0(row);      // Response for this row
           for( int j=0; j<_ncols; j++) { // For all columns
             DHistogram nh = nhs[j];
             if( nh == null ) continue; // Not tracking this column?
             float col_data = (float)chks[j].at0(row);
-            nh.incr(col_data);                // Small histogram
             if( nh instanceof DBinHistogram ) // Big histogram
               ((DBinHistogram)nh).incr(row,col_data,y);
+            else              nh .incr(col_data); // Small histogram
           }
         }
       }
@@ -275,6 +284,18 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
   }
 
   // --------------------------------------------------------------------------
+  private class ClassDist extends MRTask2<ClassDist> {
+    long _ys[];
+    @Override public void map(Chunk ys) {
+      _ys = new long[_nclass];
+      for( int i=0; i<ys._len; i++ )
+        if( !ys.isNA0(i) )
+          _ys[(int)ys.at80(i)-_ymin]++;
+    }
+    @Override public void reduce( ClassDist that ) { Utils.add(_ys,that._ys); }
+  }
+
+  // --------------------------------------------------------------------------
   // Read the 'tree' columns, do model-specific math and put the results in the
   // ds[] array, and return the sum.  Dividing any ds[] element by the sum
   // turns the results into a probability distribution.
@@ -290,12 +311,16 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
       double ds[] = new double[_nclass];
       // Score all Rows
       for( int row=0; row<ys._len; row++ ) {
-        if( ys.isNA(row) ) continue; // Ignore missing response vars
+        if( ys.isNA0(row) ) continue; // Ignore missing response vars
         int ycls = (int)ys.at80(row)-_ymin; // Response class from 0 to nclass-1
         assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin;
         double sum = score0(chks,ds,row);
-        double err = 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
+        double err = Double.isInfinite(sum) 
+          ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
+          : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
+        assert !Double.isNaN(err) : ds[ycls] + " " + sum;
         _sum += err*err;               // Squared error
+        assert !Double.isNaN(_sum);
         int best=0;                    // Pick highest prob for our prediction
         for( int c=1; c<_nclass; c++ )
           if( ds[best] < ds[c] ) best=c;
@@ -305,8 +330,9 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
     @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); }
 
     public Score report( Sys tag, DTree[][] trees ) {
+      assert !Double.isNaN(_sum);
       int lcnt=0;
-      for( DTree[] ts : trees ) for( DTree t : ts ) lcnt += t._len;
+      for( DTree[] ts : trees ) for( DTree t : ts ) if( t != null ) lcnt += t._len;
       long err=_nrows;
       for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");

@@ -98,8 +98,20 @@ class DTree extends Iced {
     }
     public final double se() { return _se0+_se1; }
 
-    // Split-at dividing point
-    float splat(DHistogram hs[]) {  return ((DBinHistogram)hs[_col]).binAt(_bin); }
+    // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
+    // error we can have that point be slightly higher or lower than the bin
+    // min/max - which would allow values outside the stated bin-range into the
+    // split sub-bins.  Always go for a value which splits the nearest two
+    // elements.
+    float splat(DHistogram hs[]) {  
+      DBinHistogram h = ((DBinHistogram)hs[_col]);
+      assert _bin > 0 && _bin < h._nbins;
+      int x=_bin-1;
+      while( h._bins[x]==0 ) x--;
+      int n=_bin;
+      while( h._bins[n]==0 ) n++;
+      return (h._maxs[x]+h._mins[n])/2;
+    }
 
     // Split a DBinHistogram.  Return null if there is no point in splitting
     // this bin further (such as there's fewer than min_row elements, or zero
@@ -186,18 +198,51 @@ class DTree extends Iced {
     // Can return null for 'all columns'.
     abstract int[] scoreCols( DHistogram[] hs );
 
+    // All columns have a constantResponse?
+    boolean hasConstantResponse() {
+      if( _hs == null ) return true;
+      for( int i=0; i<_hs.length; i++ )
+        if( _hs[i] != null && _hs[i] instanceof DBinHistogram && !((DBinHistogram)_hs[i]).isConstantResponse() )
+          return false;
+      return true;
+    }
+
+    // Make the parent of this Node use a -1 NID to prevent the split that this
+    // not otherwise induces.
+    void do_not_split( Frame fr, int ncols, int nclass, int k ) {
+      if( _hs != null ) 
+        for( int i=0; i<_hs.length; i++ )
+          if( _hs[i] != null && _hs[i] instanceof DBinHistogram && !((DBinHistogram)_hs[i]).isConstantResponse() ) {
+            System.out.println("Shocking - col[0] is constantResponse but not "+_hs[i]);
+            StringBuilder sb = new StringBuilder();
+            String[] fs = fr.toStringHdr(sb);
+            Vec nids = fr.vecs()[ncols+1+nclass+nclass+k];
+            for( int r=0; r<fr.numRows(); r++ )
+              if( nids.at8(r)==_nid )
+                fr.toString(sb,fs,r);
+            System.out.println(sb.toString());
+          }
+      DecidedNode dn = _tree.decided(_pid);
+      for( int i=0; i<dn._nids.length; i++ )
+        if( dn._nids[i]==_nid ) 
+          { dn._nids[i] = -1; return; }
+      throw H2O.fail();
+    }
+
+
     @Override public String toString() {
       final int nclass = _tree._nclass;
       final String colPad="  ";
-      final int cntW=4, mmmW=4, menW=4, varW=4;
-      final int colW=cntW+1+mmmW+1+mmmW+1+nclass*(menW+1)+varW;
+      final int cntW=4, mmmW=4, menW=5, varW=5;
+      final int colW=cntW+1+mmmW+1+mmmW+1+menW+1+varW;
       StringBuilder sb = new StringBuilder();
       sb.append("Nid# ").append(_nid).append(", ");
       printLine(sb).append("\n");
+      if( _hs == null ) return sb.append("_hs==null").toString();
       final int ncols = _hs.length;
       for( int j=0; j<ncols; j++ )
         if( _hs[j] != null )
-          p(sb,_hs[j]._name+String.format(", err=%5.2f %4.1f",_hs[j].score(),_hs[j]._min),colW).append(colPad);
+          p(sb,_hs[j]._name+String.format(", %4.1f",_hs[j]._min),colW).append(colPad);
       sb.append('\n');
       for( int j=0; j<ncols; j++ ) {
         if( _hs[j] == null ) continue;
@@ -242,11 +287,11 @@ class DTree extends Iced {
     static private StringBuilder p(StringBuilder sb, double d, int w) {
       String s = Double.isNaN(d) ? "NaN" :
         ((d==Float.MAX_VALUE || d==-Float.MAX_VALUE || d==Double.MAX_VALUE || d==-Double.MAX_VALUE) ? " -" :
-         Double.toString(d));
+         (d==0?" 0":Double.toString(d)));
       if( s.length() <= w ) return p(sb,s,w);
-      s = String.format("%4.2f",d);
+      s = String.format("% 4.2f",d);
       if( s.length() > w )
-        s = String.format("%4.1f",d);
+        s = String.format("% 4.1f",d);
       if( s.length() > w )
         s = String.format("%4.0f",d);
       return p(sb,s,w);
@@ -312,7 +357,7 @@ class DTree extends Iced {
     public int bin( Chunk chks[], int row ) {
       assert _nids.length == 2 : Arrays.toString(_nids)+", pid="+_pid+" and "+this;
       if( chks[_split._col].isNA0(row) ) // Missing data?
-        return row%_nids.length;         // pseudo-random bin select
+        return 0;                        // NAs always to bin 0
       float d = (float)chks[_split._col].at0(row); // Value to split on for this row
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits.
@@ -444,9 +489,11 @@ class DTree extends Iced {
       assert forest.length==0 || forest[0].length == nclasses()-ymin;
       treeBits = new CompressedTree[forest.length][];
       for( int i=0; i<forest.length; i++ ) {
-        CompressedTree ts[] = treeBits[i] = new CompressedTree[forest[0].length];
-        for( int c=0; c<ts.length; c++ )
-          treeBits[i][c] = forest[i][c].compress();
+        DTree[] trees = forest[i];
+        CompressedTree ts[] = treeBits[i] = new CompressedTree[trees.length];
+        for( int c=0; c<trees.length; c++ )
+          if( trees[c] != null )
+            ts[c] = trees[c].compress();
       }
     }
 
@@ -457,7 +504,8 @@ class DTree extends Iced {
       Arrays.fill(preds,0);
       for( CompressedTree ts[] : treeBits )
         for( int c=0; c<ts.length; c++ )
-          preds[c] += ts[c].score(data);
+          if( ts[c] != null )
+            preds[c] += ts[c].score(data);
       return preds;
     }
 
@@ -562,11 +610,12 @@ class DTree extends Iced {
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
           }
 
-          if( ( equal && ((float)row[colId]) == splitVal) ||
-              (!equal && ((float)row[colId]) >= splitVal) ) {
-            ab.position(ab.position()+skip); // Skip right subtree
-            lmask = rmask;                   // And set the leaf bits into common place
-          }
+          if( !Double.isNaN(row[colId]) ) // NaNs always go to bin 0
+            if( ( equal && ((float)row[colId]) == splitVal) ||
+                (!equal && ((float)row[colId]) >= splitVal) ) {
+              ab.position(ab.position()+skip); // Skip right subtree
+              lmask = rmask;                   // And set the leaf bits into common place
+            }
           if( (lmask&8)==8 ) return scoreLeaf(ab);
         }
       }
