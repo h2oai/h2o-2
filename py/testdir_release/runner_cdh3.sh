@@ -37,7 +37,8 @@ rm -f /tmp/ssh_to_176.sh
 echo "cd /home/0xdiag" > /tmp/ssh_to_176.sh
 echo "rm -fr $H2O_ONE_NODE" >> /tmp/ssh_to_176.sh
 set +e
-echo "hadoop dfs -rmr /user/kevin/$HDFS_OUTPUT" >> /tmp/ssh_to_176.sh
+# remember to update this, to match whatever user kicks off the h2o on hadoop
+echo "hadoop dfs -rmr /user/0xdiag/$HDFS_OUTPUT" >> /tmp/ssh_to_176.sh
 set -e
 echo "hadoop jar h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars h2o.jar -mapperXmx 8g -nodes 3 -output $HDFS_OUTPUT -notify $H2O_ONE_NODE " >> /tmp/ssh_to_176.sh
 # exchange keys so jenkins can do this?
@@ -92,7 +93,7 @@ $DOIT c1/test_c1_rel.py || true
 $DOIT c2/test_c2_rel.py || true
 # $DOIT c3/test_c3_rel.py || true
 # $DOIT c4/test_c4_four_billion_rows.py || true
-# $DOIT c6/test_c6_hdfs.py || true
+$DOIT c6/test_c6_hdfs.py || true
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
