@@ -2411,10 +2411,13 @@ class RemoteH2O(H2O):
         # This hack only works when the dest is /tmp/h2o*jar. It's okay to execute
         # with pwd = /tmp. If /tmp/ isn't in the jar path, I guess things will be the same as
         # normal.
-        cmdList = ["cd /tmp"] # separate by ;<space> when we join
-        cmdList += ["ls -ltr " + self.jar]
-        cmdList += [re.sub("/tmp/", "", cmd)]
-        self.channel.exec_command("; ".join(cmdList))
+        if 1==0: # enable if you want windows remote machines
+            cmdList = ["cd /tmp"] # separate by ;<space> when we join
+            cmdList += ["ls -ltr " + self.jar]
+            cmdList += [re.sub("/tmp/", "", cmd)]
+            self.channel.exec_command("; ".join(cmdList))
+        else:
+            self.channel.exec_command(cmd)
 
         if self.capture_output:
             if self.node_id is not None:
