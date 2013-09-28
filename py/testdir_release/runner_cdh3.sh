@@ -19,20 +19,30 @@ echo "Do we have to clean out old ice_root dirs somewhere?"
 # I suppose we could just have a test verify the request cloud size, after buildingk
 CDH3_JOBTRACKER=192.168.1.176:8021
 CDH3_NODES=3
-H2O_HADOOP=../../h2o-downloaded/hadoop
-H2O_JAR=../../h2o-downloaded/h2o.jar
+H2O_DOWNLOADED=../../h2o-downloaded
+H2O_HADOOP=$H2O_DOWNLOADED/hadoop
+H2O_JAR=$H2O_DOWNLOADED/h2o.jar
 HDFS_OUTPUT=hdfsOutputDirName
 
+# file created by the h2o on hadoop h2odriver*jar
+H2O_ONE_NODE=h2o_one_node
 
-# the -test -e ? how to check if it exists first. Just avoid the error trap
+# have to copy the downloaded h2o stuff over to 176 to execute with the ssh
+# it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
+scp -i ~/.0xdiag/0xdiag_id_rsa $H2O_HADOOP/h2odriver_cdh3.jar  0xdiag@192.168.1.176:/home/0xdiag
+scp -i ~/.0xdiag/0xdiag_id_rsa $H2O_JAR  0xdiag@192.168.1.176:/home/0xdiag
+
+
+rm -f /tmp/ssh_to_176.sh
+echo "cd /home/0xdiag" > /tmp/ssh_to_176.sh
+echo "rm -fr $H2O_ONE_NODE" >> /tmp/ssh_to_176.sh
 set +e
-# why did jenkins not have the $PATH right to see hadoop
-/usr/bin/hadoop dfs -rmr /user/kevin/$HDFS_OUTPUT
+echo "hadoop dfs -rmr /user/kevin/$HDFS_OUTPUT" >> /tmp/ssh_to_176.sh
 set -e
-
-H2O_ONE_NODE=./h2o_one_node
-rm -fr $H2O_ONE_NODE
-/usr/bin/hadoop jar $H2O_HADOOP/h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars $H2O_JAR -mapperXmx 8g -nodes 3 -output $HDFS_OUTPUT -notify $H2O_ONE_NODE &
+echo "hadoop jar h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars h2o.jar -mapperXmx 8g -nodes 3 -output $HDFS_OUTPUT -notify $H2O_ONE_NODE " >> /tmp/ssh_to_176.sh
+# exchange keys so jenkins can do this?
+# background!
+cat /tmp/ssh_to_176.sh | ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@192.168.1.176  &
 
 CLOUD_PID=$!
 jobs -l
@@ -41,9 +51,13 @@ echo ""
 echo "Have to wait until $H2O_ONE_NODE is available from the cloud build. Deleted it above."
 echo "spin loop here waiting for it."
 
+rm -fr $H2O_ONE_NODE
 while [ ! -f ./$H2O_ONE_NODE ]
 do
-  sleep 5
+    sleep 5
+    set +e
+    scp -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@192.168.1.176:/home/0xdiag/$H2O_ONE_NODE .
+    set -e
 done
 ls -lt ./$H2O_ONE_NODE
 
