@@ -142,6 +142,7 @@ public class GBM extends SharedTreeModelBuilder {
     @Override public void map( Chunk chks[] ) {
       Chunk ys = chk_resp(chks);
       for( int row=0; row<ys._len; row++ ) {
+        if( ys.isNA0(row) ) continue;
         int y = (int)ys.at80(row)-_ymin; // zero-based response variable
         for( int k=0; k<_nclass; k++ ) {
           if( _distribution[k] != 0 ) {
