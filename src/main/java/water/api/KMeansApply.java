@@ -12,7 +12,7 @@ import com.google.gson.JsonObject;
 public class KMeansApply extends Request {
   protected final H2OKMeansModelKey _modelKey = new H2OKMeansModelKey(MODEL_KEY, true);
   protected final H2OHexKey _dataKey = new H2OHexKey(DATA_KEY);
-  protected final H2OKey _dest = new H2OKey(DEST_KEY, true);
+  protected final H2OKey _dest = new H2OKey(DEST_KEY, Key.make("__KMeansApply_" + Key.make()));
 
   public KMeansApply() {
   }

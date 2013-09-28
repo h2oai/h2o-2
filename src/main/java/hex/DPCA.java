@@ -15,6 +15,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.api.Constants;
+import water.api.PCA;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
 
@@ -42,10 +43,17 @@ public abstract class DPCA {
 
   /* Store parameters that go into PCA calculation */
   public static class PCAParams extends Iced {
+    public int _maxPC = PCA.MAX_COL;
     public double _tol = 0;
     public boolean _standardized = true;
 
     public PCAParams(double tol, boolean standardized) {
+      _tol = tol;
+      _standardized = standardized;
+    }
+
+    public PCAParams(int maxPC, double tol, boolean standardized) {
+      _maxPC = maxPC;
       _tol = tol;
       _standardized = standardized;
     }
@@ -279,7 +287,8 @@ public abstract class DPCA {
       cumVar[i] = i == 0 ? propVar[0] : cumVar[i-1] + propVar[i];
     }
 
-    int ncomp = getNumPC(sdev, params._tol);
+    int ncomp = Math.min(getNumPC(sdev, params._tol), params._maxPC);
+    // int ncomp = getNumPC(sdev, params._tol);
     // int ncomp = Math.min(getNumPC(Sval, params._tol), (int)data._nobs-1);
     // int ncomp = Math.min(params._num_pc, Sval.length);
     PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, cumVar, eigVec, mySVD.rank(), 0, ncomp, params);

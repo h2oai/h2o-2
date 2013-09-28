@@ -115,9 +115,9 @@ public abstract class Chunk extends Iced implements Cloneable {
   private void setWrite() {
     if( _chk!=this ) return;
     assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";
-    _vec.startWriting();      // One-shot writing-init
-    _chk = clone();           // Flag this chunk as having been written into
-    _chk._chk = _chk;         // Clone has NOT been written into
+    _vec.preWriting();          // One-shot writing-init
+    _chk = clone();             // Flag this chunk as having been written into
+    _chk._chk = _chk;           // Clone has NOT been written into
   }
 
   /**

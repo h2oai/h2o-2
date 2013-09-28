@@ -2,8 +2,7 @@ import unittest, time, sys, json, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_hosts
 
-
-class JStackApi(unittest.TestCase):
+class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -19,7 +18,7 @@ class JStackApi(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
-    def test_jstack(self):
+    def test_get_cloud(self):
         # Ask each node for jstack statistics. do it 100 times
         SLEEP_AFTER = False
         GET_CLOUD_ALL_NODES = True

@@ -19,6 +19,13 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_log_download_view(self):
+        # download and view using each node, just to see we can
+        # each overwrites
+        for h in h2o.nodes:
+            h.log_view()
+            h.log_download(timeoutSecs=5)
+
+        # this gets them all thru node 0
         (logNameList, lineCountList) = h2o_log.checkH2OLogs()
 
         self.assertEqual(len(logNameList), len(h2o.nodes), "Should be %d logs" % len(h2o.nodes))

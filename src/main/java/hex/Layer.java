@@ -184,17 +184,17 @@ public abstract class Layer extends Iced {
         _means = means;
         _sigmas = sigmas;
       } else {
-        _means = new float[frame._vecs.length - 1];
+        _means = new float[frame.numCols() - 1];
         _sigmas = new float[_means.length];
         for( int i = 0; i < _means.length; i++ ) {
-          _means[i] = (float) frame._vecs[i].mean();
-          _sigmas[i] = (float) frame._vecs[i].sigma();
+          _means[i] = (float) frame.vecs()[i].mean();
+          _sigmas[i] = (float) frame.vecs()[i].sigma();
         }
       }
     }
 
     @Override int label() {
-      return (int) _frame._vecs[_frame.numCols() - 1].at8(_row);
+      return (int) _frame.vecs()[_frame.numCols() - 1].at8(_row);
     }
 
     @Override void fprop() {
@@ -209,11 +209,11 @@ public abstract class Layer extends Iced {
 
     private final Chunk chunk(int i, long n) {
       if( _caches == null )
-        _caches = new Chunk[_frame._vecs.length];
+        _caches = new Chunk[_frame.vecs().length];
       Chunk c = _caches[i];
       if( c != null && c._start <= n && n < c._start + c._len )
         return c;
-      return _caches[i] = _frame._vecs[i].chunk(n);
+      return _caches[i] = _frame.vecs()[i].chunk(n);
     }
   }
 

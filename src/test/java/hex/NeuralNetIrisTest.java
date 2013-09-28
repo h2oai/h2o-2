@@ -51,7 +51,7 @@ public class NeuralNetIrisTest extends TestUtil {
     double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
     for( int c = 0; c < frame.numCols(); c++ )
       for( int r = 0; r < frame.numRows(); r++ )
-        rows[r][c] = frame._vecs[c].at(r);
+        rows[r][c] = frame.vecs()[c].at(r);
 
     MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
     for( int i = rows.length - 1; i >= 0; i-- ) {

@@ -26,9 +26,11 @@ fi
 
 echo Using ${h2oJarFile}
 
+i=0
 for publicDnsName in $(cat nodes-public)
 do
-    echo "Copying h2o.jar to ${publicDnsName}"
+    i=$((i+1))
+    echo "Copying h2o.jar to node ${i}: ${publicDnsName}"
     scp -o StrictHostKeyChecking=no -i ${AWS_SSH_PRIVATE_KEY_FILE} ${h2oJarFile} ec2-user@${publicDnsName}:
 done
 

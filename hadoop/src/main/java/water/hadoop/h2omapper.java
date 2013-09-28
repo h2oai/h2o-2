@@ -3,6 +3,8 @@ package water.hadoop;
 import java.io.*;
 import java.net.*;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -21,6 +23,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
   final static public String H2O_JOBTRACKERNAME_KEY = "h2o.jobtrackername";
   final static public String H2O_DRIVER_IP_KEY = "h2o.driver.ip";
   final static public String H2O_DRIVER_PORT_KEY = "h2o.driver.port";
+  final static public String H2O_NETWORK_KEY = "h2o.network";
 
   static EmbeddedH2OConfig _embeddedH2OConfig;
 
@@ -338,24 +341,38 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     context.write(textId, new Text("mapred.local.dir is " + ice_root));
     String driverIp = conf.get(H2O_DRIVER_IP_KEY);
     String driverPortString = conf.get(H2O_DRIVER_PORT_KEY);
+    String network = conf.get(H2O_NETWORK_KEY);
+
     ServerSocket ss = new ServerSocket();
     InetSocketAddress sa = new InetSocketAddress("127.0.0.1", 0);
     ss.bind(sa);
     String localPortString = Integer.toString(ss.getLocalPort());
 
-    String[] args = {
-            // Options used by H2O.
-            "-ice_root", ice_root,
-            "-name", jobtrackerName,
-            "-hdfs_skip",
+    List<String> argsList = new ArrayList<String>();
 
-            // Options passed through to UserMain for configuring the EmbeddedH2OConfig.
-            "-driverip", driverIp,
-            "-driverport", driverPortString,
-            "-mapperport", localPortString
-    };
+    // Options used by H2O.
+    argsList.add("-ice_root");
+    argsList.add(ice_root);
+    argsList.add("-name");
+    argsList.add(jobtrackerName);
+    argsList.add("-hdfs_skip");
+    if (network != null) {
+      if (network.length() > 0) {
+        argsList.add("-network");
+        argsList.add(network);
+      }
+    }
+
+    // Options passed through to UserMain for configuring the EmbeddedH2OConfig.
+    argsList.add("-driverip");
+    argsList.add(driverIp);
+    argsList.add("-driverport");
+    argsList.add(driverPortString);
+    argsList.add("-mapperport");
+    argsList.add(localPortString);
 
     context.write(textId, new Text("before water.Boot.main()"));
+    String[] args = (String[]) argsList.toArray(new String[0]);
     try {
       Log.POST(11, "Before boot");
       water.Boot.main(UserMain.class, args);

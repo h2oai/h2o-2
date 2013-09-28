@@ -15,11 +15,11 @@
     "use_hdfs": true,
 
     "cloud_name": "kevin_cloud",
-    "base_port": 54366,
+    "base_port": 54355,
     "use_flatfile": true,
 
     "ip": [
-        "192.168.0.37"
+        "192.168.1.180"
     ]
 }
 

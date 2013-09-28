@@ -7,6 +7,6 @@ Author: Anqi Fu
 Maintainer: Anqi Fu <anqi@0xdata.com>
 Description: This is a wrapper that installs the package for running H2O via its REST API from within R.
 License: Apache-2
-Depends: R (>= 2.13.0), RCurl, rjson, tools
+Depends: R (>= 2.13.0)
 NeedsCompilation: no
 URL: http://www.0xdata.com

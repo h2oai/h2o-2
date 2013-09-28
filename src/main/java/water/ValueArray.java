@@ -563,8 +563,7 @@ public class ValueArray extends Iced implements Cloneable {
 
       // No cached conversion.  Make one and store it in DKV.
       int cn = conversionNumber.getAndIncrement();
-      Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString
-          + ")...");
+      Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
       Frame frame = convert();
       DKV.put(k2, frame);
       Log.info("Conversion " + cn + " complete.");
