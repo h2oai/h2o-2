@@ -40,7 +40,7 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
         print "INFO: json got ConnectionError or other exception"
         rjson = None
 
-    print rjson
+    # print rjson
     return rjson
 
 #********************************************************************
@@ -51,7 +51,7 @@ def probe_node(line, h2oNodes):
         port = '54321'
     if http_addr == '':
         http_addr = '127.0.0.1'
-    print "http_addr:", http_addr, "port:", port
+    # print "http_addr:", http_addr, "port:", port
 
     probes = []
     gc = do_json_request(http_addr, port, 'Cloud.json', timeout=3)
@@ -66,20 +66,20 @@ def probe_node(line, h2oNodes):
     nodes      = gc['nodes']
 
     for n in nodes:
-        print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
-        print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
+        # print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
+        # print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
         java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
         java_heap_GB = int(round(java_heap_GB,0))
-        print "java_heap_GB:", java_heap_GB
-        print 'num_cpus:', n['num_cpus']
+        # print "java_heap_GB:", java_heap_GB
+        # print 'num_cpus:', n['num_cpus']
 
         name = n['name'].lstrip('/')
-        print 'name:', name
+        # print 'name:', name
         ### print dump_json(n)
 
         ip, sep, port = name.partition(':')
-        print "ip:", ip
-        print "port:", port
+        # print "ip:", ip
+        # print "port:", port
         if not ip or not port:
             raise Exception("bad ip or port parsing from h2o get_cloud nodes 'name' %s" % n['name'])
 
