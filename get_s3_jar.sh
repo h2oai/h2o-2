@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-
 echo "You should be in your h2o dir running this."
 echo ""
 echo "Gets the latest h2o.jar (only + version file) from s3, using s3cmd"
@@ -33,11 +32,9 @@ fi
 
 # this is the dir it unzips to
 rm -f -r h2o*$version
-echo "Getting rid of any current h2oWrapper* files here"
 unzip h2o_$version.zip
 
 echo "moving h2o.jar and overwriting target/h2o.jar"
-# jenkins might not have!
 mkdir -p target
 cp -f ./h2o*$version/h2o.jar target/h2o.jar
 cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
@@ -46,7 +43,6 @@ cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
 cp -r ./h2o-*$version ./h2o-downloaded
 echo "You want this for your R tests"
 echo "export H2OWrapperDir=./h2o-downloaded/R"
-
 echo ""
 echo "Done. Go forth and run tests. If you build.sh or makefile, the h2o.jar will be overwritten"
 echo "I left you a copy here though, if you don't want to download again. Just cp to target/h2o.jar"
@@ -60,6 +56,7 @@ ls -ltr ./h2o-*$version/h2o.jar
 ls -ltr target/h2o.jar
 ls -ltr ./h2o-*$version/R/h2oWrapper*.tar.gz
 ls -ltr ./h2o-downloaded/R/h2oWrapper*.tar.gz
+ls -ltr ./h2o-downloaded/hadoop/h2odriver*.jar
 
 
 
