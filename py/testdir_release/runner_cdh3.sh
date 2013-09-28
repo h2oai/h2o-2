@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo you can use -n argument to skip the s3 download if you did it once 
+echo files are unzipped to ../../h2o-downloaded
 # This is critical:
 # Ensure that all your children are truly dead when you yourself are killed.
 # trap "kill -- -$BASHPID" INT TERM EXIT
@@ -11,36 +13,50 @@ echo "current PID: $$"
 source ./runner_setup.sh
 
 rm -f h2o-nodes.json
-# clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
-# only do this if you're jenksin
-# echo "If we use more machines, expand this cleaning list."
-# echo "The possibilities should be relatively static over time"
-# echo "Could be problems if other threads also using that user on these machines at same time"
-# echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-# ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
+echo "Do we have to clean out old ice_root dirs somewhere?"
 
-CDH3_JOBTRACKER=192.168.1.176:50030
+# Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
+# I suppose we could just have a test verify the request cloud size, after buildingk
+CDH3_JOBTRACKER=192.168.1.176:8021
 CDH3_NODES=3
-H2O_HADOOP=../../h2o_downloaded/hadoop
-hadoop jar $H2O_HADOOP/h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars ../h2o.jar -mapperXmx 8g -nodes 3 -output hdfsOutputDirName
+H2O_HADOOP=../../h2o-downloaded/hadoop
+H2O_JAR=../../h2o-downloaded/h2o.jar
+HDFS_OUTPUT=hdfsOutputDirName
 
-sleep 30
-../find_cloud.py -f <flatfile>
+
+# the -test -e ? how to check if it exists first. Just avoid the error trap
+set +e
+hadoop dfs -rmr /user/kevin/$HDFS_OUTPUT
+set -e
+
+H2O_ONE_NODE=./h2o_one_node
+rm -fr $H2O_ONE_NODE
+hadoop jar $H2O_HADOOP/h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars $H2O_JAR -mapperXmx 8g -nodes 3 -output $HDFS_OUTPUT -notify $H2O_ONE_NODE &
 
 CLOUD_PID=$!
 jobs -l
 
 echo ""
-echo "Have to wait until h2o-nodes.json is available from the cloud build. Deleted it above."
-echo "spin loop here waiting for it. Since the h2o.jar copy slows each node creation"
-echo "it might be 12 secs per node"
+echo "Have to wait until $H2O_ONE_NODE is available from the cloud build. Deleted it above."
+echo "spin loop here waiting for it."
 
-while [ ! -f ./h2o-nodes.json ]
+while [ ! -f ./$H2O_ONE_NODE ]
 do
   sleep 5
 done
-ls -lt ./h2o-nodes.json
+ls -lt ./$H2O_ONE_NODE
 
+# use these args when we do Runit
+while IFS=';' read CLOUD_IP CLOUD_PORT 
+do
+    echo $CLOUD_IP, $CLOUD_PORT
+done < ./$H2O_ONE_NODE
+
+rm -fr h2o-nodes.json
+../find_cloud.py -f $H2O_ONE_NODE
+
+echo "h2o-nodes.json should now exist"
+ls -ltr h2o-nodes.json
 
 # We now have the h2o-nodes.json, that means we started the jvms
 # Shouldn't need to wait for h2o cloud here..
@@ -59,28 +75,26 @@ DOIT=../testdir_single_jvm/n0.doit
 # $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
 $DOIT c1/test_c1_rel.py || true
 $DOIT c2/test_c2_rel.py || true
-$DOIT c3/test_c3_rel.py || true
-$DOIT c4/test_c4_four_billion_rows.py || true
-$DOIT c6/test_c6_hdfs.py || true
+# $DOIT c3/test_c3_rel.py || true
+# $DOIT c4/test_c4_four_billion_rows.py || true
+# $DOIT c6/test_c6_hdfs.py || true
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 ../testdir_single_jvm/n0.doit test_shutdown.py
 
+echo "Maybe it takes some time for hadoop to shut it down? sleep 10"
+sleep 10
 if ps -p $CLOUD_PID > /dev/null
 then
     echo "$CLOUD_PID is still running after shutdown. Will kill"
     kill $CLOUD_PID
+    # may take a second?
+    sleep 1
 fi
-ps aux | grep four_hour_cloud
-
-# test_c2_rel has about 11 subtests inside it, that will be tracked individually by jenkins
-# ../testdir_single_jvm/n0.doit test_c2_rel || true
-# We don't want the jenkins job to complete until we kill it, so the cloud stays alive for debug
-# also prevents us from overrunning ourselves with cloud building
-# If we don't wait, the cloud will get torn down.
+ps aux | grep h2odriver
 
 jobs -l
 echo ""
-echo "You can stop this jenkins job now if you want. It's all done"
+echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
 # 
