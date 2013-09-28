@@ -46,6 +46,7 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
 #********************************************************************
 def probe_node(line, h2oNodes):
     http_addr, sep, port = line.rstrip('\n').partition(":")
+    http_addr = http_addr.lstrip('/') # just in case it's an old-school flatfile with leading /
     if port == '':
         port = '54321'
     if http_addr == '':
@@ -90,10 +91,14 @@ def probe_node(line, h2oNodes):
             'http_addr': http_addr, 
             'port': int(port),  # print it as a number for the clone ingest
             'java_heap_GB': java_heap_GB,
+            # this list is based on what tests actually touch (fail without these)
             'node_id': node_id,
             'remoteH2O': 'true',
-            'sandbox_error_was_reported': 'false',
-            'username': 'unknown',
+            'sandbox_error_was_reported': 'false', # odd this is touched..maybe see about changing h2o.py
+            'username': '0xdiag', # probably he'll be h2o on hadooping the cloud
+            'redirect_import_folder_to_s3_path': 'false', # no..we're not on ec2
+            'delete_keys_at_teardown': 'true', # yes we want each test to clean up after itself
+
         }
 
         # this is the total list so far
