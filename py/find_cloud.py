@@ -29,9 +29,10 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
             # probably good
             print "INFO: h2o json responses should always be lists or dicts"
             rjson = None
-        elif '404' in r.text:
-            print "INFO: json got 404 result"
-            rjson = None
+        # may get legitimate 404
+        # elif '404' in r.text:
+        #     print "INFO: json got 404 result"
+        #    rjson = None
         elif r.status_code != requests.codes.ok:
             print "INFO: Could not decode any json from the request. code:" % r.status_code
             rjson = None
