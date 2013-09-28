@@ -15,6 +15,10 @@ source ./runner_setup.sh
 rm -f h2o-nodes.json
 echo "Do we have to clean out old ice_root dirs somewhere?"
 
+echo "Setting up sandbox, since no cloud build here will clear it out! (unlike other runners)"
+rm -fr sandbox
+mkdir -p sandbox
+
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after buildingk
 CDH3_JOBTRACKER=192.168.1.176:8021
@@ -32,7 +36,6 @@ H2O_ONE_NODE=h2o_one_node
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 scp -i ~/.0xdiag/0xdiag_id_rsa $H2O_HADOOP/h2odriver_cdh3.jar  0xdiag@192.168.1.176:/home/0xdiag
 scp -i ~/.0xdiag/0xdiag_id_rsa $H2O_JAR  0xdiag@192.168.1.176:/home/0xdiag
-
 
 rm -f /tmp/ssh_to_176.sh
 echo "cd /home/0xdiag" > /tmp/ssh_to_176.sh
@@ -74,6 +77,9 @@ rm -fr h2o-nodes.json
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
+# cp it to sandbox? not sure if anything is, for this setup
+cp -f h2o-nodes.json sandbox
+cp -f $H2O_ONE_NODE sandbox
 
 # We now have the h2o-nodes.json, that means we started the jvms
 # Shouldn't need to wait for h2o cloud here..
