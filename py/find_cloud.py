@@ -7,7 +7,7 @@ def dump_json(j):
 def create_url(addr, port, loc):
     return 'http://%s:%s/%s' % (addr, port, loc)
 
-def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeout=10, **kwargs):
+def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeout=5, **kwargs):
     if params is not None:
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
     else:
@@ -15,40 +15,42 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
 
     url = create_url(addr, port, jsonRequest)
     print 'Start ' + url + paramsStr
-    r = requests.get(url, timeout=timeout, params=params, **kwargs)
-
     try:
+        r = requests.get(url, timeout=timeout, params=params, **kwargs)
+        # the requests json decoder might fail if we didn't get something good
         rjson = r.json()
-    except:
-        print(r.text)
-        if not isinstance(r,(list,dict)):
-            raise Exception("h2o json responses should always be lists or dicts")
-        if '404' in r:
-            raise Exception("json got 404 result")
-        raise Exception("Could not decode any json from the request")
+        if not isinstance(rjson, (list,dict)):
+            # probably good
+            print "INFO: h2o json responses should always be lists or dicts"
+            rjson = None
+        elif '404' in r.text:
+            print "INFO: json got 404 result"
+            rjson = None
+        elif r.status_code != requests.codes.ok:
+            print "INFO: Could not decode any json from the request. code:" % r.status_code
+            rjson = None
 
+    except requests.ConnectionError, e:
+        print "INFO: json got ConnectionError or other exception"
+        rjson = None
+
+    print rjson
     return rjson
 
-def get_cloud(addr, port,  timeoutSecs=10):
-    return do_json_request(addr, port, 'Cloud.json', timeout=timeoutSecs)
-
-# print lines
-# FIX! is there any leading "/" in the flatfile anymore?
-# maybe remove it from h2o.py generation
-
 #********************************************************************
-def probe_node(line):
+def probe_node(line, h2oNodes):
     http_addr, sep, port = line.rstrip('\n').partition(":")
-    print "http_addr:", http_addr, "port:", port
-
     if port == '':
         port = '54321'
     if http_addr == '':
         http_addr = '127.0.0.1'
+    print "http_addr:", http_addr, "port:", port
 
-    # we just want the string
-    start = time.time()
-    gc = get_cloud(http_addr, port)
+    probes = []
+    gc = do_json_request(http_addr, port, 'Cloud.json', timeout=3)
+    if gc is None:
+        return probes
+        
     consensus  = gc['consensus']
     locked     = gc['locked']
     cloud_size = gc['cloud_size']
@@ -56,69 +58,73 @@ def probe_node(line):
     node_name  = gc['node_name']
     nodes      = gc['nodes']
 
-    probes = []
     for n in nodes:
         print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
         print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
         java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
         java_heap_GB = round(java_heap_GB,2)
         print "java_heap_GB:", java_heap_GB
-
-        print 'name:', n['name'].lstrip('/')
         print 'num_cpus:', n['num_cpus']
+
+        name = n['name'].lstrip('/')
+        print 'name:', name
         ### print dump_json(n)
-        ip, sep, port = n['name'].lstrip('/').partition(':')
+
+        ip, sep, port = name.partition(':')
         print "ip:", ip
         print "port:", port
         if not ip or not port:
             raise Exception("bad ip or port parsing from h2o get_cloud nodes 'name' %s" % n['name'])
 
-        # we'll just overwrite dictionary entries..assume overwrites match..can check!
-        # maybe don't overwrite!
-        newName = ip + ':' + port
-        probes.append(newName)
+        # creating the list of who this guy sees, to return
+        probes.append(name)
 
-    gcString = json.dumps(gc)
+        node = { 
+            'http_addr': http_addr, 
+            'base_port': port, 
+            'java_heap_GB': java_heap_GB 
+        }
 
-    # FIX! walk thru all the ips in the result
-
-    node = { 'http_addr': http_addr, 'base_port': port }
-    
-    # FIX! search the list we currently have
-    h2oNodes.append(node)
-    print "Added node %s %s" % (n, node)
+        # this is the total list so far
+        if name not in h2oNodes:
+            h2oNodes[name] = node
+            print "Added node %s to probes" % name
 
     # we use this for our one level of recursion
-    return probes
+    return probes # might be empty!
 
 #********************************************************************
 def flatfile_name():
-    return('pytest_flatfile-%s' %getpass.getuser())
+    a = 'pytest_flatfile-%s' %getpass.getuser()
+    print "Starting with contents of ", a
+    return a
 
 # hostPortList.append("/" + h.addr + ":" + str(base_port + ports_per_node*i))
 # partition returns a 3-tuple as (LHS, separator, RHS) if the separator is found, 
 # (original_string, '', '') if the separator isn't found
 with open(flatfile_name(), 'r') as f:
-    lines1 = f.readlines()
+    possMembers = f.readlines()
 f.close()
 
-h2oNodes = []
+h2oNodes = {}
 probes = set()
 tries = 0
-for n1, line1 in enumerate(lines1):
+for n1, possMember in enumerate(possMembers):
     tries += 1
-    if line1 not in probes:
-        probes.add(line1)
-        lines2 = probe_node(line1)
-    for n2, line2 in enumerate(lines2):
-        tries += 1
-        if line2 not in probes:
-            probes.add(line2)
-            probe_node(line2)
+    if possMember not in probes:
+        probes.add(possMember)
+        members2 = probe_node(possMember, h2oNodes)
+        for n2, member2 in enumerate(members2):
+            tries += 1
+            if member2 not in probes:
+                probes.add(member2)
+                probe_node(member2, h2oNodes)
 
-print "\nWe did %s tries" % tries, "n1:", n1, "n2", n2
+print "\nWe did %s tries" % tries
 print "len(probe):", len(probes)
 
+# get rid of the name key we used to hash to it
+h2oNodesList = [v for k, v in h2oNodes.iteritems()]
 expandedCloud = {
     'cloud_start':
         {
@@ -130,7 +136,7 @@ expandedCloud = {
         'username': 'null',
         'ip': 'null',
         },
-    'h2oNodes': h2oNodes
+    'h2oNodes': h2oNodesList
     }
 
 print "Writing h2o-nodes.json"
