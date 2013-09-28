@@ -1,18 +1,19 @@
-import unittest, time, sys, json, re
+#!/usr/bin/python
+import time, sys, json, re, getpass, requests
 
 def dump_json(j):
     return json.dumps(j, sort_keys=True, indent=2)
 
-def create_url(http_addr, port, loc)
-    return 'http://%s:%d/%s' % (http_addr, port, loc)
+def create_url(addr, port, loc):
+    return 'http://%s:%s/%s' % (addr, port, loc)
 
-def do_json_request(jsonRequest=None, params=None, timeout=10, **kwargs):
-    url = create_url(jsonRequest)
+def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeout=10, **kwargs):
     if params is not None:
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
     else:
         paramsStr = ''
 
+    url = create_url(addr, port, jsonRequest)
     print 'Start ' + url + paramsStr
     r = requests.get(url, timeout=timeout, params=params, **kwargs)
 
@@ -28,22 +29,69 @@ def do_json_request(jsonRequest=None, params=None, timeout=10, **kwargs):
 
     return rjson
 
-def get_cloud(addr, port, timeoutSecs=10):
-    a = do_json_request('Cloud.json', timeout=timeoutSecs)
-    consensus  = a['consensus']
-    locked     = a['locked']
-    cloud_size = a['cloud_size']
-    cloud_name = a['cloud_name']
-    node_name  = a['node_name']
-    node_id    = self.node_id
-    print '%s%s %s%s %s%s %s%s' % (
-        "\tnode_id: ", node_id,
-        "\tcloud_size: ", cloud_size,
-        "\tconsensus: ", consensus,
-        "\tlocked: ", locked,
-        )
-    return a
+def get_cloud(addr, port,  timeoutSecs=10):
+    return do_json_request(addr, port, 'Cloud.json', timeout=timeoutSecs)
 
+# print lines
+# FIX! is there any leading "/" in the flatfile anymore?
+# maybe remove it from h2o.py generation
+
+#********************************************************************
+def probe_node(line):
+    http_addr, sep, port = line.rstrip('\n').partition(":")
+    print "http_addr:", http_addr, "port:", port
+
+    if port == '':
+        port = '54321'
+    if http_addr == '':
+        http_addr = '127.0.0.1'
+
+    # we just want the string
+    start = time.time()
+    gc = get_cloud(http_addr, port)
+    consensus  = gc['consensus']
+    locked     = gc['locked']
+    cloud_size = gc['cloud_size']
+    cloud_name = gc['cloud_name']
+    node_name  = gc['node_name']
+    nodes      = gc['nodes']
+
+    probes = []
+    for n in nodes:
+        print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
+        print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
+        java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
+        java_heap_GB = round(java_heap_GB,2)
+        print "java_heap_GB:", java_heap_GB
+
+        print 'name:', n['name'].lstrip('/')
+        print 'num_cpus:', n['num_cpus']
+        ### print dump_json(n)
+        ip, sep, port = n['name'].lstrip('/').partition(':')
+        print "ip:", ip
+        print "port:", port
+        if not ip or not port:
+            raise Exception("bad ip or port parsing from h2o get_cloud nodes 'name' %s" % n['name'])
+
+        # we'll just overwrite dictionary entries..assume overwrites match..can check!
+        # maybe don't overwrite!
+        newName = ip + ':' + port
+        probes.append(newName)
+
+    gcString = json.dumps(gc)
+
+    # FIX! walk thru all the ips in the result
+
+    node = { 'http_addr': http_addr, 'base_port': port }
+    
+    # FIX! search the list we currently have
+    h2oNodes.append(node)
+    print "Added node %s %s" % (n, node)
+
+    # we use this for our one level of recursion
+    return probes
+
+#********************************************************************
 def flatfile_name():
     return('pytest_flatfile-%s' %getpass.getuser())
 
@@ -51,53 +99,41 @@ def flatfile_name():
 # partition returns a 3-tuple as (LHS, separator, RHS) if the separator is found, 
 # (original_string, '', '') if the separator isn't found
 with open(flatfile_name(), 'r') as f:
-    lines = f.read().partition(':')
+    lines1 = f.readlines()
 f.close()
 
-# FIX! is there any leading "/" in the flatfile anymore?
-# maybe remove it from h2o.py generation
-foundCloud = {}
-for n, line in enumerate(n,lines):
-    
-    print line, line[0], line[2]
-    http_addr = line[0] 
-    port = line[2]
+h2oNodes = []
+probes = set()
+tries = 0
+for n1, line1 in enumerate(lines1):
+    tries += 1
+    if line1 not in probes:
+        probes.add(line1)
+        lines2 = probe_node(line1)
+    for n2, line2 in enumerate(lines2):
+        tries += 1
+        if line2 not in probes:
+            probes.add(line2)
+            probe_node(line2)
 
-    if port = ''
-        port = '54321'
-    if http_addr = ''
-        http_addr = '127.0.0.1'
+print "\nWe did %s tries" % tries, "n1:", n1, "n2", n2
+print "len(probe):", len(probes)
 
-    node = { 'http_addr': http_addr, 'base_port': port }
-    foundCloud.add(node)
-    print "Added node %s %s", (n, node)
+expandedCloud = {
+    'cloud_start':
+        {
+        'time': 'null',
+        'cwd': 'null',
+        'python_test_name': 'null',
+        'python_cmd_line': 'null',
+        'config_json': 'null',
+        'username': 'null',
+        'ip': 'null',
+        },
+    'h2oNodes': h2oNodes
+    }
 
-    # we just want the string
-    start = time.time()
-    getCloud = get_cloud(addr, port)
-    elapsed = int(1000 * (time.time() - start)) # milliseconds
-    print "get_cloud completes to node", i, "in", "%s"  % elapsed, "millisecs"
-    print dump_json(getCloud)
-    getCloudString = json.dumps(getCloud)
+print "Writing h2o-nodes.json"
+with open('h2o-nodes.json', 'w+') as f:
+    f.write(json.dumps(expandedCloud, indent=4))
 
-    expandedCloud = {
-            'cloud_start':
-                {
-                'time': 'null',
-                'cwd': 'null',
-                'python_test_name': 'null',
-                'python_cmd_line': 'null',
-                'config_json': 'null',
-                'username': 'null',
-                'ip': 'null',
-                },
-            'h2o_nodes': foundCloud
-        }
-
-    print "Writing h2o-nodes.json"
-    with open('h2o-nodes.json', 'w+') as f:
-        f.write(json.dumps(expandedCloud, indent=4))
-
-
-if __name__ == '__main__':
-    h2o.unit_main()
