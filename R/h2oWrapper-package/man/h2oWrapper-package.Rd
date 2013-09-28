@@ -46,7 +46,7 @@ h2oWrapper.installDepPkgs()
 # a known place.  startH2O requires the port to be 54321.
 myIP = "localhost"
 myPort = 54321
-localH2O = h2oWrapper.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+localH2O = h2oWrapper.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = TRUE)
 
 # Import iris dataset into H2O and print summary
 irisPath = system.file("extdata", "iris.csv", package="h2o")
