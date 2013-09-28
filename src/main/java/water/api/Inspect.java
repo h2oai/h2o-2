@@ -1,8 +1,8 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.*;
 import hex.DPCA.PCAModel;
+import hex.*;
 import hex.gbm.GBM.GBMModel;
 import hex.rf.RFModel;
 
@@ -11,10 +11,9 @@ import java.util.HashMap;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
-import water.api.RequestBuilders.Response;
 import water.fvec.*;
-import water.parser.*;
 import water.parser.CustomParser.PSetupGuess;
+import water.parser.ParseDataset;
 import water.util.Utils;
 
 import com.google.gson.*;
@@ -145,6 +144,8 @@ public class Inspect extends Request {
     }
     if(f instanceof GBMModel)
       return GBMModelView.redirect(this, key);
+    if(f instanceof GridSearch)
+      return ((GridSearch) f).redirect();
     return Response.error("No idea how to display a "+f.getClass());
   }
 

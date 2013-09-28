@@ -82,8 +82,7 @@ public class GBMTest extends TestUtil {
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
       gbm.nbins = 100;
-      gbm.serve();              // Start it
-      gbm.get();                // Block for it
+      gbm.run();
 
       fr = gbm.score(gbm.source);
 
@@ -248,8 +247,7 @@ public class GBMTest extends TestUtil {
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
       gbm.nbins = 100;
-      gbm.serve();              // Start it
-      gbm.get();                // Block for it
+      gbm.run();
 
       // Test on the train data
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
@@ -339,8 +337,7 @@ public class GBMTest extends TestUtil {
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
       gbm.nbins = 100;
-      gbm.serve();              // Start it
-      gbm.get();                // Block for it
+      gbm.run();
 
       // The test data set has a few more enums than the train
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});

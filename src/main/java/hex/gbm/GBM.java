@@ -7,9 +7,7 @@ import hex.gbm.DTree.UndecidedNode;
 
 import java.util.Arrays;
 
-import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.api.GBMProgressPage;
@@ -44,9 +42,13 @@ public class GBM extends ValidatedJob {
   // Overall prediction error as I add trees
   transient private float _errs[];
 
-  public float progress(){
-    DTree.TreeModel m = DKV.get(dest()).get();
-    return (float)m.treeBits.length/(float)m.N;
+  @Override public float progress() {
+    Value value = DKV.get(dest());
+    if(value != null) {
+      DTree.TreeModel m = value .get();
+      return (float)m.treeBits.length/(float)m.N;
+    }
+    return 0;
   }
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -80,12 +82,7 @@ public class GBM extends ValidatedJob {
 
   // Compute a single GBM tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
-  @Override protected Response serve() {
-    run();
-    return GBMProgressPage.redirect(this, self(),dest());
-  }
-
-  public void run() {
+  @Override public void run() {
     selectCols();
 
     final Timer t_gbm = new Timer();
@@ -105,52 +102,45 @@ public class GBM extends ValidatedJob {
     gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,new DTree[0], null, ymin, null);
     DKV.put(outputKey, gbm_model);
 
-    H2O.submitTask(start(new H2OCountedCompleter() {
-      @Override public void compute2() {
-        // Keep the response in the basic working frame
-        fr.add("response",response);
+    // Keep the response in the basic working frame
+    fr.add("response",response);
 
-        // Build initial residual columns
-        buildResiduals(nclass,fr,ncols,nrows,ymin);
+    // Build initial residual columns
+    buildResiduals(nclass,fr,ncols,nrows,ymin);
 
-        // The Initial Forest is empty
-        DTree forest[] = new DTree[] {};
-        BulkScore bs = new BulkScore(forest,0,ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, 0 );
-        _errs = new float[]{(float)bs._sum/nrows}; // Errors for zero trees
-        gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
-        DKV.put(outputKey, gbm_model);
+    // The Initial Forest is empty
+    DTree forest[] = new DTree[] {};
+    BulkScore bs = new BulkScore(forest,0,ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, 0 );
+    _errs = new float[]{(float)bs._sum/nrows}; // Errors for zero trees
+    gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
+    DKV.put(outputKey, gbm_model);
 
-        // Build trees until we hit the limit
-        for( int tid=0; tid<ntrees; tid++) {
-          if( cancelled() ) break;
-          forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
-          // System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
-          // Tree-by-tree scoring
-          Timer t_score = new Timer();
-          BulkScore bs2 = new BulkScore(forest,tid,ncols,nclass,ymin,1.0f);
-          bs2.doAll(fr);
-          bs2.doAll(validation != null ? validation : fr);
-          bs2.report( Sys.GBM__, max_depth );
-          _errs = Arrays.copyOf(_errs,_errs.length+1);
-          _errs[_errs.length-1] = (float)bs2._sum/nrows;
-          gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
-          DKV.put(outputKey, gbm_model);
-          Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
-        }
-        Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
+    // Build trees until we hit the limit
+    for( int tid=0; tid<ntrees; tid++) {
+      if( cancelled() ) break;
+      forest = buildNextTree(fr,forest,ncols,nrows,nclass,ymin);
+      // System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
+      // Tree-by-tree scoring
+      Timer t_score = new Timer();
+      BulkScore bs2 = new BulkScore(forest,tid,ncols,nclass,ymin,1.0f);
+      bs2.doAll(fr);
+      bs2.doAll(validation != null ? validation : fr);
+      bs2.report( Sys.GBM__, max_depth );
+      _errs = Arrays.copyOf(_errs,_errs.length+1);
+      _errs[_errs.length-1] = (float)bs2._sum/nrows;
+      gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
+      DKV.put(outputKey, gbm_model);
+      Log.info(Sys.GBM__,"GBM final Scoring done in "+t_score);
+    }
+    Log.info(Sys.GBM__,"GBM Modeling done in "+t_gbm);
 
-        // Remove temp vectors; cleanup the Frame
-        while( fr.numCols() > ncols+1/*Leave response*/ )
-          UKV.remove(fr.remove(fr.numCols()-1)._key);
-        remove();
-        tryComplete();
-      }
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        ex.printStackTrace();
-        GBM.this.cancel(ex.getMessage());
-        return true;
-      }
-    }));
+    // Remove temp vectors; cleanup the Frame
+    while( fr.numCols() > ncols+1/*Leave response*/ )
+      UKV.remove(fr.remove(fr.numCols()-1)._key);
+  }
+
+  @Override protected Response redirect() {
+    return GBMProgressPage.redirect(this, self(),dest());
   }
 
   // Build the next tree, which is trying to correct the residual error from the prior trees.

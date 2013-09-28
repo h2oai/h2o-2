@@ -79,6 +79,5 @@ public class KMeansGrid extends KMeansShared {
     } finally {
       UKV.remove(temp);
     }
-    remove();
   }
 }

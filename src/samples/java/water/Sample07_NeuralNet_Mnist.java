@@ -52,17 +52,18 @@ public class Sample07_NeuralNet_Mnist {
     // Load data
     Vec[] train = TestUtil.parseFrame("smalldata/mnist/train.csv.gz").vecs();
     Vec[] test = TestUtil.parseFrame("smalldata/mnist/test.csv.gz").vecs();
-    train = NeuralNet.reChunk(train);
+    NeuralNet.reChunk(train);
 
     // Labels are on last column for this dataset
     Vec trainLabels = train[train.length - 1];
+    trainLabels.asEnum();
     train = Utils.remove(train, train.length - 1);
     Vec testLabels = test[test.length - 1];
     test = Utils.remove(test, test.length - 1);
 
     // Build net and start training
     Layer[] ls = build(train, trainLabels, null);
-    final Trainer trainer = new Trainer.MapReduce(ls);
+    Trainer trainer = new Trainer.MapReduce(ls);
     trainer.start();
 
     // Monitor training

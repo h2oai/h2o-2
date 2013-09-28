@@ -5,7 +5,6 @@ import hex.rng.MersenneTwisterRNG;
 import java.util.Random;
 
 import water.Iced;
-import water.Model;
 import water.fvec.Chunk;
 import water.fvec.Vec;
 
@@ -243,6 +242,7 @@ public abstract class Layer extends Iced {
 
     public ChunksInput(Chunk[] chunks, VecsInput stats) {
       super(stats._subs.length);
+      assert stats == null || (chunks.length == stats._subs.length && chunks.length == stats._muls.length);
       _chunks = chunks;
       _subs = stats._subs;
       _muls = stats._muls;
@@ -252,7 +252,7 @@ public abstract class Layer extends Iced {
       for( int i = 0; i < _a.length; i++ ) {
         double d = _chunks[i].at0((int) _pos);
         d -= _subs[i];
-        d = _muls[i] > 1e-4 ? d / _muls[i] : d;
+        d *= _muls[i];
         _a[i] = (float) d;
       }
     }
@@ -319,7 +319,7 @@ public abstract class Layer extends Iced {
     Vec _vec;
 
     public VecSoftmax(Vec vec) {
-      super(Model.responseDomain(vec).length);
+      super(vec.domain().length);
       _vec = vec;
     }
 
@@ -329,10 +329,10 @@ public abstract class Layer extends Iced {
   }
 
   public static class ChunkSoftmax extends Softmax {
-    Chunk _chunk;
+    transient Chunk _chunk;
 
     public ChunkSoftmax(Chunk chunk) {
-      super(Model.responseDomain(chunk._vec).length);
+      super(chunk._vec.domain().length);
       _chunk = chunk;
     }
 
@@ -429,8 +429,7 @@ public abstract class Layer extends Iced {
   }
 
   public static void copyWeights(Layer[] src, Layer[] dst) {
-    for( int y = 1; y < src.length - 1; y++ ) {
-      assert dst[y]._w == null && dst[y]._b == null;
+    for( int y = 1; y < src.length; y++ ) {
       dst[y]._w = src[y]._w;
       dst[y]._b = src[y]._b;
     }

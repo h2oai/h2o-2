@@ -75,13 +75,17 @@ public class Job extends Request2 {
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
-    protected void selectCols() {
+    protected int initResponse() {
       // Doing classification only right now...
       if( !response.isEnum() ) response.asEnum();
 
-      for( int i = cols.length - 1; i >= 0; i-- )
-        if( source.vecs()[cols[i]] == response )
+      for( int i = cols.length - 1; i >= 0; i-- ) {
+        if( source.vecs()[cols[i]] == response ) {
           cols = ArrayUtils.remove(cols, i);
+          return i;
+        }
+      }
+      return -1;
     }
   }
 
@@ -89,17 +93,20 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     protected transient Vec[] _train, _valid;
+    protected transient Vec _validResponse;
     protected transient String[] _names;
     protected transient String _responseName;
 
     @API(help = "Validation frame", filter = Default.class)
     public Frame validation;
 
-    @Override protected void selectCols() {
-      super.selectCols();
+    protected void selectCols() {
+      int rIndex = initResponse();
       _train = selectVecs(source);
-      if(validation != null)
+      if(validation != null) {
         _valid = selectVecs(validation);
+        _validResponse = validation.vecs()[rIndex];
+      }
       _names = new String[cols.length];
       for( int i = 0; i < cols.length; i++ )
         _names[i] = source._names[cols[i]];
@@ -145,7 +152,6 @@ public class Job extends Request2 {
     job_key = defaultJobKey();
     destination_key = defaultDestKey();
     description = getClass().getSimpleName();
-    start_time = System.currentTimeMillis();
   }
 
   protected Key defaultJobKey() {
@@ -164,6 +170,7 @@ public class Job extends Request2 {
   public <T extends H2OCountedCompleter> T start(final T fjtask) {
     _fjtask = fjtask;
     DKV.put(job_key, new Value(job_key, new byte[0]));
+    start_time = System.currentTimeMillis();
     new TAtomic<List>() {
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
@@ -173,7 +180,6 @@ public class Job extends Request2 {
         return old;
       }
     }.invoke(LIST);
-
     return fjtask;
   }
 
@@ -305,14 +311,16 @@ public class Job extends Request2 {
 
   // If job is a request
 
-  public void startFJ() {
+  public H2OCountedCompleter startFJ() {
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
         run();
         tryComplete();
+        remove();
       }
     };
     H2O.submitTask(start(task));
+    return task;
   }
 
   @Override protected Response serve() {
@@ -423,7 +431,7 @@ public class Job extends Request2 {
       return new ChunkProgress(0, 0, Status.Error, msg);
     }
 
-    public final float progress() {
+    @Override public float progress() {
       if( _status == Status.Done ) return 1.0f;
       return Math.min(0.99f, (float) ((double) _count / (double) _nchunks));
     }

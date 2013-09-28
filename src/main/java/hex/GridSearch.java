@@ -15,7 +15,7 @@ public class GridSearch extends Job {
   @Override protected void run() {
     UKV.put(destination_key, this);
     for( Job job : jobs )
-      job.startFJ();
+      job.startFJ().join();
   }
 
   @Override public float progress() {
@@ -25,7 +25,7 @@ public class GridSearch extends Job {
     return Math.min(1f, (float) (d / jobs.length));
   }
 
-  @Override protected Response redirect() {
+  @Override public Response redirect() {
     String n = GridSearchProgress.class.getSimpleName();
     return new Response(Response.Status.redirect, this, -1, -1, n, "job", job_key, "dst_key", destination_key);
   }
@@ -98,15 +98,22 @@ public class GridSearch extends Job {
               throw new RuntimeException(e);
             }
           }
-          sb.append("<td>").append((info._job.runTimeMs()) / 1000).append("</td>");
+          String runTime = "Pending", speed = "";
+          if( info._job.start_time != 0 ) {
+            runTime = "" + (info._job.runTimeMs()) / 1000;
+            speed = perf != null ? info._job.speedValue() : "";
+          }
+          sb.append("<td>").append(runTime).append("</td>");
           if( perf != null )
-            sb.append("<td>").append(info._job.speedValue()).append("</td>");
+            sb.append("<td>").append(speed).append("</td>");
 
           String link = info._job.destination_key.toString();
-          if( info._model instanceof GBMModel )
-            link = GBMModelView.link(link, info._job.destination_key);
-          else
-            link = Inspect.link(link, info._job.destination_key);
+          if( info._job.start_time != 0 ) {
+            if( info._model instanceof GBMModel )
+              link = GBMModelView.link(link, info._job.destination_key);
+            else
+              link = Inspect.link(link, info._job.destination_key);
+          }
           sb.append("<td>").append(link).append("</td>");
 
           String pct = "", f1 = "";
@@ -128,7 +135,7 @@ public class GridSearch extends Job {
       Job _job;
       Model _model;
       ConfusionMatrix _cm;
-      double _error;
+      double _error = Double.POSITIVE_INFINITY;
     }
 
     static void filter(ArrayList<Argument> args, String... names) {

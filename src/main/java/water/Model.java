@@ -45,7 +45,7 @@ public abstract class Model extends Iced {
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),domains(fr));
+    this(selfKey,dataKey,fr.names(),fr.domains());
   }
 
   /** Full constructor */
@@ -58,29 +58,6 @@ public abstract class Model extends Iced {
     _dataKey = dataKey;
     _names   = names;
     _domains = domains;
-  }
-
-  private static String[][] domains(Frame fr) {
-    String[][] domains = fr.domains();
-    if(domains[domains.length-1] == null)
-      domains[domains.length-1] = responseDomain(fr);
-    return domains;
-  }
-  /** If response column is not an enum, use numbers */
-  public static String[] responseDomain(Frame fr) {
-    Vec resp = fr.vecs()[fr.vecs().length-1];
-    return responseDomain(resp);
-  }
-  public static String[] responseDomain(Vec vec) {
-    String[] domain = vec._domain;
-    if(vec._domain == null) {
-      int min = (int) vec.min();
-      int max = (int) vec.max();
-      domain = new String[max - min + 1];
-      for( int i = 0; i < domain.length; i++ )
-        domain[i] = "" + (min + i);
-    }
-    return domain;
   }
 
   /** Simple shallow copy constructor to a new Key */

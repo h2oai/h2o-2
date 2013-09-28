@@ -44,6 +44,5 @@ public class KMeans2 extends ColumnsJob {
   @Override protected void run() {
     Log.info(DOC_GET + source);
     UKV.put(destination_key, source);
-    remove();
   }
 }

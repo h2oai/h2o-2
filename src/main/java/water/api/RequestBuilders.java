@@ -34,13 +34,13 @@ public class RequestBuilders extends RequestQueries {
   public static final Gson   GSON_BUILDER = new GsonBuilder().setPrettyPrinting().create();
 
   private static final ThreadLocal<DecimalFormat> _format = new ThreadLocal<DecimalFormat>() {
-    protected DecimalFormat initialValue() {
+    @Override protected DecimalFormat initialValue() {
       return new DecimalFormat("###.####");
     }
   };
 
   static final ThreadLocal<SimpleDateFormat> ISO8601 = new ThreadLocal<SimpleDateFormat>() {
-    protected SimpleDateFormat initialValue() {
+    @Override protected SimpleDateFormat initialValue() {
       return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
     }
   };

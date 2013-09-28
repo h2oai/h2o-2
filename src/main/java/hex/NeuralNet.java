@@ -57,7 +57,10 @@ public class NeuralNet extends ValidatedJob {
 
   @Override protected void run() {
     selectCols();
-    _train = reChunk(_train);
+    Vec[] vecs = Utils.add(_train, response);
+    reChunk(vecs);
+    System.arraycopy(vecs, 0, _train, 0, _train.length);
+    response = vecs[vecs.length - 1];
 
     final Layer[] ls = new Layer[hidden.length + 2];
     ls[0] = new VecsInput(_train);
@@ -82,7 +85,6 @@ public class NeuralNet extends ValidatedJob {
     UKV.put(destination_key, model);
 
     final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
-    trainer.start();
 
     // Use a separate thread for monitoring (blocked most of the time)
     Thread thread = new Thread() {
@@ -99,6 +101,22 @@ public class NeuralNet extends ValidatedJob {
 
           NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
           long[][] cm = new long[model.classNames().length][model.classNames().length];
+
+          VecsInput stats = (VecsInput) ls[0];
+          Layer[] clones = new Layer[ls.length];
+          if( _valid != null ) {
+            clones[0] = new VecsInput(_valid, stats);
+            clones[clones.length - 1] = new VecSoftmax(_validResponse);
+          } else {
+            clones[0] = new VecsInput(_train, stats);
+            clones[clones.length - 1] = new VecSoftmax(response);
+          }
+          for( int y = 1; y < clones.length - 1; y++ )
+            clones[y] = ls[y].clone();
+          for( int y = 0; y < clones.length; y++ )
+            clones[y].init(clones, y, false, 0);
+          Layer.copyWeights(ls, clones);
+
           Error train = NeuralNetScore.run(ls, EVAL_ROW_COUNT, cm);
           model.items = items;
           model.items_per_second = ps;
@@ -116,7 +134,8 @@ public class NeuralNet extends ValidatedJob {
       }
     };
     thread.start();
-    trainer.join();
+    //trainer.join();
+    trainer.start();
   }
 
   @Override public float progress() {
@@ -286,7 +305,7 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override protected void run() {
-      selectCols();
+      initResponse();
       Layer[] clones = new Layer[model.layers.length];
       clones[0] = new VecsInput(selectVecs(source));
       for( int y = 1; y < clones.length - 1; y++ )
@@ -297,7 +316,7 @@ public class NeuralNet extends ValidatedJob {
         clones[y]._b = model.bs[y];
         clones[y].init(clones, y, false, 0);
       }
-      int classes = Model.responseDomain(response).length;
+      int classes = response.domain().length;
       confusion_matrix = new long[classes][classes];
       Error error = run(clones, max_rows, confusion_matrix);
       classification_error = error.Value;
@@ -345,10 +364,7 @@ public class NeuralNet extends ValidatedJob {
     @Override public boolean toHTML(StringBuilder sb) {
       DocGen.HTML.section(sb, "Classification error: " + String.format("%5.2f %%", 100 * classification_error));
       DocGen.HTML.section(sb, "Square error: " + sqr_error);
-      String[] classes = source.vecs()[source.numCols() - 1].domain();
-      if( classes == null )
-        classes = Model.responseDomain(source);
-      confusion(sb, "Confusion Matrix", classes, confusion_matrix);
+      confusion(sb, "Confusion Matrix", response.domain(), confusion_matrix);
       return true;
     }
 
@@ -406,43 +422,42 @@ public class NeuralNet extends ValidatedJob {
    * Makes sure small datasets are spread over enough chunks to parallelize training. Neural nets
    * can require lots of processing even for small data.
    */
-  public static Vec[] reChunk(Vec[] vecs) {
+  public static void reChunk(Vec[] vecs) {
     final int splits = cores() * 2; // More in case of unbalance
-    if( vecs[0].nChunks() >= splits )
-      return vecs;
-    for( int v = 0; v < vecs.length; v++ ) {
-      AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
-      long rows = vecs[0].length();
-      Chunk cache = null;
-      for( int split = 0; split < splits; split++ ) {
-        long off = rows * (split + 0) / splits;
-        long lim = rows * (split + 1) / splits;
-        NewChunk chunk = new NewChunk(vec, split);
-        for( long r = off; r < lim; r++ ) {
-          if( cache == null || r < cache._start || r >= cache._start + cache._len )
-            cache = vecs[v].chunk(r);
-          if( !cache.isNA(r) ) {
-            if( vecs[v]._domain != null )
-              chunk.addEnum((int) cache.at8(r));
-            else if( vecs[v].isInt() )
-              chunk.addNum(cache.at8(r), 0);
-            else
-              chunk.addNum(cache.at(r));
-          } else {
-            if( vecs[v].isInt() )
-              chunk.addNA();
-            else {
-              // Don't use addNA() for doubles, as NewChunk uses separate array
-              chunk.addNum(Double.NaN);
+    if( vecs[0].nChunks() < splits ) {
+      for( int v = 0; v < vecs.length; v++ ) {
+        AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
+        long rows = vecs[0].length();
+        Chunk cache = null;
+        for( int split = 0; split < splits; split++ ) {
+          long off = rows * (split + 0) / splits;
+          long lim = rows * (split + 1) / splits;
+          NewChunk chunk = new NewChunk(vec, split);
+          for( long r = off; r < lim; r++ ) {
+            if( cache == null || r < cache._start || r >= cache._start + cache._len )
+              cache = vecs[v].chunk(r);
+            if( !cache.isNA(r) ) {
+              if( vecs[v]._domain != null )
+                chunk.addEnum((int) cache.at8(r));
+              else if( vecs[v].isInt() )
+                chunk.addNum(cache.at8(r), 0);
+              else
+                chunk.addNum(cache.at(r));
+            } else {
+              if( vecs[v].isInt() )
+                chunk.addNA();
+              else {
+                // Don't use addNA() for doubles, as NewChunk uses separate array
+                chunk.addNum(Double.NaN);
+              }
             }
           }
+          chunk.close(split, null);
         }
-        chunk.close(split, null);
+        Vec t = vec.close(null);
+        t._domain = vecs[v]._domain;
+        vecs[v] = t;
       }
-      Vec t = vec.close(null);
-      t._domain = vecs[v]._domain;
-      vecs[v] = t;
     }
-    return vecs;
   }
 }

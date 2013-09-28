@@ -55,7 +55,7 @@ public class DRF extends FrameJob {
   // Overall prediction error as I add trees
   transient private float _errs[];
 
-  public float progress(){
+  @Override public float progress(){
     DTree.TreeModel m = DKV.get(dest()).get();
     return (float)m.treeBits.length/(float)m.N;
   }

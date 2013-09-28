@@ -882,7 +882,7 @@ class DTree extends Iced {
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
 
-    @Override public ConfusionMatrix cm() { return new ConfusionMatrix(cm); }
+    @Override public ConfusionMatrix cm() { return cm == null ? null : new ConfusionMatrix(cm); }
 
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,1.0f/nclasses());
