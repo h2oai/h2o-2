@@ -1,6 +1,12 @@
 #!/usr/bin/python
-import time, sys, json, re, getpass, requests
+import time, sys, json, re, getpass, requests, argparse
 
+parser = argparse.ArgumentParser(description='Creates h2o-node.json for cloud cloning from existing cloud')
+# parser.add_argument('-v', '--verbose',     help="verbose", action='store_true')
+parser.add_argument('-f', '--flatfile', help="Use this flatfile to start probes\ndefaults to pytest_flatfile-<username> which is created by python tests", type=str)
+args = parser.parse_args()
+
+#********************************************************************
 def dump_json(j):
     return json.dumps(j, sort_keys=True, indent=2)
 
@@ -79,10 +85,15 @@ def probe_node(line, h2oNodes):
         # creating the list of who this guy sees, to return
         probes.append(name)
 
+        node_id = len(h2oNodes)
         node = { 
             'http_addr': http_addr, 
-            'base_port': port, 
-            'java_heap_GB': java_heap_GB 
+            'port': int(port),  # print it as a number for the clone ingest
+            'java_heap_GB': java_heap_GB,
+            'node_id': node_id,
+            'remoteH2O': 'true',
+            'sandbox_error_was_reported': 'false',
+            'username': 'unknown',
         }
 
         # this is the total list so far
@@ -95,11 +106,15 @@ def probe_node(line, h2oNodes):
 
 #********************************************************************
 def flatfile_name():
-    a = 'pytest_flatfile-%s' %getpass.getuser()
+    if args.flatfile:
+        a = args.flatfile
+    else:
+        a = 'pytest_flatfile-%s' %getpass.getuser()
     print "Starting with contents of ", a
     return a
 
-# hostPortList.append("/" + h.addr + ":" + str(base_port + ports_per_node*i))
+#********************************************************************
+# hostPortList.append("/" + h.addr + ":" + str(port + ports_per_node*i))
 # partition returns a 3-tuple as (LHS, separator, RHS) if the separator is found, 
 # (original_string, '', '') if the separator isn't found
 with open(flatfile_name(), 'r') as f:
@@ -136,7 +151,7 @@ expandedCloud = {
         'username': 'null',
         'ip': 'null',
         },
-    'h2oNodes': h2oNodesList
+    'h2o_nodes': h2oNodesList
     }
 
 print "Writing h2o-nodes.json"
