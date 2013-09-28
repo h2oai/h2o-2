@@ -26,12 +26,13 @@ HDFS_OUTPUT=hdfsOutputDirName
 
 # the -test -e ? how to check if it exists first. Just avoid the error trap
 set +e
-hadoop dfs -rmr /user/kevin/$HDFS_OUTPUT
+# why did jenkins not have the $PATH right to see hadoop
+/usr/bin/hadoop dfs -rmr /user/kevin/$HDFS_OUTPUT
 set -e
 
 H2O_ONE_NODE=./h2o_one_node
 rm -fr $H2O_ONE_NODE
-hadoop jar $H2O_HADOOP/h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars $H2O_JAR -mapperXmx 8g -nodes 3 -output $HDFS_OUTPUT -notify $H2O_ONE_NODE &
+/usr/bin/hadoop jar $H2O_HADOOP/h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars $H2O_JAR -mapperXmx 8g -nodes 3 -output $HDFS_OUTPUT -notify $H2O_ONE_NODE &
 
 CLOUD_PID=$!
 jobs -l
