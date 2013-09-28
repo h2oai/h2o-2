@@ -103,13 +103,16 @@ class DTree extends Iced {
     // min/max - which would allow values outside the stated bin-range into the
     // split sub-bins.  Always go for a value which splits the nearest two
     // elements.
-    float splat(DHistogram hs[]) {  
+    float splat(DHistogram hs[]) {
+      if( _col == -1 ) return Float.NaN;
       DBinHistogram h = ((DBinHistogram)hs[_col]);
       assert _bin > 0 && _bin < h._nbins;
       int x=_bin-1;
-      while( h._bins[x]==0 ) x--;
+      while( x >= 0 && h._bins[x]==0 ) x--;
       int n=_bin;
-      while( h._bins[n]==0 ) n++;
+      while( n < h._bins.length && h._bins[n]==0 ) n++;
+      if( x <               0 ) return h._mins[n];
+      if( n >= h._bins.length ) return h._maxs[x];
       return (h._maxs[x]+h._mins[n])/2;
     }
 
@@ -331,14 +334,6 @@ class DTree extends Iced {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
       _split = bestCol(n);          // Best split-point for this tree
 
-      // If I have 2 identical predictor rows leading to 2 different responses,
-      // then this dataset cannot distinguish these rows... and we have to bail
-      // out here.
-      if( _split._col == -1 || _split._bin == 0/*bin 0 is NO SPLIT*/ ) {
-        _nids = new int[] { -1, -1 };
-        _splat = 0;
-        return;
-      }
       _splat = _split.splat(n._hs); // Split-at value
       _nids = new int[2];        // Split into 2 subsets
       final char nclass  = _tree._nclass;
@@ -364,7 +359,16 @@ class DTree extends Iced {
       return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
-    public int ns( Chunk chks[], int i ) { return _nids[bin(chks,i)]; }
+    public int ns( Chunk chks[], int row ) { 
+      if( _split._col== -1 ) {
+        System.out.println(Arrays.toString(_nids));
+        for( int i=0; i<_nids.length; i++ )
+          if( _nids[i] != -1 )
+            System.out.println("i="+i+", nid="+_nids[i]+" "+_tree.node(_nids[i]));
+        return 0;
+      }
+      return _nids[bin(chks,row)]; 
+    }
 
     @Override public String toString() {
       if( _split._col == -1 ) return "Decided has col = -1";

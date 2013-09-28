@@ -159,6 +159,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     double best_se1=Double.MAX_VALUE;   // Best squared error
     boolean equal=false;                // Ranged check
     for( int b=1; b<=_nbins-1; b++ ) {
+      if( _bins[b] == 0 ) continue;        // Ignore empty splits
       double se = (MS0[2*b+1]+MS1[2*b+1]); // Squared Error (not MSE)
       if( (se < best_se0+best_se1) || // Strictly less error?
           // Or tied MSE, then pick split towards middle bins
@@ -197,6 +198,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       }
     }
 
+    if( best==0 ) return null;  // No place to split
     assert best > 0 : "Must actually pick a split "+best;
     long n0 = !equal ? ns0[best] : ns0[best]+ns1[best+1];
     long n1 = !equal ? ns1[best] : _bins[best]          ;

@@ -285,9 +285,9 @@ public class GBM extends SharedTreeModelBuilder {
     }.doAll(fr);
 
     // Print the generated K trees
-    //for( int k=0; k<_nclass; k++ )
-    //  if( ktrees[k] != null ) 
-    //    System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
+    for( int k=0; k<_nclass; k++ )
+      if( ktrees[k] != null ) 
+        System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
 
     return forest;
   }
@@ -352,9 +352,8 @@ public class GBM extends SharedTreeModelBuilder {
     // scores on all columns and selects splits on all columns.
     @Override DTree.Split bestCol( GBMUndecidedNode u ) {
       DHistogram hs[] = u._hs;
-      if( hs == null ) 
-        return new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
-      DTree.Split best = null;
+      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
+      if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;
         DTree.Split s = hs[i].scoreMSE(i);
@@ -362,7 +361,6 @@ public class GBM extends SharedTreeModelBuilder {
         if( best == null || s.se() < best.se() ) best = s;
         if( s.se() <= 0 ) break; // No point in looking further!
       }
-      assert best != null;      // 
       return best;
     }
   }

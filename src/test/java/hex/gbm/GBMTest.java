@@ -32,25 +32,28 @@ public class GBMTest extends TestUtil {
     //         });
 
     // Classification tests
-    //basicGBM("./smalldata/test/test_tree.csv","tree.hex",
-    //         new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
-    //         });
-    //basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
-    //         new PrepData() {
-    //           Vec prep(Frame fr) { 
-    //             assertEquals(380,fr.numRows());
-    //             // Remove patient ID vector
-    //             UKV.remove(fr.remove("ID")._key); 
-    //             // Prostate: predict on CAPSULE
-    //             return fr.remove("CAPSULE");
-    //           }
-    //         });
-    //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
-    //         });
-    //basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
-    //         });
+    basicGBM("./smalldata/test/test_tree_minmax.csv","tree_minmax.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("response"); } 
+             });
+    basicGBM("./smalldata/test/test_tree.csv","tree.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
+             });
+    basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
+             new PrepData() {
+               Vec prep(Frame fr) { 
+                 assertEquals(380,fr.numRows());
+                 // Remove patient ID vector
+                 UKV.remove(fr.remove("ID")._key); 
+                 // Prostate: predict on CAPSULE
+                 return fr.remove("CAPSULE");
+               }
+             });
+    basicGBM("./smalldata/cars.csv","cars.hex",
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             });
+    basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+             });
     basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
              new PrepData() {
                Vec prep(Frame fr) { 
@@ -76,11 +79,11 @@ public class GBMTest extends TestUtil {
       gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       gbm.vresponse = prep.prep(gbm.source);
-      gbm.ntrees = 20;
-      gbm.max_depth = 10;
-      gbm.learn_rate = 0.2f;
-      gbm.min_rows = 5;
-      gbm.nbins = 100;
+      gbm.ntrees = 2;
+      gbm.max_depth = 6;
+      gbm.learn_rate = 1.0f;
+      gbm.min_rows = 1;
+      gbm.nbins = 10;
       gbm.serve();              // Start it
       gbm.get();                // Block for it
 
