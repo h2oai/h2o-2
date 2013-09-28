@@ -18,7 +18,8 @@ echo "Do we have to clean out old ice_root dirs somewhere?"
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after buildingk
 CDH3_JOBTRACKER=192.168.1.176:8021
-CDH3_NODES=3
+CDH3_NODES=4
+CDH3_HEAP=20g
 H2O_DOWNLOADED=../../h2o-downloaded
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
 H2O_JAR=$H2O_DOWNLOADED/h2o.jar
@@ -40,7 +41,7 @@ set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
 echo "hadoop dfs -rmr /user/0xdiag/$HDFS_OUTPUT" >> /tmp/ssh_to_176.sh
 set -e
-echo "hadoop jar h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars h2o.jar -mapperXmx 8g -nodes 3 -output $HDFS_OUTPUT -notify $H2O_ONE_NODE " >> /tmp/ssh_to_176.sh
+echo "hadoop jar h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars h2o.jar -mapperXmx $CDH3_HEAP -nodes $CDH3_NODES -output $HDFS_OUTPUT -notify $H2O_ONE_NODE " >> /tmp/ssh_to_176.sh
 # exchange keys so jenkins can do this?
 # background!
 cat /tmp/ssh_to_176.sh | ssh -i ~/.0xdiag/0xdiag_id_rsa 0xdiag@192.168.1.176  &

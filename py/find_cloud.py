@@ -69,7 +69,7 @@ def probe_node(line, h2oNodes):
         print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
         print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
         java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
-        java_heap_GB = round(java_heap_GB,2)
+        java_heap_GB = int(round(java_heap_GB,0))
         print "java_heap_GB:", java_heap_GB
         print 'num_cpus:', n['num_cpus']
 
@@ -95,8 +95,10 @@ def probe_node(line, h2oNodes):
             'node_id': node_id,
             'remoteH2O': 'true',
             'sandbox_error_was_reported': 'false', # odd this is touched..maybe see about changing h2o.py
+            'sandbox_ignore_errors': 'false',
             'username': '0xdiag', # probably he'll be h2o on hadooping the cloud
             'redirect_import_folder_to_s3_path': 'false', # no..we're not on ec2
+            'redirect_import_folder_to_s3n_path': 'false', # no..we're not on ec2
             'delete_keys_at_teardown': 'true', # yes we want each test to clean up after itself
 
         }

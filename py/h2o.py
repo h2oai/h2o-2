@@ -2470,6 +2470,12 @@ class ExternalH2O(H2O):
             # for any other reason.
             if v == "None":
                 v = None
+            elif v == "false":
+                v = False
+            elif v == "true":
+                v = True
+            # leave "null" as-is (string) for now?
+                    
             setattr(self, k, v) # achieves self.k = v
         print "Cloned", len(nodeState), "things for a h2o node"
 
