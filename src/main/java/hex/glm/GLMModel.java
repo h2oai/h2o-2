@@ -79,7 +79,7 @@ public class GLMModel extends Model {
     this.beta_eps = beta_eps;
     this.run_time = run_time;
   }
-
+  public double [] beta(){return beta;}
   @Override protected float[] score0(double[] data, float[] preds) {
     double eta = 0.0;
     for(int i = 0; i < catOffsets.length-1; ++i) if(data[i] != 0)

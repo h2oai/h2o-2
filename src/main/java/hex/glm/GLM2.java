@@ -64,13 +64,14 @@ public class GLM2 extends FrameJob{
     super(desc, dest);
   }
 
-  public GLM2(String desc, Key dest, Frame src, Family family, Link link, double alpha, double lambda) {
+  public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda) {
     super(desc, dest);
     source = src;
     this.family = family;
     this.link = link;
     this.alpha = alpha;
     this.lambda = lambda;
+    this.standardize = standardize;
   }
   public static final String KEY_PREFIX = "__GLMModel_";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
