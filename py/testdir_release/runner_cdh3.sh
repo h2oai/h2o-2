@@ -30,12 +30,13 @@ H2O_JAR=$H2O_DOWNLOADED/h2o.jar
 HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
-REMOTE_SCP="scp -i $HOME/.0xdiag/0xdiag_id_rsa"
-REMOTE_SSH="ssh -i $HOME/.0xdiag/0xdiag_id_rsa"
+REMOTE_HOME=/home/0xdiag
 REMOTE_IP=192.168.1.176
 REMOTE_USER=0xdiag@$REMOTE_IP
+REMOTE_SCP="scp -i $HOME/.0xdiag/0xdiag_id_rsa"
+REMOTE_SSH_USER="ssh -i $HOME/.0xdiag/0xdiag_id_rsa $REMOTE_USER"
+
 REMOTE_0XCUSTOMER=0xcustomer@$REMOTE_IP
-REMOTE_HOME=/home/0xdiag
 
 # have to copy the downloaded h2o stuff over to 176 to execute with the ssh
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
@@ -43,29 +44,39 @@ echo "scp some jars"
 $REMOTE_SCP $H2O_HADOOP/$CDH3_JAR  $REMOTE_USER:$REMOTE_HOME
 $REMOTE_SCP $H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
+#***********************************************************************************
 echo "Does 0xdiag have any hadoop jobs left running from something? (manual/jenkins/whatever)"
-rm -fr /tmp/my_jobs_on_hadoop_$REMOTE_IP
-$REMOTE_SSH 'hadoop job -list' > my_jobs_on_hadoop_$REMOTE_IP
+rm -f /tmp/my_jobs_on_hadoop_$REMOTE_IP
+
+$REMOTE_SSH_USER 'hadoop job -list'
+$REMOTE_SSH_USER 'hadoop job -list' > /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
 echo "kill any running hadoop jobs by me"
-while read jobid
+while read jobid state rest
 do
-    $REMOTE_SSH "hadoop job -kill $jobid"
-done <  /tmp/my_jobs_on_hadoop_$REMOTE_IP
-
-rm -f /tmp/ssh_to_$REMOTE_IP.sh
-echo "cd /home/0xdiag" > /tmp/ssh_to_$REMOTE_IP.sh
-echo "rm -fr h2o_one_node" >> /tmp/ssh_to_$REMOTE_IP.sh
-set +e
+    echo $jobid $state
+    # ignore these kind of lines
+    # 0 jobs currently running
+    # JobId   State   StartTime   UserName    Priority    SchedulingInfo
+    if [[ ("$jobid" != "JobId") && ("$state" != "jobs") ]]
+    then
+        echo "hadoop job -kill $jobid"
+    fi
+done < /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
 #*****HERE' WHERE WE START H2O ON HADOOP*******************************************
+rm -f /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "cd /home/0xdiag" > /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
-echo "hadoop dfs -rmr /user/0xdiag/$HDFS_OUTPUT" >> /tmp/ssh_to_$REMOTE_IP.sh
+echo "hadoop dfs -rmr /user/0xdiag/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 echo "hadoop jar h2odriver_cdh3.jar water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars h2o.jar -mapperXmx $CDH3_HEAP -nodes $CDH3_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 # exchange keys so jenkins can do this?
 # background!
-cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh | $REMOTE_SSH $REMOTE_USER &
+cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh | $REMOTE_SSH_USER &
 #*********************************************************************************
 
 CLOUD_PID=$!
@@ -80,6 +91,7 @@ while [ ! -f h2o_one_node ]
 do
     sleep 5
     set +e
+    echo "$REMOTE_SCP $REMOTE_USER:$REMOTE_HOME/h2o_one_node ."
     $REMOTE_SCP $REMOTE_USER:$REMOTE_HOME/h2o_one_node .
     set -e
 done
@@ -100,6 +112,7 @@ ls -ltr h2o-nodes.json
 cp -f h2o-nodes.json sandbox
 cp -f h2o_one_node sandbox
 
+#***********************************************************************************
 
 echo "Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
 echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
@@ -107,7 +120,7 @@ echo "okay to ls the top level here...no secret info..do all the machines hadoop
 echo "BUT WE'RE CURRENTLY NOT KICKING OFF H2O ON HADOOP AS 0XCUSTOMER..need to do that?"
 for mr in 171 172 173 174 175 176 177 178 179 180
 do
-    $REMOTE_SSH 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
+    ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
 done
 
 # We now have the h2o-nodes.json, that means we started the jvms
