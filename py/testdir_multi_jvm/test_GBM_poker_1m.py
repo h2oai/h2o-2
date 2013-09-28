@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED, localhost, tryHeap
-        tryHeap = 14
+        tryHeap = 28
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
@@ -25,7 +25,6 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_poker_1m(self):
-
         for trial in range(2):
             # PARSE train****************************************
             h2o.beta_features = False #turn off beta_features
@@ -34,11 +33,8 @@ class Basic(unittest.TestCase):
             eList = []
             fList = []
 
-            h2o.beta_features = False
             modelKey = 'GBMModelKey'
-
-            timeoutSecs = 300
-
+            timeoutSecs = 900
             # Parse (train)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
@@ -50,7 +46,7 @@ class Basic(unittest.TestCase):
 
             # hack
             if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 print "Filling in the parseTrainResult['destination_key'] for h2o"
                 parseTrainResult['destination_key'] = trainKey
 
@@ -79,7 +75,7 @@ class Basic(unittest.TestCase):
             # GBM(train iterate)****************************************
             h2o.beta_features = True
             ntrees = 100
-            for max_depth in [5]:
+            for max_depth in [5,10,15,20]:
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,
@@ -98,14 +94,14 @@ class Basic(unittest.TestCase):
                     noPoll=h2o.beta_features, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 # hack
                 if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 trainElapsed = time.time() - trainStart
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", csvPathname
 
                 # Logging to a benchmark file
-                algo = "GBM " + str(ntrees) + " ntrees"
+                algo = "GBM " + " ntrees=" + str(ntrees) + " max_depth=" + str(max_depth)
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvPathname, elapsed)
+                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvPathname, trainElapsed)
                 print l
                 h2o.cloudPerfH2O.message(l)
 
@@ -131,8 +127,8 @@ class Basic(unittest.TestCase):
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'
-            eListTitle = "1jvmx28GB GBM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
-            fListTitle = "1jvmx28GB GBM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
+            eListTitle = ""
+            fListTitle = ""
             h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
 
 if __name__ == '__main__':

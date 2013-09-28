@@ -39,12 +39,13 @@ class Basic(unittest.TestCase):
             fList = []
 
             # Parse (train)****************************************
-            print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
+            if h2o.beta_features:
+                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
             parseTrainResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + trainFilename, schema='local',
                 hex_key=trainKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 print "Filling in the parseTrainResult['destination_key'] for h2o"
                 parseTrainResult['destination_key'] = trainKey
 
@@ -54,12 +55,13 @@ class Basic(unittest.TestCase):
             print "train parse result:", parseTrainResult['destination_key']
 
             # Parse (test)****************************************
-            print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
+            if h2o.beta_features:
+                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
             parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
                 hex_key=testKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 print "Filling in the parseTestResult['destination_key'] for h2o"
                 parseTestResult['destination_key'] = testKey
 
@@ -94,7 +96,7 @@ class Basic(unittest.TestCase):
                     noPoll=True, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 # hack
                 if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 trainElapsed = time.time() - trainStart
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", trainFilename
 
@@ -120,7 +122,7 @@ class Basic(unittest.TestCase):
                     timeoutSecs=timeoutSecs, **kwargs)
                 # hack
                 if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=1800, pollTimeoutSecs=1800)
+                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
@@ -151,8 +153,8 @@ class Basic(unittest.TestCase):
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'
-            eListTitle = "1jvmx28GB predict/CM learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
-            fListTitle = "1jvmx28GB train time learn_rate=.2 nbins=1024 ntrees=10 min_rows = 10"
+            eListTitle = ""
+            fListTitle = ""
             h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
 
 if __name__ == '__main__':

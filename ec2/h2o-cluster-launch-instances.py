@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import time
 import boto
 import boto.ec2
@@ -11,6 +12,7 @@ import boto.ec2
 #
 # os.environ['AWS_ACCESS_KEY_ID'] = '...'
 # os.environ['AWS_SECRET_ACCESS_KEY'] = '...'
+# os.environ['AWS_SSH_PRIVATE_KEY_FILE'] = '/path/to/private_key.pem'
 
 
 # Options you MUST tailor to your own AWS account.
@@ -29,7 +31,7 @@ securityGroupName = 'SecurityDisabled'
 # Options you might want to change.
 # ---------------------------------
 
-numInstancesToLaunch = 2
+numInstancesToLaunch = 3
 instanceType = 'm1.large'
 instanceNameRoot = 'H2ORStudioDemo'
 
@@ -47,12 +49,24 @@ dryRun = False
 # --------------------------------------------------------
 
 regionName = 'us-east-1'
-amiId = 'ami-634f050a'
+amiId = 'ami-0ff1a466'
 
 
 #--------------------------------------------------------------------------
 # No need to change anything below here.
 #--------------------------------------------------------------------------
+
+if not 'AWS_ACCESS_KEY_ID' in os.environ:
+    print 'ERROR: You must set AWS_ACCESS_KEY_ID in the environment.'
+    sys.exit(1)
+
+if not 'AWS_SECRET_ACCESS_KEY' in os.environ:
+    print 'ERROR: You must set AWS_SECRET_ACCESS_KEY in the environment.'
+    sys.exit(1)
+
+if not 'AWS_SSH_PRIVATE_KEY_FILE' in os.environ:
+    print 'ERROR: You must set AWS_SSH_PRIVATE_KEY_FILE in the environment.'
+    sys.exit(1)
 
 publicFileName = 'nodes-public'
 privateFileName = 'nodes-private'
@@ -80,12 +94,13 @@ reservation = ec2.run_instances(
 
 for i in range(numInstancesToLaunch):
     instance = reservation.instances[i]
-    print 'Waiting for instance', i, '...'
+    print 'Waiting for instance', i+1, 'of', numInstancesToLaunch, '...'
+    instance.update()
     while instance.state != 'running':
         print '    .'
-        time.sleep(5)
+        time.sleep(1)
         instance.update()
-    print '    instance', i, 'is up.'
+    print '    instance', i+1, 'of', numInstancesToLaunch, 'is up.'
     name = instanceNameRoot + str(i)
     instance.add_tag('Name', value=name)
 
@@ -98,7 +113,7 @@ for i in range(numInstancesToLaunch):
     instanceName = ''
     if 'Name' in instance.tags:
         instanceName = instance.tags['Name'];
-    print 'Instance', i
+    print 'Instance', i+1, 'of', numInstancesToLaunch
     print '    Name:   ', instanceName
     print '    PUBLIC: ', instance.public_dns_name
     print '    PRIVATE:', instance.private_ip_address
@@ -108,3 +123,25 @@ for i in range(numInstancesToLaunch):
 
 fpublic.close()
 fprivate.close()
+
+print 'Sleeping for 60 seconds for ssh to be available...'
+time.sleep(60)
+
+d = os.path.dirname(os.path.realpath(__file__))
+
+print 'Testing ssh access...'
+cmd = d + '/' + 'h2o-cluster-test-ssh.sh'
+rv = os.system(cmd)
+if rv != 0:
+    print 'Failed.'
+    sys.exit(1)
+
+print
+print 'Distributing flatfile...'
+cmd = d + '/' + 'h2o-cluster-distribute-flatfile.sh'
+rv = os.system(cmd)
+if rv != 0:
+    print 'Failed.'
+    sys.exit(1)
+
+# Distribute flatfile script already prints success when it completes.

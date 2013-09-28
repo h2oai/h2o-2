@@ -24,9 +24,9 @@ public class VecStatsTest extends TestUtil {
     Frame frame = new Frame(null, vecs);
 
     // Make sure we test the multi-chunk case
-    assert frame._vecs[0].nChunks() > 1;
+    assert frame.vecs()[0].nChunks() > 1;
     long rows = frame.numRows();
-    Vec v = frame._vecs[0];
+    Vec v = frame.vecs()[0];
     double min = Double.POSITIVE_INFINITY, max = Double.NEGATIVE_INFINITY, mean = 0, sigma = 0;
     for( int r = 0; r < rows; r++ ) {
       double d = v.at(r);

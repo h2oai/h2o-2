@@ -195,7 +195,7 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
       Vec[] vecs = new Vec[_modelDataMap.length];
       String[] names = new String[_modelDataMap.length];
       for(int i = 0; i < _modelDataMap.length; i++) {
-        vecs[i] = temp._vecs[_modelDataMap[i]];
+        vecs[i] = temp.vecs()[_modelDataMap[i]];
         names[i] = temp._names[_modelDataMap[i]];
       }
       return new Frame(names, vecs);

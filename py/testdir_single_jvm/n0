@@ -126,9 +126,6 @@
 ./n0.doit test_rf_strata_rand1.py
 ./n0.doit test_rf_syn_gz_cat.py
 ./n0.doit test_rfview_score.py
-./n0.doit test_R_GLM_basic.py
-./n0.doit test_R_KMeans_basic.py
-./n0.doit test_R_RF_basic.py
 ./n0.doit test_SetupOneJVM14.py
 ./n0.doit test_simple.py
 ./n0.doit test_slice.py

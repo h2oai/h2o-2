@@ -133,7 +133,7 @@ public class StoreView extends Request {
       for( int i = 0; i < jcols.length; ++i ) {
         JsonObject col = new JsonObject();
         if (i < cols) {
-          Vec v = fr._vecs[i];
+          Vec v = fr.vecs()[i];
           col.addProperty(HEADER,fr._names[i]);
           if( !v.isEnum()) {
             col.addProperty(MIN , noNaN(v.min() ));

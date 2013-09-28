@@ -228,13 +228,13 @@ public final class ParseDataset2 extends Job {
     final Frame _f;
     SVFTask( Frame f ) { _f = f; }
     @Override public void map(Key key) {
-      Vec v0 = _f._vecs[0];
+      Vec v0 = _f.vecs()[0];
       for(int i = 0; i < v0.nChunks(); ++i) {
         if( !v0.chunkKey(i).home() ) continue;
         // First find the nrows as the # rows of non-missing chunks; done on
         // locally-homed chunks only - to keep the data distribution.
         int nlines = 0;
-        for( Vec vec : _f._vecs ) {
+        for( Vec vec : _f.vecs() ) {
           Value val = H2O.get(vec.chunkKey(i)); // Local-get only
           if( val != null ) {
             nlines = ((Chunk)val.get())._len;
@@ -243,7 +243,7 @@ public final class ParseDataset2 extends Job {
         }
 
         // Now fill in appropriate-sized zero chunks
-        for( Vec vec:_f._vecs ) {
+        for( Vec vec:_f.vecs() ) {
           Key k = vec.chunkKey(i);
           if( !k.home() ) continue; // Local keys only
           Value val = H2O.get(k);   // Local-get only
@@ -257,7 +257,7 @@ public final class ParseDataset2 extends Job {
 
   private static Vec getVec(Key key) {
     Object o = UKV.get(key);
-    return o instanceof Vec ? (ByteVec) o : ((Frame) o)._vecs[0];
+    return o instanceof Vec ? (ByteVec) o : ((Frame) o).vecs()[0];
   }
   private static String [] genericColumnNames(int ncols){
     String [] res = new String[ncols];
@@ -281,10 +281,10 @@ public final class ParseDataset2 extends Job {
     // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
     SVFTask t = new SVFTask(fr);
     t.invokeOnAllNodes();
-    int [] ecols = new int[fr._vecs.length];
+    int [] ecols = new int[fr.vecs().length];
     int n = 0;
     for(int i = 0; i < ecols.length; ++i)
-      if(fr._vecs[i].isEnum() )
+      if(fr.vecs()[i].isEnum() )
         ecols[n++] = i;
     ecols =  Arrays.copyOf(ecols, n);
     // Rollup all the enum columns; uniformly renumber enums per chunk, etc.
@@ -293,9 +293,9 @@ public final class ParseDataset2 extends Job {
       Enum [] enums = eft._gEnums;
       String [][] ds = new String[ecols.length][];
       int j = 0;
-      for(int i:ecols)ds[j++] =  fr._vecs[i]._domain = enums[i].computeColumnDomain();
+      for(int i:ecols)ds[j++] =  fr.vecs()[i]._domain = enums[i].computeColumnDomain();
       Vec [] evecs = new Vec[ecols.length];
-      for(int i = 0; i < evecs.length; ++i)evecs[i] = fr._vecs[ecols[i]];
+      for(int i = 0; i < evecs.length; ++i)evecs[i] = fr.vecs()[ecols[i]];
       new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols).doAll(evecs);
     }
     // Jam the frame of columns into the K/V store

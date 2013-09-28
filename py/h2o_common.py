@@ -20,6 +20,9 @@ class SetupOneJVM14(object):
 
     @classmethod
     def tearDownClass(cls):
+        # if we got here by time out exception waiting for a job, we should clear
+        # all jobs, if we're leaving h2o cloud up, and going to run another test
+        h2o.cancelAllJobs() 
         h2o.tear_down_cloud()
 
 #************************************************************************************
@@ -38,6 +41,9 @@ class SetupThreeJVM4(object):
 
     @classmethod
     def tearDownClass(cls):
+        # if we got here by time out exception waiting for a job, we should clear
+        # all jobs, if we're leaving h2o cloud up, and going to run another test
+        h2o.cancelAllJobs() 
         h2o.tear_down_cloud()
 
 #************************************************************************************
