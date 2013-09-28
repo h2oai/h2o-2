@@ -197,14 +197,17 @@ public abstract class Chunk extends Iced implements Cloneable {
   public String pformat () { return pformat0(); }
   public int pformat_len() { return pformat_len0(); }
   protected String pformat0() { 
-    assert !hasFloat();         // Floats handled in subclasses
+    assert !hasFloat() : "need impl:"+getClass(); // Floats handled in subclasses
+    long min = (long)_vec.min();
+    if( min < 0 ) return "% "+pformat_len0()+"d";
     return "%"+pformat_len0()+"d";
   }
   protected int pformat_len0() { 
     assert !hasFloat();         // Floats handled in subclasses
     int len=0;
-    long max = (long)_vec.max();
-    if( max < 0 ) { max = -max; len++; }
+    long min = (long)_vec.min();
+    if( min < 0 ) len++;
+    long max = Math.max(Math.abs(min),Math.abs((long)_vec.max()));
     for( int i=1; i<DParseTask.powers10i.length; i++ )
       if( max < DParseTask.powers10i[i] )
         return i+len;
@@ -214,7 +217,7 @@ public abstract class Chunk extends Iced implements Cloneable {
     double dx = Math.log10(scale);
     int x = (int)dx;
     if( DParseTask.pow10i(x) != scale ) throw H2O.unimpl();
-    int w=lg/*compression limits digits*/+1/*dot*/+1/*e*/+(x<0?1:0)/*neg exp*/+1/*digits of exp*/;
+    int w=1+/*blank/sign*/+lg/*compression limits digits*/+1/*dot*/+1/*e*/+1/*neg exp*/+2/*digits of exp*/;
     return w;
   }
 

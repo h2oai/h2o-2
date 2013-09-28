@@ -21,9 +21,6 @@ public class GBM extends SharedTreeModelBuilder {
   @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   public double learn_rate = 0.2;
 
-  @API(help = "The GBM Model")
-  public GBMModel gbm_model;
-
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -32,7 +29,7 @@ public class GBM extends SharedTreeModelBuilder {
       super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
     }
   }
-  public Frame score( Frame fr ) { return gbm_model.score(fr,true);  }
+  public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
 
   protected Log.Tag.Sys logTag() { return Sys.GBM__; }
   public static final String KEY_PREFIX = "__GBMModel_";
@@ -63,8 +60,8 @@ public class GBM extends SharedTreeModelBuilder {
     return GBMProgressPage.redirect(this, self(),dest());
   }
 
-  protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final int ncols, final long nrows, final char nclass, final int ymin, final Timer t_build ) {
-    gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,new DTree[0][], null, ymin, null);
+  protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
+    GBMModel gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,new DTree[0][], null, _ymin, null);
     DKV.put(outputKey, gbm_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
@@ -74,33 +71,30 @@ public class GBM extends SharedTreeModelBuilder {
 
         // Build trees until we hit the limit
         for( int tid=0; tid<ntrees; tid++) {
-          if( cancelled() ) break;
 
           // ESL2, page 387
           // Step 2a: Compute prob distribution from prior tree results: 
           //   Work <== f(Tree)
-          new ComputeProb(ncols,nclass).doAll(fr);
-          System.out.println(fr.toStringAll());
+          new ComputeProb().doAll(fr);
 
           // ESL2, page 387
           // Step 2b i: Compute residuals from the probability distribution
           //   Work <== f(Work)
-          new ComputeRes(ncols,nclass,ymin).doAll(fr);
-          System.out.println(fr.toStringAll());
-
+          new ComputeRes().doAll(fr);
           
-          // ESL2, page 387, Step 2b ii, iii
-          forest = buildNextKTrees(fr,forest,ncols,nrows,nclass,ymin);
-        //  // System.out.println("Tree #" + forest.length + ":\n" +  forest[forest.length-1].compress().toString());
-        //  // Tree-by-tree scoring
-        //  BulkScore bs2 = new BulkScore(forest,tid,ncols,nclass,ymin,1.0f).doAll(fr).report( Sys.GBM__, max_depth );
-        //  _errs = Arrays.copyOf(_errs,_errs.length+1);
-        //  _errs[_errs.length-1] = (float)bs2._sum/nrows;
-        //  gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, ymin,bs2._cm);
-        //  DKV.put(outputKey, gbm_model);
+          // ESL2, page 387, Step 2b ii, iii, iv
+          forest = buildNextKTrees(fr,forest);
+          if( cancelled() ) break; // If canceled during building, do not bulkscore
+
+          // Check latest predictions
+          Score sc = new Score().doAll(fr).report(Sys.GBM__,forest);
+          _errs = Arrays.copyOf(_errs,_errs.length+1);
+          _errs[_errs.length-1] = (float)sc._sum/_nrows;
+          GBMModel gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, _ymin,sc._cm);
+          DKV.put(outputKey, gbm_model);
         }
 
-        cleanUp(fr,ncols,t_build); // Shared cleanup
+        cleanUp(fr,t_build); // Shared cleanup
         tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
@@ -114,65 +108,65 @@ public class GBM extends SharedTreeModelBuilder {
   // --------------------------------------------------------------------------
   // Compute Probability Distribution from prior tree results.
   // Prob_k = exp(Work_k)/sum_all_K exp(Work_k)
+  // Work <== f(Tree)
   class ComputeProb extends MRTask2<ComputeProb> {
-    final int _ncols;
-    final char _nclass;
-    ComputeProb( int ncols, char nclass ) { _ncols=ncols; _nclass=nclass; }
-    private Chunk tree( Chunk chks[], int c) { return DTree.chk_tree(chks,_ncols,_nclass,c); }
-    private Chunk work( Chunk chks[], int c) { return DTree.chk_work(chks,_ncols,_nclass,c); }
     @Override public void map( Chunk chks[] ) {
-      Chunk ys = DTree.chk_resp(chks,_ncols,_nclass);
+      Chunk ys = chk_resp(chks);
       double ds[] = new double[_nclass];
       for( int row=0; row<ys._len; row++ ) {
-        double sum=0;
-        for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
-          sum+=(ds[k]=Math.exp(tree(chks,k).at0(row)));
+        double sum = score0(chks,ds,row);
         for( int k=0; k<_nclass; k++ ) // Save as a probability distribution
-          work(chks,k).set0(row,ds[k]/sum);
+          chk_work(chks,k).set0(row,(float)(ds[k]/sum));
       }
     }
   }
 
+  // Read the 'tree' columns, do model-specific math and put the results in the
+  // ds[] array, and return the sum.  Dividing any ds[] element by the sum
+  // turns the results into a probability distribution.
+  @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
+    double sum=0;
+    for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
+      sum+=(ds[k]=Math.exp(chk_tree(chks,k).at0(row)));
+    return sum;
+  }
+
   // --------------------------------------------------------------------------
   // Compute Residuals from Actuals
+  // Work <== f(Work)
   class ComputeRes extends MRTask2<ComputeRes> {
-    final int _ncols, _ymin;
-    final char _nclass;
-    ComputeRes( int ncols, char nclass, int ymin ) { _ncols=ncols; _nclass=nclass; _ymin = ymin; }
-    private Chunk work( Chunk chks[], int c) { return DTree.chk_work(chks,_ncols,_nclass,c); }
     @Override public void map( Chunk chks[] ) {
-      Chunk ys = DTree.chk_resp(chks,_ncols,_nclass);
+      Chunk ys = chk_resp(chks);
       for( int row=0; row<ys._len; row++ ) {
         int y = (int)ys.at80(row)-_ymin; // zero-based response variable
         for( int k=0; k<_nclass; k++ ) {
-          Chunk wk = work(chks,k);
-          wk.set0(row, (y==k?1:0)-wk.at0(row) );
+          Chunk wk = chk_work(chks,k);
+          wk.set0(row, (y==k?1f:0f)-(float)wk.at0(row) );
         }
       }
     }
   }
 
-
   // --------------------------------------------------------------------------
   // Build the next k-trees, which is trying to correct the residual error from
   // the prior trees.  From LSE2, page 387.  Step 2b ii, iii.
-  private DTree[][] buildNextKTrees(Frame fr, DTree forest[][], final int ncols, long nrows, final char nclass, int ymin) {
-    String domain[] = fr.vecs()[ncols].domain(); // For printing
+  private DTree[][] buildNextKTrees(Frame fr, DTree forest[][]) {
+    String domain[] = fr.vecs()[_ncols].domain(); // For printing
 
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
-    DTree[] ktrees = new DTree[nclass];
-    for( int k=0; k<nclass; k++ ) {
+    final DTree[] ktrees = new DTree[_nclass];
+    for( int k=0; k<_nclass; k++ ) {
       // Initially setup as-if an empty-split had just happened
-      ktrees[k] = new DTree(fr._names,ncols,(char)nbins,nclass,min_rows);
-      new GBMUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,ncols,(char)nbins)); // The "root" node
+      ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
+      new GBMUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
     }
 
     // Add ktrees to the end of the forest
     DTree[][] oldForest = forest;
     forest = Arrays.copyOf(forest,forest.length+1);
     forest[forest.length-1] = ktrees;
-    int[] leafs = new int[nclass]; // Define a "working set" of leaf splits, from here to tree._len
+    int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
 
     // ----
     // ESL2, page 387.  Step 2b ii.
@@ -191,7 +185,8 @@ public class GBM extends SharedTreeModelBuilder {
       // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs,ncols,nclass,ymin).doAll(fr);
+      System.out.println("QQ"+Arrays.toString(leafs));
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs).doAll(fr);
       //System.out.println(sbh.profString());
 
       // Build up the next-generation tree splits from the current histograms.
@@ -199,19 +194,31 @@ public class GBM extends SharedTreeModelBuilder {
       //           O( #active_splits * #bins * #ncols )
       // but is NOT over all the data.
       boolean did_split=false;
-      for( int k=0; k<nclass; k++ ) {
+      for( int k=0; k<_nclass; k++ ) {
         DTree tree = ktrees[k]; // Tree for class K
         int tmax = tree._len;   // Number of total splits in tree K
         for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
           UndecidedNode udn = tree.undecided(leaf);
           udn._hs = sbh.getFinalHisto(k,leaf);
+
+          // Check for a constant response & stub out the tree
+          DBinHistogram h=null;
+          for( int i=0; i<_ncols; i++ )
+            if( udn._hs[i] instanceof DBinHistogram ) 
+              { h=(DBinHistogram)udn._hs[i]; break; }
+          if( h.isConstantResponse() ) {
+            new GBMLeafNode(tree,-1); // Stub the root
+            tmax = tree._len;           // No new leaves
+            break;                      // Done with this tree
+          }
+
           //System.out.println("Class "+domain[k]+", "+udn);
           // Replace the Undecided with the Split decision
           GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn);
           //System.out.println(dn);
           did_split = true;
         }
-        leafs[k]=tree._len;     // Setup leafs for next tree level
+        leafs[k]=tmax;          // Setup leafs for next tree level
       }
     
       // If we did not make any new splits, then the tree is split-to-death
@@ -219,52 +226,61 @@ public class GBM extends SharedTreeModelBuilder {
     }
 
     // Each tree bottomed-out in a DecidedNode; go 1 more level and insert
-    // GBMLeafNodes to hold predictions.
-    for( int k=0; k<nclass; k++ ) {
+    // LeafNodes to hold predictions.
+    for( int k=0; k<_nclass; k++ ) {
       DTree tree = ktrees[k];
-      int leaf = leafs[k];
-      assert leaf==tree._len;
+      int leaf = leafs[k] = tree._len;
       for( int nid=0; nid<leaf; nid++ ) {
         if( tree.node(nid) instanceof DecidedNode ) {
           DecidedNode dn = tree.decided(nid);
-          for( int i=0; i<dn._nids.length; i++ )
-            if( dn._nids[i] == -1 || // Bottomed out
-                // Or chopped off for depth
-                tree.node(dn._nids[i]) instanceof UndecidedNode )
+          for( int i=0; i<dn._nids.length; i++ ) {
+            int cnid = dn._nids[i];
+            if( cnid == -1 ||   // Bottomed out
+                tree.node(cnid) instanceof UndecidedNode ) // Or chopped off for depth
               dn._nids[i] = new GBMLeafNode(tree,nid)._nid;
+          }
         }
       }
     }
 
     // ----
-    // ESL2, page 387.  Step 2b iii.
-    GammaPass gp = new GammaPass(ktrees,leafs,ncols,nclass,ymin).doAll(fr);
-    double m1class = (double)(nclass-1)/nclass;
-    for( int k=0; k<nclass; k++ ) {
+    // ESL2, page 387.  Step 2b iii.  Compute the gammas, and store them back
+    // into the tree leaves.  Includes learn_rate.
+    // gamma_i_k = (nclass-1)/nclass * (sum res_i / sum (|res_i|*(1-|res_i|)))
+    GammaPass gp = new GammaPass(ktrees,leafs).doAll(fr);
+    double m1class = (double)(_nclass-1)/_nclass; // K-1/K
+    for( int k=0; k<_nclass; k++ ) {
       final DTree tree = ktrees[k];
       for( int i=0; i<tree._len-leafs[k]; i++ ) {
-        double g = m1class*gp._rss[k][i]/gp._gss[k][i];
-        ((GBMLeafNode)tree.node(leafs[k]+i))._pred = g;
+        assert gp._gss[k][i] != 0 : "Split until an empty leaf? nid="+(leafs[k]+i)+"  tree="+k;
+        double g = learn_rate*m1class*gp._rss[k][i]/gp._gss[k][i];
+        ((LeafNode)tree.node(leafs[k]+i))._pred = g;
       }
     }
 
-    
-
-
-    //// Scale the tree down by the learning rate
-    //for( int i=0; i<tree._len; i++ ) {
-    //  if( tree.node(i) instanceof DecidedNode ) {
-    //    float pred[][] = tree.decided(i)._pred;
-    //    if( pred != null )
-    //      for( int b=0; b<pred.length; b++ )
-    //        for( int c=0; c<pred[b].length; c++ )
-    //          pred[b][c] *= learn_rate;
-    //  }
-    //}
-    //
+    // ----
+    // ESL2, page 387.  Step 2b iv.  Cache the sum of all the trees, plus the
+    // new tree, in the 'tree' columns.  Also, zap the NIDs for next pass.
+    // Tree <== f(Tree)
+    // Nids <== 0
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        // For all tree/klasses
+        for( int k=0; k<_nclass; k++ ) {
+          final DTree tree = ktrees[k];
+          final Chunk nids = chk_nids(chks,k);
+          final Chunk ct   = chk_tree(chks,k);
+          for( int row=0; row<nids._len; row++ ) {
+            int nid = (int)nids.at80(row);
+            ct.set0(row, ct.at0(row) + ((LeafNode)tree.node(nid))._pred);
+            nids.set0(row,0);
+          }            
+        }
+      }
+    }.doAll(fr);
 
     // Print the generated K trees
-    for( int k=0; k<nclass; k++ )
+    for( int k=0; k<_nclass; k++ )
       System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
 
     return forest;
@@ -273,45 +289,35 @@ public class GBM extends SharedTreeModelBuilder {
 
   // ---
   // ESL2, page 387.  Step 2b iii.
-  private static class GammaPass extends MRTask2<GammaPass> {
+  // Nids <== f(Nids)
+  private class GammaPass extends MRTask2<GammaPass> {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
-    final int _ncols;
-    final char _nclass;         // One for regression, else #classes
-    // Bias classes to zero; e.g. covtype classes range from 1-7 so this is 1.
-    // e.g. prostate classes range 0-1 so this is 0
-    final int _ymin;
     // Per leaf: sum(res);
     double _rss[/*tree/klass*/][/*tree-relative node-id*/];
     // Per leaf:  sum(|res|*1-|res|)
     double _gss[/*tree/klass*/][/*tree-relative node-id*/];
-
-    GammaPass(DTree trees[], int leafs[], int ncols, char nclass, int ymin) {
-      assert trees.length==nclass; // One tree per-class
-      _leafs=leafs;
-      _trees=trees;
-      _ncols=ncols;
-      _nclass = nclass;
-      _ymin = ymin;
-    }
-
+    GammaPass(DTree trees[], int leafs[]) { _leafs=leafs; _trees=trees; }
     @Override public void map( Chunk[] chks ) {
       _gss = new double[_nclass][];
       _rss = new double[_nclass][];
-      // For all klasses
+      // For all tree/klasses
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
         final int   leaf = _leafs[k];
         // A leaf-biased array of all active histograms
         final double gs[] = _gss[k] = new double[tree._len-leaf];
         final double rs[] = _rss[k] = new double[tree._len-leaf];
-        final Chunk nids = DTree.chk_nids(chks,_ncols,_nclass,k);
-        final Chunk wrks = DTree.chk_work(chks,_ncols,_nclass,k);
+        final Chunk nids = chk_nids(chks,k);
+        final Chunk wrks = chk_work(chks,k);
         for( int row=0; row<nids._len; row++ ) {
           int nid = (int)nids.at80(row); // Get Node to decide from
+          if( tree.node(nid) instanceof UndecidedNode )
+            nid = tree.node(nid)._pid;
           int leafnid = tree.decided(nid).ns(chks,row);
           assert leaf <= leafnid && leafnid < tree._len;
-          assert tree.node(leafnid) instanceof GBMLeafNode;
+          assert tree.node(leafnid) instanceof LeafNode;
+          nids.set0(row,leafnid);
           double res = wrks.at0(row);
           double ares = Math.abs(res);
           gs[leafnid-leaf] += ares*(1-ares);
@@ -330,9 +336,7 @@ public class GBM extends SharedTreeModelBuilder {
   // specifies a decision algorithm given complete histograms on all
   // columns.  GBM algo: find the lowest error amongst *all* columns.
   static class GBMDecidedNode extends DecidedNode<GBMUndecidedNode> {
-    
     GBMDecidedNode( GBMUndecidedNode n ) { super(n); }
-
     @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists ) {
       return new GBMUndecidedNode(tree,nid,nhists);
     }
@@ -340,36 +344,37 @@ public class GBM extends SharedTreeModelBuilder {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override DTree.Split bestCol( GBMUndecidedNode u ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,0L,0L);
+      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
       DHistogram hs[] = u._hs;
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;
-        DTree.Split s = hs[i].scoreMSE(i,u._tree._names[i]);
-        if( s._se < best._se ) best = s;
-        if( s._se <= 0 ) break; // No point in looking further!
+        DTree.Split s = hs[i].scoreMSE(i);
+        if( s.se() < best.se() ) best = s;
+        if( s.se() <= 0 ) break; // No point in looking further!
       }
       return best;
     }
   }
 
+  // ---
   // GBM DTree undecided node: same as the normal UndecidedNode, but specifies
   // a list of columns to score on now, and then decide over later.
   // GBM algo: use all columns
   static class GBMUndecidedNode extends UndecidedNode {
     GBMUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
-
     // Randomly select mtry columns to 'score' in following pass over the data.
     // In GBM, we use all columns (as opposed to RF, which uses a random subset).
     @Override int[] scoreCols( DHistogram[] hs ) { return null; }
   }
-  static class GBMLeafNode extends Node {
-    double _pred;
+
+  // ---
+  static class GBMLeafNode extends LeafNode {
     GBMLeafNode( DTree tree, int pid ) { super(tree,pid); }
     GBMLeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
-    public StringBuilder toString2(StringBuilder sb, int depth) {
-      for( int d=0; d<depth; d++ ) sb.append("  ");
-      return sb.append("pred=").append(_pred).append("\n");
-    }
+    // Insert just the predictions: a single byte/short if we are predicting a
+    // single class, or else the full distribution.
+    @Override protected AutoBuffer compress(AutoBuffer ab) { return ab.put4f((float)_pred); }
+    @Override protected int size() { return 4; }
   }
 }

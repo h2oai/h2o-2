@@ -30,15 +30,15 @@ import water.util.Log;
 */
 public class DHistogram<T extends DHistogram> extends Iced {
   transient final String _name; // Column name, for pretty-printing
-  final boolean _isInt;         // Column only holds integers
+  final byte _isInt;            // 0=>floats, 1,2=>Column only holds integers, 2=>Enum
   float _min, _max;             // Lower-end of binning
-  public DHistogram( String name, boolean isInt, float min, float max ) {
+  public DHistogram( String name, byte isInt, float min, float max ) {
     _name = name;
     _isInt = isInt;
     _min = min;
     _max = max;
   }
-  public DHistogram( String name, boolean isInt ) {
+  public DHistogram( String name, byte isInt ) {
     this(name,isInt,Float.MAX_VALUE,-Float.MAX_VALUE);
   }
 
@@ -73,7 +73,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
   float maxs(int i) { return _max; }
   // Do not ask for 'score' from a non-scoring histogram
   double score( ) { return Float.NaN; }
-  DTree.Split scoreMSE( int col, String name ) { return null; }
+  DTree.Split scoreMSE( int col ) { return null; }
   // Do not ask for 'mean' from a non-scoring histogram
   double mean( int bin ) { return Double.NaN; }
   // Do not ask for 'var' from a non-scoring histogram

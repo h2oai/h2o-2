@@ -232,6 +232,7 @@ public class Frame extends Iced {
       for( int x=0; x<f.length(); x++ )// Get printable width from format
         if( Character.isDigit(f.charAt(x)) ) w = w*10+(f.charAt(x)-'0');
         else if( w>0 ) break;
+      if( f.charAt(1)==' ' ) w++; // Leading blank is not in print-width
       int len = sb.length();
       if( n.length() <= w ) {          // Short name, big digits
         sb.append(n);
@@ -253,9 +254,17 @@ public class Frame extends Iced {
   }
   public StringBuilder toString( StringBuilder sb, String[] fs, long idx ) {
     for( int c=0; c<fs.length; c++ ) {
-      if( _vecs[c].isNA(idx) ) throw H2O.unimpl();
-      else if( _vecs[c].isInt() ) sb.append(String.format(fs[c],_vecs[c].at8(idx)));
-      else                        sb.append(String.format(fs[c],_vecs[c].at (idx)));
+      if( _vecs[c].isInt() ) {
+        if( _vecs[c].isNA(idx) ) {
+          Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+          int len = C.pformat_len0();  // Printable width
+          for( int i=0; i<len; i++ ) sb.append('-');
+        } else
+          sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+      } else {
+        sb.append(String.format(fs[c],_vecs[c].at (idx)));
+        if( _vecs[c].isNA(idx) ) sb.append(' ');
+      }
       sb.append(' ');           // Column seperator
     }
     sb.append('\n');

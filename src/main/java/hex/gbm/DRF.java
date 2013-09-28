@@ -1,8 +1,6 @@
 package hex.gbm;
 
-import hex.gbm.DTree.BulkScore;
 import hex.gbm.DTree.DecidedNode;
-import hex.gbm.DTree.ScoreBuildHistogram;
 import hex.gbm.DTree.UndecidedNode;
 import hex.rng.MersenneTwisterRNG;
 
@@ -33,9 +31,6 @@ public class DRF extends SharedTreeModelBuilder {
   @API(help = "Seed for the random number generator", filter = Default.class)
   long seed = new Random().nextLong();
 
-  @API(help = "The DRF Model")
-  DRFModel drf_model;
-
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -61,7 +56,7 @@ public class DRF extends SharedTreeModelBuilder {
       //return preds;
     }
   }
-  public Frame score( Frame fr ) { return drf_model.score(fr,true);  }
+  public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr,true);  }
 
   protected Log.Tag.Sys logTag() { return Sys.DRF__; }
   public static final String KEY_PREFIX = "__DRFModel_";
@@ -92,11 +87,11 @@ public class DRF extends SharedTreeModelBuilder {
     return DRFProgressPage.redirect(this, self(),dest());
   }
 
-  protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final int ncols, final long nrows, final char nclass, final int ymin, final Timer t_build ) {
-    final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(ncols),1) : mtries;
-    assert 1 <= mtrys && mtrys <= ncols : "Too large mtrys="+mtrys+", ncols="+ncols;
+  protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
+    final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(_ncols),1) : mtries;
+    assert 1 <= mtrys && mtrys <= _ncols : "Too large mtrys="+mtrys+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,new DTree[0][],null, ymin, null);
+    DRFModel drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,new DTree[0][],null, _ymin, null);
     DKV.put(outputKey, drf_model);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
@@ -137,7 +132,7 @@ public class DRF extends SharedTreeModelBuilder {
         //  }
         //
         //  // Make NTREE trees at once
-        //  int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, ncols, nclass, ymin, nrows, sample_rate);
+        //  int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, sample_rate);
         //  if( d>depth ) depth=d;    // Actual max depth used
         //
         //  BulkScore bs = new BulkScore(forest,forest.length-xtrees,ncols,nclass,ymin,sample_rate).doAll(fr).report( Sys.DRF__, depth );
@@ -152,7 +147,7 @@ public class DRF extends SharedTreeModelBuilder {
         //  for( int t=0; t<xtrees; t++ )
         //    UKV.remove(fr.remove(fr.numCols()-1)._key);
         //}
-        //cleanUp(fr,ncols,t_build); // Shared cleanup
+        //cleanUp(fr,t_build); // Shared cleanup
         //tryComplete();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
@@ -163,16 +158,16 @@ public class DRF extends SharedTreeModelBuilder {
     }));
   }
 
-  private static class Set1Task extends MRTask2<Set1Task> {
-    final int _ymin, _ncols;
+  private class Set1Task extends MRTask2<Set1Task> {
+    final int _ymin;
     final char _nclass;
-    Set1Task( int ymin, int ncols, char nclass ) { _ymin = ymin; _ncols = ncols; _nclass=nclass; }
+    Set1Task( int ymin, char nclass ) { _ymin = ymin; _nclass=nclass; }
     @Override public void map( Chunk chks[] ) {
-      Chunk cy = DTree.chk_resp(chks,_ncols,_nclass);
+      Chunk cy = chk_resp(chks);
       for( int i=0; i<cy._len; i++ ) {
         if( cy.isNA0(i) ) continue;
         int cls = (int)cy.at80(i) - _ymin;
-        DTree.chk_work(chks,_ncols,_nclass,cls).set0(i,1.0f);
+        chk_work(chks,cls).set0(i,1.0f);
       }
     }
   }
@@ -180,7 +175,7 @@ public class DRF extends SharedTreeModelBuilder {
   // ----
   // One Big Loop till the tree is of proper depth.
   // Adds a layer to the tree each pass.
-  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int max_depth, Frame fr, Vec vresponse, int ncols, char nclass, int ymin, long nrows, double sample_rate ) {
+  public int makeSomeTrees( int st, DRFTree trees[], int leafs[], int ntrees, int max_depth, Frame fr, Vec vresponse, double sample_rate ) {
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
       Timer t_pass = new Timer();
@@ -193,7 +188,7 @@ public class DRF extends SharedTreeModelBuilder {
       // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs,ncols,nclass,ymin).doAll(fr);
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs).doAll(fr);
       //System.out.println(sbh.profString());
 
       // Reassign the new DHistograms back into the DTrees
@@ -240,6 +235,16 @@ public class DRF extends SharedTreeModelBuilder {
     return depth;
   }
 
+  // Read the 'tree' columns, do model-specific math and put the results in the
+  // ds[] array, and return the sum.  Dividing any ds[] element by the sum
+  // turns the results into a probability distribution.
+  @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
+    double sum=0;
+    for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
+      sum+=(ds[k]=chk_tree(chks,k).at0(row));
+    return sum;
+  }
+
   // A standard DTree with a few more bits.  Support for sampling during
   // training, and replaying the sample later on the identical dataset to
   // e.g. compute OOBEE.
@@ -281,7 +286,7 @@ public class DRF extends SharedTreeModelBuilder {
       if( u._hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
-        DTree.Split s = u._hs[col].scoreMSE(col,u._tree._names[col]);
+        DTree.Split s = u._hs[col].scoreMSE(col);
         if( s._se < best._se ) best = s;
         if( s._se <= 0 ) break; // No point in looking further!
       }

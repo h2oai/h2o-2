@@ -32,9 +32,9 @@ public class GBMTest extends TestUtil {
     //         });
 
     // Classification tests
-    basicGBM("./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
-             });
+    //basicGBM("./smalldata/test/test_tree.csv","tree.hex",
+    //         new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
+    //         });
     //basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
     //         new PrepData() {
     //           Vec prep(Frame fr) { 
@@ -45,12 +45,12 @@ public class GBMTest extends TestUtil {
     //             return fr.remove("CAPSULE");
     //           }
     //         });
-    //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
-    //         });
-    //basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
-    //         });
+    basicGBM("./smalldata/cars.csv","cars.hex",
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             });
+    basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+             });
     //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
     //         new PrepData() {
     //           Vec prep(Frame fr) { 
@@ -77,13 +77,13 @@ public class GBMTest extends TestUtil {
       UKV.remove(fkey);
       gbm.vresponse = prep.prep(gbm.source);
       gbm.ntrees = 5;
-      gbm.max_depth = 1;
-      gbm.learn_rate = 0.2f;
+      gbm.max_depth = 5;
+      gbm.learn_rate = 1.0f;
       gbm.min_rows = 1;
       gbm.nbins = 100;
       gbm.serve();              // Start it
       gbm.get();                // Block for it
-      
+
       fr = gbm.score(gbm.source);
 
     } finally {

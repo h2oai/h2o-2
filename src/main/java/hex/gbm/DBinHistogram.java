@@ -38,7 +38,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   private      double[] _MSs;  // Mean response & 2nd moment, per-bin per-class
 
   // Fill in read-only sharable values
-  public DBinHistogram( String name, final char nbins, boolean isInt, float min, float max, long nelems ) {
+  public DBinHistogram( String name, final char nbins, byte isInt, float min, float max, long nelems ) {
     super(name,isInt,min,max);
     assert nelems > 0;
     assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
@@ -46,7 +46,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
     float step;
-    if( isInt && max-min < xbins ) {
+    if( isInt>0 && max-min <= nbins ) {
+      assert ((long)min)==min;
       xbins = (char)((long)max-(long)min+1L); // Shrink bins
       step = 1.0f;                            // Fixed stepsize
     } else {
@@ -103,7 +104,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Recursive mean & variance:
   //    http://www.johndcook.com/standard_deviation.html
   //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-  DTree.Split scoreMSE( int col, String name ) {
+  DTree.Split scoreMSE( int col ) {
     assert _nbins > 1;
 
     // Compute mean/var for cumulative bins from 0 to nbins inclusive.
@@ -114,12 +115,14 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       double m0 = MS0[2*(b-1)+0],  m1 =  _MSs[2*(b-1)+0];
       double s0 = MS0[2*(b-1)+1],  s1 =  _MSs[2*(b-1)+1];
       long   k0 = ns0[   b-1   ],  k1 = _bins[   b-1   ];
+      if( k0==0 && k1==0 ) continue;
       double delta=m1-m0;
       MS0[2*b+0] = (k0*m0+k1*m1)/(k0+k1); // Mean
       MS0[2*b+1] = s0+s1+delta*delta*k0*k1/(k0+k1); // 2nd moment
       ns0[  b  ] = k0+k1;
       tot += k1;
     }
+    assert Math.abs(MS0[2*_nbins+1]) > 1e-8 : "No variance, why split? "+Arrays.toString(MS0)+" col "+_name+" "+this;
 
     // Compute mean/var for cumulative bins from nbins to 0 inclusive.
     double MS1[] = new double[2*(_nbins+1)];
@@ -128,37 +131,76 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       double m0 = MS1[2*(b+1)+0],  m1 =  _MSs[2*(b+0)+0];
       double s0 = MS1[2*(b+1)+1],  s1 =  _MSs[2*(b+0)+1];
       long   k0 = ns1[   b+1   ],  k1 = _bins[   b+0   ];
+      if( k0==0 && k1==0 ) continue;
       double delta=m1-m0;
       MS1[2*(b-0)+0] = (k0*m0+k1*m1)/(k0+k1); // Mean
       MS1[2*(b-0)+1] = s0+s1+delta*delta*k0*k1/(k0+k1); // 2nd moment
       ns1[  (b-0)  ] = k0+k1;
       assert ns0[b]+ns1[b]==tot;
     }
+    assert Math.abs(MS0[2*_nbins+1]-MS1[2*0+1]) < 1e-8 
+      : Arrays.toString(MS0)+":"+Arrays.toString(MS1)+", "+
+      Arrays.toString(ns0)+":"+Arrays.toString(ns1);
 
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
     // not-equal to some value.  Equal/not-equal makes sense for catagoricals
     // but both splits could work for any integral datatype.  Do the less-than
     // splits first.
-    assert Math.abs(MS0[2*_nbins+1]-MS1[2*0+1]) < 1e-8; // Endpoints have same Var
     int best=0;                         // The no-split
-    double best_se=Double.MAX_VALUE;    // Best squared error
+    double best_se0=Double.MAX_VALUE;   // Best squared error
+    double best_se1=Double.MAX_VALUE;   // Best squared error
+    boolean equal=false;                // Ranged check
     for( int b=1; b<=_nbins-1; b++ ) {
       double se = (MS0[2*b+1]+MS1[2*b+1]); // Squared Error (not MSE)
-      if( (se < best_se) || // Strictly less error?
+      if( (se < best_se0+best_se1) || // Strictly less error?
           // Or tied MSE, then pick split towards middle bins
-          best_se == se && best < (_nbins>>1) ) {
-        best_se = se; best = b;
+          se == (best_se0+best_se1) && best < (_nbins>>1) ) {
+        best_se0 = MS0[2*b+1]; 
+        best_se1 = MS1[2*b+1]; 
+        best = b;
       }
     }
+
+    // If the min==max, we can also try an equality-based split
+    //System.out.println(Arrays.toString(MS0)+" : "+Arrays.toString(ns0));
+    //System.out.println(Arrays.toString(MS1)+" : "+Arrays.toString(ns1));
+    if( _isInt > 0 && _step == 1.0f ) { // For any integral (not float) column
+      for( int b=1; b<=_nbins-1; b++ ) {
+        if( _bins[b] == 0 ) continue;       // Ignore empty splits
+        assert _mins[b] == _maxs[b];
+        //System.out.println("mse0="+MS0[2*(b+0)+1]+", mseX="+_MSs[2*(b+0)+1]+", mse1="+MS1[2*(b+1)+1]);
+        
+        double m0 = MS0[2*(b+0)+0],  m1 = MS1[2*(b+1)+0];
+        double s0 = MS0[2*(b+0)+1],  s1 = MS1[2*(b+1)+1];
+        long   k0 = ns0[   b+0   ],  k1 = ns1[   b+1   ];
+        if( k0==0 && k1==0 ) continue;
+        double delta=m1-m0;
+        double mi = (k0*m0+k1*m1)/(k0+k1); // Mean of included set
+        double si = s0+s1+delta*delta*k0*k1/(k0+k1); // 2nd moment
+        double se = si + _MSs[2*(b+0)+1]; // The included set, plus the excluded single bin
+        
+        if( se < best_se0+best_se1 ) {      // Strictly less error?
+          //System.out.println("Equality best for bin="+b+" col="+_name+", was se0="+best_se0+", se1="+best_se1+" splitting @ "+best+", new se="+se+"="+si+"+"+_MSs[2*(b+0)+1]+" "+(ns0[b+0]+ns1[b+1])+" "+_bins[b+0]);
+          best_se0 = si;
+          best_se1 = _MSs[2*(b+0)+1];
+          best = b;
+          equal = true;           // Equality check
+        }
+      }
+    }
+
     assert best > 0 : "Must actually pick a split "+best;
-    return new DTree.Split(col,best,false,best_se,ns0[best],ns1[best]);
+    long n0 = !equal ? ns0[best] : ns0[best]+ns1[best+1];
+    long n1 = !equal ? ns1[best] : _bins[best]          ;
+    return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1);
   }
 
   // Add one row to a bin found via simple linear interpolation.
   // Compute bin min/max.
   // Compute response mean & variance.
   void incr( int row, float col_data, double y ) {
+    if( Float.isNaN(col_data) ) return;
     int b = bin(col_data);      // Compute bin# via linear interpolation
     _bins[b]++;                 // Bump count in bin
     long k = _bins[b];          // Row count for bin b
@@ -190,9 +232,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     Vec[] vs = fr.vecs();
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
-      if( v.isEnum() ) throw H2O.unimpl(); // wrong scoreMSE
       hists[j] = (v.naCnt()==v.length() || v.min()==v.max()) ? null
-        : new DBinHistogram(fr._names[j],nbins,v.isInt(),(float)v.min(),(float)v.max(),v.length());
+        : new DBinHistogram(fr._names[j],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),(float)v.min(),(float)v.max(),v.length());
     }
     return hists;
   }
@@ -214,6 +255,17 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       _MSs[2*b+0] = (k1*m0+k2*m1)/(k1+k2); // Mean
       _MSs[2*b+1] = s0+s1+delta*delta*k1*k2/(k1+k2); // 2nd moment
     }
+  }
+
+  // Check for a constant response variable
+  public boolean isConstantResponse() {
+    double m = _MSs[0];
+    for( int b=0; b<_nbins; b++ ) {
+      if( _bins[b] == 0 ) continue;
+      if( _MSs[2*b+0] != m ) return false;
+      if( _MSs[2*b+1] != 0 ) return false;
+    }
+    return true;
   }
 
   // Pretty-print a histogram
