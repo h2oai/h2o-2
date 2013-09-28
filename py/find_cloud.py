@@ -148,6 +148,27 @@ print "len(probe):", len(probes)
 
 # get rid of the name key we used to hash to it
 h2oNodesList = [v for k, v in h2oNodes.iteritems()]
+
+print "Checking for two h2os at same ip address"
+ips = {}
+count = {}
+for h in h2oNodesList:
+    # warn for more than 1 h2o on the same ip address
+    # error for more than 1 h2o on the same port (something is broke!)
+    # but ip+port is how we name them, so that can't happen ehrer
+    ip = h['http_addr']
+    if ip in ips:
+        # FIX! maybe make this a fail exit in the future?
+        count[ip] += 1
+        print "\nWARNING: appears to be %s h2o's at the same IP address" % count[ip]
+        print "initial:", ips[ip]
+        print "another:", h, "\n"
+    else:
+        ips[ip] = h
+        count[ip] = 1
+
+        
+print "Writing h2o-nodes.json"
 expandedCloud = {
     'cloud_start':
         {
@@ -162,7 +183,6 @@ expandedCloud = {
     'h2o_nodes': h2oNodesList
     }
 
-print "Writing h2o-nodes.json"
 with open('h2o-nodes.json', 'w+') as f:
     f.write(json.dumps(expandedCloud, indent=4))
 
