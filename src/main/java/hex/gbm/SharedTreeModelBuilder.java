@@ -270,7 +270,8 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
       assert _hcs.length==_nclass; // One tree per class
       for( int k=0; k<_nclass; k++ ) {
         DHistogram hcs[/*leaf#*/][/*col*/] = _hcs[k];
-        for( int i=0; i<hcs.length; i++ ) {
+        if( hcs == null ) _hcs[k] = sbh._hcs[k];
+        else for( int i=0; i<hcs.length; i++ ) {
           DHistogram hs1[] = hcs[i], hs2[] = sbh._hcs[k][i];
           if( hs1 == null ) hcs[i] = hs2;
           else if( hs2 != null )
