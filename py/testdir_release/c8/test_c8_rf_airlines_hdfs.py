@@ -43,27 +43,26 @@ PARSE_TIMEOUT=14800
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def parseFile(self, importFolderPath='datasets', csvFilename='airlines_all.csv', **kwargs):
+    def parseFile(self, importFolderPath='datasets', csvFilename='airlines_all.csv', 
+        timeoutSecs=500, **kwargs):
         csvPathname = importFolderPath + "/" + csvFilename
 
-        # FIX! does 'separator=' take ints or ?? hex format
-        # looks like it takes the hex string (two chars)
         start = time.time()
-        # hardwire TAB as a separator, as opposed to white space (9)
-        parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=500, separator=9)
+        parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=timeoutSecs)
         elapsed = time.time() - start
         print "Parse of", parseResult['destination_key'], "took", elapsed, "seconds"
         parseResult['python_call_timer'] = elapsed
         print "Parse result['destination_key']:", parseResult['destination_key']
 
         start = time.time()
-        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=500)
+        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=200)
         elapsed = time.time() - start
         print "Inspect:", parseResult['destination_key'], "took", elapsed, "seconds"
         h2o_cmd.infoFromInspect(inspect, csvPathname)
         num_rows = inspect['num_rows']
         num_cols = inspect['num_cols']
         print "num_rows:", num_rows, "num_cols", num_cols
+        return parseResult
 
     def loadTrainData(self):
         kwargs   = trainDS.copy()
