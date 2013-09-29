@@ -22,7 +22,7 @@ mkdir -p sandbox
 CDH4_JOBTRACKER=192.168.1.162:8021
 CDH4_NODES=3
 CDH4_HEAP=20g
-CDH4_JAR=h2odriver_mapr2.1.3.jar
+CDH4_JAR=h2odriver_cdh4.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
