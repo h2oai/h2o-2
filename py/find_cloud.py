@@ -89,7 +89,7 @@ def probe_node(line, h2oNodes):
 
         node_id = len(h2oNodes)
         node = { 
-            'http_addr': http_addr, 
+            'http_addr': ip, 
             'port': int(port),  # print it as a number for the clone ingest
             'java_heap_GB': java_heap_GB,
             # this list is based on what tests actually touch (fail without these)
