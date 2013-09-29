@@ -2,13 +2,7 @@
 import h2o, h2o_util
 import re
 
-def checkH2OLogs(timeoutSecs=3):
-    # download and view using each node, just to see we can
-    # each overwrites
-    for h in h2o.nodes:
-        h.log_view()
-        h.log_download(timeoutSecs=timeoutSecs)
-
+def checkH2OLogs(timeoutSecs=3, expectedMinLines=12):
     # download logs from node 0 (this will overwrite)
     h2o.nodes[0].log_download(timeoutSecs=timeoutSecs)
 
@@ -21,6 +15,18 @@ def checkH2OLogs(timeoutSecs=3):
         lineCountList.append(lineCount)
 
     print logNameList
+
+    if len(h2o.nodes) != len(logNameList):
+        raise Exception("Should be %d logs, are %d" % len(h2o.nodes), len(logNameList))
+
+    # line counts seem to vary..check for "too small"
+    # variance in polling (cloud building and status)?
+    for i, l in enumerate(lineCountList):
+        if l < expectedMinLines:
+            raise Exception("node %d log is too small" % i)
+
+    # now that all the logs are there
+    h2o.check_sandbox_for_errors()
     return (logNameList, lineCountList)
 
 def getH2OScripts(timeoutSecs=30):

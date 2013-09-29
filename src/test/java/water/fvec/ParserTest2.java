@@ -3,15 +3,12 @@ package water.fvec;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
-
 import org.junit.Assert;
 import org.junit.Test;
 
 import water.*;
 import water.deploy.Node;
 import water.deploy.NodeVM;
-import water.parser.ParserTest;
 
 public class ParserTest2 extends TestUtil {
   private double[] d(double... ds) { return ds; }
@@ -41,7 +38,7 @@ public class ParserTest2 extends TestUtil {
     Assert.assertEquals(expected[0].length,fr.numCols());
     for (int i = 0; i < expected.length; ++i)
       for (int j = 0; j < fr.numCols(); ++j) {
-        double parsedVal = fr._vecs[j].at(i);
+        double parsedVal = fr.vecs()[j].at(i);
         Assert.assertTrue((Double.isNaN(parsedVal) == Double.isNaN(expected[i][j])));
         Assert.assertTrue(Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
       }
@@ -199,7 +196,7 @@ public class ParserTest2 extends TestUtil {
       Key r = Key.make();
       ParseDataset2.parse(r,new Key[]{key});
       Frame fr = DKV.get(r).get();
-      String[] cd = fr._vecs[2]._domain;
+      String[] cd = fr.vecs()[2]._domain;
       Assert.assertEquals(" four",cd[0]);
       Assert.assertEquals("one",cd[1]);
       Assert.assertEquals("three",cd[2]);
@@ -250,11 +247,11 @@ public class ParserTest2 extends TestUtil {
       Key r = Key.make();
       ParseDataset2.parse(r,new Key[]{key});
       Frame fr = DKV.get(r).get();
-      String[] cd = fr._vecs[2]._domain;
+      String[] cd = fr.vecs()[2]._domain;
       Assert.assertEquals("one",cd[0]);
       Assert.assertEquals("three",cd[1]);
       Assert.assertEquals("two",cd[2]);
-      cd = fr._vecs[0]._domain;
+      cd = fr.vecs()[0]._domain;
       Assert.assertEquals("bar",cd[0]);
       Assert.assertEquals("foo",cd[1]);
       Assert.assertEquals("foobar",cd[2]);
@@ -298,7 +295,7 @@ public class ParserTest2 extends TestUtil {
     Key r = Key.make();
     ParseDataset2.parse(r,new Key[]{key});
     Frame fr = DKV.get(r).get();
-    String[] cd = fr._vecs[3]._domain;
+    String[] cd = fr.vecs()[3]._domain;
     Assert.assertEquals("bar",cd[0]);
     Assert.assertEquals("foo",cd[1]);
     testParsed(r, expDouble,key);
@@ -387,20 +384,20 @@ public class ParserTest2 extends TestUtil {
     Key rkey = FVecTest.makeByteVec("na_test",data);
     Key okey = Key.make("na_test.hex");
     Frame fr = ParseDataset2.parse(okey, new Key[]{rkey});
-    int nlines = (int)fr._vecs[0].length();
+    int nlines = (int)fr.numRows();
     // This variable could be declared static, except that that causes an issue
     // with the weaver trying to load these classes before a Cloud is formed.
     Class [] expectedTypes = new Class[]{C1Chunk.class,C1SChunk.class,C2Chunk.class,C2SChunk.class,C4Chunk.class,C4FChunk.class,C8Chunk.class,C8DChunk.class, C1Chunk.class};
-    assertTrue(fr._vecs.length == expectedTypes.length);
+    assertTrue(fr.numCols() == expectedTypes.length);
 //    for(int i = 0; i < expectedTypes.length; ++i)
-//      assertTrue("unpextected vector type, got: " + fr._vecs[i].elem2BV(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr._vecs[i].elem2BV(0)));
+//      assertTrue("unpextected vector type, got: " + fr.vecs()[i].elem2BV(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr.vecs()[i].elem2BV(0)));
     assertEquals(9,nlines);
     for(int i = 0; i < nlines-2; ++i)
-      for( Vec v : fr._vecs )
+      for( Vec v : fr.vecs() )
         assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),
                    !Double.isNaN(v.at(i)) && !v.isNA(i) );
     int j = 0;
-    for( Vec v:fr._vecs ) {
+    for( Vec v:fr.vecs() ) {
       for( int i = nlines-2; i < nlines; ++i ) {
         assertTrue(i + ", " + j + ":" + v.at(i) + ", " + v.isNA(i),
                    Double.isNaN(v.at(i)) && v.isNA(i) );
@@ -439,26 +436,26 @@ public class ParserTest2 extends TestUtil {
   }
 
   void runTests(){
-//    System.out.println("testBasic");
-//    testBasic();
-//    System.out.println("testBasicSpaceAsSeparator");
-//    testBasicSpaceAsSeparator();
-//    System.out.println("testChunkBoundaries");
-//    testChunkBoundaries();
-//    System.out.println("testChunkBoundariesMixedLineEndings");
-//    testChunkBoundariesMixedLineEndings();
-//    System.out.println("testEmptyColumnValues");
-//    testEmptyColumnValues();
-//    System.out.println("testMixedSeps");
-//    testMixedSeps();
-//    System.out.println("testMultipleNondecimalColumns");
-//    testMultipleNondecimalColumns();
-//    System.out.println("testNondecimalColumns");
-//    testNondecimalColumns();
-//    System.out.println("testNumberFormats");
-//    testNumberFormats();
-//    System.out.println("testTimeParse");
-//    testTimeParse();
+    System.out.println("testBasic");
+    testBasic();
+    System.out.println("testBasicSpaceAsSeparator");
+    testBasicSpaceAsSeparator();
+    System.out.println("testChunkBoundaries");
+    testChunkBoundaries();
+    System.out.println("testChunkBoundariesMixedLineEndings");
+    testChunkBoundariesMixedLineEndings();
+    System.out.println("testEmptyColumnValues");
+    testEmptyColumnValues();
+    System.out.println("testMixedSeps");
+    testMixedSeps();
+    System.out.println("testMultipleNondecimalColumns");
+    testMultipleNondecimalColumns();
+    System.out.println("testNondecimalColumns");
+    testNondecimalColumns();
+    System.out.println("testNumberFormats");
+    testNumberFormats();
+    System.out.println("testTimeParse");
+    testTimeParse();
     System.out.println("testNAs");
     testNAs();
     checkLeakedKeys();
@@ -474,10 +471,56 @@ public class ParserTest2 extends TestUtil {
       n.start();
     }
     H2O.waitForCloudSize(nnodes);
-    System.out.println("Cloud formed");
-    //new ParserTest2().runTests();
-//    new ParserTest2().testSVMLight();
-    new ParserTest().testSVMLight();
+    new FVecTest().testParse2();
+//    File f = new File("/Users/tomasnykodym/Downloads/140k_train_anonymised.zip");
+//    Key fkey = NFSFileVec.make(f);
+//    ByteVec v = DKV.get(fkey).get();
+//    InputStream is = v.openStream(null);
+//    InputStream is2 = new FileInputStream(f);
+//    byte [] buff1 = new byte[256];
+//    byte [] buff2 = new byte[256];
+//    while(is.available() > 0 || is2.available() > 0){
+//      assert is.read() == is2.read();
+//      int off = (int)(buff1.length*Math.random());
+//      int maxN = buff1.length-off;
+//      int len = (int)(maxN*Math.random());
+//      int l1 = is.read(buff1, off, len);
+//      int l2 = is2.read(buff2, off, len);
+//      while(l1 < l2 && is.available() > 0)
+//        l1 += is.read(buff1, off+l1, l2-l1);
+//      while(l2 < l1 && is2.available() > 0)
+//        l2 += is2.read(buff2, off+l2, l1-l2);
+//      if(l1 != l2 || !Arrays.equals(buff1, buff2)){
+//        System.out.println(Arrays.toString(buff1));
+//        System.out.println(Arrays.toString(buff2));
+//        assert l1 == l2;
+//        assert Arrays.equals(buff1, buff2);
+//      }
+//    }
+//    is2.close();
+////    is = v.openStream(null);
+////    ZipInputStream zis = new ZipInputStream(is);
+////    ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
+////    // There is at least one entry in zip file and it is not a directory.
+////    assert( ze != null && !ze.isDirectory() );
+////    int i = 0;
+////    while(zis.read() != -1)++i;
+////    System.out.println("read " + i + " bytes");
+////    zis.close();
+/////    System.out.println("DONE!");
+//    System.out.println("==========================================================================");
+//    ParseDataset2.forkParseDataset(Key.make("haha"), new Key[]{fkey}, ParseDataset2.guessSetup(fkey, new ParserSetup(), true)).get();
+//    Frame f1 = DKV.get(Key.make("haha")).get();
+//    Vec v = DKV.get(fkey).get();
+//    System.out.println("parsed nchunks = " + f1.anyVec().nChunks() + ", raw nchunks = " + v.nChunks());
+//    assert f1.anyVec().nChunks() == v.nChunks();
+
+////    new ParserTest2().testTimeParse();
+//
+//
+//////    new ParserTest2().testSVMLight();
+////    new ParserTest().testSVMLight();
     System.out.println("DONE!");
+
   }
 }

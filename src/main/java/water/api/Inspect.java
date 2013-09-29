@@ -22,7 +22,7 @@ public class Inspect extends Request {
   private static final HashMap<String, String> _displayNames = new HashMap<String, String>();
   private static final long                    INFO_PAGE     = -1;
   private final H2OExistingKey                 _key          = new H2OExistingKey(KEY);
-  private final LongInt                        _offset       = new LongInt(OFFSET, 0L, INFO_PAGE, Long.MAX_VALUE, "");
+  private final LongInt                        _offset       = new LongInt(OFFSET, INFO_PAGE, Long.MAX_VALUE);
   private final Int                            _view         = new Int(VIEW, 100, 0, 10000);
   private final Str                            _producer     = new Str(JOB, null);
   private final Int                            _max_column   = new Int(COLUMNS_DISPLAY, MAX_COLUMNS_TO_DISPLAY);
@@ -273,7 +273,7 @@ public class Inspect extends Request {
   }
 
   private static void format(JsonObject obj, Frame f, long rowIdx, int colIdx) {
-    Vec v = f._vecs[colIdx];
+    Vec v = f.vecs()[colIdx];
     if( rowIdx < 0 || rowIdx >= v.length() )
       return;
     String name = f._names[colIdx] != null ? f._names[colIdx] : "" + colIdx;
@@ -300,10 +300,12 @@ public class Inspect extends Request {
         		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
     }
     sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
+          + PCA.link(key, "PCA") + ", "
           + RF.link(key, "Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
-          + KMeans.link(key, "KMeans") + ", or "
-          + KMeansGrid.link(key, "KMeansGrid") + "<br />"
+          + KMeans.link(key, "KMeans") + ", "
+          + KMeansGrid.link(key, "KMeansGrid") + ", or "
+          + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
@@ -312,6 +314,26 @@ public class Inspect extends Request {
           + cols + " columns"
           + (bytesPerRow != 0 ? (", " + bytesPerRow + " bytes-per-row * " + rows + " rows = " + PrettyPrint.bytes(bytes)) : "")
         + "</font></b></p>");
+      // sb.append(
+      // " <script>$('#inspect').submit( function() {" +
+      // " $('html', 'table').animate({ scrollTop: $('#row_30').offset().top" +
+      // "}, 2000);" +
+      // "return false;" +
+      // "});</script>");
+      String _scrollto = String.valueOf(_offset.value() - 1);
+      sb.append(
+      " <script>$(document).ready(function(){ " +
+      " $('html, body').animate({ scrollTop: $('#row_"+_scrollto+"').offset().top" +
+      "}, 2000);" +
+      "return false;" +
+      "});</script>");
+    sb.append(
+        "<form class='well form-inline' action='Inspect.html' id='inspect'>" +
+        " <input type='hidden' name='key' value="+key.toString()+">" +
+        " <input type='text' class='input-small span5' placeholder='filter' " +
+        "    name='offset' id='offset' value='"+_offset.value()+"' maxlength='512'>" +
+        " <button type='submit' class='btn btn-primary'>Jump to row!</button>" +
+        "</form>");
     // @formatter:on
     return sb.toString();
   }
@@ -319,20 +341,20 @@ public class Inspect extends Request {
   // Frame
 
   public Response serveFrame(final Key key, final Frame f) {
-    if( _offset.value() > f._vecs[0].length() )
-      return Response.error("Value only has " + f._vecs[0].length() + " rows");
+    if( _offset.value() > f.numRows() )
+      return Response.error("Value only has " + f.numRows() + " rows");
 
     JsonObject result = new JsonObject();
     result.addProperty(VALUE_TYPE, "parsed");
     result.addProperty(KEY, key.toString());
-    result.addProperty(NUM_ROWS, f._vecs[0].length());
-    result.addProperty(NUM_COLS, f._vecs.length);
+    result.addProperty(NUM_ROWS, f.numRows());
+    result.addProperty(NUM_COLS, f.numCols());
 
     JsonArray cols = new JsonArray();
     JsonArray rows = new JsonArray();
 
-    for( int i = 0; i < f._vecs.length; i++ ) {
-      Vec v = f._vecs[i];
+    for( int i = 0; i < f.numCols(); i++ ) {
+      Vec v = f.vecs()[i];
       JsonObject json = new JsonObject();
       json.addProperty(NAME, f._names[i]);
       json.addProperty(MIN, v.min());
@@ -341,12 +363,12 @@ public class Inspect extends Request {
     }
 
     if( _offset.value() != INFO_PAGE ) {
-      long endRow = Math.min(_offset.value() + _view.value(), f._vecs[0].length());
-      long startRow = Math.min(_offset.value(), f._vecs[0].length() - _view.value());
+      long endRow = Math.min(_offset.value() + _view.value(), f.numRows());
+      long startRow = Math.min(_offset.value(), f.numRows() - _view.value());
       for( long row = Math.max(0, startRow); row < endRow; ++row ) {
         JsonObject obj = new JsonObject();
         obj.addProperty(ROW, row);
-        for( int i = 0; i < f._vecs.length; ++i )
+        for( int i = 0; i < f.numCols(); ++i )
           format(obj, f, row, i);
         rows.add(obj);
       }
@@ -359,7 +381,7 @@ public class Inspect extends Request {
     r.setBuilder(ROOT_OBJECT, new ObjectBuilder() {
       @Override
       public String build(Response response, JsonObject object, String contextName) {
-        String s = html(key, f._vecs[0].length(), f._vecs.length, 0, 0);
+        String s = html(key, f.numRows(), f.numCols(), 0, 0);
         Table2 t = new Table2(argumentsToJson(), _offset.value(), _view.value(), f);
         s += t.build(response, object.get(ROWS), ROWS);
         return s;
@@ -480,7 +502,7 @@ public class Inspect extends Request {
     private final Frame _f;
 
     public Table2(JsonObject query, long offset, int view, Frame f) {
-      super(query, offset, view, f._vecs[0].length(), true);
+      super(query, offset, view, f.numRows(), true);
       _f = f;
     }
 
@@ -491,7 +513,7 @@ public class Inspect extends Request {
         array = new JsonArray();
         JsonObject fake = new JsonObject();
         fake.addProperty(ROW, 0);
-        for( int i = 0; i < _f._vecs.length; ++i )
+        for( int i = 0; i < _f.numCols(); ++i )
           format(fake, _f, 0, i);
         array.add(fake);
       }
@@ -500,32 +522,32 @@ public class Inspect extends Request {
       JsonObject row = new JsonObject();
 
       row.addProperty(ROW, MIN);
-      for( int i = 0; i < _f._vecs.length; i++ )
-        row.addProperty(_f._names[i], _f._vecs[i].min());
+      for( int i = 0; i < _f.numCols(); i++ )
+        row.addProperty(_f._names[i], _f.vecs()[i].min());
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, MAX);
-      for( int i = 0; i < _f._vecs.length; i++ )
-        row.addProperty(_f._names[i], _f._vecs[i].max());
+      for( int i = 0; i < _f.numCols(); i++ )
+        row.addProperty(_f._names[i], _f.vecs()[i].max());
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       row.addProperty(ROW, FIRST_CHUNK);
-      for( int i = 0; i < _f._vecs.length; i++ )
-        row.addProperty(_f._names[i], _f._vecs[i].chunk(0).getClass().getSimpleName());
+      for( int i = 0; i < _f.numCols(); i++ )
+        row.addProperty(_f._names[i], _f.vecs()[i].chunk(0).getClass().getSimpleName());
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {
-        for( int ci = 0; ci < _f._vecs[0].nChunks(); ci++ ) {
-          Chunk chunk = _f._vecs[ci].elem2BV(ci);
+        for( int ci = 0; ci < _f.vecs()[0].nChunks(); ci++ ) {
+          Chunk chunk = _f.vecs()[ci].elem2BV(ci);
           String prefix = CHUNK + " " + ci + " ";
 
           row.addProperty(ROW, prefix + TYPE);
-          for( int i = 0; i < _f._vecs.length; i++ )
+          for( int i = 0; i < _f.numCols(); i++ )
             row.addProperty(_f._names[i], chunk.getClass().getSimpleName());
           sb.append(defaultBuilder(row).build(response, row, contextName));
 
           row.addProperty(ROW, prefix + SIZE);
-          for( int i = 0; i < _f._vecs.length; i++ )
+          for( int i = 0; i < _f.numCols(); i++ )
             row.addProperty(_f._names[i], chunk.byteSize());
           sb.append(defaultBuilder(row).build(response, row, contextName));
         }

@@ -45,9 +45,8 @@ public class Job extends Request2 {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public FrameJob(String desc, Key dest) { super(desc,dest); }
 
-    @API(help = "Source frame", required = true, filter = sourceFilter.class)
+    @API(help = "Source frame", required = true, filter = Default.class)
     public Frame source;
-    class sourceFilter extends FrameKey { public sourceFilter() { super("source"); } }
   }
 
   public static abstract class HexJob extends Job {
@@ -86,23 +85,22 @@ public class Job extends Request2 {
   }
 
   protected Job() {
-    setJobKey(UUID.randomUUID().toString());
+    this(null, null);
   }
 
   public Job(String description, Key dest) {
-    // Pinned to self, because it should be almost always updated locally
     this(UUID.randomUUID().toString(), description, dest);
   }
 
   protected Job(String keyName, String description, Key dest) {
-    // Pinned to self, because it should be almost always updated locally
     setJobKey(keyName);
-    this.description = description;
+    this.description = description != null ? description : getClass().getSimpleName();
     start_time = System.currentTimeMillis();
     destination_key = dest;
   }
 
   final void setJobKey(String name) {
+    // Pinned to self, because it should be almost always updated locally
     job_key = Key.make(name, (byte) 0, Key.JOB, H2O.SELF);
   }
 

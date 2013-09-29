@@ -31,8 +31,10 @@ public class AppendableVec extends Vec {
 
   public AppendableVec( Key key) {
     super(key, null);
+    assert key != null;
     _espc = new long[4];
     _chunkTypes = new byte[4];
+    DKV.put(key,this);
   }
 
 
@@ -50,6 +52,7 @@ public class AppendableVec extends Vec {
     _missingCnt += chk._naCnt;
     _strCnt += chk._strCnt;
     _totalCnt += chk._len;
+    UKV.put(_key,this);
   }
 
   // What kind of data did we find?  NA's?  Strings-only?  Floats or Ints?

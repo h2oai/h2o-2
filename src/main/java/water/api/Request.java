@@ -19,16 +19,15 @@ public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface API {
     String help();
-
     boolean required() default false;
-
     int since() default 1;
-
     int until() default Integer.MAX_VALUE;
-
     Class<? extends Filter> filter() default Filter.class;
-
     Class<? extends Filter>[] filters() default {};
+    long   lmin() default Long  .MIN_VALUE;
+    long   lmax() default Long  .MAX_VALUE;
+    double dmin() default Double.MIN_VALUE;
+    double dmax() default Double.MAX_VALUE;
   }
 
   public interface Filter {
@@ -39,52 +38,6 @@ public abstract class Request extends RequestBuilders {
   public class Default implements Filter {
     @Override public boolean run(Object value) { return true; }
   }
-
-  public class TypedKey extends H2OKey {
-    Class _type;
-    public TypedKey(Class type) { super("",true); _type = type; }
-    @Override protected Key parse(String input) {
-      Key k = Key.make(input);
-      Value v = DKV.get(k);
-      if( v == null )
-        throw new IllegalArgumentException(input+":"+errors()[0]);
-      if( v.type() != TypeMap.onLoad(_type.getName()) )
-        throw new IllegalArgumentException(input+":"+errors()[1]);
-      return k;
-    }
-    @Override protected String queryDescription() { return "An existing H2O Frame key."; }
-    @Override protected String[] errors() { return new String[] { "Key not found", "Key is not a " + _type.getSimpleName() }; }
-  }
-
-  public class ColumnSelect implements Filter {
-    public final String _key;
-    protected ColumnSelect(String key) {
-      _key = key;
-    }
-    @Override public boolean run(Object value) {
-      return true;
-    }
-  }
-
-  public class VecSelect implements Filter {
-    public final String _key;
-    protected VecSelect(String key) { _key = key; }
-    @Override public boolean run(Object value) { return true; }
-  }
-
-  public class MultiVecSelect implements Filter {
-    public final String _key;
-    protected MultiVecSelect(String key) { _key = key;}
-    @Override public boolean run(Object value) { return true; }
-  }
-
-  public class VecClassSelect implements Filter {
-    public final String _key;
-    protected VecClassSelect(String key) { _key = key; }
-    @Override public boolean run(Object value) { return true; }
-  }
-
-
 
   //
 
@@ -322,5 +275,7 @@ public abstract class Request extends RequestBuilders {
   public String ReSTHelp() {
     return DocGen.ReST.genHelp(this);
   }
-  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putStr2("\"Request2\":\"dummy\""); }
+  // Dummy write of a leading field, so the auto-gen JSON can just add commas
+  // before each succeeding field.
+  @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putJSON4("Request2",0); }
 }

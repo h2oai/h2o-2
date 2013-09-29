@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -50,8 +50,13 @@ class Basic(unittest.TestCase):
         timeoutSecs = 1800
         #noPoll -> False when GBM finished
         GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+        # hack!
+        if h2o.beta_features:
+            h2o_jobs.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=5)
+
         print "GBM training completed in", GBMResult['python_elapsed'], "seconds.", \
             "%f pct. of timeout" % (GBMResult['python_%timeout'])
+
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -14,7 +14,7 @@ import water.util.RString;
 public class PCAScore extends Request {
   protected final H2OPCAModelKey _modelKey = new H2OPCAModelKey(MODEL_KEY, true);
   protected final H2OHexKey _dataKey = new H2OHexKey(KEY);
-  protected final H2OKey _destKey = new H2OKey(DEST_KEY, true);
+  protected final H2OKey _destKey = new H2OKey(DEST_KEY, Key.make("__PCAScore_" + Key.make()));
   protected final Int _numPC = new Int("num_pc", 2, 1, 1000000);   // TODO: Set default to # of features
   // protected final Real _tol = new Real("tolerance", 0.0, 0, 1, "Omit components with std dev <= tol times std dev of first component");
 
@@ -57,19 +57,14 @@ public class PCAScore extends Request {
       PCAModel m = _modelKey.value();
 
       // Extract subset of data that matches features of model
-      int colMap[] = m.columnMapping(ary.colNames());
+      int[] colMap = m.columnMapping(ary.colNames());
       boolean standardize = m._pcaParams._standardized;
-      final DataFrame orig = DataFrame.makePCAData(ary, colMap, standardize);
+      final DataFrame data = DataFrame.makePCAData(ary, colMap, standardize);
 
-      // Note: Standardize automatically removes columns not in modelDataMap
-      Frame data = standardize ? DPCA.StandardizeTask.standardize(orig) : orig.modelAsFrame();
-      PCAScoreTask.score(data, m._eigVec, _numPC.value(), _destKey.value());
-
-      JsonObject redir = new JsonObject();
-      // if( job != null ) redir.addProperty(JOB, job.toString());
-      redir.addProperty(KEY, _destKey.value().toString());
-      // return Progress.redirect(response, job.job_key, _destKey.value());
-      return Response.redirect(res, Inspect.class, redir);
+      // Frame data_std = standardize ? PCAScoreTask.standardize(data) : data.modelAsFrame();
+      // Job job = PCAScoreTask.mult(data_std, m._eigVec, _numPC.value(), ary._key, _destKey.value());
+      Job job = PCAScoreTask.score(data, m._eigVec, _numPC.value(), ary._key, _destKey.value(), standardize);
+      return Progress2.redirect(this, job.job_key, job.dest());
     } catch( Error e ) {
       return Response.error(e.getMessage());
     }

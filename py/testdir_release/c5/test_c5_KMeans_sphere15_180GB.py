@@ -116,6 +116,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             # all are multipliers of expected tuple value
             allowedDelta = (0.01, 0.01, 0.01) 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, allowError=True, trial=trial)
+            h2i.delete_keys_at_all_nodes()
+
 
 if __name__ == '__main__':
     h2o.unit_main()

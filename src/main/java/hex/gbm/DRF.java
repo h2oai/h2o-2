@@ -1,22 +1,23 @@
 package hex.gbm;
 
-import hex.ScoreTask;
-import hex.gbm.DTree.*;
+import hex.gbm.DTree.BulkScore;
+import hex.gbm.DTree.DecidedNode;
+import hex.gbm.DTree.ScoreBuildHistogram;
+import hex.gbm.DTree.UndecidedNode;
 import hex.rng.MersenneTwisterRNG;
+
 import java.util.Arrays;
 import java.util.Random;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.FrameJob;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
+import water.fvec.*;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.Log;
-import water.util.RString;
 
 // Random Forest Trees
 public class DRF extends FrameJob {
@@ -27,52 +28,23 @@ public class DRF extends FrameJob {
   Vec vresponse;
   class DRFVecSelect extends VecClassSelect { DRFVecSelect() { super("source"); } }
 
-  @API(help = "Number of trees", filter = NtreesFilter.class)
+  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
   int ntrees = 50;
-  public class NtreesFilter implements Filter {
-    @Override public boolean run(Object value) {
-      int ntrees = (Integer)value;
-      return 1 <= ntrees && ntrees <= 1000000;
-    }
-  }
 
-  @API(help = "Maximum tree depth", filter = MaxDepthFilter.class)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
   int max_depth = 50;
-  public class MaxDepthFilter implements Filter {
-    @Override public boolean run(Object value) { return 1 <= (Integer)value; }
-  }
 
-  @API(help = "Fewest allowed observations in a leaf", filter = MinRowsFilter.class)
-  int min_rows = 5;
-  public class MinRowsFilter implements Filter {
-    @Override public boolean run(Object value) { return (Integer)value >= 1; }
-  }
+  @API(help = "Fewest allowed observations in a leaf", filter = Default.class, lmin=1)
+  int min_rows = 10;
 
-  @API(help = "Number of bins to split the column", filter = NBinsFilter.class)
-  int nbins = 100;
-  public class NBinsFilter implements Filter {
-    @Override public boolean run(Object value) { return (Integer)value >= 2; }
-  }
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
+  int nbins = 1024;
 
-  @API(help = "Columns to randomly select at each level, or -1 for sqrt(#cols)", filter = MTriesFilter.class)
+  @API(help = "Columns to randomly select at each level, or -1 for sqrt(#cols)", filter = Default.class, lmin=-1, lmax=100000)
   int mtries = -1;
-  public class MTriesFilter implements Filter {
-    @Override public boolean run(Object value) {
-      int mtries = (Integer)value;
-      if( mtries == -1 ) return true;
-      if( mtries <=  0 ) return false;
-      return mtries <= source.numCols();
-    }
-  }
 
-  @API(help = "Sample rate, from 0. to 1.0", filter = SampleRateFilter.class)
+  @API(help = "Sample rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   float sample_rate = 0.6666667f;
-  public class SampleRateFilter implements Filter {
-    @Override public boolean run(Object value) {
-      float sample_rate = (Float)value;
-      return 0.0 < sample_rate && sample_rate <= 1.0;
-    }
-  }
 
   @API(help = "Seed for the random number generator", filter = Default.class)
   long seed = new Random().nextLong();
@@ -97,9 +69,15 @@ public class DRF extends FrameJob {
       Arrays.fill(preds,0);
       for( CompressedTree t : treeBits )
         t.addScore(preds, data);
+      float sum=0;
+      for( float f : preds ) sum += f;
+      // We have an (near)integer sum of votes - one per voting tree.  If OOBEE
+      // was used, the votes will be roughly equal to one minus the sampling
+      // ratio.  Estimate the number of votes.
+      int votes = Math.round(sum);
       // After adding all trees, divide by tree-count to get a distribution
       for( int i=0; i<preds.length; i++ )
-        preds[i] /= treeBits.length;
+        preds[i] /= votes;
       DTree.correctDistro(preds);
       assert DTree.checkDistro(preds) : "Funny distro";
       return preds;
@@ -142,7 +120,7 @@ public class DRF extends FrameJob {
     // part of the frame and remove it up front.
     String vname="response";
     for( int i=0; i<fr.numCols(); i++ )
-      if( fr._vecs[i]==vresponse ) {
+      if( fr.vecs()[i]==vresponse ) {
         vname=fr._names[i];
         fr.remove(i);
       }
@@ -177,24 +155,27 @@ public class DRF extends FrameJob {
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
+        fr.add("response",vresponse);
 
         // Fill in the response variable column(s)
         if( nclass == 1 ) {
-          fr.add("response",vresponse);
+          throw H2O.unimpl();
         } else {
           // A vector of {0,..,0,1,0,...}
           // A single 1.0 in the actual class.
           for( int i=0; i<nclass; i++ )
-            fr.add(domain[i],vresponse.makeZero());
-          // Set a single 1.0 in the response for that class
-          fr.add("response",vresponse);
-          new Set1Task(ymin,ncols).doAll(fr);
-          fr.remove(ncols+nclass);
+            fr.add("Resp-"+domain[i],vresponse.makeZero());
         }
-        
+        // Build a set of predictions that's the sum across all trees.
+        for( int i=0; i<nclass; i++ )   // All Zero cols
+          fr.add("Pred-"+domain[i],vresponse.makeZero());
+        // Set a single 1.0 in the response for that class
+        if( nclass > 1 )
+          new Set1Task(ymin,ncols,nclass).doAll(fr);
+
         // The RNG used to pick split columns
         Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
-        
+
         // Initially setup as-if an empty-split had just happened
         DBinHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
         DRFTree forest[] = new DRFTree[0];
@@ -210,22 +191,23 @@ public class DRF extends FrameJob {
           DRFTree someTrees[] = new DRFTree[xtrees];
           int someLeafs[] = new int[xtrees];
           forest = Arrays.copyOf(forest,forest.length+xtrees);
-          
+
           for( int t=0; t<xtrees; t++ ) {
             int idx = st+t;
-            // Make a new Vec to hold the split-number for each row (initially all zero).
-            Vec vec = vresponse.makeZero();
             forest[idx] = someTrees[t] = new DRFTree(fr,ncols,(char)nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
+            Vec vec = vresponse.makeZero();
+            // Make a new Vec to hold the split-number for each row (initially
+            // all zero).  If sampling, flag out some rows for OOBEE scoring.
             if( sample_rate < 1.0 )
               new Sample(someTrees[t],sample_rate).doAll(vec);
             fr.add("NIDs"+t,vec);
           }
-          
+
           // Make NTREE trees at once
           int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, ncols, nclass, ymin, nrows, sample_rate);
           if( d>depth ) depth=d;    // Actual max depth used
-          
-          BulkScore bs = new BulkScore(forest,ncols,nclass,ymin,sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, depth );
+
+          BulkScore bs = new BulkScore(forest,forest.length-xtrees,ncols,nclass,ymin,sample_rate).doAll(fr).report( Sys.DRF__, depth );
           int old = _errs.length;
           _errs = Arrays.copyOf(_errs,st+xtrees);
           for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
@@ -238,9 +220,9 @@ public class DRF extends FrameJob {
             UKV.remove(fr.remove(fr.numCols()-1)._key);
         }
         Log.info(Sys.DRF__,"DRF done in "+t_drf);
-        
+
         // Remove temp vectors; cleanup the Frame
-        while( fr.numCols() > ncols )
+        while( fr.numCols() > ncols+1/*Leave response*/ )
           UKV.remove(fr.remove(fr.numCols()-1)._key);
         remove();
         tryComplete();
@@ -255,13 +237,14 @@ public class DRF extends FrameJob {
 
   private static class Set1Task extends MRTask2<Set1Task> {
     final int _ymin, _ncols;
-    Set1Task( int ymin, int ncols ) { _ymin = ymin; _ncols = ncols; }
+    final char _nclass;
+    Set1Task( int ymin, int ncols, char nclass ) { _ymin = ymin; _ncols = ncols; _nclass=nclass; }
     @Override public void map( Chunk chks[] ) {
-      Chunk cy = chks[chks.length-1];
+      Chunk cy = DTree.chk_resp(chks,_ncols,_nclass);
       for( int i=0; i<cy._len; i++ ) {
         if( cy.isNA0(i) ) continue;
         int cls = (int)cy.at80(i) - _ymin;
-        chks[_ncols+cls].set0(i,1.0f);
+        DTree.chk_work(chks,_ncols,_nclass,cls).set0(i,1.0f);
       }
     }
   }
@@ -283,6 +266,7 @@ public class DRF extends FrameJob {
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(trees,leafs,ncols,nclass,ymin,fr).doAll(fr);
+      //System.out.println(sbh.profString());
 
       // Reassign the new DHistograms back into the DTrees
       for( int t=0; t<ntrees; t++ ) {
@@ -319,7 +303,6 @@ public class DRF extends FrameJob {
 
       // If all trees are done, then so are we
       if( !still_splitting ) break;
-      //new BulkScore(trees,ncols,nclass,ymin,(float)sample_rate,true).doIt(fr,vresponse).report( Sys.DRF__, depth );
     }
 
     // Print the generated trees
@@ -342,7 +325,7 @@ public class DRF extends FrameJob {
       _mtrys = mtrys;
       _seed = seed;                  // Save for any replay scenarios
       _rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32),(int)seed});
-      _seeds = new long[fr._vecs[0].nChunks()];
+      _seeds = new long[fr.vecs()[0].nChunks()];
       for( int i=0; i<_seeds.length; i++ )
         _seeds[i] = _rand.nextLong();
       new DRFUndecidedNode(this,-1,hs); // The "root" node
@@ -430,7 +413,7 @@ public class DRF extends FrameJob {
   static class Sample extends MRTask2<Sample> {
     final DRFTree _tree;
     final float _rate;
-    Sample( DRFTree tree, double rate ) { _tree = tree; _rate = (float)rate; }
+    Sample( DRFTree tree, float rate ) { _tree = tree; _rate = rate; }
     @Override public void map( Chunk nids ) {
       Random rand = _tree.rngForChunk(nids.cidx());
       for( int i=0; i<nids._len; i++ )

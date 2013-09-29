@@ -12,24 +12,22 @@ public class ConfusionMatrix extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "", required = true, filter = actualFilter.class)
+  @API(help = "", required = true, filter = Default.class)
   public Frame actual;
-  class actualFilter extends FrameKey { public actualFilter() { super("actual"); } }
 
   @API(help="Column of the actual results (will display vertically)", required=true, filter=actualVecSelect.class)
-  Vec vactual;
+  public Vec vactual;
   class actualVecSelect extends VecClassSelect { actualVecSelect() { super("actual"); } }
 
-  @API(help = "", required = true, filter = predictFilter.class)
+  @API(help = "", required = true, filter = Default.class)
   public Frame predict;
-  class predictFilter extends FrameKey { public predictFilter() { super("predict"); } }
 
   @API(help="Column of the predicted results (will display horizontally)", required=true, filter=predictVecSelect.class)
-  Vec vpredict;
+  public Vec vpredict;
   class predictVecSelect extends VecClassSelect { predictVecSelect() { super("predict"); } }
 
   @API(help="Confusion Matrix (or co-occurrence matrix)")
-  long cm[][];
+  public long cm[][];
 
   //public static String link(Key k, String content) {
   //  RString rs = new RString("<a href='ConfusionMatrix.query?model=%$key'>%content</a>");
@@ -38,7 +36,7 @@ public class ConfusionMatrix extends Request2 {
   //  return rs.toString();
   //}
 
-  @Override protected Response serve() {
+  @Override public Response serve() {
     try {
       if( vactual==null || vpredict==null )
         throw new IllegalArgumentException("Missing actual or predict?");
@@ -75,12 +73,12 @@ public class ConfusionMatrix extends Request2 {
     @Override public void reduce( CM cm ) { Utils.add(_cm,cm._cm); }
   }
 
-  private static String[] show( long xs[], String ds[] ) {
+  public static String[] show( long xs[], String ds[] ) {
     String ss[] = new String[xs.length];
     for( int i=0; i<ds.length; i++ )
       if( xs[i] > 0 || (ds[i] != null && ds[i].length() > 0) && !Integer.toString(i).equals(ds[i]) )
         ss[i] = ds[i];
-    if( xs[xs.length-1] > 0 ) 
+    if( xs[xs.length-1] > 0 )
       ss[xs.length-1] = "NA";
     return ss;
   }
@@ -109,14 +107,14 @@ public class ConfusionMatrix extends Request2 {
         sb.append("<th>").append(pdomain[p]).append("</th>");
     sb.append("<th>Error</th>");
     sb.append("</tr>");
-    
+
     // Main CM Body
     long terr=0;
     for( int a=0; a<cm.length; a++ ) { // Actual loop
       if( adomain[a] == null ) continue;
       sb.append("<tr>");
       sb.append("<th>").append(adomain[a]).append("</th>");// Row header
-      long correct=-1;
+      long correct=0;
       for( int p=0; p<pdomain.length; p++ ) { // Predicted loop
         if( pdomain[p] == null ) continue;
         boolean onDiag = adomain[a].equals(pdomain[p]);
@@ -128,7 +126,7 @@ public class ConfusionMatrix extends Request2 {
       sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/acts[a], err, acts[a]));
       sb.append("</tr>");
     }
-    
+
     // Last row of CM
     sb.append("<tr>");
     sb.append("<th>Totals</th>");// Row header

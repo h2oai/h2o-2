@@ -6,7 +6,7 @@ print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_B_hdfs_files(self):
+    def test_c6_hdfs(self):
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
@@ -25,7 +25,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "covtype.4x.shuffle.data",
             "covtype4x.shuffle.data",
             "covtype.13x.data",
-            "covtype.13x.shuffle.data",
+            # "covtype.13x.shuffle.data",
             # "covtype.169x.data",
             # "prostate_2g.csv",
             # "prostate_long.csv.gz",

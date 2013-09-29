@@ -37,7 +37,7 @@ public class XlsxParser extends CustomParser {
     return parser;
   }
 
-  @Override public void streamParse(InputStream is, CustomParser.DataOut dout){
+  @Override public DataOut streamParse(InputStream is, CustomParser.DataOut dout){
     _firstRow = true;
     _dout = dout;
     try {
@@ -58,6 +58,7 @@ public class XlsxParser extends CustomParser {
     } finally {
       try { is.close(); } catch (IOException e) { Log.err(e); }
     }
+    return dout;
   }
 
   private class SheetHandler extends DefaultHandler {

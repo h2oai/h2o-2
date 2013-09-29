@@ -15,6 +15,7 @@ public abstract class DKV {
   static public Value put( Key key, Value val ) { return put(key,val,null); }
   static public Value put( Key key, Value val, Futures fs ) { return put(key,val,fs,false);}
   static public Value put( Key key, Value val, Futures fs, boolean dontCache ) {
+    assert key != null;
     assert val==null || val._key == key:"non-matching keys " + ((Object)key).toString() + " != " + ((Object)val._key).toString();
     while( true ) {
       Value old = H2O.raw_get(key); // Raw-get: do not lazy-manifest if overwriting
@@ -26,6 +27,9 @@ public abstract class DKV {
   static public Value put( Key key, Iced v ) { return put(key,v,null); }
   static public Value put( Key key, Iced v, Futures fs ) {
     return put(key,new Value(key,v),fs);
+  }
+  static public Value put( Key key, Iced v, Futures fs,boolean donCache ) {
+    return put(key,new Value(key,v),fs,donCache);
   }
 
   // Remove this Key

@@ -1,7 +1,6 @@
 package hex;
 
 import hex.Layer.Input;
-import hex.Trainer.ParallelTrainers;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.File;
@@ -14,11 +13,13 @@ import java.util.*;
 
 import javax.swing.JFrame;
 
-import water.NeuralNetMnistTest;
+import water.Sample07_NeuralNet_Mnist;
+import water.TestUtil;
+import water.fvec.Frame;
 import water.util.Log;
 import water.util.Utils;
 
-public class Mnist8m extends NeuralNetMnistTest {
+public class Mnist8m extends Sample07_NeuralNet_Mnist {
   static final String IMAGES_SOURCE = "../datasets/mnist8m/train8m-images-idx3-ubyte";
   static final String LABELS_SOURCE = "../datasets/mnist8m/train8m-labels-idx1-ubyte";
   static final String IMAGES_SHUFFLED = "../mnist8m/shuffled-images";
@@ -26,9 +27,10 @@ public class Mnist8m extends NeuralNetMnistTest {
   static final int COUNT = 8100000;
   static ByteBuffer[] _images = new ByteBuffer[16]; // Too big for ByteBuffer
   static final byte[] _labels = new byte[COUNT];
-  static final long PAGE_SIZE = COUNT / _images.length * (long) PIXELS;
+  static final long PAGE_SIZE = COUNT / _images.length * PIXELS;
 
   public static void main(String[] args) throws Exception {
+    // /home/0xdiag/home-0xdiag-datasets/mnist/mnist8m.csv
     load();
     // One shot
     // normalize();
@@ -39,21 +41,20 @@ public class Mnist8m extends NeuralNetMnistTest {
 
   public static class Train8mInput extends Input {
     public Train8mInput() {
-      super(PIXELS);
-      _count = COUNT;
+      _len = COUNT;
     }
 
     @Override int label() {
-      return _labels[(int) _n];
+      return _labels[(int) _row];
     }
 
     @Override void fprop() {
-      long offset = _n * PIXELS;
+      long offset = _row * PIXELS;
       int page = (int) (offset / PAGE_SIZE);
       int indx = (int) (offset % PAGE_SIZE);
       ByteBuffer buffer = _images[page];
       for( int i = 0; i < _a.length; i++ ) {
-        double d = convert(buffer.get(indx + i));
+        double d = buffer.get(indx + i) & 0xff / 256;
         d -= Mnist8mNorm.MEANS[i];
         d = Mnist8mNorm.SIGMS[i] > 1e-4 ? d / Mnist8mNorm.SIGMS[i] : d;
         _a[i] = (float) d;
@@ -61,32 +62,9 @@ public class Mnist8m extends NeuralNetMnistTest {
     }
   }
 
-  public static class TestInput extends Input {
-    MnistInput _raw = loadZip(PATH + "t10k-images-idx3-ubyte.gz", PATH + "t10k-labels-idx1-ubyte.gz");
+  todo testinput with same normalization
 
-    public TestInput() {
-      super(PIXELS);
-      _count = _raw._labels.length;
-    }
-
-    @Override int label() {
-      return _raw._labels[(int) _n];
-    }
-
-    @Override void fprop() {
-      for( int i = 0; i < _a.length; i++ ) {
-        double d = _raw._images[(int) _n * PIXELS + i];
-        d -= Mnist8mNorm.MEANS[i];
-        d = Mnist8mNorm.SIGMS[i] > 1e-4 ? d / Mnist8mNorm.SIGMS[i] : d;
-        _a[i] = (float) d;
-      }
-    }
-  }
-
-  @Override public void run() throws Exception {
-    String f = "smalldata/mnist/";
-    _test =
-
+  public void run() throws Exception {
     boolean load = false;
     boolean deep = false;
     {
@@ -146,7 +124,6 @@ public class Mnist8m extends NeuralNetMnistTest {
 //    }
 //    System.out.println("save: " + (int) ((System.nanoTime() - time) / 1e6) + " ms");
   }
-
 
   void preTrain(Trainer trainer, int upTo) {
     float[][] inputs = new float[trainer._batch][];

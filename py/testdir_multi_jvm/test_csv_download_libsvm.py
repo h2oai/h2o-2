@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
             print "\nStarting csv download to",  csvDownloadPathname, "rowCount:", rowCount, "colCount:", colCount
             start = time.time()
-            h2o.nodes[0].csv_download(key=hex_key, csvPathname=csvDownloadPathname)
+            h2o.nodes[0].csv_download(src_key=hex_key, csvPathname=csvDownloadPathname)
             print "csv_download end.", 'took', time.time() - start, 'seconds. Originally from:', csvFilename
 
             # remove the original parsed key. source was already removed by h2o

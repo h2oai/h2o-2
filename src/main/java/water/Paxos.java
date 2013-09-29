@@ -79,9 +79,17 @@ public abstract class Paxos {
     for( H2ONode h2o2 : h2os )
       if( chash != h2o2._heartbeat._cloud_hash )
         return print("Heartbeat hashes differ, self=0x"+Integer.toHexString(chash)+" "+h2o2+"=0x"+Integer.toHexString(h2o2._heartbeat._cloud_hash)+" ",PROPOSED);
-    _commonKnowledge = true;    // Yup!  Have consensus
+    // Hashes are same, so accept the new larger cloud-size
     H2O.CLOUD.set_next_Cloud(h2os,chash);
-    Paxos.class.notify(); // Also, wake up a worker thread stuck in DKV.put
+
+    // Demand everybody has rolled forward to same size before consensus
+    boolean same_size=true;
+    for( H2ONode h2o2 : h2os )
+      same_size &= (h2o2._heartbeat._cloud_size == H2O.CLOUD.size());
+    if( !same_size ) return 0;
+
+    _commonKnowledge = true;    // Yup!  Have consensus
+    Paxos.class.notifyAll(); // Also, wake up a worker thread stuck in DKV.put
     Log.info("Cloud of size ", H2O.CLOUD.size(), " formed ", H2O.CLOUD.toString());
     H2O.notifyAboutCloudSize(H2O.SELF_ADDRESS, H2O.API_PORT, H2O.CLOUD.size());
     return 0;

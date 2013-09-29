@@ -61,14 +61,16 @@ public class ImportFiles extends Request {
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 
+  protected String parseLink(String k, String txt) { return Parse.link(k, txt); }
   // Auto-link to Parse
   String parse() { return "Parse.query"; }
+
 
   // HTML builder
   @Override public boolean toHTML( StringBuilder sb ) {
     if( files.length > 1 )
       sb.append("<div class='alert'>")
-        .append(Parse.link("*"+path.value()+"*", "Parse all into hex format"))
+        .append(parseLink("*"+path.value()+"*", "Parse all into hex format"))
         .append(" </div>");
 
     DocGen.HTML.title(sb,"files");

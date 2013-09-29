@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
@@ -524,8 +525,53 @@ public class ValueArray extends Iced implements Cloneable {
   public InputStream openStream() {return openStream(null);}
   public InputStream openStream(ProgressMonitor p) {return new VAStream(this, p);}
 
-  /** Convert to a Frame.  */
+  /**
+   * Frame conversion.
+   */
+
+  /** Locally synchronize VA to FVec conversions within this node. */
+  final static Object conversionLock = new Object();
+
+  /** Conversion number is only for logging. */
+  final static AtomicInteger conversionNumber = new AtomicInteger(0);
+
+  public static Frame asFrame(Value value) {
+    Object o = value.get();
+    if(o instanceof ValueArray)
+      return ((ValueArray) o).asFrame(value._key.toString());
+    return (Frame) o;
+  }
+
   public Frame asFrame() {
+    return asFrame(_key.toString());
+  }
+
+  public Frame asFrame(String input) {
+    synchronized( conversionLock ) {
+      String frameKeyString = DKV.calcConvertedFrameKeyString(input);
+      Key k2 = Key.make(frameKeyString);
+      Value v2 = DKV.get(k2);
+      if( v2 != null ) {
+        // If the thing that aliases with the cached conversion name is not
+        // a Frame, then throw an error.
+        if( !v2.isFrame() ) {
+          throw new IllegalArgumentException(k2 + " is not a frame.");
+        }
+        Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+        return v2.get();
+      }
+
+      // No cached conversion.  Make one and store it in DKV.
+      int cn = conversionNumber.getAndIncrement();
+      Log.info("Converting ValueArray to Frame: node(" + H2O.SELF + ") convNum(" + cn + ") key(" + frameKeyString + ")...");
+      Frame frame = convert();
+      DKV.put(k2, frame);
+      Log.info("Conversion " + cn + " complete.");
+      return frame;
+    }
+  }
+
+  private Frame convert() {
     String[] names = new String[_cols.length];
     AppendableVec[] avs = new AppendableVec[_cols.length];
     for(int i = 0; i < _cols.length; ++i) {

@@ -3,7 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common
 import h2o_print
 
-DO_GLM = False
+DO_GLM = True
 LOG_MACHINE_STATS = False
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -27,7 +27,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             csvFilenameList= [
                 ("*[1-2][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800),
             ]
-
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']

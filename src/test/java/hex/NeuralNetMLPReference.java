@@ -189,7 +189,28 @@ public class NeuralNetMLPReference {
     _testData = new float[testRows][];
     MakeTrainTest(allData, _trainData, _testData);
 
-    // Data really should be normalized here!
+    // Normalize all data using train stats
+    for( int i = 0; i < 4; i++ ) {
+      double mean = 0;
+      for( int n = 0; n < _trainData.length; n++ )
+        mean += _trainData[n][i];
+      mean /= _trainData.length;
+
+      double sigma = 0;
+      for( int n = 0; n < _trainData.length; n++ ) {
+        double d = _trainData[n][i] - mean;
+        sigma += d * d;
+      }
+      sigma = Math.sqrt(sigma / (_trainData.length - 1));
+      for( int n = 0; n < _trainData.length; n++ ) {
+        _trainData[n][i] -= mean;
+        _trainData[n][i] /= sigma;
+      }
+      for( int n = 0; n < _testData.length; n++ ) {
+        _testData[n][i] -= mean;
+        _testData[n][i] /= sigma;
+      }
+    }
 
     int numInput = 4;
     int numHidden = 7;
@@ -202,14 +223,14 @@ public class NeuralNetMLPReference {
     _nn.Train(_trainData, maxEpochs, learnRate, 0);
   }
 
-  static void MakeTrainTest(float[][] allData, float[][] trainData, float[][] testData) {
+  void MakeTrainTest(float[][] allData, float[][] trainData, float[][] testData) {
     // split allData into 80% trainData and 20% testData
     int numCols = allData[0].length;
 
-    int[] sequence = new int[allData.length]; // create a random sequence of indexes
-    for( int i = 0; i < sequence.length; ++i )
-      sequence[i] = i;
-    NeuralNetwork.shuffle(sequence);
+    int[] shuffle = new int[allData.length]; // create a random sequence of indexes
+    for( int i = 0; i < shuffle.length; ++i )
+      shuffle[i] = i;
+    NeuralNetwork.shuffle(shuffle);
 
     int si = 0; // index into sequence[]
     int j = 0; // index into trainData or testData
@@ -217,7 +238,7 @@ public class NeuralNetMLPReference {
     for( ; si < trainData.length; ++si ) // first rows to train data
     {
       trainData[j] = new float[numCols];
-      int idx = sequence[si];
+      int idx = shuffle[si];
       System.arraycopy(allData[idx], 0, trainData[j], 0, numCols);
       ++j;
     }
@@ -226,7 +247,7 @@ public class NeuralNetMLPReference {
     for( ; si < allData.length; ++si ) // remainder to test data
     {
       testData[j] = new float[numCols];
-      int idx = sequence[si];
+      int idx = shuffle[si];
       System.arraycopy(allData[idx], 0, testData[j], 0, numCols);
       ++j;
     }

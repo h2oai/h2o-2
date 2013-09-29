@@ -78,6 +78,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // To help with asserts, record the size of the sent DTask - if we resend
   // if should remain the same size.
   int _size;
+  int _size_rez;                // Size of received results
 
   // Magic Cookies
   static final byte SERVER_UDP_SEND = 10;
@@ -258,7 +259,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     volatile boolean _computed; // One time transition from false to true
     transient AtomicBoolean _firstException = new AtomicBoolean(false);
     // To help with asserts, record the size of the sent DTask - if we resend
-    // if should remain the same size.
+    // if should remain the same size.  Also used for profiling.
     int _size;
     public RPCCall(DTask dt, H2ONode client, int tsknum) {
       _dt = dt;
@@ -315,7 +316,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( dt._repliedTcp ) rab.put1(RPC.SERVER_TCP_SEND) ; // Reply sent via TCP
       else        dt.write(rab.put1(RPC.SERVER_UDP_SEND)); // Reply sent via UDP
       rab.close(dt._repliedTcp,false);
-      assert sz_check(rab) : "Resend of "+_dt.getClass()+"changes size from "+_size+" to "+rab.size();
+      assert sz_check(rab) : "Resend of "+_dt.getClass()+" changes size from "+_size+" to "+rab.size();
       // Double retry until we exceed existing age.  This is the time to delay
       // until we try again.  Note that we come here immediately on creation,
       // so the first doubling happens before anybody does any waiting.  Also
@@ -343,6 +344,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( _size == 0 ) { _size = absize; return true; }
       return _size==absize;
     }
+    public int size() { return _size; }
   }
 
   // Handle traffic, from a client to this server asking for work to be done.
@@ -462,6 +464,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( _done ) return ab.close(false,false); // Ignore duplicate response packet
       UDPTimeOutThread.PENDING.remove(this);
       _dt.read(ab);             // Read the answer (under lock?)
+      _size_rez = ab.size();    // Record received size
       ab.close(true,false);     // Also finish the read (under lock?)
       _dt.onAck();              // One time only execute (before sending ACKACK)
       _done = true;             // Only read one (of many) response packets
@@ -477,7 +480,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
                   task.completeExceptionally(e);
                 else try {
                   task.tryComplete();
-                } catch(Throwable e){
+                } catch(Throwable e) {
                   task.completeExceptionally(e);
                 }
               }
@@ -501,6 +504,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     if( _size == 0 ) { _size = absize; return true; }
     return _size==absize;
   }
+  // Size of received results
+  public int size_rez() { return _size_rez; }
 
   // ---
   static final long RETRY_MS = 200; // Initial UDP packet retry in msec

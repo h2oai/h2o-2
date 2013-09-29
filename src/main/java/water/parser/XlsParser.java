@@ -24,7 +24,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
   public XlsParser clone(){return new XlsParser(_setup);}
 
   @Override
-  public void streamParse( final InputStream is, final DataOut dout) throws Exception {
+  public DataOut streamParse( final InputStream is, final DataOut dout) throws Exception {
     _dout = dout;
     _firstRow = true;
     try {
@@ -38,6 +38,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
     } finally {
       try { is.close(); } catch (IOException e) { }
     }
+    return dout;
   }
 
   /**

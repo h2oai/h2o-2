@@ -41,6 +41,7 @@ public class h2odriver extends Configured implements Tool {
   static int extraMemPercent = -1;            // Between 0 and 10, typically.  Cannot be negative.
   static String driverCallbackIp = null;
   static int driverCallbackPort = 0;          // By default, let the system pick the port.
+  static String network = null;
   static boolean disown = false;
   static String clusterReadyFileName = null;
   static int cloudFormationTimeoutSeconds = DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
@@ -355,6 +356,7 @@ public class h2odriver extends Configured implements Tool {
                     "              (Note nnnnn is chosen randomly to produce a unique name)\n" +
                     "          [-driverif <ip address of mapper->driver callback interface>]\n" +
                     "          [-driverport <port of mapper->driver callback interface>]\n" +
+                    "          [-network <IPv4network1Specification>[,<IPv4network2Specification> ...]\n" +
                     "          [-timeout <seconds>]\n" +
                     "          [-disown]\n" +
                     "          [-notify <notification file name>]\n" +
@@ -372,13 +374,19 @@ public class h2odriver extends Configured implements Tool {
                     "\n" +
                     "          o  -mapperXmx is set to both Xms and Xmx of the mapper to reserve\n" +
                     "             memory up front.\n" +
-                    "          o  -extramempercent is a percentage of mapperXmx.  (Default: \" + DEFAULT_EXTRA_MEM_PERCENT + \")\n" +
+                    "          o  -extramempercent is a percentage of mapperXmx.  (Default: " + DEFAULT_EXTRA_MEM_PERCENT + ")\n" +
                     "             Extra memory for internal JVM use outside of Java heap.\n" +
                     "                 mapreduce.map.memory.mb = mapperXmx * (1 + extramempercent/100)\n" +
                     "          o  -libjars with an h2o.jar is required.\n" +
                     "          o  -driverif and -driverport let the user optionally specify the\n" +
                     "             network interface and port (on the driver host) for callback\n" +
                     "             messages from the mapper to the driver.\n" +
+                    "          o  -network allows the user to specify a list of networks that the\n" +
+                    "             H2O nodes can bind to.  Use this if you have multiple network\n" +
+                    "             interfaces on the hosts in your Hadoop cluster and you want to\n" +
+                    "             force H2O to use a specific one.\n" +
+                    "             (Example network specification: '10.1.2.0/24' allows 256 legal\n" +
+                    "             possibilities.)\n" +
                     "          o  -timeout specifies how many seconds to wait for the H2O cluster\n" +
                     "             to come up before giving up.  (Default: " + DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS + " seconds\n" +
                     "          o  -disown causes the driver to exit as soon as the cloud forms.\n" +
@@ -463,6 +471,10 @@ public class h2odriver extends Configured implements Tool {
         i++; if (i >= args.length) { usage(); }
         driverCallbackPort = Integer.parseInt(args[i]);
       }
+      else if (s.equals("-network")) {
+        i++; if (i >= args.length) { usage(); }
+        network = args[i];
+      }
       else if (s.equals("-timeout")) {
         i++; if (i >= args.length) { usage(); }
         cloudFormationTimeoutSeconds = Integer.parseInt(args[i]);
@@ -505,6 +517,46 @@ public class h2odriver extends Configured implements Tool {
       Random rng = new Random();
       int num = rng.nextInt(99999);
       jobtrackerName = "H2O_" + num;
+    }
+
+    if (network == null) {
+      network = "";
+    }
+    else {
+      String[] networks;
+      if (network.contains(",")) {
+        networks = network.split(",");
+      }
+      else {
+        networks = new String[1];
+        networks[0] = network;
+      }
+
+      for (int j = 0; j < networks.length; j++) {
+        String n = networks[j];
+        Pattern p = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)/(\\d+)");
+        Matcher m = p.matcher(n);
+        boolean b = m.matches();
+        if (! b) {
+          error("network invalid: " + n);
+        }
+
+        for (int k = 1; k <=4; k++) {
+          int o = Integer.parseInt(m.group(k));
+          if ((o < 0) || (o > 255)) {
+            error("network invalid: " + n);
+          }
+
+          int bits = Integer.parseInt(m.group(5));
+          if ((bits < 0) || (bits > 32)) {
+            error("network invalid: " + n);
+          }
+        }
+      }
+    }
+
+    if (network == null) {
+      error("Internal error, network should not be null at this point");
     }
   }
 
@@ -673,6 +725,7 @@ public class h2odriver extends Configured implements Tool {
 
     conf.set(h2omapper.H2O_DRIVER_IP_KEY, driverCallbackIp);
     conf.set(h2omapper.H2O_DRIVER_PORT_KEY, Integer.toString(actualDriverCallbackPort));
+    conf.set(h2omapper.H2O_NETWORK_KEY, network);
 
     // Set up job stuff.
     // -----------------

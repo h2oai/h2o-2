@@ -5,6 +5,8 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import jsr166y.*;
 import water.exec.Function;
@@ -179,6 +181,7 @@ public final class H2O {
       if( idx == 256 ) idx=1; // wrap, avoiding zero
       CLOUDS[idx] = CLOUD = new H2O(h2os,hash,idx);
     }
+    SELF._heartbeat._cloud_size=(char)CLOUD.size();
     Paxos.print("Announcing new Cloud Membership: ",_memary);
   }
 
@@ -203,7 +206,7 @@ public final class H2O {
   public static void waitForCloudSize(int x, long ms) {
     long start = System.currentTimeMillis();
     while( System.currentTimeMillis() - start < ms ) {
-      if( CLOUD.size() >= x )
+      if( CLOUD.size() >= x && Paxos._commonKnowledge )
         break;
       try { Thread.sleep(100); } catch( InterruptedException ie ) { }
     }
@@ -275,8 +278,20 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
+
   public static InetAddress findInetAddressForSelf() throws Error {
     if(SELF_ADDRESS == null) {
+      if ((OPT_ARGS.ip != null) && (OPT_ARGS.network != null)) {
+        Log.err("ip and network options must not be used together");
+        H2O.exit(-1);
+      }
+
+      ArrayList<UserSpecifiedNetwork> networkList = UserSpecifiedNetwork.calcArrayList(OPT_ARGS.network);
+      if (networkList == null) {
+        Log.err("Exiting.");
+        H2O.exit(-1);
+      }
+
       // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
       // Windows, but could be many on Linux or if a hypervisor is present.
       ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
@@ -312,7 +327,27 @@ public final class H2O {
           H2O.exit(-1);
         }
         local = arg;
-      } else {
+      } else if (networkList.size() > 0) {
+        // Return the first match from the list, if any.
+        // If there are no matches, then exit.
+        Log.info("Network list was specified by the user.  Searching for a match...");
+        ArrayList<InetAddress> validIps = new ArrayList();
+        for( InetAddress ip : ips ) {
+          Log.info("    Considering " + ip.getHostAddress() + " ...");
+          for ( UserSpecifiedNetwork n : networkList ) {
+            if (n.inetAddressOnNetwork(ip)) {
+              Log.info("    Matched " + ip.getHostAddress());
+              local = ip;
+              SELF_ADDRESS = local;
+              return SELF_ADDRESS;
+            }
+          }
+        }
+
+        Log.err("No interface matches the network list from the -network option.  Exiting.");
+        H2O.exit(-1);
+      }
+      else {
         // No user-specified IP address.  Attempt auto-discovery.  Roll through
         // all the network choices on looking for a single Inet4.
         ArrayList<InetAddress> validIps = new ArrayList();
@@ -420,7 +455,7 @@ public final class H2O {
     Key k = null;
     for( Value v : vs ) {
       if( v != null ) {
-        assert k == null || k == v._key;
+        assert k == null || k == v._key : "Mismatched keys: "+k+" vs "+v._key;
         k = v._key;
       }
     }
@@ -591,7 +626,13 @@ public final class H2O {
       return true;
     }
   }
-
+  public static abstract class H2OCallback<T extends DTask> extends H2OCountedCompleter{
+    @Override public void compute2(){throw new UnsupportedOperationException();}
+    @Override public void onCompletion(CountedCompleter caller){
+      callback((T)caller);
+    }
+    public abstract void callback(T t);
+  }
 
   // --------------------------------------------------------------------------
   public static OptArgs OPT_ARGS = new OptArgs();
@@ -600,6 +641,7 @@ public final class H2O {
     public String flatfile; // set_cloud_name_and_mcast()
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
+    public String network; // Network specification for acceptable interfaces to bind to.
     public String ice_root; // ice root directory
     public String hdfs; // HDFS backend
     public String hdfs_version; // version of the filesystem
@@ -644,6 +686,13 @@ public final class H2O {
     "    -port <port>\n" +
     "          Port number for this node (note: port+1 is also used).\n" +
     "          (The default port is " + DEFAULT_PORT + ".)\n" +
+    "\n" +
+    "    -network <IPv4network1Specification>[,<IPv4network2Specification> ...]\n" +
+    "          The IP address discovery code will bind to the first interface\n" +
+    "          that matches one of the networks in the comma-separated list.\n" +
+    "          Use instead of -ip when a broad range of addresses is legal.\n" +
+    "          (Example network specification: '10.1.2.0/24' allows 256 legal\n" +
+    "          possibilities.)\n" +
     "\n" +
     "    -ice_root <fileSystemPath>\n" +
     "          The directory where H2O spills temporary data to disk.\n" +
@@ -795,7 +844,7 @@ public final class H2O {
   }
 
   // Default location of the AWS credentials file
-  private static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
+  public static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
   public static PropertiesCredentials getAWSCredentials() throws IOException {
     File credentials = new File(Objects.firstNonNull(OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
     return new PropertiesCredentials(credentials);

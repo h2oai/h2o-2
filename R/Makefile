@@ -6,8 +6,6 @@ PDFLATEX=$(shell which pdflatex)
 build:
 	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' DESCRIPTION.template > h2o-package/DESCRIPTION
 	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-package.template > h2o-package/man/h2o-package.Rd
-	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' DESCRIPTION-WRAPPER.template > h2oWrapper-package/DESCRIPTION
-	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2oWrapper-package.template > h2oWrapper-package/man/h2oWrapper-package.Rd
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
@@ -25,14 +23,12 @@ endif
 	# Add to resources directory
 	mkdir -p ../lib/resources/R
 	mv info.txt ../lib/resources/R/info.txt
-	cp -p h2o_$(PROJECT_VERSION).tar.gz ../lib/resources/R	
+	mv h2o_$(PROJECT_VERSION).tar.gz ../lib/resources/R	
 
+	R CMD build h2oWrapper-package
 	mkdir -p ../target/R
 	cp -p README.txt ../target/R
-	mv h2o_$(PROJECT_VERSION).tar.gz ../target/R
-	
-	R CMD build h2oWrapper-package
-	mv h2oWrapper_$(PROJECT_VERSION).tar.gz ../target/R
+	mv h2oWrapper_1.0.tar.gz ../target/R
 
 clean:
 	rm -f h2o-package/DESCRIPTION
@@ -40,7 +36,5 @@ clean:
 	rm -f h2o-package/man/h2o-package.Rd
 	rm -f h2o_*.tar.gz
 	
-	rm -f h2oWrapper-package/DESCRIPTION
 	rm -f h2oWrapper-package/h2oWrapper_package.pdf
-	rm -f h2oWrapper-package/man/h2oWrapper-package.Rd
 	rm -f h2oWrapper_*.tar.gz

@@ -3,6 +3,7 @@ package water.fvec;
 import java.util.Arrays;
 
 import water.*;
+import water.H2O.H2OCountedCompleter;
 
 /**
  * A single distributed vector column.
@@ -53,15 +54,15 @@ public class Vec extends Iced {
   final private long _espc[];
   /** Enum/factor/catagorical names. */
   public String [] _domain;
-  /** If we have active writers, then all cached roll-ups/reductions
-   *  (e.g. _min, _max) unavailable.  We won't even try to compute them (under
-   *  the assumption that we'll about to see a zillions writes/sec). */
-  private boolean _activeWrites;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
   double _min, _max, _mean, _sigma;
   long _size;
   boolean _isInt;
-  volatile long _naCnt=-1;      // Also flag for "rollup stats computed"
+  /** The count of missing elements.... or -2 if we have active writers and no
+   *  rollup info can be computed (because the vector is being rapidly
+   *  modified!), or -1 if rollups have not been computed since the last
+   *  modification.   */
+  volatile long _naCnt=-1;
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
@@ -160,20 +161,46 @@ public class Vec extends Iced {
   /** Size of compressed vector data. */
   public long byteSize(){return rollupStats()._size; }
 
-  /** Compute the roll-up stats as-needed, and copy into the Vec object */
-  Vec rollupStats() {
-    if( _naCnt >= 0 ) return this;
-    if( _activeWrites ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
-    RollupStats rs = new RollupStats().doAll(this);
+  Vec setRollupStats( RollupStats rs ) {
     _min  = rs._min; _max = rs._max; _mean = rs._mean;
     _sigma = Math.sqrt(rs._sigma / (rs._rows - 1));
     _size =rs._size;
     _isInt= rs._isInt;
-    if( rs._rows == 0 )   // All rows missing?  Then no rollups
+    if( rs._rows == 0 )         // All rows missing?  Then no rollups
       _min = _max = _mean = _sigma = Double.NaN;
     _naCnt= rs._naCnt;          // Volatile write last to announce all stats ready
     return this;
   }
+
+  /** Compute the roll-up stats as-needed, and copy into the Vec object */
+  Vec rollupStats() {
+    if( _naCnt >= 0 ) return this;
+    Vec vthis = DKV.get(_key).get();
+    if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
+    if( vthis._naCnt>= 0 ) return vthis;
+
+    final RollupStats rs = new RollupStats().doAll(this);
+    setRollupStats(rs);
+    // Now do this remotely also
+    new TAtomic<Vec>() {
+      @Override public Vec atomic(Vec v) { 
+        if( v!=null && v._naCnt == -1 ) v.setRollupStats(rs);  return v;
+      }
+    }.fork(_key);
+    return this;
+  }
+
+  // Allow a bunch of rollups to run in parallel
+  public void rollupStats(Futures fs) {
+    if( _naCnt != -1 ) return;
+    H2OCountedCompleter cc = new H2OCountedCompleter() {
+        final Vec _vec=Vec.this;
+        @Override public void compute2() {_vec.rollupStats(); tryComplete();}
+      };
+    H2O.submitTask(cc);
+    fs.add(cc);
+  }
+
 
   /** A private class to compute the rollup stats */
   private static class RollupStats extends MRTask2<RollupStats> {
@@ -217,33 +244,28 @@ public class Vec extends Iced {
     }
   }
 
-  /** Mark this vector as being actively written into, and clear the rollup stats. */
-  private void setActiveWrites() { _activeWrites = true;  _naCnt = -1; }
-
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
    *  (_min, _max, _mean, etc).  Can be called repeatedly from one or all
    *  chunks.  Per-chunk row-counts will not be changing, just row contents and
    *  caches of row contents. */
-  void startWriting( ) {
-    if( _activeWrites ) return; // Already set
+  void preWriting( ) {
+    if( _naCnt == -2 ) return; // Already set
+    _naCnt = -2;
     if( !writable() ) throw new IllegalArgumentException("Vector not writable");
-    setActiveWrites();          // Set locally eagerly
     // Set remotely lazily.  This will trigger a cloud-wide invalidate of the
     // existing Vec, and eventually we'll have to load a fresh copy of the Vec
-    // with activeWrites turned on, and caching disabled.  This TAtomic is not
-    // lazy to avoid a race with deleting the vec - a "open/set8/close/remove"
-    // sequence can race the "SetActive" with the "remove".
+    // with active writing turned on, and caching disabled.
     new TAtomic<Vec>() {
-      @Override public Vec atomic(Vec v) { v.setActiveWrites(); return v; }
+      @Override public Vec atomic(Vec v) { if( v!=null ) v._naCnt=-2; return v; }
     }.invoke(_key);
   }
 
   /** Stop writing into this Vec.  Rollup stats will again (lazily) be computed. */
   public void postWrite() {
-    if( _activeWrites ) {
-      _activeWrites=false;
+    if( _naCnt==-2 ) {
+      _naCnt=-1;
       new TAtomic<Vec>() {
-        @Override public Vec atomic(Vec v) { v._activeWrites=false; return v; }
+        @Override public Vec atomic(Vec v) { if( v!=null && v._naCnt==-2 ) v._naCnt=-1; return v; }
       }.invoke(_key);
     }
   }
@@ -379,7 +401,7 @@ public class Vec extends Iced {
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {
-    String s = "["+length()+(_naCnt<0 ? "" : ","+_min+"/"+_mean+"/"+_max+", "+PrettyPrint.bytes(_size)+", {");
+    String s = "["+length()+(_naCnt<0 ? ", {" : ","+_min+"/"+_mean+"/"+_max+", "+PrettyPrint.bytes(_size)+", {");
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";
@@ -440,12 +462,14 @@ public class Vec extends Iced {
       private AddVecs2GroupTsk(Key key, int n){_key = key; _addN = _finalN = n;}
       @Override public VectorGroup atomic(VectorGroup old) {
         if(old == null) return new VectorGroup(_key, ++_finalN);
-        return new VectorGroup(_key, _finalN = (_addN + old._len));
+        return new VectorGroup(_key, _finalN = (_addN + old._len + 1));
       }
     }
-    public void reserveKeys(final int n){
+    // reserve range of keys and return index of first new available key
+    public int reserveKeys(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
       tsk.invoke(_key);
+      return tsk._finalN - n;
     }
     /**
      * Gets the next n keys of this group.

@@ -5,20 +5,20 @@ import water.fvec.*;
 import hex.gbm.DRF;
 import hex.gbm.GBM;
 
-public class Inspect2 extends Request {
+public class Inspect2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  private static int viewsz = 100;
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET = "Inspect a fluid-vec frame";
 
-  @API(help="An existing H2O Frame key.")
-  final FrameKey src_key = new FrameKey("src_key");
+  @API(help="An existing H2O Frame key.", required=true, filter=Default.class)
+  Frame src_key;
 
-  @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data")
-  private final LongInt offset = new LongInt("offset", 0L, -1, Long.MAX_VALUE, "");
+  @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data", filter=Default.class, lmin=-1, lmax=Long.MAX_VALUE)
+  long offset;
+
   @API(help="Number of data rows.") long numRows;
   @API(help="Number of data columns.") int numCols;
   @API(help="byte size in memory.") long byteSize;
@@ -53,22 +53,24 @@ public class Inspect2 extends Request {
 
   // Just validate the frame, and fill in the summary bits
   @Override protected Response serve() {
-    Frame fr = DKV.get(src_key.value()).get();
-    if( fr == null ) return RequestServer._http404.serve();
-    numRows = fr.numRows();
-    numCols = fr.numCols();
-    byteSize = fr.byteSize();
+    if( src_key == null ) return RequestServer._http404.serve();
+    numRows = src_key.numRows();
+    numCols = src_key.numCols();
+    Futures fs = new Futures();
+    for( int i=0; i<numCols; i++ )
+      src_key.vecs()[i].rollupStats(fs);
+    fs.blockForPending();
+
+    byteSize = src_key.byteSize();
     cols = new ColSummary[numCols];
     for( int i=0; i<cols.length; i++ )
-      cols[i] = new ColSummary(fr._names[i],fr._vecs[i]);
+      cols[i] = new ColSummary(src_key._names[i],src_key.vecs()[i]);
 
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    final Key skey = src_key.value();
-    final Frame fr = DKV.get(skey).get();
-    final long off = offset.value();
+    Key skey = Key.make(input("src_key"));
 
     // Missing/NA count
     long naCnt = 0;
@@ -83,14 +85,28 @@ public class Inspect2 extends Request {
     sb.append("<div class='alert'>" +
               //"View " + SummaryPage2.link(key, "Summary") +
               "<br/>Build models using " +
-              DRF.link(src_key.value(), "Distributed Random Forest") +", "+
-              GBM.link(src_key.value(), "Distributed GBM") +", "+
-              hex.LR2.link(src_key.value(), "Linear Regression") + ",<br>"+
-              DownloadDataset.link(src_key.value(), "Download as CSV")+
+              DRF.link(skey, "Distributed Random Forest") +", "+
+              GBM.link(skey, "Distributed GBM") +", "+
+              hex.LR2.link(skey, "Linear Regression") + ",<br>"+
+              DownloadDataset.link(skey, "Download as CSV") +
               "</div>");
+    String _scrollto = String.valueOf(offset - 1);
+      sb.append(
+      " <script>$(document).ready(function(){ " +
+      " $('html, body').animate({ scrollTop: $('#row_"+_scrollto+"').offset().top" +
+      "}, 2000);" +
+      "return false;" +
+      "});</script>");
+    sb.append(
+        "<form class='well form-inline' action='Inspect2.html' id='inspect'>" +
+        " <input type='hidden' name='src_key' value="+skey.toString()+">" +
+        " <input type='text' class='input-small span5' placeholder='filter' " +
+        "    name='offset' id='offset' value='"+offset+"' maxlength='512'>" +
+        " <button type='submit' class='btn btn-primary'>Jump to row!</button>" +
+        "</form>");
 
     // Start of where the pagination table goes.  For now, just the info button.
-    sb.append(pagination(fr.numRows()));
+    sb.append(pagination(src_key.numRows(), skey));
 
     DocGen.HTML.arrayHead(sb);
     // Column labels
@@ -103,13 +119,13 @@ public class Inspect2 extends Request {
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x1(fr._vecs[i],-1,cols[i].min)).append("</td>");
+      sb.append("<td>").append(x1(src_key.vecs()[i],-1,cols[i].min)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Max").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(x1(fr._vecs[i],-1,cols[i].max)).append("</td>");
+      sb.append("<td>").append(x1(src_key.vecs()[i],-1,cols[i].max)).append("</td>");
     sb.append("</tr>");
 
     sb.append("<tr class='warning'>");
@@ -127,17 +143,17 @@ public class Inspect2 extends Request {
       sb.append("</tr>");
     }
 
-    if( off == -1 ) {           // Info display
+    if( offset == -1 ) {           // Info display
       sb.append("<tr class='warning'>");
       // An extra row holding vec's compressed bytesize
       sb.append("<td>").append("Size").append("</td>");
       for( int i=0; i<cols.length; i++ )
-        sb.append("<td>").append(PrettyPrint.bytes(fr._vecs[i].byteSize())).append("</td>");
+        sb.append("<td>").append(PrettyPrint.bytes(src_key.vecs()[i].byteSize())).append("</td>");
       sb.append("</tr>");
 
       // All Vecs within a frame are compatible, so just read the
       // home-node/data-placement and start-row from 1st Vec
-      Vec c0 = fr.anyVec();
+      Vec c0 = src_key.anyVec();
       int N = c0.nChunks();
       for( int j=0; j<N; j++ ) { // All the chunks
         sb.append("<tr>");       // Row header
@@ -146,7 +162,7 @@ public class Inspect2 extends Request {
           .append(", ").append(c0.chunk2StartElem(j)).append("</td>");
         for( int i=0; i<cols.length; i++ ) {
           // Report chunk-type (compression scheme)
-          String clazz = fr._vecs[i].elem2BV(j).getClass().getSimpleName();
+          String clazz = src_key.vecs()[i].elem2BV(j).getClass().getSimpleName();
           String trim = clazz.replaceAll("Chunk","");
           sb.append("<td>").append(trim).append("</td>");
         }
@@ -155,12 +171,12 @@ public class Inspect2 extends Request {
 
     } else {                    // Row/data display
       // First N rows
-      int N = (int)Math.min(100,numRows-off);
+      int N = (int)Math.min(100,numRows-offset);
       for( int j=0; j<N; j++ ) {// N rows
-        sb.append("<tr>");      // Row header
-        sb.append("<td>").append(off+j).append("</td>");
+        sb.append("<tr id='row_"+String.valueOf(offset+j)+"'>");      // Row header
+        sb.append("<td>").append(offset+j).append("</td>");
         for( int i=0; i<cols.length; i++ ) // Columns w/in row
-          sb.append("<td>").append(x0(fr._vecs[i],off+j)).append("</td>");
+          sb.append("<td>").append(x0(src_key.vecs()[i],offset+j)).append("</td>");
         sb.append("</tr>");
       }
     }
@@ -172,10 +188,10 @@ public class Inspect2 extends Request {
 
   // ---
   // Return a well-formated string for this kind of Vec
-  private String x0( Vec v, long row ) { return x1(v,row,v.at(row)); }
+  public static String x0( Vec v, long row ) { return x1(v,row,v.at(row)); }
 
   // Format a row, OR the min/max
-  private String x1( Vec v, long row, double d ) {
+  public static String x1( Vec v, long row, double d ) {
     if( (row >= 0 && v.isNA(row)) || Double.isNaN(d) )
       return "-";               // Display of missing elements
     if( v.isEnum() ) return row >= 0 ? v.domain(v.at8(row)) : Long.toString((long)d);
@@ -187,7 +203,7 @@ public class Inspect2 extends Request {
     return Double.toString(d);
   }
 
-  private String x2( double d, double scale ) {
+  public static String x2( double d, double scale ) {
     String s = Double.toString(d);
     // Double math roundoff error means sometimes we get very long trailing
     // strings of junk 0's with 1 digit at the end... when we *know* the data
@@ -202,7 +218,7 @@ public class Inspect2 extends Request {
   }
 
   public String link(String txt,Key k, long offset, long max){
-    if(offset != this.offset.value() && 0 <= offset && offset <= max)return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=" + offset + "'>" + txt + "</a>";
+    if(offset != this.offset && 0 <= offset && offset <= max)return "<a href='Inspect2.html?src_key=" + k.toString() + "&offset=" + offset + "'>" + txt + "</a>";
     return "<span>" + txt + "</span>";
   }
 
@@ -211,20 +227,14 @@ public class Inspect2 extends Request {
   }
 
 
+  private static int viewsz = 100;
 
-//  sb.append("<div style='text-align:center;'>");
-//  sb.append("<span class='pagination'><ul><li>"+"<a href='"+
-//            RequestStatics.encodeRedirectArgs(null,new String[]{"src_key",skey.toString(),"offset",off>=0?"-1":"0"})+
-//            "'>"+(off>=0?"info":"rows")+"</a>"+"</li></ul></span>&nbsp;&nbsp;");
-//  sb.append("</div>");
-
-  protected String pagination(long max) {
-    final long offset = this.offset.value();
-    final Key k = src_key.value();
+  protected String pagination(long max, Key skey) {
+    final long offset = this.offset;
     StringBuilder sb = new StringBuilder();
     sb.append("<div style='text-align:center;'>");
     sb.append("<span class='pagination'><ul>");
-    sb.append("<li>" + infoLink(k) + "</li>");
+    sb.append("<li>" + infoLink(skey) + "</li>");
     long lastOffset = (max / viewsz) * viewsz;
     long lastIdx = (max / viewsz);
     long currentIdx = offset / viewsz;
@@ -232,12 +242,12 @@ public class Inspect2 extends Request {
     long endIdx = Math.min(startIdx + 11, lastIdx);
     if (offset == -1)
       currentIdx = -1;
-    sb.append("<li>" + link("|&lt;",k,0,lastOffset) + "</li>");
-    sb.append("<li>" + link("&lt;",k,offset-viewsz,lastOffset) + "</li>");
+    sb.append("<li>" + link("|&lt;",skey,0,lastOffset) + "</li>");
+    sb.append("<li>" + link("&lt;",skey,offset-viewsz,lastOffset) + "</li>");
     for (long i = startIdx; i <= endIdx; ++i)
-      sb.append("<li>" + link(String.valueOf(i),k,i*viewsz,lastOffset) + "</li>");
-    sb.append("<li>" + link("&gt;",k,offset+viewsz,lastOffset) + "</li>");
-    sb.append("<li>" + link("&gt;|",k,lastOffset,lastOffset) + "</li>");
+      sb.append("<li>" + link(String.valueOf(i),skey,i*viewsz,lastOffset) + "</li>");
+    sb.append("<li>" + link("&gt;",skey,offset+viewsz,lastOffset) + "</li>");
+    sb.append("<li>" + link("&gt;|",skey,lastOffset,lastOffset) + "</li>");
     sb.append("</ul></span>");
     sb.append("</div>");
     return sb.toString();

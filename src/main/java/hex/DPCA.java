@@ -15,6 +15,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.api.Constants;
+import water.api.PCA;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
 
@@ -27,7 +28,7 @@ public abstract class DPCA {
   /* Track PCA job progress */
   public static class PCAJob extends ChunkProgressJob {
     public PCAJob(ValueArray data, Key dest) {
-      super("PCA(" + data._key.toString() + ")", dest, data.chunks() * 2);
+      super("PCA(" + data._key.toString() + ")", dest, data.chunks());
     }
 
     public boolean isDone() {
@@ -40,64 +41,19 @@ public abstract class DPCA {
     }
   }
 
-  public static class StandardizeTask extends MRTask2<StandardizeTask> {
-    final double[] _normSub;
-    final double[] _normMul;
-
-    public StandardizeTask(double[] normSub, double[] normMul) {
-      _normSub = normSub;
-      _normMul = normMul;
-    }
-
-    @Override public void map(Chunk [] chunks) {
-      int ncol = _normSub.length;
-      Chunk [] inputs = Arrays.copyOf(chunks, ncol);
-      NewChunk [] outputs = new NewChunk[ncol];
-
-      for(int i = ncol; i < chunks.length; ++i) {
-        outputs[i-ncol] = (NewChunk)chunks[i];
-      }
-
-      int rows = inputs[0]._len;
-      for(int c = 0; c < ncol; c++) {
-        for(int r = 0; r < rows; r++) {
-          double x = inputs[c].at0(r);
-          x -= _normSub[c];
-          x *= _normMul[c];
-          outputs[c].addNum(x);
-        }
-      }
-    }
-
-    public static Frame standardize(Frame data, double[] normSub, double[] normMul) {
-      int ncol = normSub.length;
-      Vec [] vecs = Arrays.copyOf(data._vecs, 2*ncol);
-      VectorGroup vg = data._vecs[0].group();
-      Key [] keys = vg.addVecs(ncol);
-      for(int i = 0; i < ncol; i++) {
-        vecs[ncol+i] = new AppendableVec(keys[i]);
-      }
-      StandardizeTask tsk = new StandardizeTask(normSub, normMul).doAll(vecs);
-      Vec [] outputVecs = Arrays.copyOfRange(tsk._fr._vecs, ncol, 2*ncol);
-
-      Frame f = new Frame(data.names(), outputVecs);
-      return f;
-    }
-
-    public static Frame standardize(final DataFrame data) {
-      // Extract only the columns in the associated model
-      Frame subset = data.modelAsFrame();
-      Assert.assertEquals(subset._vecs.length, data._normSub.length);
-      return standardize(subset, data._normSub, data._normMul);
-    }
-  }
-
   /* Store parameters that go into PCA calculation */
   public static class PCAParams extends Iced {
+    public int _maxPC = PCA.MAX_COL;
     public double _tol = 0;
     public boolean _standardized = true;
 
     public PCAParams(double tol, boolean standardized) {
+      _tol = tol;
+      _standardized = standardized;
+    }
+
+    public PCAParams(int maxPC, double tol, boolean standardized) {
+      _maxPC = maxPC;
       _tol = tol;
       _standardized = standardized;
     }
@@ -331,7 +287,8 @@ public abstract class DPCA {
       cumVar[i] = i == 0 ? propVar[0] : cumVar[i-1] + propVar[i];
     }
 
-    int ncomp = getNumPC(sdev, params._tol);
+    int ncomp = Math.min(getNumPC(sdev, params._tol), params._maxPC);
+    // int ncomp = getNumPC(sdev, params._tol);
     // int ncomp = Math.min(getNumPC(Sval, params._tol), (int)data._nobs-1);
     // int ncomp = Math.min(params._num_pc, Sval.length);
     PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, cumVar, eigVec, mySVD.rank(), 0, ncomp, params);

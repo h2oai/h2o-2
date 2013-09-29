@@ -190,9 +190,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
-    // not-equal to some value.  Equal/not-equal makes sense for catagoricals
-    // but both splits could work for any integral datatype.  Do the less-than
-    // splits first.
+    // not-equal to some value.  Equal/not-equal makes sense for catagoricals.
+    // Do the less-than splits first.
     double mseAll=0;
     assert (mseAll = mse(M1,S1,n1))==mseAll || true;
     DTree.Split best = DTree.Split.make(col,-1,false,0L,0L,Double.MAX_VALUE,Double.MAX_VALUE,(float[])null,null);
@@ -238,7 +237,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
         assert Math.abs(mseAll - mse(M2,S2,n2)) < 0.00001 : "mseAll="+mseAll+", mse at end="+mse(M2,S2,n2)+", bin="+b+", "+this;
       }
     }
-
+    assert best._bin > 0 : "Must actually pick a split "+best;
     return best;
   }
 
@@ -273,7 +272,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Compute response-vector mean & variance.
   // Response-vector is specified as _nclass values in Chunks, from ychk to
   // ychk+_nclass-1.
-  void incr( int row, float d, Chunk[] chks, int ychk ) {
+  void incr( int row, float d, float work[] ) {
     int b = bin(d);             // Compute bin# via linear interpolation
     // Lazily allocate storage the first time a bin recieves any counts.
     float Ms[] = _Ms[b];
@@ -290,13 +289,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Recursive mean & variance of response vector
     //    http://www.johndcook.com/standard_deviation.html
     for( int c=0; c<_nclass; c++ ) {
-      Chunk chk = chks[ychk+c];
-      float y;
-      if( chk instanceof C4FChunk ) { // Help inline common case
-        y = (float)((C4FChunk)chk).at0(row);
-      } else {
-        y = (float)chk.at0(row);
-      }
+      float y = work[c];
       float oldM = Ms[c];   // Old mean
       float newM = Ms[c] = oldM + (y-oldM)/k;
       Ss[c] += (y-oldM)*(y-newM);
@@ -318,7 +311,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // An initial set of DBinHistograms (one per column) for this column set
   public static DBinHistogram[] initialHist( Frame fr, int ncols, char nbins, char nclass ) {
     DBinHistogram hists[] = new DBinHistogram[ncols];
-    Vec[] vs = fr._vecs;
+    Vec[] vs = fr.vecs();
     for( int j=0; j<ncols; j++ ) {
       Vec v = vs[j];
       hists[j] = (v.naCnt()==v.length() || v.min()==v.max()) ? null

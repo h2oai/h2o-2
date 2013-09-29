@@ -131,8 +131,8 @@ public class NewChunk extends Chunk {
         } else if( sz < 65535 ) { // 2 bytes
           byte [] bs = MemoryManager.malloc1(_len << 1);
           int bias = sz < 32767 ? 0 : -(Short.MIN_VALUE+1);
-          for(int i = 0; i < _len; ++i) 
-            UDP.set2(bs, i << 1, (short)((_xs[i] >= 0)? _xs[i]+bias : C2Chunk._NA));
+          for(int i = 0; i < _len; ++i)
+            UDP.set2(bs, i << 1, (short)((_xs[i] >= 0)? _xs[i]-bias : C2Chunk._NA));
           return sz < 32767 ? new C2Chunk(bs) : new C2SChunk(bs,bias,1);
         } else throw H2O.unimpl();
       }
