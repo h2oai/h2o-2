@@ -25,8 +25,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             ]
         else:
             csvFilenameList= [
-                ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-                ("*[1-2][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 3600),
+                # ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+                ("*[1-2][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
             ]
 
 

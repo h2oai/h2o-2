@@ -97,7 +97,12 @@ def probe_node(line, h2oNodes):
             'remoteH2O': 'true',
             'sandbox_error_was_reported': 'false', # odd this is touched..maybe see about changing h2o.py
             'sandbox_ignore_errors': 'false',
-            'username': '0xdiag', # probably he'll be h2o on hadooping the cloud
+            # /home/0xcustomer will have the superset of links for resolving remote paths
+            # the cloud may be started by 0xdiag or 0xcustomer, but this is just going to be
+            # used for looking for buckets (h2o_import.find_folder_and_filename() will 
+            # (along with other rules) try to look in # /home/h2o.nodes[0].username when trying 
+            # to resolve a path to a bucket
+            'username': '0xcustomer', 
             'redirect_import_folder_to_s3_path': 'false', # no..we're not on ec2
             'redirect_import_folder_to_s3n_path': 'false', # no..we're not on ec2
             'delete_keys_at_teardown': 'true', # yes we want each test to clean up after itself

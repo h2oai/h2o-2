@@ -25,7 +25,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "covtype.4x.shuffle.data",
             "covtype4x.shuffle.data",
             "covtype.13x.data",
-            "covtype.13x.shuffle.data",
+            # "covtype.13x.shuffle.data",
             # "covtype.169x.data",
             # "prostate_2g.csv",
             # "prostate_long.csv.gz",
