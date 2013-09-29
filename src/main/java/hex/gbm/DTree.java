@@ -104,9 +104,9 @@ class DTree extends Iced {
     // split sub-bins.  Always go for a value which splits the nearest two
     // elements.
     float splat(DHistogram hs[]) {
-      if( _col == -1 ) return Float.NaN;
       DBinHistogram h = ((DBinHistogram)hs[_col]);
       assert _bin > 0 && _bin < h._nbins;
+      if( _equal ) { assert h._bins[_bin]!=0 && h._mins[_bin]==h._maxs[_bin]; return h._mins[_bin]; }
       int x=_bin-1;
       while( x >= 0 && h._bins[x]==0 ) x--;
       int n=_bin;
@@ -201,37 +201,16 @@ class DTree extends Iced {
     // Can return null for 'all columns'.
     abstract int[] scoreCols( DHistogram[] hs );
 
-    // All columns have a constantResponse?
-    boolean hasConstantResponse() {
-      if( _hs == null ) return true;
-      for( int i=0; i<_hs.length; i++ )
-        if( _hs[i] != null && _hs[i] instanceof DBinHistogram && !((DBinHistogram)_hs[i]).isConstantResponse() )
-          return false;
-      return true;
-    }
-
     // Make the parent of this Node use a -1 NID to prevent the split that this
-    // not otherwise induces.
-    void do_not_split( Frame fr, int ncols, int nclass, int k ) {
-      if( _hs != null ) 
-        for( int i=0; i<_hs.length; i++ )
-          if( _hs[i] != null && _hs[i] instanceof DBinHistogram && !((DBinHistogram)_hs[i]).isConstantResponse() ) {
-            System.out.println("Shocking - col[0] is constantResponse but not "+_hs[i]);
-            StringBuilder sb = new StringBuilder();
-            String[] fs = fr.toStringHdr(sb);
-            Vec nids = fr.vecs()[ncols+1+nclass+nclass+k];
-            for( int r=0; r<fr.numRows(); r++ )
-              if( nids.at8(r)==_nid )
-                fr.toString(sb,fs,r);
-            System.out.println(sb.toString());
-          }
+    // node otherwise induces.  Happens if we find out too-late that we have a
+    // perfect prediction here, and we want to turn into a leaf.
+    void do_not_split( ) {
       DecidedNode dn = _tree.decided(_pid);
       for( int i=0; i<dn._nids.length; i++ )
         if( dn._nids[i]==_nid ) 
           { dn._nids[i] = -1; return; }
       throw H2O.fail();
     }
-
 
     @Override public String toString() {
       final int nclass = _tree._nclass;
@@ -325,17 +304,25 @@ class DTree extends Iced {
     transient int _size = 0;  // Compressed byte size of this subtree
 
     // Make a correctly flavored Undecided
-    abstract UDN makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists );
+    abstract UDN makeUndecidedNode(DBinHistogram[] nhists );
 
     // Pick the best column from the given histograms
     abstract Split bestCol( UDN udn );
 
     DecidedNode( UDN n ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
+      _nids = new int[2];           // Split into 2 subsets
       _split = bestCol(n);          // Best split-point for this tree
+      if( _split._col == -1 ) {     // No good split?
+        // Happens because the predictor columns cannot split the responses -
+        // which might be because all predictor columns are now constant, or
+        // because all responses are now constant.
+        _splat = Float.NaN;
+        Arrays.fill(_nids,-1);
+        return;
+      }
 
       _splat = _split.splat(n._hs); // Split-at value
-      _nids = new int[2];        // Split into 2 subsets
       final char nclass  = _tree._nclass;
       final char nbins   = _tree._nbins;
       final int min_rows = _tree._min_rows;
@@ -344,13 +331,12 @@ class DTree extends Iced {
         // Setup for children splits
         DBinHistogram nhists[] = _split.split(b,nbins,min_rows,n._hs);
         assert nhists==null || nhists.length==_tree._ncols;
-        _nids[b] = nhists == null ? -1 : makeUndecidedNode(_tree,_nid,nhists)._nid;
+        _nids[b] = nhists == null ? -1 : makeUndecidedNode(nhists)._nid;
       }
     }
 
     // Bin #.
     public int bin( Chunk chks[], int row ) {
-      assert _nids.length == 2 : Arrays.toString(_nids)+", pid="+_pid+" and "+this;
       if( chks[_split._col].isNA0(row) ) // Missing data?
         return 0;                        // NAs always to bin 0
       float d = (float)chks[_split._col].at0(row); // Value to split on for this row
@@ -359,16 +345,7 @@ class DTree extends Iced {
       return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
-    public int ns( Chunk chks[], int row ) { 
-      if( _split._col== -1 ) {
-        System.out.println(Arrays.toString(_nids));
-        for( int i=0; i<_nids.length; i++ )
-          if( _nids[i] != -1 )
-            System.out.println("i="+i+", nid="+_nids[i]+" "+_tree.node(_nids[i]));
-        return 0;
-      }
-      return _nids[bin(chks,row)]; 
-    }
+    public int ns( Chunk chks[], int row ) { return _nids[bin(chks,row)]; }
 
     @Override public String toString() {
       if( _split._col == -1 ) return "Decided has col = -1";
@@ -466,6 +443,7 @@ class DTree extends Iced {
     double _pred;
     LeafNode( DTree tree, int pid ) { super(tree,pid); }
     LeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
+    @Override public String toString() { return "Leaf#"+_nid+" = "+_pred; }
     @Override public final StringBuilder toString2(StringBuilder sb, int depth) {
       for( int d=0; d<depth; d++ ) sb.append("  ");
       sb.append(_nid).append(" ");

@@ -276,8 +276,8 @@ public class DRF extends SharedTreeModelBuilder {
   static class DRFDecidedNode extends DecidedNode<DRFUndecidedNode> {
     DRFDecidedNode( DRFUndecidedNode n ) { super(n); }
 
-    @Override DRFUndecidedNode makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists ) {
-      return new DRFUndecidedNode(tree,nid,nhists);
+    @Override DRFUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
+      return new DRFUndecidedNode(_tree,_nid,nhists);
     }
 
     // Find the column with the best split (lowest score).

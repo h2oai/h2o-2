@@ -32,11 +32,11 @@ public class GBMTest extends TestUtil {
     //         });
 
     // Classification tests
-    basicGBM("./smalldata/test/test_tree_minmax.csv","tree_minmax.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("response"); } 
-             });
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
+             });
+    basicGBM("./smalldata/test/test_tree_minmax.csv","tree_minmax.hex",
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("response"); } 
              });
     basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
              new PrepData() {

@@ -210,14 +210,11 @@ public class GBM extends SharedTreeModelBuilder {
           UndecidedNode udn = tree.undecided(leaf);
           udn._hs = sbh.getFinalHisto(k,leaf);
           //System.out.println("Class "+domain[k]+", "+udn);
-          if( udn.hasConstantResponse() ) { // Perfect prediction?
-            udn.do_not_split(fr,_ncols,_nclass,k);
-          } else {
-            // Replace the Undecided with the Split decision
-            GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn);
-            //System.out.println(dn);
-            did_split = true;
-          }
+          // Replace the Undecided with the Split decision
+          GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn);
+          //System.out.println(dn);
+          if( dn._split._col == -1 ) udn.do_not_split();
+          else did_split = true;
         }
         leafs[k]=tmax;          // Setup leafs for next tree level
       }
@@ -237,9 +234,11 @@ public class GBM extends SharedTreeModelBuilder {
           DecidedNode dn = tree.decided(nid);
           for( int i=0; i<dn._nids.length; i++ ) {
             int cnid = dn._nids[i];
-            if( cnid == -1 ||   // Bottomed out
-                tree.node(cnid) instanceof UndecidedNode ) // Or chopped off for depth
-              dn._nids[i] = new GBMLeafNode(tree,nid)._nid;
+            if( cnid == -1 || // Bottomed out (predictors or responses known constant)
+                tree.node(cnid) instanceof UndecidedNode || // Or chopped off for depth
+                (tree.node(cnid) instanceof DecidedNode &&  // Or not possible to split
+                 ((DecidedNode)tree.node(cnid))._split._col==-1) )
+              dn._nids[i] = new GBMLeafNode(tree,nid)._nid; // Mark a leaf here
           }
         }
       }
@@ -285,9 +284,9 @@ public class GBM extends SharedTreeModelBuilder {
     }.doAll(fr);
 
     // Print the generated K trees
-    for( int k=0; k<_nclass; k++ )
-      if( ktrees[k] != null ) 
-        System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
+    //for( int k=0; k<_nclass; k++ )
+    //  if( ktrees[k] != null ) 
+    //    System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
 
     return forest;
   }
@@ -310,22 +309,33 @@ public class GBM extends SharedTreeModelBuilder {
       // For all tree/klasses
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
-        if( tree == null ) continue;
         final int   leaf = _leafs[k];
-        // A leaf-biased array of all active histograms
+        if( tree == null ) continue; // Empty class is ignored
+        // A leaf-biased array of all active Tree leaves.
         final double gs[] = _gss[k] = new double[tree._len-leaf];
         final double rs[] = _rss[k] = new double[tree._len-leaf];
-        final Chunk nids = chk_nids(chks,k);
-        final Chunk wrks = chk_work(chks,k);
-        for( int row=0; row<nids._len; row++ ) {
-          int nid = (int)nids.at80(row); // Get Node to decide from
-          if( tree.node(nid) instanceof UndecidedNode )
-            nid = tree.node(nid)._pid;
-          int leafnid = tree.decided(nid).ns(chks,row);
-          assert leaf <= leafnid && leafnid < tree._len;
+        final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
+        final Chunk ress = chk_work(chks,k); // Residuals for this tree/class
+        for( int row=0; row<nids._len; row++ ) { // For all rows
+          int nid = (int)nids.at80(row);         // Get Node to decide from
+          int oldnid = nid;
+          if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
+            nid = tree.node(nid)._pid;                  // Then take parent's decision
+          DecidedNode dn = tree.decided(nid);           // Must have a decision point
+          if( dn._split._col == -1 )     // Unable to decide?
+            dn = tree.decided(nid = tree.node(nid)._pid); // Then take parent's decision
+          int leafnid = dn.ns(chks,row); // Decide down to a leafnode
+          assert leaf <= leafnid && leafnid < tree._len : 
+          "leaf="+leaf+" <= "+leafnid+" < "+tree._len+", my nid="+nid+" oldnid="+oldnid+"\n"+
+            tree.root().toString2(new StringBuilder(),0)+
+            _fr.toString(row+nids._start);
           assert tree.node(leafnid) instanceof LeafNode;
+          // Note: I can which leaf/region I end up in, but I do not care for
+          // the prediction presented by the tree.  For GBM, we compute the
+          // sum-of-residuals (and sum/abs/mult residuals) for all rows in the
+          // leaf, and get our prediction from that.
           nids.set0(row,leafnid);
-          double res = wrks.at0(row);
+          double res = ress.at0(row);
           double ares = Math.abs(res);
           gs[leafnid-leaf] += ares*(1-ares);
           rs[leafnid-leaf] += res;
@@ -344,8 +354,8 @@ public class GBM extends SharedTreeModelBuilder {
   // columns.  GBM algo: find the lowest error amongst *all* columns.
   static class GBMDecidedNode extends DecidedNode<GBMUndecidedNode> {
     GBMDecidedNode( GBMUndecidedNode n ) { super(n); }
-    @Override GBMUndecidedNode makeUndecidedNode(DTree tree, int nid, DBinHistogram[] nhists ) {
-      return new GBMUndecidedNode(tree,nid,nhists);
+    @Override GBMUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
+      return new GBMUndecidedNode(_tree,_nid,nhists);
     }
 
     // Find the column with the best split (lowest score).  Unlike RF, GBM

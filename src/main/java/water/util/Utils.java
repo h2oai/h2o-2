@@ -331,11 +331,12 @@ public class Utils {
     return a;
   }
   public static double[] add(double[] a, double[] b) {
+    if( a==null ) return b;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
   public static double[][] add(double[][] a, double[][] b) {
-    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    for(int i = 0; i < a.length; i++ ) a[i] = add(a[i],b[i]);
     return a;
   }
 

@@ -3,13 +3,11 @@ package water.fvec;
 import water.*;
 import water.parser.DParseTask;
 
-/** 
- * A compression scheme, over a chunk - a single array of bytes.  The *actual*
- * BigVector header info is in the Vec struct - which contains info to find all
- * the bytes of the distributed vector.  This struct is basically a 1-entry
- * chunk cache of the total vector.  Subclasses of this abstract class
- * implement (possibly empty) compression schemes.
-*/
+/** A compression scheme, over a chunk - a single array of bytes.  The *actual*
+ *  vector header info is in the Vec struct - which contains info to find all
+ *  the bytes of the distributed vector.  This struct is basically a 1-entry
+ *  chunk cache of the total vector.  Subclasses of this abstract class
+ *  implement (possibly empty) compression schemes.  */
 
 public abstract class Chunk extends Iced implements Cloneable {
   public long _start;         // Start element; filled after AutoBuffer.read
@@ -24,26 +22,28 @@ public abstract class Chunk extends Iced implements Cloneable {
   public final byte[] getBytes() { return _mem; }
 
   /** Load a long value.  Floating point values are silently rounded to an
-    * integer.  Throws if the value is missing.<p>
+    * integer.  Throws if the value is missing.
+    * <p>
     * Loads from the 1-entry chunk cache, or misses-out.  This version uses
     * absolute element numbers, but must convert them to chunk-relative indices
     * - requiring a load from an aliasing local var, leading to lower quality
-    * JIT'd code (similar issue to using iterator objects).<p>
-    * Slightly slower than 'at0' since it range checks within a chunk.
-    */
+    * JIT'd code (similar issue to using iterator objects).
+    * <p>
+    * Slightly slower than 'at0' since it range checks within a chunk. */
   public final long  at8( long i ) { 
     long x = i-_start;
     if( 0 <= x && x < _len ) return at80((int)x);
     throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
   }
 
-  /** Load a double value.  Returns Double.NaN if value is missing.<p>
-    * Loads from the 1-entry chunk cache, or misses-out.  This version uses
-    * absolute element numbers, but must convert them to chunk-relative indices
-    * - requiring a load from an aliasing local var, leading to lower quality
-    * JIT'd code (similar issue to using iterator objects).<p>
-    * Slightly slower than 'at80' since it range checks within a chunk.
-    */
+  /** Load a double value.  Returns Double.NaN if value is missing.
+   *  <p>
+   * Loads from the 1-entry chunk cache, or misses-out.  This version uses
+   * absolute element numbers, but must convert them to chunk-relative indices
+   * - requiring a load from an aliasing local var, leading to lower quality
+   * JIT'd code (similar issue to using iterator objects).
+   * <p>
+   * Slightly slower than 'at80' since it range checks within a chunk. */
   public final double at( long i ) { 
     long x = i-_start;
     if( 0 <= x && x < _len ) return at0((int)x);
@@ -59,59 +59,36 @@ public abstract class Chunk extends Iced implements Cloneable {
 
 
   /** The zero-based API.  Somewhere between 10% to 30% faster in a tight-loop
-   * over the data than the generic at() API.  Probably no gain on larger
-   * loops.  The row reference is zero-based on the chunk, and should
-   * range-check by the JIT as expected.
-   */
+   *  over the data than the generic at() API.  Probably no gain on larger
+   *  loops.  The row reference is zero-based on the chunk, and should
+   *  range-check by the JIT as expected.  */
   public final double  at0  ( int i ) { return _chk. atd_impl(i); }
   public final long    at80 ( int i ) { return _chk. at8_impl(i); }
   public final boolean isNA0( int i ) { return _chk.isNA_impl(i); }
 
 
   /** Slightly slower than 'at0' inside a chunk; goes (very) slow outside the
-   * chunk instead of throwing.  First outside-chunk fetches & caches whole
-   * chunk; maybe takes multiple msecs.  2nd & later touches in the same
-   * outside-chunk probably run 100x slower than inside-chunk accesses.
-   */ 
-  public final double at_slow( long i ) {
-    long x = i-_start;
-    return (0 <= x && x < _len) ? at0((int)x) : _vec.at(i);
-  }
-  public final long at8_slow( long i ) {
-    long x = i-_start;
-    return (0 <= x && x < _len) ? at80((int)x) : _vec.at8(i);
-  }
-  public final boolean isNA_slow( long i ) {
-    long x = i-_start;
-    return (0 <= x && x < _len) ? isNA0((int)x) : _vec.isNA(i);
-  }
+   *  chunk instead of throwing.  First outside-chunk fetches & caches whole
+   *  chunk; maybe takes multiple msecs.  2nd & later touches in the same
+   *  outside-chunk probably run 100x slower than inside-chunk accesses.  */ 
+  public final double    at_slow( long i ) { long x = i-_start; return (0 <= x && x < _len) ?   at0((int)x) :  _vec. at(i); }
+  public final long     at8_slow( long i ) { long x = i-_start; return (0 <= x && x < _len) ?  at80((int)x) :  _vec.at8(i); }
+  public final boolean isNA_slow( long i ) { long x = i-_start; return (0 <= x && x < _len) ? isNA0((int)x) : _vec.isNA(i); }
 
   /** Write element the slow way, as a long.  There is no way to write a
    *  missing value with this call.  Under rare circumstances this can throw:
    *  if the long does not fit in a double (value is larger magnitude than
    *  2^52), AND float values are stored in Vector.  In this case, there is no
    *  common compatible data representation. */
-  public final long set( long i, long l) {
-    long x = i-_start;
-    return (0 <= x && x < _len) ? set0((int)x,l) : _vec.set(i,l);
-  }
+  public final long   set( long i, long   l) { long x = i-_start; return (0 <= x && x < _len) ? set0((int)x,l) : _vec.set(i,l); }
   /** Write element the slow way, as a double.  Double.NaN will be treated as
    *  a set of a missing element. */
-  public final double set( long i, double d) { 
-    long x = i-_start;
-    return (0 <= x && x < _len) ? set0((int)x,d) : _vec.set(i,d);
-  }
+  public final double set( long i, double d) { long x = i-_start; return (0 <= x && x < _len) ? set0((int)x,d) : _vec.set(i,d); }
   /** Write element the slow way, as a float.  Float.NaN will be treated as
    *  a set of a missing element. */
-  public final float set( long i, float f) { 
-    long x = i-_start;
-    return (0 <= x && x < _len) ? set0((int)x,f) : _vec.set(i,f);
-  }
+  public final float  set( long i, float  f) { long x = i-_start; return (0 <= x && x < _len) ? set0((int)x,f) : _vec.set(i,f); }
   /** Set the element as missing the slow way.  */
-  public final boolean setNA( long i ) { 
-    long x = i-_start;
-    return (0 <= x && x < _len) ? setNA0((int)x) : _vec.setNA(i);
-  }
+  public final boolean setNA( long i )       { long x = i-_start; return (0 <= x && x < _len) ? setNA0((int)x) : _vec.setNA(i); }
   
   private void setWrite() {
     if( _chk!=this ) return;
