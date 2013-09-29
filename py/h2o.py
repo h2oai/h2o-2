@@ -1683,6 +1683,9 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
+        if 'response' not in a:
+            raise Exception("Can't tell where to go..No 'response' key in this polled json response: %s" % a)
+
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCAScore result:", dump_json(a))
