@@ -41,8 +41,10 @@ then
     done
 
     # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)
-    python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
-    CLOUD_IP=192.168.1.161
+    # python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
+    # CLOUD_IP=192.168.1.161
+    python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+    CLOUD_IP=192.168.1.164
     CLOUD_PORT=54377
 else
     if [[ $USER == "kevin" ]]
