@@ -31,7 +31,7 @@ public abstract class DPCA {
   public static class PCAJob extends ChunkProgressJob {
     public PCAJob(ValueArray data, Key dest) {
       super(data.chunks());
-      job_key = defaultJobKey("PCA(" + data._key.toString() + ")");
+      description = "PCA(" + data._key.toString() + ")";
       destination_key = dest;
     }
 

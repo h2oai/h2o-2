@@ -285,12 +285,7 @@ public abstract class DRF {
 
     public DRFJob(DRFTask drfTask) {
       _drfTask = drfTask;
-    }
-
-    @Override protected Key defaultJobKey() {
-      if(_drfTask != null)
-        return defaultJobKey("RandomForest_" + _drfTask._params._ntrees + "trees");
-      return super.defaultJobKey();
+      description = "RandomForest_" + drfTask._params._ntrees + "trees";
     }
 
     @Override public H2OCountedCompleter start(H2OCountedCompleter fjtask) {

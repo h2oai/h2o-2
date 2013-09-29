@@ -97,7 +97,7 @@ public abstract class DGLM {
     public GLMJob(ValueArray data, Key dest, int xval, GLMParams params) {
       // approximate the total number of computed chunks as 25 per normal model computation + 10 iterations per xval model)
       super((params._family._family == Family.gaussian) ? data.chunks() * (xval + 1) : data.chunks() * (20 + 4 * xval));
-      job_key = defaultJobKey("GLM(" + data._key.toString() + ")");
+      description = "GLM(" + data._key.toString() + ")";
       destination_key = dest;
     }
 

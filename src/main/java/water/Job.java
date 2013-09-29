@@ -10,6 +10,7 @@ import water.H2O.H2OCountedCompleter;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -155,12 +156,8 @@ public class Job extends Request2 {
   }
 
   protected Key defaultJobKey() {
-    return defaultJobKey(UUID.randomUUID().toString());
-  }
-
-  protected static Key defaultJobKey(String name) {
     // Pinned to self, because it should be almost always updated locally
-    return Key.make(name, (byte) 0, Key.JOB, H2O.SELF);
+    return Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB, H2O.SELF);
   }
 
   protected Key defaultDestKey() {
@@ -235,9 +232,11 @@ public class Job extends Request2 {
   }
 
   public void remove() {
+Log.info("1 " + destination_key);
     DKV.remove(job_key);
     new TAtomic<List>() {
       @Override public List atomic(List old) {
+Log.info("2 " +destination_key);
         if( old == null ) return null;
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
