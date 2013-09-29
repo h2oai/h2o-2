@@ -134,7 +134,7 @@ class DTree extends Iced {
     }
     // Split a DBinHistogram.  Return null if there is no point in splitting
     // this bin further (such as there's fewer than min_row elements, or zero
-    // errpr in the response column).  Return an array of DBinHistograms (one
+    // error in the response column).  Return an array of DBinHistograms (one
     // per column), which are bounded by the split bin-limits.  If the column
     // has constant data, or was not being tracked by a prior DBinHistogram
     // (for being constant data from a prior split), then that column will be

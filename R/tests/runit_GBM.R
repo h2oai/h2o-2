@@ -59,11 +59,13 @@ checkGBMModel <- function(myGBM.h2o, myGBM.r) {
 
 test.GBM.ecology <- function(serverH2O) {
   cat("\nImporting ecology_model.csv data...\n")
-  ecology.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv")
+  # ecology.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv")
+  ecology.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/gbm_test/ecology_model.csv"))
   ecology.sum = summary(ecology.hex)
   print(ecology.sum)
   
-  ecology.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv"), header = TRUE)
+  # ecology.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv"), header = TRUE)
+  ecology.data = read.csv("../../smalldata/gbm_test/ecology_model.csv", header = TRUE)
   ecology.data = na.omit(ecology.data)
   
   cat("\nH2O GBM with parameters:\nntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1\n")
@@ -75,7 +77,7 @@ test.GBM.ecology <- function(serverH2O) {
 }
 
 test.GBM.airlines <- function() {
-  # allyears.data = grabRemote("https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv", "ecology.csv")
+  # allyears.data = grabRemote("https://raw.github.com/0xdata/h2o/master/smalldata/airlines/allyears2k.zip", "ecology.csv")
   # allyears.data = na.omit(allyears.data)
   # allyears.data = data.frame(rapply(allyears.data, as.factor, classes = "character", how = "replace"))
   
@@ -84,6 +86,7 @@ test.GBM.airlines <- function() {
   # ignoreFeat = c("CRSDepTime", "CRSArrTime", "ActualElapsedTime", "CRSElapsedTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay")
   # ignoreNum = sapply(ignoreFeat, function(x) { which(allXCol == x) })
   
+  # allyears.hex = h2o.importFile(serverH2O, "../../smalldata/airlines/allyears2k.zip")
   # allyears.h2o = h2o.gbm(allyears.hex, destination = "allyears.gbm", y = "IsArrDelayed", x_ignore = ignoreNum, ntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1)
   
   # allyears.x = allyears.data[,-which(allCol == "IsArrDelayed")]

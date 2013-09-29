@@ -1,5 +1,5 @@
 import h2o_cmd, h2o,time,math,string
-
+from pprint import pprint
 def simpleCheckPCA(self, pca, **kwargs):
     #print h2o.dump_json(pca)
     warnings = None
@@ -91,4 +91,13 @@ def resultsCheckPCA(self, pca, **kwargs):
         h2o.dump_json(sdevs)
         raise Exception("Standard Deviations are possibly incorrect!")
     print " Good!"
-    
+
+    print "Checking that the sum of square component loadings is 1 for each component." 
+    print "In symbols, we are checking: sum_j(a_ij)^2 == 1 for all i"
+    pcs = pcaResult["PCAModel"]["eigenvectors"]
+    sums = [round(sum([a**2 for a in eigenvector.values()]),5) for eigenvector in pcs]
+    print "Sum of the square PC loadings are: ", sums
+    if  sums != [1 for i in range(len(pcs))]:
+        raise Exception("Sum of the square loadings do not add up to 1 for at least one eigenvector!")
+    print "Good!"
+        
