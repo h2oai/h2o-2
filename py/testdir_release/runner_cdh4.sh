@@ -79,7 +79,7 @@ echo "cd /home/0xdiag" > /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
-echo "hadoop dfs -rmr /user/0xdiag/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "hdfs dfs -rm -r /user/0xdiag/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 echo "hadoop jar $CDH4_JAR water.hadoop.h2odriver -jt $CDH4_JOBTRACKER -libjars h2o.jar -mapperXmx $CDH4_HEAP -nodes $CDH4_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 # exchange keys so jenkins can do this?
