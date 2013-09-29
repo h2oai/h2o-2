@@ -44,16 +44,19 @@ then
     # python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
     # CLOUD_IP=192.168.1.161
     python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+    # make sure this matches what's in the json!
     CLOUD_IP=192.168.1.164
-    CLOUD_PORT=54377
+    CLOUD_PORT=54355
 else
     if [[ $USER == "kevin" ]]
     then
         python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+        # make sure this matches what's in the json!
         CLOUD_IP=127.0.0.1
         CLOUD_PORT=54355
     else
         python ../four_hour_cloud.py &
+        # make sure this matches what the four_hour_cloud.py does!
         CLOUD_IP=127.0.0.1
         CLOUD_PORT=54321
     fi
