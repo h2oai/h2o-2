@@ -131,9 +131,13 @@ class Basic(unittest.TestCase):
             classErr = glmScore['validation']['classErr']
             auc = glmScore['validation']['auc']
             err = glmScore['validation']['err']
+            resDev = glmScore['validation']['resDev']
+            nullDev = glmScore['validation']['nullDev']
             print "classErr:", classErr
             print "err:", err
             print "auc:", auc
+            print "resDev:", resDev
+            print "nullDev:", nullDev
             # what is reasonable?
             # self.assertAlmostEqual(err, 0.3, delta=0.15, msg="actual err: %s not close enough to 0.3" % err)
             self.assertAlmostEqual(auc, 0.5, delta=0.15, msg="actual auc: %s not close enough to 0.5" % auc)

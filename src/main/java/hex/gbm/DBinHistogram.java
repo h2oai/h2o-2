@@ -164,36 +164,27 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       if( (se < best_se0+best_se1) || // Strictly less error?
           // Or tied MSE, then pick split towards middle bins
           se == (best_se0+best_se1) && best < (_nbins>>1) ) {
-        best_se0 = MS0[2*b+1]; 
-        best_se1 = MS1[2*b+1]; 
+        best_se0 = MS0[2*b+1];   best_se1 = MS1[2*b+1]; 
         best = b;
       }
     }
 
     // If the min==max, we can also try an equality-based split
-    //System.out.println(Arrays.toString(MS0)+" : "+Arrays.toString(ns0));
-    //System.out.println(Arrays.toString(MS1)+" : "+Arrays.toString(ns1));
     if( _isInt > 0 && _step == 1.0f ) { // For any integral (not float) column
       for( int b=1; b<=_nbins-1; b++ ) {
         if( _bins[b] == 0 ) continue;       // Ignore empty splits
         assert _mins[b] == _maxs[b] : "int col, step of 1.0 "+_mins[b]+".."+_maxs[b]+" "+this+" "+Arrays.toString(MS0)+":"+Arrays.toString(ns0);
-        //System.out.println("mse0="+MS0[2*(b+0)+1]+", mseX="+_MSs[2*(b+0)+1]+", mse1="+MS1[2*(b+1)+1]);
-        
         double m0 = MS0[2*(b+0)+0],  m1 = MS1[2*(b+1)+0];
         double s0 = MS0[2*(b+0)+1],  s1 = MS1[2*(b+1)+1];
         long   k0 = ns0[   b+0   ],  k1 = ns1[   b+1   ];
         if( k0==0 && k1==0 ) continue;
         double delta=m1-m0;
         double mi = (k0*m0+k1*m1)/(k0+k1); // Mean of included set
-        double si = s0+s1+delta*delta*k0*k1/(k0+k1); // 2nd moment
-        double se = si + _MSs[2*(b+0)+1]; // The included set, plus the excluded single bin
-        
-        if( se < best_se0+best_se1 ) {      // Strictly less error?
-          //System.out.println("Equality best for bin="+b+" col="+_name+", was se0="+best_se0+", se1="+best_se1+" splitting @ "+best+", new se="+se+"="+si+"+"+_MSs[2*(b+0)+1]+" "+(ns0[b+0]+ns1[b+1])+" "+_bins[b+0]);
-          best_se0 = si;
-          best_se1 = _MSs[2*(b+0)+1];
-          best = b;
-          equal = true;           // Equality check
+        double si = s0+s1+delta*delta*k0*k1/(k0+k1); // 2nd moment of included set
+        double sx = _MSs[2*(b+0)+1];                 // The excluded single bin
+        if( si+sx < best_se0+best_se1 ) { // Strictly less error?
+          best_se0 = si;   best_se1 = sx;
+          best = b;        equal = true; // Equality check
         }
       }
     }

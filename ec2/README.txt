@@ -1,5 +1,5 @@
 
-This directory contains scripts to help launch an H2O cluster in EC2.
+This directory contains scripts to launch an H2O cluster in EC2.
 You must install the boto python library.
 
 http://boto.readthedocs.org/en/latest/
@@ -9,25 +9,24 @@ http://www.amazon.com/Python-and-AWS-Cookbook-ebook/dp/B005ZTO0UW/ref=sr_1_1?ie=
 [ STEP 0:  Install python and boto, if necessary. ]
 
 
-STEP 1:  Build a cluster
-------------------------
+STEP 1:  Build a cluster of EC2 instances
+-----------------------------------------
 
 Note:  Run this from a host that can access the nodes via public DNS name.
 
 Edit h2o-cluster-launch-instances.py to suit your specific environment.
 At a minimum, you need to specify an ssh key name and a security group name.
 
-% h2o-cluster-launch-instances.py
-% h2o-cluster-distribute-flatfile.sh
-% h2o-cluster-distribute-h2o.sh  --OR--  h2o-cluster-download-h2o.sh
+% ./h2o-cluster-launch-instances.py
+% ./h2o-cluster-distribute-h2o.sh  --OR--  ./h2o-cluster-download-h2o.sh
 
 (Download may be faster than distribute, since download pulls from S3.)
 
 
-STEP 2:  Start H2O
-------------------
+STEP 2:  Start H2O, one H2O node per EC2 instance
+-------------------------------------------------
 
-% h2o-cluster-start-h2o.sh
+% ./h2o-cluster-start-h2o.sh
 (wait 60 seconds)
 
 
@@ -40,8 +39,8 @@ Point your web browser to
 
 Stopping and restarting H2O
 ---------------------------
-% h2o-cluster-stop-h2o.sh
-% h2o-cluster-start-h2o.sh
+% ./h2o-cluster-stop-h2o.sh
+% ./h2o-cluster-start-h2o.sh
 
 
 Control files (generated when starting the cluster and/or H2O)
@@ -56,12 +55,14 @@ Control files (generated when starting the cluster and/or H2O)
     flatfile.txt
         A list of H2O nodes by (private) IP address and port.
 
+    latest (produced by h2o-cluster-download-h2o.sh)
+        Latest build number for the requested branch.
+
+    project_version (produced by h2o-cluster-download-h2o.sh)
+        Full project version number for the requested build.
+
 
 Stopping/Terminating the cluster
 --------------------------------
 
 Go to your Amazon AWS console and do the operation manually.
-
-
-
-Work in progress...

@@ -61,7 +61,8 @@ checkPCAModel <- function(myPCA.h2o, myPCA.r, toleq = 1e-5) {
 
 test.PCA.arrests <- function(serverH2O) {
   cat("\nImporting USArrests.csv data...\n")
-  arrests.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/pca_test/USArrests.csv")
+  # arrests.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/pca_test/USArrests.csv")
+  arrests.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/pca_test/USArrests.csv"))
   arrests.sum = summary(arrests.hex)
   print(arrests.sum)
   
