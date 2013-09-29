@@ -45,24 +45,31 @@ $REMOTE_SCP $H2O_HADOOP/$CDH4_JAR  $REMOTE_USER:$REMOTE_HOME
 $REMOTE_SCP $H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
 #***********************************************************************************
-echo "Does 0xdiag have any hadoop jobs left running from something? (manual/jenkins/whatever)"
+echo "Does 0xdiag have any mapred jobs left running from something? (manual/jenkins/whatever)"
 rm -f /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
-echo "Checking hadoop jobs"
-$REMOTE_SSH_USER 'hadoop job -list' > /tmp/my_jobs_on_hadoop_$REMOTE_IP
+
+echo "Checking mapred jobs"
+echo "'hadoop job' is deprecated, we use 'mapred job'"
+$REMOTE_SSH_USER 'mapred job -list' > /tmp/my_jobs_on_hadoop_$REMOTE_IP
 cat /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
-echo "kill any running hadoop jobs by me"
+echo "kill any running mapred jobs by me"
 while read jobid state rest
 do
     echo $jobid $state
     # ignore these kind of lines
+    # cdh4, which incidentally also requires yarn to be running!
+    # Total jobs:0
+    #                   JobId      State  <more>
+
+    # cdh3
     # 0 jobs currently running
     # JobId   State   StartTime   UserName    Priority    SchedulingInfo
-    if [[ ("$jobid" != "JobId") && ("$state" != "jobs") ]]
+    if [[ ("$jobid" != "JobId") && ("$state" != "jobs") && ("$jobid" != "Total") ]]
     then
-        echo "hadoop job -kill $jobid"
-        $REMOTE_SSH_USER "hadoop job -kill $jobid"
+        echo "mapred job -kill $jobid"
+        $REMOTE_SSH_USER "mapred job -kill $jobid"
     fi
 done < /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
@@ -166,5 +173,5 @@ ps aux | grep h2odriver
 jobs -l
 echo ""
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
-echo "The hadoop job(s) should be gone?"
-$REMOTE_SSH_USER "hadoop job -list"
+echo "The mapred job(s) should be gone?"
+$REMOTE_SSH_USER "mapred job -list"
