@@ -11,7 +11,8 @@ echo "This can run anywhere. No VPN needed, just s3cmd and keys"
 echo ""
 # set -v
 # this can be master or a specific branch
-branch=gauss
+branch=master
+# branch=gauss
 
 rm -f ./latest_h2o_jar_version
 s3cmd get s3://h2o-release/h2o/$branch/latest latest_h2o_jar_version
