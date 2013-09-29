@@ -131,8 +131,10 @@ done
 # n0.doit uses nosetests so the xml gets created on completion. (n0.doit is a single test thing)
 # A little '|| true' hack to make sure we don't fail out if this subtest fails
 # test_c1_rel has 1 subtest
-
 # This could be a runner, that loops thru a list of tests.
+
+# belt and suspenders ..for resolving bucket path names
+export H2O_REMOTE_BUCKETS_ROOT=/home/0xcustomer
 
 echo "If it exists, pytest_config-<username>.json in this dir will be used"
 echo "i.e. pytest_config-jenkins.json"

@@ -134,6 +134,9 @@ done
 
 # This could be a runner, that loops thru a list of tests.
 
+# belt and suspenders ..for resolving bucket path names
+export H2O_REMOTE_BUCKETS_ROOT=/home/0xcustomer
+
 echo "If it exists, pytest_config-<username>.json in this dir will be used"
 echo "i.e. pytest_config-jenkins.json"
 echo "Used to run as 0xcust.., with multi-node targets (possibly)"
