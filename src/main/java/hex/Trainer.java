@@ -391,7 +391,7 @@ public abstract class Trainer {
           task._node = _node;
           task._cs = cs;
           tasks.add(task);
-          H2O.FJP_NORM.submit(task);
+//          H2O.FJP_NORM.submit(task);
 //          task.fork();
         }
         //H2O.submitTask(task);
