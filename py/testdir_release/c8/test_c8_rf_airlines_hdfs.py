@@ -2,7 +2,6 @@ import unittest, sys, time
 sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_hosts, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_rf
 
-
 # RF train parameters
 paramsTrainRF = { 
     'ntree'      : 50, 
@@ -42,20 +41,8 @@ scoreDS = {
 
 PARSE_TIMEOUT=14800
 
-
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def tearDown(self):
-        h2o.check_sandbox_for_errors()
-
-    @classmethod
-    def setUpClass(cls):
-        h2o_hosts.build_cloud_with_hosts()
-        
-    @classmethod
-    def tearDownClass(cls):
-        h2o.tear_down_cloud()
-        
     def parseFile(self, importFolderPath='datasets', csvFilename='airlines_all.csv', **kwargs):
         csvPathname = importFolderPath + "/" + csvFilename
 
@@ -71,7 +58,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         start = time.time()
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=500)
-        print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
+        elapsed = time.time() - start
+        print "Inspect:", parseResult['destination_key'], "took", elapsed, "seconds"
         h2o_cmd.infoFromInspect(inspect, csvPathname)
         num_rows = inspect['num_rows']
         num_cols = inspect['num_cols']
@@ -79,22 +67,22 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def loadTrainData(self):
         kwargs   = trainDS.copy()
-        trainKey = self.parseFile(**kwargs)
-        return trainKey
+        trainParseResult = self.parseFile(**kwargs)
+        return trainParseResult
     
     def loadScoreData(self):
         kwargs   = scoreDS.copy()
-        scoreKey = self.parseFile(**kwargs)
-        return scoreKey 
+        scoreParseResult = self.parseFile(**kwargs)
+        return scoreParseResult 
 
     def test_c8_rf_airlines_hdfs(self):
-        trainKey = self.loadTrainData()
+        trainParseResult = self.loadTrainData()
         kwargs   = paramsTrainRF.copy()
-        trainResult = h2o_rf.trainRF(trainKey, **kwargs)
+        trainResult = h2o_rf.trainRF(trainParseResult, **kwargs)
 
-        scoreKey = self.loadScoreData()
+        scoreParseResult = self.loadScoreData()
         kwargs   = paramsScoreRF.copy()
-        scoreResult = h2o_rf.scoreRF(scoreKey, trainResult, **kwargs)
+        scoreResult = h2o_rf.scoreRF(scoreParseResult, trainResult, **kwargs)
 
         print "\nTrain\n=========={0}".format(h2o_rf.pp_rf_result(trainResult))
         print "\nScoring\n========={0}".format(h2o_rf.pp_rf_result(scoreResult))
