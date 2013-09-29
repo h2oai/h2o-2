@@ -48,8 +48,9 @@ $REMOTE_SCP $H2O_JAR $REMOTE_USER:$REMOTE_HOME
 echo "Does 0xdiag have any hadoop jobs left running from something? (manual/jenkins/whatever)"
 rm -f /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
-$REMOTE_SSH_USER 'hadoop job -list'
+echo "Checking hadoop jobs"
 $REMOTE_SSH_USER 'hadoop job -list' > /tmp/my_jobs_on_hadoop_$REMOTE_IP
+cat /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
 echo "kill any running hadoop jobs by me"
 while read jobid state rest
@@ -61,6 +62,7 @@ do
     if [[ ("$jobid" != "JobId") && ("$state" != "jobs") ]]
     then
         echo "hadoop job -kill $jobid"
+        $REMOTE_SSH_USER "hadoop job -kill $jobid"
     fi
 done < /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
@@ -161,5 +163,7 @@ ps aux | grep h2odriver
 
 jobs -l
 echo ""
+
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
-# 
+echo "The hadoop job(s) should be gone?"
+$REMOTE_SSH_USER "hadoop job -list"
