@@ -61,6 +61,9 @@ class ReleaseCommon(object):
         # if you're fast with a test and cloud building, you may need to wait for cloud to stabilize
         # normally this is baked into build_cloud, but let's leave it here for now
         h2o.stabilize_cloud(h2o.nodes[0], node_count=len(h2o.nodes), timeoutSecs=90)
+        # this ?should? work although not guaranteed all will agree on the cloud size
+        # unless we do the conservative stabilize above
+        h2o.verify_cloud_size()
 
     @classmethod
     def tearDownClass(cls):
@@ -79,7 +82,7 @@ class ReleaseCommon(object):
             print "delete_keys_at_all_nodes(): took", elapsed, "secs"
 
 #************************************************************************************
-# no log download or key delete
+# no log download or key delete. Used for the test_shutdown.py
 class ReleaseCommon2(object):
     def tearDown(self):
         print "tearDown"

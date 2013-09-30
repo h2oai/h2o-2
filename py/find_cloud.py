@@ -1,103 +1,196 @@
-import unittest, time, sys, json, re
+#!/usr/bin/python
+import time, sys, json, re, getpass, requests, argparse
 
+parser = argparse.ArgumentParser(description='Creates h2o-node.json for cloud cloning from existing cloud')
+# parser.add_argument('-v', '--verbose',     help="verbose", action='store_true')
+parser.add_argument('-f', '--flatfile', help="Use this flatfile to start probes\ndefaults to pytest_flatfile-<username> which is created by python tests", type=str)
+args = parser.parse_args()
+
+#********************************************************************
 def dump_json(j):
     return json.dumps(j, sort_keys=True, indent=2)
 
-def create_url(http_addr, port, loc)
-    return 'http://%s:%d/%s' % (http_addr, port, loc)
+def create_url(addr, port, loc):
+    return 'http://%s:%s/%s' % (addr, port, loc)
 
-def do_json_request(jsonRequest=None, params=None, timeout=10, **kwargs):
-    url = create_url(jsonRequest)
+def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeout=5, **kwargs):
     if params is not None:
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
     else:
         paramsStr = ''
 
+    url = create_url(addr, port, jsonRequest)
     print 'Start ' + url + paramsStr
-    r = requests.get(url, timeout=timeout, params=params, **kwargs)
-
     try:
+        r = requests.get(url, timeout=timeout, params=params, **kwargs)
+        # the requests json decoder might fail if we didn't get something good
         rjson = r.json()
-    except:
-        print(r.text)
-        if not isinstance(r,(list,dict)):
-            raise Exception("h2o json responses should always be lists or dicts")
-        if '404' in r:
-            raise Exception("json got 404 result")
-        raise Exception("Could not decode any json from the request")
+        if not isinstance(rjson, (list,dict)):
+            # probably good
+            print "INFO: h2o json responses should always be lists or dicts"
+            rjson = None
+        # may get legitimate 404
+        # elif '404' in r.text:
+        #     print "INFO: json got 404 result"
+        #    rjson = None
+        elif r.status_code != requests.codes.ok:
+            print "INFO: Could not decode any json from the request. code:" % r.status_code
+            rjson = None
 
+    except requests.ConnectionError, e:
+        print "INFO: json got ConnectionError or other exception"
+        rjson = None
+
+    # print rjson
     return rjson
 
-def get_cloud(addr, port, timeoutSecs=10):
-    a = do_json_request('Cloud.json', timeout=timeoutSecs)
-    consensus  = a['consensus']
-    locked     = a['locked']
-    cloud_size = a['cloud_size']
-    cloud_name = a['cloud_name']
-    node_name  = a['node_name']
-    node_id    = self.node_id
-    print '%s%s %s%s %s%s %s%s' % (
-        "\tnode_id: ", node_id,
-        "\tcloud_size: ", cloud_size,
-        "\tconsensus: ", consensus,
-        "\tlocked: ", locked,
-        )
+#********************************************************************
+def probe_node(line, h2oNodes):
+    http_addr, sep, port = line.rstrip('\n').partition(":")
+    http_addr = http_addr.lstrip('/') # just in case it's an old-school flatfile with leading /
+    if port == '':
+        port = '54321'
+    if http_addr == '':
+        http_addr = '127.0.0.1'
+    # print "http_addr:", http_addr, "port:", port
+
+    probes = []
+    gc = do_json_request(http_addr, port, 'Cloud.json', timeout=3)
+    if gc is None:
+        return probes
+        
+    consensus  = gc['consensus']
+    locked     = gc['locked']
+    cloud_size = gc['cloud_size']
+    cloud_name = gc['cloud_name']
+    node_name  = gc['node_name']
+    nodes      = gc['nodes']
+
+    for n in nodes:
+        # print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
+        # print "tot_mem_bytes (GB):", "%0.2f" % ((n['tot_mem_bytes']+0.0)/(1024*1024*1024))
+        java_heap_GB = (n['tot_mem_bytes']+0.0)/(1024*1024*1024)
+        java_heap_GB = int(round(java_heap_GB,0))
+        # print "java_heap_GB:", java_heap_GB
+        # print 'num_cpus:', n['num_cpus']
+
+        name = n['name'].lstrip('/')
+        # print 'name:', name
+        ### print dump_json(n)
+
+        ip, sep, port = name.partition(':')
+        # print "ip:", ip
+        # print "port:", port
+        if not ip or not port:
+            raise Exception("bad ip or port parsing from h2o get_cloud nodes 'name' %s" % n['name'])
+
+        # creating the list of who this guy sees, to return
+        probes.append(name)
+
+        node_id = len(h2oNodes)
+        node = { 
+            'http_addr': ip, 
+            'port': int(port),  # print it as a number for the clone ingest
+            'java_heap_GB': java_heap_GB,
+            # this list is based on what tests actually touch (fail without these)
+            'node_id': node_id,
+            'remoteH2O': 'true',
+            'sandbox_error_was_reported': 'false', # odd this is touched..maybe see about changing h2o.py
+            'sandbox_ignore_errors': 'false',
+            # /home/0xcustomer will have the superset of links for resolving remote paths
+            # the cloud may be started by 0xdiag or 0xcustomer, but this is just going to be
+            # used for looking for buckets (h2o_import.find_folder_and_filename() will 
+            # (along with other rules) try to look in # /home/h2o.nodes[0].username when trying 
+            # to resolve a path to a bucket
+            'username': '0xcustomer', 
+            'redirect_import_folder_to_s3_path': 'false', # no..we're not on ec2
+            'redirect_import_folder_to_s3n_path': 'false', # no..we're not on ec2
+            'delete_keys_at_teardown': 'true', # yes we want each test to clean up after itself
+            'use_hdfs': 'true', # suppose we shouldn't really need this (but currently do)
+            'use_maprfs': 'false', 
+            'hdfs_version': 'cdh3', # something is checking for this. I guess we could set this in tests as a hack
+            'hdfs_name_node': '192.168.1.176', # hmm. do we have to set this to do hdfs url generation correctly?
+        }
+
+        # this is the total list so far
+        if name not in h2oNodes:
+            h2oNodes[name] = node
+            print "Added node %s to probes" % name
+
+    # we use this for our one level of recursion
+    return probes # might be empty!
+
+#********************************************************************
+def flatfile_name():
+    if args.flatfile:
+        a = args.flatfile
+    else:
+        a = 'pytest_flatfile-%s' %getpass.getuser()
+    print "Starting with contents of ", a
     return a
 
-def flatfile_name():
-    return('pytest_flatfile-%s' %getpass.getuser())
-
-# hostPortList.append("/" + h.addr + ":" + str(base_port + ports_per_node*i))
+#********************************************************************
+# hostPortList.append("/" + h.addr + ":" + str(port + ports_per_node*i))
 # partition returns a 3-tuple as (LHS, separator, RHS) if the separator is found, 
 # (original_string, '', '') if the separator isn't found
 with open(flatfile_name(), 'r') as f:
-    lines = f.read().partition(':')
+    possMembers = f.readlines()
 f.close()
 
-# FIX! is there any leading "/" in the flatfile anymore?
-# maybe remove it from h2o.py generation
-foundCloud = {}
-for n, line in enumerate(n,lines):
-    
-    print line, line[0], line[2]
-    http_addr = line[0] 
-    port = line[2]
+h2oNodes = {}
+probes = set()
+tries = 0
+for n1, possMember in enumerate(possMembers):
+    tries += 1
+    if possMember not in probes:
+        probes.add(possMember)
+        members2 = probe_node(possMember, h2oNodes)
+        for n2, member2 in enumerate(members2):
+            tries += 1
+            if member2 not in probes:
+                probes.add(member2)
+                probe_node(member2, h2oNodes)
 
-    if port = ''
-        port = '54321'
-    if http_addr = ''
-        http_addr = '127.0.0.1'
+print "\nWe did %s tries" % tries
+print "len(probe):", len(probes)
 
-    node = { 'http_addr': http_addr, 'base_port': port }
-    foundCloud.add(node)
-    print "Added node %s %s", (n, node)
+# get rid of the name key we used to hash to it
+h2oNodesList = [v for k, v in h2oNodes.iteritems()]
 
-    # we just want the string
-    start = time.time()
-    getCloud = get_cloud(addr, port)
-    elapsed = int(1000 * (time.time() - start)) # milliseconds
-    print "get_cloud completes to node", i, "in", "%s"  % elapsed, "millisecs"
-    print dump_json(getCloud)
-    getCloudString = json.dumps(getCloud)
+print "Checking for two h2os at same ip address"
+ips = {}
+count = {}
+for h in h2oNodesList:
+    # warn for more than 1 h2o on the same ip address
+    # error for more than 1 h2o on the same port (something is broke!)
+    # but ip+port is how we name them, so that can't happen ehrer
+    ip = h['http_addr']
+    if ip in ips:
+        # FIX! maybe make this a fail exit in the future?
+        count[ip] += 1
+        print "\nWARNING: appears to be %s h2o's at the same IP address" % count[ip]
+        print "initial:", ips[ip]
+        print "another:", h, "\n"
+    else:
+        ips[ip] = h
+        count[ip] = 1
 
-    expandedCloud = {
-            'cloud_start':
-                {
-                'time': 'null',
-                'cwd': 'null',
-                'python_test_name': 'null',
-                'python_cmd_line': 'null',
-                'config_json': 'null',
-                'username': 'null',
-                'ip': 'null',
-                },
-            'h2o_nodes': foundCloud
-        }
+        
+print "Writing h2o-nodes.json"
+expandedCloud = {
+    'cloud_start':
+        {
+        'time': 'null',
+        'cwd': 'null',
+        'python_test_name': 'null',
+        'python_cmd_line': 'null',
+        'config_json': 'null',
+        'username': 'null',
+        'ip': 'null',
+        },
+    'h2o_nodes': h2oNodesList
+    }
 
-    print "Writing h2o-nodes.json"
-    with open('h2o-nodes.json', 'w+') as f:
-        f.write(json.dumps(expandedCloud, indent=4))
+with open('h2o-nodes.json', 'w+') as f:
+    f.write(json.dumps(expandedCloud, indent=4))
 
-
-if __name__ == '__main__':
-    h2o.unit_main()

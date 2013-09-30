@@ -17,7 +17,6 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 
 # remove any test*xml or TEST*xml in the current dir
 rm -f test.*xml
-rm -f TEST*xml
 
 # This gets the h2o.jar
 source ./runner_setup.sh
@@ -31,20 +30,33 @@ then
     echo "The possibilities should be relatively static over time"
     echo "Could be problems if other threads also using that user on these machines at same time"
     echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.161 rm -f -r /home/0xcustomer/ice*
+    echo "Also: Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
+    echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
+    echo "okay to ls the top level here...no secret info..do all the machines we might be using"
+
+    for mr in 161 164
+    do
+        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
+            'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
+    done
 
     # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)
-    python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
-    CLOUD_IP=192.168.1.161
-    CLOUD_PORT=54377
+    # python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
+    # CLOUD_IP=192.168.1.161
+    python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+    # make sure this matches what's in the json!
+    CLOUD_IP=192.168.1.164
+    CLOUD_PORT=54355
 else
     if [[ $USER == "kevin" ]]
     then
         python ../four_hour_cloud.py -cj pytest_config-kevin.json &
+        # make sure this matches what's in the json!
         CLOUD_IP=127.0.0.1
         CLOUD_PORT=54355
     else
         python ../four_hour_cloud.py &
+        # make sure this matches what the four_hour_cloud.py does!
         CLOUD_IP=127.0.0.1
         CLOUD_PORT=54321
     fi
@@ -145,7 +157,6 @@ myR() {
     set -e
 }
 
-
 H2O_R_HOME=../../R
 echo "Okay to run h2oWrapper.R every time for now"
 
@@ -163,10 +174,10 @@ myR runit_GBM 300
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
 ../testdir_single_jvm/n0.doit test_shutdown.py
+
 #***********************************************************************
 # End of list of tests
 #***********************************************************************
-
 
 if ps -p $CLOUD_PID > /dev/null
 then
@@ -178,5 +189,4 @@ ps aux | grep four_hour_cloud
 jobs -l
 echo ""
 echo "You can stop this jenkins job now if you want. It's all done"
-
 
