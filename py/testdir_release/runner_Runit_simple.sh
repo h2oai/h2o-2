@@ -112,14 +112,13 @@ mySetup() {
     # removing .Rlibrary should have removed h2oWrapper
     # but maybe it was installed in another library (site library)
     # make sure it's removed, so the install installs the new (latest) one
-    cat <<!
+    cat <<!  > /tmp/libPaths.cmd
     .libPaths()
     myPackages = rownames(installed.packages())
     if("h2oWrapper" %in% myPackages) {
       remove.packages("h2oWrapper")
     }
 !
-    > /tmp/libPaths.cmd
 
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
     echo "Running this cmd:"
