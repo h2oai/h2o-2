@@ -23,8 +23,9 @@ mkdir -p sandbox
 # resource manager is still on 162
 # yarn.resourcemanager.address  8032
 CDH4_YARN_JOBTRACKER=192.168.1.162:8032
-CDH4_YARN_NODES=3
+CDH4_YARN_NODES=6
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
+echo "can't get more than 7g for now. boost the node count to 6"
 CDH4_YARN_HEAP=7g
 CDH4_YARN_JAR=h2odriver_cdh4_yarn.jar
 
@@ -130,7 +131,6 @@ cp -f h2o_one_node sandbox
 echo "Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
 echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
 echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
-echo "BUT WE'RE CURRENTLY NOT KICKING OFF H2O ON HADOOP AS 0XCUSTOMER..need to do that?"
 for mr in 161 162 163 
 do
     ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'

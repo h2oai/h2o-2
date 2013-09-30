@@ -20,8 +20,9 @@ mkdir -p sandbox
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after buildingk
 CDH4_JOBTRACKER=192.168.1.162:8021
-CDH4_NODES=3
-CDH4_HEAP=20g
+CDH4_NODES=6
+echo "can't get more than 7g for now boost the node count to 6"
+CDH4_HEAP=7g
 CDH4_JAR=h2odriver_cdh4.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
@@ -126,7 +127,6 @@ cp -f h2o_one_node sandbox
 echo "Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
 echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
 echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
-echo "BUT WE'RE CURRENTLY NOT KICKING OFF H2O ON HADOOP AS 0XCUSTOMER..need to do that?"
 for mr in 161 162 163 
 do
     ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
