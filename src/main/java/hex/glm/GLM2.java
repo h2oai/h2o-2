@@ -8,6 +8,7 @@ import hex.glm.GLMTask.GLMIterationTask;
 import hex.glm.GLMTask.YMUTask;
 import hex.glm.LSMSolver.ADMMSolver;
 
+import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -165,13 +166,20 @@ public class GLM2 extends FrameJob{
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
     source.remove(ignored_cols);
     final Vec [] vecs =  source.vecs();
-    for(int i = 0; i < vecs.length-1; ++i) // put response to the end
+    int response = vecs.length-1;
+    ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
+    for(int i = 0; i < vecs.length-1; ++i)// put response to the end
       if(vecs[i] == vresponse){
-        String name = source._names[i];
-        source.remove(i);
-        source.add(name, vresponse);
+        source.add(source._names[i], source.remove(i));
         break;
       }
+    for(int i = 0; i < vecs.length-1; ++i) // put response to the end
+      if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)constantOrNAs.add(i);
+    if(!constantOrNAs.isEmpty()){
+      int [] cols = new int[constantOrNAs.size()];
+      for(int i = 0; i < cols.length; ++i)cols[i] = constantOrNAs.get(i);
+      source.remove(cols);
+    }
     final Frame fr = GLMTask.adaptFrame(source);
     YMUTask ymut = new YMUTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power), standardize, case_mode, case_val, fr.anyVec().length());
     ymut.doAll(fr);
