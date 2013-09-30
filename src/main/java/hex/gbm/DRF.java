@@ -75,8 +75,6 @@ public class DRF extends SharedTreeModelBuilder {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
 
-  // Compute a single DRF tree from the Frame.  Last column is the response
-  // variable.  Depth is capped at max_depth.
   @Override public void run() {
     buildModel();
   }
@@ -89,7 +87,7 @@ public class DRF extends SharedTreeModelBuilder {
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(_ncols),1) : mtries;
     assert 1 <= mtrys && mtrys <= _ncols : "Too large mtrys="+mtrys+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    DRFModel drf_model0 = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
+    final DRFModel drf_model0 = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
     DKV.put(outputKey, drf_model0);
 
     throw H2O.unimpl();
