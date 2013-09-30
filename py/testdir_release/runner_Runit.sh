@@ -109,16 +109,21 @@ mySetup() {
         mkdir -p ~/.Rlibrary
     fi
 
-    echo ".libPaths()" > /tmp/libPaths.cmd
     # removing .Rlibrary should have removed h2oWrapper
     # but maybe it was installed in another library (site library)
     # make sure it's removed, so the install installs the new (latest) one
-    echo 'remove.packages("h2oWrapper")' >> /tmp/libPaths.cmd
+    cat <<!
+    .libPaths()
+    myPackages = rownames(installed.packages())
+    if("h2oWrapper" %in% myPackages) {
+      remove.packages("h2oWrapper")
+    }
+!
+    > /tmp/libPaths.cmd
 
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
     echo "Running this cmd:"
     echo $cmd
-
     # everything after -- is positional. grabbed by argparse.REMAINDER
     ./sh2junit.py -name $1 -timeout 30 -- $cmd
 }
