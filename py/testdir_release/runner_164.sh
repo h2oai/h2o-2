@@ -66,8 +66,9 @@ $DOIT c2/test_c2_rel.py || true
 $DOIT c3/test_c3_rel.py || true
 $DOIT c4/test_c4_four_billion_rows.py || true
 $DOIT c6/test_c6_hdfs.py || true
-$DOIT c7/test_c7_rel.py || true
 $DOIT c8/test_c8_rf_airlines_hdfs.py || true
+# fails with summary
+$DOIT c7/test_c7_rel.py || true
 
 
 # If this one fails, fail this script so the bash dies 
