@@ -1,5 +1,7 @@
 package water.api;
 
+import java.util.UUID;
+
 import water.*;
 import water.fvec.Frame;
 import water.util.Log;
@@ -19,7 +21,7 @@ public class GeneratePredictions2 extends Request2 {
   public Frame data;
 
   @API( help="Prediction key", filter=Default.class )
-  Key prediction_key = Key.make();
+  Key prediction_key = Key.make("__Prediction_" + Key.make());
 
 
   public static String link(Key k, String content) {

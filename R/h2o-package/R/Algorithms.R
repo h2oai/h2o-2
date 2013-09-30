@@ -413,6 +413,10 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
               while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
               new("H2OParsedData", h2o=object@data@h2o, key=res$key)
+            # } else if(class(object) == "H2OGBMModel") {
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key)
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
+            #  new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
             # } else if(class(object) == "H2OPCAModel") {
             #  numMatch = colnames(newdata) %in% colnames(object@data)
             #  numPC = length(numMatch[numMatch == TRUE])
