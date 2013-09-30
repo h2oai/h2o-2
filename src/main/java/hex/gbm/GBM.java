@@ -25,9 +25,8 @@ public class GBM extends SharedTreeModelBuilder {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[][] forest, double [] errs, int ymin, long [][] cm){
-      super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
-    }
+    public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, int ymin) { super(key,dataKey,fr,ntrees,ymin); }
+    public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
 
@@ -61,14 +60,12 @@ public class GBM extends SharedTreeModelBuilder {
   }
 
   protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
-    GBMModel gbm_model = new GBMModel(outputKey,dataKey,frm,ntrees,new DTree[0][], null, _ymin, null);
-    DKV.put(outputKey, gbm_model);
+    final GBMModel gbm_model0 = new GBMModel(outputKey,dataKey,frm,ntrees, _ymin);
+    DKV.put(outputKey, gbm_model0);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
-        // The Initial Forest is empty
-        DTree forest[/*Trees*/][/*nclass*/] = new DTree[0][];
-
+        GBMModel gbm_model1 = gbm_model0;
         // Build trees until we hit the limit
         for( int tid=0; tid<ntrees; tid++) {
 
@@ -83,15 +80,13 @@ public class GBM extends SharedTreeModelBuilder {
           new ComputeRes().doAll(fr);
           
           // ESL2, page 387, Step 2b ii, iii, iv
-          forest = buildNextKTrees(fr,forest);
+          DTree[] ktrees = buildNextKTrees(fr);
           if( cancelled() ) break; // If canceled during building, do not bulkscore
 
           // Check latest predictions
-          Score sc = new Score().doAll(fr).report(Sys.GBM__,forest);
-          _errs = Arrays.copyOf(_errs,_errs.length+1);
-          _errs[_errs.length-1] = (float)sc._sum/_nrows;
-          GBMModel gbm_model = new GBMModel(outputKey, dataKey,frm, ntrees,forest, _errs, _ymin,sc._cm);
-          DKV.put(outputKey, gbm_model);
+          Score sc = new Score().doAll(fr).report(Sys.GBM__,tid,ktrees);
+          gbm_model1 = new GBMModel(gbm_model1, ktrees, (float)sc._sum/_nrows, sc._cm);
+          DKV.put(outputKey, gbm_model1);
         }
 
         cleanUp(fr,t_build); // Shared cleanup
@@ -157,7 +152,7 @@ public class GBM extends SharedTreeModelBuilder {
   // --------------------------------------------------------------------------
   // Build the next k-trees, which is trying to correct the residual error from
   // the prior trees.  From LSE2, page 387.  Step 2b ii, iii.
-  private DTree[][] buildNextKTrees(Frame fr, DTree forest[][]) {
+  private DTree[] buildNextKTrees(Frame fr) {
     String domain[] = fr.vecs()[_ncols].domain(); // For printing
 
     // We're going to build K (nclass) trees - each focused on correcting
@@ -170,11 +165,6 @@ public class GBM extends SharedTreeModelBuilder {
         new GBMUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
       }
     }
-
-    // Add ktrees to the end of the forest
-    DTree[][] oldForest = forest;
-    forest = Arrays.copyOf(forest,forest.length+1);
-    forest[forest.length-1] = ktrees;
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
 
     // ----
@@ -183,7 +173,7 @@ public class GBM extends SharedTreeModelBuilder {
     // Adds a layer to the trees each pass.
     int depth=0;
     for( ; depth<max_depth; depth++ ) {
-      if( cancelled() ) return oldForest;
+      if( cancelled() ) return null;
 
       // Build K trees, one per class.
       // Fuse 2 conceptual passes into one:
@@ -288,7 +278,7 @@ public class GBM extends SharedTreeModelBuilder {
     //  if( ktrees[k] != null ) 
     //    System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
 
-    return forest;
+    return ktrees;
   }
 
 

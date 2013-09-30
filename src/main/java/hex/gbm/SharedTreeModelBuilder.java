@@ -334,15 +334,15 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
     }
     @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); }
 
-    public Score report( Sys tag, DTree[][] trees ) {
+    public Score report( Sys tag, int ntree, DTree[] trees ) {
       assert !Double.isNaN(_sum);
       int lcnt=0;
-      for( DTree[] ts : trees ) for( DTree t : ts ) if( t != null ) lcnt += t._len;
+      for( DTree t : trees ) if( t != null ) lcnt += t._len;
       long err=_nrows;
       for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");
       Log.info(tag,"Mean Squared Error for forest is "+(_sum/_nrows));
-      Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, with "+trees.length+"x"+_nclass+" trees (average of "+((float)lcnt/(trees.length*_nclass))+" nodes)");
+      Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
       System.out.println("CM= "+Arrays.deepToString(_cm));
       return this;
     }

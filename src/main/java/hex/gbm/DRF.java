@@ -34,9 +34,8 @@ public class DRF extends SharedTreeModelBuilder {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[][] forest, double [] errs, int ymin, long [][] cm){
-      super(key,dataKey,fr,ntrees,forest,errs,ymin,cm);
-    }
+    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, int ymin) { super(key,dataKey,fr,ntrees,ymin); }
+    public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
       throw H2O.unimpl();
@@ -91,8 +90,8 @@ public class DRF extends SharedTreeModelBuilder {
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(_ncols),1) : mtries;
     assert 1 <= mtrys && mtrys <= _ncols : "Too large mtrys="+mtrys+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    DRFModel drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,new DTree[0][],null, _ymin, null);
-    DKV.put(outputKey, drf_model);
+    DRFModel drf_model0 = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
+    DKV.put(outputKey, drf_model0);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
@@ -140,8 +139,8 @@ public class DRF extends SharedTreeModelBuilder {
         //  _errs = Arrays.copyOf(_errs,st+xtrees);
         //  for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
         //  _errs[_errs.length-1] = (double)bs._sum/nrows;
-        //  drf_model = new DRFModel(outputKey,dataKey,frm,ntrees,forest, _errs, ymin,bs._cm);
-        //  DKV.put(outputKey, drf_model);
+        //  drf_model1 = new DRFModel(drf_model1,forest, _errs, ymin,bs._cm);
+        //  DKV.put(outputKey, drf_model1);
         //
         //  // Remove temp vectors; cleanup the Frame
         //  for( int t=0; t<xtrees; t++ )

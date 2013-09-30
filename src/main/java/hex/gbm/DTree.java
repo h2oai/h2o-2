@@ -465,18 +465,22 @@ class DTree extends Iced {
     // model (for now - really should be seperate).
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
 
-    public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, DTree[][] forest, double [] errs, int ymin, long [][] cm) {
+    public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, int ymin) {
       super(key,dataKey,fr);
-      this.N = ntrees; this.errs = errs; this.ymin = ymin; this.cm = cm;
-      assert forest.length==0 || forest[0].length == nclasses()-ymin;
-      treeBits = new CompressedTree[forest.length][];
-      for( int i=0; i<forest.length; i++ ) {
-        DTree[] trees = forest[i];
-        CompressedTree ts[] = treeBits[i] = new CompressedTree[trees.length];
-        for( int c=0; c<trees.length; c++ )
-          if( trees[c] != null )
+      this.N = ntrees; this.errs = new double[0]; this.ymin = ymin; this.cm = null;
+      treeBits = new CompressedTree[0][];
+    }
+    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm) {
+      super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
+      this.N = prior.N; this.ymin = prior.ymin; this.cm = cm;
+      errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
+      errs[errs.length-1] = err;
+      assert trees.length == nclasses()-ymin;
+      treeBits = Arrays.copyOf(prior.treeBits,prior.treeBits.length+1);
+      CompressedTree ts[] = treeBits[treeBits.length-1] = new CompressedTree[trees.length];
+      for( int c=0; c<trees.length; c++ )
+        if( trees[c] != null )
             ts[c] = trees[c].compress();
-      }
     }
 
     // Number of trees actually in the model (instead of expected/planned)
