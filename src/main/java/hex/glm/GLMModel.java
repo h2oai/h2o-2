@@ -251,4 +251,9 @@ public class GLMModel extends Model {
     for( double b : beta ) if( b != 0 ) ++res;
     return res;
   }
+  @Override public void delete(){
+    if(validations != null) for(Key k:validations)
+      DKV.remove(k);
+    super.delete();
+  }
 }
