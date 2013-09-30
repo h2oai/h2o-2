@@ -30,11 +30,11 @@ H2O_JAR=$H2O_DOWNLOADED/h2o.jar
 HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
-REMOTE_HOME=/home/0xdiag
+REMOTE_HOME=/home/0xcustomer
 REMOTE_IP=192.168.1.173
-REMOTE_USER=0xdiag@$REMOTE_IP
-REMOTE_SCP="scp -i $HOME/.0xdiag/0xdiag_id_rsa"
-REMOTE_SSH_USER="ssh -i $HOME/.0xdiag/0xdiag_id_rsa $REMOTE_USER"
+REMOTE_USER=0xcustomer@$REMOTE_IP
+REMOTE_SCP="scp -i $HOME/.0xcustomer/0xdiag_id_rsa"
+REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xdiag_id_rsa $REMOTE_USER"
 
 REMOTE_0XCUSTOMER=0xcustomer@$REMOTE_IP
 
@@ -45,7 +45,7 @@ $REMOTE_SCP $H2O_HADOOP/$MAPR_JAR  $REMOTE_USER:$REMOTE_HOME
 $REMOTE_SCP $H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
 #***********************************************************************************
-echo "Does 0xdiag have any hadoop jobs left running from something? (manual/jenkins/whatever)"
+echo "Does 0xcustomer have any hadoop jobs left running from something? (manual/jenkins/whatever)"
 rm -f /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
 echo "Checking hadoop jobs"
@@ -68,11 +68,11 @@ done < /tmp/my_jobs_on_hadoop_$REMOTE_IP
 
 #*****HERE' WHERE WE START H2O ON HADOOP*******************************************
 rm -f /tmp/h2o_on_hadoop_$REMOTE_IP.sh
-echo "cd /home/0xdiag" > /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "cd /home/0xcustomer" > /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
-echo "hadoop dfs -rmr /user/0xdiag/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "hadoop dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 echo "hadoop jar $MAPR_JAR water.hadoop.h2odriver -jt $MAPR_JOBTRACKER -libjars h2o.jar -mapperXmx $MAPR_HEAP -nodes $MAPR_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 # exchange keys so jenkins can do this?
