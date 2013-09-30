@@ -3,13 +3,11 @@ package hex.glm;
 import hex.glm.GLMModel.GLMValidationTask;
 import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
-import hex.glm.GLMParams.FamilyIced;
 import hex.glm.GLMParams.Link;
 import hex.glm.GLMTask.GLMIterationTask;
 import hex.glm.GLMTask.YMUTask;
 import hex.glm.LSMSolver.ADMMSolver;
 
-import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -53,6 +51,7 @@ public class GLM2 extends FrameJob{
   double case_val = 0;
   @API(help = "Tweedie variance power", filter = Default.class)
   double tweedie_variance_power;
+  double tweedie_link_power;
   @API(help = "alpha", filter = Default.class)
   double alpha = 0.5;
   @API(help = "lambda", filter = Default.class)
@@ -60,6 +59,7 @@ public class GLM2 extends FrameJob{
   @API(help = "beta_eps", filter = Default.class)
   double beta_eps = 1e-4;
 
+  public GLM2 setTweedieVarPower(double d){tweedie_variance_power = d; return this;}
   public GLM2(String desc, Key dest) {
     super(desc, dest);
   }
@@ -85,7 +85,7 @@ public class GLM2 extends FrameJob{
   @Override protected Response serve() {
     link = family.defaultLink;
     _startTime = System.currentTimeMillis();
-    GLMModel m = new GLMModel(dest(),source,new FamilyIced(family,tweedie_variance_power),link,beta_eps,alpha,lambda,System.currentTimeMillis()-_startTime);
+    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_eps,alpha,lambda,System.currentTimeMillis()-_startTime);
     DKV.put(dest(), m);
     fork();
     return GLMProgressPage2.redirect(this, self(),dest());
@@ -162,7 +162,7 @@ public class GLM2 extends FrameJob{
     }
   }
   public Future fork(H2OCountedCompleter completer){
-    System.out.println("removing cols: " + Arrays.toString(ignored_cols));
+    tweedie_link_power = 1 - tweedie_variance_power; // TODO
     source.remove(ignored_cols);
     final Vec [] vecs =  source.vecs();
     for(int i = 0; i < vecs.length-1; ++i) // put response to the end
@@ -173,9 +173,9 @@ public class GLM2 extends FrameJob{
         break;
       }
     final Frame fr = GLMTask.adaptFrame(source);
-    YMUTask ymut = new YMUTask(standardize, new FamilyIced(family, tweedie_variance_power), link, case_mode, case_val, fr.anyVec().length());
+    YMUTask ymut = new YMUTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power), standardize, case_mode, case_val, fr.anyVec().length());
     ymut.doAll(fr);
-    GLMIterationTask firstIter = new GLMIterationTask(standardize, 1.0/ymut.nobs(), new FamilyIced(family, tweedie_variance_power), link, case_mode, case_val, null);
+    GLMIterationTask firstIter = new GLMIterationTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),null,standardize, 1.0/ymut.nobs(), case_mode, case_val);
     firstIter._ymu = ymut.ymu();
     final H2OEmptyCompleter fjt = start(new H2OEmptyCompleter());
     if(completer != null)fjt.setCompleter(completer);

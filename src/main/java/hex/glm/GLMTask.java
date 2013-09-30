@@ -1,12 +1,16 @@
 package hex.glm;
 
 
-import hex.glm.GLMParams.*;
+import hex.DGLM.FamilyIced;
+import hex.glm.GLMParams.CaseMode;
+import hex.glm.GLMParams.Family;
+import hex.glm.GLMParams.Link;
 import hex.gram.Gram;
 
 import java.util.Arrays;
 
-import water.*;
+import water.MRTask2;
+import water.MemoryManager;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -34,8 +38,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   double    _ymu = Double.NaN; // mean of the response
 
   protected final double [] _beta; // beta vector from previous computation or null if this is the first iteration
-  protected final FamilyIced _family;
-  protected final Link _link;
+
+  final GLMParams _glm;
   // CaseMode used to turn non-binary response into a binary one (0,1), used only by binomial family
   protected final CaseMode _caseMode;
   // CaseVaue to be used together with the Case predicate to turn the response into binary variable
@@ -48,13 +52,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   // size of the top-left strictly diagonal region of the gram matrix, currently just the size of the largest categorical
   final protected int diagN(){if(_catOffsets.length < 2)return 0; return _catOffsets[1];}
 
-  public GLMTask(boolean standardize, FamilyIced family, Link link, CaseMode cm, double cv, double [] beta) {
-    _standardize = standardize; _link = link; _family = family; _caseMode = cm; _caseVal = cv; _beta = beta;
+  public GLMTask(GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {
+    _standardize = standardize; _caseMode = cm; _caseVal = cv; _beta = beta;
+    _glm = glm;
   }
   protected GLMTask(GLMTask gt, double [] beta){
     _standardize = gt._standardize;
-    _link = gt._link;
-    _family = gt._family;
+    _glm = gt._glm;
     _caseMode = gt._caseMode;
     _caseVal = gt._caseVal;
     _beta = beta;
@@ -125,7 +129,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       vecs2[i+ncats]  = vecs [nums[i]];
       names[i+ncats] = fr._names[nums[i]];
     }
-    return new Frame(names,vecs);
+    return new Frame(names,vecs2);
   }
 
   // TODO change this to extract mean, sigma, nobs for the actual dataset
@@ -142,7 +146,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       _cats = i;
       while(i < n && !vecs[i].isEnum())++i;
       _nums = i-_cats;
-      if(i != n)throw new RuntimeException("Incorrect format of the input frame. Frame is asusmed to be ordered so that categorical columns come before numerics.");
+      if(i != n)
+        throw new RuntimeException("Incorrect format of the input frame. Frame is asusmed to be ordered so that categorical columns come before numerics.");
       _normSub = MemoryManager.malloc8d(_nums);
       _normMul = MemoryManager.malloc8d(_nums); Arrays.fill(_normMul, 1);
       if(_standardize) for(i = 0; i < _nums; ++i){
@@ -202,8 +207,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     private long   _nobs;
     private double _ymu;
     private final double _reg;
-    public YMUTask(boolean standardize, FamilyIced family, Link link, CaseMode cm, double cv, long nobs) {
-      super(standardize, family, link, cm, cv, null);
+    public YMUTask(GLMParams glm, boolean standardize, CaseMode cm, double cv, long nobs) {
+      super(glm,null,standardize, cm, cv);
       _reg = 1.0/nobs;
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
@@ -228,11 +233,11 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     private final double _gPrimeMu;
     private long _nobs;
 
-    public LMAXTask(boolean standardize, FamilyIced family, Link link, CaseMode cm, double cv, double ymu, int P) {
-      super(standardize, family, link, cm, cv, null);
+    public LMAXTask(GLMParams glm, boolean standardize, CaseMode cm, double cv, double ymu, int P) {
+      super(glm,null,standardize, cm, cv);
       _z = MemoryManager.malloc8d(P);
       _ymu = ymu;
-      _gPrimeMu = link.linkDeriv(ymu);
+      _gPrimeMu = glm.linkDeriv(ymu);
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
       double w = (response - _ymu) * _gPrimeMu;
@@ -247,7 +252,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       double res = Math.abs(_z[0]);
       for( int i = 1; i < _z.length; ++i )
         res = Math.max(res, Math.abs(_z[i]));
-      return _family._family.variance(_ymu) * res / _nobs;
+      return _glm.variance(_ymu) * res / _nobs;
     }
   }
 
@@ -265,8 +270,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     double    _yy;
     GLMValidation _val; // validation of previous model
 
-    public GLMIterationTask(boolean standardize, double reg, FamilyIced fam, Link link, CaseMode caseMode, double caseVal, double [] beta) {
-      super(standardize, fam, link, caseMode, caseVal, beta);
+    public GLMIterationTask(GLMParams glm, double [] beta, boolean standardize, double reg, CaseMode caseMode, double caseVal) {
+      super(glm, beta, standardize, caseMode, caseVal);
       _iter = 0;
       _reg = reg;
     }
@@ -278,29 +283,29 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     }
 
     @Override public final void processRow(double [] nums, int ncats, int [] cats, double y){
-      assert ((_family._family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
+      assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
       if( _caseMode != CaseMode.none ) y = (_caseMode.isCase(y, _caseVal)) ? 1 : 0;
       double w = 1;
       double eta = 0, mu = 0, var = 1;
-      if( _family._family != Family.gaussian) {
+      if( _glm.family != Family.gaussian) {
         if( _beta == null ) {
-          mu = _family.mustart(y);
-          eta = _link.link(mu);
+          mu = _glm.mustart(y);
+          eta = _glm.link(mu);
         } else {
           eta = computeEta(ncats, cats,nums);
-          mu = _link.linkInv(eta);
+          mu = _glm.linkInv(eta);
         }
         if(Double.isNaN(mu)){
           System.out.println("got NaN mu from: beta=" + Arrays.toString(_beta) + ", row = " + Arrays.toString(nums) + ", cats = " + Arrays.toString(cats) + ", ncats = " + ncats);
         }
         _val.add(y, mu);
 
-        var = Math.max(1e-5, _family.variance(mu)); // avoid numerical problems with 0 variance
-        if( _family._family == Family.binomial || _family._family == Family.poisson ) {
+        var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
+        if( _glm.family == Family.binomial || _glm.family == Family.poisson ) {
           w = var;
           y = eta + (y - mu) / var;
         } else {
-          double dp = _link.linkInvDeriv(eta);
+          double dp = _glm.linkInvDeriv(eta);
           w = dp * dp / var;
           y = eta + (y - mu) / dp;
         }
@@ -319,7 +324,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       _xy = MemoryManager.malloc8d(fullN());
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
-      _val = new GLMValidation(null,_ymu, _family,rank);
+      _val = new GLMValidation(null,_ymu, _glm,rank);
       super.map(chunks);
       _gram.mul(_reg);
       if(_val.nobs > 0)_val.avg_err /= _val.nobs;

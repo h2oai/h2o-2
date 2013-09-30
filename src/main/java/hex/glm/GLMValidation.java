@@ -1,15 +1,12 @@
 package hex.glm;
 
-import java.text.DecimalFormat;
-
-import org.omg.CORBA._PolicyStub;
-
 import hex.ConfusionMatrix;
 import hex.glm.GLMParams.Family;
-import hex.glm.GLMParams.FamilyIced;
-import water.*;
-import water.fvec.Chunk;
-import water.util.RString;
+
+import java.text.DecimalFormat;
+
+import water.Iced;
+import water.Key;
 
 /**
  * Class for GLMValidation.
@@ -27,16 +24,16 @@ public class GLMValidation extends Iced {
   private double _aic;// internal aic used only for poisson family!
   final Key dataKey;
   ConfusionMatrix [] _cms;
-  final FamilyIced _fam;
+  final GLMParams _glm;
   final private int _rank;
 
   private static final DecimalFormat DFORMAT = new DecimalFormat("##.##");
 
-  public GLMValidation(Key dataKey, double ymu, FamilyIced f, int rank){
+  public GLMValidation(Key dataKey, double ymu, GLMParams glm, int rank){
     _rank = rank;
     _ymu = ymu;
-    _fam = f;
-    if(_fam._family == Family.binomial){
+    _glm = glm;
+    if(_glm.family == Family.binomial){
       _cms = new ConfusionMatrix[DEFAULT_THRESHOLDS.length];
       for(int i = 0; i < _cms.length; ++i)
         _cms[i] = new ConfusionMatrix(2);
@@ -46,16 +43,16 @@ public class GLMValidation extends Iced {
 
   public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make());}
   public void add(double yreal, double ymodel){
-    null_deviance += _fam._family.deviance(yreal, _ymu);
-    if(_fam._family == Family.binomial) // clasification -> update confusion matrix too
+    null_deviance += _glm.deviance(yreal, _ymu);
+    if(_glm.family == Family.binomial) // clasification -> update confusion matrix too
       for(int i = 0; i < DEFAULT_THRESHOLDS.length; ++i)
         _cms[i].add((int)yreal, (ymodel >= DEFAULT_THRESHOLDS[i])?1:0);
-    if(Double.isNaN(_fam._family.deviance(yreal, ymodel)))
+    if(Double.isNaN(_glm.deviance(yreal, ymodel)))
       System.out.println("NaN from yreal=" + yreal + ", ymodel=" + ymodel);
-    residual_deviance  += _fam._family.deviance(yreal, ymodel);
+    residual_deviance  += _glm.deviance(yreal, ymodel);
     ++nobs;
     avg_err += (ymodel - yreal) * (ymodel - yreal);
-    if( _fam._family == Family.poisson ) { // aic for poisson
+    if( _glm.family == Family.poisson ) { // aic for poisson
       long y = Math.round(yreal);
       double logfactorial = 0;
       for( long i = 2; i <= y; ++i )
@@ -72,14 +69,17 @@ public class GLMValidation extends Iced {
     if(_cms == null)_cms = v._cms;
     else for(int i = 0; i < _cms.length; ++i)_cms[i].add(v._cms[i]);
   }
-
+  public final double nullDeviance(){return null_deviance;}
+  public final double residualDeviance(){return residual_deviance;}
+  public final long nullDOF(){return nobs-1;}
+  public final long resDOF(){return nobs - _rank -1;}
   public double auc(){
     if(Double.isNaN(auc))computeAUC();
     return auc;
   }
   public double aic(){
     double aic = 0;
-    switch( _fam._family ) {
+    switch( _glm.family ) {
       case gaussian:
         aic =  nobs * (Math.log(residual_deviance / nobs * 2 * Math.PI) + 1) + 2;
         break;
@@ -93,7 +93,7 @@ public class GLMValidation extends Iced {
       case tweedie:
         return Double.NaN;
       default:
-        assert false : "missing implementation for family " + _fam._family;
+        assert false : "missing implementation for family " + _glm.family;
     }
     return aic + 2*_rank;
   }
@@ -138,10 +138,10 @@ public class GLMValidation extends Iced {
     sb.append("<tr><th>Residual Deviance</th><td>" + residual_deviance + "</td></tr>");
     sb.append("<tr><th>AIC</th><td>" + aic() + "</td></tr>");
     sb.append("<tr><th>Training Error Rate Avg</th><td>" + avg_err + "</td></tr>");
-    if(_fam._family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + auc() + "</td></tr>");
+    if(_glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + auc() + "</td></tr>");
     sb.append("</table>");
 
-    if(_fam._family == Family.binomial){
+    if(_glm.family == Family.binomial){
       int best = 0;
       for(int i = 1; i < _cms.length; ++i){
         if(Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))

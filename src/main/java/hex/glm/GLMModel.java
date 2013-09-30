@@ -1,12 +1,9 @@
 package hex.glm;
 
 import hex.glm.GLMParams.Family;
-import hex.glm.GLMParams.FamilyIced;
-import hex.glm.GLMParams.Link;
-
 import java.text.DecimalFormat;
 import java.util.Arrays;
-
+import java.util.HashMap;
 import water.*;
 import water.api.DocGen;
 import water.fvec.*;
@@ -19,8 +16,7 @@ public class GLMModel extends Model {
   final int    []  catOffsets;
   final String []  warnings;
   final double     threshold;
-  final FamilyIced family;
-  final Link       link;
+  final GLMParams  glm;
   final double     beta_eps;
   final double     alpha;
   final double     lambda;
@@ -30,13 +26,12 @@ public class GLMModel extends Model {
 
   private static final DecimalFormat DFORMAT = new DecimalFormat("###.####");
 
-  public GLMModel(Key selfKey, Frame fr, FamilyIced family, Link link, double beta_eps, double alpha, double lambda,long run_time) {
+  public GLMModel(Key selfKey, Frame fr, GLMParams glm, double beta_eps, double alpha, double lambda,long run_time) {
     super(selfKey,null,fr);
     ymu = 0;
     beta = null;
     norm_beta = null;
-    this.link = link;
-    this.family = family;
+    this.glm = glm;
     threshold = 0.5;
     iteration = 0;
     this.catOffsets = null;
@@ -49,8 +44,7 @@ public class GLMModel extends Model {
 
   public GLMModel(Key selfKey, Key dataKey, int iteration, Frame fr, GLMTask glmt, double beta_eps, double alpha, double lambda, double [] beta, double threshold, String [] warnings, long run_time) {
     super(selfKey, dataKey, fr);
-    family = glmt._family;
-    link = glmt._link;
+    glm = glmt._glm;
     this.threshold = threshold;
     catOffsets = glmt._catOffsets;
     if(glmt._standardize){
@@ -67,7 +61,7 @@ public class GLMModel extends Model {
       }
       this.beta[beta.length-1] -= norm;
     } else {
-      this.beta = glmt._beta;
+      this.beta = beta;
       norm_beta = null;
     }
     final Vec [] vecs = fr.vecs();
@@ -79,6 +73,10 @@ public class GLMModel extends Model {
     this.beta_eps = beta_eps;
     this.run_time = run_time;
   }
+  public GLMValidation validation(){
+    GLMValidation res = DKV.get(validations[0]).get();
+    return res;
+  }
   public double [] beta(){return beta;}
   @Override protected float[] score0(double[] data, float[] preds) {
     double eta = 0.0;
@@ -88,12 +86,12 @@ public class GLMModel extends Model {
     for(int i = catOffsets.length-1; i < data.length; ++i)
       eta += beta[noff+i]*data[i];
     eta += beta[beta.length-1]; // add intercept
-    double mu = link.linkInv(eta);
+    double mu = glm.linkInv(eta);
     if(Double.isNaN(mu)){
       System.out.println("got NaN out of " + Arrays.toString(data));
     }
     preds[0] = (float)mu;
-    if(family._family == Family.binomial){ // threshold
+    if(glm.family == Family.binomial){ // threshold
       if(preds.length > 1)preds[1] = preds[0];
       preds[0] = preds[0] >= threshold?1:0;
     }
@@ -109,10 +107,10 @@ public class GLMModel extends Model {
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
     public GLMValidationTask(GLMModel m){_model = m;}
     public void map(Chunk [] chunks){
-      _res = new GLMValidation(null,_model.ymu,_model.family,_model.rank());
+      _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank());
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
-      float  [] preds = MemoryManager.malloc4f(_model.family._family == Family.binomial?2:1);
+      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?2:1);
       OUTER:
       for(int i = 0; i < nrows; ++i){
         if(chunks[chunks.length-1].isNA0(i))continue;
@@ -121,7 +119,7 @@ public class GLMModel extends Model {
           row[j] = chunks[j].at0(i);
         }
         _model.score0(row, preds);
-        _res.add(chunks[chunks.length-1].at80(i), _model.family._family == Family.binomial?preds[1]:preds[0]);
+        _res.add(chunks[chunks.length-1].at80(i), _model.glm.family == Family.binomial?preds[1]:preds[0]);
       }
       if(_res.nobs > 0)_res.avg_err /= _res.nobs;
     }
@@ -145,8 +143,8 @@ public class GLMModel extends Model {
     }
     sb.append("</div>");
     sb.append("<h4>Parameters</h4>");
-    parm(sb,"family",family._family);
-    parm(sb,"link",link);
+    parm(sb,"family",glm.family);
+    parm(sb,"link",glm.link);
     parm(sb,"&epsilon;<sub>&beta;</sub>",beta_eps);
     parm(sb,"&alpha;",alpha);
     parm(sb,"&lambda;",lambda);
@@ -159,7 +157,16 @@ public class GLMModel extends Model {
       }
     }
   }
-
+  /**
+   * get beta coefficients in a map indexed by name
+   * @return
+   */
+  public HashMap<String,Double> coefficients(){
+    String [] names = coefNames();
+    HashMap<String, Double> res = new HashMap<String, Double>();
+    for(int i = 0; i < beta.length; ++i)res.put(names[i],beta[i]);
+    return res;
+  }
   public String [] coefNames(){
     final int cats = catOffsets.length-1;
     int k = 0;
@@ -195,7 +202,7 @@ public class GLMModel extends Model {
     }
     sb.append("<h4>Equation</h4>");
     RString eq = null;
-    switch( link ) {
+    switch( glm.link ) {
     case identity: eq = new RString("y = %equation");   break;
     case logit:    eq = new RString("y = 1/(1 + Math.exp(-(%equation)))");  break;
     case log:      eq = new RString("y = Math.exp((%equation)))");  break;
@@ -230,7 +237,7 @@ public class GLMModel extends Model {
     sb.append(t + "msec");
   }
   public String toString(){
-    StringBuilder sb = new StringBuilder("GLM Model (key=" + _selfKey + " , trained on " + _dataKey + ", family = " + family._family + ", link = " + link + ", #iterations = " + iteration + "):\n");
+    StringBuilder sb = new StringBuilder("GLM Model (key=" + _selfKey + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration + "):\n");
     final int cats = catOffsets.length-1;
     int k = 0;
     for(int i = 0; i < cats; ++i)
