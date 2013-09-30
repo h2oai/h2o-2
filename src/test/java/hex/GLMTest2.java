@@ -50,8 +50,8 @@ public class GLMTest2  extends TestUtil {
    Key model = Key.make("poisson_test");
    try {
      // make data so that the expected coefficients is icept = col[0] = 1.0
-     Key k = FVecTest.makeByteVec(raw, "x,y\n0,2\n1,4\n2,8\n3,16\n4,32\n5,64\n6,128\n7,256");
-     Frame fr = ParseDataset2.parse(parsed, new Key[]{k});
+     FVecTest.makeByteVec(raw, "x,y\n0,2\n1,4\n2,8\n3,16\n4,32\n5,64\n6,128\n7,256");
+     Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
      new GLM2("GLM test of poisson regression.",model,fr,false,Family.poisson, Family.poisson.defaultLink,0,0).fork().get();
      GLMModel m = DKV.get(model).get();
      for(double c:m.beta())assertEquals(Math.log(2),c,1e-4);
@@ -59,8 +59,9 @@ public class GLMTest2  extends TestUtil {
      //new byte []{1,2,3,4,5,6,7,8, 9, 10,11,12,13,14},
 //     new byte []{0,1,2,3,1,4,9,18,23,31,20,25,37,45});
 
-     k = FVecTest.makeByteVec(raw, "x,y\n1,0\n2,1\n3,2\n4,3\n5,1\n6,4\n7,9\n8,18\n9,23\n10,31\n11,20\n12,25\n13,37\n14,45\n");
-     fr = ParseDataset2.parse(parsed, new Key[]{k});
+     UKV.remove(raw);
+     FVecTest.makeByteVec(raw, "x,y\n1,0\n2,1\n3,2\n4,3\n5,1\n6,4\n7,9\n8,18\n9,23\n10,31\n11,20\n12,25\n13,37\n14,45\n");
+     fr = ParseDataset2.parse(parsed, new Key[]{raw});
      new GLM2("GLM test of poisson regression(2).",model,fr,false,Family.poisson, Family.poisson.defaultLink,0,0).fork().get();
      m = DKV.get(model).get();
      assertEquals(0.3396,m.beta()[1],1e-4);
@@ -85,8 +86,8 @@ public class GLMTest2  extends TestUtil {
     Key model = Key.make("gamma_test");
     try {
       // make data so that the expected coefficients is icept = col[0] = 1.0
-      Key k = FVecTest.makeByteVec(raw, "x,y\n0,1\n1,0.5\n2,0.3333333\n3,0.25\n4,0.2\n5,0.1666667\n6,0.1428571\n7,0.125");
-      Frame fr = ParseDataset2.parse(parsed, new Key[]{k});
+      FVecTest.makeByteVec(raw, "x,y\n0,1\n1,0.5\n2,0.3333333\n3,0.25\n4,0.2\n5,0.1666667\n6,0.1428571\n7,0.125");
+      Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
 //      /public GLM2(String desc, Key dest, Frame src, Family family, Link link, double alpha, double lambda) {
       double [] vals = new double[] {1.0,1.0};
       //public GLM2(String desc, Key dest, Frame src, Family family, Link link, double alpha, double lambda) {
@@ -107,8 +108,8 @@ public class GLMTest2  extends TestUtil {
     Key model = Key.make("gaussian_test");
     try {
       // make data so that the expected coefficients is icept = col[0] = 1.0
-      Key k = FVecTest.makeByteVec(raw, "x,y\n0,0\n1,0.1\n2,0.2\n3,0.3\n4,0.4\n5,0.5\n6,0.6\n7,0.7\n8,0.8\n9,0.9\n0,0\n1,0\n2,0\n3,0\n4,0\n5,0\n6,0\n7,0\n8,0\n9,0");
-      Frame fr = ParseDataset2.parse(parsed, new Key[]{k});
+      FVecTest.makeByteVec(raw, "x,y\n0,0\n1,0.1\n2,0.2\n3,0.3\n4,0.4\n5,0.5\n6,0.6\n7,0.7\n8,0.8\n9,0.9\n0,0\n1,0\n2,0\n3,0\n4,0\n5,0\n6,0\n7,0\n8,0\n9,0");
+      Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
       double [] powers = new double [] {1.5,1.1,1.9};
       double [] intercepts = new double []{3.643,1.318,9.154};
       double [] xs = new double []{-0.260,-0.0284,-0.853};
