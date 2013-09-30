@@ -78,7 +78,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Set step & min/max for each bin
     Arrays.fill(h._mins, Float.MAX_VALUE);
     Arrays.fill(h._maxs,-Float.MAX_VALUE);
-    h._MSs = new double[_nbins*2];
+    h._MSs = MemoryManager.malloc8d(_nbins*2);
     return h;
   }
 

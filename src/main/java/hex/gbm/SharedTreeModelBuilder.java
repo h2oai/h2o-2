@@ -212,8 +212,12 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
           if( nid==-2 ) continue; // sampled away
 
           // Score row against current decisions & assign new split
-          if( leaf > 0 && (nid = tree.decided(nid).ns(chks,i)) != -1 ) // Prior pass exists?
-            nids.set0(i,nid);
+          if( leaf > 0 ) {      // Prior pass exists?
+            DTree.DecidedNode dn = tree.decided(nid);
+            if( dn._split._col == -1 ) nids.set0(i,(nid = dn._pid)); // Might have a leftover non-split
+            nid = tree.decided(nid).ns(chks,i); // Move down the tree 1 level
+            if( nid != -1 ) nids.set0(i,nid);
+          }
 
           // Pass 1.9
           if( nid < leaf ) continue; // row already predicts perfectly
