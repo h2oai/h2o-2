@@ -33,8 +33,8 @@ HDFS_OUTPUT=hdfsOutputDirName
 REMOTE_HOME=/home/0xcustomer
 REMOTE_IP=192.168.1.162
 REMOTE_USER=0xcustomer@$REMOTE_IP
-REMOTE_SCP="scp -i $HOME/.0xcustomer/0xdiag_id_rsa"
-REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xdiag_id_rsa $REMOTE_USER"
+REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
+REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
 
 REMOTE_0XCUSTOMER=0xcustomer@$REMOTE_IP
 
