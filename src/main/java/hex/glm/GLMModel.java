@@ -87,9 +87,6 @@ public class GLMModel extends Model {
       eta += beta[noff+i]*data[i];
     eta += beta[beta.length-1]; // add intercept
     double mu = glm.linkInv(eta);
-    if(Double.isNaN(mu)){
-      System.out.println("got NaN out of " + Arrays.toString(data));
-    }
     preds[0] = (float)mu;
     if(glm.family == Family.binomial){ // threshold
       if(preds.length > 1)preds[1] = preds[0];
@@ -132,7 +129,6 @@ public class GLMModel extends Model {
     if(beta != null)
       DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
     String succ = (warnings == null || warnings.length == 0)?"alert-success":"alert-warning";
-    System.out.println("succ = " + succ);
     sb.append("<div class='alert " + succ + "'>");
     sb.append(iteration + " iterations computed in ");
     pprintTime(sb, run_time);

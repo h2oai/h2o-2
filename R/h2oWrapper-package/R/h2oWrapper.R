@@ -110,7 +110,7 @@ h2oWrapper.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
     cat("H2O R package and server version", H2OVersion, "match\n")
   else if(h2oWrapper.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {    
     if("h2o" %in% myPackages) {
-      cat("Removing old H2O R package version", as.character(packageVersion("h2o")), "\n")
+      cat("Removing old H2O R package version", toString(packageVersion("h2o")), "\n")
       remove.packages("h2o")
     }
     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
