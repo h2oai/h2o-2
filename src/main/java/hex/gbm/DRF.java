@@ -79,8 +79,7 @@ public class DRF extends SharedTreeModelBuilder {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
 
-  // Compute a single DRF tree from the Frame.  Last column is the response
-  // variable.  Depth is capped at max_depth.
+  // Launch model-building & redirect to a polling/progress page
   @Override protected Response serve() {
     startBuildModel();
     return DRFProgressPage.redirect(this, self(),dest());
@@ -90,19 +89,20 @@ public class DRF extends SharedTreeModelBuilder {
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(_ncols),1) : mtries;
     assert 1 <= mtrys && mtrys <= _ncols : "Too large mtrys="+mtrys+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    DRFModel drf_model0 = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
+    final DRFModel drf_model0 = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
     DKV.put(outputKey, drf_model0);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
       @Override public void compute2() {
+        DRFModel drf_model1 = drf_model0;
         throw H2O.unimpl();
         //// Set a single 1.0 in the response for that class
         //if( nclass > 1 )
         //  new Set1Task(ymin,ncols,nclass).doAll(fr);
-        //
-        //// The RNG used to pick split columns
+
+        // The RNG used to pick split columns
         //Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
-        //
+
         //// Initially setup as-if an empty-split had just happened
         //DBinHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
         //DRFTree forest[] = new DRFTree[0];

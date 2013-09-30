@@ -24,7 +24,6 @@ public class GBM extends SharedTreeModelBuilder {
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
     public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, int ymin) { super(key,dataKey,fr,ntrees,ymin); }
     public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
   }
@@ -52,8 +51,7 @@ public class GBM extends SharedTreeModelBuilder {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
 
-  // Compute a single GBM tree from the Frame.  Last column is the response
-  // variable.  Depth is capped at maxDepth.
+  // Launch model-building & redirect to a polling/progress page
   @Override protected Response serve() {
     startBuildModel();
     return GBMProgressPage.redirect(this, self(),dest());
@@ -84,7 +82,7 @@ public class GBM extends SharedTreeModelBuilder {
           if( cancelled() ) break; // If canceled during building, do not bulkscore
 
           // Check latest predictions
-          Score sc = new Score().doAll(fr).report(Sys.GBM__,tid,ktrees);
+          Score sc = new Score().doAll(fr).report(Sys.GBM__,tid+1,ktrees);
           gbm_model1 = new GBMModel(gbm_model1, ktrees, (float)sc._sum/_nrows, sc._cm);
           DKV.put(outputKey, gbm_model1);
         }
