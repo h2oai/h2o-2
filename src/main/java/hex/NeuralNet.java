@@ -1,25 +1,31 @@
 package hex;
 
+import hex.Layer.ChunkSoftmax;
 import hex.Layer.ChunksInput;
-import hex.Layer.FrameInput;
 import hex.Layer.Input;
+import hex.Layer.Softmax;
+import hex.Layer.VecSoftmax;
+import hex.Layer.VecsInput;
 
 import java.util.UUID;
 
-import org.apache.commons.lang.ArrayUtils;
-
 import water.*;
-import water.Job.FrameJob;
+import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.api.Progress2;
 import water.fvec.*;
 import water.util.RString;
+import water.util.Utils;
 
-public class NeuralNet extends FrameJob {
+/**
+ * Neural network.
+ *
+ * @author cypof
+ */
+public class NeuralNet extends ValidatedJob {
   static final int API_WEAVER = 1;
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network";
-  public static final String KEY_PREFIX = "__NeuralNet_";
   public static final int EVAL_ROW_COUNT = 1000;
 
   public enum Activation {
@@ -27,14 +33,6 @@ public class NeuralNet extends FrameJob {
   };
 
 //@formatter:off
-  @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
-  public int[] cols;
-  class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
-
-  @API(help="Column to use as class", required=true, filter=responseFilter.class)
-  public Vec response;
-  class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
-
   @API(help = "Activation function", filter = activationFilter.class)
   public Activation activation;
   class activationFilter extends EnumArgument<Activation> { public activationFilter() { super(Activation.Tanh); } }
@@ -53,55 +51,40 @@ public class NeuralNet extends FrameJob {
   @API(help = "How many times the dataset should be iterated", filter = Default.class)
   public int epochs = 100;
 
-// TODO
-//  @API(help = "How much of the training set is used for validation", filter = Default.class)
-//  public double validation_ratio = .2;
-
   public NeuralNet() {
-    super(DOC_GET, Key.make(KEY_PREFIX + Key.make()));
+    description = DOC_GET;
   }
 
-  @Override protected void run() {
-    final Key sourceKey = Key.make(input("source"));
-    for( int i = cols.length - 1; i >= 0; i-- )
-      if( source.vecs()[cols[i]] == response )
-        cols = ArrayUtils.remove(cols, i);
-    String[] names = new String[cols.length + 1];
-    Vec[] vecs = new Vec[cols.length + 1];
-    for( int i = 0; i < cols.length; i++ ) {
-      names[i] = source._names[cols[i]];
-      vecs[i] = source.vecs()[cols[i]];
-    }
-    names[names.length - 1] = "response";
-    for( int i = 0; i < source.numCols(); i++ )
-      if( source.vecs()[i] == response )
-        names[names.length - 1] = source._names[i];
-    vecs[vecs.length - 1] = response;
-    final Frame frame = reChunk(new Frame(names, vecs));
+  @Override public void run() {
+    selectCols();
+    Vec[] vecs = Utils.add(_train, response);
+    reChunk(vecs);
+    System.arraycopy(vecs, 0, _train, 0, _train.length);
+    response = vecs[vecs.length - 1];
 
     final Layer[] ls = new Layer[hidden.length + 2];
-    ls[0] = new FrameInput(frame);
-    ls[0].init(null, frame.numCols() - 1);
+    ls[0] = new VecsInput(_train);
     for( int i = 0; i < hidden.length; i++ ) {
       if( activation == Activation.Rectifier )
-        ls[i + 1] = new Layer.Rectifier();
+        ls[i + 1] = new Layer.Rectifier(hidden[i]);
       else
-        ls[i + 1] = new Layer.Tanh();
+        ls[i + 1] = new Layer.Tanh(hidden[i]);
       ls[i + 1]._rate = (float) rate;
       ls[i + 1]._l2 = (float) l2;
-      ls[i + 1].init(ls[i], hidden[i]);
     }
-    ls[ls.length - 1] = new Layer.Softmax();
+    ls[ls.length - 1] = new VecSoftmax(response);
     ls[ls.length - 1]._rate = (float) rate;
     ls[ls.length - 1]._l2 = (float) l2;
-    int classes = (int) (response.max() + 1);
-    ls[ls.length - 1].init(ls[ls.length - 2], classes);
-    for( int i = 1; i < ls.length; i++ )
-      ls[i].randomize();
-    UKV.put(destination_key, new NeuralNetModel(destination_key, sourceKey, frame, ls));
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].init(ls, i);
+
+    final Key sourceKey = Key.make(input("source"));
+    final Frame frame = new Frame(_names, _train);
+    frame.add(_responseName, response);
+    NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+    UKV.put(destination_key, model);
 
     final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
-    trainer.start();
 
     // Use a separate thread for monitoring (blocked most of the time)
     Thread thread = new Thread() {
@@ -117,13 +100,29 @@ public class NeuralNet extends FrameJob {
           lastItems = items;
 
           NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
-          int[][] confusion = new int[model.classNames().length][model.classNames().length];
-          Error train = NeuralNetScore.eval(ls, EVAL_ROW_COUNT, confusion);
+          long[][] cm = new long[model.classNames().length][model.classNames().length];
+
+          VecsInput stats = (VecsInput) ls[0];
+          Layer[] clones = new Layer[ls.length];
+          if( _valid != null ) {
+            clones[0] = new VecsInput(_valid, stats);
+            clones[clones.length - 1] = new VecSoftmax(_validResponse);
+          } else {
+            clones[0] = new VecsInput(_train, stats);
+            clones[clones.length - 1] = new VecSoftmax(response);
+          }
+          for( int y = 1; y < clones.length - 1; y++ )
+            clones[y] = ls[y].clone();
+          for( int y = 0; y < clones.length; y++ )
+            clones[y].init(clones, y, false, 0);
+          Layer.copyWeights(ls, clones);
+
+          Error train = NeuralNetScore.run(ls, EVAL_ROW_COUNT, cm);
           model.items = items;
           model.items_per_second = ps;
           model.train_classification_error = train.Value;
           model.train_sqr_error = train.SqrDist;
-          model.confusionMatrix = confusion;
+          model.confusion_matrix = cm;
           UKV.put(destination_key, model);
 
           try {
@@ -135,7 +134,8 @@ public class NeuralNet extends FrameJob {
       }
     };
     thread.start();
-    trainer.join();
+    //trainer.join();
+    trainer.start();
   }
 
   @Override public float progress() {
@@ -156,6 +156,15 @@ public class NeuralNet extends FrameJob {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
+  }
+
+  @Override public String speedDescription() {
+    return "items/s";
+  }
+
+  @Override public String speedValue() {
+    NeuralNetModel model = UKV.get(destination_key);
+    return "" + (model == null ? 0 : model.items_per_second);
   }
 
   public static class Error {
@@ -187,19 +196,21 @@ public class NeuralNet extends FrameJob {
     public double train_sqr_error;
 
     @API(help = "Classification error on the validation set (Estimation)")
-    public double validation_classification_error;
+    public double validation_classification_error = 1;
 
     @API(help = "Square distance error on the validation set (Estimation)")
     public double validation_sqr_error;
 
     @API(help = "Confusion matrix")
-    public int[][] confusionMatrix;
+    public long[][] confusion_matrix;
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls) {
       super(selfKey, dataKey, fr);
 
-      FrameInput input = (FrameInput) ls[0];
-      layers = Layer.clone(ls, new ChunksInput(null, input._means, input._sigmas), 0);
+      layers = new Layer[ls.length];
+      for( int y = 0; y < ls.length; y++ )
+        layers[y] = ls[y].clone();
+
       ws = new float[ls.length][];
       bs = new float[ls.length][];
       for( int y = 1; y < layers.length; y++ ) {
@@ -209,15 +220,14 @@ public class NeuralNet extends FrameJob {
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
-      ChunksInput input = (ChunksInput) layers[0];
-      input.init(null, input._means.length);
-      for( int y = 1; y < layers.length; y++ ) {
+      layers[0] = new ChunksInput(Utils.remove(chunks, chunks.length - 1), ((VecsInput) layers[0]));
+      layers[layers.length - 1] = new ChunkSoftmax(chunks[chunks.length - 1]);
+      for( int y = 0; y < layers.length; y++ ) {
         layers[y]._w = ws[y];
         layers[y]._b = bs[y];
-        layers[y].init(layers[y - 1], bs[y].length, false, 0);
+        layers[y].init(layers, y, false, 0);
       }
-      input._chunks = chunks;
-      input._row = rowInChunk;
+      ((Input) layers[0])._pos = rowInChunk;
       for( int i = 0; i < layers.length; i++ )
         layers[i].fprop();
       float[] out = layers[layers.length - 1]._a;
@@ -227,6 +237,10 @@ public class NeuralNet extends FrameJob {
 
     @Override protected float[] score0(double[] data, float[] preds) {
       throw new UnsupportedOperationException();
+    }
+
+    @Override public ConfusionMatrix cm() {
+      return new ConfusionMatrix(confusion_matrix);
     }
   }
 
@@ -253,9 +267,9 @@ public class NeuralNet extends FrameJob {
 //        sb.append("<a href='Resume.html?" + job + "'><button>Resume</button></a>");
 //        sb.append("\n");
 
-        if( model.confusionMatrix != null ) {
+        if( model.confusion_matrix != null ) {
           String title = "Confusion Matrix (Training Data)";
-          NeuralNetScore.confusion(sb, title, model.classNames(), model.confusionMatrix);
+          NeuralNetScore.confusion(sb, title, model.classNames(), model.confusion_matrix);
         }
       }
       return true;
@@ -266,16 +280,13 @@ public class NeuralNet extends FrameJob {
     }
   }
 
-  public static class NeuralNetScore extends Request2 {
+  public static class NeuralNetScore extends ModelJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     static final String DOC_GET = "Neural network scoring";
 
     @API(help = "Model", required = true, filter = Default.class)
     public NeuralNetModel model;
-
-    @API(help = "Data", required = true, filter = Default.class)
-    public Frame source;
 
     @API(help = "Rows to consider for scoring, 0 (default) means the whole frame", filter = Default.class)
     public long max_rows;
@@ -287,46 +298,53 @@ public class NeuralNet extends FrameJob {
     public double sqr_error;
 
     @API(help = "Confusion matrix")
-    public int[][] confusionMatrix;
+    public long[][] confusion_matrix;
 
-    @Override protected Response serve() {
-      FrameInput input = new FrameInput(source);
-      int classes = source.numCols() - 1;
-      input.init(null, classes, false, 0);
-      Layer[] layers = Layer.clone(model.layers, input, 0);
-      for( int y = 1; y < layers.length; y++ ) {
-        layers[y]._w = model.ws[y];
-        layers[y]._b = model.bs[y];
-      }
-      confusionMatrix = new int[classes][classes];
-      Error error = eval(layers, max_rows, confusionMatrix);
-      classification_error = error.Value;
-      sqr_error = error.SqrDist;
-      return new Response(Response.Status.done, this, -1, -1, null);
+    public NeuralNetScore() {
+      description = DOC_GET;
     }
 
-    public static Error eval(Layer[] ls, long max_rows, int[][] confusion) {
+    @Override public void run() {
+      initResponse();
+      Layer[] clones = new Layer[model.layers.length];
+      clones[0] = new VecsInput(selectVecs(source));
+      for( int y = 1; y < clones.length - 1; y++ )
+        clones[y] = model.layers[y].clone();
+      clones[clones.length - 1] = new VecSoftmax(response);
+      for( int y = 0; y < clones.length; y++ ) {
+        clones[y]._w = model.ws[y];
+        clones[y]._b = model.bs[y];
+        clones[y].init(clones, y, false, 0);
+      }
+      int classes = response.domain().length;
+      confusion_matrix = new long[classes][classes];
+      Error error = run(clones, max_rows, confusion_matrix);
+      classification_error = error.Value;
+      sqr_error = error.SqrDist;
+    }
+
+    public static Error run(Layer[] ls, long max_rows, long[][] confusion) {
       Input input = (Input) ls[0];
       Error error = new Error();
       long len = input._len;
       if( max_rows != 0 )
         len = Math.min(len, max_rows);
       int correct = 0;
-      for( input._row = 0; input._row < len; input._row++ )
+      for( input._pos = 0; input._pos < len; input._pos++ )
         if( correct(ls, error, confusion) )
           correct++;
       error.Value = (len - (double) correct) / len;
       return error;
     }
 
-    private static boolean correct(Layer[] ls, Error error, int[][] confusion) {
-      Input input = (Input) ls[0];
+    private static boolean correct(Layer[] ls, Error error, long[][] confusion) {
+      Softmax output = (Softmax) ls[ls.length - 1];
       for( int i = 0; i < ls.length; i++ )
         ls[i].fprop();
       float[] out = ls[ls.length - 1]._a;
       error.SqrDist = 0;
       for( int i = 0; i < out.length; i++ ) {
-        float t = i == input.label() ? 1 : 0;
+        float t = i == output.label() ? 1 : 0;
         float d = t - out[i];
         error.SqrDist += d * d;
       }
@@ -339,21 +357,18 @@ public class NeuralNet extends FrameJob {
         }
       }
       if( confusion != null )
-        confusion[input.label()][idx]++;
-      return idx == input.label();
+        confusion[output.label()][idx]++;
+      return idx == output.label();
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
       DocGen.HTML.section(sb, "Classification error: " + String.format("%5.2f %%", 100 * classification_error));
       DocGen.HTML.section(sb, "Square error: " + sqr_error);
-      String[] classes = source.vecs()[source.numCols() - 1].domain();
-      if( classes == null )
-        classes = Model.responseDomain(source);
-      confusion(sb, "Confusion Matrix", classes, confusionMatrix);
+      confusion(sb, "Confusion Matrix", response.domain(), confusion_matrix);
       return true;
     }
 
-    static void confusion(StringBuilder sb, String title, String[] classes, int[][] confusionMatrix) {
+    static void confusion(StringBuilder sb, String title, String[] classes, long[][] confusionMatrix) {
       sb.append("<h3>" + title + "</h3>");
       sb.append("<table class='table table-striped table-bordered table-condensed'>");
       sb.append("<tr><th>Actual \\ Predicted</th>");
@@ -368,7 +383,7 @@ public class NeuralNet extends FrameJob {
         long error = 0;
         sb.append("<tr><th>" + classes[crow] + "</th>");
         for( int ccol = 0; ccol < classes.length; ++ccol ) {
-          int num = confusionMatrix[crow][ccol];
+          long num = confusionMatrix[crow][ccol];
           total += num;
           totals[ccol] += num;
           if( ccol == crow ) {
@@ -407,43 +422,42 @@ public class NeuralNet extends FrameJob {
    * Makes sure small datasets are spread over enough chunks to parallelize training. Neural nets
    * can require lots of processing even for small data.
    */
-  public static Frame reChunk(Frame frame) {
+  public static void reChunk(Vec[] vecs) {
     final int splits = cores() * 2; // More in case of unbalance
-    if( frame.anyVec().nChunks() >= splits )
-      return frame;
-    Vec[] vecs = new Vec[frame.numCols()];
-    for( int v = 0; v < vecs.length; v++ ) {
-      AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
-      long rows = frame.numRows();
-      Chunk cache = null;
-      for( int split = 0; split < splits; split++ ) {
-        long off = rows * (split + 0) / splits;
-        long lim = rows * (split + 1) / splits;
-        NewChunk chunk = new NewChunk(vec, split);
-        for( long r = off; r < lim; r++ ) {
-          if( cache == null || r < cache._start || r >= cache._start + cache._len )
-            cache = frame.vecs()[v].chunk(r);
-          if( !cache.isNA(r) ) {
-            if( frame.vecs()[v]._domain != null )
-              chunk.addEnum((int) cache.at8(r));
-            else if( frame.vecs()[v].isInt() )
-              chunk.addNum(cache.at8(r), 0);
-            else
-              chunk.addNum(cache.at(r));
-          } else {
-            if( frame.vecs()[v].isInt() )
-              chunk.addNA();
-            else {
-              // Don't use addNA() for doubles, as NewChunk uses separate array
-              chunk.addNum(Double.NaN);
+    if( vecs[0].nChunks() < splits ) {
+      for( int v = 0; v < vecs.length; v++ ) {
+        AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
+        long rows = vecs[0].length();
+        Chunk cache = null;
+        for( int split = 0; split < splits; split++ ) {
+          long off = rows * (split + 0) / splits;
+          long lim = rows * (split + 1) / splits;
+          NewChunk chunk = new NewChunk(vec, split);
+          for( long r = off; r < lim; r++ ) {
+            if( cache == null || r < cache._start || r >= cache._start + cache._len )
+              cache = vecs[v].chunk(r);
+            if( !cache.isNA(r) ) {
+              if( vecs[v]._domain != null )
+                chunk.addEnum((int) cache.at8(r));
+              else if( vecs[v].isInt() )
+                chunk.addNum(cache.at8(r), 0);
+              else
+                chunk.addNum(cache.at(r));
+            } else {
+              if( vecs[v].isInt() )
+                chunk.addNA();
+              else {
+                // Don't use addNA() for doubles, as NewChunk uses separate array
+                chunk.addNum(Double.NaN);
+              }
             }
           }
+          chunk.close(split, null);
         }
-        chunk.close(split, null);
+        Vec t = vec.close(null);
+        t._domain = vecs[v]._domain;
+        vecs[v] = t;
       }
-      vecs[v] = vec.close(null);
-      vecs[v]._domain = frame.vecs()[v]._domain;
     }
-    return new Frame(frame.names(), vecs);
   }
 }

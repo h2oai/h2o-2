@@ -1,15 +1,19 @@
 package hex.gbm;
 
 import java.util.Arrays;
-import water.*;
-import water.Job.FrameJob;
-import water.api.DocGen;
-import water.fvec.*;
-import water.util.Log.Tag.Sys;
-import water.util.Log;
-import water.util.Utils;
 
-public abstract class SharedTreeModelBuilder extends FrameJob {
+import water.*;
+import water.Job.ModelJob;
+import water.Request2.MultiVecSelect;
+import water.Request2.VecClassSelect;
+import water.api.*;
+import water.api.Request.API;
+import water.api.Request.Default;
+import water.fvec.*;
+import water.util.*;
+import water.util.Log.Tag.Sys;
+
+public abstract class SharedTreeModelBuilder extends ModelJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -51,10 +55,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
   @API(help = "Class distribution, ymin based")
   protected long _distribution[];
 
-
-  public SharedTreeModelBuilder( String name, String keyn ) { super(name,Key.make(keyn+Key.make())); }
-
-  public float progress(){
+  @Override public float progress(){
     DTree.TreeModel m = DKV.get(dest()).get();
     return (float)m.treeBits.length/(float)m.N;
   }
@@ -305,7 +306,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
   // ds[] array, and return the sum.  Dividing any ds[] element by the sum
   // turns the results into a probability distribution.
   protected abstract double score0( Chunk chks[], double ds[/*nclass*/], int row );
-  
+
   // Score the *tree* columns, and produce a confusion matrix
   protected class Score extends MRTask2<Score> {
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
@@ -320,7 +321,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
         int ycls = (int)ys.at80(row)-_ymin; // Response class from 0 to nclass-1
         assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin;
         double sum = score0(chks,ds,row);
-        double err = Double.isInfinite(sum) 
+        double err = Double.isInfinite(sum)
           ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
           : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
         assert !Double.isNaN(err) : ds[ycls] + " " + sum;

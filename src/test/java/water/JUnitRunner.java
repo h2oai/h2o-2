@@ -23,7 +23,7 @@ import water.util.Log;
 import water.util.Utils;
 
 public class JUnitRunner {
-	// TODO
+  // TODO
   @Retention(RetentionPolicy.RUNTIME)
   public @interface Nightly {
   }
@@ -37,9 +37,6 @@ public class JUnitRunner {
     // Pure JUnit test
     tests.remove(CBSChunkTest.class);
     tests.remove(GBMTest.class);
-    // Uncomment to run tests selectively
-    // tests.clear();
-    // tests.add(KMeansTest.class);
   }
 
   public static void main(String[] args) throws Exception {
@@ -79,7 +76,6 @@ public class JUnitRunner {
       out = File.createTempFile("junit-" + i + "-out-", null, sandbox);
       err = File.createTempFile("junit-" + i + "-err-", null, sandbox);
       nodes.get(i).persistIO(out.getAbsolutePath(), err.getAbsolutePath());
-      // nodes.get(i).inheritIO();
       nodes.get(i).start();
     }
 
@@ -109,26 +105,43 @@ public class JUnitRunner {
     }
   }
 
+  static List<Class> all() {
+    List<String> names = Boot.getClasses();
+    names.remove("water.Boot"); // In case called from Boot loader
+    names.remove("water.Weaver");
+    Collections.sort(names); // For deterministic runs
+    List<Class> tests = new ArrayList<Class>();
+    for( String name : names ) {
+      try {
+        Class c = Class.forName(name);
+        if( isTest(c) )
+          tests.add(c);
+      } catch( Throwable _ ) {
+      }
+    }
+    if( tests.size() == 0 )
+      throw new RuntimeException("Failed to find tests");
+    filter(tests);
+    return tests;
+  }
+
+  private static boolean isTest(Class c) {
+    for( Annotation a : c.getAnnotations() )
+      if( a instanceof Ignore )
+        return false;
+    for( Method m : c.getMethods() )
+      for( Annotation a : m.getAnnotations() )
+        if( a instanceof Test )
+          return true;
+    return false;
+  }
+
   public static class Master {
     public static void main(String[] args) {
       try {
         H2O.main(args);
         TestUtil.stall_till_cloudsize(3);
-        List<String> names = Boot.getClasses();
-        Collections.sort(names); // For deterministic runs
-        ArrayList<Class> tests = new ArrayList<Class>();
-        for( String name : names ) {
-          try {
-            Class c = Class.forName(name);
-            if( isTest(c) )
-              tests.add(c);
-          } catch( Throwable _ ) {
-          }
-        }
-        if( tests.size() == 0 )
-          throw new Exception("Failed to find tests");
-
-        filter(tests);
+        List<Class> tests = JUnitRunner.all();
         Result r = org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
         if( r.getFailureCount() == 0 ) {
           System.out.println("Successfully ran the following tests in " + (r.getRunTime() / 1000) + "s");
@@ -146,17 +159,6 @@ public class JUnitRunner {
         t.printStackTrace();
         System.exit(1);
       }
-    }
-
-    private static boolean isTest(Class c) {
-      for( Annotation a : c.getAnnotations() )
-        if( a instanceof Ignore )
-          return false;
-      for( Method m : c.getMethods() )
-        for( Annotation a : m.getAnnotations() )
-          if( a instanceof Test )
-            return true;
-      return false;
     }
   }
 }

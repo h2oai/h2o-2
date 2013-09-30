@@ -10,7 +10,6 @@ import java.util.Random;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.Job.FrameJob;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
 import water.fvec.*;
@@ -57,9 +56,8 @@ public class DRF extends SharedTreeModelBuilder {
   }
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr,true);  }
 
-  protected Log.Tag.Sys logTag() { return Sys.DRF__; }
-  public static final String KEY_PREFIX = "__DRFModel_";
-  public DRF() { super("Distributed RF",KEY_PREFIX); }
+  @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
+  public DRF() { description = "Distributed RF"; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -86,7 +84,7 @@ public class DRF extends SharedTreeModelBuilder {
     return DRFProgressPage.redirect(this, self(),dest());
   }
 
-  protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
+  @Override protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(_ncols),1) : mtries;
     assert 1 <= mtrys && mtrys <= _ncols : "Too large mtrys="+mtrys+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;

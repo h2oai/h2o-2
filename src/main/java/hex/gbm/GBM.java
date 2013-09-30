@@ -1,13 +1,15 @@
 package hex.gbm;
 
-import hex.gbm.DTree.*;
-import java.util.Arrays;
+import hex.gbm.DTree.DecidedNode;
+import hex.gbm.DTree.LeafNode;
+import hex.gbm.DTree.UndecidedNode;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.Job.FrameJob;
-import water.api.*;
-import water.fvec.*;
+import water.api.DocGen;
+import water.api.GBMProgressPage;
+import water.fvec.Chunk;
+import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -30,9 +32,8 @@ public class GBM extends SharedTreeModelBuilder {
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
 
-  protected Log.Tag.Sys logTag() { return Sys.GBM__; }
-  public static final String KEY_PREFIX = "__GBMModel_";
-  public GBM() { super("Distributed GBM",KEY_PREFIX); }
+  @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
+  public GBM() { description = "Distributed GBM"; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -59,7 +60,7 @@ public class GBM extends SharedTreeModelBuilder {
     return GBMProgressPage.redirect(this, self(),dest());
   }
 
-  protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
+  @Override protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
     final GBMModel gbm_model0 = new GBMModel(outputKey,dataKey,frm,ntrees, _ymin);
     DKV.put(outputKey, gbm_model0);
 
@@ -70,7 +71,7 @@ public class GBM extends SharedTreeModelBuilder {
         for( int tid=0; tid<ntrees; tid++) {
 
           // ESL2, page 387
-          // Step 2a: Compute prob distribution from prior tree results: 
+          // Step 2a: Compute prob distribution from prior tree results:
           //   Work <== f(Tree)
           new ComputeProb().doAll(fr);
 
@@ -78,7 +79,7 @@ public class GBM extends SharedTreeModelBuilder {
           // Step 2b i: Compute residuals from the probability distribution
           //   Work <== f(Work)
           new ComputeRes().doAll(fr);
-          
+
           // ESL2, page 387, Step 2b ii, iii, iv
           DTree[] ktrees = buildNextKTrees(fr);
           if( cancelled() ) break; // If canceled during building, do not bulkscore
@@ -208,7 +209,7 @@ public class GBM extends SharedTreeModelBuilder {
         }
         leafs[k]=tmax;          // Setup leafs for next tree level
       }
-    
+
       // If we did not make any new splits, then the tree is split-to-death
       if( !did_split ) break;
     }
@@ -268,14 +269,14 @@ public class GBM extends SharedTreeModelBuilder {
             int nid = (int)nids.at80(row);
             ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
             nids.set0(row,0);
-          }            
+          }
         }
       }
     }.doAll(fr);
 
     // Print the generated K trees
     //for( int k=0; k<_nclass; k++ )
-    //  if( ktrees[k] != null ) 
+    //  if( ktrees[k] != null )
     //    System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
 
     return ktrees;
@@ -315,7 +316,7 @@ public class GBM extends SharedTreeModelBuilder {
           if( dn._split._col == -1 )     // Unable to decide?
             dn = tree.decided(nid = tree.node(nid)._pid); // Then take parent's decision
           int leafnid = dn.ns(chks,row); // Decide down to a leafnode
-          assert leaf <= leafnid && leafnid < tree._len : 
+          assert leaf <= leafnid && leafnid < tree._len :
           "leaf="+leaf+" <= "+leafnid+" < "+tree._len+", my nid="+nid+" oldnid="+oldnid+"\n"+
             tree.root().toString2(new StringBuilder(),0)+
             _fr.toString(row+nids._start);
@@ -332,10 +333,20 @@ public class GBM extends SharedTreeModelBuilder {
         }
       }
     }
-    @Override public void reduce( GammaPass gp ) { 
-      Utils.add(_gss,gp._gss); 
-      Utils.add(_rss,gp._rss); 
+    @Override public void reduce( GammaPass gp ) {
+      Utils.add(_gss,gp._gss);
+      Utils.add(_rss,gp._rss);
     }
+  }
+
+  @Override public String speedDescription() {
+    return "seconds per tree";
+  }
+
+  @Override public String speedValue() {
+    double time = runTimeMs() / 1000;
+    double secondsPerTree = time / ntrees;
+    return String.format("%.2f", secondsPerTree);
   }
 
   // ---

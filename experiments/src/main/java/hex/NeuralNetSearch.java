@@ -19,7 +19,7 @@ public class NeuralNetSearch extends ParamsSearch {
       trainer._batch = 1;
       search.run(_ls[1], _ls[2]);
       trainer.run();
-      double error = eval(_ls, _train, trainer);
+      double error = run(_ls, _train, trainer);
       String m = "Error: " + error * 100 + " (Best: " + best + ")";
       if( error < best ) {
         best = error;

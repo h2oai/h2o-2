@@ -1,20 +1,21 @@
 package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import hex.rf.*;
 import hex.rf.ConfusionTask.CMFinal;
 import hex.rf.ConfusionTask.CMJob;
 import hex.rf.DRF.DRFJob;
 import hex.rf.Tree.StatType;
+
 import java.io.File;
 import java.util.Arrays;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import water.*;
-import water.api.RequestBuilders.Response;
-import water.fvec.*;
 import water.api.ConfusionMatrix;
+import water.fvec.*;
 
 public class GBMTest extends TestUtil {
 
@@ -25,31 +26,31 @@ public class GBMTest extends TestUtil {
   @Test public void testBasicGBM() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
     //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
 
     // Classification tests
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); } 
+             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); }
              });
     basicGBM("./smalldata/test/test_tree_minmax.csv","tree_minmax.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove("response"); } 
              });
     basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
              new PrepData() {
-               Vec prep(Frame fr) { 
+               Vec prep(Frame fr) {
                  assertEquals(380,fr.numRows());
                  // Remove patient ID vector
-                 UKV.remove(fr.remove("ID")._key); 
+                 UKV.remove(fr.remove("ID")._key);
                  // Prostate: predict on CAPSULE
                  return fr.remove("CAPSULE");
                }
              });
     basicGBM("./smalldata/cars.csv","cars.hex",
-             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); }
              });
     basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
@@ -93,7 +94,7 @@ public class GBMTest extends TestUtil {
       UKV.remove(dest);         // Remove original hex frame key
       if( gbm != null ) {
         UKV.remove(gbm.dest()); // Remove the model
-        UKV.remove(gbm.vresponse._key);
+        UKV.remove(gbm.response._key);
         gbm.remove();           // Remove GBM Job
         if( fr != null ) fr.remove();
       }
@@ -110,34 +111,34 @@ public class GBMTest extends TestUtil {
   /*@Test*/ public void testBasicDRF() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); } 
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
 
     // Classification tests
     basicDRF("./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove(fr.numCols()-1); } 
+             new PrepData() { Vec prep(Frame fr) { return fr.remove(fr.numCols()-1); }
              });
     basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
              new PrepData() {
-               Vec prep(Frame fr) { 
+               Vec prep(Frame fr) {
                  assertEquals(380,fr.numRows());
                  // Remove patient ID vector
-                 UKV.remove(fr.remove("ID")._key); 
+                 UKV.remove(fr.remove("ID")._key);
                  // Prostate: predict on CAPSULE
                  return fr.remove("CAPSULE");
                }
              });
     basicDRF("./smalldata/iris/iris_wheader.csv","iris.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("class"); } 
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("class"); }
              });
     basicDRF("./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
-             new PrepData() { Vec prep(Frame fr) { 
-               UKV.remove(fr.remove("IsArrDelayed")._key); 
-               return fr.remove("IsDepDelayed"); 
+             new PrepData() { Vec prep(Frame fr) {
+               UKV.remove(fr.remove("IsArrDelayed")._key);
+               return fr.remove("IsDepDelayed");
              }
              });
     basicDRF("./smalldata/cars.csv","cars.hex",
-             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); } 
+             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); }
              });
     basicDRF("./smalldata/airlines/allyears2k_headers.zip","air.hex",
              new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
@@ -243,18 +244,17 @@ public class GBMTest extends TestUtil {
       fr = ParseDataset2.parse(dest1,new Key[]{fkey1});
       UKV.remove(fkey1);
       UKV.remove(fr.remove("agentId")._key); // Remove unique ID; too predictive
-      gbm.vresponse = fr.remove("outcome");  // Train on the outcome
+      gbm.response = fr.remove("outcome");  // Train on the outcome
       gbm.source = fr;
       gbm.ntrees = 5;
       gbm.max_depth = 10;
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
       gbm.nbins = 100;
-      gbm.serve();              // Start it
-      gbm.get();                // Block for it
+      gbm.run();
 
       // Test on the train data
-      Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});      
+      Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
       UKV.remove(fkey2);
       fpreds = gbm.score(ftest);
 
@@ -313,7 +313,7 @@ public class GBMTest extends TestUtil {
       UKV.remove(dest2);
       if( gbm != null ) {
         UKV.remove(gbm.dest()); // Remove the model
-        UKV.remove(gbm.vresponse._key);
+        UKV.remove(gbm.response._key);
         gbm.remove();           // Remove GBM Job
       }
       if( fr != null ) fr.remove();
@@ -335,28 +335,26 @@ public class GBMTest extends TestUtil {
       gbm = new GBM();
       gbm.source = ParseDataset2.parse(dest1,new Key[]{fkey1});
       UKV.remove(fkey1);
-      gbm.vresponse = gbm.source.remove(41); // Response is col 41
+      gbm.response = gbm.source.remove(41); // Response is col 41
       gbm.ntrees = 2;
       gbm.max_depth = 8;
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
       gbm.nbins = 100;
-      gbm.serve();              // Start it
-      gbm.get();                // Block for it
+      gbm.run();
 
       // The test data set has a few more enums than the train
-      Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});      
+      Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
       Frame preds = gbm.score(ftest);
 
     } finally {
       UKV.remove(dest1);        // Remove original hex frame key
       if( gbm != null ) {
         UKV.remove(gbm.dest()); // Remove the model
-        UKV.remove(gbm.vresponse._key);
+        UKV.remove(gbm.response._key);
         gbm.remove();           // Remove GBM Job
         if( fr != null ) fr.remove();
       }
     }
   }
-
 }
