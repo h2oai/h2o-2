@@ -23,7 +23,7 @@ public class NeuralNetIrisTest extends TestUtil {
   Frame _train, _test;
 
   @BeforeClass public static void stall() {
-//    stall_till_cloudsize(3);
+    stall_till_cloudsize(3);
   }
 
   static Frame frame(double[][] rows, int off, int len) {
@@ -72,6 +72,7 @@ public class NeuralNetIrisTest extends TestUtil {
     int epochs = 1000;
     Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
     Vec labels = _train.vecs()[_train.vecs().length - 1];
+    labels.asEnum();
     VecsInput input = new VecsInput(data);
     Layer[] ls = new Layer[3];
     ls[0] = input;
