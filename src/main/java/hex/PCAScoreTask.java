@@ -9,12 +9,13 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
 
 public abstract class PCAScoreTask {
   public static class PCAScoreJob extends ChunkProgressJob {
     public PCAScoreJob(Frame data, Key dataKey, Key destKey, boolean standardize) {
-      super("PCAScore(" + dataKey.toString() + ")", destKey, standardize ? 2*data.anyVec().nChunks() : data.anyVec().nChunks());
+      super(standardize ? 2*data.anyVec().nChunks() : data.anyVec().nChunks());
+      description = "PCAScore(" + dataKey.toString() + ")";
+      destination_key = destKey;
     }
 
     public boolean isDone() {

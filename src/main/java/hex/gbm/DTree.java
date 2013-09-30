@@ -1,13 +1,16 @@
 package hex.gbm;
 
-import hex.rf.Tree.TreeVisitor;
-import java.util.*;
+import hex.ConfusionMatrix;
+
+import java.util.Arrays;
+import java.util.Random;
+
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.fvec.*;
-import water.util.*;
-import water.util.Log.Tag.Sys;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.util.Log;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -451,7 +454,6 @@ class DTree extends Iced {
     }
   }
 
-
   // --------------------------------------------------------------------------
   public static abstract class TreeModel extends Model {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -486,6 +488,8 @@ class DTree extends Iced {
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
 
+    @Override public ConfusionMatrix cm() { return cm == null ? null : new ConfusionMatrix(cm); }
+
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
       for( CompressedTree ts[] : treeBits )
@@ -498,7 +502,7 @@ class DTree extends Iced {
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
-      DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
+      DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM
@@ -608,10 +612,10 @@ class DTree extends Iced {
       
       private float scoreLeaf( AutoBuffer ab ) { return ab.get4f(); }
     }
-    
+
     /** Abstract visitor class for serialized trees.*/
     public static abstract class TreeVisitor<T extends Exception> {
-      // Override these methods to get walker behavior.  
+      // Override these methods to get walker behavior.
       protected void pre ( int col, float fcmp, boolean equal ) throws T { }
       protected void mid ( int col, float fcmp, boolean equal ) throws T { }
       protected void post( int col, float fcmp, boolean equal ) throws T { }
@@ -623,12 +627,12 @@ class DTree extends Iced {
       protected final CompressedTree _ct;
       private final AutoBuffer _ts;
       private final float _preds[]; // Reused to hold a
-      public TreeVisitor( TreeModel tm, CompressedTree ct ) { 
+      public TreeVisitor( TreeModel tm, CompressedTree ct ) {
         _tm = tm;
-        _ts = new AutoBuffer((_ct=ct)._bits); 
-        _preds = new float[ct._nclass+tm.ymin]; 
+        _ts = new AutoBuffer((_ct=ct)._bits);
+        _preds = new float[ct._nclass+tm.ymin];
       }
-      
+
       // Call either the single-class leaf or the full-prediction leaf
       private final void leaf2( int mask ) throws T {
         assert (mask& 8)== 8;   // Is a leaf
@@ -667,7 +671,7 @@ class DTree extends Iced {
         post(col,fcmp,equal);
       }
     }
-    
+
     StringBuilder toString(CompressedTree ct, final StringBuilder sb ) {
       new TreeVisitor<RuntimeException>(this,ct) {
         int _depth;

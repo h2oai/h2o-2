@@ -3,10 +3,13 @@ package water;
 import java.util.Arrays;
 import java.util.UUID;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.api.*;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -41,17 +44,79 @@ public class Job extends Request2 {
   public Key dest() { return destination_key; }
 
   public static abstract class FrameJob extends Job {
-    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
-    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public FrameJob(String desc, Key dest) { super(desc,dest); }
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help = "Source frame", required = true, filter = Default.class)
     public Frame source;
   }
 
+  public static abstract class ColumnsJob extends FrameJob {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
+    public int[] cols;
+    class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
+
+    protected Vec[] selectVecs(Frame frame) {
+      Vec[] vecs = new Vec[cols.length];
+      for( int i = 0; i < cols.length; i++ )
+        vecs[i] = frame.vecs()[cols[i]];
+      return vecs;
+    }
+  }
+
+  public static abstract class ModelJob extends ColumnsJob {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help="Column to use as class", required=true, filter=responseFilter.class)
+    public Vec response;
+    class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
+
+    protected int initResponse() {
+      // Doing classification only right now...
+      if( !response.isEnum() ) response.asEnum();
+
+      for( int i = cols.length - 1; i >= 0; i-- )
+        if( source.vecs()[cols[i]] == response )
+          cols = ArrayUtils.remove(cols, i);
+      for( int i = 0; i < source.vecs().length; i++ )
+        if( source.vecs()[i] == response )
+          return i;
+      throw new IllegalArgumentException();
+    }
+  }
+
+  public static abstract class ValidatedJob extends ModelJob {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+    protected transient Vec[] _train, _valid;
+    protected transient Vec _validResponse;
+    protected transient String[] _names;
+    protected transient String _responseName;
+
+    @API(help = "Validation frame", filter = Default.class)
+    public Frame validation;
+
+    protected void selectCols() {
+      int rIndex = initResponse();
+      _train = selectVecs(source);
+      if(validation != null) {
+        _valid = selectVecs(validation);
+        _validResponse = validation.vecs()[rIndex];
+      }
+      _names = new String[cols.length];
+      for( int i = 0; i < cols.length; i++ )
+        _names[i] = source._names[cols[i]];
+      _responseName = source._names != null ? source._names[rIndex] : "response";
+    }
+  }
+
   public static abstract class HexJob extends Job {
-    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
-    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help = "Source key", required = true, filter = source_keyFilter.class)
     public Key source_key;
@@ -80,29 +145,25 @@ public class Job extends Request2 {
     return list != null ? list._jobs : new Job[0];
   }
 
-  protected Job() {
-    this(null, null);
+  public Job() {
+    job_key = defaultJobKey();
+    destination_key = defaultDestKey();
+    description = getClass().getSimpleName();
   }
 
-  public Job(String description, Key dest) {
-    this(UUID.randomUUID().toString(), description, dest);
-  }
-
-  protected Job(String keyName, String description, Key dest) {
-    setJobKey(keyName);
-    this.description = description != null ? description : getClass().getSimpleName();
-    start_time = System.currentTimeMillis();
-    destination_key = dest;
-  }
-
-  final void setJobKey(String name) {
+  protected Key defaultJobKey() {
     // Pinned to self, because it should be almost always updated locally
-    job_key = Key.make(name, (byte) 0, Key.JOB, H2O.SELF);
+    return Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB, H2O.SELF);
+  }
+
+  protected Key defaultDestKey() {
+    return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
   }
 
   public <T extends H2OCountedCompleter> T start(final T fjtask) {
     _fjtask = fjtask;
     DKV.put(job_key, new Value(job_key, new byte[0]));
+    start_time = System.currentTimeMillis();
     new TAtomic<List>() {
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
@@ -112,7 +173,6 @@ public class Job extends Request2 {
         return old;
       }
     }.invoke(LIST);
-
     return fjtask;
   }
 
@@ -149,14 +209,25 @@ public class Job extends Request2 {
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(self) ) {
-            jobs[i].end_time = CANCELLED_END_TIME;
-            jobs[i].exception = exception;
+            final Job job = jobs[i];
+            job.end_time = CANCELLED_END_TIME;
+            job.exception = exception;
+            H2OCountedCompleter task = new H2OCountedCompleter() {
+              @Override public void compute2() {
+                job.onCancelled();
+                tryComplete();
+              }
+            };
+            H2O.submitTask(task);
             break;
           }
         }
         return old;
       }
     }.fork(LIST);
+  }
+
+  protected void onCancelled() {
   }
 
   public boolean cancelled() {
@@ -226,18 +297,38 @@ public class Job extends Request2 {
   }
 
   /** Returns job execution time in milliseconds */
-  public final long executionTime() { return end_time - start_time; }
+  public final long runTimeMs()
+  {
+    long until = end_time != 0 ? end_time : System.currentTimeMillis();
+    return until - start_time;
+  }
+
+  /** Description of a speed criteria. */
+  public String speedDescription() {
+    return null;
+  }
+
+  /** Value of the described speed criteria. */
+  public String speedValue() {
+    return null;
+  }
 
   // If job is a request
 
-  @Override protected Response serve() {
+  public H2OCountedCompleter startFJ() {
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
         run();
         tryComplete();
+        remove();
       }
     };
     H2O.submitTask(start(task));
+    return task;
+  }
+
+  @Override protected Response serve() {
+    startFJ();
     return redirect();
   }
 
@@ -294,7 +385,7 @@ public class Job extends Request2 {
     waitUntilJobEnded(jobkey, THREE_SECONDS_MILLIS);
   }
 
-  protected void run() {
+  public void run() {
     throw new RuntimeException("Should be overridden if job is a request");
   }
 
@@ -344,7 +435,7 @@ public class Job extends Request2 {
       return new ChunkProgress(0, 0, Status.Error, msg);
     }
 
-    public final float progress() {
+    @Override public float progress() {
       if( _status == Status.Done ) return 1.0f;
       return Math.min(0.99f, (float) ((double) _count / (double) _nchunks));
     }
@@ -353,9 +444,8 @@ public class Job extends Request2 {
   public static class ChunkProgressJob extends Job {
     Key _progress;
 
-    public ChunkProgressJob(String desc, Key dest, long chunksTotal) {
-      super(desc, dest);
-      _progress = Key.make(Key.make()._kb, (byte) 0, Key.DFJ_INTERNAL_USER, dest.home_node());
+    public ChunkProgressJob(long chunksTotal) {
+      _progress = Key.make(Key.make()._kb, (byte) 0, Key.DFJ_INTERNAL_USER, destination_key.home_node());
       UKV.put(_progress, new ChunkProgress(chunksTotal));
     }
 

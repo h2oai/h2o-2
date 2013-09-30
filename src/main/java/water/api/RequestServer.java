@@ -1,7 +1,7 @@
 package water.api;
 
 import hex.*;
-import hex.GBMGrid.GBMGridProgress;
+import hex.GridSearch.GridSearchProgress;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
@@ -62,8 +62,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeans Grid",                "Model");
     Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
-    Request.addToNavbar(registerRequest(new GLM2()),         "GLM2 (Beta)",                "Model");
-    Request.addToNavbar(registerRequest(new GBMGrid()),     "GBM Grid (Beta)",            "Model");
+    Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",                    "Model");
 
@@ -74,7 +73,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
     Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (Beta)",   "Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
-    Request.addToNavbar(registerRequest(new GeneratePredictions2()),     "Predict2",      "Score");
+    Request.addToNavbar(registerRequest(new Predict()),     "Predict2",      "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",       "Score");
 
@@ -127,10 +126,10 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
-    registerRequest(new GBMGridProgress());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
     registerRequest(new GetVector());
+    registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new NeuralNetProgress());
     registerRequest(new PostFile());

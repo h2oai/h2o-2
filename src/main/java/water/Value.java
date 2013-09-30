@@ -129,10 +129,6 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
   // A Value is persisted. The Key is used to define the filename.
   public transient Key _key;
 
-  // Assertion check that Keys match, for those Values that require an internal
-  // Key (usually for disk filename persistence).
-  protected boolean isSameKey(Key key) { return (_key==null) || (_key == key); }
-
   // ---
   // Backend persistence info.  3 bits are reserved for 8 different flavors of
   // backend storage.  1 bit for whether or not the latest _mem field is

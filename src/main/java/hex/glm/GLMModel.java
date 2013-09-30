@@ -1,9 +1,10 @@
 package hex.glm;
 
 import hex.glm.GLMParams.Family;
+
 import java.text.DecimalFormat;
-import java.util.Arrays;
 import java.util.HashMap;
+
 import water.*;
 import water.api.DocGen;
 import water.fvec.*;
@@ -103,7 +104,7 @@ public class GLMModel extends Model {
     GLMValidation _res;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
     public GLMValidationTask(GLMModel m){_model = m;}
-    public void map(Chunk [] chunks){
+    @Override public void map(Chunk [] chunks){
       _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank());
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
@@ -127,7 +128,7 @@ public class GLMModel extends Model {
     if(title != null && !title.isEmpty())DocGen.HTML.title(sb,title);
     DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
     if(beta != null)
-      DocGen.HTML.paragraph(sb,water.api.GeneratePredictions2.link(_selfKey,"Predict!"));
+      DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
     String succ = (warnings == null || warnings.length == 0)?"alert-success":"alert-warning";
     sb.append("<div class='alert " + succ + "'>");
     sb.append(iteration + " iterations computed in ");
