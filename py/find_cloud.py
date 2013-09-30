@@ -107,7 +107,8 @@ def probe_node(line, h2oNodes):
             'redirect_import_folder_to_s3n_path': 'false', # no..we're not on ec2
             'delete_keys_at_teardown': 'true', # yes we want each test to clean up after itself
             'use_hdfs': 'true', # suppose we shouldn't really need this (but currently do)
-
+            'hdfs_version': 'cdh3', # something is checking for this. I guess we could set this in tests as a hack
+            'hdfs_name_node': '192.168.1.176', # hmm. do we have to set this to do hdfs url generation correctly?
         }
 
         # this is the total list so far
