@@ -30,7 +30,7 @@ CDH4_YARN_JAR=h2odriver_cdh4_yarn.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
-H2O_JAR=$H2O_DOWNLOADED/h2o.jar
+H2O_JAR=h2o.jar
 HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
@@ -46,7 +46,7 @@ REMOTE_0XCUSTOMER=0xcustomer@$REMOTE_IP
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 echo "scp some jars"
 $REMOTE_SCP $H2O_HADOOP/$CDH4_YARN_JAR  $REMOTE_USER:$REMOTE_HOME
-$REMOTE_SCP $H2O_JAR $REMOTE_USER:$REMOTE_HOME
+$REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
 #***********************************************************************************
 echo "Does 0xcustomer have any mapred jobs left running from something? (manual/jenkins/whatever)"
@@ -85,7 +85,7 @@ set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
 echo "hdfs dfs -rm -r /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
-echo "hadoop jar $CDH4_YARN_JAR water.hadoop.h2odriver -jt $CDH4_YARN_JOBTRACKER -libjars h2o.jar -mapperXmx $CDH4_YARN_HEAP -nodes $CDH4_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "hadoop jar $CDH4_YARN_JAR water.hadoop.h2odriver -jt $CDH4_YARN_JOBTRACKER -libjars $H2O_JAR -mapperXmx $CDH4_YARN_HEAP -nodes $CDH4_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 # exchange keys so jenkins can do this?
 # background!
 cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh
