@@ -26,8 +26,8 @@ public class GLMTest2  extends TestUtil {
    Key model = Key.make("gaussian_test");
    try {
      // make data so that the expected coefficients is icept = col[0] = 1.0
-     Key k = FVecTest.makeByteVec(raw, "x,y\n0,0\n1,0.1\n2,0.2\n3,0.3\n4,0.4\n5,0.5\n6,0.6\n7,0.7\n8,0.8\n9,0.9");
-     Frame fr = ParseDataset2.parse(parsed, new Key[]{k});
+     FVecTest.makeByteVec(raw, "x,y\n0,0\n1,0.1\n2,0.2\n3,0.3\n4,0.4\n5,0.5\n6,0.6\n7,0.7\n8,0.8\n9,0.9");
+     Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
      new GLM2("GLM test of gaussian(linear) regression.",model,fr,false,Family.gaussian, Family.gaussian.defaultLink,0,0).fork().get();
      GLMModel m = DKV.get(model).get();
      HashMap<String, Double> coefs = m.coefficients();
@@ -206,7 +206,7 @@ public class GLMTest2  extends TestUtil {
     try{
       Frame fr = ParseDataset2.parse(outputKey, new Key[]{k});
       if(ignores != null)
-        for(String s:ignores)fr.remove(s);
+        for(String s:ignores) UKV.remove(fr.remove(s)._key);
       // put the response to the end
       fr.add(response, fr.remove(response));
       return GLMTask.adaptFrame(fr);

@@ -23,12 +23,13 @@ public class FVecTest extends TestUtil {
     }
     Futures fs = new Futures();
     ByteVec bv = new ByteVec(Vec.newKey(),espc);
-    Frame fr = new Frame(bv);
-    DKV.put(k, fr, fs);
     for(int i = 0; i < chunks.length; ++i){
       Key chunkKey = bv.chunkKey(i);
-      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1NCHUNK,Value.ICE));
+      DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1NCHUNK,Value.ICE),fs);
     }
+    DKV.put(bv._key,bv,fs);
+    Frame fr = new Frame(bv);
+    DKV.put(k, fr, fs);
     fs.blockForPending();
     return k;
   }

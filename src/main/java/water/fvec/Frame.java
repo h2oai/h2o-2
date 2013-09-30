@@ -25,8 +25,12 @@ public class Frame extends Iced {
   public Frame( String[] names, Vec[] vecs ) { 
     _names=names; 
     _vecs=vecs; 
-    _keys = new Key[_vecs.length];
-    for( int i=0; i<_vecs.length; i++ ) _keys[i] = _vecs[i]._key;
+    _keys = new Key[vecs.length];
+    for( int i=0; i<vecs.length; i++ ) {
+      Key k = _keys[i] = vecs[i]._key;
+      if( DKV.get(k)==null )    // If not already in KV, put it there
+        DKV.put(k,vecs[i]);
+    }
   }
 
   public final Vec[] vecs() { 
