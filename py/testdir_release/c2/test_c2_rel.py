@@ -25,8 +25,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             ]
         else:
             csvFilenameList= [
-                ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-                ("*[1-2][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800),
+                # ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+                ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
             ]
 
 
@@ -106,39 +106,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_C_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_D_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_E_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_F_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_G_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_H_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_I_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_J_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_K_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_L_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_M_c2_rel_long(self):
         self.sub_c2_rel_long()
 
 

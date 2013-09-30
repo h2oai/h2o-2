@@ -633,6 +633,10 @@ public final class H2O {
     }
     public abstract void callback(T t);
   }
+  public static class H2OEmptyCompleter extends H2OCountedCompleter{
+    @Override public void compute2(){throw new UnsupportedOperationException();}
+  }
+
 
   // --------------------------------------------------------------------------
   public static OptArgs OPT_ARGS = new OptArgs();

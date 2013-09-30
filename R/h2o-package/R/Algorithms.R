@@ -216,14 +216,18 @@ setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsed
               resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=allModels[[i]]$key)
               modelOrig = h2o.__getGLMResults(resH$GLMModel, y, family, tweedie.p)
               
-              res_xval = list()
-              for(j in 1:nfolds) {
-                xvalKey = resH$GLMModel$validations[[1]]$xval_models[j]
-                resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xvalKey)
-                modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p)
-                res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
+              if(nfolds < 2)
+                result[[i]] = new("H2OGLMModel", key=allModels[[i]]$key, data=data, model=modelOrig, xval=list())
+              else {
+                res_xval = list()
+                for(j in 1:nfolds) {
+                  xvalKey = resH$GLMModel$validations[[1]]$xval_models[j]
+                  resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xvalKey)
+                  modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p)
+                  res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
+                }
+                result[[i]] = new("H2OGLMModel", key=allModels[[i]]$key, data=data, model=modelOrig, xval=res_xval)
               }
-              result[[i]] = new("H2OGLMModel", key=allModels[[i]]$key, data=data, model=modelOrig, xval=res_xval)
             }
             
             # temp = data.frame(t(sapply(allModels, c)))

@@ -12,7 +12,9 @@ public class FVecTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(2); }
 
   public static  Key makeByteVec(String kname, String... data) {
-    Key k = Vec.newKey(Key.make(kname));
+    return makeByteVec(Key.make(kname), data);
+  }
+  public static  Key makeByteVec(Key k, String... data) {
     byte [][] chunks = new byte[data.length][];
     long [] espc = new long[data.length+1];
     for(int i = 0; i < chunks.length; ++i){
@@ -20,8 +22,9 @@ public class FVecTest extends TestUtil {
       espc[i+1] = espc[i] + data[i].length();
     }
     Futures fs = new Futures();
-    ByteVec bv = new ByteVec(k,espc);
-    DKV.put(k, bv, fs);
+    ByteVec bv = new ByteVec(Vec.newKey(),espc);
+    Frame fr = new Frame(bv);
+    DKV.put(k, fr, fs);
     for(int i = 0; i < chunks.length; ++i){
       Key chunkKey = bv.chunkKey(i);
       DKV.put(chunkKey, new Value(chunkKey,chunks[i].length,chunks[i],TypeMap.C1NCHUNK,Value.ICE));
@@ -65,7 +68,7 @@ public class FVecTest extends TestUtil {
     Key dest = Key.make("air.hex");
     Frame fr = ParseDataset2.parse(dest, new Key[]{fkey});
     UKV.remove(fkey);
-    try {    
+    try {
       // Scribble into a freshly parsed frame
       new SetDoubleInt().doAll(fr);
     } finally {
@@ -77,11 +80,11 @@ public class FVecTest extends TestUtil {
     @Override public void map( Chunk chks[] ) {
       Chunk c=null;
       for( Chunk x : chks )
-        if( x.getClass()==water.fvec.C2Chunk.class ) 
+        if( x.getClass()==water.fvec.C2Chunk.class )
           { c=x; break; }
       assertNotNull("Expect to find a C2Chunk",c);
       assertTrue(c.writable());
-      
+
       double d=c._vec.min();
       for( int i=0; i<c._len; i++ ) {
         double e = c.at0(i);
@@ -207,7 +210,7 @@ public class FVecTest extends TestUtil {
         for( int j=0; j<bvs.length; j++ )
           _sums[j] += bvs[j].at0(i);
     }
-    @Override public void reduce( Sum mrt ) { 
+    @Override public void reduce( Sum mrt ) {
       assert _sums != null;
       assert mrt._sums != null;
       water.util.Utils.add(_sums,mrt._sums);  }

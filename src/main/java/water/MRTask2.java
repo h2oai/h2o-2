@@ -164,7 +164,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Invokes the map/reduce computation over the given Frame. This call is
    *  asynchronous.  It returns 'this', on which getResult() can be invoked
    *  later to wait on the computation.  */
-  public final T dfork( Frame fr ) {
+  public T dfork( Frame fr ) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
     _fr = fr;                   // Record vectors to work on

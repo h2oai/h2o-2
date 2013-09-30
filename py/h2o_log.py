@@ -26,7 +26,7 @@ def checkH2OLogs(timeoutSecs=3, expectedMinLines=12):
             raise Exception("node %d log is too small" % i)
 
     # now that all the logs are there
-    h2o.check_sandbox_for_errrs()
+    h2o.check_sandbox_for_errors()
     return (logNameList, lineCountList)
 
 def getH2OScripts(timeoutSecs=30):

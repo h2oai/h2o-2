@@ -34,18 +34,32 @@ class Basic(unittest.TestCase):
         # fails because classes aren't integers
         #    "allstate_claim_prediction_train_set.zip",
         csvFilenameAll = [
-            "allyears2k.csv",
-            "billion_rows.csv.gz",
+            # "3G_poker_shuffle",
+            "TEST-poker1000.csv",
+            "and-testing.data",
+            "arcene2_train.both",
+            "arcene_train.both",
+            "bestbuy_test.csv",
+            "bestbuy_train.csv",
+            # "billion_rows.csv.gz",
+            "covtype.13x.data",
+            "covtype.13x.shuffle.data",
+            # "covtype.169x.data",
+            "covtype.4x.shuffle.data",
             "covtype.data",
-            "covtype.shuffled.data",
-            "covtype200x.data",
-            "covtype20x.data",
-            "kddcup_1999.data.gz",
-            "rand_logreg_100000000x70.csv.gz",
+            "covtype4x.shuffle.data",
+            "hhp.unbalanced.012.1x11.data.gz",
+            "hhp.unbalanced.012.data.gz",
+            "hhp.unbalanced.data.gz",
+            "hhp2.os.noisy.0_1.data",
+            "hhp2.os.noisy.9_4.data",
+            "hhp_9_14_12.data",
+            "leads.csv",
+            "prostate_long_1G.csv",
         ]
 
         # pick 8 randomly!
-        if (1==0):
+        if (1==1):
             csvFilenameList = random.sample(csvFilenameAll,8)
         # Alternatively: do the list in order! Note the order is easy to hard
         else:
@@ -55,10 +69,12 @@ class Basic(unittest.TestCase):
         # h2b.browseTheCloud()
 
         # save the first, for all comparisions, to avoid slow drift with each iteration
+        importFolderPath = "datasets"
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
-            print "Loading", csvFilename, 'from HDFS'
-            parseResult = h2i.import_parse(path="datasets/standard/" + csvFilename, schema="maprfs", timeoutSecs=1000)
+            csvPathname = importFolderPath + "/" + csvFilename
+            print "Loading", csvFilename, 'from maprfs'
+            parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=1000)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 
