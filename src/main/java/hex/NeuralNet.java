@@ -55,7 +55,7 @@ public class NeuralNet extends ValidatedJob {
     description = DOC_GET;
   }
 
-  @Override protected void run() {
+  @Override public void run() {
     selectCols();
     Vec[] vecs = Utils.add(_train, response);
     reChunk(vecs);
@@ -304,7 +304,7 @@ public class NeuralNet extends ValidatedJob {
       description = DOC_GET;
     }
 
-    @Override protected void run() {
+    @Override public void run() {
       initResponse();
       Layer[] clones = new Layer[model.layers.length];
       clones[0] = new VecsInput(selectVecs(source));

@@ -4,6 +4,7 @@ import hex.DGLM.GLMModel;
 import hex.DPCA.PCAModel;
 import hex.*;
 import hex.gbm.GBM.GBMModel;
+import hex.glm.GLMModelView;
 import hex.rf.RFModel;
 
 import java.util.HashMap;
@@ -142,6 +143,8 @@ public class Inspect extends Request {
       UKV.remove(val._key);   // Not sure if this is a good place to do this
       return Response.error(((Job.Fail)f)._message);
     }
+    if(f instanceof hex.glm.GLMModel)
+      return GLMModelView.redirect(this, key);
     if(f instanceof GBMModel)
       return GBMModelView.redirect(this, key);
     if(f instanceof GridSearch)

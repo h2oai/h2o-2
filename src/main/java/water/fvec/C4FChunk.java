@@ -36,4 +36,7 @@ public class C4FChunk extends Chunk {
   @Override NewChunk inflate_impl(NewChunk nc) {
     throw H2O.unimpl();
   }
+  // 3.3333333e33
+  public int pformat_len0() { return 14; }
+  public String pformat0() { return "% 13.7e"; }
 }

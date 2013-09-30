@@ -5,6 +5,7 @@ import hex.GridSearch.GridSearchProgress;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
+import hex.glm.*;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -61,6 +62,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeans Grid",                "Model");
     Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
+    Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new Console()),     "Console",                    "Model");
 
@@ -153,6 +155,8 @@ public class RequestServer extends NanoHTTPD {
     // testing hooks
     registerRequest(new TestPoll());
     registerRequest(new TestRedirect());
+    registerRequest(new GLMProgressPage2());
+    registerRequest(new GLMModelView());
     Request.initializeNavBar();
   }
 

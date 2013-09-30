@@ -12,7 +12,7 @@ public class GridSearch extends Job {
 
   public Job[] jobs;
 
-  @Override protected void run() {
+  @Override public void run() {
     UKV.put(destination_key, this);
     for( Job job : jobs )
       job.startFJ().join();

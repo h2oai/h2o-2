@@ -30,15 +30,15 @@ import water.util.Log;
 */
 public class DHistogram<T extends DHistogram> extends Iced {
   transient final String _name; // Column name, for pretty-printing
-  final boolean _isInt;         // Column only holds integers
-  float _min, _max;             // Lower-end of binning
-  public DHistogram( String name, boolean isInt, float min, float max ) {
+  final byte _isInt;            // 0=>floats, 1,2=>Column only holds integers, 2=>Enum
+  float _min, _max;             // Ends of binning
+  public DHistogram( String name, byte isInt, float min, float max ) {
     _name = name;
     _isInt = isInt;
     _min = min;
     _max = max;
   }
-  public DHistogram( String name, boolean isInt ) {
+  public DHistogram( String name, byte isInt ) {
     this(name,isInt,Float.MAX_VALUE,-Float.MAX_VALUE);
   }
 
@@ -67,20 +67,15 @@ public class DHistogram<T extends DHistogram> extends Iced {
   int nbins() { return 1; }
   // Number of rows in this bin.
   long bins(int i) { return 0; }
-  // Number of rows with class 'c' in this bin
-  float clss(int i, int c) { return 0; }
   // Smallest value in bin i
   float mins(int i) { return _min; }
   // Largest value in bin i
   float maxs(int i) { return _max; }
-  // Do not ask for 'score' from a non-scoring histogram
-  float score( ) { return Float.NaN; }
-  DTree.Split scoreMSE( int col, String name ) { return null; }
+  DTree.Split scoreMSE( int col ) { return null; }
   // Do not ask for 'mean' from a non-scoring histogram
-  float mean( int bin ) { return Float.NaN; }
-  float mean( int bin, int cls ) { return Float.NaN; }
+  double mean( int bin ) { return Double.NaN; }
   // Do not ask for 'var' from a non-scoring histogram
-  float var( int bin ) { return Float.NaN; }
+  double var( int bin ) { return Double.NaN; }
 
   // Nothing to tighten
   public void tightenMinMax() { }
@@ -90,6 +85,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
   protected static int byteSize(float []fs) { return fs==null ? 0 : 20+fs.length<<2; }
   protected static int byteSize(int   []is) { return is==null ? 0 : 20+is.length<<2; }
   protected static int byteSize(long  []ls) { return ls==null ? 0 : 24+ls.length<<3; }
+  protected static int byteSize(double[]fs) { return fs==null ? 0 : 24+fs.length<<3; }
   protected static int byteSize(Object[]ls) { return ls==null ? 0 : 24+ls.length<<3; }
 
   long byteSize() {

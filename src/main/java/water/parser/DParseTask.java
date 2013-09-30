@@ -653,7 +653,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     10000000000.0,
   };
 
-  static long [] powers10i = new long[]{
+  static public long [] powers10i = new long[]{
     1,
     10,
     100,

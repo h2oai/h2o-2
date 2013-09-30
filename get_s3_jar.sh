@@ -11,7 +11,8 @@ echo "This can run anywhere. No VPN needed, just s3cmd and keys"
 echo ""
 # set -v
 # this can be master or a specific branch
-branch=gauss
+branch=master
+# branch=gauss
 
 rm -f ./latest_h2o_jar_version
 s3cmd get s3://h2o-release/h2o/$branch/latest latest_h2o_jar_version
@@ -40,6 +41,7 @@ cp -f ./h2o*$version/h2o.jar target/h2o.jar
 cp -f ./latest_h2o_jar_version target/latest_h2o_jar_version
 
 # this is the one we point the R tests to. but we want a generic, no version name for them (like h2o/target)
+rm -f -r ./h2o-downloaded
 cp -r ./h2o-*$version ./h2o-downloaded
 echo "You want this for your R tests"
 echo "export H2OWrapperDir=./h2o-downloaded/R"

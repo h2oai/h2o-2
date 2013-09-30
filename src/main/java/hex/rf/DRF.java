@@ -28,6 +28,7 @@ public abstract class DRF {
     DRFTask drfTask = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Create DRF user job & start it
     DRFJob  drfJob  = new DRFJob(drfTask);
+    drfJob.destination_key = modelKey;
     drfJob.start(drfTask);
     drfTask._job = drfJob;
     // Execute the DRF task

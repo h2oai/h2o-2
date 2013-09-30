@@ -61,4 +61,6 @@ public class C2SChunk extends Chunk {
     }
     return nc;
   }
+  public int pformat_len0() { return pformat_len0(_scale,5); }
+  public String pformat0() { return "% 10.4e"; }
 }

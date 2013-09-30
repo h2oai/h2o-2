@@ -380,7 +380,7 @@ Log.info("2 " +destination_key);
     waitUntilJobEnded(jobkey, THREE_SECONDS_MILLIS);
   }
 
-  protected void run() {
+  public void run() {
     throw new RuntimeException("Should be overridden if job is a request");
   }
 

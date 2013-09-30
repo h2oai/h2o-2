@@ -1254,6 +1254,15 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+  public AutoBuffer putJSONAA( Iced fs[][] ) {
+    if( fs == null ) return putNULL();
+    put1('[');
+    for( int i=0; i<fs.length; i++ ) {
+      if( i>0 ) put1(',');
+      putJSONA(fs[i]);
+    }
+    return put1(']');
+  }
   public AutoBuffer putJSON1( byte b ) { return putJSON4(b); }
   public AutoBuffer putJSONA1( byte ary[] ) {
     if( ary == null ) return putNULL();
@@ -1303,6 +1312,7 @@ public final class AutoBuffer {
 
   public AutoBuffer putJSON  ( String name, Iced f   ) { return putJSONStr(name).put1(':').putJSON (f); }
   public AutoBuffer putJSONA ( String name, Iced f[] ) { return putJSONStr(name).put1(':').putJSONA(f); }
+  public AutoBuffer putJSONAA( String name, Iced f[][]){ return putJSONStr(name).put1(':').putJSONAA(f); }
   public AutoBuffer putJSON8 ( String name, long l   ) { return putJSONStr(name).put1(':').putJSON8(l); }
   public AutoBuffer putEnumJSON( String name, Enum e ) { return putJSONStr(name).put1(':').putEnumJSON(e); }
 

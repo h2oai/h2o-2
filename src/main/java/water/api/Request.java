@@ -26,8 +26,8 @@ public abstract class Request extends RequestBuilders {
     Class<? extends Filter>[] filters() default {};
     long   lmin() default Long  .MIN_VALUE;
     long   lmax() default Long  .MAX_VALUE;
-    double dmin() default Double.MIN_VALUE;
-    double dmax() default Double.MAX_VALUE;
+    double dmin() default Double.NEGATIVE_INFINITY;
+    double dmax() default Double.POSITIVE_INFINITY;
   }
 
   public interface Filter {

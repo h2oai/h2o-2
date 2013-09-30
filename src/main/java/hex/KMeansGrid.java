@@ -42,7 +42,7 @@ public class KMeansGrid extends KMeansShared {
     return rs.toString();
   }
 
-  @Override protected void run() {
+  @Override public void run() {
     ValueArray va = DKV.get(source_key).get();
     Key temp = null;
     try {
