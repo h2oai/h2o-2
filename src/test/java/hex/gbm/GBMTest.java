@@ -37,7 +37,7 @@ public class GBMTest extends TestUtil {
              new PrepData() { Vec prep(Frame fr) { return fr.remove(1); }
              });
     basicGBM("./smalldata/test/test_tree_minmax.csv","tree_minmax.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("response"); } 
+             new PrepData() { Vec prep(Frame fr) { return fr.remove("response"); }
              });
     basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
              new PrepData() {
@@ -57,7 +57,7 @@ public class GBMTest extends TestUtil {
              });
     basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
              new PrepData() {
-               Vec prep(Frame fr) { 
+               Vec prep(Frame fr) {
                  assertEquals(581012,fr.numRows());
                  for( int ign : IGNS )
                    UKV.remove(fr.remove("C"+Integer.toString(ign))._key);
@@ -79,14 +79,13 @@ public class GBMTest extends TestUtil {
       gbm = new GBM();
       gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
-      gbm.vresponse = prep.prep(gbm.source);
+      gbm.response = prep.prep(gbm.source);
       gbm.ntrees = 2;
       gbm.max_depth = 6;
       gbm.learn_rate = 1.0f;
       gbm.min_rows = 1;
       gbm.nbins = 10;
-      gbm.serve();              // Start it
-      gbm.get();                // Block for it
+      gbm.run();
 
       fr = gbm.score(gbm.source);
 
@@ -166,7 +165,7 @@ public class GBMTest extends TestUtil {
       drf = new DRF();
       drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
-      drf.vresponse = prep.prep(drf.source);
+      drf.response = prep.prep(drf.source);
       drf.ntrees = 5;
       drf.max_depth = 50;
       drf.min_rows = 1;
@@ -174,8 +173,7 @@ public class GBMTest extends TestUtil {
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // No sampling
       drf.seed = (1L<<32)|2;
-      drf.serve();              // Start it
-      drf.get();                // Block for it
+      drf.run();
 
       fr = drf.score(drf.source);
 
@@ -183,7 +181,7 @@ public class GBMTest extends TestUtil {
       UKV.remove(dest);         // Remove whole frame
       if( drf != null ) {
         UKV.remove(drf.dest()); // Remove the model
-        UKV.remove(drf.vresponse._key);
+        UKV.remove(drf.response._key);
         drf.remove();
         if( fr != null ) fr.remove();
       }

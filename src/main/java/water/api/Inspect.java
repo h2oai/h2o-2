@@ -3,6 +3,7 @@ package water.api;
 import hex.DGLM.GLMModel;
 import hex.DPCA.PCAModel;
 import hex.*;
+import hex.NeuralNet.NeuralNetModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.GLMModelView;
 import hex.rf.RFModel;

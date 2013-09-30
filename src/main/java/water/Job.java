@@ -10,7 +10,6 @@ import water.H2O.H2OCountedCompleter;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -80,13 +79,13 @@ public class Job extends Request2 {
       // Doing classification only right now...
       if( !response.isEnum() ) response.asEnum();
 
-      for( int i = cols.length - 1; i >= 0; i-- ) {
-        if( source.vecs()[cols[i]] == response ) {
+      for( int i = cols.length - 1; i >= 0; i-- )
+        if( source.vecs()[cols[i]] == response )
           cols = ArrayUtils.remove(cols, i);
+      for( int i = 0; i < source.vecs().length; i++ )
+        if( source.vecs()[i] == response )
           return i;
-        }
-      }
-      return -1;
+      throw new IllegalArgumentException();
     }
   }
 
@@ -111,10 +110,7 @@ public class Job extends Request2 {
       _names = new String[cols.length];
       for( int i = 0; i < cols.length; i++ )
         _names[i] = source._names[cols[i]];
-      _responseName = "response";
-      for( int i = 0; i < source.numCols(); i++ )
-        if( source.vecs()[i] == response )
-          _responseName = source._names[i];
+      _responseName = source._names != null ? source._names[rIndex] : "response";
     }
   }
 
@@ -213,14 +209,25 @@ public class Job extends Request2 {
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(self) ) {
-            jobs[i].end_time = CANCELLED_END_TIME;
-            jobs[i].exception = exception;
+            final Job job = jobs[i];
+            job.end_time = CANCELLED_END_TIME;
+            job.exception = exception;
+            H2OCountedCompleter task = new H2OCountedCompleter() {
+              @Override public void compute2() {
+                job.onCancelled();
+                tryComplete();
+              }
+            };
+            H2O.submitTask(task);
             break;
           }
         }
         return old;
       }
     }.fork(LIST);
+  }
+
+  protected void onCancelled() {
   }
 
   public boolean cancelled() {
@@ -232,11 +239,9 @@ public class Job extends Request2 {
   }
 
   public void remove() {
-Log.info("1 " + destination_key);
     DKV.remove(job_key);
     new TAtomic<List>() {
       @Override public List atomic(List old) {
-Log.info("2 " +destination_key);
         if( old == null ) return null;
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {

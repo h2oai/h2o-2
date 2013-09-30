@@ -278,6 +278,10 @@ public class NeuralNet extends ValidatedJob {
     @Override protected Response jobDone(final Job job, final String dst) {
       return new Response(Response.Status.done, this, 0, 0, null);
     }
+
+    public static String link(Key job, Key model, String content) {
+      return "<a href='NeuralNetProgress.html?job=" + job + "&dst_key=" + model + "'>" + content + "</a>";
+    }
   }
 
   public static class NeuralNetScore extends ModelJob {

@@ -7,9 +7,7 @@ import hex.rng.MersenneTwisterRNG;
 import java.util.Arrays;
 import java.util.Random;
 
-import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
 import water.fvec.*;
@@ -79,9 +77,12 @@ public class DRF extends SharedTreeModelBuilder {
 
   // Compute a single DRF tree from the Frame.  Last column is the response
   // variable.  Depth is capped at max_depth.
-  @Override protected Response serve() {
-    startBuildModel();
-    return DRFProgressPage.redirect(this, self(),dest());
+  @Override public void run() {
+    buildModel();
+  }
+
+  @Override protected Response redirect() {
+    return DRFProgressPage.redirect(this, self(), dest());
   }
 
   @Override protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
@@ -91,68 +92,58 @@ public class DRF extends SharedTreeModelBuilder {
     DRFModel drf_model0 = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
     DKV.put(outputKey, drf_model0);
 
-    H2O.submitTask(start(new H2OCountedCompleter() {
-      @Override public void compute2() {
-        throw H2O.unimpl();
-        //// Set a single 1.0 in the response for that class
-        //if( nclass > 1 )
-        //  new Set1Task(ymin,ncols,nclass).doAll(fr);
-        //
-        //// The RNG used to pick split columns
-        //Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
-        //
-        //// Initially setup as-if an empty-split had just happened
-        //DBinHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
-        //DRFTree forest[] = new DRFTree[0];
-        //
-        //// ----
-        //// Only work on so many trees at once, else get GC issues.
-        //// Hand the inner loop a smaller set of trees.
-        //final int NTREE=2;          // Limit of 5 trees at once
-        //int depth=0;
-        //for( int st = 0; st < ntrees; st+= NTREE ) {
-        //  if( cancelled() ) break;
-        //  int xtrees = Math.min(NTREE,ntrees-st);
-        //  DRFTree someTrees[] = new DRFTree[xtrees];
-        //  int someLeafs[] = new int[xtrees];
-        //  forest = Arrays.copyOf(forest,forest.length+xtrees);
-        //
-        //  for( int t=0; t<xtrees; t++ ) {
-        //    int idx = st+t;
-        //    forest[idx] = someTrees[t] = new DRFTree(fr,ncols,(char)nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
-        //    Vec vec = vresponse.makeZero();
-        //    // Make a new Vec to hold the split-number for each row (initially
-        //    // all zero).  If sampling, flag out some rows for OOBEE scoring.
-        //    if( sample_rate < 1.0 )
-        //      new Sample(someTrees[t],sample_rate).doAll(vec);
-        //    fr.add("NIDs"+t,vec);
-        //  }
-        //
-        //  // Make NTREE trees at once
-        //  int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, sample_rate);
-        //  if( d>depth ) depth=d;    // Actual max depth used
-        //
-        //  BulkScore bs = new BulkScore(forest,forest.length-xtrees,ncols,nclass,ymin,sample_rate).doAll(fr).report( Sys.DRF__, depth );
-        //  int old = _errs.length;
-        //  _errs = Arrays.copyOf(_errs,st+xtrees);
-        //  for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
-        //  _errs[_errs.length-1] = (double)bs._sum/nrows;
-        //  drf_model1 = new DRFModel(drf_model1,forest, _errs, ymin,bs._cm);
-        //  DKV.put(outputKey, drf_model1);
-        //
-        //  // Remove temp vectors; cleanup the Frame
-        //  for( int t=0; t<xtrees; t++ )
-        //    UKV.remove(fr.remove(fr.numCols()-1)._key);
-        //}
-        //cleanUp(fr,t_build); // Shared cleanup
-        //tryComplete();
-      }
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        ex.printStackTrace();
-        DRF.this.cancel(ex.getMessage());
-        return true;
-      }
-    }));
+    throw H2O.unimpl();
+    //// Set a single 1.0 in the response for that class
+    //if( nclass > 1 )
+    //  new Set1Task(ymin,ncols,nclass).doAll(fr);
+    //
+    //// The RNG used to pick split columns
+    //Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
+    //
+    //// Initially setup as-if an empty-split had just happened
+    //DBinHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
+    //DRFTree forest[] = new DRFTree[0];
+    //
+    //// ----
+    //// Only work on so many trees at once, else get GC issues.
+    //// Hand the inner loop a smaller set of trees.
+    //final int NTREE=2;          // Limit of 5 trees at once
+    //int depth=0;
+    //for( int st = 0; st < ntrees; st+= NTREE ) {
+    //  if( cancelled() ) break;
+    //  int xtrees = Math.min(NTREE,ntrees-st);
+    //  DRFTree someTrees[] = new DRFTree[xtrees];
+    //  int someLeafs[] = new int[xtrees];
+    //  forest = Arrays.copyOf(forest,forest.length+xtrees);
+    //
+    //  for( int t=0; t<xtrees; t++ ) {
+    //    int idx = st+t;
+    //    forest[idx] = someTrees[t] = new DRFTree(fr,ncols,(char)nbins,nclass,min_rows,hs,mtrys,rand.nextLong());
+    //    Vec vec = vresponse.makeZero();
+    //    // Make a new Vec to hold the split-number for each row (initially
+    //    // all zero).  If sampling, flag out some rows for OOBEE scoring.
+    //    if( sample_rate < 1.0 )
+    //      new Sample(someTrees[t],sample_rate).doAll(vec);
+    //    fr.add("NIDs"+t,vec);
+    //  }
+    //
+    //  // Make NTREE trees at once
+    //  int d = makeSomeTrees(st, someTrees,someLeafs, xtrees, max_depth, fr, vresponse, sample_rate);
+    //  if( d>depth ) depth=d;    // Actual max depth used
+    //
+    //  BulkScore bs = new BulkScore(forest,forest.length-xtrees,ncols,nclass,ymin,sample_rate).doAll(fr).report( Sys.DRF__, depth );
+    //  int old = _errs.length;
+    //  _errs = Arrays.copyOf(_errs,st+xtrees);
+    //  for( int i=old; i<_errs.length; i++ ) _errs[i] = Float.NaN;
+    //  _errs[_errs.length-1] = (double)bs._sum/nrows;
+    //  drf_model1 = new DRFModel(drf_model1,forest, _errs, ymin,bs._cm);
+    //  DKV.put(outputKey, drf_model1);
+    //
+    //  // Remove temp vectors; cleanup the Frame
+    //  for( int t=0; t<xtrees; t++ )
+    //    UKV.remove(fr.remove(fr.numCols()-1)._key);
+    //}
+    //cleanUp(fr,t_build); // Shared cleanup
   }
 
   private class Set1Task extends MRTask2<Set1Task> {

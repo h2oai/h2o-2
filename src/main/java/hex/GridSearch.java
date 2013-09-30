@@ -1,5 +1,7 @@
 package hex;
 
+import hex.NeuralNet.NeuralNetModel;
+import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.GBM.GBMModel;
 
 import java.util.*;
@@ -9,13 +11,17 @@ import water.api.*;
 import water.util.Utils;
 
 public class GridSearch extends Job {
-
   public Job[] jobs;
 
   @Override public void run() {
     UKV.put(destination_key, this);
     for( Job job : jobs )
       job.startFJ().join();
+  }
+
+  @Override protected void onCancelled() {
+    for( Job job : jobs )
+      job.cancel();
   }
 
   @Override public float progress() {
@@ -31,20 +37,6 @@ public class GridSearch extends Job {
   }
 
   public static class GridSearchProgress extends Progress2 {
-
-    @Override protected Response serve() {
-      GridSearch grid = UKV.get(Key.make(dst_key.value()));
-      if( grid != null ) {
-        boolean done = true;
-        for( int i = 0; i < grid.jobs.length; i++ )
-          if( grid.jobs[i].running() )
-            done = false;
-        if( done )
-          grid.remove();
-      }
-      return super.serve();
-    }
-
     @Override public boolean toHTML(StringBuilder sb) {
       GridSearch grid = UKV.get(Key.make(dst_key.value()));
       if( grid != null ) {
@@ -111,6 +103,8 @@ public class GridSearch extends Job {
           if( info._job.start_time != 0 ) {
             if( info._model instanceof GBMModel )
               link = GBMModelView.link(link, info._job.destination_key);
+            else if( info._model instanceof NeuralNetModel )
+              link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
             else
               link = Inspect.link(link, info._job.destination_key);
           }

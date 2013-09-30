@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.UndecidedNode;
@@ -8,6 +9,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DocGen;
 import water.api.GBMProgressPage;
+import water.api.RequestBuilders.Response;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
@@ -55,50 +57,40 @@ public class GBM extends SharedTreeModelBuilder {
 
   // Compute a single GBM tree from the Frame.  Last column is the response
   // variable.  Depth is capped at maxDepth.
-  @Override protected Response serve() {
-    startBuildModel();
-    return GBMProgressPage.redirect(this, self(),dest());
+  @Override public void run() {
+    buildModel();
+  }
+
+  @Override protected Response redirect() {
+    return GBMProgressPage.redirect(this, self(), dest());
   }
 
   @Override protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
-    final GBMModel gbm_model0 = new GBMModel(outputKey,dataKey,frm,ntrees, _ymin);
-    DKV.put(outputKey, gbm_model0);
+    GBMModel model = new GBMModel(outputKey, dataKey, frm, ntrees, _ymin);
+    DKV.put(outputKey, model);
+    // Build trees until we hit the limit
+    for( int tid=0; tid<ntrees; tid++) {
+      // ESL2, page 387
+      // Step 2a: Compute prob distribution from prior tree results:
+      //   Work <== f(Tree)
+      new ComputeProb().doAll(fr);
 
-    H2O.submitTask(start(new H2OCountedCompleter() {
-      @Override public void compute2() {
-        GBMModel gbm_model1 = gbm_model0;
-        // Build trees until we hit the limit
-        for( int tid=0; tid<ntrees; tid++) {
+      // ESL2, page 387
+      // Step 2b i: Compute residuals from the probability distribution
+      //   Work <== f(Work)
+      new ComputeRes().doAll(fr);
 
-          // ESL2, page 387
-          // Step 2a: Compute prob distribution from prior tree results:
-          //   Work <== f(Tree)
-          new ComputeProb().doAll(fr);
+      // ESL2, page 387, Step 2b ii, iii, iv
+      DTree[] ktrees = buildNextKTrees(fr);
+      if( cancelled() ) break; // If canceled during building, do not bulkscore
 
-          // ESL2, page 387
-          // Step 2b i: Compute residuals from the probability distribution
-          //   Work <== f(Work)
-          new ComputeRes().doAll(fr);
+      // Check latest predictions
+      Score sc = new Score().doAll(fr).report(Sys.GBM__,tid,ktrees);
+      model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
+      DKV.put(outputKey, model);
+    }
 
-          // ESL2, page 387, Step 2b ii, iii, iv
-          DTree[] ktrees = buildNextKTrees(fr);
-          if( cancelled() ) break; // If canceled during building, do not bulkscore
-
-          // Check latest predictions
-          Score sc = new Score().doAll(fr).report(Sys.GBM__,tid,ktrees);
-          gbm_model1 = new GBMModel(gbm_model1, ktrees, (float)sc._sum/_nrows, sc._cm);
-          DKV.put(outputKey, gbm_model1);
-        }
-
-        cleanUp(fr,t_build); // Shared cleanup
-        tryComplete();
-      }
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        ex.printStackTrace();
-        GBM.this.cancel(ex.getMessage());
-        return true;
-      }
-    }));
+    cleanUp(fr,t_build); // Shared cleanup
   }
 
   // --------------------------------------------------------------------------
