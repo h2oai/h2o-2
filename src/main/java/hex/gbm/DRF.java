@@ -89,7 +89,7 @@ public class DRF extends SharedTreeModelBuilder {
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(_ncols),1) : mtries;
     assert 1 <= mtrys && mtrys <= _ncols : "Too large mtrys="+mtrys+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    DRFModel drf_model0 = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
+    final DRFModel drf_model0 = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
     DKV.put(outputKey, drf_model0);
 
     H2O.submitTask(start(new H2OCountedCompleter() {
@@ -101,7 +101,7 @@ public class DRF extends SharedTreeModelBuilder {
         //  new Set1Task(ymin,ncols,nclass).doAll(fr);
 
         // The RNG used to pick split columns
-        Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
+        //Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
 
         //// Initially setup as-if an empty-split had just happened
         //DBinHistogram hs[] = DBinHistogram.initialHist(fr,ncols,(char)nbins,nclass);
