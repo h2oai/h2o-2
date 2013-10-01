@@ -82,7 +82,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     x = ",".join(map(str,x))
 
                     GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
-                        'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                        'max_iter': 4, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
                     start = time.time()
                     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)

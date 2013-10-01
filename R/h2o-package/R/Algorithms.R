@@ -331,6 +331,14 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="
 
 setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
           function(y, x_ignore, data, ntree, depth, classwt) {
+            myCol = colnames(data)
+            if(!y %in% myCol) stop(paste(y, "is an invalid response column!"))
+            if(!(length(x_ignore) == 1 && x_ignore == "")) {
+              temp = match(TRUE, !x_ignore %in% myCol)
+              if(!is.na(temp)) stop(paste(x_ignore[temp], "is an invalid predictor column!"))
+              if(y %in% x_ignore) stop(paste("Cannot ignore response variable", y))
+            }
+            
             # Set randomized model_key
             rand_model_key = paste("__RF_Model__", runif(n=1, max=1e10), sep="")
             
@@ -341,14 +349,16 @@ setMethod("h2o.randomForest", signature(y="character", x_ignore="character", dat
                 myWeights[i] = paste(names(classwt)[i], classwt[i], sep="=")
               res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=paste(x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","), model_key = rand_model_key)
             }
-            else
+            else {
+              myWeights = ""
               res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=paste(x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights="", model_key = rand_model_key)
+            }
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=destKey, data_key=data@key, out_of_bag_error_estimate=1)
+            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=destKey, data_key=data@key, response_variable=y, ntree=ntree, class_weights=paste(myWeights, collapse=","), out_of_bag_error_estimate=1)
             
             result = list()
-            result$type = "classification"
+            result$type = "Classification"
             result$ntree = ntree
             result$oob_err = res$confusion_matrix$classification_error
             if(x_ignore[1] != "") result$x_ignore = paste(x_ignore, collapse = ", ")
@@ -360,9 +370,16 @@ setMethod("h2o.randomForest", signature(y="character", x_ignore="character", dat
             
             # Must check confusion matrix is finished calculating!
             cf = res$confusion_matrix
-            cf_matrix = cbind(t(matrix(unlist(cf$scores), nrow=length(cf$header))), unlist(cf$classes_errors))
-            rownames(cf_matrix) = cf$header
-            colnames(cf_matrix) = c(cf$header, "class.error")
+            cf_scores = unlist(lapply(cf$scores, as.numeric))
+            cf_err = unlist(as.numeric(cf$classes_errors))
+            # cf_err = rapply(cf$classes_errors, function(x) { ifelse(x == "NaN", NaN, x) }, how = "replace")
+            cf_matrix = t(matrix(cf_scores, nrow=length(cf$header)))
+            cf_tot = apply(cf_matrix, 2, sum)
+            cf_tot.err = 1-sum(diag(cf_matrix))/sum(cf_tot)
+            
+            cf_matrix = cbind(cf_matrix, cf_err)
+            cf_matrix = rbind(cf_matrix, c(cf_tot, cf_tot.err))
+            dimnames(cf_matrix) = list(Actual = c(cf$header, "Totals"), Predicted = c(cf$header, "Error"))
             result$confusion = cf_matrix
             
             resRFModel = new("H2ORForestModel", key=destKey, data=data, model=result)
@@ -384,7 +401,8 @@ setMethod("h2o.randomForest", signature(y="numeric", x_ignore="ANY", data="H2OPa
               stop(paste("x_ignore cannot be of class", class(x_ignore)))
             if(!(missing(classwt) || class(classwt) == "numeric"))
               stop(paste("classwt cannot be of class", class(classwt)))
-            h2o.randomForest(as.character(y), as.character(x_ignore), data, ntree, depth, classwt)
+            if(y < 1 || y > ncol(data)) stop(paste("Response index must be between 1 and", ncol(data)))
+            h2o.randomForest(colnames(data)[y], as.character(x_ignore), data, ntree, depth, classwt)
           })
 
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="logical"),
@@ -413,6 +431,10 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
               while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
               new("H2OParsedData", h2o=object@data@h2o, key=res$key)
+            # } else if(class(object) == "H2OGBMModel") {
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key)
+            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
+            #  new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
             # } else if(class(object) == "H2OPCAModel") {
             #  numMatch = colnames(newdata) %in% colnames(object@data)
             #  numPC = length(numMatch[numMatch == TRUE])

@@ -2408,7 +2408,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected boolean isSelected(String value) {
       Frame fr = fr();
       int[] val = value();
-      if (val == null) return true;
+      if (val == null) return false;
       for(int i = 0; i < fr.numCols(); ++i)
         if(fr._names[i].equals(value))Ints.contains(val, i);
       return false;
@@ -2429,11 +2429,10 @@ public class RequestArguments extends RequestStatics {
         if (0 > idx || idx > fr.numCols())
           throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
         if (al.contains(idx))
-          throw new IllegalArgumentException("Column "+col+" is already ignored.");
+          throw new IllegalArgumentException("Column "+col+" is already selected.");
         checkLegality(fr.vecs()[idx]);
         al.add(idx);
       }
-      if(al.size() == fr.numCols()-1)throw new IllegalArgumentException("Can not ignore all columns!");
       return Ints.toArray(al);
     }
 

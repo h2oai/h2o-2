@@ -26,7 +26,7 @@ public class GLMGrid extends Job {
   GLMParams            _glmp;
 
   public GLMGrid(Key dest, ValueArray va, GLMParams glmp, int[] xs, double[] ls, double[] as, double[] thresholds, int xfold, boolean parallel) {
-    super("GLMGrid", dest);
+    destination_key = dest;
     _ary = va; // VA is large, and already in a Key so make it transient
     _datakey = va._key; // ... and use the data key instead when reloading
     _glmp = glmp;

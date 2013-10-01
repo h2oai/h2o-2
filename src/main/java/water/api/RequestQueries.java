@@ -134,8 +134,8 @@ public class RequestQueries extends RequestArguments {
 
   /** Returns the request query form produced from the given input arguments.
    */
-  protected String buildQuery(Properties args, RequestType type) {
-    if (args.isEmpty())
+  protected String buildQuery(Properties parms, RequestType type) {
+    if (parms.isEmpty())
       type = RequestType.query;
     RString result = new RString(_queryHtml);
     result.replace("REQ_NAME", this.getClass().getSimpleName());
@@ -145,11 +145,11 @@ public class RequestQueries extends RequestArguments {
     script.replace("REQUEST_NAME", getClass().getSimpleName());
     for (Argument arg: _arguments) {
       try {
-        arg.check(RequestQueries.this, args.getProperty(arg._name,""));
-        queryArgumentValueSet(arg, args);
+        arg.check(RequestQueries.this, parms.getProperty(arg._name,""));
+        queryArgumentValueSet(arg, parms);
       } catch (IllegalArgumentException e) {
         // in query mode only display error for arguments present
-        if ((type != RequestType.query) || !args.getProperty(arg._name,"").isEmpty())
+        if ((type != RequestType.query) || !parms.getProperty(arg._name,"").isEmpty())
           query.append("<div class='alert alert-error'>"+e.getMessage()+"</div>");
       }
       if (arg._hideInQuery)

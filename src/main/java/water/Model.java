@@ -1,5 +1,7 @@
 package water;
 
+import hex.ConfusionMatrix;
+
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -43,7 +45,7 @@ public abstract class Model extends Iced {
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),domains(fr));
+    this(selfKey,dataKey,fr.names(),fr.domains());
   }
 
   /** Full constructor */
@@ -58,26 +60,6 @@ public abstract class Model extends Iced {
     _domains = domains;
   }
 
-  private static String[][] domains(Frame fr) {
-    String[][] domains = fr.domains();
-    if(domains[domains.length-1] == null)
-      domains[domains.length-1] = responseDomain(fr);
-    return domains;
-  }
-  /** If response column is not an enum, use numbers */
-  public static String[] responseDomain(Frame fr) {
-    Vec resp = fr.vecs()[fr.vecs().length-1];
-    String[] domain = resp._domain;
-    if(resp._domain == null) {
-      int min = (int) resp.min();
-      int max = (int) resp.max();
-      domain = new String[max - min + 1];
-      for( int i = 0; i < domain.length; i++ )
-        domain[i] = "" + (min + i);
-    }
-    return domain;
-  }
-
   /** Simple shallow copy constructor to a new Key */
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
 
@@ -90,6 +72,11 @@ public abstract class Model extends Iced {
   public int nclasses() {
     String cns[] = classNames();
     return cns==null ? 1 : cns.length;
+  }
+
+  /** For classifiers, confusion matrix on validation set. */
+  public ConfusionMatrix cm() {
+    return null;
   }
 
   /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the

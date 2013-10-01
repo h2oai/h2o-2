@@ -45,7 +45,7 @@ public final class ParseDataset2 extends Job {
   }
   // Setup a private background parse job
   private ParseDataset2(Key dest, Key[] fkeys) {
-    super("Parsing", dest);
+    destination_key = dest;
     // Job progress Key
     _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
     UKV.put(_progress, ParseProgress.make(fkeys));

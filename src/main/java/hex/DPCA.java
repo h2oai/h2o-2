@@ -1,34 +1,38 @@
 package hex;
 
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel.Status;
+import hex.DGLM.GLMParams;
+import hex.DGLM.Gram;
+import hex.DGLM.GramMatrixFunc;
+import hex.NewRowVecTask.DataFrame;
+import hex.NewRowVecTask.JobCancelledException;
+
 import java.util.Arrays;
 import java.util.Comparator;
 
+import jsr166y.CountedCompleter;
+
 import org.apache.commons.lang.ArrayUtils;
 
-import jsr166y.CountedCompleter;
-import junit.framework.Assert;
-import hex.DGLM.*;
-import hex.DGLM.GLMModel.Status;
-import hex.NewRowVecTask.DataFrame;
-import hex.NewRowVecTask.JobCancelledException;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.api.Constants;
 import water.api.PCA;
-import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
-
-import com.google.gson.*;
-
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 public abstract class DPCA {
   /* Track PCA job progress */
   public static class PCAJob extends ChunkProgressJob {
     public PCAJob(ValueArray data, Key dest) {
-      super("PCA(" + data._key.toString() + ")", dest, data.chunks());
+      super(data.chunks());
+      description = "PCA(" + data._key.toString() + ")";
+      destination_key = dest;
     }
 
     public boolean isDone() {

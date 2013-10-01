@@ -61,7 +61,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'k': 3,
                 'initialization': 'Furthest',
                 'epsilon': 1e-6,
-                'max_iter': 20,
+                'max_iter': 4,
                 'cols': None,
                 'normalize': 0,
                 'destination_key': 'junk.hex',

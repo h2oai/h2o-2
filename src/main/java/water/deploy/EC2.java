@@ -10,25 +10,21 @@ import water.util.Log;
 import water.util.Utils;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.*;
 
 /**
- * Runs EC2 instances. This class is intended for debug purposes only. The recommended
- * infrastructure for H2O's deployment on AWS is documented here:<br>
- * https://github.com/0xdata/h2o/wiki/How-to-run-H2O-tests-on-EC2-clusters
+ * Runs H2O on EC2 instances.
+ * <nl>
+ * Note: This class is intended for debug purposes only. The recommended way to run H2O on AWS uses
+ * an AMI and is described in the documentation.
  */
 public class EC2 {
   private static final String USER = System.getProperty("user.name");
   private static final String NAME = USER + "-H2O-Cloud";
 
-  /**
-   * AWS credentials file with format: <br>
-   * accessKey=XXXXXXXXXXXXXXXXXXXX <br>
-   * secretKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-   */
-  public String AWSCredentials = H2O.DEFAULT_CREDENTIALS_LOCATION;
-  public int boxCount;
+  public int boxes;
   public String region = "us-east-1";
   public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
   public String type = "m1.xlarge";
@@ -74,7 +70,17 @@ public class EC2 {
    * Create or terminate EC2 instances. Uses their Name tag to find existing ones.
    */
   public Cloud resize() throws Exception {
-    AmazonEC2Client ec2 = new AmazonEC2Client(H2O.getAWSCredentials());
+    PropertiesCredentials credentials;
+    try {
+      credentials = H2O.getAWSCredentials();
+    } catch( Exception ex ) {
+      System.out.println("Please provide your AWS credentials in './AwsCredentials.properties'");
+      System.out.println("File format is:");
+      System.out.println("accessKey=XXXXXXXXXXXXXXXXXXXX");
+      System.out.println("secretKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+      throw ex;
+    }
+    AmazonEC2Client ec2 = new AmazonEC2Client(credentials);
     ec2.setEndpoint("ec2." + region + ".amazonaws.com");
     DescribeInstancesResult describeInstancesResult = ec2.describeInstances();
     List<Reservation> reservations = describeInstancesResult.getReservations();
@@ -94,12 +100,12 @@ public class EC2 {
     }
     System.out.println("Found " + instances.size() + " EC2 instances for user " + USER);
 
-    if( instances.size() > boxCount ) {
-      for( int i = 0; i < instances.size() - boxCount; i++ ) {
+    if( instances.size() > boxes ) {
+      for( int i = 0; i < instances.size() - boxes; i++ ) {
         // TODO terminate
       }
-    } else if( instances.size() < boxCount ) {
-      int launchCount = boxCount - instances.size();
+    } else if( instances.size() < boxes ) {
+      int launchCount = boxes - instances.size();
       System.out.println("Creating " + launchCount + " EC2 instances.");
       if( confirm ) {
         System.out.println("Please confirm [y/n]");

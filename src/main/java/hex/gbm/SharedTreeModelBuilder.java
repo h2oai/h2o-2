@@ -1,25 +1,18 @@
 package hex.gbm;
 
 import java.util.Arrays;
-import water.*;
-import water.Job.FrameJob;
-import water.api.DocGen;
-import water.fvec.*;
-import water.util.Log.Tag.Sys;
-import water.util.Log;
-import water.util.Utils;
 
-public abstract class SharedTreeModelBuilder extends FrameJob {
+import water.*;
+import water.Job.ValidatedJob;
+import water.api.DocGen;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.util.*;
+import water.util.Log.Tag.Sys;
+
+public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
-  @API(help="", required=true, filter=TVecSelect.class)
-  public Vec vresponse;
-  class TVecSelect extends VecClassSelect { TVecSelect() { super("source"); } }
-
-  @API(help="columns to ignore",required=false,filter=TMultiVecSelect.class)
-  public int [] ignored_cols = new int []{};
-  class TMultiVecSelect extends MultiVecSelect { TMultiVecSelect() { super("source");} }
 
   @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
   public int ntrees = 100;
@@ -51,49 +44,34 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
   @API(help = "Class distribution, ymin based")
   protected long _distribution[];
 
-
-  public SharedTreeModelBuilder( String name, String keyn ) { super(name,Key.make(keyn+Key.make())); }
-
-  public float progress(){
-    DTree.TreeModel m = DKV.get(dest()).get();
-    return (float)m.treeBits.length/(float)m.N;
+  @Override public float progress(){
+    Value value = DKV.get(dest());
+    DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
+    return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
   }
 
   // --------------------------------------------------------------------------
   // Driver for model-building.
-  public void startBuildModel( ) {
-    final Frame fr = new Frame(source); // Local copy for local hacking
-    fr.remove(ignored_cols);
-    // Doing classification only right now...
-    if( !vresponse.isEnum() ) vresponse.asEnum();
-
-    // While I'd like the Frames built custom for each call, with excluded
-    // columns already removed - for now check to see if the response column is
-    // part of the frame and remove it up front.
-    String vname="response";
-    for( int i=0; i<fr.numCols(); i++ )
-      if( fr.vecs()[i]==vresponse ) {
-        vname=fr._names[i];
-        fr.remove(i);
-      }
-
+  public void buildModel( ) {
+    selectCols();
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
-    _ncols = fr.numCols();      // Feature set
-    _nrows = fr.numRows() - vresponse.naCnt();
-    _ymin = (int)vresponse.min();
-    _nclass = vresponse.isInt() ? (char)(vresponse.max()-_ymin+1) : 1;
-    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
+    _ncols = _train.length;
+    _nrows = source.numRows() - response.naCnt();
+    _ymin = (int)response.min();
     _errs = new double[0];                // No trees yet
     final Key outputKey = dest();
     final Key dataKey = null;
-    String[] domain = vresponse.domain();
+    String[] domain = response.domain();
+    _nclass = domain.length;
+    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
 
-    fr.add(vname,vresponse);         // Hardwire response as last vector
+    Frame fr = new Frame(_names, _train);
+    fr.add(_responseName, response); // Hardwire response as last vector
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
 
     // Find the class distribution
-    _distribution = new ClassDist().doAll(vresponse)._ys;
+    _distribution = new ClassDist().doAll(response)._ys;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -102,16 +80,16 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
 
     // Current forest values: results of summing the prior M trees
     for( int i=0; i<_nclass; i++ )
-      fr.add("Tree_"+domain[i], vresponse.makeZero());
+      fr.add("Tree_"+domain[i], response.makeZero());
 
     // Initial work columns.  Set-before-use in the algos.
     for( int i=0; i<_nclass; i++ )
-      fr.add("Work_"+domain[i], vresponse.makeZero());
+      fr.add("Work_"+domain[i], response.makeZero());
 
     // One Tree per class, each tree needs a NIDs.  For empty classes use a -1
     // NID signifying an empty regression tree.
     for( int i=0; i<_nclass; i++ )
-      fr.add("NIDs_"+domain[i], vresponse.makeCon(_distribution[i]==0?-1:0));
+      fr.add("NIDs_"+domain[i], response.makeCon(_distribution[i]==0?-1:0));
 
     // Tail-call position: this forks off in the background, and this call
     // returns immediately.  The actual model build is merely kicked off.
@@ -305,7 +283,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
   // ds[] array, and return the sum.  Dividing any ds[] element by the sum
   // turns the results into a probability distribution.
   protected abstract double score0( Chunk chks[], double ds[/*nclass*/], int row );
-  
+
   // Score the *tree* columns, and produce a confusion matrix
   protected class Score extends MRTask2<Score> {
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
@@ -320,7 +298,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
         int ycls = (int)ys.at80(row)-_ymin; // Response class from 0 to nclass-1
         assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin;
         double sum = score0(chks,ds,row);
-        double err = Double.isInfinite(sum) 
+        double err = Double.isInfinite(sum)
           ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
           : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
         assert !Double.isNaN(err) : ds[ycls] + " " + sum;

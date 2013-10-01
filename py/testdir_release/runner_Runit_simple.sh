@@ -176,13 +176,10 @@ echo "Okay to run h2oWrapper.R every time for now"
 mySetup libPaths
 
 # can be slow if it had to reinstall all packages?
-export H2OWrapperDir=../../h2o-downloaded/R
-echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
-printenv | grep H2OWrapperDir
 myR runit_RF 120
-myR runit_PCA 35
-myR runit_GLM 35
-myR runit_GBM 300
+# myR runit_PCA 35
+# myR runit_GLM 35
+# myR runit_GBM 300
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!

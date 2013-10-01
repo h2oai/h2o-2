@@ -25,6 +25,7 @@ h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
+h2o.__PAGE_PREDICT2 = "GeneratePredictionsPage2.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_PCA = "PCA.json"
 h2o.__PAGE_PCASCORE = "PCAScore.json"
@@ -40,7 +41,6 @@ h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_GBM = "GBM.json"
 h2o.__PAGE_GBMGrid = "GBMGrid.json"
 h2o.__PAGE_GBMModelView = "GBMModelView.json"
-
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip

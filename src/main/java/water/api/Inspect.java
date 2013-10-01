@@ -1,8 +1,9 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.*;
 import hex.DPCA.PCAModel;
+import hex.*;
+import hex.NeuralNet.NeuralNetModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.GLMModelView;
 import hex.rf.RFModel;
@@ -13,8 +14,8 @@ import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
 import water.fvec.*;
-import water.parser.*;
 import water.parser.CustomParser.PSetupGuess;
+import water.parser.ParseDataset;
 import water.util.Utils;
 
 import com.google.gson.*;
@@ -62,6 +63,14 @@ public class Inspect extends Request {
 
   public static Response redirect(JsonObject resp, Key dest) {
     return redirect(resp, null, dest);
+  }
+
+  public static Response redirect(Request req, Key dest) {
+    return new Response(Response.Status.redirect, req, -1, -1, "Inspect", KEY, dest );
+  }
+
+  public static String link(String txt, Key key) {
+    return "<a href='Inspect.html?key=" + key + "'>" + txt + "</a>";
   }
 
   @Override protected boolean log() {
@@ -139,6 +148,8 @@ public class Inspect extends Request {
       return GLMModelView.redirect(this, key);
     if(f instanceof GBMModel)
       return GBMModelView.redirect(this, key);
+    if(f instanceof GridSearch)
+      return ((GridSearch) f).redirect();
     return Response.error("No idea how to display a "+f.getClass());
   }
 
@@ -300,7 +311,7 @@ public class Inspect extends Request {
       Job job = Job.findJob(Key.make(_producer.value()));
       if (job!= null)
         sb.append("<div class='alert alert-success'>"
-        		+ "<b>Produced in ").append(PrettyPrint.msecs(job.executionTime(),true)).append(".</b></div>");
+        		+ "<b>Produced in ").append(PrettyPrint.msecs(job.runTimeMs(),true)).append(".</b></div>");
     }
     sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + PCA.link(key, "PCA") + ", "

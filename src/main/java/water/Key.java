@@ -183,6 +183,7 @@ public final class Key extends Iced implements Comparable {
     Key key2 = H2O.getk(key); // Get the interned version, if any
     if( key2 != null ) // There is one! Return it instead
       return key2;
+
     // Set the cache with desired replication factor, and a fake cloud index
     H2O cloud = H2O.CLOUD; // Read once
     key._cache = build_cache(cloud._idx-1,0,0,rf);
