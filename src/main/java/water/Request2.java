@@ -257,7 +257,7 @@ public abstract class Request2 extends Request {
   }
 
   // Expand grid search related argument sets
-  protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
+  @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
     // TODO: real parser for unified imbricated argument sets, expressions etc
     String[][] values = new String[_arguments.size()][];
     boolean gridSearch = false;
@@ -294,6 +294,7 @@ public abstract class Request2 extends Request {
       for( int i = 0; i < values.length; i++ ) {
         if( values[i] != null ) {
           String value = values[i][counters[i]];
+          value = value.trim();
           combination.setProperty(_arguments.get(i)._name, value);
           _arguments.get(i).reset();
           _arguments.get(i).check(job, value);

@@ -1,15 +1,11 @@
 package hex.gbm;
 
-import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.UndecidedNode;
-import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.api.DocGen;
 import water.api.GBMProgressPage;
-import water.api.RequestBuilders.Response;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
