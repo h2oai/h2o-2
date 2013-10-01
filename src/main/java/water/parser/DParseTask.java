@@ -689,7 +689,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     for(int i = 0; i < _ncolumns; ++i){
       // Entirely toss out numeric columns which are largely broken.
       if( (_colTypes[i]==ICOL || _colTypes[i]==DCOL || _colTypes[i]==FCOL ) &&
-          (double)_invalidValues[i]/_numRows > 0.2 ) {
+          (double)_invalidValues[i]/_numRows > 0.99 ) {
         _enums[i] = null;
         _max[i] = _min[i] = 0;
         _scale[i] = 0;
