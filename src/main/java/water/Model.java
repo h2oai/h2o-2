@@ -111,10 +111,10 @@ public abstract class Model extends Iced {
     int x=_names.length-1, y=fr2.numCols();
     Frame result = new Frame(Arrays.copyOfRange(fr2._names,x,y),Arrays.copyOfRange(fr2.vecs(),x,y));
     // FIXME make a generic code in Frame
-    int[] col2rem = new int[y-x];
-    for (int i=0;i<col2rem.length;i++) col2rem[i] = x+i;
-    fr2.remove(col2rem);
-    fr2.remove();
+//    int[] col2rem = new int[y-x];
+//    for (int i=0;i<col2rem.length;i++) col2rem[i] = x+i;
+//    fr2.remove(col2rem);
+//    fr2.remove();
     return result;
   }
 
