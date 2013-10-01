@@ -313,10 +313,7 @@ public class GBM extends SharedTreeModelBuilder {
           if( dn._split._col == -1 )     // Unable to decide?
             dn = tree.decided(nid = tree.node(nid)._pid); // Then take parent's decision
           int leafnid = dn.ns(chks,row); // Decide down to a leafnode
-          assert leaf <= leafnid && leafnid < tree._len : 
-          "leaf="+leaf+" <= "+leafnid+" < "+tree._len+", my nid="+nid+" oldnid="+oldnid+"\n"+
-            tree.root().toString2(new StringBuilder(),0)+
-            _fr.toString(row+nids._start);
+          assert leaf <= leafnid && leafnid < tree._len;
           assert tree.node(leafnid) instanceof LeafNode;
           // Note: I can which leaf/region I end up in, but I do not care for
           // the prediction presented by the tree.  For GBM, we compute the
@@ -349,8 +346,8 @@ public class GBM extends SharedTreeModelBuilder {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override DTree.Split bestCol( GBMUndecidedNode u ) {
-      DHistogram hs[] = u._hs;
       DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
+      DHistogram hs[] = u._hs;
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;

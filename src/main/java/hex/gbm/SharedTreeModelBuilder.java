@@ -200,7 +200,7 @@ public abstract class SharedTreeModelBuilder extends FrameJob {
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[k] = new DHistogram[tree._len-leaf][];
         final Chunk nids = chk_nids(chks,k);
-        final Chunk wrks = chk_work(chks,k); // We are predicting the residuals
+        final Chunk wrks = chk_work(chks,k); // What we predict on
 
         // Pass 1: Score a prior partially-built tree model, and make new Node
         // assignments to every row.  This involves pulling out the current
