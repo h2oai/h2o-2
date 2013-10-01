@@ -57,7 +57,8 @@ checkKMModel <- function(myKM.h2o, myKM.r) {
 test.km.benign <- function(serverH2O) {
   cat("\nImporting benign.csv data...\n")
   # benign.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
-  benign.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/benign.csv"))
+  # benign.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/benign.csv"))
+  benign.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/benign.csv")
   benign.sum = summary(benign.hex)
   print(benign.sum)
   
@@ -78,7 +79,8 @@ test.km.benign <- function(serverH2O) {
 test.km.prostate <- function(serverH2O) {
   cat("\nImporting prostate.csv data...\n")
   # prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
-  prostate.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/prostate.csv"))
+  # prostate.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/prostate.csv"))
+  prostate.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/prostate.csv")
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   

@@ -61,7 +61,8 @@ checkGBMModel <- function(myGBM.h2o, myGBM.r) {
 test.GBM.ecology <- function(serverH2O) {
   cat("\nImporting ecology_model.csv data...\n")
   # ecology.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv")
-  ecology.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/gbm_test/ecology_model.csv"))
+  # ecology.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/gbm_test/ecology_model.csv"))
+  ecology.hex = h2o.uploadFile(serverH2O, "../../smalldata/gbm_test/ecology_model.csv")
   ecology.sum = summary(ecology.hex)
   print(ecology.sum)
   

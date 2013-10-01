@@ -61,7 +61,8 @@ checkGLMModel <- function(myGLM.h2o, myGLM.r) {
 test.GLM.benign <- function(serverH2O) {
   cat("\nImporting benign.csv data...\n")
   # benign.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
-  benign.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/benign.csv"))
+  # benign.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/benign.csv"))
+  benign.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/benign.csv")
   benign.sum = summary(benign.hex)
   print(benign.sum)
   
@@ -89,7 +90,8 @@ test.GLM.benign <- function(serverH2O) {
 test.GLM.prostate <- function(serverH2O) {
   cat("\nImporting prostate.csv data...\n")
   # prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
-  prostate.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/prostate.csv"), "prostate.hex")
+  # prostate.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/prostate.csv"), "prostate.hex")
+  prostate.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/prostate.csv", "prostate.hex")
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   
@@ -118,7 +120,8 @@ test.GLM.covtype <- function(serverH2O) {
   cat("\nImporting covtype.20k.data...\n")
   # covtype.hex = h2o.importFile(serverH2O, "../../UCI/UCI-large/covtype/covtype.data")
   # covtype.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/covtype/covtype.20k.data")
-  covtype.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/covtype/covtype.20k.data"))
+  # covtype.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/covtype/covtype.20k.data"))
+  covtype.hex = h2o.uploadFile(serverH2O, "../../smalldata/covtype/covtype.20k.data")
   covtype.sum = summary(covtype.hex)
   print(covtype.sum)
   

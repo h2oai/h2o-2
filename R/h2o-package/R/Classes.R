@@ -356,13 +356,8 @@ setMethod("head", "H2OParsedData2", function(x, n = 6L, ...) {
 setMethod("tail", "H2OParsedData2", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(n > 0) {
-    myOff = nrow(x)-n
-    myView = n
-  } else {
-    myOff = abs(n)
-    myView = nrow(x)+n
-  }
+  myOff = ifelse(n > 0, nrow(x)-n, abs(n))
+  myView = ifelse(n > 0, n, nrow(x)+n)
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=myOff, view=myView)
   temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
   if(is.null(temp)) return(temp)

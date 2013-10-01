@@ -128,7 +128,7 @@ h2o.__allDone <- function(client) {
 h2o.__pollAll <- function(client, timeout) {
   start = Sys.time()
   while(!h2o.__allDone(client)) {
-    Sleep(1)
+    Sys.sleep(1)
     if(as.numeric(difftime(Sys.time(), start)) > timeout)
       stop("Timeout reached! Check if any jobs have frozen in H2O.")
   }

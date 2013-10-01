@@ -2,7 +2,7 @@
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
-setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE) { standardGeneric("h2o.prcomp") })
+setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALSE) { standardGeneric("h2o.prcomp") })
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
@@ -331,8 +331,8 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
             h2o.kmeans(data, centers, as.character(cols), iter.max) 
           })
 
-setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical"), 
-          function(data, tol, standardize) {
+setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical", retx="logical"), 
+          function(data, tol, standardize, retx) {
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, tolerance=tol, standardize=as.numeric(standardize))
             while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             destKey = res$destination_key
@@ -349,17 +349,20 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardi
             rownames(temp) = names(res$eigenvectors[[1]])
             colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
             result$rotation = temp
+            if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data))
             
             new("H2OPCAModel", key=destKey, data=data, model=result)
           })
 
-setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="ANY"), 
-          function(data, tol, standardize) {
+setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="ANY", retx="ANY"), 
+          function(data, tol, standardize, retx) {
             if(!(missing(tol) || class(tol) == "numeric"))
-              stop("tol cannot be of class", class(tol))
+              stop(paste("tol cannot be of class", class(tol)))
             if(!(missing(standardize) || class(standardize) == "logical"))
-              stop("standardize cannot be of class", class(standardize))
-            h2o.prcomp(data, tol, standardize)
+              stop(paste("standardize cannot be of class", class(standardize)))
+            if(!(missing(retx) || class(retx) == "logical"))
+              stop(paste("retx cannot be of class", class(retx)))
+            h2o.prcomp(data, tol, standardize, retx)
           })
 
 setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
@@ -474,11 +477,10 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
               # h2o.__pollAll(object@data@h2o, 60)
               # new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
             } else if(class(object) == "H2OPCAModel") {
-              numMatch = colnames(newdata) %in% colnames(object@data)
-              numPC = length(numMatch[numMatch == TRUE])
-              
               # Set randomized prediction key
               rand_pred_key = paste("__PCA_Predict_", runif(n=1, max=1e10), sep="")
+              numMatch = colnames(newdata) %in% colnames(object@data)
+              numPC = length(numMatch[numMatch == TRUE])
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
               h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
               new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)

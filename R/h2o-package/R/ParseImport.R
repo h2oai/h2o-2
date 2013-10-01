@@ -7,7 +7,7 @@ setGeneric("h2o.importFolder", function(object, path, key = "", parse = TRUE, se
 # setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE, header, sep = "", col.names) { standardGeneric("h2o.importURL") })
 setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importURL") })
 setGeneric("h2o.importHDFS", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importHDFS") })
-setGeneric("h2o.uploadFile", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.uploadFile") })
+setGeneric("h2o.uploadFile", function(object, path, key = "", parse = TRUE, sep = "", silent = TRUE) { standardGeneric("h2o.uploadFile") })
 setGeneric("h2o.parseRaw", function(data, key = "", header, sep = "", col.names) { standardGeneric("h2o.parseRaw") })
 setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.setColNames") })
 
@@ -166,25 +166,30 @@ setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", key=
             h2o.importHDFS(object, path, key, parse, sep)
           })
 
-setMethod("h2o.uploadFile", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character"), {
-  function(object, path, key, parse, sep) {
+setMethod("h2o.uploadFile", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character", silent="logical"), {
+  function(object, path, key, parse, sep, silent) {
     url = paste("http://", object@ip, ":", object@port, "/PostFile.json", sep="")
     url = paste(url, "?key=", path, sep="")
-    temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE, header = TRUE))
+    if(silent)
+      temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))
+    else
+      temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
     rawData = new("H2ORawData", h2o=object, key=path)
     if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, sep=sep) else rawData
   }
 })
 
-setMethod("h2o.uploadFile", signature(object="H2OClient", path="character", key="ANY", parse="ANY", sep="ANY"), 
-  function(object, path, key, parse, sep) {
+setMethod("h2o.uploadFile", signature(object="H2OClient", path="character", key="ANY", parse="ANY", sep="ANY", silent="ANY"), 
+  function(object, path, key, parse, sep, silent) {
     if(!(missing(key) || class(key) == "character"))
       stop(paste("key cannot be of class", class(key)))
     if(!(missing(parse) || class(parse) == "logical"))
       stop(paste("parse cannot be of class", class(parse)))
     if(!(missing(sep) || class(sep) == "character"))
       stop(paste("sep cannot be of class", class(sep)))
-    h2o.uploadFile(object, path, key, parse, sep)
+    if(!(missing(silent) || class(silent) == "logical"))
+      stop(paste("silent cannot be of class", class(silent)))
+    h2o.uploadFile(object, path, key, parse, sep, silent)
 })
 
 setMethod("h2o.parseRaw", signature(data="H2ORawData", key="character", header="logical", sep="character", col.names="H2OParsedData"), 
