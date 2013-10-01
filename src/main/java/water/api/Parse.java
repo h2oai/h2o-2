@@ -16,6 +16,7 @@ public class Parse extends Request {
   private   final ParserType     _parserType= new ParserType(PARSER_TYPE);
   private   final Separator      _separator = new Separator(SEPARATOR);
   private   final Bool           _header    = new Bool(HEADER,false,"Use first line as a header");
+  protected final Bool           _sQuotes   = new Bool("single_quotes",false,"Enable single quotes as field quotation character");
   protected final HeaderKey      _hdrFrom   = new HeaderKey("header_from_file",false);
   protected final Str            _excludeExpression    = new Str("exclude","");
   protected final ExistingCSVKey _source    = new ExistingCSVKey(SOURCE_KEY);
@@ -295,6 +296,7 @@ public class Parse extends Request {
     if(!p._setup.valid())
       return Response.error("Given parser setup is not valid, I can not parse this file.");
     CustomParser.ParserSetup setup = p._setup._setup;
+    setup._singleQuotes = _sQuotes.value();
     Key dest = Key.make(_dest.value());
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.

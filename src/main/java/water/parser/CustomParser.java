@@ -68,6 +68,7 @@ public abstract class CustomParser extends Iced {
     public final ParserType _pType;
     public final byte _separator;
     public boolean _header;
+    public boolean _singleQuotes;
     public String [] _columnNames;
     public final int _ncols;
 
@@ -79,7 +80,7 @@ public abstract class CustomParser extends Iced {
       _columnNames = null;
     }
     protected ParserSetup(ParserType t) {
-      this(t,CsvParser.AUTO_SEP,0,false,null);
+      this(t,CsvParser.AUTO_SEP,0,false,null,false);
     }
     public ParserSetup(ParserType t, byte sep, boolean header) {
       _pType = t;
@@ -88,15 +89,16 @@ public abstract class CustomParser extends Iced {
       _columnNames = null;
       _ncols = 0;
     }
-    public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames) {
+    public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames, boolean singleQuotes) {
       _pType = t;
       _separator = sep;
       _ncols = ncolumns;
       _header = header;
       _columnNames = columnNames;
+      _singleQuotes = singleQuotes;
     }
     public ParserSetup clone(){
-      return new ParserSetup(_pType, _separator, _ncols,_header,null);
+      return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes);
     }
     public boolean isCompatible(ParserSetup other){
       if(other == null || _pType != other._pType)return false;
