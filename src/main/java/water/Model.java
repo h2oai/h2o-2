@@ -87,6 +87,7 @@ public abstract class Model extends Iced {
     Vec v = fr2.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
+    // FIXME adapt domain according to a mapping!
     v._domain = _domains[_domains.length-1];
     fr2.add("predict",v);
     if( nclasses() > 1 )
@@ -108,7 +109,13 @@ public abstract class Model extends Iced {
     }.doAll(fr2);
     // Return just the output columns
     int x=_names.length-1, y=fr2.numCols();
-    return new Frame(Arrays.copyOfRange(fr2._names,x,y),Arrays.copyOfRange(fr2.vecs(),x,y));
+    Frame result = new Frame(Arrays.copyOfRange(fr2._names,x,y),Arrays.copyOfRange(fr2.vecs(),x,y));
+    // FIXME make a generic code in Frame
+    int[] col2rem = new int[y-x];
+    for (int i=0;i<col2rem.length;i++) col2rem[i] = x+i;
+    fr2.remove(col2rem);
+    fr2.remove();
+    return result;
   }
 
   /** Single row scoring, on a compatible Frame.  */
@@ -188,17 +195,7 @@ public abstract class Model extends Iced {
           throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) categorical, was passed a numeric");
         throw H2O.unimpl();     // Attempt an asEnum?
       } else if( !Arrays.deepEquals(ms, ds) ) {
-        int emap[] = map[c] = new int[ds.length];
-        HashMap<String,Integer> md = new HashMap<String, Integer>();
-        for( int i = 0; i < ms.length; i++) md.put(ms[i], i);
-        for( int i = 0; i < ds.length; i++) {
-          Integer I = md.get(ds[i]);
-          if( I==null && exact )
-            throw new IllegalArgumentException("Column "+_names[c]+" was not trained with factor '"+ds[i]+"' which appears in the data");
-          emap[i] = I==null ? -1 : I;
-        }
-        for( int i = 0; i < ds.length; i++)
-          assert emap[i]==-1 || ms[emap[i]].equals(ds[i]);
+        map[c] = getDomainMapping(_names[c], ms, ds, exact);
       } else {
         // null mapping is equal to identity mapping
       }
@@ -214,13 +211,14 @@ public abstract class Model extends Iced {
     int map[][] = adapt(fr.names(),fr.domains(),exact);
     int cmap[] =     map[_names.length-1];
     Vec vecs[] = new Vec[_names.length-1];
-    for( int c=0; c<cmap.length; c++ ) {
+    for( int c=0; c<cmap.length; c++ ) { // iterate over columns
       int d = cmap[c];          // Data index
       if( d == -1 ) throw H2O.unimpl(); // Swap in a new all-NA Vec
       else if( map[c] == null ) {       // No or identity domain map?
         vecs[c] = fr.vecs()[d];         // Just use the Vec as-is
       } else {
-        throw H2O.unimpl();     // Domain mapping needed!
+        // Domain mapping - creates a new vector
+        vecs[c] = remapVecDomain(map[c], fr.vecs()[d]);
       }
     }
     return new Frame(Arrays.copyOf(_names,_names.length-1),vecs);
@@ -244,4 +242,30 @@ public abstract class Model extends Iced {
   // Version where the user has just ponied-up an array of data to be scored.
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
+
+  /**
+   * Returns a mapping between values domains for a given column.
+   */
+  public static int[] getDomainMapping(String colName, String[] modelDom, String[] dom, boolean exact) {
+    int emap[] = new int[dom.length];
+    HashMap<String,Integer> md = new HashMap<String, Integer>();
+    for( int i = 0; i < modelDom.length; i++) md.put(modelDom[i], i);
+    for( int i = 0; i < dom.length; i++) {
+      Integer I = md.get(dom[i]);
+      if( I==null && exact )
+        throw new IllegalArgumentException("Column "+colName+" was not trained with factor '"+dom[i]+"' which appears in the data");
+      emap[i] = I==null ? -1 : I;
+    }
+    for( int i = 0; i < dom.length; i++)
+      assert emap[i]==-1 || modelDom[emap[i]].equals(dom[i]);
+    return emap;
+  }
+
+  /** Recreate given vector respecting given domain mapping. */
+  public static Vec remapVecDomain(int[] map, Vec vec) {
+    assert vec._domain != null; // support only string enums
+    // Make a vector transforming original vector on-the-fly according to a given map
+    Vec rVec = vec.makeTransf(map);
+    return rVec;
+  }
 }
