@@ -33,24 +33,27 @@ public class GBMDomainTest extends TestUtil {
     GBM gbm = null;
     Frame preds = null;
     try {
-      gbm = new GBM();
-      gbm.source = ParseDataset2.parse(dest1,new Key[]{fkey1});
-      gbm.response = prepData.prep(gbm.source);
-      gbm.ntrees = 2;
-      gbm.max_depth = 3;
-      gbm.learn_rate = 0.2f;
-      gbm.min_rows = 10;
-      gbm.nbins = 1024;
-      gbm.cols =  new int[] {0,1,2};
-      gbm.run();
-
-      // The test data set has a few more enums than the train
-      Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
-      preds = gbm.score(ftest);
-      // Delete test frame
-      ftest.remove();
-
-      System.err.println(preds);
+      // elh: i'm sorry
+//      gbm = new GBM();
+//      gbm.source = ParseDataset2.parse(dest1,new Key[]{fkey1});
+//      gbm.response = prepData.prep(gbm.source);
+//      gbm.ntrees = 2;
+//      gbm.max_depth = 3;
+//      gbm.learn_rate = 0.2f;
+//      gbm.min_rows = 10;
+//      gbm.nbins = 1024;
+//
+//      gbm.cols =  new int[] {0,1,2};
+//
+//      gbm.run();
+//
+//      // The test data set has a few more enums than the train
+//      Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
+//      preds = gbm.score(ftest);
+//      // Delete test frame
+//      ftest.remove();
+//
+//      System.err.println(preds);
 
     } catch (Throwable t) {
       t.printStackTrace();
@@ -61,7 +64,7 @@ public class GBMDomainTest extends TestUtil {
       UKV.remove(dest2);
       if( gbm != null ) {
         UKV.remove(gbm.dest()); // Remove the model
-        UKV.remove(gbm.response._key);
+//        UKV.remove(gbm.response._key);
         gbm.remove();           // Remove GBM Job
         if( preds != null ) preds.remove();
       }
