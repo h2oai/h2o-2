@@ -25,7 +25,7 @@ h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
-h2o.__PAGE_PREDICT2 = "GeneratePredictionsPage2.json"
+h2o.__PAGE_PREDICT2 = "Predict.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_PCA = "PCA.json"
 h2o.__PAGE_PCASCORE = "PCAScore.json"
@@ -117,6 +117,21 @@ h2o.__poll <- function(client, keyName) {
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
   if(prog$cancelled) stop("Job key ", keyName, " has been cancelled")
   prog$progress
+}
+
+h2o.__allDone <- function(client) {
+  res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
+  notDone = lapply(res$jobs, function(x) { x$progress != -1.0 })
+  !any(unlist(notDone))
+}
+
+h2o.__pollAll <- function(client, timeout) {
+  start = Sys.time()
+  while(!h2o.__allDone(client)) {
+    Sleep(1)
+    if(as.numeric(difftime(Sys.time(), start)) > timeout)
+      stop("Timeout reached! Check if any jobs have frozen in H2O.")
+  }
 }
 
 h2o.__exec <- function(client, expr) {
