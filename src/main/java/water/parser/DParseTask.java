@@ -723,7 +723,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           _colTypes[i] = SHORT;
           _bases[i] = (int)_min[i];
         } else if (_max[i] - _min[i] < (1L << 32) &&
-                   _min[i] > Integer.MIN_VALUE && _min[i] < Integer.MAX_VALUE) {
+                   _min[i] > Integer.MIN_VALUE && _max[i] < Integer.MAX_VALUE) {
           _colTypes[i] = INT;
           _bases[i] = (int)_min[i];
         } else
