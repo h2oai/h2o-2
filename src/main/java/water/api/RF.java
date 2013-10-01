@@ -33,7 +33,7 @@ public class RF extends Request {
   protected final Bool              _parallel   = new Bool(PARALLEL,true,"Build trees in parallel");
   protected final Int               _exclusiveSplitLimit = new Int(EXCLUSIVE_SPLIT_LIMIT, null, 0, Integer.MAX_VALUE);
   protected final Bool              _iterativeCM         = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
-  protected final Bool              _useNonLocalData     = new Bool(USE_NON_LOCAL_DATA, false, "Try to use also non-local data.");
+  protected final Bool              _useNonLocalData     = new Bool(USE_NON_LOCAL_DATA, true, "Load non-local data.");
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
