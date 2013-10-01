@@ -56,18 +56,17 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     selectCols();
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
-    _ncols = _train.length;
+    _ncols = _train.length-1;   // Do not count response in the predictors count
     _nrows = source.numRows() - response.naCnt();
-    _ymin = (int)response.min();
+    _ymin = (int)response.min(); 
+   _nclass = response.isInt() ? (char)(response.max()-_ymin+1) : 1; 
     _errs = new double[0];                // No trees yet
+    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
     final Key dataKey = null;
     String[] domain = response.domain();
-    _nclass = domain.length;
-    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
 
     Frame fr = new Frame(_names, _train);
-    fr.add(_responseName, response); // Hardwire response as last vector
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
 
     // Find the class distribution
