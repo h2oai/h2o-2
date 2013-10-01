@@ -331,13 +331,13 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="
 
 setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
           function(y, x_ignore, data, ntree, depth, classwt) {
-            myCol = colnames(data)
-            if(!y %in% myCol) stop(paste(y, "is an invalid response column!"))
-            if(!(length(x_ignore) == 1 && x_ignore == "")) {
-              temp = match(TRUE, !x_ignore %in% myCol)
-              if(!is.na(temp)) stop(paste(x_ignore[temp], "is an invalid predictor column!"))
-              if(y %in% x_ignore) stop(paste("Cannot ignore response variable", y))
-            }
+            # myCol = colnames(data)
+            # if(!y %in% myCol) stop(paste(y, "is an invalid response column!"))
+            # if(!(length(x_ignore) == 1 && x_ignore == "")) {
+            #  temp = match(TRUE, !x_ignore %in% myCol)
+            #  if(!is.na(temp)) stop(paste(x_ignore[temp], "is an invalid predictor column!"))
+            #  if(y %in% x_ignore) stop(paste("Cannot ignore response variable", y))
+            # }
             
             # Set randomized model_key
             rand_model_key = paste("__RF_Model__", runif(n=1, max=1e10), sep="")
@@ -401,8 +401,7 @@ setMethod("h2o.randomForest", signature(y="numeric", x_ignore="ANY", data="H2OPa
               stop(paste("x_ignore cannot be of class", class(x_ignore)))
             if(!(missing(classwt) || class(classwt) == "numeric"))
               stop(paste("classwt cannot be of class", class(classwt)))
-            if(y < 1 || y > ncol(data)) stop(paste("Response index must be between 1 and", ncol(data)))
-            h2o.randomForest(colnames(data)[y], as.character(x_ignore), data, ntree, depth, classwt)
+            h2o.randomForest(as.character(y), as.character(x_ignore), data, ntree, depth, classwt)
           })
 
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="logical"),
