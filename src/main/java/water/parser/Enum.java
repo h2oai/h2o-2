@@ -53,7 +53,7 @@ public final class Enum extends Iced implements Cloneable{
     if(res != null ) return res; // Recorded already
     assert str._length < 65535;      // Length limit so 65535 can be used as a sentinel
     Integer newVal = new Integer(_id.incrementAndGet());
-    res = m.putIfAbsent(new ValueString(Arrays.copyOfRange(str._buf, str._off, str._off + str._length)), newVal);
+    res = m.putIfAbsent(new ValueString(str.toString()), newVal);
     if(res != null)return res;
     if(m.size() > MAX_ENUM_SIZE){
       kill();

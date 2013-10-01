@@ -390,8 +390,8 @@ NEXT_CHAR:
         // ---------------------------------------------------------------------
         case COND_QUOTE:
           if (c == quotes) {
-            //TODO
-            _str.set(bits, offset+1, 0);
+            _str.addChar();
+            _str.skipChar();
             state = STRING;
             break NEXT_CHAR;
           } else {
