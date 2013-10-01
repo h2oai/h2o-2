@@ -87,6 +87,8 @@ public class GBMTest extends TestUtil {
       gbm.learn_rate = 0.1f;
       gbm.min_rows = 10;
       gbm.nbins = 100;
+      gbm.cols = new int[gbm.source.numCols()];
+      for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
       gbm.run();
 
       fr = gbm.score(gbm.source);
