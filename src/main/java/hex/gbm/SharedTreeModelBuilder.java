@@ -58,16 +58,16 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     assert 1 <= min_rows;
     _ncols = _train.length;
     _nrows = source.numRows() - response.naCnt();
-    _ymin = (int)response.min();
+    _ymin = (int)response.min(); 
+    _nclass = response.isInt() ? (char)(response.max()-_ymin+1) : 1; 
     _errs = new double[0];                // No trees yet
+    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
     final Key dataKey = null;
     String[] domain = response.domain();
-    _nclass = domain.length;
-    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
 
     Frame fr = new Frame(_names, _train);
-    fr.add(_responseName, response); // Hardwire response as last vector
+    fr.add("response",response);
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
 
     // Find the class distribution
@@ -296,7 +296,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       for( int row=0; row<ys._len; row++ ) {
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
         int ycls = (int)ys.at80(row)-_ymin; // Response class from 0 to nclass-1
-        assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin;
+        assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin+" "+ys+_fr;
         double sum = score0(chks,ds,row);
         double err = Double.isInfinite(sum)
           ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
