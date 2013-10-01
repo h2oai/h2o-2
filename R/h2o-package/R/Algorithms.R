@@ -401,7 +401,8 @@ setMethod("h2o.randomForest", signature(y="numeric", x_ignore="ANY", data="H2OPa
               stop(paste("x_ignore cannot be of class", class(x_ignore)))
             if(!(missing(classwt) || class(classwt) == "numeric"))
               stop(paste("classwt cannot be of class", class(classwt)))
-            h2o.randomForest(as.character(y), as.character(x_ignore), data, ntree, depth, classwt)
+            if(y < 1 || y > ncol(data)) stop(paste("Response index must be between 1 and", ncol(data)))
+            h2o.randomForest(colnames(data)[y], as.character(x_ignore), data, ntree, depth, classwt)
           })
 
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="logical"),

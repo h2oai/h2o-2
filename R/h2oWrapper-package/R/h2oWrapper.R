@@ -2,19 +2,23 @@ setGeneric("h2oWrapper.init", function(ip = "127.0.0.1", port = 54321, startH2O 
 
 # Install H2O R package dependencies
 # MUST RUN THIS ON FIRST INSTALLATION!!
-h2oWrapper.installDepPkgs <- function() {
+h2oWrapper.installDepPkgs <- function(optional = FALSE) {
   myPackages = rownames(installed.packages())
   
   # For communicating with H2O via REST API
   if(!"bitops" %in% myPackages) install.packages("bitops")
   if(!"RCurl" %in% myPackages) install.packages("RCurl")
   if(!"rjson" %in% myPackages) install.packages("rjson")
+  myReqPkgs = c("RCurl", "rjson", "tools")
   
   # For plotting clusters in h2o.kmeans demo
-  if(!"fpc" %in% myPackages) install.packages("fpc")
-  if(!"cluster" %in% myPackages) install.packages("cluster")
+  if(optional) {
+    if(!"fpc" %in% myPackages) install.packages("fpc")
+    if(!"cluster" %in% myPackages) install.packages("cluster")
+    myReqPkgs = c(myReqPkgs, "fpc", "cluster")
+  }
   
-  myReqPkgs = c("RCurl", "rjson", "tools", "fpc", "cluster")
+  # myReqPkgs = c("RCurl", "rjson", "tools", "fpc", "cluster")
   temp = lapply(myReqPkgs, require, character.only = TRUE)
 }
 
@@ -24,7 +28,7 @@ h2oWrapper.installDepPkgs <- function() {
 # 3) If user does want to start H2O, but running non-locally, print an error
 setMethod("h2oWrapper.init", signature(ip="character", port="numeric", startH2O="logical", silentUpgrade="logical", promptUpgrade="logical"), 
           function(ip, port, startH2O, silentUpgrade, promptUpgrade) {
-  myReqPkgs = c("RCurl", "rjson", "tools", "fpc", "cluster")
+  myReqPkgs = c("RCurl", "rjson", "tools")
   temp = lapply(myReqPkgs, require, character.only = TRUE)
             
   myURL = paste("http://", ip, ":", port, sep="")
