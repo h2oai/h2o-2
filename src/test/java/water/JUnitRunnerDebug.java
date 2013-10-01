@@ -1,10 +1,10 @@
 package water;
 
-import hex.NeuralNetIrisTest;
-
 import java.util.ArrayList;
+import java.util.List;
 
-import org.junit.runner.Result;
+import org.junit.internal.TextListener;
+import org.junit.runner.*;
 import org.junit.runner.notification.Failure;
 
 import water.deploy.NodeCL;
@@ -28,20 +28,48 @@ public class JUnitRunnerDebug {
       new NodeCL(("-ip 127.0.0.1 -port 54323 -flatfile " + flat).split(" ")).start();
       new NodeCL(("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
 
-      ArrayList<Class> tests = new ArrayList<Class>();
+      List<Class> tests = new ArrayList<Class>();
 
       // Classes to test:
-      tests.add(NeuralNetIrisTest.class);
+      //tests = JUnitRunner.all();
+      tests.add(hex.rf.RFPredDomainTest.class);
 
-      Result result = org.junit.runner.JUnitCore.runClasses(tests.toArray(new Class[0]));
+      JUnitCore junit = new JUnitCore();
+      junit.addListener(new LogListener());
+      Result result = junit.run(tests.toArray(new Class[0]));
       if( result.getFailures().size() == 0 )
-        System.out.println("Success!");
-      else {
-        for( Failure f : result.getFailures() ) {
-          Log.info(f.getDescription());
-          f.getException().printStackTrace();;
-        }
-      }
+        Log.info("Success!");
+//      else {
+//        for( Failure f : result.getFailures() ) {
+//          Log.info(f.getDescription());
+//          f.getException().printStackTrace();;
+//        }
+//      }
+    }
+  }
+
+  static class LogListener extends TextListener {
+    LogListener() {
+      super(System.out);
+    }
+
+    @Override public void testRunFinished(Result result) {
+      printHeader(result.getRunTime());
+      printFailures(result);
+      printFooter(result);
+    }
+
+    @Override public void testStarted(Description description) {
+      Log.info("");
+      Log.info("Starting test " + description);
+    }
+
+    @Override public void testFailure(Failure failure) {
+      Log.info("Test failed " + failure);
+    }
+
+    @Override public void testIgnored(Description description) {
+      Log.info("Ignoring test " + description);
     }
   }
 }

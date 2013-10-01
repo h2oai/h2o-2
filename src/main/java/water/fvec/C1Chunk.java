@@ -2,7 +2,10 @@ package water.fvec;
 
 import water.*;
 
-// The empty-compression function, where data is in UNSIGNED bytes
+/**
+ * The empty-compression function, if all elements fit directly on UNSIGNED bytes.
+ * Cannot store 0xFF, the value is a marker for N/A.
+ */
 public class C1Chunk extends Chunk {
   static final int OFF=0;
   static protected final long _NA = 0xFF;

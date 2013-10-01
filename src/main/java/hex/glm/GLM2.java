@@ -61,12 +61,12 @@ public class GLM2 extends FrameJob{
   double beta_eps = 1e-4;
 
   public GLM2 setTweedieVarPower(double d){tweedie_variance_power = d; return this;}
-  public GLM2(String desc, Key dest) {
-    super(desc, dest);
-  }
 
+  public GLM2() {
+  }
   public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda) {
-    super(desc, dest);
+    description = desc;
+    destination_key = dest;
     source = src;
     this.family = family;
     this.link = link;
@@ -74,14 +74,7 @@ public class GLM2 extends FrameJob{
     this.lambda = lambda;
     this.standardize = standardize;
   }
-  public static final String KEY_PREFIX = "__GLMModel_";
-  public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
-  public GLM2() {super("glm2",makeKey());}
 
-  @Override public Key dest(){
-    if(destination_key == null)destination_key = makeKey();
-    return destination_key;
-  }
   private long _startTime;
   @Override protected Response serve() {
     link = family.defaultLink;
@@ -123,7 +116,7 @@ public class GLM2 extends FrameJob{
       this.fr = fr;
       this.fjt = fjt;
     }
-    public Iteration clone(){return new Iteration(solver,fr,fjt);}
+    @Override public Iteration clone(){return new Iteration(solver,fr,fjt);}
 
     @Override public void callback(GLMIterationTask glmt) {
       double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
@@ -166,7 +159,6 @@ public class GLM2 extends FrameJob{
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
     source.remove(ignored_cols);
     final Vec [] vecs =  source.vecs();
-    int response = vecs.length-1;
     ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
     for(int i = 0; i < vecs.length-1; ++i)// put response to the end
       if(vecs[i] == vresponse){

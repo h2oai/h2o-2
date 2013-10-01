@@ -34,7 +34,7 @@ public final class ParseDataset extends Job {
   public final Key  _progress;
 
   private ParseDataset(Key dest, Key[] keys) {
-    super("Parse", dest);
+    destination_key = dest;
     Value dataset = DKV.get(keys[0]);
     long total = dataset.length() * Pass.values().length;
     for(int i = 1; i < keys.length; ++i){

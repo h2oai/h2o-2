@@ -5,8 +5,6 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import jsr166y.*;
 import water.exec.Function;
@@ -432,15 +430,14 @@ public final class H2O {
   // replication.
 
   public static final Value putIfMatch( Key key, Value val, Value old ) {
-    assert val==null || val._key.equals(key); // Keys matched
-    if( old != null && val != null ) // Have an old value?
-      key = val._key = old._key; // Use prior key in val
+    if( old != null ) // Have an old value?
+      key = old._key; // Use prior key
+    if( val != null )
+      val._key = key;
 
     // Insert into the K/V store
     Value res = STORE.putIfMatchUnlocked(key,val,old);
-    assert chk_equals_key(res, old);
     if( res != old ) return res; // Return the failure cause
-    assert chk_equals_key(res, old, val);
     // Persistence-tickle.
     // If the K/V mapping is going away, remove the old guy.
     // If the K/V mapping is changing, let the store cleaner just overwrite.
@@ -450,22 +447,9 @@ public final class H2O {
     return old; // Return success
   }
 
-  // assert that all of val, old & res that are not-null all agree on key.
-  private static final boolean chk_equals_key( Value... vs ) {
-    Key k = null;
-    for( Value v : vs ) {
-      if( v != null ) {
-        assert k == null || k == v._key : "Mismatched keys: "+k+" vs "+v._key;
-        k = v._key;
-      }
-    }
-    return true;
-  }
-
   // Raw put; no marking the memory as out-of-sync with disk. Used to import
   // initial keys from local storage, or to intern keys.
   public static final Value putIfAbsent_raw( Key key, Value val ) {
-    assert val.isSameKey(key);
     Value res = STORE.putIfMatchUnlocked(key,val,null);
     assert res == null;
     return res;

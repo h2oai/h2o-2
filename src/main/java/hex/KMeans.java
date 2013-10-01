@@ -22,10 +22,6 @@ public class KMeans extends Job {
     return Key.make(KEY_PREFIX + Key.make());
   }
 
-  private KMeans(Key dest, int k, int... cols) {
-    super("KMeans K: " + k + ", Cols: " + cols.length, dest);
-  }
-
   public static KMeans start(Key dest, final ValueArray va, final int k, final Initialization init, //
       final int maxIter, long randSeed, boolean normalize, int... cols) {
 
@@ -41,7 +37,8 @@ public class KMeans extends Job {
     int cols2[] = Arrays.copyOf(cols, cols.length + 1);
     cols2[cols.length] = -1;  // No response column
 
-    final KMeans job = new KMeans(dest, k, cols);
+    final KMeans job = new KMeans();
+    job.destination_key = dest;
     final KMeansModel res = new KMeansModel(job.dest(), cols2, va._key);
     res._normalized = normalize;
     res._randSeed = randSeed;
