@@ -22,9 +22,9 @@ public class Frame extends Iced {
 
   public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
   public Frame( Vec... vecs ){ this(null,vecs);}
-  public Frame( String[] names, Vec[] vecs ) { 
-    _names=names; 
-    _vecs=vecs; 
+  public Frame( String[] names, Vec[] vecs ) {
+    _names=names;
+    _vecs=vecs;
     _keys = new Key[vecs.length];
     for( int i=0; i<vecs.length; i++ ) {
       Key k = _keys[i] = vecs[i]._key;
@@ -33,12 +33,12 @@ public class Frame extends Iced {
     }
   }
 
-  public final Vec[] vecs() { 
+  public final Vec[] vecs() {
     if( _vecs != null ) return _vecs;
     _vecs = new Vec[_keys.length];
     for( int i=0; i<_keys.length; i++ )
       _vecs[i] = DKV.get(_keys[i]).get();
-    return _vecs; 
+    return _vecs;
   }
   // Force a cache-flush & reload, assuming vec mappings were altered remotely
   public final Vec[] reloadVecs() { _vecs=null; return vecs(); }

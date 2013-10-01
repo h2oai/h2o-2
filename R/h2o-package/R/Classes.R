@@ -335,3 +335,38 @@ setMethod("summary", "H2OParsedData2", function(object) {
   myData = matrix(unlist(myList), ncol = ncol(object), dimnames = list(names(myList[[1]]), colnames(object)))
   data.frame(myData)
 })
+
+setMethod("as.data.frame", "H2OParsedData2", function(x) {
+  temp = new("H2OParsedData", h2o=x@h2o, key=x@key)
+  as.data.frame(temp)
+})
+
+setMethod("head", "H2OParsedData2", function(x, n = 6L, ...) {
+  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
+  n = round(n)
+  myView = ifelse(n > 0, n, nrow(x)+n)
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=myView)
+  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
+  if(is.null(temp)) return(temp)
+  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
+  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
+  x.df
+})
+
+setMethod("tail", "H2OParsedData2", function(x, n = 6L, ...) {
+  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
+  n = round(n)
+  if(n > 0) {
+    myOff = nrow(x)-n
+    myView = n
+  } else {
+    myOff = abs(n)
+    myView = nrow(x)+n
+  }
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=myOff, view=myView)
+  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
+  if(is.null(temp)) return(temp)
+  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
+  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
+  x.df
+})

@@ -477,7 +477,7 @@ class DTree extends Iced {
       this.N = prior.N; this.ymin = prior.ymin; this.cm = cm;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
       errs[errs.length-1] = err;
-      assert trees.length == nclasses()-ymin;
+      assert trees.length == nclasses()-ymin : "Trees="+trees.length+" nclasses()="+nclasses()+" ymin="+ymin;
       treeBits = Arrays.copyOf(prior.treeBits,prior.treeBits.length+1);
       CompressedTree ts[] = treeBits[treeBits.length-1] = new CompressedTree[trees.length];
       for( int c=0; c<trees.length; c++ )

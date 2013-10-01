@@ -2,11 +2,11 @@ H2O in R
 ------------
 
 
-These instructions assume you are using R 2.13.0 or later.  
+These instructions assume you are using R 2.15.0 or later.  
 
 **STEP 1**
 
-The download package can be obtained by clicking on the button **Download H2O** at `http://0xdata.com/h2o <http://0xdata.com/h2o>`_.
+The download package can be obtained by clicking on the button "Download H2O" at http://0xdata.com/h2o <http://0xdata.com/h2o.
 
 Unzip the downloaded h2o zip file
 
@@ -95,13 +95,11 @@ Getting started from a zip file
 -------------------------------
 
 
-""""""""""""""""""
-1. Download the latest release of H2O as a .zip file from `the H2O website <http://0xdata.com/h2O/>`_.
+1. Download the latest release of H2O as a .zip file from the H2O website http://0xdata.com/h2O/.
 
 2. From your terminal change your working directory to the same directory where your .zip file is saved.
 
 3. From your terminal, unzip the .zip file.  For example:
-
 
 
   unzip h2o-1.7.0.520.zip

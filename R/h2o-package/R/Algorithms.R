@@ -6,21 +6,20 @@ setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE) { standardG
 setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
-setGeneric("h2o.gbm", function(data, destination, y, x_ignore = "", ntrees = 10, max_depth=8, learn_rate=.2, min_rows=10) { standardGeneric("h2o.gbm") })
-setGeneric("h2o.gbmgrid", function(data, destination, y, x_ignore = as.numeric(NA), ntrees = c(10,100), max_depth=c(1,5,10), learn_rate=c(0.01,0.1,0.2), min_rows=10) { standardGeneric("h2o.gbmgrid") })
+setGeneric("h2o.gbm", function(data, destination, y, x = "", ntrees = 10, max_depth=8, learn_rate=.2, min_rows=10) { standardGeneric("h2o.gbm") })
+setGeneric("h2o.gbmgrid", function(data, destination, y, x = as.numeric(NA), ntrees = c(10,100), max_depth=c(1,5,10), learn_rate=c(0.01,0.1,0.2), min_rows=10) { standardGeneric("h2o.gbmgrid") })
 setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predict") })
 
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-          function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-      # ignoredFeat = ifelse(length(x_ignore) == 1 && is.na(x_ignore), "", paste(x_ignore - 1, sep="", collapse=","))
-      if(length(x_ignore) == 1 && any(is.na(x_ignore) == TRUE))
-        ignoredFeat = ""
-      else if(min(x_ignore) < 1 || max(x_ignore) > ncol(data))
-        stop("Column index out of bounds!")
-      else
-        ignoredFeat = paste(x_ignore - 1, sep="", collapse=",")
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="numeric", x="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
+          function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+      if (length(x) < 1) stop("gbm requires at least one explanatory variable")
+      if( any( x < 1 | x > ncol(data) ) ) stop(paste('out of range explanatory variable', paste( x[which(x < 1 || x > ncol(data))], collapse=',')))
+      if( y < 1 || y > ncol(data) ) stop(paste(y, 'is out of range'))
+      if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
+      x <- x - 1
+      cols=paste(x,collapse=',')
       
-      res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destination, source=data@key, vresponse=y, ignored_cols=ignoredFeat, ntrees=ntrees, max_depth=max_depth, learn_rate=learn_rate, min_rows=min_rows)
+      res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destination, source=data@key, response=colnames(data)[y], cols=cols, ntrees=ntrees, max_depth=max_depth, learn_rate=learn_rate, min_rows=min_rows)
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
 	    res2=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView,'_modelKey'=destination)
       
@@ -40,38 +39,61 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
 	    resGBM
 	})
 
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x_ignore="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-          function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-            if(length(x_ignore) == 1 && x_ignore == "")
-              h2o.gbm(data, destination, y, as.numeric(NA), ntrees, max_depth, learn_rate, min_rows)
-            else if(any(c(y, x_ignore) %in% colnames(data) == FALSE))
-              stop("Column name does not exist!")
-            else {
-              myCol = colnames(data); myCol = myCol[-which(myCol == y)]
-              myIgnore = which(myCol %in% x_ignore)
-              h2o.gbm(data, destination, y, myIgnore, ntrees, max_depth, learn_rate, min_rows)
-            }
-          })
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
+   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+      cc <- colnames( data )
+      if( !(y %in% cc) ) stop(paste(y, 'is not a valid column'))
+      y_i <- which(y==colnames(data))
+      if( y_i %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
+      if( any( x < 1 | x > ncol(data) ) ) stop(paste('out of range explanatory variable', paste( x[which(x < 1 | x > ncol(data))], collapse=',')))
+      if( y_i < 1 || y_i > ncol(data) ) stop(paste(y, 'is out of range'))
+      h2o.gbm(data, destination, y_i, x, ntrees, max_depth, learn_rate, min_rows)
+})
 
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character",y="character",x_ignore="ANY",ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
-          function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-            if(!(missing(x_ignore) || class(x_ignore) == "numeric" || class(x_ignore) == "character"))
-              stop(paste("ignore cannot be of class", class(x_ignore)))
-            else if(!(missing(ntrees) || class(ntrees) == "numeric"))
-              stop(paste("ntrees cannot be of class", class(ntrees)))
-            else if(!(missing(max_depth) || class(max_depth) == "numeric"))
-              stop(paste("max_depth cannot be of class", class(max_depth)))
-            else if(!(missing(learn_rate) || class(learn_rate) == "numeric"))
-              stop(paste("learn_rate cannot be of class", class(learn_rate)))
-	          else if(!(missing(min_rows) || class(min_rows) == "numeric"))
-              stop(paste("min_rows cannot be of class", class(min_rows)))
-            h2o.gbm(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) 
-          })
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
+   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+      cc <- colnames( data )
+      if( !(y %in% cc) ) stop(paste(y, 'is not a valid column'))
+      if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
+      y_i <- which(y==cc)
 
-setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character", y="character", x_ignore="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-          function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-            ignoredFeat = ifelse(length(x_ignore) == 1 && is.na(x_ignore), "", paste(x_ignore, sep="", collapse=","))
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMGrid, destination_key=destination, source=data@key, vresponse=y, ignored_cols=ignoredFeat, ntrees=ntrees, max_depth=max_depth, learn_rate=learn_rate, min_rows=min_rows, nbins=1024)
+      h2o.gbm(data, destination, y_i, x, ntrees, max_depth, learn_rate, min_rows)
+})
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="numeric", x="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
+   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+      cc <- colnames( data )
+      if( any( !(x %in% cc) ) ) stop(paste('column', x[ which( !(x %in% cc) ) ], 'is not a valid column name'))
+      if( y < 1 || y > ncol( data ) ) stop(paste(y, 'is not a valid column index'))
+      cols <- sapply( X=x, function(x) which(x==cc) )
+      if( y %in% cols ) stop(paste(y, 'is both an explanatory and dependent variable'))
+
+      h2o.gbm(data, destination, y, cols, ntrees, max_depth, learn_rate, min_rows)
+})
+
+setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character",y="character",x="ANY",ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
+   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+      if(!(missing(x) || class(x) == "numeric" || class(x) == "character"))
+         stop(paste("x cannot be of class", class(x)))
+      else if(!(missing(ntrees) || class(ntrees) == "numeric"))
+         stop(paste("ntrees cannot be of class", class(ntrees)))
+      else if(!(missing(max_depth) || class(max_depth) == "numeric"))
+         stop(paste("max_depth cannot be of class", class(max_depth)))
+      else if(!(missing(learn_rate) || class(learn_rate) == "numeric"))
+         stop(paste("learn_rate cannot be of class", class(learn_rate)))
+      else if(!(missing(min_rows) || class(min_rows) == "numeric"))
+         stop(paste("min_rows cannot be of class", class(min_rows)))
+      if(missing(min_rows)) min_rows<-10
+      if(missing(x)) x = setdiff(colnames(data), y)
+      h2o.gbm(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) 
+})
+
+setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character", y="numeric", x="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
+          function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+            if( y < 1 || y > ncol(data) ) stop(paste(y, 'is out of range of the data columns'))
+            if( any( x < 1 | x > ncol(data) ) ) stop(paste('out of range explanatory variable', paste( x[which(x < 1 | x > ncol(data))], collapse=',')))
+            x = sort(x)
+
+            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMGrid, destination_key=destination, source=data@key, vresponse=y, cols=paste(x,collapse=','), ntrees=ntrees, max_depth=max_depth, learn_rate=learn_rate, min_rows=min_rows, nbins=1024)
             while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
             res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destination)
             
@@ -101,10 +123,21 @@ setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character"
             resGBMGrid
           })
 
-setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character",y="character", x_ignore="ANY", ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
-          function(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) {
-            if(!(missing(x_ignore) || class(x_ignore) == "numeric"))
-              stop(paste("ignore cannot be of class", class(x_ignore)))
+setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character",y="character", x="character", ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
+   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+      cc <- colnames( data )
+      if( any( !(x %in% cc) ) ) stop(paste('column', x[ which( !(x %in% cc) ) ], 'is not a valid column name'))
+      cols <- paste(sort(sapply( X=x, function(x) which(x==cc) )), collapse=',')
+      if( !(y %in% cc) ) stop(paste(y, 'is not a valid column'))
+      if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
+      y_i = which(y==cc)
+      h2o.gbmgrid(data, destination, y_i, cols, ntrees, max_depth, learn_rate, min_rows)
+})
+
+setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character",y="character", x="ANY", ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
+          function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+            if(!(missing(x) || class(x) == "numeric"))
+              stop(paste("ignore cannot be of class", class(x)))
             else if(!(missing(ntrees) || class(ntrees) == "numeric"))
               stop(paste("ntrees cannot be of class", class(ntrees)))
             else if(!(missing(max_depth) || class(max_depth) == "numeric"))
@@ -113,7 +146,7 @@ setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character"
               stop(paste("learn_rate cannot be of class", class(learn_rate)))
             else if(!(missing(min_rows) || class(min_rows) == "numeric"))
               stop(paste("min_rows cannot be of class", class(min_rows)))
-            h2o.gbmgrid(data, destination, y, x_ignore, ntrees, max_depth, learn_rate, min_rows) 
+            h2o.gbmgrid(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) 
           })
 
 # internally called glm to allow games with method dispatch
@@ -430,13 +463,25 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
               while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
               new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-            # } else if(class(object) == "H2OGBMModel") {
-            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key)
-            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
-            #  new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
-            # } else if(class(object) == "H2OPCAModel") {
-            #  numMatch = colnames(newdata) %in% colnames(object@data)
-            #  numPC = length(numMatch[numMatch == TRUE])
+            } else if(class(object) == "H2OGBMModel") {
+              # Set randomized prediction key
+              rand_pred_key = paste("__GBM_Predict_", runif(n=1, max=1e10), sep="")
+              res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
+              res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
+              new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
+              # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key)
+              # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
+              # h2o.__pollAll(object@data@h2o, 60)
+              # new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
+            } else if(class(object) == "H2OPCAModel") {
+              numMatch = colnames(newdata) %in% colnames(object@data)
+              numPC = length(numMatch[numMatch == TRUE])
+              
+              # Set randomized prediction key
+              rand_pred_key = paste("__PCA_Predict_", runif(n=1, max=1e10), sep="")
+              res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
+              h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
+              new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
             #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, num_pc=numPC)
             #  while(h2o.__poll(object@data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
             #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)

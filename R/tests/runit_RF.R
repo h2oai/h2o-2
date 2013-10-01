@@ -23,6 +23,7 @@ if(!"h2oWrapper" %in% rownames(installed.packages())) {
   
   if(!file.exists(wrapPath))
     stop(paste("h2oWrapper package does not exist at", wrapPath))
+  print(paste("Installing h2oWrapper package from", wrapPath))
   install.packages(wrapPath, repos = NULL, type = "source")
 }
 
