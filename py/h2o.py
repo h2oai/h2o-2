@@ -1520,19 +1520,22 @@ class H2O(object):
         params_dict = {
             '_modelKey': model_key
         }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
         a = self.__do_json_request('GBMModelView.json',timeout=timeoutSecs,params=params_dict)
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
-        algo = 'GeneratePredictions2' if beta_features else 'GeneratePredictionsPage'
+        algo = 'Predict' if beta_features else 'GeneratePredictionsPage'
         algoView = 'Inspect2' if beta_features else 'Inspect'
 
         if beta_features:
             params_dict = {
                 'data': data_key,
                 'model': model_key,
-                'prediction_key': destination_key,
+                # 'prediction_key': destination_key,
+                'predict': destination_key,
                 }
         else:
             params_dict = {
@@ -1542,11 +1545,8 @@ class H2O(object):
                 }
 
         browseAlso = kwargs.pop('browseAlso',False)
-        # only update params_dict..don't add
-        # throw away anything else as it should come from the model (propagating what RF used)
-        for k in kwargs:
-            if k in params_dict:
-                params_dict[k] = kwargs[k]
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'generate_predictions', print_params)
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -1613,13 +1613,14 @@ class H2O(object):
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
-            'vresponse': None,
+            'validation': data_key, # what is this..default it to match the source..is it holdout data
+            'response': None,
             'source': data_key,
             'learn_rate': None,
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'ignored_cols': None,
+            'cols': None,
             'nbins': None,
         }
         # only lets these params thru

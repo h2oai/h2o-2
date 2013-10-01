@@ -66,6 +66,8 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
                         ('out_of_bag_error_estimate' in line) or
                         # R stdout confusion matrix. Probably need to figure out how to exclude R logs
                         ('Training Error' in line) or
+                        # now from GBM
+                        ('Mean Squared Error' in line) or
                         ('Error' in line and 'Actual' in line) or
                         # fvec
                         ('prediction error' in line) or ('errors on' in line) or
