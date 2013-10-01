@@ -24,6 +24,10 @@ public class Upload extends HTMLOnlyRequest {
     + "</div>";
   }
 
+  // Here is an example of how to upload a file from the command line.
+  //
+  // curl -v -F "file=@allyears2k_headers.zip" "http://localhost:54321/PostFile.json?key=a.zip"
+  //
   public static class PostFile extends JSONOnlyRequest {
     @Override protected Response serve() {
       return Response.done(new JsonObject());
