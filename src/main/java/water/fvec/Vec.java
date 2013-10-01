@@ -108,6 +108,16 @@ public class Vec extends Iced {
     return v0;
   }
 
+  // Create a vector transforming values according given domain map
+  public Vec makeTransf(final int[] domMap) {
+    Futures fs = new Futures();
+    if( _espc == null ) throw H2O.unimpl();
+    Vec v0 = new TransfVec(this._key, domMap, group().addVecs(1)[0],_espc);
+    DKV.put(v0._key,v0,fs);
+    fs.blockForPending();
+    return v0;
+  }
+
   /** Number of elements in the vector.  Overridden by subclasses that compute
    *  length in an alternative way, such as file-backed Vecs. */
   public long length() { return _espc[_espc.length-1]; }
