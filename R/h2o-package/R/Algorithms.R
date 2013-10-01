@@ -331,13 +331,13 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="
 
 setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
           function(y, x_ignore, data, ntree, depth, classwt) {
-            myCol = colnames(data)
-            if(!y %in% myCol) stop(paste(y, "is an invalid response column!"))
-            if(!(length(x_ignore) == 1 && x_ignore == "")) {
-              temp = match(TRUE, !x_ignore %in% myCol)
-              if(!is.na(temp)) stop(paste(x_ignore[temp], "is an invalid predictor column!"))
-              if(y %in% x_ignore) stop(paste("Cannot ignore response variable", y))
-            }
+            # myCol = colnames(data)
+            # if(!y %in% myCol) stop(paste(y, "is an invalid response column!"))
+            # if(!(length(x_ignore) == 1 && x_ignore == "")) {
+            #  temp = match(TRUE, !x_ignore %in% myCol)
+            #  if(!is.na(temp)) stop(paste(x_ignore[temp], "is an invalid predictor column!"))
+            #  if(y %in% x_ignore) stop(paste("Cannot ignore response variable", y))
+            # }
             
             # Set randomized model_key
             rand_model_key = paste("__RF_Model__", runif(n=1, max=1e10), sep="")
