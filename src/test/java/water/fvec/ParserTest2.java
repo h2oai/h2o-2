@@ -9,6 +9,8 @@ import org.junit.Test;
 import water.*;
 import water.deploy.Node;
 import water.deploy.NodeVM;
+import water.parser.CustomParser;
+import water.parser.CustomParser.ParserType;
 
 public class ParserTest2 extends TestUtil {
   private double[] d(double... ds) { return ds; }
@@ -415,12 +417,20 @@ public class ParserTest2 extends TestUtil {
   }
 
 
+  @Test public void testSingleQuotes(){
+    String [] data  = new String[]{"Tomas's,test\n'Tomas''s,test2',test2\nlast,'line''","s, trailing, piece'"};
+    CustomParser.ParserSetup gSetup = new CustomParser.ParserSetup(ParserType.CSV, (byte)',', false);
+    Key k = FVecTest.makeByteVec(Key.make().toString(), data);
+    Key r1 = Key.make("single_quotes_test");
+    ParseDataset2.parse(r1, new Key[]{k},gSetup);
+  }
   @Test public void testSVMLight() {
     String[] data = new String[] {
         "1 2:.2 5:.5 9:.9\n",
         "-1 7:.7 8:.8 9:.9\n",
         "+1 1:.1 5:.5 6:.6\n"
     };
+
     double[][] exp = new double[][] {
         d( 1., .0, .2, .0, .0, .5, .0, .0, .0, .9),
         d(-1., .0, .0, .0, .0, .0, .0, .7, .8, .9),
@@ -471,7 +481,7 @@ public class ParserTest2 extends TestUtil {
       n.start();
     }
     H2O.waitForCloudSize(nnodes);
-    new FVecTest().testParse2();
+    new ParserTest2().testSingleQuotes();
 //    File f = new File("/Users/tomasnykodym/Downloads/140k_train_anonymised.zip");
 //    Key fkey = NFSFileVec.make(f);
 //    ByteVec v = DKV.get(fkey).get();
