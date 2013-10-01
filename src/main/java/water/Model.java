@@ -8,7 +8,9 @@ import java.util.HashMap;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
+import water.util.Log;
 import water.util.Utils;
+import water.util.Log.Tag.Sys;
 
 /**
  * A Model models reality (hopefully).
@@ -253,7 +255,7 @@ public abstract class Model extends Iced {
     for( int i = 0; i < dom.length; i++) {
       Integer I = md.get(dom[i]);
       if( I==null && exact )
-        throw new IllegalArgumentException("Column "+colName+" was not trained with factor '"+dom[i]+"' which appears in the data");
+        Log.warn(Sys.SCORM, "Column "+colName+" was not trained with factor '"+dom[i]+"' which appears in the data");
       emap[i] = I==null ? -1 : I;
     }
     for( int i = 0; i < dom.length; i++)
