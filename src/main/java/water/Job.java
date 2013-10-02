@@ -81,9 +81,10 @@ public class Job extends Request2 {
       // Doing classification only right now...
       if( !response.isEnum() ) response.asEnum();
 
-      for( int i = cols.length - 1; i >= 0; i-- )
-        if( source.vecs()[cols[i]] == response )
-          cols = ArrayUtils.remove(cols, i);
+      if(cols != null)
+        for( int i = cols.length - 1; i >= 0; i-- )
+          if( source.vecs()[cols[i]] == response )
+            cols = ArrayUtils.remove(cols, i);
       for( int i = 0; i < source.vecs().length; i++ )
         if( source.vecs()[i] == response )
           return i;
@@ -109,9 +110,13 @@ public class Job extends Request2 {
         _valid = selectVecs(validation);
         _validResponse = validation.vecs()[rIndex];
       }
-      _names = new String[cols.length];
-      for( int i = 0; i < cols.length; i++ )
-        _names[i] = source._names[cols[i]];
+      if(cols == null || cols.length == 0)
+        _names = source._names;
+      else {
+        _names = new String[cols.length];
+        for( int i = 0; i < cols.length; i++ )
+          _names[i] = source._names[cols[i]];
+      }
       _responseName = source._names != null ? source._names[rIndex] : "response";
     }
   }
