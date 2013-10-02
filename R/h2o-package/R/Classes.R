@@ -15,6 +15,8 @@ setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel")
 setClass("H2OGBMGrid", contains="H2OGrid")
 
+MAX_INSPECT_VIEW = 10000
+
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
   cat("IP Address:", object@ip, "\n")
@@ -334,7 +336,7 @@ setMethod("h2o.factor", signature(data="H2OParsedData", col="character"),
       h2o.factor(data, ind-1)
 })
 
-#----------------- FluidVecs -----------------------#
+#--------------------------------- FluidVecs --------------------------------------#
 setMethod("colnames", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
