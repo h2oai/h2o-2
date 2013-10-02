@@ -36,12 +36,20 @@ class Basic(unittest.TestCase):
         print "parse result:", parseResult['destination_key']
 
         # GBM (train)****************************************
+
+        colsString = ""
+        for y in range(0,10):
+            if y > 0:
+                colsString = colsString + ","
+            colsString = colsString + str(y)
+
         params = { 
             'destination_key': "GBMKEY",
             'learn_rate':.1,
             'ntrees':10,
             'max_depth':8,
             'min_rows':1,
+            'cols':colsString,
             'response':784
             }
 
