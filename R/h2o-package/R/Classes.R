@@ -15,6 +15,8 @@ setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel")
 setClass("H2OGBMGrid", contains="H2OGrid")
 
+MAX_INSPECT_VIEW = 10000
+
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
   cat("IP Address:", object@ip, "\n")
@@ -269,28 +271,48 @@ setMethod("summary", "H2OPCAModel", function(object) {
 })
 
 setMethod("as.data.frame", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=nrow(x))
-  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
-  if(is.null(temp)) return(temp)
-  x.df = data.frame(matrix(temp, nrow = res$num_rows, byrow = TRUE))
-  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
-  x.df
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/downloadCsv?src_key=', x@key, sep='')
+  ttt <- getURL(url)
+  read.csv(textConnection(ttt))
 })
 
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(n > 0) as.data.frame(x[1:n,])
-  else as.data.frame(x[1:(nrow(x)+n),])
+  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x), sep=""))
+  myView = ifelse(n > 0, n, nrow(x)+n)
+  if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
+  
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=myView)
+  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
+  if(is.null(temp)) return(temp)
+  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
+  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
+  x.df
+  
+  # if(n > 0) as.data.frame(x[1:n,])
+  # else as.data.frame(x[1:(nrow(x)+n),])
 })
 
 setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(n > 0) opt = paste(h2o.__escape(x@key), nrow(x)-n, sep=",")
-  else opt = paste(h2o.__escape(x@key), abs(n), sep=",")
-  res = h2o.__exec(x@h2o, paste("slice(", opt, ")", sep=""))
-  as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res))
+  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x), sep=""))
+  myOff = ifelse(n > 0, nrow(x)-n, abs(n))
+  myView = ifelse(n > 0, n, nrow(x)+n)
+  if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
+  
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=myOff, view=myView)
+  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
+  if(is.null(temp)) return(temp)
+  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
+  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
+  x.df
+  
+  # if(n > 0) opt = paste(h2o.__escape(x@key), nrow(x)-n, sep=",")
+  # else opt = paste(h2o.__escape(x@key), abs(n), sep=",")
+  # res = h2o.__exec(x@h2o, paste("slice(", opt, ")", sep=""))
+  # as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res))
 })
 
 setMethod("plot", "H2OPCAModel", function(x, y, ...) {
@@ -314,7 +336,7 @@ setMethod("h2o.factor", signature(data="H2OParsedData", col="character"),
       h2o.factor(data, ind-1)
 })
 
-#----------------- FluidVecs -----------------------#
+#--------------------------------- FluidVecs --------------------------------------#
 setMethod("colnames", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
@@ -337,31 +359,13 @@ setMethod("summary", "H2OParsedData2", function(object) {
 })
 
 setMethod("as.data.frame", "H2OParsedData2", function(x) {
-  temp = new("H2OParsedData", h2o=x@h2o, key=x@key)
-  as.data.frame(temp)
+  as.data.frame(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
-setMethod("head", "H2OParsedData2", function(x, n = 6L, ...) {
-  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
-  n = round(n)
-  myView = ifelse(n > 0, n, nrow(x)+n)
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=myView)
-  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
-  if(is.null(temp)) return(temp)
-  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
-  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
-  x.df
+setMethod("head", "H2OParsedData2", function(x, n = 6L, ...) { 
+  head(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
 })
 
 setMethod("tail", "H2OParsedData2", function(x, n = 6L, ...) {
-  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
-  n = round(n)
-  myOff = ifelse(n > 0, nrow(x)-n, abs(n))
-  myView = ifelse(n > 0, n, nrow(x)+n)
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=myOff, view=myView)
-  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
-  if(is.null(temp)) return(temp)
-  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
-  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
-  x.df
+  tail(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
 })
