@@ -85,16 +85,18 @@ public abstract class Model extends Iced {
    *  predictions, the remaining Vecs are the probability distributions.  Also
    *  passed in a flag describing how hard we try to adapt the frame.  */
   public Frame score( Frame fr, boolean exact ) {
-    Frame fr2 = adapt(fr,exact); // Adapt the Frame layout
-    Vec v = fr2.anyVec().makeZero();
+    Frame[] adaptFrms = adapt(fr,exact); // Adapt the Frame layout - returns adapted frame and frame containing only newly created vectors
+    Frame adaptFrm = adaptFrms[0]; // adapted frame containing all columns - mix of original vectors from fr and newly created vectors serving as adaptors
+    Frame onlyAdaptFrm = adaptFrms[1]; // contains only newly created vectors. The frame eases deletion of these vectors.
+    Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
     // FIXME adapt domain according to a mapping!
     v._domain = _domains[_domains.length-1];
-    fr2.add("predict",v);
+    adaptFrm.add("predict",v);
     if( nclasses() > 1 )
       for( int c=0; c<nclasses(); c++ )
-        fr2.add(classNames()[c],fr2.anyVec().makeZero());
+        adaptFrm.add(classNames()[c],adaptFrm.anyVec().makeZero());
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp[] = new double[_names.length];
@@ -108,16 +110,13 @@ public abstract class Model extends Iced {
               chks[_names.length+c].set0(i,preds[c]);
         }
       }
-    }.doAll(fr2);
+    }.doAll(adaptFrm);
     // Return just the output columns
-    int x=_names.length-1, y=fr2.numCols();
-    Frame result = new Frame(Arrays.copyOfRange(fr2._names,x,y),Arrays.copyOfRange(fr2.vecs(),x,y));
-    // FIXME make a generic code in Frame
-//    int[] col2rem = new int[y-x];
-//    for (int i=0;i<col2rem.length;i++) col2rem[i] = x+i;
-//    fr2.remove(col2rem);
-//    fr2.remove();
-    return result;
+    int x=_names.length-1, y=adaptFrm.numCols();
+    Frame output = adaptFrm.extractFrame(x, y);
+    // Delete manually only vectors which i created :-/
+    onlyAdaptFrm.remove();
+    return output;
   }
 
   /** Single row scoring, on a compatible Frame.  */
@@ -205,14 +204,22 @@ public abstract class Model extends Iced {
     return map;
   }
 
-  /** Build an adapted Frame from the given Frame.  Useful for efficient bulk
+  /** Build an adapted Frame from the given Frame. Useful for efficient bulk
    *  scoring of a new dataset to an existing model.  Same adaption as above,
-   *  but expressed as a Frame instead of as an int[][].  The returned Frame
-   *  does not have a response column.  */
-  public Frame adapt( Frame fr, boolean exact ) {
+   *  but expressed as a Frame instead of as an int[][]. The returned Frame
+   *  does not have a response column.
+   *  It returns <b>two elements array</b> containing an adapted frame and a frame which
+   *  contains only vectors which where adapted
+   *  (the purpose of the second frame is to delete all adapted vectors with deletion of the frame). */
+  public Frame[] adapt( Frame fr, boolean exact ) {
     int map[][] = adapt(fr.names(),fr.domains(),exact);
     int cmap[] =     map[_names.length-1];
     Vec vecs[] = new Vec[_names.length-1];
+    int avCnt = 0;
+    for( int c=0; c<cmap.length; c++ ) if (map[c] != null) avCnt++;
+    Vec[]    avecs = new Vec[avCnt]; // list of adapted vectors
+    String[] anames = new String[avCnt]; // names of adapted vectors
+    avCnt = 0;
     for( int c=0; c<cmap.length; c++ ) { // iterate over columns
       int d = cmap[c];          // Data index
       if( d == -1 ) throw H2O.unimpl(); // Swap in a new all-NA Vec
@@ -220,10 +227,12 @@ public abstract class Model extends Iced {
         vecs[c] = fr.vecs()[d];         // Just use the Vec as-is
       } else {
         // Domain mapping - creates a new vector
-        vecs[c] = remapVecDomain(map[c], fr.vecs()[d]);
+        vecs[c] = avecs[avCnt] = remapVecDomain(map[c], fr.vecs()[d]);
+        anames[avCnt] = fr.names()[d];
+        avCnt++;
       }
     }
-    return new Frame(Arrays.copyOf(_names,_names.length-1),vecs);
+    return new Frame[] { new Frame(Arrays.copyOf(_names,_names.length-1),vecs), new Frame(anames, avecs) };
   }
 
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,

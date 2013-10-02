@@ -34,6 +34,10 @@ public class GBMDomainTest extends TestUtil {
   /**
    * The scenario:
    *  - test data contains an input column which contains more enum values than the same column in train data.
+   *  A - 0
+   *  B - 1    B - 0                                   B - 1
+   *  C - 2    X - 1    mapping should remap it into:  X - NA
+   *  D - 3
    */
   @Test public void testModelAdapt2() {
     runAndScoreGBM(
