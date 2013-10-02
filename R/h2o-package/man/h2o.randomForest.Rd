@@ -8,15 +8,15 @@ H2O: Random Forest
 Performs random forest classification on a parsed data set.
 }
 \usage{
-h2o.randomForest(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA))
+h2o.randomForest(y, x, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{y}{
-The name of index of the response variable. If the data does not contain a header, this is the column index. (This must be either an integer or a categorical variable).
+The name or index of the response variable. If the data does not contain a header, this is the column index. (The response must be either an integer or a categorical variable).
 }
-\item{x_ignore}{
-(Optional) A vector containing the names or indices of the predictor variables to ignore in building the random forest model. If blank, random forest will use all variables except \code{y} for classification.
+\item{x}{
+A vector containing the names or indices of the predictor variables to use in building the random forest model.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
@@ -66,11 +66,11 @@ localH2O = new("H2OClient")
 h2o.checkClient(localH2O)
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
-h2o.randomForest(y = 4, x_ignore = 0, data = iris.hex, ntree = 50, depth = 100, 
+h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, ntree = 50, depth = 100, 
 classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
 covPath = system.file("extdata", "covtype.csv", package="h2o")
 covtype.hex = h2o.importFile(localH2O, path = covPath, key = "covtype.hex")
-h2o.randomForest(y = "Cover_Type", x_ignore = c("Aspect", "Hillshade_9am"), data = covtype.hex, ntree = 50, depth = 150)
+h2o.randomForest(y = "Cover_Type", x = setdiff(colnames(covtype.hex), c("Cover_Type", "Aspect", "Hillshade_9am")), data = covtype.hex, ntree = 50, depth = 150)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
