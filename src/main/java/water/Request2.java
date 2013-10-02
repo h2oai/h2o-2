@@ -22,11 +22,11 @@ public abstract class Request2 extends Request {
     transient Class _type;
 
     public TypeaheadKey() {
-      this(null);
+      this(null, true);
     }
 
-    public TypeaheadKey(Class type) {
-      super(TypeaheadKeysRequest.class, "", true);
+    public TypeaheadKey(Class type, boolean required) {
+      super(TypeaheadKeysRequest.class, "", required);
       _type = type;
       setRefreshOnChange();
     }
@@ -42,6 +42,8 @@ public abstract class Request2 extends Request {
         Value v = DKV.get(k);
         if( v != null && !compatible(_type, v.get()) )
           throw new IllegalArgumentException(input + ":" + errors()[0]);
+        if ( v == null && _required)
+          throw new IllegalArgumentException("Key '"+input+"' does not exist!");
       }
       return k;
     }
@@ -172,7 +174,7 @@ public abstract class Request2 extends Request {
 
           // Auto-cast from key to Iced field
           else if( Freezable.class.isAssignableFrom(f.getType()) && api.filter() == Default.class )
-            arg = new TypeaheadKey(f.getType());
+            arg = new TypeaheadKey(f.getType(), api.required());
 
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
@@ -198,7 +200,7 @@ public abstract class Request2 extends Request {
               classVecs.put(d._ref, (FrameClassVec) arg);
             } else if( MultiVecSelect.class.isAssignableFrom(api.filter()) ) {
               FrameClassVec response = classVecs.get(d._ref);
-              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response);
+              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help());
             }
           }
 

@@ -28,6 +28,11 @@ public class TransfVec extends Vec {
     return new TransfChunk(c, _domMap);
   }
 
+  @Override public void remove( Futures fs ) {
+    UKV.remove(_masterVecKey,fs);
+    super.remove(fs);
+  }
+
   static class TransfChunk extends Chunk {
     Chunk _c;
     int[] _domMap;
@@ -36,15 +41,25 @@ public class TransfVec extends Vec {
 
     @Override protected double atd_impl(int idx) {
       double val = _c.atd_impl(idx);
-      return _domMap[(int)val];
+      return map((int)val);
     }
 
     @Override protected long at8_impl(int idx) {
       long val = _c.at8_impl(idx);
-      return _domMap[(int)val];
+      return map((int)val);
     }
 
-    @Override protected boolean isNA_impl(int idx) { return _c.isNA_impl(idx); }
+    private int map(int val) {
+      return _domMap[val];
+    }
+
+    @Override protected boolean isNA_impl(int idx) {
+      if (_c.isNA_impl(idx)) return true;
+      else {
+        if (at8_impl(idx)==-1) return true; // this case covers situation when there is no mapping
+        else return false;
+      }
+    }
 
     @Override boolean set_impl(int idx, long l)   { return false; }
     @Override boolean set_impl(int idx, double d) { return false; }

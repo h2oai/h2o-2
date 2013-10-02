@@ -2359,17 +2359,19 @@ public class RequestArguments extends RequestStatics {
   public class FrameKeyMultiVec extends MultipleSelect<int[]> {
     final TypeaheadKey _key;
     final FrameClassVec _response;
+    final String _description;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
       Value v = DKV.get(_key.value());
       if(v == null) throw new IllegalArgumentException("Frame not found");
       return ValueArray.asFrame(v);
     }
-    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response) {
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description) {
       super(name);
       addPrerequisite(_key = key);
       if((_response = response) != null)
         addPrerequisite(_response);
+      _description = description;
     }
     public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr.vecs()[i]; }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
@@ -2443,7 +2445,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "Columns to ignore";
+      return _description;
     }
   }
 }

@@ -15,6 +15,15 @@ public class GBMDomainTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
+  /**
+   * The scenario:
+   *  - test data contains an input column which contains less enum values than the same column in train data.
+   *  In this case we should provide correct values mapping:
+   *  A - 0
+   *  B - 1    B - 0                                   B - 1
+   *  C - 2    D - 1    mapping should remap it into:  D - 3
+   *  D - 3
+   */
   @Test public void testModelAdapt() {
     runAndScoreGBM(
         "./smalldata/test/classifier/coldom_train.csv",
@@ -22,6 +31,20 @@ public class GBMDomainTest extends TestUtil {
         new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } });
   }
 
+  /**
+   * The scenario:
+   *  - test data contains an input column which contains more enum values than the same column in train data.
+   *  A - 0
+   *  B - 1    B - 0                                   B - 1
+   *  C - 2    X - 1    mapping should remap it into:  X - NA
+   *  D - 3
+   */
+  @Test public void testModelAdapt2() {
+    runAndScoreGBM(
+        "./smalldata/test/classifier/coldom_train.csv",
+        "./smalldata/test/classifier/coldom_test2.csv",
+        new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } });
+  }
   // Adapt a trained model to a test dataset with different enums
   void runAndScoreGBM(String train, String test, PrepData prepData) {
     File file1 = TestUtil.find_test_file(train);
@@ -33,9 +56,13 @@ public class GBMDomainTest extends TestUtil {
     GBM gbm = null;
     Frame preds = null;
     try {
+      System.out.println("=========0========");   for( Key k : H2O.keySet() ) System.out.println(k);
       gbm = new GBM();
       gbm.source = ParseDataset2.parse(dest1,new Key[]{fkey1});
+      UKV.remove(fkey1); System.out.println("Remove " + fkey1);
+      System.out.println("=========1========");   for( Key k : H2O.keySet() ) System.out.println(k);
       gbm.response = prepData.prep(gbm.source);
+      System.out.println("=========2========");   for( Key k : H2O.keySet() ) System.out.println(k);
       gbm.ntrees = 2;
       gbm.max_depth = 3;
       gbm.learn_rate = 0.2f;
@@ -43,14 +70,16 @@ public class GBMDomainTest extends TestUtil {
       gbm.nbins = 1024;
       gbm.cols =  new int[] {0,1,2};
       gbm.run();
+      System.out.println("=========3========");   for( Key k : H2O.keySet() ) System.out.println(k);
 
       // The test data set has a few more enums than the train
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
+      UKV.remove(fkey2);
+      System.out.println("=========4========");   for( Key k : H2O.keySet() ) System.out.println(k);
       preds = gbm.score(ftest);
+      System.out.println("=========5========");   for( Key k : H2O.keySet() ) System.out.println(k);
       // Delete test frame
       ftest.remove();
-
-      System.err.println(preds);
 
     } catch (Throwable t) {
       t.printStackTrace();
