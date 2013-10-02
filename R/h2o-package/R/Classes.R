@@ -269,13 +269,11 @@ setMethod("summary", "H2OPCAModel", function(object) {
 })
 
 setMethod("as.data.frame", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=nrow(x))
-  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
-  if(is.null(temp)) return(temp)
-  x.df = data.frame(matrix(temp, nrow = res$num_rows, byrow = TRUE))
-  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
-  x.df
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/downloadCsv?src_key=', x@key, sep='')
+  ttt <- getURL(url)
+  read.csv(textConnection(ttt))
 })
+
 
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
@@ -336,10 +334,13 @@ setMethod("summary", "H2OParsedData2", function(object) {
   data.frame(myData)
 })
 
-setMethod("as.data.frame", "H2OParsedData2", function(x) {
-  temp = new("H2OParsedData", h2o=x@h2o, key=x@key)
-  as.data.frame(temp)
+setMethod("as.data.frame", 'H2OParsedData2', function(x) {
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/downloadCsv?src_key=', x@key, sep='')
+  #print(url)
+  ttt <- getURL(url)
+  read.csv(textConnection(ttt))
 })
+
 
 setMethod("head", "H2OParsedData2", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
