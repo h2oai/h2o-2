@@ -1,7 +1,5 @@
 package water;
 
-import hex.gbm.GBMTest;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.*;
@@ -36,7 +34,6 @@ public class JUnitRunner {
     tests.remove(ValueArrayToFrameTestAll.class);
     // Pure JUnit test
     tests.remove(CBSChunkTest.class);
-    tests.remove(GBMTest.class);
   }
 
   public static void main(String[] args) throws Exception {

@@ -208,6 +208,7 @@ class DTree extends Iced {
     // node otherwise induces.  Happens if we find out too-late that we have a
     // perfect prediction here, and we want to turn into a leaf.
     void do_not_split( ) {
+      if( _pid == -1 ) return;
       DecidedNode dn = _tree.decided(_pid);
       for( int i=0; i<dn._nids.length; i++ )
         if( dn._nids[i]==_nid ) 
