@@ -2408,9 +2408,11 @@ public class RequestArguments extends RequestStatics {
     @Override protected boolean isSelected(String value) {
       Frame fr = fr();
       int[] val = value();
-      if (val == null) return false;
+      if (val == null || val.length == 0)
+        return true;
       for(int i = 0; i < fr.numCols(); ++i)
-        if(fr._names[i].equals(value))Ints.contains(val, i);
+        if(fr._names[i].equals(value))
+          return Ints.contains(val, i);
       return false;
     }
 

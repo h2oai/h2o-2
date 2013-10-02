@@ -1535,7 +1535,7 @@ class H2O(object):
                 'data': data_key,
                 'model': model_key,
                 # 'prediction_key': destination_key,
-                'predict': destination_key,
+                'prediction': destination_key,
                 }
         else:
             params_dict = {

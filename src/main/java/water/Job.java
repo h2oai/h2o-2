@@ -55,11 +55,13 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
+    @API(help = "Columns to use as input", filter=colsFilter.class)
     public int[] cols;
     class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
     protected Vec[] selectVecs(Frame frame) {
+      if(cols == null || cols.length == 0)
+        return frame.vecs();
       Vec[] vecs = new Vec[cols.length];
       for( int i = 0; i < cols.length; i++ )
         vecs[i] = frame.vecs()[cols[i]];
@@ -315,21 +317,29 @@ public class Job extends Request2 {
 
   // If job is a request
 
+  @Override protected Response serve() {
+    startFJ();
+    return redirect();
+  }
+
   public H2OCountedCompleter startFJ() {
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        run();
-        tryComplete();
-        remove();
+        runAndRemove(this);
       }
     };
     H2O.submitTask(start(task));
     return task;
   }
 
-  @Override protected Response serve() {
-    startFJ();
-    return redirect();
+  public void runAndRemove(H2OCountedCompleter task) {
+    run();
+    task.tryComplete();
+    remove();
+  }
+
+  public void run() {
+    throw new RuntimeException("Should be overridden if job is a request");
   }
 
   protected Response redirect() {
@@ -383,10 +393,6 @@ public class Job extends Request2 {
   public static void waitUntilJobEnded(Key jobkey) {
     int THREE_SECONDS_MILLIS = 3 * 1000;
     waitUntilJobEnded(jobkey, THREE_SECONDS_MILLIS);
-  }
-
-  public void run() {
-    throw new RuntimeException("Should be overridden if job is a request");
   }
 
   public static class ChunkProgress extends Iced implements Progress {
