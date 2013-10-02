@@ -5,8 +5,6 @@ import java.io.File;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
-import water.fvec.NFSFileVec;
-import water.fvec.ParseDataset2;
 import water.util.Utils;
 
 public class Sandbox {
@@ -19,27 +17,32 @@ public class Sandbox {
     public static void userMain(String[] args) throws Exception {
       localCloud(1, true, args);
 
-      File f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
+      File train = new File("smalldata/gbm_test/ecology_model.csv");
+      File valid = new File("smalldata/gbm_test/ecology_eval.csv");
       // File f = new File("smalldata/mnist/train.csv.gz");
-      // File f = new File("smalldata/covtype/covtype.20k.data");
+      //File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
       // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
 
-      Key dest = Key.make("train.hex");
-      Key fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
+      Key key, dest;
+//      Key dest = Key.make("train.hex");
+//      Key fkey = NFSFileVec.make(f);
+//      ParseDataset2.parse(dest, new Key[] { fkey });
+//
+//      f = new File("smalldata/mnist/test.csv.gz");
+//      dest = Key.make("test.hex");
+//      fkey = NFSFileVec.make(f);
+//      ParseDataset2.parse(dest, new Key[] { fkey });
 
-      f = new File("smalldata/mnist/test.csv.gz");
-      dest = Key.make("test.hex");
-      fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
+      key = TestUtil.load_test_file(train, "train");
+      dest = Key.make("train.hex");
+      water.parser.ParseDataset.parse(dest, new Key[] { key });
 
-//      Key key = TestUtil.load_test_file(f, "test");
-//      Key dest = Key.make("test.hex");
-//      ParseDataset.parse(dest, new Key[] { key });
-//      ValueArray va = (ValueArray) UKV.get(dest);
+      key = TestUtil.load_test_file(valid, "valid");
+      dest = Key.make("valid.hex");
+      water.parser.ParseDataset.parse(dest, new Key[] { key });
 
       Utils.readConsole();
 

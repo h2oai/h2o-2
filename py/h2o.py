@@ -1527,22 +1527,14 @@ class H2O(object):
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
-        algo = 'Predict' if beta_features else 'GeneratePredictionsPage'
+        algo = 'Predict'
         algoView = 'Inspect2' if beta_features else 'Inspect'
-
-        if beta_features:
-            params_dict = {
-                'data': data_key,
-                'model': model_key,
-                # 'prediction_key': destination_key,
-                'prediction': destination_key,
-                }
-        else:
-            params_dict = {
-                'data_key': data_key,
-                'model_key': model_key,
-                'destination_key': destination_key,
-                }
+        params_dict = {
+            'data': data_key,
+            'model': model_key,
+            # 'prediction_key': destination_key,
+            'prediction': destination_key,
+            }
 
         browseAlso = kwargs.pop('browseAlso',False)
         # only lets these params thru

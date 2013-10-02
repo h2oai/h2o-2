@@ -160,7 +160,7 @@ class Basic(unittest.TestCase):
             model_key="rf_model", timeoutSecs=timeoutSecs, **kwargs)
 
 
-        print "Use H2O GeneratePredictionsPage with a H2O generated model and the same data key."
+        print "Use H2O Predict with a H2O generated model and the same data key."
         print "Does this work? (feeding in same data key)if you're predicting, "
         print "don't you need one less column (the last is output?)"
         print "WARNING: max_iter set to 8 for benchmark comparisons"

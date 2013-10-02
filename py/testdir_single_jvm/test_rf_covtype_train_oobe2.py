@@ -146,7 +146,7 @@ class Basic(unittest.TestCase):
             # ntree=50&
             # class_weights=-1%3D1.0%2C0%3D1.0%2C1%3D1.0&
             # out_of_bag_error_estimate=1&
-# http://192.168.1.28:54321/GeneratePredictionsPage.html?model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&key=iris
+# http://192.168.1.28:54321/Predict.html?model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&key=iris
 # http://192.168.1.28:54321/RFView.html?data_key=iris.hex&model_key=__RFModel_0e2531bc-2552-4f65-8a4a-843031b0cb99&ntree=50&response_variable=4&class_weights=Iris-setosa%3D1.0%2CIris-versicolor%3D1.0%2CIris-virginica%3D1.0&out_of_bag_error_estimate=true&iterative_cm=true
 
             kwargs['iterative_cm'] = 1

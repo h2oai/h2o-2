@@ -39,7 +39,7 @@ public class Test24 {
     driver.findElement(By.id("source")).sendKeys("iris22.hex");
     driver.findElement(By.id("destination_key")).clear();
     driver.findElement(By.id("destination_key")).sendKeys("");
-    new Select(driver.findElement(By.id("vresponse"))).selectByVisibleText("class");
+    new Select(driver.findElement(By.id("response"))).selectByVisibleText("class");
     driver.findElement(By.xpath("(//button[@onclick='query_submit()'])[2]")).click();
   }
 
