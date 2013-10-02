@@ -198,7 +198,7 @@ public abstract class Request2 extends Request {
               classVecs.put(d._ref, (FrameClassVec) arg);
             } else if( MultiVecSelect.class.isAssignableFrom(api.filter()) ) {
               FrameClassVec response = classVecs.get(d._ref);
-              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response);
+              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help());
             }
           }
 
