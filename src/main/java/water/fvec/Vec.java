@@ -421,6 +421,11 @@ public class Vec extends Iced {
     return s+"}]";
   }
 
+  public void remove( Futures fs ) {
+    for( int i=0; i<nChunks(); i++ )
+      UKV.remove(chunkKey(i),fs);
+  }
+
 
   /**
    * Class representing the group of vectors.
