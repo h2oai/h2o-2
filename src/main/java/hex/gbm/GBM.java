@@ -78,7 +78,7 @@ public class GBM extends SharedTreeModelBuilder {
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
-      Score sc = new Score().doAll(fr).report(Sys.GBM__,tid,ktrees);
+      Score sc = new Score().doAll(fr).report(Sys.GBM__,tid+1,ktrees);
       model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
       DKV.put(outputKey, model);
     }
@@ -216,6 +216,9 @@ public class GBM extends SharedTreeModelBuilder {
                  ((DecidedNode)tree.node(cnid))._split._col==-1) )
               dn._nids[i] = new GBMLeafNode(tree,nid)._nid; // Mark a leaf here
           }
+          // Handle the trivial non-splitting tree
+          if( nid==0 && dn._split._col == -1 )
+            new GBMLeafNode(tree,-1,0);
         }
       }
     }
@@ -292,14 +295,17 @@ public class GBM extends SharedTreeModelBuilder {
         final double rs[] = _rss[k] = new double[tree._len-leaf];
         final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
         final Chunk ress = chk_work(chks,k); // Residuals for this tree/class
+        // If we have all constant responses, then we do not split even the
+        // root and the residuals should be zero.
+        if( tree.root() instanceof LeafNode ) continue;
         for( int row=0; row<nids._len; row++ ) { // For all rows
           int nid = (int)nids.at80(row);         // Get Node to decide from
           int oldnid = nid;
           if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
             nid = tree.node(nid)._pid;                  // Then take parent's decision
           DecidedNode dn = tree.decided(nid);           // Must have a decision point
-          if( dn._split._col == -1 )     // Unable to decide?
-            dn = tree.decided(nid = tree.node(nid)._pid); // Then take parent's decision
+          if( dn._split._col == -1 )                    // Unable to decide?
+            dn = tree.decided(nid = dn._pid); // Then take parent's decision
           int leafnid = dn.ns(chks,row); // Decide down to a leafnode
           assert leaf <= leafnid && leafnid < tree._len;
           assert tree.node(leafnid) instanceof LeafNode;

@@ -1,6 +1,6 @@
 package water;
 
-import hex.gbm.GBMTest;
+import hex.gbm.GBMDomainTest;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,7 +36,7 @@ public class JUnitRunner {
     tests.remove(ValueArrayToFrameTestAll.class);
     // Pure JUnit test
     tests.remove(CBSChunkTest.class);
-    tests.remove(GBMTest.class);
+    tests.remove(GBMDomainTest.class);
   }
 
   public static void main(String[] args) throws Exception {

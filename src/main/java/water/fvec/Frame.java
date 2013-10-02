@@ -109,6 +109,55 @@ public class Frame extends Iced {
     return v;
   }
 
+  /**
+   * Remove given interval of columns from frame. Motivated by R intervals.
+   * @param startIdx - start index of column (inclusive)
+   * @param endIdx - end index of column (exclusive)
+   * @return an array of remove columns
+   */
+  public Vec[] remove(int startIdx, int endIdx) {
+    int len = _names.length;
+    int nlen = len - (endIdx-startIdx);
+    String[] names = new String[nlen];
+    Key[] keys = new Key[nlen];
+    Vec[] vecs = new Vec[nlen];
+    if (startIdx > 0) {
+      System.arraycopy(_names, 0, names, 0, startIdx);
+      System.arraycopy(_vecs,  0, vecs,  0, startIdx);
+      System.arraycopy(_keys,  0, keys,  0, startIdx);
+    }
+    nlen -= startIdx;
+    if (endIdx < _names.length+1) {
+      System.arraycopy(_names, endIdx, names, startIdx, nlen);
+      System.arraycopy(_vecs,  endIdx, vecs,  startIdx, nlen);
+      System.arraycopy(_keys,  endIdx, keys,  startIdx, nlen);
+    }
+
+    Vec[] vec = Arrays.copyOfRange(vecs(),startIdx,endIdx);
+    _names = names;
+    _vecs = vec;
+    _keys = keys;
+    _col0 = null;
+    return vec;
+  }
+
+  public Frame extractFrame(int startIdx, int endIdx) {
+    Frame f = subframe(startIdx, endIdx);
+    remove(startIdx, endIdx);
+    return f;
+  }
+
+  /** Create a subframe from given interval of columns.
+   *
+   * @param startIdx index of first column (inclusive)
+   * @param endIdx index of the last column (exclusive)
+   * @return a new frame containing specified interval of columns
+   */
+  public Frame subframe(int startIdx, int endIdx) {
+    Frame result = new Frame(Arrays.copyOfRange(_names,startIdx,endIdx),Arrays.copyOfRange(vecs(),startIdx,endIdx));
+    return result;
+  }
+
   public final String[] names() { return _names; }
   public int  numCols() { return _vecs.length; }
   public long numRows(){ return anyVec().length();}
