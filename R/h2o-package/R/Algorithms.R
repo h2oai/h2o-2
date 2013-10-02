@@ -3,8 +3,7 @@ setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lam
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
 setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALSE) { standardGeneric("h2o.prcomp") })
-setGeneric("h2o.randomForest", function(y, x_ignore = "", data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
-# setGeneric("h2o.randomForest", function(y, data, ntree, depth, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
+setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.gbm", function(data, destination, y, x = "", ntrees = 10, max_depth=8, learn_rate=.2, min_rows=10) { standardGeneric("h2o.gbm") })
 setGeneric("h2o.gbmgrid", function(data, destination, y, x = as.numeric(NA), ntrees = c(10,100), max_depth=c(1,5,10), learn_rate=c(0.01,0.1,0.2), min_rows=10) { standardGeneric("h2o.gbmgrid") })
@@ -137,7 +136,7 @@ setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character"
 setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character",y="character", x="ANY", ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
           function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
             if(!(missing(x) || class(x) == "numeric"))
-              stop(paste("ignore cannot be of class", class(x)))
+              stop(paste("x cannot be of class", class(x)))
             else if(!(missing(ntrees) || class(ntrees) == "numeric"))
               stop(paste("ntrees cannot be of class", class(ntrees)))
             else if(!(missing(max_depth) || class(max_depth) == "numeric"))
@@ -365,18 +364,18 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="
             h2o.prcomp(data, tol, standardize, retx)
           })
 
-setMethod("h2o.randomForest", signature(y="character", x_ignore="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
-          function(y, x_ignore, data, ntree, depth, classwt) {
-            # myCol = colnames(data)
-            # if(!y %in% myCol) stop(paste(y, "is an invalid response column!"))
-            # if(!(length(x_ignore) == 1 && x_ignore == "")) {
-            #  temp = match(TRUE, !x_ignore %in% myCol)
-            #  if(!is.na(temp)) stop(paste(x_ignore[temp], "is an invalid predictor column!"))
-            #  if(y %in% x_ignore) stop(paste("Cannot ignore response variable", y))
-            # }
-            
+setMethod("h2o.randomForest", signature(x="character", y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
+          function(x, y, data, ntree, depth, classwt) {
             # Set randomized model_key
             rand_model_key = paste("__RF_Model__", runif(n=1, max=1e10), sep="")
+            
+            # Determine predictors to ignore (excluding response column)
+            myCol = colnames(data)
+            if(!y %in% myCol) stop(paste(y, "is not a valid column name"))
+            if(y %in% x) stop(paste(y, "is both an explanatory and dependent variable"))
+            myXCol = myCol[-which(y == myCol)]
+            if(any(!x %in% myXCol)) stop("Invalid column names: ", paste(x[which(!x %in% myXCol)], collapse=", "))
+            x_ignore = setdiff(myXCol, x)
             
             # If no class weights, then default to all 1.0
             if(!any(is.na(classwt))) {
@@ -397,7 +396,8 @@ setMethod("h2o.randomForest", signature(y="character", x_ignore="character", dat
             result$type = "Classification"
             result$ntree = ntree
             result$oob_err = res$confusion_matrix$classification_error
-            if(x_ignore[1] != "") result$x_ignore = paste(x_ignore, collapse = ", ")
+            result$x = paste(x, collapse = ", ")
+            # if(x_ignore[1] != "") result$x_ignore = paste(x_ignore, collapse = ", ")
             
             rf_matrix = cbind(matrix(unlist(res$trees$depth), nrow=3), matrix(unlist(res$trees$leaves), nrow=3))
             rownames(rf_matrix) = c("Min.", "Mean.", "Max.")
@@ -422,22 +422,46 @@ setMethod("h2o.randomForest", signature(y="character", x_ignore="character", dat
             resRFModel
           })
 
-setMethod("h2o.randomForest", signature(y="character", x_ignore="ANY", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="ANY"),
-          function(y, x_ignore, data, ntree, depth, classwt) {
-            if(!(missing(x_ignore) || class(x_ignore) == "character" || class(x_ignore) == "numeric"))
-              stop(paste("x_ignore cannot be of class", class(x_ignore)))
-            if(!(missing(classwt) || class(classwt) == "numeric"))
-              stop(paste("classwt cannot be of class", class(classwt)))
-            h2o.randomForest(y, as.character(x_ignore), data, ntree, depth, classwt)
+setMethod("h2o.randomForest", signature(x="character", y="numeric", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
+          function(x, y, data, ntree, depth, classwt) {
+            if(y < 1 || y > ncol(data)) stop(paste(y, "must be between 1 and", ncol(data)))
+            h2o.randomForest(x, colnames(data)[y], data, ntree, depth, classwt)
           })
 
-setMethod("h2o.randomForest", signature(y="numeric", x_ignore="ANY", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="ANY"),
-          function(y, x_ignore, data, ntree, depth, classwt) {
-            if(!(missing(x_ignore) || class(x_ignore) == "character" || class(x_ignore) == "numeric"))
-              stop(paste("x_ignore cannot be of class", class(x_ignore)))
+setMethod("h2o.randomForest", signature(x="numeric", y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
+          function(x, y, data, ntree, depth, classwt) {
+            if(any(x < 1 | x > ncol(data))) stop(paste("x must be between 1 and", ncol(data)))
+            h2o.randomForest(colnames(data)[x], y, data, ntree, depth, classwt)
+          })
+
+setMethod("h2o.randomForest", signature(x="numeric", y="numeric", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
+          function(x, y, data, ntree, depth, classwt) {
+            if(y < 1 || y > ncol(data)) stop(paste("y must be between 1 and", ncol(data)))
+            if(any(x < 1 | x > ncol(data))) stop(paste("x must be between 1 and", ncol(data)))
+            myCol = colnames(data)
+            h2o.randomForest(myCol[x], myCol[y], data, ntree, depth, classwt)
+          })
+
+setMethod("h2o.randomForest", signature(x="ANY", y="ANY", data="H2OParsedData", ntree="ANY", depth="ANY", classwt="ANY"),
+          function(x, y, data, ntree, depth, classwt) {
+            if(missing(y)) stop("Must specify a response variable y!")
+            if(!(class(y) %in% c("character", "numeric", "integer")))
+              stop(paste("y cannot be of class", class(y)))
+            
+            if(missing(x)) stop("Must specify a predictor variable x!")
+            if(!(class(x) %in% c("character", "numeric", "integer")))
+              stop(paste("x cannot be of class", class(x)))
+              
+            if(!(missing(ntree) || class(ntree) == "numeric"))
+              stop(paste("ntree cannot be of class", class(ntree)))
+            if(!(missing(depth) || class(depth) == "numeric"))
+              stop(paste("depth cannot be of class", class(depth)))
             if(!(missing(classwt) || class(classwt) == "numeric"))
               stop(paste("classwt cannot be of class", class(classwt)))
-            h2o.randomForest(as.character(y), as.character(x_ignore), data, ntree, depth, classwt)
+            
+            if(class(x) == "integer") x = as.numeric(x)
+            if(class(y) == "integer") y = as.numeric(y)
+            h2o.randomForest(x, y, data, ntree, depth, classwt)
           })
 
 setMethod("h2o.getTree", signature(forest="H2ORForestModel", k="numeric", plot="logical"),
@@ -484,10 +508,10 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
               res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
               h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
               new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
-            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, num_pc=numPC)
-            #  while(h2o.__poll(object@data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-            #  res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
-            #  new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
+              # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, num_pc=numPC)
+              # while(h2o.__poll(object@data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+              # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
+              # new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
             } else
               stop(paste("Prediction has not yet been implemented for", class(object)))
           })

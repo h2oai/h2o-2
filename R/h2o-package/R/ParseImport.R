@@ -211,7 +211,7 @@ setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="logica
 
 setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="logical", sep="ANY", col.names="missing"), 
           function(data, key, header, sep) {
-            temp = new("H2OParsedData", h2o=new("H2OClient"), key="")
+            temp = new("H2OParsedData", h2o=new("H2OClient"), key="")   # Dummy variable to pass empty destination key to parser
             h2o.parseRaw(data, key, header, sep, temp)
           })
 

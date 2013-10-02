@@ -28,6 +28,11 @@ public class TransfVec extends Vec {
     return new TransfChunk(c, _domMap);
   }
 
+  @Override public void remove( Futures fs ) {
+    UKV.remove(_masterVecKey,fs);
+    super.remove(fs);
+  }
+
   static class TransfChunk extends Chunk {
     Chunk _c;
     int[] _domMap;
