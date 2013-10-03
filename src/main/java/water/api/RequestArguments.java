@@ -1388,8 +1388,6 @@ public class RequestArguments extends RequestStatics {
       setRefreshOnChange();
     }
     @Override public Boolean parse(String input) {
-      Vec vec = _fcv.value();
-      System.out.println(vec+" "+vec.isInt()+" "+vec.isEnum());
       boolean b=false;
       if( false ) ;
       else if (input.equals("1"))     b= true;
@@ -1397,13 +1395,13 @@ public class RequestArguments extends RequestStatics {
       else if (input.equals("true"))  b= true;
       else if (input.equals("false")) b= false;
       else throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
-      if( !vec.isInt() && b ) throw new IllegalArgumentException("Only Regression on float responses");
+      Vec vec = _fcv.value();
+      if( !vec.isInt() &&  b ) throw new IllegalArgumentException("Only Regression on float responses");
       if( vec.isEnum() && !b ) throw new IllegalArgumentException("Only Classification on catagorical responses");
       return b;
     }
     @Override protected Boolean defaultValue() {
-      Vec vec = _fcv.value();
-      return !vec.isInt();
+      return !_fcv.value().isInt(); // Float columns only regress
     }
   }
 
