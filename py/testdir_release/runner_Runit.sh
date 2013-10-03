@@ -154,7 +154,7 @@ myR() {
     ls $H2OWrapperDir/h2oWrapper*.tar.gz
 
     # we want $1 used for -name below, to not have .R suffix
-    rScript=$H2O_R_HOME/tests/$1.R
+    rScript=$H2O_R_HOME/tests/$1
     echo $rScript
     echo "Running this cmd:"
     cmd="R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
@@ -179,13 +179,13 @@ mySetup libPaths
 export H2OWrapperDir=../../h2o-downloaded/R
 echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
 printenv | grep H2OWrapperDir
-myR runit_RF 120
-myR runit_PCA 35
-myR runit_GLM 35
-myR runit_kmeans 60
-myR runit_tail_numeric 60
-myR runit_summary_numeric 60
-myR runit_GBM 1200
+myR runit_RF.R 120
+myR runit_PCA.R 35
+myR runit_GLM.R 35
+myR runit_kmeans.R 60
+myR runit_tail_numeric.R 60
+myR runit_summary_numeric.R 60
+myR runit_GBM.R 1200
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
