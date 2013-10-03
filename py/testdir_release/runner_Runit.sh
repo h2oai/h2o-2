@@ -182,7 +182,10 @@ printenv | grep H2OWrapperDir
 myR runit_RF 120
 myR runit_PCA 35
 myR runit_GLM 35
-myR runit_GBM 300
+myR runit_kmeans 60
+myR runit_tail_numeric.R 60
+myR runit_summary_numeric.R 60
+myR runit_GBM 1200
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
