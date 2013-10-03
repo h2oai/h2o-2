@@ -114,12 +114,11 @@ class Basic(unittest.TestCase):
 
             params = {
                 'destination_key': "GBMKEY",
-                'ignored_cols': 0, # enum?
                 'learn_rate': .1,
                 'ntrees': 2,
                 'max_depth': 8,
                 'min_rows': 1,
-                'vresponse': col # should be binomial from above
+                'response': col # should be binomial from above
                 }
 
             kwargs = params.copy()

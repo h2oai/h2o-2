@@ -5,8 +5,9 @@ import hex.glm.GLMParams.Family;
 
 import java.text.DecimalFormat;
 
-import water.Iced;
-import water.Key;
+import water.*;
+import water.api.DocGen;
+import water.api.Request.API;
 
 /**
  * Class for GLMValidation.
@@ -15,20 +16,62 @@ import water.Key;
  *
  */
 public class GLMValidation extends Iced {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+  @API(help="")
   final double _ymu;
+  @API(help="")
   double residual_deviance;
+  @API(help="")
   double null_deviance;
+  @API(help="")
   double avg_err;
+  @API(help="")
   long nobs;
-  transient double auc = Double.NaN;
-  private double _aic;// internal aic used only for poisson family!
+
+  @API(help="")
+  double auc = Double.NaN;
+
+  @API(help="AIC")
+  double aic;// internal aic used only for poisson family!
+  @API(help="internal aic used only for poisson family!")
+  private double _aic2;// internal aic used only for poisson family!
+  @API(help="")
   final Key dataKey;
+  @API(help="")
   ConfusionMatrix [] _cms;
+  @API(help="")
   final GLMParams _glm;
+  @API(help="")
   final private int _rank;
 
   private static final DecimalFormat DFORMAT = new DecimalFormat("##.##");
 
+  public static class GLMXValidation extends GLMValidation {
+    Key [] _xvalModels;
+    public GLMXValidation(GLMModel mainModel, Key [] xvalModels) {
+      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank());
+      for(Key k:_xvalModels = xvalModels){
+        GLMModel xm = DKV.get(k).get();
+        add(xm.validation());
+      }
+      finalize_AIC_AUC();
+    }
+    @Override public void generateHTML(String title, StringBuilder sb) {
+      super.generateHTML(title, sb);
+      // add links to the xval models
+      sb.append("<h4>Cross Validation Models</h4>");
+      sb.append("<table class='table table-bordered table-condensed'>");
+      int i = 0;
+      for(Key k:_xvalModels){
+        sb.append("<tr>");
+        sb.append("<td>" + "<a href='Inspect.html?key="+k+"'>" + "Model " + ++i + "</a></td>");
+        sb.append("</tr>");
+      }
+      sb.append("</table>");
+    }
+  }
   public GLMValidation(Key dataKey, double ymu, GLMParams glm, int rank){
     _rank = rank;
     _ymu = ymu;
@@ -57,15 +100,15 @@ public class GLMValidation extends Iced {
       double logfactorial = 0;
       for( long i = 2; i <= y; ++i )
         logfactorial += Math.log(i);
-      _aic += (yreal * Math.log(ymodel) - logfactorial - ymodel);
+      _aic2 += (yreal * Math.log(ymodel) - logfactorial - ymodel);
     }
   }
   public void add(GLMValidation v){
     residual_deviance  += v.residual_deviance;
     null_deviance += v.null_deviance;
-    avg_err = ((nobs/(nobs+v.nobs))*avg_err + (v.nobs/(nobs+v.nobs))*v.avg_err);
+    avg_err = (((double)nobs/(nobs+v.nobs))*avg_err + ((double)v.nobs/(nobs+v.nobs))*v.avg_err);
     nobs += v.nobs;
-    _aic += v._aic;
+    _aic2 += v._aic2;
     if(_cms == null)_cms = v._cms;
     else for(int i = 0; i < _cms.length; ++i)_cms[i].add(v._cms[i]);
   }
@@ -73,12 +116,10 @@ public class GLMValidation extends Iced {
   public final double residualDeviance(){return residual_deviance;}
   public final long nullDOF(){return nobs-1;}
   public final long resDOF(){return nobs - _rank -1;}
-  public double auc(){
-    if(Double.isNaN(auc))computeAUC();
-    return auc;
-  }
-  public double aic(){
-    double aic = 0;
+  public double auc(){return auc;}
+  public double aic(){return aic;}
+  protected void computeAIC(){
+    aic = 0;
     switch( _glm.family ) {
       case gaussian:
         aic =  nobs * (Math.log(residual_deviance / nobs * 2 * Math.PI) + 1) + 2;
@@ -87,18 +128,25 @@ public class GLMValidation extends Iced {
         aic = residual_deviance;
         break;
       case poisson:
-        aic = -2*_aic;
+        aic = -2*_aic2;
         break; // aic is set during the validation task
       case gamma:
       case tweedie:
-        return Double.NaN;
+        aic = Double.NaN;
+        break;
       default:
         assert false : "missing implementation for family " + _glm.family;
     }
-    return aic + 2*_rank;
+    aic += 2*_rank;
   }
+  @Override
   public String toString(){
     return "null_dev = " + null_deviance + ", res_dev = " + residual_deviance + ", auc = " + auc();
+  }
+
+  protected void finalize_AIC_AUC(){
+    computeAIC();
+    if(_glm.family == Family.binomial)computeAUC();
   }
   /**
    * Computes area under the ROC curve. The ROC curve is computed from the confusion matrices

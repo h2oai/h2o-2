@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import time, sys, json, re, getpass, requests, argparse
+import time, sys, json, re, getpass, requests, argparse, os, shutil
 
 parser = argparse.ArgumentParser(description='Creates h2o-node.json for cloud cloning from existing cloud')
 # parser.add_argument('-v', '--verbose',     help="verbose", action='store_true')
@@ -7,6 +7,40 @@ parser.add_argument('-f', '--flatfile', help="Use this flatfile to start probes\
 args = parser.parse_args()
 
 #********************************************************************
+# shutil.rmtree doesn't work on windows if the files are read only.
+# On unix the parent dir has to not be readonly too.
+# May still be issues with owner being different, like if 'system' is the guy running?
+# Apparently this escape function on errors is the way shutil.rmtree can
+# handle the permission issue. (do chmod here)
+# But we shouldn't have read-only files. So don't try to handle that case.
+def handleRemoveError(func, path, exc):
+    # If there was an error, it could be due to windows holding onto files.
+    # Wait a bit before retrying. Ignore errors on the retry. Just leave files.
+    # Ex. if we're in the looping cloud test deleting sandbox.
+    excvalue = exc[1]
+    print "Retrying shutil.rmtree of sandbox (2 sec delay). Will ignore errors. Exception was", excvalue.errno
+    time.sleep(2)
+    try:
+        func(path)
+    except OSError:
+        pass
+
+LOG_DIR = 'sandbox'
+# Create a clean sandbox, like the normal cloud builds...because tests
+# expect it to exist (they write to sandbox/commands.log)
+# find_cloud.py creates h2o-node.json for tests to use with -ccj
+# the side-effect they also want is clean sandbox, so we'll just do it here too
+def clean_sandbox():
+    if os.path.exists(LOG_DIR):
+        # shutil.rmtree fails to delete very long filenames on Windoze
+        #shutil.rmtree(LOG_DIR)
+        # was this on 3/5/13. This seems reliable on windows+cygwin
+        ### os.system("rm -rf "+LOG_DIR)
+        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+    # it should have been removed, but on error it might still be there
+    if not os.path.exists(LOG_DIR):
+        os.mkdir(LOG_DIR)
+
 def dump_json(j):
     return json.dumps(j, sort_keys=True, indent=2)
 
@@ -190,6 +224,9 @@ expandedCloud = {
         },
     'h2o_nodes': h2oNodesList
     }
+
+print "Cleaning sandbox, (creating it), so tests can write to commands.log normally"
+clean_sandbox()
 
 with open('h2o-nodes.json', 'w+') as f:
     f.write(json.dumps(expandedCloud, indent=4))
