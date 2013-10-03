@@ -59,16 +59,23 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     _ncols = _train.length;
     _nrows = source.numRows() - response.naCnt();
     _ymin = (int)response.min(); 
-    _nclass = response.isInt() ? (char)(response.max()-_ymin+1) : 1; 
+    assert (classification && response.isInt()) || // Classify Int or Enums
+      (!classification && !response.isEnum());     // Regress  Int or Float
+    _nclass = classification ? (char)(response.max()-_ymin+1) : 1; 
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
     final Key dataKey = null;
-    String[] domain = response.domain();
 
     Frame fr = new Frame(_names, _train);
     fr.add("response",response);
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
+    String names[] = frm.names();
+    String domains[][] = frm.domains();
+
+    String[] domain = response.domain();
+    if( domain == null )        // No names?  Make some up.
+      domains[_ncols] = domain = _nclass == 1 ? new String[] {"regressor"} : response.defaultLevels();
 
     // Find the class distribution
     _distribution = new ClassDist().doAll(response)._ys;
@@ -93,7 +100,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
     // Tail-call position: this forks off in the background, and this call
     // returns immediately.  The actual model build is merely kicked off.
-    buildModel(fr,frm,outputKey, dataKey, new Timer());
+    buildModel(fr,names,domains,outputKey, dataKey, new Timer());
   }
 
   // Shared cleanup
@@ -327,5 +334,5 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   }
 
   protected abstract water.util.Log.Tag.Sys logTag();
-  protected abstract void buildModel( Frame fr, Frame frm, Key outputKey, Key dataKey, Timer t_build );
+  protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Timer t_build );
 }

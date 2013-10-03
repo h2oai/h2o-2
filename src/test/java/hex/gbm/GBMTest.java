@@ -77,6 +77,7 @@ public class GBMTest extends TestUtil {
     Frame fr = null;
     try {
       gbm = new GBM();
+      gbm.classification = true;
       gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       gbm.response = prep.prep(gbm.source);
