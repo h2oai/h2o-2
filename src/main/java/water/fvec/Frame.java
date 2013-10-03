@@ -159,14 +159,14 @@ public class Frame extends Iced {
   }
 
   public final String[] names() { return _names; }
-  public int  numCols() { return _vecs.length; }
+  public int  numCols() { return vecs().length; }
   public long numRows(){ return anyVec().length();}
 
   /** All the domains for enum columns; null for non-enum columns.  */
   public String[][] domains() {
-    String ds[][] = new String[_vecs.length][];
-    for( int i=0; i<_vecs.length; i++ )
-      ds[i] = _vecs[i].domain();
+    String ds[][] = new String[vecs().length][];
+    for( int i=0; i<vecs().length; i++ )
+      ds[i] = vecs()[i].domain();
     return ds;
   }
 
@@ -225,7 +225,7 @@ public class Frame extends Iced {
 
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   public void remove(Futures fs){
-    if(_vecs.length > 0){
+    if(vecs().length > 0){
       VectorGroup vg = _vecs[0].group();
       for( Vec v : _vecs )
         UKV.remove(v._key,fs);
@@ -238,7 +238,7 @@ public class Frame extends Iced {
 
   public long byteSize() {
     long sum=0;
-    for( int i=0; i<_vecs.length; i++ )
+    for( int i=0; i<vecs().length; i++ )
       sum += _vecs[i].byteSize();
     return sum;
   }
@@ -307,7 +307,7 @@ public class Frame extends Iced {
   }
   public StringBuilder toString( StringBuilder sb, String[] fs, long idx ) {
     for( int c=0; c<fs.length; c++ ) {
-      if( _vecs[c].isInt() ) {
+      if( vecs()[c].isInt() ) {
         if( _vecs[c].isNA(idx) ) {
           Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
           int len = C.pformat_len0();  // Printable width

@@ -2408,12 +2408,8 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected boolean isSelected(String value) {
-      Frame fr = fr();
       int[] val = value();
-      if (val == null) return false;
-      for(int i = 0; i < fr.numCols(); ++i)
-        if(fr._names[i].equals(value))Ints.contains(val, i);
-      return false;
+      return val != null && Ints.contains(val, index(value));
     }
 
     @Override protected int[] parse(String input) throws IllegalArgumentException {
@@ -2421,21 +2417,28 @@ public class RequestArguments extends RequestStatics {
       ArrayList<Integer> al = new ArrayList();
       for (String col : input.split(",")) {
         col = col.trim();
-        int idx = -1;
-        try {
-         idx = Integer.valueOf(col);
-        }catch(NumberFormatException e){
-          for(int i = 0; i < fr.numCols(); ++i)
-            if(fr._names[i].equals(col))idx = i;
-        }
+        int idx = index(col);
         if (0 > idx || idx > fr.numCols())
           throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
         if (al.contains(idx))
-          throw new IllegalArgumentException("Column "+col+" is already selected.");
+          throw new IllegalArgumentException("Column "+col+" is specified twice.");
         checkLegality(fr.vecs()[idx]);
         al.add(idx);
       }
       return Ints.toArray(al);
+    }
+
+    private int index(String value) {
+      value = value.trim();
+      try {
+        return Integer.valueOf(value);
+      } catch(NumberFormatException e){
+        Frame fr = fr();
+        for(int i = 0; i < fr.numCols(); ++i)
+          if(fr._names[i].equals(value))
+            return i;
+      }
+      return -1;
     }
 
     @Override protected int[] defaultValue() {

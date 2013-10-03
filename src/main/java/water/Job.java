@@ -55,11 +55,41 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
+    @API(help = "Input columns (Indexes start at 0)", filter=colsFilter.class, hide=true)
     public int[] cols;
     class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
-    protected Vec[] selectVecs(Frame frame) {
+    @API(help = "Input columns to ignore. (Indexes start at 0, processed after 'cols')", filter=colsFilter.class)
+    public int[] ignored_cols;
+    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() { super("source"); } }
+
+    @Override protected Response serve() {
+      initSource();
+      return super.serve();
+    }
+
+    protected void initSource() {
+      if(cols == null || cols.length == 0) {
+        cols = new int[source.vecs().length];
+        for( int i = 0; i < cols.length; i++ )
+          cols[i] = i;
+      }
+      int length = cols.length;
+      for( int g = 0; ignored_cols != null && g < ignored_cols.length; g++ ) {
+        for( int i = 0; i < cols.length; i++ ) {
+          if(cols[i] == ignored_cols[g]) {
+            length--;
+            // Move all, try to keep ordering
+            System.arraycopy(cols, i + 1, cols, i, length - i);
+            break;
+          }
+        }
+      }
+      if( length != cols.length )
+        cols = ArrayUtils.subarray(cols, 0, length);
+    }
+
+    protected final Vec[] selectVecs(Frame frame) {
       Vec[] vecs = new Vec[cols.length];
       for( int i = 0; i < cols.length; i++ )
         vecs[i] = frame.vecs()[cols[i]];
@@ -75,17 +105,25 @@ public class Job extends Request2 {
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
-    protected int initResponse() {
+    @Override protected void registered() {
+      super.registered();
+      Argument c = find("ignored_cols");
+      Argument r = find("response");
+      int ci = _arguments.indexOf(c);
+      int ri = _arguments.indexOf(r);
+      _arguments.set(ri, c);
+      _arguments.set(ci, r);
+    }
+
+    @Override protected void initSource() {
+      super.initSource();
+
       // Doing classification only right now...
       if( !response.isEnum() ) response.asEnum();
 
       for( int i = cols.length - 1; i >= 0; i-- )
         if( source.vecs()[cols[i]] == response )
           cols = ArrayUtils.remove(cols, i);
-      for( int i = 0; i < source.vecs().length; i++ )
-        if( source.vecs()[i] == response )
-          return i;
-      throw new IllegalArgumentException();
     }
   }
 
@@ -100,17 +138,24 @@ public class Job extends Request2 {
     @API(help = "Validation frame", filter = Default.class)
     public Frame validation;
 
-    protected void selectCols() {
-      int rIndex = initResponse();
+    @Override protected void initSource() {
+      super.initSource();
+
+      int rIndex = 0;
+      for( int i = 0; i < source.vecs().length; i++ )
+        if( source.vecs()[i] == response )
+          rIndex = i;
+
       _train = selectVecs(source);
       if(validation != null) {
         _valid = selectVecs(validation);
-        _validResponse = validation.vecs()[rIndex];
+        if(rIndex >= 0)
+          _validResponse = validation.vecs()[rIndex];
       }
       _names = new String[cols.length];
       for( int i = 0; i < cols.length; i++ )
         _names[i] = source._names[cols[i]];
-      _responseName = source._names != null ? source._names[rIndex] : "response";
+      _responseName = source._names != null && rIndex >= 0 ? source._names[rIndex] : "response";
     }
   }
 

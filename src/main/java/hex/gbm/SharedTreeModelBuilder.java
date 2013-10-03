@@ -53,13 +53,12 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   // --------------------------------------------------------------------------
   // Driver for model-building.
   public void buildModel( ) {
-    selectCols();
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
     _ncols = _train.length;
     _nrows = source.numRows() - response.naCnt();
-    _ymin = (int)response.min(); 
-    _nclass = response.isInt() ? (char)(response.max()-_ymin+1) : 1; 
+    _ymin = (int)response.min();
+    _nclass = response.isInt() ? (char)(response.max()-_ymin+1) : 1;
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();

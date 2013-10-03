@@ -56,7 +56,6 @@ public class NeuralNet extends ValidatedJob {
   }
 
   @Override public void run() {
-    selectCols();
     Vec[] vecs = Utils.add(_train, response);
     reChunk(vecs);
     System.arraycopy(vecs, 0, _train, 0, _train.length);
@@ -309,7 +308,6 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override public void run() {
-      initResponse();
       Layer[] clones = new Layer[model.layers.length];
       clones[0] = new VecsInput(selectVecs(source));
       for( int y = 1; y < clones.length - 1; y++ )
