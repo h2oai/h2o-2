@@ -75,6 +75,10 @@ public class Job extends Request2 {
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
+    @API(help="Do Classification or regression", filter=myClassFilter.class)
+    public boolean classification = false;
+    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
+
     protected int initResponse() {
       // Doing classification only right now...
       if( !response.isEnum() ) response.asEnum();
