@@ -168,6 +168,7 @@ public class GBMTest extends TestUtil {
     Frame fr = null;
     try {
       drf = new DRF();
+      drf.classification = true;
       drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       drf.response = prep.prep(drf.source);
