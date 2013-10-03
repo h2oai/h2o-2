@@ -1,10 +1,8 @@
 package hex.glm;
 
 
-import hex.DGLM.FamilyIced;
 import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
-import hex.glm.GLMParams.Link;
 import hex.gram.Gram;
 
 import java.util.Arrays;
@@ -25,6 +23,10 @@ import water.util.Utils;
  */
 public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   protected final boolean _standardize;
+  final int _offset;
+  final int _step;
+  final boolean _complement;
+
   int _nums = -1;
   int _cats = -1;
   // offsets of categorcial variables
@@ -52,9 +54,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   // size of the top-left strictly diagonal region of the gram matrix, currently just the size of the largest categorical
   final protected int diagN(){if(_catOffsets.length < 2)return 0; return _catOffsets[1];}
 
-  public GLMTask(GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {
+  public GLMTask(GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {this(glm, beta, standardize, cm, cv, 1,0,false);}
+  public GLMTask(GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv, int step, int offset, boolean complement) {
     _standardize = standardize; _caseMode = cm; _caseVal = cv; _beta = beta;
     _glm = glm;
+    _step = step;
+    _offset = offset;
+    _complement = complement;
   }
   protected GLMTask(GLMTask gt, double [] beta){
     _standardize = gt._standardize;
@@ -68,6 +74,9 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     _catOffsets = gt._catOffsets;
     _normMul = gt._normMul;
     _normSub = gt._normSub;
+    _step = gt._step;
+   _offset = gt._offset;
+   _complement = gt._complement;
   }
 
   /**
@@ -168,12 +177,16 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.
    */
-  public void map(Chunk [] chunks){
+  @Override public void map(Chunk [] chunks){
     final int nrows = chunks[0]._len;
     double [] nums = MemoryManager.malloc8d(_nums);
     int    [] cats = MemoryManager.malloc4(_cats);
+    final int step = _complement?_step:1;
+    final int start = _complement?_offset:0;
+
     OUTER:
-    for(int r = 0; r < nrows; ++r){
+    for(int r = start; r < nrows; r += step){
+      if(_step > step && (r % _step) == _offset)continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
       int i = 0, ncats = 0;
       for(; i < _cats; ++i){
@@ -270,8 +283,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     double    _yy;
     GLMValidation _val; // validation of previous model
 
-    public GLMIterationTask(GLMParams glm, double [] beta, boolean standardize, double reg, CaseMode caseMode, double caseVal) {
-      super(glm, beta, standardize, caseMode, caseVal);
+    public GLMIterationTask(GLMParams glm, double [] beta, boolean standardize, double reg, CaseMode caseMode, double caseVal, int step, int offset, boolean complement) {
+      super(glm, beta, standardize, caseMode, caseVal, step, offset, complement);
       _iter = 0;
       _reg = reg;
     }

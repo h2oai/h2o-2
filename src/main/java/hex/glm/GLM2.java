@@ -6,6 +6,7 @@ import hex.glm.GLMParams.Family;
 import hex.glm.GLMParams.Link;
 import hex.glm.GLMTask.GLMIterationTask;
 import hex.glm.GLMTask.YMUTask;
+import hex.glm.GLMValidation.GLMXValidation;
 import hex.glm.LSMSolver.ADMMSolver;
 
 import java.util.ArrayList;
@@ -40,8 +41,16 @@ public class GLM2 extends FrameJob{
   @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class)
   boolean standardize = true;
 
+  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100)
+  int nfold;
+
   @API(help = "Family.", filter = Default.class)
   Family family = Family.gaussian;
+
+  private final int _step;
+  private final int _offset;
+  private final boolean _complement;
+  private double [] _beta;
 
 //  @API(help = "Link.", filter = Default.class)
   Link link = Link.identity;
@@ -62,9 +71,14 @@ public class GLM2 extends FrameJob{
 
   public GLM2 setTweedieVarPower(double d){tweedie_variance_power = d; return this;}
 
-  public GLM2() {
+  public GLM2() {_step = 1; _offset = 0; _complement = false;}
+  public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda){
+    this(desc, dest, src, standardize, family, link, alpha, lambda, 1,0,false,null);
   }
-  public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda) {
+  public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int skip, boolean complement, double [] beta) {
+    this(desc, dest, src, standardize, family, link, alpha, lambda,step,skip,complement,beta,0);
+  }
+  public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int offset, boolean complement, double [] beta,int nfold) {
     description = desc;
     destination_key = dest;
     source = src;
@@ -73,6 +87,11 @@ public class GLM2 extends FrameJob{
     this.alpha = alpha;
     this.lambda = lambda;
     this.standardize = standardize;
+    _step = step;
+    _offset = offset;
+    _complement = complement;
+    _beta = beta;
+    this.nfold = nfold;
   }
 
   private long _startTime;
@@ -94,7 +113,7 @@ public class GLM2 extends FrameJob{
   @Override public float progress(){
     if(DKV.get(dest()) == null)return 0;
     GLMModel m = DKV.get(dest()).get();
-    return (float)m.iteration/(float)max_iter; // TODO, do smomething smarter here
+    return (float)m.iteration/(float)max_iter; // TODO, do something smarter here
   }
   @Override public void run(){
     try {
@@ -133,14 +152,18 @@ public class GLM2 extends FrameJob{
       GLMModel res = new GLMModel(dest(),null,glmt._iter+1,fr,glmt,beta_eps,alpha,lambda,newBeta,0.5,null,System.currentTimeMillis() - start_time);
       if(done){
         // final validation
-        GLMValidationTask t = new GLMValidationTask(res);
-        t.doAll(fr);
-        Key valKey = GLMValidation.makeKey();
-        DKV.put(valKey,t._res);
-        res.validations = new Key[]{valKey};
-        DKV.put(dest(),res);
-        remove();
-        fjt.tryComplete(); // signal we're done to anyone waiting for the job
+        if(GLM2.this.nfold < 2){
+          GLMValidationTask t = new GLMValidationTask(res,_step,_offset,true);
+          t.doAll(fr);
+          Key valKey = GLMValidation.makeKey();
+          DKV.put(valKey,t._res);
+          t._res.finalize_AIC_AUC();
+          res.setValidation(valKey);
+          DKV.put(dest(),res);
+          remove();
+          fjt.tryComplete(); // signal we're done to anyone waiting for the job
+        } else
+          xvalidate(res, fjt);
       } else {
         DKV.put(dest(),res);
         GLMIterationTask nextIter = new GLMIterationTask(glmt, newBeta);
@@ -155,7 +178,11 @@ public class GLM2 extends FrameJob{
       return true;
     }
   }
+
   public Future fork(H2OCountedCompleter completer){
+    final H2OCountedCompleter fjt = new H2OEmptyCompleter();
+    if(completer != null)fjt.setCompleter(completer);
+    start(fjt);
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
     source.remove(ignored_cols);
     final Vec [] vecs =  source.vecs();
@@ -175,13 +202,29 @@ public class GLM2 extends FrameJob{
     final Frame fr = GLMTask.adaptFrame(source);
     YMUTask ymut = new YMUTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power), standardize, case_mode, case_val, fr.anyVec().length());
     ymut.doAll(fr);
-    GLMIterationTask firstIter = new GLMIterationTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),null,standardize, 1.0/ymut.nobs(), case_mode, case_val);
+    GLMIterationTask firstIter = new GLMIterationTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
     firstIter._ymu = ymut.ymu();
-    final H2OEmptyCompleter fjt = start(new H2OEmptyCompleter());
-    if(completer != null)fjt.setCompleter(completer);
     final LSMSolver solver = new ADMMSolver(lambda, alpha);
     firstIter.setCompleter(new Iteration(solver,fr,fjt));
     firstIter.dfork(fr);
     return fjt;
+  }
+
+  private void xvalidate(final GLMModel model, final H2OCountedCompleter cmp){
+    final Key [] keys = new Key[nfold];
+    H2OCallback callback = new H2OCallback() {
+      @Override public void callback(H2OCountedCompleter t) {
+        GLMXValidation xval = new GLMXValidation(model, keys);
+        Key xvalKey = Key.make();
+        DKV.put(xvalKey, xval);
+        model.setValidation(xvalKey);
+        DKV.put(model._selfKey, model);
+        GLM2.this.remove();
+      }
+    };
+    callback.addToPendingCount(nfold-1);
+    callback.setCompleter(cmp);
+    for(int i = 0; i < nfold; ++i)
+      new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, nfold, i,false,model.norm_beta).fork(callback);
   }
 }
