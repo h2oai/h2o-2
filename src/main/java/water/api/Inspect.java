@@ -3,9 +3,8 @@ package water.api;
 import hex.DGLM.GLMModel;
 import hex.DPCA.PCAModel;
 import hex.*;
-import hex.NeuralNet.NeuralNetModel;
 import hex.gbm.GBM.GBMModel;
-import hex.glm.GLMModelView;
+import hex.glm.*;
 import hex.rf.RFModel;
 
 import java.util.HashMap;
@@ -148,6 +147,8 @@ public class Inspect extends Request {
       return GLMModelView.redirect(this, key);
     if(f instanceof GBMModel)
       return GBMModelView.redirect(this, key);
+    if( f instanceof GLMValidation)
+      return GLMValidationView.redirect(this, key);
     if(f instanceof GridSearch)
       return ((GridSearch) f).redirect();
     return Response.error("No idea how to display a "+f.getClass());
