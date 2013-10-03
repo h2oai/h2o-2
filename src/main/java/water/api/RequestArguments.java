@@ -1396,12 +1396,12 @@ public class RequestArguments extends RequestStatics {
       else if (input.equals("false")) b= false;
       else throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
       Vec vec = _fcv.value();
-      if( !vec.isInt() &&  b ) throw new IllegalArgumentException("Only Regression on float responses");
-      if( vec.isEnum() && !b ) throw new IllegalArgumentException("Only Classification on catagorical responses");
+      if( !vec.isInt() &&  b ) throw new IllegalArgumentException("Float response allows only regression!");
+      if( vec.isEnum() && !b ) throw new IllegalArgumentException("Categorical response allows only classification!");
       return b;
     }
     @Override protected Boolean defaultValue() {
-      return !_fcv.value().isInt(); // Float columns only regress
+      return _fcv.value().isInt(); // Allows only float columns for regression
     }
   }
 
