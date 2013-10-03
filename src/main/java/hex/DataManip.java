@@ -26,7 +26,7 @@ public class DataManip extends FrameJob {
 
   @API(help="Columns to Bind", required=true, filter=DataMultiVecSelect.class)
   int[] cols = new int[] {};
-  class DataMultiVecSelect extends MultiVecSelect { DataMultiVecSelect() { super("source2", false);} }
+  class DataMultiVecSelect extends MultiVecSelect { DataMultiVecSelect() { super("source2");} }
 
   @API(help="Operation", filter=operationFilter.class)
   public Operation operation = Operation.cbind;

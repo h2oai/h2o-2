@@ -94,12 +94,47 @@ public abstract class Request2 extends Request {
     }
   }
 
+  /**
+   * Specify how a column specifier field is parsed.
+   */
+  public enum MultiVecSelectType {
+    /**
+     * Treat a token as a 0-based index if it looks like a positive integer.
+     * Otherwise, treat it as a column name.
+     */
+    INDEXES_THEN_NAMES,
+
+    /**
+     * Treat a token as a column name no matter what (even if it looks like it is an integer).
+     * This is used by the Web UI, which blindly specifies column names.
+     */
+    NAMES_ONLY
+  }
+
   public class MultiVecSelect extends Dependent {
     boolean _namesOnly;
 
-    protected MultiVecSelect(String key, boolean namesOnly) {
+    private void init (MultiVecSelectType selectType) {
+      _namesOnly = false;
+      switch (selectType) {
+        case INDEXES_THEN_NAMES:
+          _namesOnly = false;
+          break;
+
+        case NAMES_ONLY:
+          _namesOnly = true;
+          break;
+      }
+    }
+
+    protected MultiVecSelect(String key) {
       super(key);
-      _namesOnly = namesOnly;
+      init (MultiVecSelectType.INDEXES_THEN_NAMES);
+    }
+
+    protected MultiVecSelect(String key, MultiVecSelectType selectType) {
+      super(key);
+      init (selectType);
     }
   }
 
