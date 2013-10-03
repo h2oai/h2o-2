@@ -10,6 +10,7 @@ import water.H2O.H2OCountedCompleter;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -43,12 +44,27 @@ public class Job extends Request2 {
   public Key self() { return job_key; }
   public Key dest() { return destination_key; }
 
+  protected void logStart() {
+    Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
+  }
+
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help = "Source frame", required = true, filter = Default.class)
     public Frame source;
+
+    @Override protected void logStart() {
+      super.logStart();
+      if (source == null) {
+        Log.info("    source: null");
+      }
+      else {
+        Log.info("    source.numCols(): " + source.numCols());
+        Log.info("    source.numRows(): " + source.numRows());
+      }
+    }
   }
 
   public static abstract class ColumnsJob extends FrameJob {
@@ -62,6 +78,23 @@ public class Job extends Request2 {
     @API(help = "Ignored columns by name", filter=colsFilter.class, displayName="Ignored columns")
     public int[] ignored_cols_by_name;
     class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() { super("source", true); } }
+
+    @Override protected void logStart() {
+      super.logStart();
+      if (cols == null) {
+        Log.info("    cols: null");
+      }
+      else {
+        Log.info("    cols: " + cols.length + " columns selected");
+      }
+
+      if (ignored_cols_by_name == null) {
+        Log.info("    ignored_cols: null");
+      }
+      else {
+        Log.info("    ignored_cols: " + ignored_cols_by_name.length + " columns ignored");
+      }
+    }
 
     @Override protected void init() {
       super.init();
@@ -118,6 +151,18 @@ public class Job extends Request2 {
       _arguments.set(ci, r);
     }
 
+    @Override protected void logStart() {
+      super.logStart();
+      if (response == null) {
+        Log.info("    response: null");
+      }
+      else {
+        String arg = input("response");
+        assert arg != null;
+        Log.info("    response: " + arg);
+      }
+    }
+
     @Override protected void init() {
       super.init();
 
@@ -140,6 +185,17 @@ public class Job extends Request2 {
 
     @API(help = "Validation frame", filter = Default.class)
     public Frame validation;
+
+    @Override protected void logStart() {
+      super.logStart();
+      if (validation == null) {
+        Log.info("    validation: null");
+      }
+      else {
+        Log.info("    validation.numCols(): " + validation.numCols());
+        Log.info("    validation.numRows(): " + validation.numRows());
+      }
+    }
 
     @Override protected void init() {
       super.init();
