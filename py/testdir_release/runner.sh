@@ -20,17 +20,15 @@ then
     echo "Could make the rm pattern match a "sourcing job", not just 0xcustomer"
     echo "Who cleans up on the target 172-180 machines?"
     
-    ### ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
-    # I guess we're setup to do this with keys No one is contended with me on those machines
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.172 rm -f -r /home/0xcustomer/ice*
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.173 rm -f -r /home/0xcustomer/ice*
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.174 rm -f -r /home/0xcustomer/ice*
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.175 rm -f -r /home/0xcustomer/ice*
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.176 rm -f -r /home/0xcustomer/ice*
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.177 rm -f -r /home/0xcustomer/ice*
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.178 rm -f -r /home/0xcustomer/ice*
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.179 rm -f -r /home/0xcustomer/ice*
-    ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.180 rm -f -r /home/0xcustomer/ice*
+    echo "Also: Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
+    echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
+    echo "okay to ls the top level here...no secret info..do all the machines we might be using"
+
+    for mr in 171 172 173 174 175 176 177 178 179 180
+    do
+        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
+            'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
+    done
 
     python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
 else
@@ -71,14 +69,16 @@ echo "i.e. pytest_config-jenkins.json"
 echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 DOIT=../testdir_single_jvm/n0.doit
 
-$DOIT c4/test_c4_four_billion_rows.py || true
-# $DOIT c6/test_c6_hdfs.py || true
 # avoid for now
 # $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
-
 $DOIT c1/test_c1_rel.py || true
 $DOIT c2/test_c2_rel.py || true
 $DOIT c3/test_c3_rel.py || true
+$DOIT c4/test_c4_four_billion_rows.py || true
+$DOIT c6/test_c6_hdfs.py || true
+$DOIT c8/test_c8_rf_airlines_hdfs.py || true
+# fails with summary
+$DOIT c7/test_c7_rel.py || true
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.

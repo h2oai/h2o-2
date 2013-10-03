@@ -42,7 +42,6 @@ public class RequestStatics extends Constants {
     www(".html"), ///< webpage request
     help(".help"), ///< should display the help on the given request
     query(".query"), ///< Displays the query for the argument in html mode
-    debug(".debug"), ///< Displays the webpage without query
     png(".png"), ///< image, e.g. plot
     txt(".txt"), ///< text, e.g. a script
     ;
@@ -64,8 +63,6 @@ public class RequestStatics extends Constants {
         return help;
       if (requestUrl.endsWith(query._suffix))
         return query;
-      if (requestUrl.endsWith(debug._suffix))
-        return debug;
       if (requestUrl.endsWith(png._suffix))
         return png;
       if (requestUrl.endsWith(txt._suffix))

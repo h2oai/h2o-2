@@ -3,7 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common
 import h2o_print
 
-DO_GLM = False
+DO_GLM = True
 LOG_MACHINE_STATS = False
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -25,8 +25,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             ]
         else:
             csvFilenameList= [
-                ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-                ("*[1-2][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800),
+                # ("*[1][0-5][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+                ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
             ]
 
 
@@ -82,7 +82,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     x = ",".join(map(str,x))
 
                     GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
-                        'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                        'max_iter': 4, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
                     start = time.time()
                     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
@@ -106,39 +106,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_C_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_D_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_E_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_F_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_G_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_H_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_I_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_J_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_K_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_L_c2_rel_long(self):
-        self.sub_c2_rel_long()
-
-    def notest_M_c2_rel_long(self):
         self.sub_c2_rel_long()
 
 

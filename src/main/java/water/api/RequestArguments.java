@@ -2359,17 +2359,19 @@ public class RequestArguments extends RequestStatics {
   public class FrameKeyMultiVec extends MultipleSelect<int[]> {
     final TypeaheadKey _key;
     final FrameClassVec _response;
+    final String _description;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
       Value v = DKV.get(_key.value());
       if(v == null) throw new IllegalArgumentException("Frame not found");
       return ValueArray.asFrame(v);
     }
-    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response) {
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description) {
       super(name);
       addPrerequisite(_key = key);
       if((_response = response) != null)
         addPrerequisite(_response);
+      _description = description;
     }
     public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr.vecs()[i]; }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
@@ -2408,7 +2410,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected boolean isSelected(String value) {
       Frame fr = fr();
       int[] val = value();
-      if (val == null) return true;
+      if (val == null) return false;
       for(int i = 0; i < fr.numCols(); ++i)
         if(fr._names[i].equals(value))Ints.contains(val, i);
       return false;
@@ -2429,11 +2431,10 @@ public class RequestArguments extends RequestStatics {
         if (0 > idx || idx > fr.numCols())
           throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
         if (al.contains(idx))
-          throw new IllegalArgumentException("Column "+col+" is already ignored.");
+          throw new IllegalArgumentException("Column "+col+" is already selected.");
         checkLegality(fr.vecs()[idx]);
         al.add(idx);
       }
-      if(al.size() == fr.numCols()-1)throw new IllegalArgumentException("Can not ignore all columns!");
       return Ints.toArray(al);
     }
 
@@ -2442,7 +2443,7 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected String queryDescription() {
-      return "Columns to ignore";
+      return _description;
     }
   }
 }

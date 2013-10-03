@@ -1,11 +1,14 @@
 package water;
 
+import hex.GridSearch;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 
 import water.api.*;
 import water.fvec.Frame;
+import water.util.Utils;
 
 public abstract class Request2 extends Request {
   transient Properties _parms;
@@ -19,11 +22,11 @@ public abstract class Request2 extends Request {
     transient Class _type;
 
     public TypeaheadKey() {
-      this(null);
+      this(null, true);
     }
 
-    public TypeaheadKey(Class type) {
-      super(TypeaheadKeysRequest.class, "", true);
+    public TypeaheadKey(Class type, boolean required) {
+      super(TypeaheadKeysRequest.class, "", required);
       _type = type;
       setRefreshOnChange();
     }
@@ -39,6 +42,8 @@ public abstract class Request2 extends Request {
         Value v = DKV.get(k);
         if( v != null && !compatible(_type, v.get()) )
           throw new IllegalArgumentException(input + ":" + errors()[0]);
+        if ( v == null && _required)
+          throw new IllegalArgumentException("Key '"+input+"' does not exist!");
       }
       return k;
     }
@@ -169,7 +174,7 @@ public abstract class Request2 extends Request {
 
           // Auto-cast from key to Iced field
           else if( Freezable.class.isAssignableFrom(f.getType()) && api.filter() == Default.class )
-            arg = new TypeaheadKey(f.getType());
+            arg = new TypeaheadKey(f.getType(), api.required());
 
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
@@ -195,7 +200,7 @@ public abstract class Request2 extends Request {
               classVecs.put(d._ref, (FrameClassVec) arg);
             } else if( MultiVecSelect.class.isAssignableFrom(api.filter()) ) {
               FrameClassVec response = classVecs.get(d._ref);
-              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response);
+              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help());
             }
           }
 
@@ -251,6 +256,75 @@ public abstract class Request2 extends Request {
       throw new RuntimeException(e);
     }
     return request;
+  }
+
+  // Expand grid search related argument sets
+  @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
+    // TODO: real parser for unified imbricated argument sets, expressions etc
+    String[][] values = new String[_arguments.size()][];
+    boolean gridSearch = false;
+    for( int i = 0; i < _arguments.size(); i++ ) {
+      String value = _parms.getProperty(_arguments.get(i)._name);
+      if( value != null ) {
+        int off = 0;
+        int next = 0;
+        while( (next = value.indexOf('|', off)) >= 0 ) {
+          if( next != off )
+            values[i] = Utils.add(values[i], value.substring(off, next));
+          off = next + 1;
+          gridSearch = true;
+        }
+        if( off < value.length() )
+          values[i] = Utils.add(values[i], value.substring(off));
+      }
+    }
+    if( !gridSearch )
+      return superServeGrid(server, parms, type);
+
+    // Ignore destination key so that each job gets its own
+    _parms.remove("destination_key");
+    for( int i = 0; i < _arguments.size(); i++ )
+      if( _arguments.get(i)._name.equals("destination_key") )
+        values[i] = null;
+
+    // Iterate over all argument combinations
+    int[] counters = new int[values.length];
+    ArrayList<Job> jobs = new ArrayList<Job>();
+    for( ;; ) {
+      Job job = (Job) create(_parms);
+      Properties combination = new Properties();
+      for( int i = 0; i < values.length; i++ ) {
+        if( values[i] != null ) {
+          String value = values[i][counters[i]];
+          value = value.trim();
+          combination.setProperty(_arguments.get(i)._name, value);
+          _arguments.get(i).reset();
+          _arguments.get(i).check(job, value);
+        }
+      }
+      job._parms = combination;
+      jobs.add(job);
+      if( !increment(counters, values) )
+        break;
+    }
+    GridSearch grid = new GridSearch();
+    grid.jobs = jobs.toArray(new Job[jobs.size()]);
+    return grid.superServeGrid(server, parms, type);
+  }
+
+  public final NanoHTTPD.Response superServeGrid(NanoHTTPD server, Properties parms, RequestType type) {
+    return super.serveGrid(server, parms, type);
+  }
+
+  private static boolean increment(int[] counters, String[][] values) {
+    for( int i = 0; i < counters.length; i++ ) {
+      if( values[i] != null && counters[i] < values[i].length - 1 ) {
+        counters[i]++;
+        return true;
+      } else
+        counters[i] = 0;
+    }
+    return false;
   }
 
   /*

@@ -3,7 +3,9 @@ package water.fvec;
 import water.*;
 import water.parser.DParseTask;
 
-// The scale/bias function, where data is in SIGNED bytes before scaling
+/**
+ * The scale/bias function, where data is in SIGNED bytes before scaling.
+ */
 public class C1SChunk extends Chunk {
   static final int OFF=8+4;
   public double _scale;
@@ -23,13 +25,13 @@ public class C1SChunk extends Chunk {
     return (res == C1Chunk._NA)?Double.NaN:(res+_bias)*_scale;
   }
   @Override protected final boolean isNA_impl( int i ) { return (0xFF&_mem[i+OFF]) == C1Chunk._NA; }
-  @Override boolean set_impl(int i, long l) { 
+  @Override boolean set_impl(int i, long l) {
     long res = (long)(l/_scale)-_bias; // Compressed value
     double d = (res+_bias)*_scale;     // Reverse it
     if( (long)d != l ) return false;   // Does not reverse cleanly?
     if( !(0 <= res && res < 255) ) return false; // Out-o-range for a byte array
     _mem[i+OFF] = (byte)res;
-    return true; 
+    return true;
   }
   @Override boolean set_impl(int i, double d) { return false; }
   @Override boolean set_impl(int i, float f ) { return false; }
@@ -58,4 +60,6 @@ public class C1SChunk extends Chunk {
     }
     return nc;
   }
+  public int pformat_len0() { return pformat_len0(_scale,3); }
+  public String pformat0() { return "% 8.2e"; }
 }

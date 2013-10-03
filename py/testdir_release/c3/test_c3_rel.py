@@ -3,7 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common
 import h2o_print
 
-DO_GLM = False
+DO_GLM = True
 LOG_MACHINE_STATS = False
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -25,9 +25,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             ]
         else:
             csvFilenameList= [
-                ("*[1-2][0-9][0-9].dat.gz", "file_200_A.dat.gz", 200 * avgMichalSize, 1800),
+                ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 1800),
             ]
-
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
@@ -81,7 +80,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     x = ",".join(map(str,x))
 
                     GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
-                        'max_iter': 10, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                        'max_iter': 4, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
                     start = time.time()
                     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)

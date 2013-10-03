@@ -121,6 +121,7 @@ public class TypeMap {
   }
 
   static public Freezable newFreezable(int id) {
+    assert id >= 0 : "Bad type id "+id;
     if( id >= CLAZZES.length || CLAZZES[id] == null ) loadId(id);
     Freezable f = GOLD[id];
     if( f == null ) {

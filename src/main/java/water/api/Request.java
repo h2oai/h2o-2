@@ -26,8 +26,8 @@ public abstract class Request extends RequestBuilders {
     Class<? extends Filter>[] filters() default {};
     long   lmin() default Long  .MIN_VALUE;
     long   lmax() default Long  .MAX_VALUE;
-    double dmin() default Double.MIN_VALUE;
-    double dmax() default Double.MAX_VALUE;
+    double dmin() default Double.NEGATIVE_INFINITY;
+    double dmax() default Double.POSITIVE_INFINITY;
   }
 
   public interface Filter {
@@ -58,6 +58,10 @@ public abstract class Request extends RequestBuilders {
     return RequestType.www;
   }
 
+  protected boolean log() {
+    return true;
+  }
+
   protected void registered() {
   }
 
@@ -67,53 +71,45 @@ public abstract class Request extends RequestBuilders {
 
   protected abstract Response serve();
 
-  protected Response serve_debug() {
-    throw H2O.unimpl();
-  }
-
-  protected boolean log() {
-    return true;
-  }
-
-  public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
-    // Needs to be done also for help to initialize or argument records
-    String query = checkArguments(args, type);
-    onArgumentsParsed();
+  public NanoHTTPD.Response serve(NanoHTTPD server, Properties parms, RequestType type) {
     switch( type ) {
       case help:
         return wrap(server, HTMLHelp());
       case json:
       case www:
-      case png:
         if( log() ) {
           String log = getClass().getSimpleName();
-          for( Object arg : args.keySet() ) {
-            String value = args.getProperty((String) arg);
+          for( Object arg : parms.keySet() ) {
+            String value = parms.getProperty((String) arg);
             if( value != null && value.length() != 0 )
               log += " " + arg + "=" + value;
           }
           Log.debug(Sys.HTTPD, log);
         }
-        if( query != null )
-          return wrap(server, query, type);
-        long time = System.currentTimeMillis();
-        Response response = serve();
-        response.setTimeStart(time);
-        if( type == RequestType.json )
-          return response._req == null ? wrap(server, response.toJson()) : wrap(server, new String(response._req
-              .writeJSON(new AutoBuffer()).buf()), RequestType.json);
-        return wrap(server, build(response));
-      case debug:
-        response = serve_debug();
-        return wrap(server, build(response));
-      case query:
+        return serveGrid(server, parms, type);
+      case query: {
+        for (Argument arg: _arguments)
+          arg.reset();
+        String query = buildQuery(parms,type);
         return wrap(server, query);
+      }
       default:
         throw new RuntimeException("Invalid request type " + type.toString());
     }
   }
 
-  protected void onArgumentsParsed() {
+  protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
+    String query = checkArguments(parms, type);
+    if( query != null )
+      return wrap(server, query, type);
+    long time = System.currentTimeMillis();
+    Response response = serve();
+    response.setTimeStart(time);
+    if( type == RequestType.json )
+      return response._req == null ? //
+            wrap(server, response.toJson()) : //
+            wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()), RequestType.json);
+    return wrap(server, build(response));
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String response) {

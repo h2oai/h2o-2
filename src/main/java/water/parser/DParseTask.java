@@ -653,7 +653,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     10000000000.0,
   };
 
-  static long [] powers10i = new long[]{
+  static public long [] powers10i = new long[]{
     1,
     10,
     100,
@@ -689,7 +689,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     for(int i = 0; i < _ncolumns; ++i){
       // Entirely toss out numeric columns which are largely broken.
       if( (_colTypes[i]==ICOL || _colTypes[i]==DCOL || _colTypes[i]==FCOL ) &&
-          (double)_invalidValues[i]/_numRows > 0.2 ) {
+          (double)_invalidValues[i]/_numRows > 0.99 ) {
         _enums[i] = null;
         _max[i] = _min[i] = 0;
         _scale[i] = 0;
@@ -723,7 +723,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           _colTypes[i] = SHORT;
           _bases[i] = (int)_min[i];
         } else if (_max[i] - _min[i] < (1L << 32) &&
-                   _min[i] > Integer.MIN_VALUE && _min[i] < Integer.MAX_VALUE) {
+                   _min[i] > Integer.MIN_VALUE && _max[i] < Integer.MAX_VALUE) {
           _colTypes[i] = INT;
           _bases[i] = (int)_min[i];
         } else

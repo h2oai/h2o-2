@@ -37,7 +37,6 @@ public class CsvParser extends CustomParser {
 
   private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
 
-
   public CsvParser(ParserSetup setup) {
     super(setup);
     CHAR_SEPARATOR = setup._separator;
@@ -86,7 +85,6 @@ public class CsvParser extends CustomParser {
 
 MAIN_LOOP:
     while (true) {
-      //System.out.println("off = " + offset + ", char='" + (char)c  + "', state = " + state + ", quotes='" + (char)quotes+"'");
 NEXT_CHAR:
       switch (state) {
         // ---------------------------------------------------------------------
@@ -140,8 +138,8 @@ NEXT_CHAR:
         // ---------------------------------------------------------------------
         case EOL:
           if(quotes != 0){
-            System.err.println("Umatched quote char " + ((char)quotes));
-            dout.invalidLine("Umatched quote char " + ((char)quotes));
+            System.err.println("Unmatched quote char " + ((char)quotes) + " " + (((_str._length+1) < offset && _str._off > 0)?new String(Arrays.copyOfRange(bits,_str._off-1,offset)):""));
+            dout.invalidLine("Unmatched quote char " + ((char)quotes));
             colIdx = 0;
             quotes = 0;
           }else if (colIdx != 0) {
@@ -198,7 +196,7 @@ NEXT_CHAR:
         case COND_QUOTED_TOKEN:
           state = TOKEN;
           if( CHAR_SEPARATOR!=HIVE_SEP && // Only allow quoting in CSV not Hive files
-              ((c == CHAR_SINGLE_QUOTE) || (c == CHAR_DOUBLE_QUOTE))) {
+              ((_setup._singleQuotes && c == CHAR_SINGLE_QUOTE) || (c == CHAR_DOUBLE_QUOTE))) {
             assert (quotes == 0);
             quotes = c;
             break NEXT_CHAR;
@@ -390,8 +388,8 @@ NEXT_CHAR:
         // ---------------------------------------------------------------------
         case COND_QUOTE:
           if (c == quotes) {
-            //TODO
-            _str.set(bits, offset+1, 0);
+            _str.addChar();
+            _str.skipChar();
             state = STRING;
             break NEXT_CHAR;
           } else {
@@ -654,7 +652,7 @@ NEXT_CHAR:
       }
     }
     if(lines.isEmpty())
-      return new PSetupGuess(new ParserSetup(ParserType.AUTO,CsvParser.AUTO_SEP,0,false,null),0,0,null,null);
+      return new PSetupGuess(new ParserSetup(ParserType.AUTO,CsvParser.AUTO_SEP,0,false,null,setup._singleQuotes),0,0,null,null);
     boolean hasHeader = false;
     byte sep = setup._separator;
     final String [][] data = new String[lines.size()][];
@@ -668,7 +666,7 @@ NEXT_CHAR:
           sep = ' ';
         else {
           data[0] = new String[]{lines.get(0)};
-          return new PSetupGuess(new ParserSetup(ParserType.CSV,CsvParser.AUTO_SEP,1,false,null),lines.size(),0,data,new String[]{"Failed to guess separator."});
+          return new PSetupGuess(new ParserSetup(ParserType.CSV,CsvParser.AUTO_SEP,1,false,null,setup._singleQuotes),lines.size(),0,data,new String[]{"Failed to guess separator."});
         }
       }
       if(lines.size() == 1)
@@ -695,7 +693,7 @@ NEXT_CHAR:
           hasHeader = true;
       }
     }
-    ParserSetup resSetup = new ParserSetup(ParserType.CSV, sep, ncols,hasHeader, hasHeader?data[0]:null);
+    ParserSetup resSetup = new ParserSetup(ParserType.CSV, sep, ncols,hasHeader, hasHeader?data[0]:null,setup._singleQuotes);
     ArrayList<String> errors = new ArrayList<String>();
     int ilines = 0;
     for(int i = 0; i < data.length; ++i){

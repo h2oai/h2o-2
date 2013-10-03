@@ -27,17 +27,14 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs
-  public static Frame parse(Key okey, Key [] keys) {
-    // TODO, get global setup from all files!
-    Key k = keys[0];
-    ByteVec v = (ByteVec)getVec(k);
-    byte [] bits = v.elem2BV(0)._mem;
-    Compression cpr = Utils.guessCompressionMethod(bits);
-    CustomParser.ParserSetup globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), new ParserSetup(),true)._setup;
-    return forkParseDataset(okey, keys, globalSetup).get();
-  }
+  public static Frame parse(Key okey, Key [] keys) {return parse(okey,keys,new ParserSetup());}
 
   public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup) {
+    Key k = keys[0];
+    ByteVec v = (ByteVec)getVec(k);
+    byte [] bits = v.elem2BV(0).getBytes();
+    Compression cpr = Utils.guessCompressionMethod(bits);
+    globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
     return forkParseDataset(okey, keys, globalSetup).get();
   }
   // Same parse, as a backgroundable Job
@@ -48,7 +45,7 @@ public final class ParseDataset2 extends Job {
   }
   // Setup a private background parse job
   private ParseDataset2(Key dest, Key[] fkeys) {
-    super("Parsing", dest);
+    destination_key = dest;
     // Job progress Key
     _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
     UKV.put(_progress, ParseProgress.make(fkeys));

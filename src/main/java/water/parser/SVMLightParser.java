@@ -61,7 +61,7 @@ public class SVMLightParser extends CustomParser{
     SVMLightParser p = new SVMLightParser(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, false));
     InspectDataOut dout = new InspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
-    return new PSetupGuess(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, dout._ncols,false,null),dout._nlines,dout._invalidLines,dout.data(),dout.errors());
+    return new PSetupGuess(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, dout._ncols,false,null,false),dout._nlines,dout._invalidLines,dout.data(),dout.errors());
   }
   @Override
   public boolean isCompatible(CustomParser p){return p instanceof SVMLightParser;}

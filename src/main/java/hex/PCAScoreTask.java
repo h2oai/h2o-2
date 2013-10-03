@@ -9,12 +9,13 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
 
 public abstract class PCAScoreTask {
   public static class PCAScoreJob extends ChunkProgressJob {
     public PCAScoreJob(Frame data, Key dataKey, Key destKey, boolean standardize) {
-      super("PCAScore(" + dataKey.toString() + ")", destKey, standardize ? 2*data.anyVec().nChunks() : data.anyVec().nChunks());
+      super(standardize ? 2*data.anyVec().nChunks() : data.anyVec().nChunks());
+      description = "PCAScore(" + dataKey.toString() + ")";
+      destination_key = destKey;
     }
 
     public boolean isDone() {
@@ -46,7 +47,7 @@ public abstract class PCAScoreTask {
           double x = chunks[c].at0(r);
           x -= _normSub[c];
           x *= _normMul[c];
-          chunks[ncol+c].set(r,x);
+          chunks[ncol+c].set0(r,x);
         }
       }
       if(_job != null) _job.updateProgress(1);
@@ -93,7 +94,7 @@ public abstract class PCAScoreTask {
          double x = 0;
          for(int d = 0; d < _nfeat; d++)
            x += chunks[d].at0(r)*_smatrix[d][c];
-         chunks[_nfeat+c].set(r,x);
+         chunks[_nfeat+c].set0(r,x);
         }
       }
       _job.updateProgress(1);
@@ -170,10 +171,8 @@ public abstract class PCAScoreTask {
         final int nfeat = Math.min(nrow, lmatrix.numCols());
 
         Vec [] vecs = Arrays.copyOf(lmatrix.vecs(), nfeat + ncomp);
-        VectorGroup vg = lmatrix.vecs()[0].group();
-        Key [] keys = vg.addVecs(ncomp);
         for(int i = 0; i < ncomp; i++) {
-          vecs[nfeat+i] = new AppendableVec(keys[i]);
+          vecs[nfeat+i] = vecs[0].makeZero();
         }
 
         ScoreTask tsk = new ScoreTask(job, nfeat, ncomp, eigvec).doAll(vecs);

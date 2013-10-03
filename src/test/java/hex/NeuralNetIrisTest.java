@@ -1,7 +1,7 @@
 package hex;
 
-import hex.Layer.FrameInput;
-import hex.Layer.Softmax;
+import hex.Layer.VecSoftmax;
+import hex.Layer.VecsInput;
 import hex.NeuralNet.NeuralNetScore;
 import hex.rng.MersenneTwisterRNG;
 
@@ -16,6 +16,7 @@ import org.junit.Test;
 import water.*;
 import water.fvec.*;
 import water.util.Log;
+import water.util.Utils;
 
 public class NeuralNetIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
@@ -67,21 +68,20 @@ public class NeuralNetIrisTest extends TestUtil {
     UKV.remove(pars);
 
     //
-
     float rate = 0.01f;
     int epochs = 1000;
-    FrameInput input = new FrameInput(_train);
+    Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
+    Vec labels = _train.vecs()[_train.vecs().length - 1];
+    labels.asEnum();
+    VecsInput input = new VecsInput(data);
     Layer[] ls = new Layer[3];
     ls[0] = input;
-    ls[0].init(null, 4);
-    ls[1] = new Layer.Tanh();
+    ls[1] = new Layer.Tanh(7);
     ls[1]._rate = rate;
-    ls[1].init(ls[0], 7);
-    ls[2] = new Softmax();
+    ls[2] = new VecSoftmax(labels);
     ls[2]._rate = rate;
-    ls[2].init(ls[1], 3);
-    for( int i = 1; i < ls.length; i++ )
-      ls[i].randomize();
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].init(ls, i);
 
     Layer l = ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
@@ -124,11 +124,13 @@ public class NeuralNetIrisTest extends TestUtil {
     }
 
     // Make sure errors are equal
-    NeuralNet.Error train = NeuralNetScore.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
-    ls[0] = new FrameInput(_test, input._means, input._sigmas);
-    ls[0].init(null, 4);
-    ls[1]._in = ls[0];
-    NeuralNet.Error test = NeuralNetScore.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    NeuralNet.Error train = NeuralNetScore.run(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
+    labels = _test.vecs()[_test.vecs().length - 1];
+    input._vecs = data;
+    input._len = data[0].length();
+    ((VecSoftmax) ls[2])._vec = labels;
+    NeuralNet.Error test = NeuralNetScore.run(ls, NeuralNet.EVAL_ROW_COUNT, null);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
     Assert.assertEquals(trainAcc, train.Value, epsilon);
     float testAcc = ref._nn.Accuracy(ref._testData);

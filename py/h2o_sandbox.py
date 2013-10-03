@@ -1,7 +1,11 @@
-
+#!/usr/bin/python
 import sys, itertools, os, re
+
 def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is ???',
     cloudShutdownIsError=False, sandboxIgnoreErrors=False):
+    # show the parameters
+    ### print "check_sandbox_for_errors:", locals()
+    
     # gets set below on error (returned)
     errorFound = False
 
@@ -19,7 +23,10 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
     # so don't want to dump it multiple times?
     errLines = []
     for filename in os.listdir(LOG_DIR):
-        if re.search('stdout|stderr',filename):
+        # don't search the R stdout/stderr
+        # this matches the python h2o captured stdout/stderr, and also any downloaded h2o logs
+        # not the commands.log
+        if re.search('h2o.*stdout|h2o.*stderr',filename):
             sandFile = open(LOG_DIR + "/" + filename, "r")
             # just in case error/assert is lower or upper case
             # FIX! aren't we going to get the cloud building info failure messages
@@ -59,6 +66,8 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
                         ('out_of_bag_error_estimate' in line) or
                         # R stdout confusion matrix. Probably need to figure out how to exclude R logs
                         ('Training Error' in line) or
+                        # now from GBM
+                        ('Mean Squared Error' in line) or
                         ('Error' in line and 'Actual' in line) or
                         # fvec
                         ('prediction error' in line) or ('errors on' in line) or
@@ -126,20 +135,23 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
             if not sandboxIgnoreErrors:
                 raise Exception(errorMessage)
 
-    return errorFound
+    if errorFound:
+        return errorMessage
+    else:
+        return
 
 if __name__ == "__main__":
     # if you call from the command line, we'll just pass the first two positionally.
     # here's a low budget argsparse :) (args are optional!)
     arg_names = ['me', 'LOG_DIR', 'python_test_name', 'cloudShutdownIsError', 'sandboxIgnoreErrors']
     args = dict(itertools.izip_longest(arg_names, sys.argv))
-    errorFound = check_sandbox_for_errors(
+    errorMessage = check_sandbox_for_errors(
         LOG_DIR=args['LOG_DIR'], 
         python_test_name=args['python_test_name'],
         cloudShutdownIsError=args['cloudShutdownIsError'], 
         sandboxIgnoreErrors=args['sandboxIgnoreErrors'])
 
     # it shouldn't return here because it should take the exception)
-    if errorFound:
+    if errorMessage:
         raise Exception('Error found in the logs that we want to consider fatal')
 

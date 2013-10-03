@@ -30,7 +30,7 @@ class Basic(unittest.TestCase):
 
         # h2b.browseTheCloud()
 
-        for (importFolderPath, trainFilename, trainKey, timeoutSecs, vresponse, testFilename, testKey) in files:
+        for (importFolderPath, trainFilename, trainKey, timeoutSecs, response, testFilename, testKey) in files:
             h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             start = time.time()
@@ -71,7 +71,11 @@ class Basic(unittest.TestCase):
             print "test parse result:", parseTestResult['destination_key']
 
             # GBM (train iterate)****************************************
-            ntrees = 10
+            inspect = h2o_cmd.runInspect(key=parseTestResult['destination_key'])
+            x = range(inspect['num_cols'])
+            del x[response]
+            cols = ','.join(map(str, x))
+            ntrees = 2
             for max_depth in [5,10,20,40]:
                 params = {
                     'learn_rate': .2,
@@ -79,8 +83,8 @@ class Basic(unittest.TestCase):
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
-                    'vresponse': vresponse,
-                    # 'ignored_cols': 
+                    'response': response,
+                    'cols': cols,
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
@@ -119,7 +123,7 @@ class Basic(unittest.TestCase):
                     data_key=parseTestResult['destination_key'], 
                     model_key=modelKey,
                     destination_key=predictKey,
-                    timeoutSecs=timeoutSecs, **kwargs)
+                    timeoutSecs=timeoutSecs)
                 # hack
                 if h2o.beta_features:
                     h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
@@ -129,9 +133,9 @@ class Basic(unittest.TestCase):
                 print "This is crazy!"
                 gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
                     actual=parseTestResult['destination_key'],
-                    vactual=vresponse,
+                    vactual=response,
                     predict=predictKey,
-                    vpredict='predict', # choices are 0 and 'predict'
+                    vpredict='predict', # choices are 7 (now) and 'predict'
                     )
 
                 # errrs from end of list? is that the last tree?

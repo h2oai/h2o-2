@@ -23,6 +23,7 @@ if(!"h2oWrapper" %in% rownames(installed.packages())) {
   
   if(!file.exists(wrapPath))
     stop(paste("h2oWrapper package does not exist at", wrapPath))
+  print(paste("Installing h2oWrapper package from", wrapPath))
   install.packages(wrapPath, repos = NULL, type = "source")
 }
 
@@ -55,11 +56,14 @@ checkKMModel <- function(myKM.h2o, myKM.r) {
 # Test k-means clustering on benign.csv
 test.km.benign <- function(serverH2O) {
   cat("\nImporting benign.csv data...\n")
-  benign.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
+  # benign.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
+  # benign.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/benign.csv"))
+  benign.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/benign.csv")
   benign.sum = summary(benign.hex)
   print(benign.sum)
   
-  benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
+  # benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
+  benign.data = read.csv("../../smalldata/logreg/benign.csv", header = TRUE)
   benign.data = na.omit(benign.data)
   
   for(i in 1:5) {
@@ -74,11 +78,14 @@ test.km.benign <- function(serverH2O) {
 # Test k-means clustering on prostate.csv
 test.km.prostate <- function(serverH2O) {
   cat("\nImporting prostate.csv data...\n")
-  prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
+  # prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
+  # prostate.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/prostate.csv"))
+  prostate.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/prostate.csv")
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   
-  prostate.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"), header = TRUE)
+  # prostate.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"), header = TRUE)
+  prostate.data = read.csv("../../smalldata/logreg/prostate.csv", header = TRUE)
   prostate.data = na.omit(prostate.data)
   
   for(i in 5:8) {

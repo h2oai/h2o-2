@@ -1,4 +1,4 @@
-import time, os, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
+import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
 import h2o_sandbox
@@ -261,13 +261,22 @@ def clean_sandbox_stdout_stderr():
             os.remove(f)
 
 def tmp_file(prefix='', suffix=''):
-    return tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
+    fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
+    # make sure the file now exists
+    # os.open(path, 'a').close()
+    # give everyone permission to read it (jenkins running as 
+    # 0xcustomer needs to archive as jenkins
+    permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+    os.chmod(path, permissions)
+    return (fd, path)
 
 def tmp_dir(prefix='', suffix=''):
     return tempfile.mkdtemp(prefix=prefix, suffix=suffix, dir=LOG_DIR)
 
 def log(cmd, comment=None):
-    with open(LOG_DIR + '/commands.log', 'a') as f:
+    filename = LOG_DIR + '/commands.log'
+    # everyone can read
+    with open(filename, 'a') as f:
         f.write(str(datetime.datetime.now()) + ' -- ')
         # what got sent to h2o
         # f.write(cmd)
@@ -280,6 +289,9 @@ def log(cmd, comment=None):
             f.write("\n")
         elif comment: # for comment-only
             f.write(comment + "\n")
+    # jenkins runs as 0xcustomer, and the file wants to be archived by jenkins who isn't in his group
+    permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+    os.chmod(filename, permissions)
 
 def make_syn_dir():
     SYNDATASETS_DIR = './syn_datasets'
@@ -297,6 +309,7 @@ def spawn_cmd(name, cmd, capture_output=True, **kwargs):
     if capture_output:
         outfd, outpath = tmp_file(name + '.stdout.', '.log')
         errfd, errpath = tmp_file(name + '.stderr.', '.log')
+        # everyone can read
         ps = psutil.Popen(cmd, stdin=None, stdout=outfd, stderr=errfd, **kwargs)
     else:
         outpath = '<stdout>'
@@ -320,9 +333,10 @@ def spawn_wait(ps, stdout, stderr, capture_output=True, timeout=None):
     if rc is None:
         ps.terminate()
         raise Exception("%s %s timed out after %d\nstdout:\n%s\n\nstderr:\n%s" %
-                (name, args, timeout or 0, out, err))
+            (ps.name, ps.cmdline, timeout or 0, out, err))
     elif rc != 0:
-        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % (ps.name, ps.cmdline, out, err))
+        raise Exception("%s %s failed.\nstdout:\n%s\n\nstderr:\n%s" % 
+            (ps.name, ps.cmdline, out, err))
     return rc
 
 def spawn_cmd_and_wait(name, cmd, capture_output=True, timeout=None, **kwargs):
@@ -360,11 +374,12 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
     if hosts is None:
         ip = get_ip_address()
         for i in range(node_count):
-            hostPortList.append("/" + ip + ":" + str(base_port + ports_per_node*i))
+            hostPortList.append(ip + ":" + str(base_port + ports_per_node*i))
     else:
         for h in hosts:
             for i in range(node_count):
-                hostPortList.append("/" + h.addr + ":" + str(base_port + ports_per_node*i))
+                # removed leading "/"
+                hostPortList.append(h.addr + ":" + str(base_port + ports_per_node*i))
 
     # note we want to shuffle the full list of host+port
     if rand_shuffle:
@@ -1505,19 +1520,22 @@ class H2O(object):
         params_dict = {
             '_modelKey': model_key
         }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
         a = self.__do_json_request('GBMModelView.json',timeout=timeoutSecs,params=params_dict)
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
-        algo = 'GeneratePredictions2' if beta_features else 'GeneratePredictionsPage'
+        algo = 'Predict' if beta_features else 'GeneratePredictionsPage'
         algoView = 'Inspect2' if beta_features else 'Inspect'
 
         if beta_features:
             params_dict = {
                 'data': data_key,
                 'model': model_key,
-                'prediction_key': destination_key,
+                # 'prediction_key': destination_key,
+                'predict': destination_key,
                 }
         else:
             params_dict = {
@@ -1527,11 +1545,8 @@ class H2O(object):
                 }
 
         browseAlso = kwargs.pop('browseAlso',False)
-        # only update params_dict..don't add
-        # throw away anything else as it should come from the model (propagating what RF used)
-        for k in kwargs:
-            if k in params_dict:
-                params_dict[k] = kwargs[k]
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'generate_predictions', print_params)
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -1598,12 +1613,14 @@ class H2O(object):
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
-            'vresponse': None,
+            'validation': data_key, # what is this..default it to match the source..is it holdout data
+            'response': None,
             'source': data_key,
             'learn_rate': None,
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
+            'cols': None,
             'nbins': None,
         }
         # only lets these params thru
@@ -1623,17 +1640,19 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, noPoll=False, **kwargs):
+    def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
         params_dict = {
-            'destination_key':None,
-            'key':data_key,
-            'ignore':None,
-            'tolerance':None,
-            'standardize':None
+            'destination_key': None,
+            'key': data_key,
+            'ignore': None,
+            'tolerance': None,
+            'standardize': None
         }
-        params_dict.update(kwargs)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'pca', print_params)
         start = time.time()
-        a = self.__do_json_request('PCA.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('PCA.json', timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
             a['python_elapsed'] = time.time() - start
@@ -1643,6 +1662,65 @@ class H2O(object):
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCA result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
+    def pca_score(self, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
+        params_dict = {
+            'model_key': None,
+            'destination_key': None,
+            'key': None,
+            'num_pc': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'pca_score', print_params)
+        start = time.time()
+        a = self.__do_json_request('PCAScore.json',timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            return a
+
+        if 'response' not in a:
+            raise Exception("Can't tell where to go..No 'response' key in this polled json response: %s" % a)
+
+        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nPCAScore result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
+    def neural_net(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': data_key,
+            # this is ignore??
+            'cols': None,
+            'response': None,
+            'activation': None,
+            'hidden': None,
+            'rate': None,
+            'l2': None,
+            'epochs': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
+        start = time.time()
+        a = self.__do_json_request('NeuralNet.json',timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            return a
+
+        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nPCAScore result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
@@ -2314,10 +2392,13 @@ class RemoteH2O(H2O):
         # This hack only works when the dest is /tmp/h2o*jar. It's okay to execute
         # with pwd = /tmp. If /tmp/ isn't in the jar path, I guess things will be the same as
         # normal.
-        cmdList = ["cd /tmp"] # separate by ;<space> when we join
-        cmdList += ["ls -ltr " + self.jar]
-        cmdList += [re.sub("/tmp/", "", cmd)]
-        self.channel.exec_command("; ".join(cmdList))
+        if 1==0: # enable if you want windows remote machines
+            cmdList = ["cd /tmp"] # separate by ;<space> when we join
+            cmdList += ["ls -ltr " + self.jar]
+            cmdList += [re.sub("/tmp/", "", cmd)]
+            self.channel.exec_command("; ".join(cmdList))
+        else:
+            self.channel.exec_command(cmd)
 
         if self.capture_output:
             if self.node_id is not None:
@@ -2393,6 +2474,12 @@ class ExternalH2O(H2O):
             # for any other reason.
             if v == "None":
                 v = None
+            elif v == "false":
+                v = False
+            elif v == "true":
+                v = True
+            # leave "null" as-is (string) for now?
+                    
             setattr(self, k, v) # achieves self.k = v
         print "Cloned", len(nodeState), "things for a h2o node"
 

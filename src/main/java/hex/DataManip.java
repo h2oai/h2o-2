@@ -13,10 +13,6 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 
 public class DataManip extends FrameJob {
-  public DataManip() {
-    super("Data Manip", null);
-  }
-
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 

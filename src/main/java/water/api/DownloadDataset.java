@@ -1,8 +1,10 @@
 package water.api;
 
+import java.io.InputStream;
 import java.util.Properties;
 
 import water.*;
+import water.ValueArray.CsvVAStream;
 import water.fvec.Frame;
 
 /**
@@ -29,8 +31,9 @@ public class DownloadDataset extends Request2 {
   @Override final public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
     // Needs to be done also for help to initialize or argument records
     checkArguments(args, type);
-    Frame fr = DKV.get(src_key).get();
-    NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY,fr.toCSV(true));
+    Object value = DKV.get(src_key).get();
+    InputStream csv = value instanceof ValueArray ? new CsvVAStream((ValueArray) value, null) : ((Frame) value).toCSV(true);
+    NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY, csv);
     // Clean up Key name back to something resembling a file system name.  Hope
     // the user's browser actually asks for what to do with the suggested
     // filename.  Without this code, my FireFox would claim something silly

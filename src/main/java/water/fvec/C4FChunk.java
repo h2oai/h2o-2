@@ -2,7 +2,9 @@ package water.fvec;
 
 import water.*;
 
-// The empty-compression function, where data is in 'int's.
+/**
+ * The empty-compression function, where data is in 'float's.
+ */
 public class C4FChunk extends Chunk {
   C4FChunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>2; }
   @Override protected final long at8_impl( int i ) {
@@ -17,7 +19,7 @@ public class C4FChunk extends Chunk {
   @Override protected final boolean isNA_impl( int i ) { return Float.isNaN(UDP.get4f(_mem,i<<2)); }
   @Override boolean set_impl(int idx, long l) { return false; }
   @Override boolean set_impl(int i, double d) { return false; }
-  @Override boolean set_impl(int i, float f ) { 
+  @Override boolean set_impl(int i, float f ) {
     UDP.set4f(_mem,i<<2,f);
     return true;
   }
@@ -34,4 +36,7 @@ public class C4FChunk extends Chunk {
   @Override NewChunk inflate_impl(NewChunk nc) {
     throw H2O.unimpl();
   }
+  // 3.3333333e33
+  public int pformat_len0() { return 14; }
+  public String pformat0() { return "% 13.7e"; }
 }

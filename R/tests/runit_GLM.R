@@ -23,6 +23,7 @@ if(!"h2oWrapper" %in% rownames(installed.packages())) {
   
   if(!file.exists(wrapPath))
     stop(paste("h2oWrapper package does not exist at", wrapPath))
+  print(paste("Installing h2oWrapper package from", wrapPath))
   install.packages(wrapPath, repos = NULL, type = "source")
 }
 
@@ -59,11 +60,14 @@ checkGLMModel <- function(myGLM.h2o, myGLM.r) {
 # Test GLM on benign.csv dataset
 test.GLM.benign <- function(serverH2O) {
   cat("\nImporting benign.csv data...\n")
-  benign.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
+  # benign.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
+  # benign.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/benign.csv"))
+  benign.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/benign.csv")
   benign.sum = summary(benign.hex)
   print(benign.sum)
   
-  benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
+  # benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
+  benign.data = read.csv("../../smalldata/logreg/benign.csv", header = TRUE)
   benign.data = na.omit(benign.data)
   
   myY = "3"; myY.r = as.numeric(myY) + 1
@@ -85,11 +89,14 @@ test.GLM.benign <- function(serverH2O) {
 # Test GLM on prostate dataset
 test.GLM.prostate <- function(serverH2O) {
   cat("\nImporting prostate.csv data...\n")
-  prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
+  # prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
+  # prostate.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/prostate.csv"), "prostate.hex")
+  prostate.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/prostate.csv", "prostate.hex")
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   
-  prostate.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"), header = TRUE)
+  # prostate.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"), header = TRUE)
+  prostate.data = read.csv("../../smalldata/logreg/prostate.csv", header = TRUE)
   prostate.data = na.omit(prostate.data)
   
   myY = "1"; myY.r = as.numeric(myY) + 1
@@ -112,7 +119,9 @@ test.GLM.prostate <- function(serverH2O) {
 test.GLM.covtype <- function(serverH2O) {
   cat("\nImporting covtype.20k.data...\n")
   # covtype.hex = h2o.importFile(serverH2O, "../../UCI/UCI-large/covtype/covtype.data")
-  covtype.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/covtype/covtype.20k.data")
+  # covtype.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/covtype/covtype.20k.data")
+  # covtype.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/covtype/covtype.20k.data"))
+  covtype.hex = h2o.uploadFile(serverH2O, "../../smalldata/covtype/covtype.20k.data")
   covtype.sum = summary(covtype.hex)
   print(covtype.sum)
   

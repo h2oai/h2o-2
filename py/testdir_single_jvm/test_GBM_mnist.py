@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             'ntrees':10,
             'max_depth':8,
             'min_rows':1,
-            'vresponse':784
+            'response':784
             }
 
         kwargs = params.copy()

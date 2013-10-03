@@ -2,7 +2,9 @@ package water.fvec;
 
 import water.*;
 
-// The empty-compression function, where data is in shorts
+/**
+ * The empty-compression function, where data is in shorts.
+ */
 public class C2Chunk extends Chunk {
   static protected final long _NA = Short.MIN_VALUE;
   static final int OFF=0;
@@ -22,7 +24,7 @@ public class C2Chunk extends Chunk {
     UDP.set2(_mem,(idx<<1)+OFF,(short)l);
     return true;
   }
-  @Override boolean set_impl(int idx, double d) { 
+  @Override boolean set_impl(int idx, double d) {
     if( Double.isNaN(d) ) return setNA_impl(idx);
     long l = (long)d;
     return l==d ? set_impl(idx,l) : false;

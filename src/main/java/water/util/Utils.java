@@ -331,11 +331,12 @@ public class Utils {
     return a;
   }
   public static double[] add(double[] a, double[] b) {
+    if( a==null ) return b;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
   public static double[][] add(double[][] a, double[][] b) {
-    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    for(int i = 0; i < a.length; i++ ) a[i] = add(a[i],b[i]);
     return a;
   }
 
@@ -511,6 +512,10 @@ public class Utils {
     @Override public FieldDoc[] toDocField() {
       return null;
     }
+  }
+  public static final boolean hasNaNsOrInfs(double [] arr){
+    for(double d:arr) if(Double.isNaN(d) || Double.isInfinite(d))return true;
+    return false;
   }
 
 }

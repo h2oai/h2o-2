@@ -1,33 +1,38 @@
 package hex;
 
+import hex.DGLM.Family;
+import hex.DGLM.GLMModel.Status;
+import hex.DGLM.GLMParams;
+import hex.DGLM.Gram;
+import hex.DGLM.GramMatrixFunc;
+import hex.NewRowVecTask.DataFrame;
+import hex.NewRowVecTask.JobCancelledException;
+
 import java.util.Arrays;
 import java.util.Comparator;
 
+import jsr166y.CountedCompleter;
+
 import org.apache.commons.lang.ArrayUtils;
 
-import jsr166y.CountedCompleter;
-import junit.framework.Assert;
-import hex.DGLM.*;
-import hex.DGLM.GLMModel.Status;
-import hex.NewRowVecTask.DataFrame;
-import hex.NewRowVecTask.JobCancelledException;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.api.Constants;
-import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
-
-import com.google.gson.*;
-
+import water.api.PCA;
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 public abstract class DPCA {
   /* Track PCA job progress */
   public static class PCAJob extends ChunkProgressJob {
     public PCAJob(ValueArray data, Key dest) {
-      super("PCA(" + data._key.toString() + ")", dest, data.chunks());
+      super(data.chunks());
+      description = "PCA(" + data._key.toString() + ")";
+      destination_key = dest;
     }
 
     public boolean isDone() {
@@ -42,10 +47,17 @@ public abstract class DPCA {
 
   /* Store parameters that go into PCA calculation */
   public static class PCAParams extends Iced {
+    public int _maxPC = PCA.MAX_COL;
     public double _tol = 0;
     public boolean _standardized = true;
 
     public PCAParams(double tol, boolean standardized) {
+      _tol = tol;
+      _standardized = standardized;
+    }
+
+    public PCAParams(int maxPC, double tol, boolean standardized) {
+      _maxPC = maxPC;
       _tol = tol;
       _standardized = standardized;
     }
@@ -279,7 +291,8 @@ public abstract class DPCA {
       cumVar[i] = i == 0 ? propVar[0] : cumVar[i-1] + propVar[i];
     }
 
-    int ncomp = getNumPC(sdev, params._tol);
+    int ncomp = Math.min(getNumPC(sdev, params._tol), params._maxPC);
+    // int ncomp = getNumPC(sdev, params._tol);
     // int ncomp = Math.min(getNumPC(Sval, params._tol), (int)data._nobs-1);
     // int ncomp = Math.min(params._num_pc, Sval.length);
     PCAModel myModel = new PCAModel(Status.Done, 0.0f, resKey, data, sdev, propVar, cumVar, eigVec, mySVD.rank(), 0, ncomp, params);

@@ -15,9 +15,11 @@ do
     echo ${privateIp}:54321 >> ${flatfileName}
 done
 
+i=0
 for publicDnsName in $(cat nodes-public)
 do
-    echo "Copying flatfile to ${publicDnsName}"
+    i=$((i+1))
+    echo "Copying flatfile to node ${i}: ${publicDnsName}"
     scp -o StrictHostKeyChecking=no -i ${AWS_SSH_PRIVATE_KEY_FILE} ${flatfileName} ec2-user@${publicDnsName}:
 done
 

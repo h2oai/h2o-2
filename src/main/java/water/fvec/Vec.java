@@ -52,7 +52,7 @@ public class Vec extends Iced {
    *  dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
    *  such as file-backed Vecs. */
   final private long _espc[];
-  /** Enum/factor/catagorical names. */
+  /** Enum/factor/categorical names. */
   public String [] _domain;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
   double _min, _max, _mean, _sigma;
@@ -108,6 +108,16 @@ public class Vec extends Iced {
     return v0;
   }
 
+  // Create a vector transforming values according given domain map
+  public Vec makeTransf(final int[] domMap) {
+    Futures fs = new Futures();
+    if( _espc == null ) throw H2O.unimpl();
+    Vec v0 = new TransfVec(this._key, domMap, group().addVecs(1)[0],_espc);
+    DKV.put(v0._key,v0,fs);
+    fs.blockForPending();
+    return v0;
+  }
+
   /** Number of elements in the vector.  Overridden by subclasses that compute
    *  length in an alternative way, such as file-backed Vecs. */
   public long length() { return _espc[_espc.length-1]; }
@@ -116,11 +126,11 @@ public class Vec extends Iced {
    *  alternative way, such as file-backed Vecs. */
   public int nChunks() { return _espc.length-1; }
 
-  /** Is the column a factor/catagorical/enum?  Note: all "isEnum()" columns
+  /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
    *  are are also "isInt()" but not vice-versa. */
   public final boolean isEnum(){return _domain != null;}
 
-  /** Map the integer value for a enum/factor/catagorical to it's String.
+  /** Map the integer value for a enum/factor/categorical to it's String.
    *  Error if it is not an ENUM.  */
   public String domain(long i) { return _domain[(int)i]; }
 
@@ -183,7 +193,7 @@ public class Vec extends Iced {
     setRollupStats(rs);
     // Now do this remotely also
     new TAtomic<Vec>() {
-      @Override public Vec atomic(Vec v) { 
+      @Override public Vec atomic(Vec v) {
         if( v!=null && v._naCnt == -1 ) v.setRollupStats(rs);  return v;
       }
     }.fork(_key);
@@ -409,6 +419,11 @@ public class Vec extends Iced {
       s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
     }
     return s+"}]";
+  }
+
+  public void remove( Futures fs ) {
+    for( int i=0; i<nChunks(); i++ )
+      UKV.remove(chunkKey(i),fs);
   }
 
 
