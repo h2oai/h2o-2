@@ -12,16 +12,18 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         # hdfs_config='/opt/mapr/conf/mapr-clusters.conf', 
+        #        # hdfs_name_node='mr-0x1.0xdata.loc:7222')
+        #        hdfs_version='mapr2.1.3',
         if (localhost):
             h2o.build_cloud(1, 
                 use_maprfs=True, 
-                hdfs_version='mapr2.1.3', 
-                hdfs_name_node='mr-0x1.0xdata.loc:7222')
+                hdfs_version='mapr3.0.1',
+                hdfs_name_node='192.168.1.171:7222')
         else:
             h2o_hosts.build_cloud_with_hosts(1, 
                 use_maprfs=True, 
-                hdfs_version='mapr2.1.3', 
-                hdfs_name_node='mr-0x1.0xdata.loc:7222')
+                hdfs_version='mapr3.0.1',
+                hdfs_name_node='192.168.1.171:7222')
 
     @classmethod
     def tearDownClass(cls):
@@ -74,7 +76,7 @@ class Basic(unittest.TestCase):
             # creates csvFilename.hex from file in hdfs dir 
             csvPathname = importFolderPath + "/" + csvFilename
             print "Loading", csvFilename, 'from maprfs'
-            parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=1000)
+            parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=1000, doSummary=False)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 

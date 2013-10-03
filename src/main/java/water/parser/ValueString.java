@@ -91,8 +91,8 @@ public final class ValueString {
   @Override public boolean equals(Object o){
     if(!(o instanceof ValueString)) return false;
     ValueString str = (ValueString)o;
-    if(str._length != _length)return false;
     if(_skips.isEmpty() && str._skips.isEmpty()){ // no skipped chars
+      if(str._length != _length)return false;
       for(int i = 0; i < _length; ++i)
         if(_buf[_off+i] != str._buf[str._off+i]) return false;
     }else if(str._skips.isEmpty()){ // only this has skipped chars
