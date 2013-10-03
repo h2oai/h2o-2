@@ -42,7 +42,7 @@ public class GLM2 extends FrameJob{
   boolean standardize = true;
 
   @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100)
-  int nfold;
+  int n_folds;
 
   @API(help = "Family.", filter = Default.class)
   Family family = Family.gaussian;
@@ -67,7 +67,7 @@ public class GLM2 extends FrameJob{
   @API(help = "lambda", filter = Default.class)
   double lambda = 0.0;
   @API(help = "beta_eps", filter = Default.class)
-  double beta_eps = 1e-4;
+  double beta_epsilon = 1e-4;
 
   public GLM2 setTweedieVarPower(double d){tweedie_variance_power = d; return this;}
 
@@ -91,14 +91,14 @@ public class GLM2 extends FrameJob{
     _offset = offset;
     _complement = complement;
     _beta = beta;
-    this.nfold = nfold;
+    this.n_folds = nfold;
   }
 
   private long _startTime;
   @Override protected Response serve() {
     link = family.defaultLink;
     _startTime = System.currentTimeMillis();
-    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_eps,alpha,lambda,System.currentTimeMillis()-_startTime);
+    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime);
     DKV.put(dest(), m);
     fork();
     return GLMProgressPage2.redirect(this, self(),dest());
@@ -148,11 +148,11 @@ public class GLM2 extends FrameJob{
         done = true;
         newBeta = glmt._beta == null?newBeta:glmt._beta;
       }
-      done = done || family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_eps;
-      GLMModel res = new GLMModel(dest(),null,glmt._iter+1,fr,glmt,beta_eps,alpha,lambda,newBeta,0.5,null,System.currentTimeMillis() - start_time);
+      done = done || family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon;
+      GLMModel res = new GLMModel(dest(),null,glmt._iter+1,fr,glmt,beta_epsilon,alpha,lambda,newBeta,0.5,null,System.currentTimeMillis() - start_time);
       if(done){
         // final validation
-        if(GLM2.this.nfold < 2){
+        if(GLM2.this.n_folds < 2){
           GLMValidationTask t = new GLMValidationTask(res,_step,_offset,true);
           t.doAll(fr);
           Key valKey = GLMValidation.makeKey();
@@ -211,7 +211,7 @@ public class GLM2 extends FrameJob{
   }
 
   private void xvalidate(final GLMModel model, final H2OCountedCompleter cmp){
-    final Key [] keys = new Key[nfold];
+    final Key [] keys = new Key[n_folds];
     H2OCallback callback = new H2OCallback() {
       @Override public void callback(H2OCountedCompleter t) {
         GLMXValidation xval = new GLMXValidation(model, keys);
@@ -222,9 +222,9 @@ public class GLM2 extends FrameJob{
         GLM2.this.remove();
       }
     };
-    callback.addToPendingCount(nfold-1);
+    callback.addToPendingCount(n_folds-1);
     callback.setCompleter(cmp);
-    for(int i = 0; i < nfold; ++i)
-      new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, nfold, i,false,model.norm_beta).fork(callback);
+    for(int i = 0; i < n_folds; ++i)
+      new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta).fork(callback);
   }
 }
