@@ -1,6 +1,6 @@
 package water;
 
-import hex.GLMTest2;
+import hex.NeuralNetIrisTest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,19 +34,13 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       //tests = JUnitRunner.all();
-      tests.add(GLMTest2.class);
+      tests.add(NeuralNetIrisTest.class);
 
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());
       Result result = junit.run(tests.toArray(new Class[0]));
       if( result.getFailures().size() == 0 )
         Log.info("Success!");
-//      else {
-//        for( Failure f : result.getFailures() ) {
-//          Log.info(f.getDescription());
-//          f.getException().printStackTrace();;
-//        }
-//      }
     }
   }
 

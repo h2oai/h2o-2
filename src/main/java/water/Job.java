@@ -57,23 +57,28 @@ public class Job extends Request2 {
 
     @API(help = "Input columns (Indexes start at 0)", filter=colsFilter.class, hide=true)
     public int[] cols;
-    class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
+    class colsFilter extends MultiVecSelect { public colsFilter() { super("source", false); } }
 
-    @API(help = "Input columns to ignore. (Indexes start at 0, processed after 'cols')", filter=colsFilter.class)
-    public int[] ignored_cols;
-    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() { super("source"); } }
+    @API(help = "Ignored columns by name", filter=colsFilter.class, displayName="Ignored columns")
+    public int[] ignored_cols_by_name;
+    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() { super("source", true); } }
 
     @Override protected void init() {
       super.init();
+
+      if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
+        throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
+      if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
+        throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
       if(cols == null || cols.length == 0) {
         cols = new int[source.vecs().length];
         for( int i = 0; i < cols.length; i++ )
           cols[i] = i;
       }
       int length = cols.length;
-      for( int g = 0; ignored_cols != null && g < ignored_cols.length; g++ ) {
+      for( int g = 0; ignored_cols_by_name != null && g < ignored_cols_by_name.length; g++ ) {
         for( int i = 0; i < cols.length; i++ ) {
-          if(cols[i] == ignored_cols[g]) {
+          if(cols[i] == ignored_cols_by_name[g]) {
             length--;
             // Move all, try to keep ordering
             System.arraycopy(cols, i + 1, cols, i, length - i);
@@ -83,6 +88,8 @@ public class Job extends Request2 {
       }
       if( length != cols.length )
         cols = ArrayUtils.subarray(cols, 0, length);
+      if( cols.length == 0 )
+        throw new IllegalArgumentException("No column selected");
     }
 
     protected final Vec[] selectVecs(Frame frame) {
@@ -103,7 +110,7 @@ public class Job extends Request2 {
 
     @Override protected void registered() {
       super.registered();
-      Argument c = find("ignored_cols");
+      Argument c = find("ignored_cols_by_name");
       Argument r = find("response");
       int ci = _arguments.indexOf(c);
       int ri = _arguments.indexOf(r);
@@ -368,9 +375,11 @@ public class Job extends Request2 {
   //
 
   public H2OCountedCompleter fork() {
+    init();
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        Job.this.invoke();
+        Job.this.exec();
+        Job.this.done();
         tryComplete();
       }
     };
@@ -378,19 +387,29 @@ public class Job extends Request2 {
     return task;
   }
 
-  public final void invoke() {
+  public void invoke() {
     init();
     exec();
     done();
   }
 
-  protected void init() {
+  /**
+   * Invoked before job runs. This is the place to checks arguments are valid or throw
+   * IllegalArgumentException. It will get invoked both from the Web and Java APIs.
+   */
+  protected void init() throws IllegalArgumentException {
   }
 
+  /**
+   * Actual job code. Should be blocking until execution is done.
+   */
   protected void exec() {
     throw new RuntimeException("Should be overridden if job is a request");
   }
 
+  /**
+   * Invoked after job has run for cleanup purposes.
+   */
   protected void done() {
     remove();
   }

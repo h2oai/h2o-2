@@ -293,7 +293,7 @@ public class RequestArguments extends RequestStatics {
     protected String query() {
       RString result = new RString(_queryHtml);
       result.replace("ID",_name);
-      result.replace("NAME", JSON2HTML(_name));
+      result.replace("NAME", _displayName != null ? _displayName : JSON2HTML(_name));
       if (disabled())
         result.replace("ELEMENT","<div class='alert alert-info' style='padding-top:4px;padding-bottom:4px;margin-bottom:5px'>"+record()._disabledReason+"</div>");
       else
@@ -320,7 +320,7 @@ public class RequestArguments extends RequestStatics {
     /** Name of the argument. This must correspond to the name of the JSON
      * request argument.
      */
-    public String _name;
+    public String _name, _displayName;
 
     /** True if the argument is required, false if it may be skipped.
      */
@@ -2360,18 +2360,20 @@ public class RequestArguments extends RequestStatics {
     final TypeaheadKey _key;
     final FrameClassVec _response;
     final String _description;
+    final boolean _namesOnly;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
       Value v = DKV.get(_key.value());
       if(v == null) throw new IllegalArgumentException("Frame not found");
       return ValueArray.asFrame(v);
     }
-    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description) {
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description, boolean namesOnly) {
       super(name);
       addPrerequisite(_key = key);
       if((_response = response) != null)
         addPrerequisite(_response);
       _description = description;
+      _namesOnly = namesOnly;
     }
     public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr.vecs()[i]; }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
@@ -2429,15 +2431,17 @@ public class RequestArguments extends RequestStatics {
     }
 
     private int index(String value) {
-      value = value.trim();
-      try {
-        return Integer.valueOf(value);
-      } catch(NumberFormatException e){
-        Frame fr = fr();
-        for(int i = 0; i < fr.numCols(); ++i)
-          if(fr._names[i].equals(value))
-            return i;
+      if(!_namesOnly) {
+        try {
+          if(value.matches("[1-9][0-9]*"))
+            return Integer.valueOf(value);
+        } catch(NumberFormatException e){
+        }
       }
+      Frame fr = fr();
+      for(int i = 0; i < fr.numCols(); ++i)
+        if(fr._names[i].equals(value))
+          return i;
       return -1;
     }
 

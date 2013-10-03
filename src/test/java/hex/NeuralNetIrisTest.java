@@ -6,7 +6,6 @@ import hex.NeuralNet.NeuralNetScore;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.File;
-import java.util.UUID;
 
 import junit.framework.Assert;
 
@@ -24,19 +23,6 @@ public class NeuralNetIrisTest extends TestUtil {
 
   @BeforeClass public static void stall() {
     stall_till_cloudsize(3);
-  }
-
-  static Frame frame(double[][] rows, int off, int len) {
-    Vec[] vecs = new Vec[rows[0].length];
-    for( int c = 0; c < vecs.length; c++ ) {
-      AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
-      NewChunk chunk = new NewChunk(vec, 0);
-      for( int r = 0; r < len; r++ )
-        chunk.addNum(rows[r + off][c]);
-      chunk.close(0, null);
-      vecs[c] = vec.close(null);
-    }
-    return new Frame(null, vecs);
   }
 
   @Test public void compare() throws Exception {
@@ -63,8 +49,8 @@ public class NeuralNetIrisTest extends TestUtil {
     }
 
     int limit = (int) frame.numRows() * 80 / 100;
-    _train = frame(rows, 0, limit);
-    _test = frame(rows, limit, (int) frame.numRows() - limit);
+    _train = frame(null, Utils.subarray(rows, 0, limit));
+    _test = frame(null, Utils.subarray(rows, limit, (int) frame.numRows() - limit));
     UKV.remove(pars);
 
     //

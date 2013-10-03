@@ -340,6 +340,10 @@ public class Utils {
     return a;
   }
 
+  public static <T> T[] subarray(T[] a, int off, int len) {
+    return (T[]) ArrayUtils.subarray(a, off, off + len);
+  }
+
   public static void clearFolder(String folder) {
     clearFolder(new File(folder));
   }

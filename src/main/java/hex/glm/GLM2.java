@@ -29,7 +29,7 @@ public class GLM2 extends FrameJob{
 
   @API(help="columns to ignore",required=false,filter=GLMMultiVecSelect.class)
   public int [] ignored_cols = new int []{};
-  class GLMMultiVecSelect extends MultiVecSelect { GLMMultiVecSelect() { super("source");} }
+  class GLMMultiVecSelect extends MultiVecSelect { GLMMultiVecSelect() { super("source", false);} }
 
   @API(help = "The GLM Model")
   public GLMModel glm_model;

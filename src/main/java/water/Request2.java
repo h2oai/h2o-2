@@ -95,8 +95,11 @@ public abstract class Request2 extends Request {
   }
 
   public class MultiVecSelect extends Dependent {
-    protected MultiVecSelect(String key) {
+    boolean _namesOnly;
+
+    protected MultiVecSelect(String key, boolean namesOnly) {
       super(key);
+      _namesOnly = namesOnly;
     }
   }
 
@@ -197,12 +200,14 @@ public abstract class Request2 extends Request {
               classVecs.put(d._ref, (FrameClassVec) arg);
             } else if( d instanceof MultiVecSelect ) {
               FrameClassVec response = classVecs.get(d._ref);
-              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help());
+              boolean names = ((MultiVecSelect) d)._namesOnly;
+              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names);
             }
           }
 
           if( arg != null ) {
             arg._name = f.getName();
+            arg._displayName = api.displayName().length() > 0 ? api.displayName() : null;
             arg._required = api.required();
             arg._field = f;
             arg._hideInQuery = api.hide();
