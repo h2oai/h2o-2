@@ -9,7 +9,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_c6_maprfs(self):
+    def test_c6_hdfs(self):
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
@@ -70,7 +70,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             timeoutSecs = 1000
             # do an import first, because we want to get the size of the file
-            (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs)
+            (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs)
             succeeded = importResult['succeeded']
             if len(succeeded) < 1:
                 raise Exception("Should have imported at least 1 key for" % csvPathname)
@@ -97,9 +97,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             #      "value_size_bytes": 1115287100
             #    },
 
-            print "Loading", csvFilename, 'from maprfs'
+            print "Loading", csvFilename, 'from hdfs'
             start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs,
+            parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs,
                 doSummary=False, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
