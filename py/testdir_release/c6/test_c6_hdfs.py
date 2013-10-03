@@ -47,7 +47,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # h2o.nodes[0].hdfs_version = 'cdh3'
         # h2o.nodes[0].hdfs_name_node = '192.168.1.176'
 
-        setup_benchmark_log()
+        h2o.setup_benchmark_log()
 
         # benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
         # benchmarkLogging = ['cpu','disk', 'network', 'iostats']
