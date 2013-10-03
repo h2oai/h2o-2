@@ -23,7 +23,7 @@ def check_params_update_kwargs(params_dict, kw, function, print_params):
         if k in params_dict:
             params_dict[k] = kw[k]
         else:
-            raise Exception("illegal parameter %s in %s" % (k, function))
+            raise Exception("illegal parameter '%s' in %s" % (k, function))
 
     if print_params:
         print "\n%s parameters:" % function, params_dict

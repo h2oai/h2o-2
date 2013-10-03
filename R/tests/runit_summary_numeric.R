@@ -55,7 +55,7 @@ test.summary.numeric <- function(con) {
   summary(arrests.hex)
   summary_ <- summary(arrests.hex)
   cat("\nCheck that we get a table back from the summary(hex)")
-  expect_that(summary_, is_a("data.frame"))
+  expect_that(summary_, is_a("table"))
   summary_2 <- summary(tail(USArrests))
   
   cat("\nCheck that the summary of the tail of the dataset is the same as what R produces: ")
