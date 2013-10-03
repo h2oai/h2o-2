@@ -271,7 +271,7 @@ setMethod("summary", "H2OPCAModel", function(object) {
 })
 
 setMethod("as.data.frame", "H2OParsedData", function(x) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/downloadCsv?src_key=', x@key, sep='')
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/downloadCsv?key=', x@key, sep='')
   ttt <- getURL(url)
   read.csv(textConnection(ttt))
 })
@@ -279,7 +279,7 @@ setMethod("as.data.frame", "H2OParsedData", function(x) {
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x), sep=""))
+  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
   myView = ifelse(n > 0, n, nrow(x)+n)
   if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
   
@@ -297,7 +297,7 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
 setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x), sep=""))
+  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
   myOff = ifelse(n > 0, nrow(x)-n, abs(n))
   myView = ifelse(n > 0, n, nrow(x)+n)
   if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))

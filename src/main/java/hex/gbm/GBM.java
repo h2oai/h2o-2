@@ -24,7 +24,7 @@ public class GBM extends SharedTreeModelBuilder {
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public GBMModel(Key key, Key dataKey, Frame fr, int ntrees, int ymin) { super(key,dataKey,fr,ntrees,ymin); }
+    public GBMModel(Key key, Key dataKey, String names[], String domains[][], int ntrees, int ymin) { super(key,dataKey,names,domains,ntrees,ymin); }
     public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
@@ -58,8 +58,8 @@ public class GBM extends SharedTreeModelBuilder {
     return GBMProgressPage.redirect(this, self(), dest());
   }
 
-  @Override protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
-    GBMModel model = new GBMModel(outputKey, dataKey, frm, ntrees, _ymin);
+  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Timer t_build ) {
+    GBMModel model = new GBMModel(outputKey, dataKey, names, domains, ntrees, _ymin);
     DKV.put(outputKey, model);
     // Build trees until we hit the limit
     for( int tid=0; tid<ntrees; tid++) {

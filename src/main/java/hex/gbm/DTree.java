@@ -468,8 +468,8 @@ class DTree extends Iced {
     // model (for now - really should be seperate).
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
 
-    public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, int ymin) {
-      super(key,dataKey,fr);
+    public TreeModel(Key key, Key dataKey, String names[], String domains[][], int ntrees, int ymin) {
+      super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0]; this.ymin = ymin; this.cm = null;
       treeBits = new CompressedTree[0][];
     }
