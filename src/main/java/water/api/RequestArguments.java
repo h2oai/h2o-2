@@ -17,6 +17,7 @@ import water.*;
 import water.Request2.TypeaheadKey;
 import water.ValueArray.Column;
 import water.api.Request.Filter;
+import water.api.Request.API;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Check;
@@ -1379,6 +1380,31 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
+  public class ClassifyBool extends Bool {
+    private FrameClassVec _fcv;
+    public ClassifyBool(String name, FrameClassVec fcv) {
+      super(name,false,"Classification or Regression");
+      addPrerequisite(_fcv=fcv);
+      setRefreshOnChange();
+    }
+    @Override public Boolean parse(String input) {
+      boolean b=false;
+      if( false ) ;
+      else if (input.equals("1"))     b= true;
+      else if (input.equals("0"))     b= false;
+      else if (input.equals("true"))  b= true;
+      else if (input.equals("false")) b= false;
+      else throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
+      Vec vec = _fcv.value();
+      if( !vec.isInt() &&  b ) throw new IllegalArgumentException("Only Regression on float responses");
+      if( vec.isEnum() && !b ) throw new IllegalArgumentException("Only Classification on catagorical responses");
+      return b;
+    }
+    @Override protected Boolean defaultValue() {
+      return !_fcv.value().isInt(); // Float columns only regress
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // EnumClass
   // ---------------------------------------------------------------------------
@@ -2333,27 +2359,10 @@ public class RequestArguments extends RequestStatics {
   /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
   public class FrameClassVec extends FrameKeyVec {
     public FrameClassVec(String name, TypeaheadKey key ) { super(name, key); }
-    @Override protected String[] selectValues() {
-      ArrayList<String> as = new ArrayList();
-      Frame fr = fr();
-      if(fr != null) {
-        Vec vecs[] = fr.vecs();
-        for( int i=0; i<vecs.length; i++ )
-          if( filter(vecs[i]) ) as.add(fr()._names[i]);
-      }
-      return as.toArray(new String[as.size()]);
-    }
-    @Override protected Vec parse(String input) throws IllegalArgumentException {
-      Vec vec = super.parse(input);
-      if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
-      return vec;
-    }
-    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && (vec.max()-vec.min() <= 1000);  }
     @Override protected Vec defaultValue() {
       Frame fr = fr();
       return fr != null ? fr.vecs()[fr.vecs().length - 1] : null;
     }
-    @Override protected String[] errors() { return new String[] { "Only positive integer or enum/factor columns can be classified, with a limit of 1000 classes" }; }
   }
 
   public class FrameKeyMultiVec extends MultipleSelect<int[]> {

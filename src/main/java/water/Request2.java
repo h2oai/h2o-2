@@ -100,6 +100,10 @@ public abstract class Request2 extends Request {
     }
   }
 
+  public class DoClassBoolean extends Dependent {
+    protected DoClassBoolean(String key) { super(key); }
+  }
+
   /**
    * Iterates over fields and their annotations, and creates argument handlers.
    */
@@ -154,7 +158,7 @@ public abstract class Request2 extends Request {
           }
 
           // Bool
-          else if( f.getType() == boolean.class ) {
+          else if( f.getType() == boolean.class && api.filter()==Default.class ) {
             boolean val = (Boolean) defaultValue;
             arg = new Bool(f.getName(), val, api.help());
           }
@@ -201,6 +205,9 @@ public abstract class Request2 extends Request {
             } else if( MultiVecSelect.class.isAssignableFrom(api.filter()) ) {
               FrameClassVec response = classVecs.get(d._ref);
               arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help());
+            } else if( DoClassBoolean.class.isAssignableFrom(api.filter()) ) {
+              FrameClassVec response = classVecs.get(d._ref);
+              arg = new ClassifyBool(f.getName(),response);
             }
           }
 
