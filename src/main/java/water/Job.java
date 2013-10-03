@@ -63,12 +63,8 @@ public class Job extends Request2 {
     public int[] ignored_cols;
     class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() { super("source"); } }
 
-    @Override protected Response serve() {
-      initSource();
-      return super.serve();
-    }
-
-    protected void initSource() {
+    @Override protected void init() {
+      super.init();
       if(cols == null || cols.length == 0) {
         cols = new int[source.vecs().length];
         for( int i = 0; i < cols.length; i++ )
@@ -115,8 +111,8 @@ public class Job extends Request2 {
       _arguments.set(ci, r);
     }
 
-    @Override protected void initSource() {
-      super.initSource();
+    @Override protected void init() {
+      super.init();
 
       // Doing classification only right now...
       if( !response.isEnum() ) response.asEnum();
@@ -138,8 +134,8 @@ public class Job extends Request2 {
     @API(help = "Validation frame", filter = Default.class)
     public Frame validation;
 
-    @Override protected void initSource() {
-      super.initSource();
+    @Override protected void init() {
+      super.init();
 
       int rIndex = 0;
       for( int i = 0; i < source.vecs().length; i++ )
@@ -360,25 +356,43 @@ public class Job extends Request2 {
 
   // If job is a request
 
-  public H2OCountedCompleter startFJ() {
+  @Override protected Response serve() {
+    fork();
+    return redirect();
+  }
+
+  protected Response redirect() {
+    return Progress2.redirect(this, job_key, destination_key);
+  }
+
+  //
+
+  public H2OCountedCompleter fork() {
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        run();
+        Job.this.invoke();
         tryComplete();
-        remove();
       }
     };
     H2O.submitTask(start(task));
     return task;
   }
 
-  @Override protected Response serve() {
-    startFJ();
-    return redirect();
+  public final void invoke() {
+    init();
+    exec();
+    done();
   }
 
-  protected Response redirect() {
-    return Progress2.redirect(this, job_key, destination_key);
+  protected void init() {
+  }
+
+  protected void exec() {
+    throw new RuntimeException("Should be overridden if job is a request");
+  }
+
+  protected void done() {
+    remove();
   }
 
   /**
@@ -428,10 +442,6 @@ public class Job extends Request2 {
   public static void waitUntilJobEnded(Key jobkey) {
     int THREE_SECONDS_MILLIS = 3 * 1000;
     waitUntilJobEnded(jobkey, THREE_SECONDS_MILLIS);
-  }
-
-  public void run() {
-    throw new RuntimeException("Should be overridden if job is a request");
   }
 
   public static class ChunkProgress extends Iced implements Progress {

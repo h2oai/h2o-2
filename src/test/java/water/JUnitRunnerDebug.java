@@ -1,5 +1,7 @@
 package water;
 
+import hex.GLMTest2;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +34,7 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       //tests = JUnitRunner.all();
-      tests.add(hex.rf.RFPredDomainTest.class);
+      tests.add(GLMTest2.class);
 
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());

@@ -50,7 +50,7 @@ public class GBM extends SharedTreeModelBuilder {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
 
-  @Override public void run() {
+  @Override protected void exec() {
     buildModel();
   }
 

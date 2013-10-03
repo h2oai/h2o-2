@@ -10,7 +10,6 @@ import hex.glm.LSMSolver.ADMMSolver;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import jsr166y.CountedCompleter;
 import water.*;
@@ -74,16 +73,6 @@ public class GLM2 extends FrameJob{
     this.lambda = lambda;
     this.standardize = standardize;
   }
-
-  private long _startTime;
-  @Override protected Response serve() {
-    link = family.defaultLink;
-    _startTime = System.currentTimeMillis();
-    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_eps,alpha,lambda,System.currentTimeMillis()-_startTime);
-    DKV.put(dest(), m);
-    fork();
-    return GLMProgressPage2.redirect(this, self(),dest());
-  }
   private static double beta_diff(double[] b1, double[] b2) {
     if(b1 == null)return Double.MAX_VALUE;
     double res = Math.abs(b1[0] - b2[0]);
@@ -94,18 +83,27 @@ public class GLM2 extends FrameJob{
   @Override public float progress(){
     if(DKV.get(dest()) == null)return 0;
     GLMModel m = DKV.get(dest()).get();
-    return (float)m.iteration/(float)max_iter; // TODO, do smomething smarter here
+    return (float)m.iteration/(float)max_iter; // TODO, do something smarter here
   }
-  @Override public void run(){
+
+  private long _startTime;
+  @Override protected void exec(){
+    link = family.defaultLink;
+    _startTime = System.currentTimeMillis();
+    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_eps,alpha,lambda,System.currentTimeMillis()-_startTime);
+    DKV.put(dest(), m);
     try {
-      fork().get();
+      fork(null).get();
     } catch( InterruptedException e ) {
       throw new RuntimeException(e);
     } catch( ExecutionException e ) {
       throw new RuntimeException(e);
     }
   }
-  public Future fork(){return fork(null);}
+  @Override protected Response redirect() {
+    return GLMProgressPage2.redirect(this, self(),dest());
+  }
+
   private class Iteration extends H2OCallback<GLMIterationTask> {
     final LSMSolver solver;
     final Frame fr;
@@ -155,7 +153,7 @@ public class GLM2 extends FrameJob{
       return true;
     }
   }
-  public Future fork(H2OCountedCompleter completer){
+  public H2OCountedCompleter fork(H2OCountedCompleter completer){
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
     source.remove(ignored_cols);
     final Vec [] vecs =  source.vecs();

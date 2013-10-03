@@ -13,10 +13,10 @@ import water.util.Utils;
 public class GridSearch extends Job {
   public Job[] jobs;
 
-  @Override public void run() {
+  @Override protected void exec() {
     UKV.put(destination_key, this);
     for( Job job : jobs )
-      job.startFJ().join();
+      job.fork().join();
   }
 
   @Override protected void onCancelled() {

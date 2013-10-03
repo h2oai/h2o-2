@@ -69,7 +69,7 @@ public class GBMDomainTest extends TestUtil {
       gbm.min_rows = 10;
       gbm.nbins = 1024;
       gbm.cols =  new int[] {0,1,2};
-      gbm.run();
+      gbm.invoke();
       System.out.println("=========3========");   for( Key k : H2O.keySet() ) System.out.println(k);
 
       // The test data set has a few more enums than the train
