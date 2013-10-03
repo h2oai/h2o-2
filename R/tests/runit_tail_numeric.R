@@ -1,5 +1,5 @@
 context("Tail Tests Numeric") #set context for test. Here we are checking the tail() functionality
-# R -f runit_tail.R --args H2OServer:Port
+# R -f runit_tail_numeric.R --args H2OServer:Port
 # By default, H2OServer = 127.0.0.1 and Port = 54321
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 1)
