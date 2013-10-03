@@ -3,11 +3,20 @@ package hex.glm;
 
 import water.H2O;
 import water.Iced;
+import water.api.DocGen;
+import water.api.Request.API;
 
 public class GLMParams extends Iced {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+  @API(help="family")
   final Family family;
+  @API(help="link")
   final Link   link;
+  @API(help="tweedie variance power")
   final double tweedie_variance_power;
+  @API(help="tweedie link power")
   final double tweedie_link_power;
 
   public GLMParams(Family f, double twVar, Link l, double twLnk){

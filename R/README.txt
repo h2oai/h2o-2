@@ -2,7 +2,7 @@ H2O in R
 ------------
 
 
-These instructions assume you are using R 2.15.0 or later.  
+These instructions assume you are using R 2.14.0 or later.  
 
 **STEP 1**
 
