@@ -1,6 +1,3 @@
-library(RCurl)
-library(rjson)
-
 # Hack to get around Exec.json always dumping to same Result.hex key
 pkg.env = new.env()
 pkg.env$result_count = 0
@@ -169,7 +166,12 @@ h2o.__operator <- function(op, x, y) {
 }
 
 h2o.__escape <- function(key) {
-  paste("|", key, "|", sep="")
+  key_esc = key
+  myOS = Sys.info()["sysname"]
+  if(myOS == "Windows")
+    key_esc = gsub("\\\\", "\\\\\\\\", key)
+    
+  paste("|", key_esc, "|", sep="")
 }
 
 h2o.__func <- function(fname, x, type) {

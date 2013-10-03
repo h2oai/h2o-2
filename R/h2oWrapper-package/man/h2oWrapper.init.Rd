@@ -8,7 +8,7 @@ Connect to H2O and Install R Package
 Connects to a H2O instance and checks the local H2O R package is the correct version.
 }
 \usage{
-h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = TRUE)
+h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -50,18 +50,15 @@ Once the package is successfully installed, this method will load it and return 
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-# Try to create a localhost connection to H2O.  Try to start it if needed.
-# Prompt to install H2O R package from server if version mismatch.
+# Try to create a localhost connection to H2O. Launch H2O GUI if needed.
 localH2O = h2oWrapper.init()
-
-# Prompt to install H2O R package from server if version mismatch
 localH2O = h2oWrapper.init(ip = "localhost", port = 54321)
 
 # Prompt to install H2O R package from server if version mismatch
 localH2O = h2oWrapper.init(ip = "localhost", port = 54321, silentUpgrade = FALSE, promptUpgrade = TRUE)
 
-# Don't check if local H2O R package matches version from server
-localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = FALSE, silentUpgrade = FALSE, promptUpgrade = FALSE)
+# Automatically install H2O R package from server if version mismatch
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = FALSE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
