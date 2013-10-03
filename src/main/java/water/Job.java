@@ -92,7 +92,7 @@ public class Job extends Request2 {
         Log.info("    ignored_cols: null");
       }
       else {
-        Log.info("    ignored_cols: " + cols.length + " columns ignored");
+        Log.info("    ignored_cols: " + ignored_cols.length + " columns ignored");
       }
     }
 
