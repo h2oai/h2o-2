@@ -50,10 +50,17 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
   }
 
+  @Override protected void logStart() {
+    super.logStart();
+    Log.info("    ntrees: " + ntrees);
+    Log.info("    max_depth: " + max_depth);
+    Log.info("    min_rows: " + min_rows);
+    Log.info("    nbins: " + nbins);
+  }
+
   // --------------------------------------------------------------------------
   // Driver for model-building.
   public void buildModel( ) {
-    selectCols();
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
     _ncols = _train.length;

@@ -41,7 +41,7 @@ public class KMeans2 extends ColumnsJob {
     description = DOC_GET;
   }
 
-  @Override public void run() {
+  @Override protected void exec() {
     Log.info(DOC_GET + source);
     UKV.put(destination_key, source);
   }

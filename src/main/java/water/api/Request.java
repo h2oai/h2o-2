@@ -28,6 +28,8 @@ public abstract class Request extends RequestBuilders {
     long   lmax() default Long  .MAX_VALUE;
     double dmin() default Double.NEGATIVE_INFINITY;
     double dmax() default Double.POSITIVE_INFINITY;
+    boolean hide() default false;
+    String displayName() default "";
   }
 
   public interface Filter {

@@ -1,5 +1,8 @@
 package water.api;
 
+import java.util.Properties;
+
+import water.NanoHTTPD;
 import water.util.RString;
 
 /**
@@ -18,6 +21,12 @@ public class HTTP404 extends Request {
 
   @Override public Response serve() {
     return Response.error(_error.value());
+  }
+
+  @Override public water.NanoHTTPD.Response serve(NanoHTTPD server, Properties parms, RequestType type) {
+    water.NanoHTTPD.Response r = super.serve(server, parms, type);
+    r.status = NanoHTTPD.HTTP_NOTFOUND;
+    return r;
   }
 
   private static final String _html =

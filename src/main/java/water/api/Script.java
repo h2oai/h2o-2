@@ -30,7 +30,7 @@ public class Script extends Request {
     return RequestType.txt;
   }
 
-  public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
+  @Override public NanoHTTPD.Response serve(NanoHTTPD server, Properties args, RequestType type) {
     checkArguments(args, type);
     int count = _count.value();
 

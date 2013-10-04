@@ -50,7 +50,14 @@ public class GBM extends SharedTreeModelBuilder {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
 
-  @Override public void run() {
+  @Override protected void logStart() {
+    Log.info("Starting GBM model build...");
+    super.logStart();
+    Log.info("    learn_rate: " + learn_rate);
+  }
+
+  @Override protected void exec() {
+    logStart();
     buildModel();
   }
 

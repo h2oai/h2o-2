@@ -1,5 +1,7 @@
 package water;
 
+import hex.JobArgsTest;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,32 +21,31 @@ public class JUnitRunnerDebug {
   public static class UserCode {
     public static void userMain(String[] args) {
       String flat = "";
+      boolean multi = false;
       flat += "127.0.0.1:54321\n";
-      flat += "127.0.0.1:54323\n";
-      flat += "127.0.0.1:54325\n";
+      if( multi ) {
+        flat += "127.0.0.1:54323\n";
+        flat += "127.0.0.1:54325\n";
+      }
       flat = Utils.writeFile(flat).getAbsolutePath();
 
       H2O.main(("  -ip 127.0.0.1 -port 54321 -flatfile " + flat).split(" "));
-      new NodeCL(("-ip 127.0.0.1 -port 54323 -flatfile " + flat).split(" ")).start();
-      new NodeCL(("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
+      if( multi ) {
+        new NodeCL(("-ip 127.0.0.1 -port 54323 -flatfile " + flat).split(" ")).start();
+        new NodeCL(("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
+      }
 
       List<Class> tests = new ArrayList<Class>();
 
       // Classes to test:
       //tests = JUnitRunner.all();
-      tests.add(hex.rf.RFPredDomainTest.class);
+      tests.add(JobArgsTest.class);
 
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());
       Result result = junit.run(tests.toArray(new Class[0]));
       if( result.getFailures().size() == 0 )
         Log.info("Success!");
-//      else {
-//        for( Failure f : result.getFailures() ) {
-//          Log.info(f.getDescription());
-//          f.getException().printStackTrace();;
-//        }
-//      }
     }
   }
 

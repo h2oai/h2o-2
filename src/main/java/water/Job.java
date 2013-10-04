@@ -10,6 +10,7 @@ import water.H2O.H2OCountedCompleter;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -43,23 +44,88 @@ public class Job extends Request2 {
   public Key self() { return job_key; }
   public Key dest() { return destination_key; }
 
+  protected void logStart() {
+    Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
+  }
+
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help = "Source frame", required = true, filter = Default.class)
     public Frame source;
+
+    @Override protected void logStart() {
+      super.logStart();
+      if (source == null) {
+        Log.info("    source: null");
+      }
+      else {
+        Log.info("    source.numCols(): " + source.numCols());
+        Log.info("    source.numRows(): " + source.numRows());
+      }
+    }
   }
 
   public static abstract class ColumnsJob extends FrameJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Columns to use as input", required=true, filter=colsFilter.class)
+    @API(help = "Input columns (Indexes start at 0)", filter=colsFilter.class, hide=true)
     public int[] cols;
     class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
-    protected Vec[] selectVecs(Frame frame) {
+    @API(help = "Ignored columns by name", filter=colsFilter.class, displayName="Ignored columns")
+    public int[] ignored_cols_by_name;
+    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
+
+    @Override protected void logStart() {
+      super.logStart();
+      if (cols == null) {
+        Log.info("    cols: null");
+      }
+      else {
+        Log.info("    cols: " + cols.length + " columns selected");
+      }
+
+      if (ignored_cols_by_name == null) {
+        Log.info("    ignored_cols: null");
+      }
+      else {
+        Log.info("    ignored_cols: " + ignored_cols_by_name.length + " columns ignored");
+      }
+    }
+
+    @Override protected void init() {
+      super.init();
+
+      if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
+        throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
+      if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
+        throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
+      if(cols == null || cols.length == 0) {
+        cols = new int[source.vecs().length];
+        for( int i = 0; i < cols.length; i++ )
+          cols[i] = i;
+      }
+      int length = cols.length;
+      for( int g = 0; ignored_cols_by_name != null && g < ignored_cols_by_name.length; g++ ) {
+        for( int i = 0; i < cols.length; i++ ) {
+          if(cols[i] == ignored_cols_by_name[g]) {
+            length--;
+            // Move all, try to keep ordering
+            System.arraycopy(cols, i + 1, cols, i, length - i);
+            break;
+          }
+        }
+      }
+      if( length != cols.length )
+        cols = ArrayUtils.subarray(cols, 0, length);
+      if( cols.length == 0 )
+        throw new IllegalArgumentException("No column selected");
+    }
+
+    protected final Vec[] selectVecs(Frame frame) {
       Vec[] vecs = new Vec[cols.length];
       for( int i = 0; i < cols.length; i++ )
         vecs[i] = frame.vecs()[cols[i]];
@@ -79,17 +145,38 @@ public class Job extends Request2 {
     public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
-    protected int initResponse() {
+    @Override protected void registered() {
+      super.registered();
+      Argument c = find("ignored_cols_by_name");
+      Argument r = find("response");
+      int ci = _arguments.indexOf(c);
+      int ri = _arguments.indexOf(r);
+      _arguments.set(ri, c);
+      _arguments.set(ci, r);
+    }
+
+    @Override protected void logStart() {
+      super.logStart();
+      if (response == null) {
+        Log.info("    response: null");
+      }
+      else {
+        String arg = input("response");
+        assert arg != null;
+        Log.info("    response: " + arg);
+      }
+    }
+
+    @Override protected void init() {
+      super.init();
+
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
+
       for( int i = cols.length - 1; i >= 0; i-- )
         if( source.vecs()[cols[i]] == response )
           cols = ArrayUtils.remove(cols, i);
-      for( int i = 0; i < source.vecs().length; i++ )
-        if( source.vecs()[i] == response )
-          return i;
-      throw new IllegalArgumentException();
     }
   }
 
@@ -104,17 +191,35 @@ public class Job extends Request2 {
     @API(help = "Validation frame", filter = Default.class)
     public Frame validation;
 
-    protected void selectCols() {
-      int rIndex = initResponse();
+    @Override protected void logStart() {
+      super.logStart();
+      if (validation == null) {
+        Log.info("    validation: null");
+      }
+      else {
+        Log.info("    validation.numCols(): " + validation.numCols());
+        Log.info("    validation.numRows(): " + validation.numRows());
+      }
+    }
+
+    @Override protected void init() {
+      super.init();
+
+      int rIndex = 0;
+      for( int i = 0; i < source.vecs().length; i++ )
+        if( source.vecs()[i] == response )
+          rIndex = i;
+
       _train = selectVecs(source);
       if(validation != null) {
         _valid = selectVecs(validation);
-        _validResponse = validation.vecs()[rIndex];
+        if(rIndex >= 0)
+          _validResponse = validation.vecs()[rIndex];
       }
       _names = new String[cols.length];
       for( int i = 0; i < cols.length; i++ )
         _names[i] = source._names[cols[i]];
-      _responseName = source._names != null ? source._names[rIndex] : "response";
+      _responseName = source._names != null && rIndex >= 0 ? source._names[rIndex] : "response";
     }
   }
 
@@ -319,25 +424,55 @@ public class Job extends Request2 {
 
   // If job is a request
 
-  public H2OCountedCompleter startFJ() {
+  @Override protected Response serve() {
+    fork();
+    return redirect();
+  }
+
+  protected Response redirect() {
+    return Progress2.redirect(this, job_key, destination_key);
+  }
+
+  //
+
+  public H2OCountedCompleter fork() {
+    init();
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        run();
+        Job.this.exec();
+        Job.this.done();
         tryComplete();
-        remove();
       }
     };
     H2O.submitTask(start(task));
     return task;
   }
 
-  @Override protected Response serve() {
-    startFJ();
-    return redirect();
+  public void invoke() {
+    init();
+    exec();
+    done();
   }
 
-  protected Response redirect() {
-    return Progress2.redirect(this, job_key, destination_key);
+  /**
+   * Invoked before job runs. This is the place to checks arguments are valid or throw
+   * IllegalArgumentException. It will get invoked both from the Web and Java APIs.
+   */
+  protected void init() throws IllegalArgumentException {
+  }
+
+  /**
+   * Actual job code. Should be blocking until execution is done.
+   */
+  protected void exec() {
+    throw new RuntimeException("Should be overridden if job is a request");
+  }
+
+  /**
+   * Invoked after job has run for cleanup purposes.
+   */
+  protected void done() {
+    remove();
   }
 
   /**
@@ -387,10 +522,6 @@ public class Job extends Request2 {
   public static void waitUntilJobEnded(Key jobkey) {
     int THREE_SECONDS_MILLIS = 3 * 1000;
     waitUntilJobEnded(jobkey, THREE_SECONDS_MILLIS);
-  }
-
-  public void run() {
-    throw new RuntimeException("Should be overridden if job is a request");
   }
 
   public static class ChunkProgress extends Iced implements Progress {

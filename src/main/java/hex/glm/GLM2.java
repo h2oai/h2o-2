@@ -11,7 +11,6 @@ import hex.glm.LSMSolver.ADMMSolver;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import jsr166y.CountedCompleter;
 import water.*;
@@ -93,16 +92,6 @@ public class GLM2 extends FrameJob{
     _beta = beta;
     this.n_folds = nfold;
   }
-
-  private long _startTime;
-  @Override protected Response serve() {
-    link = family.defaultLink;
-    _startTime = System.currentTimeMillis();
-    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime);
-    DKV.put(dest(), m);
-    fork();
-    return GLMProgressPage2.redirect(this, self(),dest());
-  }
   private static double beta_diff(double[] b1, double[] b2) {
     if(b1 == null)return Double.MAX_VALUE;
     double res = Math.abs(b1[0] - b2[0]);
@@ -115,16 +104,25 @@ public class GLM2 extends FrameJob{
     GLMModel m = DKV.get(dest()).get();
     return (float)m.iteration/(float)max_iter; // TODO, do something smarter here
   }
-  @Override public void run(){
+
+  private long _startTime;
+  @Override protected void exec(){
+    link = family.defaultLink;
+    _startTime = System.currentTimeMillis();
+    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime);
+    DKV.put(dest(), m);
     try {
-      fork().get();
+      fork(null).get();
     } catch( InterruptedException e ) {
       throw new RuntimeException(e);
     } catch( ExecutionException e ) {
       throw new RuntimeException(e);
     }
   }
-  public Future fork(){return fork(null);}
+  @Override protected Response redirect() {
+    return GLMProgressPage2.redirect(this, self(),dest());
+  }
+
   private class Iteration extends H2OCallback<GLMIterationTask> {
     final LSMSolver solver;
     final Frame fr;
@@ -178,11 +176,7 @@ public class GLM2 extends FrameJob{
       return true;
     }
   }
-
-  public Future fork(H2OCountedCompleter completer){
-    final H2OCountedCompleter fjt = new H2OEmptyCompleter();
-    if(completer != null)fjt.setCompleter(completer);
-    start(fjt);
+  public H2OCountedCompleter fork(H2OCountedCompleter completer){
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
     source.remove(ignored_cols);
     final Vec [] vecs =  source.vecs();
@@ -204,6 +198,8 @@ public class GLM2 extends FrameJob{
     ymut.doAll(fr);
     GLMIterationTask firstIter = new GLMIterationTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
     firstIter._ymu = ymut.ymu();
+    final H2OEmptyCompleter fjt = start(new H2OEmptyCompleter());
+    if(completer != null)fjt.setCompleter(completer);
     final LSMSolver solver = new ADMMSolver(lambda, alpha);
     firstIter.setCompleter(new Iteration(solver,fr,fjt));
     firstIter.dfork(fr);

@@ -4,8 +4,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -15,6 +14,7 @@ import water.parser.ParseDataset;
 import water.util.Log;
 
 import com.google.common.io.Closeables;
+import com.google.gson.Gson;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
@@ -336,5 +336,24 @@ public class TestUtil {
     File file = new File(path);
     Key fkey = NFSFileVec.make(file);
     return ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
+  }
+
+  public static Frame frame(String[] names, double[][] rows) {
+    assert names.length == rows[0].length;
+    Vec[] vecs = new Vec[rows[0].length];
+    for( int c = 0; c < vecs.length; c++ ) {
+      AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
+      NewChunk chunk = new NewChunk(vec, 0);
+      for( int r = 0; r < rows.length; r++ )
+        chunk.addNum(rows[r][c]);
+      chunk.close(0, null);
+      vecs[c] = vec.close(null);
+    }
+    return new Frame(names, vecs);
+  }
+
+  public static <T> T readJson(String json, Class<T> c) {
+    Gson gson = new Gson();
+    return gson.fromJson(new StringReader(json), c);
   }
 }
