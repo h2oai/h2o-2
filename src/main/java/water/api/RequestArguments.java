@@ -71,6 +71,10 @@ public class RequestArguments extends RequestStatics {
     return result;
   }
 
+  /** This rule of searching for matching names, and only if that fails do we
+   *  attempt a number parse for a zero-based column id, is used exactly for
+   *  defining selected columns in the JSON 'cols' argument.
+   */
   protected static int vaColumnNameToIndex(ValueArray va, String input) {
     // first check if we have string match
     for (int i = 0; i < va._cols.length; ++i) {
