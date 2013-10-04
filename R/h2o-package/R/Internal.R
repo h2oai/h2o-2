@@ -118,7 +118,7 @@ h2o.__poll <- function(client, keyName) {
 
 h2o.__allDone <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
-  notDone = lapply(res$jobs, function(x) { x$progress != -1.0 })
+  notDone = lapply(res$jobs, function(x) { !(x$progress == -1.0 || x$cancelled) })
   !any(unlist(notDone))
 }
 
@@ -190,4 +190,23 @@ h2o.__func <- function(fname, x, type) {
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
   res$version
+}
+
+h2o.__getFamily <- function(family, link, tweedie.var.p = 0, tweedie.link.p = 1-tweedie.var.p) {
+  if(family == "tweedie")
+    return(tweedie(var.power = tweedie.var.p, link.power = tweedie.link.p))
+  
+  if(missing(link)) {
+    switch(family,
+           gaussian = gaussian(),
+           binomial = binomial(),
+           poisson = poisson(),
+           gamma = gamma())
+  } else {
+    switch(family,
+           gaussian = gaussian(link),
+           binomial = binomial(link),
+           poisson = poisson(link),
+           gamma = gamma(link))
+  }
 }
