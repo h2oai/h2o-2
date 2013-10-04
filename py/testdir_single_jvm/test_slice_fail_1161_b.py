@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r" + str(trial)
             # different fails for specifying row count or not
-            execExpr = resultKey + "=slice(" + dataKeyTrain + ",0," + str(rowsToUse) + ")"
+            execExpr = resultKey + "=slice(" + dataKeyTrain + ",0)"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
 
 
