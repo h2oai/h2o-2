@@ -228,6 +228,7 @@ public abstract class MemoryManager {
         case  9: return new double [elems];
         case  0: return new boolean[elems];
         case -1: return Arrays.copyOfRange((byte[])orig,from,elems);
+        case -4: return Arrays.copyOfRange((int [])orig,from,elems);
         case -8: return Arrays.copyOfRange((long[])orig,from,elems);
         default: throw H2O.unimpl();
         }
@@ -251,8 +252,10 @@ public abstract class MemoryManager {
   public static double [] malloc8d(int size) { return (double [])malloc(size,size*8, 9,null,0); }
   public static boolean[] mallocZ (int size) { return (boolean[])malloc(size,size*1, 0,null,0); }
   public static byte[] arrayCopyOfRange(byte[] orig, int from, int sz) { return (byte[]) malloc(sz,(sz-from),-1,orig,from); }
+  public static int [] arrayCopyOfRange(int [] orig, int from, int sz) { return (int []) malloc(sz,(sz-from),-4,orig,from); }
   public static long[] arrayCopyOfRange(long[] orig, int from, int sz) { return (long[]) malloc(sz,(sz-from),-8,orig,from); }
   public static byte[] arrayCopyOf( byte[] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
+  public static int [] arrayCopyOf( int [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
   public static long[] arrayCopyOf( long[] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
 
   // Memory available for tasks (we assume 3/4 of the heap is available for tasks)
