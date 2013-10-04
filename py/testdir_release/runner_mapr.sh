@@ -36,8 +36,6 @@ REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
 
-REMOTE_0XCUSTOMER=0xcustomer@$REMOTE_IP
-
 # have to copy the downloaded h2o stuff over to 171 to execute with the ssh
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 echo "scp some jars"
