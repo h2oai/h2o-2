@@ -114,7 +114,8 @@ do
 done < h2o_one_node
 
 rm -fr h2o-nodes.json
-../find_cloud.py -f h2o_one_node
+# NOTE: keep this hdfs info in sync with the json used to build the cloud above
+../find_cloud.py -f h2o_one_node -hdfs_version cdh4 -hdfs_name_node 192.168.1.161 -expected_size $CDH4_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
