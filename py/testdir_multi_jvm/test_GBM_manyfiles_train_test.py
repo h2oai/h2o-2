@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
         # hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz
 
         # h2b.browseTheCloud()
-        for (importFolderPath, trainFilename, trainKey, timeoutSecs, vresponse, testFilename, testKey) in files:
+        for (importFolderPath, trainFilename, trainKey, timeoutSecs, response, testFilename, testKey) in files:
             h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             start = time.time()
@@ -103,10 +103,10 @@ class Basic(unittest.TestCase):
             # Note ..no inspect of test data here..so translate happens later?
 
             # GBM (train iterate)****************************************
-            # if not vresponse:
-            #     vresponse = num_cols - 1
-            vresponse = 378
-            print "Using the same vresponse %s for train and test (which should have a output value too)" % vresponse
+            # if not response:
+            #     response = num_cols - 1
+            response = 378
+            print "Using the same response %s for train and test (which should have a output value too)" % response
 
             ntrees = 10
             for max_depth in [5,10,20,40]:
@@ -116,7 +116,7 @@ class Basic(unittest.TestCase):
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
-                    'vresponse': vresponse,
+                    'response': response,
                     # 'ignored_cols': 
                 }
                 print "Using these parameters for GBM: ", params
@@ -162,7 +162,7 @@ class Basic(unittest.TestCase):
                 print "This is crazy!"
                 gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
                     actual=parseTestResult['destination_key'],
-                    vactual=vresponse,
+                    vactual=response,
                     predict=predictKey,
                     vpredict='predict', # choices are 0 and 'predict'
                     )
