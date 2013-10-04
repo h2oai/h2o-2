@@ -50,7 +50,7 @@ H2Ocon <- new("H2OClient", ip=myIP, port=myPort)
 
 test.slice.colTypes <- function(con) {
   cat("\nImporting iris.csv data...\n")
-  iris.hex = h2o.uploadFile(H2Ocon, "smalldata/iris/iris_wheader.csv", "iris.hex")
+  iris.hex = h2o.uploadFile(H2Ocon, "../../smalldata/iris/iris_wheader.csv", "iris.hex")
   cat("\nCheck that summary works...")
   summary(iris.hex)
   summary_ <- summary(iris.hex) #keep the summary around
