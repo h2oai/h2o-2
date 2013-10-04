@@ -23,12 +23,15 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
       res2=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView,'_modelKey'=destination)
       
-      result=list()
-      categories=length(res2$gbm_model$cm)
-      cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
-      colnames(cf_matrix)=c(1:categories)
-      rownames(cf_matrix)=c(1:categories)
-      result$confusion= cf_matrix
+       result=list()
+       categories=length(res2$gbm_model$cm)
+       cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
+       cf_names <- res2$gbm_model[['_domains']]
+       cf_names <- cf_names[[ length(cf_names) ]]
+
+       colnames(cf_matrix) <- cf_names
+       rownames(cf_matrix) <- cf_names
+       result$confusion= cf_matrix
       
       # mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=ntrees)
       # colnames(mse_matrix)=c(1:ntrees)
