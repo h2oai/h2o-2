@@ -71,7 +71,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs)
             succeeded = importResult['succeeded']
             if len(succeeded) < 1:
-                raise Exception("Should have imported at least 1 key for" % csvPathname)
+                raise Exception("Should have imported at least 1 key for %s" % csvPathname)
 
             # just do a search
             foundIt = None
