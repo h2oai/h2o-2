@@ -81,8 +81,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     String domains[][] = frm.domains();
 
     String[] domain = response.domain();
-    if( domain == null )        // No names?  Make some up.
-      domains[_ncols] = domain = _nclass == 1 ? new String[] {"r"} : response.defaultLevels();
+    if( domain == null && _nclass > 1 ) // No names?  Make some up.
+      domains[_ncols] = domain = response.defaultLevels();
+    if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution
     _distribution = _nclass > 1 ? new ClassDist().doAll(response)._ys : null;

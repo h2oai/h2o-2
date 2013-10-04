@@ -79,7 +79,7 @@ public class GBM extends SharedTreeModelBuilder {
       new ComputeRes().doAll(fr);
 
       // ESL2, page 387, Step 2b ii, iii, iv
-      DTree[] ktrees = buildNextKTrees(fr,domains);
+      DTree[] ktrees = buildNextKTrees(fr);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
@@ -167,9 +167,7 @@ public class GBM extends SharedTreeModelBuilder {
   // --------------------------------------------------------------------------
   // Build the next k-trees, which is trying to correct the residual error from
   // the prior trees.  From LSE2, page 387.  Step 2b ii, iii.
-  private DTree[] buildNextKTrees(Frame fr, String domains[][]) {
-    String domain[] = domains[_ncols]; // For printing
-
+  private DTree[] buildNextKTrees(Frame fr) {
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
     final DTree[] ktrees = new DTree[_nclass];
