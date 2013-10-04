@@ -64,7 +64,7 @@ checkGBMModel <- function(myGBM.h2o, myGBM.r,serverH2O) {
   cat("\nGaussian Deviance by tree in R (i.e. the per tree 'train error'): \n")
   print(myGBM.r$train.error)
   cat("Expect these to be close... mean of the absolute differences is < .5, and sd < 0.1")
-  errDiff <- abs(ecoR2$train.error - ecology.h2o@model$err)
+  errDiff <- abs(myGBM.r$train.error - myGBM.h2o@model$err)
   cat("\nMean of the absolute difference is: ", mean(errDiff))
   cat("\nStandard Deviation of the absolute difference is: ", sd(errDiff))
   expect_true(mean(errDiff) < 0.5)
