@@ -212,7 +212,11 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
         if timeout and elapsed > timeout:
             timeoutError = True
             errors += 1
-            raise Exception("sh2junit: elapsed: %0.2f timeout: %s (secs) while echoing subprocess stdout" % (elapsed, timeout))
+            # we don't want to exception here, because we're going to print the xml that says there's an error
+            # I guess we'll end up terminating the R process down below
+            # could we have lines in stdout we didn't catch up on? maybe, but do we care?
+            print "ERROR: sh2junit: elapsed: %0.2f timeout: %s (secs) while echoing subprocess stdout" % (elapsed, timeout)
+            break
         # wait for some more output to accumulate
         time.sleep(0.25)
         

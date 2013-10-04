@@ -143,12 +143,17 @@ public class Vec extends Iced {
   public void asEnum() {
     if( _domain!=null ) return;
     if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
-    long min = (long)min(), max = (long)max();
-    if( min < 0 || max > 10000L ) throw H2O.unimpl();
-    _domain = new String[(int)max+1];
-    for( int i=0; i<(int)max+1; i++ )
-      _domain[i] = Integer.toString(i);
+    _domain = defaultLevels();
     DKV.put(_key,this);
+  }
+
+  public String[] defaultLevels() {
+    long min = (long)min(), max = (long)max();
+    if( min < 0 || max > 100000L ) throw H2O.unimpl();
+    String domain[] = new String[(int)max+1];
+    for( int i=0; i<(int)max+1; i++ )
+      domain[i] = Integer.toString(i);
+    return domain;
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
