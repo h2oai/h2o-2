@@ -1,6 +1,6 @@
 package water;
 
-import hex.JobArgsTest;
+import hex.NeuralNetIrisTest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ public class JUnitRunnerDebug {
   public static class UserCode {
     public static void userMain(String[] args) {
       String flat = "";
-      boolean multi = false;
+      boolean multi = true;
       flat += "127.0.0.1:54321\n";
       if( multi ) {
         flat += "127.0.0.1:54323\n";
@@ -39,7 +39,7 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       //tests = JUnitRunner.all();
-      tests.add(JobArgsTest.class);
+      tests.add(NeuralNetIrisTest.class);
 
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());

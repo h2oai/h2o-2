@@ -10,7 +10,8 @@ import water.H2O.H2OCountedCompleter;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
+import water.util.*;
+import water.util.Utils.ExpectedExceptionForDebug;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -432,13 +433,35 @@ public class Job extends Request2 {
     init();
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        Job.this.exec();
-        Job.this.done();
-        tryComplete();
+        Throwable t = null;
+        try {
+          Job.this.exec();
+          Job.this.done();
+        } catch (Throwable t_) {
+          t = t_;
+          if(!(t instanceof ExpectedExceptionForDebug))
+            Log.err(t);
+        } finally {
+          tryComplete();
+        }
+        if(t != null)
+          update(Job.this, Utils.getStackAsString(t));
       }
     };
     H2O.submitTask(start(task));
     return task;
+  }
+
+  private static void update(final Job job, final String exception) {
+    new TAtomic<List>() {
+      @Override public List atomic(List old) {
+        if( old != null && old._jobs != null )
+          for(Job current : old._jobs)
+            if(current == job)
+              job.exception = exception;
+        return old;
+      }
+    }.invoke(LIST);
   }
 
   public void invoke() {

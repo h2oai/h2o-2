@@ -1,11 +1,14 @@
 package hex;
 
+import java.io.InputStreamReader;
+
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
-import org.junit.Assert;
 
 import water.Key;
 import water.TestUtil;
+
+import com.google.gson.Gson;
 
 public class HttpTest extends TestUtil {
   HttpClient _client = new HttpClient();
@@ -20,21 +23,31 @@ public class HttpTest extends TestUtil {
     Get res = new Get();
     try {
       res._status = _client.executeMethod(get);
-      res._res = readJson(get.getResponseBodyAsString(), c);
+      if( res._status == 200 ) {
+        Gson gson = new Gson();
+        res._res = gson.fromJson(new InputStreamReader(get.getResponseBodyAsStream()), c);
+      }
     } catch( Exception e ) {
       throw new RuntimeException(e);
     }
     return res;
   }
 
-  public void waitForJob(Key dst) throws Exception {
+  public String waitForJob(Key dst) throws Exception {
     for( ;; ) {
+      boolean exists = false;
       Get get = get("Jobs.json", JobsRes.class);
-      Assert.assertEquals(200, get._status);
-      for( Job job : ((JobsRes) get._res).jobs )
-        if( job.destination_key.equals(dst.toString()) )
+      assert get._status == 200;
+      for( Job job : ((JobsRes) get._res).jobs ) {
+        if( job.destination_key.equals(dst.toString()) ) {
+          exists = true;
           if( job.end_time.length() > 0 )
-            return;
+            return job.exception;
+        }
+      }
+      if( !exists )
+        return null;
+      Thread.sleep(100);
     }
   }
 
@@ -46,5 +59,6 @@ public class HttpTest extends TestUtil {
     String key;
     String destination_key;
     String end_time;
+    String exception;
   }
 }

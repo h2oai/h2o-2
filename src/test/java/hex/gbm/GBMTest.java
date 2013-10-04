@@ -10,13 +10,13 @@ import hex.rf.Tree.StatType;
 import java.io.File;
 import java.util.Arrays;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import water.*;
 import water.api.ConfusionMatrix;
 import water.fvec.*;
 
+@Ignore
 public class GBMTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
