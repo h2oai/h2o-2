@@ -14,7 +14,6 @@ import water.parser.ParseDataset;
 import water.util.Log;
 
 import com.google.common.io.Closeables;
-import com.google.gson.Gson;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
@@ -339,7 +338,7 @@ public class TestUtil {
   }
 
   public static Frame frame(String[] names, double[][] rows) {
-    assert names.length == rows[0].length;
+    assert names == null || names.length == rows[0].length;
     Vec[] vecs = new Vec[rows[0].length];
     for( int c = 0; c < vecs.length; c++ ) {
       AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
@@ -350,10 +349,5 @@ public class TestUtil {
       vecs[c] = vec.close(null);
     }
     return new Frame(names, vecs);
-  }
-
-  public static <T> T readJson(String json, Class<T> c) {
-    Gson gson = new Gson();
-    return gson.fromJson(new StringReader(json), c);
   }
 }

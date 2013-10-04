@@ -6,10 +6,12 @@ import water.Job.ValidatedJob;
 import water.*;
 import water.api.RequestServer;
 import water.fvec.Frame;
+import water.util.Utils.ExpectedExceptionForDebug;
 
+@Ignore
 public class JobArgsTest extends HttpTest {
   @BeforeClass public static void stall() {
-    stall_till_cloudsize(3);
+    //   stall_till_cloudsize(3);
   }
 
   @Test public void testIndexesVsNames() throws Exception {
@@ -24,18 +26,37 @@ public class JobArgsTest extends HttpTest {
     Frame frame = frame(names, items);
     UKV.put(key, frame);
     try {
-      RequestServer.registerRequest(new JobArgsTestJob());
+      RequestServer.registerRequest(new FailTestJob());
+      RequestServer.registerRequest(new FailTestJobAsync());
+      RequestServer.registerRequest(new ArgsTestJob());
 
       String args = "" + //
           "destination_key=" + dst + "&" + //
           "source=" + key + "&" + //
           "response=2&" + //
           "cols=2,4";
-      Get get = get("JobArgsTestJob.json?" + args, Res.class);
+      Get get;
+
+      get = get("NotRegisteredJob.json?" + args, Res.class);
+      Assert.assertEquals(404, get._status);
+      waitForJob(dst);
+
+      get = get(FailTestJob.class.getSimpleName() + ".json?" + args, Res.class);
+      Assert.assertEquals(500, get._status);
+      waitForJob(dst);
+
+      get = get(FailTestJobAsync.class.getSimpleName() + ".json?" + args, Res.class);
+      Assert.assertEquals(200, get._status);
+      String exception = waitForJob(dst);
+      Assert.assertTrue(exception.contains(ExpectedExceptionForDebug.class.getName()));
+
+      get = get(ArgsTestJob.class.getSimpleName() + ".json?" + args, Res.class);
       Assert.assertEquals(200, get._status);
       waitForJob(dst);
     } finally {
-      RequestServer.unregisterRequest(new JobArgsTestJob());
+      RequestServer.unregisterRequest(new FailTestJob());
+      RequestServer.registerRequest(new FailTestJobAsync());
+      RequestServer.unregisterRequest(new ArgsTestJob());
       UKV.remove(key);
     }
   }
@@ -44,7 +65,19 @@ public class JobArgsTest extends HttpTest {
     String status;
   }
 
-  static class JobArgsTestJob extends ValidatedJob {
+  static class FailTestJob extends ValidatedJob {
+    @Override protected Response serve() {
+      throw new ExpectedExceptionForDebug();
+    }
+  }
+
+  static class FailTestJobAsync extends ValidatedJob {
+    @Override protected void exec() {
+      throw new ExpectedExceptionForDebug();
+    }
+  }
+
+  static class ArgsTestJob extends ValidatedJob {
     @Override protected void exec() {
       Assert.assertEquals(source.vecs()[2], _train[0]);
       Assert.assertEquals(source.vecs()[4], _train[1]);

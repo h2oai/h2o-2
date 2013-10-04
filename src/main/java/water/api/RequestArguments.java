@@ -90,6 +90,27 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
+  protected static int frameColumnNameToIndex(Frame fr, String input, boolean namesOnly) {
+    // first check if we have string match
+    for (int i = 0; fr._names != null && i < fr._names.length; ++i) {
+      String colName = fr._names[i];
+      if (colName == null)
+        colName = String.valueOf(i);
+      if (colName.equals(input))
+        return i;
+    }
+    try {
+      if(!namesOnly) {
+        int i = Integer.parseInt(input);
+        if ((i<0) || (i>=fr.vecs().length))
+          return -1;
+        return i;
+      }
+    } catch (NumberFormatException e) {
+    }
+    return -1;
+  }
+
   /** Compute union of categories in model column and data column.
    * The result is ordered and the values are unique. */
   protected static String[] vaCategoryNames(ValueArray.Column modelCol, ValueArray.Column dataCol, int maxClasses) throws IllegalArgumentException {
@@ -2420,7 +2441,7 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected boolean isSelected(String value) {
       int[] val = value();
-      return val != null && Ints.contains(val, index(value));
+      return val != null && Ints.contains(val, frameColumnNameToIndex(fr(), value, _namesOnly));
     }
 
     @Override protected int[] parse(String input) throws IllegalArgumentException {
@@ -2428,7 +2449,7 @@ public class RequestArguments extends RequestStatics {
       ArrayList<Integer> al = new ArrayList();
       for (String col : input.split(",")) {
         col = col.trim();
-        int idx = index(col);
+        int idx = frameColumnNameToIndex(fr(), col, _namesOnly);
         if (0 > idx || idx > fr.numCols())
           throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
         if (al.contains(idx))
@@ -2437,21 +2458,6 @@ public class RequestArguments extends RequestStatics {
         al.add(idx);
       }
       return Ints.toArray(al);
-    }
-
-    private int index(String value) {
-      if(!_namesOnly) {
-        try {
-          if(value.matches("[1-9][0-9]*"))
-            return Integer.valueOf(value);
-        } catch(NumberFormatException e){
-        }
-      }
-      Frame fr = fr();
-      for(int i = 0; i < fr.numCols(); ++i)
-        if(fr._names[i].equals(value))
-          return i;
-      return -1;
     }
 
     @Override protected int[] defaultValue() {
