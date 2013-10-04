@@ -29,8 +29,7 @@ public class GBMTest extends TestUtil {
     //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
     //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
-    //         });
+    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }});
 
     // Classification tests
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
@@ -78,6 +77,7 @@ public class GBMTest extends TestUtil {
     Frame fr = null;
     try {
       gbm = new GBM();
+      gbm.classification = true;
       gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       gbm.response = prep.prep(gbm.source);
@@ -168,6 +168,7 @@ public class GBMTest extends TestUtil {
     Frame fr = null;
     try {
       drf = new DRF();
+      drf.classification = true;
       drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       drf.response = prep.prep(drf.source);

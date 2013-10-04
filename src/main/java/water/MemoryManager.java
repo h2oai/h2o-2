@@ -203,7 +203,7 @@ public abstract class MemoryManager {
   // Allocates memory with cache management
   // Will block until there is enough available memory.
   // Catches OutOfMemory, clears cache & retries.
-  public static Object malloc(int elems, long bytes, int type, byte[] orig, int from ) {
+  public static Object malloc(int elems, long bytes, int type, Object orig, int from ) {
     // Do not assert on large-size here.  RF's temp internal datastructures are
     // single very large arrays.
     //assert bytes < Value.MAX : "malloc size=0x"+Long.toHexString(bytes);
@@ -224,10 +224,12 @@ public abstract class MemoryManager {
         case  2: return new short  [elems];
         case  4: return new int    [elems];
         case  8: return new long   [elems];
-        case -4: return new float  [elems];
-        case -8: return new double [elems];
+        case  5: return new float  [elems];
+        case  9: return new double [elems];
         case  0: return new boolean[elems];
-        case -1: return Arrays.copyOfRange(orig,from,elems);
+        case -1: return Arrays.copyOfRange((byte[])orig,from,elems);
+        case -4: return Arrays.copyOfRange((int [])orig,from,elems);
+        case -8: return Arrays.copyOfRange((long[])orig,from,elems);
         default: throw H2O.unimpl();
         }
       }
@@ -244,17 +246,17 @@ public abstract class MemoryManager {
   // Allocates memory with cache management
   public static byte   [] malloc1 (int size) { return (byte   [])malloc(size,size*1, 1,null,0); }
   public static short  [] malloc2 (int size) { return (short  [])malloc(size,size*2, 2,null,0); }
-  public static float  [] malloc4f(int size) { return (float  [])malloc(size,size*4,-4,null,0); }
   public static int    [] malloc4 (int size) { return (int    [])malloc(size,size*4, 4,null,0); }
   public static long   [] malloc8 (int size) { return (long   [])malloc(size,size*8, 8,null,0); }
-  public static double [] malloc8d(int size) { return (double [])malloc(size,size*8,-8,null,0); }
+  public static float  [] malloc4f(int size) { return (float  [])malloc(size,size*4, 5,null,0); }
+  public static double [] malloc8d(int size) { return (double [])malloc(size,size*8, 9,null,0); }
   public static boolean[] mallocZ (int size) { return (boolean[])malloc(size,size*1, 0,null,0); }
-  public static byte[] arrayCopyOfRange(byte[] orig, int from, int sz) {
-    return (byte[]) malloc(sz,(sz-from),-1,orig,from);
-  }
-  public static byte[] arrayCopyOf( byte[] orig, int sz) {
-    return arrayCopyOfRange(orig,0,sz);
-  }
+  public static byte[] arrayCopyOfRange(byte[] orig, int from, int sz) { return (byte[]) malloc(sz,(sz-from),-1,orig,from); }
+  public static int [] arrayCopyOfRange(int [] orig, int from, int sz) { return (int []) malloc(sz,(sz-from),-4,orig,from); }
+  public static long[] arrayCopyOfRange(long[] orig, int from, int sz) { return (long[]) malloc(sz,(sz-from),-8,orig,from); }
+  public static byte[] arrayCopyOf( byte[] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
+  public static int [] arrayCopyOf( int [] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
+  public static long[] arrayCopyOf( long[] orig, int sz) { return arrayCopyOfRange(orig,0,sz); }
 
   // Memory available for tasks (we assume 3/4 of the heap is available for tasks)
   static final AtomicLong _taskMem = new AtomicLong(MEM_MAX-(MEM_MAX>>2));

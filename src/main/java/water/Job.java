@@ -141,6 +141,10 @@ public class Job extends Request2 {
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
+    @API(help="Do Classification or regression", filter=myClassFilter.class)
+    public boolean classification = true;
+    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
+
     @Override protected void registered() {
       super.registered();
       Argument c = find("ignored_cols_by_name");
@@ -166,8 +170,9 @@ public class Job extends Request2 {
     @Override protected void init() {
       super.init();
 
-      // Doing classification only right now...
-      if( !response.isEnum() ) response.asEnum();
+      // Does not alter the Response to an Enum column if Classification is
+      // asked for: instead use the classification flag to decide between
+      // classification or regression.
 
       for( int i = cols.length - 1; i >= 0; i-- )
         if( source.vecs()[cols[i]] == response )

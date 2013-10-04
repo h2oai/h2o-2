@@ -610,11 +610,9 @@ public final class H2O {
       return true;
     }
   }
-  public static abstract class H2OCallback<T extends DTask> extends H2OCountedCompleter{
+  public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){
-      callback((T)caller);
-    }
+    @Override public void onCompletion(CountedCompleter caller){callback((T)caller);}
     public abstract void callback(T t);
   }
   public static class H2OEmptyCompleter extends H2OCountedCompleter{
