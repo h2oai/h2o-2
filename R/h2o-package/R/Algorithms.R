@@ -3,6 +3,7 @@ setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lam
 setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
 setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALSE) { standardGeneric("h2o.prcomp") })
+setGeneric("h2o.pcr", function(x, y, data, ncomp) { standardGeneric("h2o.pcr") })
 setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
 setGeneric("h2o.gbm", function(data, destination, y, x = "", ntrees = 10, max_depth=8, learn_rate=.2, min_rows=10) { standardGeneric("h2o.gbm") })
@@ -191,7 +192,7 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
       result = list()
       result$coefficients = unlist(res$coefficients)
       result$rank = res$nCols
-      result$family = family   # Need to convert to family object
+      result$family = h2o.__getFamily(family, tweedie.var.p = tweedie.p)
       result$deviance = res$validations[[1]]$resDev
       result$aic = res$validations[[1]]$aic
       result$null.deviance = res$validations[[1]]$nullDev
@@ -201,7 +202,7 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
       result$train.err = res$validations[[1]]$err
       result$y = y
       result$x = res$column_names
-      result$tweedie.p = ifelse(missing(tweedie.p), 'NA', tweedie.p)
+      # result$tweedie.p = ifelse(missing(tweedie.p), 'NA', tweedie.p)
       
       if(family == "binomial") {
         result$auc = res$validations[[1]]$auc
@@ -333,6 +334,26 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
     })
 
 #------------------------------- Principal Components Analysis ----------------------------------#
+h2o.prcomp.internal <- function(data, x, dest, max_pc, tol, standardize) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, x=x, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
+  while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  destKey = res$destination_key
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
+  res = res$PCAModel
+  
+  result = list()
+  result$standardized = standardize
+  result$sdev = as.numeric(unlist(res$stdDev))
+  # result$rotation = do.call(rbind, res$eigenvectors)
+  # temp = t(do.call(rbind, res$eigenvectors))
+  nfeat = length(res$eigenvectors[[1]])
+  temp = matrix(unlist(res$eigenvectors), nrow = nfeat)
+  rownames(temp) = names(res$eigenvectors[[1]])
+  colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
+  result$rotation = temp
+  new("H2OPCAModel", key=destKey, data=data, model=result)
+}
+
 setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical", retx="logical"), 
     function(data, tol, standardize, retx) {
       res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, tolerance=tol, standardize=as.numeric(standardize))
@@ -367,6 +388,25 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="
       h2o.prcomp(data, tol, standardize, retx)
     })
 
+setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData", ncomp="numeric"),
+    function(x, y, data, ncomp) {
+      myCol = colnames(data)
+      if(!y %in% myCol) stop(paste(y, "is not a valid column name"))
+      if(y %in% x) stop(paste(y, "is both an explanatory and dependent variable"))
+      if(any(!x %in% myCol)) stop("Invalid column names: ", paste(x[which(!x %in% myCol)], collapse=", "))
+      if(ncomp < 1 || ncomp > ncol(data)) stop("Number of components must be between 1 and ", ncol(data))
+      
+      myXCol = which(myCol %in% x)-1
+      # myModel = h2o.prcomp(data, myXCol, standardize = TRUE, retx = TRUE)
+      myModel = h2o.prcomp.internal(data=data, x=myXCol, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
+      myScore = h2o.predict(myModel)
+      
+      myYCol = which(myCol == y)-1
+      rand_cbind_key = paste("__PCABind_", runif(n=1, max=1e10), sep="")
+      res = h2o.__remoteSend(data@h2o, "DataManip.json", source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=myYCol, destination_key=rand_cbind_key, operation="cbind")
+      myGLMData = new("H2OParsedData2", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
+      # h2o.glm(seq(1,ncomp), y, myGLMData)
+    })
 
 #-------------------------------------- Random Forest ----------------------------------------------#
 setMethod("h2o.randomForest", signature(x="character", y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
@@ -508,7 +548,8 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
       } else if(class(object) == "H2OPCAModel") {
         # Set randomized prediction key
         rand_pred_key = paste("__PCA_Predict_", runif(n=1, max=1e10), sep="")
-        numMatch = colnames(newdata) %in% colnames(object@data)
+        # numMatch = colnames(newdata) %in% colnames(object@data)
+        numMatch = colnames(newdata) %in% rownames(myModel@model$rotation)
         numPC = length(numMatch[numMatch == TRUE])
         res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
         h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
@@ -523,3 +564,62 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 
 setMethod("h2o.predict", signature(object="H2OModel", newdata="missing"), 
     function(object) { h2o.predict(object, object@data) })
+
+#------------------------------- FluidVecs -------------------------------------#
+setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData2", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+    function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, NA)) {
+      if(family != "tweedie" && !(missing(tweedie.p) || is.na(tweedie.p)))
+        stop("tweedie.p may only be set for family tweedie")
+      
+      x_ignore = which(!colnames(data) %in% x) - 1
+      if(length(x_ignore) == 0) x_ignore = ""
+      rand_glm_key = paste("__GLM2Model_", runif(n=1, max=1e10), sep="")
+      
+      if(family != "tweedie")
+        res = h2o.__remoteSend(data@h2o, "GLM2.json", source = data@key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case_val=1.0, standardize=as.numeric(FALSE))
+      else
+        res = h2o.__remoteSend(data@h2o, "GLM2.json", source = data@key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case_val=1.0, tweedie_variance_power=tweedie.p, standardize=as.numeric(FALSE))
+      while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+      
+      destKey = res$destination_key
+      res = h2o.__remoteSend(data@h2o, "GLMModelView.json", '_modelKey'=destKey)
+      resModel = res$glm_model
+      res = h2o.__remoteSend(data@h2o, "GLMValidation.json", '_valKey'=resModel$validations[[1]])
+      modelOrig = h2o.__getGLM2Results(resModel, y, res$glm_val)
+      new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list())
+  })
+
+# Pretty formatting of H2O GLM results
+h2o.__getGLM2Results <- function(model, y, valid) {
+  result = list()
+  result$y = y
+  result$x = model$'_names'
+  result$coefficients = unlist(model$beta)
+  result$rank = length(result$coefficients) + 1
+  if(model$glm$family == "tweedie")
+    result$family = h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
+  else
+    result$family = h2o.__getFamily(model$glm$family, model$glm$link)
+  result$iter = model$iteration
+  
+  result$deviance = valid$residual_deviance
+  result$aic = valid$aic
+  result$null.deviance = valid$null_deviance
+  result$train.err = valid$avg_err
+  # result$df.residual = res$dof
+  # result$df.null = res$dof + result$rank
+  
+  if(family == "binomial") {
+    result$threshold = model$threshold
+    result$auc = valid$auc
+    # result$class.err = res$validations[[1]]$classErr
+    
+    # Construct confusion matrix
+    # temp = t(data.frame(sapply(res$validations[[1]]$cm, c)))
+    # dn = list(Actual = temp[-1,1], Predicted = temp[1,-1])
+    # temp = temp[-1,]; temp = temp[,-1]
+    # dimnames(temp) = dn
+    # result$cm = temp
+  }
+  return(result)
+}
