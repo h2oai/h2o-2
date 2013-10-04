@@ -339,7 +339,7 @@ public class TestUtil {
   }
 
   public static Frame frame(String[] names, double[][] rows) {
-    assert names.length == rows[0].length;
+    assert names == null || names.length == rows[0].length;
     Vec[] vecs = new Vec[rows[0].length];
     for( int c = 0; c < vecs.length; c++ ) {
       AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
