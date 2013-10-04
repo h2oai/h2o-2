@@ -126,7 +126,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "rf end on ", csvPathname, 'took', elapsed, 'seconds.', "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
                 l = '{!s} jvms, {!s}GB heap, {:s} {:s} {:s} for {:.2f} secs {:s}' .format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, "KMeans", "trial "+str(trial), csvFilename, elapsed, paramsString)
+                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, "RF", "trial "+str(trial), csvFilename, elapsed, paramsString)
                 print l
                 h2o.cloudPerfH2O.message(l)
 
