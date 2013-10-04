@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
                  ('', 'allyears.csv', 'allyears.hex',1800,'IsDepDelayed')
                 ]
 
-        for importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse in files:
+        for importFolderPath,csvFilename,trainKey,timeoutSecs,response in files:
             h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             start = time.time()
@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
                     'ntrees': 10,
                     'max_depth': depth,
                     'min_rows': 10,
-                    'vresponse': vresponse,
+                    'response': response,
                     'ignored_cols': 'CRSDepTime,CRSArrTime,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed'
                 }
                 print "Using these parameters for GBM: ", params

@@ -11,7 +11,7 @@ def define_params():
         'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         'x': [0,1,15,33,34],
         'family': ['poisson'],
-        'n_folds': [2,3,4,9],
+        'n_folds': [2,3,4],
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
         'max_iter': [5, 10, 19],
@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_loop_random_param_covtype(self):
+    def test_GLM_poisson_rand2(self):
         csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
         paramDict = define_params()
@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
 
             # make timeout bigger with xvals
-            timeoutSecs = 60 + (kwargs['n_folds']*20)
+            timeoutSecs = 60 + (kwargs['n_folds']*40)
             # or double the 4 seconds per iteration (max_iter+1 worst case?)
             timeoutSecs = max(timeoutSecs, (8 * (kwargs['max_iter']+1)))
 
