@@ -73,11 +73,11 @@ public class Job extends Request2 {
 
     @API(help = "Input columns (Indexes start at 0)", filter=colsFilter.class, hide=true)
     public int[] cols;
-    class colsFilter extends MultiVecSelect { public colsFilter() { super("source", false); } }
+    class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
     @API(help = "Ignored columns by name", filter=colsFilter.class, displayName="Ignored columns")
     public int[] ignored_cols_by_name;
-    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() { super("source", true); } }
+    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
 
     @Override protected void logStart() {
       super.logStart();
