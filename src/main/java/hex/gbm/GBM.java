@@ -40,16 +40,6 @@ public class GBM extends SharedTreeModelBuilder {
     return rs.toString();
   }
 
-  // ==========================================================================
-
-  // Compute a GBM tree.
-
-  // Start by splitting all the data according to some criteria (minimize
-  // variance at the leaves).  Record on each row which split it goes to, and
-  // assign a split number to it (for next pass).  On *this* pass, use the
-  // split-number to build a per-split histogram, with a per-histogram-bucket
-  // variance.
-
   @Override protected void logStart() {
     Log.info("Starting GBM model build...");
     super.logStart();
@@ -65,6 +55,14 @@ public class GBM extends SharedTreeModelBuilder {
     return GBMProgressPage.redirect(this, self(), dest());
   }
 
+  // ==========================================================================
+  // Compute a GBM tree.
+
+  // Start by splitting all the data according to some criteria (minimize
+  // variance at the leaves).  Record on each row which split it goes to, and
+  // assign a split number to it (for next pass).  On *this* pass, use the
+  // split-number to build a per-split histogram, with a per-histogram-bucket
+  // variance.
   @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Timer t_build ) {
     GBMModel model = new GBMModel(outputKey, dataKey, names, domains, ntrees, _ymin);
     DKV.put(outputKey, model);
