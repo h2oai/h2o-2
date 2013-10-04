@@ -364,19 +364,6 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="
       h2o.prcomp(data, tol, standardize, retx)
     })
 
-setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData", ncomp="numeric"),
-    function(x, y, data, ncomp) {
-      myCol = colnames(data)
-      if(!y %in% myCol) stop(paste(y, "is not a valid column name"))
-      if(y %in% x) stop(paste(y, "is both an explanatory and dependent variable"))
-      if(any(!x %in% myCol)) stop("Invalid column names: ", paste(x[which(!x %in% myCol)], collapse=", "))
-      if(ncomp < 1 || ncomp > ncol(data)) stop("Number of components must be between 1 and ", ncol(data))
-      
-      myXCol = which(myCol %in% x)-1
-      # myModel = h2o.prcomp(data, myXCol, standardize = TRUE, retx = TRUE)
-      # myGLMData = cbind(myModel@model$x, data$y)
-      h2o.glm(seq(1,ncomp), y, myGLMData)
-    })
 
 #-------------------------------------- Random Forest ----------------------------------------------#
 setMethod("h2o.randomForest", signature(x="character", y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
