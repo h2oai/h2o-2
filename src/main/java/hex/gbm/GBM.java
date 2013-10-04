@@ -126,16 +126,27 @@ public class GBM extends SharedTreeModelBuilder {
   // Work <== f(Work)
   class ComputeRes extends MRTask2<ComputeRes> {
     @Override public void map( Chunk chks[] ) {
-      Chunk ys = chk_resp(chks);
-      for( int row=0; row<ys._len; row++ ) {
-        if( ys.isNA0(row) ) continue;
-        int y = (int)ys.at80(row)-_ymin; // zero-based response variable
-        for( int k=0; k<_nclass; k++ ) {
-          if( _distribution[k] != 0 ) {
-            Chunk wk = chk_work(chks,k);
-            wk.set0(row, (y==k?1f:0f)-(float)wk.at0(row) );
+      if( _nclass > 1 ) {       // Classification
+        Chunk ys = chk_resp(chks);
+        for( int row=0; row<ys._len; row++ ) {
+          if( ys.isNA0(row) ) continue;
+          int y = (int)ys.at80(row)-_ymin; // zero-based response variable
+          // Actual is '1' for class 'y' and '0' for all other classes
+          for( int k=0; k<_nclass; k++ ) {
+            if( _distribution[k] != 0 ) {
+              Chunk wk = chk_work(chks,k);
+              wk.set0(row, (y==k?1f:0f)-(float)wk.at0(row) );
+            }
           }
         }
+
+      } else {                  // Regression
+
+        Chunk ys = chk_tree(chks,0); // Actuals
+        Chunk wk = chk_work(chks,0); // Residuals
+        for( int row=0; row<ys._len; row++ )
+          if( !ys.isNA0(row) ) 
+            wk.set0(row, (float)(ys.at0(row)-wk.at0(row)) );
       }
     }
   }
@@ -151,7 +162,7 @@ public class GBM extends SharedTreeModelBuilder {
     final DTree[] ktrees = new DTree[_nclass];
     for( int k=0; k<_nclass; k++ ) {
       // Initially setup as-if an empty-split had just happened
-      if( _distribution[k] != 0 ) {
+      if( _distribution == null || _distribution[k] != 0 ) {
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
         new GBMUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
       }

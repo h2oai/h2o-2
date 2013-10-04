@@ -160,6 +160,7 @@ public class Job extends Request2 {
       super.logStart();
       int idx = source.find(response);
       Log.info("    response: "+(idx==-1?"null":source._names[idx]));
+      Log.info("    "+(classification ? "classification" : "regression"));
     }
 
     @Override protected void init() {

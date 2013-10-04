@@ -16,7 +16,6 @@ import water.*;
 import water.api.ConfusionMatrix;
 import water.fvec.*;
 
-@Ignore
 public class GBMTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
@@ -29,7 +28,7 @@ public class GBMTest extends TestUtil {
     //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
     //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }});
+    //         new PrepData() { int prep(Frame fr ) { UKV.remove(fr.remove("name")._key); return ~fr.find("economy (mpg)"); }});
 
     // Classification tests
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
@@ -79,11 +78,10 @@ public class GBMTest extends TestUtil {
       gbm = new GBM();
       gbm.source = fr = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
-      gbm.classification = true;
       int idx = prep.prep(fr);
+      if( idx < 0 ) { gbm.classification = false; idx = ~idx; }
       String rname =fr._names[idx];
       gbm.response = fr.vecs()[idx];
-      System.out.println("i="+idx+" "+gbm.response);
       fr.remove(idx);           // Move response to the end
       fr.add(rname,gbm.response);
       gbm.ntrees = 5;
@@ -170,12 +168,14 @@ public class GBMTest extends TestUtil {
     Key dest = Key.make(hexname);
     DRF drf = null;
     Frame fr = null;
+    SharedTreeModelBuilder mb = null;
     try {
       drf = new DRF();
       drf.classification = true;
       fr = drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       int idx = prep.prep(fr);
+      if( idx < 0 ) { drf.classification = false; idx = ~idx; }
       String rname =fr._names[idx];
       drf.response = fr.vecs()[idx];
       fr.remove(idx);           // Move response to the end

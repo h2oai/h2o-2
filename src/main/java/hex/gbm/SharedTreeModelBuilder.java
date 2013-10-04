@@ -82,10 +82,10 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
     String[] domain = response.domain();
     if( domain == null )        // No names?  Make some up.
-      domains[_ncols] = domain = _nclass == 1 ? new String[] {"regressor"} : response.defaultLevels();
+      domains[_ncols] = domain = _nclass == 1 ? new String[] {"r"} : response.defaultLevels();
 
     // Find the class distribution
-    _distribution = new ClassDist().doAll(response)._ys;
+    _distribution = _nclass > 1 ? new ClassDist().doAll(response)._ys : null;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -103,7 +103,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // One Tree per class, each tree needs a NIDs.  For empty classes use a -1
     // NID signifying an empty regression tree.
     for( int i=0; i<_nclass; i++ )
-      fr.add("NIDs_"+domain[i], response.makeCon(_distribution[i]==0?-1:0));
+      fr.add("NIDs_"+domain[i], response.makeCon(_distribution==null ? 0 : (_distribution[i]==0?-1:0)));
 
     // Tail-call position: this forks off in the background, and this call
     // returns immediately.  The actual model build is merely kicked off.
@@ -309,9 +309,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // Score all Rows
       for( int row=0; row<ys._len; row++ ) {
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
+        double sum = score0(chks,ds,row);
         int ycls = (int)ys.at80(row)-_ymin; // Response class from 0 to nclass-1
         assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin+" "+ys+_fr;
-        double sum = score0(chks,ds,row);
         double err = Double.isInfinite(sum)
           ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
           : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
