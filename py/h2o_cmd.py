@@ -25,7 +25,7 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
     node.summary_page(myKeyForParseResult)
     return p
 
-def runInspect(node=None, key=None, timeoutSecs=5, **kwargs):
+def runInspect(node=None, key=None, timeoutSecs=30, **kwargs):
     if not key: raise Exception('No key for Inspect')
     if not node: node = h2o.nodes[0]
     return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
