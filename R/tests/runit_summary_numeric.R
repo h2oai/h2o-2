@@ -52,7 +52,7 @@ H2Ocon <- new("H2OClient", ip=myIP, port=myPort)
 
 test.summary.numeric <- function(con) {
   cat("\nImporting USArrests.csv data...\n")
-  arrests.hex = h2o.uploadFile(H2Ocon, "smalldata/pca_test/USArrests.csv", "arrests.hex")
+  arrests.hex = h2o.uploadFile(H2Ocon, "../../smalldata/pca_test/USArrests.csv", "arrests.hex")
   cat("\nCheck that summary works...")
   summary(arrests.hex)
   summary_ <- summary(arrests.hex)

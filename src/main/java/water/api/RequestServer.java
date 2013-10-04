@@ -16,8 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import water.*;
 import water.api.Script.RunScript;
 import water.api.Upload.PostFile;
-import water.util.Log;
+import water.util.*;
 import water.util.Log.Tag.Sys;
+import water.util.Utils.ExpectedExceptionForDebug;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -216,7 +217,8 @@ public class RequestServer extends NanoHTTPD {
       // call the request
       return request.serve(this,parms,type);
     } catch (Exception e) {
-      e.printStackTrace();
+      if(!(e instanceof ExpectedExceptionForDebug))
+        e.printStackTrace();
       // make sure that no Exception is ever thrown out from the request
       parms.setProperty(Request.ERROR,e.getClass().getSimpleName()+": "+e.getMessage());
       return _http500.serve(this,parms,type);

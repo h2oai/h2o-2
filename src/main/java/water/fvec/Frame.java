@@ -51,6 +51,13 @@ public class Frame extends Iced {
     return -1;
   }
 
+  public int find( Vec vec ) {
+    for( int i=0; i<_vecs.length; i++ )
+      if( vec==_vecs[i] )
+        return i;
+    return -1;
+  }
+
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
     // TODO : needs a compatibility-check!!!
