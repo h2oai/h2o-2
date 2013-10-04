@@ -154,7 +154,7 @@ myR() {
     ls $H2OWrapperDir/h2oWrapper*.tar.gz
 
     # we want $1 used for -name below, to not have .R suffix
-    rScript=$H2O_R_HOME/tests/$1.R
+    rScript=$H2O_R_HOME/tests/$1
     echo $rScript
     echo "Running this cmd:"
     cmd="R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
@@ -176,7 +176,7 @@ echo "Okay to run h2oWrapper.R every time for now"
 mySetup libPaths
 
 # can be slow if it had to reinstall all packages?
-myR runit_RF 120
+myR runit_RF.R 120
 # myR runit_PCA 35
 # myR runit_GLM 35
 # myR runit_GBM 300

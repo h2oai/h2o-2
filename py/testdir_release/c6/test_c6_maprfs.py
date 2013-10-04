@@ -1,4 +1,4 @@
-import unittest, time, sys, time, random
+import unittest, time, sys, time, random, json
 sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common
 
@@ -10,8 +10,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c6_maprfs(self):
-        print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
-        print "\nYou can try running as hduser/hduser if fail"
+        print "\nLoad a list of files from maprfs, parse and do 1 RF tree"
         # larger set in my local dir
         # fails because classes aren't integers
         #    "allstate_claim_prediction_train_set.zip",
@@ -46,7 +45,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         h2o.nodes[0].hdfs_version = 'mapr3.0.1',
         h2o.nodes[0].hdfs_name_node = 'mr-0x1.0xdata.loc:7222'
 
-        setup_benchmark_log()
+        h2o.setup_benchmark_log()
 
         # benchmarkLogging = ['cpu','disk', 'network', 'iostats', 'jstack']
         # benchmarkLogging = ['cpu','disk', 'network', 'iostats']

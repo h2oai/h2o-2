@@ -76,7 +76,7 @@ public class Job extends Request2 {
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
     @API(help="Do Classification or regression", filter=myClassFilter.class)
-    public boolean classification = false;
+    public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
     protected int initResponse() {

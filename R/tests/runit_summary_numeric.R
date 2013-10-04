@@ -1,3 +1,5 @@
+if(!"testthat" %in% rownames(installed.packages())) install.packages("testthat")
+library(testthat)
 context("Summary Tests Numeric") #set context for test. Here we are checking the tail() functionality
 # R -f runit_summary_numeric.R --args H2OServer:Port
 # By default, H2OServer = 127.0.0.1 and Port = 54321
