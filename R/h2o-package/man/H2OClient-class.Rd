@@ -46,8 +46,10 @@ Objects can be created by calls of the form \code{new("H2OClient", ...)}
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
 }
 \examples{
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+library(h2o)
 showClass("H2OClient")
-localClient = new("H2OClient", ip = "localhost", port = 54321)
-remoteClient = new("H2OClient", ip = "192.168.1.173", port = 54322)
 }
 \keyword{classes}

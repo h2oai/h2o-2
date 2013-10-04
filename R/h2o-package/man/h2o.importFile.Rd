@@ -52,8 +52,10 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-localH2O = new("H2OClient", ip = "localhost", port = 54321)
-h2o.checkClient(localH2O)
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+library(h2o)
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
