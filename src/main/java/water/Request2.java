@@ -241,7 +241,6 @@ public abstract class Request2 extends Request {
               FrameClassVec response = classVecs.get(d._ref);
               boolean names = ((MultiVecSelect) d)._namesOnly;
               arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names);
-              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help());
             } else if( DoClassBoolean.class.isAssignableFrom(api.filter()) ) {
               FrameClassVec response = classVecs.get(d._ref);
               arg = new ClassifyBool(f.getName(),response);

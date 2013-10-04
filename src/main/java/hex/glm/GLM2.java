@@ -109,7 +109,7 @@ public class GLM2 extends FrameJob{
   @Override protected void exec(){
     link = family.defaultLink;
     _startTime = System.currentTimeMillis();
-    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_eps,alpha,lambda,System.currentTimeMillis()-_startTime);
+    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime);
     DKV.put(dest(), m);
     try {
       fork(null).get();
@@ -198,6 +198,8 @@ public class GLM2 extends FrameJob{
     ymut.doAll(fr);
     GLMIterationTask firstIter = new GLMIterationTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
     firstIter._ymu = ymut.ymu();
+    final H2OEmptyCompleter fjt = start(new H2OEmptyCompleter());
+    if(completer != null)fjt.setCompleter(completer);
     final LSMSolver solver = new ADMMSolver(lambda, alpha);
     firstIter.setCompleter(new Iteration(solver,fr,fjt));
     firstIter.dfork(fr);
