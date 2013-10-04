@@ -160,11 +160,9 @@ public class RequestServer extends NanoHTTPD {
     Request.initializeNavBar();
   }
 
-  /** Registers the request with the request server.
-   *
-   * returns the request so that it can be further updated.
+  /**
+   * Registers the request with the request server.
    */
-
   public static Request registerRequest(Request req) {
     String href = req.href();
     assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
@@ -173,10 +171,15 @@ public class RequestServer extends NanoHTTPD {
     return req;
   }
 
+  public static void unregisterRequest(Request req) {
+    String href = req.href();
+    _requests.remove(href);
+  }
+
   // Keep spinning until we get to launch the NanoHTTPD
   public static void start() {
     new Thread( new Runnable() {
-        public void run()  {
+        @Override public void run()  {
           while( true ) {
             try {
               // Try to get the NanoHTTP daemon started
