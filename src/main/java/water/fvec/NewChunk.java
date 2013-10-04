@@ -88,8 +88,8 @@ public class NewChunk extends Chunk {
   void append2slow( ) {
     if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
-    _ls = Arrays.copyOf(_ls,_len<<1);
-    _xs = Arrays.copyOf(_xs,_len<<1);
+    _ls = MemoryManager.arrayCopyOf(_ls,_len<<1);
+    _xs = MemoryManager.arrayCopyOf(_xs,_len<<1);
   }
   void invalid() { append2(0,Integer.MIN_VALUE); }
   void setInvalid(int idx) { _ls[idx]=0; _xs[idx] = Integer.MIN_VALUE; }

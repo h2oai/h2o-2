@@ -23,12 +23,15 @@ setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y=
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
       res2=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView,'_modelKey'=destination)
       
-      result=list()
-      categories=length(res2$gbm_model$cm)
-      cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
-      colnames(cf_matrix)=c(1:categories)
-      rownames(cf_matrix)=c(1:categories)
-      result$confusion= cf_matrix
+       result=list()
+       categories=length(res2$gbm_model$cm)
+       cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
+       cf_names <- res2$gbm_model[['_domains']]
+       cf_names <- cf_names[[ length(cf_names) ]]
+
+       colnames(cf_matrix) <- cf_names
+       rownames(cf_matrix) <- cf_names
+       result$confusion= cf_matrix
       
       # mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=ntrees)
       # colnames(mse_matrix)=c(1:ntrees)
@@ -364,19 +367,6 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="
       h2o.prcomp(data, tol, standardize, retx)
     })
 
-setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData", ncomp="numeric"),
-    function(x, y, data, ncomp) {
-      myCol = colnames(data)
-      if(!y %in% myCol) stop(paste(y, "is not a valid column name"))
-      if(y %in% x) stop(paste(y, "is both an explanatory and dependent variable"))
-      if(any(!x %in% myCol)) stop("Invalid column names: ", paste(x[which(!x %in% myCol)], collapse=", "))
-      if(ncomp < 1 || ncomp > ncol(data)) stop("Number of components must be between 1 and ", ncol(data))
-      
-      myXCol = which(myCol %in% x)-1
-      # myModel = h2o.prcomp(data, myXCol, standardize = TRUE, retx = TRUE)
-      # myGLMData = cbind(myModel@model$x, data$y)
-      h2o.glm(seq(1,ncomp), y, myGLMData)
-    })
 
 #-------------------------------------- Random Forest ----------------------------------------------#
 setMethod("h2o.randomForest", signature(x="character", y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
