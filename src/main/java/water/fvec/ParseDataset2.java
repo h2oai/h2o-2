@@ -159,9 +159,7 @@ public final class ParseDataset2 extends Job {
 
     @Override public void map(Chunk [] chks){
       int [][] emap = emap(_chunk2Enum[chks[0].cidx()]);
-      int c = 0;
-//      for(int i = 0; i < _gDomain.length;++i)
-//        System.out.println("i= " + i + ", col# " + _colIds[i] + " domain=" + Arrays.toString(_gDomain[i]) + ", emap = " + Arrays.toString(emap[i]));
+      final int cidx = chks[0].cidx();
       for(int i = 0; i < chks.length; ++i){
         if(_gDomain[i] == null) // killed, replace with all NAs
           DKV.put(chks[i]._vec.chunkKey(chks[i].cidx()),new C0DChunk(Double.NaN,chks[i]._len));
@@ -172,18 +170,10 @@ public final class ParseDataset2 extends Job {
           assert emap[i][(int)l] >= 0: H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chks[i].getClass().getSimpleName();
           chks[i].set0(j, emap[i][(int)l]);
         }
+        chks[i].close(cidx, _fs);
       }
     }
   }
-
-//  static class LocalEnumRecord extends Iced{
-//    Enum [] _enums;
-//    public LocalEnumRecord(int ncols){
-//      _enums = new Enum[ncols];
-//      for(int i = 0; i < ncols; ++i)
-//        _enums[i] = new Enum();
-//    }
-//  }
 
   public static class EnumFetchTask extends MRTask<EnumFetchTask> {
     final Key _k;
@@ -290,10 +280,17 @@ public final class ParseDataset2 extends Job {
       Enum [] enums = eft._gEnums;
       String [][] ds = new String[ecols.length][];
       int j = 0;
-      for(int i:ecols)ds[j++] =  fr.vecs()[i]._domain = enums[i].computeColumnDomain();
+      final Vec [] vecs = fr.vecs();
+      for(int i:ecols)ds[j++] =  vecs[i]._domain = enums[i].computeColumnDomain();
       Vec [] evecs = new Vec[ecols.length];
       for(int i = 0; i < evecs.length; ++i)evecs[i] = fr.vecs()[ecols[i]];
       new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols).doAll(evecs);
+      Futures fs = new Futures();
+      for(Vec v2:evecs){
+        v2.postWrite();
+        DKV.put(v2._key, v2,fs);
+      }
+      fs.blockForPending();
     }
     // Jam the frame of columns into the K/V store
     UKV.put(job.dest(),fr);
