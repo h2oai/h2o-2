@@ -400,7 +400,7 @@ def check_h2o_version():
         print output
 
 def default_hosts_file():
-    if os.environ.has_key["H2O_HOSTS_FILE"]:
+    if os.environ.has_key("H2O_HOSTS_FILE"):
         return os.environ["H2O_HOSTS_FILE"]
     return 'pytest_config-{0}.json'.format(getpass.getuser())
 
