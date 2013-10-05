@@ -69,12 +69,12 @@ public class GBM extends SharedTreeModelBuilder {
     // Build trees until we hit the limit
     for( int tid=0; tid<ntrees; tid++) {
       // ESL2, page 387
-      // Step 2a: Compute prob distribution from prior tree results:
+      // Step 2a: Compute prediction (prob distribution) from prior tree results:
       //   Work <== f(Tree)
       new ComputeProb().doAll(fr);
 
       // ESL2, page 387
-      // Step 2b i: Compute residuals from the probability distribution
+      // Step 2b i: Compute residuals from the prediction (probability distribution)
       //   Work <== f(Work)
       new ComputeRes().doAll(fr);
 
@@ -92,21 +92,32 @@ public class GBM extends SharedTreeModelBuilder {
   }
 
   // --------------------------------------------------------------------------
-  // Compute Probability Distribution from prior tree results.
-  // Prob_k = exp(Work_k)/sum_all_K exp(Work_k)
+  // Compute Prediction from prior tree results.
+  // Classification: Probability Distribution of loglikelyhoods
+  //   Prob_k = exp(Work_k)/sum_all_K exp(Work_k)
+  // Regression: Just prior tree results
   // Work <== f(Tree)
   class ComputeProb extends MRTask2<ComputeProb> {
     @Override public void map( Chunk chks[] ) {
       Chunk ys = chk_resp(chks);
-      double ds[] = new double[_nclass];
-      for( int row=0; row<ys._len; row++ ) {
-        double sum = score0(chks,ds,row);
-        if( Double.isInfinite(sum) )
-          for( int k=0; k<_nclass; k++ )
-            chk_work(chks,k).set0(row,Double.isInfinite(ds[k])?1.0f:0.0f);
-        else
-          for( int k=0; k<_nclass; k++ ) // Save as a probability distribution
-            chk_work(chks,k).set0(row,(float)(ds[k]/sum));
+      if( _nclass > 1 ) {       // Classification
+        double ds[] = new double[_nclass];
+        for( int row=0; row<ys._len; row++ ) {
+          double sum = score0(chks,ds,row);
+          if( Double.isInfinite(sum) ) // Overflow (happens for constant responses)
+            for( int k=0; k<_nclass; k++ )
+              chk_work(chks,k).set0(row,Double.isInfinite(ds[k])?1.0f:0.0f);
+          else
+            for( int k=0; k<_nclass; k++ ) // Save as a probability distribution
+              chk_work(chks,k).set0(row,(float)(ds[k]/sum));
+        }
+
+      } else {                  // Regression
+        
+        Chunk tr = chk_tree(chks,0); // Prior tree sums
+        Chunk wk = chk_work(chks,0); // Predictions
+        for( int row=0; row<ys._len; row++ )
+          wk.set0(row,(float)tr.at0(row));
       }
     }
   }
@@ -115,6 +126,8 @@ public class GBM extends SharedTreeModelBuilder {
   // ds[] array, and return the sum.  Dividing any ds[] element by the sum
   // turns the results into a probability distribution.
   @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
+    if( _nclass == 1 )                                       // Classification?
+      return chk_tree(chks,0).at0(row);
     double sum=0;
     for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
       sum+=(ds[k]=Math.exp(chk_tree(chks,k).at0(row)));
@@ -126,8 +139,9 @@ public class GBM extends SharedTreeModelBuilder {
   // Work <== f(Work)
   class ComputeRes extends MRTask2<ComputeRes> {
     @Override public void map( Chunk chks[] ) {
+      Chunk ys = chk_resp(chks);
       if( _nclass > 1 ) {       // Classification
-        Chunk ys = chk_resp(chks);
+
         for( int row=0; row<ys._len; row++ ) {
           if( ys.isNA0(row) ) continue;
           int y = (int)ys.at80(row)-_ymin; // zero-based response variable
@@ -142,8 +156,7 @@ public class GBM extends SharedTreeModelBuilder {
 
       } else {                  // Regression
 
-        Chunk ys = chk_tree(chks,0); // Actuals
-        Chunk wk = chk_work(chks,0); // Residuals
+        Chunk wk = chk_work(chks,0); // Prediction==>Residuals
         for( int row=0; row<ys._len; row++ )
           if( !ys.isNA0(row) ) 
             wk.set0(row, (float)(ys.at0(row)-wk.at0(row)) );
@@ -155,8 +168,6 @@ public class GBM extends SharedTreeModelBuilder {
   // Build the next k-trees, which is trying to correct the residual error from
   // the prior trees.  From LSE2, page 387.  Step 2b ii, iii.
   private DTree[] buildNextKTrees(Frame fr) {
-    String domain[] = fr.vecs()[_ncols].domain(); // For printing
-
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
     final DTree[] ktrees = new DTree[_nclass];
@@ -201,10 +212,8 @@ public class GBM extends SharedTreeModelBuilder {
         for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
           UndecidedNode udn = tree.undecided(leaf);
           udn._hs = sbh.getFinalHisto(k,leaf);
-          //System.out.println("Class "+domain[k]+", "+udn);
           // Replace the Undecided with the Split decision
           GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn);
-          //System.out.println(dn);
           if( dn._split._col == -1 ) udn.do_not_split();
           else did_split = true;
         }
@@ -242,9 +251,11 @@ public class GBM extends SharedTreeModelBuilder {
     // ----
     // ESL2, page 387.  Step 2b iii.  Compute the gammas, and store them back
     // into the tree leaves.  Includes learn_rate.
-    // gamma_i_k = (nclass-1)/nclass * (sum res_i / sum (|res_i|*(1-|res_i|)))
+    //    gamma_i_k = (nclass-1)/nclass * (sum res_i / sum (|res_i|*(1-|res_i|)))
+    // For regression: 
+    //    gamma_i_k = sum res_i / count(res_i)
     GammaPass gp = new GammaPass(ktrees,leafs).doAll(fr);
-    double m1class = (double)(_nclass-1)/_nclass; // K-1/K
+    double m1class = _nclass > 1 ? (double)(_nclass-1)/_nclass : 1.0; // K-1/K
     for( int k=0; k<_nclass; k++ ) {
       final DTree tree = ktrees[k];
       if( tree == null ) continue;
@@ -332,7 +343,7 @@ public class GBM extends SharedTreeModelBuilder {
           nids.set0(row,leafnid);
           double res = ress.at0(row);
           double ares = Math.abs(res);
-          gs[leafnid-leaf] += ares*(1-ares);
+          gs[leafnid-leaf] += _nclass > 1 ? ares*(1-ares) : 1;
           rs[leafnid-leaf] += res;
         }
       }

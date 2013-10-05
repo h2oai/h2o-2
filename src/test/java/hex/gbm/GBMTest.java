@@ -27,14 +27,13 @@ public class GBMTest extends TestUtil {
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
-    //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { int prep(Frame fr ) { UKV.remove(fr.remove("name")._key); return ~fr.find("economy (mpg)"); }});
+    basicGBM("./smalldata/cars.csv","cars.hex",
+             new PrepData() { int prep(Frame fr ) { UKV.remove(fr.remove("name")._key); return ~fr.find("economy (mpg)"); }});
 
     // Classification tests
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { int prep(Frame fr) { return 1; }
              });
-
     basicGBM("./smalldata/test/test_tree_minmax.csv","tree_minmax.hex",
              new PrepData() { int prep(Frame fr) { return fr.find("response"); }
              });
