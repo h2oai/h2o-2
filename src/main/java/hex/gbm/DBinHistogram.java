@@ -149,9 +149,10 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Assert we computed the variance in both directions to some near-equal amount
     double last_var_left_side = MS0[2*_nbins+1];
     double frst_var_rite_side = MS1[2*  0   +1];
-    double var_err = Math.abs(frst_var_rite_side-last_var_left_side)/last_var_left_side;
-    assert var_err < 1e-12 : Arrays.toString(MS0)+":"+Arrays.toString(MS1)+", "+
-      Arrays.toString(ns0)+":"+Arrays.toString(ns1)+", variance error="+var_err;
+    double abs_err = Math.abs(frst_var_rite_side-last_var_left_side);
+    double rel_err = abs_err/last_var_left_side;
+    assert abs_err < 1e-20 || rel_err < 1e-10 : Arrays.toString(MS0)+":"+Arrays.toString(MS1)+", "+
+      Arrays.toString(ns0)+":"+Arrays.toString(ns1)+", var relative error="+rel_err+", var absolute error="+abs_err;
 
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
