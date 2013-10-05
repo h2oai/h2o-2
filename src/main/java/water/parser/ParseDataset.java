@@ -15,7 +15,6 @@ import water.parser.CustomParser.ParserType;
 import water.parser.DParseTask.Pass;
 import water.util.*;
 import water.util.Utils.IcedArrayList;
-import water.util.Utils;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -25,13 +24,14 @@ import com.google.common.io.Closeables;
  *
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
-@SuppressWarnings("fallthrough")
 public final class ParseDataset extends Job {
   public static enum Compression { NONE, ZIP, GZIP }
 
   public static int PLIMIT = Integer.MAX_VALUE;
 
   public final Key  _progress;
+  transient Key [] keys;
+  transient CustomParser.ParserSetup setup;
 
   private ParseDataset(Key dest, Key[] keys) {
     destination_key = dest;
@@ -351,28 +351,15 @@ public final class ParseDataset extends Job {
     }
   }
 
-  public static class ParserFJTask extends H2OCountedCompleter {
-    final ParseDataset job;
-    Key [] keys;
-    CustomParser.ParserSetup setup;
-
-    public ParserFJTask(ParseDataset job, Key [] keys, CustomParser.ParserSetup setup){
-      this.job = job;
-      this.keys = keys;
-      this.setup = setup;
-    }
-    @Override
-    public void compute2() {
-      parse(job, keys,setup);
-      tryComplete();
-    }
-  }
   public static Job forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
     ParseDataset job = new ParseDataset(dest, keys);
-    H2OCountedCompleter fjt = new ParserFJTask(job, keys, setup);
-    job.start(fjt);
-    H2O.submitTask(fjt);
+    job.keys = keys;
+    job.setup = setup;
+    job.start();
     return job;
+  }
+  @Override protected void exec() {
+    parse(this, keys, setup);
   }
   public static class ParseException extends RuntimeException {
     public ParseException(String msg) {

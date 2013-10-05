@@ -319,7 +319,6 @@ public class Inspect extends Request {
           + RF.link(key, "Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", "
-          + KMeansGrid.link(key, "KMeansGrid") + ", or "
           + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "

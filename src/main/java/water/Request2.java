@@ -14,7 +14,7 @@ public abstract class Request2 extends Request {
   transient Properties _parms;
 
   public String input(String fieldName) {
-    return _parms.getProperty(fieldName);
+    return _parms == null ? null : _parms.getProperty(fieldName);
   }
 
   public class TypeaheadKey extends TypeaheadInputText<Key> {
@@ -26,7 +26,7 @@ public abstract class Request2 extends Request {
     }
 
     public TypeaheadKey(Class type, boolean required) {
-      super(TypeaheadKeysRequest.class, "", required);
+      super(mapTypeahead(type), "", required);
       _type = type;
       setRefreshOnChange();
     }
@@ -99,14 +99,14 @@ public abstract class Request2 extends Request {
    */
   public enum MultiVecSelectType {
     /**
-     * Treat a token as a 0-based index if it looks like a positive integer.
-     * Otherwise, treat it as a column name.
+     * Treat a token as a 0-based index if it looks like a positive integer. Otherwise, treat it as
+     * a column name.
      */
     INDEXES_THEN_NAMES,
 
     /**
-     * Treat a token as a column name no matter what (even if it looks like it is an integer).
-     * This is used by the Web UI, which blindly specifies column names.
+     * Treat a token as a column name no matter what (even if it looks like it is an integer). This
+     * is used by the Web UI, which blindly specifies column names.
      */
     NAMES_ONLY
   }
@@ -114,9 +114,9 @@ public abstract class Request2 extends Request {
   public class MultiVecSelect extends Dependent {
     boolean _namesOnly;
 
-    private void init (MultiVecSelectType selectType) {
+    private void init(MultiVecSelectType selectType) {
       _namesOnly = false;
-      switch (selectType) {
+      switch( selectType ) {
         case INDEXES_THEN_NAMES:
           _namesOnly = false;
           break;
@@ -129,17 +129,19 @@ public abstract class Request2 extends Request {
 
     protected MultiVecSelect(String key) {
       super(key);
-      init (MultiVecSelectType.INDEXES_THEN_NAMES);
+      init(MultiVecSelectType.INDEXES_THEN_NAMES);
     }
 
     protected MultiVecSelect(String key, MultiVecSelectType selectType) {
       super(key);
-      init (selectType);
+      init(selectType);
     }
   }
 
   public class DoClassBoolean extends Dependent {
-    protected DoClassBoolean(String key) { super(key); }
+    protected DoClassBoolean(String key) {
+      super(key);
+    }
   }
 
   /**
@@ -175,7 +177,7 @@ public abstract class Request2 extends Request {
           // Create an Argument instance to reuse existing Web framework for now
           Argument arg = null;
 
-          // simplest case, filter is an Argument
+          // Simplest case, filter is an Argument
           if( Argument.class.isAssignableFrom(api.filter()) )
             arg = (Argument) newInstance(api);
 
@@ -196,7 +198,7 @@ public abstract class Request2 extends Request {
           }
 
           // Bool
-          else if( f.getType() == boolean.class && api.filter()==Default.class ) {
+          else if( f.getType() == boolean.class && api.filter() == Default.class ) {
             boolean val = (Boolean) defaultValue;
             arg = new Bool(f.getName(), val, api.help());
           }
@@ -243,7 +245,7 @@ public abstract class Request2 extends Request {
               arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names);
             } else if( DoClassBoolean.class.isAssignableFrom(api.filter()) ) {
               FrameClassVec response = classVecs.get(d._ref);
-              arg = new ClassifyBool(f.getName(),response);
+              arg = new ClassifyBool(f.getName(), response);
             }
           }
 

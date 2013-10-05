@@ -10,6 +10,7 @@ import hex.Layer.VecsInput;
 import java.util.UUID;
 
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.api.Progress2;

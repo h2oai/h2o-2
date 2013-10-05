@@ -11,12 +11,9 @@ import hex.NewRowVecTask.JobCancelledException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-import jsr166y.CountedCompleter;
-
 import org.apache.commons.lang.ArrayUtils;
 
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.api.Constants;
 import water.api.PCA;
@@ -190,7 +187,7 @@ public abstract class DPCA {
       _arr = eigvec;
     }
 
-    public EigenvectorMatrix clone() {
+    @Override public EigenvectorMatrix clone() {
       EigenvectorMatrix res = new EigenvectorMatrix(0);
       res._arr = _arr.clone();
       for(int i = 0; i < _arr.length; ++i)
@@ -214,7 +211,7 @@ public abstract class DPCA {
   }
 
   static class reverseDouble implements Comparator<Double> {
-    public int compare(Double a, Double b) {
+    @Override public int compare(Double a, Double b) {
         return b.compareTo(a);
       }
     }
@@ -228,31 +225,22 @@ public abstract class DPCA {
 
   public static PCAJob startPCAJob(Key dest, final DataFrame data, final PCAParams params) {
     if(dest == null) dest = PCAModel.makeKey();
-    final PCAJob job = new PCAJob(data._ary, dest);
     final double[] sdev = null;
     final double[] propVar = null;
     final double[] cumVar = null;
     final double[][] eigVec = null;
-
-    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, cumVar, eigVec, 0, 0, 0, params));
-    final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-      @Override public void compute2() {
+    PCAJob job = new PCAJob(data._ary, dest) {
+      @Override protected void exec() {
         try {
-          buildModel(job, job.dest(), data, params);
-          assert !job.cancelled();
-          job.remove();
+          buildModel(this, dest(), data, params);
+          assert !cancelled();
         } catch( JobCancelledException e ) {
-          UKV.remove(job.dest());
+          UKV.remove(dest());
         }
-        tryComplete();
-      }
-
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        if( job != null ) job.onException(ex);
-        return super.onExceptionalCompletion(ex, caller);
       }
     };
-    H2O.submitTask(job.start(fjtask));
+    UKV.put(job.dest(), new PCAModel(Status.ComputingModel, 0.0f, job.dest(), data, sdev, propVar, cumVar, eigVec, 0, 0, 0, params));
+    job.start();
     return job;
   }
 

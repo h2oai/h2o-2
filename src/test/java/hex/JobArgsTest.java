@@ -8,14 +8,13 @@ import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Utils.ExpectedExceptionForDebug;
 
-@Ignore
 public class JobArgsTest extends HttpTest {
   @BeforeClass public static void stall() {
-    //   stall_till_cloudsize(3);
+    stall_till_cloudsize(3);
   }
 
   @Test public void testIndexesVsNames() throws Exception {
-    String[] names = new String[] { "5", "2", "1", "8", "4" };
+    String[] names = new String[] { "5", "2", "1", "8", "4", "100" };
     double[][] items = new double[10][names.length];
     for( int r = 0; r < items.length; r++ )
       for( int c = 0; c < items[r].length; c++ )
@@ -33,8 +32,8 @@ public class JobArgsTest extends HttpTest {
       String args = "" + //
           "destination_key=" + dst + "&" + //
           "source=" + key + "&" + //
-          "response=2&" + //
-          "cols=2,4";
+          "response=8&" + //
+          "cols=2,100";
       Get get;
 
       get = get("NotRegisteredJob.json?" + args, Res.class);
@@ -55,7 +54,7 @@ public class JobArgsTest extends HttpTest {
       waitForJob(dst);
     } finally {
       RequestServer.unregisterRequest(new FailTestJob());
-      RequestServer.registerRequest(new FailTestJobAsync());
+      RequestServer.unregisterRequest(new FailTestJobAsync());
       RequestServer.unregisterRequest(new ArgsTestJob());
       UKV.remove(key);
     }
@@ -79,8 +78,8 @@ public class JobArgsTest extends HttpTest {
 
   static class ArgsTestJob extends ValidatedJob {
     @Override protected void exec() {
-      Assert.assertEquals(source.vecs()[2], _train[0]);
-      Assert.assertEquals(source.vecs()[4], _train[1]);
+      Assert.assertEquals(source.vecs()[1], _train[0]);
+      Assert.assertEquals(source.vecs()[5], _train[1]);
     }
   }
 }

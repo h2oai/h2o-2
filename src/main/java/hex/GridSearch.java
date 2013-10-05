@@ -16,7 +16,7 @@ public class GridSearch extends Job {
   @Override protected void exec() {
     UKV.put(destination_key, this);
     for( Job job : jobs )
-      job.fork().join();
+      job.invoke();
   }
 
   @Override protected void onCancelled() {

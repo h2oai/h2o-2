@@ -1,5 +1,10 @@
 package water.api;
 
+import hex.KMeansModel;
+import hex.DGLM.GLMModel;
+import hex.DPCA.PCAModel;
+import hex.rf.RFModel;
+
 import java.io.InputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -7,6 +12,7 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import water.*;
+import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -241,6 +247,25 @@ public abstract class Request extends RequestBuilders {
           return r._response;
       }
     }
+  }
+
+  // TODO clean this stuff, typeahead should take type name
+  protected static Class mapTypeahead(Class c) {
+    if(c != null) {
+      if( PCAModel.class.isAssignableFrom(c) )
+        return TypeaheadPCAModelKeyRequest.class;
+      if( GLMModel.class.isAssignableFrom(c))
+        return TypeaheadGLMModelKeyRequest.class;
+      if( RFModel.class.isAssignableFrom(c))
+        return TypeaheadRFModelKeyRequest.class;
+      if( KMeansModel.class.isAssignableFrom(c))
+        return TypeaheadKMeansModelKeyRequest.class;
+      if( Model.class.isAssignableFrom(c))
+        return TypeaheadModelKeyRequest.class;
+      if( Frame.class.isAssignableFrom(c) || ValueArray.class.isAssignableFrom(c) )
+        return TypeaheadHexKeyRequest.class;
+    }
+    return TypeaheadKeysRequest.class;
   }
 
   // ==========================================================================

@@ -35,6 +35,7 @@ public class Jobs extends Request {
       boolean cancelled = (end == 0 ? jobs[i].cancelled() : end == Job.CANCELLED_END_TIME);
       json.addProperty(END_TIME, end == 0 ? "" : RequestBuilders.ISO8601.get().format(new Date(end)));
       json.addProperty(PROGRESS, end == 0 ? (cancelled ? -2 : jobs[i].progress()) : (cancelled ? -2 : -1));
+      json.addProperty(EXCEPTION, jobs[i].exception != null ? jobs[i].exception : "");
       json.addProperty(CANCELLED, cancelled);
       array.add(json);
     }

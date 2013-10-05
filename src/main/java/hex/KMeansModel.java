@@ -2,9 +2,7 @@ package hex;
 
 import hex.KMeans.ClusterDist;
 import hex.KMeans.Initialization;
-import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.Job.Progress;
 import water.ValueArray.Column;
@@ -78,7 +76,7 @@ public class KMeansModel extends OldModel implements Progress {
    * NaN. Returns the cluster-number, which is mostly an internal value. Last data element refers to
    * the response variable, which is not used for k-means.
    */
-  protected double score0(double[] data) {
+  @Override protected double score0(double[] data) {
     for( int i = 0; i < data.length - 1; i++ ) { // Normalize the data before scoring
       ValueArray.Column C = _va._cols[i];
       double d = data[i];
@@ -94,12 +92,12 @@ public class KMeansModel extends OldModel implements Progress {
   }
 
   /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, int row) {
+  @Override protected double score0(ValueArray data, int row) {
     throw H2O.unimpl();
   }
 
   /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-  protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
+  @Override protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
     throw H2O.unimpl();
   }
 
@@ -178,6 +176,8 @@ public class KMeansModel extends OldModel implements Progress {
     }
   }
 
+  static final int ROW_SIZE = 4;
+
   // Classify a dataset using a model and generates a list of classes
   public static class KMeansApply extends MRTask {
     ChunkProgressJob _job;  // IN
@@ -186,16 +186,12 @@ public class KMeansModel extends OldModel implements Progress {
     double _clusters[][];   // IN:  The (normalized) Clusters
     boolean _normalized;    // IN
 
-    static final int ROW_SIZE = 4;
-
     public static Job run(final Key dest, final KMeansModel model, final ValueArray ary) {
       UKV.remove(dest); // Delete dest first, or chunk size from previous key can crash job
-      final ChunkProgressJob job = new ChunkProgressJob(ary.chunks());
-      job.destination_key = dest;
-      final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-        @Override public void compute2() {
+      final ChunkProgressJob job = new ChunkProgressJob(ary.chunks()) {
+        @Override protected void exec() {
           KMeansApply kms = new KMeansApply();
-          kms._job = job;
+          kms._job = this;
           kms._arykey = ary._key;
           kms._cols = model.columnMapping(ary.colNames());
           kms._clusters = model._clusters;
@@ -204,7 +200,7 @@ public class KMeansModel extends OldModel implements Progress {
 
           Column c = new Column();
           c._name = Constants.RESPONSE;
-          c._size = ROW_SIZE;
+          c._size = KMeansModel.ROW_SIZE;
           c._scale = 1;
           c._min = 0;
           c._max = model._clusters.length;
@@ -215,16 +211,10 @@ public class KMeansModel extends OldModel implements Progress {
           ValueArray res = new ValueArray(dest, ary.numRows(), c._size, new Column[] { c });
           DKV.put(dest, res);
           DKV.write_barrier();
-          job.remove();
-          tryComplete();
-        }
-
-        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-          job.onException(ex);
-          return super.onExceptionalCompletion(ex, caller);
         }
       };
-      H2O.submitTask(job.start(fjtask));
+      job.destination_key = dest;
+      job.start();
       return job;
     }
 

@@ -3,7 +3,6 @@ package hex;
 import java.util.*;
 
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.util.Utils;
 
 /**
@@ -37,24 +36,21 @@ public class KMeans extends Job {
     int cols2[] = Arrays.copyOf(cols, cols.length + 1);
     cols2[cols.length] = -1;  // No response column
 
-    final KMeans job = new KMeans();
+    final KMeansModel res = new KMeansModel(dest, cols2, va._key);
+    // Updated column mapping selection after removing various junk columns
+    final int[] filteredCols = res.columnMapping(va.colNames());
+    final KMeans job = new KMeans() {
+      @Override protected void exec() {
+        run(res, va, k, init, filteredCols);
+      }
+    };
     job.destination_key = dest;
-    final KMeansModel res = new KMeansModel(job.dest(), cols2, va._key);
     res._normalized = normalize;
     res._randSeed = randSeed;
     res._maxIter = maxIter;
     res._initialization = init;
     UKV.put(job.dest(), res);
-    // Updated column mapping selection after removing various junk columns
-    final int[] filteredCols = res.columnMapping(va.colNames());
-
-    H2OCountedCompleter task = new H2OCountedCompleter() {
-      @Override public void compute2() {
-        job.run(res, va, k, init, filteredCols);
-        tryComplete();
-      }
-    };
-    H2O.submitTask(job.start(task));
+    job.start();
     return job;
   }
 
@@ -64,7 +60,7 @@ public class KMeans extends Job {
     datad(va, bits, va.rowInChunk(va.chknum(row), row), cols, normalize, cluster);
   }
 
-  private void run(KMeansModel res, ValueArray va, int k, Initialization init, int[] cols) {
+  void run(KMeansModel res, ValueArray va, int k, Initialization init, int[] cols) {
     // -1 to be different from all chunk indexes (C.f. Sampler)
     Random rand = Utils.getRNG(res._randSeed - 1);
     double[][] clusters;

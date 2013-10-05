@@ -5,8 +5,6 @@ import java.io.File;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
-import water.fvec.NFSFileVec;
-import water.fvec.ParseDataset2;
 import water.util.Utils;
 
 public class Sandbox {
@@ -27,19 +25,19 @@ public class Sandbox {
       // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
       // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
 
-      Key dest = Key.make("train.hex");
-      Key fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
+//      Key dest = Key.make("train.hex");
+//      Key fkey = NFSFileVec.make(f);
+//      ParseDataset2.parse(dest, new Key[] { fkey });
+//
+//      f = new File("smalldata/mnist/test.csv.gz");
+//      dest = Key.make("test.hex");
+//      fkey = NFSFileVec.make(f);
+//      ParseDataset2.parse(dest, new Key[] { fkey });
 
-      f = new File("smalldata/mnist/test.csv.gz");
-      dest = Key.make("test.hex");
-      fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
-
-//      Key key = TestUtil.load_test_file(f, "test");
-//      Key dest = Key.make("test.hex");
-//      ParseDataset.parse(dest, new Key[] { key });
-//      ValueArray va = (ValueArray) UKV.get(dest);
+      Key key = TestUtil.load_test_file(f, "test");
+      Key dest = Key.make("test.hex");
+      water.parser.ParseDataset.parse(dest, new Key[] { key });
+      //ValueArray va = (ValueArray) UKV.get(dest);
 
       Utils.readConsole();
 

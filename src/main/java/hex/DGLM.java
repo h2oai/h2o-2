@@ -12,10 +12,8 @@ import hex.RowVecTask.Sampling;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import jsr166y.CountedCompleter;
 import jsr166y.RecursiveAction;
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
@@ -196,7 +194,7 @@ public abstract class DGLM {
       _str = str;
     }
 
-    public String toString() {
+    @Override public String toString() {
       return _str;
     }
 
@@ -595,7 +593,7 @@ public abstract class DGLM {
 
     }
 
-    public String toString() {
+    @Override public String toString() {
       return "";
     }
 
@@ -1167,7 +1165,7 @@ public abstract class DGLM {
      * Single row scoring, on properly ordered data. Will return NaN if any data element contains a
      * NaN.
      */
-    protected double score0(double[] data) {
+    @Override protected double score0(double[] data) {
       double p = 0;             // Prediction; scored value
       for( int i = 0; i < data.length; i++ ) {
         int idx = _colCatMap[i];
@@ -1193,12 +1191,12 @@ public abstract class DGLM {
     }
 
     /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */
-    protected double score0(ValueArray data, int row) {
+    @Override protected double score0(ValueArray data, int row) {
       throw H2O.unimpl();
     }
 
     /** Bulk scoring API, on a compatible ValueArray (when pushed throw the mapping) */
-    protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
+    @Override protected double score0(ValueArray data, AutoBuffer ab, int row_in_chunk) {
       throw H2O.unimpl();
     }
   }
@@ -1723,7 +1721,6 @@ public abstract class DGLM {
   public static GLMJob startGLMJob(Key dest, final DataFrame data, final LSMSolver lsm, final GLMParams params,
       final double[] betaStart, final int xval, final boolean parallel) {
     if( dest == null ) dest = GLMModel.makeKey(true);
-    final GLMJob job = new GLMJob(data._ary, dest, xval, params);
     final double[] beta;
     final double[] denormalizedBeta;
     if( betaStart != null ) {
@@ -1732,26 +1729,19 @@ public abstract class DGLM {
     } else {
       beta = denormalizedBeta = null;
     }
-    UKV.put(job.dest(), new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params,
-        lsm, 0, 0, false, 0, 0, null));
-    final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-      @Override public void compute2() {
+    GLMJob job = new GLMJob(data._ary, dest, xval, params) {
+      @Override protected void exec() {
         try {
-          buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
-          assert !job.cancelled();
-          job.remove();
+          buildModel(this, dest(), data, lsm, params, beta, xval, parallel);
+          assert !cancelled();
         } catch( JobCancelledException e ) {
-          UKV.remove(job.dest());
+          UKV.remove(dest());
         }
-        tryComplete();
-      }
-
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        if( job != null ) job.onException(ex);
-        return super.onExceptionalCompletion(ex, caller);
       }
     };
-    H2O.submitTask(job.start(fjtask));
+    UKV.put(job.dest(), new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params,
+        lsm, 0, 0, false, 0, 0, null));
+    job.start();
     return job;
   }
   public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,

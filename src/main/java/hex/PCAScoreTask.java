@@ -6,7 +6,6 @@ import java.util.Arrays;
 
 import junit.framework.Assert;
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.fvec.*;
 
@@ -108,23 +107,21 @@ public abstract class PCAScoreTask {
     final int ncomp = Math.min(ncol, smatrix[0].length);
     final int nfeat = Math.min(nrow, lmatrix.numCols());
 
-    final PCAScoreJob job = new PCAScoreJob(lmatrix, dataKey, destKey, false);
-    final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-      @Override public void compute2() {
+    PCAScoreJob job = new PCAScoreJob(lmatrix, dataKey, destKey, false) {
+      @Override protected void exec() {
         Vec [] vecs = Arrays.copyOf(lmatrix.vecs(), nfeat + ncomp);
         for(int i = 0; i < ncomp; i++)
           vecs[nfeat+i] = vecs[0].makeZero();
 
-        ScoreTask tsk = new ScoreTask(job, nfeat, ncomp, smatrix).doAll(vecs);
+        ScoreTask tsk = new ScoreTask(this, nfeat, ncomp, smatrix).doAll(vecs);
         Vec [] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), nfeat, nfeat + ncomp);
         String [] names = new String[ncomp];
         for(int i = 0; i < ncomp; i++) names[i] = "PC" + i;
         Frame f = new Frame(names, outputVecs);
         DKV.put(destKey, f);
-        job.remove();
       }
     };
-    H2O.submitTask(job.start(fjtask));
+    job.start();
     return job;
   }
 
@@ -149,10 +146,8 @@ public abstract class PCAScoreTask {
       throw new RuntimeException("Mismatched dimensions! Model matrix has " + data._modelDataMap.length + " features, while eigenvector matrix has " + eigvec.length + " features");
 
     final Frame origModel = data.modelAsFrame();
-    final PCAScoreJob job = new PCAScoreJob(origModel, dataKey, destKey, standardize);
-
-    final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-      @Override public void compute2() {
+    PCAScoreJob job = new PCAScoreJob(origModel, dataKey, destKey, standardize) {
+      @Override protected void exec() {
         Frame lmatrix = origModel;
 
         // Note: Standardize automatically removes columns not in modelDataMap
@@ -162,7 +157,7 @@ public abstract class PCAScoreTask {
           Vec [] vecs = Arrays.copyOf(origModel.vecs(), 2*ncol);
           for(int i = 0; i < ncol; i++)
             vecs[ncol+i] = vecs[0].makeZero();
-          StandardizeTask tsk = new StandardizeTask(job, data._normSub, data._normMul).doAll(vecs);
+          StandardizeTask tsk = new StandardizeTask(this, data._normSub, data._normMul).doAll(vecs);
           Vec [] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), ncol, 2*ncol);
           lmatrix = new Frame(origModel.names(), outputVecs);
         }
@@ -175,16 +170,15 @@ public abstract class PCAScoreTask {
           vecs[nfeat+i] = vecs[0].makeZero();
         }
 
-        ScoreTask tsk = new ScoreTask(job, nfeat, ncomp, eigvec).doAll(vecs);
+        ScoreTask tsk = new ScoreTask(this, nfeat, ncomp, eigvec).doAll(vecs);
         Vec [] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), nfeat, nfeat + ncomp);
         String [] names = new String[ncomp];
         for(int i = 0; i < ncomp; i++) names[i] = "PC" + i;
         Frame f = new Frame(names, outputVecs);
         DKV.put(destKey, f);
-        job.remove();
       }
     };
-    H2O.submitTask(job.start(fjtask));
+    job.start();
     return job;
   }
 

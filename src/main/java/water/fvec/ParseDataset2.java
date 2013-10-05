@@ -6,10 +6,8 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.zip.*;
 
-import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCallback;
-import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.*;
@@ -24,6 +22,8 @@ import water.util.Utils.IcedInt;
 
 public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
+  transient Key [] _keys;
+  transient CustomParser.ParserSetup _setup;
 
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs
@@ -40,9 +40,12 @@ public final class ParseDataset2 extends Job {
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
     ParseDataset2 job = new ParseDataset2(dest, keys);
-    H2O.submitTask(job.start(new ParserFJTask(job, keys, setup)));
+    job._keys = keys;
+    job._setup = setup;
+    job.start();
     return job;
   }
+
   // Setup a private background parse job
   private ParseDataset2(Key dest, Key[] fkeys) {
     destination_key = dest;
@@ -51,29 +54,8 @@ public final class ParseDataset2 extends Job {
     UKV.put(_progress, ParseProgress.make(fkeys));
   }
 
-  // Simple internal class doing background parsing, with trackable Job status
-  public static class ParserFJTask extends H2OCountedCompleter {
-    final ParseDataset2 _job;
-    Key [] _keys;
-    CustomParser.ParserSetup _setup;
-
-    public ParserFJTask( ParseDataset2 job, Key [] keys, CustomParser.ParserSetup setup) {
-      _job = job;
-      _keys = keys;
-      _setup = setup;
-    }
-    @Override public void compute2() {
-      parse_impl(_job, _keys, _setup);
-      tryComplete();
-    }
-
-    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      if(_job != null){
-        _job.cancel(ex.toString());
-      }
-      ex.printStackTrace();
-      return true;
-    }
+  @Override protected void exec() {
+    parse_impl(this, _keys, _setup);
   }
 
   // --------------------------------------------------------------------------
@@ -159,7 +141,7 @@ public final class ParseDataset2 extends Job {
 
     @Override public void map(Chunk [] chks){
       int [][] emap = emap(_chunk2Enum[chks[0].cidx()]);
-      int c = 0;
+//      int c = 0;
 //      for(int i = 0; i < _gDomain.length;++i)
 //        System.out.println("i= " + i + ", col# " + _colIds[i] + " domain=" + Arrays.toString(_gDomain[i]) + ", emap = " + Arrays.toString(emap[i]));
       for(int i = 0; i < chks.length; ++i){
@@ -381,7 +363,6 @@ public final class ParseDataset2 extends Job {
           // Then treat as no-headers, i.e., parse it as a normal row
           localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false);
       }
-      final int ncols = _setup._ncols;
 
       // Parse the file
       try {
@@ -551,7 +532,7 @@ public final class ParseDataset2 extends Job {
         _nvs[i] = (NewChunk)(_vecs[i] = new AppendableVec(vg.vecKey(vecIdStart + i))).elem2BV(_cidx);
     }
 
-    public FVecDataOut reduce(StreamDataOut sdout){
+    @Override public FVecDataOut reduce(StreamDataOut sdout){
       FVecDataOut dout = (FVecDataOut)sdout;
       if(dout._vecs.length > _vecs.length){
         AppendableVec [] v = _vecs;
@@ -562,18 +543,18 @@ public final class ParseDataset2 extends Job {
         _vecs[i].reduce(dout._vecs[i]);
       return this;
     }
-    public FVecDataOut close(){
+    @Override public FVecDataOut close(){
       Futures fs = new Futures();
       close(fs);
       fs.blockForPending();
       return this;
     }
-    public FVecDataOut close(Futures fs){
+    @Override public FVecDataOut close(Futures fs){
       for(NewChunk nv:_nvs)
         nv.close(_cidx, fs);
       return this;
     }
-    public FVecDataOut nextChunk(){
+    @Override public FVecDataOut nextChunk(){
       return  new FVecDataOut(_vg, _cidx+1, _nCols, _vecIdStart, _enums);
     }
 
@@ -628,7 +609,7 @@ public final class ParseDataset2 extends Job {
     * @param colIdx
     * @param value
     */
-    public void addNumCol(int colIdx, double value) {
+    @Override public void addNumCol(int colIdx, double value) {
       if (Double.isNaN(value)) {
         addInvalidCol(colIdx);
       } else {
@@ -643,7 +624,7 @@ public final class ParseDataset2 extends Job {
         addNumCol(colIdx, number, exp);
       }
     }
-    public void setColumnNames(String [] names){}
+    @Override public void setColumnNames(String [] names){}
     @Override public final void rollbackLine() {}
     @Override public void invalidLine(String err) {
       newLine();

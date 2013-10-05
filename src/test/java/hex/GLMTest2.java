@@ -29,7 +29,7 @@ public class GLMTest2  extends TestUtil {
      // make data so that the expected coefficients is icept = col[0] = 1.0
      FVecTest.makeByteVec(raw, "x,y\n0,0\n1,0.1\n2,0.2\n3,0.3\n4,0.4\n5,0.5\n6,0.6\n7,0.7\n8,0.8\n9,0.9");
      Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
-     new GLM2("GLM test of gaussian(linear) regression.",modelKey,fr,false,Family.gaussian, Family.gaussian.defaultLink,0,0).fork().get();
+     new GLM2("GLM test of gaussian(linear) regression.",modelKey,fr,false,Family.gaussian, Family.gaussian.defaultLink,0,0).fork(null).get();
      model = DKV.get(modelKey).get();
      HashMap<String, Double> coefs = model.coefficients();
      assertEquals(0.0,coefs.get("Intercept"),1e-4);

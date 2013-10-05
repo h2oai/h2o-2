@@ -16,7 +16,6 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
-import water.H2O.H2OEmptyCompleter;
 import water.Job.FrameJob;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -198,7 +197,7 @@ public class GLM2 extends FrameJob{
     ymut.doAll(fr);
     GLMIterationTask firstIter = new GLMIterationTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
     firstIter._ymu = ymut.ymu();
-    final H2OEmptyCompleter fjt = start(new H2OEmptyCompleter());
+    final H2OCountedCompleter fjt = start();
     if(completer != null)fjt.setCompleter(completer);
     final LSMSolver solver = new ADMMSolver(lambda, alpha);
     firstIter.setCompleter(new Iteration(solver,fr,fjt));

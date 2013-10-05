@@ -42,8 +42,13 @@ public class Job extends Request2 {
 
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
 
-  public Key self() { return job_key; }
-  public Key dest() { return destination_key; }
+  public Key self() {
+    return job_key;
+  }
+
+  public Key dest() {
+    return destination_key;
+  }
 
   protected void logStart() {
     Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
@@ -58,13 +63,19 @@ public class Job extends Request2 {
 
     @Override protected void logStart() {
       super.logStart();
-      if (source == null) {
+      if( source == null ) {
         Log.info("    source: null");
-      }
-      else {
+      } else {
         Log.info("    source.numCols(): " + source.numCols());
         Log.info("    source.numRows(): " + source.numRows());
       }
+    }
+
+    @Override protected void init() throws IllegalArgumentException {
+      super.init();
+      String source = input("source");
+      if( destination_key != null && destination_key.toString().equals(source) )
+        throw new IllegalArgumentException("destination_key cannot be source_key");
     }
   }
 
@@ -72,27 +83,35 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Input columns (Indexes start at 0)", filter=colsFilter.class, hide=true)
+    @API(help = "Input columns (Indexes start at 0)", filter = colsFilter.class, hide = true)
     public int[] cols;
-    class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
-    @API(help = "Ignored columns by name", filter=colsFilter.class, displayName="Ignored columns")
+    class colsFilter extends MultiVecSelect {
+      public colsFilter() {
+        super("source");
+      }
+    }
+
+    @API(help = "Ignored columns by name", filter = colsFilter.class, displayName = "Ignored columns")
     public int[] ignored_cols_by_name;
-    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
+
+    class colsNamesFilter extends MultiVecSelect {
+      public colsNamesFilter() {
+        super("source", MultiVecSelectType.NAMES_ONLY);
+      }
+    }
 
     @Override protected void logStart() {
       super.logStart();
-      if (cols == null) {
+      if( cols == null ) {
         Log.info("    cols: null");
-      }
-      else {
+      } else {
         Log.info("    cols: " + cols.length + " columns selected");
       }
 
-      if (ignored_cols_by_name == null) {
+      if( ignored_cols_by_name == null ) {
         Log.info("    ignored_cols: null");
-      }
-      else {
+      } else {
         Log.info("    ignored_cols: " + ignored_cols_by_name.length + " columns ignored");
       }
     }
@@ -104,7 +123,7 @@ public class Job extends Request2 {
         throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
       if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
         throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
-      if(cols == null || cols.length == 0) {
+      if( cols == null || cols.length == 0 ) {
         cols = new int[source.vecs().length];
         for( int i = 0; i < cols.length; i++ )
           cols[i] = i;
@@ -112,7 +131,7 @@ public class Job extends Request2 {
       int length = cols.length;
       for( int g = 0; ignored_cols_by_name != null && g < ignored_cols_by_name.length; g++ ) {
         for( int i = 0; i < cols.length; i++ ) {
-          if(cols[i] == ignored_cols_by_name[g]) {
+          if( cols[i] == ignored_cols_by_name[g] ) {
             length--;
             // Move all, try to keep ordering
             System.arraycopy(cols, i + 1, cols, i, length - i);
@@ -138,13 +157,15 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help="Column to use as class", required=true, filter=responseFilter.class)
+    // @formatter:off
+     @API(help = "Column to use as class", required = true, filter = responseFilter.class)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
-    @API(help="Do Classification or regression", filter=myClassFilter.class)
+    @API(help = "Do Classification or regression", filter = myClassFilter.class)
     public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
+    // @formatter:on
 
     @Override protected void registered() {
       super.registered();
@@ -158,10 +179,9 @@ public class Job extends Request2 {
 
     @Override protected void logStart() {
       super.logStart();
-      if (response == null) {
+      if( response == null ) {
         Log.info("    response: null");
-      }
-      else {
+      } else {
         String arg = input("response");
         assert arg != null;
         Log.info("    response: " + arg);
@@ -194,10 +214,9 @@ public class Job extends Request2 {
 
     @Override protected void logStart() {
       super.logStart();
-      if (validation == null) {
+      if( validation == null ) {
         Log.info("    validation: null");
-      }
-      else {
+      } else {
         Log.info("    validation.numCols(): " + validation.numCols());
         Log.info("    validation.numRows(): " + validation.numRows());
       }
@@ -212,9 +231,9 @@ public class Job extends Request2 {
           rIndex = i;
 
       _train = selectVecs(source);
-      if(validation != null) {
+      if( validation != null ) {
         _valid = selectVecs(validation);
-        if(rIndex >= 0)
+        if( rIndex >= 0 )
           _validResponse = validation.vecs()[rIndex];
       }
       _names = new String[cols.length];
@@ -228,9 +247,11 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    // @formatter:off
     @API(help = "Source key", required = true, filter = source_keyFilter.class)
     public Key source_key;
-    class source_keyFilter extends H2OHexKey { public source_keyFilter() { super(""); } }
+    class source_keyFilter extends H2OHexKey { source_keyFilter() { super(""); } }
+    // @formatter:on
   }
 
   public interface Progress {
@@ -243,7 +264,10 @@ public class Job extends Request2 {
 
   public static class Fail extends Iced {
     public final String _message;
-    public Fail(String message) { _message = message; }
+
+    public Fail(String message) {
+      _message = message;
+    }
   }
 
   static final class List extends Iced {
@@ -270,20 +294,89 @@ public class Job extends Request2 {
     return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
   }
 
-  public <T extends H2OCountedCompleter> T start(final T fjtask) {
-    _fjtask = fjtask;
+  public H2OCountedCompleter start() {
+    init();
+    _fjtask = fork();
     DKV.put(job_key, new Value(job_key, new byte[0]));
     start_time = System.currentTimeMillis();
     new TAtomic<List>() {
       @Override public List atomic(List old) {
-        if( old == null ) old = new List();
+        if( old == null )
+          old = new List();
         Job[] jobs = old._jobs;
         old._jobs = Arrays.copyOf(jobs, jobs.length + 1);
         old._jobs[jobs.length] = Job.this;
         return old;
       }
     }.invoke(LIST);
-    return fjtask;
+    return _fjtask;
+  }
+
+  public void invoke() {
+    start().join();
+  }
+
+  /**
+   * Invoked before job runs. This is the place to checks arguments are valid or throw
+   * IllegalArgumentException. It will get invoked both from the Web and Java APIs.
+   */
+  protected void init() throws IllegalArgumentException {
+  }
+
+  /**
+   * Default behavior is to call exec() in a F/J task. Override to run in a non-blocking mode,
+   * making sure you call remove() when done.
+   */
+  protected H2OCountedCompleter fork() {
+    H2OCountedCompleter task = new H2OCountedCompleter() {
+      @Override public void compute2() {
+        Throwable t = null;
+        try {
+          Job.this.exec();
+          remove();
+        } catch( Throwable t_ ) {
+          t = t_;
+          if( !(t instanceof ExpectedExceptionForDebug) )
+            Log.err(t);
+        } finally {
+          tryComplete();
+        }
+        if( t != null )
+          onException(t);
+      }
+    };
+    H2O.submitTask(task);
+    return task;
+  }
+
+  /**
+   * Actual job code. Must block until execution is done.
+   */
+  protected void exec() {
+  }
+
+  protected void onException(Throwable ex) {
+    UKV.remove(dest());
+    update(Job.this, Utils.getStackAsString(ex));
+  }
+
+  private static void update(final Job job, final String exception) {
+    new TAtomic<List>() {
+      @Override public List atomic(List old) {
+        if( old != null && old._jobs != null )
+          for( Job current : old._jobs )
+            if( current == job )
+              job.exception = exception;
+        return old;
+      }
+    }.invoke(LIST);
+  }
+
+  /**
+   * Invoked after job has run for cleanup purposes.
+   */
+  protected void done() {
+    remove();
   }
 
   // Overridden for Parse
@@ -294,11 +387,11 @@ public class Job extends Request2 {
     return 0;
   }
 
-  // Block until the Job finishes.
+  //Block until the Job finishes.
   public <T> T get() {
-    try{
+    try {
       _fjtask.join();             // Block until top-level job is done
-    } catch(DistributedException e){
+    } catch( DistributedException e ) {
       // rethrow as a runtime exception to stay consistent with FJ and to keep record on where the exception
       // was thrown locally
       throw new RuntimeException(e);
@@ -308,14 +401,21 @@ public class Job extends Request2 {
     return ans;
   }
 
-  public void cancel() { cancel("cancelled by user"); }
-  public void cancel(String msg) { cancel(job_key,msg); }
+  public void cancel() {
+    cancel("cancelled by user");
+  }
+
+  public void cancel(String msg) {
+    cancel(job_key, msg);
+  }
+
   public static void cancel(final Key self, final String exception) {
     DKV.remove(self);
     DKV.write_barrier();
     new TAtomic<List>() {
       @Override public List atomic(List old) {
-        if( old == null ) old = new List();
+        if( old == null )
+          old = new List();
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(self) ) {
@@ -343,7 +443,11 @@ public class Job extends Request2 {
   public boolean cancelled() {
     return !running() && end_time == Job.CANCELLED_END_TIME;
   }
-  public boolean running() { return running(job_key); }
+
+  public boolean running() {
+    return running(job_key);
+  }
+
   public static boolean running(Key self) {
     return DKV.get(self) != null;
   }
@@ -352,7 +456,8 @@ public class Job extends Request2 {
     DKV.remove(job_key);
     new TAtomic<List>() {
       @Override public List atomic(List old) {
-        if( old == null ) return null;
+        if( old == null )
+          return null;
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(job_key) ) {
@@ -407,8 +512,7 @@ public class Job extends Request2 {
   }
 
   /** Returns job execution time in milliseconds */
-  public final long runTimeMs()
-  {
+  public final long runTimeMs() {
     long until = end_time != 0 ? end_time : System.currentTimeMillis();
     return until - start_time;
   }
@@ -434,105 +538,47 @@ public class Job extends Request2 {
     return Progress2.redirect(this, job_key, destination_key);
   }
 
-  //
-
-  public H2OCountedCompleter fork() {
-    init();
-    H2OCountedCompleter task = new H2OCountedCompleter() {
-      @Override public void compute2() {
-        Throwable t = null;
-        try {
-          Job.this.exec();
-          Job.this.done();
-        } catch (Throwable t_) {
-          t = t_;
-          if(!(t instanceof ExpectedExceptionForDebug))
-            Log.err(t);
-        } finally {
-          tryComplete();
-        }
-        if(t != null)
-          update(Job.this, Utils.getStackAsString(t));
-      }
-    };
-    H2O.submitTask(start(task));
-    return task;
-  }
-
-  private static void update(final Job job, final String exception) {
-    new TAtomic<List>() {
-      @Override public List atomic(List old) {
-        if( old != null && old._jobs != null )
-          for(Job current : old._jobs)
-            if(current == job)
-              job.exception = exception;
-        return old;
-      }
-    }.invoke(LIST);
-  }
-
-  public void invoke() {
-    init();
-    exec();
-    done();
-  }
-
-  /**
-   * Invoked before job runs. This is the place to checks arguments are valid or throw
-   * IllegalArgumentException. It will get invoked both from the Web and Java APIs.
-   */
-  protected void init() throws IllegalArgumentException {
-  }
-
-  /**
-   * Actual job code. Should be blocking until execution is done.
-   */
-  protected void exec() {
-    throw new RuntimeException("Should be overridden if job is a request");
-  }
-
-  /**
-   * Invoked after job has run for cleanup purposes.
-   */
-  protected void done() {
-    remove();
-  }
-
   /**
    * Block synchronously waiting for a job to end, success or not.
-   * @param jobkey Job to wait for.
-   * @param pollingIntervalMillis Polling interval sleep time.
+   *
+   * @param jobkey
+   *          Job to wait for.
+   * @param pollingIntervalMillis
+   *          Polling interval sleep time.
    */
   public static void waitUntilJobEnded(Key jobkey, int pollingIntervalMillis) {
     boolean done = false;
-    while (! done) {
-      try { Thread.sleep (pollingIntervalMillis); } catch (Exception _) {}
+    while( !done ) {
+      try {
+        Thread.sleep(pollingIntervalMillis);
+      } catch( Exception _ ) {
+      }
       Job[] jobs = Job.all();
       boolean found = false;
-      for (int i = jobs.length - 1; i >= 0; i--) {
-        if (jobs[i].job_key == null) {
+      for( int i = jobs.length - 1; i >= 0; i-- ) {
+        if( jobs[i].job_key == null ) {
           continue;
         }
 
-        if (! jobs[i].job_key.equals(jobkey)) {
+        if( !jobs[i].job_key.equals(jobkey) ) {
           continue;
         }
 
         // This is the job we are looking for.
         found = true;
 
-        if (jobs[i].end_time > 0) {
+        if( jobs[i].end_time > 0 ) {
           done = true;
         }
 
-        if (jobs[i].cancelled()) {
+        if( jobs[i].cancelled() ) {
           done = true;
         }
 
         break;
       }
 
-      if (! found) {
+      if( !found ) {
         done = true;
       }
     }
@@ -540,7 +586,9 @@ public class Job extends Request2 {
 
   /**
    * Block synchronously waiting for a job to end, success or not.
-   * @param jobkey Job to wait for.
+   *
+   * @param jobkey
+   *          Job to wait for.
    */
   public static void waitUntilJobEnded(Key jobkey) {
     int THREE_SECONDS_MILLIS = 3 * 1000;
@@ -553,12 +601,22 @@ public class Job extends Request2 {
     private final Status _status;
     final String _error;
     protected DException _ex;
-    public enum Status { Computing, Done, Cancelled, Error };
 
-    public Status status() { return _status; }
+    public enum Status {
+      Computing, Done, Cancelled, Error
+    };
 
-    public boolean isDone() { return _status == Status.Done || _status == Status.Error; }
-    public String error() { return _error; }
+    public Status status() {
+      return _status;
+    }
+
+    public boolean isDone() {
+      return _status == Status.Done || _status == Status.Error;
+    }
+
+    public String error() {
+      return _error;
+    }
 
     public ChunkProgress(long chunksTotal) {
       _nchunks = chunksTotal;
@@ -594,7 +652,8 @@ public class Job extends Request2 {
     }
 
     @Override public float progress() {
-      if( _status == Status.Done ) return 1.0f;
+      if( _status == Status.Done )
+        return 1.0f;
       return Math.min(0.99f, (float) ((double) _count / (double) _nchunks));
     }
   }
@@ -611,7 +670,8 @@ public class Job extends Request2 {
       if( !cancelled() ) {
         new TAtomic<ChunkProgress>() {
           @Override public ChunkProgress atomic(ChunkProgress old) {
-            if( old == null ) return null;
+            if( old == null )
+              return null;
             return old.update(c);
           }
         }.fork(_progress);
@@ -623,17 +683,18 @@ public class Job extends Request2 {
       UKV.remove(_progress);
     }
 
-    public final Key progressKey() { return _progress; }
+    public final Key progressKey() {
+      return _progress;
+    }
 
-    public void onException(Throwable ex) {
-      UKV.remove(dest());
+    @Override protected void onException(Throwable ex) {
       Value v = DKV.get(progressKey());
       if( v != null ) {
         ChunkProgress p = v.get();
         p = p.error(ex.getMessage());
         DKV.put(progressKey(), p);
       }
-      cancel();
+      super.onException(ex);
     }
   }
 }

@@ -3,9 +3,7 @@ package hex.rf;
 import java.util.Arrays;
 import java.util.Random;
 
-import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.util.*;
@@ -113,13 +111,9 @@ public class ConfusionTask extends MRTask {
     final Value dummyCMVal = new Value(cmKey, CMFinal.make());
     final Value val = DKV.DputIfMatch(cmKey, dummyCMVal, null, null);
     if (val==null) {
-      final CMJob cmJob = new CMJob(modelSize);
-      cmJob.destination_key = cmKey;
-      cmJob.description = "CM computation";
-      // and start a new confusion matrix computation
-      H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-        @Override public void compute2() {
-          ConfusionTask cmTask = new ConfusionTask(cmJob, model, modelSize, datakey, classcol, classWt, computeOOB);
+      CMJob cmJob = new CMJob(modelSize) {
+        @Override protected void exec() {
+          ConfusionTask cmTask = new ConfusionTask(this, model, modelSize, datakey, classcol, classWt, computeOOB);
           cmTask.invoke(datakey); // Invoke and wait for completion
           // Create final matrix
           CMFinal cmResult = CMFinal.make(cmTask._matrix, model, cmTask.domain(), cmTask._errorsPerTree, computeOOB);
@@ -129,19 +123,13 @@ public class ConfusionTask extends MRTask {
           Value oldVal = DKV.DputIfMatch(cmKey, new Value(cmKey, cmResult), dummyCMVal, null);
           // Be sure that nobody overwrite the value since I am only one writter
           assert oldVal == dummyCMVal;
-          // Remove this jobs - it already finished or it was useless
-          cmJob.remove();
-          tryComplete();
-        }
-        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-          cmJob.onException(ex);
-          return super.onExceptionalCompletion(ex, caller);
         }
       };
-      H2O.submitTask(cmJob.start(fjtask));
+      cmJob.destination_key = cmKey;
+      cmJob.description = "CM computation";
       // FIXME the the job should be invoked asynchronously but for now we block immediately
       // since we do not store a list of previous jobs
-      cmJob.get();
+      cmJob.start().join();
       return cmJob;
     } else {
       // We should return Job which is/was computing the CM with given cmKey
@@ -209,7 +197,7 @@ public class ConfusionTask extends MRTask {
   /**A classic Map/Reduce style incremental computation of the confusion
    * matrix on a chunk of data.
    * */
-  public void map(Key chunkKey) {
+  @Override public void map(Key chunkKey) {
     AutoBuffer cdata      = _data.getChunk(chunkKey);
     final int nchk       = (int) ValueArray.getChunkIndex(chunkKey);
     final int rows       = _data.rpc(nchk);
@@ -308,7 +296,7 @@ public class ConfusionTask extends MRTask {
   }
 
   /** Reduction combines the confusion matrices. */
-  public void reduce(DRemoteTask drt) {
+  @Override public void reduce(DRemoteTask drt) {
     ConfusionTask C = (ConfusionTask) drt;
     if (_matrix == null) {
       _matrix = C._matrix;
