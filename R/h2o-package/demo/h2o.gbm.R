@@ -12,8 +12,7 @@ print(prostate.gbm)
 prostate.gbm2 = h2o.gbm(x = c("AGE", "RACE", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.hex, n.trees = 10, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
 print(prostate.gbm2)
 
-#This is a demo of H2O's GBM use of default parameters on iris dataset(three classes)
-
+# This is a demo of H2O's GBM use of default parameters on iris dataset (three classes)
 iris.hex = h2o.importFile(localH2O, system.file("extdata", "iris.csv", package="h2o"), "iris.hex")
 summary(iris.hex)
 iris.gbm = h2o.gbm(x = 1:4, y = 5, data = iris.hex)
