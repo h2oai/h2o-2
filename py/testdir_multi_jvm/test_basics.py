@@ -6,17 +6,6 @@ import h2o_browse as h2b
 import h2o_common
 
 class Basic(h2o_common.SetupThreeJVM4, unittest.TestCase):
-    #def tearDown(self):
-    #    h2o.check_sandbox_for_errors()
-#
- #   @classmethod
-  #  def setUpClass(cls):
-   #     h2o.build_cloud(node_count=3,java_heap_GB=1, cloud_name='kevin')
-#
- #   @classmethod
-  #  def tearDownClass(cls):
-   #     h2o.tear_down_cloud()
-
     def test_A_Basic(self):
         ### h2o.verify_cloud_size()
         pass
