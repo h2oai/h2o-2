@@ -8,7 +8,7 @@ h2o.checkClient(localH2O)
 
 prostate.hex = h2o.importFile(localH2O, path = system.file("extdata", "prostate.csv", package="h2o"), key = "prostate.hex")
 summary(prostate.hex)
-prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
+prostate.glm = h2o.glm(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(prostate.glm)
 
 myLabels = c(prostate.glm@model$x, "Intercept")

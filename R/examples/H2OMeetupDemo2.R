@@ -11,7 +11,7 @@ airlines.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o
 summary(airlines.hex)
 x_ignore = c("IsArrDelayed", "ActualElapsedTime", "ArrDelay", "DepDelay", "Canceled", "Diverted", "IsDepDelayed")
 myX = setdiff(colnames(airlines.hex), x_ignore)
-airlines.glm = h2o.glm(y = "IsArrDelayed", x = myX, data = airlines.hex, family = "binomial", nfolds = 10, alpha = 0.5)
+airlines.glm = h2o.glm(x = myX, y = "IsArrDelayed", data = airlines.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(airlines.glm)
 
 # For hands-on demo of running H2O remotely
@@ -21,7 +21,7 @@ remoteH2O = h2oWrapper.init(ip = "192.168.1.161", port = 54329)
 
 airlines_big.hex = h2o.importFile(remoteH2O, path = "/home/earl/./oldairlines/airlines.orig.all.withheader.25.csv", key = "airlines_big.hex")
 summary(airlines_big.hex)
-airlines_big.glm = h2o.glm(y = "IsArrDelayed", x = myX, data = airlines_big.hex, family = "binomial", nfolds = 10, alpha = 0.5)
+airlines_big.glm = h2o.glm(x = myX, y = "IsArrDelayed", data = airlines_big.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(airlines_big.glm)
 
 # Still in Beta! H2O Data Munging on large airlines data set

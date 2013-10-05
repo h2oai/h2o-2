@@ -95,7 +95,6 @@ checkGBMModel <- function(myGBM.h2o, myGBM.r,serverH2O) {
 }
 
 test.GBM.ecology <- function(serverH2O) {
-  
   cat("\nImporting ecology_model.csv data...\n")
   ecology.hex = h2o.uploadFile(serverH2O, "../../smalldata/gbm_test/ecology_model.csv")
   ecology.sum = summary(ecology.hex)
@@ -108,7 +107,7 @@ test.GBM.ecology <- function(serverH2O) {
   
   cat("\nH2O GBM with parameters:\nntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1\n")
   #Train H2O GBM Model:
-  ecology.h2o = h2o.gbm(ecology.hex, destination = "ecology.h2o", x=3:13, y = "Angaus", ntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1)
+  ecology.h2o = h2o.gbm(x = 3:13, y = "Angaus", data = ecology.hex, n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
   print(ecology.h2o)
   
   #Train R GBM Model: Using Gaussian loss function for binary outcome OK... Also more comparable to H2O, which uses MSE
@@ -126,16 +125,14 @@ test.GBM.airlines <- function() {
   # allyears.data = grabRemote("https://raw.github.com/0xdata/h2o/master/smalldata/airlines/allyears2k.zip", "ecology.csv")
   # allyears.data = na.omit(allyears.data)
   # allyears.data = data.frame(rapply(allyears.data, as.factor, classes = "character", how = "replace"))
-  
-  # allCol = colnames(allyears.data)
-  # allXCol = allCol[-which(allCol == "IsArrDelayed")]
-  # ignoreFeat = c("CRSDepTime", "CRSArrTime", "ActualElapsedTime", "CRSElapsedTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay")
-  # ignoreNum = sapply(ignoreFeat, function(x) { which(allXCol == x) })
-  
   # allyears.hex = h2o.importFile(serverH2O, "../../smalldata/airlines/allyears2k.zip")
-  # allyears.h2o = h2o.gbm(allyears.hex, destination = "allyears.gbm", y = "IsArrDelayed", x_ignore = ignoreNum, ntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1)
   
-  # allyears.x = allyears.data[,-which(allCol == "IsArrDelayed")]
+  # ignoreNum = sapply(ignoreFeat, function(x) { which(allXCol == x) })
+  # ignoreFeat = c("CRSDepTime", "CRSArrTime", "ActualElapsedTime", "CRSElapsedTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay")
+  # myX = setdiff(colnames(allyears.hex), c(ignoreFeat, "IsArrDelayed"))
+  # allyears.h2o = h2o.gbm(x = myX, y = "IsArrDelayed", data = allyears.hex, n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
+  
+  # allyears.x = allyears.data[,-which(colnames(allyears.data) == "IsArrDelayed")]
   # allyears.x = subset(allyears.x, select = -ignoreNum)
   # allyears.gbm = gbm.fit(y = allyears.data$IsArrDelayed, x = allyears.x, distribution = "bernoulli", n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
 }

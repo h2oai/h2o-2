@@ -61,7 +61,7 @@ grabRemote <- function(myURL, myFile) {
 check.params <- function() {
   #current allowed params as of 10/04/2013 5:13PM PST: 
   cat("\nParameters of H2O GBM as of 10/04/2013\n")
-  x <- c("data","destination","y","x","ntrees","max_depth","learn_rate","min_rows")
+  x <- c("x", "y", "data", "n.trees", "interaction.depth", "n.minobsinnode", "shrinkage")
   print(x)
   #grab params from newest build:
   cat("\nParameters of current build: \n")
