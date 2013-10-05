@@ -5,7 +5,10 @@ import h2o, h2o_cmd, h2o_import as h2i
 import h2o_browse as h2b
 import h2o_common
 
-class Basic(h2o_common.SetupThreeJVM4, unittest.TestCase):
+class Basic(h2o_common.SetupUnitTest, unittest.TestCase):
+    nodes = 3
+    java_xmx = 1
+
     def test_A_Basic(self):
         ### h2o.verify_cloud_size()
         pass
