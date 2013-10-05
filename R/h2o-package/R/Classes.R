@@ -49,14 +49,16 @@ setMethod("show", "H2OGLMModel", function(object) {
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
   
-  if(model$family == "binomial") {
+  # if(model$family == "binomial") {
+  if(model$family$family == "binomial") {
     cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
     cat("\nConfusion Matrix:\n"); print(model$cm)
   }
     
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
-    if(model$family == "binomial") {
+    # if(model$family == "binomial") {
+    if(model$family$family == "binomial") {
       modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
       colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
     } else {

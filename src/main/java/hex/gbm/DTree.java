@@ -496,7 +496,7 @@ class DTree extends Iced {
       for( CompressedTree ts[] : treeBits )
         for( int c=0; c<ts.length; c++ )
           if( ts[c] != null )
-            preds[c] += ts[c].score(data);
+            preds[c+ymin] += ts[c].score(data);
       return preds;
     }
 
@@ -507,7 +507,7 @@ class DTree extends Iced {
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM
-      if( cm != null ) {
+      if( cm != null && nclasses() > 1 ) {
         assert ymin+cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         DocGen.HTML.arrayHead(sb);

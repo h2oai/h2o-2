@@ -1,169 +1,97 @@
 # Model-building operations and algorithms
 setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
-setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
+# setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
+setGeneric("h2o.glm.FV", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm.FV") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
 setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALSE) { standardGeneric("h2o.prcomp") })
-setGeneric("h2o.pcr", function(x, y, data, ncomp) { standardGeneric("h2o.pcr") })
+setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
 setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
-setGeneric("h2o.gbm", function(data, destination, y, x = "", ntrees = 10, max_depth=8, learn_rate=.2, min_rows=10) { standardGeneric("h2o.gbm") })
-setGeneric("h2o.gbmgrid", function(data, destination, y, x = as.numeric(NA), ntrees = c(10,100), max_depth=c(1,5,10), learn_rate=c(0.01,0.1,0.2), min_rows=10) { standardGeneric("h2o.gbmgrid") })
+setGeneric("h2o.gbm", function(x, y, data, n.trees = 10, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2) { standardGeneric("h2o.gbm") })
+# setGeneric("h2o.gbmgrid", function(x, y, data, n.trees = c(10,100), interaction.depth = c(1,5,10), n.minobsinnode = 10, shrinkage = c(0.01,0.1,0.2)) { standardGeneric("h2o.gbmgrid") })
 setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predict") })
 
 #----------------------- Generalized Boosting Machines (GBM) -----------------------#
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="numeric", x="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
-      if (length(x) < 1) stop("gbm requires at least one explanatory variable")
-      if( any( x < 1 | x > ncol(data) ) ) stop(paste('out of range explanatory variable', paste( x[which(x < 1 || x > ncol(data))], collapse=',')))
-      if( y < 1 || y > ncol(data) ) stop(paste(y, 'is out of range'))
-      if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
+setMethod("h2o.gbm", signature(x="numeric", y="numeric", data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
+   function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+      if (length(x) < 1) stop("GBM requires at least one explanatory variable")
+      if(any( x < 1 | x > ncol(data))) stop(paste('Out of range explanatory variable', paste(x[which(x < 1 || x > ncol(data))], collapse=',')))
+      if( y < 1 || y > ncol(data) ) stop(paste('Response variable index', y, 'is out of range'))
+      if( y %in% x ) stop(paste(colnames(data)[y], 'is both an explanatory and dependent variable'))
       x <- x - 1
       cols=paste(x,collapse=',')
-      
-      res=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destination, source=data@key, response=colnames(data)[y], cols=cols, ntrees=ntrees, max_depth=max_depth, learn_rate=learn_rate, min_rows=min_rows)
+    
+      destKey = paste("__GBMModel_", UUIDgenerate(), sep="")
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=colnames(data)[y], cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode)
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-      res2=h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView,'_modelKey'=destination)
-      
-       result=list()
-       categories=length(res2$gbm_model$cm)
-       cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
-       cf_names <- res2$gbm_model[['_domains']]
-       cf_names <- cf_names[[ length(cf_names) ]]
+      res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
+    
+      result=list()
+      categories=length(res2$gbm_model$cm)
+      cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
+      cf_names <- res2$gbm_model[['_domains']]
+      cf_names <- cf_names[[ length(cf_names) ]]
 
-       colnames(cf_matrix) <- cf_names
-       rownames(cf_matrix) <- cf_names
-       result$confusion= cf_matrix
+      colnames(cf_matrix) <- cf_names
+      rownames(cf_matrix) <- cf_names
+      result$confusion= cf_matrix
       
-      # mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=ntrees)
-      # colnames(mse_matrix)=c(1:ntrees)
+      # mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=n.trees)
+      # colnames(mse_matrix)=c(1:n.trees)
       # rownames(mse_matrix)="MSE"
       # result$err=mse_matrix
       result$err = res2$gbm_model$errs
-      new("H2OGBMModel", key=destination, data=data, model=result)
+      new("H2OGBMModel", key=destKey, data=data, model=result)
 	})
 
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+setMethod("h2o.gbm", signature(x="numeric", y="character", data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
+    function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
       cc <- colnames( data )
-      if( !(y %in% cc) ) stop(paste(y, 'is not a valid column'))
-      y_i <- which(y==colnames(data))
-      if( y_i %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
-      if( any( x < 1 | x > ncol(data) ) ) stop(paste('out of range explanatory variable', paste( x[which(x < 1 | x > ncol(data))], collapse=',')))
-      if( y_i < 1 || y_i > ncol(data) ) stop(paste(y, 'is out of range'))
-      h2o.gbm(data, destination, y_i, x, ntrees, max_depth, learn_rate, min_rows)
-  })
-
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="character", x="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
-      cc <- colnames( data )
-      if( !(y %in% cc) ) stop(paste(y, 'is not a valid column'))
-      if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
+      if( !(y %in% cc) ) stop(paste(y, 'is not a valid column name'))
       y_i <- which(y==cc)
-
-      h2o.gbm(data, destination, y_i, x, ntrees, max_depth, learn_rate, min_rows)
+      h2o.gbm(x, y_i, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
   })
 
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character", y="numeric", x="character", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+setMethod("h2o.gbm", signature(x="character", y="character", data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
+    function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
       cc <- colnames( data )
-      if( any( !(x %in% cc) ) ) stop(paste('column', x[ which( !(x %in% cc) ) ], 'is not a valid column name'))
-      if( y < 1 || y > ncol( data ) ) stop(paste(y, 'is not a valid column index'))
-      cols <- sapply( X=x, function(x) which(x==cc) )
-      if( y %in% cols ) stop(paste(y, 'is both an explanatory and dependent variable'))
-
-      h2o.gbm(data, destination, y, cols, ntrees, max_depth, learn_rate, min_rows)
+      if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
+      if(any(!(x %in% cc))) stop(paste(paste(x[which(!(x %in% cc))], collapse=','), 'is not a valid column name'))
+      x_i = match(x, cc)
+      h2o.gbm(x_i, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
   })
 
-setMethod("h2o.gbm", signature(data="H2OParsedData", destination="character",y="character",x="ANY",ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
-   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
+setMethod("h2o.gbm", signature(x="ANY", y="character", data="H2OParsedData", n.trees="ANY", interaction.depth="ANY", n.minobsinnode="ANY", shrinkage="ANY"),
+   function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
       if(!(missing(x) || class(x) == "numeric" || class(x) == "character"))
          stop(paste("x cannot be of class", class(x)))
-      else if(!(missing(ntrees) || class(ntrees) == "numeric"))
-         stop(paste("ntrees cannot be of class", class(ntrees)))
-      else if(!(missing(max_depth) || class(max_depth) == "numeric"))
-         stop(paste("max_depth cannot be of class", class(max_depth)))
-      else if(!(missing(learn_rate) || class(learn_rate) == "numeric"))
-         stop(paste("learn_rate cannot be of class", class(learn_rate)))
-      else if(!(missing(min_rows) || class(min_rows) == "numeric"))
-         stop(paste("min_rows cannot be of class", class(min_rows)))
-      if(missing(min_rows)) min_rows<-10
+      else if(!(missing(n.trees) || class(n.trees) == "numeric"))
+         stop(paste("n.trees cannot be of class", class(n.trees)))
+      else if(!(missing(interaction.depth) || class(interaction.depth) == "numeric"))
+         stop(paste("interaction.depth cannot be of class", class(interaction.depth)))
+      else if(!(missing(shrinkage) || class(shrinkage) == "numeric"))
+         stop(paste("shrinkage cannot be of class", class(shrinkage)))
+      else if(!(missing(n.minobsinnode) || class(n.minobsinnode) == "numeric"))
+         stop(paste("n.minobsinnode cannot be of class", class(n.minobsinnode)))
       if(missing(x)) x = setdiff(colnames(data), y)
-      h2o.gbm(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) 
+      h2o.gbm(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
   })
 
-setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character", y="numeric", x="numeric", ntrees="numeric", max_depth="numeric", learn_rate="numeric", min_rows="numeric"),
-   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
-      if( y < 1 || y > ncol(data) ) stop(paste(y, 'is out of range of the data columns'))
-      if( any( x < 1 | x > ncol(data) ) ) stop(paste('out of range explanatory variable', paste( x[which(x < 1 | x > ncol(data))], collapse=',')))
-      x = sort(x)
-
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMGrid, destination_key=destination, source=data@key, vresponse=y, cols=paste(x,collapse=','), ntrees=ntrees, max_depth=max_depth, learn_rate=learn_rate, min_rows=min_rows, nbins=1024)
-      while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destination)
-      
-      # Create list of individual GBM models
-      myModels = list()
-      resGrid = res$rows
-      for(i in 1:length(resGrid)) {
-        destKey = resGrid[[i]]$'model key'
-        resModel = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
-        
-        result = list()
-        categories = length(resModel$gbm_model$cm)
-        cf_matrix = t(matrix(unlist(resModel$gbm_model$cm), nrow = categories))
-        colnames(cf_matrix) = c(1:categories)
-        rownames(cf_matrix) = c(1:categories)
-        result$confusion = cf_matrix
-        
-        # ntreesModel = resGrid[[i]]$ntrees
-        # mse_matrix = matrix(unlist(resModel$gbm_model$errs), ncol = ntreesModel)
-        # colnames(mse_matrix) = c(1:ntreesModel)
-        # rownames(mse_matrix) = "MSE"
-        # result$err = mse_matrix
-        result$err = resModel$gbm_model$errs
-        myModels[[i]] = new("H2OGBMModel", key=destKey, data=data, model=result)
-      }
-      new("H2OGBMGrid", key=destination, data=data, models=myModels, sumtable=resGrid)
-   })
-
-setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character",y="character", x="character", ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
-   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
-      cc <- colnames( data )
-      if( any( !(x %in% cc) ) ) stop(paste('column', x[ which( !(x %in% cc) ) ], 'is not a valid column name'))
-      cols <- paste(sort(sapply( X=x, function(x) which(x==cc) )), collapse=',')
-      if( !(y %in% cc) ) stop(paste(y, 'is not a valid column'))
-      if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
-      y_i = which(y==cc)
-      h2o.gbmgrid(data, destination, y_i, cols, ntrees, max_depth, learn_rate, min_rows)
-   })
-
-setMethod("h2o.gbmgrid", signature(data="H2OParsedData", destination="character",y="character", x="ANY", ntrees="ANY", max_depth="ANY", learn_rate="ANY", min_rows="ANY"),
-   function(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) {
-      if(!(missing(x) || class(x) == "numeric"))
-        stop(paste("x cannot be of class", class(x)))
-      else if(!(missing(ntrees) || class(ntrees) == "numeric"))
-        stop(paste("ntrees cannot be of class", class(ntrees)))
-      else if(!(missing(max_depth) || class(max_depth) == "numeric"))
-        stop(paste("max_depth cannot be of class", class(max_depth)))
-      else if(!(missing(learn_rate) || class(learn_rate) == "numeric"))
-        stop(paste("learn_rate cannot be of class", class(learn_rate)))
-      else if(!(missing(min_rows) || class(min_rows) == "numeric"))
-        stop(paste("min_rows cannot be of class", class(min_rows)))
-      h2o.gbmgrid(data, destination, y, x, ntrees, max_depth, learn_rate, min_rows) 
+setMethod("h2o.gbm", signature(x="ANY", y="numeric", data="H2OParsedData", n.trees="ANY", interaction.depth="ANY", n.minobsinnode="ANY", shrinkage="ANY"),
+    function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+      if( y < 1 || y > ncol( data ) ) stop(paste(y, 'is not a valid column index'))
+      h2o.gbm(x, colnames(data)[y], data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
     })
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
 # Internally called glm to allow games with method dispatch
 h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
-      if( family == 'tweedie' ){
-          if ( tweedie.p < 1 || tweedie.p > 2 )
-              stop('tweedie.p must be in (1,2)')
-      } else {
-          if( !(missing(tweedie.p) || is.na(tweedie.p) ) )
-              stop('tweedie.p may only be set for family tweedie')
-      }
+      if(family == 'tweedie' && (tweedie.p < 1 || tweedie.p > 2 ))
+          stop('tweedie.p must be in (1,2)')
+      if(family != "tweedie" && !(missing(tweedie.p) || is.na(tweedie.p) ) )
+          stop('tweedie.p may only be set for family tweedie')
 
-      if( family != 'tweedie' )
+      if(family != 'tweedie')
           res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0)
       else
           res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0, tweedie_power=tweedie.p)
@@ -185,6 +113,37 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, tweedie.
         res_xval[[i]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
       }
       new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
+}
+
+h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda) {
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGrid, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0, parallel= 1 )
+      while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+      destKey = res$destination_key
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGridProgress, destination_key=res$destination_key)
+      allModels = res$models
+      
+      result = list()
+      tweedie.p = "NA"
+      # result$Summary = t(sapply(res$models,c))
+      for(i in 1:length(allModels)) {
+        resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=allModels[[i]]$key)
+        modelOrig = h2o.__getGLMResults(resH$GLMModel, y, family, tweedie.p)
+        
+        if(nfolds < 2)
+          result[[i]] = new("H2OGLMModel", key=allModels[[i]]$key, data=data, model=modelOrig, xval=list())
+        else {
+          res_xval = list()
+          for(j in 1:nfolds) {
+            xvalKey = resH$GLMModel$validations[[1]]$xval_models[j]
+            resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xvalKey)
+            modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p)
+            res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
+          }
+          result[[i]] = new("H2OGLMModel", key=allModels[[i]]$key, data=data, model=modelOrig, xval=res_xval)
+        }
+      }
+      # temp = data.frame(t(sapply(allModels, c)))
+      new("H2OGLMGrid", key=destKey, data=data, models=result, sumtable=allModels)
 }
 
 # Pretty formatting of H2O GLM results
@@ -220,66 +179,47 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
 }
 
 setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
-    function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) {
+    function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
       if(!(missing(nfolds) || class(nfolds) == "numeric"))
         stop(paste("nfolds cannot be of class", class(nfolds)))
-      else if(!(missing(alpha) || class(alpha) == "numeric"))
+      if(!(missing(alpha) || class(alpha) == "numeric"))
         stop(paste("alpha cannot be of class", class(alpha)))
-      else if(!(missing(lambda) || class(lambda) == "numeric"))
+      if(!(missing(lambda) || class(lambda) == "numeric"))
         stop(paste("lambda cannot be of class", class(lambda)))
-  
-      if ( !(missing( tweedie.p ) || class( tweedie.p ) == 'numeric' ) )
+      if (!(missing(tweedie.p) || class(tweedie.p) == 'numeric'))
         stop(paste('tweedie.p cannot be of class', class(tweedie.p)))
-  
-      if( missing(tweedie.p) && family != 'tweedie' )
-          h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda) 
-      else 
-          h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda, tweedie.p) 
+      
+      cc = colnames(data)
+      if(y %in% x) stop(paste(y, 'is both an explanatory and dependent variable'))
+      if(!y %in% cc) stop(paste(y, 'is not a valid column name'))
+      if(any(!(x %in% cc))) stop(paste(paste(x[which(!(x %in% cc))], collapse=','), 'is not a valid column name'))
+      
+      if((missing(lambda) || length(lambda) == 1) && (missing(alpha) || length(alpha) == 1))
+        h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda)
+      else {
+        if(!missing(tweedie.p)) print("Tweedie variance power not available in GLM grid search")
+        h2o.glmgrid.internal(x, y, data, family, nfolds, alpha, lambda)
+      }
    })
 
-setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="numeric", alpha="numeric", lambda="numeric"),
-    function(x, y, data, family, nfolds, alpha, lambda) {
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGrid, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0, parallel= 1 )
-      while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-      destKey = res$destination_key
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMGridProgress, destination_key=res$destination_key)
-      allModels = res$models
-      
-      result = list()
-      tweedie.p = "NA"
-      # result$Summary = t(sapply(res$models,c))
-      for(i in 1:length(allModels)) {
-        resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=allModels[[i]]$key)
-        modelOrig = h2o.__getGLMResults(resH$GLMModel, y, family, tweedie.p)
-        
-        if(nfolds < 2)
-          result[[i]] = new("H2OGLMModel", key=allModels[[i]]$key, data=data, model=modelOrig, xval=list())
-        else {
-          res_xval = list()
-          for(j in 1:nfolds) {
-            xvalKey = resH$GLMModel$validations[[1]]$xval_models[j]
-            resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xvalKey)
-            modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p)
-            res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
-          }
-          result[[i]] = new("H2OGLMModel", key=allModels[[i]]$key, data=data, model=modelOrig, xval=res_xval)
-        }
-      }
-      
-      # temp = data.frame(t(sapply(allModels, c)))
-      new("H2OGLMGrid", key=destKey, data=data, models=result, sumtable=allModels)
-  })
+setMethod("h2o.glm", signature(x="character", y="numeric", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+    function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
+      if(y < 1 || y > ncol(data)) stop(paste(y, "is not a valid column index"))
+      h2o.glm(x, colnames(data)[y], data, family, nfolds, alpha, lambda, tweedie.p)
+    })  
 
-setMethod("h2o.glmgrid", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY"),
-    function(x, y, data, family, nfolds, alpha, lambda) {
-      if(!(missing(nfolds) || class(nfolds) == "numeric"))
-        stop(paste("nfolds cannot be of class", class(nfolds)))
-      else if(!(missing(alpha) || class(alpha) == "numeric"))
-        stop(paste("alpha cannot be of class", class(alpha)))
-      else if(!(missing(lambda) || class(lambda) == "numeric"))
-        stop(paste("lambda cannot be of class", class(lambda)))
-      h2o.glmgrid(x, y, data, family, nfolds, alpha, lambda) 
-  })
+setMethod("h2o.glm", signature(x="numeric", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+    function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
+      if (length(x) < 1) stop("GLM requires at least one explanatory variable")
+      if(any( x < 1 | x > ncol(data))) stop(paste('Out of range explanatory variable', paste(x[which(x < 1 || x > ncol(data))], collapse=',')))
+      h2o.glm(colnames(data)[x], y, data, family, nfolds, alpha, lambda)
+    })
+
+setMethod("h2o.glm", signature(x="numeric", y="numeric", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+    function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
+      if(y < 1 || y > ncol(data)) stop(paste(y, "is not a valid column index"))
+      h2o.glm(x, colnames(data)[y], data, family, nfolds, alpha, lambda, tweedie.p)
+    })
 
 #----------------------------- K-Means Clustering -------------------------------#
 setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols="character", iter.max="numeric"),
@@ -372,7 +312,7 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardi
       rownames(temp) = names(res$eigenvectors[[1]])
       colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
       result$rotation = temp
-      if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data))
+      if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result))
       
       new("H2OPCAModel", key=destKey, data=data, model=result)
     })
@@ -388,8 +328,8 @@ setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="ANY", standardize="
       h2o.prcomp(data, tol, standardize, retx)
     })
 
-setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData", ncomp="numeric"),
-    function(x, y, data, ncomp) {
+setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData", ncomp="numeric", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+    function(x, y, data, ncomp, family, nfolds, alpha, lambda, tweedie.p) {
       myCol = colnames(data)
       if(!y %in% myCol) stop(paste(y, "is not a valid column name"))
       if(y %in% x) stop(paste(y, "is both an explanatory and dependent variable"))
@@ -402,17 +342,17 @@ setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData
       myScore = h2o.predict(myModel)
       
       myYCol = which(myCol == y)-1
-      rand_cbind_key = paste("__PCABind_", runif(n=1, max=1e10), sep="")
+      rand_cbind_key = paste("__PCABind_", UUIDgenerate(), sep="")
       res = h2o.__remoteSend(data@h2o, "DataManip.json", source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=myYCol, destination_key=rand_cbind_key, operation="cbind")
-      myGLMData = new("H2OParsedData2", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
-      # h2o.glm(seq(1,ncomp), y, myGLMData)
+      myGLMData = new("H2OParsedData", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
+      h2o.glm.FV(paste("PC", 0:(ncomp-1), sep=""), y, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
     })
 
 #-------------------------------------- Random Forest ----------------------------------------------#
 setMethod("h2o.randomForest", signature(x="character", y="character", data="H2OParsedData", ntree="numeric", depth="numeric", classwt="numeric"),
     function(x, y, data, ntree, depth, classwt) {
       # Set randomized model_key
-      rand_model_key = paste("__RF_Model__", runif(n=1, max=1e10), sep="")
+      rand_model_key = paste("__RF_Model__", UUIDgenerate(), sep="")
       
       # Determine predictors to ignore (excluding response column)
       myCol = colnames(data)
@@ -537,7 +477,7 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
         new("H2OParsedData", h2o=object@data@h2o, key=res$key)
       } else if(class(object) == "H2OGBMModel") {
         # Set randomized prediction key
-        rand_pred_key = paste("__GBM_Predict_", runif(n=1, max=1e10), sep="")
+        rand_pred_key = paste("__GBM_Predict_", UUIDgenerate(), sep="")
         res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
         res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
         new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
@@ -547,10 +487,10 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
         # new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
       } else if(class(object) == "H2OPCAModel") {
         # Set randomized prediction key
-        rand_pred_key = paste("__PCA_Predict_", runif(n=1, max=1e10), sep="")
+        rand_pred_key = paste("__PCA_Predict_", UUIDgenerate(), sep="")
         # numMatch = colnames(newdata) %in% colnames(object@data)
-        numMatch = colnames(newdata) %in% rownames(myModel@model$rotation)
-        numPC = length(numMatch[numMatch == TRUE])
+        numMatch = colnames(newdata) %in% rownames(object@model$rotation)
+        numPC = min(length(numMatch[numMatch == TRUE]), length(object@model$sdev))
         res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
         h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
         new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
@@ -566,27 +506,26 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="missing"),
     function(object) { h2o.predict(object, object@data) })
 
 #------------------------------- FluidVecs -------------------------------------#
-setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData2", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
     function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, NA)) {
       if(family != "tweedie" && !(missing(tweedie.p) || is.na(tweedie.p)))
         stop("tweedie.p may only be set for family tweedie")
       
-      x_ignore = which(!colnames(data) %in% x) - 1
+      x_ignore = which(!colnames(data) %in% c(x, y)) - 1
       if(length(x_ignore) == 0) x_ignore = ""
-      rand_glm_key = paste("__GLM2Model_", runif(n=1, max=1e10), sep="")
+      rand_glm_key = paste("__GLM2Model_", UUIDgenerate(), sep="")
       
       if(family != "tweedie")
-        res = h2o.__remoteSend(data@h2o, "GLM2.json", source = data@key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case_val=1.0, standardize=as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, "GLM2.json", source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
       else
-        res = h2o.__remoteSend(data@h2o, "GLM2.json", source = data@key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case_val=1.0, tweedie_variance_power=tweedie.p, standardize=as.numeric(FALSE))
-      while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+        res = h2o.__remoteSend(data@h2o, "GLM2.json", source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
+      while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
       
-      destKey = res$destination_key
-      res = h2o.__remoteSend(data@h2o, "GLMModelView.json", '_modelKey'=destKey)
+      res = h2o.__remoteSend(data@h2o, "GLMModelView.json", '_modelKey'=rand_glm_key)
       resModel = res$glm_model
-      res = h2o.__remoteSend(data@h2o, "GLMValidation.json", '_valKey'=resModel$validations[[1]])
+      res = h2o.__remoteSend(data@h2o, "GLMValidationView.json", '_valKey'=resModel$validations)
       modelOrig = h2o.__getGLM2Results(resModel, y, res$glm_val)
-      new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list())
+      new("H2OGLMModel", key=resModel$'_selfKey', data=data, model=modelOrig, xval=list())
   })
 
 # Pretty formatting of H2O GLM results
@@ -609,7 +548,7 @@ h2o.__getGLM2Results <- function(model, y, valid) {
   # result$df.residual = res$dof
   # result$df.null = res$dof + result$rank
   
-  if(family == "binomial") {
+  if(model$glm$family == "binomial") {
     result$threshold = model$threshold
     result$auc = valid$auc
     # result$class.err = res$validations[[1]]$classErr
