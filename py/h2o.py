@@ -400,6 +400,8 @@ def check_h2o_version():
         print output
 
 def default_hosts_file():
+    if os.environ.has_key["H2O_HOSTS_FILE"]:
+        return os.environ["H2O_HOSTS_FILE"]
     return 'pytest_config-{0}.json'.format(getpass.getuser())
 
 # node_count is number of H2O instances per host if hosts is specified.
@@ -410,7 +412,7 @@ def decide_if_localhost():
         print "* Using config JSON you passed as -cj argument:", config_json
         return False
     if os.path.exists(hostsFile):
-        print "* Using matching username config JSON file discovered in this directory: {0}.".format(hostsFile)
+        print "* Using config JSON file discovered in this directory: {0}.".format(hostsFile)
         return False
     if 'hosts' in os.getcwd():
         print "Since you're in a *hosts* directory, we're using a config json"
