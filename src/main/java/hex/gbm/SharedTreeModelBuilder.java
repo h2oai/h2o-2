@@ -24,7 +24,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   public int min_rows = 10;
 
   @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
-  public int nbins = 1024;
+  public int nbins = 100;
 
   // Overall prediction Mean Squared Error as I add trees
   transient protected double _errs[];
@@ -80,6 +80,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     String names[] = frm.names();
     String domains[][] = frm.domains();
 
+    // For doing classification on Integer (not Enum) columns, we want some
+    // handy names in the Model.  This really should be in the Model code.
     String[] domain = response.domain();
     if( domain == null && _nclass > 1 ) // No names?  Make some up.
       domains[_ncols] = domain = response.defaultLevels();
@@ -247,6 +249,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         for( int row=0; row<nids._len; row++ ) { // For all rows
           int nid = (int)nids.at80(row);         // Get Node to decide from
           if( nid<leaf ) continue; // row already predicts perfectly or sampled away
+          if( wrks.isNA0(row) ) continue; // No response, cannot train
           DHistogram nhs[] = hcs[nid-leaf];
 
           double y = wrks.at0(row);      // Response for this row
