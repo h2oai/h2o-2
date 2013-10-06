@@ -17,7 +17,7 @@ A logical value indicating whether to install optional packages for visualizing 
 }
 }
 \details{
-The R packages required to run H2O are RCurl, rjson, and tools. All packages are installed from CRAN. The package RCurl needs the latest version of libcurl. See the \href{http://www.omegahat.org/RCurl/FAQ.html}{RCurl FAQ} for details.
+The R packages required to run H2O are RCurl, rjson, uuid, and tools. All packages are installed from CRAN. The package RCurl needs the latest version of libcurl. See the \href{http://www.omegahat.org/RCurl/FAQ.html}{RCurl FAQ} for details.
 
 If \code{optional = TRUE}, the packages fpc and cluster, along with all associated dependencies, will be installed. Note that this requires R version 3.0 or higher.
 }
