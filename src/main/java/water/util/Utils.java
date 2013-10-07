@@ -343,6 +343,27 @@ public class Utils {
     return (T[]) ArrayUtils.subarray(a, off, off + len);
   }
 
+  public static int[] append(int[] a, int[] b) {
+    int[] res = new int[a.length + b.length];
+    System.arraycopy(a, 0, res, 0, a.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static double[][] append(double[][] a, double[][] b) {
+    double[][] res = new double[a.length + b.length][];
+    System.arraycopy(a, 0, res, 0, a.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static String[] append(String[] a, String[] b) {
+    String[] res = new String[a.length + b.length];
+    System.arraycopy(a, 0, res, 0, a.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
   public static void clearFolder(String folder) {
     clearFolder(new File(folder));
   }

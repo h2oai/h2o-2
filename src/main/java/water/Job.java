@@ -83,14 +83,11 @@ public class Job extends Request2 {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    // @formatter:off
     @API(help = "Input columns (Indexes start at 0)", filter = colsFilter.class, hide = true)
     public int[] cols;
-
-    class colsFilter extends MultiVecSelect {
-      public colsFilter() {
-        super("source");
-      }
-    }
+    class colsFilter extends MultiVecSelect { colsFilter() { super("source"); } }
+    // @formatter:on
 
     @API(help = "Ignored columns by name", filter = colsFilter.class, displayName = "Ignored columns")
     public int[] ignored_cols_by_name;

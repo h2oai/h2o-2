@@ -5,8 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import water.*;
-import water.util.ByteBufferInputStream;
-import water.util.Log;
+import water.util.*;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
@@ -137,8 +136,8 @@ public class PersistS3Task extends MRTask {
         _parts = task._parts;
         _etags = task._etags;
       } else {
-        _parts = merge(_parts, task._parts);
-        _etags = merge(_etags, task._etags);
+        _parts = Utils.append(_parts, task._parts);
+        _etags = Utils.append(_etags, task._etags);
       }
     }
   }
