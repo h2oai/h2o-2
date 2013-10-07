@@ -23,5 +23,6 @@ exportClasses(
      "H2OParsedData",
      "H2ORawData",
      "H2ORForestModel",
-      "H2OPCAModel"
+      "H2OPCAModel",
+    "H2OModel"
 )

@@ -7,7 +7,7 @@ setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALS
 setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
 setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
-setGeneric("h2o.gbm", function(x, y, data, n.trees = 10, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2) { standardGeneric("h2o.gbm") })
+setGeneric("h2o.gbm", function(x, y, data, n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1) { standardGeneric("h2o.gbm") })
 # setGeneric("h2o.gbmgrid", function(x, y, data, n.trees = c(10,100), interaction.depth = c(1,5,10), n.minobsinnode = 10, shrinkage = c(0.01,0.1,0.2)) { standardGeneric("h2o.gbmgrid") })
 setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predict") })
 
@@ -32,9 +32,10 @@ setMethod("h2o.gbm", signature(x="numeric", y="numeric", data="H2OParsedData", n
       cf_names <- res2$gbm_model[['_domains']]
       cf_names <- cf_names[[ length(cf_names) ]]
 
-      colnames(cf_matrix) <- cf_names
-      rownames(cf_matrix) <- cf_names
-      result$confusion= cf_matrix
+      # colnames(cf_matrix) <- cf_names
+      # rownames(cf_matrix) <- cf_names
+      dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
+      result$cm = cf_matrix
       
       # mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=n.trees)
       # colnames(mse_matrix)=c(1:n.trees)

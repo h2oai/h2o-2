@@ -5,7 +5,7 @@ setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData2", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
-setClass("H2OGrid", representation(key="character", data="H2OParsedData", models="list", sumtable="list", "VIRTUAL"))
+setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 setClass("H2OGLMGrid", contains="H2OGrid")
@@ -325,6 +325,8 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
 setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
 setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
    function(data, col) {
+     if(col < 1 || col > ncol(data)) stop("col must be between 1 and ", ncol(data))
+     col = col - 1
       newCol = paste("factor(", h2o.__escape(data@key), "[", col, "])", sep="")
       expr = paste("colSwap(", h2o.__escape(data@key), ",", col, ",", newCol, ")", sep="")
       res = h2o.__exec_dest_key(data@h2o, expr, destKey=data@key)
