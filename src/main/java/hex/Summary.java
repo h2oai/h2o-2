@@ -30,6 +30,7 @@ public class Summary extends Iced {
     ColSummary(Summary s, int colId) {
       this(s,colId,null);
     }
+
     ColSummary(Summary s, int colId, double [] percentiles) {
       _summary = s;
       _colId = colId;
