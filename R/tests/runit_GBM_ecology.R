@@ -1,53 +1,6 @@
-if(!"testthat" %in% rownames(installed.packages())) install.packages("testthat")
-library(testthat)
-context("GBM Test") #set context for test. Here we are checking GBM
-# Test gradient boosting machines in H2O
-# R -f runit_GBM_ecology.R --args H2OServer:Port
-# By default, H2OServer = 127.0.0.1 and Port = 54321
-args <- commandArgs(trailingOnly = TRUE)
-if(length(args) > 1)
-  stop("Usage: R -f runit_GBM_ecology.R --args H2OServer:Port")
-if(length(args) == 0) {
-  myIP = "127.0.0.1"
-  myPort = 54321
-} else {
-  argsplit = strsplit(args[1], ":")[[1]]
-  myIP = argsplit[1]
-  myPort = as.numeric(argsplit[2])
-}
-defaultPath = "../../target/R"
+source('./Utils/h2oR.R')
 
-# Check if H2O R wrapper package is installed
-if(!"h2oWrapper" %in% rownames(installed.packages())) {
-  envPath = Sys.getenv("H2OWrapperDir")
-  wrapDir = ifelse(envPath == "", defaultPath, envPath)
-  wrapName = list.files(wrapDir, pattern="h2oWrapper")[1]
-  wrapPath = paste(wrapDir, wrapName, sep="/")
-  
-  if(!file.exists(wrapPath))
-    stop(paste("h2oWrapper package does not exist at", wrapPath))
-  print(paste("Installing h2oWrapper package from", wrapPath))
-  install.packages(wrapPath, repos = NULL, type = "source")
-}
-
-# Check that H2O R package matches version on server
-library(h2oWrapper)
-h2oWrapper.installDepPkgs()      # Install R package dependencies
-h2oWrapper.init(ip=myIP, port=myPort, startH2O=FALSE, silentUpgrade = TRUE)
-
-# Load H2O R package and run test
-if(!"RUnit" %in% rownames(installed.packages())) install.packages("RUnit")
-if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
-if(!"gbm" %in% rownames(installed.packages())) install.packages("gbm")
-library(RUnit)
-library(glmnet)
-library(gbm)
-library(h2o)
-
-if(Sys.info()['sysname'] == "Windows")
-  options(RCurlOptions = list(cainfo = system.file("CurlSSL", "cacert.pem", package = "RCurl")))
-
-#------------------------------ Begin Tests ------------------------------#
+logging("\n======================== Begin Test ===========================\n")
 serverH2O = new("H2OClient", ip=myIP, port=myPort)
 grabRemote <- function(myURL, myFile) {
   temp <- tempfile()
@@ -69,7 +22,9 @@ checkGBMModel <- function(myGBM.h2o, myGBM.r,serverH2O) {
   cat("\nStandard Deviation of the absolute difference is: ", sd(errDiff))
   expect_true(mean(errDiff) < 0.5)
   expect_true(sd(errDiff) < 0.1)
-  
+ 
+  #TODO(spencer): checkGBMModel should be a general fcn
+ 
   # Compare GBM models on out-of-sample data
   cat("\nUploading ecology testing data...\n")
   ecologyTest.hex <- h2o.uploadFile(serverH2O, "../../smalldata/gbm_test/ecology_eval.csv")
