@@ -24,6 +24,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
   final static public String H2O_DRIVER_IP_KEY = "h2o.driver.ip";
   final static public String H2O_DRIVER_PORT_KEY = "h2o.driver.port";
   final static public String H2O_NETWORK_KEY = "h2o.network";
+  final static public String H2O_BETA_KEY = "h2o.beta";
 
   static EmbeddedH2OConfig _embeddedH2OConfig;
 
@@ -342,6 +343,7 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
     String driverIp = conf.get(H2O_DRIVER_IP_KEY);
     String driverPortString = conf.get(H2O_DRIVER_PORT_KEY);
     String network = conf.get(H2O_NETWORK_KEY);
+    String betaString = conf.get(H2O_BETA_KEY);
 
     ServerSocket ss = new ServerSocket();
     InetSocketAddress sa = new InetSocketAddress("127.0.0.1", 0);
@@ -360,6 +362,11 @@ public class h2omapper extends Mapper<Text, Text, Text, Text> {
       if (network.length() > 0) {
         argsList.add("-network");
         argsList.add(network);
+      }
+    }
+    if (betaString != null) {
+      if (betaString.length() > 0) {
+        argsList.add(betaString);
       }
     }
 
