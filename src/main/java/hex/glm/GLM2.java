@@ -129,43 +129,45 @@ public class GLM2 extends FrameJob{
     @Override public Iteration clone(){return new Iteration(solver,fr,fjt);}
 
     @Override public void callback(GLMIterationTask glmt) {
-      double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
-//      System.out.println(glmt._gram.pprint(glmt._gram.getXX()));
-      solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
-      boolean done = false;
-      if(Utils.hasNaNsOrInfs(newBeta)){
-        System.out.println("got NaNs in beta after " + glmt._iter + " iterations");
-        System.out.println(glmt._gram.pprint(glmt._gram.getXX()));
-        done = true;
-        newBeta = glmt._beta == null?newBeta:glmt._beta;
-      }
-      done = done || family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon;
-      GLMModel res = new GLMModel(dest(),null,glmt._iter+1,fr,glmt,beta_epsilon,alpha,lambda,newBeta,0.5,null,System.currentTimeMillis() - start_time,GLM2.this.case_mode,GLM2.this.case_val);
-      if(done){
-        // final validation
-        GLMValidationTask t = new GLMValidationTask(res,_step,_offset,true);
-        t.doAll(fr);
-        t._res.finalize_AIC_AUC();
-        res.setValidation(t._res);
-        DKV.put(dest(),res);
-        if(GLM2.this.n_folds < 2){
-          remove();
-          fjt.tryComplete(); // signal we're done to anyone waiting for the job
-        } else
-          xvalidate(res, fjt);
-      } else {
-        glmt._val.finalize_AIC_AUC();
-        _oldModel.setValidation(glmt._val);
-        DKV.put(dest(),_oldModel);// validation is one iteration behind
-        _oldModel = res;
-        GLMIterationTask nextIter = new GLMIterationTask(glmt, newBeta);
-        nextIter.setCompleter(clone()); // we need to clone here as FJT will set status to done after this method
-        nextIter.dfork(fr);
-      }
+      if(!cancelled()){
+        double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
+  //      System.out.println(glmt._gram.pprint(glmt._gram.getXX()));
+        solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+        boolean done = false;
+        if(Utils.hasNaNsOrInfs(newBeta)){
+          System.out.println("got NaNs in beta after " + glmt._iter + " iterations");
+          System.out.println(glmt._gram.pprint(glmt._gram.getXX()));
+          done = true;
+          newBeta = glmt._beta == null?newBeta:glmt._beta;
+        }
+        done = done || family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || cancelled();
+        GLMModel res = new GLMModel(dest(),null,glmt._iter+1,fr,glmt,beta_epsilon,alpha,lambda,newBeta,0.5,null,System.currentTimeMillis() - start_time,GLM2.this.case_mode,GLM2.this.case_val);
+        if(done){
+          // final validation
+          GLMValidationTask t = new GLMValidationTask(res,_step,_offset,true);
+          t.doAll(fr);
+          t._res.finalize_AIC_AUC();
+          res.setValidation(t._res);
+          DKV.put(dest(),res);
+          if(GLM2.this.n_folds < 2){
+            remove();
+            fjt.tryComplete(); // signal we're done to anyone waiting for the job
+          } else
+            xvalidate(res, fjt);
+        } else {
+          glmt._val.finalize_AIC_AUC();
+          _oldModel.setValidation(glmt._val);
+          DKV.put(dest(),_oldModel);// validation is one iteration behind
+          _oldModel = res;
+          GLMIterationTask nextIter = new GLMIterationTask(glmt, newBeta);
+          nextIter.setCompleter(clone()); // we need to clone here as FJT will set status to done after this method
+          nextIter.dfork(fr);
+        }
+      } else fjt.onExceptionalCompletion(new RuntimeException("Cancelled!"),null);
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      ex.printStackTrace();
-      GLM2.this.cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'");
+      if(!ex.getMessage().equals("Cancelled"))
+        GLM2.this.cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'");
       fjt.onExceptionalCompletion(ex, caller);
       return true;
     }
@@ -175,6 +177,7 @@ public class GLM2 extends FrameJob{
     final H2OCountedCompleter fjt = new H2OEmptyCompleter();
     if(completer != null)fjt.setCompleter(completer);
     start(fjt);
+    UKV.remove(dest());
     _oldModel = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime,GLM2.this.case_mode,GLM2.this.case_val);
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
     source.remove(ignored_cols);
@@ -193,10 +196,11 @@ public class GLM2 extends FrameJob{
       source.remove(cols);
     }
     final Frame fr = GLMTask.adaptFrame(source);
-    YMUTask ymut = new YMUTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power), standardize, case_mode, case_val, fr.anyVec().length());
+    YMUTask ymut = new YMUTask(this,new GLMParams(family, tweedie_variance_power, link,tweedie_link_power), standardize, case_mode, case_val, fr.anyVec().length());
     ymut.doAll(fr);
-    GLMIterationTask firstIter = new GLMIterationTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
+    GLMIterationTask firstIter = new GLMIterationTask(this,new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
     firstIter._ymu = ymut.ymu();
+    System.out.println("nobs = " + ymut.nobs() + ", ymu = " + firstIter._ymu);
     if(completer != null)fjt.setCompleter(completer);
     final LSMSolver solver = new ADMMSolver(lambda, alpha);
     firstIter.setCompleter(new Iteration(solver,fr,fjt));
