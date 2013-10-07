@@ -192,8 +192,14 @@ public class Vec extends Iced {
     if( _naCnt >= 0 ) return this;
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
-    if( vthis._naCnt>= 0 ) return vthis;
-
+    if( vthis._naCnt>= 0 ) {    // KV store has a better answer
+      _min  = vthis._min;   _max   = vthis._max; 
+      _mean = vthis._mean;  _sigma = vthis._sigma;
+      _size = vthis._size;  _isInt = vthis._isInt;
+      _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
+      return this;
+    }
+    // Compute the hard way
     final RollupStats rs = new RollupStats().doAll(this);
     setRollupStats(rs);
     // Now do this remotely also
