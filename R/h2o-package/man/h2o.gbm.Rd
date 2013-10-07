@@ -1,5 +1,5 @@
-\name{h2o.gbm.Rd}
-\alias{h2o.gbm.Rd}
+\name{h2o.gbm}
+\alias{h2o.gbm}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 H2O: GBM
@@ -19,7 +19,7 @@ The name or index of the response variable. If the data does not contain a heade
 A vector containing the names or indices of the predictor variables to use in building the GBM model.
 }
   \item{distribution}{
-The type of GBM model to be produced, categorization is "miltinomial" (default), "gausian" used for regression.
+The type of GBM model to be produced, categorization is "multinomial" (default), "gaussian" used for regression.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
@@ -37,9 +37,6 @@ Minimum number of rows to assign to teminal nodes.
 A learning-rate parameter defining step size reduction.
 }   
   }
-\details{
-Note that indexing begins at zero, so for example, to specify the first column as the response variable, set \code{y = 0}. 
-}
 \value{
 An object of class \code{\linkS4class{H2OGBM}} with slots key, data, and model, where the last is a list of the following components:
 \item{type }{The type of the tree, which currently must be classification.}
@@ -72,10 +69,10 @@ library(h2oWrapper)
 h2oWrapper.installDepPkgs()
 localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 library(h2o)
-# Run classification GBM of CAPSULE ~ AGE + RACE + PSA + DCAPS
+# Run classification GBM on CAPSULE ~ AGE + RACE + PSA + DCAPS
 prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 h2o.gbm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, n.trees = 100, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
-# Run regression GBM of 
+# Run regression GBM on CAPSULE ~ AGE + RACE + PSA + DCAPS
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.gbm(y = "VOL", x = myX, data = prostate.hex, n.trees = 10, interaction.depth = 5, shrinkage = 0.1)
 }
