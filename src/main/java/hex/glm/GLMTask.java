@@ -7,8 +7,7 @@ import hex.gram.Gram;
 
 import java.util.Arrays;
 
-import water.MRTask2;
-import water.MemoryManager;
+import water.*;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -26,6 +25,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   final int _offset;
   final int _step;
   final boolean _complement;
+  final Job _job;
 
   int _nums = -1;
   int _cats = -1;
@@ -54,13 +54,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   // size of the top-left strictly diagonal region of the gram matrix, currently just the size of the largest categorical
   final protected int diagN(){if(_catOffsets.length < 2)return 0; return _catOffsets[1];}
 
-  public GLMTask(GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {this(glm, beta, standardize, cm, cv, 1,0,false);}
-  public GLMTask(GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv, int step, int offset, boolean complement) {
+  public GLMTask(Job job, GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {this(job,glm, beta, standardize, cm, cv, 1,0,false);}
+  public GLMTask(Job job, GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv, int step, int offset, boolean complement) {
     _standardize = standardize; _caseMode = cm; _caseVal = cv; _beta = beta;
     _glm = glm;
     _step = step;
     _offset = offset;
     _complement = complement;
+    _job = job;
   }
   protected GLMTask(GLMTask gt, double [] beta){
     _standardize = gt._standardize;
@@ -77,6 +78,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     _step = gt._step;
    _offset = gt._offset;
    _complement = gt._complement;
+   _job = gt._job;
   }
 
   /**
@@ -178,6 +180,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public void map(Chunk [] chunks){
+    if(_job.cancelled())throw new RuntimeException("Cancelled");
     final int nrows = chunks[0]._len;
     double [] nums = MemoryManager.malloc8d(_nums);
     int    [] cats = MemoryManager.malloc4(_cats);
@@ -222,19 +225,24 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     private long   _nobs;
     private double _ymu;
     private final double _reg;
-    public YMUTask(GLMParams glm, boolean standardize, CaseMode cm, double cv, long nobs) {
-      super(glm,null,standardize, cm, cv);
+    public YMUTask(Job job, GLMParams glm, boolean standardize, CaseMode cm, double cv, long nobs) {
+      super(job,glm,null,standardize, cm, cv);
       _reg = 1.0/nobs;
+      System.out.println("nobs = " + nobs + ", _reg = " + (1.0/nobs));
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
       _ymu += response;
       ++_nobs;
     }
+    @Override public void reduce(YMUTask t){
+      _ymu += t._ymu;
+      _nobs += t._nobs;
+    }
     @Override public void map(Chunk [] chunks){
       super.map(chunks);
       _ymu *= _reg;
     }
-    public double ymu(){return _ymu * (_nobs/_reg);}
+    public double ymu(){return _ymu /(_reg*_nobs);}
     public long nobs(){return _nobs;}
   }
   /**
@@ -248,8 +256,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     private final double _gPrimeMu;
     private long _nobs;
 
-    public LMAXTask(GLMParams glm, boolean standardize, CaseMode cm, double cv, double ymu, int P) {
-      super(glm,null,standardize, cm, cv);
+    public LMAXTask(Job job, GLMParams glm, boolean standardize, CaseMode cm, double cv, double ymu, int P) {
+      super(job,glm,null,standardize, cm, cv);
       _z = MemoryManager.malloc8d(P);
       _ymu = ymu;
       _gPrimeMu = glm.linkDeriv(ymu);
@@ -285,8 +293,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     double    _yy;
     GLMValidation _val; // validation of previous model
 
-    public GLMIterationTask(GLMParams glm, double [] beta, boolean standardize, double reg, CaseMode caseMode, double caseVal, int step, int offset, boolean complement) {
-      super(glm, beta, standardize, caseMode, caseVal, step, offset, complement);
+    public GLMIterationTask(Job job, GLMParams glm, double [] beta, boolean standardize, double reg, CaseMode caseMode, double caseVal, int step, int offset, boolean complement) {
+      super(job, glm, beta, standardize, caseMode, caseVal, step, offset, complement);
       _iter = 0;
       _reg = reg;
     }
@@ -306,11 +314,12 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
         if( _beta == null ) {
           mu = _glm.mustart(y);
           eta = _glm.link(mu);
+          _val.add(y, _ymu);
         } else {
           eta = computeEta(ncats, cats,nums);
           mu = _glm.linkInv(eta);
+          _val.add(y, mu);
         }
-        _val.add(y, mu);
         var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
         if( _glm.family == Family.binomial || _glm.family == Family.poisson ) {
           w = var;

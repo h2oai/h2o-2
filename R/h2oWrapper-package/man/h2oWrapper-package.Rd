@@ -12,7 +12,7 @@ This wrapper connects to an H2O instance and installs the corresponding R packag
 \tabular{ll}{
 Package: \tab h2oWrapper\cr
 Type: \tab Package\cr
-Version: \tab 1.0\cr
+Version: \tab 1.0.2\cr
 Date: \tab 2013-09-13\cr
 License: \tab Apache-2\cr
 Depends: \tab R (>= 2.13.0), RCurl, rjson, tools\cr
