@@ -36,8 +36,6 @@ REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
 
-REMOTE_0XCUSTOMER=0xcustomer@$REMOTE_IP
-
 # have to copy the downloaded h2o stuff over to 176 to execute with the ssh
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 echo "scp some jars"
@@ -106,7 +104,8 @@ do
 done < h2o_one_node
 
 rm -fr h2o-nodes.json
-../find_cloud.py -f h2o_one_node
+# NOTE: keep this hdfs info in sync with the json used to build the cloud above
+../find_cloud.py -f h2o_one_node -hdfs_version cdh3 -hdfs_name_node 192.168.1.176 -expected_size $CDH3_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json

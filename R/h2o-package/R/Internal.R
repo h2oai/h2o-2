@@ -46,8 +46,9 @@ h2o.__remoteSend <- function(client, page, ...) {
   # Sends the given arguments as URL arguments to the given page on the specified server
   url = paste("http://", ip, ":", port, "/", page, sep="")
   temp = postForm(url, style = "POST", ...)
-  after = gsub("NaN", "\"NaN\"", temp[1])
-  # after = gsub("Inf", "\"Inf\"", after)
+  # after = gsub("NaN", "\"NaN\"", temp[1])
+  after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
+  after = gsub("NaN", "\"NaN\"", after)
   after = gsub("-Infinity", "\"-Inf\"", after)
   after = gsub("Infinity", "\"Inf\"", after)
   res = fromJSON(after)

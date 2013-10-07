@@ -179,13 +179,9 @@ public class Job extends Request2 {
 
     @Override protected void logStart() {
       super.logStart();
-      if( response == null ) {
-        Log.info("    response: null");
-      } else {
-        String arg = input("response");
-        assert arg != null;
-        Log.info("    response: " + arg);
-      }
+      int idx = source.find(response);
+      Log.info("    response: "+(idx==-1?"null":source._names[idx]));
+      Log.info("    "+(classification ? "classification" : "regression"));
     }
 
     @Override protected void init() {

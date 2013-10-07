@@ -6,11 +6,11 @@ localH2O = h2oWrapper.init(ip = "127.0.0.1", port = 54321)
 
 # For hands-on audience participation
 # H2O Import, Summary, GLM and K-Means on prostate cancer data set
-# prostate.hex = h2o.importFile(localH2O, path = "../../smalldata/logreg/prostate.hex", key = "prostate.hex")
 library(h2o)
+# prostate.hex = h2o.importFile(localH2O, path = "../../smalldata/logreg/prostate.hex", key = "prostate.hex")
 prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 summary(prostate.hex)
-prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","GLEASON"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
+prostate.glm = h2o.glm(x = c("AGE","RACE","PSA","GLEASON"), y = "CAPSULE", data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(prostate.glm)
 prostate.km = h2o.kmeans(data = prostate.hex, centers = 5, cols = c("AGE","RACE","GLEASON","CAPSULE","PSA"))
 print(prostate.km)

@@ -16,53 +16,51 @@ import water.*;
 import water.api.ConfusionMatrix;
 import water.fvec.*;
 
-@Ignore
 public class GBMTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
-  private abstract class PrepData { abstract Vec prep(Frame fr); }
+  private abstract class PrepData { abstract int prep(Frame fr); }
 
   @Test public void testBasicGBM() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
+    //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
-    //basicGBM("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }});
+    basicGBM("./smalldata/cars.csv","cars.hex",
+             new PrepData() { int prep(Frame fr ) { UKV.remove(fr.remove("name")._key); return ~fr.find("economy (mpg)"); }});
 
     // Classification tests
     basicGBM("./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove(1); }
+             new PrepData() { int prep(Frame fr) { return 1; }
              });
-
     basicGBM("./smalldata/test/test_tree_minmax.csv","tree_minmax.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("response"); }
+             new PrepData() { int prep(Frame fr) { return fr.find("response"); }
              });
     basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
              new PrepData() {
-               Vec prep(Frame fr) {
+               int prep(Frame fr) {
                  assertEquals(380,fr.numRows());
                  // Remove patient ID vector
                  UKV.remove(fr.remove("ID")._key);
                  // Prostate: predict on CAPSULE
-                 return fr.remove("CAPSULE");
+                 return fr.find("CAPSULE");
                }
              });
     basicGBM("./smalldata/cars.csv","cars.hex",
-             new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); }
+             new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); }
              });
     basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+             new PrepData() { int prep(Frame fr) { return fr.find("IsDepDelayed"); }
              });
     //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
     //         new PrepData() {
-    //           Vec prep(Frame fr) {
+    //           int prep(Frame fr) {
     //             assertEquals(581012,fr.numRows());
     //             for( int ign : IGNS )
     //               UKV.remove(fr.remove("C"+Integer.toString(ign))._key);
     //             // Covtype: predict on last column
-    //             return fr.remove(fr.numCols()-1);
+    //             return fr.numCols()-1;
     //           }
     //         });
   }
@@ -77,18 +75,21 @@ public class GBMTest extends TestUtil {
     Frame fr = null;
     try {
       gbm = new GBM();
-      gbm.classification = true;
-      gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
+      gbm.source = fr = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
-      gbm.response = prep.prep(gbm.source);
-      gbm.source.add("response",gbm.response);
+      int idx = prep.prep(fr);
+      if( idx < 0 ) { gbm.classification = false; idx = ~idx; }
+      String rname =fr._names[idx];
+      gbm.response = fr.vecs()[idx];
+      fr.remove(idx);           // Move response to the end
+      fr.add(rname,gbm.response);
       gbm.ntrees = 5;
       gbm.max_depth = 5;
-      gbm.learn_rate = .2f;
       gbm.min_rows = 1;
       gbm.nbins = 100;
-      gbm.cols = new int[gbm.source.numCols()];
+      gbm.cols = new int[fr.numCols()];
       for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
+      gbm.learn_rate = .2f;
       gbm.invoke();
 
       fr = gbm.score(gbm.source);
@@ -114,17 +115,17 @@ public class GBMTest extends TestUtil {
   /*@Test*/ public void testBasicDRF() {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
+    //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
 
     // Classification tests
     basicDRF("./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { Vec prep(Frame fr) { return fr.remove(fr.numCols()-1); }
+             new PrepData() { int prep(Frame fr) { return fr.numCols()-1; }
              });
 
     //basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
     //         new PrepData() {
-    //           Vec prep(Frame fr) {
+    //           int prep(Frame fr) {
     //             assertEquals(380,fr.numRows());
     //             // Remove patient ID vector
     //             UKV.remove(fr.remove("ID")._key);
@@ -133,24 +134,24 @@ public class GBMTest extends TestUtil {
     //           }
     //         });
     //basicDRF("./smalldata/iris/iris_wheader.csv","iris.hex",
-    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("class"); }
+    //         new PrepData() { int prep(Frame fr) { return fr.remove("class"); }
     //         });
     //basicDRF("./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
-    //         new PrepData() { Vec prep(Frame fr) {
+    //         new PrepData() { int prep(Frame fr) {
     //           UKV.remove(fr.remove("IsArrDelayed")._key);
     //           return fr.remove("IsDepDelayed");
     //         }
     //         });
     //basicDRF("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { Vec prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); }
+    //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("cylinders"); }
     //         });
     //basicDRF("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-    //         new PrepData() { Vec prep(Frame fr) { return fr.remove("IsDepDelayed"); }
+    //         new PrepData() { int prep(Frame fr) { return fr.remove("IsDepDelayed"); }
     //         });
     //basicDRF("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
     //         //basicDRF("./smalldata/covtype/covtype.20k.data","covtype.hex",
     //         new PrepData() {
-    //           Vec prep(Frame fr) {
+    //           int prep(Frame fr) {
     //             for( int ign : IGNS )
     //               UKV.remove(fr.remove(Integer.toString(ign))._key);
     //             // Covtype: predict on last column
@@ -166,12 +167,19 @@ public class GBMTest extends TestUtil {
     Key dest = Key.make(hexname);
     DRF drf = null;
     Frame fr = null;
+    SharedTreeModelBuilder mb = null;
     try {
       drf = new DRF();
       drf.classification = true;
-      drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
+      fr = drf.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
-      drf.response = prep.prep(drf.source);
+      int idx = prep.prep(fr);
+      if( idx < 0 ) { drf.classification = false; idx = ~idx; }
+      String rname =fr._names[idx];
+      drf.response = fr.vecs()[idx];
+      fr.remove(idx);           // Move response to the end
+      fr.add(rname,drf.response);
+
       drf.ntrees = 2;
       drf.max_depth = 50;
       drf.min_rows = 1;

@@ -195,7 +195,9 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       }
       for(;i < chunks.length-1;++i)
         nums[i-_cats] = (chunks[i].at0(r) - _normSub[i-_cats])*_normMul[i-_cats];
-      processRow(nums, ncats, cats, chunks[chunks.length-1].at0(r));
+      double y = chunks[chunks.length-1].at0(r);
+      if( _caseMode != CaseMode.none ) y = (_caseMode.isCase(y, _caseVal)) ? 1 : 0;
+      processRow(nums, ncats, cats,y);
     }
   }
 
@@ -297,7 +299,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
 
     @Override public final void processRow(double [] nums, int ncats, int [] cats, double y){
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
-      if( _caseMode != CaseMode.none ) y = (_caseMode.isCase(y, _caseVal)) ? 1 : 0;
+      assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
       double w = 1;
       double eta = 0, mu = 0, var = 1;
       if( _glm.family != Family.gaussian) {
@@ -308,11 +310,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
           eta = computeEta(ncats, cats,nums);
           mu = _glm.linkInv(eta);
         }
-        if(Double.isNaN(mu)){
-          System.out.println("got NaN mu from: beta=" + Arrays.toString(_beta) + ", row = " + Arrays.toString(nums) + ", cats = " + Arrays.toString(cats) + ", ncats = " + ncats);
-        }
         _val.add(y, mu);
-
         var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
         if( _glm.family == Family.binomial || _glm.family == Family.poisson ) {
           w = var;

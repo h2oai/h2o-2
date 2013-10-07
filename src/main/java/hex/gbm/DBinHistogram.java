@@ -145,9 +145,14 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       ns1[  (b-0)  ] = k0+k1;
       assert ns0[b]+ns1[b]==tot;
     }
-    assert Math.abs(MS0[2*_nbins+1]-MS1[2*0+1]) < 1e-8 
-      : Arrays.toString(MS0)+":"+Arrays.toString(MS1)+", "+
-      Arrays.toString(ns0)+":"+Arrays.toString(ns1);
+
+    // Assert we computed the variance in both directions to some near-equal amount
+    double last_var_left_side = MS0[2*_nbins+1];
+    double frst_var_rite_side = MS1[2*  0   +1];
+    double abs_err = Math.abs(frst_var_rite_side-last_var_left_side);
+    double rel_err = abs_err/last_var_left_side;
+    assert abs_err < 1e-19 || rel_err < 1e-9 : Arrays.toString(MS0)+":"+Arrays.toString(MS1)+", "+
+      Arrays.toString(ns0)+":"+Arrays.toString(ns1)+", var relative error="+rel_err+", var absolute error="+abs_err;
 
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
@@ -285,6 +290,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
   @Override long byteSize() {
     long sum = super.byteSize();
+    sum += 4+4+2+2;/*step,bmin,nbins,pad*/
     sum += 8+byteSize(_bins);
     sum += 8+byteSize(_mins);
     sum += 8+byteSize(_maxs);

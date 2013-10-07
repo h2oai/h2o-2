@@ -104,10 +104,13 @@ public abstract class Model extends Iced {
         Chunk p = chks[_names.length-1];
         for( int i=0; i<p._len; i++ ) {
           score0(chks,i,tmp,preds);
-          p.set0(i,Utils.maxIndex(preds));
-          if( nclasses() > 1 )
+          if( nclasses() > 1 ) {
+            p.set0(i,Utils.maxIndex(preds));
             for( int c=0; c<nclasses(); c++ )
               chks[_names.length+c].set0(i,preds[c]);
+          } else {
+            p.set0(i,preds[0]);
+          }
         }
       }
     }.doAll(adaptFrm);
@@ -135,9 +138,9 @@ public abstract class Model extends Iced {
   /** Single row scoring, on a compatible set of data, given an adaption vector */
   public final float[] score( int map[][], double row[], float[] preds ) {
     int[] colMap = map[map.length-1]; // Column mapping is the final array
-    assert colMap.length == _names.length;
-    double tmp[] = new double[_names.length]; // The adapted data
-    for( int i=0; i<_names.length; i++ ) {
+    assert colMap.length == _names.length-1 : " "+Arrays.toString(colMap)+" "+Arrays.toString(_names);
+    double tmp[] = new double[colMap.length]; // The adapted data
+    for( int i=0; i<colMap.length; i++ ) {
       // Column mapping, or NaN for missing columns
       double d = colMap[i]==-1 ? Double.NaN : row[colMap[i]];
       if( map[i] != null ) {    // Enum mapping

@@ -59,7 +59,7 @@ public class GLMValidation extends Iced {
       finalize_AIC_AUC();
     }
     @Override public void generateHTML(String title, StringBuilder sb) {
-      super.generateHTML(title, sb);
+      super.generateHTML(_xvalModels.length + "-fold Cross Validation", sb);
       // add links to the xval models
       sb.append("<h4>Cross Validation Models</h4>");
       sb.append("<table class='table table-bordered table-condensed'>");
@@ -178,7 +178,7 @@ public class GLMValidation extends Iced {
   }
 
   public void generateHTML(String title, StringBuilder sb) {
-    sb.append("<h4>Validation on: " + dataKey + "</h4>");
+    sb.append("<h4>" + title + "</h4>");
     sb.append("<table class='table table-striped table-bordered table-condensed'>");
     final long null_dof = nobs-1, res_dof = Math.max(0,nobs-_rank-1);
     sb.append("<tr><th>Degrees of freedom:</th><td>" + null_dof + " total (i.e. Null); " + res_dof + " Residual</td></tr>");

@@ -10,7 +10,7 @@ import hex.glm.GLMValidation.GLMXValidation;
 import hex.glm.LSMSolver.ADMMSolver;
 
 import java.util.ArrayList;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import jsr166y.CountedCompleter;
 import water.*;
@@ -49,6 +49,7 @@ public class GLM2 extends FrameJob{
   private final int _offset;
   private final boolean _complement;
   private double [] _beta;
+  private GLMModel _oldModel;
 
 //  @API(help = "Link.", filter = Default.class)
   Link link = Link.identity;
@@ -91,6 +92,14 @@ public class GLM2 extends FrameJob{
     _beta = beta;
     this.n_folds = nfold;
   }
+
+  private long _startTime;
+  @Override protected Response serve() {
+    link = family.defaultLink;
+    _startTime = System.currentTimeMillis();
+    run(null);
+    return GLMProgressPage2.redirect(this, self(),dest());
+  }
   private static double beta_diff(double[] b1, double[] b2) {
     if(b1 == null)return Double.MAX_VALUE;
     double res = Math.abs(b1[0] - b2[0]);
@@ -104,23 +113,7 @@ public class GLM2 extends FrameJob{
     return (float)m.iteration/(float)max_iter; // TODO, do something smarter here
   }
 
-  private long _startTime;
-  @Override protected void exec(){
-    link = family.defaultLink;
-    _startTime = System.currentTimeMillis();
-    GLMModel m = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime);
-    DKV.put(dest(), m);
-    try {
-      fork(null).get();
-    } catch( InterruptedException e ) {
-      throw new RuntimeException(e);
-    } catch( ExecutionException e ) {
-      throw new RuntimeException(e);
-    }
-  }
-  @Override protected Response redirect() {
-    return GLMProgressPage2.redirect(this, self(),dest());
-  }
+
 
   private class Iteration extends H2OCallback<GLMIterationTask> {
     final LSMSolver solver;
@@ -146,23 +139,24 @@ public class GLM2 extends FrameJob{
         newBeta = glmt._beta == null?newBeta:glmt._beta;
       }
       done = done || family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon;
-      GLMModel res = new GLMModel(dest(),null,glmt._iter+1,fr,glmt,beta_epsilon,alpha,lambda,newBeta,0.5,null,System.currentTimeMillis() - start_time);
+      GLMModel res = new GLMModel(dest(),null,glmt._iter+1,fr,glmt,beta_epsilon,alpha,lambda,newBeta,0.5,null,System.currentTimeMillis() - start_time,GLM2.this.case_mode,GLM2.this.case_val);
       if(done){
         // final validation
+        GLMValidationTask t = new GLMValidationTask(res,_step,_offset,true);
+        t.doAll(fr);
+        t._res.finalize_AIC_AUC();
+        res.setValidation(t._res);
+        DKV.put(dest(),res);
         if(GLM2.this.n_folds < 2){
-          GLMValidationTask t = new GLMValidationTask(res,_step,_offset,true);
-          t.doAll(fr);
-          Key valKey = GLMValidation.makeKey();
-          DKV.put(valKey,t._res);
-          t._res.finalize_AIC_AUC();
-          res.setValidation(valKey);
-          DKV.put(dest(),res);
           remove();
           fjt.tryComplete(); // signal we're done to anyone waiting for the job
         } else
           xvalidate(res, fjt);
       } else {
-        DKV.put(dest(),res);
+        glmt._val.finalize_AIC_AUC();
+        _oldModel.setValidation(glmt._val);
+        DKV.put(dest(),_oldModel);// validation is one iteration behind
+        _oldModel = res;
         GLMIterationTask nextIter = new GLMIterationTask(glmt, newBeta);
         nextIter.setCompleter(clone()); // we need to clone here as FJT will set status to done after this method
         nextIter.dfork(fr);
@@ -175,7 +169,9 @@ public class GLM2 extends FrameJob{
       return true;
     }
   }
-  public H2OCountedCompleter fork(H2OCountedCompleter completer){
+
+  public Future run(H2OCountedCompleter completer){
+    _oldModel = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime,GLM2.this.case_mode,GLM2.this.case_val);
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
     source.remove(ignored_cols);
     final Vec [] vecs =  source.vecs();
@@ -185,7 +181,7 @@ public class GLM2 extends FrameJob{
         source.add(source._names[i], source.remove(i));
         break;
       }
-    for(int i = 0; i < vecs.length-1; ++i) // put response to the end
+    for(int i = 0; i < vecs.length-1; ++i) // remove constant cols and cols with too many NAs
       if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)constantOrNAs.add(i);
     if(!constantOrNAs.isEmpty()){
       int [] cols = new int[constantOrNAs.size()];
@@ -209,10 +205,7 @@ public class GLM2 extends FrameJob{
     final Key [] keys = new Key[n_folds];
     H2OCallback callback = new H2OCallback() {
       @Override public void callback(H2OCountedCompleter t) {
-        GLMXValidation xval = new GLMXValidation(model, keys);
-        Key xvalKey = Key.make();
-        DKV.put(xvalKey, xval);
-        model.setValidation(xvalKey);
+        model.setValidation(new GLMXValidation(model, keys));
         DKV.put(model._selfKey, model);
         GLM2.this.remove();
       }
@@ -220,6 +213,6 @@ public class GLM2 extends FrameJob{
     callback.addToPendingCount(n_folds-1);
     callback.setCompleter(cmp);
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta).fork(callback);
+      new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta).run(callback);
   }
 }
