@@ -1,3 +1,5 @@
+if(!"testthat" %in% rownames(installed.packages())) install.packages("testthat")
+library(testthat)
 context("Slice Tests") #set context for test. Here we are checking the tail() functionality
 # R -f runit_sliceColTail_iris.R --args H2OServer:Port
 # By default, H2OServer = 127.0.0.1 and Port = 54321
@@ -34,10 +36,8 @@ h2oWrapper.init(ip=myIP, port=myPort, startH2O=FALSE, silentUpgrade = TRUE)
 
 # Load H2O R package and run test
 if(!"RUnit" %in% rownames(installed.packages())) install.packages("RUnit")
-if(!"testthat" %in% rownames(installed.packages())) install.packages("testthat")
 
 library(RUnit)
-library(testthat)
 library(h2o)
 
 if(Sys.info()['sysname'] == "Windows")
@@ -48,7 +48,7 @@ H2Ocon <- new("H2OClient", ip=myIP, port=myPort)
 
 test.slice.colTail <- function(con) {
   cat("\nImporting iris.csv data...\n")
-  iris.hex = h2o.uploadFile(H2Ocon, "smalldata/iris/iris_wheader.csv", "iris.hex")
+  iris.hex = h2o.uploadFile(H2Ocon, "../../smalldata/iris/iris_wheader.csv", "iris.hex")
   cat("\nCheck that summary works...")
   summary(iris.hex)
   summary_ <- summary(iris.hex) #keep the summary around

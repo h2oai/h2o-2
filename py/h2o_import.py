@@ -384,13 +384,19 @@ def count_keys(node=None, pattern=None, timeoutSecs=30):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
     nodeCnt = 0
+    offset = 0
     while True:
         # we get 20 at a time with default storeView
-        storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
+        # if we get < 20, we're done
+        storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, offset=offset, view=20, **kwargs)
         keys = storeViewResult['keys']
         if not keys:
             break
         nodeCnt += len(storeViewResult['keys'])
+        if len(keys) < 20:
+            break
+        offset += 20
+
     print nodeCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return nodeCnt
 

@@ -1,9 +1,12 @@
+if(!"testthat" %in% rownames(installed.packages())) install.packages("testthat")
+library(testthat)
+context("GBM Test") #set context for test. Here we are checking GBM
 # Test gradient boosting machines in H2O
-# R -f runit_GBM.R --args H2OServer:Port
+# R -f runit_GBM_ecology.R --args H2OServer:Port
 # By default, H2OServer = 127.0.0.1 and Port = 54321
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 1)
-  stop("Usage: R -f runit_GBM.R --args H2OServer:Port")
+  stop("Usage: R -f runit_GBM_ecology.R --args H2OServer:Port")
 if(length(args) == 0) {
   myIP = "127.0.0.1"
   myPort = 54321
@@ -54,28 +57,69 @@ grabRemote <- function(myURL, myFile) {
   return(aap.file)
 }
 
-checkGBMModel <- function(myGBM.h2o, myGBM.r) {
+checkGBMModel <- function(myGBM.h2o, myGBM.r,serverH2O) {
   # Check GBM model against R
+  cat("\nMSE by tree in H2O:")
+  print(myGBM.h2o@model$err)
+  cat("\nGaussian Deviance by tree in R (i.e. the per tree 'train error'): \n")
+  print(myGBM.r$train.error)
+  cat("Expect these to be close... mean of the absolute differences is < .5, and sd < 0.1")
+  errDiff <- abs(myGBM.r$train.error - myGBM.h2o@model$err)
+  cat("\nMean of the absolute difference is: ", mean(errDiff))
+  cat("\nStandard Deviation of the absolute difference is: ", sd(errDiff))
+  expect_true(mean(errDiff) < 0.5)
+  expect_true(sd(errDiff) < 0.1)
+  
+  # Compare GBM models on out-of-sample data
+  cat("\nUploading ecology testing data...\n")
+  ecologyTest.hex <- h2o.uploadFile(serverH2O, "../../smalldata/gbm_test/ecology_eval.csv")
+  ecologyTest.data <- read.csv("../../smalldata/gbm_test/ecology_eval.csv")
+  actual <- ecologyTest.data[,1]
+  cat("\nPerforming the predictions on h2o GBM model: ")
+  #TODO: Building CM in R instead of in H2O
+  h2ogbm.predict <- h2o.predict(myGBM.h2o, ecologyTest.hex)
+  h2o.preds <- head(h2ogbm.predict,nrow(h2ogbm.predict))[,1]
+  h2oCM <- table(actual,h2o.preds)
+  cat("\nH2O CM is: \n")
+  print(h2oCM)
+  cat("\nPerforming the predictions of R GBM model: ")
+  R.preds <- ifelse(predict.gbm(myGBM.r, ecologyTest.data,n.trees=100,type="response") < 0.5, 0,1)
+  cat("\nR CM is: \n")
+  RCM <- table(actual,R.preds)
+  print(RCM)
+  cat("\nCompare AUC from R and H2O:\n")
+  cat("\nH2O AUC: ")
+  print(gbm.roc.area(actual,h2o.preds))
+  cat("\nR AUC: ")
+  print(gbm.roc.area(actual,R.preds))
 }
 
 test.GBM.ecology <- function(serverH2O) {
+  
   cat("\nImporting ecology_model.csv data...\n")
-  # ecology.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv")
-  # ecology.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/gbm_test/ecology_model.csv"))
   ecology.hex = h2o.uploadFile(serverH2O, "../../smalldata/gbm_test/ecology_model.csv")
   ecology.sum = summary(ecology.hex)
+  cat("\nSummary of the ecology data from h2o: \n") 
   print(ecology.sum)
   
-  # ecology.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/gbm_test/ecology_model.csv"), header = TRUE)
+  #import csv data for R to use
   ecology.data = read.csv("../../smalldata/gbm_test/ecology_model.csv", header = TRUE)
-  ecology.data = na.omit(ecology.data)
+  ecology.data = na.omit(ecology.data) #this omits NAs... does GBM do this? Perhaps better to model w/o doing this?
   
   cat("\nH2O GBM with parameters:\nntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1\n")
-  ecology.h2o = h2o.gbm(ecology.hex, destination = "ecology.gbm", y = "Site", ntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1)
+  #Train H2O GBM Model:
+  ecology.h2o = h2o.gbm(ecology.hex, destination = "ecology.h2o", x=3:13, y = "Angaus", ntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1)
   print(ecology.h2o)
   
-  allyears.gbm = gbm(Site ~ ., data = ecology.data, distribution = "gaussian", n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
-  checkGBMModel(allyears.h2o, allyears.gbm)
+  #Train R GBM Model: Using Gaussian loss function for binary outcome OK... Also more comparable to H2O, which uses MSE
+  ecology.r = gbm(Angaus ~ ., data = ecology.data[,-1], distribution = "gaussian", 
+                  n.trees = 100,
+                  interaction.depth = 5, 
+                  n.minobsinnode = 10, 
+                  shrinkage = 0.1,
+                  bag.fraction=1)
+
+  checkGBMModel(ecology.h2o, ecology.r, serverH2O)
 }
 
 test.GBM.airlines <- function() {

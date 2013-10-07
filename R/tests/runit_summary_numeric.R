@@ -1,3 +1,5 @@
+if(!"testthat" %in% rownames(installed.packages())) install.packages("testthat")
+library(testthat)
 context("Summary Tests Numeric") #set context for test. Here we are checking the tail() functionality
 # R -f runit_summary_numeric.R --args H2OServer:Port
 # By default, H2OServer = 127.0.0.1 and Port = 54321
@@ -50,7 +52,7 @@ H2Ocon <- new("H2OClient", ip=myIP, port=myPort)
 
 test.summary.numeric <- function(con) {
   cat("\nImporting USArrests.csv data...\n")
-  arrests.hex = h2o.uploadFile(H2Ocon, "smalldata/pca_test/USArrests.csv", "arrests.hex")
+  arrests.hex = h2o.uploadFile(H2Ocon, "../../smalldata/pca_test/USArrests.csv", "arrests.hex")
   cat("\nCheck that summary works...")
   summary(arrests.hex)
   summary_ <- summary(arrests.hex)

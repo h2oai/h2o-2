@@ -70,6 +70,9 @@ def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySec
         if benchmarkLogging:
             h2o.cloudPerfH2O.get_log_save(benchmarkLogging)
 
+        # check the sandbox for stack traces! just like we do when polling normally
+        h2o.check_sandbox_for_errors()
+
     patternKeys = []
     for j in jobs:
         # save the destination keys in progress that match pattern (for returning)

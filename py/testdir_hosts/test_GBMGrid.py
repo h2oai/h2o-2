@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
         #max_depth = 20
         grid = [[1,10,100,1000], [0.0,0.01,0.001,0.0001,1], [1,2], [1,10,100]] 
         grid = list(itertools.product(*grid))
-        for importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse in files:
+        for importFolderPath,csvFilename,trainKey,timeoutSecs,response in files:
             # PARSE train****************************************
             start = time.time()
             parseResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + csvFilename,
@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
                  'ntrees':ntree,
                  'max_depth':max_depth,
                  'min_rows':min_rows,
-                 'vresponse':vresponse
+                 'response':response
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()

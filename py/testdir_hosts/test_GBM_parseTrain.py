@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
                  ('standard', 'allyears.csv', 'allyears2k.hex',1800,'IsArrDelayed')
                 ]
                   
-        for importFolderPath,csvFilename,trainKey,timeoutSecs,vresponse in files:
+        for importFolderPath,csvFilename,trainKey,timeoutSecs,response in files:
             h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             start = time.time()
@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
                 'ntrees':1,
                 'max_depth':1,
                 'min_rows':1,
-                'vresponse':vresponse
+                'response':response
             }   
             print "Using these parameters for GBM: ", params
             kwargs = params.copy()

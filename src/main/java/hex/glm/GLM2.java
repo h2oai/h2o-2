@@ -10,7 +10,6 @@ import hex.glm.GLMValidation.GLMXValidation;
 import hex.glm.LSMSolver.ADMMSolver;
 
 import java.util.ArrayList;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import jsr166y.CountedCompleter;
@@ -99,7 +98,7 @@ public class GLM2 extends FrameJob{
   @Override protected Response serve() {
     link = family.defaultLink;
     _startTime = System.currentTimeMillis();
-    fork();
+    run(null);
     return GLMProgressPage2.redirect(this, self(),dest());
   }
   private static double beta_diff(double[] b1, double[] b2) {
@@ -114,16 +113,9 @@ public class GLM2 extends FrameJob{
     GLMModel m = DKV.get(dest()).get();
     return (float)m.iteration/(float)max_iter; // TODO, do something smarter here
   }
-  @Override public void run(){
-    try {
-      fork().get();
-    } catch( InterruptedException e ) {
-      throw new RuntimeException(e);
-    } catch( ExecutionException e ) {
-      throw new RuntimeException(e);
-    }
-  }
-  public Future fork(){return fork(null);}
+
+
+
   private class Iteration extends H2OCallback<GLMIterationTask> {
     final LSMSolver solver;
     final Frame fr;
@@ -179,7 +171,7 @@ public class GLM2 extends FrameJob{
     }
   }
 
-  public Future fork(H2OCountedCompleter completer){
+  public Future run(H2OCountedCompleter completer){
     final H2OCountedCompleter fjt = new H2OEmptyCompleter();
     if(completer != null)fjt.setCompleter(completer);
     start(fjt);
@@ -205,6 +197,7 @@ public class GLM2 extends FrameJob{
     ymut.doAll(fr);
     GLMIterationTask firstIter = new GLMIterationTask(new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
     firstIter._ymu = ymut.ymu();
+    if(completer != null)fjt.setCompleter(completer);
     final LSMSolver solver = new ADMMSolver(lambda, alpha);
     firstIter.setCompleter(new Iteration(solver,fr,fjt));
     firstIter.dfork(fr);
@@ -223,6 +216,6 @@ public class GLM2 extends FrameJob{
     callback.addToPendingCount(n_folds-1);
     callback.setCompleter(cmp);
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta).fork(callback);
+      new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta).run(callback);
   }
 }

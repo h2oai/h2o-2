@@ -45,8 +45,10 @@ The particular tree to retrieve. (Must be an integer between 1 and \code{ntree})
 \code{\link{h2o.randomForest}}, \code{\linkS4class{H2ORForestModel}}
 }
 \examples{
-localH2O = new("H2OClient")
-h2o.checkClient(localH2O)
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+library(h2o)
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 iris.rf = h2o.randomForest(y = 4, data = iris.hex, ntree = 50, depth = 100)

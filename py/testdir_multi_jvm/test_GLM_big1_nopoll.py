@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             print "\njobDispatch #", jobDispatch
 
             timeoutSecs = 200
-        h2o_jobs.pollWaitJobs(pattern='GLMModel', timeoutSecs=timeoutSecs, retryDelaySecs=10)
+        h2o_jobs.pollWaitJobs(pattern='GLM', timeoutSecs=timeoutSecs, retryDelaySecs=10)
         elapsed = time.time() - start
         print "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 

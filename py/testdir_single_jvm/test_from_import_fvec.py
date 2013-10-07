@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
         # pop open a browser on the cloud
         # h2b.browseTheCloud()
 
-        for (importFolderPath, csvFilename, vresponse) in csvFilenameList:
+        for (importFolderPath, csvFilename, response) in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             csvPathname = importFolderPath + "/" + csvFilename 
             
@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
             h2o.check_sandbox_for_errors()
 
             # have to avoid this on nflx data. colswap with exec
-            # Exception: rjson error in gbm: Argument 'vresponse' error: Only integer or enum/factor columns can be classified
+            # Exception: rjson error in gbm: Argument 'response' error: Only integer or enum/factor columns can be classified
             if importFolderPath=='manyfiles-nflx-gz':
                 execExpr = 'c.hex=colSwap(c.hex,378,(c.hex[378]>15 ? 1 : 0))'
                 resultExec = h2o_cmd.runExec(expression=execExpr)
@@ -100,7 +100,7 @@ class Basic(unittest.TestCase):
                 'ntrees': 2,
                 'max_depth': 8,
                 'min_rows': 1,
-                'vresponse': vresponse
+                'response': response
                 }
 
             kwargs = params.copy()

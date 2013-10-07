@@ -76,6 +76,10 @@ do
 done
 ls -lt ./h2o-nodes.json
 
+# do this just to probe the cloud and check it's size is as expected
+# R doesn't use the created h2o-nodes.json. FIX! we can use the -expected_size to verify the cloud size
+../find_cloud.py -f h2o_one_node -hdfs_version cdh3 -hdfs_name_node 192.168.1.176
+
 # We now have the h2o-nodes.json, that means we started the jvms
 # Shouldn't need to wait for h2o cloud here..
 # the test should do the normal cloud-stabilize before it does anything.
@@ -183,9 +187,9 @@ myR runit_RF 120
 myR runit_PCA 35
 myR runit_GLM 35
 myR runit_kmeans 60
-myR runit_tail_numeric.R 60
-myR runit_summary_numeric.R 60
-myR runit_GBM 1200
+myR runit_tail_numeric 60
+myR runit_summary_numeric 60
+myR runit_GBM_ecology 1200
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!

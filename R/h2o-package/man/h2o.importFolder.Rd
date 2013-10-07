@@ -46,8 +46,10 @@ WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until
     %% ~~objects to See Also as \code{\link{help}}, ~~~
   }
 \examples{
-localH2O = new("H2OClient", ip = "localhost", port = 54321)
-h2o.checkClient(localH2O)
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+library(h2o)
 myPath = paste(path.package("h2o"), "extdata", sep="/")
 all_files.hex = h2o.importFolder(localH2O, path = myPath)
 for(i in 1:length(all_files.hex))

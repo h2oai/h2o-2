@@ -102,7 +102,8 @@ class Basic(unittest.TestCase):
             # always slice from the beginning
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r" + str(trial)
-            execExpr = resultKey + "=slice(" + dataKeyTrain + ",1," + str(rowsToUse) + ")"
+            # FIX! do we really need to slice here? isn't it 10% already as a result of the filter?
+            execExpr = resultKey + "=slice(" + dataKeyTrain + ",0," + str(rowsToUse) + ")"
             # execExpr = resultKey + "=slice(" + dataKeyTrain + ",1)"
             h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
             parseResult['destination_key'] = resultKey

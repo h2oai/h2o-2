@@ -50,15 +50,22 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
   }
 
+  @Override protected void logStart() {
+    super.logStart();
+    Log.info("    ntrees: " + ntrees);
+    Log.info("    max_depth: " + max_depth);
+    Log.info("    min_rows: " + min_rows);
+    Log.info("    nbins: " + nbins);
+  }
+
   // --------------------------------------------------------------------------
   // Driver for model-building.
   public void buildModel( ) {
-    selectCols();
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
     _ncols = _train.length;
     _nrows = source.numRows() - response.naCnt();
-    _ymin = (int)response.min(); 
+    _ymin = classification ? (int)response.min() : 0;
     assert (classification && response.isInt()) || // Classify Int or Enums
       (!classification && !response.isEnum());     // Regress  Int or Float
     _nclass = classification ? (char)(response.max()-_ymin+1) : 1; 
@@ -74,11 +81,12 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     String domains[][] = frm.domains();
 
     String[] domain = response.domain();
-    if( domain == null )        // No names?  Make some up.
-      domains[_ncols] = domain = _nclass == 1 ? new String[] {"regressor"} : response.defaultLevels();
+    if( domain == null && _nclass > 1 ) // No names?  Make some up.
+      domains[_ncols] = domain = response.defaultLevels();
+    if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution
-    _distribution = new ClassDist().doAll(response)._ys;
+    _distribution = _nclass > 1 ? new ClassDist().doAll(response)._ys : null;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -96,7 +104,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // One Tree per class, each tree needs a NIDs.  For empty classes use a -1
     // NID signifying an empty regression tree.
     for( int i=0; i<_nclass; i++ )
-      fr.add("NIDs_"+domain[i], response.makeCon(_distribution[i]==0?-1:0));
+      fr.add("NIDs_"+domain[i], response.makeCon(_distribution==null ? 0 : (_distribution[i]==0?-1:0)));
 
     // Tail-call position: this forks off in the background, and this call
     // returns immediately.  The actual model build is merely kicked off.
@@ -302,13 +310,18 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // Score all Rows
       for( int row=0; row<ys._len; row++ ) {
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
-        int ycls = (int)ys.at80(row)-_ymin; // Response class from 0 to nclass-1
-        assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin+" "+ys+_fr;
         double sum = score0(chks,ds,row);
-        double err = Double.isInfinite(sum)
-          ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
-          : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
-        assert !Double.isNaN(err) : ds[ycls] + " " + sum;
+        double err;  int ycls=0;
+        if( _nclass > 1 ) {     // Classification
+          ycls = (int)ys.at80(row)-_ymin; // Response class from 0 to nclass-1
+          assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin+" "+ys+_fr;
+          err = Double.isInfinite(sum)
+            ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
+            : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
+          assert !Double.isNaN(err) : ds[ycls] + " " + sum;
+        } else {                // Regression
+          err = ys.at0(row) - sum;
+        }
         _sum += err*err;               // Squared error
         assert !Double.isNaN(_sum);
         int best=0;                    // Pick highest prob for our prediction
@@ -326,9 +339,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       long err=_nrows;
       for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");
-      Log.info(tag,"Mean Squared Error for forest is "+(_sum/_nrows));
-      Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
-      System.out.println("CM= "+Arrays.deepToString(_cm));
+      Log.info(tag,"Mean Squared Error is "+(_sum/_nrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
+      if( _nclass > 1 ) 
+        Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, CM= "+Arrays.deepToString(_cm));
       return this;
     }
   }
