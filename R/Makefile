@@ -28,7 +28,7 @@ endif
 	R CMD build h2oWrapper-package
 	mkdir -p ../target/R
 	cp -p README.txt ../target/R
-	mv h2oWrapper_1.0.1.tar.gz ../target/R
+	mv h2oWrapper_1.0.2.tar.gz ../target/R
 
 clean:
 	rm -f h2o-package/DESCRIPTION

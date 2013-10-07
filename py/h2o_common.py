@@ -1,6 +1,27 @@
 import time
 import h2o, h2o_hosts, h2o_import as h2i
 
+class SetupUnitTest(object):
+    def tearDown(self):
+        h2o.check_sandbox_for_errors()
+
+    @classmethod
+    def setUpClass(cls):
+        global localhost
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=cls.nodes, java_heap_GB=cls.java_xmx)
+        else:
+            h2o_hosts.build_cloud_with_hosts()
+
+    @classmethod
+    def tearDownClass(cls):
+        # if we got here by time out exception waiting for a job, we should clear
+        # all jobs, if we're leaving h2o cloud up, and going to run another test
+        #h2o.cancelAllJobs() 
+        h2o.tear_down_cloud()
+
+
 # typical use in a unittest:
 # class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 # see multiple inheritance at http://docs.python.org/release/1.5/tut/node66.html
@@ -22,7 +43,7 @@ class SetupOneJVM14(object):
     def tearDownClass(cls):
         # if we got here by time out exception waiting for a job, we should clear
         # all jobs, if we're leaving h2o cloud up, and going to run another test
-        h2o.cancelAllJobs() 
+        #h2o.cancelAllJobs() 
         h2o.tear_down_cloud()
 
 #************************************************************************************
@@ -43,7 +64,7 @@ class SetupThreeJVM4(object):
     def tearDownClass(cls):
         # if we got here by time out exception waiting for a job, we should clear
         # all jobs, if we're leaving h2o cloud up, and going to run another test
-        h2o.cancelAllJobs() 
+        #h2o.cancelAllJobs() 
         h2o.tear_down_cloud()
 
 #************************************************************************************

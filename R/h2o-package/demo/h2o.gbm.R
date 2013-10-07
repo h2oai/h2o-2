@@ -7,14 +7,13 @@ h2o.checkClient(localH2O)
 
 prostate.hex = h2o.importFile(localH2O, system.file("extdata", "prostate.csv", package="h2o"), "prostate.hex")
 summary(prostate.hex)
-prostate.gbm = h2o.gbm(prostate.hex, "prostate.gbm", y = "CAPSULE", ntrees = 10, max_depth = 5, learn_rate = 0.1)
+prostate.gbm = h2o.gbm(x = setdiff(colnames(prostate.hex), "CAPSULE"), y = "CAPSULE", data = prostate.hex, n.trees = 10, interaction.depth = 5, shrinkage = 0.1)
 print(prostate.gbm)
-prostate.gbm2 = h2o.gbm(prostate.hex, "prostate.gbm", y = "CAPSULE", x_ignore = c("ID", "DPROS", "DCAPS"), ntrees = 10, max_depth = 8, learn_rate = 0.2)
+prostate.gbm2 = h2o.gbm(x = c("AGE", "RACE", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.hex, n.trees = 10, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
 print(prostate.gbm2)
 
-#This is a demo of H2O's GBM use of default parameters on iris dataset(three classes)
-
+# This is a demo of H2O's GBM use of default parameters on iris dataset (three classes)
 iris.hex = h2o.importFile(localH2O, system.file("extdata", "iris.csv", package="h2o"), "iris.hex")
 summary(iris.hex)
-iris.gbm=h2o.gbm(data=iris.hex,destination="iris",y="4")
+iris.gbm = h2o.gbm(x = 1:4, y = 5, data = iris.hex)
 print(iris.gbm)

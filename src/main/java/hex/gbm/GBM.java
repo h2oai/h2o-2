@@ -19,7 +19,7 @@ public class GBM extends SharedTreeModelBuilder {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
-  public double learn_rate = 0.2;
+  public double learn_rate = 0.1;
 
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -143,7 +143,7 @@ public class GBM extends SharedTreeModelBuilder {
       if( _nclass > 1 ) {       // Classification
 
         for( int row=0; row<ys._len; row++ ) {
-          if( ys.isNA0(row) ) continue;
+          if( ys.isNA0(row) ) throw H2O.unimpl(); // Set NANs in all works
           int y = (int)ys.at80(row)-_ymin; // zero-based response variable
           // Actual is '1' for class 'y' and '0' for all other classes
           for( int k=0; k<_nclass; k++ ) {
@@ -158,8 +158,7 @@ public class GBM extends SharedTreeModelBuilder {
 
         Chunk wk = chk_work(chks,0); // Prediction==>Residuals
         for( int row=0; row<ys._len; row++ )
-          if( !ys.isNA0(row) ) 
-            wk.set0(row, (float)(ys.at0(row)-wk.at0(row)) );
+          wk.set0(row, (float)(ys.at0(row)-wk.at0(row)) );
       }
     }
   }
@@ -212,6 +211,7 @@ public class GBM extends SharedTreeModelBuilder {
         for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
           UndecidedNode udn = tree.undecided(leaf);
           udn._hs = sbh.getFinalHisto(k,leaf);
+          //System.out.println(udn);
           // Replace the Undecided with the Split decision
           GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn);
           if( dn._split._col == -1 ) udn.do_not_split();
@@ -263,6 +263,7 @@ public class GBM extends SharedTreeModelBuilder {
         double g = gp._gss[k][i] == 0 // Constant response?
           ? 1000                      // Cap (exponential) learn, instead of dealing with Inf
           : learn_rate*m1class*gp._rss[k][i]/gp._gss[k][i];
+        assert !Double.isNaN(g);
         ((LeafNode)tree.node(leafs[k]+i))._pred = g;
       }
     }
@@ -341,6 +342,7 @@ public class GBM extends SharedTreeModelBuilder {
           // sum-of-residuals (and sum/abs/mult residuals) for all rows in the
           // leaf, and get our prediction from that.
           nids.set0(row,leafnid);
+          if( ress.isNA0(row) ) continue;
           double res = ress.at0(row);
           double ares = Math.abs(res);
           gs[leafnid-leaf] += _nclass > 1 ? ares*(1-ares) : 1;

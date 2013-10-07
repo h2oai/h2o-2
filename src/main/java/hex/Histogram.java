@@ -42,7 +42,7 @@ public abstract class Histogram {
       return res;
    }
 
-   static class Bins extends Iced {
+   public static class Bins extends Iced {
       long[] _bins;
       double _start, _end, _binsz;
       

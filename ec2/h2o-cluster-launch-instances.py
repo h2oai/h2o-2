@@ -56,6 +56,13 @@ amiId = 'ami-0ff1a466'
 # No need to change anything below here.
 #--------------------------------------------------------------------------
 
+# Note: this python script was initially developed with boto 2.13.3.
+def botoVersionMismatch():
+    print 'WARNING:  Unsupported boto version.  Please upgrade boto to at least 2.13.x and try again.'
+    print 'Comment this out to run anyway.'
+    print 'Exiting.'
+    sys.exit(1)
+
 if not 'AWS_ACCESS_KEY_ID' in os.environ:
     print 'ERROR: You must set AWS_ACCESS_KEY_ID in the environment.'
     sys.exit(1)
@@ -76,6 +83,13 @@ if not dryRun:
     fprivate = open(privateFileName, 'w')
 
 print 'Using boto version', boto.Version
+if True:
+    botoVersionArr = boto.Version.split(".")
+    if (botoVersionArr[0] != 2):
+        botoVersionMismatch
+    if (botoVersionArr[1] < 13):
+        botoVersionMismatch
+
 if (debug):
     boto.set_stream_logger('h2o-ec2')
 ec2 = boto.ec2.connect_to_region(regionName, debug=debug)
