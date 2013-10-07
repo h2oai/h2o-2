@@ -11,7 +11,7 @@ H2O: GBM
 \usage{
 h2o.gbm(y, x, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
 }
-\arguments
+\arguments{
   \item{y}{
 The name or index of the response variable. If the data does not contain a header, this is the column index number starting at 0, and increasing from left to right. (The response must be either an integer or a categorical variable).
 }
@@ -41,13 +41,13 @@ A learning-rate parameter defining step size reduction.
 Note that indexing begins at zero, so for example, to specify the first column as the response variable, set \code{y = 0}. 
 }
 \value{
-\value{
 An object of class \code{\linkS4class{H2OGBM}} with slots key, data, and model, where the last is a list of the following components:
 \item{type }{The type of the tree, which currently must be classification.}
 \item{n.trees }{Number of trees grown.}
 \item{oob_err }{Out of bag error rate.}
 \item{forest }{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
 \item{confusion }{Confusion matrix of the prediction.}
+}
 \references{
 
 1. Elith, Jane, John R Leathwick, and Trevor Hastie. "A Working Guide to
@@ -61,6 +61,7 @@ and Ji Zhu. "Discussion of Boosting Papers." Ann. Statist 32 (2004):
 Elements of Statistical Learning.
 Vol.1. N.p.: Springer New York, 2001. 
 http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
+}
 
 
 \seealso{
@@ -78,14 +79,3 @@ h2o.gbm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, n
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.gbm(y = "VOL", x = myX, data = prostate.hex, n.trees = 10, interaction.depth = 5, shrinkage = 0.1)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
-{
-  }
-}
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
