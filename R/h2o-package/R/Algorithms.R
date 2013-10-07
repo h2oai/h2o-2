@@ -7,22 +7,28 @@ setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALS
 setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
 setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 setGeneric("h2o.getTree", function(forest, k, plot = FALSE) { standardGeneric("h2o.getTree") })
-setGeneric("h2o.gbm", function(x, y, data, n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1) { standardGeneric("h2o.gbm") })
+setGeneric("h2o.gbm", function(x, y, distribution='multinomial', data, n.trees = 10, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2) { standardGeneric("h2o.gbm") })
 # setGeneric("h2o.gbmgrid", function(x, y, data, n.trees = c(10,100), interaction.depth = c(1,5,10), n.minobsinnode = 10, shrinkage = c(0.01,0.1,0.2)) { standardGeneric("h2o.gbmgrid") })
 setGeneric("h2o.predict", function(object, newdata) { standardGeneric("h2o.predict") })
 
 #----------------------- Generalized Boosting Machines (GBM) -----------------------#
-setMethod("h2o.gbm", signature(x="numeric", y="numeric", data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
-   function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+setMethod("h2o.gbm", signature(x="numeric", y="numeric", distribution='character', data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
+   function(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
       if (length(x) < 1) stop("GBM requires at least one explanatory variable")
       if(any( x < 1 | x > ncol(data))) stop(paste('Out of range explanatory variable', paste(x[which(x < 1 || x > ncol(data))], collapse=',')))
       if( y < 1 || y > ncol(data) ) stop(paste('Response variable index', y, 'is out of range'))
       if( y %in% x ) stop(paste(colnames(data)[y], 'is both an explanatory and dependent variable'))
       x <- x - 1
       cols=paste(x,collapse=',')
+
+      if( missing(distribution) )
+        distribution <- 'multinomial'
+      if( !(distribution %in% c('multinomial', 'gaussian')) )
+        stop(paste(distribution, "is not a valid distribution; only [multinomial, guassian] are supported"))
+      classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
     
       destKey = paste("__GBMModel_", UUIDgenerate(), sep="")
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=colnames(data)[y], cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode)
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=colnames(data)[y], cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
       res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
     
@@ -45,25 +51,28 @@ setMethod("h2o.gbm", signature(x="numeric", y="numeric", data="H2OParsedData", n
       new("H2OGBMModel", key=destKey, data=data, model=result)
 	})
 
-setMethod("h2o.gbm", signature(x="numeric", y="character", data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
-    function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+setMethod("h2o.gbm", signature(x="numeric", y="character", distribution='ANY', data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
+    function(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
       cc <- colnames( data )
       if( !(y %in% cc) ) stop(paste(y, 'is not a valid column name'))
       y_i <- which(y==cc)
-      h2o.gbm(x, y_i, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+      h2o.gbm(x, y_i, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
   })
 
-setMethod("h2o.gbm", signature(x="character", y="character", data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
-    function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+setMethod("h2o.gbm", signature(x="character", y="character", distribution='ANY', data="H2OParsedData", n.trees="numeric", interaction.depth="numeric", n.minobsinnode="numeric", shrinkage="numeric"),
+    function(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
       cc <- colnames( data )
       if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
       if(any(!(x %in% cc))) stop(paste(paste(x[which(!(x %in% cc))], collapse=','), 'is not a valid column name'))
       x_i = match(x, cc)
-      h2o.gbm(x_i, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+      h2o.gbm(x_i, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
   })
 
-setMethod("h2o.gbm", signature(x="ANY", y="character", data="H2OParsedData", n.trees="ANY", interaction.depth="ANY", n.minobsinnode="ANY", shrinkage="ANY"),
-   function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+setMethod("h2o.gbm", signature(x="ANY", y="character", distribution='ANY', data="H2OParsedData", n.trees="ANY", interaction.depth="ANY", n.minobsinnode="ANY", shrinkage="ANY"),
+   function(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+      if( missing(distribution) ) distribution='multinomial'
+      if( !(distribution %in% c('multinomial', 'gaussian')) )
+        stop(paste(distribution, "is not a valid distribution; only [multinomial, guassian] are supported"))
       if(!(missing(x) || class(x) == "numeric" || class(x) == "character"))
          stop(paste("x cannot be of class", class(x)))
       else if(!(missing(n.trees) || class(n.trees) == "numeric"))
@@ -75,13 +84,13 @@ setMethod("h2o.gbm", signature(x="ANY", y="character", data="H2OParsedData", n.t
       else if(!(missing(n.minobsinnode) || class(n.minobsinnode) == "numeric"))
          stop(paste("n.minobsinnode cannot be of class", class(n.minobsinnode)))
       if(missing(x)) x = setdiff(colnames(data), y)
-      h2o.gbm(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+      h2o.gbm(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
   })
 
-setMethod("h2o.gbm", signature(x="ANY", y="numeric", data="H2OParsedData", n.trees="ANY", interaction.depth="ANY", n.minobsinnode="ANY", shrinkage="ANY"),
-    function(x, y, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+setMethod("h2o.gbm", signature(x="ANY", y="numeric", distribution='ANY', data="H2OParsedData", n.trees="ANY", interaction.depth="ANY", n.minobsinnode="ANY", shrinkage="ANY"),
+    function(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
       if( y < 1 || y > ncol( data ) ) stop(paste(y, 'is not a valid column index'))
-      h2o.gbm(x, colnames(data)[y], data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+      h2o.gbm(x, colnames(data)[y], data, distribution, n.trees, interaction.depth, n.minobsinnode, shrinkage)
     })
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
