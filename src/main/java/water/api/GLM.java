@@ -40,7 +40,7 @@ public class GLM extends Request {
   protected final CaseModeSelect _caseMode = new CaseModeSelect(_key,_y,_family, CASE_MODE,CaseMode.none);
   protected final CaseSelect _case = new CaseSelect(_key,_y,_caseMode,CASE);
   protected final Int _xval = new Int(XVAL, 10, 0, 1000000);
-  protected final Bool _expertSettings = new Bool("expert_settings", false,"Show expert settings.");
+  protected final Bool _expertSettings = new Bool("expert_settings", true ,"Show expert settings.");
   // ------------------------------------- ADVANCED SETTINGS ------------------------------------------------------------------------------------
   protected final Bool _standardize = new Bool("standardize", true, "Set to standardize (0 mean, unit variance) the data before training.");
   protected final RSeq _thresholds = new RSeq(DTHRESHOLDS, false, new NumberSequence("0:1:0.01", false, 0.01),false);
