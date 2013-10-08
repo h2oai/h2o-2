@@ -68,18 +68,11 @@ public class SummaryPage2 extends Request2 {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-
-    DocGen.HTML.arrayHead(sb);
-
     for( int i = 0; i < summaries.length; i++) {
       String cname = source._names[cols[i]];
       Summary2 s2 = summaries[i];
       s2.toHTML(source.vecs()[cols[i]],cname,sb);
     }
-
-    DocGen.HTML.arrayTail(sb);
-
     return true;
   }
-
 }
