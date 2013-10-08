@@ -5,8 +5,8 @@ import hex.KMeans.Initialization;
 import java.util.ArrayList;
 import java.util.Random;
 
-import water.*;
 import water.Job.ColumnsJob;
+import water.*;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.Utils;
@@ -58,6 +58,9 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "Whether data was normalized")
     public boolean normalized;
 
+    private transient double[] _subs, _muls; // Normalization
+    private transient double[][] _normalized;
+
     public KMeansModel2(Key self, Key data, Frame source) {
       super(self, data, source);
     }
@@ -67,18 +70,23 @@ public class KMeans2 extends ColumnsJob {
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
-      data[data.length - 1] = Double.NaN; // Response variable column not used
-      return KMeans.closest(_clusters, data, new ClusterDist())._cluster;
-
-      return out;
+      if( normalize && _normalized == null ) {
+        _normalized = normalize(clusters, chunks);
+        _subs = new double[chunks.length];
+        _muls = new double[chunks.length];
+        for( int i = 0; i < chunks.length; i++ ) {
+          _subs[i] = (float) chunks[i]._vec.mean();
+          double sigma = chunks[i]._vec.sigma();
+          _muls[i] = normalize(sigma) ? 1 / sigma : 1;
+        }
+      }
+      data(tmp, chunks, rowInChunk, _subs, _muls);
+      preds[closest(_normalized, tmp, new ClusterDist())._cluster] = 1;
+      return preds;
     }
 
     @Override protected float[] score0(double[] data, float[] preds) {
-      throw H2O.unimpl();
-    }
-
-    @Override public ConfusionMatrix cm() {
-      return new ConfusionMatrix(confusion_matrix);
+      throw new UnsupportedOperationException();
     }
   }
 
@@ -103,8 +111,7 @@ public class KMeans2 extends ColumnsJob {
       for( int i = 0; i < vecs.length; i++ ) {
         subs[i] = (float) vecs[i].mean();
         double sigma = vecs[i].sigma();
-        // TODO unify handling of constant columns
-        muls[i] = sigma > 1e-6 ? 1 / sigma : 1;
+        muls[i] = normalize(sigma) ? 1 / sigma : 1;
       }
     }
 
@@ -119,7 +126,7 @@ public class KMeans2 extends ColumnsJob {
     } else {
       // Initialize first cluster to random row
       clusters = new double[1][];
-      clusters[0] = new double[cols.length - 1];
+      clusters[0] = new double[vecs.length];
       randomRow(vecs, rand, clusters[0], subs, muls);
 
       while( model.iterations < 5 ) {
@@ -160,13 +167,11 @@ public class KMeans2 extends ColumnsJob {
       task._subs = subs;
       task._muls = muls;
       task.doAll(vecs);
-      clusters = task._clusters;
-
       for( int cluster = 0; cluster < clusters.length; cluster++ ) {
         if( task._counts[cluster] > 0 ) {
-          for( int column = 0; column < cols.length - 1; column++ ) {
-            double value = task._sums[cluster][column] / task._counts[cluster];
-            clusters[cluster][column] = value;
+          for( int vec = 0; vec < vecs.length; vec++ ) {
+            double value = task._sums[cluster][vec] / task._counts[cluster];
+            clusters[cluster][vec] = value;
           }
         }
       }
@@ -195,7 +200,7 @@ public class KMeans2 extends ColumnsJob {
       double[] values = new double[cs.length];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < cs[0]._len; row++ ) {
-        datad(values, cs, row, _subs, _muls);
+        data(values, cs, row, _subs, _muls);
         _sqr += minSqr(_clusters, values, cd);
       }
       _subs = _muls = null;
@@ -225,7 +230,7 @@ public class KMeans2 extends ColumnsJob {
       ClusterDist cd = new ClusterDist();
 
       for( int row = 0; row < cs[0]._len; row++ ) {
-        datad(values, cs, row, _subs, _muls);
+        data(values, cs, row, _subs, _muls);
         double sqr = minSqr(_clusters, values, cd);
         if( _probability * sqr > rand.nextDouble() * _sqr )
           list.add(values.clone());
@@ -260,7 +265,7 @@ public class KMeans2 extends ColumnsJob {
 
       // Find closest cluster for each row
       for( int row = 0; row < cs[0]._len; row++ ) {
-        datad(values, cs, row, _subs, _muls);
+        data(values, cs, row, _subs, _muls);
         closest(_clusters, values, cd);
         int cluster = cd._cluster;
         _sqr += cd._dist;
@@ -378,7 +383,26 @@ public class KMeans2 extends ColumnsJob {
 
   private void randomRow(Vec[] vecs, Random rand, double[] cluster, double[] subs, double[] muls) {
     long row = Math.max(0, (long) (rand.nextDouble() * vecs[0].length()) - 1);
-    datad(cluster, vecs, row, subs, muls);
+    data(cluster, vecs, row, subs, muls);
+  }
+
+  private static boolean normalize(double sigma) {
+    // TODO unify handling of constant columns
+    return sigma > 1e-6;
+  }
+
+  private static double[][] normalize(double[][] clusters, Chunk[] chks) {
+    double[][] value = new double[clusters.length][clusters[0].length];
+    for( int row = 0; row < value.length; row++ ) {
+      for( int col = 0; col < clusters[row].length; col++ ) {
+        double d = clusters[row][col];
+        Vec vec = chks[col]._vec;
+        d -= vec.mean();
+        d /= normalize(vec.sigma()) ? vec.sigma() : 1;
+        value[row][col] = d;
+      }
+    }
+    return value;
   }
 
   private static double[][] denormalize(double[][] clusters, Vec[] vecs) {
@@ -398,7 +422,7 @@ public class KMeans2 extends ColumnsJob {
    * Return a row of normalized values. If missing, use the mean (which we know exists because we
    * filtered out columns with no mean).
    */
-  private void datad(double[] values, Vec[] vecs, long row, double[] subs, double[] muls) {
+  private static void data(double[] values, Vec[] vecs, long row, double[] subs, double[] muls) {
     for( int i = 0; i < vecs.length - 1; i++ ) {
       double d = vecs[i].at(row);
       if( subs != null ) {
@@ -409,7 +433,7 @@ public class KMeans2 extends ColumnsJob {
     }
   }
 
-  private static void datad(double[] values, Chunk[] chks, int row, double[] subs, double[] muls) {
+  private static void data(double[] values, Chunk[] chks, int row, double[] subs, double[] muls) {
     for( int i = 0; i < chks.length - 1; i++ ) {
       double d = chks[i].at0(row);
       if( subs != null ) {

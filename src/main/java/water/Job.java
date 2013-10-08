@@ -143,10 +143,13 @@ public class Job extends Request2 {
     }
 
     protected final Vec[] selectVecs(Frame frame) {
-      Vec[] vecs = new Vec[cols.length];
-      for( int i = 0; i < cols.length; i++ )
-        vecs[i] = frame.vecs()[cols[i]];
-      return vecs;
+      if( cols != null ) {
+        Vec[] vecs = new Vec[cols.length];
+        for( int i = 0; i < cols.length; i++ )
+          vecs[i] = frame.vecs()[cols[i]];
+        return vecs;
+      }
+      return frame.vecs();
     }
   }
 
@@ -177,8 +180,8 @@ public class Job extends Request2 {
     @Override protected void logStart() {
       super.logStart();
       int idx = source.find(response);
-      Log.info("    response: "+(idx==-1?"null":source._names[idx]));
-      Log.info("    "+(classification ? "classification" : "regression"));
+      Log.info("    response: " + (idx == -1 ? "null" : source._names[idx]));
+      Log.info("    " + (classification ? "classification" : "regression"));
     }
 
     @Override protected void init() {
@@ -523,7 +526,7 @@ public class Job extends Request2 {
   // If job is a request
 
   @Override protected Response serve() {
-    fork();
+    start();
     return redirect();
   }
 
