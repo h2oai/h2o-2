@@ -44,7 +44,6 @@ h2o.checkClient(object)
 library(h2oWrapper)
 h2oWrapper.installDepPkgs()
 localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-library(h2o)
 h2o.checkClient(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

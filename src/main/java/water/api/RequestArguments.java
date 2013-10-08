@@ -17,7 +17,6 @@ import water.*;
 import water.Request2.TypeaheadKey;
 import water.ValueArray.Column;
 import water.api.Request.Filter;
-import water.api.Request.API;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Check;
@@ -2392,9 +2391,9 @@ public class RequestArguments extends RequestStatics {
 
   public class FrameKeyMultiVec extends MultipleSelect<int[]> {
     final TypeaheadKey _key;
-    final FrameClassVec _response;
     final String _description;
     final boolean _namesOnly;
+    FrameClassVec _response;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
       Value v = DKV.get(_key.value());
@@ -2404,10 +2403,14 @@ public class RequestArguments extends RequestStatics {
     public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description, boolean namesOnly) {
       super(name);
       addPrerequisite(_key = key);
-      if((_response = response) != null)
-        addPrerequisite(_response);
       _description = description;
       _namesOnly = namesOnly;
+      if(response != null)
+        setResponse(response);
+    }
+    public void setResponse(FrameClassVec response) {
+      _response = response;
+      addPrerequisite(response);
     }
     public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr.vecs()[i]; }
     public void checkLegality(Vec v) throws IllegalArgumentException { }

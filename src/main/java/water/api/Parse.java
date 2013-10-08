@@ -21,12 +21,14 @@ public class Parse extends Request {
   protected final Str            _excludeExpression    = new Str("exclude","");
   protected final ExistingCSVKey _source    = new ExistingCSVKey(SOURCE_KEY);
   protected final NewH2OHexKey   _dest      = new NewH2OHexKey(DEST_KEY);
+  protected final Bool           _blocking  = new Bool("blocking",false,"Synchronously wait until parse completes");
   @SuppressWarnings("unused")
   private   final Preview        _preview   = new Preview(PREVIEW);
 
   public Parse() {
     _excludeExpression.setRefreshOnChange();
     _header.setRefreshOnChange();
+    _blocking._hideInQuery = true;
   }
 
 //  private static String toHTML(ParseSetupGuessException e){
@@ -302,6 +304,9 @@ public class Parse extends Request {
       // Make a new Setup, with the 'header' flag set according to user wishes.
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
       Job job = ParseDataset.forkParseDataset(dest, keys,setup);
+      if (_blocking.value()) {
+        Job.waitUntilJobEnded(job.self());
+      }
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.JOB, job.self().toString());
       response.addProperty(RequestStatics.DEST_KEY,dest.toString());

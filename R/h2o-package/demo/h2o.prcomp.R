@@ -1,9 +1,9 @@
 # This is a demo of H2O's PCA function
 # It imports a data set, parses it, and prints a summary
 # Then, it runs PCA on a subset of the features
-library(h2o)
-localH2O = new("H2OClient", ip="localhost", port=54321)
-h2o.checkClient(localH2O)
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 
 australia.hex = h2o.importFile(localH2O, system.file("extdata", "australia.csv", package="h2o"), "australia.hex")
 summary(australia.hex)

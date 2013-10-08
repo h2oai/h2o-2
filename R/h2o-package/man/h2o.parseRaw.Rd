@@ -48,7 +48,6 @@ After the raw data file is parsed, it will be automatically deleted from the H2O
 library(h2oWrapper)
 h2oWrapper.installDepPkgs()
 localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-library(h2o)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.raw = h2o.importFile(localH2O, path = prosPath, parse = FALSE)
 # Do not modify prostate.csv on disk at this point!

@@ -23,10 +23,7 @@ public class GBMTest extends TestUtil {
   private abstract class PrepData { abstract int prep(Frame fr); }
 
   @Test public void testBasicGBM() {
-    // Disabled Regression tests
-    //basicDRF("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
-    //         });
+    // Regression tests
     basicGBM("./smalldata/cars.csv","cars.hex",
              new PrepData() { int prep(Frame fr ) { UKV.remove(fr.remove("name")._key); return ~fr.find("economy (mpg)"); }});
 
