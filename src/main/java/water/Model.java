@@ -82,16 +82,22 @@ public abstract class Model extends Iced {
   }
 
   /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the
-   *  predictions, the remaining Vecs are the probability distributions.  Also
-   *  passed in a flag describing how hard we try to adapt the frame.  */
+   *  predicted class, the remaining Vecs are the probability distributions.
+   *  For Regression (single-class) models, the 1st and only Vec is the
+   *  prediction value.  Also passed in a flag describing how hard we try to
+   *  adapt the frame.  */
   public Frame score( Frame fr, boolean exact ) {
-    Frame[] adaptFrms = adapt(fr,exact); // Adapt the Frame layout - returns adapted frame and frame containing only newly created vectors
-    Frame adaptFrm = adaptFrms[0]; // adapted frame containing all columns - mix of original vectors from fr and newly created vectors serving as adaptors
-    Frame onlyAdaptFrm = adaptFrms[1]; // contains only newly created vectors. The frame eases deletion of these vectors.
+    // Adapt the Frame layout - returns adapted frame and frame containing only
+    // newly created vectors
+    Frame[] adaptFrms = adapt(fr,exact);
+    // Adapted frame containing all columns - mix of original vectors from fr
+    // and newly created vectors serving as adaptors
+    Frame adaptFrm = adaptFrms[0]; 
+    // Contains only newly created vectors. The frame eases deletion of these vectors.
+    Frame onlyAdaptFrm = adaptFrms[1]; 
     Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
-    // FIXME adapt domain according to a mapping!
     v._domain = _domains[_domains.length-1];
     adaptFrm.add("predict",v);
     if( nclasses() > 1 )
@@ -211,11 +217,14 @@ public abstract class Model extends Iced {
    *  scoring of a new dataset to an existing model.  Same adaption as above,
    *  but expressed as a Frame instead of as an int[][]. The returned Frame
    *  does not have a response column.
-   *  It returns <b>two elements array</b> containing an adapted frame and a frame which
-   *  contains only vectors which where adapted
-   *  (the purpose of the second frame is to delete all adapted vectors with deletion of the frame). */
+   *  It returns a <b>two element array</b> containing an adapted frame and a
+   *  frame which contains only vectors which where adapted (the purpose of the
+   *  second frame is to delete all adapted vectors with deletion of the
+   *  frame). */
   public Frame[] adapt( Frame fr, boolean exact ) {
-    int map[][] = adapt(fr.names(),fr.domains(),exact);
+    String frnames[] = fr.names();
+    Vec frvecs[] = fr.vecs();
+    int map[][] = adapt(frnames,fr.domains(),exact);
     int cmap[] =     map[_names.length-1];
     Vec vecs[] = new Vec[_names.length-1];
     int avCnt = 0;
@@ -227,11 +236,11 @@ public abstract class Model extends Iced {
       int d = cmap[c];          // Data index
       if( d == -1 ) throw H2O.unimpl(); // Swap in a new all-NA Vec
       else if( map[c] == null ) {       // No or identity domain map?
-        vecs[c] = fr.vecs()[d];         // Just use the Vec as-is
+        vecs[c] = frvecs[d];            // Just use the Vec as-is
       } else {
         // Domain mapping - creates a new vector
-        vecs[c] = avecs[avCnt] = remapVecDomain(map[c], fr.vecs()[d]);
-        anames[avCnt] = fr.names()[d];
+        vecs[c] = avecs[avCnt] = frvecs[d].makeTransf(map[c]);
+        anames[avCnt] = frnames[d];
         avCnt++;
       }
     }
@@ -257,9 +266,7 @@ public abstract class Model extends Iced {
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
 
-  /**
-   * Returns a mapping between values domains for a given column.
-   */
+  /** Returns a mapping between values domains for a given column.  */
   public static int[] getDomainMapping(String colName, String[] modelDom, String[] dom, boolean exact) {
     int emap[] = new int[dom.length];
     HashMap<String,Integer> md = new HashMap<String, Integer>();
