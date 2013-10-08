@@ -126,7 +126,7 @@ public class GLMModel extends Model {
   }
 
   public final int ncoefs() {return beta.length;}
-
+  
   // use general score to reduce number of possible different code paths
   public static class GLMValidationTask extends MRTask2<GLMValidationTask>{
     final GLMModel _model;
@@ -158,7 +158,7 @@ public class GLMModel extends Model {
           response = _model._caseMode.isCase(response, _model._caseVal)?1:0;
         _res.add(response, _model.glm.family == Family.binomial?preds[1]:preds[0]);
       }
-      if(_res.nobs > 0)_res.avg_err /= _res.nobs;
+      if(_res.nobs > 0)_res.avg_err = Math.sqrt(_res.avg_err)/_res.nobs;
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
   }

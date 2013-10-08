@@ -83,6 +83,9 @@ public class GLMValidation extends Iced {
     }
     this.dataKey = dataKey;
   }
+  protected void regularize(double reg){
+    avg_err = Math.sqrt(avg_err)*reg;
+  }
 
   public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make());}
   public void add(double yreal, double ymodel){
@@ -106,7 +109,7 @@ public class GLMValidation extends Iced {
   public void add(GLMValidation v){
     residual_deviance  += v.residual_deviance;
     null_deviance += v.null_deviance;
-    avg_err = (((double)nobs/(nobs+v.nobs))*avg_err + ((double)v.nobs/(nobs+v.nobs))*v.avg_err);
+    avg_err += v.avg_err;
     nobs += v.nobs;
     _aic2 += v._aic2;
     if(_cms == null)_cms = v._cms;
