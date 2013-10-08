@@ -468,8 +468,8 @@ class DTree extends Iced {
     // model (for now - really should be seperate).
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
 
-    public TreeModel(Key key, Key dataKey, Frame fr, int ntrees, int ymin) {
-      super(key,dataKey,fr);
+    public TreeModel(Key key, Key dataKey, String names[], String domains[][], int ntrees, int ymin) {
+      super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0]; this.ymin = ymin; this.cm = null;
       treeBits = new CompressedTree[0][];
     }
@@ -496,7 +496,7 @@ class DTree extends Iced {
       for( CompressedTree ts[] : treeBits )
         for( int c=0; c<ts.length; c++ )
           if( ts[c] != null )
-            preds[c] += ts[c].score(data);
+            preds[c+ymin] += ts[c].score(data);
       return preds;
     }
 
@@ -507,7 +507,7 @@ class DTree extends Iced {
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM
-      if( cm != null ) {
+      if( cm != null && nclasses() > 1 ) {
         assert ymin+cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         DocGen.HTML.arrayHead(sb);

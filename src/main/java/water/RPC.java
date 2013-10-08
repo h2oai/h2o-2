@@ -305,7 +305,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         _dt.setException(ex);
         onCompletion(caller);
       }
-      return true;
+      return false;
     }
     // Re-send strictly the ack, because we're missing an AckAck
     public final void resend_ack() {

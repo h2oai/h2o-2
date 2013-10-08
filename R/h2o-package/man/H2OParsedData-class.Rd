@@ -3,10 +3,10 @@
 \docType{class}
 \alias{H2OParsedData-class}
 \alias{colnames,H2OParsedData-method}
-\alias{h2o.glm,character,character,H2OParsedData,character,ANY,ANY,ANY-method}
+\alias{h2o.gbm,character,character,H2OParsedData,numeric,numeric,numeric,numeric-method}
 \alias{h2o.glm,character,character,H2OParsedData,character,numeric,numeric,numeric-method}
-\alias{h2o.kmeans,H2OParsedData,numeric,ANY,ANY-method}
 \alias{h2o.kmeans,H2OParsedData,numeric,character,numeric-method}
+\alias{h2o.prcomp,H2OParsedData,numeric,logical,logical-method}
 \alias{h2o.randomForest,character,H2OParsedData,numeric-method}
 \alias{show,H2OParsedData-method}
 \alias{summary,H2OParsedData-method}
@@ -28,14 +28,14 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
 \section{Methods}{
   \describe{
     \item{colnames}{\code{signature(x = "H2OParsedData")}: ... }
-    \item{h2o.glm}{\code{signature(x = "character", y = "character", data = "H2OParsedData", 
-    family = "character", nfolds = "ANY", alpha = "ANY", lambda = "ANY")}: ... }
+    \item{h2o.gbm}{\code{signature(x = "character", y = "character", data = "H2OParsedData",
+    n.trees = "numeric", interaction.depth = "numeric", n.minobsinnode = "numeric", 
+    shrinkage = "numeric")}: ... }
     \item{h2o.glm}{\code{signature(x = "character", y = "character", data = "H2OParsedData", 
     family = "character", nfolds = "numeric", alpha = "numeric", lambda = "numeric")}: ... }
-    \item{h2o.kmeans}{\code{signature(data = "H2OParsedData", centers = "numeric", cols = "ANY", 
-    iter.max = "ANY")}: ... }
     \item{h2o.kmeans}{\code{signature(data = "H2OParsedData", centers = "numeric", cols = "character", 
     iter.max = "numeric")}: ... }
+    \item{h2o.prcomp}{\code{signature(data = "H2OParsedData", tol = "numeric", standardize = "logical", retx = "logical")}: ... }
     \item{h2o.randomForest}{\code{signature(y = "character", data = "H2OParsedData", ntree = "numeric")}: ... }
     \item{show}{\code{signature(object = "H2OParsedData")}: ... }
     \item{summary}{\code{signature(object = "H2OParsedData")}: ... }

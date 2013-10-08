@@ -70,6 +70,10 @@ public class RequestArguments extends RequestStatics {
     return result;
   }
 
+  /** This rule of searching for matching names, and only if that fails do we
+   *  attempt a number parse for a zero-based column id, is used exactly for
+   *  defining selected columns in the JSON 'cols' argument.
+   */
   protected static int vaColumnNameToIndex(ValueArray va, String input) {
     // first check if we have string match
     for (int i = 0; i < va._cols.length; ++i) {
@@ -87,6 +91,27 @@ public class RequestArguments extends RequestStatics {
     } catch (NumberFormatException e) {
       return -1;
     }
+  }
+
+  protected static int frameColumnNameToIndex(Frame fr, String input, boolean namesOnly) {
+    // first check if we have string match
+    for (int i = 0; fr._names != null && i < fr._names.length; ++i) {
+      String colName = fr._names[i];
+      if (colName == null)
+        colName = String.valueOf(i);
+      if (colName.equals(input))
+        return i;
+    }
+    try {
+      if(!namesOnly) {
+        int i = Integer.parseInt(input);
+        if ((i<0) || (i>=fr.vecs().length))
+          return -1;
+        return i;
+      }
+    } catch (NumberFormatException e) {
+    }
+    return -1;
   }
 
   /** Compute union of categories in model column and data column.
@@ -293,7 +318,7 @@ public class RequestArguments extends RequestStatics {
     protected String query() {
       RString result = new RString(_queryHtml);
       result.replace("ID",_name);
-      result.replace("NAME", JSON2HTML(_name));
+      result.replace("NAME", _displayName != null ? _displayName : JSON2HTML(_name));
       if (disabled())
         result.replace("ELEMENT","<div class='alert alert-info' style='padding-top:4px;padding-bottom:4px;margin-bottom:5px'>"+record()._disabledReason+"</div>");
       else
@@ -320,7 +345,7 @@ public class RequestArguments extends RequestStatics {
     /** Name of the argument. This must correspond to the name of the JSON
      * request argument.
      */
-    public String _name;
+    public String _name, _displayName;
 
     /** True if the argument is required, false if it may be skipped.
      */
@@ -1379,6 +1404,31 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
+  public class ClassifyBool extends Bool {
+    private FrameClassVec _fcv;
+    public ClassifyBool(String name, FrameClassVec fcv) {
+      super(name,false,"Classification or Regression");
+      addPrerequisite(_fcv=fcv);
+      setRefreshOnChange();
+    }
+    @Override public Boolean parse(String input) {
+      boolean b=false;
+      if( false ) ;
+      else if (input.equals("1"))     b= true;
+      else if (input.equals("0"))     b= false;
+      else if (input.equals("true"))  b= true;
+      else if (input.equals("false")) b= false;
+      else throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
+      Vec vec = _fcv.value();
+      if( !vec.isInt() &&  b ) throw new IllegalArgumentException("Float response allows only regression!");
+      if( vec.isEnum() && !b ) throw new IllegalArgumentException("Categorical response allows only classification!");
+      return b;
+    }
+    @Override protected Boolean defaultValue() {
+      return _fcv.value().isInt(); // Allows only float columns for regression
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // EnumClass
   // ---------------------------------------------------------------------------
@@ -2333,45 +2383,34 @@ public class RequestArguments extends RequestStatics {
   /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
   public class FrameClassVec extends FrameKeyVec {
     public FrameClassVec(String name, TypeaheadKey key ) { super(name, key); }
-    @Override protected String[] selectValues() {
-      ArrayList<String> as = new ArrayList();
-      Frame fr = fr();
-      if(fr != null) {
-        Vec vecs[] = fr.vecs();
-        for( int i=0; i<vecs.length; i++ )
-          if( filter(vecs[i]) ) as.add(fr()._names[i]);
-      }
-      return as.toArray(new String[as.size()]);
-    }
-    @Override protected Vec parse(String input) throws IllegalArgumentException {
-      Vec vec = super.parse(input);
-      if( !filter(vec) ) throw new IllegalArgumentException(errors()[0]);
-      return vec;
-    }
-    private boolean filter( Vec vec ) { return vec.isInt() && vec.min()>=0 && (vec.max()-vec.min() <= 1000);  }
     @Override protected Vec defaultValue() {
       Frame fr = fr();
       return fr != null ? fr.vecs()[fr.vecs().length - 1] : null;
     }
-    @Override protected String[] errors() { return new String[] { "Only positive integer or enum/factor columns can be classified, with a limit of 1000 classes" }; }
   }
 
   public class FrameKeyMultiVec extends MultipleSelect<int[]> {
     final TypeaheadKey _key;
-    final FrameClassVec _response;
     final String _description;
+    final boolean _namesOnly;
+    FrameClassVec _response;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
       Value v = DKV.get(_key.value());
       if(v == null) throw new IllegalArgumentException("Frame not found");
       return ValueArray.asFrame(v);
     }
-    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description) {
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description, boolean namesOnly) {
       super(name);
       addPrerequisite(_key = key);
-      if((_response = response) != null)
-        addPrerequisite(_response);
       _description = description;
+      _namesOnly = namesOnly;
+      if(response != null)
+        setResponse(response);
+    }
+    public void setResponse(FrameClassVec response) {
+      _response = response;
+      addPrerequisite(response);
     }
     public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr.vecs()[i]; }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
@@ -2408,12 +2447,8 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected boolean isSelected(String value) {
-      Frame fr = fr();
       int[] val = value();
-      if (val == null) return false;
-      for(int i = 0; i < fr.numCols(); ++i)
-        if(fr._names[i].equals(value))Ints.contains(val, i);
-      return false;
+      return val != null && Ints.contains(val, frameColumnNameToIndex(fr(), value, _namesOnly));
     }
 
     @Override protected int[] parse(String input) throws IllegalArgumentException {
@@ -2421,17 +2456,11 @@ public class RequestArguments extends RequestStatics {
       ArrayList<Integer> al = new ArrayList();
       for (String col : input.split(",")) {
         col = col.trim();
-        int idx = -1;
-        try {
-         idx = Integer.valueOf(col);
-        }catch(NumberFormatException e){
-          for(int i = 0; i < fr.numCols(); ++i)
-            if(fr._names[i].equals(col))idx = i;
-        }
+        int idx = frameColumnNameToIndex(fr(), col, _namesOnly);
         if (0 > idx || idx > fr.numCols())
           throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
         if (al.contains(idx))
-          throw new IllegalArgumentException("Column "+col+" is already selected.");
+          throw new IllegalArgumentException("Column "+col+" is specified twice.");
         checkLegality(fr.vecs()[idx]);
         al.add(idx);
       }

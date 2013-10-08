@@ -45,6 +45,7 @@ public class h2odriver extends Configured implements Tool {
   static boolean disown = false;
   static String clusterReadyFileName = null;
   static int cloudFormationTimeoutSeconds = DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
+  static boolean beta = false;
 
   // Runtime state that might be touched by different threads.
   volatile ServerSocket driverCallbackSocket = null;
@@ -486,6 +487,9 @@ public class h2odriver extends Configured implements Tool {
         i++; if (i >= args.length) { usage(); }
         clusterReadyFileName = args[i];
       }
+      else if (s.equals("-beta")) {
+        beta = true;
+      }
       else {
         error("Unrecognized option " + s);
       }
@@ -726,6 +730,9 @@ public class h2odriver extends Configured implements Tool {
     conf.set(h2omapper.H2O_DRIVER_IP_KEY, driverCallbackIp);
     conf.set(h2omapper.H2O_DRIVER_PORT_KEY, Integer.toString(actualDriverCallbackPort));
     conf.set(h2omapper.H2O_NETWORK_KEY, network);
+    if (beta) {
+        conf.set(h2omapper.H2O_BETA_KEY, "-beta");
+    }
 
     // Set up job stuff.
     // -----------------

@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED, localhost, tryHeap
-        tryHeap = 14
+        tryHeap = 4
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
@@ -64,8 +64,8 @@ class Basic(unittest.TestCase):
 
         if getpass.getuser() == 'kevin': # longer run
             tryList = [
-                (10000,  100, 'cA', 100),
-                (10000,  300, 'cB', 300),
+                (10000,  100, 'cA', 300),
+                (10000,  300, 'cB', 500),
                 # (10000,  500, 'cC', 700),
                 # (10000,  700, 'cD', 3600),
                 # (10000,  900, 'cE', 3600),

@@ -1,6 +1,3 @@
-library(RCurl)
-library(rjson)
-
 # Hack to get around Exec.json always dumping to same Result.hex key
 pkg.env = new.env()
 pkg.env$result_count = 0
@@ -49,8 +46,9 @@ h2o.__remoteSend <- function(client, page, ...) {
   # Sends the given arguments as URL arguments to the given page on the specified server
   url = paste("http://", ip, ":", port, "/", page, sep="")
   temp = postForm(url, style = "POST", ...)
-  after = gsub("NaN", "\"NaN\"", temp[1])
-  # after = gsub("Inf", "\"Inf\"", after)
+  # after = gsub("NaN", "\"NaN\"", temp[1])
+  after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
+  after = gsub("NaN", "\"NaN\"", after)
   after = gsub("-Infinity", "\"-Inf\"", after)
   after = gsub("Infinity", "\"Inf\"", after)
   res = fromJSON(after)
@@ -121,7 +119,7 @@ h2o.__poll <- function(client, keyName) {
 
 h2o.__allDone <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_JOBS)
-  notDone = lapply(res$jobs, function(x) { x$progress != -1.0 })
+  notDone = lapply(res$jobs, function(x) { !(x$progress == -1.0 || x$cancelled) })
   !any(unlist(notDone))
 }
 
@@ -169,7 +167,12 @@ h2o.__operator <- function(op, x, y) {
 }
 
 h2o.__escape <- function(key) {
-  paste("|", key, "|", sep="")
+  key_esc = key
+  myOS = Sys.info()["sysname"]
+  if(myOS == "Windows")
+    key_esc = gsub("\\\\", "\\\\\\\\", key)
+    
+  paste("|", key_esc, "|", sep="")
 }
 
 h2o.__func <- function(fname, x, type) {
@@ -188,4 +191,23 @@ h2o.__func <- function(fname, x, type) {
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
   res$version
+}
+
+h2o.__getFamily <- function(family, link, tweedie.var.p = 0, tweedie.link.p = 1-tweedie.var.p) {
+  if(family == "tweedie")
+    return(tweedie(var.power = tweedie.var.p, link.power = tweedie.link.p))
+  
+  if(missing(link)) {
+    switch(family,
+           gaussian = gaussian(),
+           binomial = binomial(),
+           poisson = poisson(),
+           gamma = gamma())
+  } else {
+    switch(family,
+           gaussian = gaussian(link),
+           binomial = binomial(link),
+           poisson = poisson(link),
+           gamma = gamma(link))
+  }
 }

@@ -349,12 +349,17 @@ def find_key(pattern=None):
 def delete_keys(node=None, pattern=None, timeoutSecs=30):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
-    storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
-    keys = storeViewResult['keys']
-    for k in keys:
-        node.remove_key(k['key'])
-    deletedCnt = len(keys)
-    # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
+    deletedCnt = 0
+    while True:
+        storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
+        # we get 20 at a time with default storeView
+        keys = storeViewResult['keys']
+        if not keys:
+            break
+        for k in keys:
+            node.remove_key(k['key'])
+        deletedCnt += len(keys)
+        # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return deletedCnt
 
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
@@ -378,8 +383,20 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
 def count_keys(node=None, pattern=None, timeoutSecs=30):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
-    storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, **kwargs)
-    nodeCnt = len(storeViewResult['keys'])
+    nodeCnt = 0
+    offset = 0
+    while True:
+        # we get 20 at a time with default storeView
+        # if we get < 20, we're done
+        storeViewResult = h2o_cmd.runStoreView(node, timeoutSecs=timeoutSecs, offset=offset, view=20, **kwargs)
+        keys = storeViewResult['keys']
+        if not keys:
+            break
+        nodeCnt += len(storeViewResult['keys'])
+        if len(keys) < 20:
+            break
+        offset += 20
+
     print nodeCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return nodeCnt
 

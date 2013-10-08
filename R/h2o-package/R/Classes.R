@@ -5,7 +5,7 @@ setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData2", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
-setClass("H2OGrid", representation(key="character", data="H2OParsedData", models="list", sumtable="list", "VIRTUAL"))
+setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 setClass("H2OGLMGrid", contains="H2OGrid")
@@ -49,14 +49,16 @@ setMethod("show", "H2OGLMModel", function(object) {
   cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
   
-  if(model$family == "binomial") {
+  # if(model$family == "binomial") {
+  if(model$family$family == "binomial") {
     cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
     cat("\nConfusion Matrix:\n"); print(model$cm)
   }
     
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
-    if(model$family == "binomial") {
+    # if(model$family == "binomial") {
+    if(model$family$family == "binomial") {
       modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
       colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
     } else {
@@ -279,7 +281,7 @@ setMethod("as.data.frame", "H2OParsedData", function(x) {
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x), sep=""))
+  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
   myView = ifelse(n > 0, n, nrow(x)+n)
   if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
   
@@ -297,7 +299,7 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
 setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x), sep=""))
+  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
   myOff = ifelse(n > 0, nrow(x)-n, abs(n))
   myView = ifelse(n > 0, n, nrow(x)+n)
   if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
@@ -323,6 +325,8 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
 setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
 setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
    function(data, col) {
+     if(col < 1 || col > ncol(data)) stop("col must be between 1 and ", ncol(data))
+     col = col - 1
       newCol = paste("factor(", h2o.__escape(data@key), "[", col, "])", sep="")
       expr = paste("colSwap(", h2o.__escape(data@key), ",", col, ",", newCol, ")", sep="")
       res = h2o.__exec_dest_key(data@h2o, expr, destKey=data@key)

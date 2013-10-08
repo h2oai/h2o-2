@@ -89,6 +89,6 @@ public class DHistogram<T extends DHistogram> extends Iced {
   protected static int byteSize(Object[]ls) { return ls==null ? 0 : 24+ls.length<<3; }
 
   long byteSize() {
-    return 16+8+(4+4)+(2+1+5);
+    return 16/*hdr*/+8/*name*/+(4+4)/*min+max*/+1/*isInt*/+7/*PAD*/;
   }
 }

@@ -1,16 +1,13 @@
 package hex.glm;
 
 
-import hex.DGLM.FamilyIced;
 import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
-import hex.glm.GLMParams.Link;
 import hex.gram.Gram;
 
 import java.util.Arrays;
 
-import water.MRTask2;
-import water.MemoryManager;
+import water.*;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -25,6 +22,11 @@ import water.util.Utils;
  */
 public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   protected final boolean _standardize;
+  final int _offset;
+  final int _step;
+  final boolean _complement;
+  final Job _job;
+
   int _nums = -1;
   int _cats = -1;
   // offsets of categorcial variables
@@ -52,9 +54,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   // size of the top-left strictly diagonal region of the gram matrix, currently just the size of the largest categorical
   final protected int diagN(){if(_catOffsets.length < 2)return 0; return _catOffsets[1];}
 
-  public GLMTask(GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {
+  public GLMTask(Job job, GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {this(job,glm, beta, standardize, cm, cv, 1,0,false);}
+  public GLMTask(Job job, GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv, int step, int offset, boolean complement) {
     _standardize = standardize; _caseMode = cm; _caseVal = cv; _beta = beta;
     _glm = glm;
+    _step = step;
+    _offset = offset;
+    _complement = complement;
+    _job = job;
   }
   protected GLMTask(GLMTask gt, double [] beta){
     _standardize = gt._standardize;
@@ -68,6 +75,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     _catOffsets = gt._catOffsets;
     _normMul = gt._normMul;
     _normSub = gt._normSub;
+    _step = gt._step;
+   _offset = gt._offset;
+   _complement = gt._complement;
+   _job = gt._job;
   }
 
   /**
@@ -168,12 +179,17 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.
    */
-  public void map(Chunk [] chunks){
+  @Override public void map(Chunk [] chunks){
+    if(_job.cancelled())throw new RuntimeException("Cancelled");
     final int nrows = chunks[0]._len;
     double [] nums = MemoryManager.malloc8d(_nums);
     int    [] cats = MemoryManager.malloc4(_cats);
+    final int step = _complement?_step:1;
+    final int start = _complement?_offset:0;
+
     OUTER:
-    for(int r = 0; r < nrows; ++r){
+    for(int r = start; r < nrows; r += step){
+      if(_step > step && (r % _step) == _offset)continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
       int i = 0, ncats = 0;
       for(; i < _cats; ++i){
@@ -182,7 +198,9 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       }
       for(;i < chunks.length-1;++i)
         nums[i-_cats] = (chunks[i].at0(r) - _normSub[i-_cats])*_normMul[i-_cats];
-      processRow(nums, ncats, cats, chunks[chunks.length-1].at0(r));
+      double y = chunks[chunks.length-1].at0(r);
+      if( _caseMode != CaseMode.none ) y = (_caseMode.isCase(y, _caseVal)) ? 1 : 0;
+      processRow(nums, ncats, cats,y);
     }
   }
 
@@ -207,19 +225,24 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     private long   _nobs;
     private double _ymu;
     private final double _reg;
-    public YMUTask(GLMParams glm, boolean standardize, CaseMode cm, double cv, long nobs) {
-      super(glm,null,standardize, cm, cv);
+    public YMUTask(Job job, GLMParams glm, boolean standardize, CaseMode cm, double cv, long nobs) {
+      super(job,glm,null,standardize, cm, cv);
       _reg = 1.0/nobs;
+      System.out.println("nobs = " + nobs + ", _reg = " + (1.0/nobs));
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
       _ymu += response;
       ++_nobs;
     }
+    @Override public void reduce(YMUTask t){
+      _ymu += t._ymu;
+      _nobs += t._nobs;
+    }
     @Override public void map(Chunk [] chunks){
       super.map(chunks);
       _ymu *= _reg;
     }
-    public double ymu(){return _ymu * (_nobs/_reg);}
+    public double ymu(){return _ymu /(_reg*_nobs);}
     public long nobs(){return _nobs;}
   }
   /**
@@ -233,8 +256,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     private final double _gPrimeMu;
     private long _nobs;
 
-    public LMAXTask(GLMParams glm, boolean standardize, CaseMode cm, double cv, double ymu, int P) {
-      super(glm,null,standardize, cm, cv);
+    public LMAXTask(Job job, GLMParams glm, boolean standardize, CaseMode cm, double cv, double ymu, int P) {
+      super(job,glm,null,standardize, cm, cv);
       _z = MemoryManager.malloc8d(P);
       _ymu = ymu;
       _gPrimeMu = glm.linkDeriv(ymu);
@@ -270,8 +293,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     double    _yy;
     GLMValidation _val; // validation of previous model
 
-    public GLMIterationTask(GLMParams glm, double [] beta, boolean standardize, double reg, CaseMode caseMode, double caseVal) {
-      super(glm, beta, standardize, caseMode, caseVal);
+    public GLMIterationTask(Job job, GLMParams glm, double [] beta, boolean standardize, double reg, CaseMode caseMode, double caseVal, int step, int offset, boolean complement) {
+      super(job, glm, beta, standardize, caseMode, caseVal, step, offset, complement);
       _iter = 0;
       _reg = reg;
     }
@@ -284,22 +307,19 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
 
     @Override public final void processRow(double [] nums, int ncats, int [] cats, double y){
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
-      if( _caseMode != CaseMode.none ) y = (_caseMode.isCase(y, _caseVal)) ? 1 : 0;
+      assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
       double w = 1;
       double eta = 0, mu = 0, var = 1;
       if( _glm.family != Family.gaussian) {
         if( _beta == null ) {
           mu = _glm.mustart(y);
           eta = _glm.link(mu);
+          _val.add(y, _ymu);
         } else {
           eta = computeEta(ncats, cats,nums);
           mu = _glm.linkInv(eta);
+          _val.add(y, mu);
         }
-        if(Double.isNaN(mu)){
-          System.out.println("got NaN mu from: beta=" + Arrays.toString(_beta) + ", row = " + Arrays.toString(nums) + ", cats = " + Arrays.toString(cats) + ", ncats = " + ncats);
-        }
-        _val.add(y, mu);
-
         var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
         if( _glm.family == Family.binomial || _glm.family == Family.poisson ) {
           w = var;

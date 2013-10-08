@@ -16,8 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import water.*;
 import water.api.Script.RunScript;
 import water.api.Upload.PostFile;
-import water.util.Log;
+import water.util.*;
 import water.util.Log.Tag.Sys;
+import water.util.Utils.ExpectedExceptionForDebug;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -113,6 +114,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",        "Beta (FluidVecs!)");
     }
 
     // internal handlers
@@ -157,14 +159,13 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TestRedirect());
     registerRequest(new GLMProgressPage2());
     registerRequest(new GLMModelView());
+    registerRequest(new GLMValidationView());
     Request.initializeNavBar();
   }
 
-  /** Registers the request with the request server.
-   *
-   * returns the request so that it can be further updated.
+  /**
+   * Registers the request with the request server.
    */
-
   public static Request registerRequest(Request req) {
     String href = req.href();
     assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
@@ -173,10 +174,15 @@ public class RequestServer extends NanoHTTPD {
     return req;
   }
 
+  public static void unregisterRequest(Request req) {
+    String href = req.href();
+    _requests.remove(href);
+  }
+
   // Keep spinning until we get to launch the NanoHTTPD
   public static void start() {
     new Thread( new Runnable() {
-        public void run()  {
+        @Override public void run()  {
           while( true ) {
             try {
               // Try to get the NanoHTTP daemon started
@@ -212,7 +218,8 @@ public class RequestServer extends NanoHTTPD {
       // call the request
       return request.serve(this,parms,type);
     } catch (Exception e) {
-      e.printStackTrace();
+      if(!(e instanceof ExpectedExceptionForDebug))
+        e.printStackTrace();
       // make sure that no Exception is ever thrown out from the request
       parms.setProperty(Request.ERROR,e.getClass().getSimpleName()+": "+e.getMessage());
       return _http500.serve(this,parms,type);

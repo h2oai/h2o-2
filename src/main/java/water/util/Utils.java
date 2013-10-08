@@ -19,7 +19,6 @@ import water.parser.ParseDataset;
 import water.parser.ParseDataset.Compression;
 
 public class Utils {
-
   /** Returns the index of the largest value in the array.
    * In case of a tie, an the index is selected randomly.
    */
@@ -340,6 +339,10 @@ public class Utils {
     return a;
   }
 
+  public static <T> T[] subarray(T[] a, int off, int len) {
+    return (T[]) ArrayUtils.subarray(a, off, off + len);
+  }
+
   public static void clearFolder(String folder) {
     clearFolder(new File(folder));
   }
@@ -518,4 +521,13 @@ public class Utils {
     return false;
   }
 
+  public static class ExpectedExceptionForDebug extends RuntimeException {
+  }
+
+  public static String getStackAsString(Throwable t) {
+    Writer result = new StringWriter();
+    PrintWriter printWriter = new PrintWriter(result);
+    t.printStackTrace(printWriter);
+    return result.toString();
+  }
 }

@@ -13,7 +13,7 @@ h2o.randomForest(y, x, data, ntree = 50, depth = 2147483647, classwt = as.numeri
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{y}{
-The name or index of the response variable. If the data does not contain a header, this is the column index. (The response must be either an integer or a categorical variable).
+The name or index of the response variable. If the data does not contain a header, this is the column index, designated by increasing numbers from left to right. (The response must be either an integer or a categorical variable).
 }
 \item{x}{
 A vector containing the names or indices of the predictor variables to use in building the random forest model.
@@ -31,7 +31,7 @@ Number of trees to grow. (Must be a nonnegative integer).
   (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.}
 }
 \details{
-Currently, only classification regression trees are supported. Note that indexing begins at zero, so for example, to specify the first column as the response variable, set \code{y = 0}.
+Currently, only classification trees are supported. Note that indexing begins at zero, so for example, to specify the first column as the response variable, set \code{y = 0}.
 }
 \value{
 An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, and model, where the last is a list of the following components:
@@ -62,8 +62,10 @@ An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, an
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-localH2O = new("H2OClient")
-h2o.checkClient(localH2O)
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+library(h2o)
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, ntree = 50, depth = 100, 

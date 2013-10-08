@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
 
 
     def test_rand_inspect(self):
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
 
         ### h2b.browseTheCloud()
         csvFilename = 'covtype.data'

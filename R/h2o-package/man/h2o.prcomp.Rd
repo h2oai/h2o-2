@@ -47,8 +47,10 @@ The signs of the columns of the rotation matrix are arbitrary, and so may differ
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-localH2O = new("H2OClient")
-h2o.checkClient(localH2O)
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+library(h2o)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.pca = h2o.prcomp(data = prostate.hex, standardize = TRUE)

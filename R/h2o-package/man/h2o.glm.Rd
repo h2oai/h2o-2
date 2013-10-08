@@ -22,7 +22,7 @@ The name of the response variable in the model.
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{family}{
-A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, and gamma are supported.
+A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and tweedie are supported.
 }
   \item{nfolds}{
 Number of folds for cross-validation. The default is 10.
@@ -32,6 +32,7 @@ The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined
 }
   \item{lambda}{The shrinkage parameter, which multiples \eqn{P(\alpha,\beta)} in the objective. The larger \code{lambda} is, the more the coefficients are shrunk toward zero (and each other).
 }
+  \item{tweedie.p}{The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}.}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
@@ -76,8 +77,10 @@ The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-localH2O = new("H2OClient")
-h2o.checkClient(localH2O)
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+library(h2o)
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
 prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = 

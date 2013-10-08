@@ -227,7 +227,7 @@ def wait_for_ssh(ips, port=22, skipAlive=True, requiredsuccess=3):
                 h2o_cmd.dot()
 
 
-def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME, save=True):
+def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME, save=True, h2o_per_host=1):
     if not filename: filename=DEFAULT_HOSTS_FILENAME
 
     cfg = {}
@@ -242,7 +242,7 @@ def dump_hosts_config(ec2_config, reservation, filename=DEFAULT_HOSTS_FILENAME, 
     else: warn_file_miss(ec2_config['hdfs_config'])
     cfg['username']        = ec2_config['username'] 
     cfg['use_flatfile']    = True
-    cfg['h2o_per_host']    = 1
+    cfg['h2o_per_host']    = h2o_per_host
     cfg['java_heap_GB']    = MEMORY_MAPPING[ec2_config['instance_type']]['xmx']
     cfg['java_extra_args'] = '' # No default Java arguments '-XX:MaxDirectMemorySize=1g'
     cfg['base_port']       = 54321
@@ -434,6 +434,7 @@ def main():
     parser.add_argument('--instance_type',   help='Enfore a type of EC2 to launch (e.g., m2.2xlarge).', type=str, default=None)
     parser.add_argument('--cmd',             help='Shell command to be executed by nexec.', type=str, default=None)
     parser.add_argument('--image_id',        help='Override defautl image_id', type=str, default=None)
+    parser.add_argument('--h2o_per_host',    help='Number of JVM launched per node', type=int, default=1)
     args = parser.parse_args()
 
     ec2_region = load_ec2_region(args.region)
@@ -450,7 +451,7 @@ def main():
         log("Tags       : {0}".format(tags))
         reservation = run_instances(args.instances, ec2_config, ec2_region, tags=tags)
         
-        hosts_cfg, filename   = dump_hosts_config(ec2_config, reservation, args.hosts)
+        hosts_cfg, filename   = dump_hosts_config(ec2_config, reservation, filename=args.hosts, h2o_per_host=args.h2o_per_host)
         dump_ssh_commands(ec2_config, reservation)
         if (args.action == 'demo'):
             args.hosts = filename
@@ -470,7 +471,7 @@ def main():
     elif (args.action == 'dump_reservation'):
         ec2_config = load_ec2_config(args.config, ec2_region)
         ec2_reservation = load_ec2_reservation(args.reservation, ec2_region)
-        dump_hosts_config(ec2_config, ec2_reservation, args.hosts)
+        dump_hosts_config(ec2_config, ec2_reservation, filename=args.hosts)
     elif (args.action == 'show_reservations'):
         report_reservations(args.region, args.reservation)
     else: 

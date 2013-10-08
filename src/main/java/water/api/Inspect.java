@@ -3,9 +3,8 @@ package water.api;
 import hex.DGLM.GLMModel;
 import hex.DPCA.PCAModel;
 import hex.*;
-import hex.NeuralNet.NeuralNetModel;
 import hex.gbm.GBM.GBMModel;
-import hex.glm.GLMModelView;
+import hex.glm.*;
 import hex.rf.RFModel;
 
 import java.util.HashMap;
@@ -148,6 +147,8 @@ public class Inspect extends Request {
       return GLMModelView.redirect(this, key);
     if(f instanceof GBMModel)
       return GBMModelView.redirect(this, key);
+    if( f instanceof GLMValidation)
+      return GLMValidationView.redirect(this, key);
     if(f instanceof GridSearch)
       return ((GridSearch) f).redirect();
     return Response.error("No idea how to display a "+f.getClass());
@@ -551,18 +552,17 @@ public class Inspect extends Request {
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {
-        for( int ci = 0; ci < _f.vecs()[0].nChunks(); ci++ ) {
-          Chunk chunk = _f.vecs()[ci].elem2BV(ci);
-          String prefix = CHUNK + " " + ci + " ";
 
+        for( int ci = 0; ci < _f.vecs()[0].nChunks(); ci++ ) {
+//          Chunk chunk = _f.vecs()[ci].elem2BV(ci);
+          String prefix = CHUNK + " " + ci + " ";
           row.addProperty(ROW, prefix + TYPE);
           for( int i = 0; i < _f.numCols(); i++ )
-            row.addProperty(_f._names[i], chunk.getClass().getSimpleName());
+            row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(ci).getClass().getSimpleName());
           sb.append(defaultBuilder(row).build(response, row, contextName));
-
           row.addProperty(ROW, prefix + SIZE);
           for( int i = 0; i < _f.numCols(); i++ )
-            row.addProperty(_f._names[i], chunk.byteSize());
+            row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(ci).byteSize());
           sb.append(defaultBuilder(row).build(response, row, contextName));
         }
       } else {

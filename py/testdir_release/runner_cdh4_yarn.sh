@@ -41,8 +41,6 @@ REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
 
-REMOTE_0XCUSTOMER=0xcustomer@$REMOTE_IP
-
 # have to copy the downloaded h2o stuff over to xxx to execute with the ssh
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 echo "scp some jars"
@@ -118,7 +116,8 @@ do
 done < h2o_one_node
 
 rm -fr h2o-nodes.json
-../find_cloud.py -f h2o_one_node
+# NOTE: keep this hdfs info in sync with the json used to build the cloud above
+../find_cloud.py -f h2o_one_node -hdfs_version cdh4_yarn -hdfs_name_node 192.168.1.161 -expected_size $CDH4_YARN_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
@@ -153,7 +152,9 @@ echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 DOIT=../testdir_single_jvm/n0.doit
 
 # $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
-$DOIT c1/test_c1_rel.py || true
+# don't run this until we know whether 0xcustomer permissions also exist for the hadoop job
+# $DOIT c1/test_c1_rel.py || true
+
 $DOIT c2/test_c2_rel.py || true
 # $DOIT c3/test_c3_rel.py || true
 # $DOIT c4/test_c4_four_billion_rows.py || true

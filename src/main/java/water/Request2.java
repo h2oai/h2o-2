@@ -42,8 +42,8 @@ public abstract class Request2 extends Request {
         Value v = DKV.get(k);
         if( v != null && !compatible(_type, v.get()) )
           throw new IllegalArgumentException(input + ":" + errors()[0]);
-        if ( v == null && _required)
-          throw new IllegalArgumentException("Key '"+input+"' does not exist!");
+        if( v == null && _required )
+          throw new IllegalArgumentException("Key '" + input + "' does not exist!");
       }
       return k;
     }
@@ -94,10 +94,52 @@ public abstract class Request2 extends Request {
     }
   }
 
+  /**
+   * Specify how a column specifier field is parsed.
+   */
+  public enum MultiVecSelectType {
+    /**
+     * Treat a token as a 0-based index if it looks like a positive integer.
+     * Otherwise, treat it as a column name.
+     */
+    INDEXES_THEN_NAMES,
+
+    /**
+     * Treat a token as a column name no matter what (even if it looks like it is an integer).
+     * This is used by the Web UI, which blindly specifies column names.
+     */
+    NAMES_ONLY
+  }
+
   public class MultiVecSelect extends Dependent {
+    boolean _namesOnly;
+
+    private void init (MultiVecSelectType selectType) {
+      _namesOnly = false;
+      switch (selectType) {
+        case INDEXES_THEN_NAMES:
+          _namesOnly = false;
+          break;
+
+        case NAMES_ONLY:
+          _namesOnly = true;
+          break;
+      }
+    }
+
     protected MultiVecSelect(String key) {
       super(key);
+      init (MultiVecSelectType.INDEXES_THEN_NAMES);
     }
+
+    protected MultiVecSelect(String key, MultiVecSelectType selectType) {
+      super(key);
+      init (selectType);
+    }
+  }
+
+  public class DoClassBoolean extends Dependent {
+    protected DoClassBoolean(String key) { super(key); }
   }
 
   /**
@@ -121,6 +163,7 @@ public abstract class Request2 extends Request {
           if( !Modifier.isStatic(field.getModifiers()) )
             fields.add(field);
 
+      // TODO remove map, response field already processed specifically
       HashMap<String, FrameClassVec> classVecs = new HashMap<String, FrameClassVec>();
       for( Field f : fields ) {
         Annotation[] as = f.getAnnotations();
@@ -154,7 +197,7 @@ public abstract class Request2 extends Request {
           }
 
           // Bool
-          else if( f.getType() == boolean.class ) {
+          else if( f.getType() == boolean.class && api.filter()==Default.class ) {
             boolean val = (Boolean) defaultValue;
             arg = new Bool(f.getName(), val, api.help());
           }
@@ -189,31 +232,41 @@ public abstract class Request2 extends Request {
           //
           else if( Dependent.class.isAssignableFrom(api.filter()) ) {
             Dependent d = (Dependent) newInstance(api);
-            Argument ref = null;
-            for( Argument a : _arguments )
-              if( d._ref.equals(a._name) )
-                ref = a;
-            if( VecSelect.class.isAssignableFrom(api.filter()) )
+            Argument ref = find(d._ref);
+            if( d instanceof VecSelect )
               arg = new FrameKeyVec(f.getName(), (TypeaheadKey) ref);
-            else if( VecClassSelect.class.isAssignableFrom(api.filter()) ) {
+            else if( d instanceof VecClassSelect ) {
               arg = new FrameClassVec(f.getName(), (TypeaheadKey) ref);
               classVecs.put(d._ref, (FrameClassVec) arg);
-            } else if( MultiVecSelect.class.isAssignableFrom(api.filter()) ) {
+            } else if( d instanceof MultiVecSelect ) {
               FrameClassVec response = classVecs.get(d._ref);
-              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help());
+              boolean names = ((MultiVecSelect) d)._namesOnly;
+              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names);
+            } else if( DoClassBoolean.class.isAssignableFrom(api.filter()) ) {
+              FrameClassVec response = classVecs.get(d._ref);
+              arg = new ClassifyBool(f.getName(),response);
             }
           }
 
           if( arg != null ) {
             arg._name = f.getName();
+            arg._displayName = api.displayName().length() > 0 ? api.displayName() : null;
             arg._required = api.required();
             arg._field = f;
+            arg._hideInQuery = api.hide();
           }
         }
       }
     } catch( Exception e ) {
       throw new RuntimeException(e);
     }
+  }
+
+  final Argument find(String name) {
+    for( Argument a : _arguments )
+      if( name.equals(a._name) )
+        return a;
+    return null;
   }
 
   // Extracted in separate class as Weaver cannot load REquest during boot

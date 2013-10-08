@@ -30,7 +30,7 @@ public class DRF extends SharedTreeModelBuilder {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public DRFModel(Key key, Key dataKey, Frame fr, int ntrees, int ymin) { super(key,dataKey,fr,ntrees,ymin); }
+    public DRFModel(Key key, Key dataKey, String names[], String domains[][], int ntrees, int ymin) { super(key,dataKey,names,domains,ntrees,ymin); }
     public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
@@ -74,7 +74,7 @@ public class DRF extends SharedTreeModelBuilder {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
 
-  @Override public void run() {
+  @Override protected void exec() {
     buildModel();
   }
 
@@ -82,30 +82,30 @@ public class DRF extends SharedTreeModelBuilder {
     return DRFProgressPage.redirect(this, self(), dest());
   }
 
-  @Override protected void buildModel( final Frame fr, final Frame frm, final Key outputKey, final Key dataKey, final Timer t_build ) {
+  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Timer t_build ) {
     final int mtrys = (mtries==-1) ? Math.max((int)Math.sqrt(_ncols),1) : mtries;
     assert 1 <= mtrys && mtrys <= _ncols : "Too large mtrys="+mtrys+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    DRFModel model = new DRFModel(outputKey,dataKey,frm,ntrees, _ymin);
+    DRFModel model = new DRFModel(outputKey,dataKey,names,domains,ntrees, _ymin);
     DKV.put(outputKey, model);
 
     // The RNG used to pick split columns
     Random rand = new MersenneTwisterRNG(new int[]{(int)(seed>>32L),(int)seed});
-    
+
     // Set a single 1.0 in the response for that class
     new Set1Task().doAll(fr);
-    
+
     // Build trees until we hit the limit
     for( int tid=0; tid<ntrees; tid++) {
       DTree[] ktrees = buildNextKTrees(fr,mtrys,rand);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
-      
+
       // Check latest predictions
       Score sc = new Score().doAll(fr).report(Sys.DRF__,tid+1,ktrees);
       model = new DRFModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
       DKV.put(outputKey, model);
     }
-    
+
     cleanUp(fr,t_build); // Shared cleanup
   }
 
@@ -177,7 +177,7 @@ public class DRF extends SharedTreeModelBuilder {
         }
         leafs[k]=tmax;          // Setup leafs for next tree level
       }
-    
+
       // If we did not make any new splits, then the tree is split-to-death
       if( !did_split ) break;
     }
@@ -205,7 +205,7 @@ public class DRF extends SharedTreeModelBuilder {
 
     // ----
     // ESL2, page 387.  Step 2b iii.  Compute the gammas, and store them back
-    // into the tree leaves.  
+    // into the tree leaves.
     // gamma_i_k = (nclass-1)/nclass * (sum res_i / sum (|res_i|*(1-|res_i|)))
     GammaPass gp = new GammaPass(ktrees,leafs).doAll(fr);
     double m1class = (double)(_nclass-1)/_nclass; // K-1/K
@@ -237,14 +237,14 @@ public class DRF extends SharedTreeModelBuilder {
             int nid = (int)nids.at80(row);
             ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
             nids.set0(row,0);
-          }            
+          }
         }
       }
     }.doAll(fr);
 
     // Print the generated K trees
     for( int k=0; k<_nclass; k++ )
-      if( ktrees[k] != null ) 
+      if( ktrees[k] != null )
         System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
 
     return ktrees;
@@ -307,9 +307,9 @@ public class DRF extends SharedTreeModelBuilder {
         }
       }
     }
-    @Override public void reduce( GammaPass gp ) { 
-      Utils.add(_gss,gp._gss); 
-      Utils.add(_rss,gp._rss); 
+    @Override public void reduce( GammaPass gp ) {
+      Utils.add(_gss,gp._gss);
+      Utils.add(_rss,gp._rss);
     }
   }
 

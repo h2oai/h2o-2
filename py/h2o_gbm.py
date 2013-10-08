@@ -122,34 +122,6 @@ def pickRandGbmParams(paramDict, params):
         randomV = paramDict[randomKey]
         randomValue = random.choice(randomV)
         params[randomKey] = randomValue
-        if (randomKey=='x'):
-            colX = randomValue
-
-        if 'family' in params and 'link' in params: 
-            # don't allow logit for poisson
-            if params['family'] is not None and params['family'] == 'poisson':
-                if params['link'] is not None and params['link'] in ('logit'):
-                    params['link'] = None # use default link for poisson always
-
-        # case only used if binomial? binomial is default if no family
-        if 'family' not in params or params['family'] == 'binomial':
-            maxCase = max(paramDict['case'])
-            minCase = min(paramDict['case'])
-            # make sure the combo of case and case_mode makes sense
-            # there needs to be some entries in both effective cases
-            if ('case_mode' in params):
-                if ('case' not in params) or (params['case'] is None):
-                    params['case'] = 1
-                elif params['case_mode']=="<" and params['case']==minCase:
-                    params['case'] += 1
-                elif params['case_mode']==">" and params['case']==maxCase:
-                    params['case'] -= 1
-                elif params['case_mode']==">=" and params['case']==minCase:
-                    params['case'] += 1
-                elif params['case_mode']=="<=" and params['case']==maxCase:
-                    params['case'] -= 1
-
-    return colX
 
 
 def simpleCheckGBMScore(self, glmScore, family='gaussian', allowFailWarning=False, **kwargs):

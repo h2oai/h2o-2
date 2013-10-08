@@ -143,12 +143,17 @@ public class Vec extends Iced {
   public void asEnum() {
     if( _domain!=null ) return;
     if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
-    long min = (long)min(), max = (long)max();
-    if( min < 0 || max > 10000L ) throw H2O.unimpl();
-    _domain = new String[(int)max+1];
-    for( int i=0; i<(int)max+1; i++ )
-      _domain[i] = Integer.toString(i);
+    _domain = defaultLevels();
     DKV.put(_key,this);
+  }
+
+  public String[] defaultLevels() {
+    long min = (long)min(), max = (long)max();
+    if( min < 0 || max > 100000L ) throw H2O.unimpl();
+    String domain[] = new String[(int)max+1];
+    for( int i=0; i<(int)max+1; i++ )
+      domain[i] = Integer.toString(i);
+    return domain;
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
@@ -187,8 +192,14 @@ public class Vec extends Iced {
     if( _naCnt >= 0 ) return this;
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
-    if( vthis._naCnt>= 0 ) return vthis;
-
+    if( vthis._naCnt>= 0 ) {    // KV store has a better answer
+      _min  = vthis._min;   _max   = vthis._max; 
+      _mean = vthis._mean;  _sigma = vthis._sigma;
+      _size = vthis._size;  _isInt = vthis._isInt;
+      _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
+      return this;
+    }
+    // Compute the hard way
     final RollupStats rs = new RollupStats().doAll(this);
     setRollupStats(rs);
     // Now do this remotely also

@@ -1,5 +1,6 @@
 package hex.glm;
 
+import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 
 import java.text.DecimalFormat;
@@ -7,27 +8,52 @@ import java.util.HashMap;
 
 import water.*;
 import water.api.DocGen;
+import water.api.Request.API;
 import water.fvec.*;
 import water.util.RString;
 
 public class GLMModel extends Model {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+  @API(help="mean of response in the training dataset")
   final double     ymu;
+
+  @API(help="predicate applied to the response column to turn it into 0/1")
+  final CaseMode  _caseMode;
+
+  @API(help="value used to co compare agains using case-predicate to turn the response into 0/1")
+  final double _caseVal;
+
+  @API(help="Beta vector containing model coefficients.")
   final double []  beta;
+
+  @API(help="Beta vector containing normalized coefficients (coefficients obtained on normalized data).")
   final double []  norm_beta;
+  @API(help="offsets of categorical columns into the beta vector. The last value is the offset of the first numerical column.")
   final int    []  catOffsets;
+  @API(help="warnings")
   final String []  warnings;
+  @API(help="Decision threshold.")
   final double     threshold;
+  @API(help="glm params")
   final GLMParams  glm;
+  @API(help="beta epsilon - stop iterating when beta diff is below this threshold.")
   final double     beta_eps;
+  @API(help="regularization parameter driving proportion of L1/L2 penalty.")
   final double     alpha;
+  @API(help="regularization param giving the strength of the applied regularization. high values drive coeffficients to zero.")
   final double     lambda;
+  @API(help="number of iterations computed.")
   final int        iteration;
+  @API(help="running time of the algo in ms.")
   final long       run_time;
-  Key []           validations;
+  @API(help="Validation")
+  GLMValidation validation;
 
   private static final DecimalFormat DFORMAT = new DecimalFormat("###.####");
 
-  public GLMModel(Key selfKey, Frame fr, GLMParams glm, double beta_eps, double alpha, double lambda,long run_time) {
+  public GLMModel(Key selfKey, Frame fr, GLMParams glm, double beta_eps, double alpha, double lambda,long run_time, CaseMode caseMode, double caseVal ) {
     super(selfKey,null,fr);
     ymu = 0;
     beta = null;
@@ -41,9 +67,11 @@ public class GLMModel extends Model {
     this.lambda = lambda;
     this.beta_eps = beta_eps;
     this.run_time = run_time;
+    _caseVal = caseVal;
+    _caseMode = caseMode;
   }
 
-  public GLMModel(Key selfKey, Key dataKey, int iteration, Frame fr, GLMTask glmt, double beta_eps, double alpha, double lambda, double [] beta, double threshold, String [] warnings, long run_time) {
+  public GLMModel(Key selfKey, Key dataKey, int iteration, Frame fr, GLMTask glmt, double beta_eps, double alpha, double lambda, double [] beta, double threshold, String [] warnings, long run_time, CaseMode caseMode, double caseVal) {
     super(selfKey, dataKey, fr);
     glm = glmt._glm;
     this.threshold = threshold;
@@ -73,10 +101,11 @@ public class GLMModel extends Model {
     this.lambda = lambda;
     this.beta_eps = beta_eps;
     this.run_time = run_time;
+    _caseMode = caseMode;
+    _caseVal = caseVal;
   }
   public GLMValidation validation(){
-    GLMValidation res = DKV.get(validations[0]).get();
-    return res;
+    return validation;
   }
   public double [] beta(){return beta;}
   @Override protected float[] score0(double[] data, float[] preds) {
@@ -102,22 +131,32 @@ public class GLMModel extends Model {
   public static class GLMValidationTask extends MRTask2<GLMValidationTask>{
     final GLMModel _model;
     GLMValidation _res;
+    private final int _offset;
+    private final int _step;
+    private final boolean _complement;
+
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
-    public GLMValidationTask(GLMModel m){_model = m;}
+    public GLMValidationTask(GLMModel m, int step, int offset,boolean complement){_model = m; _step = step; _offset = offset;_complement = complement;}
     @Override public void map(Chunk [] chunks){
       _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank());
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
       float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?2:1);
+      final int step  = _complement?_step:1;
+      final int start = _complement?_offset:0;
       OUTER:
-      for(int i = 0; i < nrows; ++i){
+      for(int i = start; i < nrows; i += step){
+        if(_step > step && (i % _step) == _offset)continue;
         if(chunks[chunks.length-1].isNA0(i))continue;
         for(int j = 0; j < chunks.length-1; ++j){
           if(chunks[j].isNA0(i))continue OUTER;
           row[j] = chunks[j].at0(i);
         }
         _model.score0(row, preds);
-        _res.add(chunks[chunks.length-1].at80(i), _model.glm.family == Family.binomial?preds[1]:preds[0]);
+        double response = chunks[chunks.length-1].at80(i);
+        if(_model._caseMode != CaseMode.none)
+          response = _model._caseMode.isCase(response, _model._caseVal)?1:0;
+        _res.add(response, _model.glm.family == Family.binomial?preds[1]:preds[0]);
       }
       if(_res.nobs > 0)_res.avg_err /= _res.nobs;
     }
@@ -147,12 +186,8 @@ public class GLMModel extends Model {
     parm(sb,"&lambda;",lambda);
     if(beta != null)
       coefs2html(sb);
-    if(validations != null && validations.length > 0){
-      for(Key k:validations){
-        GLMValidation v = DKV.get(k).get();
-        v.generateHTML("", sb);
-      }
-    }
+    GLMValidation val = validation();
+    if(val != null)val.generateHTML("Training Set Validation", sb);
   }
   /**
    * get beta coefficients in a map indexed by name
@@ -233,6 +268,7 @@ public class GLMModel extends Model {
     if(hrs > 0 || minutes > 0 | seconds > 0)sb.append(seconds + "sec ");
     sb.append(t + "msec");
   }
+  @Override
   public String toString(){
     StringBuilder sb = new StringBuilder("GLM Model (key=" + _selfKey + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration + "):\n");
     final int cats = catOffsets.length-1;
@@ -252,9 +288,6 @@ public class GLMModel extends Model {
     for( double b : beta ) if( b != 0 ) ++res;
     return res;
   }
-  @Override public void delete(){
-    if(validations != null) for(Key k:validations)
-      DKV.remove(k);
-    super.delete();
-  }
+  @Override public void delete(){super.delete();}
+  public void setValidation(GLMValidation val ){validation = val;}
 }

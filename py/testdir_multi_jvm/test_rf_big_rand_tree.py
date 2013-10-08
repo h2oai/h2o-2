@@ -45,13 +45,13 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(2, java_heap_GB=7)
         else:
             import h2o_hosts
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(2, java_heap_GB=7)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
     
-    def test_rf_big_rand_trees(self):
+    def test_rf_big_rand_tree(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -67,10 +67,12 @@ class Basic(unittest.TestCase):
             seed = random.randint(0,sys.maxint)
             # some cols can be dropped due to constant 0 or 1. make sure data set has all 0's and all 1's above
             # to guarantee no dropped cols!
-            kwargs = {'ntree': 3, 'depth': 50, 'seed': seed}
+            # kwargs = {'ntree': 3, 'depth': 50, 'seed': seed}
+            # out of memory/GC errors with the above. reduce depth
+            kwargs = {'ntree': 3, 'depth': 20, 'seed': seed}
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
-            h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=180, pollTimeoutSecs=5, **kwargs)
+            h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=200, pollTimeoutSecs=180, **kwargs)
             print "trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
 

@@ -49,8 +49,10 @@ When the path is a directory, if \code{parse = TRUE}, the function returns a lis
 \code{\link{h2o.importFolder}}, \code{\link{h2o.importFile}}, \code{\link{h2o.importURL}}
 }
 \examples{
-localH2O = new("H2OClient", ip = "localhost", port = 54321)
-h2o.checkClient(localH2O)
+library(h2oWrapper)
+h2oWrapper.installDepPkgs()
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+library(h2o)
 covtype.hex = importHDFS(localH2O, path = "hdfs://192.168.1.173:54321/0xdiag/datasets/standard/covtype.data", parse = TRUE)
 summary(covtype.hex)
 

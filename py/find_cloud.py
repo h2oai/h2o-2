@@ -1,12 +1,74 @@
 #!/usr/bin/python
-import time, sys, json, re, getpass, requests, argparse
+import time, sys, json, re, getpass, requests, argparse, os, shutil
 
 parser = argparse.ArgumentParser(description='Creates h2o-node.json for cloud cloning from existing cloud')
+
 # parser.add_argument('-v', '--verbose',     help="verbose", action='store_true')
-parser.add_argument('-f', '--flatfile', help="Use this flatfile to start probes\ndefaults to pytest_flatfile-<username> which is created by python tests", type=str)
+parser.add_argument('-f', '--flatfile', 
+    help="Use this flatfile to start probes\ndefaults to pytest_flatfile-<username> which is created by python tests", 
+    type=str)
+
+parser.add_argument('-hdfs_version', '--hdfs_version', 
+    choices=['0.20.2', 'cdh3', 'cdh4', 'cdh4_yarn', 'mapr2.1.3', 'mapr3.0.1'],
+    default='cdh3', 
+    help="Use this for setting hdfs_version in the cloned cloud", 
+    type=str)
+
+parser.add_argument('-hdfs_config', '--hdfs_config', 
+    default=None,
+    help="Use this for setting hdfs_config in the cloned cloud", 
+    type=str)
+
+parser.add_argument('-hdfs_name_node', '--hdfs_name_node', 
+    default='192.168.1.176',
+    help="Use this for setting hdfs_name_node in the cloned cloud. Can be ip, ip:port, hostname, hostname:port", 
+    type=str)
+
+parser.add_argument('-expected_size', '--expected_size', 
+    default=None,
+    help="Require that the discovered cloud has this size, at each discovered node, otherwise exception",
+    type=int)
+
 args = parser.parse_args()
 
+#            "hdfs_version": "cdh3", 
+#            "hdfs_config": "None", 
+#            "hdfs_name_node": "192.168.1.176", 
 #********************************************************************
+# shutil.rmtree doesn't work on windows if the files are read only.
+# On unix the parent dir has to not be readonly too.
+# May still be issues with owner being different, like if 'system' is the guy running?
+# Apparently this escape function on errors is the way shutil.rmtree can
+# handle the permission issue. (do chmod here)
+# But we shouldn't have read-only files. So don't try to handle that case.
+def handleRemoveError(func, path, exc):
+    # If there was an error, it could be due to windows holding onto files.
+    # Wait a bit before retrying. Ignore errors on the retry. Just leave files.
+    # Ex. if we're in the looping cloud test deleting sandbox.
+    excvalue = exc[1]
+    print "Retrying shutil.rmtree of sandbox (2 sec delay). Will ignore errors. Exception was", excvalue.errno
+    time.sleep(2)
+    try:
+        func(path)
+    except OSError:
+        pass
+
+LOG_DIR = 'sandbox'
+# Create a clean sandbox, like the normal cloud builds...because tests
+# expect it to exist (they write to sandbox/commands.log)
+# find_cloud.py creates h2o-node.json for tests to use with -ccj
+# the side-effect they also want is clean sandbox, so we'll just do it here too
+def clean_sandbox():
+    if os.path.exists(LOG_DIR):
+        # shutil.rmtree fails to delete very long filenames on Windoze
+        #shutil.rmtree(LOG_DIR)
+        # was this on 3/5/13. This seems reliable on windows+cygwin
+        ### os.system("rm -rf "+LOG_DIR)
+        shutil.rmtree(LOG_DIR, ignore_errors=False, onerror=handleRemoveError)
+    # it should have been removed, but on error it might still be there
+    if not os.path.exists(LOG_DIR):
+        os.mkdir(LOG_DIR)
+
 def dump_json(j):
     return json.dumps(j, sort_keys=True, indent=2)
 
@@ -45,6 +107,22 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
     return rjson
 
 #********************************************************************
+
+# we create this node level state that h2o_import.py uses to create urls
+# normally it's set during build_cloud. 
+# As a hack, we're going to force it, from arguments to find_cloud
+# everything should just work then...the runner*sh know what hdfs clusters they're targeting
+# so can tell us (and they built the cloud anyhow!..so they are the central place that's deciding
+# hdfs_config is only used on ec2, but we'll support it in case find_cloud.py is used there.
+#            "hdfs_version": "cdh3", 
+#            "hdfs_config": "None", 
+#            "hdfs_name_node": "192.168.1.176", 
+# force these to the right state, although I should update h2o*py stuff, so they're not necessary
+# they force the prior settings to be ignore (we used to do stuff if hdfs was enabled, writing to hdfs
+# this was necessary to override the settings above that caused that to happen
+#            "use_hdfs": true, 
+#            "use_maprfs": false, 
+
 def probe_node(line, h2oNodes):
     http_addr, sep, port = line.rstrip('\n').partition(":")
     http_addr = http_addr.lstrip('/') # just in case it's an old-school flatfile with leading /
@@ -62,9 +140,12 @@ def probe_node(line, h2oNodes):
     consensus  = gc['consensus']
     locked     = gc['locked']
     cloud_size = gc['cloud_size']
-    cloud_name = gc['cloud_name']
     node_name  = gc['node_name']
+    cloud_name = gc['cloud_name']
     nodes      = gc['nodes']
+
+    if args.expected_size and (cloud_size!=args.expected_size):
+        raise Exception("cloud_size %s at %s disagrees with -expected_size %s" % (cloud_size, node_name, args.expected_size))
 
     for n in nodes:
         # print "free_mem_bytes (GB):", "%0.2f" % ((n['free_mem_bytes']+0.0)/(1024*1024*1024))
@@ -88,6 +169,9 @@ def probe_node(line, h2oNodes):
         probes.append(name)
 
         node_id = len(h2oNodes)
+
+        use_maprfs = 'mapr' in args.hdfs_version
+        use_hdfs = not use_maprfs # we default to enabling cdh3 on 192.168.1.176
         node = { 
             'http_addr': ip, 
             'port': int(port),  # print it as a number for the clone ingest
@@ -102,14 +186,14 @@ def probe_node(line, h2oNodes):
             # used for looking for buckets (h2o_import.find_folder_and_filename() will 
             # (along with other rules) try to look in # /home/h2o.nodes[0].username when trying 
             # to resolve a path to a bucket
-            'username': '0xcustomer', 
+            'username': '0xcustomer', # most found clouds are run by 0xcustomer. This doesn't really matter
             'redirect_import_folder_to_s3_path': 'false', # no..we're not on ec2
             'redirect_import_folder_to_s3n_path': 'false', # no..we're not on ec2
             'delete_keys_at_teardown': 'true', # yes we want each test to clean up after itself
-            'use_hdfs': 'true', # suppose we shouldn't really need this (but currently do)
-            'use_maprfs': 'false', 
-            'hdfs_version': 'cdh3', # something is checking for this. I guess we could set this in tests as a hack
-            'hdfs_name_node': '192.168.1.176', # hmm. do we have to set this to do hdfs url generation correctly?
+            'use_hdfs': use_hdfs,
+            'use_maprfs': use_maprfs,
+            'hdfs_version': args.hdfs_version, # something is checking for this. I guess we could set this in tests as a hack
+            'hdfs_name_node': args.hdfs_name_node, # hmm. do we have to set this to do hdfs url generation correctly?
         }
 
         # this is the total list so far
@@ -190,6 +274,9 @@ expandedCloud = {
         },
     'h2o_nodes': h2oNodesList
     }
+
+print "Cleaning sandbox, (creating it), so tests can write to commands.log normally"
+clean_sandbox()
 
 with open('h2o-nodes.json', 'w+') as f:
     f.write(json.dumps(expandedCloud, indent=4))
