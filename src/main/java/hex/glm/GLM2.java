@@ -22,7 +22,7 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Utils;
 
-public class GLM2 extends FrameJob{
+public class GLM2 extends FrameJob {
 
   @API(help="", required=true, filter=GLMResponseVecSelect.class)
   public Vec vresponse;
@@ -65,7 +65,7 @@ public class GLM2 extends FrameJob{
   @API(help = "alpha", filter = Default.class)
   double alpha = 0.5;
   @API(help = "lambda", filter = Default.class)
-  double lambda = 0.0;
+  double lambda = 1e-5;
   @API(help = "beta_eps", filter = Default.class)
   double beta_epsilon = 1e-4;
 
