@@ -25,6 +25,7 @@ public class Summary2 extends Iced {
   public static final int NMAX = 5;
   // INPUTS
   final transient boolean _enum;
+  final transient boolean _isInt;
   final transient long _avail_rows;
 
   // OUTPUTS
@@ -36,8 +37,11 @@ public class Summary2 extends Iced {
   @API(help="max elements") double [] _max; // max N elements
   @API(help="percentiles" ) double [] _percentileValues;
 
+  final transient double _binszInv;
+
   public Summary2(Vec vec) {
     _enum = vec.isEnum();
+    _isInt = vec.isInt();
     long len = vec.length();
     _avail_rows = len - vec.naCnt();
     _min = MemoryManager.malloc8d((int)Math.min(len,NMAX));
@@ -47,27 +51,26 @@ public class Summary2 extends Iced {
 
     double span = vec.max()-vec.min();
     if( vec.isEnum() && (span+1) < MAX_HIST_SZ ) {
-      _start=vec.min();
-      _binsz=1;
+      _start = vec.min();
+      _binszInv = _binsz = 1;
       _bins = new long[(int)span+1];
     } else {
-      if( vec.isInt() ) span++; // Include all of the next whole integer
-      double a = span / len;
-      double b = Math.pow(10, Math.floor(Math.log10(a)));
-      // selects among d, 5*d, and 10*d so that the number of
-      // partitions go in [start, end] is closest to n
-      if (a > 20*b/3)
-        b *= 10;
-      else if (a > 5*b/3)
-        b *= 5;
-      _start = b * Math.floor(vec.min() / b);
       // guard against improper parse (date type) or zero c._sigma
-      double binsz = Math.max(1e-4, 3.5 * vec.sigma()/ Math.cbrt(len));
-      if( vec.isInt() ) binsz = Math.max(1,Math.floor(binsz));
-      _binsz = binsz;
-      // Pick smaller of two for number of bins to avoid blowup of longs
-      int nbin = Math.max(Math.min(MAX_HIST_SZ,(int)(span / _binsz)),1);
-      _bins = new long[nbin];
+      //double b = Math.max(1e-4, 3.5 * vec.sigma()/ Math.cbrt(len));
+      //double b = Math.max(1e-4, 2 * vec.sigma()/ Math.sqrt(len));
+      double b = 2 * vec.sigma()/ Math.sqrt(len);
+      double d = Math.pow(10, Math.floor(Math.log10(b)));
+      if (b > 20*d/3)
+        d *= 10;
+      else if (b > 5*d/3)
+        d *= 5;
+      d = Math.max(1e-4,d);
+      // tweak for integers
+      if (d < 1. && _isInt) d = 1.;
+      _binsz = d; _binszInv = 1./d;
+      _start = _binsz * Math.floor(vec.min() * _binszInv);
+      int nbin = (int)Math.ceil((vec.max() + (_isInt?1:0) - _start)*_binszInv);
+      _bins = new long[nbin>0?nbin:1];
     }
   }
 
@@ -92,7 +95,8 @@ public class Summary2 extends Iced {
             minmax = k;
       }
       // update histogram
-      int binIdx = Math.min(_bins.length-1,(int)((val - _start)/_binsz));
+      int binIdx = _isInt ? (int)Math.round((val - _start)*_binszInv)
+              : (int)Math.floor((val - _start)*_binszInv);
       ++_bins[binIdx];
     }
 
@@ -153,12 +157,15 @@ public class Summary2 extends Iced {
 
   public void toHTML( Vec vec, String cname, StringBuilder sb ) {
 
-    sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;border-top-style:solid;'><div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
+    sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;border-top-style:solid;'>" +
+            "<div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
 
     // Base stats
     if( !vec.isEnum() ) {
       sb.append("<div style='width:100%;'><table class='table-bordered'>");
-      sb.append("<tr><th colspan='" + 100 + "' style='text-align:center;'>Base Stats</th></tr>");
+      sb.append("<tr><th colspan='"+20+"' style='text-align:center;'>Base" +
+              " " +
+              "Stats</th></tr>");
       sb.append("<tr>");
       sb.append("<th>avg</th><td>" + Utils.p2d(vec.mean())+"</td>");
       sb.append("<th>sd</th><td>" + Utils.p2d(vec.sigma()) + "</td>");
@@ -168,36 +175,11 @@ public class Summary2 extends Iced {
       for( double min : _min ) sb.append("<td>" + Utils.p2d(min) + "</td>");
       sb.append("<th>max[" + _max.length + "]</th>");
       for( double max : _max ) sb.append("<td>" + Utils.p2d(max) + "</td>");
-//
-//        StringBuilder threshold = new StringBuilder();
-//        StringBuilder value = new StringBuilder();
-//        if(o.has("percentiles")){
-//          JsonObject percentiles = o.get("percentiles").getAsJsonObject();
-//          JsonArray thresholds = percentiles.get("thresholds").getAsJsonArray();
-//          JsonArray values = percentiles.get("values").getAsJsonArray();
-//          Iterator<JsonElement> tIter = thresholds.iterator();
-//          Iterator<JsonElement> vIter = values.iterator();
-//
-//          threshold.append("<tr><th>Threshold</th>");
-//          value.append("<tr><th>Value</th>");
-//          while(tIter.hasNext() && vIter.hasNext()){
-//            threshold.append("<td>" + tIter.next().getAsString() + "</td>");
-//            value.append("<td>" + Utils.p2d(vIter.next().getAsDouble()) + "</td>");
-//          }
-//          threshold.append("</tr>");
-//          value.append("</tr>");
-//
-//          sb.append("<div style='width:100%;overflow:scroll;'><table class='table-bordered'>");
-//          sb.append("<th colspan='12' style='text-align:center;'>Percentiles</th>");
-//          sb.append(threshold.toString());
-//          sb.append(value.toString());
-//          sb.append("</table>");
-//          sb.append("</div>");
-//        }
-//
       // End of base stats
       sb.append("</tr> </table>");
       sb.append("</div>");
+
+
     } else {                    // Enums
       sb.append("<div style='width:100%'><table class='table-bordered'>");
       sb.append("<tr><th colspan='" + 4 + "' style='text-align:center;'>Base Stats</th></tr>");
@@ -210,7 +192,8 @@ public class Summary2 extends Iced {
     final int MAX_HISTO_BINS_DISPLAYED = 1000;
     int len = Math.min(_bins.length,MAX_HISTO_BINS_DISPLAYED);
     sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
-    sb.append("<tr> <th colspan="+len+ ">Histogram</th></tr>");
+    sb.append("<tr> <th colspan="+len+" style='text-align:center' " +
+            ">Histogram</th></tr>");
     sb.append("<tr>");
     for( int i=0; i<len; i++ ) sb.append("<th>" + Utils.p2d(binValue(i)) + "</th>");
     sb.append("</tr>");
@@ -218,13 +201,30 @@ public class Summary2 extends Iced {
     for( int i=0; i<len; i++ ) sb.append("<td>" + _bins[i] + "</td>");
     sb.append("</tr>");
     sb.append("<tr>");
-    for( int i=0; i<len; i++ ) 
+    for( int i=0; i<len; i++ )
       sb.append(String.format("<td>%.1f%%</td>",(100.0*_bins[i]/_avail_rows)));
     sb.append("</tr>");
     if( _bins.length >= MAX_HISTO_BINS_DISPLAYED )
       sb.append("<div class='alert'>Histogram for this column was too big and was truncated to 1000 values!</div>");
     sb.append("</table></div>");
 
+    if (!vec.isEnum()) {
+      // Percentiles
+      sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
+      sb.append("<tr> <th colspan='" + DEFAULT_PERCENTILES.length + "' " +
+              "style='text-align:center' " +
+              ">Percentiles</th></tr>");
+      sb.append("<tr><th>Threshold(%)</th>");
+      for (double pc : DEFAULT_PERCENTILES)
+        sb.append("<td>" + (int) Math.round(pc * 100) + "</td>");
+      sb.append("</tr>");
+      sb.append("<tr><th>Value</th>");
+      for (double pv : _percentileValues)
+        sb.append("<td>" + Utils.p2d(pv) + "</td>");
+      sb.append("</tr>");
+      sb.append("</table>");
+      sb.append("</div>");
+    }
     sb.append("\n</div>\n");
   }
 }
