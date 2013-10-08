@@ -6,7 +6,7 @@ def define_params():
     paramDict = {
         'standardize': [None, 0,1],
         'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
-        'expert': [None, 0, 1],
+        'expert_settings': [None, 0, 1],
         'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         'x': [0,1,15,33,34],
         'family': ['binomial'],

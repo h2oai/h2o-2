@@ -8,7 +8,7 @@ import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h
 paramDict = {
     # FIX! if there's a header, can you specify column number or column header
     'response_variable': 54,
-    'class_weight': None,
+    'class_weights': None,
     'ntree': 10,
     'model_key': 'model_keyA',
     'out_of_bag_error_estimate': 1,

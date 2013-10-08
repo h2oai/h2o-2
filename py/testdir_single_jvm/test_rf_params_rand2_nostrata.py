@@ -9,7 +9,7 @@ print "Temporarily not using bin_limit=1 to 4"
 print "Temporarily not using stratify"
 paramDict = {
     'response_variable': [None,54],
-    'class_weight': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
+    'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
     'ntree': [1,3,7,19],
     'model_key': ['model_keyA', '012345', '__hello'],
     'out_of_bag_error_estimate': [None,0,1],
