@@ -247,6 +247,22 @@ public abstract class Model extends Iced {
     return new Frame[] { new Frame(Arrays.copyOf(_names,_names.length-1),vecs), new Frame(anames, avecs) };
   }
 
+  /** Returns a mapping between values domains for a given column.  */
+  private static int[] getDomainMapping(String colName, String[] modelDom, String[] dom, boolean exact) {
+    int emap[] = new int[dom.length];
+    HashMap<String,Integer> md = new HashMap<String, Integer>();
+    for( int i = 0; i < modelDom.length; i++) md.put(modelDom[i], i);
+    for( int i = 0; i < dom.length; i++) {
+      Integer I = md.get(dom[i]);
+      if( I==null && exact )
+        Log.warn(Sys.SCORM, "Column "+colName+" was not trained with factor '"+dom[i]+"' which appears in the data");
+      emap[i] = I==null ? -1 : I;
+    }
+    for( int i = 0; i < dom.length; i++)
+      assert emap[i]==-1 || modelDom[emap[i]].equals(dom[i]);
+    return emap;
+  }
+
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,
    *  and expect the last Chunks are for the final distribution & prediction.
    *  Default method is to just load the data into the tmp array, then call
@@ -266,27 +282,94 @@ public abstract class Model extends Iced {
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
 
-  /** Returns a mapping between values domains for a given column.  */
-  public static int[] getDomainMapping(String colName, String[] modelDom, String[] dom, boolean exact) {
-    int emap[] = new int[dom.length];
-    HashMap<String,Integer> md = new HashMap<String, Integer>();
-    for( int i = 0; i < modelDom.length; i++) md.put(modelDom[i], i);
-    for( int i = 0; i < dom.length; i++) {
-      Integer I = md.get(dom[i]);
-      if( I==null && exact )
-        Log.warn(Sys.SCORM, "Column "+colName+" was not trained with factor '"+dom[i]+"' which appears in the data");
-      emap[i] = I==null ? -1 : I;
-    }
-    for( int i = 0; i < dom.length; i++)
-      assert emap[i]==-1 || modelDom[emap[i]].equals(dom[i]);
-    return emap;
-  }
 
-  /** Recreate given vector respecting given domain mapping. */
-  public static Vec remapVecDomain(int[] map, Vec vec) {
-    assert vec._domain != null; // support only string enums
-    // Make a vector transforming original vector on-the-fly according to a given map
-    Vec rVec = vec.makeTransf(map);
-    return rVec;
+  /** Return a String which is a valid Java program representing a class that
+   *  implements the Model.  The Java is of the form:
+   *  <pre>
+   *    class uuidxxxxModel {
+   *      public static final String NAMES[] = { ....column names... }
+   *      public static final String DOMAINS[][] = { ....domain names... }
+   *      // Pass in data in a double[], pre-aligned to the Model's requirements.
+   *      // Jam predictions into the preds[] array; preds[0] is reserved for the
+   *      // main prediction (class for classifiers or value for regression),
+   *      // and remaining columns hold a probability distribution for classifiers.
+   *      float[] predict( double data[], float preds[] ) {
+   *        ...model specific...
+   *        return preds;
+   *      }
+   *      double[] map( HashMap<String,Double> row, double data[] ) {
+   *        ...model specific domain mapping code...
+   *        return data;
+   *      }
+   *      // Does the mapping lookup for every row, no allocation
+   *      float[] predict( HashMap<String,Double> row, double data[], float preds[] ) {
+   *        return predict(map(row,data),preds);
+   *      }
+   *      // Allocates a double[] for every row
+   *      float[] predict( HashMap<String,Double> row, float preds[] ) {
+   *        return predict(map(row,new double[NAMES.length]),preds);
+   *      }
+   *      // Allocates a double[] and a float[] for every row
+   *      float[] predict( HashMap<String,Double> row ) {
+   *        return predict(map(row,new double[NAMES.length]),preds);
+   *      }
+   *    }
+   *  </pre>
+   */
+  protected String toJava_impl() { throw new IllegalArgumentException("This model type does not support conversion to Java"); }
+  public String toJava() {
+    String m = toJava_impl();
+    String j = String
+      .format("\n"+
+              "class %s {\n"+
+              "  public static final String NAMES[] = %s;\n"+
+              "  public static final int NCLASSES=%d;\n" +
+              "  // Pass in data in a double[], pre-aligned to the Model's requirements.\n"+
+              "  // Jam predictions into the preds[] array; preds[0] is reserved for the\n"+
+              "  // main prediction (class for classifiers or value for regression),\n"+
+              "  // and remaining columns hold a probability distribution for classifiers.\n"+
+              "  float[] predict( double data[], float preds[] ) {\n"+
+              "    %s\n"+
+              "    return preds;\n"+
+              "  }\n"+
+              "  double[] map( java.util.HashMap<String,Double> row, double data[] ) {\n"+
+              "    for( int i=0; i<NAMES.length-1; i++ ) {\n"+
+              "      Double d = row.get(NAMES[i]);\n"+
+              "      data[i] = d==null ? Double.NaN : d;\n"+
+              "    }\n"+
+              "    return data;\n"+
+              "  }\n"+
+              "  // Does the mapping lookup for every row, no allocation\n"+
+              "  float[] predict( java.util.HashMap<String,Double> row, double data[], float preds[] ) {\n"+
+              "    return predict(map(row,data),preds);\n"+
+              "  }\n"+
+              "  // Allocates a double[] for every row\n"+
+              "  float[] predict( java.util.HashMap<String,Double> row, float preds[] ) {\n"+
+              "    return predict(map(row,new double[NAMES.length]),preds);\n"+
+              "  }\n"+
+              "  // Allocates a double[] and a float[] for every row\n"+
+              "  float[] predict( java.util.HashMap<String,Double> row ) {\n"+
+              "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
+              "  }\n"+
+              "}\n", 
+              _selfKey.toString(), toString(_names), nclasses(),m);
+
+    return j;
+  }
+  // Convert a String[] into a valid Java String initializer
+  private String toString( String[] ss ) {
+    SB sb = new SB();
+    sb.p('{');
+    for( int i=0; i<ss.length-1; i++ )  sb.p('"').p(ss[i]).p("\",");
+    if( ss.length > 0 ) sb.p('"').p(ss[ss.length-1]).p('"');
+    sb.p('}');
+    return sb.toString();
+  }
+  // Can't believe this wasn't done long long ago
+  private static class SB {
+    public final StringBuilder _sb = new StringBuilder();
+    SB p( String s ) { _sb.append(s); return this; }
+    SB p( char   s ) { _sb.append(s); return this; }
+    @Override public String toString() { return _sb.toString(); }
   }
 }
