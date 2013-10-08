@@ -4,6 +4,7 @@ import java.util.Arrays;
 import water.*;
 import water.fvec.*;
 import water.util.Log;
+import water.util.Utils;
 
 /**
    A Histogram, computed in parallel over a Vec.
@@ -25,7 +26,7 @@ import water.util.Log;
    and again until (with a log number of splits) each bin holds roughly the
    same amount of data.  This dynamic binning resolves a lot of problems with
    picking the proper bin count or limits - generally a few more tree levels
-   will be the equal any fancy but fixed-size binning strategy.
+   will equal any fancy but fixed-size binning strategy.
    <p>
    @author Cliff Click
 */
@@ -58,7 +59,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     }
     _nbins = xbins;
     _bmin = min;                // Bin-Min
-    _step = step;
+    _step = 1.0f/step;
   }
 
   // Copy from the original DBinHistogram, but return a smaller non-binning DHistogram.
@@ -86,11 +87,11 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   int bin( float col_data ) {
     if( Float.isNaN(col_data) ) return 0; // Always NAs to bin 0
     assert col_data <= _max : "Coldata out of range "+col_data+" "+this;
-    int idx1  = (int)((col_data-_bmin)/_step);
+    int idx1  = (int)((col_data-_bmin)*_step);
     int idx2  = Math.max(Math.min(idx1,_nbins-1),0); // saturate at bounds
     return idx2;
   }
-  float binAt( int b ) { return _bmin+b*_step; }
+  float binAt( int b ) { return _bmin+b/_step; }
 
   @Override int  nbins(     ) { return _nbins  ; }
   @Override long  bins(int b) { return _bins[b]; }
@@ -104,9 +105,6 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Score is the sum of the MSEs when the data is split at a single point.
   // mses[1] == MSE for splitting between bins  0  and 1.
   // mses[n] == MSE for splitting between bins n-1 and n.
-  // Recursive mean & variance:
-  //    http://www.johndcook.com/standard_deviation.html
-  //    http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
   DTree.Split scoreMSE( int col ) {
     assert _nbins > 1;
 
@@ -149,10 +147,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Assert we computed the variance in both directions to some near-equal amount
     double last_var_left_side = MS0[2*_nbins+1];
     double frst_var_rite_side = MS1[2*  0   +1];
-    double abs_err = Math.abs(frst_var_rite_side-last_var_left_side);
-    double rel_err = abs_err/last_var_left_side;
-    assert abs_err < 1e-19 || rel_err < 1e-9 : Arrays.toString(MS0)+":"+Arrays.toString(MS1)+", "+
-      Arrays.toString(ns0)+":"+Arrays.toString(ns1)+", var relative error="+rel_err+", var absolute error="+abs_err;
+    assert equals(last_var_left_side,frst_var_rite_side) : Arrays.toString(MS0)+":"+Arrays.toString(MS1)+", "+
+      Arrays.toString(ns0)+":"+Arrays.toString(ns1);
 
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
@@ -211,13 +207,24 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     // Track actual lower/upper bound per-bin
     if( col_data < _mins[b] ) _mins[b] = col_data;
     if( col_data > _maxs[b] ) _maxs[b] = col_data;
-    // Recursive mean & variance of response vector
-    //    http://www.johndcook.com/standard_deviation.html
-    double oldM = _MSs[2*b+0];  // Old mean
-    double newM = _MSs[2*b+0] = oldM + (y-oldM)/k;
-    _MSs[2*b+1] += (y-oldM)*(y-newM);
+    _MSs[2*b+0] += y;
+    _MSs[2*b+1] += y*y;
   }
 
+
+  // One-time after compute sum & sum^2, convert to mean & var*N
+  public void fini() {
+    for( int b=0; b<_nbins; b++ ) {
+      long N = _bins[b];
+      if( N>0 ) {
+        double sum = _MSs[2*b+0];
+        double ss2 = _MSs[2*b+1];
+        double mean = sum / N;
+        _MSs[2*b+0] = mean;
+        _MSs[2*b+1] = ss2- mean*sum; // var*N == (ss2/N-mean*mean)*N == ss2-mean*mean*N
+      }
+    }
+  }
 
   // After having filled in histogram bins, compute tighter min/max bounds.
   @Override public void tightenMinMax() {
@@ -266,9 +273,10 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     double m = Double.NaN;
     for( int b=0; b<_nbins; b++ ) {
       if( _bins[b] == 0 ) continue;
-      if( _MSs[2*b+1] != 0 ) return false;
-      if( _MSs[2*b+0] != m ) 
-        if( Double.isNaN(m) ) m=_MSs[2*b+0]; 
+      double mean = mean(b);
+      if( var(b) > 1e-16 ) return false;
+      if( mean != m ) 
+        if( Double.isNaN(m) ) m=mean; 
         else return false;
     }
     return true;
@@ -277,7 +285,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   // Pretty-print a histogram
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(_name).append(":").append(_min).append("-").append(_max+", bmin="+_bmin+" step="+_step+" nbins="+(int)_nbins);
+    sb.append(_name).append(":").append(_min).append("-").append(_max+", bmin="+_bmin+" step="+(1/_step)+" nbins="+(int)_nbins);
     if( _bins != null ) {
       for( int b=0; b<_nbins; b++ ) {
         sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));
@@ -296,5 +304,13 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     sum += 8+byteSize(_maxs);
     sum += 8+byteSize(_MSs);
     return sum;
+  }
+
+  private boolean equals( double d1, double d2 ) {
+    if( d1 == d2 ) return true;
+    double abs_err = Math.abs(d1-d2);
+    double max=Math.max(Math.abs(d1),Math.abs(d2));
+    double rel_err = abs_err/max;
+    return abs_err < 1e-19 || rel_err < 1e-9;
   }
 }
