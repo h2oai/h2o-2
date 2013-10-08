@@ -262,6 +262,13 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
             else              nh .incr(col_data); // Small histogram
           }
         }
+
+        // Per-chunk histogram rollups
+        for( DHistogram dbh[] : hcs )
+          if( dbh != null )
+            for( int j=0; j<dbh.length; j++ )
+              if( dbh[j] != null )
+                ((DBinHistogram)dbh[j]).fini();
       }
     }
 

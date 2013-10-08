@@ -49,7 +49,6 @@ Objects can be created by calls of the form \code{new("H2OClient", ...)}
 library(h2oWrapper)
 h2oWrapper.installDepPkgs()
 localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
-library(h2o)
 showClass("H2OClient")
 }
 \keyword{classes}

@@ -163,6 +163,7 @@ public abstract class Request2 extends Request {
           if( !Modifier.isStatic(field.getModifiers()) )
             fields.add(field);
 
+      // TODO remove map, response field already processed specifically
       HashMap<String, FrameClassVec> classVecs = new HashMap<String, FrameClassVec>();
       for( Field f : fields ) {
         Annotation[] as = f.getAnnotations();

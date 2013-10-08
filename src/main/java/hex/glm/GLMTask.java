@@ -1,6 +1,5 @@
 package hex.glm;
 
-
 import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
@@ -228,7 +227,6 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     public YMUTask(Job job, GLMParams glm, boolean standardize, CaseMode cm, double cv, long nobs) {
       super(job,glm,null,standardize, cm, cv);
       _reg = 1.0/nobs;
-      System.out.println("nobs = " + nobs + ", _reg = " + (1.0/nobs));
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
       _ymu += response;
@@ -305,38 +303,34 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       _reg = git._reg;
     }
 
-    @Override public final void processRow(double [] nums, int ncats, int [] cats, double y){
+    @Override public final void processRow(final double [] nums, final int ncats, final int [] cats, final double y){
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
       assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
-      double w = 1;
-      double eta = 0, mu = 0, var = 1;
-      if( _glm.family != Family.gaussian) {
+      final double w, eta, mu, var, z;
+      if( _glm.family == Family.gaussian) {
+        w = 1;
+        z = y;
+      } else {
         if( _beta == null ) {
-          mu = _glm.mustart(y);
+          mu = _glm.mustart(y, _ymu);
           eta = _glm.link(mu);
-          _val.add(y, _ymu);
         } else {
           eta = computeEta(ncats, cats,nums);
           mu = _glm.linkInv(eta);
-          _val.add(y, mu);
         }
+        _val.add(y, mu);
         var = Math.max(1e-5, _glm.variance(mu)); // avoid numerical problems with 0 variance
-        if( _glm.family == Family.binomial || _glm.family == Family.poisson ) {
-          w = var;
-          y = eta + (y - mu) / var;
-        } else {
-          double dp = _glm.linkInvDeriv(eta);
-          w = dp * dp / var;
-          y = eta + (y - mu) / dp;
-        }
+        final double d = _glm.linkDeriv(mu);
+        z = eta + (y - mu)*d;
+        w = 1.0/(var*d*d);
       }
       assert w >= 0 : "invalid weight " + w;
-      _yy += 0.5 * w * y * y;
-      double wy = w * y;
-      for(int i = 0; i < ncats; ++i)_xy[cats[i]] += wy;
+      _yy += 0.5 * w * z * z;
+      double wz = w * z;
+      for(int i = 0; i < ncats; ++i)_xy[cats[i]] += wz;
       final int numStart = _catOffsets[_cats];
-      for(int i = 0; i < nums.length; ++i)_xy[numStart+i] += wy*nums[i];
-      _xy[numStart + _nums] += wy;
+      for(int i = 0; i < nums.length; ++i)_xy[numStart+i] += wz*nums[i];
+      _xy[numStart + _nums] += wz;
       _gram.addRow(nums, ncats, cats, w);
     }
     @Override public void map(Chunk [] chunks){
@@ -347,7 +341,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       _val = new GLMValidation(null,_ymu, _glm,rank);
       super.map(chunks);
       _gram.mul(_reg);
-      if(_val.nobs > 0)_val.avg_err /= _val.nobs;
+      _val.regularize(_reg);
       for(int i = 0; i < _xy.length; ++i)
         _xy[i] *= _reg;
     }
