@@ -43,6 +43,7 @@ h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
   port = client@port
   
+  #TODO(spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
   url = paste("http://", ip, ":", port, "/", page, sep="")
   temp = postForm(url, style = "POST", ...)

@@ -1,3 +1,16 @@
+read.zip <- function(zipfile, exdir,header=T) {
+    zipdir <- exdir
+    unzip(zipfile, exdir=zipdir)
+    files <- list.files(zipdir)
+    file <- paste(zipdir, files[1], sep="/")
+    read.csv(file,header=header)
+}
+
+remove_exdir <- function(exdir) {
+    exec <- paste("rm -r ", exdir, sep="")
+    system(exec)
+}
+
 logging<- 
 function(m) {
   cat(sprintf("[%s] %s\n", Sys.time(),m))
