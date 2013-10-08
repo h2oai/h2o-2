@@ -1,5 +1,5 @@
 # Model-building operations and algorithms
-setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
+setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, expert_settings = 1, beta_epsilon = 1e-5, standardize = 1, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
 # setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.glm.FV", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm.FV") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
@@ -95,16 +95,16 @@ setMethod("h2o.gbm", signature(x="ANY", y="numeric", distribution='ANY', data="H
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
 # Internally called glm to allow games with method dispatch
-h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
+h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
       if(family == 'tweedie' && (tweedie.p < 1 || tweedie.p > 2 ))
           stop('tweedie.p must be in (1,2)')
       if(family != "tweedie" && !(missing(tweedie.p) || is.na(tweedie.p) ) )
           stop('tweedie.p may only be set for family tweedie')
 
       if(family != 'tweedie')
-          res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0)
+          res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, expert_settings, beta_epsilon, standardize, case_mode="=", case=1.0)
       else
-          res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, case_mode="=", case=1.0, tweedie_power=tweedie.p)
+          res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM, key = data@key, y = y, x = paste(x, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, expert_settings, beta_epsilon, standardize, case_mode="=", case=1.0, tweedie_power=tweedie.p)
       while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
       destKey = res$destination_key
       res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
@@ -188,14 +188,20 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
       return(result)
 }
 
-setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
-    function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
+setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", expert_settings="ANY", beta_epsilon="ANY", standardize="ANY", tweedie.p="ANY"),
+    function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
       if(!(missing(nfolds) || class(nfolds) == "numeric"))
         stop(paste("nfolds cannot be of class", class(nfolds)))
       if(!(missing(alpha) || class(alpha) == "numeric"))
         stop(paste("alpha cannot be of class", class(alpha)))
       if(!(missing(lambda) || class(lambda) == "numeric"))
         stop(paste("lambda cannot be of class", class(lambda)))
+      if(!(missing(expert_settings) || class(expert_settings) == "numeric"))
+        stop(paste("expert_settings cannot be of class", class(expert_settings)))
+      if(!(missing(beta_epsilon) || class(beta_epsilon) == "numeric"))
+        stop(paste("beta_epsilon cannot be of class", class(beta_epsilon)))
+      if(!(missing(standardize) || class(standardize) == "numeric"))
+        stop(paste("standardize cannot be of class", class(standardize)))  
       if (!(missing(tweedie.p) || class(tweedie.p) == 'numeric'))
         stop(paste('tweedie.p cannot be of class', class(tweedie.p)))
       
@@ -205,30 +211,30 @@ setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData
       if(any(!(x %in% cc))) stop(paste(paste(x[which(!(x %in% cc))], collapse=','), 'is not a valid column name'))
       
       if((missing(lambda) || length(lambda) == 1) && (missing(alpha) || length(alpha) == 1))
-        h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda)
+        h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize)
       else {
         if(!missing(tweedie.p)) print("Tweedie variance power not available in GLM grid search")
         h2o.glmgrid.internal(x, y, data, family, nfolds, alpha, lambda)
       }
    })
 
-setMethod("h2o.glm", signature(x="character", y="numeric", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+setMethod("h2o.glm", signature(x="character", y="numeric", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", expert_settings="ANY", beta_epsilon="ANY", standardize="ANY", tweedie.p="ANY"),
     function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
       if(y < 1 || y > ncol(data)) stop(paste(y, "is not a valid column index"))
-      h2o.glm(x, colnames(data)[y], data, family, nfolds, alpha, lambda, tweedie.p)
+      h2o.glm(x, colnames(data)[y], data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p)
     })  
 
-setMethod("h2o.glm", signature(x="numeric", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
-    function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
+setMethod("h2o.glm", signature(x="numeric", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", expert_settings="ANY", beta_epsilon="ANY", standardize="ANY", tweedie.p="ANY"),
+    function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
       if (length(x) < 1) stop("GLM requires at least one explanatory variable")
       if(any( x < 1 | x > ncol(data))) stop(paste('Out of range explanatory variable', paste(x[which(x < 1 || x > ncol(data))], collapse=',')))
-      h2o.glm(colnames(data)[x], y, data, family, nfolds, alpha, lambda)
+      h2o.glm(colnames(data)[x], y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize)
     })
 
-setMethod("h2o.glm", signature(x="numeric", y="numeric", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
-    function(x, y, data, family, nfolds, alpha, lambda, tweedie.p) {
+setMethod("h2o.glm", signature(x="numeric", y="numeric", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", expert_settings="ANY", beta_epsilon="ANY", standardize="ANY", tweedie.p="ANY"),
+    function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
       if(y < 1 || y > ncol(data)) stop(paste(y, "is not a valid column index"))
-      h2o.glm(x, colnames(data)[y], data, family, nfolds, alpha, lambda, tweedie.p)
+      h2o.glm(x, colnames(data)[y], data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p)
     })
 
 #----------------------------- K-Means Clustering -------------------------------#
