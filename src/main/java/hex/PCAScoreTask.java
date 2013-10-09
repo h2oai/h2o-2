@@ -89,11 +89,18 @@ public abstract class PCAScoreTask {
     // the features of the input dataset, while the cols of B are the principal components.
     @Override public void map(Chunk [] chunks) {
       int rows = chunks[0]._len;
+      ROW_LOOP:
       for(int r = 0; r < rows; r++) {
         for(int c = 0; c < _ncomp; c++) {
          double x = 0;
-         for(int d = 0; d < _nfeat; d++)
+         for(int d = 0; d < _nfeat; d++) {
+           if(chunks[d].isNA0(r)) {
+             for(int i = 0; i < _ncomp; i++)
+               chunks[_nfeat+i].setNA0(r);
+               continue ROW_LOOP;
+           }
            x += chunks[d].at0(r)*_smatrix[d][c];
+         }
          chunks[_nfeat+c].set0(r,x);
         }
       }
