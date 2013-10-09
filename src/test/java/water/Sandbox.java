@@ -10,18 +10,9 @@ import water.util.Utils;
 public class Sandbox {
   public static void main(String[] args) throws Exception {
     String line = "-mainClass " + UserCode.class.getName() + " -beta"; // -name s8koPQJ72ZC8Jh66uGeR
-//    Boot._init.boot2(Utils.add(args, line.split(" ")));
-
-    EC2 ec2 = new EC2();
-    ec2.boxes = 4;
-    ec2.securityGroup = "cypof";
-    Cloud c = ec2.resize();
-    c.clientRSyncIncludes.add("experiments/target");
-    c.clientRSyncIncludes.add("smalldata");
-    c.fannedRSyncIncludes.add("smalldata");
-    c.jdk = "../libs/jdk";
-    String java = "-ea -Xmx12G -Dh2o.debug";
-    c.start(java.split(" "), line.split(" "));
+    args = Utils.add(args, line.split(" "));
+    Boot._init.boot2(args);
+    //ec2(args);
   }
 
   public static class UserCode {
@@ -29,26 +20,26 @@ public class Sandbox {
       localCloud(1, true, args);
 
       // File f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
-      // File f = new File("smalldata/mnist/train.csv.gz");
-      File f = new File("smalldata/covtype/covtype.20k.data");
+      // File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
       // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
 
-//      Key dest = Key.make("train.hex");
-//      Key fkey = NFSFileVec.make(f);
-//      ParseDataset2.parse(dest, new Key[] { fkey });
-//
-//      f = new File("smalldata/mnist/test.csv.gz");
-//      dest = Key.make("test.hex");
-//      fkey = NFSFileVec.make(f);
-//      ParseDataset2.parse(dest, new Key[] { fkey });
+//    Key key = TestUtil.load_test_file(f, "test");
+//    Key dest = Key.make("test.hex");
+//    water.parser.ParseDataset.parse(dest, new Key[] { key });
+//    ValueArray va = (ValueArray) UKV.get(dest);
 
-      Key key = TestUtil.load_test_file(f, "test");
-      Key dest = Key.make("test.hex");
-      water.parser.ParseDataset.parse(dest, new Key[] { key });
-      //ValueArray va = (ValueArray) UKV.get(dest);
+      File train = new File("smalldata/mnist/train.csv.gz");
+      Key dest = Key.make("train.hex");
+      Key fkey = water.fvec.NFSFileVec.make(train);
+      water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+
+      File test = new File("smalldata/mnist/test.csv.gz");
+      dest = Key.make("test.hex");
+      fkey = water.fvec.NFSFileVec.make(test);
+      water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
 
       Utils.readConsole();
 
@@ -126,6 +117,18 @@ public class Sandbox {
     }
     H2O.main(args(args, local, port, flatfile));
     TestUtil.stall_till_cloudsize(1 + workers.length);
+  }
+
+  public static void ec2(String[] args) throws Exception {
+    EC2 ec2 = new EC2();
+    ec2.boxes = 4;
+    Cloud c = ec2.resize();
+    c.clientRSyncIncludes.add("experiments/target");
+    c.clientRSyncIncludes.add("smalldata");
+    c.fannedRSyncIncludes.add("smalldata");
+    c.jdk = "../libs/jdk";
+    String java = "-ea -Xmx12G -Dh2o.debug";
+    c.start(java.split(" "), args);
   }
 
   private static String[] args(String[] args, String ip, int port, String flatfile) {

@@ -319,13 +319,8 @@ public abstract class Layer extends Iced {
     Vec _vec;
 
     public VecSoftmax(Vec vec) {
-      super(classes(vec));
+      super(vec.domain().length);
       _vec = vec;
-    }
-
-    static int classes(Vec vec) {
-      long min = (long) vec.min(), max = (long) vec.max();
-      return (int) (max - min);
     }
 
     @Override int label() {
@@ -337,7 +332,7 @@ public abstract class Layer extends Iced {
     transient Chunk _chunk;
 
     public ChunkSoftmax(Chunk chunk) {
-      super(VecSoftmax.classes(chunk._vec));
+      super(chunk._vec.domain().length);
       _chunk = chunk;
     }
 

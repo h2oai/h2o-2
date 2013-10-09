@@ -71,7 +71,12 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1]._rate = (float) rate;
       ls[i + 1]._l2 = (float) l2;
     }
-    ls[ls.length - 1] = new VecSoftmax(response);
+    if( classification ) {
+      response.asEnum();
+      ls[ls.length - 1] = new VecSoftmax(response);
+    } else {
+      // TODO Gaussian?
+    }
     ls[ls.length - 1]._rate = (float) rate;
     ls[ls.length - 1]._l2 = (float) l2;
     for( int i = 0; i < ls.length; i++ )
@@ -99,7 +104,9 @@ public class NeuralNet extends ValidatedJob {
           lastItems = items;
 
           NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
-          long[][] cm = new long[model.classNames().length][model.classNames().length];
+          long[][] cm = null;
+          if( classification )
+            cm = new long[response.domain().length][response.domain().length];
 
           VecsInput stats = (VecsInput) ls[0];
           Layer[] clones = new Layer[ls.length];
@@ -318,7 +325,7 @@ public class NeuralNet extends ValidatedJob {
         clones[y]._b = model.bs[y];
         clones[y].init(clones, y, false, 0);
       }
-      int classes = VecSoftmax.classes(response);
+      int classes = response.domain().length;
       confusion_matrix = new long[classes][classes];
       Error error = run(clones, max_rows, confusion_matrix);
       classification_error = error.Value;
