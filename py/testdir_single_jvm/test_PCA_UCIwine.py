@@ -36,7 +36,6 @@ class Basic(unittest.TestCase):
         #PCA params
         params = { 
             'destination_key': "python_PCA_key",
-            'ignore':0,
             'tolerance':0.0,
             'standardize':1
             }   

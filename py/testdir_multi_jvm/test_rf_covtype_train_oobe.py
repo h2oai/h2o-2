@@ -15,7 +15,7 @@ paramDict = {
     'use_non_local_data': 1,
     # FIX! if there's a header, can you specify column number or column header
     'response_variable': 54,
-    'class_weight': None,
+    'class_weights': None,
     'ntree': 50,
     'out_of_bag_error_estimate': 1,
     'stat_type': 'ENTROPY',

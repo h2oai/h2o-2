@@ -14,13 +14,13 @@ H2Ocon <- new("H2OClient", ip=myIP, port=myPort)
 test.LiblineaR <- function(con) {
   L1logistic <- function(train,trainLabels,test,testLabels,trainhex,testhex) {
     logging("\nUsing default parameters for LiblineaR: \n")
-    logging("   type =    6: Logistic Regression L1-Regularized\n")
+    logging("   type =    0: Logistic Regression L2-Regularized\n")
     logging("   cost =  100: Cost of constraints parameter\n")
     logging("epsilon = 1E-2: Tolerance of termination criterion\n")
     logging("  cross =    0: No k-fold cross-validation\n")
-    LibR.m      <- LiblineaR(train, trainLabels,type=6, epsilon=1E-2, cost=100)
-    LibRpreds  <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
-    LibRCM <- table(testLabels, LibRpreds$predictions)
+    LibR.m      <- LiblineaR(train, trainLabels,type=0, epsilon=1E-2, 100)#cost= 1 / (34 * 7))
+    LibRpreds   <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
+    LibRCM      <- table(testLabels, LibRpreds$predictions)
     
     LibRPrecision <- LibRCM[1] / (LibRCM[1] + LibRCM[3])
     LibRRecall    <- LibRCM[1] / (LibRCM[1] + LibRCM[2])
@@ -29,22 +29,22 @@ test.LiblineaR <- function(con) {
     
     logging("\nUsing these parameters for H2O: \n")
     logging(" family = 'binomial': Logistic Regression\n")
-    logging(" lambda =         34: Shrinkage Parameter\n")
+    logging(" lambda =      1/700: Shrinkage Parameter\n")
     logging("  alpha =        0.0: Elastic Net Parameter\n")
     logging("epsilon =      1E-02: Tolerance of termination criterion\n")
     logging(" nfolds =          1: No k-fold cross-validation\n")
     h2o.m <- h2o.glm(x            = c("GLEASON","DPROS","PSA","DCAPS","AGE","RACE","VOL"), 
-                     y            = "CAPSULE", 
-                     data         = trainhex, 
+                     y            = "CAPSULE",
+                     data         = trainhex,
                      family       = "binomial",
-                     nfolds       = 1, 
-                     lambda       = 34,
+                     nfolds       = 1,
+                     lambda       = 1 / 700,
                      alpha        = 0.0,
                      beta_epsilon = 1E-2)
     
-    h2op     <- h2o.predict(h2o.m, testhex)
-    h2opreds <- head(h2op, nrow(h2op))
-    h2oCM    <- table(testLabels, h2opreds$CAPSULE)
+    h2op         <- h2o.predict(h2o.m, testhex)
+    h2opreds     <- head(h2op, nrow(h2op))
+    h2oCM        <- table(testLabels, h2opreds$CAPSULE)
     
     h2oPrecision <- h2oCM[1] / (h2oCM[1] + h2oCM[3])
     h2oRecall    <- h2oCM[1] / (h2oCM[1] + h2oCM[2])
@@ -70,11 +70,11 @@ test.LiblineaR <- function(con) {
   
   L2logistic <- function(train,trainLabels,test,testLabels,trainhex,testhex) {
     logging("\nUsing these parameters for LiblineaR: \n")
-    logging("   type =    0: Logistic Regression L2-Regularized\n")
-    logging("   cost =  100: Cost of constraints parameter\n")
-    logging("epsilon = 1E-2: Tolerance of termination criterion\n")
-    logging("  cross =    0: No k-fold cross-validation\n")
-    LibR.m      <- LiblineaR(train, trainLabels, type=0, epsilon=1E-2,cost=0.0097)
+    logging("   type =                      0: Logistic Regression L2-Regularized\n")
+    logging("   cost =                     10: Cost of constraints parameter\n")
+    logging("epsilon =                   1E-2: Tolerance of termination criterion\n")
+    logging("  cross =                      0: No k-fold cross-validation\n")
+    LibR.m      <- LiblineaR(train, trainLabels, type=0, epsilon=1E-2,cost=10)
     LibRpreds  <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
     LibRCM <- table(testLabels, LibRpreds$predictions)
     
@@ -94,7 +94,7 @@ test.LiblineaR <- function(con) {
                      data         = trainhex, 
                      family       = "binomial",
                      nfolds       = 1, 
-                     lambda       = 1E-3,
+                     lambda       = 1/70,
                      alpha        = 0.00,
                      beta_epsilon = 1E-2)
     
@@ -150,8 +150,8 @@ test.LiblineaR <- function(con) {
   xTest              <- prostate.test.dat[,-1]
   yTest              <- factor(prostate.test.dat[,1])
   models             <- L1logistic(xTrain,yTrain,xTest,yTest,prostate.train.hex,prostate.test.hex)
-  models2            <- L2logistic(xTrain,yTrain,xTest,yTest,prostate.train.hex,prostate.test.hex)
-  compareCoefs(models2[[1]], models[[2]])
+  #models2            <- L2logistic(xTrain,yTrain,xTest,yTest,prostate.train.hex,prostate.test.hex)
+  compareCoefs(models[[1]], models[[2]])
 }
 
 test_that("LiblineaR Test", test.LiblineaR(H2Ocon))

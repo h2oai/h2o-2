@@ -7,7 +7,7 @@ import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import as h2i
 # rng DETERMINISTIC is default
 paramDict = {
     'response_variable': 54,
-    'class_weight': None,
+    'class_weights': None,
     'ntree': 30,
     # 'ntree': 200,
     'model_key': 'model_keyA',

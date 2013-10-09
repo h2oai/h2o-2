@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
             csvPathname = 'iris/iris_wheader.csv.gz'
             hex_key = "iris" + "_" + str(x) + ".hex"
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, doSummary=False, schema='put')
-            h2o_cmd.runSummary(key=hex_key, doPrint=True)
+            h2o_cmd.runSummary(key=hex_key)
             trial += 1
 
 

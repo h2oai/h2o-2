@@ -26,7 +26,7 @@ class GLMTest(unittest.TestCase):
         # no regularization
         kwargs['alpha'] = 0
         kwargs['lambda'] = 0
-        glm = h2o_cmd.runGLM(parseResult=parseResult, Y = 'CAPSULE', timeoutSecs=10, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, y = 'CAPSULE', timeoutSecs=10, **kwargs)
 
         GLMModel = glm['GLMModel']
         GLMParams = GLMModel["GLMParams"]

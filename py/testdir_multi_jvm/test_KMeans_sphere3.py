@@ -94,7 +94,6 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'k': 3, 
                 'initialization': 'Furthest',
-                'epsilon': 1e-6, 
                 'cols': None, 
                 'destination_key': 'spheres3.hex', 
                 # 'seed': 265211114317615310,

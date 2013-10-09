@@ -130,7 +130,7 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
 
         paramDict = {
-            'class_weight': None,
+            'class_weights': None,
             'ntree': 10,
             'model_key': 'model_keyA',
             'out_of_bag_error_estimate': 1,
