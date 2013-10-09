@@ -100,9 +100,10 @@ public class PCA2 extends ColumnsJob {
       cumVar[i] = i == 0 ? propVar[0] : cumVar[i-1] + propVar[i];
     }
 
+    Key dataKey = Key.make(input("source"));
     int ncomp = Math.min(getNumPC(sdev, tolerance), max_pc);
-    PCAParams params = new PCAParams(max_pc, tolerance, standardize);
-    return new PCAModel(destination_key, Key.make(input("source")), source, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
+    PCAParams params = new PCAParams(data.names(), max_pc, tolerance, standardize);
+    return new PCAModel(destination_key, dataKey, source, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
   }
 
   static class reverseDouble implements Comparator<Double> {

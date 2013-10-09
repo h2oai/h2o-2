@@ -41,7 +41,6 @@ public class PCAModel extends Model {
     this.params = params;
     this.rank = rank;
     this.num_pc = num_pc;
-    // TODO: Add names of column features used to build model
   }
 
   @Override protected float[] score0(double[] data, float[] preds) {
