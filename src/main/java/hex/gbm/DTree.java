@@ -682,9 +682,9 @@ class DTree extends Iced {
     }
 
     // Convert Tree model to Java
-    protected void toJavaPredict( final SB sb ) {
+    @Override protected void toJavaPredictBody( final SB sb ) {
       String[] cnames = classNames();
-      sb.indent(2).p("Arrays.fill(preds,0);\n");
+      sb.indent(2).p("java.util.Arrays.fill(preds,0f);\n");
       for( int i=0; i < treeBits.length; i++ ) {
         CompressedTree cts[] = treeBits[i];
         for( int c=0; c<cts.length; c++ ) {
@@ -699,13 +699,12 @@ class DTree extends Iced {
             float _fs[] = new float[100];
             @Override protected void pre( int col, float fcmp, boolean equal ) {
               if( _depth > 0 ) {
-                assert _bits[_depth-1] > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
-                sb.p('\n').indent(_depth+3).p('?');
-                if( _bits[_depth-1]==2 ) { // Prior leaf?
-                  sb.p(' ').p(_fs[_depth]);// Dump the leaf, then setup for self
-                  sb.p('\n').indent(_depth+3).p(":");
-                }
-                if( _bits[_depth-1]==1 ) _bits[_depth-1]=3;
+                int b = _bits[_depth-1];
+                assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
+                if( b==1         ) _bits[_depth-1]=3; 
+                if( b==1 || b==2 ) sb.p('\n').indent(_depth+3).p("?");
+                if( b==2         ) sb.p(' ').p(_fs[_depth]); // Dump the leaf
+                if( b==2 || b==3 ) sb.p('\n').indent(_depth+3).p(":");
               }
               sb.p(" (data[").p(col).p("] ").p(equal?"== ":"< ").p(fcmp);
               assert _bits[_depth]==0;
@@ -717,7 +716,7 @@ class DTree extends Iced {
                 _bits[_depth-1]=2; _fs[_depth-1]=pred;
               } else {          // Else==2 (prior leaf) or 3 (prior tree)
                 if( _bits[_depth-1] == 2 ) sb.p(" ? ").p(_fs[_depth-1]).p(" ");
-                else                       sb.p('\n').indent(_depth+3).p(": ");
+                else                       sb.p('\n').indent(_depth+3);
                 sb.p(": ").p(pred);
               }
             }

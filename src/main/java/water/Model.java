@@ -1,16 +1,15 @@
 package water;
 
 import hex.ConfusionMatrix;
-
 import java.util.Arrays;
 import java.util.HashMap;
-
+import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
+import water.util.Log.Tag.Sys;
 import water.util.Log;
 import water.util.Utils;
-import water.util.Log.Tag.Sys;
 
 /**
  * A Model models reality (hopefully).
@@ -308,45 +307,84 @@ public abstract class Model extends Iced {
     SB sb = new SB();
     sb.p("\n");
     sb.p("class ").p(_selfKey.toString()).p(" {\n");
-    sb.p("  public static final String NAMES[] = ").p(_names).p(";\n");
-    sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
+    toJavaNAMES(sb);
+    toJavaNCLASSES(sb);
     toJavaInit(sb);  sb.p("\n");
+    toJavaPredict(sb);
+    sb.p(TOJAVA_MAP);
+    sb.p(TOJAVA_PREDICT_MAP);
+    sb.p(TOJAVA_PREDICT_MAP_ALLOC1);
+    sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
+    sb.p("}\n");
+    return sb.toString();
+  }
+  // Same thing as toJava, but as a Javassist CtClass
+  private CtClass makeCtClass() throws CannotCompileException {
+    CtClass clz = ClassPool.getDefault().makeClass(_selfKey.toString());
+    clz.addField(CtField.make(toJavaNAMES   (new SB()).toString(),clz));
+    clz.addField(CtField.make(toJavaNCLASSES(new SB()).toString(),clz));
+    toJavaInit(clz);            // Model-specific top-level goodness
+    clz.addMethod(CtMethod.make(toJavaPredict(new SB()).toString(),clz));
+    clz.addMethod(CtMethod.make(TOJAVA_MAP,clz));
+    clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP,clz));
+    clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP_ALLOC1,clz));
+    clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP_ALLOC2,clz));
+    return clz;
+  }
+
+
+  private SB toJavaNAMES( SB sb ) {
+    return sb.p("  public static final String []NAMES = new String[] ").p(_names).p(";\n");
+  }
+  private SB toJavaNCLASSES( SB sb ) {
+    return sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
+  }
+  // Override in subclasses to provide some top-level model-specific goodness
+  protected void toJavaInit(SB sb) { };
+  protected void toJavaInit(CtClass ct) { };
+  // Override in subclasses to provide some inside 'predict' call goodness
+  protected void toJavaPredictBody(SB sb) { 
+    throw new IllegalArgumentException("This model type does not support conversion to Java"); 
+  }
+  // Wrapper around the main predict call, including the signature and return value
+  private SB toJavaPredict(SB sb) {
     sb.p("  // Pass in data in a double[], pre-aligned to the Model's requirements.\n");
     sb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the\n");
     sb.p("  // main prediction (class for classifiers or value for regression),\n");
     sb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
     sb.p("  float[] predict( double data[], float preds[] ) {\n");
-    toJavaPredict(sb);  sb.p("\n");
+    toJavaPredictBody(sb);
     sb.p("    return preds;\n");
     sb.p("  }\n");
-    sb.p("  double[] map( java.util.HashMap<String,Double> row, double data[] ) {\n");
-    sb.p("    for( int i=0; i<NAMES.length-1; i++ ) {\n");
-    sb.p("      Double d = row.get(NAMES[i]);\n");
-    sb.p("      data[i] = d==null ? Double.NaN : d;\n");
-    sb.p("    }\n");
-    sb.p("    return data;\n");
-    sb.p("  }\n");
-    sb.p("  // Does the mapping lookup for every row, no allocation\n");
-    sb.p("  float[] predict( java.util.HashMap<String,Double> row, double data[], float preds[] ) {\n");
-    sb.p("    return predict(map(row,data),preds);\n");
-    sb.p("  }\n");
-    sb.p("  // Allocates a double[] for every row\n");
-    sb.p("  float[] predict( java.util.HashMap<String,Double> row, float preds[] ) {\n");
-    sb.p("    return predict(map(row,new double[NAMES.length]),preds);\n");
-    sb.p("  }\n");
-    sb.p("  // Allocates a double[] and a float[] for every row\n");
-    sb.p("  float[] predict( java.util.HashMap<String,Double> row ) {\n");
-    sb.p("    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n");
-    sb.p("  }\n");
-    sb.p("}\n");
-    return sb.toString();
+    return sb;
   }
-  // Override in subclasses to provide some top-level model-specific goodness
-  protected void toJavaInit(SB sb) { };
-  // Override in subclasses to provide some inside 'predict' call goodness
-  protected void toJavaPredict(SB sb) { 
-    throw new IllegalArgumentException("This model type does not support conversion to Java"); 
-  }
+
+  private static final String TOJAVA_MAP = 
+    "  // Takes a HashMap mapping column names to doubles.  Looks up the column\n"+
+    "  // names needed by the model, and places the doubles into the data array in\n"+
+    "  // the order needed by the model.  Missing columns use NaN.\n"+
+    "  double[] map( java.util.HashMap row, double data[] ) {\n"+
+    "    for( int i=0; i<NAMES.length-1; i++ ) {\n"+
+    "      Double d = (Double)row.get(NAMES[i]);\n"+
+    "      data[i] = d==null ? Double.NaN : d;\n"+
+    "    }\n"+
+    "    return data;\n"+
+    "  }\n";
+  private static final String TOJAVA_PREDICT_MAP = 
+    "  // Does the mapping lookup for every row, no allocation\n"+
+    "  float[] predict( java.util.HashMap row, double data[], float preds[] ) {\n"+
+    "    return predict(map(row,data),preds);\n"+
+    "  }\n";
+  private static final String TOJAVA_PREDICT_MAP_ALLOC1 = 
+    "  // Allocates a double[] for every row\n"+
+    "  float[] predict( java.util.HashMap row, float preds[] ) {\n"+
+    "    return predict(map(row,new double[NAMES.length]),preds);\n"+
+    "  }\n";
+  private static final String TOJAVA_PREDICT_MAP_ALLOC2 = 
+    "  // Allocates a double[] and a float[] for every row\n"+
+    "  float[] predict( java.util.HashMap row ) {\n"+
+    "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
+    "  }\n";
 
   // Can't believe this wasn't done long long ago
   protected static class SB {
@@ -364,5 +402,20 @@ public abstract class Model extends Iced {
       return p('}');
     }
     @Override public String toString() { return _sb.toString(); }
+  }
+
+  // Convenience method for testing: build Java, convert it to a class &
+  // execute it: compare the results of the new class's (JIT'd) scoring with
+  // the built-in (interpreted) scoring on this dataset.  Throws if there
+  // is any error (typically an AssertionError).
+  public void testJavaScoring( Frame fr ) {
+    try {
+      System.out.println(toJava());
+      Class clz = ClassPool.getDefault().toClass(makeCtClass());
+      Object modelo = clz.newInstance();
+    } 
+    catch( CannotCompileException cce ) { throw new Error(cce); }
+    catch( InstantiationException cce ) { throw new Error(cce); }
+    catch( IllegalAccessException cce ) { throw new Error(cce); }
   }
 }
