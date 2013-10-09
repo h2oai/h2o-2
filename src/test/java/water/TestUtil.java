@@ -337,6 +337,13 @@ public class TestUtil {
     return ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
   }
 
+  public static Frame parseFrame(Key okey, String path) {
+    Key fkey = NFSFileVec.make(new File(path));
+    Frame fr = ParseDataset2.parse(okey, new Key[] { fkey });
+    UKV.remove(fkey);
+    return fr;
+  }
+
   public static Frame frame(String[] names, double[][] rows) {
     assert names == null || names.length == rows[0].length;
     Vec[] vecs = new Vec[rows[0].length];
