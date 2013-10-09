@@ -10,7 +10,6 @@ import hex.Layer.VecsInput;
 import java.util.UUID;
 
 import water.*;
-import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.api.Progress2;
@@ -319,7 +318,7 @@ public class NeuralNet extends ValidatedJob {
         clones[y]._b = model.bs[y];
         clones[y].init(clones, y, false, 0);
       }
-      int classes = response.domain().length;
+      int classes = VecSoftmax.classes(response);
       confusion_matrix = new long[classes][classes];
       Error error = run(clones, max_rows, confusion_matrix);
       classification_error = error.Value;

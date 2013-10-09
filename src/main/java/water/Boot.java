@@ -30,7 +30,7 @@ import water.util.Utils;
  * at least for the time being so that we can continue using different IDEs).
  */
 public class Boot extends ClassLoader {
-
+  public static final String MAIN_CLASS = "-mainClass";
   public static final Boot _init;
   public final byte[] _jarHash;
 
@@ -230,7 +230,7 @@ public class Boot extends ClassLoader {
     // Figure out the correct main class to call
     String mainClass = "water.H2O";
     if(args != null) {
-      int index = Arrays.asList(args).indexOf("-mainClass");
+      int index = Arrays.asList(args).indexOf(MAIN_CLASS);
       if( index >= 0 && args.length > index + 1 ) {
         mainClass = args[index + 1];    // Swap out for requested main
         args = Arrays.copyOfRange(args, index + 2, args.length);
@@ -350,7 +350,7 @@ public class Boot extends ClassLoader {
   // methods to classes that inherit from DTask & Iced.  Notice that this
   // changes the default search order: existing classes first, then my class
   // search, THEN the System or parent loader.
-  public synchronized Class loadClass( String name, boolean resolve ) throws ClassNotFoundException {
+  @Override public synchronized Class loadClass( String name, boolean resolve ) throws ClassNotFoundException {
     assert !name.equals(Weaver.class.getName());
     Class z = loadClass2(name);      // Do all the work in here
     if( resolve ) resolveClass(z);   // Resolve here instead in the work method

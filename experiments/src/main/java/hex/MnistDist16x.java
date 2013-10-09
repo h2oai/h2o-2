@@ -12,12 +12,12 @@ public class MnistDist16x {
   public static void main(String[] args) throws Exception {
     Cloud cloud = new Cloud();
     for( int i = LOW; i < LOW + LEN; i++ )
-      cloud._publicIPs.add("192.168.1." + (161 + i));
-    cloud._clientRSyncIncludes.add("../libs/jdk");
-    cloud._clientRSyncIncludes.add("smalldata");
-    cloud._clientRSyncIncludes.add("experiments/target");
-    cloud._fannedRSyncIncludes.add("jdk");
-    cloud._fannedRSyncIncludes.add("smalldata");
+      cloud.publicIPs.add("192.168.1." + (161 + i));
+    cloud.clientRSyncIncludes.add("../libs/jdk");
+    cloud.clientRSyncIncludes.add("smalldata");
+    cloud.clientRSyncIncludes.add("experiments/target");
+    cloud.fannedRSyncIncludes.add("jdk");
+    cloud.fannedRSyncIncludes.add("smalldata");
     String java = "-ea -Xmx120G -Dh2o.debug";
     String node = "-mainClass " + MnistDist16x.UserCode.class.getName() + " -beta";
     cloud.start(java.split(" "), node.split(" "));

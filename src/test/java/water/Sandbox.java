@@ -10,16 +10,27 @@ import water.util.Utils;
 public class Sandbox {
   public static void main(String[] args) throws Exception {
     String line = "-mainClass " + UserCode.class.getName() + " -beta"; // -name s8koPQJ72ZC8Jh66uGeR
-    Boot._init.boot2(Utils.add(args, line.split(" ")));
+//    Boot._init.boot2(Utils.add(args, line.split(" ")));
+
+    EC2 ec2 = new EC2();
+    ec2.boxes = 4;
+    ec2.securityGroup = "cypof";
+    Cloud c = ec2.resize();
+    c.clientRSyncIncludes.add("experiments/target");
+    c.clientRSyncIncludes.add("smalldata");
+    c.fannedRSyncIncludes.add("smalldata");
+    c.jdk = "../libs/jdk";
+    String java = "-ea -Xmx12G -Dh2o.debug";
+    c.start(java.split(" "), line.split(" "));
   }
 
   public static class UserCode {
     public static void userMain(String[] args) throws Exception {
       localCloud(1, true, args);
 
-      File f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
+      // File f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
       // File f = new File("smalldata/mnist/train.csv.gz");
-      // File f = new File("smalldata/covtype/covtype.20k.data");
+      File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
