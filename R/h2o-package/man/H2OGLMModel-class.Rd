@@ -16,7 +16,7 @@ Objects can be created by calls of the form \code{new("H2OGLMModel", ...)}.
   \describe{
     \item{\code{key}:}{Object of class \code{"character"}, representing the unique hex key that identifies the model.}
     \item{\code{data}:}{Object of class \code{\linkS4class{H2OParsedData}}, which is the input data used to build the model.}
-    \item{\code{glm}:}{Object of class \code{"list"} containing the following elements:
+    \item{\code{model}:}{Object of class \code{"list"} containing the following elements:
     \itemize{
     \item{\code{coefficients}: A named vector of the coefficients estimated in the model.}
     \item{\code{rank}: The numeric rank of the fitted linear model.}

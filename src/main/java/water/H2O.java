@@ -604,11 +604,7 @@ public final class H2O {
     // from a remote node, need the remote task to run at a higher priority
     // than themselves.  This field tracks the required priority.
     public byte priority() { return MIN_PRIORITY; }
-    // Do not silently ignore uncaught exceptions!
-    public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-      ex.printStackTrace();
-      return true;
-    }
+
   }
   public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
     @Override public void compute2(){throw new UnsupportedOperationException();}

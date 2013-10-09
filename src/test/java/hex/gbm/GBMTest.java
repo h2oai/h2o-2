@@ -23,10 +23,7 @@ public class GBMTest extends TestUtil {
   private abstract class PrepData { abstract int prep(Frame fr); }
 
   @Test public void testBasicGBM() {
-    // Disabled Regression tests
-    //basicDRF("./smalldata/cars.csv","cars.hex",
-    //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
-    //         });
+    // Regression tests
     basicGBM("./smalldata/cars.csv","cars.hex",
              new PrepData() { int prep(Frame fr ) { UKV.remove(fr.remove("name")._key); return ~fr.find("economy (mpg)"); }});
 
@@ -83,16 +80,19 @@ public class GBMTest extends TestUtil {
       gbm.response = fr.vecs()[idx];
       fr.remove(idx);           // Move response to the end
       fr.add(rname,gbm.response);
-      gbm.ntrees = 5;
-      gbm.max_depth = 5;
+      gbm.ntrees = 4;
+      gbm.max_depth = 4;
       gbm.min_rows = 1;
-      gbm.nbins = 100;
+      gbm.nbins = 50;
       gbm.cols = new int[fr.numCols()];
       for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
       gbm.learn_rate = .2f;
       gbm.invoke();
 
       fr = gbm.score(gbm.source);
+
+      GBM.GBMModel gbmmodel = UKV.get(gbm.dest());
+      //System.out.println(gbmmodel.toJava());
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
@@ -352,7 +352,7 @@ public class GBMTest extends TestUtil {
       gbm.max_depth = 8;
       gbm.learn_rate = 0.2f;
       gbm.min_rows = 10;
-      gbm.nbins = 100;
+      gbm.nbins = 50;
       gbm.invoke();
 
       // The test data set has a few more enums than the train

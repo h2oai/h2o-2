@@ -44,14 +44,29 @@ public class GLMParams extends Iced {
     }
   }
 
-  public final double mustart(double y) {
+  public final boolean canonical(){
+    switch(family){
+      case gaussian:
+        return link == Link.identity;
+      case binomial:
+        return link == Link.logit;
+      case poisson:
+        return link == Link.log;
+      case gamma:
+        return false; //return link == Link.inverse;
+      case tweedie:
+        return false;
+      default:
+        throw H2O.unimpl();
+    }
+  }
+
+  public final double mustart(double y, double ymu) {
     switch( family ) {
       case gaussian:
-        return y;
       case binomial:
-        return 0.5;
       case poisson:
-        return y + 0.1;
+        return ymu;
       case gamma:
         return y;
       case tweedie:

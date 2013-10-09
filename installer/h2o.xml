@@ -218,8 +218,8 @@
             <path>${env(HOME)}/Desktop/h2o_package</path>
         </createDirectory>
         <copyFile>
-            <destination>${env(HOME)}/Desktop/h2o_package/h2o_R_package_${project.version}.tar.gz</destination>
-            <origin>${installdir}/R/h2o_${project.version}.tar.gz</origin>
+            <destination>${env(HOME)}/Desktop/h2o_package/h2oWrapper_1.0.2.tar.gz</destination>
+            <origin>${installdir}/R/h2oWrapper_1.0.2.tar.gz</origin>
         </copyFile>
         <copyFile>
             <destination>${env(HOME)}/Desktop/h2o_package/README.txt</destination>
