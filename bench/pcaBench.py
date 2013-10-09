@@ -25,13 +25,13 @@ def doPCA(fs, folderPath):
             java_heap_GB = h2o.nodes[0].java_heap_GB
             importFolderPath = "bench-test/" + folderPath
             if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x']): csvPathname = importFolderPath + "/" + f + '.csv'
-            else: csvPathname = importFolderPath + "/f/*linked*"
+            else: csvPathname = importFolderPath + "/" + f + "/*linked*"
             hex_key = f + '.hex'
             trainParseWallStart = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
                 timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=3600)
             parseWallTime = time.time() - trainParseWallStart
-            print "Parsing training file took ", trainParseWallTime ," seconds." 
+            print "Parsing training file took ", parseWallTime ," seconds." 
             
             inspect  = h2o.nodes[0].inspect(parseResult['destination_key'])
             
@@ -39,7 +39,7 @@ def doPCA(fs, folderPath):
                          'dataset'            : f,
                          'nRows'              : inspect['num_rows'],
                          'nCols'              : inspect['num_cols'],
-                         'ParseWallTime'      : parseWallTime,
+                         'parseWallTime'      : parseWallTime,
                         }
         
             params   =  {'destination_key'    : "python_PCA_key",
@@ -50,7 +50,7 @@ def doPCA(fs, folderPath):
 
             kwargs    = params.copy()
             pcaStart  = time.time()
-            pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=3600, **kwargs)
             pcaTime   = time.time() - pcaStart
             row.update({'pcaBuildTime' : pcaTime})
             csvWrt.writerow(row)

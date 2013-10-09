@@ -11,7 +11,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
              }   
 
 def doKMeans(fs, folderPath): 
-    for (f in fs['train']):
+    for f in fs['train']:
         overallWallStart = time.time()
         if not os.path.exists('kmeansbench.csv'):
             output = open('kmeansbench.csv','w')
@@ -25,14 +25,14 @@ def doKMeans(fs, folderPath):
             #Train File Parsing#
             importFolderPath = "bench-test/" + folderPath
             if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x']): csvPathname = importFolderPath + "/" + f + '.csv'
-            else: csvPathname = importFolderPath + "/*linked*"
+            else: csvPathname = importFolderPath + "/" + f + "/*linked*"
             hex_key = f + '.hex'
             trainParseWallStart = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,
                 timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=3600)
             parseWallTime = time.time() - trainParseWallStart
             #End Train File Parse#
-            print "Parsing training file took ", trainParseWallTime ," seconds." 
+            print "Parsing training file took ", parseWallTime ," seconds." 
             
             inspect  = h2o.nodes[0].inspect(parseResult['destination_key'])
             
@@ -40,7 +40,7 @@ def doKMeans(fs, folderPath):
                          'dataset'            : f,
                          'nRows'              : inspect['num_rows'],
                          'nCols'              : inspect['num_cols'],
-                         'ParseWallTime'      : parseWallTime,
+                         'parseWallTime'      : parseWallTime,
                         }
         
             params   =  {'source_key'         : hex_key,
@@ -50,11 +50,11 @@ def doKMeans(fs, folderPath):
                          'seed'               : 1234567,
                          'normalize'          : 0,
                          #'cols'               : ,
-                         'destination_key'    : "python_KMEANS_key",
+                         'destination_key'    : "KMeans("+f+")",
                         }
             kwargs       = params.copy()
             kmeansStart  = time.time()
-            kmeans       = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            kmeans       = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=3600, **kwargs)
             kmeansTime   = time.time() - kmeansStart
             row.update({'kmeansBuildTime' : kmeansTime})
             csvWrt.writerow(row)
