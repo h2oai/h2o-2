@@ -620,31 +620,23 @@ class DTree extends Iced {
       protected void pre ( int col, float fcmp, boolean equal ) throws T { }
       protected void mid ( int col, float fcmp, boolean equal ) throws T { }
       protected void post( int col, float fcmp, boolean equal ) throws T { }
-      protected void leaf( int pclass )                         throws T { }
-      protected void leaf( float preds[] )                      throws T { }
+      protected void leaf( float pred )                         throws T { }
       long  result( ) { return 0; } // Override to return simple results
 
       protected final TreeModel _tm;
       protected final CompressedTree _ct;
       private final AutoBuffer _ts;
-      private final float _preds[]; // Reused to hold a
+      protected int _depth;
       public TreeVisitor( TreeModel tm, CompressedTree ct ) {
         _tm = tm;
         _ts = new AutoBuffer((_ct=ct)._bits);
-        _preds = new float[ct._nclass+tm.ymin];
       }
 
       // Call either the single-class leaf or the full-prediction leaf
       private final void leaf2( int mask ) throws T {
         assert (mask& 8)== 8;   // Is a leaf
-        if( (mask&16) == 0 )    // Small leaf?
-          // Call the leaf with a single class prediction
-          leaf(_tm.ymin+(_ct._nclass < 256 ? _ts.get1() : _ts.get2()));
-        else {
-          for( int i = 0; i < _ct._nclass; ++i )
-            _preds[_tm.ymin+i] = _ts.get4f();
-          leaf(_preds);
-        }
+        assert (mask&16)==16;   // No longer do small leaf
+        leaf(_ts.get4f());
       }
 
       public final void visit() throws T {
@@ -666,36 +658,77 @@ class DTree extends Iced {
         default: assert false:"illegal lmask value " + lmask;
         }
         pre (col,fcmp,equal);   // Pre-walk
+        _depth++;
         if( (lmask & 0x8)==8 ) leaf2(lmask);  else  visit();
         mid (col,fcmp,equal);   // Mid-walk
         if( (rmask & 0x8)==8 ) leaf2(rmask);  else  visit();
+        _depth--;
         post(col,fcmp,equal);
       }
     }
 
-    StringBuilder toString(CompressedTree ct, final StringBuilder sb ) {
+    StringBuilder toString(final String res, CompressedTree ct, final StringBuilder sb ) {
       new TreeVisitor<RuntimeException>(this,ct) {
-        int _depth;
         @Override protected void pre( int col, float fcmp, boolean equal ) {
           for( int i=0; i<_depth; i++ ) sb.append("  ");
           sb.append(_names[col]).append(equal?"==":"< ").append(fcmp).append('\n');
-          _depth++;
         }
-        @Override protected void post( int col, float fcmp, boolean equal ) { _depth--; }
-        @Override protected void leaf( int pclass ) {
+        @Override protected void leaf( float pred ) {
           for( int i=0; i<_depth; i++ ) sb.append("  ");
-          sb.append("[").append(classNames()[pclass]).append("]\n");
-        }
-        @Override protected void leaf( float preds[]  ) {
-          for( int i=0; i<_depth; i++ ) sb.append("  ");
-          String domain[] = classNames();
-          sb.append("[");
-          for( int c=_tm.ymin; c<preds.length; c++ )
-            sb.append(domain[c]).append('=').append(preds[c]).append(',');
-          sb.append("]\n");
+          sb.append(res).append("=").append(pred).append(";\n");
         }
       }.visit();
       return sb;
+    }
+
+    // Convert Tree model to Java
+    protected void toJavaPredict( final SB sb ) {
+      String[] cnames = classNames();
+      sb.indent(2).p("Arrays.fill(preds,0);\n");
+      for( int i=0; i < treeBits.length; i++ ) {
+        CompressedTree cts[] = treeBits[i];
+        for( int c=0; c<cts.length; c++ ) {
+          if( cts[c] == null ) continue;
+          sb.indent(2).p("// Tree ").p(i);
+          if( cnames != null ) sb.p(", class=").p(cnames[c+ymin]);
+          sb.p("\n");
+          sb.indent(2).p("preds[").p(c+ymin+1).p("] +=");
+          final int x=c;
+          new TreeVisitor<RuntimeException>(this,cts[c]) {
+            byte _bits[] = new byte[100];
+            float _fs[] = new float[100];
+            @Override protected void pre( int col, float fcmp, boolean equal ) {
+              if( _depth > 0 ) {
+                assert _bits[_depth-1] > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
+                sb.p('\n').indent(_depth+3).p('?');
+                if( _bits[_depth-1]==2 ) { // Prior leaf?
+                  sb.p(' ').p(_fs[_depth]);// Dump the leaf, then setup for self
+                  sb.p('\n').indent(_depth+3).p(":");
+                }
+                if( _bits[_depth-1]==1 ) _bits[_depth-1]=3;
+              }
+              sb.p(" (data[").p(col).p("] ").p(equal?"== ":"< ").p(fcmp);
+              assert _bits[_depth]==0;
+              _bits[_depth]=1;
+            }
+            @Override protected void leaf( float pred  ) {
+              assert _bits[_depth-1] > 0 : Arrays.toString(_bits);
+              if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+                _bits[_depth-1]=2; _fs[_depth-1]=pred;
+              } else {          // Else==2 (prior leaf) or 3 (prior tree)
+                if( _bits[_depth-1] == 2 ) sb.p(" ? ").p(_fs[_depth-1]).p(" ");
+                else                       sb.p('\n').indent(_depth+3).p(": ");
+                sb.p(": ").p(pred);
+              }
+            }
+            @Override protected void post( int col, float fcmp, boolean equal ) { 
+              sb.p(')');
+              _bits[_depth]=0;
+            }
+          }.visit();
+          sb.p(";\n");
+        }
+      }
     }
   }
 

@@ -286,90 +286,83 @@ public abstract class Model extends Iced {
   /** Return a String which is a valid Java program representing a class that
    *  implements the Model.  The Java is of the form:
    *  <pre>
-   *    class uuidxxxxModel {
+   *    class UUIDxxxxModel {
    *      public static final String NAMES[] = { ....column names... }
    *      public static final String DOMAINS[][] = { ....domain names... }
    *      // Pass in data in a double[], pre-aligned to the Model's requirements.
    *      // Jam predictions into the preds[] array; preds[0] is reserved for the
    *      // main prediction (class for classifiers or value for regression),
    *      // and remaining columns hold a probability distribution for classifiers.
-   *      float[] predict( double data[], float preds[] ) {
-   *        ...model specific...
-   *        return preds;
-   *      }
-   *      double[] map( HashMap<String,Double> row, double data[] ) {
-   *        ...model specific domain mapping code...
-   *        return data;
-   *      }
+   *      float[] predict( double data[], float preds[] );
+   *      double[] map( HashMap<String,Double> row, double data[] );
    *      // Does the mapping lookup for every row, no allocation
-   *      float[] predict( HashMap<String,Double> row, double data[], float preds[] ) {
-   *        return predict(map(row,data),preds);
-   *      }
+   *      float[] predict( HashMap<String,Double> row, double data[], float preds[] );
    *      // Allocates a double[] for every row
-   *      float[] predict( HashMap<String,Double> row, float preds[] ) {
-   *        return predict(map(row,new double[NAMES.length]),preds);
-   *      }
+   *      float[] predict( HashMap<String,Double> row, float preds[] );
    *      // Allocates a double[] and a float[] for every row
-   *      float[] predict( HashMap<String,Double> row ) {
-   *        return predict(map(row,new double[NAMES.length]),preds);
-   *      }
+   *      float[] predict( HashMap<String,Double> row );
    *    }
    *  </pre>
    */
-  protected String toJava_impl() { throw new IllegalArgumentException("This model type does not support conversion to Java"); }
   public String toJava() {
-    String m = toJava_impl();
-    String j = String
-      .format("\n"+
-              "class %s {\n"+
-              "  public static final String NAMES[] = %s;\n"+
-              "  public static final int NCLASSES=%d;\n" +
-              "  // Pass in data in a double[], pre-aligned to the Model's requirements.\n"+
-              "  // Jam predictions into the preds[] array; preds[0] is reserved for the\n"+
-              "  // main prediction (class for classifiers or value for regression),\n"+
-              "  // and remaining columns hold a probability distribution for classifiers.\n"+
-              "  float[] predict( double data[], float preds[] ) {\n"+
-              "    %s\n"+
-              "    return preds;\n"+
-              "  }\n"+
-              "  double[] map( java.util.HashMap<String,Double> row, double data[] ) {\n"+
-              "    for( int i=0; i<NAMES.length-1; i++ ) {\n"+
-              "      Double d = row.get(NAMES[i]);\n"+
-              "      data[i] = d==null ? Double.NaN : d;\n"+
-              "    }\n"+
-              "    return data;\n"+
-              "  }\n"+
-              "  // Does the mapping lookup for every row, no allocation\n"+
-              "  float[] predict( java.util.HashMap<String,Double> row, double data[], float preds[] ) {\n"+
-              "    return predict(map(row,data),preds);\n"+
-              "  }\n"+
-              "  // Allocates a double[] for every row\n"+
-              "  float[] predict( java.util.HashMap<String,Double> row, float preds[] ) {\n"+
-              "    return predict(map(row,new double[NAMES.length]),preds);\n"+
-              "  }\n"+
-              "  // Allocates a double[] and a float[] for every row\n"+
-              "  float[] predict( java.util.HashMap<String,Double> row ) {\n"+
-              "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
-              "  }\n"+
-              "}\n", 
-              _selfKey.toString(), toString(_names), nclasses(),m);
-
-    return j;
-  }
-  // Convert a String[] into a valid Java String initializer
-  private String toString( String[] ss ) {
     SB sb = new SB();
-    sb.p('{');
-    for( int i=0; i<ss.length-1; i++ )  sb.p('"').p(ss[i]).p("\",");
-    if( ss.length > 0 ) sb.p('"').p(ss[ss.length-1]).p('"');
-    sb.p('}');
+    sb.p("\n");
+    sb.p("class ").p(_selfKey.toString()).p(" {\n");
+    sb.p("  public static final String NAMES[] = ").p(_names).p(";\n");
+    sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
+    toJavaInit(sb);  sb.p("\n");
+    sb.p("  // Pass in data in a double[], pre-aligned to the Model's requirements.\n");
+    sb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the\n");
+    sb.p("  // main prediction (class for classifiers or value for regression),\n");
+    sb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
+    sb.p("  float[] predict( double data[], float preds[] ) {\n");
+    toJavaPredict(sb);  sb.p("\n");
+    sb.p("    return preds;\n");
+    sb.p("  }\n");
+    sb.p("  double[] map( java.util.HashMap<String,Double> row, double data[] ) {\n");
+    sb.p("    for( int i=0; i<NAMES.length-1; i++ ) {\n");
+    sb.p("      Double d = row.get(NAMES[i]);\n");
+    sb.p("      data[i] = d==null ? Double.NaN : d;\n");
+    sb.p("    }\n");
+    sb.p("    return data;\n");
+    sb.p("  }\n");
+    sb.p("  // Does the mapping lookup for every row, no allocation\n");
+    sb.p("  float[] predict( java.util.HashMap<String,Double> row, double data[], float preds[] ) {\n");
+    sb.p("    return predict(map(row,data),preds);\n");
+    sb.p("  }\n");
+    sb.p("  // Allocates a double[] for every row\n");
+    sb.p("  float[] predict( java.util.HashMap<String,Double> row, float preds[] ) {\n");
+    sb.p("    return predict(map(row,new double[NAMES.length]),preds);\n");
+    sb.p("  }\n");
+    sb.p("  // Allocates a double[] and a float[] for every row\n");
+    sb.p("  float[] predict( java.util.HashMap<String,Double> row ) {\n");
+    sb.p("    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n");
+    sb.p("  }\n");
+    sb.p("}\n");
     return sb.toString();
   }
+  // Override in subclasses to provide some top-level model-specific goodness
+  protected void toJavaInit(SB sb) { };
+  // Override in subclasses to provide some inside 'predict' call goodness
+  protected void toJavaPredict(SB sb) { 
+    throw new IllegalArgumentException("This model type does not support conversion to Java"); 
+  }
+
   // Can't believe this wasn't done long long ago
-  private static class SB {
+  protected static class SB {
     public final StringBuilder _sb = new StringBuilder();
-    SB p( String s ) { _sb.append(s); return this; }
-    SB p( char   s ) { _sb.append(s); return this; }
+    public SB p( String s ) { _sb.append(s); return this; }
+    public SB p( float  s ) { _sb.append(s); return this; }
+    public SB p( char   s ) { _sb.append(s); return this; }
+    public SB p( int    s ) { _sb.append(s); return this; }
+    public SB indent( int d ) { for( int i=0; i<d; i++ ) p("  "); return this; }
+    // Convert a String[] into a valid Java String initializer
+    SB p( String[] ss ) {
+      p('{');
+      for( int i=0; i<ss.length-1; i++ )  p('"').p(ss[i]).p("\",");
+      if( ss.length > 0 ) p('"').p(ss[ss.length-1]).p('"');
+      return p('}');
+    }
     @Override public String toString() { return _sb.toString(); }
   }
 }
