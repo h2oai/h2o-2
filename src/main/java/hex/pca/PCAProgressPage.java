@@ -24,7 +24,7 @@ public class PCAProgressPage extends Progress2 {
     Value v = DKV.get(jjob.dest());
     PCAModel m = v != null ? (PCAModel) v.get() : null;
     if(v != null)
-      m.generateHTML("GLM Model", sb);
+      m.generateHTML("PCA Model", sb);
     else
       sb.append("<b>No model yet.</b>");
     return true;

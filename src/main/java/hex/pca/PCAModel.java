@@ -30,17 +30,18 @@ public class PCAModel extends Model {
   int num_pc;
 
   @API(help = "PCA parameters")
-  final PCAParams pca;
+  final PCAParams params;
 
-  public PCAModel(Key selfKey, Key dataKey, Frame fr, PCAParams pca, int rank, int num_pc) {
+  public PCAModel(Key selfKey, Key dataKey, Frame fr, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
     super(selfKey, dataKey, fr);
-    sdev = null;
-    propVar = null;
-    cumVar = null;
-    eigVec = null;
-    this.pca = pca;
+    this.sdev = sdev;
+    this.propVar = propVar;
+    this.cumVar = cumVar;
+    this.eigVec = eigVec;
+    this.params = params;
     this.rank = rank;
     this.num_pc = num_pc;
+    // TODO: Add names of column features used to build model
   }
 
   @Override protected float[] score0(double[] data, float[] preds) {

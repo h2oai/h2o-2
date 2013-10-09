@@ -1,15 +1,18 @@
 package hex.pca;
 
+import hex.pca.PCAModel;
+import hex.pca.PCAParams;
 import hex.gram.Gram;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.concurrent.Future;
+import java.util.*;
 
+import org.apache.commons.lang.ArrayUtils;
+
+import Jama.Matrix;
+import Jama.SingularValueDecomposition;
 import water.*;
-import water.H2O.H2OCountedCompleter;
-import water.H2O.H2OEmptyCompleter;
 import water.Job.*;
+import water.api.DocGen;
 import water.fvec.*;
 
 /**
@@ -20,6 +23,10 @@ import water.fvec.*;
  *
  */
 public class PCA2 extends ColumnsJob {
+  static final int API_WEAVER = 1;
+  static public DocGen.FieldDoc[] DOC_FIELDS;
+  static final String DOC_GET = "pca";
+
   @API(help = "The PCA Model")
   public PCAModel pca_model;
 
@@ -32,6 +39,7 @@ public class PCA2 extends ColumnsJob {
   @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class)
   boolean standardize = true;
 
+  /*
   public PCA2(String desc, Key dest, Frame src, int max_pc, double tol, boolean standardize) {
     description = desc;
     destination_key = dest;
@@ -40,58 +48,82 @@ public class PCA2 extends ColumnsJob {
     this.tolerance = tol;
     this.standardize = standardize;
   }
+  */
 
-  @Override protected Response serve() {
-    run(null);
-    return PCAProgressPage.redirect(this, self(), dest());
-  }
-
-  public Future run(H2OCountedCompleter completer) {
-    final H2OCountedCompleter fjt = new H2OEmptyCompleter();
-    if(completer != null) fjt.setCompleter(completer);
-
-    start(fjt);
-    UKV.remove(dest());
-    // _oldModel = new PCAModel(dest(), source, new PCAParams(max_pc, tolerance, standardize), 0, num_pc);
-    Vec[] vecs = selectVecs(source);
+  @Override protected void exec() {
+    Frame fr = selectFrame(source);
+    Vec[] vecs = fr.vecs();
 
     // Remove constant cols, non-numeric cols, and cols with too many NAs
-    ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
+    ArrayList<Integer> removeCols = new ArrayList<Integer>();
     for(int i = 0; i < vecs.length; i++) {
       if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2 || vecs[i].domain() != null)
-        constantOrNAs.add(i);
+        removeCols.add(i);
     }
-    if(!constantOrNAs.isEmpty()) {
-      int[] cols = new int[constantOrNAs.size()];
+    if(!removeCols.isEmpty()) {
+      int[] cols = new int[removeCols.size()];
       for(int i = 0; i < cols.length; i++)
-        cols[i] = constantOrNAs.get(i);
-        // Remove from vecs array
+        cols[i] = removeCols.get(i);
+      fr.remove(cols);
     }
 
-    // final PCAScoreJob job = new PCAJob(source, dataKey, destKey, standardize);
-    // PCATask tsk = new PCATask(standardize);
-    // tsk.doAll(vecs);
-    return fjt;
+    PCATask tsk = new PCATask(this, -1, -1, standardize).doAll(fr);
+    PCAModel myModel = buildModel(fr, tsk._gram.getXX());
+    UKV.put(destination_key, myModel);
   }
 
-  public static class PCAJob extends ChunkProgressJob {
-    public PCAJob(Frame data, Key dataKey, Key destKey, boolean standardize) {
-      super(standardize ? 2*data.anyVec().nChunks() : data.anyVec().nChunks());
-      description = "PCAScore(" + dataKey.toString() + ")";
-      destination_key = destKey;
+  public PCAModel buildModel(Frame data, double[][] gram) {
+    Matrix myGram = new Matrix(gram);   // X'X/n where n = num rows
+    SingularValueDecomposition mySVD = myGram.svd();
+
+    // Extract eigenvalues and eigenvectors
+    // Note: Singular values ordered in weakly descending order by algorithm
+    double[] Sval = mySVD.getSingularValues();
+    double[][] eigVec = mySVD.getV().getArray();  // rows = features, cols = principal components
+    // DKV.put(EigenvectorMatrix.makeKey(input("source"), destination_key), new EigenvectorMatrix(eigVec));
+
+    // Compute standard deviation
+    double[] sdev = new double[Sval.length];
+    double totVar = 0;
+    double dfcorr = data.numRows()/(data.numRows() - 1.0);
+    for(int i = 0; i < Sval.length; i++) {
+      // if(standardize)
+        Sval[i] = dfcorr*Sval[i];   // Correct since degrees of freedom = n-1
+      sdev[i] = Math.sqrt(Sval[i]);
+      totVar += Sval[i];
     }
 
-    public boolean isDone() {
-      return DKV.get(self()) == null;
+    double[] propVar = new double[Sval.length];    // Proportion of total variance
+    double[] cumVar = new double[Sval.length];    // Cumulative proportion of total variance
+    for(int i = 0; i < Sval.length; i++) {
+      propVar[i] = Sval[i]/totVar;
+      cumVar[i] = i == 0 ? propVar[0] : cumVar[i-1] + propVar[i];
     }
 
-    @Override public float progress() {
-      ChunkProgress progress = UKV.get(progressKey());
-      return (progress != null ? progress.progress() : 0);
-    }
+    int ncomp = Math.min(getNumPC(sdev, tolerance), max_pc);
+    PCAParams params = new PCAParams(max_pc, tolerance, standardize);
+    return new PCAModel(destination_key, Key.make(input("source")), source, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
   }
 
-  public class PCATask extends MRTask2<PCATask> {
+  static class reverseDouble implements Comparator<Double> {
+    @Override public int compare(Double a, Double b) {
+        return b.compareTo(a);
+      }
+    }
+
+  public static int getNumPC(double[] sdev, double tol) {
+    if(sdev == null) return 0;
+    double cutoff = tol*sdev[0];
+    int ind = Arrays.binarySearch(ArrayUtils.toObject(sdev), cutoff, new reverseDouble());
+    return Math.abs(ind+1);
+  }
+
+  /*@Override public float progress() {
+    ChunkProgress progress = UKV.get(progressKey());
+    return (progress != null ? progress.progress() : 0);
+  }*/
+
+  public static class PCATask extends MRTask2<PCATask> {
     Gram _gram;
     Job _job;
     int _nums;          // Number of numerical columns
@@ -101,10 +133,11 @@ public class PCA2 extends ColumnsJob {
     double[] _normMul;
     boolean _standardize;
 
-    public PCATask(PCAJob job, Frame fr, boolean standardize) {
+    public PCATask(Job job, int nums, int cats, boolean standardize) {
       _job = job;
-      _nums = fr.numCols();
-      _cats = 0;
+      _nums = nums;
+      _cats = cats;
+      _catOffsets = null;
       _normSub = null;
       _normMul = null;
       _standardize = standardize;

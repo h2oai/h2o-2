@@ -6,6 +6,7 @@ import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
 import hex.glm.*;
+import hex.pca.PCA2;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -106,6 +107,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new KMeans2());
       registerRequest(new hex.gbm.DRF());
       registerRequest(new hex.LR2());
+      registerRequest(new PCA2());
     }
     else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
@@ -115,6 +117,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",        "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new PCA2()), "PCA2", "Beta (FluidVecs!)");
     }
 
     // internal handlers

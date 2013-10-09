@@ -132,6 +132,16 @@ public class Job extends Request2 {
         vecs[i] = frame.vecs()[cols[i]];
       return vecs;
     }
+
+    protected final Frame selectFrame(Frame frame) {
+      Vec[] vecs = new Vec[cols.length];
+      String[] names = new String[cols.length];
+      for( int i = 0; i < cols.length; i++ ) {
+        vecs[i] = frame.vecs()[cols[i]];
+        names[i] = frame.names()[cols[i]];
+      }
+      return new Frame(names, vecs);
+    }
   }
 
   public static abstract class ModelJob extends ColumnsJob {
