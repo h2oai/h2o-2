@@ -1,7 +1,6 @@
 package water.api;
 
-import java.util.ArrayList;
-import java.util.Properties;
+import java.util.*;
 
 import water.Iced;
 import water.util.RString;
@@ -46,6 +45,7 @@ public class RequestQueries extends RequestArguments {
 
     // Check that for each actual input argument from the user, there is some
     // request argument that this method is expecting.
+    //
     {
       Enumeration en = args.propertyNames();
       while (en.hasMoreElements()) {
