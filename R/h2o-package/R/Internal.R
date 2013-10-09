@@ -39,6 +39,11 @@ h2o.__PAGE_GBM = "GBM.json"
 h2o.__PAGE_GBMGrid = "GBMGrid.json"
 h2o.__PAGE_GBMModelView = "GBMModelView.json"
 
+h2o.__PAGE_GLM2 = "GLM2.json"
+h2o.__PAGE_GLMModelView = "GLMModelView.json"
+h2o.__PAGE_GLMValidView = "GLMValidationView.json"
+h2o.__PAGE_FVEXEC = "DataManip.json"     # This is temporary until FluidVec Exec query is finished!
+
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
   port = client@port
