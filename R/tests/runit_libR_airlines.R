@@ -36,7 +36,7 @@ test.LiblineaR.airlines <- function(con) {
                      data         = trainhex, 
                      family       = "binomial",
                      nfolds       = 1, 
-                     lambda       = 1 / (261*(1e2)),
+                     lambda       = 1 / (3*100),
                      alpha        = 0.0,
                      standardize  = 1,
                      beta_epsilon = 1E-4)
@@ -98,5 +98,5 @@ test.LiblineaR.airlines <- function(con) {
   models  <- L1logistic(xTrain,yTrain,xTest,yTest,trainhex,testhex)
   compareCoefs(models[[1]], models[[2]])
 }
-options(digits=3)
+options(digits=8)
 test_that("LiblineaR Test Airlines", test.LiblineaR.airlines(H2Ocon))
