@@ -277,7 +277,7 @@ public abstract class DocGen {
         else if( c=='<' ) ss += "&lt;";//sb.setCharAt(i, "&lt;");
         else if( c=='>' ) ss += "&gt;";//sb.setCharAt(i, "&gt;");
         else if( c=='&' ) ss += "&amp;";//sb.setCharAt(i, "&amp;");
-        else if( c=='"' ) ss += "&guot;";//sb.setCharAt(i, "&quot;");
+        else if( c=='"' ) ss += "&quot;";//sb.setCharAt(i, "&quot;");
         else ss += c;//sb.setCharAt(i, c);
       }   
       return ss;//sb.toString(); 
