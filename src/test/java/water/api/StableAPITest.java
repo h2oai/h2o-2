@@ -152,7 +152,6 @@ public class StableAPITest {
     regPy(ConfusionMatrix.class, "actual", "predict", "vactual", "vpredict");
     regPy(DRFModelView.class);
     regPy(DRFProgressPage.class);
-    regPy(DataDistrib.class);
     regPy(Debug.class);
     regPy(DownloadDataset.class); // not used
     regPy(Exec.class, "expression");
