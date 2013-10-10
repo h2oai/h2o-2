@@ -574,9 +574,12 @@ public class ValueArray extends Iced implements Cloneable {
   private Frame convert() {
     String[] names = new String[_cols.length];
     AppendableVec[] avs = new AppendableVec[_cols.length];
+    // A new random VectorGroup
+    Vec.VectorGroup grp = new AppendableVec(UUID.randomUUID().toString()).group();
+    Key keys[] = grp.addVecs(_cols.length);
     for(int i = 0; i < _cols.length; ++i) {
       names[i] = _cols[i]._name;
-      avs[i] = new AppendableVec(UUID.randomUUID().toString());
+      avs[i] = new AppendableVec(keys[i]);
     }
     avs = new Converter(_key,avs).invoke(_key)._vecs;
     Vec[] vecs = new Vec[avs.length];

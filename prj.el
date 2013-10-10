@@ -17,6 +17,6 @@
  '(jde-sourcepath (quote ("./src")))
  '(jde-run-option-hotspot-type (quote server))
  '(jde-compile-option-target (quote ("1.6")))
- '(jde-run-option-heap-size (quote ((4000 . "megabytes") (4000 . "megabytes"))))
+ '(jde-run-option-heap-size (quote ((1100 . "megabytes") (1100 . "megabytes"))))
  '(jde-run-application-class "water.Boot")
  '(jde-compile-option-debug (quote ("all" (t t t)))))

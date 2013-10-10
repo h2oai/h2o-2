@@ -18,7 +18,7 @@ public class Frame extends Iced {
   public String[] _names;
   private Key[] _keys;          // Keys for the vectors
   private transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
-  private transient Vec _col0;  // First readable vec; fast access to the VecGroup's Chunk layout
+  private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
 
   public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
   public Frame( Vec... vecs ){ this(null,vecs);}
@@ -26,7 +26,9 @@ public class Frame extends Iced {
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
+    VectorGroup grp = vecs[0].group();
     for( int i=0; i<vecs.length; i++ ) {
+      assert grp == vecs[i].group();
       Key k = _keys[i] = vecs[i]._key;
       if( DKV.get(k)==null )    // If not already in KV, put it there
         DKV.put(k,vecs[i]);
@@ -60,7 +62,7 @@ public class Frame extends Iced {
 
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
-    // TODO : needs a compatibility-check!!!
+    assert anyVec().group() == vec.group();
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
