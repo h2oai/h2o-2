@@ -1,4 +1,0 @@
-exportPattern("^[[:alpha:]]+")
-exportMethods(
-    "h2oWrapper.init"
-)
