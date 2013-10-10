@@ -54,7 +54,7 @@ public class GridSearch extends Job {
           sb.append("<td><b>").append(perf).append("</b></td>");
         sb.append("<td><b>").append("model key").append("</b></td>");
         sb.append("<td><b>").append("prediction error %").append("</b></td>");
-        sb.append("<td><b>").append("precision & recall").append("</b></td>");
+        sb.append("<td><b>").append("F1 score").append("</b></td>");
         sb.append("</tr>");
 
         ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
