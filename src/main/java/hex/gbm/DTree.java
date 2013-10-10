@@ -504,6 +504,20 @@ class DTree extends Iced {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
+      DocGen.HTML.paragraph(sb,"<div class=\"pull-left\"><a href=\"#\" onclick"+
+                               "=\'$(\"#javaModel\").toggleClass(\"hide\");\' "+
+                               "class=\'btn btn-inverse btn-mini\'>"+
+                               "Java Model</a></div><br />");
+      DocGen.HTML.paragraph(sb,"<div class=\"hide\" id=\"javaModel\">");
+      DocGen.HTML.paragraph(sb,"<pre style=\"overflow-y:scroll;\">");
+      DocGen.HTML.paragraph(sb, toJava());
+      DocGen.HTML.paragraph(sb,"<div class=\"pull-right\"><a href=\"#\" onclick"+
+                               "=\'$(\"#javaModel\").toggleClass(\"hide\");\' "+
+                               "class=\'btn btn-inverse btn-mini\'>"+
+                               "Java Model</a></div><br />");
+      DocGen.HTML.paragraph(sb,"<div class=\"hide\" id=\"javaModel\">");
+      DocGen.HTML.paragraph(sb,"</pre></div>");
+      System.out.println(toJava());
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM
