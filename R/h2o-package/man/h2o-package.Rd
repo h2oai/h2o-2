@@ -49,7 +49,7 @@ myPort = 54321
 localH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = TRUE)
 
 # Import iris dataset into H2O and print summary
-irisPath = system.file("extdata", "iris.csv", package="h2o")
+irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 
