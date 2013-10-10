@@ -1,5 +1,5 @@
 # Model-building operations and algorithms
-setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1e-5, standardize = TRUE, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
+setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1e-5, standardize = TRUE, tweedie.p = ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
 # setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.glm.FV", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm.FV") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
