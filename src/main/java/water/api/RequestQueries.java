@@ -2,6 +2,7 @@ package water.api;
 
 import java.util.*;
 
+import water.H2O;
 import water.Iced;
 import water.util.RString;
 
@@ -31,6 +32,7 @@ public class RequestQueries extends RequestArguments {
    * @return
    */
   protected final String checkArguments(Properties args, RequestType type) {
+    // Why the following lines duplicate lines from Request#92 - handling query?
     // reset all arguments
     for (Argument arg: _arguments)
       arg.reset();
@@ -39,14 +41,11 @@ public class RequestQueries extends RequestArguments {
       return buildQuery(args,type);
 
     /*
-    // I'd like to be able to run this code, however this method is called in an
-    // inconsistent way from several places, and basic things fail.
-    // PostFiles.json, for example, does not work when this check is enabled.
-
     // Check that for each actual input argument from the user, there is some
     // request argument that this method is expecting.
-    //
-    {
+    //*/
+    if (H2O.OPT_ARGS.check_rest_params){
+      System.out.println("RequestQueries.checkArguments(): checking unused arguments");
       Enumeration en = args.propertyNames();
       while (en.hasMoreElements()) {
         boolean found = false;
@@ -57,13 +56,11 @@ public class RequestQueries extends RequestArguments {
             break;
           }
         }
-
-        if (! found) {
-          return jsonError("Argument '"+key+"' error: Not a valid parameter for this query").toString();
+        if (!found) {
+          return jsonError("Request specifies the argument '"+key+"' but it is not a valid parameter for this query " + this.getClass().getName()).toString();
         }
       }
     }
-    */
 
     // check the arguments now
     for (Argument arg: _arguments) {

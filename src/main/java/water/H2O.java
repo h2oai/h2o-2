@@ -635,6 +635,7 @@ public final class H2O {
     public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
+    public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
     public String h = null;
     public String help = null;
     public String version = null;
