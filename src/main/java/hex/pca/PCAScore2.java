@@ -68,16 +68,18 @@ public class PCAScore2 extends FrameJob {
     return (progress != null ? progress.progress() : 0);
   } */
 
-  public final Frame subset(Frame data, String[] names) {
-    Vec[] dvecs = new Vec[names.length];
-    String[] dnames = new String[names.length];
+  public final Frame subset(Frame data, String[] feat) {
+    Vec[] dvecs = new Vec[feat.length];
+    String[] dnames = new String[feat.length];
 
-    for(int i = 0; i < names.length; i++) {
-      int idx = data.find(names[i]);
+    Vec[] vecs = data.vecs();
+    String[] names = data.names();
+    for(int i = 0; i < feat.length; i++) {
+      int idx = data.find(feat[i]);
       if(idx == -1)
-        throw new IllegalArgumentException("Incompatible dataset: Column " + names[i] + " does not exist in source!");
-      dvecs[i] = data.vecs()[idx];
-      dnames[i] = data.names()[idx];
+        throw new IllegalArgumentException("Incompatible dataset: Column " + feat[i] + " does not exist in source!");
+      dvecs[i] = vecs[idx];
+      dnames[i] = names[idx];
     }
     return new Frame(dnames, dvecs);
   }
@@ -102,7 +104,7 @@ public class PCAScore2 extends FrameJob {
     }
 
     // Matrix multiplication A * B, where A is a skinny matrix (# rows >> # cols) and B is a
-    // small matrix that fitting on a single node. For PCA scoring, the cols of A (rows of B) are
+    // small matrix that fits on a single node. For PCA scoring, the cols of A (rows of B) are
     // the features of the input dataset, while the cols of B are the principal components.
     @Override public void map(Chunk [] chunks) {
       int rows = chunks[0]._len;
