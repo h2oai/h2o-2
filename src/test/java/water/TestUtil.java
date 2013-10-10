@@ -38,7 +38,9 @@ public class TestUtil {
       for( Key k : H2O.keySet() ) {
         Value value = DKV.get(k);
         Object o = value.type() != TypeMap.PRIM_B ? value.get() : "byte[]";
-        System.err.println("Leaked key: " + k + " = " + o);
+        // Ok to leak VectorGroups
+        if( o instanceof Vec.VectorGroup ) leaked_keys--;
+        else System.err.println("Leaked key: " + k + " = " + o);
       }
     }
     assertTrue("No keys leaked", leaked_keys<=0);
@@ -347,8 +349,9 @@ public class TestUtil {
   public static Frame frame(String[] names, double[][] rows) {
     assert names == null || names.length == rows[0].length;
     Vec[] vecs = new Vec[rows[0].length];
+    Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
     for( int c = 0; c < vecs.length; c++ ) {
-      AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
+      AppendableVec vec = new AppendableVec(keys[c]);
       NewChunk chunk = new NewChunk(vec, 0);
       for( int r = 0; r < rows.length; r++ )
         chunk.addNum(rows[r][c]);

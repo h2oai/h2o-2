@@ -470,6 +470,7 @@ public class Vec extends Iced {
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
+    public VectorGroup() { this(Key.make(Key.make().toString(), (byte)0, Key.VEC),0); }
 
     public Key vecKey(int vecId){
       byte [] bits = _key._kb.clone();
@@ -512,6 +513,14 @@ public class Vec extends Iced {
       for(int i = 0; i < n; ++i)
         res[i] = vecKey(i + tsk._finalN - n);
       return res;
+    }
+
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof VectorGroup) ) return false;
+      return ((VectorGroup)o)._key.equals(_key);
+    }
+    @Override public int hashCode() {
+      return _key.hashCode();
     }
   }
 }

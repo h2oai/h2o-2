@@ -575,8 +575,7 @@ public class ValueArray extends Iced implements Cloneable {
     String[] names = new String[_cols.length];
     AppendableVec[] avs = new AppendableVec[_cols.length];
     // A new random VectorGroup
-    Vec.VectorGroup grp = new AppendableVec(UUID.randomUUID().toString()).group();
-    Key keys[] = grp.addVecs(_cols.length);
+    Key keys[] = new Vec.VectorGroup().addVecs(_cols.length);
     for(int i = 0; i < _cols.length; ++i) {
       names[i] = _cols[i]._name;
       avs[i] = new AppendableVec(keys[i]);
