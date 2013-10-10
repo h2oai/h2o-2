@@ -11,6 +11,7 @@ import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.Log;
+import water.util.RString;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -466,16 +467,18 @@ class DTree extends Iced {
 
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be seperate).
+    @API(help="Testing key for cm and errs") public final Key testKey;
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
 
-    public TreeModel(Key key, Key dataKey, String names[], String domains[][], int ntrees, int ymin) {
+    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int ymin) {
       super(key,dataKey,names,domains);
-      this.N = ntrees; this.errs = new double[0]; this.ymin = ymin; this.cm = null;
+      this.N = ntrees; this.errs = new double[0]; this.ymin = ymin; 
+      this.testKey = testKey;  this.cm = null;
       treeBits = new CompressedTree[0][];
     }
     public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
-      this.N = prior.N; this.ymin = prior.ymin; this.cm = cm;
+      this.N = prior.N; this.ymin = prior.ymin; this.testKey = prior.testKey; this.cm = cm;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
       errs[errs.length-1] = err;
       assert trees.length == nclasses()-ymin : "Trees="+trees.length+" nclasses()="+nclasses()+" ymin="+ymin;
@@ -504,26 +507,27 @@ class DTree extends Iced {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
-      DocGen.HTML.paragraph(sb,"<div class=\"pull-left\"><a href=\"#\" onclick"+
-                               "=\'$(\"#javaModel\").toggleClass(\"hide\");\' "+
-                               "class=\'btn btn-inverse btn-mini\'>"+
-                               "Java Model</a></div><br />");
-      DocGen.HTML.paragraph(sb,"<div class=\"hide\" id=\"javaModel\">");
-      DocGen.HTML.paragraph(sb,"<pre style=\"overflow-y:scroll;\">");
-      DocGen.HTML.paragraph(sb, toJava());
-      DocGen.HTML.paragraph(sb,"<div class=\"pull-right\"><a href=\"#\" onclick"+
-                               "=\'$(\"#javaModel\").toggleClass(\"hide\");\' "+
-                               "class=\'btn btn-inverse btn-mini\'>"+
-                               "Java Model</a></div><br />");
-      DocGen.HTML.paragraph(sb,"<div class=\"hide\" id=\"javaModel\">");
-      DocGen.HTML.paragraph(sb,"</pre></div>");
-      System.out.println(toJava());
+      sb.append("<div class=\"pull-left\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br />");
+      sb.append("<div class=\"hide\" id=\"javaModel\">");
+      sb.append("<pre style=\"overflow-y:scroll;\">");
+      DocGen.HTML.escape(sb, toJava());
+      sb.append("<div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br />");
+      sb.append("<div class=\"hide\" id=\"javaModel\">");
+      sb.append("</pre></div>");
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM
       if( cm != null && nclasses() > 1 ) {
         assert ymin+cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
+        if( testKey.equals(_dataKey) ) {
+          sb.append("<div class=\"alert\">Reported on training data</div>");
+        } else {
+          RString rs = new RString("Reported on <a href='Inspect2.html?src_key=%$key'>%key</a>");
+          rs.replace("key", testKey);
+          DocGen.HTML.paragraph(sb,rs.toString());
+        }
+
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
         sb.append("<th>Actual / Predicted</th>"); // Row header
@@ -533,7 +537,7 @@ class DTree extends Iced {
         sb.append("</tr>");
 
         // Main CM Body
-        long tsum=0, terr=0;                   // Total observations & errors
+        long tsum=0, terr=0;               // Total observations & errors
         for( int i=0; i<cm.length; i++ ) { // Actual loop
           sb.append("<tr>");
           sb.append("<th>").append(domain[i+ymin]).append("</th>");// Row header
@@ -566,11 +570,11 @@ class DTree extends Iced {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Trees</th>");
-        for( int i=0; i<errs.length; i++ )
+        for( int i=errs.length-1; i>=0; i-- )
           sb.append("<td>").append(i).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>MSE</th>");
-        for( int i=0; i<errs.length; i++ )
+        for( int i=errs.length-1; i>=0; i-- )
           sb.append(String.format("<td>%5.3f</td>",errs[i]));
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);

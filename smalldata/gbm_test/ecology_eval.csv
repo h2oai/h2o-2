@@ -1,4 +1,4 @@
-Angaus_obs,SegSumT,SegTSeas,SegLowFlow,DSDist,DSMaxSlope,USAvgT,USRainDays,USSlope,USNative,DSDam,Method,LocSed
+Angaus,SegSumT,SegTSeas,SegLowFlow,DSDist,DSMaxSlope,USAvgT,USRainDays,USSlope,USNative,DSDam,Method,LocSed
 0,16.6,1.01,1.017,5.23,0.29,-1.4,1.98,10,1,0,electric,4.9
 1,16.8,-0.51,1.002,2.24,0,0.27,0.46,0.7,0,0,electric,2.3
 0,16.3,0.76,1.023,162.28,5.14,-0.6,0.806,21.4,0.66,0,electric,4.3

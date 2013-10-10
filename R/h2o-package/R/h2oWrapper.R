@@ -112,12 +112,12 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
   serverMD5 = res$md5_hash
   
   myPackages = rownames(installed.packages())
-  if("h2o" %in% myPackages && packageVersion("h2o") == H2OVersion)
+  if("h2oRClient" %in% myPackages && packageVersion("h2oRClient") == H2OVersion)
     cat("H2O R package and server version", H2OVersion, "match\n")
   else if(h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {    
-    if("h2o" %in% myPackages) {
-      cat("Removing old H2O R package version", toString(packageVersion("h2o")), "\n")
-      remove.packages("h2o")
+    if("h2oRClient" %in% myPackages) {
+      cat("Removing old H2O R package version", toString(packageVersion("h2oRClient")), "\n")
+      remove.packages("h2oRClient")
     }
     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
     # download.file(paste(myURL, "R", myFile, sep="/"), destfile = paste(getwd(), myFile, sep="/"), mode = "wb")

@@ -14,7 +14,7 @@ public abstract class Request2 extends Request {
   transient Properties _parms;
 
   public String input(String fieldName) {
-    return _parms.getProperty(fieldName);
+    return _parms==null?null:_parms.getProperty(fieldName);
   }
 
   public class TypeaheadKey extends TypeaheadInputText<Key> {
