@@ -7,6 +7,7 @@ import hex.rf.ConfusionTask.CMJob;
 import java.util.Arrays;
 
 import water.*;
+import water.api.RequestArguments.H2OKey;
 import water.util.RString;
 
 import com.google.gson.*;
@@ -27,8 +28,11 @@ public class RFView extends /* Progress */ Request {
   protected final Bool               _oobee    = new Bool(OOBEE,false,"Out of bag errors");
   protected final Bool               _noCM     = new Bool(NO_CM, false,"Do not produce confusion matrix");
   protected final Bool               _clearCM  = new Bool(JSON_CLEAR_CM, false, "Clear cache of model confusion matrices");
-  protected final Bool               _iterativeCM       = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
+  protected final Bool               _iterativeCM        = new Bool(ITERATIVE_CM, true, "Compute confusion matrix on-the-fly");
   protected final Int                _refreshThresholdCM = new Int(JSON_REFRESH_THRESHOLD_CM, DEFAULT_CM_REFRESH_THRESHOLD);
+  // Dummy parameters
+  protected final H2OKey              _job     = new H2OKey(JOB,false);
+  protected final H2OKey              _dest    = new H2OKey(DEST_KEY,false);
   /** RFView specific parameters names */
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
   public static final String JSON_CLEAR_CM        = "clear_confusion_matrix";
@@ -49,6 +53,8 @@ public class RFView extends /* Progress */ Request {
     // hide in generated query page
     _oobee._hideInQuery = true;
     _numTrees._readOnly = true;
+    _job._hideInQuery   = true;
+    _dest._hideInQuery  = true;
   }
 
   public static Response redirect(JsonObject fromPageResponse, Key jobKey, Key modelKey, Key dataKey, int ntree, int classCol, String weights, boolean oobee, boolean iterativeCM) {
