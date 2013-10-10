@@ -158,12 +158,12 @@ public class NeuralNet extends ValidatedJob {
   }
 
   @Override public String speedDescription() {
-    return "items/s";
+    return "s/items";
   }
 
-  @Override public String speedValue() {
+  @Override public long speedValue() { // msecs per item
     NeuralNetModel model = UKV.get(destination_key);
-    return "" + (model == null ? 0 : model.items_per_second);
+    return (long)(1000.0/model.items_per_second);
   }
 
   public static class Error {

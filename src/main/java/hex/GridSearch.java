@@ -48,12 +48,12 @@ public class GridSearch extends Job {
         filter(args, "destination_key", "source", "cols", "ignored_cols_by_name", "response", "classification", "validation");
         for( int i = 0; i < args.size(); i++ )
           sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
-        sb.append("<td><b>").append("run time (s)").append("</b></td>");
+        sb.append("<td><b>").append("run time").append("</b></td>");
         String perf = grid.jobs[0].speedDescription();
         if( perf != null )
           sb.append("<td><b>").append(perf).append("</b></td>");
         sb.append("<td><b>").append("model key").append("</b></td>");
-        sb.append("<td><b>").append("prediction error %").append("</b></td>");
+        sb.append("<td><b>").append("prediction error").append("</b></td>");
         sb.append("<td><b>").append("F1 score").append("</b></td>");
         sb.append("</tr>");
 
@@ -92,8 +92,8 @@ public class GridSearch extends Job {
           }
           String runTime = "Pending", speed = "";
           if( info._job.start_time != 0 ) {
-            runTime = "" + (info._job.runTimeMs()) / 1000;
-            speed = perf != null ? info._job.speedValue() : "";
+            runTime = PrettyPrint.msecs(info._job.runTimeMs(),true);
+            speed = perf != null ? PrettyPrint.msecs(info._job.speedValue(),true) : "";
           }
           sb.append("<td>").append(runTime).append("</td>");
           if( perf != null )

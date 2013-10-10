@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import java.util.Arrays;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.UndecidedNode;
@@ -83,7 +84,7 @@ public class GBM extends SharedTreeModelBuilder {
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
-      Score sc = new Score().doAll(fr).report(Sys.GBM__,tid+1,ktrees);
+      Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid+1,ktrees);
       model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
       DKV.put(outputKey, model);
     }
@@ -354,16 +355,6 @@ public class GBM extends SharedTreeModelBuilder {
       Utils.add(_gss,gp._gss);
       Utils.add(_rss,gp._rss);
     }
-  }
-
-  @Override public String speedDescription() {
-    return "seconds per tree";
-  }
-
-  @Override public String speedValue() {
-    double time = runTimeMs() / 1000;
-    double secondsPerTree = time / ntrees;
-    return String.format("%.2f", secondsPerTree);
   }
 
   // ---
