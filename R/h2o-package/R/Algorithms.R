@@ -160,6 +160,7 @@ h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda) {
 h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
       result = list()
       result$coefficients = unlist(res$coefficients)
+      results$normalized_coefficients = unlist(res$normalized_coefficients)
       result$rank = res$nCols
       result$family = h2o.__getFamily(family, tweedie.var.p = tweedie.p)
       result$deviance = res$validations[[1]]$resDev
