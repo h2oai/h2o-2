@@ -9,14 +9,14 @@ H2O: GBM
 \description{Builds gradient boosed classification trees on a parsed data set.
 }
 \usage{
-h2o.gbm(y, x, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
 }
 \arguments{
-  \item{y}{
-The name or index of the response variable. If the data does not contain a header, this is the column index number starting at 0, and increasing from left to right. (The response must be either an integer or a categorical variable).
-}
   \item{x}{
 A vector containing the names or indices of the predictor variables to use in building the GBM model.
+}
+  \item{y}{
+The name or index of the response variable. If the data does not contain a header, this is the column index number starting at 0, and increasing from left to right. (The response must be either an integer or a categorical variable).
 }
   \item{distribution}{
 The type of GBM model to be produced, categorization is "multinomial" (default), "gaussian" used for regression.

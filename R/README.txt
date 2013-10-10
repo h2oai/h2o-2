@@ -20,7 +20,7 @@ Start an instance of H2O. If you have questions about how to do this see the not
 
 In the R console install the package by entering the following command at the prompt:
 
-  >install.packages("<unzipped h2o directory>/R/h2o_1.0.2.tar.gz", repos = NULL, type = "source")
+  >install.packages("<unzipped h2o directory>/R/h2o_1.0.3.tar.gz", repos = NULL, type = "source")
   
 
 This returns output similar to the following:
