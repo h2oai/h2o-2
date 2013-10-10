@@ -472,9 +472,9 @@ public class Vec extends Iced {
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
     public VectorGroup() { 
-      byte[] bits = new byte[17];
+      byte[] bits = new byte[26];
       bits[0] = Key.VEC;
-      bits[1] = 0;
+      bits[1] = -1;
       UDP.set4(bits, 2, -1);
       UDP.set4(bits, 6, -1);
       UUID uu = UUID.randomUUID();
@@ -500,7 +500,10 @@ public class Vec extends Iced {
       private AddVecs2GroupTsk(Key key, int n){_key = key; _n = n;}
       @Override public VectorGroup atomic(VectorGroup old) {
         int n = _n;             // how many
-        _n = old==null ? 0 : old._len; // start of allocated key run
+        // If the old group is missing, assume it is the default group-of-self
+        // (having 1 ID already allocated for self), not a new group with
+        // zero prior vectors.
+        _n = old==null ? 1 : old._len; // start of allocated key run
         return new VectorGroup(_key, n+_n);
       }
     }
