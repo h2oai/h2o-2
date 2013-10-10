@@ -1,12 +1,12 @@
 # Initialize H2O and check/install correct version of H2O R package
-library(h2oWrapper)
-h2oWrapper.installDepPkgs(optional = FALSE)
-localH2O = h2oWrapper.init(ip = "127.0.0.1", port = 54321)
+library(h2o)
+h2o.installDepPkgs(optional = FALSE)
+localH2O = h2o.init(ip = "127.0.0.1", port = 54321)
 # localH2O = new("H2OClient", ip = "127.0.0.1", port = 54321)
 
 # For hands-off demo of H2O vs. R
 # H2O Import, Summary and GLM of small airlines data set on local machine
-library(h2o)
+library(h2oRClient)
 airlines.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/allyears2k_headers.zip", key = "airlines.hex")
 summary(airlines.hex)
 x_ignore = c("IsArrDelayed", "ActualElapsedTime", "ArrDelay", "DepDelay", "Canceled", "Diverted", "IsDepDelayed")
@@ -16,7 +16,7 @@ print(airlines.glm)
 
 # For hands-on demo of running H2O remotely
 # H2O Import, Summary and GLM of large airlines data set on remote machine
-remoteH2O = h2oWrapper.init(ip = "192.168.1.161", port = 54329)
+remoteH2O = h2o.init(ip = "192.168.1.161", port = 54329)
 # remoteH2O = new("H2OClient", ip = "192.168.1.161", port = 54329)
 
 airlines_big.hex = h2o.importFile(remoteH2O, path = "/home/earl/./oldairlines/airlines.orig.all.withheader.25.csv", key = "airlines_big.hex")

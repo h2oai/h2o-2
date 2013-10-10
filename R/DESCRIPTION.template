@@ -1,4 +1,4 @@
-Package: h2o
+Package: h2oRClient
 Type: Package
 Title: H2O R Interface
 Version: SUBST_PROJECT_VERSION

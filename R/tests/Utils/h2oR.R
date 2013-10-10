@@ -38,25 +38,25 @@ function(args) {
 checkNLoadWrapper<-
 function(ipPort) {
   logging("\nCheck if H2O R wrapper package is installed\n")
-  if (!"h2oWrapper" %in% rownames(installed.packages())) {
+  if (!"h2o" %in% rownames(installed.packages())) {
     envPath  = Sys.getenv("H2OWrapperDir")
     wrapDir  = ifelse(envPath == "", defaultPath, envPath)
-    wrapName = list.files(wrapDir, pattern  = "h2oWrapper")[1]
+    wrapName = list.files(wrapDir, pattern  = "h2o")[1]
     wrapPath = paste(wrapDir, wrapName, sep = "/")
     
     if (!file.exists(wrapPath))
-      stop(paste("h2oWrapper package does not exist at", wrapPath));
-    print(paste("Installing h2oWrapper package from", wrapPath))
+      stop(paste("h2o package does not exist at", wrapPath));
+    print(paste("Installing h2o package from", wrapPath))
     install.packages(wrapPath, repos = NULL, type = "source")
   }
 
   logging("\nCheck that H2O R package matches version on server\n")
-  library(h2oWrapper)
-  h2oWrapper.installDepPkgs()      # Install R package dependencies
-  h2oWrapper.init(ip            = ipPort[[1]], 
-                  port          = ipPort[[2]], 
-                  startH2O      = FALSE, 
-                  silentUpgrade = TRUE)
+  library(h2o)
+  h2o.installDepPkgs()      # Install R package dependencies
+  h2o.init(ip            = ipPort[[1]], 
+           port          = ipPort[[2]], 
+           startH2O      = FALSE, 
+           silentUpgrade = TRUE)
 }
 
 checkNLoadPackages<-
@@ -71,7 +71,7 @@ function() {
   logging("\nLoading RUnit and testthat\n")
   require(RUnit)
   require(testthat)
-  require(h2o)
+  require(h2oRClient)
 }
 
 logging("\n============== Setting up R-Unit environment... ================\n")
