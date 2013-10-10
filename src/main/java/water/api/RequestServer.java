@@ -39,133 +39,133 @@ public class RequestServer extends NanoHTTPD {
 
   // initialization ------------------------------------------------------------
   static {
-    _http404 = registerRequest(new HTTP404());
-    _http500 = registerRequest(new HTTP500());
+    _http404 = register(new HTTP404());
+    _http500 = register(new HTTP500());
 
-    Request.addToNavbar(registerRequest(new Inspect()),     "Inspect",                    "Data");
-    Request.addToNavbar(registerRequest(new StoreView()),   "View All",                   "Data");
-    Request.addToNavbar(registerRequest(new Parse()),       "Parse",                      "Data");
-    Request.addToNavbar(registerRequest(new RReader()),     "Parse R Data",               "Data");
-    Request.addToNavbar(registerRequest(new ImportFiles()), "Import Files",               "Data");
-    Request.addToNavbar(registerRequest(new ImportUrl()),   "Import URL",                 "Data");
-    Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",                  "Data");
-    Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",                  "Data");
-    Request.addToNavbar(registerRequest(new ImportHdfs()),  "Import HDFS",                "Data");
-    Request.addToNavbar(registerRequest(new ExportHdfs()),  "Export HDFS",                "Data");
-    Request.addToNavbar(registerRequest(new Upload()),      "Upload",                     "Data");
-    Request.addToNavbar(registerRequest(new Get()),         "Download",                   "Data");
-    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Data");
+    Request.addToNavbar(register(new Inspect()),     "Inspect",                    "Data");
+    Request.addToNavbar(register(new StoreView()),   "View All",                   "Data");
+    Request.addToNavbar(register(new Parse()),       "Parse",                      "Data");
+    Request.addToNavbar(register(new RReader()),     "Parse R Data",               "Data");
+    Request.addToNavbar(register(new ImportFiles()), "Import Files",               "Data");
+    Request.addToNavbar(register(new ImportUrl()),   "Import URL",                 "Data");
+    Request.addToNavbar(register(new ImportS3()),    "Import S3",                  "Data");
+    Request.addToNavbar(register(new ExportS3()),    "Export S3",                  "Data");
+    Request.addToNavbar(register(new ImportHdfs()),  "Import HDFS",                "Data");
+    Request.addToNavbar(register(new ExportHdfs()),  "Export HDFS",                "Data");
+    Request.addToNavbar(register(new Upload()),      "Upload",                     "Data");
+    Request.addToNavbar(register(new Get()),         "Download",                   "Data");
+    Request.addToNavbar(register(new SummaryPage()), "Summary",                    "Data");
 
-    Request.addToNavbar(registerRequest(new RF()),          "Random Forest",              "Model");
-    Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
-    Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
-    Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
-    Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
-    Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
-    Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
-    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
-    Request.addToNavbar(registerRequest(new Console()),     "Console",                    "Model");
+    Request.addToNavbar(register(new RF()),          "Random Forest",              "Model");
+    Request.addToNavbar(register(new GLM()),         "GLM",                        "Model");
+    Request.addToNavbar(register(new GLMGrid()),     "GLM Grid",                   "Model");
+    Request.addToNavbar(register(new KMeans()),      "KMeans",                     "Model");
+    Request.addToNavbar(register(new PCA()),         "PCA (Beta)",                 "Model");
+    Request.addToNavbar(register(new GBM()),         "GBM (Beta)",                 "Model");
+    Request.addToNavbar(register(new GLM2()),        "GLM2 (Beta)",                "Model");
+    Request.addToNavbar(register(new NeuralNet()),   "Neural Network (Beta)",      "Model");
+    Request.addToNavbar(register(new Console()),     "Console",                    "Model");
 
-    Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
-    Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
-    Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",                     "Score");
-    Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",               "Score");
-    Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
-    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (Beta)",   "Score");
-    Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
-    Request.addToNavbar(registerRequest(new Predict()),     "Predict2",      "Score");
-    Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
-    Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",       "Score");
+    Request.addToNavbar(register(new RFScore()),     "Random Forest",              "Score");
+    Request.addToNavbar(register(new GLMScore()),    "GLM",                        "Score");
+    Request.addToNavbar(register(new KMeansScore()), "KMeans",                     "Score");
+    Request.addToNavbar(register(new KMeansApply()), "KMeans Apply",               "Score");
+    Request.addToNavbar(register(new PCAScore()),    "PCA (Beta)",                 "Score");
+    Request.addToNavbar(register(new NeuralNetScore()), "Neural Network (Beta)",   "Score");
+    Request.addToNavbar(register(new GeneratePredictionsPage()),  "Predict",       "Score");
+    Request.addToNavbar(register(new Predict()),     "Predict2",      "Score");
+    Request.addToNavbar(register(new Score()),       "Apply Model",                "Score");
+    Request.addToNavbar(register(new ConfusionMatrix()), "Confusion Matrix",       "Score");
 
     //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
-    registerRequest(new Plot());
+    register(new Plot());
 
-    Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",            "Admin");
-    Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",  "Admin");
-    Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",     "Admin");
-    Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",        "Admin");
-    Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",      "Admin");
-    Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",      "Admin");
-    Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",     "Admin");
-    Request.addToNavbar(registerRequest(new Script()),      "Get Script",      "Admin");
-    Request.addToNavbar(registerRequest(new DataDistrib()), "Data Distrib",    "Admin");
-    Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",        "Admin");
+    Request.addToNavbar(register(new Jobs()),        "Jobs",            "Admin");
+    Request.addToNavbar(register(new Cloud()),       "Cluster Status",  "Admin");
+    Request.addToNavbar(register(new IOStatus()),    "Cluster I/O",     "Admin");
+    Request.addToNavbar(register(new Timeline()),    "Timeline",        "Admin");
+    Request.addToNavbar(register(new JStack()),      "Stack Dump",      "Admin");
+    Request.addToNavbar(register(new Debug()),       "Debug Dump",      "Admin");
+    Request.addToNavbar(register(new LogView()),     "Inspect Log",     "Admin");
+    Request.addToNavbar(register(new Script()),      "Get Script",      "Admin");
+    Request.addToNavbar(register(new DataDistrib()), "Data Distrib",    "Admin");
+    Request.addToNavbar(register(new Shutdown()),    "Shutdown",        "Admin");
 
-    Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help");
-    Request.addToNavbar(registerRequest(new Tutorials()),           "Tutorials Home",         "Help");
-    Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest Tutorial", "Help");
-    Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
-    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
+    Request.addToNavbar(register(new Documentation()),       "H2O Documentation",      "Help");
+    Request.addToNavbar(register(new Tutorials()),           "Tutorials Home",         "Help");
+    Request.addToNavbar(register(new TutorialRFIris()),      "Random Forest Tutorial", "Help");
+    Request.addToNavbar(register(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
+    Request.addToNavbar(register(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
 
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
-      registerRequest(new ImportFiles2());
-      registerRequest(new Parse2());
-      registerRequest(new Inspect2());
-      registerRequest(new KMeans2());
-      registerRequest(new hex.gbm.DRF());
-      registerRequest(new hex.LR2());
+      register(new ImportFiles2());
+      register(new Parse2());
+      register(new Inspect2());
+      register(new KMeans2());
+      register(new hex.gbm.DRF());
+      register(new hex.LR2());
     }
     else {
-      Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",        "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new SummaryPage2()),   "Summary2",        "Beta (FluidVecs!)");
     }
 
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
-    registerRequest(new Cancel());
-    registerRequest(new DRFModelView());
-    registerRequest(new DRFProgressPage());
-    registerRequest(new DownloadDataset());
-    registerRequest(new Exec());
-    registerRequest(new DataManip());
-    registerRequest(new ExportS3Progress());
-    registerRequest(new GBMModelView());
-    registerRequest(new GBMProgressPage());
-    registerRequest(new GLMGridProgress());
-    registerRequest(new GLMProgressPage());
-    registerRequest(new GetVector());
-    registerRequest(new GridSearchProgress());
-    registerRequest(new LogView.LogDownload());
-    registerRequest(new NeuralNetProgress());
-    registerRequest(new PostFile());
-    registerRequest(new Progress());
-    registerRequest(new Progress2());
-    registerRequest(new PutValue());
-    registerRequest(new PutVector());
-    registerRequest(new RFTreeView());
-    registerRequest(new RFView());
-    registerRequest(new RPackage());
-    registerRequest(new RReaderProgress());
-    registerRequest(new Remove());
-    registerRequest(new RemoveAck());
-    registerRequest(new RunScript());
-    registerRequest(new SetColumnNames());
-    registerRequest(new TypeaheadFileRequest());
-    registerRequest(new TypeaheadGLMModelKeyRequest());
-    registerRequest(new TypeaheadHdfsPathRequest());
-    registerRequest(new TypeaheadHexKeyRequest());
-    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
-    registerRequest(new TypeaheadRFModelKeyRequest());
-    registerRequest(new TypeaheadS3BucketRequest());
+    register(new Cancel());
+    register(new DRFModelView());
+    register(new DRFProgressPage());
+    register(new DownloadDataset());
+    register(new Exec());
+    register(new DataManip());
+    register(new ExportS3Progress());
+    register(new GBMModelView());
+    register(new GBMProgressPage());
+    register(new GLMGridProgress());
+    register(new GLMProgressPage());
+    register(new GetVector());
+    register(new GridSearchProgress());
+    register(new LogView.LogDownload());
+    register(new NeuralNetProgress());
+    register(new PostFile());
+    register(new Progress());
+    register(new Progress2());
+    register(new PutValue());
+    register(new PutVector());
+    register(new RFTreeView());
+    register(new RFView());
+    register(new RPackage());
+    register(new RReaderProgress());
+    register(new Remove());
+    register(new RemoveAck());
+    register(new RunScript());
+    register(new SetColumnNames());
+    register(new TypeaheadFileRequest());
+    register(new TypeaheadGLMModelKeyRequest());
+    register(new TypeaheadHdfsPathRequest());
+    register(new TypeaheadHexKeyRequest());
+    register(new TypeaheadKeysRequest("Existing H2O Key", "", null));
+    register(new TypeaheadRFModelKeyRequest());
+    register(new TypeaheadS3BucketRequest());
     // testing hooks
-    registerRequest(new TestPoll());
-    registerRequest(new TestRedirect());
-    registerRequest(new GLMProgressPage2());
-    registerRequest(new GLMModelView());
-    registerRequest(new GLMValidationView());
+    register(new TestPoll());
+    register(new TestRedirect());
+    register(new GLMProgressPage2());
+    register(new GLMModelView());
+    register(new GLMValidationView());
     Request.initializeNavBar();
   }
 
   /**
    * Registers the request with the request server.
    */
-  public static Request registerRequest(Request req) {
+  public static Request register(Request req) {
     String href = req.href();
     assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
     _requests.put(href,req);
@@ -173,7 +173,14 @@ public class RequestServer extends NanoHTTPD {
     return req;
   }
 
-  public static void unregisterRequest(Request req) {
+  /**
+   * Registers a request to train a model.
+   */
+  public static Request register(Model model) {
+    return register(model.defaultTrainJob());
+  }
+
+  public static void unregister(Request req) {
     String href = req.href();
     _requests.remove(href);
   }

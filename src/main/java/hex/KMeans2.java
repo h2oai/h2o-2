@@ -5,10 +5,14 @@ import hex.KMeans.Initialization;
 import java.util.ArrayList;
 import java.util.Random;
 
-import water.Job.ColumnsJob;
 import water.*;
-import water.api.DocGen;
-import water.fvec.*;
+import water.Job.ColumnsJob;
+import water.Job.Progress;
+import water.api.*;
+import water.api.Request.API;
+import water.api.Request.Default;
+import water.fvec.Chunk;
+import water.fvec.Vec;
 import water.util.Utils;
 
 /**
@@ -16,10 +20,9 @@ import water.util.Utils;
  * http://theory.stanford.edu/~sergei/papers/vldb12-kmpar.pdf<br>
  * http://www.youtube.com/watch?v=cigXAxV3XcY
  */
-public class KMeans2 extends ColumnsJob {
+public class KMeans2 extends Model implements Progress {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
-  static final String DOC_GET = "k-means";
 
   @API(help = "Clusters initialization", filter = Default.class)
   public Initialization initialization = Initialization.None;
@@ -36,73 +39,23 @@ public class KMeans2 extends ColumnsJob {
   @API(help = "Seed for the random number generator", filter = Default.class)
   public long seed = new Random().nextLong();
 
-  public class KMeansModel2 extends Model implements Progress {
-    @API(help = "Cluster centers, always denormalized")
-    public double[][] clusters;
+  @API(help = "Cluster centers, always denormalized")
+  public double[][] clusters;
 
-    @API(help = "Sum of min square distances")
-    public double error;
+  @API(help = "Sum of min square distances")
+  public double error;
 
-    @API(help = "Clusters initialization")
-    public Initialization initialization;
+  @API(help = "Iterations the algorithm ran")
+  public int iterations;
 
-    @API(help = "Iterations the algorithm ran")
-    public int iterations;
+  private transient double[] _subs, _muls; // Normalization
+  private transient double[][] _normalized;
 
-    @API(help = "Maximum number of iterations")
-    public int max_iter;
-
-    @API(help = "Seed for the random number generator")
-    public long seed;
-
-    @API(help = "Whether data was normalized")
-    public boolean normalized;
-
-    private transient double[] _subs, _muls; // Normalization
-    private transient double[][] _normalized;
-
-    public KMeansModel2(Key self, Key data, Frame source) {
-      super(self, data, source);
-    }
-
-    @Override public float progress() {
-      return Math.min(1f, iterations / (float) max_iter);
-    }
-
-    @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
-      if( normalize && _normalized == null ) {
-        _normalized = normalize(clusters, chunks);
-        _subs = new double[chunks.length];
-        _muls = new double[chunks.length];
-        for( int i = 0; i < chunks.length; i++ ) {
-          _subs[i] = (float) chunks[i]._vec.mean();
-          double sigma = chunks[i]._vec.sigma();
-          _muls[i] = normalize(sigma) ? 1 / sigma : 1;
-        }
-      }
-      data(tmp, chunks, rowInChunk, _subs, _muls);
-      preds[closest(_normalized, tmp, new ClusterDist())._cluster] = 1;
-      return preds;
-    }
-
-    @Override protected float[] score0(double[] data, float[] preds) {
-      throw new UnsupportedOperationException();
-    }
+  @Override public float progress() {
+    return Math.min(1f, iterations / (float) max_iter);
   }
 
-  public KMeans2() {
-    description = DOC_GET;
-  }
-
-  @Override protected void exec() {
-    Vec[] vecs = selectVecs(source);
-    final Key sourceKey = Key.make(input("source"));
-    KMeansModel2 model = new KMeansModel2(destination_key, sourceKey, source);
-    model.initialization = initialization;
-    model.max_iter = max_iter;
-    model.seed = seed;
-    model.normalized = normalize;
-
+  @Override protected void train(Job job, Vec[] vecs, Vec response) {
     double[] subs = null, muls = null;
     if( normalize ) {
       subs = new double[vecs.length];
@@ -129,7 +82,7 @@ public class KMeans2 extends ColumnsJob {
       clusters[0] = new double[vecs.length];
       randomRow(vecs, rand, clusters[0], subs, muls);
 
-      while( model.iterations < 5 ) {
+      while( iterations < 5 ) {
         // Sum squares distances to clusters
         SumSqr sqr = new SumSqr();
         sqr._clusters = clusters;
@@ -148,14 +101,12 @@ public class KMeans2 extends ColumnsJob {
         sampler.doAll(vecs);
         clusters = Utils.append(clusters, sampler._sampled);
 
-        if( cancelled() ) {
-          remove();
+        if( job.cancelled() )
           return;
-        }
-        model.clusters = normalize ? denormalize(clusters, vecs) : clusters;
-        model.error = sqr._sqr;
-        model.iterations++;
-        UKV.put(destination_key, model);
+        clusters = normalize ? denormalize(clusters, vecs) : clusters;
+        error = sqr._sqr;
+        iterations++;
+        UKV.put(_selfKey, this);
       }
 
       clusters = recluster(clusters, k, rand, initialization);
@@ -175,17 +126,67 @@ public class KMeans2 extends ColumnsJob {
           }
         }
       }
-      model.clusters = normalize ? denormalize(clusters, vecs) : clusters;
-      model.error = task._sqr;
-      model.iterations++;
-      UKV.put(destination_key, model);
-      if( model.iterations >= max_iter )
+      clusters = normalize ? denormalize(clusters, vecs) : clusters;
+      error = task._sqr;
+      iterations++;
+      UKV.put(_selfKey, this);
+      if( iterations >= max_iter )
         break;
-      if( cancelled() )
+      if( job.cancelled() )
         break;
     }
+  }
 
-    remove();
+  @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
+    if( normalize && _normalized == null ) {
+      _normalized = normalize(clusters, chunks);
+      _subs = new double[chunks.length];
+      _muls = new double[chunks.length];
+      for( int i = 0; i < chunks.length; i++ ) {
+        _subs[i] = (float) chunks[i]._vec.mean();
+        double sigma = chunks[i]._vec.sigma();
+        _muls[i] = normalize(sigma) ? 1 / sigma : 1;
+      }
+    }
+    data(tmp, chunks, rowInChunk, _subs, _muls);
+    preds[closest(_normalized, tmp, new ClusterDist())._cluster] = 1;
+    return preds;
+  }
+
+  @Override protected float[] score0(double[] data, float[] preds) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public Job defaultTrainJob() {
+    return new KMeans2Train();
+  }
+
+  public static class KMeans2Train extends ColumnsJob {
+    private KMeans2 _model = new KMeans2();
+
+    public KMeans2Train() {
+      description = "K-means";
+    }
+
+    @Override protected ArrayList<Class> getClasses() {
+      ArrayList<Class> classes = super.getClasses();
+      classes.add(0, KMeans2.class);
+      return classes;
+    }
+
+    @Override protected Object getTarget() {
+      return _model;
+    }
+
+    @Override protected void exec() {
+      _model = new KMeans2();
+      _model._selfKey = destination_key;
+      _model._dataKey = Key.make(input("source"));
+      _model._names = source.names();
+      _model._domains = source.domains();
+      _model.train(this, selectVecs(source), null);
+      remove();
+    }
   }
 
   public static class SumSqr extends MRTask2<SumSqr> {

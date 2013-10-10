@@ -119,7 +119,8 @@ public abstract class DocGen {
   }
 
   public String genHelp(Request R) {
-    final String name = R.getClass().getSimpleName();
+    final String name = R.name();
+    final String url = R.getClass().getSimpleName();
     final FieldDoc docs[] = R.toDocField();
     final StringBuilder sb = new StringBuilder();
     bodyHead(sb);
@@ -134,7 +135,7 @@ public abstract class DocGen {
     }
 
     section(sb,"URL");
-    paraTail(escape(paraHead(sb),"http://<h2oHost>:<h2oApiPort>/"+name+".json"));
+    paraTail(escape(paraHead(sb),"http://<h2oHost>:<h2oApiPort>/"+url+".json"));
 
     // Escape out for not-yet-converted auto-doc Requests
     if( docs == null ) return bodyTail(sb).toString();
@@ -184,18 +185,18 @@ public abstract class DocGen {
     if( s != null ) {
       section(sb,"Success Example");
       paraHead(sb);
-      url(sb,name,s);
+      url(sb,url,s);
       paraTail(sb);
-      paragraph(sb,serve(name,s));
+      paragraph(sb,serve(url,s));
     }
 
     String f[] = R.DocExampleFail();
     if( f != null ) {
       section(sb,"Error Example");
       paraHead(sb);
-      url(sb,name,f);
+      url(sb,url,f);
       paraTail(sb);
-      paragraph(sb,serve(name,f));
+      paragraph(sb,serve(url,f));
     }
 
     bodyTail(sb);

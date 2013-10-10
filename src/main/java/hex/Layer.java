@@ -319,8 +319,13 @@ public abstract class Layer extends Iced {
     Vec _vec;
 
     public VecSoftmax(Vec vec) {
-      super(vec.domain().length);
+      super(classes(vec));
       _vec = vec;
+    }
+
+    private static int classes(Vec vec) {
+      vec.asEnum();
+      return vec.domain().length;
     }
 
     @Override int label() {

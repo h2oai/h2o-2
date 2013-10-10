@@ -17,8 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.fvec.Chunk;
-import water.fvec.Vec;
+import water.fvec.*;
 import water.util.Log;
 import water.util.Utils;
 
@@ -27,7 +26,7 @@ import com.jogamp.opencl.CLMemory.Mem;
 
 /**
  * Trains a neural network.
- *
+ * 
  * @author cypof
  */
 public abstract class Trainer {
@@ -304,10 +303,9 @@ public abstract class Trainer {
         _task._ws[y] = _ls[y]._w;
         _task._bs[y] = _ls[y]._b;
       }
-      //_task.dfork(new Frame(null, Utils.add(vecs, response)));
       Vec[] vecs = ((VecsInput) _ls[0])._vecs;
       Vec response = ((VecSoftmax) _ls[_ls.length - 1])._vec;
-      _task.doAll(Utils.add(vecs, response));
+      _task.dfork(new Frame(null, Utils.add(vecs, response)));
     }
 
     @Override public void join() {
@@ -363,57 +361,16 @@ public abstract class Trainer {
     @Override protected void closeLocal() {
       // Launch actual computation in order, otherwise passes
       // between chunks diverge quickly
-      ArrayList<DescentEpoch> list = new ArrayList<DescentEpoch>();
-      for( int i = 0; i < 8; i++ ) {
       DescentEpoch epoch = new DescentEpoch();
       epoch._node = _node;
       epoch._count = _epochs == 0 ? -1 : _epochs;
-      //epoch.invoke();
-      //H2O.submitTask(epoch);
-      list.add(epoch);
-      epoch.fork();
-      }
-      for(DescentEpoch epoch : list)
-        epoch.join();
-
-      for( int i = 0; _epochs == 0 || i < _epochs; i++ ) {
-        if( _node._job != null && !Job.running(_node._job) )
-          break;
-//        for( DescentChunk task : _node._tasks )
-//          H2O.submitTask(task);
-//        for( DescentChunk task : _node._tasks ) {
-//          task.join();
-//          task.reinitialize();
-//        }
-        ArrayList<DescentChunk> tasks = new ArrayList<DescentChunk>();
-        for( Chunk[] cs : _node._chunks ) {
-          DescentChunk task = new DescentChunk();
-          task._node = _node;
-          task._cs = cs;
-          tasks.add(task);
-//          H2O.FJP_NORM.submit(task);
-//          task.fork();
-        }
-        //H2O.submitTask(task);
-        //H2O.submitTask(task);
-        for( DescentChunk task : tasks ) {
-          task.join();
-        }
-      }
-
-      if( _node._key.home() )
-        _node._trainer.done();
-
+      H2O.submitTask(epoch);
       _ls = null;
       _ws = _bs = null;
       _key = null;
     }
 
     @Override public void map(Chunk[] cs) {
-//      DescentChunk task = new DescentChunk();
-//      task._node = _node;
-//      task._cs = cs;
-//      _node._tasks.add(task);
       _node._chunks.add(cs);
     }
 
@@ -427,28 +384,18 @@ public abstract class Trainer {
     int _count;
 
     @Override public void compute2() {
-      Chunk[][] cs = _node._chunks.toArray(new Chunk[0][]);
-      MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      for( int n = cs.length - 1; n >= 0; n-- ) {
-        int shuffle = rand.nextInt(n + 1);
-        Chunk[] t = cs[shuffle];
-        cs[shuffle] = cs[n];
-        cs[n] = t;
-      }
-      for( ;; ) {
-        if( _count < 0 || --_count > 0 && (_node._job == null || Job.running(_node._job)) ) {
-          for( Chunk[] c : cs ) {
-            DescentChunk task = new DescentChunk();
-            task._node = _node;
-            task._cs = c;
-            task.compute2();
-          }
-        } else {
-//        if( _node._key.home() )
-//          _node._trainer.done();
-          tryComplete();
-          break;
+      if( _count < 0 || --_count > 0 && (_node._job == null || Job.running(_node._job)) ) {
+        for( Chunk[] cs : _node._chunks ) {
+          DescentChunk task = new DescentChunk();
+          task._node = _node;
+          task._cs = cs;
+          H2O.submitTask(task);
         }
+        reinitialize();
+        H2O.submitTask(this);
+      } else {
+        if( _node._key.home() )
+          _node._trainer.done();
       }
     }
   }

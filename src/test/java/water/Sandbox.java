@@ -5,6 +5,7 @@ import java.io.File;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
+import water.fvec.Frame;
 import water.util.Utils;
 
 public class Sandbox {
@@ -20,7 +21,6 @@ public class Sandbox {
       localCloud(1, true, args);
 
       // File f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
-      // File f = new File("smalldata/covtype/covtype.20k.data");
       // File f = new File("syn_5853362476331324036_100x11.csv");
       // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
       // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
@@ -31,16 +31,7 @@ public class Sandbox {
 //    water.parser.ParseDataset.parse(dest, new Key[] { key });
 //    ValueArray va = (ValueArray) UKV.get(dest);
 
-      File train = new File("smalldata/mnist/train.csv.gz");
-      Key dest = Key.make("train.hex");
-      Key fkey = water.fvec.NFSFileVec.make(train);
-      water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
-
-      File test = new File("smalldata/mnist/test.csv.gz");
-      dest = Key.make("test.hex");
-      fkey = water.fvec.NFSFileVec.make(test);
-      water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
-
+      covtype();
       Utils.readConsole();
 
       // @formatter:off
@@ -79,6 +70,33 @@ public class Sandbox {
 
       System.out.println("Done!");
     }
+  }
+
+  static void covtype() {
+    File train = new File("smalldata/covtype/covtype.20k.data");
+    Key dest = Key.make("covtype.20k.data.hex");
+    Key fkey = water.fvec.NFSFileVec.make(train);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+    Frame frame = UKV.get(dest);
+
+//    double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
+//    for( int r = 0; r < rows.length; r++ ) {
+//      for( int c = 0; c < rows[r].length; c++ ) {
+//        rows =
+//      }
+//    }
+  }
+
+  static void mnist() {
+    File train = new File("smalldata/mnist/train.csv.gz");
+    Key dest = Key.make("train.hex");
+    Key fkey = water.fvec.NFSFileVec.make(train);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+
+    File test = new File("smalldata/mnist/test.csv.gz");
+    dest = Key.make("test.hex");
+    fkey = water.fvec.NFSFileVec.make(test);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
   }
 
   /**

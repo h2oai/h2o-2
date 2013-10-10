@@ -1073,7 +1073,7 @@ public class RequestArguments extends RequestStatics {
     static NumberSequence parse(String input, boolean mul, double defaultStep){
       return new NumberSequence(parseArray(input, mul, defaultStep),null);
     }
-    public String toString(){
+    @Override public String toString(){
       if(_str != null)return _str;
       if(_arr == null || _arr.length == 0)return"";
 
@@ -1090,8 +1090,7 @@ public class RequestArguments extends RequestStatics {
     transient NumberSequence _dVal;
     double _defaultStep;
 
-    @Override
-    public String queryComment(){
+    @Override public String queryComment(){
       return disabled()?"":"Comma separated list of values. Or range specified as from:to:step" + (_multiplicative?"(*).":"(+).");
     }
 

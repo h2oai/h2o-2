@@ -6,7 +6,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 
-import water.api.*;
+import water.api.Request;
+import water.api.RequestArguments;
 import water.fvec.Frame;
 import water.util.Utils;
 
@@ -144,19 +145,36 @@ public abstract class Request2 extends Request {
     }
   }
 
+  protected ArrayList<Class> getClasses() {
+    ArrayList<Class> classes = new ArrayList<Class>();
+    {
+      Class c = getClass();
+      while( c != null ) {
+        classes.add(c);
+        c = c.getSuperclass();
+      }
+    }
+    return classes;
+  }
+
+  protected Object getTarget() {
+    return this;
+  }
+
+  private final Object getTarget(Field f) {
+    Object t = getTarget();
+    if( f.getDeclaringClass().isAssignableFrom(t.getClass()) )
+      return t;
+    return this;
+  }
+
   /**
    * Iterates over fields and their annotations, and creates argument handlers.
    */
   @Override protected void registered() {
     try {
-      ArrayList<Class> classes = new ArrayList<Class>();
-      {
-        Class c = getClass();
-        while( c != null ) {
-          classes.add(c);
-          c = c.getSuperclass();
-        }
-      }
+      ArrayList<Class> classes = getClasses();
+
       // Fields from parent classes first
       Collections.reverse(classes);
       ArrayList<Field> fields = new ArrayList<Field>();
@@ -173,7 +191,7 @@ public abstract class Request2 extends Request {
 
         if( api != null && Helper.isInput(api) ) {
           f.setAccessible(true);
-          Object defaultValue = f.get(this);
+          Object defaultValue = f.get(getTarget(f));
 
           // Create an Argument instance to reuse existing Web framework for now
           Argument arg = null;
@@ -196,6 +214,15 @@ public abstract class Request2 extends Request {
           else if( f.getType() == int.class || f.getType() == long.class ) {
             long val = ((Number) defaultValue).longValue();
             arg = new LongInt(f.getName(), api.required(), val, api.lmin(), api.lmax(), api.help());
+          }
+
+          // RSeq
+          else if( f.getType() == int[].class ) {
+            int[] val = (int[]) defaultValue;
+            double[] ds = new double[val.length];
+            for( int i = 0; i < ds.length; i++ )
+              ds[i] = val[i];
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null), false);
           }
 
           // Bool
@@ -419,7 +446,7 @@ public abstract class Request2 extends Request {
         } else
           value = ds;
       }
-      arg._field.set(this, value);
+      arg._field.set(getTarget(arg._field), value);
     } catch( Exception e ) {
       throw new RuntimeException(e);
     }

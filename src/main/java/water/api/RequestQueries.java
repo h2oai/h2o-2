@@ -86,7 +86,7 @@ public class RequestQueries extends RequestArguments {
             "<div class='container'>"
           + "<div class='row-fluid'>"
           + "<div class='span12'>"
-          + "<h3>Request %REQ_NAME <a href='%REQ_NAME.help'><i class='icon-question-sign'></i></a></h3>"
+          + "<h3>%REQ_NAME <a href='%REQ_LINK.help'><i class='icon-question-sign'></i></a></h3>"
           + "<p></p>"
           + "  <dl class='dl-horizontal'><dt></dt><dd>"
           + "    <button class='btn btn-primary' onclick='query_submit()'>Submit</button>"
@@ -138,7 +138,8 @@ public class RequestQueries extends RequestArguments {
     if (parms.isEmpty())
       type = RequestType.query;
     RString result = new RString(_queryHtml);
-    result.replace("REQ_NAME", this.getClass().getSimpleName());
+    result.replace("REQ_NAME", ((Request) this).name());
+    result.replace("REQ_LINK", this.getClass().getSimpleName());
     StringBuilder query = new StringBuilder();
     query.append("<form onsubmit='return false;'>");
     RString script = new RString(_queryJs);

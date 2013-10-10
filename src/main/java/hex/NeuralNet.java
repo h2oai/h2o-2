@@ -10,9 +10,14 @@ import hex.Layer.VecsInput;
 import java.util.UUID;
 
 import water.*;
+import water.H2O.H2OCountedCompleter;
+import water.Job.ModelJob;
+import water.Job.Progress;
 import water.Job.ValidatedJob;
-import water.api.DocGen;
-import water.api.Progress2;
+import water.api.*;
+import water.api.Request.API;
+import water.api.Request.Default;
+import water.api.RequestBuilders.Response;
 import water.fvec.*;
 import water.util.RString;
 import water.util.Utils;
@@ -22,7 +27,7 @@ import water.util.Utils;
  *
  * @author cypof
  */
-public class NeuralNet extends ValidatedJob {
+public class NeuralNet extends Model implements Progress {
   static final int API_WEAVER = 1;
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network";
@@ -32,15 +37,11 @@ public class NeuralNet extends ValidatedJob {
     Tanh, Rectifier
   };
 
-//@formatter:off
-  @API(help = "Activation function", filter = activationFilter.class)
-  public Activation activation;
-  class activationFilter extends EnumArgument<Activation> { public activationFilter() { super(Activation.Tanh); } }
+  @API(help = "Activation function", filter = Default.class)
+  public Activation activation = Activation.Tanh;
 
-  @API(help = "Hidden layer sizes", filter = hiddenFilter.class)
-  public int[] hidden;
-  class hiddenFilter extends RSeq { public hiddenFilter() { super("500", false); } }
-//@formatter:on
+  @API(help = "Hidden layer sizes", filter = Default.class)
+  public int[] hidden = new int[] { 500 };
 
   @API(help = "Learning rate", filter = Default.class)
   public double rate = .01;
@@ -51,11 +52,34 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "How many times the dataset should be iterated", filter = Default.class)
   public int epochs = 100;
 
-  public NeuralNet() {
-    description = DOC_GET;
-  }
+  @API(help = "Layers")
+  public Layer[] layers;
 
-  @Override protected void exec() {
+  @API(help = "Layer weights")
+  public float[][] ws, bs;
+
+  @API(help = "How many items have been processed")
+  public long items;
+
+  @API(help = "Training speed")
+  public int items_per_second;
+
+  @API(help = "Classification error on the training set (Estimation)")
+  public double train_classification_error = 1;
+
+  @API(help = "Square distance error on the training set (Estimation)")
+  public double train_sqr_error;
+
+  @API(help = "Classification error on the validation set (Estimation)")
+  public double validation_classification_error = 1;
+
+  @API(help = "Square distance error on the validation set (Estimation)")
+  public double validation_sqr_error;
+
+  @API(help = "Confusion matrix")
+  public long[][] confusion_matrix;
+
+  @Override protected H2OCountedCompleter fork() {
     Vec[] vecs = Utils.add(_train, response);
     reChunk(vecs);
     System.arraycopy(vecs, 0, _train, 0, _train.length);
@@ -71,10 +95,9 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1]._rate = (float) rate;
       ls[i + 1]._l2 = (float) l2;
     }
-    if( classification ) {
-      response.asEnum();
+    if( classification )
       ls[ls.length - 1] = new VecSoftmax(response);
-    } else {
+    else {
       // TODO Gaussian?
     }
     ls[ls.length - 1]._rate = (float) rate;
@@ -139,9 +162,9 @@ public class NeuralNet extends ValidatedJob {
         }
       }
     };
-    thread.start();
-    //trainer.join();
     trainer.start();
+    thread.start();
+    return null;
   }
 
   @Override public float progress() {
@@ -154,6 +177,30 @@ public class NeuralNet extends ValidatedJob {
   @Override protected Response redirect() {
     String n = NeuralNetProgress.class.getSimpleName();
     return new Response(Response.Status.redirect, this, -1, -1, n, "job", job_key, "dst_key", destination_key);
+  }
+
+  @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
+    layers[0] = new ChunksInput(Utils.remove(chunks, chunks.length - 1), ((VecsInput) layers[0]));
+    layers[layers.length - 1] = new ChunkSoftmax(chunks[chunks.length - 1]);
+    for( int y = 0; y < layers.length; y++ ) {
+      layers[y]._w = ws[y];
+      layers[y]._b = bs[y];
+      layers[y].init(layers, y, false, 0);
+    }
+    ((Input) layers[0])._pos = rowInChunk;
+    for( int i = 0; i < layers.length; i++ )
+      layers[i].fprop();
+    float[] out = layers[layers.length - 1]._a;
+    assert out.length == preds.length;
+    return out;
+  }
+
+  @Override protected float[] score0(double[] data, float[] preds) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public ConfusionMatrix cm() {
+    return new ConfusionMatrix(confusion_matrix);
   }
 
   public static String link(Key k, String content) {
@@ -182,35 +229,8 @@ public class NeuralNet extends ValidatedJob {
     }
   }
 
-  public static class NeuralNetModel extends Model {
-    @API(help = "Layers")
-    public Layer[] layers;
-
-    @API(help = "Layer weights")
-    public float[][] ws, bs;
-
-    @API(help = "How many items have been processed")
-    public long items;
-
-    @API(help = "Training speed")
-    public int items_per_second;
-
-    @API(help = "Classification error on the training set (Estimation)")
-    public double train_classification_error = 1;
-
-    @API(help = "Square distance error on the training set (Estimation)")
-    public double train_sqr_error;
-
-    @API(help = "Classification error on the validation set (Estimation)")
-    public double validation_classification_error = 1;
-
-    @API(help = "Square distance error on the validation set (Estimation)")
-    public double validation_sqr_error;
-
-    @API(help = "Confusion matrix")
-    public long[][] confusion_matrix;
-
-    NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls) {
+  public static class NeuralNetTrain extends ValidatedJob {
+    NeuralNetTrain(Key selfKey, Key dataKey, Frame fr, Layer[] ls) {
       super(selfKey, dataKey, fr);
 
       layers = new Layer[ls.length];
@@ -223,30 +243,6 @@ public class NeuralNet extends ValidatedJob {
         ws[y] = layers[y]._w;
         bs[y] = layers[y]._b;
       }
-    }
-
-    @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
-      layers[0] = new ChunksInput(Utils.remove(chunks, chunks.length - 1), ((VecsInput) layers[0]));
-      layers[layers.length - 1] = new ChunkSoftmax(chunks[chunks.length - 1]);
-      for( int y = 0; y < layers.length; y++ ) {
-        layers[y]._w = ws[y];
-        layers[y]._b = bs[y];
-        layers[y].init(layers, y, false, 0);
-      }
-      ((Input) layers[0])._pos = rowInChunk;
-      for( int i = 0; i < layers.length; i++ )
-        layers[i].fprop();
-      float[] out = layers[layers.length - 1]._a;
-      assert out.length == preds.length;
-      return out;
-    }
-
-    @Override protected float[] score0(double[] data, float[] preds) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override public ConfusionMatrix cm() {
-      return new ConfusionMatrix(confusion_matrix);
     }
   }
 

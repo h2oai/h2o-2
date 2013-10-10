@@ -25,9 +25,9 @@ public class JobArgsTest extends HttpTest {
     Frame frame = frame(names, items);
     UKV.put(key, frame);
     try {
-      RequestServer.registerRequest(new FailTestJob());
-      RequestServer.registerRequest(new FailTestJobAsync());
-      RequestServer.registerRequest(new ArgsTestJob());
+      RequestServer.register(new FailTestJob());
+      RequestServer.register(new FailTestJobAsync());
+      RequestServer.register(new ArgsTestJob());
 
       String args = "" + //
           "destination_key=" + dst + "&" + //
@@ -53,9 +53,9 @@ public class JobArgsTest extends HttpTest {
       Assert.assertEquals(200, get._status);
       waitForJob(dst);
     } finally {
-      RequestServer.unregisterRequest(new FailTestJob());
-      RequestServer.unregisterRequest(new FailTestJobAsync());
-      RequestServer.unregisterRequest(new ArgsTestJob());
+      RequestServer.unregister(new FailTestJob());
+      RequestServer.unregister(new FailTestJobAsync());
+      RequestServer.unregister(new ArgsTestJob());
       UKV.remove(key);
     }
   }

@@ -24,7 +24,7 @@ public abstract class Model extends Iced {
 
   /** Key associated with this Model, if any.  */
   @API(help="Key associated with Model")
-  public final Key _selfKey;
+  public Key _selfKey;
 
   /** Dataset key used to *build* the model, for models for which this makes
    *  sense, or null otherwise.  Not all models are built from a dataset (eg
@@ -32,17 +32,20 @@ public abstract class Model extends Iced {
    *  models), so this key has no *mathematical* significance in the model but
    *  is handy during common model-building and for the historical record.  */
   @API(help="Datakey used to *build* the model")
-  public final Key _dataKey;
+  public Key _dataKey;
 
   /** Columns used in the model and are used to match up with scoring data
    *  columns.  The last name is the response column name. */
   @API(help="Column names used to build the model")
-  public final String _names[];
+  public String _names[];
 
   /** Categorical/factor/enum mappings, per column.  Null for non-enum cols.
    *  The last column holds the response col enums.  */
   @API(help="Column names used to build the model")
-  public final String _domains[][];
+  public String _domains[][];
+
+  public Model() {
+  }
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
@@ -64,6 +67,14 @@ public abstract class Model extends Iced {
 
   /** Simple shallow copy constructor to a new Key */
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
+
+  /** Default Job to train model */
+  public Job defaultTrainJob() {
+    return null;
+  }
+
+  /** Train the model */
+  protected void train(Job job, Vec[] vecs, Vec response) {}
 
   /** Called when deleting this model, to cleanup any internal keys */
   public void delete() { UKV.remove(_selfKey); }
@@ -92,9 +103,9 @@ public abstract class Model extends Iced {
     Frame[] adaptFrms = adapt(fr,exact);
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
-    Frame adaptFrm = adaptFrms[0]; 
+    Frame adaptFrm = adaptFrms[0];
     // Contains only newly created vectors. The frame eases deletion of these vectors.
-    Frame onlyAdaptFrm = adaptFrms[1]; 
+    Frame onlyAdaptFrm = adaptFrms[1];
     Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
@@ -351,7 +362,7 @@ public abstract class Model extends Iced {
               "  float[] predict( java.util.HashMap<String,Double> row ) {\n"+
               "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
               "  }\n"+
-              "}\n", 
+              "}\n",
               _selfKey.toString(), toString(_names), nclasses(),m);
 
     return j;

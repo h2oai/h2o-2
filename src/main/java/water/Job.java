@@ -50,6 +50,10 @@ public class Job extends Request2 {
     return destination_key;
   }
 
+  @Override protected String name() {
+    return description;
+  }
+
   protected void logStart() {
     Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
   }
