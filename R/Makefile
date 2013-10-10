@@ -10,7 +10,7 @@ ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
 	R CMD Rd2pdf --force --output="h2oRClient-package/h2oRClient_package.pdf" --title="Package 'h2oRClient'" --no-index --no-preview h2oRClient-package/man 1> /dev/null
-	R CMD Rd2pdf --force --output="h2oWrapper-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
+	R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
 endif
 	R CMD build h2oRClient-package
 	echo h2oRClient_$(PROJECT_VERSION).tar.gz > info.txt
