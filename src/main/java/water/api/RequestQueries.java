@@ -44,8 +44,7 @@ public class RequestQueries extends RequestArguments {
     // Check that for each actual input argument from the user, there is some
     // request argument that this method is expecting.
     //*/
-    if (H2O.OPT_ARGS.check_rest_params){
-      System.out.println("RequestQueries.checkArguments(): checking unused arguments");
+    if (H2O.OPT_ARGS.check_rest_params) {
       Enumeration en = args.propertyNames();
       while (en.hasMoreElements()) {
         boolean found = false;
