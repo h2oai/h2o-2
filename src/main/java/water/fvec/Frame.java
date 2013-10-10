@@ -26,13 +26,16 @@ public class Frame extends Iced {
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
-    VectorGroup grp = vecs[0].group();
     for( int i=0; i<vecs.length; i++ ) {
-      assert grp == vecs[i].group();
       Key k = _keys[i] = vecs[i]._key;
       if( DKV.get(k)==null )    // If not already in KV, put it there
         DKV.put(k,vecs[i]);
     }
+    Vec v0 = anyVec();
+    if( v0 == null ) return;
+    VectorGroup grp = v0.group();
+    for( int i=0; i<vecs.length; i++ )
+      assert grp.equals(vecs[i].group());
   }
 
   public final Vec[] vecs() {
@@ -62,7 +65,7 @@ public class Frame extends Iced {
 
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
-    assert anyVec().group() == vec.group();
+    assert anyVec().group().equals(vec.group());
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
