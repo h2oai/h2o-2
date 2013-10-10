@@ -419,36 +419,32 @@ public abstract class Request2 extends Request {
     return type.isInstance(o);
   }
 
-  public void set(Argument arg, String input, Object value) {
+  public Object cast(Argument arg, String input, Object value) {
     if( arg._field.getType() != Key.class && value instanceof Key )
       value = UKV.get((Key) value);
 
-    try {
-      if( arg._field.getType() == Key.class && value instanceof ValueArray )
-        value = ((ValueArray) value)._key;
-      //
-      else if( arg._field.getType() == int.class && value instanceof Long )
-        value = ((Long) value).intValue();
-      //
-      else if( arg._field.getType() == float.class && value instanceof Double )
-        value = ((Double) value).floatValue();
-      //
-      else if( arg._field.getType() == Frame.class && value instanceof ValueArray )
-        value = ((ValueArray) value).asFrame(input);
-      //
-      else if( value instanceof NumberSequence ) {
-        double[] ds = ((NumberSequence) value)._arr;
-        if( arg._field.getType() == int[].class ) {
-          int[] is = new int[ds.length];
-          for( int i = 0; i < is.length; i++ )
-            is[i] = (int) ds[i];
-          value = is;
-        } else
-          value = ds;
-      }
-      arg._field.set(getTarget(arg._field), value);
-    } catch( Exception e ) {
-      throw new RuntimeException(e);
+    if( arg._field.getType() == Key.class && value instanceof ValueArray )
+      value = ((ValueArray) value)._key;
+    //
+    else if( arg._field.getType() == int.class && value instanceof Long )
+      value = ((Long) value).intValue();
+    //
+    else if( arg._field.getType() == float.class && value instanceof Double )
+      value = ((Double) value).floatValue();
+    //
+    else if( arg._field.getType() == Frame.class && value instanceof ValueArray )
+      value = ((ValueArray) value).asFrame(input);
+    //
+    else if( value instanceof NumberSequence ) {
+      double[] ds = ((NumberSequence) value)._arr;
+      if( arg._field.getType() == int[].class ) {
+        int[] is = new int[ds.length];
+        for( int i = 0; i < is.length; i++ )
+          is[i] = (int) ds[i];
+        value = is;
+      } else
+        value = ds;
     }
+    return value;
   }
 }

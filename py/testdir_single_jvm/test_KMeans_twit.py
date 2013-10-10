@@ -49,7 +49,6 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'k': 3, 
                 'max_iter': 50,
-                'epsilon': 1e-4,
                 'normalize': 0,
                 'cols': '0,1',
                 'initialization': 'Furthest', 

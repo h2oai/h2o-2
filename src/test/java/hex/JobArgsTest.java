@@ -2,8 +2,9 @@ package hex;
 
 import org.junit.*;
 
-import water.Job.ValidatedJob;
-import water.*;
+import water.Key;
+import water.UKV;
+import water.api.RequestBuilders.Response;
 import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Utils.ExpectedExceptionForDebug;
@@ -78,8 +79,8 @@ public class JobArgsTest extends HttpTest {
 
   static class ArgsTestJob extends ValidatedJob {
     @Override protected void exec() {
-      Assert.assertEquals(source.vecs()[1], _train[0]);
-      Assert.assertEquals(source.vecs()[5], _train[1]);
+      Assert.assertEquals(source.vecs()[1], _filteredSource.vecs()[0]);
+      Assert.assertEquals(source.vecs()[5], _filteredSource.vecs()[1]);
     }
   }
 }

@@ -9,7 +9,7 @@ def define_params():
         'standardize': [1],
         'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
         'beta_epsilon': [None, 0.0001],
-        'expert': [None, 0, 1],
+        'expert_settings': [None, 0, 1],
         'family': [None, 'gaussian', 'binomial', 'poisson'],
         'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         'family': ['poisson'],
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
                 'beta_epsilon': 0.001,
                 'max_iter': 3,
                 'standardize': 1,
-                'expert': 1,
+                'expert_settings': 1,
                 'lsm_solver': 'ADMM',
                 }
 

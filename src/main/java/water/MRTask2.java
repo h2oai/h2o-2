@@ -261,10 +261,14 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       if( v0.chunkKey(_lo).home() ) { // And chunk is homed here?
 
         // Make decompression chunk headers for these chunks
-        Chunk bvs[] = new Chunk[_fr.vecs().length];
-        for( int i=0; i<_fr.vecs().length; i++ )
-          if( _fr.vecs()[i] != null )
-            bvs[i] = _fr.vecs()[i].elem2BV(_lo);
+        Vec vecs[] = _fr.vecs();
+        Chunk bvs[] = new Chunk[vecs.length];
+        for( int i=0; i<vecs.length; i++ )
+          if( vecs[i] != null ) {
+            assert vecs[i].chunkKey(_lo).home() 
+              : "Chunk="+_lo+" v0="+v0+", k="+v0.chunkKey(_lo)+"   v["+i+"]="+vecs[i]+", k="+vecs[i].chunkKey(_lo);
+            bvs[i] = vecs[i].elem2BV(_lo);
+          }
 
         // Call all the various map() calls that apply
         _profile._userstart = System.currentTimeMillis();

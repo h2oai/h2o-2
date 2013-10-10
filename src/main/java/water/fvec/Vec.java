@@ -1,6 +1,7 @@
 package water.fvec;
 
 import java.util.Arrays;
+import java.util.UUID;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -470,6 +471,18 @@ public class Vec extends Iced {
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
+    public VectorGroup() { 
+      byte[] bits = new byte[26];
+      bits[0] = Key.VEC;
+      bits[1] = -1;
+      UDP.set4(bits, 2, -1);
+      UDP.set4(bits, 6, -1);
+      UUID uu = UUID.randomUUID();
+      UDP.set8(bits,10,uu.getLeastSignificantBits());
+      UDP.set8(bits,18,uu. getMostSignificantBits());
+      _key = Key.make(bits);
+      _len = 0;
+    }
 
     public Key vecKey(int vecId){
       byte [] bits = _key._kb.clone();
@@ -483,19 +496,22 @@ public class Vec extends Iced {
      */
     private static class AddVecs2GroupTsk extends TAtomic<VectorGroup>{
       final Key _key;
-      final int _addN;
-      int _finalN;
-      private AddVecs2GroupTsk(Key key, int n){_key = key; _addN = _finalN = n;}
+      int _n;          // INPUT: Keys to allocate; OUTPUT: start of run of keys
+      private AddVecs2GroupTsk(Key key, int n){_key = key; _n = n;}
       @Override public VectorGroup atomic(VectorGroup old) {
-        if(old == null) return new VectorGroup(_key, ++_finalN);
-        return new VectorGroup(_key, _finalN = (_addN + old._len + 1));
+        int n = _n;             // how many
+        // If the old group is missing, assume it is the default group-of-self
+        // (having 1 ID already allocated for self), not a new group with
+        // zero prior vectors.
+        _n = old==null ? 1 : old._len; // start of allocated key run
+        return new VectorGroup(_key, n+_n);
       }
     }
     // reserve range of keys and return index of first new available key
     public int reserveKeys(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
       tsk.invoke(_key);
-      return tsk._finalN - n;
+      return tsk._n;
     }
     /**
      * Gets the next n keys of this group.
@@ -510,8 +526,20 @@ public class Vec extends Iced {
       tsk.invoke(_key);
       Key [] res = new Key[n];
       for(int i = 0; i < n; ++i)
-        res[i] = vecKey(i + tsk._finalN - n);
+        res[i] = vecKey(i + tsk._n);
       return res;
+    }
+
+    @Override public String toString() {
+      return "VecGrp "+_key.toString()+", next free="+_len;
+    }
+
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof VectorGroup) ) return false;
+      return ((VectorGroup)o)._key.equals(_key);
+    }
+    @Override public int hashCode() {
+      return _key.hashCode();
     }
   }
 }

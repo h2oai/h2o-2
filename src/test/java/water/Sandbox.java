@@ -20,18 +20,35 @@ public class Sandbox {
     public static void userMain(String[] args) throws Exception {
       localCloud(1, true, args);
 
-      // File f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
-      // File f = new File("syn_5853362476331324036_100x11.csv");
-      // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
-      // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
-      // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
-
-//    Key key = TestUtil.load_test_file(f, "test");
-//    Key dest = Key.make("test.hex");
-//    water.parser.ParseDataset.parse(dest, new Key[] { key });
-//    ValueArray va = (ValueArray) UKV.get(dest);
-
       covtype();
+
+      File f = new File("smalldata/covtype/covtype.20k.data");
+      Key dest = Key.make("covtype.20k.data.hex");
+      Key fkey = NFSFileVec.make(f);
+      ParseDataset2.parse(dest, new Key[] { fkey });
+
+      // f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
+      f = new File("smalldata/mnist/train.csv.gz");
+      // f = new File("smalldata/covtype/covtype.20k.data");
+      // f = new File("syn_5853362476331324036_100x11.csv");
+      // f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
+      // f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
+      // f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
+
+      dest = Key.make("train.hex");
+      fkey = NFSFileVec.make(f);
+      ParseDataset2.parse(dest, new Key[] { fkey });
+
+      f = new File("smalldata/mnist/test.csv.gz");
+      dest = Key.make("test.hex");
+      fkey = NFSFileVec.make(f);
+      ParseDataset2.parse(dest, new Key[] { fkey });
+
+//      Key key = TestUtil.load_test_file(f, "test");
+//      Key dest = Key.make("test.hex");
+//      ParseDataset.parse(dest, new Key[] { key });
+//      ValueArray va = (ValueArray) UKV.get(dest);
+
       Utils.readConsole();
 
       // @formatter:off

@@ -9,7 +9,7 @@ paramDict = {
     'ntree': 50,
     'model_key': 'model_keyA',
     'out_of_bag_error_estimate': 1,
-    # 'class_weight': None,
+    # 'class_weights': None,
     # 'sample': 66,
     # 'stat_type': 'ENTROPY',
     # 'depth': 2147483647, 

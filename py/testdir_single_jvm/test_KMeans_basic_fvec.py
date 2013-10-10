@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
 
         # loop, to see if we get same centers
         for trial in range(2):
-            kwargs = {'k': 3, 'epsilon': 1e-6, 'cols': None, 'destination_key': 'benign_k.hex',
+            kwargs = {'k': 3, 'cols': None, 'destination_key': 'benign_k.hex',
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310}
 

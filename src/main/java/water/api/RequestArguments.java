@@ -535,8 +535,14 @@ public class RequestArguments extends RequestStatics {
           record._value = parse(input);
           record._valid = true;
 
-          if(callInstance instanceof Request2)
-            ((Request2) callInstance).set(this, input, record._value);
+          if(callInstance instanceof Request2) {
+            try {
+              Object cast = ((Request2) callInstance).cast(this, input, record._value);
+              _field.set(callInstance, cast);
+            } catch( IllegalAccessException e ) {
+              throw new IllegalArgumentException(e);
+            }
+          }
         } catch (IllegalArgumentException e) {
           //record._value = defaultValue();
           throw e;

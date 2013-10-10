@@ -63,19 +63,18 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   public void buildModel( ) {
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
-    _ncols = _train.length;
+    _ncols = _filteredSource.numCols() - 1;
     _nrows = source.numRows() - response.naCnt();
     _ymin = classification ? (int)response.min() : 0;
     assert (classification && response.isInt()) || // Classify Int or Enums
       (!classification && !response.isEnum());     // Regress  Int or Float
-    _nclass = classification ? (char)(response.max()-_ymin+1) : 1; 
+    _nclass = classification ? (char)(response.max()-_ymin+1) : 1;
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
     final Key dataKey = null;
 
-    Frame fr = new Frame(_names, _train);
-    fr.add("response",response);
+    Frame fr = new Frame(_filteredSource);
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
     String names[] = frm.names();
     String domains[][] = frm.domains();
@@ -354,7 +353,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");
       Log.info(tag,"Mean Squared Error is "+(_sum/_nrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
-      if( _nclass > 1 ) 
+      if( _nclass > 1 )
         Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, CM= "+Arrays.deepToString(_cm));
       return this;
     }

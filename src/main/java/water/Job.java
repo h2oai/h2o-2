@@ -122,38 +122,35 @@ public class Job extends Request2 {
 
       if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
         throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
-      if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
-        throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
-      if( cols == null || cols.length == 0 ) {
-        cols = new int[source.vecs().length];
-        for( int i = 0; i < cols.length; i++ )
-          cols[i] = i;
+    }
+
+    protected int[] filteredCols() {
+      int[] res;
+      if( cols != null && cols.length > 0 )
+        res = cols.clone();
+      else {
+        res = new int[source.vecs().length];
+        for( int i = 0; i < res.length; i++ )
+          res[i] = i;
       }
-      int length = cols.length;
+      int length = res.length;
       for( int g = 0; ignored_cols_by_name != null && g < ignored_cols_by_name.length; g++ ) {
         for( int i = 0; i < cols.length; i++ ) {
           if( cols[i] == ignored_cols_by_name[g] ) {
+        for( int i = 0; i < res.length; i++ ) {
+          if( res[i] == ignored_cols_by_name[g] ) {
             length--;
             // Move all, try to keep ordering
-            System.arraycopy(cols, i + 1, cols, i, length - i);
+            System.arraycopy(res, i + 1, res, i, length - i);
             break;
           }
         }
       }
-      if( length != cols.length )
-        cols = ArrayUtils.subarray(cols, 0, length);
-      if( cols.length == 0 )
+      if( length != res.length )
+        res = ArrayUtils.subarray(res, 0, length);
+      if( res.length == 0 )
         throw new IllegalArgumentException("No column selected");
-    }
-
-    protected final Vec[] selectVecs(Frame frame) {
-      if( cols != null ) {
-        Vec[] vecs = new Vec[cols.length];
-        for( int i = 0; i < cols.length; i++ )
-          vecs[i] = frame.vecs()[cols[i]];
-        return vecs;
-      }
-      return frame.vecs();
+      return res;
     }
   }
 
@@ -162,11 +159,14 @@ public class Job extends Request2 {
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     // @formatter:off
-     @API(help = "Column to use as class", required = true, filter = responseFilter.class)
+    @API(help = "Column to use as class", required = true, filter = responseFilter.class)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
 
-    @API(help = "Do Classification or regression", filter = myClassFilter.class)
+    // Note: do not alter the Response to an Enum column if Classification is
+    // asked for: instead use the classification flag to decide between
+    // classification or regression.
+    @API(help = "Do classification or regression", filter = myClassFilter.class)
     public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
     // @formatter:on
@@ -189,29 +189,62 @@ public class Job extends Request2 {
       Log.info("    " + (classification ? "classification" : "regression"));
     }
 
-    @Override protected void init() {
-      super.init();
-
-      // Does not alter the Response to an Enum column if Classification is
-      // asked for: instead use the classification flag to decide between
-      // classification or regression.
-
-      for( int i = cols.length - 1; i >= 0; i-- )
-        if( source.vecs()[cols[i]] == response )
-          cols = ArrayUtils.remove(cols, i);
+    @Override protected int[] filteredCols() {
+      int[] res = super.filteredCols();
+      if( response == null )
+        throw new IllegalArgumentException("No response selected");
+      for( int i = res.length - 1; i >= 0; i-- )
+        if( source.vecs()[res[i]] == response )
+          res = ArrayUtils.remove(res, i);
+      if( res.length == 0 )
+        throw new IllegalArgumentException("No column selected");
+      return res;
     }
   }
 
   public static abstract class ValidatedJob extends ModelJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
-    protected transient Vec[] _train, _valid;
-    protected transient Vec _validResponse;
-    protected transient String[] _names;
-    protected transient String _responseName;
 
     @API(help = "Validation frame", filter = Default.class)
     public Frame validation;
+
+    // Source and validation frames with selected cols and response as last column
+    protected transient Frame _filteredSource, _filteredValidation;
+    private transient Frame _generated;
+
+    private void filterSource() {
+      int[] filtered = filteredCols();
+      String[] names = new String[filtered.length];
+      for( int i = 0; i < filtered.length; i++ )
+        names[i] = source.names()[filtered[i]];
+      Vec[] vecs = new Vec[filtered.length];
+      for( int i = 0; i < filtered.length; i++ )
+        vecs[i] = source.vecs()[filtered[i]];
+      _filteredSource = new Frame(names, vecs);
+      String responseName = null;
+      for( int i = 0; i < source.vecs().length; i++ )
+        if( source.vecs()[i] == response )
+          responseName = source.names()[i];
+      _filteredSource.add(responseName != null ? responseName : "response", response);
+    }
+
+    @Override public Object cast(Argument arg, String input, Object value) {
+      Object cast = super.cast(arg, input, value);
+      if( arg._name.equals("validation") && cast != null && source != null ) {
+        filterSource();
+        Model model = new NopModel(_filteredSource);
+        Frame[] frs = model.adapt((Frame) cast, true, true);
+        _filteredValidation = frs[0];
+        _generated = frs[1];
+      }
+      return cast;
+    }
+
+    @Override protected void init() {
+      super.init();
+      filterSource();
+    }
 
     @Override protected void logStart() {
       super.logStart();
@@ -223,24 +256,20 @@ public class Job extends Request2 {
       }
     }
 
-    @Override protected void init() {
-      super.init();
+    @Override protected void done() {
+      if( _generated != null )
+        _generated.remove();
+      super.done();
+    }
+  }
 
-      int rIndex = 0;
-      for( int i = 0; i < source.vecs().length; i++ )
-        if( source.vecs()[i] == response )
-          rIndex = i;
+  private static class NopModel extends Model {
+    NopModel(Frame frame) {
+      super(null, null, frame);
+    }
 
-      _train = selectVecs(source);
-      if( validation != null ) {
-        _valid = selectVecs(validation);
-        if( rIndex >= 0 )
-          _validResponse = validation.vecs()[rIndex];
-      }
-      _names = new String[cols.length];
-      for( int i = 0; i < cols.length; i++ )
-        _names[i] = source._names[cols[i]];
-      _responseName = source._names != null && rIndex >= 0 ? source._names[rIndex] : "response";
+    @Override protected float[] score0(double[] data, float[] preds) {
+      throw new RuntimeException("TODO Auto-generated method stub");
     }
   }
 

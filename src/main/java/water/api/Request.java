@@ -222,32 +222,6 @@ public abstract class Request extends RequestBuilders {
     return r;
   }
 
-  public static JsonObject execSync(Request request) {
-    for( ;; ) {
-      Response r = request.serve();
-      switch( r._status ) {
-        case error:
-          throw new RuntimeException(r.error());
-        case redirect:
-          request = RequestServer.requests().get(r._redirectName);
-          Properties args = new Properties();
-          for( Entry<String, JsonElement> entry : r._redirectArgs.entrySet() )
-            args.put(entry.getKey(), entry.getValue().getAsString());
-          request.checkArguments(args, RequestType.json);
-          break;
-        case poll:
-          // Not a FJ thread, just wait
-          try {
-            Thread.sleep(100);
-          } catch( InterruptedException e ) {
-            throw new RuntimeException(e);
-          }
-          break;
-        case done:
-          return r._response;
-      }
-    }
-  }
 
   // TODO clean this stuff, typeahead should take type name
   protected static Class mapTypeahead(Class c) {

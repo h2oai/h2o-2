@@ -22,7 +22,6 @@ print "Temporarily not using binLimit=1 to 4"
 # ntree=50&
 # stat_type=ENTROPY&
 # class_weights=0%3D1.0&
-# stratify=0&
 # model_key=model&
 # out_of_bag_error_estimate=0&
 # features=&

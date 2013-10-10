@@ -118,7 +118,6 @@ class Basic(unittest.TestCase):
             for tolerance in [i/10.0 for i in range(11)]:
                 params = {
                     'destination_key': modelKey,
-                    'ignore': 0,
                     'tolerance': tolerance,
                     'standardize': 1,
                 }

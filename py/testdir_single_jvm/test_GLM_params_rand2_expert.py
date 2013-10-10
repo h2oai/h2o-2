@@ -7,13 +7,12 @@ def define_params():
         'standardize': [None, 0,1],
         'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
         'beta_epsilon': [None, 0.0001],
-        'expert': [None, 0, 1],
+        'expert_settings': [None, 0, 1],
         'family': [None, 'gaussian', 'binomial', 'poisson'],
         'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         'x': [0,1,15,33],
         'lambda': [0, 1e-8, 1e-4],
         'alpha': [0,0.2,0.8],
-        'beta_epsilon': [None, 0.0001],
         # can't use < or <= case_mode if 1!
         # same with > or > if 7
         # maybe don't use 7 because of low frequency in dataset (think xval sampling)

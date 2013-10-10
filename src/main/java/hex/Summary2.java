@@ -37,8 +37,6 @@ public class Summary2 extends Iced {
   @API(help="max elements") double [] _max; // max N elements
   @API(help="percentiles" ) double [] _percentileValues;
 
-  final transient double _binszInv;
-
   public Summary2(Vec vec) {
     _enum = vec.isEnum();
     _isInt = vec.isInt();
@@ -52,25 +50,23 @@ public class Summary2 extends Iced {
     double span = vec.max()-vec.min();
     if( vec.isEnum() && (span+1) < MAX_HIST_SZ ) {
       _start = vec.min();
-      _binszInv = _binsz = 1;
+      _binsz = 1;
       _bins = new long[(int)span+1];
     } else {
       // guard against improper parse (date type) or zero c._sigma
-      //double b = Math.max(1e-4, 3.5 * vec.sigma()/ Math.cbrt(len));
-      //double b = Math.max(1e-4, 2 * vec.sigma()/ Math.sqrt(len));
-      double b = 2 * vec.sigma()/ Math.sqrt(len);
+      double b = Math.max(1e-4,3.5 * vec.sigma()/ Math.cbrt(len));
       double d = Math.pow(10, Math.floor(Math.log10(b)));
       if (b > 20*d/3)
         d *= 10;
       else if (b > 5*d/3)
         d *= 5;
-      d = Math.max(1e-4,d);
+
       // tweak for integers
       if (d < 1. && _isInt) d = 1.;
-      _binsz = d; _binszInv = 1./d;
-      _start = _binsz * Math.floor(vec.min() * _binszInv);
-      int nbin = (int)Math.ceil((vec.max() + (_isInt?1:0) - _start)*_binszInv);
-      _bins = new long[nbin>0?nbin:1];
+      _binsz = d;
+      _start = _binsz * Math.floor(vec.min()/_binsz);
+      int nbin = (int)Math.floor((vec.max() + (_isInt?.5:0) - _start)/_binsz) + 1;
+      _bins = new long[nbin];
     }
   }
 
@@ -95,8 +91,9 @@ public class Summary2 extends Iced {
             minmax = k;
       }
       // update histogram
-      int binIdx = _isInt ? (int)Math.round((val - _start)*_binszInv)
-              : (int)Math.floor((val - _start)*_binszInv);
+
+      int binIdx = _isInt ? (int)(((long)val - (long)_start)/(long)_binsz)
+              : (int)Math.floor((val - _start)/_binsz);
       ++_bins[binIdx];
     }
 
@@ -163,18 +160,22 @@ public class Summary2 extends Iced {
     // Base stats
     if( !vec.isEnum() ) {
       sb.append("<div style='width:100%;'><table class='table-bordered'>");
-      sb.append("<tr><th colspan='"+20+"' style='text-align:center;'>Base" +
-              " " +
-              "Stats</th></tr>");
+      sb.append("<tr><th colspan='"+20+"' style='text-align:center;'>Base Stats</th></tr>");
       sb.append("<tr>");
       sb.append("<th>avg</th><td>" + Utils.p2d(vec.mean())+"</td>");
       sb.append("<th>sd</th><td>" + Utils.p2d(vec.sigma()) + "</td>");
       sb.append("<th>NAs</th>  <td>" + vec.naCnt() + "</td>");
       sb.append("<th>zeros</th><td>" + _zeros + "</td>");
       sb.append("<th>min[" + _min.length + "]</th>");
-      for( double min : _min ) sb.append("<td>" + Utils.p2d(min) + "</td>");
+      for( double min : _min ) {
+        if (min == Double.POSITIVE_INFINITY) break;
+        sb.append("<td>" + Utils.p2d(min) + "</td>");
+      }
       sb.append("<th>max[" + _max.length + "]</th>");
-      for( double max : _max ) sb.append("<td>" + Utils.p2d(max) + "</td>");
+      for( double max : _max ) {
+        if (max == Double.NEGATIVE_INFINITY) continue;
+        sb.append("<td>" + Utils.p2d(max) + "</td>");
+      }
       // End of base stats
       sb.append("</tr> </table>");
       sb.append("</div>");
@@ -192,10 +193,12 @@ public class Summary2 extends Iced {
     final int MAX_HISTO_BINS_DISPLAYED = 1000;
     int len = Math.min(_bins.length,MAX_HISTO_BINS_DISPLAYED);
     sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
-    sb.append("<tr> <th colspan="+len+" style='text-align:center' " +
-            ">Histogram</th></tr>");
+    sb.append("<tr> <th colspan="+len+" style='text-align:center'>Histogram</th></tr>");
     sb.append("<tr>");
-    for( int i=0; i<len; i++ ) sb.append("<th>" + Utils.p2d(binValue(i)) + "</th>");
+    if (_enum)
+       for( int i=0; i<len; i++ ) sb.append("<th>" + vec.domain(i) + "</th>");
+    else
+       for( int i=0; i<len; i++ ) sb.append("<th>" + Utils.p2d(binValue(i)) + "</th>");
     sb.append("</tr>");
     sb.append("<tr>");
     for( int i=0; i<len; i++ ) sb.append("<td>" + _bins[i] + "</td>");
