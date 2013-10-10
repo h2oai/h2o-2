@@ -4,6 +4,7 @@ package water.api;
 import com.google.gson.JsonObject;
 
 public class Upload extends HTMLOnlyRequest {
+  @Override
   protected String build(Response response) {
     return "<script type='text/javascript' src='jquery.fileupload/js/vendor/jquery.ui.widget.js'></script>"
     + "<script type='text/javascript' src='jquery.fileupload/js/jquery.iframe-transport.js'></script>"
@@ -28,7 +29,11 @@ public class Upload extends HTMLOnlyRequest {
   //
   // curl -v -F "file=@allyears2k_headers.zip" "http://localhost:54321/PostFile.json?key=a.zip"
   //
+  // This call is handled as a POST request in method NanoHTTPD#fileUpload
   public static class PostFile extends JSONOnlyRequest {
+    // dummy parameter
+    H2OKey key = new H2OKey(KEY,true);
+
     @Override protected Response serve() {
       return Response.done(new JsonObject());
     }

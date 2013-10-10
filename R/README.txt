@@ -20,21 +20,21 @@ Start an instance of H2O. If you have questions about how to do this see the not
 
 In the R console install the package by entering the following command at the prompt:
 
-  >install.packages("<unzipped h2o directory>/R/h2oWrapper_1.0.tar.gz", repos = NULL, type = "source")
+  >install.packages("<unzipped h2o directory>/R/h2o_1.0.2.tar.gz", repos = NULL, type = "source")
   
 
 This returns output similar to the following:
 
 
 
-   * installing *source* package ‘h2oWrapper’ ...
+   * installing *source* package 'h2o' ...
    ** R
    ** preparing package for lazy loading
    ** help
    *** installing help indices
    ** building package indices
    ** testing if installed package can be loaded
-   * DONE (h2oWrapper)
+   * DONE (h2o)
 
 **STEP 3: R Studio Users** 
 
@@ -47,14 +47,14 @@ http://docs.0xdata.com/Ruser/Rwrapper.html and looking for the section for RStud
 
 
 
-  >library(h2oWrapper)
+  >library(h2o)
 
 **STEP 5**
 
 Install dependencies for the R package by calling 
 
 
-  >h2oWrapper.installDepPkgs()
+  >h2o.installDepPkgs()
 
 Which returns
 
@@ -72,7 +72,7 @@ Which returns
 **STEP 6**
 
 
-  >localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+  >localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
 
 
 
@@ -82,7 +82,7 @@ Here is an example of using the above object in an H2O call in R
 
 
 
-  >irisPath = system.file("extdata", "iris.csv", package="h2o")
+  >irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
   
   >iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
   >summary(iris.hex)

@@ -115,8 +115,8 @@ mySetup() {
     cat <<!  > /tmp/libPaths.cmd
     .libPaths()
     myPackages = rownames(installed.packages())
-    if("h2oWrapper" %in% myPackages) {
-      remove.packages("h2oWrapper")
+    if("h2o" %in% myPackages) {
+      remove.packages("h2o")
     }
 !
 
@@ -151,7 +151,7 @@ myR() {
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
     export H2OWrapperDir=../../h2o-downloaded/R
     echo "H2OWrapperDir should be $H2OWrapperDir"
-    ls $H2OWrapperDir/h2oWrapper*.tar.gz
+    ls $H2OWrapperDir/h2o*.tar.gz
 
     # we want $1 used for -name below, to not have .R suffix
     rScript=$H2O_R_HOME/tests/$1.R

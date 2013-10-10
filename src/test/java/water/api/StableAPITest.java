@@ -18,6 +18,7 @@ import water.*;
 import water.api.LogView.LogDownload;
 import water.api.Request.API;
 import water.api.RequestArguments.Argument;
+import water.api.Upload.PostFile;
 
 /**
  * The objective of test is to test a stability of API.
@@ -151,7 +152,6 @@ public class StableAPITest {
     regPy(ConfusionMatrix.class, "actual", "predict", "vactual", "vpredict");
     regPy(DRFModelView.class);
     regPy(DRFProgressPage.class);
-    regPy(DataDistrib.class);
     regPy(Debug.class);
     regPy(DownloadDataset.class); // not used
     regPy(Exec.class, "expression");
@@ -192,7 +192,7 @@ public class StableAPITest {
     //regPy(Parse.class, "alpha", "bin_limit", "case", "case_mode", "class_weights", "depth", "destination_key", "exclude", "family", "features", "header", "header_from_file", "ignore", "iterative_cm", "key_key", "lambda", "link", "model_key", "n_folds", "ntree", "out_of_bag_error_estimate", "parallel", "response_variable", "sample", "sampling_strategy", "seed", "separator", "source_key", "stat_type", "strata_samples", "use_non_local_data", "x", "y");
     regPy(Parse2.class, "destination_key", "header", "source_key");
     regPy(Plot.class);
-    //regPy(PostFile.class, "key"); // PostFile has no key attribute - it is hard-coded in Nano
+    regPy(PostFile.class, "key"); // PostFile has no key attribute - it is hard-coded in Nano
     regPy(Predict.class, "data", "model", "prediction");
     regPy(Progress.class, "destination_key", "job");
     regPy(Progress2.class);
