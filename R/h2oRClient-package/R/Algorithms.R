@@ -41,7 +41,7 @@ setMethod("h2o.gbm", signature(x="numeric", y="numeric", distribution="character
       # colnames(cf_matrix) <- cf_names
       # rownames(cf_matrix) <- cf_names
       dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
-      result$cm = cf_matrix
+      result$confusion = cf_matrix
       
       # mse_matrix=matrix(unlist(res2$gbm_model$errs),ncol=n.trees)
       # colnames(mse_matrix)=c(1:n.trees)
@@ -183,7 +183,7 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
         dn = list(Actual = temp[-1,1], Predicted = temp[1,-1])
         temp = temp[-1,]; temp = temp[,-1]
         dimnames(temp) = dn
-        result$cm = temp
+        result$confusion = temp
       }
       return(result)
 }
@@ -572,7 +572,7 @@ h2o.__getGLM2Results <- function(model, y, valid) {
     # dn = list(Actual = temp[-1,1], Predicted = temp[1,-1])
     # temp = temp[-1,]; temp = temp[,-1]
     # dimnames(temp) = dn
-    # result$cm = temp
+    # result$confusion = temp
   }
   return(result)
 }

@@ -55,7 +55,7 @@ summary(iris.hex)
 
 # Attach H2O R package and run GLM demo
 library(h2oRClient)
-??h2oRClient
+??h2o
 demo(package = "h2oRClient")
 demo(h2o.glm)
 }
