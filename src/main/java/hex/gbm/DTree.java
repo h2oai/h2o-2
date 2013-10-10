@@ -552,11 +552,11 @@ class DTree extends Iced {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Trees</th>");
-        for( int i=0; i<errs.length; i++ )
+        for( int i=errs.length-1; i>=0; i-- )
           sb.append("<td>").append(i).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>MSE</th>");
-        for( int i=0; i<errs.length; i++ )
+        for( int i=errs.length-1; i>=0; i-- )
           sb.append(String.format("<td>%5.3f</td>",errs[i]));
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
