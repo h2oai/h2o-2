@@ -27,7 +27,7 @@ import com.google.common.io.Closeables;
 public class RequestServer extends NanoHTTPD {
   public enum API_VERSION {
     V_1(1, "/"),
-    V_2(2, "/2/");
+    V_2(2, "/2/"); // FIXME: better should be /v2/
     final private int _version;
     final private String _prefix;
     public final String prefix() { return _prefix; }

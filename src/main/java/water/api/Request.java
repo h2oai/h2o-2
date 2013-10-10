@@ -251,7 +251,11 @@ public abstract class Request extends RequestBuilders {
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putJSON4("Request2",0); }
 
   /**
-   *
+   * Request API versioning.
+   * TODO: better solution would be to have an explicit annotation for each request
+   *  - something like <code>@API-VERSION(2) @API-VERSION(1)</code>
+   *  Annotation will be processed during start of RequestServer and default version will be registered
+   *  under /, else /version/name_of_request.
    */
   protected static final API_VERSION[] SUPPORTS_ONLY_V1 = new API_VERSION[] { API_VERSION.V_1 };
   protected static final API_VERSION[] SUPPORTS_ONLY_V2 = new API_VERSION[] { API_VERSION.V_2 };
