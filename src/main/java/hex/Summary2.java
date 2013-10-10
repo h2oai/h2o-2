@@ -153,10 +153,8 @@ public class Summary2 extends Iced {
   }
 
   public void toHTML( Vec vec, String cname, StringBuilder sb ) {
-
     sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;border-top-style:solid;'>" +
             "<div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
-
     // Base stats
     if( !vec.isEnum() ) {
       sb.append("<div style='width:100%;'><table class='table-bordered'>");
@@ -179,8 +177,6 @@ public class Summary2 extends Iced {
       // End of base stats
       sb.append("</tr> </table>");
       sb.append("</div>");
-
-
     } else {                    // Enums
       sb.append("<div style='width:100%'><table class='table-bordered'>");
       sb.append("<tr><th colspan='" + 4 + "' style='text-align:center;'>Base Stats</th></tr>");
@@ -188,7 +184,6 @@ public class Summary2 extends Iced {
       sb.append("<th>cardinality</th>  <td>" + vec.domain().length + "</td></tr>");
       sb.append("</table></div>");
     }
-
     // Histogram
     final int MAX_HISTO_BINS_DISPLAYED = 1000;
     int len = Math.min(_bins.length,MAX_HISTO_BINS_DISPLAYED);
