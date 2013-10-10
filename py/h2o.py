@@ -1770,7 +1770,7 @@ class H2O(object):
         # log it
         params = {'src_key': src_key}
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
-        url = self.__url('downloadCsv')
+        url = self.__url('2/DownloadDataset.json')
         log('Start ' + url + paramsStr, comment=csvPathname)
 
         # do it (absorb in 1024 byte chunks)
