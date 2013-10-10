@@ -4,15 +4,14 @@ import java.io.InputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.*;
-import java.util.Map.Entry;
 
 import water.*;
+import water.api.RequestServer.API_VERSION;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
@@ -52,8 +51,9 @@ public abstract class Request extends RequestBuilders {
   protected Request() {
   }
 
-  protected String href() {
-    return getClass().getSimpleName();
+  protected String href() { return href(supportedVersions()[0]); }
+  protected String href(API_VERSION v) {
+    return v.prefix() + getClass().getSimpleName();
   }
 
   protected RequestType hrefType() {
@@ -64,7 +64,7 @@ public abstract class Request extends RequestBuilders {
     return true;
   }
 
-  protected void registered() {
+  protected void registered(API_VERSION version) {
   }
 
   protected Request create(Properties parms) {
@@ -249,4 +249,12 @@ public abstract class Request extends RequestBuilders {
   // Dummy write of a leading field, so the auto-gen JSON can just add commas
   // before each succeeding field.
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putJSON4("Request2",0); }
+
+  /**
+   *
+   */
+  protected static final API_VERSION[] SUPPORTS_ONLY_V1 = new API_VERSION[] { API_VERSION.V_1 };
+  protected static final API_VERSION[] SUPPORTS_ONLY_V2 = new API_VERSION[] { API_VERSION.V_2 };
+  protected static final API_VERSION[] SUPPORTS_V1_V2   = new API_VERSION[] { API_VERSION.V_1, API_VERSION.V_2 };
+  protected API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V1; }
 }

@@ -8,6 +8,7 @@ import org.apache.commons.lang.ArrayUtils;
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.api.*;
+import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
@@ -146,8 +147,8 @@ public class Job extends Request2 {
     public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
-    @Override protected void registered() {
-      super.registered();
+    @Override protected void registered(API_VERSION ver) {
+      super.registered(ver);
       Argument c = find("ignored_cols_by_name");
       Argument r = find("response");
       int ci = _arguments.indexOf(c);
