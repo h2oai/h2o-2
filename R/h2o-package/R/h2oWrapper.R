@@ -39,7 +39,7 @@ setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logica
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip=="localhost" || ip=="127.0.0.1") {
       print("H2O is not running yet, launching it now.")
-      h2o.startLauncher()
+      h2oWrapper.startLauncher()
       invisible(readline("Start H2O, then hit <Return> to continue: "))
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
@@ -67,7 +67,7 @@ setMethod("h2o.init", signature(ip="ANY", port="ANY", startH2O="ANY", silentUpgr
 })
 
 # Start H2O launcher GUI if installed locally from InstallBuilder executable
-h2o.startLauncher <- function() {
+h2oWrapper.startLauncher <- function() {
   myOS = Sys.info()["sysname"]
   
   if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
@@ -105,7 +105,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
   temp = postForm(paste(myURL, h2o.__PAGE_RPACKAGE, sep="/"), style = "POST")
   res = fromJSON(temp)
   if (!is.null(res$error))
-    stop(paste(myURL," returned the following error:\n", h2o.__formatError(res$error)))
+    stop(paste(myURL," returned the following error:\n", h2oWrapper.__formatError(res$error)))
   
   H2OVersion = res$version
   myFile = res$filename
@@ -148,7 +148,7 @@ h2o.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
 
 h2o.__PAGE_RPACKAGE = "RPackage.json"
 
-h2o.__formatError <- function(error, prefix="  ") {
+h2oWrapper.__formatError <- function(error, prefix="  ") {
   result = ""
   items = strsplit(error,"\n")[[1]];
   for (i in 1:length(items))
