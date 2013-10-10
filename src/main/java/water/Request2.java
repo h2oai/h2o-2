@@ -99,14 +99,14 @@ public abstract class Request2 extends Request {
    */
   public enum MultiVecSelectType {
     /**
-     * Treat a token as a 0-based index if it looks like a positive integer.
-     * Otherwise, treat it as a column name.
+     * Treat a token as a 0-based index if it looks like a positive integer. Otherwise, treat it as
+     * a column name.
      */
     INDEXES_THEN_NAMES,
 
     /**
-     * Treat a token as a column name no matter what (even if it looks like it is an integer).
-     * This is used by the Web UI, which blindly specifies column names.
+     * Treat a token as a column name no matter what (even if it looks like it is an integer). This
+     * is used by the Web UI, which blindly specifies column names.
      */
     NAMES_ONLY
   }
@@ -114,9 +114,9 @@ public abstract class Request2 extends Request {
   public class MultiVecSelect extends Dependent {
     boolean _namesOnly;
 
-    private void init (MultiVecSelectType selectType) {
+    private void init(MultiVecSelectType selectType) {
       _namesOnly = false;
-      switch (selectType) {
+      switch( selectType ) {
         case INDEXES_THEN_NAMES:
           _namesOnly = false;
           break;
@@ -129,17 +129,19 @@ public abstract class Request2 extends Request {
 
     protected MultiVecSelect(String key) {
       super(key);
-      init (MultiVecSelectType.INDEXES_THEN_NAMES);
+      init(MultiVecSelectType.INDEXES_THEN_NAMES);
     }
 
     protected MultiVecSelect(String key, MultiVecSelectType selectType) {
       super(key);
-      init (selectType);
+      init(selectType);
     }
   }
 
   public class DoClassBoolean extends Dependent {
-    protected DoClassBoolean(String key) { super(key); }
+    protected DoClassBoolean(String key) {
+      super(key);
+    }
   }
 
   /**
@@ -197,7 +199,7 @@ public abstract class Request2 extends Request {
           }
 
           // Bool
-          else if( f.getType() == boolean.class && api.filter()==Default.class ) {
+          else if( f.getType() == boolean.class && api.filter() == Default.class ) {
             boolean val = (Boolean) defaultValue;
             arg = new Bool(f.getName(), val, api.help());
           }
@@ -244,7 +246,7 @@ public abstract class Request2 extends Request {
               arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names);
             } else if( DoClassBoolean.class.isAssignableFrom(api.filter()) ) {
               FrameClassVec response = classVecs.get(d._ref);
-              arg = new ClassifyBool(f.getName(),response);
+              arg = new ClassifyBool(f.getName(), response);
             }
           }
 
@@ -390,36 +392,32 @@ public abstract class Request2 extends Request {
     return type.isInstance(o);
   }
 
-  public void set(Argument arg, String input, Object value) {
+  public Object cast(Argument arg, String input, Object value) {
     if( arg._field.getType() != Key.class && value instanceof Key )
       value = UKV.get((Key) value);
 
-    try {
-      if( arg._field.getType() == Key.class && value instanceof ValueArray )
-        value = ((ValueArray) value)._key;
-      //
-      else if( arg._field.getType() == int.class && value instanceof Long )
-        value = ((Long) value).intValue();
-      //
-      else if( arg._field.getType() == float.class && value instanceof Double )
-        value = ((Double) value).floatValue();
-      //
-      else if( arg._field.getType() == Frame.class && value instanceof ValueArray )
-        value = ((ValueArray) value).asFrame(input);
-      //
-      else if( value instanceof NumberSequence ) {
-        double[] ds = ((NumberSequence) value)._arr;
-        if( arg._field.getType() == int[].class ) {
-          int[] is = new int[ds.length];
-          for( int i = 0; i < is.length; i++ )
-            is[i] = (int) ds[i];
-          value = is;
-        } else
-          value = ds;
-      }
-      arg._field.set(this, value);
-    } catch( Exception e ) {
-      throw new RuntimeException(e);
+    if( arg._field.getType() == Key.class && value instanceof ValueArray )
+      value = ((ValueArray) value)._key;
+    //
+    else if( arg._field.getType() == int.class && value instanceof Long )
+      value = ((Long) value).intValue();
+    //
+    else if( arg._field.getType() == float.class && value instanceof Double )
+      value = ((Double) value).floatValue();
+    //
+    else if( arg._field.getType() == Frame.class && value instanceof ValueArray )
+      value = ((ValueArray) value).asFrame(input);
+    //
+    else if( value instanceof NumberSequence ) {
+      double[] ds = ((NumberSequence) value)._arr;
+      if( arg._field.getType() == int[].class ) {
+        int[] is = new int[ds.length];
+        for( int i = 0; i < is.length; i++ )
+          is[i] = (int) ds[i];
+        value = is;
+      } else
+        value = ds;
     }
+    return value;
   }
 }

@@ -79,8 +79,8 @@ public class JobArgsTest extends HttpTest {
 
   static class ArgsTestJob extends ValidatedJob {
     @Override protected void exec() {
-      Assert.assertEquals(source.vecs()[2], _train[0]);
-      Assert.assertEquals(source.vecs()[4], _train[1]);
+      Assert.assertEquals(source.vecs()[2], _filteredSource.vecs()[0]);
+      Assert.assertEquals(source.vecs()[4], _filteredSource.vecs()[1]);
     }
   }
 }

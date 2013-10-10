@@ -6,9 +6,6 @@ import hex.Layer.Input;
 import hex.Layer.Softmax;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-
-import java.util.UUID;
-
 import water.*;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
@@ -56,13 +53,27 @@ public class NeuralNet extends ValidatedJob {
   }
 
   @Override protected void exec() {
-    Vec[] vecs = Utils.add(_train, response);
+    Vec[] vecs = _filteredSource.vecs().clone();
     reChunk(vecs);
-    System.arraycopy(vecs, 0, _train, 0, _train.length);
-    response = vecs[vecs.length - 1];
+    final Vec[] train = new Vec[vecs.length - 1];
+    System.arraycopy(vecs, 0, train, 0, train.length);
+    final Vec trainResponse = vecs[vecs.length - 1];
+    trainResponse.asEnum();
+
+    final Vec[] valid;
+    final Vec validResponse;
+    if( _filteredValidation != null ) {
+      valid = new Vec[_filteredValidation.vecs().length - 1];
+      System.arraycopy(_filteredValidation.vecs(), 0, valid, 0, valid.length);
+      validResponse = _filteredValidation.vecs()[_filteredValidation.vecs().length - 1];
+      validResponse.asEnum();
+    } else {
+      valid = train;
+      validResponse = trainResponse;
+    }
 
     final Layer[] ls = new Layer[hidden.length + 2];
-    ls[0] = new VecsInput(_train);
+    ls[0] = new VecsInput(train);
     for( int i = 0; i < hidden.length; i++ ) {
       if( activation == Activation.Rectifier )
         ls[i + 1] = new Layer.Rectifier(hidden[i]);
@@ -71,16 +82,14 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1]._rate = (float) rate;
       ls[i + 1]._l2 = (float) l2;
     }
-    ls[ls.length - 1] = new VecSoftmax(response);
+    ls[ls.length - 1] = new VecSoftmax(trainResponse);
     ls[ls.length - 1]._rate = (float) rate;
     ls[ls.length - 1]._l2 = (float) l2;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
 
     final Key sourceKey = Key.make(input("source"));
-    final Frame frame = new Frame(_names, _train);
-    frame.add(_responseName, response);
-    NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+    NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, _filteredSource, ls);
     UKV.put(destination_key, model);
 
     final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
@@ -98,18 +107,13 @@ public class NeuralNet extends ValidatedJob {
           lastTime = time;
           lastItems = items;
 
-          NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
-          long[][] cm = new long[model.classNames().length][model.classNames().length];
+          NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, _filteredSource, ls);
+          long[][] cm = new long[trainResponse.domain().length][trainResponse.domain().length];
 
           VecsInput stats = (VecsInput) ls[0];
           Layer[] clones = new Layer[ls.length];
-          if( _valid != null ) {
-            clones[0] = new VecsInput(_valid, stats);
-            clones[clones.length - 1] = new VecSoftmax(_validResponse);
-          } else {
-            clones[0] = new VecsInput(_train, stats);
-            clones[clones.length - 1] = new VecSoftmax(response);
-          }
+          clones[0] = new VecsInput(valid, stats);
+          clones[clones.length - 1] = new VecSoftmax(validResponse);
           for( int y = 1; y < clones.length - 1; y++ )
             clones[y] = ls[y].clone();
           for( int y = 0; y < clones.length; y++ )
@@ -268,7 +272,13 @@ public class NeuralNet extends ValidatedJob {
 
         if( model.confusion_matrix != null ) {
           String title = "Confusion Matrix (Training Data)";
-          NeuralNetScore.confusion(sb, title, model.classNames(), model.confusion_matrix);
+          String[] classes = model.classNames();
+          if( classes == null ) {
+            classes = new String[model.confusion_matrix.length];
+            for( int i = 0; i < model.confusion_matrix.length; i++ )
+              classes[i] = "" + i;
+          }
+          NeuralNetScore.confusion(sb, title, classes, model.confusion_matrix);
         }
       }
       return true;
@@ -308,11 +318,15 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override protected void exec() {
+      Frame[] frs = model.adapt(source, false, true);
+      Vec[] vecs = new Vec[frs[0].vecs().length - 1];
+      System.arraycopy(frs[0].vecs(), 0, vecs, 0, vecs.length);
+
       Layer[] clones = new Layer[model.layers.length];
-      clones[0] = new VecsInput(selectVecs(source));
+      clones[0] = new VecsInput(vecs);
       for( int y = 1; y < clones.length - 1; y++ )
         clones[y] = model.layers[y].clone();
-      clones[clones.length - 1] = new VecSoftmax(response);
+      clones[clones.length - 1] = new VecSoftmax(frs[0].vecs()[frs[0].vecs().length - 1]);
       for( int y = 0; y < clones.length; y++ ) {
         clones[y]._w = model.ws[y];
         clones[y]._b = model.bs[y];
@@ -323,6 +337,8 @@ public class NeuralNet extends ValidatedJob {
       Error error = run(clones, max_rows, confusion_matrix);
       classification_error = error.Value;
       sqr_error = error.SqrDist;
+      if( frs[1] != null )
+        frs[1].remove();
     }
 
     public static Error run(Layer[] ls, long max_rows, long[][] confusion) {
@@ -427,8 +443,10 @@ public class NeuralNet extends ValidatedJob {
   public static void reChunk(Vec[] vecs) {
     final int splits = cores() * 2; // More in case of unbalance
     if( vecs[0].nChunks() < splits ) {
+      // A new random VectorGroup
+      Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
       for( int v = 0; v < vecs.length; v++ ) {
-        AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
+        AppendableVec vec = new AppendableVec(keys[v]);
         long rows = vecs[0].length();
         Chunk cache = null;
         for( int split = 0; split < splits; split++ ) {
