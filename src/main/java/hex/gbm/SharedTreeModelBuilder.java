@@ -73,7 +73,10 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
-    final Key dataKey = null;
+    String sd = input("source");
+    final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
+    String sv = input("validation");
+    final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
 
     Frame fr = new Frame(_names, _train);
     fr.add("response",response);
@@ -111,7 +114,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
     // Tail-call position: this forks off in the background, and this call
     // returns immediately.  The actual model build is merely kicked off.
-    buildModel(fr,names,domains,outputKey, dataKey, new Timer());
+    buildModel(fr,names,domains,outputKey, dataKey, testKey, new Timer());
   }
 
   // Shared cleanup
@@ -387,5 +390,5 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @Override public long speedValue() { return runTimeMs() / ntrees; }
 
   protected abstract water.util.Log.Tag.Sys logTag();
-  protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Timer t_build );
+  protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 }
