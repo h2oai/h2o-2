@@ -268,6 +268,20 @@ public abstract class DocGen {
       }
       return sb;
     }
+    public String escape2(String s) {
+      int len=s.length();
+      String ss = "";
+      for( int i=0; i<len; i++ ) { 
+        char c = s.charAt(i);
+        if( false ) ; 
+        else if( c=='<' ) ss += "&lt;";//sb.setCharAt(i, "&lt;");
+        else if( c=='>' ) ss += "&gt;";//sb.setCharAt(i, "&gt;");
+        else if( c=='&' ) ss += "&amp;";//sb.setCharAt(i, "&amp;");
+        else if( c=='"' ) ss += "&guot;";//sb.setCharAt(i, "&quot;");
+        else ss += c;//sb.setCharAt(i, c);
+      }   
+      return ss;//sb.toString(); 
+    }
     @Override public StringBuilder bodyHead( StringBuilder sb ) {
       return sb.append("<div class='container'>"+
                        "<div class='row-fluid'>"+

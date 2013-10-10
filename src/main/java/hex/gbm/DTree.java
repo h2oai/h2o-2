@@ -511,7 +511,7 @@ class DTree extends Iced {
         sb.insert(sb.indexOf("</pre>") +"</pre></div>".length(),  
         "<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
         "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
-        "<pre style=\"overflow-y:scroll;\">"+toJava()+"</pre></div>");
+        "<pre style=\"overflow-y:scroll;\">"+DocGen.HTML.escape2(toJava())+"</pre></div>");
       }
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
