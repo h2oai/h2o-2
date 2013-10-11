@@ -325,7 +325,8 @@ public class Frame extends Iced {
           int len = C.pformat_len0();  // Printable width
           for( int i=0; i<len; i++ ) sb.append('-');
         } else
-          sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+          sb.append(_vecs[c].at8(idx));
+          // FIXME sb.append(String.format(fs[c],_vecs[c].at8(idx)));
       } else {
         sb.append(String.format(fs[c],_vecs[c].at (idx)));
         if( _vecs[c].isNA(idx) ) sb.append(' ');

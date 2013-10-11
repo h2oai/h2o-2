@@ -53,6 +53,7 @@ public class TypeMap {
     // dependency from core code into tests !!!!
     "hex.DGLM$GLMParams",
     "hex.NewRowVecTask$DataFrame",
+    "hex.gbm.DRF",
     "water.AutoSerialTest",
     "water.KVTest$Atomic2",
   };

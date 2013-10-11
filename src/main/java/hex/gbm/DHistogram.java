@@ -17,7 +17,7 @@ import water.util.Log;
    {@code DHistogram} can determine that fewer bins are needed
    (e.g. boolean columns run from 0 to 1, but only ever take on 2
    values, so only 2 bins are needed), then fewer bins are used.
-   <p>
+   </p><p>
    If we are successively splitting rows (e.g. in a decision tree), then a
    fresh {@code DHistogram} for each split will dynamically re-bin the data.
    Each successive split then, will logarithmically divide the data.  At the
@@ -25,7 +25,7 @@ import water.util.Log;
    central bins may be very full.  At the next split(s), the full bins will get
    split, and again until (with a log number of splits) each bin holds roughly
    the same amount of data.
-   <p>
+   </p>
    @author Cliff Click
 */
 public class DHistogram<T extends DHistogram> extends Iced {
@@ -79,6 +79,7 @@ public class DHistogram<T extends DHistogram> extends Iced {
 
   // Nothing to tighten
   public void tightenMinMax() { }
+  public void fini() { }
 
   protected static int byteSize(byte  []bs) { return bs==null ? 0 : 20+bs.length<<0; }
   protected static int byteSize(short []ss) { return ss==null ? 0 : 20+ss.length<<1; }

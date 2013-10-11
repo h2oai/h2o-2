@@ -125,7 +125,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     }
     // If we see zero variance, we must have a constant response in this
     // column.  Normally this situation is cut out before we even try to split, but we might
-    // have NA's in THIS column... 
+    // have NA's in THIS column...
     if( MS0[2*_nbins+1] == 0 ) { assert isConstantResponse(); return null; }
     //assert Math.abs(MS0[2*_nbins+1]) > 1e-8 : "No variance, why split? "+Arrays.toString(MS0)+" col "+_name+" "+this;
 
@@ -165,7 +165,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       if( (se < best_se0+best_se1) || // Strictly less error?
           // Or tied MSE, then pick split towards middle bins
           se == (best_se0+best_se1) && best < (_nbins>>1) ) {
-        best_se0 = MS0[2*b+1];   best_se1 = MS1[2*b+1]; 
+        best_se0 = MS0[2*b+1];   best_se1 = MS1[2*b+1];
         best = b;
       }
     }
@@ -213,7 +213,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
 
   // One-time after compute sum & sum^2, convert to mean & var*N
-  public void fini() {
+  @Override public void fini() {
     for( int b=0; b<_nbins; b++ ) {
       long N = _bins[b];
       if( N>0 ) {
@@ -275,8 +275,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       if( _bins[b] == 0 ) continue;
       double mean = mean(b);
       if( var(b) > 1e-16 ) return false;
-      if( mean != m ) 
-        if( Double.isNaN(m) ) m=mean; 
+      if( mean != m )
+        if( Double.isNaN(m) ) m=mean;
         else return false;
     }
     return true;

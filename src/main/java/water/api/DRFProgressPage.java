@@ -8,7 +8,7 @@ import water.api.RequestBuilders.Response;
 
 public class DRFProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
-  protected Response jobDone(final Job job, final String dst) {
+  @Override protected Response jobDone(final Job job, final String dst) {
     JsonObject args = new JsonObject();
     args.addProperty("model_key", job.dest().toString());
     return DRFModelView.redirect(this, job.dest());

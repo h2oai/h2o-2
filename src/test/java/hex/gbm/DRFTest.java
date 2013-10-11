@@ -22,9 +22,11 @@ public class DRFTest extends TestUtil {
 
     // Classification tests
     basicDRF(
-            "./smalldata/iris/iris_train.csv","iris_train.hex",
-            //"./smalldata/iris/iris_test.csv" ,"iris_test.hex",
-             //"./smalldata/test/test_tree.csv","tree.hex",
+             //"./smalldata/iris/iris_train.csv","iris_train.hex",
+             //"./smalldata/iris/iris_test.csv" ,"iris_test.hex",
+             //"./smalldata/test/classifier/chess_train.csv","chess_train.hex",
+             //"./smalldata/test/classifier/chess_test.csv","chess_test.hex",
+             "./smalldata/test/test_tree.csv","tree.hex",
              new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; }
              });
 
