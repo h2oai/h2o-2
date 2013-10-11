@@ -260,6 +260,39 @@ setMethod("summary", "H2OParsedData", function(object) {
   result
 })
 
+setMethod("summary", "H2OParsedData2", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
+  col.summaries = res$summaries
+  col.names     = res$names
+  col.means     = res$means
+  
+  result = NULL
+  for(i in 1:length(col.summaries)) {
+    if(is.null(col.summaries[[i]]$domains)) {
+      if(is.null(col.summaries[[i]]$mins) || length(col.summaries[[i]]$mins) == 0) col.summaries[[i]]$mins = NaN
+      if(is.null(col.summaries[[i]]$maxs) || length(col.summaries[[i]]$maxs) == 0) col.summaries[[i]]$maxs = NaN
+      if(is.null(col.summaries[[i]]$percentileValues))
+        params = format(rep(round(as.numeric(col.means[[i]]), 3), 6), nsmall = 3)
+      else
+        params = format(round(as.numeric(c(col.summaries[[i]]$mins[1], col.summaries[[i]]$percentileValues[4], col.summaries[[i]]$percentileValues[6], col.means[[i]], col.summaries[[i]]$percentileValues[8], tail(col.summaries[[i]]$maxs, 1) )), 3), nsmall = 3)
+      result = cbind(result, c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
+                               paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
+                               paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))                 
+    }
+    else {
+      col = matrix(rep("", 6), ncol=1)
+      len = length(col.summaries[[i]]$domains)
+      for(j in 1:min(6,len))
+        col[j] = paste(col.summaries[[i]]$domains[len-j+1], ": ", col.summaries[[i]]$bins[len-j+1], sep="")
+      result = cbind(result, col)
+    }
+  }
+  result = as.table(result)
+  rownames(result) <- rep("", 6)
+  colnames(result) <- col.names
+  result
+})
+
 setMethod("summary", "H2OPCAModel", function(object) {
   # TODO: Save propVar and cumVar from the Java output instead of computing here
   myVar = object@model$sdev^2
@@ -353,14 +386,6 @@ setMethod("nrow", "H2OParsedData2", function(x) {
 
 setMethod("ncol", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numCols })
-
-setMethod("summary", "H2OParsedData2", function(object) {
-  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_INSPECT2, src_key=object@key)
-  if(is.null(res$cols) || length(res$cols) == 0) return(NULL)
-  myList = lapply(res$cols, function(x) { x$name = NULL; x })
-  myData = matrix(unlist(myList), ncol = ncol(object), dimnames = list(names(myList[[1]]), colnames(object)))
-  data.frame(myData)
-})
 
 setMethod("as.data.frame", "H2OParsedData2", function(x) {
   as.data.frame(new("H2OParsedData", h2o=x@h2o, key=x@key))

@@ -23,15 +23,20 @@ public class SummaryPage2 extends Request2 {
   Frame source;
 
   class colsFilter1 extends MultiVecSelect { public colsFilter1() { super("source");} }
-  @API(help = "Select columns", required=true,  filter=colsFilter1.class)
+  @API(help = "Select columns", filter=colsFilter1.class)
   int[] cols;
 
-  @API(help = "Maximum columns to show summaries of", required = true,
-          filter = Default.class, lmin = 1,  lmax = 1000)
+  @API(help = "Maximum columns to show summaries of", filter = Default.class, lmin = 1,  lmax = 1000)
   int max_ncols = 1000;
 
   @API(help = "Column summaries.")
   Summary2[] summaries;
+
+  @API(help = "Column means.")
+  double[]   means;
+
+  @API(help = "Column names.")
+  String[]   names;
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='SummaryPage2.query?source=%$key'>"+content+"</a>");
@@ -41,11 +46,16 @@ public class SummaryPage2 extends Request2 {
 
   @Override protected Response serve() {
     if( source == null ) return RequestServer._http404.serve();
-    String[] names = new String[cols.length];
+    // select all columns by default
+    if( cols == null ) cols = new int[Math.min(source.vecs().length,max_ncols)];
+    for(int i = 0; i < cols.length; i++) cols[i] = i;
+    names = new String[cols.length];
+    means = new double[cols.length];
     Vec[] vecs = new Vec[cols.length];
     for (int i = 0; i < cols.length; i++) {
       vecs[i] = source.vecs()[cols[i]];
       names[i] = source._names[cols[i]];
+      means[i] = vecs[i].mean();
     }
     Frame fr = new Frame(names, vecs);
     summaries = new SummaryTask2().doAll(fr)._summaries;
