@@ -1,9 +1,10 @@
 package water.api;
 
+import hex.GridSearch;
+
 import java.util.*;
 
 import water.H2O;
-import water.Iced;
 import water.util.RString;
 
 /**
@@ -45,18 +46,20 @@ public class RequestQueries extends RequestArguments {
     // request argument that this method is expecting.
     //*/
     if (H2O.OPT_ARGS.check_rest_params) {
-      Enumeration en = args.propertyNames();
-      while (en.hasMoreElements()) {
-        boolean found = false;
-        String key = (String) en.nextElement();
-        for (Argument arg: _arguments) {
-          if (arg._name.equals(key)) {
-            found = true;
-            break;
+      if (!(this instanceof GridSearch) && !(this instanceof HTTP404) && !(this instanceof HTTP500)) {
+        Enumeration en = args.propertyNames();
+        while (en.hasMoreElements()) {
+          boolean found = false;
+          String key = (String) en.nextElement();
+          for (Argument arg: _arguments) {
+            if (arg._name.equals(key)) {
+              found = true;
+              break;
+            }
           }
-        }
-        if (!found) {
-          return jsonError("Request specifies the argument '"+key+"' but it is not a valid parameter for this query " + this.getClass().getName()).toString();
+          if (!found) {
+            return jsonError("Request specifies the argument '"+key+"' but it is not a valid parameter for this query " + this.getClass().getName()).toString();
+          }
         }
       }
     }

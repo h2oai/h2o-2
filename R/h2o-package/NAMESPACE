@@ -1,5 +1,4 @@
 exportPattern("^[[:alpha:]]+")
 exportMethods(
-    "h2o.init",
-    "h2o.installDepPkgs"
+    "h2o.init"
 )

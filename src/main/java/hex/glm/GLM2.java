@@ -9,6 +9,7 @@ import hex.glm.GLMTask.YMUTask;
 import hex.glm.GLMValidation.GLMXValidation;
 import hex.glm.LSMSolver.ADMMSolver;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.Future;
 
@@ -163,8 +164,14 @@ public class GLM2 extends FrameJob {
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       final String msg = ex.getMessage();
-      if(msg == null || !msg.equals("Cancelled"))
-        GLM2.this.cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'");
+      if(msg == null || !msg.equals("Cancelled")){
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        ex.printStackTrace(pw);
+        String stackTrace = sw.toString();
+        GLM2.this.cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
+        System.out.println(stackTrace);
+      }
       fjt.completeExceptionally(ex);
       return false;
     }

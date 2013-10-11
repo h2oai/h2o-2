@@ -27,8 +27,7 @@ public class TransfVec extends Vec {
   }
 
   @Override public void remove( Futures fs ) {
-    UKV.remove(_masterVecKey,fs);
-    super.remove(fs);
+    // The TransfVec is a just wrapper vector => it should not delete underlying chunks or underlying vector.
   }
 
   static class TransfChunk extends Chunk {

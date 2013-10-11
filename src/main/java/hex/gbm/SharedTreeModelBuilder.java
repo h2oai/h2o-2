@@ -7,6 +7,7 @@ import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.fvec.Chunk;
 import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -72,7 +73,10 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
-    final Key dataKey = null;
+    String sd = input("source");
+    final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
+    String sv = input("validation");
+    final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
 
     Frame fr = new Frame(_filteredSource);
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
@@ -109,7 +113,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
     // Tail-call position: this forks off in the background, and this call
     // returns immediately.  The actual model build is merely kicked off.
-    buildModel(fr,names,domains,outputKey, dataKey, new Timer());
+    buildModel(fr,names,domains,outputKey, dataKey, testKey, new Timer());
   }
 
   // Shared cleanup
@@ -129,10 +133,10 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     assert chks.length == _ncols+1/*response*/+_nclass/*prob dist so far*/+_nclass/*tmp*/+_nclass/*NIDs, one tree per class*/;
     return chks;
   }
-  Chunk chk_resp( Chunk chks[]        ) { return chk_check(chks)[_ncols]; }
-  Chunk chk_tree( Chunk chks[], int c ) { return chk_check(chks)[_ncols+1+c]; }
-  Chunk chk_work( Chunk chks[], int c ) { return chk_check(chks)[_ncols+1+_nclass+c]; }
-  Chunk chk_nids( Chunk chks[], int t ) { return chk_check(chks)[_ncols+1+_nclass+_nclass+t]; }
+  Chunk chk_resp( Chunk chks[]        ) { return chks[_ncols]; }
+  Chunk chk_tree( Chunk chks[], int c ) { return chks[_ncols+1+c]; }
+  Chunk chk_work( Chunk chks[], int c ) { return chks[_ncols+1+_nclass+c]; }
+  Chunk chk_nids( Chunk chks[], int t ) { return chks[_ncols+1+_nclass+_nclass+t]; }
 
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
@@ -312,6 +316,28 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   protected class Score extends MRTask2<Score> {
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
+
+    // Compute CM & MSE on either the training or testing dataset
+    Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) {
+      // No validation, so do on training data
+      if( validation == null ) return doAll(fr);
+
+      // Validation: need to score the set, getting a probability distribution
+      Frame res = model.score(validation,true);
+      // Adapt the validation set to the model
+      Frame frs[] = model.adapt(validation,true,false);
+      Frame fr2 = frs[0];
+      // Dump in the prob distribution
+      fr2.add("response",vresponse);
+      for( int i=0; i<_nclass; i++ )
+        fr2.add("Work"+i,res.vecs()[i+1]);
+      // Compute a CM & MSE
+      doAll(fr2);
+      // Remove the extra adapted Vecs
+      frs[1].remove();
+      return this;
+    }
+
     @Override public void map( Chunk chks[] ) {
       Chunk ys = chk_resp(chks); // Response
       _cm = new long[_nclass][_nclass];
@@ -359,6 +385,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     }
   }
 
+  @Override public String speedDescription() { return "time/tree"; }
+  @Override public String speedValue() { return PrettyPrint.msecs(runTimeMs() / ntrees,true); }
+
   protected abstract water.util.Log.Tag.Sys logTag();
-  protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Timer t_build );
+  protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 }

@@ -41,14 +41,16 @@ public abstract class Request2 extends Request {
       Key k = Key.make(input);
       if( _type != null ) {
         // TODO: remove special case for jobs
-        if( Job.class.isAssignableFrom(_type) )
+        if( Job.class.isAssignableFrom(_type) ) {
           if( Job.findJob(k) == null )
             throw new IllegalArgumentException("Key '" + input + "' does not exist!");
-        Value v = DKV.get(k);
-        if( v != null && !compatible(_type, v.get()) )
-          throw new IllegalArgumentException(input + ":" + errors()[0]);
-        if( v == null && _required )
-          throw new IllegalArgumentException("Key '" + input + "' does not exist!");
+        } else {
+          Value v = DKV.get(k);
+          if( v != null && !compatible(_type, v.get()) )
+            throw new IllegalArgumentException(input + ":" + errors()[0]);
+          if( v == null && _required )
+            throw new IllegalArgumentException("Key '" + input + "' does not exist!");
+        }
       }
       return k;
     }
