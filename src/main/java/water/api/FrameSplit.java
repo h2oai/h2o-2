@@ -5,6 +5,7 @@ import java.util.*;
 
 import water.*;
 import water.fvec.*;
+import water.fvec.Vec.VectorGroup;
 import water.util.Log;
 
 import com.google.gson.*;
@@ -32,10 +33,6 @@ public class FrameSplit extends Request2 {
 
 
   @Override protected Response serve() {
-    //TODO elh: once request2 properly works with string APIs, remove hack
-    this.fractions = input("fractions");
-    this.destination_keys = input("destination_keys");
-
     if( source == null || source.equals(""))
       return Response.error("source is required");
     if( fractions == null || fractions.length() == 0 )
@@ -170,11 +167,19 @@ public class FrameSplit extends Request2 {
       _num_columns = frame.vecs().length;
       _splits = splits;
 
+      // elh: don't ask why this is necessary but it is
+      for(int i=0; i < _num_columns; i++)
+        frame.vecs()[i].isInt();
+
       Vec[] v = new Vec[_num_columns * (1 + _splits.length)];
       for( int i = 0; i < _num_columns; i++ )
         v[i] = frame.vecs()[i];
+      Key keys[] = frame.anyVec().group().addVecs(_num_columns * _splits.length);
       for( int i = _num_columns; i < v.length; i++ )
-        v[i] = new AppendableVec(UUID.randomUUID().toString());
+        v[i] = new AppendableVec(keys[i - _num_columns]);
+
+
+
 
       String[] names = new String[_num_columns * (1 + _splits.length)];
       for( int copy = 0; copy < 1 + _splits.length; copy++ )
@@ -207,24 +212,31 @@ public class FrameSplit extends Request2 {
 
     @Override public void map(Chunk[] cs) {
       Random random = new Random();
+//      Log.info(String.format("Map called with %d chunks operating on %d source cols; offset %d", cs.length, _num_columns, cs[0]._start));
 
       NewChunk[] new_chunks = new NewChunk[_num_columns * _splits.length];
       for( int i = 0; i < _num_columns * _splits.length; i++ )
         new_chunks[i] = (NewChunk) cs[_num_columns + i];
 
+      Vec[] vecs = _fr.vecs();
+//      StringBuilder sb = new StringBuilder();
+//      sb.append("chunk " + cs[0]._start + ": ");
+//      for(int i=0; i < _num_columns; i++)
+//        sb.append(String.format("%d:%s, ", i, vecs[i].isInt()));
+//      Log.info(sb.toString());
       for( int chunk_row = 0; chunk_row < cs[0]._len; chunk_row++ ) {
         double draw = random.nextDouble();
         int split = 0;
         while( draw > _splits[split] ) { split++; }
 
         for( int col = 0; col < _num_columns; col++ ) {
-          if( _fr.vecs()[col].isEnum() ) {
+          if( vecs[col].isEnum() ) {
             if( !cs[col].isNA0(chunk_row) )
               new_chunks[split * _num_columns + col].addEnum((int) cs[col].at80(chunk_row));
             else
               new_chunks[split * _num_columns + col].addNA();
 
-          } else if( _fr.vecs()[col].isInt() ) {
+          } else if( vecs[col].isInt() ) {
             if( !cs[col].isNA0(chunk_row) )
               new_chunks[split * _num_columns + col].addNum(cs[col].at80(chunk_row), 0);
             else
@@ -235,6 +247,8 @@ public class FrameSplit extends Request2 {
           }
         }
       }
+
+//      Log.info("Map finished with some chunks; offset " + cs[0]._start);
     }
   }
 
