@@ -267,7 +267,7 @@ public class NeuralNet extends Model implements water.Job.Progress {
       return _model;
     }
 
-    @Override protected void exec() {
+    @Override protected H2OCountedCompleter fork() {
       _model._selfKey = destination_key;
       _model._dataKey = Key.make(input("source"));
       _model._names = source.names();
@@ -293,6 +293,7 @@ public class NeuralNet extends Model implements water.Job.Progress {
       }
       UKV.put(destination_key, _model);
       _model.startTrain(this);
+      return null;
     }
 
     @Override protected Response redirect() {
