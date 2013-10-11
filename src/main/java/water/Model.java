@@ -410,7 +410,7 @@ public abstract class Model extends Iced {
   // is any error (typically an AssertionError).
   public void testJavaScoring( Frame fr ) {
     try {
-      System.out.println(toJava());
+      //System.out.println(toJava());
       Class clz = ClassPool.getDefault().toClass(makeCtClass());
       Object modelo = clz.newInstance();
     } 

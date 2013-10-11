@@ -366,7 +366,7 @@ public class NonBlockingHashMap<TypeK, TypeV>
     if( newVal == null ) newVal = TOMBSTONE;
     final TypeV res = (TypeV)putIfMatch( this, _kvs, key, newVal, oldVal );
     assert !(res instanceof Prime);
-    assert res != null;
+    //assert res != null;
     return res == TOMBSTONE ? null : res;
   }
 
