@@ -1,7 +1,7 @@
 package water.api;
 
 
-import java.util.*;
+import java.util.Random;
 
 import water.*;
 import water.fvec.*;
@@ -10,7 +10,6 @@ import water.util.Log;
 import com.google.gson.*;
 
 public class FrameSplit extends Request2 {
-
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -20,40 +19,15 @@ public class FrameSplit extends Request2 {
   @API(help = "Destination keys, comma separated", required = false, filter = Default.class)
   public String destination_keys; // Key holding final value after job is removed
 
-  @API(help = "fraction per frame, comma separated", required = true, filter = Default.class)
-  public String fractions;
-
+  @API(help = "Fraction per frame, comma separated", required = true, filter = Default.class)
+  public double[] fractions;
 
   public static final String KEY_PREFIX = "__FRAME_SPLIT__";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
 
-
-  public FrameSplit(){ }
-
-
   @Override protected Response serve() {
-    //TODO elh: once request2 properly works with string APIs, remove hack
-    this.fractions = input("fractions");
-    this.destination_keys = input("destination_keys");
-
     if( source == null || source.equals(""))
       return Response.error("source is required");
-    if( fractions == null || fractions.length() == 0 )
-      return Response.error("fractions must be set");
-
-    final Frame fr = new Frame(source);
-
-    ArrayList< Double > fs = new ArrayList< Double >();
-    for( String s : fractions.split(",") ){
-      try {
-        fs.add( Double.parseDouble( s ) );
-      } catch(NumberFormatException nfe){
-        Response.error("invalid number format: " + s);
-      }
-    }
-    double[] fractions = new double[ fs.size() ];
-    for( int i=0; i < fractions.length; i++ )
-      fractions[i] = fs.get(i);
 
     Key[] keys = new Key[ fractions.length ];
     if( this.destination_keys == null || "".equals(this.destination_keys) ){
@@ -75,9 +49,6 @@ public class FrameSplit extends Request2 {
       sb.append(";");
     }
     Log.info(sb.toString());
-
-
-
 
     Frame[] frames = splitFrame(source, fractions);
     for( int f=0; f<frames.length; f++ )
@@ -170,17 +141,18 @@ public class FrameSplit extends Request2 {
       _num_columns = frame.vecs().length;
       _splits = splits;
 
-      Vec[] v = new Vec[_num_columns * (1 + _splits.length)];
-      for( int i = 0; i < _num_columns; i++ )
-        v[i] = frame.vecs()[i];
-      for( int i = _num_columns; i < v.length; i++ )
-        v[i] = new AppendableVec(UUID.randomUUID().toString());
+      for(int i=0; i < _num_columns; i++)
+        frame.vecs()[i].isInt();
 
-      String[] names = new String[_num_columns * (1 + _splits.length)];
+      Vec[] v = new Vec[_num_columns * (1 + _splits.length)];
+      System.arraycopy(frame.vecs(), 0, v, 0, _num_columns);
+      Key[] keys = frame.anyVec().group().addVecs(_num_columns * _splits.length);
+      for( int i = 0; i < keys.length; i++ )
+        v[_num_columns + i] = new AppendableVec(keys[i]);
+      String[] names = new String[v.length];
       for( int copy = 0; copy < 1 + _splits.length; copy++ )
         System.arraycopy(frame._names, 0, names, copy * _num_columns, _num_columns);
-
-       return new Frame(names, v);
+      return new Frame(names, v);
     }
 
     /**
@@ -237,7 +209,4 @@ public class FrameSplit extends Request2 {
       }
     }
   }
-
-
-
 }

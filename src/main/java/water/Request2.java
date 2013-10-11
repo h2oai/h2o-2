@@ -263,6 +263,12 @@ public abstract class Request2 extends Request {
             arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null), false);
           }
 
+          // RSeq
+          else if( f.getType() == double[].class ) {
+            double[] val = (double[]) defaultValue;
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(val, null), false);
+          }
+
           // Bool
           else if( f.getType() == boolean.class && api.filter() == Default.class ) {
             boolean val = (Boolean) defaultValue;

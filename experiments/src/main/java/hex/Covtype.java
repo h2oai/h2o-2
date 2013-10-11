@@ -1,67 +1,108 @@
 package hex;
 
-import hex.Mnist8m.TestInput;
-import hex.Mnist8m.Train8mInput;
-import hex.Trainer.Threaded;
-import water.deploy.VM;
+import hex.Layer.Tanh;
+import hex.Layer.VecSoftmax;
+import hex.Layer.VecsInput;
+import hex.NeuralNet.Error;
+import hex.rng.MersenneTwisterRNG;
+
+import java.io.*;
+import java.util.UUID;
+import java.util.zip.GZIPInputStream;
+
+import water.H2O;
+import water.TestUtil;
+import water.api.FrameSplit;
+import water.fvec.*;
+import water.util.Utils;
 
 public class Covtype {
   public static void main(String[] args) throws Exception {
-    VM.exitWithParent();
-
-    Mnist8m.load();
-    Mnist8m.loadTest();
-
-    Covtype mnist = new Covtype();
-    mnist.run();
+    water.Boot.main(UserCode.class, "-beta");
   }
 
-  public void run() throws Exception {
-    ParamsSearch search = new ParamsSearch();
-    double best = Double.MAX_VALUE;
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
+      H2O.main(args);
+      new Covtype().run();
+    }
+  }
+
+  public Layer[] build(Vec[] data, Vec labels, VecsInput stats) {
+    Layer[] ls = new Layer[3];
+    ls[0] = new VecsInput(data, stats);
+    ls[1] = new Tanh(500);
+    ls[2] = new VecSoftmax(labels);
+    ls[1]._rate = .05f;
+    ls[2]._rate = .02f;
+    ls[1]._l2 = .0001f;
+    ls[2]._l2 = .0001f;
+    ls[1]._rateAnnealing = 1 / 2e6f;
+    ls[2]._rateAnnealing = 1 / 2e6f;
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].init(ls, i);
+    return ls;
+  }
+
+  public void run() {
+    // Load data
+    Frame frame = TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
+    Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
+    Vec[] train = frames[0].vecs();
+    Vec[] valid = frames[1].vecs();
+    Vec[] test_ = frames[2].vecs();
+    NeuralNet.reChunk(train);
+
+    // Labels are on last column for this dataset
+    Vec trainLabels = train[train.length - 1];
+    Vec validLabels = valid[valid.length - 1];
+    Vec test_Labels = test_[test_.length - 1];
+    train = Utils.remove(train, train.length - 1);
+    valid = Utils.remove(valid, valid.length - 1);
+    test_ = Utils.remove(test_, test_.length - 1);
+
+    // Test is classification so make sure number is interpreted as enum
+    trainLabels.asEnum();
+    validLabels.asEnum();
+    test_Labels.asEnum();
+
+    // Build net and start training
+    Layer[] ls = build(train, trainLabels, null);
+    Trainer trainer = new Trainer.MapReduce(ls);
+    trainer.start();
+
+    // Monitor training
+    long start = System.nanoTime();
+    long lastTime = start;
+    long lastItems = 0;
     for( ;; ) {
-      Layer[] ls = new Layer[3];
-      ls[0] = new Train8mInput();
-      ls[1] = new Layer.Tanh(ls[0], 1000);
-      ls[1]._rate = 0.001f;
-      ls[2] = new Layer.Softmax(ls[1], 10);
-      ls[2]._rate = 0.001f;
-      for( int i = 0; i < ls.length; i++ )
-        ls[i].init(false);
-
-      Trainer trainer = new Threaded(ls);
-      //trainer._batches = Mnist8m.COUNT / trainer._batch;
-      trainer._batches = 10;
-      search.run(ls[1], ls[2]);
-      trainer.run();
-      double error = eval(ls, trainer);
-      String m = "Error: " + error * 100 + " (Best: " + best + ")";
-      if( error < best ) {
-        best = error;
-        search.save();
-        System.out.println(m + ", Saved");
-      } else
-        System.out.println(m + ", Discarded");
-
-      if( error < best ) {
-        best = error;
-        search.save();
-        System.out.println("Saved: " + search.toString());
-      } else
-        System.out.println("Discarded");
-    }
-  }
-
-  double eval(Layer[] ls, Trainer trainer) {
-    int count = 1000, correct = 0;
-    for( int n = 0; n < count; n++ ) {
-      if( Mnist8m.run(ls, n, null) ) {
-        correct++;
+      try {
+        Thread.sleep(2000);
+      } catch( InterruptedException e ) {
+        throw new RuntimeException(e);
       }
+
+      long time = System.nanoTime();
+      double delta = (time - lastTime) / 1e9;
+      double total = (time - start) / 1e9;
+      long steps = trainer.items();
+      int ps = (int) ((steps - lastItems) / delta);
+      String text = (int) total + "s, " + steps + " steps (" + (ps) + "/s) ";
+      lastTime = time;
+      lastItems = steps;
+
+      // Build separate nets for scoring purposes, use same normalization stats as for training
+      Layer[] temp = build(train, trainLabels, (VecsInput) ls[0]);
+      Layer.copyWeights(ls, temp);
+      Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
+      text += "train: " + error;
+
+      temp = build(valid, validLabels, (VecsInput) ls[0]);
+      Layer.copyWeights(ls, temp);
+      error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
+      text += ", valid: " + error;
+
+      System.out.println(text);
     }
-    double error = (count - (double) correct) / count;
-    String train = Mnist8m._format.format(error * 100f);
-    System.out.println("Error: " + train);
-    return error;
   }
 }

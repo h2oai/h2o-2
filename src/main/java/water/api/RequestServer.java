@@ -104,6 +104,7 @@ public class RequestServer extends NanoHTTPD {
       register(new KMeans2());
       register(new hex.gbm.DRF());
       register(new hex.LR2());
+      register(new FrameSplit());
     }
     else {
       Request.addToNavbar(register(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
@@ -112,7 +113,8 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(register(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
       Request.addToNavbar(register(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(register(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
-      Request.addToNavbar(register(new SummaryPage2()),   "Summary2",        "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new FrameSplit()),     "Frame Split",          "Beta (FluidVecs!)");
     }
 
     // internal handlers
@@ -158,7 +160,6 @@ public class RequestServer extends NanoHTTPD {
     register(new GLMProgressPage2());
     register(new GLMModelView());
     register(new GLMValidationView());
-    register(new FrameSplit());
     Request.initializeNavBar();
   }
 
