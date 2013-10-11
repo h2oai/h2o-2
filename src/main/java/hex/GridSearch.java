@@ -1,6 +1,5 @@
 package hex;
 
-import hex.NeuralNet.NeuralNetModel;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.GBM.GBMModel;
 
@@ -38,14 +37,15 @@ public class GridSearch extends Job {
 
   public static class GridSearchProgress extends Progress2 {
     @Override public boolean toHTML(StringBuilder sb) {
-      GridSearch grid = UKV.get(Key.make(dst_key.value()));
+      GridSearch grid = UKV.get(dst_key);
       if( grid != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
         ArrayList<Argument> args = grid.jobs[0].arguments();
         // Filter some keys to simplify UI
         args = (ArrayList<Argument>) args.clone();
-        filter(args, "destination_key", "source", "cols", "ignored_cols_by_name", "response", "classification", "validation");
+        filter(args, "destination_key", "source", "cols", "ignored_cols_by_name", "response", "classification",
+            "validation");
         for( int i = 0; i < args.size(); i++ )
           sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
         sb.append("<td><b>").append("run time (s)").append("</b></td>");
@@ -103,7 +103,7 @@ public class GridSearch extends Job {
           if( info._job.start_time != 0 ) {
             if( info._model instanceof GBMModel )
               link = GBMModelView.link(link, info._job.destination_key);
-            else if( info._model instanceof NeuralNetModel )
+            else if( info._model instanceof NeuralNet )
               link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
             else
               link = Inspect.link(link, info._job.destination_key);
@@ -139,7 +139,7 @@ public class GridSearch extends Job {
             args.remove(i);
     }
 
-    @Override protected Response jobDone(final Job job, final String dst) {
+    @Override protected Response jobDone(Job job, Key dst) {
       return new Response(Response.Status.done, this, 0, 0, null);
     }
   }

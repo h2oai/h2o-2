@@ -5,7 +5,8 @@ import java.io.File;
 import org.apache.commons.lang.ArrayUtils;
 
 import water.deploy.*;
-import water.fvec.Frame;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
 import water.util.Utils;
 
 public class Sandbox {
@@ -22,13 +23,9 @@ public class Sandbox {
 
       covtype();
 
-      File f = new File("smalldata/covtype/covtype.20k.data");
-      Key dest = Key.make("covtype.20k.data.hex");
-      Key fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
-
-      // f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
-      f = new File("smalldata/mnist/train.csv.gz");
+      File f;
+      Key dest, fkey;
+      f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
       // f = new File("smalldata/covtype/covtype.20k.data");
       // f = new File("syn_5853362476331324036_100x11.csv");
       // f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
@@ -36,11 +33,6 @@ public class Sandbox {
       // f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
 
       dest = Key.make("train.hex");
-      fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
-
-      f = new File("smalldata/mnist/test.csv.gz");
-      dest = Key.make("test.hex");
       fkey = NFSFileVec.make(f);
       ParseDataset2.parse(dest, new Key[] { fkey });
 
@@ -93,8 +85,8 @@ public class Sandbox {
     File train = new File("smalldata/covtype/covtype.20k.data");
     Key dest = Key.make("covtype.20k.data.hex");
     Key fkey = water.fvec.NFSFileVec.make(train);
-    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
-    Frame frame = UKV.get(dest);
+    ParseDataset2.parse(dest, new Key[] { fkey });
+    //Frame frame = UKV.get(dest);
 
 //    double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
 //    for( int r = 0; r < rows.length; r++ ) {

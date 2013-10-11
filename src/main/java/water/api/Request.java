@@ -1,15 +1,14 @@
 package water.api;
 
-import hex.KMeansModel;
 import hex.DGLM.GLMModel;
 import hex.DPCA.PCAModel;
+import hex.*;
 import hex.rf.RFModel;
 
 import java.io.InputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.*;
-import java.util.Map.Entry;
 
 import water.*;
 import water.fvec.Frame;
@@ -18,7 +17,6 @@ import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
@@ -30,6 +28,7 @@ public abstract class Request extends RequestBuilders {
     int until() default Integer.MAX_VALUE;
     Class<? extends Filter> filter() default Filter.class;
     Class<? extends Filter>[] filters() default {};
+    boolean json() default false; // Only needed for input fields
     long   lmin() default Long  .MIN_VALUE;
     long   lmax() default Long  .MAX_VALUE;
     double dmin() default Double.NEGATIVE_INFINITY;

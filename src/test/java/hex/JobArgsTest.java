@@ -2,9 +2,8 @@ package hex;
 
 import org.junit.*;
 
-import water.Key;
-import water.UKV;
-import water.api.RequestBuilders.Response;
+import water.Job.ValidatedJob;
+import water.*;
 import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Utils.ExpectedExceptionForDebug;

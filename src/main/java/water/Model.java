@@ -72,9 +72,6 @@ public abstract class Model extends Iced {
     return null;
   }
 
-  /** Train the model */
-  protected void train(Job job, Vec[] vecs, Vec response) {}
-
   /** Called when deleting this model, to cleanup any internal keys */
   public void delete() { UKV.remove(_selfKey); }
 

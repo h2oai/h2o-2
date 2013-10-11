@@ -55,7 +55,7 @@ public class KMeans2 extends Model implements Progress {
     return Math.min(1f, iterations / (float) max_iter);
   }
 
-  @Override protected void train(Job job, Vec[] vecs, Vec response) {
+  private void train(Job job, Vec[] vecs, Vec response) {
     double[] subs = null, muls = null;
     if( normalize ) {
       subs = new double[vecs.length];
@@ -179,12 +179,15 @@ public class KMeans2 extends Model implements Progress {
     }
 
     @Override protected void exec() {
-      _model = new KMeans2();
       _model._selfKey = destination_key;
       _model._dataKey = Key.make(input("source"));
       _model._names = source.names();
       _model._domains = source.domains();
-      _model.train(this, selectVecs(source), null);
+      int[] filtered = filteredCols();
+      Vec[] vecs = new Vec[filtered.length];
+      for( int i = 0; i < filtered.length; i++ )
+        vecs[i] = source.vecs()[filtered[i]];
+      _model.train(this, vecs, null);
       remove();
     }
   }

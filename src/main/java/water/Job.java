@@ -135,8 +135,6 @@ public class Job extends Request2 {
       }
       int length = res.length;
       for( int g = 0; ignored_cols_by_name != null && g < ignored_cols_by_name.length; g++ ) {
-        for( int i = 0; i < cols.length; i++ ) {
-          if( cols[i] == ignored_cols_by_name[g] ) {
         for( int i = 0; i < res.length; i++ ) {
           if( res[i] == ignored_cols_by_name[g] ) {
             length--;

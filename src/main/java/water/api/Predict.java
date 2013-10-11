@@ -33,7 +33,7 @@ public class Predict extends Request2 {
       if( model instanceof Model ) {
         Frame fr = ((Model) model).score(data, true);
         UKV.put(prediction, fr);
-        return Inspect2.redirect(this, prediction.toString());
+        return Inspect2.redirect(this, prediction);
       } else {
         // Assume dataset has been converted from a VA
         ValueArray va = UKV.get(Key.make(input("data")));

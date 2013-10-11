@@ -40,6 +40,10 @@ public abstract class Request2 extends Request {
     @Override protected Key parse(String input) {
       Key k = Key.make(input);
       if( _type != null ) {
+        // TODO: remove special case for jobs
+        if( Job.class.isAssignableFrom(_type) )
+          if( Job.findJob(k) == null )
+            throw new IllegalArgumentException("Key '" + input + "' does not exist!");
         Value v = DKV.get(k);
         if( v != null && !compatible(_type, v.get()) )
           throw new IllegalArgumentException(input + ":" + errors()[0]);
@@ -161,7 +165,7 @@ public abstract class Request2 extends Request {
     return this;
   }
 
-  private final Object getTarget(Field f) {
+  public final Object getTarget(Field f) {
     Object t = getTarget();
     if( f.getDeclaringClass().isAssignableFrom(t.getClass()) )
       return t;
@@ -200,54 +204,6 @@ public abstract class Request2 extends Request {
           if( Argument.class.isAssignableFrom(api.filter()) )
             arg = (Argument) newInstance(api);
 
-          // String
-          else if( f.getType() == String.class )
-            arg = new Str(f.getName(), (String) defaultValue);
-
-          // Real
-          else if( f.getType() == float.class || f.getType() == double.class ) {
-            double val = ((Number) defaultValue).doubleValue();
-            arg = new Real(f.getName(), api.required(), val, api.dmin(), api.dmax(), api.help());
-          }
-
-          // LongInt
-          else if( f.getType() == int.class || f.getType() == long.class ) {
-            long val = ((Number) defaultValue).longValue();
-            arg = new LongInt(f.getName(), api.required(), val, api.lmin(), api.lmax(), api.help());
-          }
-
-          // RSeq
-          else if( f.getType() == int[].class ) {
-            int[] val = (int[]) defaultValue;
-            double[] ds = new double[val.length];
-            for( int i = 0; i < ds.length; i++ )
-              ds[i] = val[i];
-            arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null), false);
-          }
-
-          // Bool
-          else if( f.getType() == boolean.class && api.filter() == Default.class ) {
-            boolean val = (Boolean) defaultValue;
-            arg = new Bool(f.getName(), val, api.help());
-          }
-
-          // Enum
-          else if( Enum.class.isAssignableFrom(f.getType()) ) {
-            Enum val = (Enum) defaultValue;
-            arg = new EnumArgument(f.getName(), val);
-          }
-
-          // Key
-          else if( f.getType() == Key.class ) {
-            TypeaheadKey t = new TypeaheadKey();
-            t._defaultValue = (Key) defaultValue;
-            arg = t;
-          }
-
-          // Auto-cast from key to Iced field
-          else if( Freezable.class.isAssignableFrom(f.getType()) && api.filter() == Default.class )
-            arg = new TypeaheadKey(f.getType(), api.required());
-
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
             ColumnSelect name = (ColumnSelect) newInstance(api);
@@ -271,11 +227,62 @@ public abstract class Request2 extends Request {
               FrameClassVec response = classVecs.get(d._ref);
               boolean names = ((MultiVecSelect) d)._namesOnly;
               arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names);
-            } else if( DoClassBoolean.class.isAssignableFrom(api.filter()) ) {
+            } else if( d instanceof DoClassBoolean ) {
               FrameClassVec response = classVecs.get(d._ref);
               arg = new ClassifyBool(f.getName(), response);
             }
           }
+
+          // String
+          else if( f.getType() == String.class )
+            arg = new Str(f.getName(), (String) defaultValue);
+
+          // Real
+          else if( f.getType() == float.class || f.getType() == double.class ) {
+            double val = ((Number) defaultValue).doubleValue();
+            arg = new Real(f.getName(), api.required(), val, api.dmin(), api.dmax(), api.help());
+          }
+
+          // LongInt
+          else if( f.getType() == int.class || f.getType() == long.class ) {
+            long val = ((Number) defaultValue).longValue();
+            arg = new LongInt(f.getName(), api.required(), val, api.lmin(), api.lmax(), api.help());
+          }
+
+          // RSeq
+          else if( f.getType() == int[].class ) {
+            int[] val = (int[]) defaultValue;
+            double[] ds = null;
+            if( val != null ) {
+              ds = new double[val.length];
+              for( int i = 0; i < ds.length; i++ )
+                ds[i] = val[i];
+            }
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null), false);
+          }
+
+          // Bool
+          else if( f.getType() == boolean.class && api.filter() == Default.class ) {
+            boolean val = (Boolean) defaultValue;
+            arg = new Bool(f.getName(), val, api.help());
+          }
+
+          // Enum
+          else if( Enum.class.isAssignableFrom(f.getType()) ) {
+            Enum val = (Enum) defaultValue;
+            arg = new EnumArgument(f.getName(), val);
+          }
+
+          // Key
+          else if( f.getType() == Key.class ) {
+            TypeaheadKey t = new TypeaheadKey();
+            t._defaultValue = (Key) defaultValue;
+            arg = t;
+          }
+
+          // Generic Freezable field
+          else if( Freezable.class.isAssignableFrom(f.getType()) )
+            arg = new TypeaheadKey(f.getType(), api.required());
 
           if( arg != null ) {
             arg._name = f.getName();
@@ -420,8 +427,13 @@ public abstract class Request2 extends Request {
   }
 
   public Object cast(Argument arg, String input, Object value) {
-    if( arg._field.getType() != Key.class && value instanceof Key )
-      value = UKV.get((Key) value);
+    if( arg._field.getType() != Key.class && value instanceof Key ) {
+      // TODO: remove special case for jobs
+      if( Job.class.isAssignableFrom(arg._field.getType()) )
+        value = Job.findJob((Key) value);
+      else
+        value = UKV.get((Key) value);
+    }
 
     if( arg._field.getType() == Key.class && value instanceof ValueArray )
       value = ((ValueArray) value)._key;

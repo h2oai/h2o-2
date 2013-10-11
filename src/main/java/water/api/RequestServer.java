@@ -88,7 +88,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(register(new Debug()),       "Debug Dump",      "Admin");
     Request.addToNavbar(register(new LogView()),     "Inspect Log",     "Admin");
     Request.addToNavbar(register(new Script()),      "Get Script",      "Admin");
-    Request.addToNavbar(register(new DataDistrib()), "Data Distrib",    "Admin");
     Request.addToNavbar(register(new Shutdown()),    "Shutdown",        "Admin");
 
     Request.addToNavbar(register(new Documentation()),       "H2O Documentation",      "Help");

@@ -4,6 +4,7 @@
 package water.api;
 
 import hex.DPCA.PCAModel;
+import hex.NeuralNet.NeuralNetTrain;
 import hex.*;
 import hex.gbm.GBM;
 import hex.glm.*;
@@ -185,7 +186,7 @@ public class StableAPITest {
     regPy(KMeansApply.class, "data_key", "destination_key", "model_key");
     regPy(KMeansScore.class, "key", "model_key");
     regPy(LogView.class);
-    regPy(NeuralNet.class, "activation", "cols", "destination_key", "epochs", "hidden", "l2", "rate", "response", "source");
+    regPy(NeuralNetTrain.class, "activation", "cols", "destination_key", "epochs", "hidden", "l2", "rate", "response", "source");
     regPy(PCA.class, "destination_key", "key", "standardize", "tolerance");
     regPy(PCAScore.class, "destination_key", "key", "model_key", "num_pc");
     regPy(Parse.class, "destination_key", "header", "header_from_file", "separator", "source_key");

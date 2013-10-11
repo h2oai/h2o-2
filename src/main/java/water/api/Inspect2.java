@@ -47,7 +47,7 @@ public class Inspect2 extends Request2 {
 
 
   // Called from some other page, to redirect that other page to this page.
-  public static Response redirect(Request req, String src_key) {
+  public static Response redirect(Request req, Key src_key) {
     return new Response(Response.Status.redirect, req, -1, -1, "Inspect2", "src_key", src_key );
   }
 

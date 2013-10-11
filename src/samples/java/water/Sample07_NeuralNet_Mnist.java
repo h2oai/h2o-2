@@ -5,7 +5,6 @@ import hex.Layer.Tanh;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.NeuralNet.Error;
-import hex.NeuralNet.NeuralNetScore;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -90,12 +89,12 @@ public class Sample07_NeuralNet_Mnist {
       // Build separate nets for scoring purposes, use same normalization stats as for training
       Layer[] temp = build(train, trainLabels, (VecsInput) ls[0]);
       Layer.copyWeights(ls, temp);
-      Error error = NeuralNetScore.run(temp, NeuralNet.EVAL_ROW_COUNT, null);
+      Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
       text += "train: " + error;
 
       temp = build(test, testLabels, (VecsInput) ls[0]);
       Layer.copyWeights(ls, temp);
-      error = NeuralNetScore.run(temp, NeuralNet.EVAL_ROW_COUNT, null);
+      error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
       text += ", test: " + error;
 
       System.out.println(text);

@@ -204,9 +204,8 @@ public abstract class Layer extends Iced {
 
     static int expand(Vec[] vecs) {
       int n = 0;
-      for( int i = 0; i < vecs.length; i++ ) {
+      for( int i = 0; i < vecs.length; i++ )
         n += vecs[i].domain() != null ? vecs[i].domain().length : 1;
-      }
       return n;
     }
 

@@ -26,7 +26,7 @@ import com.jogamp.opencl.CLMemory.Mem;
 
 /**
  * Trains a neural network.
- * 
+ *
  * @author cypof
  */
 public abstract class Trainer {
@@ -270,7 +270,7 @@ public abstract class Trainer {
       DKV.put(_key, new Value(_key, new byte[0]));
 
       Vec[] vecs = ((VecsInput) ls[0])._vecs;
-      assert ls[0]._a.length == vecs.length;
+      assert ls[0]._a.length == VecsInput.expand(vecs);
       assert vecs[0].nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
       _counts = new AtomicIntegerArray(vecs[0].nChunks());
     }
