@@ -1,24 +1,25 @@
 #!/bin/bash
+
 set -e
-echo "You should be in your h2o dir running this."
-echo ""
-echo "Gets the latest h2o.jar (only + version file) from s3, using s3cmd"
-echo ""
-echo "s3cmd should have been installed by you: http://s3tools.org/download or http://s3tools.org/repositories"
-echo "s3cmd --configure should have been run by you to set 0xdata aws key/id (once)." 
-echo "If you need the keys, they might be in your ~/.ec2 dir: 'cat ~/.ec2/aws*' to see"
-echo "This can run anywhere. No VPN needed, just s3cmd and keys"
-echo ""
-# set -v
+
+echo "Gets the latest h2o.jar (only + version file) from s3, using curl"
+
 # this can be master or a specific branch
 branch=master
 # branch=gauss
 
+d=`dirname $0`
+cd $d
+
 rm -f ./latest_h2o_jar_version
-s3cmd get s3://h2o-release/h2o/$branch/latest latest_h2o_jar_version
+
+curl --silent -o latest_h2o_jar_version https://h2o-release.s3.amazonaws.com/h2o/${branch}/latest
+
 version=$(<latest_h2o_jar_version)
 echo "latest h2o jar version is: $version"
-s3cmd ls s3://h2o-release/h2o/$branch/$version
+
+curl --silent -o latest_h2o_project_version https://h2o-release.s3.amazonaws.com/h2o/${branch}/${version}/project_version
+project_version=$(<latest_h2o_project_version)
 
 # a secret way to skip the download (use any arg)
 if [ $# -eq 0 ]
@@ -26,8 +27,9 @@ then
     # echo "getting JUST $version/h2o.jar"
     rm -f ./h2o*$version.jar
     rm -f ./h2o*$version.zip
-    s3cmd ls s3://h2o-release/h2o/$branch/$version/
-    s3cmd get s3://h2o-release/h2o/$branch/$version/h2o-*$version.zip 
+    zipurl=https://s3.amazonaws.com/h2o-release/h2o/${branch}/${version}/h2o-${project_version}.zip
+    echo Downloading ${zipurl} ...
+    curl -o h2o-${project_version}.zip ${zipurl}
     mv h2o-*$version.zip h2o_$version.zip
 fi
 

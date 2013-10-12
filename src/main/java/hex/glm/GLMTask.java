@@ -141,11 +141,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     }
     return new Frame(names,vecs2);
   }
-
-  // TODO change this to extract mean, sigma, nobs for the actual dataset
-  // (NAs being skipped) as I did for the response variable
-  // and move it from dfork!
-  @Override public T dfork(Frame fr){
+  public T doIt(Frame fr){
     if(_cats == -1 && _nums == -1 ){
       assert _normMul == null;
       assert _normSub == null;
@@ -157,7 +153,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       while(i < n && !vecs[i].isEnum())++i;
       _nums = i-_cats;
       if(i != n)
-        throw new RuntimeException("Incorrect format of the input frame. Frame is asusmed to be ordered so that categorical columns come before numerics.");
+        throw new RuntimeException("Incorrect format of the input frame. Frame is assumed to be ordered so that categorical columns come before numerics.");
       _normSub = MemoryManager.malloc8d(_nums);
       _normMul = MemoryManager.malloc8d(_nums); Arrays.fill(_normMul, 1);
       if(_standardize) for(i = 0; i < _nums; ++i){
@@ -171,9 +167,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       // get mean of response...
       if(Double.isNaN(_ymu))_ymu = vecs[vecs.length-1].mean();
     }
-    return super.dfork(fr);
+    return dfork(fr);
   }
-
   /**
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.

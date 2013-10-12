@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs = 1800
                 start = time.time()
                 glm = h2o_cmd.runGLM(parseResult=parseResult, 
-                    timeoutSecs=timeoutSecs, pollTimeoutsecs=60, noise=('StoreView', None), **kwargs)
+                    timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noise=('StoreView', None), **kwargs)
                 elapsed = time.time() - start
                 print "GLM completed in", elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
