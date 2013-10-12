@@ -12,6 +12,7 @@ import java.util.ArrayList;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.H2O.H2OEmptyCompleter;
 import water.Job.ModelJob;
 import water.Job.ValidatedJob;
 import water.api.*;
@@ -226,7 +227,10 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   @Override public ConfusionMatrix cm() {
-    return new ConfusionMatrix(confusion_matrix);
+    long[][] cm = confusion_matrix;
+    if( cm != null )
+      return new ConfusionMatrix(cm);
+    return null;
   }
 
   public static String link(Key k, String content) {
@@ -293,7 +297,12 @@ public class NeuralNet extends Model implements water.Job.Progress {
       }
       UKV.put(destination_key, _model);
       _model.startTrain(this);
-      return null;
+      return new H2OEmptyCompleter();
+    }
+
+    @Override public void remove() {
+      _fjtask.tryComplete();
+      super.remove();
     }
 
     @Override protected Response redirect() {

@@ -5,13 +5,13 @@ import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.NeuralNet.Error;
 import water.H2O;
-import water.TestUtil;
+import water.Sandbox;
 import water.api.FrameSplit;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Utils;
 
-public class Covtype {
+public class Airlines {
   public static void main(String[] args) throws Exception {
     water.Boot.main(UserCode.class, "-beta");
   }
@@ -19,7 +19,7 @@ public class Covtype {
   public static class UserCode {
     public static void userMain(String[] args) throws Exception {
       H2O.main(args);
-      new Covtype().run();
+      new Airlines().run();
     }
   }
 
@@ -28,8 +28,8 @@ public class Covtype {
     ls[0] = new VecsInput(data, stats);
     ls[1] = new Tanh(1000);
     ls[2] = new VecSoftmax(labels);
-    ls[1]._rate = .05f;
-    ls[2]._rate = .02f;
+    ls[1]._rate = .001f;
+    ls[2]._rate = .001f;
     ls[1]._l2 = .0001f;
     ls[2]._l2 = .0001f;
     for( int i = 0; i < ls.length; i++ )
@@ -39,8 +39,7 @@ public class Covtype {
 
   public void run() {
     // Load data
-    //Frame frame = TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
-    Frame frame = TestUtil.parseFrame("smalldata/cars.csv");
+    Frame frame = Sandbox.airlines();
     Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
     Vec[] train = frames[0].vecs();
     Vec[] valid = frames[1].vecs();

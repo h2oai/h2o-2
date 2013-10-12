@@ -1,7 +1,5 @@
 package water;
 
-import hex.JobArgsTest;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +37,7 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       //tests = JUnitRunner.all();
-      tests.add(JobArgsTest.class);
+      tests.add(GridSplitTest.class);
 
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());

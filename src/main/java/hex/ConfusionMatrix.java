@@ -12,10 +12,10 @@ import com.google.gson.JsonPrimitive;
 public final class ConfusionMatrix extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-  @API(help="")
+  @API(help = "")
   public long[][] _arr; // [actual][predicted]
 
-  public ConfusionMatrix clone() {
+  @Override public ConfusionMatrix clone() {
     ConfusionMatrix res = new ConfusionMatrix(0);
     res._arr = _arr.clone();
     for( int i = 0; i < _arr.length; ++i )
@@ -98,23 +98,27 @@ public final class ConfusionMatrix extends Iced {
     water.util.Utils.add(_arr, other._arr);
   }
 
-  public double precisionAndRecall() {
-    return precisionAndRecall(_arr);
+  public double f1() {
+    return f1(_arr);
   }
 
   /**
    * Returns the F-measure which combines precision and recall. <br>
    * C.f. end of http://en.wikipedia.org/wiki/Precision_and_recall.
    */
-  public static double precisionAndRecall(long[][] cm) {
-    assert cm.length == 2 && cm[0].length == 2 && cm[1].length == 2;
-    double tp = cm[0][0];
-    double fp = cm[1][0];
-    double fn = cm[0][1];
-    double precision = tp / (tp + fp);
-    double recall = tp / (tp + fn);
-    double f = 2 * (precision * recall) / (precision + recall);
-    return f;
+  public static double f1(long[][] cm) {
+    if( cm.length == 2 ) {
+      assert cm[0].length == 2 && cm[1].length == 2;
+      double tp = cm[0][0];
+      double fp = cm[1][0];
+      double fn = cm[0][1];
+      double precision = tp / (tp + fp);
+      double recall = tp / (tp + fn);
+      double f = 2 * (precision * recall) / (precision + recall);
+      return f;
+    } else {
+      return 0;
+    }
   }
 
   @Override public String toString() {

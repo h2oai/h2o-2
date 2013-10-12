@@ -4,9 +4,9 @@ import java.io.File;
 
 import org.apache.commons.lang.ArrayUtils;
 
+import water.api.FrameSplit;
 import water.deploy.*;
-import water.fvec.NFSFileVec;
-import water.fvec.ParseDataset2;
+import water.fvec.Frame;
 import water.util.Utils;
 
 public class Sandbox {
@@ -21,79 +21,21 @@ public class Sandbox {
     public static void userMain(String[] args) throws Exception {
       localCloud(1, true, args);
 
-      covtype();
+      // covtype();
 
-      File f;
-      Key dest, fkey;
-      f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
-      // f = new File("smalldata/covtype/covtype.20k.data");
-      // f = new File("syn_5853362476331324036_100x11.csv");
-      // f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
-      // f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
-      // f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
+      //Frame frame = water.TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
+      //Frame frame = water.TestUtil.parseFrame("smalldata/categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");
+      Frame frame = airlines();
+      Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
+      UKV.put(Key.make("train.hex"), frames[0]);
+      UKV.put(Key.make("valid.hex"), frames[1]);
+      UKV.put(Key.make("test.hex"), frames[2]);
 
-      dest = Key.make("train.hex");
-      fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
-
-//      Key key = TestUtil.load_test_file(f, "test");
-//      Key dest = Key.make("test.hex");
-//      ParseDataset.parse(dest, new Key[] { key });
-//      ValueArray va = (ValueArray) UKV.get(dest);
-
-      Utils.readConsole();
-
-      // @formatter:off
-//      double[][] array = new double[][] {
-//        new double[] { 0,0,0,0 },
-//        new double[] { 1.63475416828,1.63337340671,-7.01908639681,2.72330313693 },
-//        new double[] { -7.01908639681,2.72330313693,-3.47665202262,4.71153347407 },
-//      };
-      // @formatter:on
-//      Key key = Key.make("test.hex");
-//       final int columns = 100;
-//       double[][] goals = new double[8][columns];
-//       double[][] array = KMeansTest.gauss(columns, 10000, goals);
-//      ValueArray va = TestUtil.va_maker(key, (Object[]) array);
-
-//      Key km = Key.make("test.kmeans");
-//      int[] cols = new int[va._cols.length];
-//      for( int i = 0; i < cols.length; i++ )
-//        cols[i] = i;
-//      for( int i = 0; i < 1; i++ ) {
-//        KMeans job = KMeans.start(km, va, 2, 1e-6, 0, new Random().nextLong(), false, cols);
-//        KMeansModel m = job.get();
-//        System.out.println(m._error);
-//      }
-//
-//      Key ap = Key.make("test.kmeans-apply");
-//      KMeansApply.run(ap, (KMeansModel) UKV.get(km), va);
-
-//    String s = "";
-//    for( int i = 0; i < cols.length; i++ ) {
-//      s += s.length() != 0 ? "%2C" : "";
-//      s += cols[i];
-//    }
 //    String u = "/Plot.png?source_key=test.hex&cols=" + s + "&clusters=test.kmeans";
 //    Desktop.getDesktop().browse(new URI("http://localhost:54321" + u));
 
-      System.out.println("Done!");
+      System.out.println("Ready");
     }
-  }
-
-  static void covtype() {
-    File train = new File("smalldata/covtype/covtype.20k.data");
-    Key dest = Key.make("covtype.20k.data.hex");
-    Key fkey = water.fvec.NFSFileVec.make(train);
-    ParseDataset2.parse(dest, new Key[] { fkey });
-    //Frame frame = UKV.get(dest);
-
-//    double[][] rows = new double[(int) frame.numRows()][frame.numCols()];
-//    for( int r = 0; r < rows.length; r++ ) {
-//      for( int c = 0; c < rows[r].length; c++ ) {
-//        rows =
-//      }
-//    }
   }
 
   static void mnist() {
@@ -106,6 +48,23 @@ public class Sandbox {
     dest = Key.make("test.hex");
     fkey = water.fvec.NFSFileVec.make(test);
     water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+  }
+
+  public static Frame airlines() {
+    Frame frame = water.TestUtil.parseFrame("smalldata/airlines/allyears2k_headers.zip");
+    frame.remove("DepTime");
+    frame.remove("CRSDepTime");
+    frame.remove("ArrTime");
+    frame.remove("CRSArrTime");
+    frame.remove("ArrDelay");
+    frame.remove("DepDelay");
+    frame.remove("CarrierDelay");
+    frame.remove("WeatherDelay");
+    frame.remove("NASDelay");
+    frame.remove("SecurityDelay");
+    frame.remove("LateAircraftDelay");
+    frame.remove("IsArrDelayed");
+    return frame;
   }
 
   /**

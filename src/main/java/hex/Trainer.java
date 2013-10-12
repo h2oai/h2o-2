@@ -5,7 +5,6 @@ import hex.Layer.ChunksInput;
 import hex.Layer.Input;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-import hex.rng.MersenneTwisterRNG;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -427,9 +426,7 @@ public abstract class Trainer {
   }
 
   static class NodeDescent {
-    //transient ConcurrentLinkedQueue<DescentChunk> _tasks = new ConcurrentLinkedQueue<DescentChunk>();
-    transient ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
-
+    ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
     Key _job;
     Layer[] _ls;
     float[][] _ws, _bs;

@@ -79,7 +79,10 @@ public class GridSearch extends Job {
           sb.append("<tr>");
           for( Argument a : args ) {
             try {
-              Object value = a._field.get(info._job);
+              Object target = info._job;
+              if( target instanceof Request2 )
+                target = ((Request2) target).getTarget(a._field);
+              Object value = a._field.get(target);
               String s;
               if( value instanceof int[] )
                 s = Utils.sampleToString((int[]) value, 20);
@@ -92,7 +95,7 @@ public class GridSearch extends Job {
           }
           String runTime = "Pending", speed = "";
           if( info._job.start_time != 0 ) {
-            runTime = PrettyPrint.msecs(info._job.runTimeMs(),true);
+            runTime = PrettyPrint.msecs(info._job.runTimeMs(), true);
             speed = perf != null ? info._job.speedValue() : "";
           }
           sb.append("<td>").append(runTime).append("</td>");
@@ -114,7 +117,7 @@ public class GridSearch extends Job {
           if( info._cm != null ) {
             pct = String.format("%.2f", 100 * info._error) + "%";
             if( info._cm._arr.length == 2 )
-              f1 = String.format("%.2f", info._cm.precisionAndRecall());
+              f1 = String.format("%.2f", info._cm.f1());
           }
           sb.append("<td><b>").append(pct).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");

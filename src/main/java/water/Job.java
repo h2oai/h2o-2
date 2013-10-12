@@ -254,10 +254,10 @@ public class Job extends Request2 {
       }
     }
 
-    @Override protected void done() {
+    @Override public void remove() {
       if( _generated != null )
         _generated.remove();
-      super.done();
+      super.remove();
     }
   }
 
@@ -400,13 +400,6 @@ public class Job extends Request2 {
     }.invoke(LIST);
   }
 
-  /**
-   * Invoked after job has run for cleanup purposes.
-   */
-  protected void done() {
-    remove();
-  }
-
   // Overridden for Parse
   public float progress() {
     Freezable f = UKV.get(destination_key);
@@ -546,10 +539,14 @@ public class Job extends Request2 {
   }
 
   /** Description of a speed criteria: e.g. msecs/frob */
-  public String speedDescription() { return null; }
+  public String speedDescription() {
+    return null;
+  }
 
   /** Value of the described speed criteria */
-  public String speedValue() { return null; }
+  public String speedValue() {
+    return null;
+  }
 
   // If job is a request
 
