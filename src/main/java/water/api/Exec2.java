@@ -37,7 +37,7 @@ public class Exec2 extends Request2 {
       if( num_rows==1 && num_cols==1 ) scalar=fr.vecs()[0].at(0);
       return new Response(Response.Status.done, this, -1, -1, null);
     } 
-    catch( PositionedException pe ) { e=pe;} // No logging user typo's
+    catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's
     catch( Exception e2 ) { Log.err(e=e2); }
     return Response.error(e.getMessage());
   }
