@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
  * Adapted from
  * https://svn.apache.org/repos/asf/hadoop/common/trunk/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/src/test/java/org/apache/hadoop/SleepJob.java
  */
+@SuppressWarnings("deprecation")
 public class h2odriver extends Configured implements Tool {
   final static int DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS = 120;
   final static int CLOUD_FORMATION_SETTLE_DOWN_SECONDS = 2;
