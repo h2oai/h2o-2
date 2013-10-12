@@ -1,4 +1,4 @@
-import time
+import time, sys
 import h2o, h2o_hosts, h2o_import as h2i
 
 class SetupUnitTest(object):
@@ -7,6 +7,7 @@ class SetupUnitTest(object):
 
     @classmethod
     def setUpClass(cls):
+        sys.stdout = h2o.OutWrapper(sys.stdout)
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
