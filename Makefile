@@ -13,6 +13,26 @@
 # $ make
 #
 
+###########################################################################
+# Directories
+###########################################################################
+
+# R/			H2O support for the R language.  Includes tests.
+# bench/		Benchmarking support.
+# ci/			Support files for Jenkins (continuous integration).
+# docs/			Individual documents for the project.
+# ec2/			EC2 scripts for use by the public.
+# experiments/		Experimental code built on top of H2O.
+# hadoop/		Hadoop driver and mapper for H2O.
+# installer/		BitRock InstallBuilder code for windows and mac.
+# launcher/		Launcher packaged with the installer.
+# lib/			Libraries used for compiling and running H2O.
+# packaging/		Varous files used for building the H2O packages.
+# py/			Python tests.
+# selenium/		Web UI tests.
+# smalldata/		"Small" (in size) datasets used for testing.
+# src/			H2O source code.
+# target/		Build output directory (Warning: gets wiped out!).
 
 ###########################################################################
 # Figure out how to create PROJECT_VERSION variable.
