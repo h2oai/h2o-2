@@ -206,17 +206,18 @@ public class Job extends Request2 {
       for( int i = 0; i < source.vecs().length; i++ )
         if( source.vecs()[i] == response )
           rIndex = i;
+      _responseName = source._names != null && rIndex >= 0 ? source._names[rIndex] : "response";
 
       _train = selectVecs(source);
-      if(validation != null) {
-        _valid = selectVecs(validation);
-        if(rIndex >= 0)
-          _validResponse = validation.vecs()[rIndex];
-      }
       _names = new String[cols.length];
       for( int i = 0; i < cols.length; i++ )
         _names[i] = source._names[cols[i]];
-      _responseName = source._names != null && rIndex >= 0 ? source._names[rIndex] : "response";
+
+      if( validation != null ) {
+        int idx = validation.find(source.names()[rIndex]);
+        if( idx == -1 ) throw new IllegalArgumentException("Validation set does not have a response column called "+_responseName);
+        _validResponse = validation.vecs()[idx];
+      }
     }
   }
 
@@ -403,21 +404,16 @@ public class Job extends Request2 {
   }
 
   /** Returns job execution time in milliseconds */
-  public final long runTimeMs()
-  {
+  public final long runTimeMs() {
     long until = end_time != 0 ? end_time : System.currentTimeMillis();
     return until - start_time;
   }
 
-  /** Description of a speed criteria. */
-  public String speedDescription() {
-    return null;
-  }
+  /** Description of a speed criteria: msecs/frob */
+  public String speedDescription() { return null; }
 
-  /** Value of the described speed criteria. */
-  public String speedValue() {
-    return null;
-  }
+  /** Value of the described speed criteria: msecs/frob */
+  public long speedValue() { return 0; }
 
   // If job is a request
 

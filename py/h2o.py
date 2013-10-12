@@ -1829,13 +1829,10 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict = {
-            'parallel': 1,
             'family': 'binomial',
             'key': key,
             'y': 1,
             'link': 'familyDefault',
-            # can name GLM models now. pass a name here.
-            'destination_key': 'GLM_model_$python_0_default_0',
         }
         params_dict.update(kwargs)
         print "\n"+parentName, "params list:", params_dict
@@ -1845,9 +1842,9 @@ class H2O(object):
 
     def GLM(self, key,
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_$python_0_default_0',**kwargs):
 
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM",destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
@@ -1874,7 +1871,7 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", parallel=1, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMGridProgress':
             print dump_json(a)

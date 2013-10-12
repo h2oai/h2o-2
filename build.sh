@@ -30,7 +30,6 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
   TESTSRC=src/test/java
 SAMPLESRC=src/samples/java
 RESOURCES=src/main/resources
-RSRC=R/h2o-package
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
 

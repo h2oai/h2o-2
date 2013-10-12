@@ -51,7 +51,7 @@ setMethod("h2o.checkClient", signature(object="H2OClient"), function(object) {
     if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
   } else { 
     cat("Successfully connected to", myURL, "\n")
-    if("h2o" %in% rownames(installed.packages()) && (pv=packageVersion("h2o")) != (sv=h2o.__version(object)))
+    if("h2oRClient" %in% rownames(installed.packages()) && (pv=packageVersion("h2oRClient")) != (sv=h2o.__version(object)))
       warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
   }
 })

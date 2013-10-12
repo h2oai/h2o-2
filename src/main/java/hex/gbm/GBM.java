@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import java.util.Arrays;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.UndecidedNode;
@@ -24,7 +25,7 @@ public class GBM extends SharedTreeModelBuilder {
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public GBMModel(Key key, Key dataKey, String names[], String domains[][], int ntrees, int ymin) { super(key,dataKey,names,domains,ntrees,ymin); }
+    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int ymin) { super(key,dataKey,testKey,names,domains,ntrees,ymin); }
     public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
@@ -63,8 +64,8 @@ public class GBM extends SharedTreeModelBuilder {
   // assign a split number to it (for next pass).  On *this* pass, use the
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
-  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Timer t_build ) {
-    GBMModel model = new GBMModel(outputKey, dataKey, names, domains, ntrees, _ymin);
+  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
+    GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees, _ymin);
     DKV.put(outputKey, model);
     // Build trees until we hit the limit
     for( int tid=0; tid<ntrees; tid++) {
@@ -83,7 +84,7 @@ public class GBM extends SharedTreeModelBuilder {
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
-      Score sc = new Score().doAll(fr).report(Sys.GBM__,tid+1,ktrees);
+      Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid+1,ktrees);
       model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
       DKV.put(outputKey, model);
     }
@@ -354,16 +355,6 @@ public class GBM extends SharedTreeModelBuilder {
       Utils.add(_gss,gp._gss);
       Utils.add(_rss,gp._rss);
     }
-  }
-
-  @Override public String speedDescription() {
-    return "seconds per tree";
-  }
-
-  @Override public String speedValue() {
-    double time = runTimeMs() / 1000;
-    double secondsPerTree = time / ntrees;
-    return String.format("%.2f", secondsPerTree);
   }
 
   // ---
