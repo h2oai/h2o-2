@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 1800
             start = time.time()
             rfView = h2o_cmd.runRF(parseResult=parseResult, rfView=True,
-                timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2, **kwargs)
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2, **kwargs)
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
