@@ -25,18 +25,22 @@ test.GLM.benign <- function(serverH2O) {
   benign.data = read.csv("../../smalldata/logreg/benign.csv", header = TRUE)
   benign.data = na.omit(benign.data)
   
-  myY = "3"; myY.r = as.numeric(myY) + 1
+  # myY = 3; myY.r = myY + 1
+  myY = 4;
   for(maxx in 10:13) {
-    myX = 0:maxx
-    myX = myX[which(myX != myY)]; myX.r = myX + 1
-    myX = paste(myX, collapse=",")
+    # myX = 0:maxx
+    # myX = myX[which(myX != myY)]; myX.r = myX + 1
+    # myX = paste(myX, collapse=",")
+    myX = 1:maxx;
+    myX = myX[which(myX != myY)]
     
     cat("\nH2O GLM (binomial) with parameters:\nX:", myX, "\nY:", myY, "\n")
     benign.glm.h2o = h2o.glm(y = myY, x = myX, data = benign.hex, family = "binomial", nfolds = 5, alpha = 0.5)
     print(benign.glm.h2o)
     
     # benign.glm = glm.fit(y = benign.data[,myY.r], x = benign.data[,myX.r], family = binomial)
-    benign.glm = glmnet(y = benign.data[,myY.r], x = data.matrix(benign.data[,myX.r]), family = "binomial", alpha = 0.5)
+    # benign.glm = glmnet(y = benign.data[,myY.r], x = data.matrix(benign.data[,myX.r]), family = "binomial", alpha = 0.5)
+    benign.glm = glmnet(y = benign.data[,myY], x = data.matrix(benign.data[,myX]), family = "binomial", alpha = 0.5)
     checkGLMModel(benign.glm.h2o, benign.glm)
   }
 }
