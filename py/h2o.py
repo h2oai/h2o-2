@@ -1829,7 +1829,6 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso',False)
         params_dict = {
-            'parallel': 1,
             'family': 'binomial',
             'key': key,
             'y': 1,
@@ -1872,7 +1871,7 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", parallel=1, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMGridProgress':
             print dump_json(a)
