@@ -34,7 +34,6 @@ public class AppendableVec extends Vec {
     assert key != null;
     _espc = new long[4];
     _chunkTypes = new byte[4];
-    DKV.put(key,this);
   }
 
 

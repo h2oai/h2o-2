@@ -31,8 +31,8 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   private int _noutputs;
 
   /** Override with your map implementation.  This overload is given a single
-   *  <strong>local</strong> Chunk.  It is meant for map/reduce jobs that use a
-   *  single column in a Frame.  All map variants are called, but only one is
+   *  <strong>local</strong> input Chunk.  It is meant for map/reduce jobs that use a
+   *  single column in a input Frame.  All map variants are called, but only one is
    *  expected to be overridden. */
   public void map( Chunk c ) { }
   public void map( Chunk c, NewChunk nc ) { }
@@ -45,18 +45,14 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   public void map( Chunk c0, Chunk c1, NewChunk nc1, NewChunk nc2 ) { }
 
   /** Override with your map implementation.  This overload is given three
-   * <strong>local</strong> Chunks.  All map variants are called, but only one
+   * <strong>local</strong> input Chunks.  All map variants are called, but only one
    * is expected to be overridden. */
   public void map( Chunk c0, Chunk c1, Chunk c2 ) { }
-  /** Override with your map implementation.  This overload is given three
-   * <strong>local</strong> Chunks and produces one <strong>local</strong> output Chunk. */
   public void map( Chunk c0, Chunk c1, Chunk c2, NewChunk nc ) { }
-  /** Override with your map implementation.  This overload is given three
-   * <strong>local</strong> Chunks and produces two <strong>local</strong> output Chunkd. */
   public void map( Chunk c0, Chunk c1, Chunk c2, NewChunk nc1, NewChunk nc2 ) { }
 
   /** Override with your map implementation.  This overload is given an array
-   *  of <strong>local</strong> Chunks, for Frames with arbitrary column
+   *  of <strong>local</strong> input Chunks, for Frames with arbitrary column
    *  numbers.  All map variants are called, but only one is expected to be
    *  overridden. */
   public void map(    Chunk cs[] ) { }
@@ -186,12 +182,12 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Invokes the map/reduce computation over the given Frame. This call is
    *  asynchronous.  It returns 'this', on which getResult() can be invoked
    *  later to wait on the computation.  */
-  public T dfork( Vec...vecs ) {return dfork(0,vecs);}
-  public T dfork( Frame fr ) {return dfork(0,fr);}
-  public T dfork( int outputs, Vec... vecs) {
+  public final T dfork( Vec...vecs ) {return dfork(0,vecs);}
+  public final T dfork( Frame fr ) {return dfork(0,fr);}
+  public final T dfork( int outputs, Vec... vecs) {
     return dfork(outputs,new Frame(vecs));
   }
-  public T dfork( int outputs, Frame fr) {
+  public final T dfork( int outputs, Frame fr) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
     if((_noutputs = outputs) > 0)_vid = fr.anyVec().group().reserveKeys(outputs);
@@ -313,13 +309,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         if( _fr.vecs().length == 2 ) map(bvs[0], bvs[1]);
         if( _fr.vecs().length == 3 ) map(bvs[0], bvs[1], bvs[2]);
         if( true                  )  map(bvs );
-        if(_noutputs == 1){
+        if(_noutputs == 1){ // convenience versions for cases with single output.
           if( _fr.vecs().length == 1 ) map(bvs[0], appendableChunks[0]);
           if( _fr.vecs().length == 2 ) map(bvs[0], bvs[1],appendableChunks[0]);
           if( _fr.vecs().length == 3 ) map(bvs[0], bvs[1], bvs[2],appendableChunks[0]);
           if( true                  )  map(bvs,    appendableChunks[0]);
         }
-        if(_noutputs == 2){
+        if(_noutputs == 2){ // convenience versions for cases with 2 outputs (e.g split).
           if( _fr.vecs().length == 1 ) map(bvs[0], appendableChunks[0],appendableChunks[1]);
           if( _fr.vecs().length == 2 ) map(bvs[0], bvs[1],appendableChunks[0],appendableChunks[1]);
           if( _fr.vecs().length == 3 ) map(bvs[0], bvs[1], bvs[2],appendableChunks[0],appendableChunks[1]);
