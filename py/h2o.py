@@ -124,7 +124,6 @@ def get_sandbox_name():
     else: return "sandbox"
 
 def unit_main():
-    sys.stdout = OutWrapper(sys.stdout)
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
@@ -526,6 +525,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # (both come thru here)
     # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
+    sys.stdout = OutWrapper(sys.stdout)
     if clone_cloud_json or clone_cloud:
         nodeList = build_cloud_with_json(
             h2o_nodes_json=clone_cloud_json if clone_cloud_json else clone_cloud)
