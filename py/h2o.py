@@ -1842,9 +1842,9 @@ class H2O(object):
 
     def GLM(self, key,
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_$python_0_default_0',**kwargs):
 
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM",destination_key='GLM_model_$python_0_default_0', **kwargs)
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM",destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
