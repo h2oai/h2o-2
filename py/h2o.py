@@ -1834,8 +1834,6 @@ class H2O(object):
             'key': key,
             'y': 1,
             'link': 'familyDefault',
-            # can name GLM models now. pass a name here.
-            'destination_key': 'GLM_model_$python_0_default_0',
         }
         params_dict.update(kwargs)
         print "\n"+parentName, "params list:", params_dict
@@ -1847,7 +1845,7 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM", **kwargs)
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM",destination_key='GLM_model_$python_0_default_0', **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
