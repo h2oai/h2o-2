@@ -63,8 +63,7 @@ public class Sample07_NeuralNet_Mnist {
 
     // Build net and start training
     Layer[] ls = build(train, trainLabels, null);
-    //Trainer trainer = new Trainer.MapReduce(ls);
-    Trainer trainer = new Trainer.Threaded(ls);
+    Trainer trainer = new Trainer.MapReduce(ls);
     trainer.start();
 
     // Monitor training

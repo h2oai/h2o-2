@@ -2,6 +2,7 @@ package water;
 
 import jsr166y.CountedCompleter;
 import water.fvec.*;
+import water.fvec.Vec.VectorGroup;
 
 /**
  * Map/Reduce style distributed computation.
@@ -13,38 +14,51 @@ import water.fvec.*;
  * methods can store their results in fields. Results are serialized and reduced all the
  * way back to the invoking node. When the last reduce method has been called, fields
  * of the initial MRTask2 instance contains the computation results.
+ * <nl>
+ * Apart from small reduced POJO returned to the calling node, MRtask2 can produce output vector(s) as a result.
+ * These will have chunks co-located with the input dataset, however, their number of lines will generally differ,
+ * (so they won't be strictly compatible with the original). To produce output vectors, call doAll.dfork version
+ * with required number of outputs and override appropriate <code>map</code> call taking required number of NewChunks.
+ * MRTask2 will automatically close the new Appendable vecs and produce an output frame with newly created Vecs.
  */
 public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable {
 
   /** The Vectors to work on. */
   public Frame _fr;
+  public Frame _outputFrame;
+  private AppendableVec [] _appendables; // appendables are treated separately (roll-ups computed in map/reduce style, can not be passed via K/V store).
+  private int _vid;
+  private int _noutputs;
 
   /** Override with your map implementation.  This overload is given a single
-   *  <strong>local</strong> Chunk.  It is meant for map/reduce jobs that use a
-   *  single column in a Frame.  All map variants are called, but only one is
+   *  <strong>local</strong> input Chunk.  It is meant for map/reduce jobs that use a
+   *  single column in a input Frame.  All map variants are called, but only one is
    *  expected to be overridden. */
   public void map( Chunk c ) { }
+  public void map( Chunk c, NewChunk nc ) { }
 
   /** Override with your map implementation.  This overload is given two
    *  <strong>local</strong> Chunks.  All map variants are called, but only one
    *  is expected to be overridden. */
   public void map( Chunk c0, Chunk c1 ) { }
-
-  /** Override with your map implementation.  This overload is designed to
-   *  efficiently modify or append data to the first column.  All map variants
-   *  are called, but only one is expected to be overridden. */
-  public void map( NewChunk c0, Chunk c1 ) { }
+  public void map( Chunk c0, Chunk c1, NewChunk nc) { }
+  public void map( Chunk c0, Chunk c1, NewChunk nc1, NewChunk nc2 ) { }
 
   /** Override with your map implementation.  This overload is given three
-   * <strong>local</strong> Chunks.  All map variants are called, but only one
+   * <strong>local</strong> input Chunks.  All map variants are called, but only one
    * is expected to be overridden. */
-  public void map(    Chunk c0, Chunk c1, Chunk c2 ) { }
+  public void map( Chunk c0, Chunk c1, Chunk c2 ) { }
+  public void map( Chunk c0, Chunk c1, Chunk c2, NewChunk nc ) { }
+  public void map( Chunk c0, Chunk c1, Chunk c2, NewChunk nc1, NewChunk nc2 ) { }
 
   /** Override with your map implementation.  This overload is given an array
-   *  of <strong>local</strong> Chunks, for Frames with arbitrary column
+   *  of <strong>local</strong> input Chunks, for Frames with arbitrary column
    *  numbers.  All map variants are called, but only one is expected to be
    *  overridden. */
   public void map(    Chunk cs[] ) { }
+  public void map(    Chunk cs[], NewChunk nc ) { }
+  public void map(    Chunk cs[], NewChunk nc1, NewChunk nc2 ) { }
+  public void map(    Chunk cs[], NewChunk [] ncs ) { }
 
   /** Override to combine results from 'mrt' into 'this' MRTask2.  Both 'this'
    *  and 'mrt' are guaranteed to either have map() run on them, or be the
@@ -82,8 +96,8 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // nested MRTasks.  All numbers are CTM stamps or millisecond times.
   private static class MRProfile extends Iced {
     String _clz;
-    public MRProfile(MRTask2 mrt) { 
-      _clz = mrt.getClass().toString(); 
+    public MRProfile(MRTask2 mrt) {
+      _clz = mrt.getClass().toString();
       _localdone = System.currentTimeMillis();
     }
     // See where these are set to understand their meaning.  If we split the
@@ -107,7 +121,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         _last = last;
         if( first._onCdone > _done1st ) { _time1st = first.sumTime(); _done1st = first._onCdone; }
       }
-      if( size_rez !=0 )        // Record i/o result size 
+      if( size_rez !=0 )        // Record i/o result size
         if( _size_rez0 == 0 ) {      _size_rez0=size_rez; }
         else { assert _size_rez1==0; _size_rez1=size_rez; }
       assert _last._onCdone >= _done1st;
@@ -152,21 +166,31 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
 
   /** Invokes the map/reduce computation over the given Vecs.  This call is
    *  blocking. */
-  public final T doAll( Vec... vecs ) { return doAll(new Frame(null,vecs)); }
+  public final T doAll( Vec... vecs ) { return doAll(0,vecs); }
+  public final T doAll(int outputs, Vec... vecs ) { return doAll(outputs,new Frame(null,vecs)); }
 
   /** Invokes the map/reduce computation over the given Frame.  This call is
    *  blocking.  */
-  public final T doAll( Frame fr ) {
-    dfork(fr);
+  public final T doAll( Frame fr) {
+    return doAll(0,fr);
+  }
+  public final T doAll( int outputs, Frame fr) {
+    dfork(outputs,fr);
     return getResult();
   }
 
   /** Invokes the map/reduce computation over the given Frame. This call is
    *  asynchronous.  It returns 'this', on which getResult() can be invoked
    *  later to wait on the computation.  */
-  public T dfork( Frame fr ) {
+  public final T dfork( Vec...vecs ) {return dfork(0,vecs);}
+  public final T dfork( Frame fr ) {return dfork(0,fr);}
+  public final T dfork( int outputs, Vec... vecs) {
+    return dfork(outputs,new Frame(vecs));
+  }
+  public final T dfork( int outputs, Frame fr) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
+    if((_noutputs = outputs) > 0)_vid = fr.anyVec().group().reserveKeys(outputs);
     _fr = fr;                   // Record vectors to work on
     _nodes = (1L<<H2O.CLOUD.size())-1; // Do Whole Cloud
     setupLocal0();              // Local setup
@@ -263,24 +287,46 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         // Make decompression chunk headers for these chunks
         Vec vecs[] = _fr.vecs();
         Chunk bvs[] = new Chunk[vecs.length];
+        NewChunk [] appendableChunks = null;
         for( int i=0; i<vecs.length; i++ )
           if( vecs[i] != null ) {
-            assert vecs[i].chunkKey(_lo).home() 
+            assert vecs[i].chunkKey(_lo).home()
               : "Chunk="+_lo+" v0="+v0+", k="+v0.chunkKey(_lo)+"   v["+i+"]="+vecs[i]+", k="+vecs[i].chunkKey(_lo);
             bvs[i] = vecs[i].elem2BV(_lo);
           }
-
+        if(_noutputs > 0){
+          final VectorGroup vg = vecs[0].group();
+          _appendables = new AppendableVec[_noutputs];
+          appendableChunks = new NewChunk[_noutputs];
+          for(int i = 0; i < _appendables.length; ++i){
+            _appendables[i] = new AppendableVec(vg.vecKey(_vid+i));
+            appendableChunks[i] = (NewChunk)_appendables[i].elem2BV(_lo);
+          }
+        }
         // Call all the various map() calls that apply
         _profile._userstart = System.currentTimeMillis();
         if( _fr.vecs().length == 1 ) map(bvs[0]);
-        if( _fr.vecs().length == 2 && bvs[0] instanceof NewChunk) map((NewChunk)bvs[0], bvs[1]);
         if( _fr.vecs().length == 2 ) map(bvs[0], bvs[1]);
         if( _fr.vecs().length == 3 ) map(bvs[0], bvs[1], bvs[2]);
-        if( true                  ) map(bvs );
+        if( true                  )  map(bvs );
+        if(_noutputs == 1){ // convenience versions for cases with single output.
+          if( _fr.vecs().length == 1 ) map(bvs[0], appendableChunks[0]);
+          if( _fr.vecs().length == 2 ) map(bvs[0], bvs[1],appendableChunks[0]);
+          if( _fr.vecs().length == 3 ) map(bvs[0], bvs[1], bvs[2],appendableChunks[0]);
+          if( true                  )  map(bvs,    appendableChunks[0]);
+        }
+        if(_noutputs == 2){ // convenience versions for cases with 2 outputs (e.g split).
+          if( _fr.vecs().length == 1 ) map(bvs[0], appendableChunks[0],appendableChunks[1]);
+          if( _fr.vecs().length == 2 ) map(bvs[0], bvs[1],appendableChunks[0],appendableChunks[1]);
+          if( _fr.vecs().length == 3 ) map(bvs[0], bvs[1], bvs[2],appendableChunks[0],appendableChunks[1]);
+          if( true                  )  map(bvs,    appendableChunks[0],appendableChunks[1]);
+        }
+        map(bvs,appendableChunks);
         _res = self();          // Save results since called map() at least once!
         // Further D/K/V put any new vec results.
         _profile._closestart = System.currentTimeMillis();
         for( Chunk bv : bvs ) bv.close(_lo,_fs);
+        if(_noutputs > 0) for(NewChunk nch:appendableChunks)nch.close(_lo, _fs);
       }
     }
     _profile._mapdone = System.currentTimeMillis();
@@ -332,9 +378,20 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       _res._profile = _profile;   // Use my profile (not childs)
       copyOver(_res);             // So copy into self
     }
+    System.out.println("postLocal at " + H2O.SELF + ", noutputs = " + _noutputs);
     closeLocal();
-    if( ns == (1L<<H2O.CLOUD.size())-1 ) // All-done on head of whole MRTask tree?
-      _fr.closeAppendables(); // Final close ops on any new appendable vec
+    if( ns == (1L<<H2O.CLOUD.size())-1){
+      System.out.println("postGlobal at " + H2O.SELF + ", noutputs = " + _noutputs);
+    }
+    if( ns == (1L<<H2O.CLOUD.size())-1 && _noutputs > 0){ // All-done on head of whole MRTask tree?
+      // close the appendables and make the output frame
+      Futures fs = new Futures();
+      Vec [] vecs = new Vec[_noutputs];
+      for(int i = 0; i < _noutputs; ++i)
+        vecs[i] = _appendables[i].close(fs);
+      fs.blockForPending();
+      _outputFrame = new Frame(vecs);
+    }
   }
 
   // Block for RPCs to complete, then reduce global results into self results

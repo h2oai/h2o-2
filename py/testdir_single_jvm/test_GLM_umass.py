@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
                     kwargs['x'] = x
 
                 start = time.time()
-                parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs, **kwargs)
+                parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs)
                 glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
                 print "glm end (w/check) on ", csvPathname, 'took', time.time() - start, 'seconds'

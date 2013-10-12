@@ -25,7 +25,7 @@ public class Inspect2 extends Request2 {
 
   // An internal JSON-output-only class
   @SuppressWarnings("unused")
-  private static class ColSummary extends Iced {
+  static class ColSummary extends Iced {
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public ColSummary( String name, Vec vec ) {

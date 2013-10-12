@@ -64,7 +64,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(register(new GBM()),         "GBM (Beta)",                 "Model");
     Request.addToNavbar(register(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(register(new NeuralNet()),   "Neural Network (Beta)",      "Model");
-    Request.addToNavbar(register(new Console()),     "Console",                    "Model");
 
     Request.addToNavbar(register(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(register(new GLMScore()),    "GLM",                        "Score");
@@ -115,6 +114,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(register(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(register(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(register(new FrameSplit()),     "Frame Split",          "Beta (FluidVecs!)");
+      Request.addToNavbar(register(new Console()),        "Console",              "Beta (FluidVecs!)");
     }
 
     // internal handlers
@@ -123,14 +123,15 @@ public class RequestServer extends NanoHTTPD {
     register(new DRFModelView());
     register(new DRFProgressPage());
     register(new DownloadDataset());
-    register(new Exec());
-    register(new DataManip());
+    register(new Exec2());
+    register(new Exec());      // Will be replaced by Exec2
+    register(new DataManip()); // Will be replaced by Exec2
     register(new ExportS3Progress());
     register(new GBMModelView());
     register(new GBMProgressPage());
     register(new GLMGridProgress());
     register(new GLMProgressPage());
-    register(new GetVector());
+    register(new GetVector()); // Will be replaced by Exec2
     register(new GridSearchProgress());
     register(new LogView.LogDownload());
     register(new NeuralNetProgress());
@@ -138,7 +139,7 @@ public class RequestServer extends NanoHTTPD {
     register(new Progress());
     register(new Progress2());
     register(new PutValue());
-    register(new PutVector());
+    register(new PutVector()); // Will be replaced by Exec2
     register(new RFTreeView());
     register(new RFView());
     register(new RPackage());

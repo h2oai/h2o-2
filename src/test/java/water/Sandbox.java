@@ -25,11 +25,11 @@ public class Sandbox {
 
       //Frame frame = water.TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
       //Frame frame = water.TestUtil.parseFrame("smalldata/categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");
-      Frame frame = airlines();
-      Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
-      UKV.put(Key.make("train.hex"), frames[0]);
-      UKV.put(Key.make("valid.hex"), frames[1]);
-      UKV.put(Key.make("test.hex"), frames[2]);
+//      Frame frame = airlines();
+//      Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
+//      UKV.put(Key.make("train.hex"), frames[0]);
+//      UKV.put(Key.make("valid.hex"), frames[1]);
+//      UKV.put(Key.make("test.hex"), frames[2]);
 
 //    String u = "/Plot.png?source_key=test.hex&cols=" + s + "&clusters=test.kmeans";
 //    Desktop.getDesktop().browse(new URI("http://localhost:54321" + u));
