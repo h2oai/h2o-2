@@ -86,11 +86,11 @@ class Basic(unittest.TestCase):
             kwargs = {}
             if FROM_HDFS:
                 parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
-                    timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2,
+                    timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
                     benchmarkLogging=benchmarkLogging, **kwargs)
             else:
                 parseResult = h2i.import_parse(path=csvPathname, schema='local', hex_key=hex_key,
-                    timeoutSecs=timeoutSecs, pollTimeoutsecs=60, retryDelaySecs=2,
+                    timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
                     benchmarkLogging=benchmarkLogging, **kwargs)
 
             elapsed = time.time() - start
