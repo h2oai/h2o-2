@@ -281,8 +281,10 @@ setMethod("as.data.frame", "H2OParsedData", function(x) {
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
-  myView = ifelse(n > 0, n, nrow(x)+n)
+  # if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
+  numRows = nrow(x)
+  if(n < 0 && abs(n) >= numRows) return(data.frame())
+  myView = ifelse(n > 0, min(n, numRows), numRows+n)
   if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
   
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=myView)
@@ -299,9 +301,11 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
 setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
   n = round(n)
-  if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
-  myOff = ifelse(n > 0, nrow(x)-n, abs(n))
-  myView = ifelse(n > 0, n, nrow(x)+n)
+  # if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
+  numRows = nrow(x)
+  if(n < 0 && abs(n) >= numRows) return(data.frame())
+  myOff = ifelse(n > 0, max(0, numRows-n), abs(n))
+  myView = ifelse(n > 0, min(n, numRows), numRows+n)
   if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
   
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=myOff, view=myView)
