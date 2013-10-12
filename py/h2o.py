@@ -16,6 +16,14 @@ import requests, zipfile, StringIO
 from subprocess import Popen, PIPE
 import stat
 
+class OutWrapper:
+    def __init__(self, out):
+        self._out = out
+    def write(self, x):
+        self._out.write(x.replace('\n', '\n[{0}] '.format(str(datetime.datetime.now()))))
+    def flush(self):
+        self._out.flush()
+
 def check_params_update_kwargs(params_dict, kw, function, print_params):
     # only update params_dict..don't add
     # throw away anything else as it should come from the model (propagating what RF used)
@@ -116,6 +124,7 @@ def get_sandbox_name():
     else: return "sandbox"
 
 def unit_main():
+    sys.stdout = OutWrapper(sys.stdout)
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
