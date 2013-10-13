@@ -136,7 +136,7 @@ class Basic(unittest.TestCase):
 
             # GBM(train iterate)****************************************
             h2o.beta_features = True
-            ntrees = 100
+            ntrees = 10
             for max_depth in [5,10,20,40]:
                 params = {
                     'learn_rate': .2,
