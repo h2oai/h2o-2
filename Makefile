@@ -24,6 +24,7 @@
 # ec2/			EC2 scripts for use by the public.
 # experiments/		Experimental code built on top of H2O.
 # hadoop/		Hadoop driver and mapper for H2O.
+# h2odocs/              docs.0xdata.com website content.
 # installer/		BitRock InstallBuilder code for windows and mac.
 # launcher/		Launcher packaged with the installer.
 # lib/			Libraries used for compiling and running H2O.
@@ -77,7 +78,11 @@ nightly_build_stuff:
 	@echo
 	$(MAKE) clean PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
-	@echo
+	# @echo
+	# @echo "PHASE: Building docs website..."
+	# @echo
+	# $(MAKE) docs-website PROJECT_VERSION=$(PROJECT_VERSION)
+	 @echo
 	@echo Build completed successfully.
 
 build:
@@ -160,6 +165,49 @@ build_installer:
 test:
 	./build.sh
 
+TOPDIR:=$(CURDIR)
+BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
+SPHINXBUILD=$(shell command -v sphinx-build)
+ifeq ($(SPHINXBUILD),)
+docs-website:
+	@echo sphinx-build not found, skipping...
+else
+docs-website: dw_1 dw_2 dw_3 dw_4
+endif
+
+dw_1:
+	rm -fr $(BUILD_WEBSITE_DIR)
+	rm -fr h2odocs/source/developuser/links
+	mkdir -p h2odocs/source/developuser/links
+	cd h2odocs/source/developuser/links && java -cp $(TOPDIR)/target/h2o.jar water.api.DocGen
+
+# If this fails, you might need to do the following:
+#     $ (possibly sudo) easy_install pip
+#     $ (possibly sudo) pip install sphinxcontrib-fulltoc
+#
+dw_2:
+	(export PROJECT_VERSION=$(PROJECT_VERSION); $(MAKE) -C h2odocs)
+
+dw_3:
+	mv h2odocs/build/html $(BUILD_WEBSITE_DIR)
+	mkdir -p $(BUILD_WEBSITE_DIR)/bits
+	cp -p docs/0xdata_H2O_Algorithms.pdf $(BUILD_WEBSITE_DIR)/bits
+	cp -rp target/javadoc $(BUILD_WEBSITE_DIR)/bits
+	mkdir -p $(BUILD_WEBSITE_DIR)/bits/hadoop
+	cp -p hadoop/README.txt $(BUILD_WEBSITE_DIR)/bits/hadoop
+	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
+
+# Note:  to get pdfunite on a mac, try:
+#     $ brew install poppler
+#
+PDFUNITE=$(shell command -v pdfunite)
+dw_4:
+ifeq ($(PDFUNITE),)
+	@echo pdfunite not found, skipping...
+else
+	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
+endif
+
 #
 # Set appropriately for your data size to quickly try out H2O.
 # For best results, the Java heap should be at least 4x data size.
@@ -171,10 +219,12 @@ run:
 	java $(JAVA_HEAP_SIZE) -jar target/h2o.jar
 
 clean:
-	rm -f ${BUILD_VERSION_JAVA_FILE}
+	rm -f $(BUILD_VERSION_JAVA_FILE)
 	rm -fr target
 	./build.sh clean
 	$(MAKE) -C hadoop clean
 	$(MAKE) -C R clean
 	$(MAKE) -C launcher clean
 	$(MAKE) -C installer clean
+
+.phony: default build test docs-website run clean
