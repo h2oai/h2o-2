@@ -96,7 +96,8 @@ class Basic(unittest.TestCase):
             'ntree': 6, 
             'parallel': 1, 
             'out_of_bag_error_estimate': 0, 
-            'no_confusion_matrix': 1,
+# Causes rest api illegal argument error.
+#            'no_confusion_matrix': 1,
             'model_key': 'RF_model'
         }
 
