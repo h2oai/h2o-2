@@ -378,11 +378,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       _res._profile = _profile;   // Use my profile (not childs)
       copyOver(_res);             // So copy into self
     }
-    System.out.println("postLocal at " + H2O.SELF + ", noutputs = " + _noutputs);
     closeLocal();
-    if( ns == (1L<<H2O.CLOUD.size())-1){
-      System.out.println("postGlobal at " + H2O.SELF + ", noutputs = " + _noutputs);
-    }
     if( ns == (1L<<H2O.CLOUD.size())-1 && _noutputs > 0){ // All-done on head of whole MRTask tree?
       // close the appendables and make the output frame
       Futures fs = new Futures();
