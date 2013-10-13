@@ -136,12 +136,6 @@ EOF
         $SAMPLESRC/water/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
-
-    cp -r ${RESOURCES}/* "${CLASSES}"
-cat >> "$VERSION_PROPERTIES" <<EOF
-h2o.git.version=$($GIT rev-parse HEAD 2>/dev/null )
-h2o.git.branch=$($GIT rev-parse --abbrev-ref HEAD 2>/dev/null )
-EOF
 }
 
 function build_initializer() {
