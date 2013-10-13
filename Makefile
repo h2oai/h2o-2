@@ -177,9 +177,9 @@ endif
 
 dw_1:
 	rm -fr $(BUILD_WEBSITE_DIR)
-	rm -fr h2odocs/source/developuser/links
-	mkdir -p h2odocs/source/developuser/links
-	cd h2odocs/source/developuser/links && java -cp $(TOPDIR)/target/h2o.jar water.api.DocGen
+	rm -fr h2odocs/source/developuser/DocGen
+	mkdir -p h2odocs/source/developuser/DocGen
+	cd h2odocs/source/developuser/DocGen && java -cp $(TOPDIR)/target/h2o.jar water.api.DocGen
 
 # If this fails, you might need to do the following:
 #     $ (possibly sudo) easy_install pip
