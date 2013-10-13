@@ -167,7 +167,7 @@ test:
 
 TOPDIR:=$(CURDIR)
 BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
-SPHINXBUILD=$(shell command -v sphinx-build)
+SPHINXBUILD=$(shell which sphinx-build)
 ifeq ($(SPHINXBUILD),)
 docs-website:
 	@echo sphinx-build not found, skipping...
@@ -200,7 +200,7 @@ dw_3:
 # Note:  to get pdfunite on a mac, try:
 #     $ brew install poppler
 #
-PDFUNITE=$(shell command -v pdfunite)
+PDFUNITE=$(shell which pdfunite)
 dw_4:
 ifeq ($(PDFUNITE),)
 	@echo pdfunite not found, skipping...
