@@ -10,7 +10,7 @@ import water.util.Log;
 
 import hex.gbm.*;
 import hex.glm.*;
-import hex.KMeans2;
+// import hex.KMeans2;
 
 /**
  * Auto-gen doc support, for JSON & REST API docs
@@ -43,7 +43,7 @@ public abstract class DocGen {
     createFile("GBM.rst", new GBM().ReSTHelp());
     createFile("DRF2.rst", new DRF().ReSTHelp());
     createFile("GLM2.rst", new GLM2().ReSTHelp());
-    createFile("KMeans2.rst", new KMeans2().ReSTHelp());
+//    createFile("KMeans2.rst", new KMeans2().ReSTHelp());
   }
 
   public static void main(String[] args) throws Exception {
