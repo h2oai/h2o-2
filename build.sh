@@ -183,11 +183,6 @@ function build_javadoc() {
     "${JAVADOC}" -overview ${SRC}/overview.html -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
 }
 
-function build_package() {
-    echo "creating package..."
-    make package >& target/package_build.log
-}
-
 function junit() {
     echo "running JUnit tests..."
     "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
