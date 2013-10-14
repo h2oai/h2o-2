@@ -4,7 +4,7 @@ sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
 
-csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error','AverageErrorOverNFolds')
+csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error','AverageErrorOver10Folds')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
@@ -15,7 +15,7 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
     for f in fs['train']:
         overallWallStart = time.time()
         date = '-'.join([str(x) for x in list(time.localtime())][0:3])
-        glmbenchcsv = 'benchmarks/'+build+'/'+date+'glmbench.csv'
+        glmbenchcsv = 'benchmarks/'+build+'/'+date+'/glmbench.csv'
         if not os.path.exists(glmbenchcsv):
             output = open(glmbenchcsv,'w')
             output.write(','.join(csv_header)+'\n')

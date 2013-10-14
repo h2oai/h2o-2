@@ -20,7 +20,7 @@ def doKMeans(fs, folderPath):
             output = open(kmeansbenchcsv,'w')
             output.write(','.join(csv_header)+'\n')
         else:
-            output = open(kmeansbench.csv,'a')
+            output = open(kmeansbenchcsv,'a')
         csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
                         dialect='excel', extrasaction='ignore',delimiter=',')
         try:

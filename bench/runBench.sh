@@ -16,7 +16,7 @@ function ALL() {
     echo "Running GLM benchmark..."
     GLM
     wait
-    echo "Running Big KMeans..."
+    #echo "Running Big KMeans..."
     #BigKMeans
     #wait
 }
@@ -28,9 +28,8 @@ function PCA() {
 }
 
 function KMeans() {
-    py_args="BMscripts/kmeansBench.py -cj ${JSON}"
-    python "$py_args"
-    echo ${py_args}
+    pyScript="BMscripts/kmeansBench.py"
+    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
 }
 
@@ -43,9 +42,8 @@ function BigKMeans() {
 }
 
 function GLM() {
-    py_args="BMscripts/glmBench.py -cj ${JSON}"
-    python "$py_args"
-    echo ${py_args}
+    pyScript="BMscripts/glmBench.py"
+    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
 }
 
@@ -129,6 +127,6 @@ fi
 if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
-rm latest
+#rm latest
 $TEST
 
