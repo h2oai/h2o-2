@@ -36,7 +36,7 @@ def doKMeans(fs, folderPath):
             headerKey = h2i.find_key(hK)
             trainParseWallStart = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=3600)
+                timeoutSecs=4800,retryDelaySecs=5,pollTimeoutSecs=4800)
             parseWallTime = time.time() - trainParseWallStart
             #End Train File Parse#
             print "Parsing training file took ", parseWallTime ," seconds." 
@@ -62,7 +62,7 @@ def doKMeans(fs, folderPath):
                         }
             kwargs       = params.copy()
             kmeansStart  = time.time()
-            kmeans       = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=3600, **kwargs)
+            kmeans       = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=4800, **kwargs)
             kmeansTime   = time.time() - kmeansStart
             row.update({'kmeansBuildTime' : kmeansTime})
             csvWrt.writerow(row)
