@@ -15,7 +15,7 @@ def doKMeans(fs, folderPath):
     for f in fs['train']:
         overallWallStart = time.time()
         date = '-'.join([str(x) for x in list(time.localtime())][0:3])
-        kmeansbenchcsv = 'benchmarks/'+build+date+'/kmeansbench.csv'
+        kmeansbenchcsv = 'benchmarks/'+build+'/'+date+'/kmeansbench.csv'
         if not os.path.exists(kmeansbenchcsv):
             output = open(kmeansbenchcsv,'w')
             output.write(','.join(csv_header)+'\n')

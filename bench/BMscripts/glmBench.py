@@ -15,7 +15,7 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
     for f in fs['train']:
         overallWallStart = time.time()
         date = '-'.join([str(x) for x in list(time.localtime())][0:3])
-        glmbenchcsv = 'benchmarks'+build+date+'glmbench.csv'
+        glmbenchcsv = 'benchmarks/'+build+'/'+date+'glmbench.csv'
         if not os.path.exists(glmbenchcsv):
             output = open(glmbenchcsv,'w')
             output.write(','.join(csv_header)+'\n')
@@ -97,7 +97,12 @@ if __name__ == '__main__':
     h2o_hosts.build_cloud_with_hosts()
     #Test File parse
     airlinesTestParseStart      = time.time()
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex",timeoutSecs=3600,retryDelaySecs=5, pollTimeoutSecs=3600)
+    hK                          =  "AirlinesHeader.csv"
+    headerPathname              = "bench/Airlines" + "/" + hK
+    h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+    headerKey                   = h2i.find_key(hK)
+    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44,
+                                  timeoutSecs=3600,retryDelaySecs=5, pollTimeoutSecs=3600)
     elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
     
     row = {'testParseWallTime' : elapsedAirlinesTestParse}
@@ -106,7 +111,14 @@ if __name__ == '__main__':
 
     allBedroomsTestParseStart   = time.time()
     x = 'sumlevel,metro,Rent_Type,mcd,count1,count2,count3,count4,count5,count6,count7,count8,count9,count10,count11,count12,count13,count14,count15,count16,count17,count18,count19,count20,count21,count22,count23,count24,count25,count26,count27,count28,count29,count30,count31,count32,count33,count34,count35,count36,count37,count38,count39,count40,count41,count42,count43,count44,count45,count46,count47,count48,count49,count50,count51,count52,count53,count54,count55,count56,count57,count58,count59,count60,count61,count62,count63,count64,count65,count66,count67,count68,count69,count70,count71,count72,count73,count74,count75,count76,count77,count78,count79,count80,count81,count82,count83,count84,count85,count86,count87,count88,count89,count90,count91,count92,count93,count94,count95,count96,count97,count98,count99'
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBtest.hex",timeoutSecs=3600,retryDelaySecs=5, pollTimeoutSecs=3600)
+    hK                          =  "AllBedroomsHeader.csv"
+    headerPathname              = "bench/AllBedrooms" + "/" + hK
+    h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+    headerKey                   = h2i.find_key(hK)
+
+    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBtest.hex", header=1, header_from_file=headerKey, separator=44,
+                                  timeoutSecs=3600,retryDelaySecs=5, pollTimeoutSecs=3600)
+
     elapsedAllBedroomsTestParse = time.time() - allBedroomsTestParseStart
     
     row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
