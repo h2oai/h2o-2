@@ -5,8 +5,9 @@ set -e
 echo "Gets the latest h2o.jar (only + version file) from s3, using curl"
 
 # this can be master or a specific branch
-branch=master
+branch=${BRANCH_NAME:-master}
 # branch=gauss
+echo "using branch: $branch"
 
 d=`dirname $0`
 cd $d
