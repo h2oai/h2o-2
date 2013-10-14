@@ -42,17 +42,10 @@ public class Job extends Request2 {
 
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
 
-  public Key self() {
-    return job_key;
-  }
-
-  public Key dest() {
-    return destination_key;
-  }
-
-  @Override protected String name() {
-    return description;
-  }
+  // @formatter:off
+  public Key self() { return job_key; }
+  public Key dest() { return destination_key; }
+  // @formatter:on
 
   protected void logStart() {
     Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
@@ -91,16 +84,11 @@ public class Job extends Request2 {
     @API(help = "Input columns (Indexes start at 0)", filter = colsFilter.class, hide = true)
     public int[] cols;
     class colsFilter extends MultiVecSelect { colsFilter() { super("source"); } }
-    // @formatter:on
 
     @API(help = "Ignored columns by name", filter = colsFilter.class, displayName = "Ignored columns")
     public int[] ignored_cols_by_name;
-
-    class colsNamesFilter extends MultiVecSelect {
-      public colsNamesFilter() {
-        super("source", MultiVecSelectType.NAMES_ONLY);
-      }
-    }
+    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
+    // @formatter:on
 
     @Override protected void logStart() {
       super.logStart();
@@ -324,7 +312,6 @@ public class Job extends Request2 {
 
   public H2OCountedCompleter start() {
     init();
-    _fjtask = fork();
     DKV.put(job_key, new Value(job_key, new byte[0]));
     start_time = System.currentTimeMillis();
     new TAtomic<List>() {
@@ -337,7 +324,7 @@ public class Job extends Request2 {
         return old;
       }
     }.invoke(LIST);
-    return _fjtask;
+    return _fjtask = fork();
   }
 
   public void invoke() {
