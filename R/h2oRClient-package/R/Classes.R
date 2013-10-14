@@ -260,33 +260,53 @@ setMethod("summary", "H2OParsedData", function(object) {
   result
 })
 
+histograms <- function(object) {UseMethod("histograms", object)}
+setMethod("histograms", "H2OParsedData2", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
+  list.of.bins <- lapply(res$summaries, function(res) {
+    counts <- res$bins
+    breaks <- seq(res$start, by=res$binsz, length.out=length(bins))
+    cbind(bins,breaks)
+  })
+})
+
 setMethod("summary", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
   col.summaries = res$summaries
   col.names     = res$names
   col.means     = res$means
-  
+  col.results   = mapply(c, res$summaries, res$names, res$means, SIMPLIFY=FALSE)
+  for (i in 1:length(col.results))
+    names(col.results[[i]])[(length(col.results[[i]]) - 1) : length(col.results[[i]])] <- c('name', 'mean')
   result = NULL
-  for(i in 1:length(col.summaries)) {
-    if(is.null(col.summaries[[i]]$domains)) {
-      if(is.null(col.summaries[[i]]$mins) || length(col.summaries[[i]]$mins) == 0) col.summaries[[i]]$mins = NaN
-      if(is.null(col.summaries[[i]]$maxs) || length(col.summaries[[i]]$maxs) == 0) col.summaries[[i]]$maxs = NaN
-      if(is.null(col.summaries[[i]]$percentileValues))
+
+  result <- sapply(col.results, function(res) {
+    if(is.null(res$domains)) { # numeric column
+      if(is.null(res$mins) || length(res$mins) == 0) res$mins = NaN
+      if(is.null(res$maxs) || length(res$maxs) == 0) res$maxs = NaN
+      if(is.null(res$percentileValues))
         params = format(rep(round(as.numeric(col.means[[i]]), 3), 6), nsmall = 3)
       else
-        params = format(round(as.numeric(c(col.summaries[[i]]$mins[1], col.summaries[[i]]$percentileValues[4], col.summaries[[i]]$percentileValues[6], col.means[[i]], col.summaries[[i]]$percentileValues[8], tail(col.summaries[[i]]$maxs, 1) )), 3), nsmall = 3)
-      result = cbind(result, c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
-                               paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
-                               paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))                 
+        params = format(round(as.numeric(c(
+          res$mins[1],
+          res$percentileValues[4],
+          res$percentileValues[6],
+          res$mean,
+          res$percentileValues[8],
+          tail(res$maxs, 1))), 3), nsmall = 3)
+      result = c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
+                 paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
+                 paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")) 
     }
     else {
-      col = matrix(rep("", 6), ncol=1)
-      len = length(col.summaries[[i]]$domains)
-      for(j in 1:min(6,len))
-        col[j] = paste(col.summaries[[i]]$domains[len-j+1], ": ", col.summaries[[i]]$bins[len-j+1], sep="")
-      result = cbind(result, col)
+      col = vector(mode="character", 6)
+
+      for(j in 1:length(res$maxs))
+        col[j] = paste(res$domains[res$maxs[j] + 1], ": ", res$bins[res$maxs[j] + 1], sep="")
+      col
     }
-  }
+  })
+  
   result = as.table(result)
   rownames(result) <- rep("", 6)
   colnames(result) <- col.names

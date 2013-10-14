@@ -59,7 +59,10 @@ public class SummaryPage2 extends Request2 {
     }
     Frame fr = new Frame(names, vecs);
     summaries = new SummaryTask2().doAll(fr)._summaries;
-    for( Summary2 s2 : summaries ) s2.percentileValue(0);
+    for( Summary2 s2 : summaries ) {
+      s2.percentileValue(0);
+      s2.computeMajorities();
+    }
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 

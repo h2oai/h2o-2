@@ -139,6 +139,36 @@ public class Summary2 extends Iced {
       percentileValues[j] = mins[0] + k*binsz + ((binsz > 1)?0.5*binsz:0);
     }
   }
+  
+  // Compute majority categories for enums only
+  public void computeMajorities() {
+    if (!_enum) return;
+    for (int i = 0; i < mins.length; i++) mins[i] = i;
+    for (int i = 0; i < maxs.length; i++) maxs[i] = i;
+    int mini = 0, maxi = 0;
+    for( int i = 0; i < bins.length; i++ ) {
+      if (bins[i] < bins[(int)mins[mini]]) {
+        mins[mini] = i;
+        for (int j = 0; j < mins.length; j++) 
+          if (bins[(int)mins[j]] > bins[(int)mins[mini]]) mini = j;
+      }
+      if (bins[i] > bins[(int)maxs[maxi]]) {
+        maxs[maxi] = i;
+        for (int j = 0; j < maxs.length; j++) 
+          if (bins[(int)maxs[j]] < bins[(int)maxs[maxi]]) maxi = j;
+      }
+    }
+    for (int i = 0; i < mins.length - 1; i++)
+      for (int j = i; j < mins.length - 1; j++)
+        if (bins[(int)mins[j]] > bins[(int)mins[j+1]]) { 
+          double t = mins[j]; mins[j] = mins[j+1]; mins[j+1] = t;
+        }
+    for (int i = 0; i < maxs.length - 1; i++)
+      for (int j = i; j < maxs.length - 1; j++)
+        if (bins[(int)maxs[j]] > bins[(int)maxs[j+1]]) { 
+          double t = maxs[j]; maxs[j] = maxs[j+1]; maxs[j+1] = t;
+        }
+  }
 
   public double percentileValue(int idx) {
     if( _enum ) return Double.NaN;
