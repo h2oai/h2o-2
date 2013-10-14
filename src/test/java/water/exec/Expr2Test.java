@@ -28,6 +28,15 @@ public class Expr2Test extends TestUtil {
       checkStr("(1.23+h.hex)-h.hex");
       checkStr("min(h.hex,1+2)");
       checkStr("isNA(h.hex)");
+      checkStr("h.hex[2,3]");
+      checkStr("h.hex[2+3,-4*5]");
+      checkStr("h.hex[2+3,h.hex]");
+      checkStr("h.hex[2,]");
+      checkStr("h.hex[,3]");
+      checkStr("h.hex[ncols(h.hex),nrows(h.hex)]");
+      checkStr("h.hex[2,3]=4");
+      checkStr("h.hex[2,]=h.hex[7,]");
+      checkStr("h.hex[,2]=h.hex[,7]+1");
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key

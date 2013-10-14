@@ -140,13 +140,12 @@ public class Exec2 {
     final long _rows;
     AST( int cols, long rows ) { _cols=cols; _rows=rows; }
     static AST parseCXExpr(Exec2 E ) {
-      AST ast = parseExpr(E);
+      AST ast2, ast = parseExpr(E);
       if( ast == null ) return null;
       // Can find an infix op between expressions
-      AST ast2 = ASTOp2.parseInfix(E,ast); // Infix op, or not?
-      if( ast2 != null ) return ast2;
-      if( ast instanceof ASTKey && E.peek('=') ) { throw H2O.unimpl(); } // assignment
-      if( ast instanceof ASTKey && E.peek('[') ) { throw H2O.unimpl(); } // subset assignment
+      if( (ast2 = ASTOp2.parseInfix(E,ast)) != null ) return ast2;
+      // Can find '=' between expressions
+      if( (ast2 = ASTAssign.parse  (E,ast)) != null ) return ast2;
       if( ast.isScalar() && E.peek('?') ) { throw H2O.unimpl(); } // infix trinary
       return ast;
     }
@@ -161,17 +160,24 @@ public class Exec2 {
       if( (ast = ASTOp2.parsePrefix(E)) != null ) return ast;
       return null;
     }
-    protected void indent( StringBuilder sb, int d ) { 
+    protected StringBuilder indent( StringBuilder sb, int d ) { 
       for( int i=0; i<d; i++ ) sb.append("  "); 
       sb.append(_rows).append('x').append(_cols).append(' ');
+      return sb;
     }
     boolean isScalar() { return _cols==1 && _rows==1; }
-    public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
+    public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
   }
 
+  // --------------------------------------------------------------------------
   static private class ASTKey extends AST {
     final Key _key;
-    ASTKey( int cols, long rows, Key key) { super(cols,rows); _key=key; }
+    final AST _colsel, _rowsel; // Row-selection, Col-selection
+    ASTKey( int cols, long rows, Key key, AST colsel, AST rowsel ) { 
+      super(cols,rows); 
+      _key=key;
+      _colsel = colsel;  _rowsel = rowsel;
+    }
     // Parse a valid H2O Frame Key, or return null;
     static ASTKey parse(Exec2 E) { 
       int x = E._x;
@@ -181,14 +187,61 @@ public class Exec2 {
       Iced ice = UKV.get(key);
       if( ice==null || !(ice instanceof Frame) ) { E._x = x; return null; }
       Frame fr = (Frame)ice;
-      return new ASTKey(fr.numCols(),fr.numRows(),key);
+      AST rows=null, cols=null;
+      if( E.peek('[') ) {       // Subsets?
+        rows= E.xpeek(',',(x=E._x),parseCXExpr(E));
+        if( rows != null && rows._cols != 1 ) E.throwErr("Row select only a single column only",x);
+        cols= E.xpeek(']',(x=E._x),parseCXExpr(E));
+        if( cols != null && cols._cols != 1 ) E.throwErr("Col select only a single column only",x);
+      } 
+      return new ASTKey(cols==null?fr.numCols():(int)cols._rows,
+                        rows==null?fr.numRows():     rows._rows,
+                        key,cols,rows);
     }
     @Override public String toString() { return _key.toString(); }
-    @Override public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+      indent(sb,d).append(this);
+      if( _colsel != null || _rowsel != null ) {
+        sb.append("[,]\n");
+        if( _rowsel == null ) indent(sb,d+1).append("all rows\n");
+        else _rowsel.toString(sb,d+1).append('\n');
+        if( _colsel == null ) indent(sb,d+1).append("all cols");
+        else _colsel.toString(sb,d+1);
+      }
+      return sb;
+    }
   }
 
+  // --------------------------------------------------------------------------
+  static private class ASTAssign extends AST {
+    final ASTKey _key;
+    final AST _eval;
+    ASTAssign( ASTKey key, AST eval ) { 
+      super(key._cols,key._rows);
+      _key=key; _eval=eval;
+    }
+    // Parse a valid H2O Frame Key, or return null;
+    static ASTAssign parse(Exec2 E, AST ast) { 
+      if( !(ast instanceof ASTKey) ) return null;
+      if( !E.peek('=') ) return null;
+      int x = E._x;
+      AST eval = parseCXExpr(E);
+      E.throwIfNotCompat(ast,eval,x);
+      return new ASTAssign((ASTKey)ast,eval);
+    }
+    @Override public String toString() { return "="; }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+      indent(sb,d).append(this).append('\n');
+      _key.toString(sb,d+1).append('\n');
+      _eval.toString(sb,d+1);
+      return sb;
+    }
+  }
+
+  // --------------------------------------------------------------------------
   static private class ASTNum extends AST {
     static final NumberFormat NF = NumberFormat.getInstance();
+    static { NF.setGroupingUsed(false); }
     final double _d;
     ASTNum(double d ) { super(1,1); _d=d; }
     // Parse a number, or throw a parse error
@@ -202,27 +255,32 @@ public class Exec2 {
       return new ASTNum(d);
     }
     @Override public String toString() { return Double.toString(_d); }
-    @Override public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
   }
 
+  // --------------------------------------------------------------------------
   abstract static private class ASTOp1 extends AST {
     static final HashMap<String,ASTOp1> OP1S = new HashMap();
     static {
       put(new ASTIsNA());
       put(new ASTSgn());
+      put(new ASTNrows());
+      put(new ASTNcols());
     }
     static private void put(ASTOp1 ast) { OP1S.put(ast.opStr(),ast); }
     final AST _left;
-    ASTOp1( ) { super(-1,-1); _left=null; }
-    ASTOp1( AST left ) { 
-      super(left._cols,left._rows);
-      _left = left;
+    final boolean _isReduce;    // Returns a scalar
+    ASTOp1( ) { super(-1,-1); _left=null; _isReduce=false;}
+    ASTOp1( AST left, boolean isReduce ) { 
+      super(isReduce ? 1 : left._cols,
+            isReduce ? 1 : left._rows);
+      _left = left;  _isReduce = isReduce;
     }
     abstract String opStr();
     abstract ASTOp1 make(AST left);
     @Override public String toString() { return opStr(); }
     @Override public StringBuilder toString( StringBuilder sb, int d ) { 
-      indent(sb,d); sb.append(this).append('\n');
+      indent(sb,d).append(this).append('\n');
       _left.toString(sb,d+1);
       return sb;
     }
@@ -245,17 +303,30 @@ public class Exec2 {
   static private class ASTIsNA extends ASTOp1 {
     @Override String opStr() { return "isNA"; }
     ASTIsNA( ) { super(); }
-    ASTIsNA( AST left ) { super(left); }
+    ASTIsNA( AST left ) { super(left,false); }
     @Override ASTOp1 make( AST left ) { return new ASTIsNA(left); }
   }
   static private class ASTSgn extends ASTOp1 {
     @Override String opStr() { return "Sgn"; }
     ASTSgn( ) { super(); }
-    ASTSgn( AST left ) { super(left); }
+    ASTSgn( AST left ) { super(left,false); }
     @Override ASTOp1 make( AST left ) { return new ASTSgn(left); }
+  }
+  static private class ASTNrows extends ASTOp1 {
+    @Override String opStr() { return "nrows"; }
+    ASTNrows( ) { super(); }
+    ASTNrows( AST left ) { super(left,true); }
+    @Override ASTOp1 make( AST left ) { return new ASTNrows(left); }
+  }
+  static private class ASTNcols extends ASTOp1 {
+    @Override String opStr() { return "ncols"; }
+    ASTNcols( ) { super(); }
+    ASTNcols( AST left ) { super(left,true); }
+    @Override ASTOp1 make( AST left ) { return new ASTNcols(left); }
   }
 
 
+  // --------------------------------------------------------------------------
   abstract static private class ASTOp2 extends AST {
     static final HashMap<String,ASTOp2> OP2S = new HashMap();
     static {
@@ -291,7 +362,7 @@ public class Exec2 {
 
     @Override public String toString() { return opStr(); }
     @Override public StringBuilder toString( StringBuilder sb, int d ) { 
-      indent(sb,d); sb.append(this).append('\n');
+      indent(sb,d).append(this).append('\n');
       _left.toString(sb,d+1).append('\n');
       _rite.toString(sb,d+1);
       return sb;
@@ -355,6 +426,7 @@ public class Exec2 {
     @Override ASTOp2 make( AST left, AST rite ) { return new ASTMin(left,rite); }
   }
 
+  // --------------------------------------------------------------------------
   private boolean throwIfNotCompat(AST l, AST r, int idx ) {
     assert l._rows != -1 && r._rows != -1 && l._cols != -1 && r._cols != -1;
     if( !(l._rows==1 || r._rows==1 || l._rows==r._rows) )  throwErr("Frames not compatible: ",idx);
