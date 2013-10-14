@@ -128,12 +128,18 @@ public class NewChunk extends Chunk {
           byte [] bs = MemoryManager.malloc1(_len);
           for(int i = 0; i < _len; ++i) bs[i] = (byte)(_xs[i] >= 0 ? (0xFF&_xs[i]) : C1Chunk._NA);
           return new C1Chunk(bs);
-        } else if( sz < 65535 ) { // 2 bytes
-          byte [] bs = MemoryManager.malloc1(_len << 1);
-          int bias = sz < 32767 ? 0 : -(Short.MIN_VALUE+1);
-          for(int i = 0; i < _len; ++i)
-            UDP.set2(bs, i << 1, (short)((_xs[i] >= 0)? _xs[i]-bias : C2Chunk._NA));
-          return sz < 32767 ? new C2Chunk(bs) : new C2SChunk(bs,bias,1);
+        } else if( sz <= 65535 ) { // 2 bytes
+          int bias = 0, off = 0;
+          if(sz >= 32767){
+            bias = 32768;
+            off = C2SChunk.OFF;
+          }
+          byte [] bs = MemoryManager.malloc1((_len << 1) + off);
+          for(int i = 0; i < _len; ++i){
+            if(_xs[i] >= 0) assert (short)(_xs[i]-bias) == (_xs[i]-bias);
+            UDP.set2(bs, off + (i << 1), (short)((_xs[i] > 0)? _xs[i]-bias : C2Chunk._NA));
+          }
+          return bias == 0 ? new C2Chunk(bs) : new C2SChunk(bs,bias,1);
         } else throw H2O.unimpl();
       }
     }
@@ -149,8 +155,10 @@ public class NewChunk extends Chunk {
     // Look at the min & max & scaling.  See if we can sanely normalize the
     // data in some fixed-point format.
     boolean first = true;
+    boolean hasNA = false;
+
     for( int i=0; i<_len; i++ ) {
-      if( isNA(i) ) continue;
+      if( isNA(i) ) { hasNA = true; continue;}
       long l = _ls[i];
       int  x = _xs[i];
       // Compute per-chunk min/sum/max
@@ -182,11 +190,10 @@ public class NewChunk extends Chunk {
     }
 
     // Constant column?
-    if( _min==_max ) {
+    if(!hasNA && _min==_max ) {
       return ((long)_min  == _min)
           ?new C0LChunk((long)_min,_len)
           :new C0DChunk(_min, _len);
-
     }
 
     // Boolean column? (or in general two value column)
@@ -352,13 +359,13 @@ public class NewChunk extends Chunk {
     _naCnt++;
     return true;
   }
-  @Override public long   at8_impl( int i ) { 
+  @Override public long   at8_impl( int i ) {
     if( _ls == null ) return (long)_ds[i];
-    return _ls[i]*DParseTask.pow10i(_xs[i]); 
+    return _ls[i]*DParseTask.pow10i(_xs[i]);
   }
-  @Override public double atd_impl( int i ) { 
+  @Override public double atd_impl( int i ) {
     if( _ds == null ) return at8_impl(i);
-    assert _xs==null; return _ds[i]; 
+    assert _xs==null; return _ds[i];
   }
   @Override public boolean isNA_impl( int i ) { return isNA(i); }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }
