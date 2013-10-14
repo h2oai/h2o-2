@@ -16,6 +16,14 @@ import requests, zipfile, StringIO
 from subprocess import Popen, PIPE
 import stat
 
+class OutWrapper:
+    def __init__(self, out):
+        self._out = out
+    def write(self, x):
+        self._out.write(x.replace('\n', '\n[{0}] '.format(str(datetime.datetime.now()))))
+    def flush(self):
+        self._out.flush()
+
 def check_params_update_kwargs(params_dict, kw, function, print_params):
     # only update params_dict..don't add
     # throw away anything else as it should come from the model (propagating what RF used)
@@ -517,6 +525,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # (both come thru here)
     # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
+    sys.stdout = OutWrapper(sys.stdout)
     if clone_cloud_json or clone_cloud:
         nodeList = build_cloud_with_json(
             h2o_nodes_json=clone_cloud_json if clone_cloud_json else clone_cloud)

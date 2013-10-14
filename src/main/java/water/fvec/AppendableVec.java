@@ -34,7 +34,6 @@ public class AppendableVec extends Vec {
     assert key != null;
     _espc = new long[4];
     _chunkTypes = new byte[4];
-    DKV.put(key,this);
   }
 
 
@@ -52,7 +51,6 @@ public class AppendableVec extends Vec {
     _missingCnt += chk._naCnt;
     _strCnt += chk._strCnt;
     _totalCnt += chk._len;
-    UKV.put(_key,this);
   }
 
   // What kind of data did we find?  NA's?  Strings-only?  Floats or Ints?
@@ -126,20 +124,28 @@ public class AppendableVec extends Vec {
   }
 
   // Default read/write behavior for AppendableVecs
+  @Override
   public boolean readable() { return false; }
+  @Override
   public boolean writable() { return true ; }
 
   @Override public Chunk elem2BV( int cidx ) { return new NewChunk(this,cidx); }
 
   // None of these are supposed to be called while building the new vector
+  @Override
   public Value chunkIdx( int cidx ) { throw H2O.fail(); }
+  @Override
   public long length() { throw H2O.fail(); }
+  @Override
   public int nChunks() { throw H2O.fail(); }
+  @Override
   int elem2ChunkIdx( long i ) { throw H2O.fail(); }
+  @Override
   public long chunk2StartElem( int cidx ) { throw H2O.fail(); }
   public long   get ( long i ) { throw H2O.fail(); }
   public double getd( long i ) { throw H2O.fail(); }
 
+  @Override
   public long byteSize() { return 0; }
   @Override public String toString() { return "[AppendableVec, unknown size]"; }
 }

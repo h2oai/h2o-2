@@ -36,18 +36,19 @@
             %HELP
             startPrompt();
           } else if( input ) {
-            $.get('Exec',
-              { expression: input, destination_key : 'Result_'+(resultNumber++)+'.hex', escape_nan : true },
-              function (data, status, jqXHR) {
+            $.get('Exec2',
+              // name 'str' matches the Java field name 'water/api/Exec2.str'
+              { str: input },
+              function (data) {
                 if( data.error ) {
                   jqconsole.Write(data.error, 'jqconsole-error');
-                } else if( data.type == 'parsed' ) {
-                  var res = $('<a href="Inspect.html?key='+data.key+'" target="_blank"/>');
+                } else if( data.cols ) {
+                  var res = $('<a href="Inspect2.html?src_key='+data.key+'" target="_blank"/>');
                   res.append(data.key);
                   jqconsole.Append(res);
                   jqconsole.Write(': ');
                   if( data.num_rows == 1 && data.num_cols == 1 ) {
-                    jqconsole.Write(data.rows[0][0], 'jqconsole-output');
+                    jqconsole.Write(data.scalar, 'jqconsole-output');
                   } else if( data.num_cols == 1 ) {
                     var msg = formatColumn(data.cols[0], data.num_rows)
                     jqconsole.Write(msg, 'jqconsole-output');
