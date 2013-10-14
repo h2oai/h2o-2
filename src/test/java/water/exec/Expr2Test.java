@@ -24,6 +24,8 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex");
       checkStr("h.hex+1");
       checkStr("h.hex-h.hex");
+      checkStr("1.23+(h.hex-h.hex)");
+      checkStr("(1.23+h.hex)-h.hex");
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
