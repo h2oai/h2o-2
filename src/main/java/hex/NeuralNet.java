@@ -7,13 +7,10 @@ import hex.Layer.Output;
 import hex.Layer.Softmax;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-
-import java.util.ArrayList;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
-import water.Job.ModelJob;
+import water.Job.ResponseJob;
 import water.Job.ValidatedJob;
 import water.api.*;
 import water.api.Request.API;
@@ -255,48 +252,33 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   public static class NeuralNetTrain extends ValidatedJob {
-    private NeuralNet _model = new NeuralNet();
-
     public NeuralNetTrain() {
       description = DOC_GET;
-    }
-
-    @Override protected ArrayList<Class> getClasses() {
-      ArrayList<Class> classes = super.getClasses();
-      classes.add(0, NeuralNet.class);
-      return classes;
-    }
-
-    @Override protected Object getTarget() {
-      return _model;
+      _model = new NeuralNet();
     }
 
     @Override protected H2OCountedCompleter fork() {
-      _model._selfKey = destination_key;
-      _model._dataKey = Key.make(input("source"));
-      _model._names = source.names();
-      _model._domains = source.domains();
-
       Vec[] vecs = _filteredSource.vecs().clone();
       reChunk(vecs);
-      _model._train = new Vec[vecs.length - 1];
-      System.arraycopy(vecs, 0, _model._train, 0, _model._train.length);
-      _model._trainResp = vecs[vecs.length - 1];
+      NeuralNet nn = (NeuralNet) _model;
+      nn._train = new Vec[vecs.length - 1];
+      System.arraycopy(vecs, 0, nn._train, 0, nn._train.length);
+      nn._trainResp = vecs[vecs.length - 1];
       if( _filteredValidation == null ) {
-        _model._valid = _model._train;
-        _model._validResp = _model._trainResp;
+        nn._valid = nn._train;
+        nn._validResp = nn._trainResp;
       } else {
         vecs = _filteredValidation.vecs();
-        _model._valid = new Vec[vecs.length - 1];
-        System.arraycopy(vecs, 0, _model._valid, 0, _model._valid.length);
-        _model._validResp = vecs[vecs.length - 1];
+        nn._valid = new Vec[vecs.length - 1];
+        System.arraycopy(vecs, 0, nn._valid, 0, nn._valid.length);
+        nn._validResp = vecs[vecs.length - 1];
       }
       if( classification ) {
-        _model._trainResp.asEnum();
-        _model._validResp.asEnum();
+        nn._trainResp.asEnum();
+        nn._validResp.asEnum();
       }
-      UKV.put(destination_key, _model);
-      _model.startTrain(this);
+      UKV.put(destination_key, nn);
+      nn.startTrain(this);
       return new H2OEmptyCompleter();
     }
 
@@ -373,7 +355,7 @@ public class NeuralNet extends Model implements water.Job.Progress {
     }
   }
 
-  public static class NeuralNetScore extends ModelJob {
+  public static class NeuralNetScore extends ResponseJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     static final String DOC_GET = "Neural network scoring";

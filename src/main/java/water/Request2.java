@@ -64,7 +64,9 @@ public abstract class Request2 extends Request {
     }
 
     @Override protected String[] errors() {
-      return new String[] { "Key is not a " + _type.getSimpleName() };
+      if( _type != null )
+        return new String[] { "Key is not a " + _type.getSimpleName() };
+      return super.errors();
     }
   }
 

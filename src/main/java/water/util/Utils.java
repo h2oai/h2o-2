@@ -5,6 +5,7 @@ import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
@@ -359,6 +360,13 @@ public class Utils {
 
   public static String[] append(String[] a, String[] b) {
     String[] res = new String[a.length + b.length];
+    System.arraycopy(a, 0, res, 0, a.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static <T> T[] append(T[] a, T[] b) {
+    T[] res = (T[]) Array.newInstance(a.getClass().getComponentType(), a.length + b.length);
     System.arraycopy(a, 0, res, 0, a.length);
     System.arraycopy(b, 0, res, a.length, b.length);
     return res;

@@ -43,7 +43,7 @@ public abstract class DocGen {
     createFile("GBM.rst", new GBM().ReSTHelp());
     createFile("DRF2.rst", new DRF().ReSTHelp());
     createFile("GLM2.rst", new GLM2().ReSTHelp());
-    createFile("KMeans2.rst", new KMeans2().ReSTHelp());
+    createFile("KMeans2.rst", new KMeans2.KMeans2Train().ReSTHelp());
   }
 
   public static void main(String[] args) throws Exception {
@@ -66,7 +66,6 @@ public abstract class DocGen {
     final int _since, _until; // Min/Max supported-version numbers
     final Class _clazz; // Java type: subtypes of Argument are inputs, otherwise outputs
     final boolean _input, _required;
-    RequestArguments.Argument _arg; // Lazily filled in, as docs are asked for.
     public FieldDoc( String name, String help, int min, int max, Class C, boolean input, boolean required ) {
       _name = name; _help = help; _since = min; _until = max; _clazz = C; _input = input; _required = required;
     }
@@ -83,28 +82,6 @@ public abstract class DocGen {
       return _input;
     }
     public final boolean isJSON() { return !isInput(); }
-
-    // Specific accessors for input arguments.  Not valid for JSON output fields.
-    private RequestArguments.Argument arg(Request R) {
-      if( _arg != null ) return _arg;
-      Class clzz = R.getClass();
-      // An amazing crazy API from the JDK again.  Cannot search for protected
-      // fields without either (1) throwing NoSuchFieldException if you ask in
-      // a subclass, or (2) sorting through the list of ALL fields and EACH
-      // level of the hierarchy.  Sadly, I catch NSFE & loop.
-      while( true ) {
-        try {
-          Field field = clzz.getDeclaredField(_name);
-          field.setAccessible(true);
-          Object o = field.get(R);
-          return _arg=((RequestArguments.Argument)o);
-        }
-        catch(   NoSuchFieldException ie ) { clzz = clzz.getSuperclass(); }
-        catch( IllegalAccessException ie ) { break; }
-        catch( ClassCastException ie ) { break; }
-      }
-      return null;
-    }
   }
 
   // --------------------------------------------------------------------------
@@ -151,7 +128,7 @@ public abstract class DocGen {
     listHead(sb);
     for( FieldDoc doc : docs ) {
       if( doc.isInput() ) {
-        Argument arg = doc.arg(R); // Legacy
+        Argument arg = R.arg(doc._name); // Legacy
         String help = doc._help;
         boolean required = doc._required;
         String[] errors = null;
@@ -279,16 +256,16 @@ public abstract class DocGen {
     public String escape2(String s) {
       int len=s.length();
       String ss = "";
-      for( int i=0; i<len; i++ ) { 
+      for( int i=0; i<len; i++ ) {
         char c = s.charAt(i);
-        if( false ) ; 
+        if( false ) ;
         else if( c=='<' ) ss += "&lt;";//sb.setCharAt(i, "&lt;");
         else if( c=='>' ) ss += "&gt;";//sb.setCharAt(i, "&gt;");
         else if( c=='&' ) ss += "&amp;";//sb.setCharAt(i, "&amp;");
         else if( c=='"' ) ss += "&quot;";//sb.setCharAt(i, "&quot;");
         else ss += c;//sb.setCharAt(i, c);
-      }   
-      return ss;//sb.toString(); 
+      }
+      return ss;//sb.toString();
     }
     @Override public StringBuilder bodyHead( StringBuilder sb ) {
       return sb.append("<div class='container'>"+

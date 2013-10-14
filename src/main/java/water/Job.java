@@ -1,13 +1,13 @@
 package water;
 
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
 
 import org.apache.commons.lang.ArrayUtils;
 
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.api.*;
+import water.api.DocGen.FieldDoc;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
@@ -141,6 +141,44 @@ public class Job extends Request2 {
   }
 
   public static abstract class ModelJob extends ColumnsJob {
+    public Model _model;
+
+    @Override protected ArrayList<Class> getClasses() {
+      ArrayList<Class> classes = super.getClasses();
+      if( _model != null )
+        classes.add(0, _model.getClass());
+      return classes;
+    }
+
+    @Override protected Object getTarget() {
+      if( _model != null )
+        return _model;
+      return super.getTarget();
+    }
+
+    @Override protected void init() {
+      super.init();
+      if( _model != null ) {
+        _model._selfKey = destination_key;
+        _model._dataKey = Key.make(input("source"));
+        _model._names = source.names();
+        _model._domains = source.domains();
+      }
+    }
+
+    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
+      super.writeJSONFields(bb);
+      _model.writeJSONFields(bb);
+      return bb;
+    }
+
+    @Override public FieldDoc[] toDocField() {
+      FieldDoc[] fs = super.toDocField();
+      return Utils.append(fs, _model.toDocField());
+    }
+  }
+
+  public static abstract class ResponseJob extends ModelJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
@@ -188,7 +226,7 @@ public class Job extends Request2 {
     }
   }
 
-  public static abstract class ValidatedJob extends ModelJob {
+  public static abstract class ValidatedJob extends ResponseJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
@@ -339,8 +377,8 @@ public class Job extends Request2 {
   }
 
   /**
-   * Default behavior is to call exec() in a F/J task. Override to run in a non-blocking mode,
-   * making sure you call remove() when done.
+   * Default behavior is to call exec() in a F/J task. Override to run non-blocking, making sure you
+   * call remove() when done.
    */
   protected H2OCountedCompleter fork() {
     H2OCountedCompleter task = new H2OCountedCompleter() {
