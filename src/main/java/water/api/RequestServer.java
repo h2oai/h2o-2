@@ -6,6 +6,7 @@ import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
 import hex.glm.*;
+import hex.pca.*;
 
 import java.io.*;
 import java.net.ServerSocket;

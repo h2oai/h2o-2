@@ -98,5 +98,6 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
     do_file(TestUtil.find_test_file(root));
 //    do_file(TestUtil.find_test_file("smalldata/categoricals/40k_categoricals.csv.gz"));
     System.out.println("DONE!!!");
+    System.exit(0);
   }
 }

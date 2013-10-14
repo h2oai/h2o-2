@@ -4,6 +4,7 @@ import java.util.*;
 
 import hex.*;
 import hex.DPCA.*;
+import hex.pca.*;
 import hex.NewRowVecTask.DataFrame;
 import water.*;
 import water.util.Log;
