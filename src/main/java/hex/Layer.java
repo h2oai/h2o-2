@@ -198,7 +198,7 @@ public abstract class Layer extends Iced {
     static int categories(Vec vec) {
       if( vec.domain() == null )
         return 1;
-      return (int) (vec.max() - vec.min()) - 1;
+      return (int) (vec.max() - vec.min());
     }
 
     static int expand(Vec[] vecs) {
@@ -309,7 +309,7 @@ public abstract class Layer extends Iced {
           int cat = VecsInput.categories(chunks[i]._vec);
           for( int c = 0; c < cat; c++ )
             a[n + c] = -subs[n + c];
-          int c = (int) chunks[i]._vec.min() + (int) d - 1;
+          int c = (int) d - (int) chunks[i]._vec.min() - 1;
           if( c >= 0 )
             a[n + c] = (1 - subs[n + c]) * muls[n + c];
           n += cat;
