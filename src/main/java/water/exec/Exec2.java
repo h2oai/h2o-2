@@ -6,7 +6,7 @@ import java.text.*;
 import java.util.HashMap;
 
 /** Execute a generic R string, in the context of an H2O Cloud
- * @author cliffc@0xdata.com
+ *  @author cliffc@0xdata.com
  */
 public class Exec2 {
   // Parse a string, execute it & return a Frame.
@@ -88,6 +88,11 @@ public class Exec2 {
     _x++;
     return true;
   }
+  // Same as peek, but throw if char not found  
+  private AST xpeek(char c, int x, AST ast) {
+    if( !peek(c) ) throwErr("Missing close-paren",x);
+    return ast;
+  }
 
   // Return an ID string, or null if we get weird stuff or numbers.
   // Valid IDs: + ++ <= > ! [ ] joe123 ABC 
@@ -136,6 +141,7 @@ public class Exec2 {
     AST( int cols, long rows ) { _cols=cols; _rows=rows; }
     static AST parseCXExpr(Exec2 E ) {
       AST ast = parseExpr(E);
+      if( ast == null ) return null;
       // Can find an infix op between expressions
       AST ast2 = ASTOp2.parseInfix(E,ast); // Infix op, or not?
       if( ast2 != null ) return ast2;
@@ -148,17 +154,11 @@ public class Exec2 {
     static AST parseExpr(Exec2 E ) {
       AST ast;
       // Simple paren expression
-      if( E.peek('(') ) { 
-        int x = E._x;
-        ast = parseCXExpr(E);
-        if( !E.peek(')') ) E.throwErr("Missing close-paren",x);
-        return ast;
-      }
-
-      ast = ASTKey.parse(E);
-      if( ast != null ) return ast;
-      ast = ASTNum.parse(E);  // Number parse either throws or valid returns
-      if( ast != null ) return ast;
+      if( E.peek('(') )  return E.xpeek(')',E._x,parseCXExpr(E));
+      if( (ast = ASTKey.parse(E)) != null ) return ast;
+      if( (ast = ASTNum.parse(E)) != null ) return ast;
+      if( (ast = ASTOp1.parsePrefix(E)) != null ) return ast;
+      if( (ast = ASTOp2.parsePrefix(E)) != null ) return ast;
       return null;
     }
     protected void indent( StringBuilder sb, int d ) { 
@@ -168,6 +168,7 @@ public class Exec2 {
     boolean isScalar() { return _cols==1 && _rows==1; }
     public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
   }
+
   static private class ASTKey extends AST {
     final Key _key;
     ASTKey( int cols, long rows, Key key) { super(cols,rows); _key=key; }
@@ -185,6 +186,7 @@ public class Exec2 {
     @Override public String toString() { return _key.toString(); }
     @Override public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
   }
+
   static private class ASTNum extends AST {
     static final NumberFormat NF = NumberFormat.getInstance();
     final double _d;
@@ -193,7 +195,7 @@ public class Exec2 {
     static ASTNum parse(Exec2 E) { 
       ParsePosition pp = new ParsePosition(E._x);
       Number N = NF.parse(E._str,pp);
-      if( pp.getIndex()==E._x ) E.throwErr("Number parse",pp.getErrorIndex());
+      if( pp.getIndex()==E._x ) return null;
       assert N instanceof Double || N instanceof Long;
       E._x = pp.getIndex();
       double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
@@ -203,11 +205,65 @@ public class Exec2 {
     @Override public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
   }
 
+  abstract static private class ASTOp1 extends AST {
+    static final HashMap<String,ASTOp1> OP1S = new HashMap();
+    static {
+      put(new ASTIsNA());
+      put(new ASTSgn());
+    }
+    static private void put(ASTOp1 ast) { OP1S.put(ast.opStr(),ast); }
+    final AST _left;
+    ASTOp1( ) { super(-1,-1); _left=null; }
+    ASTOp1( AST left ) { 
+      super(left._cols,left._rows);
+      _left = left;
+    }
+    abstract String opStr();
+    abstract ASTOp1 make(AST left);
+    @Override public String toString() { return opStr(); }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+      indent(sb,d); sb.append(this).append('\n');
+      _left.toString(sb,d+1);
+      return sb;
+    }
+
+    // Parse an prefix operator
+    static AST parsePrefix(Exec2 E) { 
+      int x = E._x;
+      String id = E.isID();
+      if( id == null ) return null;
+      ASTOp1 op1 = OP1S.get(id);
+      if( op1==null ) {         // No ops match
+        E._x = x;               // Roll back, no parse happened
+        return null;
+      }
+      E.xpeek('(',x,null);  
+      return E.xpeek(')',E._x,op1.make(parseCXExpr(E)));
+    }
+  }
+
+  static private class ASTIsNA extends ASTOp1 {
+    @Override String opStr() { return "isNA"; }
+    ASTIsNA( ) { super(); }
+    ASTIsNA( AST left ) { super(left); }
+    @Override ASTOp1 make( AST left ) { return new ASTIsNA(left); }
+  }
+  static private class ASTSgn extends ASTOp1 {
+    @Override String opStr() { return "Sgn"; }
+    ASTSgn( ) { super(); }
+    ASTSgn( AST left ) { super(left); }
+    @Override ASTOp1 make( AST left ) { return new ASTSgn(left); }
+  }
+
+
   abstract static private class ASTOp2 extends AST {
     static final HashMap<String,ASTOp2> OP2S = new HashMap();
     static {
       put(new ASTPlus());
       put(new ASTSub());
+      put(new ASTMul());
+      put(new ASTDiv());
+      put(new ASTMin());
     }
     static private void put(ASTOp2 ast) { OP2S.put(ast.opStr(),ast); }
     final AST _left, _rite;
@@ -226,6 +282,13 @@ public class Exec2 {
     }
     abstract String opStr();
     abstract ASTOp2 make(AST left, AST rite);
+    ASTOp2 parseRite(AST left,Exec2 E) {
+      int x = E._x;
+      AST rite = parseCXExpr(E);
+      E.throwIfNotCompat(left,rite,x);
+      return make(left,rite);
+    }
+
     @Override public String toString() { return opStr(); }
     @Override public StringBuilder toString( StringBuilder sb, int d ) { 
       indent(sb,d); sb.append(this).append('\n');
@@ -234,20 +297,30 @@ public class Exec2 {
       return sb;
     }
 
-    // Parse an infix operator, or return the original AST
+    // Parse an infix operator
     static AST parseInfix(Exec2 E, AST ast) { 
       int x = E._x;
       String id = E.isID();
-      if( id == null ) return ast;
+      if( id == null ) return null;
       ASTOp2 op2 = OP2S.get(id);
       if( op2==null ) {         // No ops match
         E._x = x;               // Roll back, no parse happened
-        return ast; 
+        return null;
       }
-      // Parsed an Op2 - so now parse right side of infix
-      AST rite = parseCXExpr(E);
-      E.throwIfNotCompat(ast,rite,x);
-      return op2.make(ast,rite);
+      return op2.parseRite(ast,E); // Parsed an Op2 - so now parse right side of infix
+    }
+    static AST parsePrefix(Exec2 E) { 
+      int x = E._x;
+      String id = E.isID();
+      if( id == null ) return null;
+      ASTOp2 op2 = OP2S.get(id);
+      if( op2==null ) {         // No ops match
+        E._x = x;               // Roll back, no parse happened
+        return null;
+      }
+      E.xpeek('(',x,null);  
+      AST left = E.xpeek(',',E._x,parseCXExpr(E));
+      return     E.xpeek(')',E._x,op2.parseRite(left,E));
     }
   }
 
@@ -262,6 +335,24 @@ public class Exec2 {
     ASTSub( ) { super(); }
     ASTSub( AST left, AST rite ) { super(left,rite); }
     @Override ASTOp2 make( AST left, AST rite ) { return new ASTSub(left,rite); }
+  }
+  static private class ASTMul extends ASTOp2 {
+    @Override String opStr() { return "*"; }
+    ASTMul( ) { super(); }
+    ASTMul( AST left, AST rite ) { super(left,rite); }
+    @Override ASTOp2 make( AST left, AST rite ) { return new ASTMul(left,rite); }
+  }
+  static private class ASTDiv extends ASTOp2 {
+    @Override String opStr() { return "/"; }
+    ASTDiv( ) { super(); }
+    ASTDiv( AST left, AST rite ) { super(left,rite); }
+    @Override ASTOp2 make( AST left, AST rite ) { return new ASTDiv(left,rite); }
+  }
+  static private class ASTMin extends ASTOp2 {
+    @Override String opStr() { return "min"; }
+    ASTMin( ) { super(); }
+    ASTMin( AST left, AST rite ) { super(left,rite); }
+    @Override ASTOp2 make( AST left, AST rite ) { return new ASTMin(left,rite); }
   }
 
   private boolean throwIfNotCompat(AST l, AST r, int idx ) {
