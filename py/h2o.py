@@ -2238,8 +2238,11 @@ class LocalH2O(H2O):
         else:
             logPrefix = 'local-h2o'
 
-        spawn = spawn_cmd(logPrefix, cmd=self.get_args(), capture_output=self.capture_output)
-        self.ps = spawn[0]
+        p = self.skipCloudBuildIfDebugging()
+        if p is None:
+            spawn = spawn_cmd(logPrefix, cmd=self.get_args(), capture_output=self.capture_output)
+            p = spawn[0]
+        self.ps = p
 
     def get_h2o_jar(self):
         return find_file('target/h2o.jar')
@@ -2283,6 +2286,20 @@ class LocalH2O(H2O):
 
     def stack_dump(self):
         self.ps.send_signal(signal.SIGQUIT)
+
+    def skipCloudBuildIfDebugging(self):
+        for s in sys.path:
+            if 'eclipse/plugins/org.python.pydev' in s:
+                for p in psutil.get_process_list():
+                    if p.name == 'java':
+                        for c in p.get_connections():
+                            l= c.local_address
+                            if l[1] == 54321:
+                                global browse_disable
+                                browse_disable = True
+                                return p
+                raise 'Cannot find debug cloud'
+        return None
 
 #*****************************************************************
 class RemoteHost(object):
