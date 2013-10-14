@@ -13,6 +13,27 @@
 # $ make
 #
 
+###########################################################################
+# Directories
+###########################################################################
+
+# R/			H2O support for the R language.  Includes tests.
+# bench/		Benchmarking support.
+# ci/			Support files for Jenkins (continuous integration).
+# docs/			Individual documents for the project.
+# ec2/			EC2 scripts for use by the public.
+# experiments/		Experimental code built on top of H2O.
+# hadoop/		Hadoop driver and mapper for H2O.
+# h2odocs/              docs.0xdata.com website content.
+# installer/		BitRock InstallBuilder code for windows and mac.
+# launcher/		Launcher packaged with the installer.
+# lib/			Libraries used for compiling and running H2O.
+# packaging/		Varous files used for building the H2O packages.
+# py/			Python tests.
+# selenium/		Web UI tests.
+# smalldata/		"Small" (in size) datasets used for testing.
+# src/			H2O source code.
+# target/		Build output directory (Warning: gets wiped out!).
 
 ###########################################################################
 # Figure out how to create PROJECT_VERSION variable.
@@ -52,21 +73,72 @@ default: nightly_build_stuff
 
 nightly_build_stuff:
 	@echo PROJECT_VERSION is $(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Cleaning..."
+	@echo
 	$(MAKE) clean PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
-	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
+	# @echo
+	# @echo "PHASE: Building docs website..."
+	# @echo
+	# $(MAKE) docs-website PROJECT_VERSION=$(PROJECT_VERSION)
+	 @echo
+	@echo Build completed successfully.
 
 build:
+	@echo
+	@echo "PHASE: Building R packages..."
+	@echo
 	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
+	@echo
+	$(MAKE) build_version PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Building H2O..."
+	@echo
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Building hadoop driver..."
+	@echo
 	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Building launcher..."
+	@echo
 	$(MAKE) -C launcher build PROJECT_VERSION=$(PROJECT_VERSION)
-	$(MAKE) package
+	@echo
+	@echo "PHASE: Building zip package..."
+	@echo
+	$(MAKE) build_package PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Building Mac and Windows installer packages..."
+	@echo
+	$(MAKE) build_installer PROJECT_VERSION=$(PROJECT_VERSION)
+
+BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
+BUILD_HASH=$(shell git log -1 --format="%H")
+BUILD_DESCRIBE=$(shell git describe --always --dirty)
+BUILD_ON=$(shell date)
+BUILD_BY=$(shell whoami | sed 's/.*\\\\//')
+BUILD_VERSION_JAVA_FILE = src/main/java/water/BuildVersion.java
+
+build_version:
+	@rm -f ${BUILD_VERSION_JAVA_FILE}
+	@echo "package water;"                                                        >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	@echo "public class BuildVersion extends AbstractBuildVersion {"              >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	@echo "    public String branchName()     { return \"$(BUILD_BRANCH)\"; }"    >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	@echo "    public String lastCommitHash() { return \"$(BUILD_HASH)\"; }"      >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	@echo "    public String describe()       { return \"$(BUILD_DESCRIBE)\"; }"  >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	@echo "    public String projectVersion() { return \"$(PROJECT_VERSION)\"; }" >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	@echo "    public String compiledOn()     { return \"$(BUILD_ON)\"; }"        >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	@echo "    public String compiledBy()     { return \"$(BUILD_BY)\"; }"        >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	@echo "}"                                                                     >> ${BUILD_VERSION_JAVA_FILE}.tmp
+	mv ${BUILD_VERSION_JAVA_FILE}.tmp ${BUILD_VERSION_JAVA_FILE}
 
 build_h2o:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
 
-package:
+build_package:
 	echo $(PROJECT_VERSION) > target/project_version
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	mkdir target/h2o-$(PROJECT_VERSION)
@@ -91,7 +163,50 @@ build_installer:
 	$(MAKE) -C installer build PROJECT_VERSION=$(PROJECT_VERSION)
 
 test:
-	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh)
+	./build.sh
+
+TOPDIR:=$(CURDIR)
+BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
+SPHINXBUILD=$(shell which sphinx-build)
+ifeq ($(SPHINXBUILD),)
+docs-website:
+	@echo sphinx-build not found, skipping...
+else
+docs-website: dw_1 dw_2 dw_3 dw_4
+endif
+
+dw_1:
+	rm -fr $(BUILD_WEBSITE_DIR)
+	rm -fr h2odocs/source/developuser/DocGen
+	mkdir -p h2odocs/source/developuser/DocGen
+	cd h2odocs/source/developuser/DocGen && java -cp $(TOPDIR)/target/h2o.jar water.api.DocGen
+
+# If this fails, you might need to do the following:
+#     $ (possibly sudo) easy_install pip
+#     $ (possibly sudo) pip install sphinxcontrib-fulltoc
+#
+dw_2:
+	(export PROJECT_VERSION=$(PROJECT_VERSION); $(MAKE) -C h2odocs)
+
+dw_3:
+	mv h2odocs/build/html $(BUILD_WEBSITE_DIR)
+	mkdir -p $(BUILD_WEBSITE_DIR)/bits
+	cp -p docs/0xdata_H2O_Algorithms.pdf $(BUILD_WEBSITE_DIR)/bits
+	cp -rp target/javadoc $(BUILD_WEBSITE_DIR)/bits
+	mkdir -p $(BUILD_WEBSITE_DIR)/bits/hadoop
+	cp -p hadoop/README.txt $(BUILD_WEBSITE_DIR)/bits/hadoop
+	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
+
+# Note:  to get pdfunite on a mac, try:
+#     $ brew install poppler
+#
+PDFUNITE=$(shell which pdfunite)
+dw_4:
+ifeq ($(PDFUNITE),)
+	@echo pdfunite not found, skipping...
+else
+	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
+endif
 
 #
 # Set appropriately for your data size to quickly try out H2O.
@@ -104,9 +219,12 @@ run:
 	java $(JAVA_HEAP_SIZE) -jar target/h2o.jar
 
 clean:
+	rm -f $(BUILD_VERSION_JAVA_FILE)
 	rm -fr target
 	./build.sh clean
 	$(MAKE) -C hadoop clean
 	$(MAKE) -C R clean
 	$(MAKE) -C launcher clean
 	$(MAKE) -C installer clean
+
+.phony: default build test docs-website run clean

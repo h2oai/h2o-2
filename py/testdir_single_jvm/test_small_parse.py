@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         num_trials = 0 
         stallForNJobs = 100 
         for i in range(10):
-            for j in range(200):
+            for j in range(50):
                 csvFilename = 'poker-hand-testing.data'
                 csvPathname = 'poker/' + csvFilename
                 src_key = csvFilename + "_" + str(i) + "_" + str(j)
