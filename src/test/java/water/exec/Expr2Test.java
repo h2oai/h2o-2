@@ -10,7 +10,7 @@ import water.fvec.*;
 public class Expr2Test extends TestUtil {
   int i = 0;
 
-  /*@Test*/ public void testBasicExpr1() {
+  @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
       File file = TestUtil.find_test_file("smalldata/cars.csv");
@@ -49,14 +49,13 @@ public class Expr2Test extends TestUtil {
   }
 
   void checkStr( String s ) {
-    Frame res=null;
+    Env env=null;
     try { 
-      res = Exec2.exec(s); 
-      System.out.println(res.toStringAll());
-      res.remove();
+      env = Exec2.exec(s); 
+      System.out.println(env);
     } 
     catch( IllegalArgumentException iae ) { System.out.println(iae.getMessage()); }
-    if( res != null ) res.remove();
+    if( env != null ) env.remove();
   }
 
 }
