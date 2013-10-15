@@ -103,28 +103,29 @@ public class GLMGrid extends Job {
   public void start() {
     UKV.put(dest(), new GLMModels(_lambdas.length * _alphas.length));
     H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-        @Override public void compute2() {
-          if(_parallel) {
-            final int cloudsize = H2O.CLOUD._memary.length;
-            int myId = H2O.SELF.index();
-            for( int a = 0; a < _alphas.length; a++ ) {
-              GridTask t = new GridTask(GLMGrid.this, a, _parallel);
-              int nodeId = (myId+a)%cloudsize;
-              if(nodeId == myId)
-                H2O.submitTask(t);
-              else
-                RPC.call(H2O.CLOUD._memary[nodeId],t);
-            }
-          } else {
-            for( int a = 0; a < _alphas.length; a++ ) {
-              GridTask t = new GridTask(GLMGrid.this, a, _parallel);
-              t.compute2();
-            }
-            remove();
+      @Override public void compute2() {
+        if(_parallel) {
+          final int cloudsize = H2O.CLOUD._memary.length;
+          int myId = H2O.SELF.index();
+          for( int a = 0; a < _alphas.length; a++ ) {
+            GridTask t = new GridTask(GLMGrid.this, a, _parallel);
+            int nodeId = (myId+a)%cloudsize;
+            if(nodeId == myId)
+              H2O.submitTask(t);
+            else
+              RPC.call(H2O.CLOUD._memary[nodeId],t);
           }
+        } else {
+          for( int a = 0; a < _alphas.length; a++ ) {
+            GridTask t = new GridTask(GLMGrid.this, a, _parallel);
+            t.compute2();
+          }
+          remove();
         }
-      };
-    H2O.submitTask(super.start(fjtask));
+      }
+    };
+    super.start(fjtask);
+    H2O.submitTask(fjtask);
   }
 
   public static class GLMModels extends Iced implements Progress {
