@@ -38,7 +38,7 @@ public class GridSearch extends Job {
 
   public static class GridSearchProgress extends Progress2 {
     @Override public boolean toHTML(StringBuilder sb) {
-      GridSearch grid = UKV.get(Key.make(dst_key.value()));
+      GridSearch grid = UKV.get(dst_key);
       if( grid != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
@@ -139,7 +139,7 @@ public class GridSearch extends Job {
             args.remove(i);
     }
 
-    @Override protected Response jobDone(final Job job, final String dst) {
+    @Override protected Response jobDone(final Job job, final Key dst) {
       return new Response(Response.Status.done, this, 0, 0, null);
     }
   }

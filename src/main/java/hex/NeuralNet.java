@@ -249,7 +249,7 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
-      NeuralNetModel model = UKV.get(Key.make(dst_key.value()));
+      NeuralNetModel model = UKV.get(dst_key);
       if( model != null ) {
         String train = String.format("%5.2f %%", 100 * model.train_classification_error);
         String valid = String.format("%5.2f %%", 100 * model.validation_classification_error);
@@ -274,7 +274,7 @@ public class NeuralNet extends ValidatedJob {
       return true;
     }
 
-    @Override protected Response jobDone(final Job job, final String dst) {
+    @Override protected Response jobDone(final Job job, final Key dst) {
       return new Response(Response.Status.done, this, 0, 0, null);
     }
 

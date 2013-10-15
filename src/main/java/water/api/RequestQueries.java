@@ -45,7 +45,7 @@ public class RequestQueries extends RequestArguments {
     // Check that for each actual input argument from the user, there is some
     // request argument that this method is expecting.
     //*/
-    if (H2O.OPT_ARGS.check_rest_params && !(this instanceof GridSearch)) {
+    if (H2O.OPT_ARGS.check_rest_params && !(this instanceof GridSearch) && !(this instanceof HTTP500)) {
       Enumeration en = args.propertyNames();
       while (en.hasMoreElements()) {
         boolean found = false;
