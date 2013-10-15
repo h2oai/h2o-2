@@ -1612,7 +1612,7 @@ class H2O(object):
         # everyone should move to using this, and a full list in params_dict
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'predict_confusion_matrix', print_params)
-        a = self.__do_json_request('ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nprediction_confusion_matrix result:", dump_json(a))
         return a
 
