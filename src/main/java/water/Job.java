@@ -245,6 +245,15 @@ public class Job extends Request2 {
 
   static final class List extends Iced {
     Job[] _jobs = new Job[0];
+
+    @Override
+    public List clone(){
+      List l = new List();
+      l._jobs = _jobs.clone();
+      for(int i = 0; i < l._jobs.length; ++i)
+        l._jobs[i] = (Job)l._jobs[i].clone();
+      return l;
+    }
   }
 
   public static Job[] all() {
@@ -311,27 +320,30 @@ public class Job extends Request2 {
     DKV.remove(self);
     DKV.write_barrier();
     new TAtomic<List>() {
+      transient private Job _job;
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(self) ) {
-            final Job job = jobs[i];
-            job.end_time = CANCELLED_END_TIME;
-            job.exception = exception;
-            H2OCountedCompleter task = new H2OCountedCompleter() {
-              @Override public void compute2() {
-                job.onCancelled();
-                tryComplete();
-              }
-            };
-            H2O.submitTask(task);
+            jobs[i].end_time = CANCELLED_END_TIME;
+            System.out.println("setting end_time of " + jobs[i] + " to " + jobs[i].end_time);
+            jobs[i].exception = exception;
+            _job = jobs[i];
             break;
           }
         }
         return old;
       }
-    }.fork(LIST);
+      @Override public void onSuccess(){
+        if(_job != null){
+          final Job job = _job;
+          H2O.submitTask(new H2OCountedCompleter() {
+            @Override public void compute2() {job.onCancelled();}
+          });
+        }
+      }
+    }.invoke(LIST);
   }
 
   protected void onCancelled() {
