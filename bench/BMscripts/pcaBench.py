@@ -36,7 +36,7 @@ def doPCA(fs, folderPath):
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
             headerKey =h2i.find_key(hK)
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=3600,retryDelaySecs=5,pollTimeoutSecs=3600)
+                timeoutSecs=4800,retryDelaySecs=5,pollTimeoutSecs=4800)
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
             
@@ -57,7 +57,7 @@ def doPCA(fs, folderPath):
 
             kwargs    = params.copy()
             pcaStart  = time.time()
-            pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=3600, **kwargs)
+            pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=4800, **kwargs)
             pcaTime   = time.time() - pcaStart
             row.update({'pcaBuildTime' : pcaTime})
             csvWrt.writerow(row)
