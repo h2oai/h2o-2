@@ -332,7 +332,7 @@ setMethod("summary", "H2OPCAModel", function(object) {
 })
 
 setMethod("as.data.frame", "H2OParsedData", function(x) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/downloadCsv?src_key=', x@key, sep='')
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/DownloadDataset?src_key=', x@key, sep='')
   ttt <- getURL(url)
   read.csv(textConnection(ttt))
 })

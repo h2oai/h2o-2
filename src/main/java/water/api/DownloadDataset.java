@@ -21,10 +21,8 @@ public class DownloadDataset extends Request2 {
   @API(help="An existing H2O Frame or VA key.", filter=Default.class)
   Key src_key;
 
-  @Override public String href() { return "downloadCsv"; }
-
   public static String link(Key k, String content){
-    return  "<a href='/downloadCsv?src_key=" + k.toString() + "'>" + content + "</a>";
+    return  "<a href='2/DownloadDataset?src_key=" + k.toString() + "'>" + content + "</a>";
   }
 
   @SuppressWarnings("resource")

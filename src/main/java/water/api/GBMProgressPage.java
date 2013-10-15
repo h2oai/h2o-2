@@ -2,6 +2,7 @@ package water.api;
 
 import hex.gbm.GBM.GBMModel;
 import water.*;
+import water.api.RequestServer.API_VERSION;
 
 import com.google.gson.JsonObject;
 
@@ -24,4 +25,5 @@ public class GBMProgressPage extends Progress2 {
     else ((GBMModel)value.get()).generateHTML("GBM Model", sb);
     return true;
   }
+  @Override protected API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
 }
