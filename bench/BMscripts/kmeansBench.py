@@ -13,6 +13,7 @@ build = ""
 
 def doKMeans(fs, folderPath): 
     for f in fs['train']:
+        #if f in ['AirlinesTrain10x', 'AirlinesTrain100x']: continue
         overallWallStart = time.time()
         date = '-'.join([str(x) for x in list(time.localtime())][0:3])
         kmeansbenchcsv = 'benchmarks/'+build+'/'+date+'/kmeansbench.csv'
@@ -36,7 +37,7 @@ def doKMeans(fs, folderPath):
             headerKey = h2i.find_key(hK)
             trainParseWallStart = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=4800,retryDelaySecs=5,pollTimeoutSecs=4800)
+                timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200)
             parseWallTime = time.time() - trainParseWallStart
             #End Train File Parse#
             print "Parsing training file took ", parseWallTime ," seconds." 
@@ -62,7 +63,7 @@ def doKMeans(fs, folderPath):
                         }
             kwargs       = params.copy()
             kmeansStart  = time.time()
-            kmeans       = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=4800, **kwargs)
+            kmeans       = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=7200, **kwargs)
             kmeansTime   = time.time() - kmeansStart
             row.update({'kmeansBuildTime' : kmeansTime})
             csvWrt.writerow(row)

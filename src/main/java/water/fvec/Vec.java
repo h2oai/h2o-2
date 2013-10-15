@@ -73,6 +73,16 @@ public class Vec extends Iced {
     _espc = espc;
   }
 
+  // A 1-element Vec
+  public Vec( Key key, double d ) {
+    _key = key;
+    _espc = new long[]{0,1};
+    Futures fs = new Futures();
+    DKV.put(chunkKey(0),new C0DChunk(d,1),fs);
+    DKV.put(_key,this,fs);
+    fs.blockForPending();
+  }
+
   /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
   public Vec makeZero() { return makeCon(0); }
