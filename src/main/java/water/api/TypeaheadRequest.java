@@ -30,5 +30,5 @@ public abstract class TypeaheadRequest extends Request {
 
   abstract protected JsonArray serve(String filter, int limit);
 
-  @Override protected API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
+  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
 }

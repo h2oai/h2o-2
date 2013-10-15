@@ -1,7 +1,7 @@
 package water.api;
 
-import water.Job;
-import water.Key;
+import water.*;
+import water.api.RequestServer.API_VERSION;
 
 public class Progress2 extends Request {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -46,4 +46,5 @@ public class Progress2 extends Request {
   }
 
   @Override protected boolean log() { return false; }
+  @Override public API_VERSION[] supportedVersions() { return  SUPPORTS_ONLY_V2; }
 }

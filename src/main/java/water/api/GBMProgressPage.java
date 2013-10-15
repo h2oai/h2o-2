@@ -25,5 +25,5 @@ public class GBMProgressPage extends Progress2 {
     else ((GBMModel)value.get()).generateHTML("GBM Model", sb);
     return true;
   }
-  @Override protected API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
+  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
 }

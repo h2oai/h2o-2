@@ -260,5 +260,5 @@ public abstract class Request extends RequestBuilders {
   protected static final API_VERSION[] SUPPORTS_ONLY_V1 = new API_VERSION[] { API_VERSION.V_1 };
   protected static final API_VERSION[] SUPPORTS_ONLY_V2 = new API_VERSION[] { API_VERSION.V_2 };
   protected static final API_VERSION[] SUPPORTS_V1_V2   = new API_VERSION[] { API_VERSION.V_1, API_VERSION.V_2 };
-  protected API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V1; }
+  public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V1; }
 }
