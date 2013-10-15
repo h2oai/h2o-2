@@ -251,7 +251,7 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='NeuralNet.query?%key_param=%$key'>%content</a>");
+    RString rs = new RString("<a href='NeuralNetTrain.query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", "source");
     rs.replace("key", k.toString());
     rs.replace("content", content);
@@ -281,7 +281,8 @@ public class NeuralNet extends Model implements water.Job.Progress {
       return new NeuralNet();
     }
 
-    @Override protected H2OCountedCompleter fork() {
+    @Override public H2OCountedCompleter start() {
+      init();
       Vec[] vecs = _filteredSource.vecs().clone();
       reChunk(vecs);
       NeuralNet nn = (NeuralNet) _model;
@@ -303,7 +304,7 @@ public class NeuralNet extends Model implements water.Job.Progress {
       }
       UKV.put(destination_key, nn);
       nn.startTrain(this);
-      return new H2OEmptyCompleter();
+      return start(new H2OEmptyCompleter());
     }
 
     @Override public void remove() {

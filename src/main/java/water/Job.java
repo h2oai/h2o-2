@@ -355,8 +355,8 @@ public class Job extends Request2 {
     return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
   }
 
-  public H2OCountedCompleter start() {
-    init();
+  public <T extends H2OCountedCompleter> T start(final T fjtask) {
+    _fjtask = fjtask;
     DKV.put(job_key, new Value(job_key, new byte[0]));
     start_time = System.currentTimeMillis();
     new TAtomic<List>() {
@@ -369,7 +369,14 @@ public class Job extends Request2 {
         return old;
       }
     }.invoke(LIST);
-    return _fjtask = fork();
+    return fjtask;
+  }
+
+  public H2OCountedCompleter start() {
+    init();
+    H2OCountedCompleter task = defaultTask();
+    H2O.submitTask(start(task));
+    return task;
   }
 
   public void invoke() {
@@ -387,49 +394,32 @@ public class Job extends Request2 {
    * Default behavior is to call exec() in a F/J task. Override to run non-blocking, making sure you
    * call remove() when done.
    */
-  protected H2OCountedCompleter fork() {
+  protected H2OCountedCompleter defaultTask() {
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        Throwable t = null;
         try {
           Job.this.exec();
           remove();
-        } catch( Throwable t_ ) {
-          t = t_;
+        } catch( Throwable t ) {
           if( !(t instanceof ExpectedExceptionForDebug) )
             Log.err(t);
+          onException(t);
         } finally {
           tryComplete();
         }
-        if( t != null )
-          onException(t);
       }
     };
-    H2O.submitTask(task);
     return task;
+  }
+
+  protected void onException(Throwable t) {
+    cancel(job_key, Utils.getStackAsString(t));
   }
 
   /**
    * Actual job code. Must block until execution is done.
    */
   protected void exec() {
-  }
-
-  protected void onException(Throwable ex) {
-    UKV.remove(dest());
-    update(Job.this, Utils.getStackAsString(ex));
-  }
-
-  private static void update(final Job job, final String exception) {
-    new TAtomic<List>() {
-      @Override public List atomic(List old) {
-        if( old != null && old._jobs != null )
-          for( Job current : old._jobs )
-            if( current == job )
-              job.exception = exception;
-        return old;
-      }
-    }.invoke(LIST);
   }
 
   // Overridden for Parse
@@ -440,7 +430,7 @@ public class Job extends Request2 {
     return 0;
   }
 
-  //Block until the Job finishes.
+  // Block until the Job finishes.
   public <T> T get() {
     try {
       _fjtask.join();             // Block until top-level job is done
@@ -741,7 +731,7 @@ public class Job extends Request2 {
       return _progress;
     }
 
-    @Override protected void onException(Throwable ex) {
+    @Override public void onException(Throwable ex) {
       Value v = DKV.get(progressKey());
       if( v != null ) {
         ChunkProgress p = v.get();

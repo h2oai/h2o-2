@@ -201,6 +201,11 @@ def parse_our_args():
     abort_after_import = args.abort_after_import
     clone_cloud_json = args.clone_cloud_json
 
+    # Auto skip cloud building if debugging
+    if fromPyDev():
+        browse_disable = True
+        clone_cloud_json = os.getenv("HOME") + '/h2o-nodes.json'
+
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
     # Pass "--failfast" to stop on first error to unittest. and -v
@@ -208,6 +213,11 @@ def parse_our_args():
     sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
     # sys.argv[1:] = args.unittest_args
 
+def fromPyDev():
+    for s in sys.path:
+        if 'eclipse/plugins/org.python.pydev' in s:
+            return True
+    return False
 
 def find_file(base):
     f = base
@@ -554,6 +564,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # doing this list outside the loops so we can shuffle for better test variation
         # this jvm startup shuffle is independent from the flatfile shuffle
         portList = [base_port + ports_per_node*i for i in range(node_count)]
+
         if hosts is None:
             # if use_flatfile, we should create it,
             # because tests will just call build_cloud with use_flatfile=True
@@ -2238,11 +2249,8 @@ class LocalH2O(H2O):
         else:
             logPrefix = 'local-h2o'
 
-        p = self.skipCloudBuildIfDebugging()
-        if p is None:
-            spawn = spawn_cmd(logPrefix, cmd=self.get_args(), capture_output=self.capture_output)
-            p = spawn[0]
-        self.ps = p
+        spawn = spawn_cmd(logPrefix, cmd=self.get_args(), capture_output=self.capture_output)
+        self.ps = spawn[0]
 
     def get_h2o_jar(self):
         return find_file('target/h2o.jar')
@@ -2286,20 +2294,6 @@ class LocalH2O(H2O):
 
     def stack_dump(self):
         self.ps.send_signal(signal.SIGQUIT)
-
-    def skipCloudBuildIfDebugging(self):
-        for s in sys.path:
-            if 'eclipse/plugins/org.python.pydev' in s:
-                for p in psutil.get_process_list():
-                    if p.name == 'java':
-                        for c in p.get_connections():
-                            l= c.local_address
-                            if l[1] == 54321:
-                                global browse_disable
-                                browse_disable = True
-                                return p
-                raise 'Cannot find debug cloud'
-        return None
 
 #*****************************************************************
 class RemoteHost(object):

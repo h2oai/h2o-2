@@ -5,6 +5,7 @@ import hex.rf.Tree.StatType;
 import java.util.Arrays;
 import java.util.HashSet;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.ValueArray.Column;
@@ -26,9 +27,9 @@ public abstract class DRF {
     // Create DRF remote task
     DRFTask drfTask = create(modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Create DRF user job & start it
-    DRFJob  drfJob = new DRFJob(drfTask);
+    DRFJob  drfJob  = new DRFJob(drfTask);
     drfJob.destination_key = modelKey;
-    drfJob.start();
+    drfJob.start(drfTask);
     drfTask._job = drfJob;
     // Execute the DRF task
     drfTask.dfork(drfTask._rfmodel._dataKey);
@@ -288,21 +289,25 @@ public abstract class DRF {
       description = "RandomForest_" + drfTask._params._ntrees + "trees";
     }
 
-    @Override protected H2OCountedCompleter fork() {
-      H2O.submitTask(_drfTask);
-      return _drfTask;
-    }
-
-    @Override protected void exec() {
-      new TAtomic<RFModel>() {
-        @Override public RFModel atomic(RFModel old) {
-          if(old == null) return null;
-          old._time = DRFJob.this.runTimeMs();
-          return old;
+    @Override public H2OCountedCompleter start(H2OCountedCompleter fjtask) {
+      H2OCountedCompleter jobRemoval = new H2O.H2OCountedCompleter() {
+        @Override public void compute2() {
+          new TAtomic<RFModel>() {
+            @Override public RFModel atomic(RFModel old) {
+              if(old == null) return null;
+              old._time = DRFJob.this.runTimeMs();
+              return old;
+            }
+          }.invoke(dest());
         }
-      }.invoke(dest());
-    }
+        @Override public void onCompletion(CountedCompleter caller) {
+          DRFJob.this.remove();
+        }
+      };
+      fjtask.setCompleter(jobRemoval);
 
+      return super.start(jobRemoval);
+    }
     @Override public float progress() {
       Progress p = (Progress) UKV.get(destination_key);
       return p.progress();
