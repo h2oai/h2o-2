@@ -1,5 +1,7 @@
 package water.api;
 
+import water.api.RequestServer.API_VERSION;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -27,4 +29,6 @@ public abstract class TypeaheadRequest extends Request {
   }
 
   abstract protected JsonArray serve(String filter, int limit);
+
+  @Override protected API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
 }

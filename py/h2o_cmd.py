@@ -25,10 +25,15 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
     node.summary_page(myKeyForParseResult)
     return p
 
-def runInspect(node=None, key=None, timeoutSecs=30, **kwargs):
+# normally we don't want inspect to print during verboseprint. verbose=True to get it
+# in specific tests
+def runInspect(node=None, key=None, timeoutSecs=30, verbose=False, **kwargs):
     if not key: raise Exception('No key for Inspect')
     if not node: node = h2o.nodes[0]
-    return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
+    a = node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
+    if verbose:
+        print "inspect of %s:" % key, h2o.dump_json(a)
+    return a
 
 def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
     if not key: raise Exception('No key for Summary')
@@ -53,7 +58,6 @@ def runKMeans(node=None, parseResult=None,
         timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for KMeans')
     if not node: node = h2o.nodes[0]
-    print parseResult['destination_key']
     return node.kmeans(parseResult['destination_key'], None, 
         timeoutSecs, retryDelaySecs, **kwargs)
 
@@ -111,8 +115,6 @@ def runRF(node=None, parseResult=None, trees=5,
         timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for RF')
     if not node: node = h2o.nodes[0]
-    #! FIX! what else is in parseResult that we should check?
-    h2o.verboseprint("runRF parseResult:", parseResult)
     Key = parseResult['destination_key']
     return node.random_forest(Key, trees, timeoutSecs, **kwargs)
 

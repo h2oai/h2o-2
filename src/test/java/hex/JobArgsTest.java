@@ -5,6 +5,7 @@ import org.junit.*;
 import water.Job.ValidatedJob;
 import water.*;
 import water.api.RequestServer;
+import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.util.Utils.ExpectedExceptionForDebug;
 
