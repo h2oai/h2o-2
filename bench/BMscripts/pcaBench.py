@@ -13,6 +13,7 @@ build = ""
 
 def doPCA(fs, folderPath):
     for f in fs['train']:
+        #if f in ['AirlinesTrain10x', 'AirlinesTrain100x']: continue
         print "Doing PCA on ", f
         overallWallStart = time.time()
         date = '-'.join([str(x) for x in list(time.localtime())][0:3])
@@ -36,7 +37,7 @@ def doPCA(fs, folderPath):
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
             headerKey =h2i.find_key(hK)
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=4800,retryDelaySecs=5,pollTimeoutSecs=4800)
+                timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200)
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
             
@@ -57,7 +58,7 @@ def doPCA(fs, folderPath):
 
             kwargs    = params.copy()
             pcaStart  = time.time()
-            pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=4800, **kwargs)
+            pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=7200, **kwargs)
             pcaTime   = time.time() - pcaStart
             row.update({'pcaBuildTime' : pcaTime})
             csvWrt.writerow(row)

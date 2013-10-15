@@ -21,6 +21,7 @@ h2o.__PAGE_VIEWALL = "StoreView.json"
 h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
+h2o.__PAGE_SUMMARY2 = "SummaryPage2.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 h2o.__PAGE_PREDICT2 = "Predict.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
