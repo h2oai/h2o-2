@@ -260,6 +260,65 @@ setMethod("summary", "H2OParsedData", function(object) {
   result
 })
 
+histograms <- function(object) {UseMethod("histograms", object)}
+setMethod("histograms", "H2OParsedData2", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
+  list.of.bins <- lapply(res$summaries, function(res) {
+    counts <- res$bins
+    breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins))
+    cbind(counts,breaks)
+  })
+})
+
+setMethod("summary", "H2OParsedData2", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
+  col.summaries = res$summaries
+  col.names     = res$names
+  col.means     = res$means
+  col.results   = mapply(c, res$summaries, res$names, res$means, SIMPLIFY=FALSE)
+  for (i in 1:length(col.results))
+    names(col.results[[i]])[(length(col.results[[i]]) - 1) : length(col.results[[i]])] <- c('name', 'mean')
+  result = NULL
+
+  result <- sapply(col.results, function(res) {
+    if(is.null(res$domains)) { # numeric column
+      if(is.null(res$mins) || length(res$mins) == 0) res$mins = NaN
+      if(is.null(res$maxs) || length(res$maxs) == 0) res$maxs = NaN
+      if(is.null(res$percentileValues))
+        params = format(rep(round(as.numeric(col.means[[i]]), 3), 6), nsmall = 3)
+      else
+        params = format(round(as.numeric(c(
+          res$mins[1],
+          res$percentileValues[4],
+          res$percentileValues[6],
+          res$mean,
+          res$percentileValues[8],
+          tail(res$maxs, 1))), 3), nsmall = 3)
+      result = c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
+                 paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
+                 paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")) 
+    }
+    else {
+      domains <- res$domains[res$maxs + 1]
+      counts <- res$bins[res$maxs + 1]
+      width <- max(cbind(nchar(domains), nchar(counts)))
+      result <- paste(domains,
+                      mapply(function(x, y) { paste(rep(' ',width + 1 - nchar(x) - nchar(y)), collapse='') }, domains, counts),
+                      ":",
+                      counts,
+                      " ",
+                      sep='')
+      result[6] <- NA
+      result
+    }
+  })
+  
+  result = as.table(result)
+  rownames(result) <- rep("", 6)
+  colnames(result) <- col.names
+  result
+})
+
 setMethod("summary", "H2OPCAModel", function(object) {
   # TODO: Save propVar and cumVar from the Java output instead of computing here
   myVar = object@model$sdev^2
@@ -357,14 +416,6 @@ setMethod("nrow", "H2OParsedData2", function(x) {
 
 setMethod("ncol", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numCols })
-
-setMethod("summary", "H2OParsedData2", function(object) {
-  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_INSPECT2, src_key=object@key)
-  if(is.null(res$cols) || length(res$cols) == 0) return(NULL)
-  myList = lapply(res$cols, function(x) { x$name = NULL; x })
-  myData = matrix(unlist(myList), ncol = ncol(object), dimnames = list(names(myList[[1]]), colnames(object)))
-  data.frame(myData)
-})
 
 setMethod("as.data.frame", "H2OParsedData2", function(x) {
   as.data.frame(new("H2OParsedData", h2o=x@h2o, key=x@key))

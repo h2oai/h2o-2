@@ -860,7 +860,7 @@ class H2O(object):
             # (this is new/experimental)
             exc_info = sys.exc_info()
             if not ignoreConnectionError: # use this to ignore the initial connection errors during build cloud when h2o is coming up
-                h2p.red_print("ERROR: got exception on json request to h2o. Going to check sandbox, then rethrow..")
+                h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % url + paramStr)
                 time.sleep(2)
                 check_sandbox_for_errors();
             raise exc_info[1], None, exc_info[2]
@@ -1296,8 +1296,9 @@ class H2O(object):
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
     # after parse
-    def remove_key(self, key):
-        a = self.__do_json_request('Remove.json', params={"key": key}, ignoreH2oError=True)
+    def remove_key(self, key, timeoutSecs=30):
+        a = self.__do_json_request('Remove.json', 
+            params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
         return a
 
     # only model keys can be exported?

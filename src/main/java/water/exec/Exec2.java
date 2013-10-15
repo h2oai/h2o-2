@@ -1,9 +1,10 @@
 package water.exec;
 
-import water.fvec.*;
-import water.*;
 import java.text.*;
+import java.util.Arrays;
 import java.util.HashMap;
+import water.*;
+import water.fvec.*;
 
 /** Execute a generic R string, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -11,32 +12,29 @@ import java.util.HashMap;
 public class Exec2 {
   // Parse a string, execute it & return a Frame.
   // Grammer:
+  //   statements := cxexpr ; statements
   //   cxexpr :=                   // COMPLEX expr 
   //           key_slice = cxexpr  // subset assignment; must be equal shapes 
+  //           id = cxexpr         // temp typed assignment; dropped when scope exits
   //           expr
-  //           expr op2 cxexpr     // apply all; ....optional INFIX notation
+  //           expr op2 cxexpr     // apply(op2,expr,cxexpr); ....optional INFIX notation
   //           expr0 ? expr : expr // exprs must have *compatible* shapes
   //   expr :=                     // expr is a Frame, a 2-d table
-  //           num | id            // Scalars, treated as 1x1
+  //           num                 // Scalars, treated as 1x1
+  //           id                  // any visible var; will be typed
+  //           key_slice           // Rectangular R-value
+  //           function(v0,v1,v2) { statements; ...v0,v1,v2... } // 1st-class lexically scoped functions
   //           ( cxexpr )          // Ordering evaluation
-  //           op1(cxexpr)         // apply op1 to all elements
-  //           op2(cxexpr,cxexpr)  // apply op2 to all; exprs must have *compatible* shapes
-  //           apply1(op,cxexpr)   // for-all-cols in expr, apply op to col
-  //           apply1(op2,cxexpr)  // reduce cols; result is size 1xN
-  //           apply2(op2,cxexpr)  // reduce rows; result is size NX1
-  //           apply (op2,cxexpr)  // reduce all; result is size 1x1
-  //           op2(cxexpr)         // reduce all; ....optional notation
   //           ifelse(expr0,cxexpr,cxexpr)  // exprs must have *compatible* shapes
-  //           key_slice           // R-value
-  //   key_slice:
+  //           apply(op,cxexpr,...)// Apply function op to args
+  //   key_slice :=
   //           key                 // A Frame, dimensions stored in K/V already
   //           key [expr1,expr1]   // slice rows & cols by index
   //           key [expr1,expr1]   // subset assignment of *same* shape
   //           key [,expr1]        // subset assignment of *same* shape
   //           key [expr1,]        // subset assignment of *same* shape
-
   //   key  := any Key mapping to a Frame.
-  //   
+
   //   func1:= {id -> expr0}     // user function; id will be a scalar in expr0
   //   op1  := func1 sgn sin cos ...any unary op...
   //   func2:= {id,id -> expr0}  // user reduction function; id will be a scalar in expr0
@@ -56,21 +54,29 @@ public class Exec2 {
   public static Frame exec( String str ) throws IllegalArgumentException {
     AST ast = new Exec2(str).parse();
     System.out.println(ast.toString(new StringBuilder(),0).toString());
-    return null;
+    Vec.VectorGroup vg = new Vec.VectorGroup();
+    Exec2 res = ast.exec(vg);
+    if( res._fr != null ) return res._fr;
+    return new Frame(new String[]{"result"},
+                     new Vec[]{new Vec(vg.addVecs(1)[0],res._d)});
   }
 
   private Exec2( String str ) { _str = str; _buf = str.toCharArray(); }
+  private Exec2( double d ) { _str=null; _buf=null; _d=d; }
+  private Exec2( Frame fr ) { _str=null; _buf=null; _fr=fr; }
+  // Simple parser state
   final String _str;
   final char _buf[];
   int _x;
+  // Simple execution state
+  Frame _fr;                    // For  Big   Data
+  double _d;                    // For little Data
+  AST _fun;                     // 1st-class Function-as-data
   
   private AST parse() { 
     AST ast = AST.parseCXExpr(this); 
-    // Now EOL
-    skipWS();
-    if( _x < _buf.length ) 
-      throwErr("Junk at end of line",_buf.length-1);
-    return ast;
+    skipWS();                   // No trailing crud
+    return _x == _buf.length ? ast : throwErr("Junk at end of line",_buf.length-1);
   }
 
   // --------------------------------------------------------------------------
@@ -89,14 +95,12 @@ public class Exec2 {
     return true;
   }
   // Same as peek, but throw if char not found  
-  private AST xpeek(char c, int x, AST ast) {
-    if( !peek(c) ) throwErr("Missing close-paren",x);
-    return ast;
-  }
+  private AST xpeek(char c, int x, AST ast) { return peek(c) ? ast : throwErr("Missing '"+c+"'",x); }
 
-  // Return an ID string, or null if we get weird stuff or numbers.
-  // Valid IDs: + ++ <= > ! [ ] joe123 ABC 
-  // Invalid: +++ 0joe ( =
+  // Return an ID string, or null if we get weird stuff or numbers.  Valid IDs
+  // include all the operators, except parens (function application) and assignment.
+  // Valid IDs: +   ++   <=  > ! [ ] joe123 ABC 
+  // Invalid  : +++ 0joe ( = ) 123.45 1e3
   private String isID() {
     skipWS();
     if( _x>=_buf.length ) return null; // No characters to parse
@@ -115,7 +119,7 @@ public class Exec2 {
       return _str.substring(x,_x);
     }
 
-    // If first char is special, accept 1 or 2 specials
+    // If first char is special, accept 1 or 2 special chars
     if( _x>=_buf.length ) return _str.substring(_x-1,_x);
     char c2=_buf[_x];
     if( isDigit(c2) || isLetter(c2) || isWS(c2) || isReserved(c2) ) return _str.substring(_x-1,_x);
@@ -140,13 +144,12 @@ public class Exec2 {
     final long _rows;
     AST( int cols, long rows ) { _cols=cols; _rows=rows; }
     static AST parseCXExpr(Exec2 E ) {
-      AST ast = parseExpr(E);
+      AST ast2, ast = parseExpr(E);
       if( ast == null ) return null;
       // Can find an infix op between expressions
-      AST ast2 = ASTOp2.parseInfix(E,ast); // Infix op, or not?
-      if( ast2 != null ) return ast2;
-      if( ast instanceof ASTKey && E.peek('=') ) { throw H2O.unimpl(); } // assignment
-      if( ast instanceof ASTKey && E.peek('[') ) { throw H2O.unimpl(); } // subset assignment
+      if( (ast2 = ASTOp.parseInfix(E,ast)) != null ) return ast2;
+      // Can find '=' between expressions
+      if( (ast2 = ASTAssign.parse  (E,ast)) != null ) return ast2;
       if( ast.isScalar() && E.peek('?') ) { throw H2O.unimpl(); } // infix trinary
       return ast;
     }
@@ -157,21 +160,37 @@ public class Exec2 {
       if( E.peek('(') )  return E.xpeek(')',E._x,parseCXExpr(E));
       if( (ast = ASTKey.parse(E)) != null ) return ast;
       if( (ast = ASTNum.parse(E)) != null ) return ast;
-      if( (ast = ASTOp1.parsePrefix(E)) != null ) return ast;
-      if( (ast = ASTOp2.parsePrefix(E)) != null ) return ast;
+      if( (ast = ASTOp .parsePrefix(E)) != null ) return ast;
       return null;
     }
-    protected void indent( StringBuilder sb, int d ) { 
+    protected StringBuilder indent( StringBuilder sb, int d ) { 
       for( int i=0; i<d; i++ ) sb.append("  "); 
-      sb.append(_rows).append('x').append(_cols).append(' ');
+      return sb.append(dimStr()).append(' ');
     }
     boolean isScalar() { return _cols==1 && _rows==1; }
-    public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
+    abstract boolean isPure();  // Side-effect free
+    Exec2 exec(Vec.VectorGroup vg) { 
+      System.out.println("Exec not impl for: "+getClass());
+      throw H2O.unimpl(); 
+    }
+    public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
+    public String dimStr() { return dimStr(_cols,_rows); }
+    public static String dimStr(int col, long row) {
+      if( col==0 && row==0 ) return "fun";
+      assert col >=1 && row >= 1;
+      return col+"x"+row;
+    }
   }
 
+  // --------------------------------------------------------------------------
   static private class ASTKey extends AST {
     final Key _key;
-    ASTKey( int cols, long rows, Key key) { super(cols,rows); _key=key; }
+    final AST _colsel, _rowsel; // Row-selection, Col-selection
+    ASTKey( int cols, long rows, Key key, AST colsel, AST rowsel ) { 
+      super(cols,rows); 
+      _key=key;
+      _colsel = colsel;  _rowsel = rowsel;
+    }
     // Parse a valid H2O Frame Key, or return null;
     static ASTKey parse(Exec2 E) { 
       int x = E._x;
@@ -181,14 +200,72 @@ public class Exec2 {
       Iced ice = UKV.get(key);
       if( ice==null || !(ice instanceof Frame) ) { E._x = x; return null; }
       Frame fr = (Frame)ice;
-      return new ASTKey(fr.numCols(),fr.numRows(),key);
+      AST rows=null, cols=null;
+      if( E.peek('[') ) {       // Subsets?
+        rows= E.xpeek(',',(x=E._x),parseCXExpr(E));
+        if( rows != null && rows._cols != 1 ) E.throwErr("Row select only a single column only",x);
+        cols= E.xpeek(']',(x=E._x),parseCXExpr(E));
+        if( cols != null && cols._cols != 1 ) E.throwErr("Col select only a single column only",x);
+      } 
+      return new ASTKey(cols==null?fr.numCols():(int)cols._rows,
+                        rows==null?fr.numRows():     rows._rows,
+                        key,cols,rows);
     }
+    boolean isPure() { return true; }
     @Override public String toString() { return _key.toString(); }
-    @Override public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+      indent(sb,d).append(this);
+      if( _colsel != null || _rowsel != null ) {
+        sb.append("[,]\n");
+        if( _rowsel == null ) indent(sb,d+1).append("all rows\n");
+        else _rowsel.toString(sb,d+1).append('\n');
+        if( _colsel == null ) indent(sb,d+1).append("all cols");
+        else _colsel.toString(sb,d+1);
+      }
+      return sb;
+    }
+    //@Override Exec2 exec(Vec.VectorGroup vg) {
+    //  if( _colsel != null ) _ecol = _colsel.exec(vg);
+    //  if( _rowsel != null ) _erow = _rowsel.exec(vg);
+    //  if( _ecol == null && _erow == null )
+    //    return new Exec2((Frame)(DKV.get(_key).get()));
+    //  if( _ecol._fr==null && _erow._fr==null )
+    //    throw H2O.unimpl();  
+    //  throw H2O.unimpl();  
+    //}
   }
 
+  // --------------------------------------------------------------------------
+  static private class ASTAssign extends AST {
+    final ASTKey _key;
+    final AST _eval;
+    ASTAssign( ASTKey key, AST eval ) { 
+      super(key._cols,key._rows);
+      _key=key; _eval=eval;
+    }
+    // Parse a valid H2O Frame Key, or return null;
+    static ASTAssign parse(Exec2 E, AST ast) { 
+      if( !(ast instanceof ASTKey) ) return null;
+      if( !E.peek('=') ) return null;
+      int x = E._x;
+      AST eval = parseCXExpr(E);
+      E.throwIfNotCompat(ast,eval,x);
+      return new ASTAssign((ASTKey)ast,eval);
+    }
+    boolean isPure() { return false; }
+    @Override public String toString() { return "="; }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+      indent(sb,d).append(this).append('\n');
+      _key.toString(sb,d+1).append('\n');
+      _eval.toString(sb,d+1);
+      return sb;
+    }
+  }
+
+  // --------------------------------------------------------------------------
   static private class ASTNum extends AST {
     static final NumberFormat NF = NumberFormat.getInstance();
+    static { NF.setGroupingUsed(false); }
     final double _d;
     ASTNum(double d ) { super(1,1); _d=d; }
     // Parse a number, or throw a parse error
@@ -201,164 +278,203 @@ public class Exec2 {
       double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
       return new ASTNum(d);
     }
+    boolean isPure() { return true; }
+    @Override Exec2 exec(Vec.VectorGroup vg) { return new Exec2(_d); }
     @Override public String toString() { return Double.toString(_d); }
-    @Override public StringBuilder toString( StringBuilder sb, int d ) { indent(sb,d); return sb.append(this); }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
   }
 
-  abstract static private class ASTOp1 extends AST {
-    static final HashMap<String,ASTOp1> OP1S = new HashMap();
-    static {
-      put(new ASTIsNA());
-      put(new ASTSgn());
-    }
-    static private void put(ASTOp1 ast) { OP1S.put(ast.opStr(),ast); }
-    final AST _left;
-    ASTOp1( ) { super(-1,-1); _left=null; }
-    ASTOp1( AST left ) { 
-      super(left._cols,left._rows);
-      _left = left;
-    }
-    abstract String opStr();
-    abstract ASTOp1 make(AST left);
-    @Override public String toString() { return opStr(); }
-    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
-      indent(sb,d); sb.append(this).append('\n');
-      _left.toString(sb,d+1);
-      return sb;
+  // --------------------------------------------------------------------------
+  static private class ASTApply extends AST {
+    final AST _args[];
+    private ASTApply( AST args[], int cols, long rows ) { super(cols,rows);  _args = args;  }
+
+    // Wrap compatible but different-sized ops in reduce/bulk ops.
+    static ASTApply make(AST args[],Exec2 E, int x) {
+      //// 1-arg case; check for size-type operators
+      //if( args.length==1 ) {
+      //  if( this instanceof ASTNrow || this instanceof ASTNcol ) {
+      //    ASTOp op = make(args,1,1); // Result is always a scalar
+      //    if( !op.isPure() ) E.throwErr("nrow and ncol expressions cannot have side effects",x);
+      //    return op;
+      //  }
+      //}
+      // 2-arg case; check for compatible row counts.
+      // Insert expansion operators as needed.
+      if( args.length==2 ) {
+      //  if( args[0]._rows != args[1]._rows ) {
+      //    if( args[0]._rows==1 )      args[0] = new ASTByRow(args[0],args[1]._rows);
+      //    else if( args[1]._rows==1 ) args[1] = new ASTByRow(args[1],args[0]._rows);
+      //    else E.throwErr("Mismatch rows: "+args[0]._rows+" and "+args[1]._rows,x);
+      //  }
+      //  if( args[0]._cols != args[1]._cols ) {
+      //    if( args[0]._cols==1 )      args[0] = new ASTByCol(args[0],args[1]._cols);
+      //    else if( args[1]._cols==1 ) args[1] = new ASTByCol(args[1],args[0]._cols);
+      //    else E.throwErr("Mismatch cols: "+args[0]._cols+" and "+args[1]._cols,x);
+      //  }
+        E.throwIfNotCompat(args[1],args[2],x);
+      }
+
+      ASTOp op = (ASTOp)args[0]; // Checked before I get here
+      for( int i=0; i<op._vcols.length; i++ )
+        if( op._vcols[i] != args[i+1]._cols ||
+            op._vrows[i] != args[i+1]._rows )
+          E.throwErr("Actual argument to '"+op._vars[i]+"' expected to be "+dimStr(op._vcols[i],op._vrows[i])+" but was "+args[i+1].dimStr(),x);
+
+      return new ASTApply(args,args[0]._cols,args[0]._rows);
     }
 
-    // Parse an prefix operator
-    static AST parsePrefix(Exec2 E) { 
+    boolean isPure() {
+      for( AST arg : _args )
+        if( !arg.isPure() ) return false;
+      return true;
+    }
+    @Override public String toString() { return _args[0].toString()+"()"; }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+      indent(sb,d).append("apply(").append(_args[0]).append(")\n");
+      for( int i=1; i<_args.length-1; i++ )
+        _args[i].toString(sb,d+1).append('\n');
+      return _args[_args.length-1].toString(sb,d+1);
+    }
+    //@Override Exec2 exec(Vec.VectorGroup vg) {
+    //  _e2s = new Exec2[_args.length];
+    //  for( int i=0; i<_args.length; i++ )
+    //    _e2s[i] = _args[i].exec(vg);
+    //  return null;
+    //}
+  }
+
+  // --------------------------------------------------------------------------
+  abstract static private class ASTOp extends AST {
+    static final HashMap<String,ASTOp> OPS = new HashMap();
+    static {
+      // Unary ops
+      put(new ASTIsNA());
+      put(new ASTSgn ());
+      put(new ASTNrow());
+      put(new ASTNcol());
+
+      // Binary ops
+      put(new ASTPlus());
+      put(new ASTSub ());
+      put(new ASTMul ());
+      put(new ASTDiv ());
+      put(new ASTMin ());
+
+      // Variable argcnt
+      put(new ASTCat  ());
+    }
+    static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
+
+    // All fields are final, because functions are immutable
+    final String _vars[];       // Variable names
+    final int   _vcols[];       // Every var is size-typed
+    final long  _vrows[];
+    ASTOp( int cols, long rows, String vars[], int vcols[], long vrows[] ) { 
+      super(cols,rows);           // Result size
+      // The input args
+      _vars = vars;  _vcols = vcols;  _vrows = vrows;
+    }
+
+    abstract String opStr();
+    @Override boolean isPure() { return true; }
+    @Override public String toString() { 
+      String s = opStr()+"(";
+      for( int i=0; i<_vars.length; i++ )
+        s += dimStr(_vcols[i],_vrows[i])+" "+_vars[i]+",";
+      s += ')';
+      return s;
+    }
+    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+      return indent(sb,d).append(this);
+    }
+
+    // Parse an OP or return null.
+    private static ASTOp parse(Exec2 E) {
       int x = E._x;
       String id = E.isID();
       if( id == null ) return null;
-      ASTOp1 op1 = OP1S.get(id);
-      if( op1==null ) {         // No ops match
-        E._x = x;               // Roll back, no parse happened
-        return null;
-      }
-      E.xpeek('(',x,null);  
-      return E.xpeek(')',E._x,op1.make(parseCXExpr(E)));
+      ASTOp op = OPS.get(id);
+      if( op != null ) return op;
+      E._x = x;                 // Roll back, no parse happened
+      return null;
     }
-  }
 
-  static private class ASTIsNA extends ASTOp1 {
-    @Override String opStr() { return "isNA"; }
-    ASTIsNA( ) { super(); }
-    ASTIsNA( AST left ) { super(left); }
-    @Override ASTOp1 make( AST left ) { return new ASTIsNA(left); }
-  }
-  static private class ASTSgn extends ASTOp1 {
-    @Override String opStr() { return "Sgn"; }
-    ASTSgn( ) { super(); }
-    ASTSgn( AST left ) { super(left); }
-    @Override ASTOp1 make( AST left ) { return new ASTSgn(left); }
-  }
-
-
-  abstract static private class ASTOp2 extends AST {
-    static final HashMap<String,ASTOp2> OP2S = new HashMap();
-    static {
-      put(new ASTPlus());
-      put(new ASTSub());
-      put(new ASTMul());
-      put(new ASTDiv());
-      put(new ASTMin());
+    // Parse a prefix operator
+    static AST parsePrefix(Exec2 E) { 
+      throw H2O.unimpl();
+      //int x = E._x;
+      //ASTOp op = parse(E);
+      //if( op == null ) return null;
+      //// Fixed arg count
+      //if( op._args!=null ) {
+      //  AST args[] = new AST[op._args.length];
+      //  E.xpeek('(',x,null);  
+      //  for( int i=0; i<args.length-1; i++ )
+      //    args[i] = E.xpeek(',',E._x,parseCXExpr(E));
+      //  args[args.length-1]=parseCXExpr(E);
+      //  return E.xpeek(')',E._x,op.make_rows(args,E,x));
+      //}
+      //// Variable arg cnt
+      //E.xpeek('(',x,null);  
+      //AST args[] = new AST[2];
+      //int i=0;
+      //while( true ) {
+      //  args[i++] = parseCXExpr(E);
+      //  if( E.peek(')') ) break;
+      //  E.xpeek(',',E._x,null);
+      //  if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);
+      //}
+      //return op.make(Arrays.copyOf(args,i),1,i);
     }
-    static private void put(ASTOp2 ast) { OP2S.put(ast.opStr(),ast); }
-    final AST _left, _rite;
-    ASTOp2( ) { super(-1,-1); _left=_rite=null; }
-    ASTOp2( AST left, AST rite ) { 
-      // Compatibility rules:
-      // RxC meets RxC ==> element-wise op
-      // RxC meets Rx1 ==> row-wide op
-      // RxC meets 1xC ==> col-wide op
-      // RxC meets 1x1 ==> scalar op
-      super(Math.max(left._cols,rite._cols),
-            Math.max(left._rows,rite._rows));
-      _left = left;  _rite=rite;
-      assert left._rows==1 || rite._rows==1 || left._rows==rite._rows;
-      assert left._cols==1 || rite._cols==1 || left._cols==rite._cols;
-    }
-    abstract String opStr();
-    abstract ASTOp2 make(AST left, AST rite);
-    ASTOp2 parseRite(AST left,Exec2 E) {
+
+    // Parse an infix boolean operator
+    static ASTApply parseInfix(Exec2 E, AST ast) { 
+      ASTOp op = parse(E);
+      if( op == null ) return null;
+      if( op._vars.length != 2 ) return null;
       int x = E._x;
       AST rite = parseCXExpr(E);
-      E.throwIfNotCompat(left,rite,x);
-      return make(left,rite);
-    }
-
-    @Override public String toString() { return opStr(); }
-    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
-      indent(sb,d); sb.append(this).append('\n');
-      _left.toString(sb,d+1).append('\n');
-      _rite.toString(sb,d+1);
-      return sb;
-    }
-
-    // Parse an infix operator
-    static AST parseInfix(Exec2 E, AST ast) { 
-      int x = E._x;
-      String id = E.isID();
-      if( id == null ) return null;
-      ASTOp2 op2 = OP2S.get(id);
-      if( op2==null ) {         // No ops match
-        E._x = x;               // Roll back, no parse happened
-        return null;
-      }
-      return op2.parseRite(ast,E); // Parsed an Op2 - so now parse right side of infix
-    }
-    static AST parsePrefix(Exec2 E) { 
-      int x = E._x;
-      String id = E.isID();
-      if( id == null ) return null;
-      ASTOp2 op2 = OP2S.get(id);
-      if( op2==null ) {         // No ops match
-        E._x = x;               // Roll back, no parse happened
-        return null;
-      }
-      E.xpeek('(',x,null);  
-      AST left = E.xpeek(',',E._x,parseCXExpr(E));
-      return     E.xpeek(')',E._x,op2.parseRite(left,E));
+      return ASTApply.make(new AST[]{op,ast,rite},E,x);
     }
   }
 
-  static private class ASTPlus extends ASTOp2 {
-    @Override String opStr() { return "+"; }
-    ASTPlus( ) { super(); }
-    ASTPlus( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTPlus(left,rite); }
+
+  abstract static private class ASTUniOp extends ASTOp {
+    static final String VARS[] = new String[]{"x"};
+    static final int    COLS[] = new int   []{ 1 };
+    static final long   ROWS[] = new long  []{ 1 };
+    ASTUniOp( ) { super(1,1,VARS,COLS,ROWS); }
   }
-  static private class ASTSub extends ASTOp2 {
-    @Override String opStr() { return "-"; }
-    ASTSub( ) { super(); }
-    ASTSub( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTSub(left,rite); }
+  static private class ASTIsNA extends ASTUniOp { @Override String opStr() { return "isNA"; }  }
+  static private class ASTSgn  extends ASTUniOp { @Override String opStr() { return "sgn" ; }  }
+  static private class ASTNrow extends ASTUniOp { @Override String opStr() { return "nrow"; }  }
+  static private class ASTNcol extends ASTUniOp { @Override String opStr() { return "ncol"; }  }
+
+  abstract static private class ASTBinOp extends ASTOp {
+    static final String VARS[] = new String[]{"x","y"};
+    static final int    COLS[] = new int   []{ 1 , 1 };
+    static final long   ROWS[] = new long  []{ 1 , 1 };
+    ASTBinOp( ) { super(1,1,VARS,COLS,ROWS); }
   }
-  static private class ASTMul extends ASTOp2 {
-    @Override String opStr() { return "*"; }
-    ASTMul( ) { super(); }
-    ASTMul( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTMul(left,rite); }
-  }
-  static private class ASTDiv extends ASTOp2 {
-    @Override String opStr() { return "/"; }
-    ASTDiv( ) { super(); }
-    ASTDiv( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTDiv(left,rite); }
-  }
-  static private class ASTMin extends ASTOp2 {
-    @Override String opStr() { return "min"; }
-    ASTMin( ) { super(); }
-    ASTMin( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTMin(left,rite); }
+  static private class ASTPlus extends ASTBinOp { @Override String opStr() { return "+"  ; }  }
+  static private class ASTSub  extends ASTBinOp { @Override String opStr() { return "-"  ; }  }
+  static private class ASTMul  extends ASTBinOp { @Override String opStr() { return "*"  ; }  }
+  static private class ASTDiv  extends ASTBinOp { @Override String opStr() { return "/"  ; }  }
+  static private class ASTMin  extends ASTBinOp { @Override String opStr() { return "min"; }  }
+
+  // Variable length; instances will be created of required length
+  static private class ASTCat extends ASTOp {
+    @Override String opStr() { return "c"; }
+    ASTCat( ) { super(-1,-1,null,null,null); }
   }
 
+  // --------------------------------------------------------------------------
   private boolean throwIfNotCompat(AST l, AST r, int idx ) {
     assert l._rows != -1 && r._rows != -1 && l._cols != -1 && r._cols != -1;
-    if( !(l._rows==1 || r._rows==1 || l._rows==r._rows) )  throwErr("Frames not compatible: ",idx);
-    if( !(l._cols==1 || r._cols==1 || l._cols==r._cols) )  throwErr("Frames not compatible: ",idx);
+    if( !(l._rows==1 || r._rows==1 || l._rows==r._rows) ||
+        !(l._cols==1 || r._cols==1 || l._cols==r._cols) )  
+      throwErr("Frames not compatible: "+l.dimStr()+" vs "+r.dimStr(),idx);
     return true;
   }
 

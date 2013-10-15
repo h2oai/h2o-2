@@ -38,4 +38,7 @@ public class C0DChunk extends Chunk {
     Arrays.fill(nc._ds,_con);
     return nc;
   }
+  // 3.3333333e33
+  public int pformat_len0() { return 22; }
+  public String pformat0() { return "% 21.15e"; }
 }
