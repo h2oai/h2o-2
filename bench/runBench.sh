@@ -150,6 +150,6 @@ fi
 if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
-#rm latest
+rm latest
 $TEST
 
