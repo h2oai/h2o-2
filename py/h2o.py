@@ -1792,18 +1792,6 @@ class H2O(object):
                 f.write(chunk)
         print csvPathname, "size:", h2o_util.file_size_formatted(csvPathname)
 
-    def script_download(self, pathname, timeoutSecs=30):
-        url = self.__url('script.txt')
-        log('Start ' + url,  comment=pathname)
-
-        # do it (absorb in 1024 byte chunks)
-        r = requests.get(url, params=None, timeout=timeoutSecs)
-        print "script_download r.headers:", r.headers
-        if r.status_code == 200:
-            f = open(pathname, 'wb')
-            for chunk in r.iter_content(1024):
-                f.write(chunk)
-
     # shouldn't need params
     def log_download(self, logDir=None, timeoutSecs=5, **kwargs):
         if logDir == None:
