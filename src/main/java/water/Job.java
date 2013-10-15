@@ -332,15 +332,15 @@ public class Job extends Request2 {
             break;
           }
         }
-        assert _job != null;
         return old;
       }
       @Override public void onSuccess(){
-        System.out.println("end_time of " + _job + " = " + _job.end_time);
-        final Job job = _job;
-        H2O.submitTask(new H2OCountedCompleter() {
-          @Override public void compute2() {job.onCancelled();}
-        });
+        if(_job != null){
+          final Job job = _job;
+          H2O.submitTask(new H2OCountedCompleter() {
+            @Override public void compute2() {job.onCancelled();}
+          });
+        }
       }
     }.invoke(LIST);
   }
