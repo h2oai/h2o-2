@@ -26,6 +26,7 @@ public class Exec2 extends Request2 {
     Exception e;
     try {
       Frame fr = water.exec.Exec2.exec(str);
+      if( fr == null ) throw new IllegalArgumentException("Null return from Exec2?");
       key = Key.make(".Last.value");
       UKV.remove(key);
       UKV.put(key,fr);

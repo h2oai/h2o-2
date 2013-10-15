@@ -357,6 +357,7 @@ public class Job extends Request2 {
   }
 
   public void remove() {
+    end_time = System.currentTimeMillis();
     DKV.remove(job_key);
     new TAtomic<List>() {
       @Override public List atomic(List old) {
