@@ -21,6 +21,7 @@ exportClasses(
      "H2OGLMModel",
      "H2OKMeansModel",
      "H2OParsedData",
+     "H2OParsedData2",
      "H2ORawData",
      "H2ORForestModel",
       "H2OPCAModel",

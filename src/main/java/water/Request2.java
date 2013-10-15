@@ -7,6 +7,7 @@ import java.lang.reflect.*;
 import java.util.*;
 
 import water.api.*;
+import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.util.Utils;
 
@@ -145,7 +146,7 @@ public abstract class Request2 extends Request {
   /**
    * Iterates over fields and their annotations, and creates argument handlers.
    */
-  @Override protected void registered() {
+  @Override protected void registered(API_VERSION version) {
     try {
       ArrayList<Class> classes = new ArrayList<Class>();
       {
@@ -422,4 +423,6 @@ public abstract class Request2 extends Request {
       throw new RuntimeException(e);
     }
   }
+
+  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
 }

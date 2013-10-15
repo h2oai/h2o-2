@@ -3,6 +3,8 @@ package water.api;
 
 import java.io.File;
 
+import water.api.RequestServer.API_VERSION;
+
 import com.google.gson.*;
 
 public class TypeaheadFileRequest extends TypeaheadRequest {
