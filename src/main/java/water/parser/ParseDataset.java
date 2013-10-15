@@ -362,9 +362,10 @@ public final class ParseDataset extends Job {
       tryComplete();
     }
 
+    @Override public void onCompletion(CountedCompleter cmp){job.remove();}
+
     @Override
     public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      job.remove();
       job.cancel("Got Exception " + ex.getClass().getSimpleName() + ", with msg " + ex.getMessage());
       return super.onExceptionalCompletion(ex, caller);
     }
