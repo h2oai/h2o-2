@@ -1,9 +1,10 @@
 package water.exec;
 
-import water.fvec.*;
-import water.*;
 import java.text.*;
+import java.util.Arrays;
 import java.util.HashMap;
+import water.*;
+import water.fvec.*;
 
 /** Execute a generic R string, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -143,7 +144,7 @@ public class Exec2 {
       AST ast2, ast = parseExpr(E);
       if( ast == null ) return null;
       // Can find an infix op between expressions
-      if( (ast2 = ASTOp2.parseInfix(E,ast)) != null ) return ast2;
+      if( (ast2 = ASTOp.parseInfix(E,ast)) != null ) return ast2;
       // Can find '=' between expressions
       if( (ast2 = ASTAssign.parse  (E,ast)) != null ) return ast2;
       if( ast.isScalar() && E.peek('?') ) { throw H2O.unimpl(); } // infix trinary
@@ -156,8 +157,7 @@ public class Exec2 {
       if( E.peek('(') )  return E.xpeek(')',E._x,parseCXExpr(E));
       if( (ast = ASTKey.parse(E)) != null ) return ast;
       if( (ast = ASTNum.parse(E)) != null ) return ast;
-      if( (ast = ASTOp1.parsePrefix(E)) != null ) return ast;
-      if( (ast = ASTOp2.parsePrefix(E)) != null ) return ast;
+      if( (ast = ASTOp .parsePrefix(E)) != null ) return ast;
       return null;
     }
     protected StringBuilder indent( StringBuilder sb, int d ) { 
@@ -166,6 +166,7 @@ public class Exec2 {
       return sb;
     }
     boolean isScalar() { return _cols==1 && _rows==1; }
+    abstract boolean isPure();  // Side-effect free
     public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
   }
 
@@ -198,6 +199,7 @@ public class Exec2 {
                         rows==null?fr.numRows():     rows._rows,
                         key,cols,rows);
     }
+    boolean isPure() { return true; }
     @Override public String toString() { return _key.toString(); }
     @Override public StringBuilder toString( StringBuilder sb, int d ) { 
       indent(sb,d).append(this);
@@ -229,6 +231,7 @@ public class Exec2 {
       E.throwIfNotCompat(ast,eval,x);
       return new ASTAssign((ASTKey)ast,eval);
     }
+    boolean isPure() { return false; }
     @Override public String toString() { return "="; }
     @Override public StringBuilder toString( StringBuilder sb, int d ) { 
       indent(sb,d).append(this).append('\n');
@@ -254,183 +257,197 @@ public class Exec2 {
       double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
       return new ASTNum(d);
     }
+    boolean isPure() { return true; }
     @Override public String toString() { return Double.toString(_d); }
     @Override public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
   }
 
   // --------------------------------------------------------------------------
-  abstract static private class ASTOp1 extends AST {
-    static final HashMap<String,ASTOp1> OP1S = new HashMap();
+  abstract static private class ASTOp extends AST {
+    static final HashMap<String,ASTOp> OPS = new HashMap();
     static {
-      put(new ASTIsNA());
-      put(new ASTSgn());
-      put(new ASTNrows());
-      put(new ASTNcols());
+      // Unary ops
+      put(new ASTIsNA (new AST[1],-1,-1));
+      put(new ASTSgn  (new AST[1],-1,-1));
+      put(new ASTNrows(new AST[1],-1,-1));
+      put(new ASTNcols(new AST[1],-1,-1));
+
+      // Binary ops
+      put(new ASTPlus (new AST[2],-1,-1));
+      put(new ASTSub  (new AST[2],-1,-1));
+      put(new ASTMul  (new AST[2],-1,-1));
+      put(new ASTDiv  (new AST[2],-1,-1));
+      put(new ASTMin  (new AST[2],-1,-1));
+
+      // Variable argcnt
+      put(new ASTCat  (   null   ,-1,-1));
     }
-    static private void put(ASTOp1 ast) { OP1S.put(ast.opStr(),ast); }
-    final AST _left;
-    final boolean _isReduce;    // Returns a scalar
-    ASTOp1( ) { super(-1,-1); _left=null; _isReduce=false;}
-    ASTOp1( AST left, boolean isReduce ) { 
-      super(isReduce ? 1 : left._cols,
-            isReduce ? 1 : left._rows);
-      _left = left;  _isReduce = isReduce;
-    }
+    static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
+    final AST _args[];
+    ASTOp( AST args[], int cols, long rows ) { super(cols,rows);   _args = args;  }
     abstract String opStr();
-    abstract ASTOp1 make(AST left);
+    abstract ASTOp make(AST args[],int cols, long rows);
+
+    // Wrap compatible but different-sized ops in reduce/bulk ops.
+    ASTOp make_rows(AST args[],Exec2 E, int x) {
+      if( args.length > 2 ) throw H2O.unimpl();
+      // 1-arg case; check for size-type operators
+      if( args.length==1 ) {
+        if( this instanceof ASTNrows || this instanceof ASTNcols ) {
+          ASTOp op = make(args,1,1); // Result is always a scalar
+          if( !op.isPure() ) E.throwErr("nrows and ncols expressions cannot have side effects",x);
+          return op;
+        }
+      }
+      // 2-arg case; check for compatible row counts.
+      // Insert expansion operators as needed.
+      if( args.length==2 ) {
+        if( args[0]._rows != args[1]._rows ) {
+          if( args[0]._rows==1 )      args[0] = new ASTByRow(args[0],args[1]._rows);
+          else if( args[1]._rows==1 ) args[1] = new ASTByRow(args[1],args[0]._rows);
+          else E.throwErr("Mismatch rows: "+args[0]._rows+" and "+args[1]._rows,x);
+        }
+        if( args[0]._cols != args[1]._cols ) {
+          if( args[0]._cols==1 )      args[0] = new ASTByCol(args[0],args[1]._cols);
+          else if( args[1]._cols==1 ) args[1] = new ASTByCol(args[1],args[0]._cols);
+          else E.throwErr("Mismatch cols: "+args[0]._cols+" and "+args[1]._cols,x);
+        }
+        E.throwIfNotCompat(args[0],args[1],x);
+      }
+      return make(args,args[0]._cols,args[0]._rows);
+    }
+
+    boolean isPure() {
+      for( AST arg : _args )
+        if( !arg.isPure() ) return false;
+      return true;
+    }
     @Override public String toString() { return opStr(); }
     @Override public StringBuilder toString( StringBuilder sb, int d ) { 
       indent(sb,d).append(this).append('\n');
-      _left.toString(sb,d+1);
-      return sb;
+      for( int i=0; i<_args.length-1; i++ )
+        _args[i].toString(sb,d+1).append('\n');
+      return _args[_args.length-1].toString(sb,d+1);
     }
 
-    // Parse an prefix operator
-    static AST parsePrefix(Exec2 E) { 
+    private static ASTOp parse(Exec2 E) {
       int x = E._x;
       String id = E.isID();
       if( id == null ) return null;
-      ASTOp1 op1 = OP1S.get(id);
-      if( op1==null ) {         // No ops match
-        E._x = x;               // Roll back, no parse happened
-        return null;
+      ASTOp op = OPS.get(id);
+      if( op != null ) return op;
+      E._x = x;                 // Roll back, no parse happened
+      return null;
+    }
+
+    // Parse a prefix operator
+    static AST parsePrefix(Exec2 E) { 
+      int x = E._x;
+      ASTOp op = parse(E);
+      if( op == null ) return null;
+      // Fixed arg count
+      if( op._args!=null ) {
+        AST args[] = new AST[op._args.length];
+        E.xpeek('(',x,null);  
+        for( int i=0; i<args.length-1; i++ )
+          args[i] = E.xpeek(',',E._x,parseCXExpr(E));
+        args[args.length-1]=parseCXExpr(E);
+        return E.xpeek(')',E._x,op.make_rows(args,E,x));
       }
+      // Variable arg cnt
       E.xpeek('(',x,null);  
-      return E.xpeek(')',E._x,op1.make(parseCXExpr(E)));
+      AST args[] = new AST[2];
+      int i=0;
+      while( true ) {
+        args[i++] = parseCXExpr(E);
+        if( E.peek(')') ) break;
+        E.xpeek(',',E._x,null);
+        if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);
+      }
+      return op.make(Arrays.copyOf(args,i),1,i);
     }
-  }
 
-  static private class ASTIsNA extends ASTOp1 {
-    @Override String opStr() { return "isNA"; }
-    ASTIsNA( ) { super(); }
-    ASTIsNA( AST left ) { super(left,false); }
-    @Override ASTOp1 make( AST left ) { return new ASTIsNA(left); }
-  }
-  static private class ASTSgn extends ASTOp1 {
-    @Override String opStr() { return "Sgn"; }
-    ASTSgn( ) { super(); }
-    ASTSgn( AST left ) { super(left,false); }
-    @Override ASTOp1 make( AST left ) { return new ASTSgn(left); }
-  }
-  static private class ASTNrows extends ASTOp1 {
-    @Override String opStr() { return "nrows"; }
-    ASTNrows( ) { super(); }
-    ASTNrows( AST left ) { super(left,true); }
-    @Override ASTOp1 make( AST left ) { return new ASTNrows(left); }
-  }
-  static private class ASTNcols extends ASTOp1 {
-    @Override String opStr() { return "ncols"; }
-    ASTNcols( ) { super(); }
-    ASTNcols( AST left ) { super(left,true); }
-    @Override ASTOp1 make( AST left ) { return new ASTNcols(left); }
-  }
-
-
-  // --------------------------------------------------------------------------
-  abstract static private class ASTOp2 extends AST {
-    static final HashMap<String,ASTOp2> OP2S = new HashMap();
-    static {
-      put(new ASTPlus());
-      put(new ASTSub());
-      put(new ASTMul());
-      put(new ASTDiv());
-      put(new ASTMin());
-    }
-    static private void put(ASTOp2 ast) { OP2S.put(ast.opStr(),ast); }
-    final AST _left, _rite;
-    ASTOp2( ) { super(-1,-1); _left=_rite=null; }
-    ASTOp2( AST left, AST rite ) { 
-      // Compatibility rules:
-      // RxC meets RxC ==> element-wise op
-      // RxC meets Rx1 ==> row-wide op
-      // RxC meets 1xC ==> col-wide op
-      // RxC meets 1x1 ==> scalar op
-      super(Math.max(left._cols,rite._cols),
-            Math.max(left._rows,rite._rows));
-      _left = left;  _rite=rite;
-      assert left._rows==1 || rite._rows==1 || left._rows==rite._rows;
-      assert left._cols==1 || rite._cols==1 || left._cols==rite._cols;
-    }
-    abstract String opStr();
-    abstract ASTOp2 make(AST left, AST rite);
-    ASTOp2 parseRite(AST left,Exec2 E) {
+    // Parse an infix boolean operator
+    static AST parseInfix(Exec2 E, AST ast) { 
+      ASTOp op = parse(E);
+      if( op == null ) return null;
+      if( op._args==null || op._args.length != 2 ) return null;
       int x = E._x;
       AST rite = parseCXExpr(E);
-      E.throwIfNotCompat(left,rite,x);
-      return make(left,rite);
-    }
-
-    @Override public String toString() { return opStr(); }
-    @Override public StringBuilder toString( StringBuilder sb, int d ) { 
-      indent(sb,d).append(this).append('\n');
-      _left.toString(sb,d+1).append('\n');
-      _rite.toString(sb,d+1);
-      return sb;
-    }
-
-    // Parse an infix operator
-    static AST parseInfix(Exec2 E, AST ast) { 
-      int x = E._x;
-      String id = E.isID();
-      if( id == null ) return null;
-      ASTOp2 op2 = OP2S.get(id);
-      if( op2==null ) {         // No ops match
-        E._x = x;               // Roll back, no parse happened
-        return null;
-      }
-      return op2.parseRite(ast,E); // Parsed an Op2 - so now parse right side of infix
-    }
-    static AST parsePrefix(Exec2 E) { 
-      int x = E._x;
-      String id = E.isID();
-      if( id == null ) return null;
-      ASTOp2 op2 = OP2S.get(id);
-      if( op2==null ) {         // No ops match
-        E._x = x;               // Roll back, no parse happened
-        return null;
-      }
-      E.xpeek('(',x,null);  
-      AST left = E.xpeek(',',E._x,parseCXExpr(E));
-      return     E.xpeek(')',E._x,op2.parseRite(left,E));
+      return op.make_rows(new AST[]{ast,rite},E,x);
     }
   }
 
-  static private class ASTPlus extends ASTOp2 {
+
+  static private class ASTByRow extends ASTOp {
+    @Override String opStr() { return "byRow"; }
+    ASTByRow( AST arg, long rows ) { super(new AST[]{arg},arg._cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { throw H2O.fail(); }
+  }
+  static private class ASTByCol extends ASTOp {
+    @Override String opStr() { return "byCol"; }
+    ASTByCol( AST arg, int cols ) { super(new AST[]{arg},cols,arg._rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { throw H2O.fail(); }
+  }
+
+  static private class ASTIsNA extends ASTOp {
+    @Override String opStr() { return "isNA"; }
+    ASTIsNA( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTIsNA(args,cols,rows); }
+  }
+  static private class ASTSgn extends ASTOp {
+    @Override String opStr() { return "sgn"; }
+    ASTSgn( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTSgn(args,cols,rows); }
+  }
+  static private class ASTNrows extends ASTOp {
+    @Override String opStr() { return "nrows"; }
+    ASTNrows( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTNrows(args,cols,rows); }
+  }
+  static private class ASTNcols extends ASTOp {
+    @Override String opStr() { return "ncols"; }
+    ASTNcols( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTNcols(args,cols,rows); }
+  }
+  static private class ASTPlus extends ASTOp {
     @Override String opStr() { return "+"; }
-    ASTPlus( ) { super(); }
-    ASTPlus( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTPlus(left,rite); }
+    ASTPlus( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTPlus(args,cols,rows); }
   }
-  static private class ASTSub extends ASTOp2 {
+  static private class ASTSub extends ASTOp {
     @Override String opStr() { return "-"; }
-    ASTSub( ) { super(); }
-    ASTSub( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTSub(left,rite); }
+    ASTSub( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTSub(args,cols,rows); }
   }
-  static private class ASTMul extends ASTOp2 {
+  static private class ASTMul extends ASTOp {
     @Override String opStr() { return "*"; }
-    ASTMul( ) { super(); }
-    ASTMul( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTMul(left,rite); }
+    ASTMul( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTMul(args,cols,rows); }
   }
-  static private class ASTDiv extends ASTOp2 {
+  static private class ASTDiv extends ASTOp {
     @Override String opStr() { return "/"; }
-    ASTDiv( ) { super(); }
-    ASTDiv( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTDiv(left,rite); }
+    ASTDiv( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTDiv(args,cols,rows); }
   }
-  static private class ASTMin extends ASTOp2 {
+  static private class ASTMin extends ASTOp {
     @Override String opStr() { return "min"; }
-    ASTMin( ) { super(); }
-    ASTMin( AST left, AST rite ) { super(left,rite); }
-    @Override ASTOp2 make( AST left, AST rite ) { return new ASTMin(left,rite); }
+    ASTMin( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTMin(args,cols,rows); }
   }
+  static private class ASTCat extends ASTOp {
+    @Override String opStr() { return "c"; }
+    ASTCat( AST args[], int cols, long rows ) { super(args,cols,rows); }
+    @Override ASTOp make( AST args[], int cols, long rows ) { return new ASTCat(args,cols,rows); }
+  }
+
 
   // --------------------------------------------------------------------------
   private boolean throwIfNotCompat(AST l, AST r, int idx ) {
     assert l._rows != -1 && r._rows != -1 && l._cols != -1 && r._cols != -1;
-    if( !(l._rows==1 || r._rows==1 || l._rows==r._rows) )  throwErr("Frames not compatible: ",idx);
-    if( !(l._cols==1 || r._cols==1 || l._cols==r._cols) )  throwErr("Frames not compatible: ",idx);
+    if( !(l._rows==1 || r._rows==1 || l._rows==r._rows) ||
+        !(l._cols==1 || r._cols==1 || l._cols==r._cols) )  
+      throwErr("Frames not compatible: "+l._rows+"x"+l._cols+" vs "+r._rows+"x"+r._cols ,idx);
     return true;
   }
 
