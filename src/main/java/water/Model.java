@@ -223,8 +223,7 @@ public abstract class Model extends Iced {
 
   /** Build an adapted Frame from the given Frame. Useful for efficient bulk
    *  scoring of a new dataset to an existing model.  Same adaption as above,
-   *  but expressed as a Frame instead of as an int[][]. The returned Frame
-   *  does not have a response column.
+   *  but expressed as a Frame instead of as an int[][].
    *  It returns a <b>two element array</b> containing an adapted frame and a
    *  frame which contains only vectors which where adapted (the purpose of the
    *  second frame is to delete all adapted vectors with deletion of the

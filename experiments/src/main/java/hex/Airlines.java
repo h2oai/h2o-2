@@ -1,15 +1,10 @@
 package hex;
 
-import hex.Layer.Tanh;
-import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.NeuralNet.Error;
-import water.H2O;
-import water.Sandbox;
-import water.api.FrameSplit;
+import hex.NeuralNet.NeuralNetTrain;
+import water.*;
 import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.Utils;
 
 public class Airlines {
   public static void main(String[] args) throws Exception {
@@ -23,51 +18,19 @@ public class Airlines {
     }
   }
 
-  public Layer[] build(Vec[] data, Vec labels, VecsInput stats) {
-    Layer[] ls = new Layer[3];
-    ls[0] = new VecsInput(data, stats);
-    ls[1] = new Tanh(1000);
-    ls[2] = new VecSoftmax(labels);
-    ls[1]._rate = .001f;
-    ls[2]._rate = .001f;
-    ls[1]._l2 = .0001f;
-    ls[2]._l2 = .0001f;
-    for( int i = 0; i < ls.length; i++ )
-      ls[i].init(ls, i);
-    return ls;
-  }
-
   public void run() {
     // Load data
-    Frame frame = Sandbox.airlines();
-    Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
-    Vec[] train = frames[0].vecs();
-    Vec[] valid = frames[1].vecs();
-    Vec[] test_ = frames[2].vecs();
-    NeuralNet.reChunk(train);
+    Sandbox.airlines();
+    Frame train = UKV.get(Key.make("train.hex"));
 
-    // Labels are on last column for this dataset
-    Vec trainLabels = train[train.length - 1];
-    Vec validLabels = valid[valid.length - 1];
-    Vec test_Labels = test_[test_.length - 1];
-    train = Utils.remove(train, train.length - 1);
-    valid = Utils.remove(valid, valid.length - 1);
-    test_ = Utils.remove(test_, test_.length - 1);
-
-    // Test is classification so make sure number is interpreted as enum
-    trainLabels.asEnum();
-    validLabels.asEnum();
-    test_Labels.asEnum();
-
-    // Build net and start training
-    Layer[] ls = build(train, trainLabels, null);
-    Trainer trainer = new Trainer.MapReduce(ls);
-    trainer.start();
+    NeuralNetTrain job = new NeuralNetTrain();
+    NeuralNet model = (NeuralNet) job._model;
+    job.source = train;
+    job.response = train.vecs()[train.vecs().length - 1];
+    job.start();
 
     // Monitor training
     long start = System.nanoTime();
-    long lastTime = start;
-    long lastItems = 0;
     for( ;; ) {
       try {
         Thread.sleep(2000);
@@ -76,13 +39,8 @@ public class Airlines {
       }
 
       long time = System.nanoTime();
-      double delta = (time - lastTime) / 1e9;
       double total = (time - start) / 1e9;
-      long steps = trainer.items();
-      int ps = (int) ((steps - lastItems) / delta);
-      String text = (int) total + "s, " + steps + " steps (" + (ps) + "/s) ";
-      lastTime = time;
-      lastItems = steps;
+      String text = (int) total + "s, " + model.items + " steps (" + (model.items_per_second) + "/s) ";
 
       // Build separate nets for scoring purposes, use same normalization stats as for training
       Layer[] temp = build(train, trainLabels, (VecsInput) ls[0]);

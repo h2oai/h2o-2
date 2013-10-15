@@ -22,14 +22,10 @@ public class Sandbox {
       localCloud(1, true, args);
 
       // covtype();
+      airlines();
 
       //Frame frame = water.TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
       //Frame frame = water.TestUtil.parseFrame("smalldata/categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");
-//      Frame frame = airlines();
-//      Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
-//      UKV.put(Key.make("train.hex"), frames[0]);
-//      UKV.put(Key.make("valid.hex"), frames[1]);
-//      UKV.put(Key.make("test.hex"), frames[2]);
 
 //    String u = "/Plot.png?source_key=test.hex&cols=" + s + "&clusters=test.kmeans";
 //    Desktop.getDesktop().browse(new URI("http://localhost:54321" + u));
@@ -50,7 +46,7 @@ public class Sandbox {
     water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
   }
 
-  public static Frame airlines() {
+  public static void airlines() {
     Frame frame = water.TestUtil.parseFrame("smalldata/airlines/allyears2k_headers.zip");
     frame.remove("DepTime");
     frame.remove("CRSDepTime");
@@ -64,7 +60,14 @@ public class Sandbox {
     frame.remove("SecurityDelay");
     frame.remove("LateAircraftDelay");
     frame.remove("IsArrDelayed");
-    return frame;
+    split(frame);
+  }
+
+  public static void split(Frame frame) {
+    Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
+    UKV.put(Key.make("train.hex"), frames[0]);
+    UKV.put(Key.make("valid.hex"), frames[1]);
+    UKV.put(Key.make("test.hex"), frames[2]);
   }
 
   /**

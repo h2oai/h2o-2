@@ -168,13 +168,16 @@ public class Job extends Request2 {
 
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       super.writeJSONFields(bb);
-      _model.writeJSONFields(bb);
+      if( _model != null )
+        _model.writeJSONFields(bb);
       return bb;
     }
 
     @Override public FieldDoc[] toDocField() {
       FieldDoc[] fs = super.toDocField();
-      return Utils.append(fs, _model.toDocField());
+      if( _model != null )
+        fs = Utils.append(fs, _model.toDocField());
+      return fs;
     }
   }
 
