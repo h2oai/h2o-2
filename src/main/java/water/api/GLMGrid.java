@@ -10,6 +10,7 @@ import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Properties;
 
+import water.DKV;
 import water.Key;
 import water.util.Log;
 import water.util.RString;
@@ -129,6 +130,7 @@ public class GLMGrid extends Request {
                         _xval.value(),
                         _parallel.value());
     job.start();
+    Log.temp("aaaaaaaaaaaaaa " + job.self() + " ffffffff " + DKV.get(job.self()));
 
     // Redirect to the grid-search status page
     JsonObject j = new JsonObject();

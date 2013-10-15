@@ -513,6 +513,10 @@ public abstract class Log {
     }
     return r;
   }
+  /** Temporary, calls to this should be removed if forgotten during debug. */
+  static public void temp(Object... objects) {
+    info(objects);
+  }
 
   public static String padRight(String stringToPad, int size) {
     StringBuilder strb = new StringBuilder(stringToPad);

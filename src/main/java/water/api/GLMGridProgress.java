@@ -8,6 +8,7 @@ import hex.GLMGrid.GLMModels;
 import java.util.Map;
 
 import water.*;
+import water.util.Log;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
@@ -75,10 +76,14 @@ public class GLMGridProgress extends Request {
 
     Response r;
     Key job = _job.value();
+    Log.temp("fffffffffff " + job + " ddddddd " + DKV.get(job));
     if( job != null && DKV.get(job) != null )
       r = Response.poll(response, models.progress());
-    else
+    else {
+      Job j =  Job.findJob(job);
+      Log.temp("qqqqqqqqqqq found " + j + " ddddddd " + (j != null ? j.end_time : ""));
       r = Response.done(response);
+    }
 
     r.setBuilder(Constants.DEST_KEY, new HideBuilder());
     r.setBuilder(MODELS, new GridBuilder2());
