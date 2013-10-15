@@ -1,9 +1,5 @@
 #! /bin/bash
 
-if [ -z ${PROJECT_VERSION} ]; then
-    PROJECT_VERSION=99.80
-fi
-
 # determine the correct separator of multiple paths
 if [ `uname` = "Darwin" ]
 then 
@@ -99,32 +95,11 @@ function clean() {
     fi
     mkdir ${OUTDIR}
     mkdir ${CLASSES}
-    rm -f $SRC/water/BuildVersion.java
     rm -fr hadoop/target
 }
 
 function build_classes() {
     echo "building classes..."
-
-    BUILD_BRANCH=`git branch | grep '*' | sed 's/* //'`
-    BUILD_HASH=`git log -1 --format="%H"`
-    BUILD_DESCRIBE=`git describe --always --dirty`
-    BUILD_ON=`date`
-    BUILD_BY=`whoami | sed 's/.*\\\\//'`
-
-    cat > $SRC/water/BuildVersion.java <<EOF
-package water;
-
-public class BuildVersion extends AbstractBuildVersion {
-    public String branchName()     { return "${BUILD_BRANCH}"; }
-    public String lastCommitHash() { return "${BUILD_HASH}"; }
-    public String describe()       { return "${BUILD_DESCRIBE}"; }
-    public String projectVersion() { return "${PROJECT_VERSION}"; }
-    public String compiledOn()     { return "${BUILD_ON}"; }
-    public String compiledBy()     { return "${BUILD_BY}"; }
-}
-EOF
-
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     "$JAVAC" ${JAVAC_ARGS} \
         -cp "${CLASSPATH}" \
@@ -136,12 +111,6 @@ EOF
         $SAMPLESRC/water/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
-
-    cp -r ${RESOURCES}/* "${CLASSES}"
-cat >> "$VERSION_PROPERTIES" <<EOF
-h2o.git.version=$($GIT rev-parse HEAD 2>/dev/null )
-h2o.git.branch=$($GIT rev-parse --abbrev-ref HEAD 2>/dev/null )
-EOF
 }
 
 function build_initializer() {
@@ -181,11 +150,6 @@ function build_javadoc() {
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     mkdir -p target/logs
     "${JAVADOC}" -overview ${SRC}/overview.html -classpath "${CLASSPATH}" -d "${OUTDIR}"/javadoc -sourcepath "${SRC}" -subpackages hex:water >& target/logs/javadoc_build.log
-}
-
-function build_package() {
-    echo "creating package..."
-    make package >& target/package_build.log
 }
 
 function junit() {

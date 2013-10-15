@@ -38,9 +38,9 @@ class Basic(unittest.TestCase):
             csvPathname2 = SYNDATASETS_DIR + '/' + csvFilename + '_stripped.csv'
             h2o_util.file_strip_trailing_spaces(fullPathname1, csvPathname2)
 
-            kwargs = {'n_folds': 0, 'family': family, 'link': 'familyDefault', 'y': y}
-            parseResult = h2i.import_parse(path=csvPathname2, schema='put', timeoutSecs=timeoutSecs, **kwargs)
+            parseResult = h2i.import_parse(path=csvPathname2, schema='put', timeoutSecs=timeoutSecs)
             start = time.time()
+            kwargs = {'n_folds': 0, 'family': family, 'link': 'familyDefault', 'y': y}
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end (w/check) on ", csvPathname2, 'took', time.time() - start, 'seconds'

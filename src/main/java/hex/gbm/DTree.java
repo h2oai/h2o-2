@@ -507,13 +507,12 @@ class DTree extends Iced {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
-      sb.append("<div class=\"pull-left\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br />");
-      sb.append("<div class=\"hide\" id=\"javaModel\">");
-      sb.append("<pre style=\"overflow-y:scroll;\">");
-      DocGen.HTML.escape(sb, toJava());
-      sb.append("<div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br />");
-      sb.append("<div class=\"hide\" id=\"javaModel\">");
-      sb.append("</pre></div>");
+      if(sb.indexOf("<h3>GBMModelView</h3>") != -1) {
+        sb.insert(sb.indexOf("</pre>") +"</pre></div>".length(),  
+        "<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
+        "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
+        "<pre style=\"overflow-y:scroll;\">"+DocGen.HTML.escape2(toJava())+"</pre></div>");
+      }
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM

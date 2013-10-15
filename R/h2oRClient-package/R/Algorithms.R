@@ -1,5 +1,5 @@
 # Model-building operations and algorithms
-setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1e-5, standardize = TRUE, tweedie.p=ifelse(family=='tweedie', 1.5, NA)) { standardGeneric("h2o.glm") })
+setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1e-5, standardize = TRUE, tweedie.p = ifelse(family=='tweedie', 1.5, as.numeric(NA))) { standardGeneric("h2o.glm") })
 # setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.glm.FV", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm.FV") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
@@ -505,13 +505,11 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
         # numMatch = colnames(newdata) %in% colnames(object@data)
         numMatch = colnames(newdata) %in% rownames(object@model$rotation)
         numPC = min(length(numMatch[numMatch == TRUE]), length(object@model$sdev))
-        res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
-        h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
+        # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
+        res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
+        # h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
+        while(h2o.__poll(object@data@h2o, res$job_key) != -1) { Sys.sleep(1) }
         new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
-        # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, num_pc=numPC)
-        # while(h2o.__poll(object@data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-        # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
-        # new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
       } else
         stop(paste("Prediction has not yet been implemented for", class(object)))
     })

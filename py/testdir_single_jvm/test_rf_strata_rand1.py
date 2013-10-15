@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', 
-                timeoutSecs=timeoutSecs, **kwargs)
+                timeoutSecs=timeoutSecs)
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "Trial #", trial, "completed"
 
