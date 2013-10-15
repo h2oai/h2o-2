@@ -95,7 +95,7 @@ public class SummaryPage2 extends Request2 {
       s2.toHTML(source.vecs()[cols[i]],cname,innerPageBdr);
       sb.append("<div><a href='#col_" + cname + "'>" + cname + "</a></div>");
     }
-    innerPageBdr.append("/div");
+    innerPageBdr.append("</div>");
 
     sb.append("</div>");
     sb.append("</div>");

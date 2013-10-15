@@ -40,20 +40,25 @@ public class Summary2 extends Iced {
 
   public Summary2(Vec vec) {
     _enum = vec.isEnum();
-    if (_enum) domains = vec.domain(); else domains = null;
     _isInt = vec.isInt();
+    if (_enum) domains = vec.domain(); else domains = null;
     long len = vec.length();
     _avail_rows = len - vec.naCnt();
-    mins = MemoryManager.malloc8d((int)Math.min(len,NMAX));
-    maxs = MemoryManager.malloc8d((int)Math.min(len,NMAX));
+    if (_enum) {
+      mins = MemoryManager.malloc8d(Math.min(domains.length, NMAX));
+      maxs = MemoryManager.malloc8d(Math.min(domains.length, NMAX));
+    } else {
+      mins = MemoryManager.malloc8d((int)Math.min(len,NMAX));
+      maxs = MemoryManager.malloc8d((int)Math.min(len,NMAX));
+    }
     Arrays.fill(mins, Double.POSITIVE_INFINITY);
     Arrays.fill(maxs, Double.NEGATIVE_INFINITY);
 
-    double span = vec.max()-vec.min();
-    if( vec.isEnum() && (span+1) < MAX_HIST_SZ ) {
+    double span = vec.max()-vec.min() + 1;
+    if( vec.isEnum() && span < MAX_HIST_SZ ) {
       start = vec.min();
       binsz = 1;
-      bins = new long[(int)span+1];
+      bins = new long[(int)span];
     } else {
       // guard against improper parse (date type) or zero c._sigma
       double b = Math.max(1e-4,3.5 * vec.sigma()/ Math.cbrt(len));
@@ -159,13 +164,13 @@ public class Summary2 extends Iced {
       }
     }
     for (int i = 0; i < mins.length - 1; i++)
-      for (int j = i; j < mins.length - 1; j++)
+      for (int j = 0; j < i; j++)
         if (bins[(int)mins[j]] > bins[(int)mins[j+1]]) { 
           double t = mins[j]; mins[j] = mins[j+1]; mins[j+1] = t;
         }
     for (int i = 0; i < maxs.length - 1; i++)
-      for (int j = i; j < maxs.length - 1; j++)
-        if (bins[(int)maxs[j]] > bins[(int)maxs[j+1]]) { 
+      for (int j = 0; j < i; j++)
+        if (bins[(int)maxs[j]] < bins[(int)maxs[j+1]]) { 
           double t = maxs[j]; maxs[j] = maxs[j+1]; maxs[j+1] = t;
         }
   }
@@ -255,6 +260,6 @@ public class Summary2 extends Iced {
       sb.append("</table>");
       sb.append("</div>");
     }
-    sb.append("\n</div>\n");
+    sb.append("</div>\n"); 
   }
 }
