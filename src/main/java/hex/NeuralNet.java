@@ -79,27 +79,31 @@ public class NeuralNet extends Model implements water.Job.Progress {
   private Vec[] _train, _valid;
   private Vec _trainResp, _validResp;
 
-  public H2OCountedCompleter startTrain(final Job job) {
-    layers = new Layer[hidden.length + 2];
-    layers[0] = new VecsInput(_train);
+  public Layer[] build(Vec[] vecs, Vec response) {
+    Layer[] ls = new Layer[hidden.length + 2];
+    ls[0] = new VecsInput(vecs);
     for( int i = 0; i < hidden.length; i++ ) {
       if( activation == Activation.Rectifier )
-        layers[i + 1] = new Layer.Rectifier(hidden[i]);
+        ls[i + 1] = new Layer.Rectifier(hidden[i]);
       else
-        layers[i + 1] = new Layer.Tanh(hidden[i]);
-      layers[i + 1]._rate = (float) rate;
-      layers[i + 1]._l2 = (float) l2;
+        ls[i + 1] = new Layer.Tanh(hidden[i]);
+      ls[i + 1]._rate = (float) rate;
+      ls[i + 1]._l2 = (float) l2;
     }
-    if( _trainResp.domain() != null )
-      layers[layers.length - 1] = new VecSoftmax(_trainResp);
+    if( response.domain() != null )
+      ls[ls.length - 1] = new VecSoftmax(response);
     else {
       // TODO Gaussian?
     }
-    layers[layers.length - 1]._rate = (float) rate;
-    layers[layers.length - 1]._l2 = (float) l2;
-    for( int i = 0; i < layers.length; i++ )
-      layers[i].init(layers, i);
+    ls[ls.length - 1]._rate = (float) rate;
+    ls[ls.length - 1]._l2 = (float) l2;
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].init(ls, i);
+    return ls;
+  }
 
+  public H2OCountedCompleter startTrain(final Job job) {
+    layers = build(_train, _trainResp);
     final Trainer trainer = new Trainer.MapReduce(layers, epochs, job.self());
 
     // Use a separate thread for monitoring (blocked most of the time)
@@ -147,6 +151,22 @@ public class NeuralNet extends Model implements water.Job.Progress {
 
   @Override public float progress() {
     return 0.1f + Math.min(1, items / (float) (epochs * _train[0].length()));
+  }
+
+  public Error eval(Frame frame, long n, long[][] cm) {
+    Frame[] frs = adapt(frame, false, true);
+    Error e = evalAdapted(frs[0], n, cm);
+    frs[1].remove();
+    return e;
+  }
+
+  public Error evalAdapted(Frame frame, long n, long[][] cm) {
+    Vec[] vecs = frame.vecs();
+    Vec response = vecs[vecs.length - 1];
+    vecs = Utils.remove(vecs, vecs.length - 1);
+    VecsInput stats = (VecsInput) layers[0];
+    Error e = eval(new VecsInput(vecs, stats), new VecSoftmax(response), n, cm);
+    return e;
   }
 
   public Error eval(Input input, Output output, long n, long[][] cm) {
@@ -254,7 +274,11 @@ public class NeuralNet extends Model implements water.Job.Progress {
   public static class NeuralNetTrain extends ValidatedJob {
     public NeuralNetTrain() {
       description = DOC_GET;
-      _model = new NeuralNet();
+      _model = newModel();
+    }
+
+    protected NeuralNet newModel() {
+      return new NeuralNet();
     }
 
     @Override protected H2OCountedCompleter fork() {

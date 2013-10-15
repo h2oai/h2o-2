@@ -1,6 +1,5 @@
 package hex;
 
-import hex.Layer.VecsInput;
 import hex.NeuralNet.Error;
 import hex.NeuralNet.NeuralNetTrain;
 import water.*;
@@ -27,9 +26,12 @@ public class Airlines {
     NeuralNet model = (NeuralNet) job._model;
     job.source = train;
     job.response = train.vecs()[train.vecs().length - 1];
+    model.rate = .0001;
+    model.l2 = 0;
     job.start();
 
     // Monitor training
+    Frame test = model.adapt((Frame) UKV.get(Key.make("test.hex")), false, true)[0];
     long start = System.nanoTime();
     for( ;; ) {
       try {
@@ -38,21 +40,13 @@ public class Airlines {
         throw new RuntimeException(e);
       }
 
-      long time = System.nanoTime();
-      double total = (time - start) / 1e9;
-      String text = (int) total + "s, " + model.items + " steps (" + (model.items_per_second) + "/s) ";
+      Error trErr = model.evalAdapted(train, NeuralNet.EVAL_ROW_COUNT, null);
+      Error tsErr = model.evalAdapted(test, NeuralNet.EVAL_ROW_COUNT, null);
 
-      // Build separate nets for scoring purposes, use same normalization stats as for training
-      Layer[] temp = build(train, trainLabels, (VecsInput) ls[0]);
-      Layer.copyWeights(ls, temp);
-      Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
-      text += "train: " + error;
-
-      temp = build(valid, validLabels, (VecsInput) ls[0]);
-      Layer.copyWeights(ls, temp);
-      error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
-      text += ", valid: " + error;
-
+      double time = (System.nanoTime() - start) / 1e9;
+      String text = (int) time + "s, " + model.items + " steps (" + (model.items_per_second) + "/s) ";
+      text += "train: " + trErr;
+      text += ", test: " + tsErr;
       System.out.println(text);
     }
   }

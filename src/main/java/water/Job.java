@@ -160,7 +160,9 @@ public class Job extends Request2 {
       super.init();
       if( _model != null ) {
         _model._selfKey = destination_key;
-        _model._dataKey = Key.make(input("source"));
+        String sourceArg = input("source");
+        if( sourceArg != null )
+          _model._dataKey = Key.make(sourceArg);
         _model._names = source.names();
         _model._domains = source.domains();
       }
@@ -168,8 +170,10 @@ public class Job extends Request2 {
 
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       super.writeJSONFields(bb);
-      if( _model != null )
+      if( _model != null ) {
+        bb.put1(',');
         _model.writeJSONFields(bb);
+      }
       return bb;
     }
 
