@@ -1127,7 +1127,7 @@ class H2O(object):
         if key2 is not None: params_dict['destination_key'] = key2
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        algo = 'KMeans2' if beta_features else 'KMeans'
+        algo = '2/KMeans2' if beta_features else 'KMeans'
 
         print "\n%s params list:" % algo, params_dict
         a = self.__do_json_request(algo + '.json', 
@@ -1199,7 +1199,7 @@ class H2O(object):
         # requests.defaults({max_retries : 4})
         # https://github.com/kennethreitz/requests/issues/719
         # it was closed saying Requests doesn't do retries. (documentation implies otherwise)
-        algo = "Parse2" if beta_features else "Parse"
+        algo = "2/Parse2" if beta_features else "Parse"
         verboseprint("\n %s key: %s to key2: %s (if None, means default)" % (algo, key, key2))
         # other h2o parse parameters, not in the defauls
         # header
@@ -1267,7 +1267,7 @@ class H2O(object):
                 "max_column_display": max_column_display
                 }
 
-        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
+        a = self.__do_json_request('2/Inspect2.json' if beta_features else 'Inspect.json',
             params=params,
             ignoreH2oError=ignoreH2oError,
             timeout=timeoutSecs
@@ -1317,7 +1317,7 @@ class H2O(object):
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
     def import_files(self, path, timeoutSecs=180):
-        a = self.__do_json_request('ImportFiles2.json' if beta_features else 'ImportFiles.json',
+        a = self.__do_json_request('2/ImportFiles2.json' if beta_features else 'ImportFiles.json',
             timeout=timeoutSecs,
             params={"path": path}
         )
@@ -1452,8 +1452,8 @@ class H2O(object):
             r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
             return r
 
-        algo = 'DRFView2' if beta_features else 'RFView'
-        algoScore = 'DRFScore2' if beta_features else 'RFScore'
+        algo = '2/DRFView2' if beta_features else 'RFView'
+        algoScore = '2/DRFScore2' if beta_features else 'RFScore'
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {
@@ -1551,13 +1551,13 @@ class H2O(object):
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
-        a = self.__do_json_request('GBMModelView.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GBMModelView.json',timeout=timeoutSecs,params=params_dict)
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
-        algo = 'Predict' if beta_features else 'GeneratePredictionsPage'
-        algoView = 'Inspect2' if beta_features else 'Inspect'
+        algo = '2/Predict' if beta_features else 'GeneratePredictionsPage'
+        algoView = '2/Inspect2' if beta_features else 'Inspect'
 
         if beta_features:
             params_dict = {
@@ -1657,7 +1657,7 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'gbm', print_params)
 
         start = time.time()
-        a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GBM.json',timeout=timeoutSecs,params=params_dict)
         if noPoll:
             a['python_elapsed'] = time.time() - start
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
@@ -1780,7 +1780,7 @@ class H2O(object):
         # log it
         params = {'src_key': src_key}
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
-        url = self.__url('downloadCsv')
+        url = self.__url('2/DownloadDataset.json')
         log('Start ' + url + paramsStr, comment=csvPathname)
 
         # do it (absorb in 1024 byte chunks)
@@ -1841,8 +1841,8 @@ class H2O(object):
     def GLM(self, key,
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_$python_0_default_0',**kwargs):
-
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM",destination_key=destination_key, **kwargs)
+        parentName = "2/GLM2" if beta_features else "GLM"
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName ,destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)

@@ -26,6 +26,14 @@ import com.google.common.io.Closeables;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
+  public enum API_VERSION {
+    V_1(1, "/"),
+    V_2(2, "/2/"); // FIXME: better should be /v2/
+    final private int _version;
+    final private String _prefix;
+    public final String prefix() { return _prefix; }
+    private API_VERSION(int version, String prefix) { _version = version; _prefix = prefix; }
+  }
   static RequestServer SERVER;
 
   // cache of all loaded resources
@@ -105,8 +113,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new KMeans2());
       registerRequest(new hex.gbm.DRF());
       registerRequest(new hex.LR2());
-    }
-    else {
+    } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
@@ -169,16 +176,21 @@ public class RequestServer extends NanoHTTPD {
    * Registers the request with the request server.
    */
   public static Request registerRequest(Request req) {
-    String href = req.href();
-    assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
-    _requests.put(href,req);
-    req.registered();
+    assert req.supportedVersions().length > 0;
+    for (API_VERSION ver : req.supportedVersions()) {
+      String href = req.href(ver);
+      assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
+      _requests.put(href,req);
+      req.registered(ver);
+    }
     return req;
   }
 
   public static void unregisterRequest(Request req) {
-    String href = req.href();
-    _requests.remove(href);
+    for (API_VERSION ver : req.supportedVersions()) {
+      String href = req.href(ver);
+      _requests.remove(href);
+    }
   }
 
   // Keep spinning until we get to launch the NanoHTTPD
