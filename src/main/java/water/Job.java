@@ -277,7 +277,7 @@ public class Job extends Request2 {
     return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
   }
 
-  public <T extends H2OCountedCompleter> T start(final T fjtask) {
+  public void start(final H2OCountedCompleter fjtask) {
     // Subtle FJ stuff: we create another counted completer and set it as completer of the user's task.
     // This is to ensure that if anyone calls this.get() it will block until all completion methods
     // (if there are any) of the _fjtask completed. Common case is that the user's FJtask has
@@ -297,7 +297,6 @@ public class Job extends Request2 {
       }
     }.invoke(LIST);
     fs.blockForPending();
-    return fjtask;
   }
   // Overridden for Parse
   public float progress() {
@@ -343,7 +342,6 @@ public class Job extends Request2 {
       }
       @Override public void onSuccess(){
         if(_job != null){
-          System.out.println("updated job " + _job.job_key);
           final Job job = _job;
           H2O.submitTask(new H2OCountedCompleter() {
             @Override public void compute2() {job.onCancelled();}
@@ -448,7 +446,7 @@ public class Job extends Request2 {
 
   //
 
-  public H2OCountedCompleter fork() {
+  public Job fork() {
     init();
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
@@ -467,8 +465,9 @@ public class Job extends Request2 {
           update(Job.this, Utils.getStackAsString(t));
       }
     };
-    H2O.submitTask(start(task));
-    return task;
+    start(task);
+    H2O.submitTask(task);
+    return this;
   }
 
   private static void update(final Job job, final String exception) {
