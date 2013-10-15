@@ -387,7 +387,13 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   }
 
   @Override public String speedDescription() { return "time/tree"; }
-  @Override public long speedValue() { return runTimeMs() / ntrees; }
+  @Override public long speedValue() {
+    Value value = DKV.get(dest());
+    DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
+    long numTreesBuiltSoFar = m == null ? 0 : m.treeBits.length;
+    long sv = (numTreesBuiltSoFar <= 0) ? 0 : (runTimeMs() / numTreesBuiltSoFar);
+    return sv;
+  }
 
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
