@@ -9,6 +9,7 @@ import hex.glm.GLMTask.YMUTask;
 import hex.glm.GLMValidation.GLMXValidation;
 import hex.glm.LSMSolver.ADMMSolver;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.Future;
 
@@ -158,14 +159,20 @@ public class GLM2 extends FrameJob {
           _oldModel = res;
           GLMIterationTask nextIter = new GLMIterationTask(glmt, newBeta);
           nextIter.setCompleter(clone()); // we need to clone here as FJT will set status to done after this method
-          nextIter.dfork(fr);
+          nextIter.doIt(fr);
         }
       } else fjt.onExceptionalCompletion(new RuntimeException("Cancelled!"),null);
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       final String msg = ex.getMessage();
-      if(msg == null || !msg.equals("Cancelled"))
-        GLM2.this.cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'");
+      if(msg == null || !msg.equals("Cancelled")){
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        ex.printStackTrace(pw);
+        String stackTrace = sw.toString();
+        GLM2.this.cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
+        System.out.println(stackTrace);
+      }
       fjt.completeExceptionally(ex);
       return false;
     }
@@ -196,13 +203,13 @@ public class GLM2 extends FrameJob {
     }
     fr = GLMTask.adaptFrame(fr);
     YMUTask ymut = new YMUTask(this,new GLMParams(family, tweedie_variance_power, link,tweedie_link_power), standardize, case_mode, case_val, fr.anyVec().length());
-    ymut.doAll(fr);
+    ymut.doIt(fr).getResult();
     GLMIterationTask firstIter = new GLMIterationTask(this,new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
     firstIter._ymu = ymut.ymu();
     if(completer != null)fjt.setCompleter(completer);
     final LSMSolver solver = new ADMMSolver(lambda, alpha);
     firstIter.setCompleter(new Iteration(solver,fr,fjt));
-    firstIter.dfork(fr);
+    firstIter.doIt(fr);
     return fjt;
   }
 

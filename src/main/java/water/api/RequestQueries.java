@@ -1,9 +1,10 @@
 package water.api;
 
+import hex.GridSearch;
+
 import java.util.*;
 
 import water.H2O;
-import water.Iced;
 import water.util.RString;
 
 /**
@@ -44,7 +45,7 @@ public class RequestQueries extends RequestArguments {
     // Check that for each actual input argument from the user, there is some
     // request argument that this method is expecting.
     //*/
-    if (H2O.OPT_ARGS.check_rest_params) {
+    if (H2O.OPT_ARGS.check_rest_params && !(this instanceof GridSearch)) {
       Enumeration en = args.propertyNames();
       while (en.hasMoreElements()) {
         boolean found = false;

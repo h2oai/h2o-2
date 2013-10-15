@@ -28,7 +28,7 @@ endif
 	R CMD build h2o-package
 	mkdir -p ../target/R
 	cp -p README.txt ../target/R
-	mv h2o_1.0.2.tar.gz ../target/R
+	mv h2o_1.0.3.tar.gz ../target/R
 
 clean:
 	rm -f h2oRClient-package/DESCRIPTION

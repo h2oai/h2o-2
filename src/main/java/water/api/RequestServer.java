@@ -6,6 +6,7 @@ import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
 import hex.glm.*;
+import hex.pca.*;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -65,7 +66,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
-    Request.addToNavbar(registerRequest(new Console()),     "Console",                    "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
@@ -113,8 +113,9 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",        "Beta (FluidVecs!)");
-    }
+      Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
+     }
 
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
@@ -122,14 +123,15 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new DRFModelView());
     registerRequest(new DRFProgressPage());
     registerRequest(new DownloadDataset());
-    registerRequest(new Exec());
-    registerRequest(new DataManip());
+    registerRequest(new Exec2());
+    registerRequest(new Exec());      // Will be replaced by Exec2
+    registerRequest(new DataManip()); // Will be replaced by Exec2
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
-    registerRequest(new GetVector());
+    registerRequest(new GetVector()); // Will be replaced by Exec2
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new NeuralNetProgress());
@@ -137,7 +139,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new Progress());
     registerRequest(new Progress2());
     registerRequest(new PutValue());
-    registerRequest(new PutVector());
+    registerRequest(new PutVector()); // Will be replaced by Exec2
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
     registerRequest(new RPackage());

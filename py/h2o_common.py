@@ -1,4 +1,4 @@
-import time
+import time, sys
 import h2o, h2o_hosts, h2o_import as h2i
 
 class SetupUnitTest(object):
@@ -10,7 +10,8 @@ class SetupUnitTest(object):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=cls.nodes, java_heap_GB=cls.java_xmx)
+            params = collectConf(cls)
+            h2o.build_cloud(**params)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -21,6 +22,13 @@ class SetupUnitTest(object):
         #h2o.cancelAllJobs() 
         h2o.tear_down_cloud()
 
+
+def collectConf(cls):
+    result = { }
+    if hasattr(cls, 'nodes'): result['node_count'] = cls.nodes
+    if hasattr(cls, 'java_xmx'): result['java_heap_GB'] = cls.java_xmx
+    
+    return result
 
 # typical use in a unittest:
 # class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):

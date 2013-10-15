@@ -36,7 +36,7 @@ public class JUnitRunner {
     tests.remove(ValueArrayToFrameTestAll.class);
     // Pure JUnit test
     tests.remove(CBSChunkTest.class);
-    tests.remove(GBMDomainTest.class);
+    //tests.remove(GBMDomainTest.class);
   }
 
   public static void main(String[] args) throws Exception {

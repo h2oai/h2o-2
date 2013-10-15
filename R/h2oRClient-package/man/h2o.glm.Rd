@@ -8,9 +8,9 @@ H2O: Generalized Linear Model
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-05)
+h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, tweedie.p)
 }
-%- maybe also 'usage' for other objects documented here.
+
 \arguments{
   \item{x}{
 A vector containing the names of the predictors in the model.
@@ -22,7 +22,7 @@ The name of the response variable in the model.
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{family}{
-A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and tweedie are supported.
+A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported.
 }
   \item{nfolds}{
 Number of folds for cross-validation. The default is 10.
