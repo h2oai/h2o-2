@@ -12,11 +12,12 @@ files      = {'Airlines'   : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', '
 build = ""
 
 def doPCA(fs, folderPath):
+    benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+    date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
-        #if f in ['AirlinesTrain10x', 'AirlinesTrain100x']: continue
+        h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='PCA'+f+'.csv')
         print "Doing PCA on ", f
         overallWallStart = time.time()
-        date = '-'.join([str(x) for x in list(time.localtime())][0:3])
         pcabenchcsv = 'benchmarks/'+build+'/'+date+'/pcabench.csv'
         if not os.path.exists(pcabenchcsv):
             output = open(pcabenchcsv,'w')
@@ -35,9 +36,11 @@ def doPCA(fs, folderPath):
             hK = folderPath + "Header.csv"
             headerPathname = importFolderPath + "/" + hK
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-            headerKey =h2i.find_key(hK)
+            headerKey = h2i.find_key(hK)
+            h2o.cloudPerfH2O.message("=========PARSE TRAIN========")
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200)
+                timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200, benchmarkLogging=benchmarkLogging)
+            h2o.cloudPerfH2O.message("=========END PARSE TRAIN========")
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
             
@@ -61,9 +64,11 @@ def doPCA(fs, folderPath):
 
             kwargs    = params.copy()
             pcaStart  = time.time()
-            pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=7200, **kwargs)
+            h2o.cloudPerfH2O.message("========PCA BUILD========")
+            pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=7200, benchmarkLogging=benchmarkLogging, **kwargs)
             pcaTime   = time.time() - pcaStart
             row.update({'pcaBuildTime' : pcaTime})
+            h2o.cloudPerfH2O.message("======END PCA BUILD======")
             csvWrt.writerow(row)
         finally:
             output.close()
@@ -71,7 +76,7 @@ def doPCA(fs, folderPath):
 if __name__ == '__main__':
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
-    h2o_hosts.build_cloud_with_hosts()
+    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
     doPCA(files['Airlines'], 'Airlines')
     doPCA(files['AllBedrooms'], 'AllBedrooms')
     h2o.tear_down_cloud()
