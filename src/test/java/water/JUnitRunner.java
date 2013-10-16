@@ -35,7 +35,7 @@ public class JUnitRunner {
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
     // Pure JUnit test
-    tests.remove(CBSChunkTest.class);
+//    tests.remove(CBSChunkTest.class);
     //tests.remove(GBMDomainTest.class);
   }
 

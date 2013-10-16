@@ -41,8 +41,8 @@ public class CBSChunkTest {
     assertEquals(expNA, nc._naCnt);
     // Compress chunk
     Chunk cc = nc.compress();
+    assert cc instanceof CBSChunk;
     cc._vec = av.close(new Futures());
-
     assertTrue( "Found chunk class "+cc.getClass()+" but expected " + CBSChunk.class, CBSChunk.class.isInstance(cc) );
     assertEquals(nc._len, cc._len);
     assertEquals(expGap, ((CBSChunk)cc)._gap);
@@ -50,7 +50,8 @@ public class CBSChunkTest {
     assertEquals(expClen, cc._mem.length - CBSChunk.OFF);
     // Also, we can decompress correctly
     for( int i=0; i<ls.length; i++ )
-      assertEquals(xs[i]==0 ? ls[i] : Long.MIN_VALUE, cc.at80(i));
+      if(xs[i]==0)assertEquals(ls[i], cc.at80(i));
+      else assertTrue(cc.isNA0(i));
   }
 
   // Test one bit per value compression which is used
