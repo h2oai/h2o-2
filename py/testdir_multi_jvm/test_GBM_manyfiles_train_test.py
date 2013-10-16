@@ -117,7 +117,7 @@ class Basic(unittest.TestCase):
                     'max_depth': max_depth,
                     'min_rows': 10,
                     'response': response,
-                    # 'ignored_cols': 
+                    'ignored_cols_by_name': None,
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()

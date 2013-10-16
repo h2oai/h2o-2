@@ -1649,7 +1649,7 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'cols': None,
+            'ignored_cols_by_name': None,
             'nbins': None,
             'classification': None,
         }
