@@ -265,8 +265,10 @@ setMethod("histograms", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
   list.of.bins <- lapply(res$summaries, function(res) {
     counts <- res$bins
-    breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins))
-    cbind(counts,breaks)
+    breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins) + 1)
+    bins <- list(counts,breaks)
+    names(bins) <- cbind('counts', 'breaks')
+    bins
   })
 })
 
