@@ -106,6 +106,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
 
     #********************
     global hosts
+    hosts = []
     # Update: special case paramsToUse['ip'] = ["127.0.0.1"] and use the normal build_cloud
     # this allows all the tests in testdir_host to be run with a special config that points to 127.0.0.1
     # hosts should be None for everyone if normal build_cloud is desired

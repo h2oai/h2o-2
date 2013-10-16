@@ -117,8 +117,8 @@ NEXT_CHAR:
           if ((c != CHAR_SEPARATOR) && (c == CHAR_SPACE))
             break NEXT_CHAR;
           // we have parsed the string enum correctly
-          if((_str._off + _str._length) > _str._buf.length){ // crossing chunk boundary
-            assert _str._buf != bits;
+          if((_str.get_off() + _str.get_length()) > _str.get_buf().length){ // crossing chunk boundary
+            assert _str.get_buf() != bits;
             _str.addBuff(bits);
           }
           dout.addStrCol(colIdx, _str);
@@ -138,7 +138,7 @@ NEXT_CHAR:
         // ---------------------------------------------------------------------
         case EOL:
           if(quotes != 0){
-            System.err.println("Unmatched quote char " + ((char)quotes) + " " + (((_str._length+1) < offset && _str._off > 0)?new String(Arrays.copyOfRange(bits,_str._off-1,offset)):""));
+            System.err.println("Unmatched quote char " + ((char)quotes) + " " + (((_str.get_length()+1) < offset && _str.get_off() > 0)?new String(Arrays.copyOfRange(bits,_str.get_off()-1,offset)):""));
             dout.invalidLine("Unmatched quote char " + ((char)quotes));
             colIdx = 0;
             quotes = 0;

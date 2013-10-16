@@ -1,7 +1,10 @@
 package water.fvec;
 
 import java.util.Arrays;
+import java.util.GregorianCalendar;
+
 import water.parser.Enum;
+import water.parser.ValueString;
 import water.*;
 import water.parser.DParseTask;
 
@@ -93,6 +96,117 @@ public class NewChunk extends Chunk {
   }
   void invalid() { append2(0,Integer.MIN_VALUE); }
   void setInvalid(int idx) { _ls[idx]=0; _xs[idx] = Integer.MIN_VALUE; }
+
+  /*
+   *
+   *
+   *
+   * private long attemptTimeParse( ValueString str ) {
+    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
+    if( t0 != Long.MIN_VALUE ) return t0;
+    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
+    if( t1 != Long.MIN_VALUE ) return t1;
+    return Long.MIN_VALUE;
+  }
+  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
+  private long attemptTimeParse_0( ValueString str ) {
+    final byte[] buf = str._buf;
+    int i=str._off;
+    final int end = i+str._length;
+    while( i < end && buf[i] == ' ' ) i++;
+    if   ( i < end && buf[i] == '"' ) i++;
+    if( (end-i) < 19 ) return Long.MIN_VALUE;
+    int yy=0, MM=0, dd=0, HH=0, mm=0, ss=0, SS=0;
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    if( yy < 1970 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    MM = digit(MM,buf[i++]);
+    MM = digit(MM,buf[i++]);
+    if( MM < 1 || MM > 12 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    dd = digit(dd,buf[i++]);
+    dd = digit(dd,buf[i++]);
+    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
+    if( buf[i++] != ' ' ) return Long.MIN_VALUE;
+    HH = digit(HH,buf[i++]);
+    HH = digit(HH,buf[i++]);
+    if( HH < 0 || HH > 23 ) return Long.MIN_VALUE;
+    if( buf[i++] != ':' ) return Long.MIN_VALUE;
+    mm = digit(mm,buf[i++]);
+    mm = digit(mm,buf[i++]);
+    if( mm < 0 || mm > 59 ) return Long.MIN_VALUE;
+    if( buf[i++] != ':' ) return Long.MIN_VALUE;
+    ss = digit(ss,buf[i++]);
+    ss = digit(ss,buf[i++]);
+    if( ss < 0 || ss > 59 ) return Long.MIN_VALUE;
+    if( i<end && buf[i] == '.' ) {
+      i++;
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( SS < 0 || SS > 999 ) return Long.MIN_VALUE;
+    }
+    if( i<end && buf[i] == '"' ) i++;
+    if( i<end ) return Long.MIN_VALUE;
+    return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
+  }
+
+  // So I just brutally parse "dd-MMM-yy".
+  public static final byte MMS[][][] = new byte[][][] {
+    {"jan".getBytes(),null},
+    {"feb".getBytes(),null},
+    {"mar".getBytes(),null},
+    {"apr".getBytes(),null},
+    {"may".getBytes(),null},
+    {"jun".getBytes(),"june".getBytes()},
+    {"jul".getBytes(),"july".getBytes()},
+    {"aug".getBytes(),null},
+    {"sep".getBytes(),"sept".getBytes()},
+    {"oct".getBytes(),null},
+    {"nov".getBytes(),null},
+    {"dec".getBytes(),null}
+  };
+  private long attemptTimeParse_1( ValueString str ) {
+    final byte[] buf = str._buf;
+    int i=str._off;
+    final int end = i+str._length;
+    while( i < end && buf[i] == ' ' ) i++;
+    if   ( i < end && buf[i] == '"' ) i++;
+    if( (end-i) < 8 ) return Long.MIN_VALUE;
+    int yy=0, MM=0, dd=0;
+    dd = digit(dd,buf[i++]);
+    if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
+    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    byte[]mm=null;
+    OUTER: for( ; MM<MMS.length; MM++ ) {
+      byte[][] mms = MMS[MM];
+      INNER: for( int k=0; k<mms.length; k++ ) {
+        mm = mms[k];
+        if( mm == null ) continue;
+        for( int j=0; j<mm.length; j++ )
+          if( mm[j] != Character.toLowerCase(buf[i+j]) )
+            continue INNER;
+        break OUTER;
+      }
+    }
+    if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
+    i += mm.length;             // Skip month bytes
+    MM++;                       // 1-based month
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy += 2000;                 // Y2K bug
+    if( i<end && buf[i] == '"' ) i++;
+    if( i<end ) return Long.MIN_VALUE;
+    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
+  }
+
+   */
+
 
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead

@@ -27,7 +27,7 @@ test.GLM.benign <- function(serverH2O) {
   
   # myY = 3; myY.r = myY + 1
   myY = 4;
-  for(maxx in 10:13) {
+  for(maxx in 11:14) {
     # myX = 0:maxx
     # myX = myX[which(myX != myY)]; myX.r = myX + 1
     # myX = paste(myX, collapse=",")
@@ -38,8 +38,8 @@ test.GLM.benign <- function(serverH2O) {
     benign.glm.h2o = h2o.glm(y = myY, x = myX, data = benign.hex, family = "binomial", nfolds = 5, alpha = 0.5)
     print(benign.glm.h2o)
     
-    # benign.glm = glm.fit(y = benign.data[,myY.r], x = benign.data[,myX.r], family = binomial)
-    # benign.glm = glmnet(y = benign.data[,myY.r], x = data.matrix(benign.data[,myX.r]), family = "binomial", alpha = 0.5)
+    # benign.glm = glm.fit(y = benign.data[,myY], x = benign.data[,myX], family = binomial)
+    # benign.glm = glmnet(y = benign.data[,myY], x = data.matrix(benign.data[,myX]), family = "binomial", alpha = 0.5)
     benign.glm = glmnet(y = benign.data[,myY], x = data.matrix(benign.data[,myX]), family = "binomial", alpha = 0.5)
     checkGLMModel(benign.glm.h2o, benign.glm)
   }
@@ -58,18 +58,18 @@ test.GLM.prostate <- function(serverH2O) {
   prostate.data = read.csv("../../smalldata/logreg/prostate.csv", header = TRUE)
   prostate.data = na.omit(prostate.data)
   
-  myY = 1; myY.r = as.numeric(myY) + 1
-  for(maxx in 3:8) {
-    myX = 1:maxx
-    myX = myX[which(myX != myY)]; myX.r = myX + 1
-   # myX = paste(myX, collapse=",")
+  myY = 2
+  for(maxx in 4:9) {
+    myX = 3:maxx
+    myX = myX[which(myX != myY)]
+    # myX = paste(myX, collapse=",")
     
     cat("\nH2O GLM (binomial) with parameters:\nX:", myX, "\nY:", myY, "\n")
     prostate.glm.h2o = h2o.glm(y = myY, x = myX, data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
     print(prostate.glm.h2o)
     
-    # prostate.glm = glm.fit(y = prostate.data[,myY.r], x = prostate.data[,myX.r], family = binomial)
-    prostate.glm = glmnet(y = prostate.data[,myY.r], x = data.matrix(prostate.data[,myX.r]), family = "binomial", alpha = 0.5)
+    # prostate.glm = glm.fit(y = prostate.data[,myY], x = prostate.data[,myX], family = binomial)
+    prostate.glm = glmnet(y = prostate.data[,myY], x = data.matrix(prostate.data[,myX]), family = "binomial", alpha = 0.5)
     checkGLMModel(prostate.glm.h2o, prostate.glm)
   }
 }
@@ -84,10 +84,9 @@ test.GLM.covtype <- function(serverH2O) {
   covtype.sum = summary(covtype.hex)
   print(covtype.sum)
   
-  myY = 54
-  myX = 1:maxx
+  myY = 55
+  myX = setdiff(1:54, c(21,29))   # Cols 21 and 29 are constant, so must be explicitly ignored
   myX = myX[which(myX != myY)];
-
   # max_iter = 8
   
   # L2: alpha = 0, lambda = 0
