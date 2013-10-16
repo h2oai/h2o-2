@@ -1,8 +1,8 @@
 package water.api;
 
-import water.exec.PositionedException;
 import water.util.Log;
 import water.*;
+import water.exec.*;
 import water.fvec.*;
 
 public class Exec2 extends Request2 {
@@ -18,6 +18,7 @@ public class Exec2 extends Request2 {
   @API(help="Rows in result"       ) long num_rows;
   @API(help="Columns in result"    ) int  num_cols;
   @API(help="Scalar result"        ) double scalar;
+  @API(help="Function result"      ) String funstr;
  
   @API(help="Array of Column Summaries.") Inspect2.ColSummary cols[];
 
@@ -25,17 +26,22 @@ public class Exec2 extends Request2 {
     if( str == null ) return RequestServer._http404.serve();
     Exception e;
     try {
-      Frame fr = water.exec.Exec2.exec(str);
-      if( fr == null ) throw new IllegalArgumentException("Null return from Exec2?");
+      Env env = water.exec.Exec2.exec(str);
+      if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
       key = Key.make(".Last.value");
       UKV.remove(key);
-      UKV.put(key,fr);
-      num_rows = fr.numRows();
-      num_cols = fr.numCols();
-      cols = new Inspect2.ColSummary[num_cols];
-      for( int i=0; i<num_cols; i++ )
-        cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
-      if( num_rows==1 && num_cols==1 ) scalar=fr.vecs()[0].at(0);
+      if( env.sp() == 0 ) {      // Empty stack
+      } else if( env.isFrame() ) { 
+        Frame fr = env.popFrame();
+        UKV.put(key,fr);
+        num_rows = fr.numRows();
+        num_cols = fr.numCols();
+        cols = new Inspect2.ColSummary[num_cols];
+        for( int i=0; i<num_cols; i++ )
+          cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
+      } else if( env.isFun() ) funstr = env.popFun().toString();
+        else scalar = env.popDbl();
+      env.remove();
       return new Response(Response.Status.done, this, -1, -1, null);
     } 
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's

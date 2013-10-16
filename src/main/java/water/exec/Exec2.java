@@ -14,26 +14,28 @@ public class Exec2 {
   // Grammer:
   //   statements := cxexpr ; statements
   //   cxexpr :=                   // COMPLEX expr 
-  //           key_slice = cxexpr  // subset assignment; must be equal shapes 
   //           id = cxexpr         // temp typed assignment; dropped when scope exits
+  //                               // If temp exists in outer scope, it is shadowed
+  //           slice = cxexpr      // Subset L-value; exprs must have equal shapes; does NOT define a new name
+  //           slice               // Subset R-value
+  //           slice op2 cxexpr    // apply(op2,expr,cxexpr); ....optional INFIX notation
+  //           slice0 ? cxexpr : cxexpr // exprs must have *compatible* shapes
+  //   slice := 
   //           expr
-  //           expr op2 cxexpr     // apply(op2,expr,cxexpr); ....optional INFIX notation
-  //           expr0 ? expr : expr // exprs must have *compatible* shapes
+  //           expr[]              // whole expr
+  //           expr[,]             // whole expr
+  //           expr[expr1,expr1]   // row & col slice (row FIRST, col SECOND)
+  //           expr[,expr1]        // col-only slice
+  //           expr[expr1,]        // row-only slice
   //   expr :=                     // expr is a Frame, a 2-d table
   //           num                 // Scalars, treated as 1x1
   //           id                  // any visible var; will be typed
-  //           key_slice           // Rectangular R-value
+  //           key                 // A Frame, dimensions stored in K/V already
   //           function(v0,v1,v2) { statements; ...v0,v1,v2... } // 1st-class lexically scoped functions
   //           ( cxexpr )          // Ordering evaluation
   //           ifelse(expr0,cxexpr,cxexpr)  // exprs must have *compatible* shapes
   //           apply(op,cxexpr,...)// Apply function op to args
-  //   key_slice :=
-  //           key                 // A Frame, dimensions stored in K/V already
-  //           key [expr1,expr1]   // slice rows & cols by index
-  //           key [expr1,expr1]   // subset assignment of *same* shape
-  //           key [,expr1]        // subset assignment of *same* shape
-  //           key [expr1,]        // subset assignment of *same* shape
-  //   key  := any Key mapping to a Frame.
+  //           op(cxexpr...)
 
   //   func1:= {id -> expr0}     // user function; id will be a scalar in expr0
   //   op1  := func1 sgn sin cos ...any unary op...
@@ -94,7 +96,7 @@ public class Exec2 {
 
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
-  static boolean isReserved(char c) { return c=='(' || c==')' || c=='='; }
+  static boolean isReserved(char c) { return c=='(' || c==')' || c=='=' || c=='[' || c==']' || c==','; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z');  }
   static boolean isLetter2(char c) { 
     if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
@@ -134,9 +136,7 @@ public class Exec2 {
 
   // --------------------------------------------------------------------------
   boolean throwIfNotCompat(AST l, AST r, int idx ) {
-    assert l._rows != -1 && r._rows != -1 && l._cols != -1 && r._cols != -1;
-    if( !(l._rows==1 || r._rows==1 || l._rows==r._rows) ||
-        !(l._cols==1 || r._cols==1 || l._cols==r._cols) )  
+    if( l._rows!=r._rows || l._cols!=r._cols )
       throwErr("Frames not compatible: "+l.dimStr()+" vs "+r.dimStr(),idx);
     return true;
   }
