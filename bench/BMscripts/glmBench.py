@@ -4,7 +4,7 @@ sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
-csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error','AverageErrorOver10Folds')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error','AverageErrorOver10Folds')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
@@ -13,7 +13,6 @@ header = ""
 
 def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex, row):
     for f in fs['train']:
-        #if f in ['AirlinesTrain10x', 'AirlinesTrain100x']: continue
         overallWallStart = time.time()
         date = '-'.join([str(z) for z in list(time.localtime())][0:3])
         glmbenchcsv = 'benchmarks/'+build+'/'+date+'/glmbench.csv'
@@ -43,8 +42,11 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
             inspect_train  = h2o.nodes[0].inspect(parseResult['destination_key'])
             inspect_test   = h2o.nodes[0].inspect(testFilehex)
 
-            row.update( {'h2o_build'          : build,  
-                         'java_heap_GB'       : java_heap_GB,
+            nMachines = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
+            row.update( {'h2o_build'          : build,
+                         'nMachines'          : nMachines,
+                         'nJVMs'              : len(h2o.nodes),
+                         'Xmx/JVM'            : java_heap_GB,
                          'dataset'            : f,
                          'nTrainRows'         : inspect_train['num_rows'],
                          'nTestRows'          : inspect_test['num_rows'],
@@ -52,7 +54,7 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
                          'trainParseWallTime' : parseWallTime,
                          'nfolds'             : nfolds,
                         })
-        
+
             params   =  {'y'                  : y,
                          'x'                  : x,
                          'family'             : family,
