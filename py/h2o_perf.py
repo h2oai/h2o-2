@@ -100,7 +100,7 @@ class PerfH2O(object):
         # and lots of info we don't want. 
         jstackResult = h2o.nodes[0].jstack()
         node0 = jstackResult['nodes'][0]
-        stack_traces = node0["stack_traces"]
+        stack_traces = node0["traces"]
         # all one string
         stackLines = stack_traces.split('\n')
 
@@ -269,7 +269,6 @@ class PerfH2O(object):
     def get_log_save(self, benchmarkLogging=None, initOnly=False):
         if not benchmarkLogging:
             return
-
         self.snapshotTime = time.time()
         self.elapsedTime = self.snapshotTime - self.pollStats['time']
 

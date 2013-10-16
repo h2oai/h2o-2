@@ -1050,7 +1050,7 @@ class H2O(object):
 
             if noPoll:
                 return r
-
+            
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
@@ -1650,7 +1650,7 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'cols': None,
+            'ignored_cols_by_name': None,
             'nbins': None,
             'classification': None,
         }
