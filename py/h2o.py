@@ -1676,7 +1676,7 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'key': data_key,
-            'ignore': None,
+            'X': None,
             'tolerance': None,
             'standardize': None
         }
@@ -1700,15 +1700,15 @@ class H2O(object):
     def pca_score(self, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
-            'model_key': None,
+            'model': None,
             'destination_key': None,
-            'key': None,
+            'source': None,
             'num_pc': None,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'pca_score', print_params)
         start = time.time()
-        a = self.__do_json_request('PCAScore.json',timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/PCAScore.json',timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
             a['python_elapsed'] = time.time() - start
