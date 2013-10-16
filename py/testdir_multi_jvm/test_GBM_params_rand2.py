@@ -2,15 +2,31 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 import h2o_browse as h2b, h2o_gbm
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
+
+# this only covers the params for gbm
+# FIX! what about the other algos below
+def define_gbm_params():
+    paramsDict = {
+        'learn_rate': [None, 0.1, 0.2, 0.3],
+        'nbins': [2, 10, 1024], # has to be between 2 and 100000
+        'ntrees': [1, 2, 4, 10],
+        'max_depth': [None, 1, 2, 4, 8, 40], # 0 might cause problem
+        'min_rows': [None, 1, 2, 100, 10000000],
+        'response': [54],
+        'ignored_cols_by_name': [None, '0,1,2,3', '0'],
+        'classification': [None, 0, 1],
+        # 'validation': [None]
+        # 'validation': 
+    }
+    return paramsDict
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
-        global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(3, java_heap_GB=4)
@@ -21,27 +37,15 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_manyfiles_train_test(self):
+    def test_GBM_covtype_train_test(self):
+        h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
-        if localhost:
-            files = [
-                # None forces num_cols to be used. assumes you set it from Inspect
-                # problems with categoricals not in the train data set? (warnings in h2o stdout)
-                ## ('manyfiles-nflx-gz', 'file_1.dat.gz', 'file_1.hex', 1800, None, 'file_11.dat.gz', 'file_1_test.hex')
-                # just use matching
-                ('manyfiles-nflx-gz', 'file_1.dat.gz', 'file_1.hex', 1800, None, 'file_1.dat.gz', 'file_1_test.hex')
-                ]
-        else:
-            files = [
-                # None forces num_cols to be used. assumes you set it from Inspect
-                ('manyfiles-nflx-gz', 'file_[0-9].dat.gz', 'file_10.hex', 1800, None, 'file_1[0-9].dat.gz', 'file_10_test.hex')
+        files = [
+                # ('standard', 'covtype.shuffled.90pct.data', 'covtype.train.hex', 1800, 54, 'covtype.shuffled.10pct.data', 'covtype.test.hex')
+                ('standard', 'covtype.shuffled.10pct.sorted.data', 'covtype.train.hex', 1800, 54, 'covtype.shuffled.10pct.data', 'covtype.test.hex')
                 ]
 
-        # if I got to hdfs, it's here
-        # hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz
-
-        # h2b.browseTheCloud()
         for (importFolderPath, trainFilename, trainKey, timeoutSecs, response, testFilename, testKey) in files:
             h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
@@ -53,8 +57,7 @@ class Basic(unittest.TestCase):
             # Parse (train)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
-            csvPathname = importFolderPath + "/" + trainFilename
-            parseTrainResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
+            parseTrainResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + trainFilename, schema='local',
                 hex_key=trainKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:
@@ -67,25 +70,9 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "train parse result:", parseTrainResult['destination_key']
 
-            ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
-
-            # if you set beta_features here, the fvec translate will happen with the Inspect not the GBM
-            # h2o.beta_features = True
-            inspect = h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
-            print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
-
-            # Make col 378 it something we can do binomial regression on!
-            execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (trainKey, trainKey, trainKey)
-            resultExec = h2o_cmd.runExec(expression=execExpr)
-
             # Parse (test)****************************************
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
-
             parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
                 hex_key=testKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
@@ -99,32 +86,20 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "test parse result:", parseTestResult['destination_key']
 
-            # Make col 378 it something we can do binomial regression on!
-            execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (testKey, testKey, testKey)
-            resultExec = h2o_cmd.runExec(expression=execExpr)
-
-            # Note ..no inspect of test data here..so translate happens later?
-
             # GBM (train iterate)****************************************
-            # if not response:
-            #     response = num_cols - 1
-            response = 378
-            print "Using the same response %s for train and test (which should have a output value too)" % response
+            inspect = h2o_cmd.runInspect(key=parseTestResult['destination_key'])
+            paramsDict = define_gbm_params()
+            for trial in range(3):
+                h2o.beta_features = True
+                # translate it (only really need to do once . out of loop?
+                h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
+                ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
-            ntrees = 10
-            for max_depth in [5,10,20,40]:
-                params = {
-                    'learn_rate': .2,
-                    'nbins': 1024,
-                    'ntrees': ntrees,
-                    'max_depth': max_depth,
-                    'min_rows': 10,
-                    'response': response,
-                    'ignored_cols_by_name': None,
-                }
+                # use this to set any defaults you want if the pick doesn't set
+                params = {'response': 54, 'ignored_cols_by_name': '0,1,2,3,4', 'ntrees': 2}
+                h2o_gbm.pickRandGbmParams(paramsDict, params)
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
-                h2o.beta_features = True
 
                 # GBM train****************************************
                 trainStart = time.time()
@@ -149,7 +124,7 @@ class Basic(unittest.TestCase):
 
                 # GBM test****************************************
                 predictKey = 'Predict.hex'
-                ### h2o_cmd.runInspect(key=parseTestResult['destination_key'])
+                h2o_cmd.runInspect(key=parseTestResult['destination_key'])
                 start = time.time()
                 gbmTestResult = h2o_cmd.runPredict(
                     data_key=parseTestResult['destination_key'], 
@@ -167,7 +142,7 @@ class Basic(unittest.TestCase):
                     actual=parseTestResult['destination_key'],
                     vactual=response,
                     predict=predictKey,
-                    vpredict='predict', # choices are 0 and 'predict'
+                    vpredict='predict', # choices are 7 (now) and 'predict'
                     )
 
                 # errrs from end of list? is that the last tree?
@@ -181,7 +156,7 @@ class Basic(unittest.TestCase):
                 print h2o_gbm.pp_cm(cm)
 
                 # xList.append(ntrees)
-                xList.append(max_depth)
+                xList.append(params['max_depth'])
                 eList.append(pctWrong)
                 fList.append(trainElapsed)
 

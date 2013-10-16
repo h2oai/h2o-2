@@ -74,7 +74,6 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=parseTestResult['destination_key'])
             x = range(inspect['num_cols'])
             del x[response]
-            cols = ','.join(map(str, x))
             ntrees = 2
             for max_depth in [5,10,20,40]:
                 params = {
@@ -84,7 +83,7 @@ class Basic(unittest.TestCase):
                     'max_depth': max_depth,
                     'min_rows': 10,
                     'response': response,
-                    'cols': cols,
+                    'ignored_cols_by_name': None,
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
