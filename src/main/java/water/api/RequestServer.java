@@ -54,7 +54,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Inspect()),     "Inspect",                    "Data");
     Request.addToNavbar(registerRequest(new StoreView()),   "View All",                   "Data");
     Request.addToNavbar(registerRequest(new Parse()),       "Parse",                      "Data");
-    Request.addToNavbar(registerRequest(new RReader()),     "Parse R Data",               "Data");
     Request.addToNavbar(registerRequest(new ImportFiles()), "Import Files",               "Data");
     Request.addToNavbar(registerRequest(new ImportUrl()),   "Import URL",                 "Data");
     Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",                  "Data");

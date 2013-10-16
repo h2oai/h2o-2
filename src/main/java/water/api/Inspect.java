@@ -178,9 +178,7 @@ public class Inspect extends Request {
     // The builder Response
     Response r = Response.done(result);
     // Some nice links in the response
-    r.addHeader("<div class='alert'>" //
-        + Parse.link(key, "Parse into hex format") + " or " //
-        + RReader.link(key, "from R data") + " </div>");
+    r.addHeader("<div class='alert'>" + Parse.link(key, "Parse into hex format"));
     // Set the builder for showing the rows
     r.setBuilder(ROWS, new ArrayBuilder() {
       public String caption(JsonArray array, String name) {
@@ -318,9 +316,8 @@ public class Inspect extends Request {
           + PCA.link(key, "PCA") + ", "
           + RF.link(key, "Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
-          + KMeans.link(key, "KMeans") + ", "
-          + KMeansGrid.link(key, "KMeansGrid") + ", or "
-          + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
+          + KMeans.link(key, "KMeans") + ", or "
+          + KMeansGrid.link(key, "KMeansGrid") + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")

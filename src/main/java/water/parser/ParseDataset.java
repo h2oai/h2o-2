@@ -366,13 +366,14 @@ public final class ParseDataset extends Job {
 
     @Override
     public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      UKV.remove(job._progress);
       job.cancel("Got Exception " + ex.getClass().getSimpleName() + ", with msg " + ex.getMessage());
       return super.onExceptionalCompletion(ex, caller);
     }
   }
   public static Job forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
     ParseDataset job = new ParseDataset(dest, keys);
-    H2OCountedCompleter fjt = new ParserFJTask(job, keys, setup);
+    ParserFJTask fjt = new ParserFJTask(job, keys, setup);
     job.start(fjt);
     H2O.submitTask(fjt);
     return job;

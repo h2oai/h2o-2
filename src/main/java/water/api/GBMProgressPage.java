@@ -8,7 +8,7 @@ import com.google.gson.JsonObject;
 
 public class GBMProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
-  @Override protected Response jobDone(final Job job, final String dst) {
+  @Override protected Response jobDone(final Job job, final Key dst) {
     JsonObject args = new JsonObject();
     args.addProperty("model_key", job.dest().toString());
     return GBMModelView.redirect(this, job.dest());
@@ -19,11 +19,11 @@ public class GBMProgressPage extends Progress2 {
   }
 
   @Override public boolean toHTML(StringBuilder sb) {
-    Job jjob = Job.findJob(Key.make(job.value()));
+    Job jjob = Job.findJob(job);
     Value value = DKV.get(jjob.dest());
     if( value == null ) DocGen.HTML.paragraph(sb, "Pending...");
     else ((GBMModel)value.get()).generateHTML("GBM Model", sb);
     return true;
   }
-  @Override protected API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
+  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
 }

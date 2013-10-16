@@ -224,7 +224,8 @@ public class KMeansModel extends OldModel implements Progress {
           return super.onExceptionalCompletion(ex, caller);
         }
       };
-      H2O.submitTask(job.start(fjtask));
+      job.start(fjtask);
+      H2O.submitTask(fjtask);
       return job;
     }
 

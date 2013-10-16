@@ -3,6 +3,7 @@ package water.api;
 import java.io.File;
 
 import water.Key;
+import water.api.RequestServer.API_VERSION;
 import water.util.FileIntegrityChecker;
 
 public class ImportFiles2 extends ImportFiles {
@@ -22,4 +23,5 @@ public class ImportFiles2 extends ImportFiles {
 
   @Override protected String parseLink(String k, String txt) { return Parse2.link(k, txt); }
   @Override String parse() { return "Parse2.query"; }
+  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
 }

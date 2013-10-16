@@ -143,8 +143,8 @@ NEXT_CHAR:
             colIdx = 0;
             quotes = 0;
           }else if (colIdx != 0) {
-            colIdx = 0;
             dout.newLine();
+            colIdx = 0;
           }
           state = (c == CHAR_CR) ? EXPECT_COND_LF : POSSIBLE_EMPTY_LINE;
           if( !firstChunk )
@@ -183,11 +183,10 @@ NEXT_CHAR:
               break NEXT_CHAR;
           } else if (c == CHAR_SEPARATOR) {
             // we have empty token, store as NaN
-            dout.addInvalidCol(colIdx);
-            ++colIdx;
+            dout.addInvalidCol(colIdx++);
             break NEXT_CHAR;
           } else if (isEOL(c)) {
-            dout.addInvalidCol(colIdx);
+            dout.addInvalidCol(colIdx++);
             state = EOL;
             continue MAIN_LOOP;
           }

@@ -152,7 +152,7 @@ class Basic(unittest.TestCase):
                     data_key=parseTestResult['destination_key'], 
                     model_key=modelKey,
                     destination_key=predictKey,
-                    timeoutSecs=timeoutSecs, **kwargs)
+                    timeoutSecs=timeoutSecs)
                 # hack
                 if h2o.beta_features:
                     h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)

@@ -5,6 +5,7 @@ import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.GBM.GBMModel;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 import water.*;
 import water.api.*;
@@ -16,7 +17,10 @@ public class GridSearch extends Job {
   @Override protected void exec() {
     UKV.put(destination_key, this);
     for( Job job : jobs )
-      job.fork().join();
+      try { job.fork().get();
+      } catch( Exception e ) {
+        throw new RuntimeException(e);
+      }
   }
 
   @Override protected void onCancelled() {
@@ -38,7 +42,7 @@ public class GridSearch extends Job {
 
   public static class GridSearchProgress extends Progress2 {
     @Override public boolean toHTML(StringBuilder sb) {
-      GridSearch grid = UKV.get(Key.make(dst_key.value()));
+      GridSearch grid = UKV.get(dst_key);
       if( grid != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
@@ -139,7 +143,7 @@ public class GridSearch extends Job {
             args.remove(i);
     }
 
-    @Override protected Response jobDone(final Job job, final String dst) {
+    @Override protected Response jobDone(final Job job, final Key dst) {
       return new Response(Response.Status.done, this, 0, 0, null);
     }
   }

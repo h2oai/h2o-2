@@ -40,7 +40,9 @@ public final class ParseDataset2 extends Job {
   // Same parse, as a backgroundable Job
   public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
     ParseDataset2 job = new ParseDataset2(dest, keys);
-    H2O.submitTask(job.start(new ParserFJTask(job, keys, setup)));
+    ParserFJTask fjt = new ParserFJTask(job, keys, setup);
+    job.start(fjt);
+    H2O.submitTask(fjt);
     return job;
   }
   // Setup a private background parse job

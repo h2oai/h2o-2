@@ -2,6 +2,7 @@ package water.api;
 
 import water.Job;
 import water.Key;
+import water.api.RequestServer.API_VERSION;
 import water.fvec.ParseDataset2;
 import water.parser.CustomParser;
 import water.util.RString;
@@ -40,4 +41,6 @@ public class Parse2 extends Parse {
       return Response.error(e.getMessage());
     }
   }
+
+  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
 }
