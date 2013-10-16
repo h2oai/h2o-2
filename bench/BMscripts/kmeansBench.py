@@ -4,7 +4,7 @@ sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
-csv_header = ('h2o_build','java_heap_GB','dataset','nRows','nCols','parseWallTime','kmeansBuildTime')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nRows','nCols','parseWallTime','kmeansBuildTime')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
@@ -44,8 +44,11 @@ def doKMeans(fs, folderPath):
             
             inspect  = h2o.nodes[0].inspect(parseResult['destination_key'])
             
-            row      =  {'h2o_build'          : build,  
-                         'java_heap_GB'       : java_heap_GB,
+            nMachines = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts) 
+            row      =  {'h2o_build'          : build,
+                         'nMachines'          : nMachines,
+                         'nJVMs'              : len(h2o.nodes),
+                         'Xmx/JVM'            : java_heap_GB,
                          'dataset'            : f,
                          'nRows'              : inspect['num_rows'],
                          'nCols'              : inspect['num_cols'],
