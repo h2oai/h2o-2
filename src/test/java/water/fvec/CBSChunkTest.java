@@ -2,9 +2,6 @@ package water.fvec;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -23,15 +20,9 @@ import water.Futures;
 public class CBSChunkTest {
 
   void testImpl(long[] ls, int[] xs, int expBpv, int expGap, int expClen, int expNA) {
-    // The following code mock underlying vector since we are not
-    // tested them (=we are not interested in them), but chunk compression.
-    // Mock the appendable vector.
-    AppendableVec av = mock(AppendableVec.class);
-    // Create an expectation - I know what should I expect
-    // after closing the appendable vector.
-    Vec vv = mock(Vec.class);
-    when(av.close(any(Futures.class))).thenReturn(vv);
-
+    AppendableVec av = new AppendableVec(Vec.newKey());
+    Futures fs = new Futures();
+    Vec vv = av.close(fs);
     // Create a new chunk
     NewChunk nc = new NewChunk(av,0);
     nc._ls = ls;
