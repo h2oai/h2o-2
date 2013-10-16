@@ -310,8 +310,8 @@ public class NewChunk extends Chunk {
           :new C0DChunk(_min, _len);
     }
 
-    // Boolean column? (or in general two value column)
-    if (lemax-lemin == 1 && lemin == 0 && xmin == 0) {
+    // Boolean column?
+    if (_max == 1 && _min == 0 && xmin == 0) {
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
@@ -422,7 +422,7 @@ public class NewChunk extends Chunk {
     byte b    = 0;
     int  idx  = off;
     for (int i=0; i<_len; i++) {
-      byte val = isNA(i) ? CBSChunk._NA : (byte) _ls[i];
+      byte val = isNA(i) ? CBSChunk._NA : _ls[i] == 0?(byte)0:(byte)1;
       switch (bpv) {
       case 1: assert val!=CBSChunk._NA : "Found NA row "+i+", naCnt="+_naCnt+", strcnt="+_strCnt;
               b = CBSChunk.write1b(b, val, boff); break;
