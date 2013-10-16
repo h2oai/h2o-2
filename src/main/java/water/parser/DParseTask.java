@@ -863,10 +863,10 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         ++_colIdx;
         // If this is a yet unspecified but non-numeric column, attempt a time-parse
         if( _colTypes[colIdx] == UCOL &&
-            attemptTimeParse(str) != Long.MIN_VALUE )
+            Utils.attemptTimeParse(str) != Long.MIN_VALUE )
           _colTypes[colIdx] = TCOL; // Passed a time-parse, so assume a time-column
         if( _colTypes[colIdx] == TCOL ) {
-          long time = attemptTimeParse(str);
+          long time = Utils.attemptTimeParse(str);
           if( time != Long.MIN_VALUE ) {
             if(time < _min[colIdx])_min[colIdx] = time;
             if(time > _max[colIdx])_max[colIdx] = time;
@@ -879,9 +879,9 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         // Now attempt to make this an Enum col
         Enum e = _enums[colIdx];
         if( e == null || e.isKilled() ) return;
-        if( _colTypes[colIdx] == UCOL )
-          _colTypes[colIdx] = ECOL;
         e.addKey(str);
+        if( _colTypes[colIdx] == UCOL && e.size() > 1)
+          _colTypes[colIdx] = ECOL;
         ++_invalidValues[colIdx]; // invalid count in phase0 is in fact number of non-numbers (it is used for mean computation, is recomputed in 2nd pass)
         break;
       case TWO:
@@ -899,7 +899,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         } else if( _colTypes[colIdx] == LONG ) {
           ++_colIdx;
           // Times are strings with a numeric column type of LONG
-          long time = attemptTimeParse(str);
+          long time = Utils.attemptTimeParse(str);
           _ab.put8(time);
           // Update sigma
           if( !Double.isNaN(_mean[colIdx])) {
@@ -982,123 +982,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         assert (false);
     }
   }
-
-  // Deduce if we are looking at a Date/Time value, or not.
-  // If so, return time as msec since Jan 1, 1970 or Long.MIN_VALUE.
-
-  // I tried java.util.SimpleDateFormat, but it just throws too many
-  // exceptions, including ParseException, NumberFormatException, and
-  // ArrayIndexOutOfBoundsException... and the Piece de resistance: a
-  // ClassCastException deep in the SimpleDateFormat code:
-  // "sun.util.calendar.Gregorian$Date cannot be cast to sun.util.calendar.JulianCalendar$Date"
-  private static int digit( int x, int c ) {
-    if( x < 0 || c < '0' || c > '9' ) return -1;
-    return x*10+(c-'0');
-  }
-  private long attemptTimeParse( ValueString str ) {
-    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
-    if( t0 != Long.MIN_VALUE ) return t0;
-    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
-    if( t1 != Long.MIN_VALUE ) return t1;
-    return Long.MIN_VALUE;
-  }
-  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
-  private long attemptTimeParse_0( ValueString str ) {
-    final byte[] buf = str._buf;
-    int i=str._off;
-    final int end = i+str._length;
-    while( i < end && buf[i] == ' ' ) i++;
-    if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 19 ) return Long.MIN_VALUE;
-    int yy=0, MM=0, dd=0, HH=0, mm=0, ss=0, SS=0;
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    if( yy < 1970 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    MM = digit(MM,buf[i++]);
-    MM = digit(MM,buf[i++]);
-    if( MM < 1 || MM > 12 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    dd = digit(dd,buf[i++]);
-    dd = digit(dd,buf[i++]);
-    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
-    if( buf[i++] != ' ' ) return Long.MIN_VALUE;
-    HH = digit(HH,buf[i++]);
-    HH = digit(HH,buf[i++]);
-    if( HH < 0 || HH > 23 ) return Long.MIN_VALUE;
-    if( buf[i++] != ':' ) return Long.MIN_VALUE;
-    mm = digit(mm,buf[i++]);
-    mm = digit(mm,buf[i++]);
-    if( mm < 0 || mm > 59 ) return Long.MIN_VALUE;
-    if( buf[i++] != ':' ) return Long.MIN_VALUE;
-    ss = digit(ss,buf[i++]);
-    ss = digit(ss,buf[i++]);
-    if( ss < 0 || ss > 59 ) return Long.MIN_VALUE;
-    if( i<end && buf[i] == '.' ) {
-      i++;
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( SS < 0 || SS > 999 ) return Long.MIN_VALUE;
-    }
-    if( i<end && buf[i] == '"' ) i++;
-    if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
-  }
-
-  // So I just brutally parse "dd-MMM-yy".
-  public static final byte MMS[][][] = new byte[][][] {
-    {"jan".getBytes(),null},
-    {"feb".getBytes(),null},
-    {"mar".getBytes(),null},
-    {"apr".getBytes(),null},
-    {"may".getBytes(),null},
-    {"jun".getBytes(),"june".getBytes()},
-    {"jul".getBytes(),"july".getBytes()},
-    {"aug".getBytes(),null},
-    {"sep".getBytes(),"sept".getBytes()},
-    {"oct".getBytes(),null},
-    {"nov".getBytes(),null},
-    {"dec".getBytes(),null}
-  };
-  private long attemptTimeParse_1( ValueString str ) {
-    final byte[] buf = str._buf;
-    int i=str._off;
-    final int end = i+str._length;
-    while( i < end && buf[i] == ' ' ) i++;
-    if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 8 ) return Long.MIN_VALUE;
-    int yy=0, MM=0, dd=0;
-    dd = digit(dd,buf[i++]);
-    if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
-    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    byte[]mm=null;
-    OUTER: for( ; MM<MMS.length; MM++ ) {
-      byte[][] mms = MMS[MM];
-      INNER: for( int k=0; k<mms.length; k++ ) {
-        mm = mms[k];
-        if( mm == null ) continue;
-        for( int j=0; j<mm.length; j++ )
-          if( mm[j] != Character.toLowerCase(buf[i+j]) )
-            continue INNER;
-        break OUTER;
-      }
-    }
-    if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
-    i += mm.length;             // Skip month bytes
-    MM++;                       // 1-based month
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy += 2000;                 // Y2K bug
-    if( i<end && buf[i] == '"' ) i++;
-    if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
-  }
-
   @Override public void invalidLine(String err) {newLine();} //TODO
   @Override public void invalidValue(int line, int col) {} //TODO
 }
