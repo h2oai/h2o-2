@@ -860,7 +860,7 @@ class H2O(object):
             # (this is new/experimental)
             exc_info = sys.exc_info()
             if not ignoreConnectionError: # use this to ignore the initial connection errors during build cloud when h2o is coming up
-                h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % url + paramStr)
+                h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
                 time.sleep(2)
                 check_sandbox_for_errors();
             raise exc_info[1], None, exc_info[2]
