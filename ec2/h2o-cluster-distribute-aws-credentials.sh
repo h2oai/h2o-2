@@ -62,7 +62,6 @@ for publicDnsName in $(cat nodes-public)
 do
     i=$((i+1))
     echo "Copying aws credential files to node ${i}: ${publicDnsName}"
-    ssh -o StrictHostKeyChecking=no -i ${AWS_SSH_PRIVATE_KEY_FILE} ec2-user@${publicDnsName} mkdir -p .ec2
     scp -p -o StrictHostKeyChecking=no -i ${AWS_SSH_PRIVATE_KEY_FILE} ${coreSiteFileName} ${awsCredentialsPropertiesFileName} ec2-user@${publicDnsName}:.ec2
 done
 
