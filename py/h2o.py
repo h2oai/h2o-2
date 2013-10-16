@@ -1644,6 +1644,7 @@ class H2O(object):
             'destination_key': None,
             'validation': data_key, # what is this..default it to match the source..is it holdout data
             'response': None,
+            'ignored_cols_by_name': None, 
             'source': data_key,
             'learn_rate': None,
             'ntrees': None,
@@ -1979,7 +1980,7 @@ class H2O(object):
 
         # I guess it doesn't matter if we use flatfile for both now
         # defaults to not specifying
-	# FIX! we need to check that it's not outside the limits of the dram of the machine it's running on?
+        # FIX! we need to check that it's not outside the limits of the dram of the machine it's running on?
         if self.java_heap_GB is not None:
             if not (1 <= self.java_heap_GB <= 256):
                 raise Exception('java_heap_GB <1 or >256  (GB): %s' % (self.java_heap_GB))
