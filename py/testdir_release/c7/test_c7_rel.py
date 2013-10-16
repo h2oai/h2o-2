@@ -28,7 +28,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # looks like it takes the hex string (two chars)
         start = time.time()
         # hardwire TAB as a separator, as opposed to white space (9)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9)
+        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=False)
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
         print csvFilename, 'parse time:', parseResult['response']['time']
@@ -72,6 +72,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
+        # do summary of the parsed dataset last, since we know it fails on this dataset
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
+        h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
 
 if __name__ == '__main__':
     h2o.unit_main()
