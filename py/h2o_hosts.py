@@ -2,7 +2,7 @@ import getpass, json, h2o
 import random, os, sys
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
 # means we won't realy on h2o self-discovery of cluster
-global hosts = []
+
 def find_config(base):
     f = base
     if not os.path.exists(f): f = 'testdir_hosts/' + base
@@ -106,6 +106,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
 
     #********************
     global hosts
+    hosts = []
     # Update: special case paramsToUse['ip'] = ["127.0.0.1"] and use the normal build_cloud
     # this allows all the tests in testdir_host to be run with a special config that points to 127.0.0.1
     # hosts should be None for everyone if normal build_cloud is desired
