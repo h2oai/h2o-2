@@ -2,7 +2,7 @@
 import os, sys, time, csv
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
 csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error','AverageErrorOver10Folds')
 
@@ -12,17 +12,16 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
 header = ""
 
 def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row, case_mode, case_val):
-    print x
     for f in fs['train']:
-        if f not 'AirlinesTrain1x': continue #in ['AirlinesTrain10x', 'AirlinesTrain100x']: continue
+        if f != 'AirlinesTrain1x': continue #in ['AirlinesTrain10x', 'AirlinesTrain100x']: continue
         overallWallStart = time.time()
         date = '-'.join([str(z) for z in list(time.localtime())][0:3])
-        glmbenchcsv = 'benchmarks/'+build+'/'+date+'/glmbench.csv'
-        if not os.path.exists(glmbenchcsv):
-            output = open(glmbenchcsv,'w')
+        glm2benchcsv = 'benchmarks/'+build+'/'+date+'/glm2bench.csv'
+        if not os.path.exists(glm2benchcsv):
+            output = open(glm2benchcsv,'w')
             output.write(','.join(csv_header)+'\n')
         else:
-            output = open(glmbenchcsv,'a')
+            output = open(glm2benchcsv,'a')
         csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
                         dialect='excel', extrasaction='ignore',delimiter=',')
         try:
@@ -44,8 +43,6 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
             inspect_train  = h2o.nodes[0].inspect(parseResult['destination_key'])
             inspect_test   = h2o.nodes[0].inspect(testFilehex)
             
-            print x
-
             row.update( {'h2o_build'          : build,  
                          'java_heap_GB'       : java_heap_GB,
                          'dataset'            : f,
@@ -67,6 +64,7 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
                          'destination_key'    : "GLM("+f+")",
                          'expert_settings'    : 0,
                         }
+            h2o.beta_features = True
             kwargs    = params.copy()
             glmStart  = time.time()
             glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=7200, **kwargs)
@@ -121,7 +119,7 @@ if __name__ == '__main__':
             x           = x,  
             testFilehex = testFile['destination_key'],
             row         = row,
-            case_mode   = "=",
+            case_mode   = "%3D",
             case_val    = 1.0 
           ) 
     

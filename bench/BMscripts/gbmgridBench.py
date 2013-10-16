@@ -2,7 +2,7 @@
 import os, sys, time, csv
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
 csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','classification','gbmBuildTime')
 

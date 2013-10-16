@@ -178,9 +178,7 @@ public class Inspect extends Request {
     // The builder Response
     Response r = Response.done(result);
     // Some nice links in the response
-    r.addHeader("<div class='alert'>" //
-        + Parse.link(key, "Parse into hex format") + " or " //
-        + RReader.link(key, "from R data") + " </div>");
+    r.addHeader("<div class='alert'>" + Parse.link(key, "Parse into hex format"));
     // Set the builder for showing the rows
     r.setBuilder(ROWS, new ArrayBuilder() {
       public String caption(JsonArray array, String name) {
