@@ -23,6 +23,7 @@ b2:
 clean:
 	rm -f aws_credentials.properties
 	rm -f core-site.xml
+	rm -f flatfile.txt
 	rm -f latest
 	rm -f nodes-private
 	rm -f nodes-public
