@@ -1050,7 +1050,7 @@ class H2O(object):
 
             if noPoll:
                 return r
-
+            
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 

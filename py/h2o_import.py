@@ -287,7 +287,7 @@ def parse_only(node=None, pattern=None, hex_key=None,
     parseResult = node.parse(key=pattern, key2=hex_key,
         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
         initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise,
-        benchmarkLogging=None, noPoll=noPoll, **kwargs)
+        benchmarkLogging=benchmarkLogging, noPoll=noPoll, **kwargs)
 
     parseResult['python_source'] = pattern
     return parseResult
