@@ -27,7 +27,10 @@ class Basic(unittest.TestCase):
         if localhost:
             files = [
                 # None forces num_cols to be used. assumes you set it from Inspect
-                ('manyfiles-nflx-gz', 'file_1.dat.gz', 'file_1.hex', 1800, None, 'file_11.dat.gz', 'file_1_test.hex')
+                # problems with categoricals not in the train data set? (warnings in h2o stdout)
+                ## ('manyfiles-nflx-gz', 'file_1.dat.gz', 'file_1.hex', 1800, None, 'file_11.dat.gz', 'file_1_test.hex')
+                # just use matching
+                ('manyfiles-nflx-gz', 'file_1.dat.gz', 'file_1.hex', 1800, None, 'file_1.dat.gz', 'file_1_test.hex')
                 ]
         else:
             files = [
