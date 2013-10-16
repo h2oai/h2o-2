@@ -101,6 +101,7 @@ public class Summary2 extends Iced {
 
       int binIdx = _isInt ? (int)(((long)val - (long)start)/(long)binsz)
               : (int)Math.floor((val - start)/binsz);
+      if (start + (binIdx + 1) * binsz <= val) ++binIdx; // guard against numeric error
       ++bins[binIdx];
     }
 
