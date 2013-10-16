@@ -109,6 +109,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new ImportFiles2());
       registerRequest(new Parse2());
       registerRequest(new Inspect2());
+      registerRequest(new SummaryPage2());
       registerRequest(new KMeans2());
       registerRequest(new hex.gbm.DRF());
       registerRequest(new hex.LR2());
