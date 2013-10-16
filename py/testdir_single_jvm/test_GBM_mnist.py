@@ -38,12 +38,12 @@ class Basic(unittest.TestCase):
         # GBM (train)****************************************
         params = { 
             'destination_key': "GBMKEY",
-            'learn_rate':.1,
-            'ntrees':10,
-            'max_depth':8,
-            'min_rows':1,
-            'response':784,
-            'cols': range(200)
+            'learn_rate': .1,
+            'ntrees': 10,
+            'max_depth': 8,
+            'min_rows': 1,
+            'response': 784, # this dataset has the response in the last col (0-9 to check)
+            # 'ignored_cols_by_name': range(200,784) # only use the first 200 for speed?
             }
 
         kwargs = params.copy()

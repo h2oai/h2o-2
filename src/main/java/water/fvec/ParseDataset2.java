@@ -401,6 +401,8 @@ public final class ParseDataset2 extends Job {
           }else {
             ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
             _dout = streamParse(vec.openStream(pmon), localSetup, _vecIdStart, chunkStartIdx,pmon);
+            for(int i = 0; i < vec.nChunks(); ++i)
+              _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
           }
           break;
         case ZIP: {
@@ -530,6 +532,7 @@ public final class ParseDataset2 extends Job {
     protected transient NewChunk [] _nvs;
     protected AppendableVec []_vecs;
     protected final Enum [] _enums;
+    protected final byte [] _ctypes;
     long _nLines;
     int _nCols;
     int _col = -1;
@@ -537,6 +540,11 @@ public final class ParseDataset2 extends Job {
     final int _vecIdStart;
     boolean _closedVecs = false;
     private final VectorGroup _vg;
+
+    final private byte UCOL = 0;
+    final private byte NCOL = 1;
+    final private byte ECOL = 2;
+    final private byte TCOL = 3;
 
     public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
       _vecs = new AppendableVec[ncols];
@@ -546,10 +554,11 @@ public final class ParseDataset2 extends Job {
       _cidx = cidx;
       _vg = vg;
       _vecIdStart = vecIdStart;
+      _ctypes = MemoryManager.malloc1(ncols);
       for(int i = 0; i < ncols; ++i)
         _nvs[i] = (NewChunk)(_vecs[i] = new AppendableVec(vg.vecKey(vecIdStart + i))).elem2BV(_cidx);
-    }
 
+    }
     public FVecDataOut reduce(StreamDataOut sdout){
       FVecDataOut dout = (FVecDataOut)sdout;
       if(dout._vecs.length > _vecs.length){
@@ -568,8 +577,12 @@ public final class ParseDataset2 extends Job {
       return this;
     }
     public FVecDataOut close(Futures fs){
-      for(NewChunk nv:_nvs)
+      int i = 0;
+      for(NewChunk nv:_nvs){
+        if(i++ == 1049)
+          System.out.println("haha");
         nv.close(_cidx, fs);
+      }
       return this;
     }
     public FVecDataOut nextChunk(){
@@ -613,9 +626,20 @@ public final class ParseDataset2 extends Job {
 
     @Override public final void addStrCol(int colIdx, ValueString str) {
       if(colIdx < _nvs.length){
-        if(!_enums[_col = colIdx].isKilled()) {
+        if(_ctypes[colIdx] == NCOL){ // support enforced types
+          addInvalidCol(colIdx);
+          return;
+        }
+        if(_ctypes[colIdx] == UCOL && Utils.attemptTimeParse(str) > 0)
+          _ctypes[colIdx] = TCOL;
+        if(_ctypes[colIdx] == TCOL){
+          long l = Utils.attemptTimeParse(str);
+          if(l > 0)addNumCol(colIdx, l, 0);
+          else addInvalidCol(colIdx);
+        } else if(!_enums[_col = colIdx].isKilled()) {
           // store enum id into exponent, so that it will be interpreted as NA if compressing as numcol.
           int id = _enums[colIdx].addKey(str);
+          if(_ctypes[colIdx] == UCOL && id > 1)_ctypes[colIdx] = ECOL;
           _nvs[colIdx].addEnum(id);
         } else // turn the column into NAs by adding value overflowing Enum.MAX_SIZE
           _nvs[colIdx].addEnum(Integer.MAX_VALUE);
