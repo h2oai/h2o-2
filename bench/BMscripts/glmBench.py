@@ -2,7 +2,7 @@
 import os, sys, time, csv
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
 csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error','AverageErrorOver10Folds')
 
@@ -12,7 +12,6 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
 header = ""
 
 def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex, row):
-    print x
     for f in fs['train']:
         #if f in ['AirlinesTrain10x', 'AirlinesTrain100x']: continue
         overallWallStart = time.time()
@@ -43,8 +42,6 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
             
             inspect_train  = h2o.nodes[0].inspect(parseResult['destination_key'])
             inspect_test   = h2o.nodes[0].inspect(testFilehex)
-            
-            print x
 
             row.update( {'h2o_build'          : build,  
                          'java_heap_GB'       : java_heap_GB,
@@ -125,7 +122,6 @@ if __name__ == '__main__':
     elapsedAllBedroomsTestParse = time.time() - allBedroomsTestParseStart
     
     row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
-    print x
     doGLM(files['AllBedrooms'], 'AllBedrooms', 'gaussian', 'identity', 1E-4, 0.75, 10, 'medrent',x, testFile['destination_key'],row)
 
     h2o.tear_down_cloud()

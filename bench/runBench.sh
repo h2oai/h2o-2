@@ -16,9 +16,12 @@ function ALL() {
     echo "Running GLM benchmark..."
     GLM
     wait
-    #echo "Running GBM..."
-    #GBM
+    #echo "Running GLM2..."
+    #GLM2
     #wait
+    echo "Running GBM..."
+    GBM
+    wait
     #echo "Running GBMGrid..."
     #GBMGrid
     #wait
@@ -52,6 +55,13 @@ function GLM() {
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
 }
+
+function GLM2() {
+    pyScript="BMscripts/glm2Bench.py"
+    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
+    wait
+}
+
 
 function GBM() {
     pyScript="BMscripts/gbmBench.py"
@@ -127,8 +137,8 @@ then
     exit
 fi
 
-bash S3getLatest.sh
-wait
+#bash S3getLatest.sh
+#wait
 h2oBuild=`cat latest`
 
 if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"pcabench.csv" ]; then
@@ -143,13 +153,21 @@ if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"kmeansbench.csv" ]; then
  rm -f ${benchmarks}/${h2oBuild}/${DATE}/"kmeansbench.csv"
 fi
 
-#if [ -a ${benchmarks}/${h2oBuild}/${DATE}/bigkmeansbench.csv ]; then
-# rm -f ${benchmarks}/${h2oBuild}/${DATE}/bigkmeansbench.csv
-#fi
+if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"bigkmeansbench.csv" ]; then
+ rm -f ${benchmarks}/${h2oBuild}/${DATE}/"bigkmeansbench.csv"
+fi
+
+if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"gbmbench.csv" ]; then
+ rm -f ${benchmarks}/${h2oBuild}/${DATE}/"gbmbench.csv"
+fi
+
+if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"glm2bench.csv" ]; then
+ rm -f ${benchmarks}/${h2oBuild}/${DATE}/"glm2bench.csv"
+fi
 
 if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
-rm latest
+#rm latest
 $TEST
 

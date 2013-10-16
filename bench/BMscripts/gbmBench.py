@@ -1,8 +1,8 @@
-#GBM bench
+##GBM bench
 import os, sys, time, csv
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
 csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','classification','gbmBuildTime')
 
@@ -12,8 +12,9 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
              }
 header = ""
 
-def doGLM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response):
+def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
     for f in fs['train']:
+        #if f != 'AirlinesTrain1x': continue
         overallWallStart = time.time()
         date = '-'.join([str(x) for x in list(time.localtime())][0:3])
         gbmbenchcsv = 'benchmarks/'+build+'/'+date+'/gbmbench.csv'
@@ -67,7 +68,11 @@ def doGLM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
 
             kwargs    = params.copy()
             gbmStart  = time.time()
-            gbm       = h2o_cmd.runGBM(parseResult = parseResult, timeoutSecs=4800, **kwargs)
+            #TODO(spencer): Uses jobs to poll for gbm completion
+            h2o.beta_features = True
+            gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
+            h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=120, retryDelaySecs=5)
+            h2o.beta_features = False
             gbmTime   = time.time() - gbmStart
             row.update( {'gbmBuildTime'       : gbmTime,
                         })
@@ -83,7 +88,7 @@ if __name__ == '__main__':
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()
-    
+ 
     #AIRLINES
     airlinesTestParseStart      = time.time()
     hK                          =  "AirlinesHeader.csv"
@@ -98,13 +103,15 @@ if __name__ == '__main__':
     ignored  = None
     doGBM(files['Airlines'], folderPath='Airlines', 
             ignored_cols    = ignored, 
-            classificiation = 1,
+            classification  = 1,
             testFilehex     = testFile['destination_key'], 
             ntrees          = 100,
             depth           = 5,
             minrows         = 10,
             nbins           = 100,
-            learnRate       = 0.01
+            learnRate       = 0.01,
+            response        = response,
+            row             = row
          )
     
     #COVTYPE
@@ -121,14 +128,15 @@ if __name__ == '__main__':
     ignored  = None
     doGBM(files['Covtype'], folderPath='CovType', 
             ignored_cols    = ignored, 
-            classificiation = 1,
+            classification = 1,
             testFilehex     = testFile['destination_key'], 
             ntrees          = 100,
             depth           = 5,
             minrows         = 10, 
             nbins           = 100,
             learnRate       = 0.01,
-            response        = response
+            response        = response,
+            row             = row
          ) 
     
     #ALLBEDROOMS
@@ -145,14 +153,15 @@ if __name__ == '__main__':
     ignored  = None
     doGBM(files['AllBedroom'], folderPath='AllBedrooms',
             ignored_cols    = ignored,
-            classificiation = 0,
+            classification = 0,
             testFilehex     = testFile['destination_key'],
             ntrees          = 100,
             depth           = 5,
             minrows         = 10,
             nbins           = 100,
             learnRate       = 0.01,
-            response        = response
+            response        = response,
+            row             = row 
          )
 
     h2o.tear_down_cloud()
