@@ -375,6 +375,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     // calculate the column domains
     if(_enums != null)
       for(int i = 0; i < t._enums.length; ++i){
+        if(t._colTypes[i] == UCOL && t._enums[i] != null && t._enums[i].size() == 1)
+          t._colTypes[i] = ECOL;
         if(t._colTypes[i] == ECOL && t._enums[i] != null && !t._enums[i].isKilled())
           t._colDomains[i] = t._enums[i].computeColumnDomain();
         else
