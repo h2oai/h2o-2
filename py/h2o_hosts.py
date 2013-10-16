@@ -2,7 +2,7 @@ import getpass, json, h2o
 import random, os, sys
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
 # means we won't realy on h2o self-discovery of cluster
-
+global hosts = []
 def find_config(base):
     f = base
     if not os.path.exists(f): f = 'testdir_hosts/' + base
