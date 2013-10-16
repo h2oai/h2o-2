@@ -588,7 +588,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         start = time.time()
         # UPDATE: best to stabilize on the last node!
         stabilize_cloud(nodeList[0], len(nodeList),
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, ignoreConnectionError=True)
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorCheck=True)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time()-start, " secs")
         verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList),
             hostCount, (time.time() - start)))
@@ -598,7 +598,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # UPDATE: do it for all cases now 2/14/13
         if conservative: # still needed?
             for n in nodeList:
-                stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, ignoreConnectionError=True)
+                stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, noExtraErrorCheck=True)
         else:
             pass
             # verify_cloud_size(nodeList)
@@ -766,12 +766,12 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
                 (sizeStr, consensusStr, expectedSize))
     return (sizeStr, consensusStr, expectedSize)
 
-def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, ignoreConnectionError=False):
-    node.wait_for_node_to_accept_connections(timeoutSecs, ignoreConnectionError=ignoreConnectionError)
+def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
+    node.wait_for_node_to_accept_connections(timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None):
-        c = n.get_cloud(ignoreConnectionError=True)
+        c = n.get_cloud(noExtraErrorCheck=True)
         # don't want to check everything. But this will check that the keys are returned!
         consensus  = c['consensus']
         locked     = c['locked']
@@ -823,7 +823,7 @@ class H2O(object):
         return u
 
     def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None,
-        cmd='get', extraComment=None, ignoreH2oError=False, ignoreConnectionError=False, **kwargs):
+        cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorCheck=False, **kwargs):
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
             url = fullUrl
@@ -859,8 +859,8 @@ class H2O(object):
             # because there's no delay, and we don't want to delay all cloud teardowns by waiting.
             # (this is new/experimental)
             exc_info = sys.exc_info()
-            if not ignoreConnectionError: # use this to ignore the initial connection errors during build cloud when h2o is coming up
-                h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % url + paramStr)
+            if not noExtraErrorCheck: # use this to ignore the initial connection errors during build cloud when h2o is coming up
+                h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
                 time.sleep(2)
                 check_sandbox_for_errors();
             raise exc_info[1], None, exc_info[2]
@@ -909,9 +909,9 @@ class H2O(object):
     def test_poll(self, args):
         return self.__do_json_request('TestPoll.json', params=args)
 
-    def get_cloud(self, ignoreConnectionError=False, timeoutSecs=10):
+    def get_cloud(self, noExtraErrorCheck=False, timeoutSecs=10):
         # hardwire it to allow a 60 second timeout
-        a = self.__do_json_request('Cloud.json', ignoreConnectionError=ignoreConnectionError, timeout=timeoutSecs)
+        a = self.__do_json_request('Cloud.json', noExtraErrorCheck=noExtraErrorCheck, timeout=timeoutSecs)
 
         consensus  = a['consensus']
         locked     = a['locked']
@@ -935,7 +935,7 @@ class H2O(object):
     # so request library might retry and get exception. allow that.
     def shutdown_all(self):
         try:
-            self.__do_json_request('Shutdown.json')
+            self.__do_json_request('Shutdown.json', noExtraErrorCheck=True)
         except:
             pass
         time.sleep(1) # a little delay needed?
@@ -1952,11 +1952,11 @@ class H2O(object):
                 msg = error(self, timeTakenSecs, numberOfRetries)
                 raise Exception(msg)
 
-    def wait_for_node_to_accept_connections(self, timeoutSecs=15, ignoreConnectionError=False):
+    def wait_for_node_to_accept_connections(self, timeoutSecs=15, noExtraErrorCheck=False):
         verboseprint("wait_for_node_to_accept_connections")
         def test(n, tries=None):
             try:
-                n.get_cloud(ignoreConnectionError=ignoreConnectionError)
+                n.get_cloud(noExtraErrorCheck=noExtraErrorCheck)
                 return True
             except requests.ConnectionError, e:
                 # Now using: requests 1.1.0 (easy_install --upgrade requests) 2/5/13
@@ -2452,7 +2452,7 @@ class RemoteH2O(H2O):
         if self.channel.closed: return False
         if self.channel.exit_status_ready(): return False
         try:
-            self.get_cloud()
+            self.get_cloud(noExtraErrorCheck=True)
             return True
         except:
             return False
