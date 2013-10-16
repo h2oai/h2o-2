@@ -124,7 +124,6 @@ def get_sandbox_name():
     else: return "sandbox"
 
 def unit_main():
-    sys.stdout = OutWrapper(sys.stdout)
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
@@ -202,6 +201,11 @@ def parse_our_args():
     abort_after_import = args.abort_after_import
     clone_cloud_json = args.clone_cloud_json
 
+    # Auto skip cloud building if debugging
+    if fromPyDev():
+        browse_disable = True
+        clone_cloud_json = os.getenv("HOME") + '/h2o-nodes.json'
+
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
     # Pass "--failfast" to stop on first error to unittest. and -v
@@ -209,6 +213,11 @@ def parse_our_args():
     sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
     # sys.argv[1:] = args.unittest_args
 
+def fromPyDev():
+    for s in sys.path:
+        if 'eclipse/plugins/org.python.pydev' in s:
+            return True
+    return False
 
 def find_file(base):
     f = base
@@ -526,6 +535,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # (both come thru here)
     # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
+    sys.stdout = OutWrapper(sys.stdout)
     if clone_cloud_json or clone_cloud:
         nodeList = build_cloud_with_json(
             h2o_nodes_json=clone_cloud_json if clone_cloud_json else clone_cloud)
@@ -554,6 +564,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # doing this list outside the loops so we can shuffle for better test variation
         # this jvm startup shuffle is independent from the flatfile shuffle
         portList = [base_port + ports_per_node*i for i in range(node_count)]
+
         if hosts is None:
             # if use_flatfile, we should create it,
             # because tests will just call build_cloud with use_flatfile=True

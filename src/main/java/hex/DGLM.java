@@ -12,8 +12,10 @@ import hex.RowVecTask.Sampling;
 import java.text.DecimalFormat;
 import java.util.*;
 
+import jsr166y.CountedCompleter;
 import jsr166y.RecursiveAction;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
 import water.ValueArray.Column;
 import water.api.Constants;
@@ -1721,6 +1723,7 @@ public abstract class DGLM {
   public static GLMJob startGLMJob(Key dest, final DataFrame data, final LSMSolver lsm, final GLMParams params,
       final double[] betaStart, final int xval, final boolean parallel) {
     if( dest == null ) dest = GLMModel.makeKey(true);
+    final GLMJob job = new GLMJob(data._ary, dest, xval, params);
     final double[] beta;
     final double[] denormalizedBeta;
     if( betaStart != null ) {
@@ -1729,19 +1732,26 @@ public abstract class DGLM {
     } else {
       beta = denormalizedBeta = null;
     }
-    GLMJob job = new GLMJob(data._ary, dest, xval, params) {
-      @Override protected void exec() {
-        try {
-          buildModel(this, dest(), data, lsm, params, beta, xval, parallel);
-          assert !cancelled();
-        } catch( JobCancelledException e ) {
-          UKV.remove(dest());
-        }
-      }
-    };
     UKV.put(job.dest(), new GLMModel(Status.ComputingModel, 0.0f, job.dest(), data, denormalizedBeta, beta, params,
         lsm, 0, 0, false, 0, 0, null));
-    job.start();
+    final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
+      @Override public void compute2() {
+        try {
+          buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
+          assert !job.cancelled();
+          job.remove();
+        } catch( JobCancelledException e ) {
+          UKV.remove(job.dest());
+        }
+        tryComplete();
+      }
+
+      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+        if( job != null ) job.onException(ex);
+        return super.onExceptionalCompletion(ex, caller);
+      }
+    };
+    H2O.submitTask(job.start(fjtask));
     return job;
   }
   public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,

@@ -172,6 +172,7 @@ public abstract class Layer extends Iced {
 
   public static class VecsInput extends Input {
     Vec[] _vecs;
+    int[] _categoricals;
     float[] _subs, _muls;
     transient Chunk[] _chunks;
 
@@ -180,15 +181,20 @@ public abstract class Layer extends Iced {
     }
 
     public VecsInput(Vec[] vecs, VecsInput stats) {
-      super(expand(vecs));
+      super(stats != null ? stats._subs.length : expand(vecs));
       _vecs = vecs;
       _len = vecs[0].length();
 
       if( stats != null ) {
+        assert stats._categoricals.length == vecs.length;
+        _categoricals = stats._categoricals;
         assert stats._subs.length == _units;
         _subs = stats._subs;
         _muls = stats._muls;
       } else {
+        _categoricals = new int[vecs.length];
+        for( int i = 0; i < vecs.length; i++ )
+          _categoricals[i] = categories(vecs[i]);
         _subs = new float[_units];
         _muls = new float[_units];
         stats(vecs);
@@ -198,7 +204,7 @@ public abstract class Layer extends Iced {
     static int categories(Vec vec) {
       if( vec.domain() == null )
         return 1;
-      return (int) (vec.max() - vec.min()) - 1;
+      return (int) (vec.max() - vec.min());
     }
 
     static int expand(Vec[] vecs) {
@@ -211,6 +217,7 @@ public abstract class Layer extends Iced {
     private void stats(Vec[] vecs) {
       Stats stats = new Stats();
       stats._units = _units;
+      stats._categoricals = _categoricals;
       stats.doAll(_vecs);
       for( int i = 0; i < vecs.length; i++ ) {
         _subs[i] = (float) stats._means[i];
@@ -227,7 +234,7 @@ public abstract class Layer extends Iced {
         if( c == null || c._vec != _vecs[i] || _pos < c._start || _pos >= c._start + c._len )
           _chunks[i] = _vecs[i].chunk(_pos);
       }
-      ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), _subs, _muls);
+      ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), _subs, _muls, _categoricals);
     }
 
     /**
@@ -235,10 +242,10 @@ public abstract class Layer extends Iced {
      */
     private static class Stats extends MRTask2<Stats> {
       int _units;
+      int[] _categoricals;
       double[] _means, _sigms;
       long _rows;
-      transient float[] _subs;
-      transient float[] _muls;
+      transient float[] _subs, _muls;
 
       @Override protected void setupLocal() {
         _subs = new float[_units];
@@ -252,14 +259,14 @@ public abstract class Layer extends Iced {
         _sigms = new double[_units];
         float[] a = new float[_means.length];
         for( int r = 0; r < cs[0]._len; r++ ) {
-          ChunksInput.set(cs, a, r, _subs, _muls);
+          ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
           for( int c = 0; c < a.length; c++ )
             _means[c] += a[c];
         }
         for( int c = 0; c < a.length; c++ )
           _means[c] /= cs[0]._len;
         for( int r = 0; r < cs[0]._len; r++ ) {
-          ChunksInput.set(cs, a, r, _subs, _muls);
+          ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
           for( int c = 0; c < a.length; c++ )
             _sigms[c] += (a[c] - _means[c]) * (a[c] - _means[c]);
         }
@@ -284,32 +291,34 @@ public abstract class Layer extends Iced {
   public static class ChunksInput extends Input {
     transient Chunk[] _chunks;
     float[] _subs, _muls;
+    int[] _categoricals;
 
     public ChunksInput(Chunk[] chunks, VecsInput stats) {
       super(stats._subs.length);
       _chunks = chunks;
       _subs = stats._subs;
       _muls = stats._muls;
+      _categoricals = stats._categoricals;
     }
 
     @Override void fprop() {
-      set(_chunks, _a, (int) _pos, _subs, _muls);
+      set(_chunks, _a, (int) _pos, _subs, _muls, _categoricals);
     }
 
-    static void set(Chunk[] chunks, float[] a, int row, float[] subs, float[] muls) {
+    static void set(Chunk[] chunks, float[] a, int row, float[] subs, float[] muls, int[] categoricals) {
       int n = 0;
       for( int i = 0; i < chunks.length; i++ ) {
         double d = chunks[i].at0(row);
         d = Double.isNaN(d) ? 0 : d;
-        if( chunks[i]._vec.domain() == null ) {
+        if( categoricals[i] == 1 ) {
           d -= subs[n];
           d *= muls[n];
           a[n++] = (float) d;
         } else {
-          int cat = VecsInput.categories(chunks[i]._vec);
+          int cat = categoricals[i];
           for( int c = 0; c < cat; c++ )
             a[n + c] = -subs[n + c];
-          int c = (int) chunks[i]._vec.min() + (int) d - 1;
+          int c = (int) d - (int) chunks[i]._vec.min() - 1;
           if( c >= 0 )
             a[n + c] = (1 - subs[n + c]) * muls[n + c];
           n += cat;

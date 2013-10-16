@@ -154,6 +154,12 @@ public class RequestArguments extends RequestStatics {
   public ArrayList<Argument> arguments() {
     return _arguments;
   }
+  public Argument arg(String name) {
+    for(Argument a : _arguments)
+      if(name.equals(a._name))
+        return a;
+    return null;
+  }
 
   // ---------------------------------------------------------------------------
 

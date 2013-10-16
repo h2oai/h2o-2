@@ -7,13 +7,10 @@ import hex.Layer.Output;
 import hex.Layer.Softmax;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-
-import java.util.ArrayList;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
-import water.Job.ModelJob;
+import water.Job.ResponseJob;
 import water.Job.ValidatedJob;
 import water.api.*;
 import water.api.Request.API;
@@ -82,27 +79,31 @@ public class NeuralNet extends Model implements water.Job.Progress {
   private Vec[] _train, _valid;
   private Vec _trainResp, _validResp;
 
-  public H2OCountedCompleter startTrain(final Job job) {
-    layers = new Layer[hidden.length + 2];
-    layers[0] = new VecsInput(_train);
+  public Layer[] build(Vec[] vecs, Vec response) {
+    Layer[] ls = new Layer[hidden.length + 2];
+    ls[0] = new VecsInput(vecs);
     for( int i = 0; i < hidden.length; i++ ) {
       if( activation == Activation.Rectifier )
-        layers[i + 1] = new Layer.Rectifier(hidden[i]);
+        ls[i + 1] = new Layer.Rectifier(hidden[i]);
       else
-        layers[i + 1] = new Layer.Tanh(hidden[i]);
-      layers[i + 1]._rate = (float) rate;
-      layers[i + 1]._l2 = (float) l2;
+        ls[i + 1] = new Layer.Tanh(hidden[i]);
+      ls[i + 1]._rate = (float) rate;
+      ls[i + 1]._l2 = (float) l2;
     }
-    if( _trainResp.domain() != null )
-      layers[layers.length - 1] = new VecSoftmax(_trainResp);
+    if( response.domain() != null )
+      ls[ls.length - 1] = new VecSoftmax(response);
     else {
       // TODO Gaussian?
     }
-    layers[layers.length - 1]._rate = (float) rate;
-    layers[layers.length - 1]._l2 = (float) l2;
-    for( int i = 0; i < layers.length; i++ )
-      layers[i].init(layers, i);
+    ls[ls.length - 1]._rate = (float) rate;
+    ls[ls.length - 1]._l2 = (float) l2;
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].init(ls, i);
+    return ls;
+  }
 
+  public H2OCountedCompleter startTrain(final Job job) {
+    layers = build(_train, _trainResp);
     final Trainer trainer = new Trainer.MapReduce(layers, epochs, job.self());
 
     // Use a separate thread for monitoring (blocked most of the time)
@@ -150,6 +151,22 @@ public class NeuralNet extends Model implements water.Job.Progress {
 
   @Override public float progress() {
     return 0.1f + Math.min(1, items / (float) (epochs * _train[0].length()));
+  }
+
+  public Error eval(Frame frame, long n, long[][] cm) {
+    Frame[] frs = adapt(frame, false, true);
+    Error e = evalAdapted(frs[0], n, cm);
+    frs[1].remove();
+    return e;
+  }
+
+  public Error evalAdapted(Frame frame, long n, long[][] cm) {
+    Vec[] vecs = frame.vecs();
+    Vec response = vecs[vecs.length - 1];
+    vecs = Utils.remove(vecs, vecs.length - 1);
+    VecsInput stats = (VecsInput) layers[0];
+    Error e = eval(new VecsInput(vecs, stats), new VecSoftmax(response), n, cm);
+    return e;
   }
 
   public Error eval(Input input, Output output, long n, long[][] cm) {
@@ -234,7 +251,7 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='NeuralNet.query?%key_param=%$key'>%content</a>");
+    RString rs = new RString("<a href='NeuralNetTrain.query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", "source");
     rs.replace("key", k.toString());
     rs.replace("content", content);
@@ -255,49 +272,39 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   public static class NeuralNetTrain extends ValidatedJob {
-    private NeuralNet _model = new NeuralNet();
-
     public NeuralNetTrain() {
       description = DOC_GET;
+      _model = newModel();
     }
 
-    @Override protected ArrayList<Class> getClasses() {
-      ArrayList<Class> classes = super.getClasses();
-      classes.add(0, NeuralNet.class);
-      return classes;
+    protected NeuralNet newModel() {
+      return new NeuralNet();
     }
 
-    @Override protected Object getTarget() {
-      return _model;
-    }
-
-    @Override protected H2OCountedCompleter fork() {
-      _model._selfKey = destination_key;
-      _model._dataKey = Key.make(input("source"));
-      _model._names = source.names();
-      _model._domains = source.domains();
-
+    @Override public H2OCountedCompleter start() {
+      init();
       Vec[] vecs = _filteredSource.vecs().clone();
       reChunk(vecs);
-      _model._train = new Vec[vecs.length - 1];
-      System.arraycopy(vecs, 0, _model._train, 0, _model._train.length);
-      _model._trainResp = vecs[vecs.length - 1];
+      NeuralNet nn = (NeuralNet) _model;
+      nn._train = new Vec[vecs.length - 1];
+      System.arraycopy(vecs, 0, nn._train, 0, nn._train.length);
+      nn._trainResp = vecs[vecs.length - 1];
       if( _filteredValidation == null ) {
-        _model._valid = _model._train;
-        _model._validResp = _model._trainResp;
+        nn._valid = nn._train;
+        nn._validResp = nn._trainResp;
       } else {
         vecs = _filteredValidation.vecs();
-        _model._valid = new Vec[vecs.length - 1];
-        System.arraycopy(vecs, 0, _model._valid, 0, _model._valid.length);
-        _model._validResp = vecs[vecs.length - 1];
+        nn._valid = new Vec[vecs.length - 1];
+        System.arraycopy(vecs, 0, nn._valid, 0, nn._valid.length);
+        nn._validResp = vecs[vecs.length - 1];
       }
       if( classification ) {
-        _model._trainResp.asEnum();
-        _model._validResp.asEnum();
+        nn._trainResp.asEnum();
+        nn._validResp.asEnum();
       }
-      UKV.put(destination_key, _model);
-      _model.startTrain(this);
-      return new H2OEmptyCompleter();
+      UKV.put(destination_key, nn);
+      nn.startTrain(this);
+      return start(new H2OEmptyCompleter());
     }
 
     @Override public void remove() {
@@ -373,7 +380,7 @@ public class NeuralNet extends Model implements water.Job.Progress {
     }
   }
 
-  public static class NeuralNetScore extends ModelJob {
+  public static class NeuralNetScore extends ResponseJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     static final String DOC_GET = "Neural network scoring";

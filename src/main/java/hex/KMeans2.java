@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import water.*;
-import water.Job.ColumnsJob;
+import water.Job.ModelJob;
 import water.Job.Progress;
 import water.api.*;
 import water.api.Request.API;
@@ -161,34 +161,18 @@ public class KMeans2 extends Model implements Progress {
     return new KMeans2Train();
   }
 
-  public static class KMeans2Train extends ColumnsJob {
-    private KMeans2 _model = new KMeans2();
-
+  public static class KMeans2Train extends ModelJob {
     public KMeans2Train() {
       description = "K-means";
-    }
-
-    @Override protected ArrayList<Class> getClasses() {
-      ArrayList<Class> classes = super.getClasses();
-      classes.add(0, KMeans2.class);
-      return classes;
-    }
-
-    @Override protected Object getTarget() {
-      return _model;
+      _model = new KMeans2();
     }
 
     @Override protected void exec() {
-      _model._selfKey = destination_key;
-      _model._dataKey = Key.make(input("source"));
-      _model._names = source.names();
-      _model._domains = source.domains();
       int[] filtered = filteredCols();
       Vec[] vecs = new Vec[filtered.length];
       for( int i = 0; i < filtered.length; i++ )
         vecs[i] = source.vecs()[filtered[i]];
-      _model.train(this, vecs, null);
-      remove();
+      ((KMeans2) _model).train(this, vecs, null);
     }
   }
 

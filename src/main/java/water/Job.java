@@ -1,13 +1,13 @@
 package water;
 
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
 
 import org.apache.commons.lang.ArrayUtils;
 
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.api.*;
+import water.api.DocGen.FieldDoc;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
@@ -42,17 +42,10 @@ public class Job extends Request2 {
 
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
 
-  public Key self() {
-    return job_key;
-  }
-
-  public Key dest() {
-    return destination_key;
-  }
-
-  @Override protected String name() {
-    return description;
-  }
+  // @formatter:off
+  public Key self() { return job_key; }
+  public Key dest() { return destination_key; }
+  // @formatter:on
 
   protected void logStart() {
     Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
@@ -91,16 +84,11 @@ public class Job extends Request2 {
     @API(help = "Input columns (Indexes start at 0)", filter = colsFilter.class, hide = true)
     public int[] cols;
     class colsFilter extends MultiVecSelect { colsFilter() { super("source"); } }
-    // @formatter:on
 
     @API(help = "Ignored columns by name", filter = colsFilter.class, displayName = "Ignored columns")
     public int[] ignored_cols_by_name;
-
-    class colsNamesFilter extends MultiVecSelect {
-      public colsNamesFilter() {
-        super("source", MultiVecSelectType.NAMES_ONLY);
-      }
-    }
+    class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
+    // @formatter:on
 
     @Override protected void logStart() {
       super.logStart();
@@ -153,6 +141,51 @@ public class Job extends Request2 {
   }
 
   public static abstract class ModelJob extends ColumnsJob {
+    public Model _model;
+
+    @Override protected ArrayList<Class> getClasses() {
+      ArrayList<Class> classes = super.getClasses();
+      if( _model != null )
+        classes.add(0, _model.getClass());
+      return classes;
+    }
+
+    @Override protected Object getTarget() {
+      if( _model != null )
+        return _model;
+      return super.getTarget();
+    }
+
+    @Override protected void init() {
+      super.init();
+      if( _model != null ) {
+        _model._selfKey = destination_key;
+        String sourceArg = input("source");
+        if( sourceArg != null )
+          _model._dataKey = Key.make(sourceArg);
+        _model._names = source.names();
+        _model._domains = source.domains();
+      }
+    }
+
+    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
+      super.writeJSONFields(bb);
+      if( _model != null ) {
+        bb.put1(',');
+        _model.writeJSONFields(bb);
+      }
+      return bb;
+    }
+
+    @Override public FieldDoc[] toDocField() {
+      FieldDoc[] fs = super.toDocField();
+      if( _model != null )
+        fs = Utils.append(fs, _model.toDocField());
+      return fs;
+    }
+  }
+
+  public static abstract class ResponseJob extends ModelJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
@@ -200,7 +233,7 @@ public class Job extends Request2 {
     }
   }
 
-  public static abstract class ValidatedJob extends ModelJob {
+  public static abstract class ValidatedJob extends ResponseJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
@@ -322,9 +355,8 @@ public class Job extends Request2 {
     return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
   }
 
-  public H2OCountedCompleter start() {
-    init();
-    _fjtask = fork();
+  public <T extends H2OCountedCompleter> T start(final T fjtask) {
+    _fjtask = fjtask;
     DKV.put(job_key, new Value(job_key, new byte[0]));
     start_time = System.currentTimeMillis();
     new TAtomic<List>() {
@@ -337,7 +369,14 @@ public class Job extends Request2 {
         return old;
       }
     }.invoke(LIST);
-    return _fjtask;
+    return fjtask;
+  }
+
+  public H2OCountedCompleter start() {
+    init();
+    H2OCountedCompleter task = defaultTask();
+    H2O.submitTask(start(task));
+    return task;
   }
 
   public void invoke() {
@@ -352,52 +391,35 @@ public class Job extends Request2 {
   }
 
   /**
-   * Default behavior is to call exec() in a F/J task. Override to run in a non-blocking mode,
-   * making sure you call remove() when done.
+   * Default behavior is to call exec() in a F/J task. Override to run non-blocking, making sure you
+   * call remove() when done.
    */
-  protected H2OCountedCompleter fork() {
+  protected H2OCountedCompleter defaultTask() {
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
-        Throwable t = null;
         try {
           Job.this.exec();
           remove();
-        } catch( Throwable t_ ) {
-          t = t_;
+        } catch( Throwable t ) {
           if( !(t instanceof ExpectedExceptionForDebug) )
             Log.err(t);
+          onException(t);
         } finally {
           tryComplete();
         }
-        if( t != null )
-          onException(t);
       }
     };
-    H2O.submitTask(task);
     return task;
+  }
+
+  protected void onException(Throwable t) {
+    cancel(job_key, Utils.getStackAsString(t));
   }
 
   /**
    * Actual job code. Must block until execution is done.
    */
   protected void exec() {
-  }
-
-  protected void onException(Throwable ex) {
-    UKV.remove(dest());
-    update(Job.this, Utils.getStackAsString(ex));
-  }
-
-  private static void update(final Job job, final String exception) {
-    new TAtomic<List>() {
-      @Override public List atomic(List old) {
-        if( old != null && old._jobs != null )
-          for( Job current : old._jobs )
-            if( current == job )
-              job.exception = exception;
-        return old;
-      }
-    }.invoke(LIST);
   }
 
   // Overridden for Parse
@@ -408,7 +430,7 @@ public class Job extends Request2 {
     return 0;
   }
 
-  //Block until the Job finishes.
+  // Block until the Job finishes.
   public <T> T get() {
     try {
       _fjtask.join();             // Block until top-level job is done
@@ -474,6 +496,7 @@ public class Job extends Request2 {
   }
 
   public void remove() {
+    end_time = System.currentTimeMillis();
     DKV.remove(job_key);
     new TAtomic<List>() {
       @Override public List atomic(List old) {
@@ -708,7 +731,7 @@ public class Job extends Request2 {
       return _progress;
     }
 
-    @Override protected void onException(Throwable ex) {
+    @Override public void onException(Throwable ex) {
       Value v = DKV.get(progressKey());
       if( v != null ) {
         ChunkProgress p = v.get();

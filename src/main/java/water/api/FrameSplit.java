@@ -169,7 +169,8 @@ public class FrameSplit extends Request2 {
 
       for( int f = 0; f < _splits.length; f++ ) {
         Vec[] vecs = new Vec[_num_columns];
-        System.arraycopy(_fr.vecs(), (f + 1) * _num_columns, vecs, 0, _num_columns);
+        for( int i = 0; i < _num_columns; i++ )
+          vecs[i] = ((AppendableVec) _fr.vecs()[(f + 1) * _num_columns + i]).close(null);
 
         for( int column = 0; column < _num_columns; column++ )
           if( _fr.vecs()[column].isEnum() )

@@ -24,6 +24,24 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex");
       checkStr("h.hex+1");
       checkStr("h.hex-h.hex");
+      checkStr("1.23+(h.hex-h.hex)");
+      checkStr("(1.23+h.hex)-h.hex");
+      checkStr("min(h.hex,1+2)");
+      checkStr("isNA(h.hex)");
+      checkStr("h.hex[2,3]");
+      checkStr("h.hex[2+3,-4*5]");
+      checkStr("h.hex[2+3,h.hex]");
+      checkStr("h.hex[2,]");
+      checkStr("h.hex[,3]");
+      checkStr("h.hex[ncols(h.hex),nrows(h.hex)]");
+      checkStr("h.hex[nrows(h.hex=1),]");
+      checkStr("h.hex[2,3]=4");
+      checkStr("h.hex[2,]=h.hex[7,]");
+      checkStr("h.hex[,2]=h.hex[,7]+1");
+      checkStr("c(1,3,5)");
+      checkStr("h.hex[c(1,3,5),]");
+      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
+      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
