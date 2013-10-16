@@ -119,7 +119,7 @@ class Basic(unittest.TestCase):
                     hex_key = csvFilename + "_" + str(trial) + ".hex"
                     print "Loading", protocol, "key:", src_key, "to", hex_key
                     start = time.time()
-                    parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/*",
+                    parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvFolder + "/" + csvFilepattern,
                         timeoutSecs=timeoutSecs, 
                         retryDelaySecs=retryDelaySecs,
                         pollTimeoutSecs=pollTimeoutSecs,

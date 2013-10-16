@@ -124,7 +124,6 @@ def get_sandbox_name():
     else: return "sandbox"
 
 def unit_main():
-    sys.stdout = OutWrapper(sys.stdout)
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
     # if I remember correctly there was an issue with using sys.argv[0]
     # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
@@ -526,6 +525,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # (both come thru here)
     # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
+    sys.stdout = OutWrapper(sys.stdout)
     if clone_cloud_json or clone_cloud:
         nodeList = build_cloud_with_json(
             h2o_nodes_json=clone_cloud_json if clone_cloud_json else clone_cloud)
@@ -588,7 +588,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         start = time.time()
         # UPDATE: best to stabilize on the last node!
         stabilize_cloud(nodeList[0], len(nodeList),
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, ignoreConnectionError=True)
+            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, noExtraErrorChecking=True)
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time()-start, " secs")
         verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList),
             hostCount, (time.time() - start)))
@@ -598,7 +598,7 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
         # UPDATE: do it for all cases now 2/14/13
         if conservative: # still needed?
             for n in nodeList:
-                stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, ignoreConnectionError=True)
+                stabilize_cloud(n, len(nodeList), timeoutSecs=timeoutSecs, noExtraErrorChecking=True)
         else:
             pass
             # verify_cloud_size(nodeList)
@@ -766,12 +766,12 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10):
                 (sizeStr, consensusStr, expectedSize))
     return (sizeStr, consensusStr, expectedSize)
 
-def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, ignoreConnectionError=False):
-    node.wait_for_node_to_accept_connections(timeoutSecs, ignoreConnectionError=ignoreConnectionError)
+def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorChecking=False):
+    node.wait_for_node_to_accept_connections(timeoutSecs, noExtraErrorChecking=noExtraErrorChecking)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
     def test(n, tries=None):
-        c = n.get_cloud(ignoreConnectionError=True)
+        c = n.get_cloud(noExtraErrorChecking=True)
         # don't want to check everything. But this will check that the keys are returned!
         consensus  = c['consensus']
         locked     = c['locked']
@@ -823,7 +823,7 @@ class H2O(object):
         return u
 
     def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None,
-        cmd='get', extraComment=None, ignoreH2oError=False, ignoreConnectionError=False, **kwargs):
+        cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorChecking=False, **kwargs):
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
             url = fullUrl
@@ -859,8 +859,8 @@ class H2O(object):
             # because there's no delay, and we don't want to delay all cloud teardowns by waiting.
             # (this is new/experimental)
             exc_info = sys.exc_info()
-            if not ignoreConnectionError: # use this to ignore the initial connection errors during build cloud when h2o is coming up
-                h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
+            if not noExtraErrorChecking: # use this to ignore the initial connection errors during build cloud when h2o is coming up
+                h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % url + paramStr)
                 time.sleep(2)
                 check_sandbox_for_errors();
             raise exc_info[1], None, exc_info[2]
@@ -909,9 +909,9 @@ class H2O(object):
     def test_poll(self, args):
         return self.__do_json_request('TestPoll.json', params=args)
 
-    def get_cloud(self, ignoreConnectionError=False, timeoutSecs=10):
+    def get_cloud(self, noExtraErrorChecking=False, timeoutSecs=10):
         # hardwire it to allow a 60 second timeout
-        a = self.__do_json_request('Cloud.json', ignoreConnectionError=ignoreConnectionError, timeout=timeoutSecs)
+        a = self.__do_json_request('Cloud.json', noExtraErrorChecking=noExtraErrorChecking, timeout=timeoutSecs)
 
         consensus  = a['consensus']
         locked     = a['locked']
@@ -935,7 +935,7 @@ class H2O(object):
     # so request library might retry and get exception. allow that.
     def shutdown_all(self):
         try:
-            self.__do_json_request('Shutdown.json')
+            self.__do_json_request('Shutdown.json', noExtraErrorChecking=True)
         except:
             pass
         time.sleep(1) # a little delay needed?
@@ -1127,7 +1127,7 @@ class H2O(object):
         if key2 is not None: params_dict['destination_key'] = key2
         browseAlso = kwargs.get('browseAlso', False)
         params_dict.update(kwargs)
-        algo = 'KMeans2' if beta_features else 'KMeans'
+        algo = '2/KMeans2' if beta_features else 'KMeans'
 
         print "\n%s params list:" % algo, params_dict
         a = self.__do_json_request(algo + '.json', 
@@ -1199,7 +1199,7 @@ class H2O(object):
         # requests.defaults({max_retries : 4})
         # https://github.com/kennethreitz/requests/issues/719
         # it was closed saying Requests doesn't do retries. (documentation implies otherwise)
-        algo = "Parse2" if beta_features else "Parse"
+        algo = "2/Parse2" if beta_features else "Parse"
         verboseprint("\n %s key: %s to key2: %s (if None, means default)" % (algo, key, key2))
         # other h2o parse parameters, not in the defauls
         # header
@@ -1267,7 +1267,7 @@ class H2O(object):
                 "max_column_display": max_column_display
                 }
 
-        a = self.__do_json_request('Inspect2.json' if beta_features else 'Inspect.json',
+        a = self.__do_json_request('2/Inspect2.json' if beta_features else 'Inspect.json',
             params=params,
             ignoreH2oError=ignoreH2oError,
             timeout=timeoutSecs
@@ -1296,8 +1296,9 @@ class H2O(object):
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
     # after parse
-    def remove_key(self, key):
-        a = self.__do_json_request('Remove.json', params={"key": key}, ignoreH2oError=True)
+    def remove_key(self, key, timeoutSecs=30):
+        a = self.__do_json_request('Remove.json', 
+            params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
         return a
 
     # only model keys can be exported?
@@ -1316,7 +1317,7 @@ class H2O(object):
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
     def import_files(self, path, timeoutSecs=180):
-        a = self.__do_json_request('ImportFiles2.json' if beta_features else 'ImportFiles.json',
+        a = self.__do_json_request('2/ImportFiles2.json' if beta_features else 'ImportFiles.json',
             timeout=timeoutSecs,
             params={"path": path}
         )
@@ -1451,8 +1452,8 @@ class H2O(object):
             r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
             return r
 
-        algo = 'DRFView2' if beta_features else 'RFView'
-        algoScore = 'DRFScore2' if beta_features else 'RFScore'
+        algo = '2/DRFView2' if beta_features else 'RFView'
+        algoScore = '2/DRFScore2' if beta_features else 'RFScore'
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
         params_dict = {
@@ -1550,13 +1551,13 @@ class H2O(object):
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
-        a = self.__do_json_request('GBMModelView.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GBMModelView.json',timeout=timeoutSecs,params=params_dict)
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
-        algo = 'Predict' if beta_features else 'GeneratePredictionsPage'
-        algoView = 'Inspect2' if beta_features else 'Inspect'
+        algo = '2/Predict' if beta_features else 'GeneratePredictionsPage'
+        algoView = '2/Inspect2' if beta_features else 'Inspect'
 
         if beta_features:
             params_dict = {
@@ -1611,7 +1612,7 @@ class H2O(object):
         # everyone should move to using this, and a full list in params_dict
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'predict_confusion_matrix', print_params)
-        a = self.__do_json_request('ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/ConfusionMatrix.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nprediction_confusion_matrix result:", dump_json(a))
         return a
 
@@ -1656,7 +1657,7 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'gbm', print_params)
 
         start = time.time()
-        a = self.__do_json_request('GBM.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GBM.json',timeout=timeoutSecs,params=params_dict)
         if noPoll:
             a['python_elapsed'] = time.time() - start
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
@@ -1779,7 +1780,7 @@ class H2O(object):
         # log it
         params = {'src_key': src_key}
         paramsStr =  '?' + '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
-        url = self.__url('downloadCsv')
+        url = self.__url('2/DownloadDataset.json')
         log('Start ' + url + paramsStr, comment=csvPathname)
 
         # do it (absorb in 1024 byte chunks)
@@ -1790,18 +1791,6 @@ class H2O(object):
             for chunk in r.iter_content(1024):
                 f.write(chunk)
         print csvPathname, "size:", h2o_util.file_size_formatted(csvPathname)
-
-    def script_download(self, pathname, timeoutSecs=30):
-        url = self.__url('script.txt')
-        log('Start ' + url,  comment=pathname)
-
-        # do it (absorb in 1024 byte chunks)
-        r = requests.get(url, params=None, timeout=timeoutSecs)
-        print "script_download r.headers:", r.headers
-        if r.status_code == 200:
-            f = open(pathname, 'wb')
-            for chunk in r.iter_content(1024):
-                f.write(chunk)
 
     # shouldn't need params
     def log_download(self, logDir=None, timeoutSecs=5, **kwargs):
@@ -1852,8 +1841,8 @@ class H2O(object):
     def GLM(self, key,
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_$python_0_default_0',**kwargs):
-
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLM",destination_key=destination_key, **kwargs)
+        parentName = "2/GLM2" if beta_features else "GLM"
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName ,destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
@@ -1962,11 +1951,11 @@ class H2O(object):
                 msg = error(self, timeTakenSecs, numberOfRetries)
                 raise Exception(msg)
 
-    def wait_for_node_to_accept_connections(self, timeoutSecs=15, ignoreConnectionError=False):
+    def wait_for_node_to_accept_connections(self, timeoutSecs=15, noExtraErrorChecking=False):
         verboseprint("wait_for_node_to_accept_connections")
         def test(n, tries=None):
             try:
-                n.get_cloud(ignoreConnectionError=ignoreConnectionError)
+                n.get_cloud(noExtraErrorChecking=noExtraErrorChecking)
                 return True
             except requests.ConnectionError, e:
                 # Now using: requests 1.1.0 (easy_install --upgrade requests) 2/5/13
@@ -2462,7 +2451,7 @@ class RemoteH2O(H2O):
         if self.channel.closed: return False
         if self.channel.exit_status_ready(): return False
         try:
-            self.get_cloud()
+            self.get_cloud(noExtraErrorChecking=True)
             return True
         except:
             return False
