@@ -186,6 +186,7 @@ myR runit_tail_numeric 60
 myR runit_summary_numeric 60
 myR runit_GBM_ecology 1200
 myR runit_RF 120
+myR runit_histograms 60
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
