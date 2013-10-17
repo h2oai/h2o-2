@@ -75,6 +75,21 @@ public class Frame extends Iced {
     _keys [len] = vec._key;
   }
 
+  /** Appends an entire Frame */
+  public Frame add( Frame fr ) {
+    assert anyVec().group().equals(fr.anyVec().group());
+    final int len0=    _names.length;
+    final int len1= fr._names.length;
+    final int len = len0+len1;
+    _names = Arrays.copyOf(_names,len);
+    _vecs  = Arrays.copyOf(_vecs ,len);
+    _keys  = Arrays.copyOf(_keys ,len);
+    System.arraycopy(fr._names,0,_names,len0,len1);
+    System.arraycopy(fr._vecs ,0,_vecs ,len0,len1);
+    System.arraycopy(fr._keys ,0,_keys ,len0,len1);
+    return this;
+  }
+
   /** Removes the first column with a matching name.  */
   public Vec remove( String name ) { return remove(find(name)); }
 

@@ -12,16 +12,15 @@ import water.fvec.*;
 
 // --------------------------------------------------------------------------
 abstract public class AST {
-  // Size, for compatible-shape checking.
-  final int  _cols;
-  final long _rows;
-  AST( int cols, long rows ) { _cols=cols; _rows=rows; }
+  enum Type { fun, ary, dbl };
+  final Type _t;
+  AST( Type t ) { _t = t; }
   static AST parseCXExpr(Exec2 E ) {
     AST ast2, ast = ASTSlice.parse(E);
     if( ast == null ) return null;
-    // Can find '=' between expressions
-    if( (ast2 = ASTAssign.parse  (E,ast)) != null ) return ast2;
-    // Can find an infix op between expressions
+    //// Can find '=' between expressions
+    //if( (ast2 = ASTAssign.parse  (E,ast)) != null ) return ast2;
+    //// Can find an infix op between expressions
     if( (ast2 = ASTOp.parseInfix(E,ast)) != null ) return ast2;
     if( E.peek('?') ) { throw H2O.unimpl(); } // infix trinary
     return ast;
@@ -36,104 +35,126 @@ abstract public class AST {
     if( (ast = ASTOp .parsePrefix(E)) != null ) return ast;
     return null;
   }
+
   protected StringBuilder indent( StringBuilder sb, int d ) { 
     for( int i=0; i<d; i++ ) sb.append("  "); 
-    return sb.append(dimStr()).append(' ');
+    return sb.append(_t).append(' ');
   }
-  boolean isScalar() { return _cols==1 && _rows==1; }
   boolean isPure() { return true; } // Side-effect free
   void exec(Env env) { 
     System.out.println("Exec not impl for: "+getClass());
     throw H2O.unimpl(); 
   }
   public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
-  public String dimStr() { return dimStr(_cols,_rows); }
-  public static String dimStr(int col, long row) {
-    if( col==0 && row==0 ) return "fun";
-    return (col>=1?""+col:"?")+"x"+(row>=1?""+row:"?");
-  }
 }
 
 // --------------------------------------------------------------------------
 class ASTSlice extends AST {
-  final AST _ast, _colsel, _rowsel; // 2-D slice of an expression
-  ASTSlice( int cols, long rows, AST ast, AST colsel, AST rowsel ) { 
-    super(cols,rows); 
-    _ast = ast; _colsel = colsel; _rowsel = rowsel; 
+  final AST _ast, _cols, _rows; // 2-D slice of an expression
+  ASTSlice( AST ast, AST cols, AST rows ) { 
+    super(Type.ary); _ast = ast; _cols = cols; _rows = rows; 
   }
   static AST parse(Exec2 E ) {
     AST ast = parseExpr(E);
     if( ast == null ) return null;
+    if( ast._t != Type.ary ) return ast; // No slice allowed unless known frame
     if( !E.peek('[') ) return ast; // No slice
     if(  E.peek(']') ) return ast; // [] ===> same as no slice
     int x;
     AST rows=E.xpeek(',',(x=E._x),parseExpr(E));
-    long nrows = rows == null ? ast._rows :      peek(rows,ast._rows,E,x);
     AST cols=E.xpeek(']',(x=E._x),parseExpr(E));
-    int  ncols = cols == null ? ast._cols : (int)peek(cols,ast._cols,E,x);
-    return new ASTSlice(ncols,nrows,ast,cols,rows);
-  }
-
-  // Peek into constant expressions & return count of selected items
-  private static long peek( AST ast, long len, Exec2 E, int x ) {
-    if( ast._cols != 1 ) E.throwErr("Slice selector can only be a single column",x);
-    if( ast instanceof ASTNum ) {
-      long d = (long)((ASTNum)ast)._d;
-      if( d < -len ) return len;  // Exclude nothing
-      if( d <   0  ) return len-1;// Exclude one thing
-      if( d ==  0  ) return  0;   // Select nothing
-      if( d <  len ) return  1;   // Select 1 thing
-      E.throwErr("Select off end: "+d,x);
-    }
-    // Else check on group selections
-    throw H2O.unimpl();
+    return new ASTSlice(ast,cols,rows);
   }
 
   @Override boolean isPure() {
     return _ast.isPure() && 
-      (_colsel==null ? true : _colsel.isPure()) &&
-      (_rowsel==null ? true : _rowsel.isPure());
+      (_cols==null ? true : _cols.isPure()) &&
+      (_rows==null ? true : _rows.isPure());
   }
   @Override void exec(Env env) {
     int sp = env._sp;
     _ast.exec(env);
     assert sp+1==env._sp;
-    Frame fr=null; double d;
-    if( env.isFrame() ) fr=env.popFrame(); else d = env.popDbl();
-
+    Frame fr=env.popFrame();
+  
     // Column subselection?
-    if( _colsel != null ) {
-      assert _colsel._cols == 1 && _colsel._rows > 0; // parser only allows 1-col results
-      _colsel.exec(env);
+    int cols[] = null;
+    if( _cols != null ) {
+      _cols.exec(env);
       assert sp+1==env._sp;
-      Frame cfr=null; int cd;
-      if( env.isFrame() ) cfr=env.popFrame(); else cd = (int)env.popDbl();
-      if( cfr==null ) {
-        throw H2O.unimpl();
-        
+      if( !env.isFrame() ) {
+        int col = (int)env.popDbl(); // Silent truncation
+        cols = new int[]{col};
       } else {
         throw H2O.unimpl();
       }
+
+      // Decide if we're a toss-out or toss-in list
+      int mode=0;
+      for( int i=0; i<cols.length; i++ ) {
+        int c = cols[i];
+        if( c==0 ) continue;
+        if( mode==0 ) mode=c;
+        if( (mode^c) < 0 ) 
+          throw new IllegalArgumentException("Cannot mix selection signs: "+mode+" vs "+c);
+        if( c < 0 ) throw H2O.unimpl();
+      }
+
+    } else {
+      cols = new int[fr.numCols()];
+      for( int i=0; i<cols.length; i++ ) cols[i]=i;
     }
-    if( _rowsel != null ) throw H2O.unimpl();
     throw H2O.unimpl();
+
+    //// Shallow copy all requested columns
+    //// ...really: if allowed, we can make as many Vec copies as
+    //// requested... and can make more later even in the same
+    //
+    //
+    //Frame fr2 = new Frame();
+    //for( int i=0; i<cols.length; i++ )
+    //  if( cols[i]>0 && cols[i] < fr.numCols() )
+    //    fr2.add(fr._names[cols[i]],fr.vecs()[cols[i]]);
+    //
+    //// Row subselection? 
+    //long rows[] = null;
+    //if( _rows != null ) throw H2O.unimpl();
+    //
+    //Frame tmp = env.tmp(fr2);   // My Handy Temp
+    //
+    //// Bulk (expensive) copy into the temp
+    //new DeepSlice(cols,rows).doAll(new Frame(tmp).add(fr));
   }
   @Override public String toString() { return "[,]"; }
   public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append('\n');
     _ast.toString(sb,d+1).append("\n");
-    if( _colsel==null ) indent(sb,d+1).append("all\n");
-    else      _colsel.toString(sb,d+1).append("\n");
-    if( _rowsel==null ) indent(sb,d+1).append("all");
-    else      _rowsel.toString(sb,d+1);
+    if( _cols==null ) indent(sb,d+1).append("all\n");
+    else      _cols.toString(sb,d+1).append("\n");
+    if( _rows==null ) indent(sb,d+1).append("all");
+    else      _rows.toString(sb,d+1);
     return sb;
   }
+  
+  //// Bulk (expensive) copy from 2nd cols into 1st cols.
+  //// Sliced by the given cols & rows
+  //private static class DeepSlice extends MRTask2<DeepSlice> {
+  //  final int  _cols[];
+  //  final long _rows[];
+  //  DeepSlice( int cols[], long rows[] ) { _cols=cols; _rows=rows; }
+  //  @Override public void map( Chunk chks[] ) {
+  //    if( _rows != null ) throw H2O.unimpl();
+  //    for( int i=0; i<_cols.length; i++ ) {
+  //      throw H2O.unimpl();
+  //    }
+  //  }
+  //}
 }
 
 // --------------------------------------------------------------------------
 class ASTKey extends AST {
   final Key _key;
-  ASTKey( int cols, long rows, Key key ) { super(cols,rows); _key=key; }
+  ASTKey( Key key ) { super(Type.ary); _key=key; }
   // Parse a valid H2O Frame Key, or return null;
   static ASTKey parse(Exec2 E) { 
     int x = E._x;
@@ -142,46 +163,45 @@ class ASTKey extends AST {
     Key key = Key.make(id);
     Iced ice = UKV.get(key);
     if( ice==null || !(ice instanceof Frame) ) { E._x = x; return null; }
-    Frame fr = (Frame)ice;
-    return new ASTKey(fr.numCols(),fr.numRows(),key);
+    return new ASTKey(key);
   }
   @Override public String toString() { return _key.toString(); }
   @Override void exec(Env env) { env.push((Frame)(DKV.get(_key).get())); }
 }
 
-// --------------------------------------------------------------------------
-class ASTAssign extends AST {
-  final ASTKey _key;
-  final AST _eval;
-  ASTAssign( ASTKey key, AST eval ) { 
-    super(key._cols,key._rows);
-    _key=key; _eval=eval;
-  }
-  // Parse a valid H2O Frame Key, or return null;
-  static ASTAssign parse(Exec2 E, AST ast) { 
-    if( !(ast instanceof ASTKey) ) return null;
-    if( !E.peek('=') ) return null;
-    int x = E._x;
-    AST eval = parseCXExpr(E);
-    E.throwIfNotCompat(ast,eval,x);
-    return new ASTAssign((ASTKey)ast,eval);
-  }
-  boolean isPure() { return false; }
-  @Override public String toString() { return "="; }
-  @Override public StringBuilder toString( StringBuilder sb, int d ) { 
-    indent(sb,d).append(this).append('\n');
-    _key.toString(sb,d+1).append('\n');
-    _eval.toString(sb,d+1);
-    return sb;
-  }
-}
+//// --------------------------------------------------------------------------
+//class ASTAssign extends AST {
+//  final ASTKey _key;
+//  final AST _eval;
+//  ASTAssign( ASTKey key, AST eval ) { 
+//    super(key._cols,key._rows);
+//    _key=key; _eval=eval;
+//  }
+//  // Parse a valid H2O Frame Key, or return null;
+//  static ASTAssign parse(Exec2 E, AST ast) { 
+//    if( !(ast instanceof ASTKey) ) return null;
+//    if( !E.peek('=') ) return null;
+//    int x = E._x;
+//    AST eval = parseCXExpr(E);
+//    E.throwIfNotCompat(ast,eval,x);
+//    return new ASTAssign((ASTKey)ast,eval);
+//  }
+//  boolean isPure() { return false; }
+//  @Override public String toString() { return "="; }
+//  @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+//    indent(sb,d).append(this).append('\n');
+//    _key.toString(sb,d+1).append('\n');
+//    _eval.toString(sb,d+1);
+//    return sb;
+//  }
+//}
 
 // --------------------------------------------------------------------------
 class ASTNum extends AST {
   static final NumberFormat NF = NumberFormat.getInstance();
   static { NF.setGroupingUsed(false); }
   final double _d;
-  ASTNum(double d ) { super(1,1); _d=d; }
+  ASTNum(double d) { super(Type.dbl); _d=d; }
   // Parse a number, or throw a parse error
   static ASTNum parse(Exec2 E) { 
     ParsePosition pp = new ParsePosition(E._x);
@@ -199,40 +219,26 @@ class ASTNum extends AST {
 // --------------------------------------------------------------------------
 class ASTApply extends AST {
   final AST _args[];
-  private ASTApply( AST args[], int cols, long rows ) { super(cols,rows);  _args = args;  }
+  private ASTApply( AST args[] ) { super(((ASTOp)args[0])._vtypes[0]);  _args = args;  }
 
   // Wrap compatible but different-sized ops in reduce/bulk ops.
   static ASTApply make(AST args[],Exec2 E, int x) {
     ASTOp op = (ASTOp)args[0]; // Checked before I get here
-    assert op._vcols.length+1 == args.length;
+    assert op._vtypes.length == args.length;
 
-    // Check that all column arguments match, or can be auto-expanded.  Any op
-    // taking a single column and passed multiple columns will be auto-expanded.
-    int col = -1;               // Expansion size, if needed
+    // Check that all arguments match, or can be auto-expanded.  Any op taking
+    // a scalar and passed an array will be auto-expanded.
     for( int i=1; i<args.length; i++ ) {
-      if( args[i]._cols == op._vcols[i-1] ) continue;
-      if( col == -1 ) col = args[i]._cols;
-      if( op._vcols[i-1] != 1 || col != args[i]._cols )
-        E.throwErr("Mismatched cols in '"+op._vars[i]+"': "+op._vcols[i-1]+" vs "+args[i].dimStr(),x);
+      if( op._vtypes[i] == Type.fun ) {
+        throw H2O.unimpl();     // Deep function type checking
+      }
+      if( op._vtypes[i] == args[i]._t ) continue; // both scalar or both array
+      if( op._vtypes[i] != Type.dbl )
+        E.throwErr("Mismatched arg: '"+op._vars[i]+"': "+op._vtypes[i]+" vs "+args[i]._t,x);
+      throw H2O.unimpl();       // Expansion needed
     }
 
-    // Check that all row arguments match, or can be auto-expanded.  Any op
-    // taking a single row and passed multiple rows will be auto-expanded.
-    long row = -1;              // Expansion size, if needed
-    for( int i=1; i<args.length; i++ ) {
-      if( args[i]._rows == op._vrows[i-1] ) continue;
-      if( row == -1 ) row = args[i]._rows;
-      if( op._vrows[i-1] != 1 || row != args[i]._rows )
-        E.throwErr("Mismatched rows in '"+op._vars[i]+"': "+op._vrows[i-1]+" vs "+args[i].dimStr(),x);
-    }
-
-    // Auto-expand simple scalar ops across columns.  Replace {op,args...}
-    // with {byCol,col,op,args...}
-    if( col != -1 || row != -1 ) {
-      throw H2O.unimpl();
-    }
-
-    return new ASTApply(args,args[0]._cols,args[0]._rows);
+    return new ASTApply(args);
   }
 
   boolean isPure() {
@@ -283,20 +289,17 @@ abstract class ASTOp extends AST {
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
   // All fields are final, because functions are immutable
-  final String _vars[];       // Variable names
-  final int   _vcols[];       // Every var is size-typed
-  final long  _vrows[];
-  ASTOp( int cols, long rows, String vars[], int vcols[], long vrows[] ) { 
-    super(cols,rows);           // Result size
-    // The input args
-    _vars = vars;  _vcols = vcols;  _vrows = vrows;
+  final String _vars[];         // Variable names
+  final Type   _vtypes[];       // Every arg is typed
+  ASTOp( String vars[], Type vtypes[] ) { 
+    super(Type.fun);  _vars = vars;  _vtypes = vtypes;
   }
 
   abstract String opStr();
   @Override public String toString() { 
-    String s = opStr()+"(";
-    for( int i=0; i<_vars.length; i++ )
-      s += dimStr(_vcols[i],_vrows[i])+" "+_vars[i]+",";
+    String s = _vtypes[0]+" "+opStr()+"(";
+    for( int i=1; i<_vars.length; i++ )
+      s += _vtypes[i]+" "+_vars[i]+",";
     s += ')';
     return s;
   }
@@ -319,7 +322,7 @@ abstract class ASTOp extends AST {
     if( op == null ) return null;
     // Fixed arg count
     if( op._vars!=null ) {
-      AST args[] = new AST[op._vars.length+1];
+      AST args[] = new AST[op._vars.length];
       E.xpeek('(',x,null);  
       args[0] = op;
       for( int i=1; i<args.length-1; i++ )
@@ -342,10 +345,10 @@ abstract class ASTOp extends AST {
   }
 
   // Parse an infix boolean operator
-  static ASTApply parseInfix(Exec2 E, AST ast) { 
+  static AST parseInfix(Exec2 E, AST ast) { 
     ASTOp op = parse(E);
     if( op == null ) return null;
-    if( op._vars.length != 2 ) return null;
+    if( op._vars.length != 3 ) return null;
     int x = E._x;
     AST rite = parseCXExpr(E);
     return ASTApply.make(new AST[]{op,ast,rite},E,x);
@@ -359,10 +362,9 @@ abstract class ASTOp extends AST {
 
 
 abstract class ASTUniOp extends ASTOp {
-  static final String VARS[] = new String[]{"x"};
-  static final int    COLS[] = new int   []{ 1 };
-  static final long   ROWS[] = new long  []{ 1 };
-  ASTUniOp( ) { super(1,1,VARS,COLS,ROWS); }
+  static final String VARS[] = new String[]{ "", "x"};
+  static final Type   TYPES[]= new Type  []{ Type.dbl, Type.dbl };
+  ASTUniOp( ) { super(VARS,TYPES); }
 }
 class ASTIsNA extends ASTUniOp { @Override String opStr() { return "isNA"; }  }
 class ASTSgn  extends ASTUniOp { @Override String opStr() { return "sgn" ; }  }
@@ -370,10 +372,9 @@ class ASTNrow extends ASTUniOp { @Override String opStr() { return "nrow"; }  }
 class ASTNcol extends ASTUniOp { @Override String opStr() { return "ncol"; }  }
 
 abstract class ASTBinOp extends ASTOp {
-  static final String VARS[] = new String[]{"x","y"};
-  static final int    COLS[] = new int   []{ 1 , 1 };
-  static final long   ROWS[] = new long  []{ 1 , 1 };
-  ASTBinOp( ) { super(1,1,VARS,COLS,ROWS); }
+  static final String VARS[] = new String[]{ "", "x","y"};
+  static final Type   TYPES[]= new Type  []{ Type.dbl, Type.dbl, Type.dbl };
+  ASTBinOp( ) { super(VARS,TYPES); }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env) {
     double d1 = env.popDbl();
@@ -390,31 +391,31 @@ class ASTMin  extends ASTBinOp { @Override String opStr(){ return "min";} double
 // Variable length; instances will be created of required length
 class ASTCat extends ASTOp {
   @Override String opStr() { return "c"; }
-  ASTCat( ) { super(-1,-1,null,null,null); }
+  ASTCat( ) { super(null,null); }
 }
 
-// Iterate a function across columns
-class ASTByCol extends ASTOp {
-  static final String VARS[] = new String[]{"op","fr","x"};
-  // Each ByCol is type-size matched to it's parsed frame expression.
-  ASTByCol( ASTOp op, AST fr ) {
-    super(fr._cols,fr._rows,VARS, new int []{0,fr._cols,1}, new long[]{0,fr._rows,1});
-  }
-  @Override String opStr() { return "byCol"; }
-  @Override void apply(Env env) {
-    throw H2O.unimpl();
-  }
-}
-
-// Iterate a function down rows
-class ASTByRow extends ASTOp {
-  static final String VARS[] = new String[]{"op","col","x"};
-  // Each ByRow is type-size matched to it's parsed frame expression.
-  ASTByRow( ASTOp op, AST fr ) {
-    super(1,fr._rows,VARS, new int []{0,1,1}, new long[]{0,fr._rows,1});
-  }
-  @Override String opStr() { return "byRow"; }
-  @Override void apply(Env env) {
-    throw H2O.unimpl();
-  }
-}
+//// Iterate a function across columns
+//class ASTByCol extends ASTOp {
+//  static final String VARS[] = new String[]{"op","fr","x"};
+//  // Each ByCol is type-size matched to it's parsed frame expression.
+//  ASTByCol( ASTOp op, AST fr ) {
+//    super(fr._cols,fr._rows,VARS, new int []{0,fr._cols,1}, new long[]{0,fr._rows,1});
+//  }
+//  @Override String opStr() { return "byCol"; }
+//  @Override void apply(Env env) {
+//    throw H2O.unimpl();
+//  }
+//}
+//
+//// Iterate a function down rows
+//class ASTByRow extends ASTOp {
+//  static final String VARS[] = new String[]{"op","col","x"};
+//  // Each ByRow is type-size matched to it's parsed frame expression.
+//  ASTByRow( ASTOp op, AST fr ) {
+//    super(1,fr._rows,VARS, new int []{0,1,1}, new long[]{0,fr._rows,1});
+//  }
+//  @Override String opStr() { return "byRow"; }
+//  @Override void apply(Env env) {
+//    throw H2O.unimpl();
+//  }
+//}

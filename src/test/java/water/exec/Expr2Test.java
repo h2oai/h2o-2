@@ -18,14 +18,14 @@ public class Expr2Test extends TestUtil {
       Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
 
-      checkStr("1.23");
-      checkStr(" 1.23 + 2.34");
-      checkStr(" 1.23 2.34");
-      checkStr("h.hex");
-      checkStr("+(1.23,2.34)");
-      checkStr("+(1.23)");
-      checkStr("+(1.23,2,3)");
-      checkStr("h.hex[2,3]");
+      checkStr("1.23");         // 1.23
+      checkStr(" 1.23 + 2.34"); // 3.57
+      checkStr(" 1.23 2.34");   // Syntax error
+      checkStr("h.hex");        // Simple ref
+      checkStr("+(1.23,2.34)"); // prefix 3.57
+      checkStr("+(1.23)");      // Syntax error, not enuf args
+      checkStr("+(1.23,2,3)");  // Syntax error, too many args
+      checkStr("h.hex[2,3]");   // Scalar selection
       checkStr("h.hex[2+3,-4*5]");
       checkStr("h.hex[2+3,h.hex]");
       checkStr("h.hex[2,]");
@@ -45,6 +45,11 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[c(1,3,5),]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
+
+      // Needed examples: 
+      // (1) Replace NAs with imputed mean
+      // (2) Drop 95% outliers (top & bot 2.5% outliers)
+
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key

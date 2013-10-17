@@ -19,6 +19,10 @@ public class Env {
   ASTOp  _fun[];                // Functions (or null if not a function)
   int    _sp;                   // Stack pointer
 
+  boolean _allow_tmp;           // Deep-copy allowed to tmp
+  boolean _busy_tmp;            // Assert temp is available for use
+  Frame  _tmp;                  // The One Big Active Tmp
+
   Env( ) { _fr=new Frame[2]; _d=new double[2]; _fun=new ASTOp[2]; }
   public int sp() { return _sp; }
   public boolean isFrame() { return _fr [_sp-1] != null; }
@@ -45,18 +49,24 @@ public class Env {
   // Pop a slot
   void pop( ) {
     _fun[--_sp]=null;
-    Frame fr = _fr[_sp];
+    removeRef(_fr[_sp]);
+    _fr[_sp] = null;
+  }
+  static void removeRef( Frame fr ) {
     if( fr != null ) {
+      Futures fs = new Futures();
       Vec[] vecs = fr.vecs();
       for( Vec vec : vecs ) 
         if( vec instanceof TmpVec )
-          throw H2O.unimpl();
-      _fr[_sp] = null;
+          UKV.remove(vec._key,fs);
+      fs.blockForPending();
     }
   }
 
-  public Frame  popFrame() { Frame fr = _fr[--_sp];  assert fr != null;  pop(); return fr; }
-  public double popDbl  () { assert _fr[_sp-1]==null && _fun[_sp-1] == null; pop(); return _d[_sp]; }
+  // Return a Frame; ref-cnt of all things remains unchanged.  Caller is
+  // responsible for tracking lifetime.
+  public Frame  popFrame() { Frame fr = _fr[--_sp];  _fr[_sp] = null; assert allAlive(fr); return fr; }
+  public double popDbl  () { assert _fr[_sp-1]==null && _fun[_sp-1] == null; pop(); return _d  [_sp]; }
   public AST    popFun  () { assert _fr[_sp-1]==null && _fun[_sp-1] != null; pop(); return _fun[_sp]; }
   public void poppush(double d) {
     assert isFun();
@@ -65,15 +75,39 @@ public class Env {
     assert isDbl();
   }
 
+  // Nice assert
+  boolean allAlive(Frame fr) {
+    for( Vec vec : fr.vecs() ) 
+      if( vec instanceof TmpVec && ((TmpVec)vec)._refcnt <= 0 ) 
+        return false;
+    return true;
+  }
+
+  // Get The Temp; must be compatible with 'x'
+  Frame tmp(Frame x) {
+    if( _tmp == null ) {
+      assert _allow_tmp;
+      _allow_tmp = false;
+      _tmp = TmpVec.deepAllocTmp(x);
+    }
+    if( _tmp.numCols() < x.numCols() ||
+        _tmp.numRows() < x.numRows() )
+      throw new IllegalArgumentException("Working storage: "+_tmp+" too small for "+x);
+    assert !_busy_tmp;          // tmp not currently in use
+    _busy_tmp = true;
+    return _tmp;
+  }
+
   // Remove all embedded frames.  Pop the stack.
   public void remove() {
     while( _sp > 0 ) pop();
+    removeRef(_tmp);  _tmp=null;
   }
 
   @Override public String toString() {
     String s="{";
     for( int i=0; i<_sp; i++ ) {
-      if( _fr[i] != null ) s += AST.dimStr(_fr[i].numCols(),_fr[i].numRows());
+      if( _fr[i] != null ) s += _fr[i].numCols()+"x"+_fr[i].numRows();
       else if( _fun[i] != null ) s += _fun[i];
       else s += _d[i];
       s += ',';

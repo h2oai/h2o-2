@@ -10,7 +10,7 @@ import water.UDP;
 public class C0LChunk extends Chunk {
   static final int OFF=8+4;
   long _con;
-  C0LChunk(long con, int len) { _mem=new byte[OFF]; _start = -1; _len = len;
+  public C0LChunk(long con, int len) { _mem=new byte[OFF]; _start = -1; _len = len;
     _con = con;
     UDP.set8(_mem,0,con);
     UDP.set4(_mem,8,len);

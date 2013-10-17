@@ -73,7 +73,7 @@ public class Vec extends Iced {
     _espc = espc;
   }
 
-  protected Vec( Vec v ) { _key = v._key; _espc = v._espc; }
+  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; assert group()==v.group(); }
 
   // A 1-element Vec
   public Vec( Key key, double d ) {

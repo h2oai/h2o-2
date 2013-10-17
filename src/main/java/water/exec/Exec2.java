@@ -11,11 +11,19 @@ import water.fvec.*;
  */
 public class Exec2 {
   // Parse a string, execute it & return a Frame.
-  // Grammer:
+  // Basic types: Frame, Scalar, Function
+
+  // Big Allocation: all expressions are eval'd in a context where a large temp
+  // is available, and all allocations are compatible with that temp.  Linear-
+  // logic style execution is guaranteed inside the big temp.  Parse error if
+  // an expression which is not provably small does not have an active temp.
+
+  // Grammar:
   //   statements := cxexpr ; statements
   //   cxexpr :=                   // COMPLEX expr 
-  //           id = cxexpr         // temp typed assignment; dropped when scope exits
+  //           id = cxexpr         // temp typed ptr assignment; dropped when scope exits
   //                               // If temp exists in outer scope, it is shadowed
+  //           id := cxexpr        // Deep-copy; otherwise same as above
   //           slice = cxexpr      // Subset L-value; exprs must have equal shapes; does NOT define a new name
   //           slice               // Subset R-value
   //           slice op2 cxexpr    // apply(op2,expr,cxexpr); ....optional INFIX notation
@@ -43,11 +51,8 @@ public class Exec2 {
   //   op2  := func2 min max + - * / % & |    ...any boolean op...
   //   func3:= {id -> expr1}     // id will be an expr1
   //
-  //   same shape == same rows, same cols
-  //   compatible shape == same shape, or (1 row x same cols), (same rows x 1 cols), or 1x1
-  //
   // Example: Compute mean for each col:
-  //    means = apply1(+,fr)/nrows(fr)
+  //    means = reduce1(+,fr)/nrows(fr)
   // Example: Replace NA's with 0:
   //    {x -> isna(x) ? 0 : x}(fr)
   // Example: Replace NA's with mean:
@@ -57,7 +62,12 @@ public class Exec2 {
     AST ast = new Exec2(str).parse();
     System.out.println(ast.toString(new StringBuilder(),0).toString());
     Env env = new Env();
-    ast.exec(env);
+    try {
+      ast.exec(env); 
+    } catch( RuntimeException t ) {
+      env.remove();
+      throw t;
+    }
     return env;
   }
 
@@ -97,7 +107,7 @@ public class Exec2 {
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
   static boolean isReserved(char c) { return c=='(' || c==')' || c=='=' || c=='[' || c==']' || c==','; }
-  static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z');  }
+  static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
     if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
     if( isDigit(c) ) return true;
@@ -112,7 +122,7 @@ public class Exec2 {
     skipWS();
     if( _x>=_buf.length ) return null; // No characters to parse
     char c = _buf[_x];
-    // Fail on special chars in the grammer
+    // Fail on special chars in the grammar
     if( isReserved(c) ) return null;
     // Fail on leading numeric
     if( isDigit(c) ) return null;
@@ -135,12 +145,6 @@ public class Exec2 {
   }
 
   // --------------------------------------------------------------------------
-  boolean throwIfNotCompat(AST l, AST r, int idx ) {
-    if( l._rows!=r._rows || l._cols!=r._cols )
-      throwErr("Frames not compatible: "+l.dimStr()+" vs "+r.dimStr(),idx);
-    return true;
-  }
-
   // Nicely report a syntax error
   AST throwErr( String msg, int idx ) {
     int lo = _x, hi=idx;
