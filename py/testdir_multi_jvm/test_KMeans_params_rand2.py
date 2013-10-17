@@ -6,8 +6,8 @@ def define_params(SEED):
     paramDict = {
         'k': [2, 5], # seems two slow tih 12 clusters if all cols
         'initialization': ['None', 'PlusPlus', 'Furthest'],
-        'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
-        'max_iter': [1, 5, 10, 20],
+        'cols': [None, "0", "3", "0,1,2,3,4"],
+        'max_iter': [1, 5, 10],
         'seed': [None, 12345678, SEED],
         'normalize': [None, 0, 1],
         # 'destination_key:': "junk",
@@ -37,11 +37,11 @@ class Basic(unittest.TestCase):
         if localhost:
             csvFilenameList = [
                 # ('covtype.data', 60),
-                ('covtype20x.data', 800),
+                ('covtype.data', 800),
                 ]
         else:
             csvFilenameList = [
-                ('covtype20x.data', 800),
+                ('covtype.data', 800),
                 ]
 
         importFolderPath = "standard"

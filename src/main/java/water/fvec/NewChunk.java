@@ -334,6 +334,8 @@ public class NewChunk extends Chunk {
         long bias = 32767 + lemin;
         return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
       }
+      if(lemax - lemin < Integer.MAX_VALUE)
+        return new C4SChunk(bufX(lemin, xmin,C4SChunk.OFF,2),(int)lemin,DParseTask.pow10(xmin));
       return chunkF();
     } // else an integer column
     // Compress column into a byte
@@ -390,26 +392,10 @@ public class NewChunk extends Chunk {
 
   // Compute a compressed float buffer
   private Chunk chunkF() {
-    if(_ds == null){
-      double [] ds = MemoryManager.malloc8d(_len);
-      for(int i = 0; i < _len; ++i)
-        ds[i] = isNA(i)?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]);
-      _ds = ds; // can't assign to _ds bfr cause it would mess with isNA
-    }
-    boolean isFloat = true;
-    for(double d:_ds)isFloat = isFloat && ((float)d == d);
-    byte [] bs;
-    if(isFloat){ // fits loss-lessly into a float
-      bs = MemoryManager.malloc1(_len*4);
-      for(int i = 0; i < _len; ++i)
-        UDP.set4f(bs, 4*i, (float)_ds[i]);
-      return new C4FChunk(bs);
-    } else { // have to use double
-      bs = MemoryManager.malloc1(_len*8);
-      for(int i = 0; i < _len; ++i)
-        UDP.set8d(bs, 8*i, _ds[i]);
-      return new C8DChunk(bs);
-    }
+    final byte [] bs = MemoryManager.malloc1(_len*8);
+    for(int i = 0; i < _len; ++i)
+      UDP.set8d(bs, 8*i, _ds != null?_ds[i]:isNA0(i)?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]));
+    return new C8DChunk(bs);
   }
 
   // Compute compressed boolean buffer
