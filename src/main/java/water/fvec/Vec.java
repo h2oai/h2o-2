@@ -121,7 +121,7 @@ public class Vec extends Iced {
   }
 
   // Create a vector transforming values according given domain map
-  public Vec makeTransf(final int[] domMap) { return makeTransf(domMap); }
+  public Vec makeTransf(final int[] domMap) { return makeTransf(domMap, null); }
   public Vec makeTransf(final int[] domMap, final String[] domain) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
