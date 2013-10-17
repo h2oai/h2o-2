@@ -334,6 +334,8 @@ public class NewChunk extends Chunk {
         long bias = 32767 + lemin;
         return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
       }
+      if(lemax - lemin < Integer.MAX_VALUE)
+        return new C4SChunk(bufX(lemin, xmin,C4SChunk.OFF,2),(int)lemin,DParseTask.pow10(xmin));
       return chunkF();
     } // else an integer column
     // Compress column into a byte
