@@ -57,7 +57,7 @@ public abstract class Request extends RequestBuilders {
   protected Request() {
   }
 
-  protected String href() { return href(supportedVersions()[0]); }
+  public String href() { return href(supportedVersions()[0]); }
   protected String href(API_VERSION v) {
     return v.prefix() + getClass().getSimpleName();
   }

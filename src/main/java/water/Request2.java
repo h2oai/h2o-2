@@ -40,17 +40,11 @@ public abstract class Request2 extends Request {
     @Override protected Key parse(String input) {
       Key k = Key.make(input);
       if( _type != null ) {
-        // TODO: remove special case for jobs
-        if( Job.class.isAssignableFrom(_type) ) {
-          if( Job.findJob(k) == null )
-            throw new IllegalArgumentException("Key '" + input + "' does not exist!");
-        } else {
-          Value v = DKV.get(k);
-          if( v != null && !compatible(_type, v.get()) )
-            throw new IllegalArgumentException(input + ":" + errors()[0]);
-          if( v == null && _required )
-            throw new IllegalArgumentException("Key '" + input + "' does not exist!");
-        }
+        Value v = DKV.get(k);
+        if( v != null && !compatible(_type, v.get()) )
+          throw new IllegalArgumentException(input + ":" + errors()[0]);
+        if( v == null && _required )
+          throw new IllegalArgumentException("Key '" + input + "' does not exist!");
       }
       return k;
     }
@@ -435,13 +429,8 @@ public abstract class Request2 extends Request {
   }
 
   public Object cast(Argument arg, String input, Object value) {
-    if( arg._field.getType() != Key.class && value instanceof Key ) {
-      // TODO: remove special case for jobs
-      if( Job.class.isAssignableFrom(arg._field.getType()) )
-        value = Job.findJob((Key) value);
-      else
+    if( arg._field.getType() != Key.class && value instanceof Key )
         value = UKV.get((Key) value);
-    }
 
     if( arg._field.getType() == Key.class && value instanceof ValueArray )
       value = ((ValueArray) value)._key;

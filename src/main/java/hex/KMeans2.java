@@ -14,8 +14,7 @@ import water.api.*;
 import water.api.DocGen.FieldDoc;
 import water.api.Request.API;
 import water.api.Request.Default;
-import water.fvec.Chunk;
-import water.fvec.Vec;
+import water.fvec.*;
 import water.util.Utils;
 
 /**
@@ -179,8 +178,13 @@ public class KMeans2 extends Model implements Progress {
       String sourceArg = input("source");
       if( sourceArg != null )
         _model._dataKey = Key.make(sourceArg);
-      _model._names = source.names();
-      _model._domains = source.domains();
+      String[] names = new String[cols.length];
+      for( int i = 0; i < cols.length; i++ )
+        names[i] = source._names[cols[i]];
+      Vec[] vecs = selectVecs(source);
+      Frame frame = new Frame(names, vecs);
+      _model._names = frame.names();
+      _model._domains = frame.domains();
     }
 
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {

@@ -10,6 +10,7 @@ import hex.Layer.VecsInput;
 
 import java.util.ArrayList;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
@@ -258,7 +259,8 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='NeuralNetTrain.query?%key_param=%$key'>%content</a>");
+    NeuralNetTrain req = new NeuralNetTrain();
+    RString rs = new RString("<a href='" + req.href() + ".query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", "source");
     rs.replace("key", k.toString());
     rs.replace("content", content);
@@ -266,8 +268,8 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   public Response redirect(Request req, Key key) {
-    String n = NeuralNetProgress.class.getSimpleName();
-    return new Response(Response.Status.redirect, req, -1, -1, n, "dst_key", key);
+    String n = new NeuralNetProgress().href();
+    return new Response(Response.Status.redirect, req, -1, -1, n, "job", Key.make(), "dst_key", key);
   }
 
   public static class Error {
@@ -298,8 +300,10 @@ public class NeuralNet extends Model implements water.Job.Progress {
       String sourceArg = input("source");
       if( sourceArg != null )
         _model._dataKey = Key.make(sourceArg);
-      _model._names = source.names();
-      _model._domains = source.domains();
+      Frame fr = new Frame(_names, _train);
+      fr.add(_responseName, response);
+      _model._names = fr.names();
+      _model._domains = fr.domains();
     }
 
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
@@ -341,6 +345,11 @@ public class NeuralNet extends Model implements water.Job.Progress {
           UKV.put(destination_key, nn);
           nn.startTrain(NeuralNetTrain.this);
           tryComplete();
+        }
+
+        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+          Job.cancel(job_key, Utils.getStackAsString(ex));
+          return super.onExceptionalCompletion(ex, caller);
         }
       };
       start(new H2OEmptyCompleter());
@@ -408,7 +417,8 @@ public class NeuralNet extends Model implements water.Job.Progress {
     }
 
     public static String link(Key job, Key model, String content) {
-      return "<a href='NeuralNetProgress.html?job=" + job + "&dst_key=" + model + "'>" + content + "</a>";
+      NeuralNetProgress req = new NeuralNetProgress();
+      return "<a href='" + req.href() + ".html?job=" + job + "&dst_key=" + model + "'>" + content + "</a>";
     }
   }
 

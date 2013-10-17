@@ -28,7 +28,7 @@ public class Airlines {
     job.response = train.vecs()[train.vecs().length - 1];
     model.rate = .0001;
     model.l2 = 0;
-    job.start();
+    job.fork();
 
     // Monitor training
     Frame test = model.adapt((Frame) UKV.get(Key.make("test.hex")), false, true)[0];
@@ -40,8 +40,8 @@ public class Airlines {
         throw new RuntimeException(e);
       }
 
-      Error trErr = model.evalAdapted(train, NeuralNet.EVAL_ROW_COUNT, null);
-      Error tsErr = model.evalAdapted(test, NeuralNet.EVAL_ROW_COUNT, null);
+      Error trErr = model.eval(train, NeuralNet.EVAL_ROW_COUNT, null);
+      Error tsErr = model.eval(test, NeuralNet.EVAL_ROW_COUNT, null);
 
       double time = (System.nanoTime() - start) / 1e9;
       String text = (int) time + "s, " + model.items + " steps (" + (model.items_per_second) + "/s) ";
