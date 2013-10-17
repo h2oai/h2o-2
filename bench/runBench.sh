@@ -35,7 +35,7 @@ function PCA() {
     pyScript="BMscripts/pcaBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
-    zip ${archive}/${h2oBuild}-${DATE}-PCA sandbox/
+    zip -r  ${archive}/${h2oBuild}-${DATE}-PCA sandbox/
     wait
     rm -rf sandbox/
 }
@@ -44,7 +44,7 @@ function KMeans() {
     pyScript="BMscripts/kmeansBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
-    zip ${archive}/${h2oBuild}-${DATE}-KMEANS sandbox/
+    zip -r  ${archive}/${h2oBuild}-${DATE}-KMEANS sandbox/
     wait
     rm -rf sandbox/
 }
@@ -53,7 +53,7 @@ function BigKMeans() {
     pyScript="BMscripts/bigkmeansBench.py"
     python ${pyScript} ${h2oBuild}
     wait
-    zip ${archive}/${h2oBuild}-${DATE}-BIGKMEANS sandbox/
+    zip -r  ${archive}/${h2oBuild}-${DATE}-BIGKMEANS sandbox/
     wait
     rm sandbox/
 }
@@ -62,7 +62,7 @@ function GLM() {
     pyScript="BMscripts/glmBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
-    zip ${archive}/${h2oBuild}-${DATE}-GLM sandbox/
+    zip -r  ${archive}/${h2oBuild}-${DATE}-GLM sandbox/
     wait
     rm -rf sandbox/
 }
@@ -71,7 +71,7 @@ function GLM2() {
     pyScript="BMscripts/glm2Bench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
-    zip ${archive}/${h2oBuild}-${DATE}-GLM2 sandbox/
+    zip -r  ${archive}/${h2oBuild}-${DATE}-GLM2 sandbox/
     wait
     rm -rf sandbox/
 }
@@ -81,7 +81,7 @@ function GBM() {
     pyScript="BMscripts/gbmBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
-    zip ${archive}/${h2oBuild}-${DATE}-GBM sandbox/
+    zip -r  ${archive}/${h2oBuild}-${DATE}-GBM sandbox/
     wait
     rm -rf sandbox/
 }
@@ -90,7 +90,7 @@ function GBMGrid() {
     pyScript="BMscripts/gbmgridBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
-    zip ${archive}/${h2oBuild}-${DATE}-GBMGrid sandbox/
+    zip -r  ${archive}/${h2oBuild}-${DATE}-GBMGrid sandbox/
     wait
     rm -rf sandbox/
 }

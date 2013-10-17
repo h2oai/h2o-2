@@ -500,7 +500,7 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
 
     nodeList = []
     for nodeState in nodeStateList:
-        print "\nCloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
+        print "Cloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
 
         newNode = ExternalH2O(nodeState)
         nodeList.append(newNode)
@@ -2501,7 +2501,7 @@ class ExternalH2O(H2O):
             # leave "null" as-is (string) for now?
                     
             setattr(self, k, v) # achieves self.k = v
-        print "Cloned", len(nodeState), "things for a h2o node"
+        ## print "Cloned", len(nodeState), "things for a h2o node"
 
     def is_alive(self):
         verboseprint("Doing is_alive check for ExternalH2O")
