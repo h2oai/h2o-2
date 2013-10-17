@@ -1050,7 +1050,7 @@ class H2O(object):
 
             if noPoll:
                 return r
-
+            
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
@@ -1257,7 +1257,7 @@ class H2O(object):
             params = {
                 "src_key": key,
                 "offset": offset,
-                "view": view
+                # view doesn't exist for 2. let it be passed here from old tests but not used
                 }
         else:
             params = {
@@ -1465,7 +1465,6 @@ class H2O(object):
             'ntree': None,
             'class_weights': None,
             'response_variable': None,
-            'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -1650,7 +1649,7 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'cols': None,
+            'ignored_cols_by_name': None,
             'nbins': None,
             'classification': None,
         }
@@ -1672,7 +1671,7 @@ class H2O(object):
         return a
 
     def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
-        noPoll=False, print_params=True, **kwargs):
+        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
         params_dict = {
             'destination_key': None,
             'key': data_key,
@@ -1690,7 +1689,7 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCA result:", dump_json(a))
         a['python_elapsed'] = time.time() - start

@@ -697,7 +697,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         _colTypes[i] = STRINGCOL;
         continue;
       }
-
+      if(_colTypes[i] == UCOL && _enums[i] != null && _enums[i].size() == 1)
+        _colTypes[i] = ECOL;
       switch(_colTypes[i]){
       case UCOL: // only missing values
         _colTypes[i] = BYTE;
