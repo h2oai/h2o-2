@@ -1,10 +1,10 @@
 package hex;
 
 import hex.Trainer.Threaded;
-import water.Sample07_NeuralNet_Mnist;
+import water.Sample07_NeuralNetLowLevel;
 import water.util.Utils;
 
-public class MnistSearch extends Sample07_NeuralNet_Mnist {
+public class MnistSearch extends Sample07_NeuralNetLowLevel {
   public static void main(String[] args) throws Exception {
     MnistSearch test = new MnistSearch();
     test.run();

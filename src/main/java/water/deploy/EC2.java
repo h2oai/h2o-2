@@ -18,7 +18,7 @@ import com.amazonaws.services.ec2.model.*;
  * Runs H2O on EC2 instances.
  * <nl>
  * Note: This class is intended for debug purposes only. The recommended way to run H2O on AWS uses
- * an AMI and is described in the documentation.
+ * is described in the documentation.
  */
 public class EC2 {
   private static final String USER = System.getProperty("user.name");
@@ -27,13 +27,10 @@ public class EC2 {
   public int boxes;
   public String region = "us-east-1";
   public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
+//  public String image = "ami-3565305c"; // Amazon Linux, x64, Instance-Store, US East N. Virginia
   public String type = "m1.xlarge";
   public String securityGroup = "default";
   public boolean confirm = true;
-  public Set<String> rsyncIncludes = new HashSet<String>();
-  public Set<String> rsyncExcludes = new HashSet<String>();
-  public String[] javaArgs;
-  public String[] userArgs;
 
 //@formatter:off
   static String cloudConfig = "" +
@@ -44,27 +41,20 @@ public class EC2 {
       l("    ssh-authorized-keys:") +
       l("      - " + pubKey()) +
       l("    shell: /bin/bash") +
-      l("") +
-      l("runcmd:") +
-      l("  - iptables -I INPUT -p tcp --dport 22 -j DROP") +
-      l("  - echo 'fs.file-max = 524288' > /etc/sysctl.d/increase-max-fd.conf") +
-      l("  - sysctl -w fs.file-max=524288") +
-      l("  - echo '* soft nofile 524288' > /etc/security/limits.d/increase-max-fd-soft.conf") +
-      l("  - echo '* hard nofile 524288' > /etc/security/limits.d/increase-max-fd-hard.conf") +
+//      l("") +
+//      l("runcmd:") +
+//      l("  - iptables -I INPUT -p tcp --dport 22 -j DROP") +
+//      l("  - echo 'fs.file-max = 524288' > /etc/sysctl.d/increase-max-fd.conf") +
+//      l("  - sysctl -w fs.file-max=524288") +
+//      l("  - echo '* soft nofile 524288' > /etc/security/limits.d/increase-max-fd-soft.conf") +
+//      l("  - echo '* hard nofile 524288' > /etc/security/limits.d/increase-max-fd-hard.conf") +
 //      l("  - apt-get update") +
 //      l("  - apt-get -y install openjdk-7-jdk") +
 //      l("  - apt-get -y install openvpn") +
-      l("  - iptables -D INPUT 1") +
+//      l("  - iptables -D INPUT 1") +
       l("");
   static String l(String line) { return line + "\n"; }
   //@formatter:on
-
-  public void run() throws Exception {
-    Cloud c = resize();
-    c._clientRSyncIncludes.addAll(rsyncIncludes);
-    c._clientRSyncExcludes.addAll(rsyncExcludes);
-    c.start(javaArgs, userArgs);
-  }
 
   /**
    * Create or terminate EC2 instances. Uses their Name tag to find existing ones.
@@ -140,8 +130,8 @@ public class EC2 {
     System.out.println("EC2 public IPs: " + Utils.join(' ', pub));
     System.out.println("EC2 private IPs: " + Utils.join(' ', prv));
     Cloud cloud = new Cloud();
-    cloud._publicIPs.addAll(Arrays.asList(pub));
-    cloud._privateIPs.addAll(Arrays.asList(prv));
+    cloud.publicIPs.addAll(Arrays.asList(pub));
+    cloud.privateIPs.addAll(Arrays.asList(prv));
     return cloud;
   }
 

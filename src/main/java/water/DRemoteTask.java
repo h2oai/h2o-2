@@ -197,29 +197,6 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     alsoBlockFor(drt._fs);
   }
 
-  // Misc
-
-  public static double[][] merge(double[][] a, double[][] b) {
-    double[][] res = new double[a.length + b.length][];
-    System.arraycopy(a, 0, res, 0, a.length);
-    System.arraycopy(b, 0, res, a.length, b.length);
-    return res;
-  }
-
-  public static int[] merge(int[] a, int[] b) {
-    int[] res = new int[a.length + b.length];
-    System.arraycopy(a, 0, res, 0, a.length);
-    System.arraycopy(b, 0, res, a.length, b.length);
-    return res;
-  }
-
-  public static String[] merge(String[] a, String[] b) {
-    String[] res = new String[a.length + b.length];
-    System.arraycopy(a, 0, res, 0, a.length);
-    System.arraycopy(b, 0, res, a.length, b.length);
-    return res;
-  }
-
   @Override public T clone() {
     T dt = (T)super.clone();
     dt.setCompleter(this); // Set completer, what used to be a final field

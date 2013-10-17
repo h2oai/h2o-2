@@ -154,6 +154,12 @@ public class RequestArguments extends RequestStatics {
   public ArrayList<Argument> arguments() {
     return _arguments;
   }
+  public Argument arg(String name) {
+    for(Argument a : _arguments)
+      if(name.equals(a._name))
+        return a;
+    return null;
+  }
 
   // ---------------------------------------------------------------------------
 
@@ -535,8 +541,15 @@ public class RequestArguments extends RequestStatics {
           record._value = parse(input);
           record._valid = true;
 
-          if(callInstance instanceof Request2)
-            ((Request2) callInstance).set(this, input, record._value);
+          if(callInstance instanceof Request2) {
+            Request2 request = (Request2) callInstance;
+            try {
+              Object cast = request.cast(this, input, record._value);
+              _field.set(request.getTarget(_field), cast);
+            } catch( IllegalAccessException e ) {
+              throw new IllegalArgumentException(e);
+            }
+          }
         } catch (IllegalArgumentException e) {
           //record._value = defaultValue();
           throw e;

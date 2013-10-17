@@ -427,11 +427,11 @@ public class Job extends Request2 {
     return until - start_time;
   }
 
-  /** Description of a speed criteria: msecs/frob */
+  /** Description of a speed criteria: e.g. msecs/frob */
   public String speedDescription() { return null; }
 
-  /** Value of the described speed criteria: msecs/frob */
-  public long speedValue() { return 0; }
+  /** Value of the described speed criteria */
+  public String speedValue() { return null; }
 
   // If job is a request
 

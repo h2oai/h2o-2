@@ -43,7 +43,7 @@ public abstract class DocGen {
     createFile("GBM.rst", new GBM().ReSTHelp());
     createFile("DRF2.rst", new DRF().ReSTHelp());
     createFile("GLM2.rst", new GLM2().ReSTHelp());
-    createFile("KMeans2.rst", new KMeans2().ReSTHelp());
+    createFile("KMeans2.rst", new KMeans2.KMeans2Train().ReSTHelp());
   }
 
   public static void main(String[] args) throws Exception {
@@ -66,7 +66,6 @@ public abstract class DocGen {
     final int _since, _until; // Min/Max supported-version numbers
     final Class _clazz; // Java type: subtypes of Argument are inputs, otherwise outputs
     final boolean _input, _required;
-    RequestArguments.Argument _arg; // Lazily filled in, as docs are asked for.
     public FieldDoc( String name, String help, int min, int max, Class C, boolean input, boolean required ) {
       _name = name; _help = help; _since = min; _until = max; _clazz = C; _input = input; _required = required;
     }
@@ -83,28 +82,6 @@ public abstract class DocGen {
       return _input;
     }
     public final boolean isJSON() { return !isInput(); }
-
-    // Specific accessors for input arguments.  Not valid for JSON output fields.
-    private RequestArguments.Argument arg(Request R) {
-      if( _arg != null ) return _arg;
-      Class clzz = R.getClass();
-      // An amazing crazy API from the JDK again.  Cannot search for protected
-      // fields without either (1) throwing NoSuchFieldException if you ask in
-      // a subclass, or (2) sorting through the list of ALL fields and EACH
-      // level of the hierarchy.  Sadly, I catch NSFE & loop.
-      while( true ) {
-        try {
-          Field field = clzz.getDeclaredField(_name);
-          field.setAccessible(true);
-          Object o = field.get(R);
-          return _arg=((RequestArguments.Argument)o);
-        }
-        catch(   NoSuchFieldException ie ) { clzz = clzz.getSuperclass(); }
-        catch( IllegalAccessException ie ) { break; }
-        catch( ClassCastException ie ) { break; }
-      }
-      return null;
-    }
   }
 
   // --------------------------------------------------------------------------
@@ -126,7 +103,8 @@ public abstract class DocGen {
   }
 
   public String genHelp(Request R) {
-    final String name = R.getClass().getSimpleName();
+    final String name = R.name();
+    final String url = R.getClass().getSimpleName();
     final FieldDoc docs[] = R.toDocField();
     final StringBuilder sb = new StringBuilder();
     bodyHead(sb);
@@ -141,7 +119,7 @@ public abstract class DocGen {
     }
 
     section(sb,"URL");
-    paraTail(escape(paraHead(sb),"http://<h2oHost>:<h2oApiPort>/"+name+".json"));
+    paraTail(escape(paraHead(sb),"http://<h2oHost>:<h2oApiPort>/"+url+".json"));
 
     // Escape out for not-yet-converted auto-doc Requests
     if( docs == null ) return bodyTail(sb).toString();
@@ -150,7 +128,7 @@ public abstract class DocGen {
     listHead(sb);
     for( FieldDoc doc : docs ) {
       if( doc.isInput() ) {
-        Argument arg = doc.arg(R); // Legacy
+        Argument arg = R.arg(doc._name); // Legacy
         String help = doc._help;
         boolean required = doc._required;
         String[] errors = null;
@@ -191,18 +169,18 @@ public abstract class DocGen {
     if( s != null ) {
       section(sb,"Success Example");
       paraHead(sb);
-      url(sb,name,s);
+      url(sb,url,s);
       paraTail(sb);
-      paragraph(sb,serve(name,s));
+      paragraph(sb,serve(url,s));
     }
 
     String f[] = R.DocExampleFail();
     if( f != null ) {
       section(sb,"Error Example");
       paraHead(sb);
-      url(sb,name,f);
+      url(sb,url,f);
       paraTail(sb);
-      paragraph(sb,serve(name,f));
+      paragraph(sb,serve(url,f));
     }
 
     bodyTail(sb);

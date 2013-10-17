@@ -69,7 +69,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     _ymin = classification ? (int)response.min() : 0;
     assert (classification && response.isInt()) || // Classify Int or Enums
       (!classification && !response.isEnum());     // Regress  Int or Float
-    _nclass = classification ? (char)(response.max()-_ymin+1) : 1; 
+    _nclass = classification ? (char)(response.max()-_ymin+1) : 1;
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
@@ -326,7 +326,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // Validation: need to score the set, getting a probability distribution
       Frame res = model.score(validation,true);
       // Adapt the validation set to the model
-      Frame frs[] = model.adapt(validation,true);
+      Frame frs[] = model.adapt(validation,true,false);
       Frame fr2 = frs[0];
       // Dump in the prob distribution
       fr2.add("response",vresponse);
@@ -380,19 +380,19 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");
       Log.info(tag,"Mean Squared Error is "+(_sum/_nrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
-      if( _nclass > 1 ) 
+      if( _nclass > 1 )
         Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, CM= "+Arrays.deepToString(_cm));
       return this;
     }
   }
 
   @Override public String speedDescription() { return "time/tree"; }
-  @Override public long speedValue() {
+  @Override public String speedValue() {
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
     long numTreesBuiltSoFar = m == null ? 0 : m.treeBits.length;
     long sv = (numTreesBuiltSoFar <= 0) ? 0 : (runTimeMs() / numTreesBuiltSoFar);
-    return sv;
+    return PrettyPrint.msecs(sv,true);
   }
 
   protected abstract water.util.Log.Tag.Sys logTag();

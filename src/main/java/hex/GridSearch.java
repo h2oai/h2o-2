@@ -1,11 +1,9 @@
 package hex;
 
-import hex.NeuralNet.NeuralNetModel;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.GBM.GBMModel;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 
 import water.*;
 import water.api.*;
@@ -83,7 +81,10 @@ public class GridSearch extends Job {
           sb.append("<tr>");
           for( Argument a : args ) {
             try {
-              Object value = a._field.get(info._job);
+              Object target = info._job;
+              if( target instanceof Request2 )
+                target = ((Request2) target).getTarget(a._field);
+              Object value = a._field.get(target);
               String s;
               if( value instanceof int[] )
                 s = Utils.sampleToString((int[]) value, 20);
@@ -97,7 +98,7 @@ public class GridSearch extends Job {
           String runTime = "Pending", speed = "";
           if( info._job.start_time != 0 ) {
             runTime = PrettyPrint.msecs(info._job.runTimeMs(),true);
-            speed = perf != null ? PrettyPrint.msecs(info._job.speedValue(),true) : "";
+            speed = perf != null ? info._job.speedValue() : "";
           }
           sb.append("<td>").append(runTime).append("</td>");
           if( perf != null )
@@ -107,7 +108,7 @@ public class GridSearch extends Job {
           if( info._job.start_time != 0 ) {
             if( info._model instanceof GBMModel )
               link = GBMModelView.link(link, info._job.destination_key);
-            else if( info._model instanceof NeuralNetModel )
+            else if( info._model instanceof NeuralNet )
               link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
             else
               link = Inspect.link(link, info._job.destination_key);

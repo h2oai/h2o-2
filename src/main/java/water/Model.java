@@ -23,7 +23,7 @@ public abstract class Model extends Iced {
 
   /** Key associated with this Model, if any.  */
   @API(help="Key associated with Model")
-  public final Key _selfKey;
+  public Key _selfKey;
 
   /** Dataset key used to *build* the model, for models for which this makes
    *  sense, or null otherwise.  Not all models are built from a dataset (eg
@@ -31,17 +31,17 @@ public abstract class Model extends Iced {
    *  models), so this key has no *mathematical* significance in the model but
    *  is handy during common model-building and for the historical record.  */
   @API(help="Datakey used to *build* the model")
-  public final Key _dataKey;
+  public Key _dataKey;
 
   /** Columns used in the model and are used to match up with scoring data
    *  columns.  The last name is the response column name. */
   @API(help="Column names used to build the model")
-  public final String _names[];
+  public String _names[];
 
   /** Categorical/factor/enum mappings, per column.  Null for non-enum cols.
    *  The last column holds the response col enums.  */
   @API(help="Column names used to build the model")
-  public final String _domains[][];
+  public String _domains[][];
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
@@ -60,6 +60,8 @@ public abstract class Model extends Iced {
     _names   = names;
     _domains = domains;
   }
+
+  public Model() {}
 
   /** Simple shallow copy constructor to a new Key */
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
@@ -88,12 +90,12 @@ public abstract class Model extends Iced {
   public Frame score( Frame fr, boolean exact ) {
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
-    Frame[] adaptFrms = adapt(fr,exact);
+    Frame[] adaptFrms = adapt(fr,exact,false);
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
-    Frame adaptFrm = adaptFrms[0]; 
+    Frame adaptFrm = adaptFrms[0];
     // Contains only newly created vectors. The frame eases deletion of these vectors.
-    Frame onlyAdaptFrm = adaptFrms[1]; 
+    Frame onlyAdaptFrm = adaptFrms[1];
     Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
@@ -137,7 +139,7 @@ public abstract class Model extends Iced {
 
   /** Single row scoring, on a compatible set of data.  Fairly expensive to adapt. */
   public final float[] score( String names[], String domains[][], boolean exact, double row[] ) {
-    return score(adapt(names,domains,exact),row,new float[nclasses()]);
+    return score(adapt(names,domains,exact,false),row,new float[nclasses()]);
   }
 
   /** Single row scoring, on a compatible set of data, given an adaption vector */
@@ -173,14 +175,15 @@ public abstract class Model extends Iced {
    *    any enums returned by the model that the data does not have a mapping for.
    *  If 'exact' is false, these situations will use or return NA's instead.
    */
-  private int[][] adapt( String names[], String domains[][], boolean exact ) {
-    int map[][] = new int[_names.length][];
+  private int[][] adapt( String names[], String domains[][], boolean exact, boolean response ) {
+    int length = response ? _names.length : _names.length-1;
+    int map[][] = new int[length + 1][];
 
     // Build the column mapping: cmap[model_col] == user_col, or -1 if missing.
-    int cmap[] = map[_names.length-1] = new int[_names.length-1];
+    int cmap[] = map[length] = new int[length];
     HashMap<String,Integer> m = new HashMap<String, Integer>();
     for( int d = 0; d <  names.length  ; ++d) m.put(names[d], d);
-    for( int c = 0; c < _names.length-1; ++c) {
+    for( int c = 0; c < length; ++c) {
       Integer I = m.get(_names[c]);
       cmap[c] = I==null ? -1 : I; // Check for data missing model column
     }
@@ -214,18 +217,17 @@ public abstract class Model extends Iced {
 
   /** Build an adapted Frame from the given Frame. Useful for efficient bulk
    *  scoring of a new dataset to an existing model.  Same adaption as above,
-   *  but expressed as a Frame instead of as an int[][]. The returned Frame
-   *  does not have a response column.
+   *  but expressed as a Frame instead of as an int[][].
    *  It returns a <b>two element array</b> containing an adapted frame and a
    *  frame which contains only vectors which where adapted (the purpose of the
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
-  public Frame[] adapt( Frame fr, boolean exact ) {
+  public Frame[] adapt( Frame fr, boolean exact, boolean response ) {
     String frnames[] = fr.names();
     Vec frvecs[] = fr.vecs();
-    int map[][] = adapt(frnames,fr.domains(),exact);
-    int cmap[] =     map[_names.length-1];
-    Vec vecs[] = new Vec[_names.length-1];
+    int map[][] = adapt(frnames,fr.domains(),exact,response);
+    int cmap[] =     map[map.length-1];
+    Vec vecs[] = new Vec[map.length-1];
     int avCnt = 0;
     for( int c=0; c<cmap.length; c++ ) if (map[c] != null) avCnt++;
     Vec[]    avecs = new Vec[avCnt]; // list of adapted vectors
@@ -243,7 +245,7 @@ public abstract class Model extends Iced {
         avCnt++;
       }
     }
-    return new Frame[] { new Frame(Arrays.copyOf(_names,_names.length-1),vecs), new Frame(anames, avecs) };
+    return new Frame[] { new Frame(Arrays.copyOf(_names,map.length-1),vecs), new Frame(anames, avecs) };
   }
 
   /** Returns a mapping between values domains for a given column.  */
@@ -343,8 +345,8 @@ public abstract class Model extends Iced {
   protected void toJavaInit(SB sb) { };
   protected void toJavaInit(CtClass ct) { };
   // Override in subclasses to provide some inside 'predict' call goodness
-  protected void toJavaPredictBody(SB sb) { 
-    throw new IllegalArgumentException("This model type does not support conversion to Java"); 
+  protected void toJavaPredictBody(SB sb) {
+    throw new IllegalArgumentException("This model type does not support conversion to Java");
   }
   // Wrapper around the main predict call, including the signature and return value
   private SB toJavaPredict(SB sb) {
@@ -359,7 +361,7 @@ public abstract class Model extends Iced {
     return sb;
   }
 
-  private static final String TOJAVA_MAP = 
+  private static final String TOJAVA_MAP =
     "  // Takes a HashMap mapping column names to doubles.  Looks up the column\n"+
     "  // names needed by the model, and places the doubles into the data array in\n"+
     "  // the order needed by the model.  Missing columns use NaN.\n"+
@@ -370,17 +372,17 @@ public abstract class Model extends Iced {
     "    }\n"+
     "    return data;\n"+
     "  }\n";
-  private static final String TOJAVA_PREDICT_MAP = 
+  private static final String TOJAVA_PREDICT_MAP =
     "  // Does the mapping lookup for every row, no allocation\n"+
     "  float[] predict( java.util.HashMap row, double data[], float preds[] ) {\n"+
     "    return predict(map(row,data),preds);\n"+
     "  }\n";
-  private static final String TOJAVA_PREDICT_MAP_ALLOC1 = 
+  private static final String TOJAVA_PREDICT_MAP_ALLOC1 =
     "  // Allocates a double[] for every row\n"+
     "  float[] predict( java.util.HashMap row, float preds[] ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),preds);\n"+
     "  }\n";
-  private static final String TOJAVA_PREDICT_MAP_ALLOC2 = 
+  private static final String TOJAVA_PREDICT_MAP_ALLOC2 =
     "  // Allocates a double[] and a float[] for every row\n"+
     "  float[] predict( java.util.HashMap row ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
@@ -413,7 +415,7 @@ public abstract class Model extends Iced {
       //System.out.println(toJava());
       Class clz = ClassPool.getDefault().toClass(makeCtClass());
       Object modelo = clz.newInstance();
-    } 
+    }
     catch( CannotCompileException cce ) { throw new Error(cce); }
     catch( InstantiationException cce ) { throw new Error(cce); }
     catch( IllegalAccessException cce ) { throw new Error(cce); }

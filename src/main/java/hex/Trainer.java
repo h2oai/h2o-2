@@ -5,7 +5,6 @@ import hex.Layer.ChunksInput;
 import hex.Layer.Input;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-import hex.rng.MersenneTwisterRNG;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -15,10 +14,10 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.fvec.Chunk;
-import water.fvec.Vec;
+import water.fvec.*;
 import water.util.Log;
 import water.util.Utils;
 
@@ -271,7 +270,7 @@ public abstract class Trainer {
       DKV.put(_key, new Value(_key, new byte[0]));
 
       Vec[] vecs = ((VecsInput) ls[0])._vecs;
-      assert ls[0]._a.length == vecs.length;
+      assert ls[0]._a.length == VecsInput.expand(vecs);
       assert vecs[0].nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
       _counts = new AtomicIntegerArray(vecs[0].nChunks());
     }
@@ -304,10 +303,9 @@ public abstract class Trainer {
         _task._ws[y] = _ls[y]._w;
         _task._bs[y] = _ls[y]._b;
       }
-      //_task.dfork(new Frame(null, Utils.add(vecs, response)));
       Vec[] vecs = ((VecsInput) _ls[0])._vecs;
       Vec response = ((VecSoftmax) _ls[_ls.length - 1])._vec;
-      _task.doAll(Utils.add(vecs, response));
+      _task.dfork(new Frame(null, Utils.add(vecs, response)));
     }
 
     @Override public void join() {
@@ -346,12 +344,12 @@ public abstract class Trainer {
           while( _job == null || Job.running(_job) ) {
             if( !home )
               _node.sync();
-            else
+            else {
               _node._total = _node._trainer.items();
-
-            try {
-              Thread.sleep(1);
-            } catch( InterruptedException ex ) {
+              try {
+                Thread.sleep(1);
+              } catch( InterruptedException ex ) {
+              }
             }
           }
         }
@@ -363,57 +361,16 @@ public abstract class Trainer {
     @Override protected void closeLocal() {
       // Launch actual computation in order, otherwise passes
       // between chunks diverge quickly
-      ArrayList<DescentEpoch> list = new ArrayList<DescentEpoch>();
-      for( int i = 0; i < 8; i++ ) {
       DescentEpoch epoch = new DescentEpoch();
       epoch._node = _node;
       epoch._count = _epochs == 0 ? -1 : _epochs;
-      //epoch.invoke();
-      //H2O.submitTask(epoch);
-      list.add(epoch);
-      epoch.fork();
-      }
-      for(DescentEpoch epoch : list)
-        epoch.join();
-
-      for( int i = 0; _epochs == 0 || i < _epochs; i++ ) {
-        if( _node._job != null && !Job.running(_node._job) )
-          break;
-//        for( DescentChunk task : _node._tasks )
-//          H2O.submitTask(task);
-//        for( DescentChunk task : _node._tasks ) {
-//          task.join();
-//          task.reinitialize();
-//        }
-        ArrayList<DescentChunk> tasks = new ArrayList<DescentChunk>();
-        for( Chunk[] cs : _node._chunks ) {
-          DescentChunk task = new DescentChunk();
-          task._node = _node;
-          task._cs = cs;
-          tasks.add(task);
-//          H2O.FJP_NORM.submit(task);
-//          task.fork();
-        }
-        //H2O.submitTask(task);
-        //H2O.submitTask(task);
-        for( DescentChunk task : tasks ) {
-          task.join();
-        }
-      }
-
-      if( _node._key.home() )
-        _node._trainer.done();
-
+      H2O.submitTask(epoch);
       _ls = null;
       _ws = _bs = null;
       _key = null;
     }
 
     @Override public void map(Chunk[] cs) {
-//      DescentChunk task = new DescentChunk();
-//      task._node = _node;
-//      task._cs = cs;
-//      _node._tasks.add(task);
       _node._chunks.add(cs);
     }
 
@@ -422,49 +379,48 @@ public abstract class Trainer {
     }
   }
 
-  private static class DescentEpoch extends H2OCountedCompleter {
+  private static abstract class NodeTask extends H2OCountedCompleter {
     NodeDescent _node;
+
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+      String error = Utils.getStackAsString(ex);
+      Log.info(error);
+      if( _node._job != null )
+        Job.cancel(_node._job, error);
+      return super.onExceptionalCompletion(ex, caller);
+    }
+  }
+
+  private static class DescentEpoch extends NodeTask {
     int _count;
 
     @Override public void compute2() {
-      Chunk[][] cs = _node._chunks.toArray(new Chunk[0][]);
-      MersenneTwisterRNG rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      for( int n = cs.length - 1; n >= 0; n-- ) {
-        int shuffle = rand.nextInt(n + 1);
-        Chunk[] t = cs[shuffle];
-        cs[shuffle] = cs[n];
-        cs[n] = t;
-      }
-      for( ;; ) {
-        if( _count < 0 || --_count > 0 && (_node._job == null || Job.running(_node._job)) ) {
-          for( Chunk[] c : cs ) {
-            DescentChunk task = new DescentChunk();
-            task._node = _node;
-            task._cs = c;
-            task.compute2();
-          }
-        } else {
-//        if( _node._key.home() )
-//          _node._trainer.done();
-          tryComplete();
-          break;
+      if( (_count < 0 || --_count > 0) && (_node._job == null || Job.running(_node._job)) ) {
+        for( Chunk[] cs : _node._chunks ) {
+          DescentChunk task = new DescentChunk();
+          task._node = _node;
+          task._cs = cs;
+          H2O.submitTask(task);
         }
+        reinitialize();
+        H2O.submitTask(this);
+      } else {
+        if( _node._key.home() )
+          _node._trainer.done();
       }
     }
   }
 
-  static class DescentChunk extends H2OCountedCompleter {
-    NodeDescent _node;
+  static class DescentChunk extends NodeTask {
     Chunk[] _cs;
 
     @Override public void compute2() {
       Layer[] clones = new Layer[_node._ls.length];
-      VecsInput stats = (VecsInput) _node._ls[0];
-      ChunksInput input = new ChunksInput(Utils.remove(_cs, _cs.length - 1), stats);
+      ChunksInput input = new ChunksInput(Utils.remove(_cs, _cs.length - 1), (VecsInput) _node._ls[0]);
       clones[0] = input;
       for( int y = 1; y < _node._ls.length - 1; y++ )
         clones[y] = _node._ls[y].clone();
-      clones[clones.length - 1] = new ChunkSoftmax(_cs[_cs.length - 1]);
+      clones[clones.length - 1] = new ChunkSoftmax(_cs[_cs.length - 1], (VecSoftmax) _node._ls[_node._ls.length - 1]);
       for( int y = 0; y < clones.length; y++ ) {
         clones[y].init(clones, y, false, _node._total);
         clones[y]._w = _node._ws[y];
@@ -480,9 +436,7 @@ public abstract class Trainer {
   }
 
   static class NodeDescent {
-    //transient ConcurrentLinkedQueue<DescentChunk> _tasks = new ConcurrentLinkedQueue<DescentChunk>();
-    transient ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
-
+    ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
     Key _job;
     Layer[] _ls;
     float[][] _ws, _bs;

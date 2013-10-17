@@ -201,6 +201,11 @@ def parse_our_args():
     abort_after_import = args.abort_after_import
     clone_cloud_json = args.clone_cloud_json
 
+    # Auto skip cloud building if debugging
+    if fromPyDev():
+        browse_disable = True
+        clone_cloud_json = os.getenv("HOME") + '/h2o-nodes.json'
+
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
     # Pass "--failfast" to stop on first error to unittest. and -v
@@ -208,6 +213,11 @@ def parse_our_args():
     sys.argv[1:] = ['-v', "--failfast"] + args.unittest_args
     # sys.argv[1:] = args.unittest_args
 
+def fromPyDev():
+    for s in sys.path:
+        if 'eclipse/plugins/org.python.pydev' in s:
+            return True
+    return False
 
 def find_file(base):
     f = base

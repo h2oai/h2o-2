@@ -5,6 +5,7 @@ import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
@@ -15,8 +16,7 @@ import org.apache.commons.lang.ArrayUtils;
 
 import water.*;
 import water.api.DocGen.FieldDoc;
-import water.parser.ParseDataset;
-import water.parser.ValueString;
+import water.parser.*;
 import water.parser.ParseDataset.Compression;
 
 public class Utils {
@@ -342,6 +342,34 @@ public class Utils {
 
   public static <T> T[] subarray(T[] a, int off, int len) {
     return (T[]) ArrayUtils.subarray(a, off, off + len);
+  }
+
+  public static int[] append(int[] a, int[] b) {
+    int[] res = new int[a.length + b.length];
+    System.arraycopy(a, 0, res, 0, a.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static double[][] append(double[][] a, double[][] b) {
+    double[][] res = new double[a.length + b.length][];
+    System.arraycopy(a, 0, res, 0, a.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static String[] append(String[] a, String[] b) {
+    String[] res = new String[a.length + b.length];
+    System.arraycopy(a, 0, res, 0, a.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static <T> T[] append(T[] a, T[] b) {
+    T[] res = (T[]) Array.newInstance(a.getClass().getComponentType(), a.length + b.length);
+    System.arraycopy(a, 0, res, 0, a.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
   }
 
   public static void clearFolder(String folder) {

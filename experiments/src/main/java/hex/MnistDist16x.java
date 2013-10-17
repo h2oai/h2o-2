@@ -12,14 +12,13 @@ public class MnistDist16x {
   public static void main(String[] args) throws Exception {
     Cloud cloud = new Cloud();
     for( int i = LOW; i < LOW + LEN; i++ )
-      cloud._publicIPs.add("192.168.1." + (161 + i));
-    cloud._clientRSyncIncludes.add("../libs/jdk");
-    cloud._clientRSyncIncludes.add("smalldata");
-    cloud._clientRSyncIncludes.add("experiments/target");
-    cloud._fannedRSyncIncludes.add("jdk");
-    cloud._fannedRSyncIncludes.add("smalldata");
+      cloud.publicIPs.add("192.168.1." + (161 + i));
+    cloud.clientRSyncIncludes.add("smalldata");
+    cloud.clientRSyncIncludes.add("experiments/target");
+    cloud.fannedRSyncIncludes.add("smalldata");
+    cloud.jdk = "../libs/jdk";
     String java = "-ea -Xmx120G -Dh2o.debug";
-    String node = "-mainClass " + MnistDist16x.UserCode.class.getName() + " -beta";
+    String node = "-mainClass " + UserCode.class.getName() + " -beta";
     cloud.start(java.split(" "), node.split(" "));
   }
 
@@ -34,7 +33,7 @@ public class MnistDist16x {
       TestUtil.stall_till_cloudsize(LEN);
       //Sample08_DeepNeuralNet_EC2.run();
       //Sample07_NeuralNet_Mnist8m.run();
-      //Sample07_NeuralNet_Mnist.run();
+      new Sample07_NeuralNetLowLevel().run();
 
       File f = new File("smalldata/mnist/train.csv.gz");
       Key dest = Key.make("train.hex");
