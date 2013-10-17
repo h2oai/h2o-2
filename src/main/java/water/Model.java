@@ -91,9 +91,9 @@ public abstract class Model extends Iced {
     Frame[] adaptFrms = adapt(fr,exact);
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
-    Frame adaptFrm = adaptFrms[0]; 
+    Frame adaptFrm = adaptFrms[0];
     // Contains only newly created vectors. The frame eases deletion of these vectors.
-    Frame onlyAdaptFrm = adaptFrms[1]; 
+    Frame onlyAdaptFrm = adaptFrms[1];
     Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
@@ -247,7 +247,7 @@ public abstract class Model extends Iced {
   }
 
   /** Returns a mapping between values domains for a given column.  */
-  private static int[] getDomainMapping(String colName, String[] modelDom, String[] dom, boolean exact) {
+  public static int[] getDomainMapping(String colName, String[] modelDom, String[] dom, boolean exact) {
     int emap[] = new int[dom.length];
     HashMap<String,Integer> md = new HashMap<String, Integer>();
     for( int i = 0; i < modelDom.length; i++) md.put(modelDom[i], i);
@@ -343,8 +343,8 @@ public abstract class Model extends Iced {
   protected void toJavaInit(SB sb) { };
   protected void toJavaInit(CtClass ct) { };
   // Override in subclasses to provide some inside 'predict' call goodness
-  protected void toJavaPredictBody(SB sb) { 
-    throw new IllegalArgumentException("This model type does not support conversion to Java"); 
+  protected void toJavaPredictBody(SB sb) {
+    throw new IllegalArgumentException("This model type does not support conversion to Java");
   }
   // Wrapper around the main predict call, including the signature and return value
   private SB toJavaPredict(SB sb) {
@@ -359,7 +359,7 @@ public abstract class Model extends Iced {
     return sb;
   }
 
-  private static final String TOJAVA_MAP = 
+  private static final String TOJAVA_MAP =
     "  // Takes a HashMap mapping column names to doubles.  Looks up the column\n"+
     "  // names needed by the model, and places the doubles into the data array in\n"+
     "  // the order needed by the model.  Missing columns use NaN.\n"+
@@ -370,17 +370,17 @@ public abstract class Model extends Iced {
     "    }\n"+
     "    return data;\n"+
     "  }\n";
-  private static final String TOJAVA_PREDICT_MAP = 
+  private static final String TOJAVA_PREDICT_MAP =
     "  // Does the mapping lookup for every row, no allocation\n"+
     "  float[] predict( java.util.HashMap row, double data[], float preds[] ) {\n"+
     "    return predict(map(row,data),preds);\n"+
     "  }\n";
-  private static final String TOJAVA_PREDICT_MAP_ALLOC1 = 
+  private static final String TOJAVA_PREDICT_MAP_ALLOC1 =
     "  // Allocates a double[] for every row\n"+
     "  float[] predict( java.util.HashMap row, float preds[] ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),preds);\n"+
     "  }\n";
-  private static final String TOJAVA_PREDICT_MAP_ALLOC2 = 
+  private static final String TOJAVA_PREDICT_MAP_ALLOC2 =
     "  // Allocates a double[] and a float[] for every row\n"+
     "  float[] predict( java.util.HashMap row ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
@@ -413,7 +413,7 @@ public abstract class Model extends Iced {
       //System.out.println(toJava());
       Class clz = ClassPool.getDefault().toClass(makeCtClass());
       Object modelo = clz.newInstance();
-    } 
+    }
     catch( CannotCompileException cce ) { throw new Error(cce); }
     catch( InstantiationException cce ) { throw new Error(cce); }
     catch( IllegalAccessException cce ) { throw new Error(cce); }
