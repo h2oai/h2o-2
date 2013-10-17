@@ -383,6 +383,7 @@ public class Vec extends Iced {
   /** Make a Vector-group key.  */
   private Key groupKey(){
     byte [] bits = _key._kb.clone();
+    bits[0] = Key.VGROUP;
     UDP.set4(bits, 2, -1);
     UDP.set4(bits, 6, -1);
     return Key.make(bits);
@@ -501,7 +502,7 @@ public class Vec extends Iced {
     private VectorGroup(Key key, int len){_key = key;_len = len;}
     public VectorGroup() {
       byte[] bits = new byte[26];
-      bits[0] = Key.VEC;
+      bits[0] = Key.VGROUP;
       bits[1] = -1;
       UDP.set4(bits, 2, -1);
       UDP.set4(bits, 6, -1);
@@ -511,13 +512,12 @@ public class Vec extends Iced {
       _key = Key.make(bits);
       _len = 0;
     }
-
     public Key vecKey(int vecId){
       byte [] bits = _key._kb.clone();
+      bits[0] = Key.VEC;
       UDP.set4(bits,2,vecId);//
       return Key.make(bits);
     }
-
     /**
      * Task to atomically add vectors into existing group.
      * @author tomasnykodym

@@ -42,6 +42,7 @@ public final class Key extends Iced implements Comparable {
 
   public static final byte VEC = 4;
   public static final byte DVEC = 5;
+  public static final byte VGROUP = 6; // vector group
 
   public static final byte HDFS_INTERNAL_BLOCK = 10;
 

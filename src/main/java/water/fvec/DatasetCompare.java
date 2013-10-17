@@ -54,7 +54,7 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
     if(f.isDirectory()){
       for(File f2:f.listFiles())do_file(f2,diffs,ex);
     } else {
-//      TestUtil.checkLeakedKeys(); // make sure we have no previous keys in
+      TestUtil.checkLeakedKeys(); // make sure we have no previous keys in
       System.out.print("parsing file " + f.getPath() + "...");
       Key vaHex = Key.make("va.hex");
       Key vaRaw = null;
@@ -82,6 +82,7 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
         ex.put(f.getPath(), e);
       }finally{
         if(vaRaw != null)UKV.remove(vaRaw);
+        for(Key k:H2O.keySet())UKV.remove(k);
         UKV.remove(vaHex);
         UKV.remove(frHex);
         if(frRaw != null)UKV.remove(frRaw);
@@ -100,6 +101,7 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
     String root = (args.length > 0)?args[0]:"smalldata";
     System.out.println("ROOT = " + root);
     System.out.println("Running...");
+    new NewVectorTest().testCompression();
     Map<String,Double> diffs = new TreeMap<String, Double>();
     Map<String,Exception> exs = new TreeMap<String, Exception>();
     do_file(TestUtil.find_test_file(root),diffs,exs);
