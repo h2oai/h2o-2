@@ -12,10 +12,12 @@ files      = {'Airlines'   : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', '
 build = ""
 
 def doPCA(fs, folderPath):
-    benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+    #benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+    benchmarkLogging = None
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
         #if f != 'AirlinesTrain1x': continue
+        retryDelaySecs = 5 if f == 'AirlinesTrain1x' else 30
         h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='PCA'+f+'.csv')
         print "Doing PCA on ", f
         overallWallStart = time.time()
@@ -40,7 +42,7 @@ def doPCA(fs, folderPath):
             headerKey = h2i.find_key(hK)
             h2o.cloudPerfH2O.message("=========PARSE TRAIN========")
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key,header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200, benchmarkLogging=benchmarkLogging)
+                timeoutSecs=7200,retryDelaySecs=retryDelaySecs,pollTimeoutSecs=7200, benchmarkLogging=benchmarkLogging)
             h2o.cloudPerfH2O.message("=========END PARSE TRAIN========")
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
