@@ -5,11 +5,10 @@ import java.util.Arrays;
 import water.*;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
+import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+import water.fvec.Vec.CollectDomain;
 
 public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -39,9 +38,6 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @API(help = "Number of classes")
   protected int _nclass;
 
-  @API(help = "Minimum class number, generally 0 or 1")
-  protected int _ymin;
-
   @API(help = "Class distribution, ymin based")
   protected long _distribution[];
 
@@ -66,10 +62,17 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     assert 1 <= min_rows;
     _ncols = _train.length;
     _nrows = source.numRows() - response.naCnt();
-    _ymin = classification ? (int)response.min() : 0;
     assert (classification && response.isInt()) || // Classify Int or Enums
       (!classification && !response.isEnum());     // Regress  Int or Float
-    _nclass = classification ? (char)(response.max()-_ymin+1) : 1; 
+    _nclass = classification ? (char)(response.max()-response.min()+1) : 1;
+    // Make a fake response for
+    if (response.domain()==null && classification) {
+      int[] domain = new CollectDomain(response).doAll(response).domain();
+      int[] domMap = Utils.mapping(domain);
+      String[] sdomain = Utils.toStringMap(domain);
+      response = response.makeTransf(domMap, sdomain);
+      _nclass = domain.length;
+    }
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
@@ -302,7 +305,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       _ys = new long[_nclass];
       for( int i=0; i<ys._len; i++ )
         if( !ys.isNA0(i) )
-          _ys[(int)ys.at80(i)-_ymin]++;
+          _ys[(int)ys.at80(i)]++;
     }
     @Override public void reduce( ClassDist that ) { Utils.add(_ys,that._ys); }
   }
@@ -323,19 +326,24 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // No validation, so do on training data
       if( validation == null ) return doAll(fr);
 
-      // Validation: need to score the set, getting a probability distribution
+      // Validation: need to score the set, getting a probability distribution for each class
+      // Frame has nclass vectors (nclass, or 1 for regression)
       Frame res = model.score(validation,true);
       // Adapt the validation set to the model
       Frame frs[] = model.adapt(validation,true);
-      Frame fr2 = frs[0];
+      Frame adapValidation = frs[0]; // adapted validation dataset
+      // Adapt vresponse to original response
+      vresponse = vresponse.adaptTo(response, true);
       // Dump in the prob distribution
-      fr2.add("response",vresponse);
+      adapValidation.add("response",vresponse);
       for( int i=0; i<_nclass; i++ )
-        fr2.add("Work"+i,res.vecs()[i+1]);
+        adapValidation.add("Work"+i,res.vecs()[i+1]);
       // Compute a CM & MSE
-      doAll(fr2);
+      doAll(adapValidation);
       // Remove the extra adapted Vecs
       frs[1].remove();
+      // Remove temporary result
+      // FIXME delete vresponse res.remove();
       return this;
     }
 
@@ -352,8 +360,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
           if( sum == 0 )       // This tree does not predict this row *at all*?
             err = 1.0f-1.0f/_nclass; // Then take ycls=0, uniform predictive power
           else {
-            ycls = (int)ys.at80(row)-_ymin; // Response class from 0 to nclass-1
-            assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row)+", ymin="+_ymin+" "+ys+_fr;
+            ycls = (int)ys.at80(row); // Response class from 0 to nclass-1
+            if (ycls >= _nclass) continue;
+            assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row);
             err = Double.isInfinite(sum)
               ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
               : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
@@ -380,7 +389,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");
       Log.info(tag,"Mean Squared Error is "+(_sum/_nrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
-      if( _nclass > 1 ) 
+      if( _nclass > 1 )
         Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, CM= "+Arrays.deepToString(_cm));
       return this;
     }

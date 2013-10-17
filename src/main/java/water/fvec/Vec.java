@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.util.Utils;
 
 /**
  * A single distributed vector column.
@@ -120,13 +121,30 @@ public class Vec extends Iced {
   }
 
   // Create a vector transforming values according given domain map
-  public Vec makeTransf(final int[] domMap) {
+  public Vec makeTransf(final int[] domMap) { return makeTransf(domMap); }
+  public Vec makeTransf(final int[] domMap, final String[] domain) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, domMap, group().addVecs(1)[0],_espc);
+    Vec v0 = new TransfVec(this._key, domMap, domain, group().addVecs(1)[0],_espc);
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
+  }
+  /**
+   * Adapt given vector <code>v</code> to this vector.
+   * I.e., unify domains and call makeTransf().
+   */
+  public Vec adaptTo(Vec v, boolean exact) {
+    int[] domain = null;
+    String[] sdomain = _domain == null
+        ? Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain()) // it is number-column
+        : domain(); // it is enum
+    int[] domMap = Model.getDomainMapping(null, v._domain, sdomain, exact);
+    if (domain!=null) {
+      // do a mapping from INT -> ENUM -> this vector ENUM
+      domMap = Utils.compose(Utils.mapping(domain), domMap);
+    }
+    return this.makeTransf(domMap, sdomain);
   }
 
   /** Number of elements in the vector.  Overridden by subclasses that compute
@@ -204,7 +222,7 @@ public class Vec extends Iced {
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 ) {    // KV store has a better answer
-      _min  = vthis._min;   _max   = vthis._max; 
+      _min  = vthis._min;   _max   = vthis._max;
       _mean = vthis._mean;  _sigma = vthis._sigma;
       _size = vthis._size;  _isInt = vthis._isInt;
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
@@ -481,7 +499,7 @@ public class Vec extends Iced {
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
-    public VectorGroup() { 
+    public VectorGroup() {
       byte[] bits = new byte[26];
       bits[0] = Key.VEC;
       bits[1] = -1;
@@ -550,6 +568,31 @@ public class Vec extends Iced {
     }
     @Override public int hashCode() {
       return _key.hashCode();
+    }
+  }
+
+  public static class CollectDomain extends MRTask2<CollectDomain> {
+    final int _nclass;
+    final int _ymin;
+    byte _dom[];
+    public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
+    @Override public void map(Chunk ys) {
+      _dom = new byte[_nclass];
+      int ycls=0;
+      for( int row=0; row<ys._len; row++ ) {
+        if (ys.isNA0(row)) continue;
+        ycls = (int)ys.at80(row)-_ymin;
+        _dom[ycls] = 1;
+      }
+    }
+    @Override public void reduce( CollectDomain that ) { Utils.or(_dom,that._dom); }
+    public int[] domain() {
+      int cnt = 0;
+      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) cnt++;
+      int[] dom = new int[cnt];
+      cnt=0;
+      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) dom[cnt++] = i+_ymin;
+      return dom;
     }
   }
 }
