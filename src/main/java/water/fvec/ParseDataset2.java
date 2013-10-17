@@ -577,12 +577,7 @@ public final class ParseDataset2 extends Job {
       return this;
     }
     public FVecDataOut close(Futures fs){
-      int i = 0;
-      for(NewChunk nv:_nvs){
-        if(i++ == 1049)
-          System.out.println("haha");
-        nv.close(_cidx, fs);
-      }
+      for(NewChunk nv:_nvs)nv.close(_cidx, fs);
       return this;
     }
     public FVecDataOut nextChunk(){
