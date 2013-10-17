@@ -1663,6 +1663,8 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
+
+        verboseprint("\nGBM first result:", dump_json(a))
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nGBM result:", dump_json(a))
@@ -2008,6 +2010,9 @@ class H2O(object):
             args += ['-classpath', os.pathsep.join(entries), 'water.Boot']
         else:
             args += ["-jar", self.get_h2o_jar()]
+
+        if beta_features:
+            args += ["-beta"]
 
         # H2O should figure it out, if not specified
         # DON"T EVER USE on multi-machine...h2o should always get it right, to be able to run on hadoop 
