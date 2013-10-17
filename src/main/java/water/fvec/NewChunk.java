@@ -245,7 +245,7 @@ public class NewChunk extends Chunk {
         } else if( sz <= 65535 ) { // 2 bytes
           int bias = 0, off = 0;
           if(sz >= 32767){
-            bias = 32768;
+            bias = 32767;
             off = C2SChunk.OFF;
           }
           byte [] bs = MemoryManager.malloc1((_len << 1) + off);
@@ -334,8 +334,10 @@ public class NewChunk extends Chunk {
     if( xmin != 0 ) {
       if(lemax-lemin < 255 ) // Fits in scaled biased byte?
         return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
-      if(lemax-lemin < 65535 )
-        return new C2SChunk( bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
+      if(lemax-lemin < 65535 ) { // we use signed 2B short, add -32k to the bias!
+        long bias = 32767 + lemin;
+        return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
+      }
       return new C4FChunk( bufF(2));
     }
     // Compress column into a byte
