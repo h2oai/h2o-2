@@ -1,6 +1,6 @@
 import unittest, sys, time
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print
+import h2o, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_glm
 
 print "Assumes you ran ../../cloud.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
