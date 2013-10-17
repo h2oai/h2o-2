@@ -19,15 +19,14 @@ test.histogram <- function (con, path, key) {
       
       r.hist <- hist(r.data[,i], breaks=h2o.breaks, right=FALSE)
       # regularize
-      A <- h2o.counts / sum(h2o.counts)
-      B <- r.hist$counts / sum(r.hist$counts)
-      
-      Binv <- 1 / B
-      Binv[is.nan(Binv)] <- 0
-      chisq <- (A - B) %*% ((A - B) * B)
-      logging(cat("chisq = ", chisq, "\n"))
-      expect_true(chisq < 0.01)
-      
+#      A <- h2o.counts / sum(h2o.counts)
+#      B <- r.hist$counts / sum(r.hist$counts)
+#      Binv <- 1 / B
+#      Binv[is.nan(Binv)] <- 0
+#      chisq <- (A - B) %*% ((A - B) * B)
+#      logging(cat("chisq = ", chisq, "\n"))
+#      expect_true(chisq < 0.0001)
+      expect_true(max(h2o.counts - r.hist$counts) <= 1)
       logging(cat("Column ", i, " in ", path," successful.\n"))
     } else {
       logging(cat("Column ", i, " in ", path," skipped.\n"))
@@ -39,4 +38,3 @@ test.histogram(H2Ocon, '../../smalldata/cars.csv', 'cars.hex')
 test.histogram(H2Ocon, '../../smalldata/pca_test/USArrests.csv', 'usarrests.hex')
 test.histogram(H2Ocon, '../../smalldata/iris/iris22.csv', 'iris.hex')
 test.histogram(H2Ocon, '../../smalldata/test/arit.csv', 'arit.hex')
-
