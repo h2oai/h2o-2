@@ -76,8 +76,8 @@ public class NeuralNet extends Model implements water.Job.Progress {
   @API(help = "Confusion matrix")
   public long[][] confusion_matrix;
 
-  private Vec[] _train, _valid;
-  private Vec _trainResp, _validResp;
+  private transient Vec[] _train, _valid;
+  private transient Vec _trainResp, _validResp;
 
   public Layer[] build(Vec[] vecs, Vec response) {
     Layer[] ls = new Layer[hidden.length + 2];
