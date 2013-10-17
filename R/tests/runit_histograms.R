@@ -18,7 +18,16 @@ test.histogram <- function (con, path, key) {
       h2o.breaks <- h2o.hists[[i]]$breaks
       
       r.hist <- hist(r.data[,i], breaks=h2o.breaks, right=FALSE)
-      expect_that(h2o.counts, equals(r.hist$counts, tolerance=0.001))
+      # regularize
+      A <- h2o.counts / sum(h2o.counts)
+      B <- r.hist$counts / sum(r.hist$counts)
+      
+      Binv <- 1 / B
+      Binv[is.nan(Binv)] <- 0
+      chisq <- (A - B) %*% ((A - B) * B)
+      logging(cat("chisq = ", chisq, "\n"))
+      expect_true(chisq < 0.01)
+      
       logging(cat("Column ", i, " in ", path," successful.\n"))
     } else {
       logging(cat("Column ", i, " in ", path," skipped.\n"))
