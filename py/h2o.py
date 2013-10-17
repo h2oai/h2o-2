@@ -1066,7 +1066,9 @@ class H2O(object):
             'data_key': data_key,
             }
         browseAlso = kwargs.get('browseAlso', False)
-        params_dict.update(kwargs)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans_apply', print_params=True)
+
         print "\nKMeansApply params list:", params_dict
         a = self.__do_json_request('KMeansApply.json', timeout=timeoutSecs, params=params_dict)
 
@@ -1096,7 +1098,8 @@ class H2O(object):
             'model_key': model_key,
             }
         browseAlso = kwargs.get('browseAlso', False)
-        params_dict.update(kwargs)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans_score', print_params=True)
         print "\nKMeansScore params list:", params_dict
         a = self.__do_json_request('KMeansScore.json', timeout=timeoutSecs, params=params_dict)
 
@@ -1111,35 +1114,54 @@ class H2O(object):
 
     # additional params include: cols=.
     # don't need to include in params_dict it doesn't need a default
-    def kmeans(self, key, key2=None,
+    # FIX! cols should be renamed in test for fvec
+    def kmeans(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         # defaults
         # KMeans has more params than shown here
         # KMeans2 has these params?
         # max_iter=100&max_iter2=1&iterations=0
-        params_dict = {
-            'initialization': 'Furthest',
-            'k': 1,
-            'source_key': key,
-            'destination_key': None,
-            }
+        if beta_features:
+            params_dict = {
+                'initialization': 'Furthest',
+                'k': 1,
+                'source': key,
+                'destination_key': key2,
+                'seed': None,
+                'ignored_cols_by_name': None,
+                'max_iter': None,
+                'normalize': None,
+                }
+        else:
+            params_dict = {
+                'initialization': 'Furthest',
+                'k': 1,
+                'source_key': key,
+                'destination_key': key2,
+                'seed': None,
+                'cols': None,
+                'max_iter': None,
+                'normalize': None,
+                }
+
         if key2 is not None: params_dict['destination_key'] = key2
         browseAlso = kwargs.get('browseAlso', False)
-        params_dict.update(kwargs)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans', print_params=True)
         algo = '2/KMeans2' if beta_features else 'KMeans'
 
         print "\n%s params list:" % algo, params_dict
         a = self.__do_json_request(algo + '.json', 
             timeout=timeoutSecs, params=params_dict)
 
-        # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request']!='Progress':
-            print dump_json(a)
-            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
-
         if noPoll:
             return a
+
+        # Check that the response has the right Progress url it's going to steer us to.
+        if 'response' not in a or a['response']['redirect_request']!='Progress':
+            print dump_json(a)
+            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
 
         a = self.poll_url(a['response'],
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
