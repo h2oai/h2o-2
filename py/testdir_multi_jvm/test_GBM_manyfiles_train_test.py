@@ -10,6 +10,8 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
@@ -109,10 +111,17 @@ class Basic(unittest.TestCase):
             # if not response:
             #     response = num_cols - 1
             response = 378
+
+            # randomly ignore a bunch of cols, just to make it go faster
+            x = range(num_cols)
+            del x[response]
+            ignored_cols_by_name = random.sample(x, 300)
+
             print "Using the same response %s for train and test (which should have a output value too)" % response
 
             ntrees = 10
-            for max_depth in [5,10,20,40]:
+            # ignore 200 random cols (not the response)
+            for max_depth in [5, 40]:
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,
@@ -120,7 +129,7 @@ class Basic(unittest.TestCase):
                     'max_depth': max_depth,
                     'min_rows': 10,
                     'response': response,
-                    'ignored_cols_by_name': None,
+                    'ignored_cols_by_name': ignored_cols_by_name,
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
