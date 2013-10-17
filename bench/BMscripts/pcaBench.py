@@ -15,6 +15,7 @@ def doPCA(fs, folderPath):
     benchmarkLogging = ['cpu','disk', 'network', 'iostats']
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
+        #if f != 'AirlinesTrain1x': continue
         h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='PCA'+f+'.csv')
         print "Doing PCA on ", f
         overallWallStart = time.time()
