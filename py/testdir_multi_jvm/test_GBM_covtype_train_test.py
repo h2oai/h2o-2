@@ -75,7 +75,8 @@ class Basic(unittest.TestCase):
             x = range(inspect['num_cols'])
             del x[response]
             ntrees = 2
-            for max_depth in [5,10,20,40]:
+            # fails with 40
+            for max_depth in [40, 5]:
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,

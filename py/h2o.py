@@ -1663,6 +1663,8 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
+
+        verboseprint("\nGBM first result:", dump_json(a))
         a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nGBM result:", dump_json(a))
