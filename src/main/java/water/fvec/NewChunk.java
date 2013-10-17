@@ -259,12 +259,7 @@ public class NewChunk extends Chunk {
     }
     // If the data was set8 as doubles, we (weanily) give up on compression and
     // just store it as a pile-o-doubles.
-    if( _ds != null ) {
-      for( int i=0; i<_len; i++ ) // Attempt to inject all doubles into floats
-        if( (double)(float)_ds[i] != _ds[i] )
-          return new C8DChunk(bufF(3));
-      return new C4FChunk(bufF(2));
-    }
+    if( _ds != null )return chunkF();
 
     // Look at the min & max & scaling.  See if we can sanely normalize the
     // data in some fixed-point format.
@@ -318,6 +313,7 @@ public class NewChunk extends Chunk {
     }
 
 
+    final boolean fpoint = xmin < 0 || _min < Long.MIN_VALUE || _max > Long.MAX_VALUE;
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like
     // {1.2,23,0.34} then is normalized to always be represented with 2 digits
@@ -329,38 +325,36 @@ public class NewChunk extends Chunk {
     // uniform, so we scale up the largest lmax by the largest scale we need
     // and if that fits in a byte/short - then it's worth compressing.  Other
     // wise we just flip to a float or double representation.
-    if(overflow || ((xmin != 0) && floatOverflow || -35 > xmin || xmin > 35))
-      return new C8DChunk(bufF(3));
-    if( xmin != 0 ) {
+    if(overflow || fpoint && floatOverflow || -35 > xmin || xmin > 35)
+      return chunkF();
+    if( fpoint ) {
       if(lemax-lemin < 255 ) // Fits in scaled biased byte?
         return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
       if(lemax-lemin < 65535 ) { // we use signed 2B short, add -32k to the bias!
         long bias = 32767 + lemin;
         return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
       }
-      return new C4FChunk( bufF(2));
-    }
+      return chunkF();
+    } // else an integer column
     // Compress column into a byte
-    if( 0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
+    if(xmin == 0 &&  0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
       return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
-      if( 0 <= lemin && lemax < 255 ) // Span fits in an unbiased byte?
+      if(0 <= _min && _max < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
-      return new C1SChunk( bufX(lemin,0,C1SChunk.OFF,0),(int)lemin,1);
+      return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10i(xmin));
     }
 
     // Compress column into a short
     if( lemax-lemin < 65535 ) {               // Span fits in a biased short?
-      if( Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
+      if( xmin == 0 && Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
         return new C2Chunk( bufX(0,0,C2Chunk.OFF,1));
       int bias = (int)(lemin-(Short.MIN_VALUE+1));
-      return new C2SChunk( bufX(bias,0,C2SChunk.OFF,1),bias,1);
+      return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),bias,DParseTask.pow10i(xmin));
     }
-
     // Compress column into ints
-    if( Integer.MIN_VALUE < lemin && lemax <= Integer.MAX_VALUE )
+    if(Integer.MIN_VALUE < _min && _max <= Integer.MAX_VALUE )
       return new C4Chunk( bufX(0,0,0,2));
-
     return new C8Chunk( bufX(0,0,0,3));
   }
 
@@ -395,24 +389,27 @@ public class NewChunk extends Chunk {
   }
 
   // Compute a compressed float buffer
-  private byte[] bufF( int log ) {
-    byte[] bs = new byte[_len<<log];
-    for( int i=0; i<_len; i++ ) {
-      if(isNA(i)){
-        switch( log ) {
-          case 2: UDP.set4f(bs,(i<<2), Float .NaN); break;
-          case 3: UDP.set8d(bs,(i<<3), Double.NaN); break;
-        }
-      } else {
-        double le = _ds == null ? _ls[i]*DParseTask.pow10(_xs[i]) : _ds[i];
-        switch( log ) {
-        case 2: UDP.set4f(bs,(i<<2), (float)le); break;
-        case 3: UDP.set8d(bs,(i<<3),        le); break;
-        default: H2O.fail();
-        }
-      }
+  private Chunk chunkF() {
+    if(_ds == null){
+      double [] ds = MemoryManager.malloc8d(_len);
+      for(int i = 0; i < _len; ++i)
+        ds[i] = isNA(i)?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]);
+      _ds = ds; // can't assign to _ds bfr cause it would mess with isNA
     }
-    return bs;
+    boolean isFloat = true;
+    for(double d:_ds)isFloat = isFloat && ((float)d == d);
+    byte [] bs;
+    if(isFloat){ // fits loss-lessly into a float
+      bs = MemoryManager.malloc1(_len*4);
+      for(int i = 0; i < _len; ++i)
+        UDP.set4f(bs, 4*i, (float)_ds[i]);
+      return new C4FChunk(bs);
+    } else { // have to use double
+      bs = MemoryManager.malloc1(_len*8);
+      for(int i = 0; i < _len; ++i)
+        UDP.set8d(bs, 8*i, _ds[i]);
+      return new C8DChunk(bs);
+    }
   }
 
   // Compute compressed boolean buffer
