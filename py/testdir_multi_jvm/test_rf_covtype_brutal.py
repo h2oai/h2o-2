@@ -7,7 +7,6 @@ USE_LOCAL=True
 # RF train parameters
 paramsTrainRF = { 
             'use_non_local_data' : 1,
-            'clear_confusion_matrix' : 1,
             'ntree'      : 10, 
             'depth'      : 300,
             'parallel'   : 1, 
@@ -26,7 +25,6 @@ paramsScoreRF = {
             'response_variable': None,
             'timeoutSecs': 60,
             'out_of_bag_error_estimate': 0, 
-            'clear_confusion_matrix' : 1,
         }
 
 trainDS1 = {

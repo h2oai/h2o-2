@@ -18,7 +18,6 @@ paramsTrainRF = {
             # 'strata_samples': '1=99,2=99,3=99,4=99,5=99,6=99,7=99',
             'use_non_local_data' : 1,
             'sample': 66,
-            'clear_confusion_matrix' : 1,
             'ntree'      : 10, 
             'depth'      : 300,
             'parallel'   : 1, 
@@ -38,7 +37,6 @@ paramsScoreRF = {
             'response_variable': None,
             'timeoutSecs': 300,
             'out_of_bag_error_estimate': 0, 
-            'clear_confusion_matrix' : 1,
         }
 
 trainDS1 = {

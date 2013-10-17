@@ -1257,7 +1257,7 @@ class H2O(object):
             params = {
                 "src_key": key,
                 "offset": offset,
-                "view": view
+                # view doesn't exist for 2. let it be passed here from old tests but not used
                 }
         else:
             params = {
@@ -1465,7 +1465,6 @@ class H2O(object):
             'ntree': None,
             'class_weights': None,
             'response_variable': None,
-            'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
