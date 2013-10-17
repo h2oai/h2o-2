@@ -305,6 +305,14 @@ public class Utils {
     return (T[]) ArrayUtils.remove(a, i);
   }
 
+  public static byte[] or(byte[] a, byte[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
+    return a;
+  }
+  public static byte[] add(byte[] a, byte[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
   public static int[] add(int[] a, int[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
@@ -529,5 +537,24 @@ public class Utils {
     PrintWriter printWriter = new PrintWriter(result);
     t.printStackTrace(printWriter);
     return result.toString();
+  }
+
+  public static int[] mapping(int[] dom) {
+    int max = dom[dom.length-1];
+    int[] result = new int[max+1];
+    for (int i=0; i<result.length; i++) result[i] = -1; // not used fields
+    for (int i=0; i<dom.length; i++) result[dom[i]] = i;
+    return result;
+  }
+  public static String[] toStringMap(int[] dom) {
+    String[] result = new String[dom.length];
+    for (int i=0; i<dom.length; i++) result[i] = String.valueOf(dom[i]);
+    return result;
+  }
+  public static int[] compose(int[] first, int[] transf) {
+    for (int i=0; i<first.length; i++) {
+      if (first[i]!=-1) first[i] = transf[first[i]];
+    }
+    return first;
   }
 }

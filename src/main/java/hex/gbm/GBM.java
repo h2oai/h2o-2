@@ -1,6 +1,5 @@
 package hex.gbm;
 
-import java.util.Arrays;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.UndecidedNode;
@@ -114,7 +113,7 @@ public class GBM extends SharedTreeModelBuilder {
         }
 
       } else {                  // Regression
-        
+
         Chunk tr = chk_tree(chks,0); // Prior tree sums
         Chunk wk = chk_work(chks,0); // Predictions
         for( int row=0; row<ys._len; row++ )
@@ -253,7 +252,7 @@ public class GBM extends SharedTreeModelBuilder {
     // ESL2, page 387.  Step 2b iii.  Compute the gammas, and store them back
     // into the tree leaves.  Includes learn_rate.
     //    gamma_i_k = (nclass-1)/nclass * (sum res_i / sum (|res_i|*(1-|res_i|)))
-    // For regression: 
+    // For regression:
     //    gamma_i_k = sum res_i / count(res_i)
     GammaPass gp = new GammaPass(ktrees,leafs).doAll(fr);
     double m1class = _nclass > 1 ? (double)(_nclass-1)/_nclass : 1.0; // K-1/K
