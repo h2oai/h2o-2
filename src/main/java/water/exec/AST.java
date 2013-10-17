@@ -1,8 +1,7 @@
 package water.exec;
 
 import java.text.*;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 import water.*;
 import water.fvec.*;
 
@@ -12,7 +11,7 @@ import water.fvec.*;
 
 // --------------------------------------------------------------------------
 abstract public class AST {
-  enum Type { fun, ary, dbl };
+  enum Type { fun, ary, dbl }
   final Type _t;
   AST( Type t ) { _t = t; }
   static AST parseCXExpr(Exec2 E ) {
@@ -30,9 +29,9 @@ abstract public class AST {
     AST ast;
     // Simple paren expression
     if( E.peek('(') )  return E.xpeek(')',E._x,parseCXExpr(E));
-    if( (ast = ASTKey.parse(E)) != null ) return ast;
-    if( (ast = ASTNum.parse(E)) != null ) return ast;
-    if( (ast = ASTApply.parsePrefix(E)) != null ) return ast;
+    if( (ast = ASTId   .parse(E)) != null ) return ast;
+    if( (ast = ASTNum  .parse(E)) != null ) return ast;
+    if( (ast = ASTApply.parse(E)) != null ) return ast;
     return null;
   }
 
@@ -55,21 +54,22 @@ class ASTSlice extends AST {
     super(Type.ary); _ast = ast; _cols = cols; _rows = rows; 
   }
   static AST parse(Exec2 E ) {
+    int x = E._x;
     AST ast = parseExpr(E);
     if( ast == null ) return null;
-    if( ast._t != Type.ary ) return ast; // No slice allowed unless known frame
     if( !E.peek('[') ) return ast; // No slice
+    if( ast._t == null ) ast = ((ASTId)ast).setOnUse(E,Type.ary);
+    if( ast._t != Type.ary ) E.throwErr("Not an ary",x);
     if(  E.peek(']') ) return ast; // [] ===> same as no slice
-    int x;
-    AST rows=E.xpeek(',',(x=E._x),parseCXExpr(E));
-    AST cols=E.xpeek(']',(x=E._x),parseCXExpr(E));
+    AST rows=E.xpeek(',',E._x,parseCXExpr(E));
+    AST cols=E.xpeek(']',E._x,parseCXExpr(E));
     return new ASTSlice(ast,cols,rows);
   }
 
   @Override boolean isPure() {
     return _ast.isPure() && 
-      (_cols==null ? true : _cols.isPure()) &&
-      (_rows==null ? true : _rows.isPure());
+      (_cols==null || _cols.isPure()) &&
+      (_rows==null || _rows.isPure());
   }
   @Override void exec(Env env) {
     int sp = env._sp;
@@ -78,7 +78,7 @@ class ASTSlice extends AST {
     Frame fr=env.popFrame();
   
     // Column subselection?
-    int cols[] = null;
+    int cols[];
     if( _cols != null ) {
       _cols.exec(env);
       assert sp+1==env._sp;
@@ -91,8 +91,7 @@ class ASTSlice extends AST {
 
       // Decide if we're a toss-out or toss-in list
       int mode=0;
-      for( int i=0; i<cols.length; i++ ) {
-        int c = cols[i];
+      for( int c : cols ) {
         if( c==0 ) continue;
         if( mode==0 ) mode=c;
         if( (mode^c) < 0 ) 
@@ -152,21 +151,31 @@ class ASTSlice extends AST {
 }
 
 // --------------------------------------------------------------------------
-class ASTKey extends AST {
-  final Key _key;
-  ASTKey( Key key ) { super(Type.ary); _key=key; }
+class ASTId extends AST {
+  final String _id;
+  final int _depth;
+  ASTId( Type t, String id, int d ) { super(t); _id=id; _depth=d; }
   // Parse a valid H2O Frame Key, or return null;
-  static ASTKey parse(Exec2 E) { 
+  static ASTId parse(Exec2 E) { 
     int x = E._x;
     String id = E.isID();
     if( id == null ) return null;
-    Key key = Key.make(id);
-    Iced ice = UKV.get(key);
-    if( ice==null || !(ice instanceof Frame) ) { E._x = x; return null; }
-    return new ASTKey(key);
+    for( int d=E._env.size()-1; d >=0; d-- ) {
+      HashMap<String,Type> vars = E._env.get(d);
+      if( !vars.containsKey(id) ) continue;
+      return new ASTId(vars.get(id),id,d);
+    }
+    E._x=x;
+    return null;
   }
-  @Override public String toString() { return _key.toString(); }
-  @Override void exec(Env env) { env.push((Frame)(DKV.get(_key).get())); }
+  ASTId setOnUse( Exec2 E, Type t ) {
+    assert _t == null;          // Currently an untyped variable
+    HashMap<String,Type> vars = E._env.get(_depth);
+    assert vars.containsKey(_id) && vars.get(_id)==null;
+    vars.put(_id,t);            // Set type on 1st use
+    return new ASTId(t,_id,_depth);
+  }
+  @Override public String toString() { return _id; }
 }
 
 // --------------------------------------------------------------------------
@@ -176,13 +185,13 @@ class ASTAssign extends AST {
   ASTAssign( AST lhs, AST eval ) { super(Type.ary); _lhs=lhs; _eval=eval; }
   // Parse a valid LHS= or return null
   static ASTAssign parse(Exec2 E, AST ast) { 
+    int x = E._x;
     if( !E.peek('=') ) return null;
     AST ast2=ast;
     if( (ast instanceof ASTSlice) ) // Peek thru slice op
       ast2 = ((ASTSlice)ast)._ast;
     // Must be a simple in-scope ID
-    if( !(ast2 instanceof ASTKey) )  return null;
-    int x = E._x;
+    if( !(ast2 instanceof ASTId) ) E.throwErr("Can only assign to ID (or slice)",x);
     AST eval = parseCXExpr(E);
     return new ASTAssign(ast,eval);
   }
@@ -231,34 +240,24 @@ class ASTApply extends AST {
     for( int i=1; i<args.length; i++ ) {
       if( op._vtypes[i] == Type.fun ) {
         System.out.println(op._vars[i]+" isa? "+args[i]);
-        
         throw H2O.unimpl();     // Deep function type checking
       }
+      if( args[i]._t == null )
+        args[i] = ((ASTId)args[i]).setOnUse(E,op._vtypes[i]);
       if( op._vtypes[i] == args[i]._t ) continue; // both scalar or both array
       if( op._vtypes[i] != Type.dbl )
         E.throwErr("Mismatched arg: '"+op._vars[i]+"': "+op._vtypes[i]+" vs "+args[i]._t,x);
       // Expansion needed, will insert in a later pass
     }
-
     return new ASTApply(args);
   }
 
   // Parse a prefix operator
-  static AST parsePrefix(Exec2 E) { 
+  static AST parse(Exec2 E) { 
     int x = E._x;
     ASTOp op = ASTOp.parse(E);
     if( op == null ) return null;
     if( !E.peek('(') ) return null; // Plain op, no prefix application
-    // Fixed arg count
-    if( op._vars!=null ) {
-      AST args[] = new AST[op._vars.length];
-      args[0] = op;
-      for( int i=1; i<args.length-1; i++ )
-        args[i] = E.xpeek(',',E._x,parseCXExpr(E));
-      args[args.length-1]=parseCXExpr(E);
-      return E.xpeek(')',E._x,ASTApply.make(args,E,x));
-    }
-    // Variable arg cnt
     AST args[] = new AST[] { op, null };
     int i=1;
     if( !E.peek(')') ) {
@@ -269,7 +268,12 @@ class ASTApply extends AST {
         if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);
       }
     }
-    return make(op.set_varargs_types(Arrays.copyOf(args,i)),E,x);
+    args = Arrays.copyOf(args,i);
+    if( op._vars!=null ) {      // Check fixed-arg length
+      if( i != op._vars.length ) 
+        E.throwErr("Expected "+op._vars.length+" args but found "+i,x);
+    } else op.set_varargs_types(args);
+    return make(args,E,x);
   }
 
   // Parse an infix boolean operator
@@ -289,7 +293,7 @@ class ASTApply extends AST {
   }
   @Override public String toString() { return _args[0].toString()+"()"; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) { 
-    indent(sb,d).append("apply(").append(_args[0]).append(")\n");
+    _args[0].toString(sb,d).append("()\n");
     for( int i=1; i<_args.length-1; i++ )
       _args[i].toString(sb,d+1).append('\n');
     return _args[_args.length-1].toString(sb,d+1);
@@ -353,15 +357,17 @@ abstract class ASTOp extends AST {
     ASTOp op = OPS.get(id);
     if( op != null ) return op;
     E._x = x;                 // Roll back, no parse happened
+    // Attempt a user-mode function parse
+    if( (op = ASTFunc.parseFcn(E)) != null ) return op;
     return null;
   }
   AST[] set_varargs_types(AST args[]) { throw H2O.fail(); }
+
   @Override void exec(Env env) { env.push(this); }
   void apply(Env env) {
     System.out.println("Apply not impl for: "+getClass());
   }
 }
-
 
 abstract class ASTUniOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x"};
@@ -405,5 +411,53 @@ class ASTCat extends ASTOp {
     types[0] = Type.ary;        // Always array-type result
     args[0] = new ASTCat(vars,types);
     return args;
+  }
+}
+
+// --------------------------------------------------------------------------
+class ASTFunc extends ASTOp {
+  AST _body;
+  ASTFunc( String vars[], Type vtypes[], AST body ) { super(vars,vtypes); _body = body; }
+  @Override String opStr() { return "fun"; }
+  static ASTOp parseFcn(Exec2 E ) {
+    int x = E._x;
+    String id = E.isID();
+    if( id == null ) return null;
+    if( !"function".equals(id) ) { E._x = x; return null; }
+    E.xpeek('(',E._x,null);
+    LinkedHashMap<String,Type> vars = new LinkedHashMap<String,Type>();
+    if( !E.peek(')') ) {
+      while( true ) {
+        x = E._x;
+        id = E.isID();
+        if( id == null ) E.throwErr("Invalid id",x);
+        if( vars.containsKey(id) ) E.throwErr("Repeated argument",x);
+        vars.put(id,null);        // Add unknown-type variable to new vars list
+        if( E.peek(')') ) break;
+        E.xpeek(',',E._x,null);
+      }
+    }
+    E.xpeek('{',E._x,null);
+    E._env.push(vars);
+    AST body = E.xpeek('}',E._x,parseCXExpr(E));
+    E._env.pop();
+    // The body should force the types.  Build a type signature.
+    String xvars[] = new String[vars.size()+1];
+    Type   types[] = new Type  [vars.size()+1];
+    xvars[0] = "fun";
+    types[0] = body._t;         // Return type of body
+    int i=1;
+    for( String id2 : vars.keySet() ) {
+      xvars[i] = id2;
+      types[i] = vars.get(id2);
+      if( types[i]==null ) System.out.println("Warning: var "+id2+" failed to get typed.");
+      i++;
+    }
+    return new ASTFunc(xvars,types,body);
+  }  
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
+    indent(sb,d).append(this).append(") {\n");
+    _body.toString(sb,d+1).append("\n");
+    return indent(sb,d).append("}");
   }
 }

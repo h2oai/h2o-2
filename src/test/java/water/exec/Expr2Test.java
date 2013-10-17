@@ -1,8 +1,6 @@
 package water.exec;
 
-import static org.junit.Assert.*;
 import org.junit.Test;
-import water.exec.*;
 import java.io.File;
 import water.*;
 import water.fvec.*;
@@ -15,7 +13,7 @@ public class Expr2Test extends TestUtil {
     try {
       File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
-      Frame fr = ParseDataset2.parse(dest,new Key[]{fkey});
+      ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
 
       checkStr("1.23");         // 1.23
@@ -37,6 +35,8 @@ public class Expr2Test extends TestUtil {
       checkStr("min(h.hex,1+2)");
       checkStr("isNA(h.hex)");
       checkStr("h.hex[ncol(h.hex),nrow(h.hex)]");
+      checkStr("1=2");
+      checkStr("(h.hex+1)=2");
       checkStr("h.hex[nrow(h.hex=1),]");
       checkStr("h.hex[2,3]=4");
       checkStr("h.hex[2,]=h.hex[7,]");
@@ -45,6 +45,12 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[c(1,3,5),]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
+      checkStr("function(=){x+1}(2)");
+      checkStr("function(x,=){x+1}(2)");
+      checkStr("function(x,x){x+1}(2)");
+      checkStr("function(x){x[]}(h.hex)");
+      checkStr("function(x){x[]}(2)");
+      checkStr("function(x){x+1}(2)");
 
       // Needed examples: 
       // (1) Replace NAs with imputed mean

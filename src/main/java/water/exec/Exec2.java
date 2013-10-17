@@ -1,10 +1,7 @@
 package water.exec;
 
-import java.text.*;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 import water.*;
-import water.fvec.*;
 
 /** Parse & execute a generic R-like string, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -12,6 +9,8 @@ import water.fvec.*;
 public class Exec2 {
   // Parse a string, execute it & return a Frame.
   // Basic types: Frame, Scalar, Function
+  // Functions are 1st class; every argument typed one of the above.
+  // Assignment is always to in-scope variables only.
 
   // Big Allocation: all expressions are eval'd in a context where a large temp
   // is available, and all allocations are compatible with that temp.  Linear-
@@ -21,12 +20,11 @@ public class Exec2 {
   // Grammar:
   //   statements := cxexpr ; statements
   //   cxexpr :=                   // COMPLEX expr 
-  //           id = cxexpr         // temp typed ptr assignment; dropped when scope exits
-  //                               // If temp exists in outer scope, it is shadowed
+  //           slice               // (subset) R-value
+  //           slice = cxexpr      // L-value: IDs or slices of IDs; exprs must have equal shapes; 
+  //                               // does NOT define a new name
   //           id := cxexpr        // Deep-copy; otherwise same as above
-  //           slice = cxexpr      // Subset L-value; exprs must have equal shapes; does NOT define a new name
-  //           slice               // Subset R-value
-  //           slice op2 cxexpr    // apply(op2,expr,cxexpr); ....optional INFIX notation
+  //           slice op2 cxexpr    // apply(op2,slice,cxexpr); ....optional INFIX notation
   //           slice0 ? cxexpr : cxexpr // exprs must have *compatible* shapes
   //   slice := 
   //           expr
@@ -35,28 +33,15 @@ public class Exec2 {
   //           expr[expr1,expr1]   // row & col slice (row FIRST, col SECOND)
   //           expr[,expr1]        // col-only slice
   //           expr[expr1,]        // row-only slice
-  //   expr :=                     // expr is a Frame, a 2-d table
-  //           num                 // Scalars, treated as 1x1
+  //   expr :=
+  //           ( cxexpr )          // Ordering evaluation
   //           id                  // any visible var; will be typed
   //           key                 // A Frame, dimensions stored in K/V already
+  //           num                 // Scalars, treated as 1x1
+  //           op(cxexpr...)       // Prefix function application
   //           function(v0,v1,v2) { statements; ...v0,v1,v2... } // 1st-class lexically scoped functions
-  //           ( cxexpr )          // Ordering evaluation
-  //           ifelse(expr0,cxexpr,cxexpr)  // exprs must have *compatible* shapes
-  //           apply(op,cxexpr,...)// Apply function op to args
-  //           op(cxexpr...)
-
-  //   func1:= {id -> expr0}     // user function; id will be a scalar in expr0
-  //   op1  := func1 sgn sin cos ...any unary op...
-  //   func2:= {id,id -> expr0}  // user reduction function; id will be a scalar in expr0
-  //   op2  := func2 min max + - * / % & |    ...any boolean op...
-  //   func3:= {id -> expr1}     // id will be an expr1
-  //
-  // Example: Compute mean for each col:
-  //    means = reduce1(+,fr)/nrows(fr)
-  // Example: Replace NA's with 0:
-  //    {x -> isna(x) ? 0 : x}(fr)
-  // Example: Replace NA's with mean:
-  //    apply1({col -> mean=apply1(+,col)/nrows(col); apply1({x->isna(x)?mean:x},col) },fr)
+  //   op  := sgn sin cos ...any unary op...
+  //   op  := min max + - * / % & |    ...any boolean op...
 
   public static Env exec( String str ) throws IllegalArgumentException {
     System.out.println(str);
@@ -72,11 +57,22 @@ public class Exec2 {
     return env;
   }
 
-  private Exec2( String str ) { _str = str; _buf = str.toCharArray(); }
   // Simple parser state
   final String _str;
-  final char _buf[];
-  int _x;
+  final char _buf[];            // Chars from the string
+  int _x;                       // Parse pointer
+  Stack<LinkedHashMap<String,AST.Type>> _env;
+  private Exec2( String str ) {
+    _str = str;
+    _buf = str.toCharArray();
+    _env = new Stack();
+    // Preload the global environment from existing Frames
+    LinkedHashMap<String,AST.Type> global = new LinkedHashMap();
+    for( Value v : H2O.values() )
+      if( v.type()==TypeMap.FRAME )
+        global.put(v._key.toString(),AST.Type.ary);
+    _env.push(global);
+  }
   
   AST parse() { 
     AST ast = AST.parseCXExpr(this); 
@@ -111,8 +107,7 @@ public class Exec2 {
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
     if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
-    if( isDigit(c) ) return true;
-    return isLetter(c);
+    return isDigit(c) || isLetter(c);
   }
 
   // Return an ID string, or null if we get weird stuff or numbers.  Valid IDs
