@@ -30,8 +30,7 @@ public class AppendableVec extends Vec {
   }
 
   public AppendableVec( Key key) {
-    super(key, null);
-    assert key != null;
+    super(key, (long[])null);
     _espc = new long[4];
     _chunkTypes = new byte[4];
   }

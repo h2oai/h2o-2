@@ -59,11 +59,12 @@ public class Exec2 {
   //    apply1({col -> mean=apply1(+,col)/nrows(col); apply1({x->isna(x)?mean:x},col) },fr)
 
   public static Env exec( String str ) throws IllegalArgumentException {
+    System.out.println(str);
     AST ast = new Exec2(str).parse();
     System.out.println(ast.toString(new StringBuilder(),0).toString());
     Env env = new Env();
     try {
-      ast.exec(env); 
+      //ast.exec(env); 
     } catch( RuntimeException t ) {
       env.remove();
       throw t;
