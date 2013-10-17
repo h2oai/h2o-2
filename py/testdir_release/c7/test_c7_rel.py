@@ -63,7 +63,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             'beta_epsilon': 1.0E-4,
             }
 
-        timeoutSecs = 1800
+        timeoutSecs = 3600
         start = time.time()
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
         elapsed = time.time() - start
