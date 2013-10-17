@@ -5,6 +5,7 @@
 h2oBuild=
 benchmarks="benchmarks"
 DATE=`date +%Y-%m-%d`
+archive="Archive"
 
 function ALL() {
     echo "Running PCA benchmark..."
@@ -16,50 +17,63 @@ function ALL() {
     echo "Running GLM benchmark..."
     GLM
     wait
-    #echo "Running GLM2..."
-    #GLM2
-    #wait
+    echo "Running GLM2..."
+    GLM2
+    wait
     echo "Running GBM..."
     GBM
     wait
-    #echo "Running GBMGrid..."
-    #GBMGrid
-    #wait
-    #echo "Running Big KMeans..."
-    #BigKMeans
-    #wait
+    echo "Running GBMGrid..."
+    GBMGrid
+    wait
+    echo "Running Big KMeans..."
+    BigKMeans
+    wait
 }
 
 function PCA() {
     pyScript="BMscripts/pcaBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
+    zip ${archive}/${h2oBuild}-${DATE}-PCA sandbox/
+    wait
+    rm -rf sandbox/
 }
 
 function KMeans() {
     pyScript="BMscripts/kmeansBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
+    zip ${archive}/${h2oBuild}-${DATE}-KMEANS sandbox/
+    wait
+    rm -rf sandbox/
 }
 
 function BigKMeans() {
-    #py_args="BMscripts/BigKMeansBench.py -cj ${JSON}"
-    #python "$py_args"
-    #echo ${py_args}
-    #wait
-    echo "No Big KMeans yet..."
+    pyScript="BMscripts/bigkmeansBench.py"
+    python ${pyScript} ${h2oBuild}
+    wait
+    zip ${archive}/${h2oBuild}-${DATE}-BIGKMEANS sandbox/
+    wait
+    rm sandbox/
 }
 
 function GLM() {
     pyScript="BMscripts/glmBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
+    zip ${archive}/${h2oBuild}-${DATE}-GLM sandbox/
+    wait
+    rm -rf sandbox/
 }
 
 function GLM2() {
     pyScript="BMscripts/glm2Bench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
+    zip ${archive}/${h2oBuild}-${DATE}-GLM2 sandbox/
+    wait
+    rm -rf sandbox/
 }
 
 
@@ -67,12 +81,18 @@ function GBM() {
     pyScript="BMscripts/gbmBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
+    zip ${archive}/${h2oBuild}-${DATE}-GBM sandbox/
+    wait
+    rm -rf sandbox/
 }
 
 function GBMGrid() {
     pyScript="BMscripts/gbmgridBench.py"
     python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
     wait
+    zip ${archive}/${h2oBuild}-${DATE}-GBMGrid sandbox/
+    wait
+    rm -rf sandbox/
 }
 
 
@@ -101,6 +121,7 @@ OPTIONS:
                    162        -- Runs benchmark(s) on single machine on 162 (100GB)
                    163        -- Runs benchmark(s) on single machine on 163 (100GB)
                    164        -- Runs benchmark(s) on single machine on 164 (100GB)
+ 		   161_163    -- Runs benchmark(s) on four machines 161-163 (133GB Each)
                    161_164    -- Runs benchmark(s) on four machines 161-164 (100GB Each)
 EOF
 }
@@ -141,33 +162,22 @@ fi
 #wait
 h2oBuild=`cat latest`
 
-if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"pcabench.csv" ]; then
- rm -f ${benchmarks}/${h2oBuild}/${DATE}/"pcabench.csv"
-fi
-
-if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"glmbench.csv" ]; then
- rm -f ${benchmarks}/${h2oBuild}/${DATE}/"glmbench.csv"
-fi
-
-if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"kmeansbench.csv" ]; then
- rm -f ${benchmarks}/${h2oBuild}/${DATE}/"kmeansbench.csv"
-fi
-
-if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"bigkmeansbench.csv" ]; then
- rm -f ${benchmarks}/${h2oBuild}/${DATE}/"bigkmeansbench.csv"
-fi
-
-if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"gbmbench.csv" ]; then
- rm -f ${benchmarks}/${h2oBuild}/${DATE}/"gbmbench.csv"
-fi
-
-if [ -a ${benchmarks}/${h2oBuild}/${DATE}/"glm2bench.csv" ]; then
- rm -f ${benchmarks}/${h2oBuild}/${DATE}/"glm2bench.csv"
-fi
-
 if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
-#rm latest
-$TEST
 
+if [ ! -d BMLogs/${h2oBuild}/${DATE} ]; then
+  mkdir -p BMLogs/${h2oBuild}/${DATE}
+fi
+
+$TEST
+wait
+
+#remove annoying useless files
+rm pytest*flatfile*
+rm benchmark*log
+
+#archive nohup
+if [ -a nohup.out ]; then
+    mv nohup.out ${archive}/${h2oBuild}-${DATE}-nohup.out
+fi
