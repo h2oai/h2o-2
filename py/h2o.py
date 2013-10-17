@@ -2009,6 +2009,9 @@ class H2O(object):
         else:
             args += ["-jar", self.get_h2o_jar()]
 
+        if beta_features:
+            args += ["-beta"]
+
         # H2O should figure it out, if not specified
         # DON"T EVER USE on multi-machine...h2o should always get it right, to be able to run on hadoop 
         # where it's not told
