@@ -38,12 +38,12 @@ class Basic(unittest.TestCase):
         # GBM (train)****************************************
         params = { 
             'destination_key': "GBMKEY",
-            'learn_rate':.1,
-            'ntrees':10,
-            'max_depth':8,
-            'min_rows':1,
-            'response':784,
-            'cols': range(200)
+            'learn_rate': .1,
+            'ntrees': 10,
+            'max_depth': 8,
+            'min_rows': 1,
+            'response': 784, # this mnist has output response (0-9) in last col
+            # 'ignore_cols_by_name': range(200, 783) # if we want it to go faster?
             }
 
         kwargs = params.copy()

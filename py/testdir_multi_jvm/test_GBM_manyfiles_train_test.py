@@ -77,7 +77,7 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (trainKey, trainKey, trainKey)
-            resultExec = h2o_cmd.runExec(expression=execExpr)
+            resultExec = h2o_cmd.runExec(expression=execExpr, timeoutSecs=180)
 
             # Parse (test)****************************************
             if h2o.beta_features:
@@ -98,7 +98,7 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (testKey, testKey, testKey)
-            resultExec = h2o_cmd.runExec(expression=execExpr)
+            resultExec = h2o_cmd.runExec(expression=execExpr, timeoutSecs=180)
 
             # Note ..no inspect of test data here..so translate happens later?
 
@@ -117,7 +117,7 @@ class Basic(unittest.TestCase):
                     'max_depth': max_depth,
                     'min_rows': 10,
                     'response': response,
-                    # 'ignored_cols': 
+                    'ignored_cols_by_name': None,
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
