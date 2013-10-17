@@ -98,10 +98,8 @@ public class Summary2 extends Iced {
             minmax = k;
       }
       // update histogram
-
-      int binIdx = _isInt ? (int)(((long)val - (long)start)/(long)binsz)
-              : (int)Math.floor((val - start)/binsz);
-      ++bins[binIdx];
+      long binIdx = Math.round((val-start)*1000000.0/binsz)/1000000;
+      ++bins[(int)binIdx];
     }
 
     /* sort min and max */
