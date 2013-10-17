@@ -165,42 +165,34 @@ public class KMeans2 extends Model implements Progress {
 
     @Override protected ArrayList<Class> getClasses() {
       ArrayList<Class> classes = super.getClasses();
-      if( _model != null )
-        classes.add(0, _model.getClass());
+      classes.add(0, _model.getClass());
       return classes;
     }
 
     @Override protected Object getTarget() {
-      if( _model != null )
-        return _model;
-      return super.getTarget();
+      return _model;
     }
 
     @Override protected void init() {
       super.init();
-      if( _model != null ) {
-        _model._selfKey = destination_key;
-        String sourceArg = input("source");
-        if( sourceArg != null )
-          _model._dataKey = Key.make(sourceArg);
-        _model._names = source.names();
-        _model._domains = source.domains();
-      }
+      _model._selfKey = destination_key;
+      String sourceArg = input("source");
+      if( sourceArg != null )
+        _model._dataKey = Key.make(sourceArg);
+      _model._names = source.names();
+      _model._domains = source.domains();
     }
 
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       super.writeJSONFields(bb);
-      if( _model != null ) {
-        bb.put1(',');
-        _model.writeJSONFields(bb);
-      }
+      bb.put1(',');
+      _model.writeJSONFields(bb);
       return bb;
     }
 
     @Override public FieldDoc[] toDocField() {
       FieldDoc[] fs = super.toDocField();
-      if( _model != null )
-        fs = Utils.append(fs, _model.toDocField());
+      fs = Utils.append(fs, _model.toDocField());
       return fs;
     }
   }

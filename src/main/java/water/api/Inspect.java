@@ -2,6 +2,7 @@ package water.api;
 
 import hex.DGLM.GLMModel;
 import hex.DPCA.PCAModel;
+import hex.NeuralNet.NeuralNetTrain;
 import hex.*;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.*;
@@ -149,6 +150,8 @@ public class Inspect extends Request {
       return GBMModelView.redirect(this, key);
     if( f instanceof GLMValidation)
       return GLMValidationView.redirect(this, key);
+    if(f instanceof NeuralNet)
+      return ((NeuralNet) f).redirect(this, key);
     if(f instanceof GridSearch)
       return ((GridSearch) f).redirect();
     return Response.error("No idea how to display a "+f.getClass());

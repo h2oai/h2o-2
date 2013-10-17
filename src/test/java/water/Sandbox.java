@@ -21,10 +21,9 @@ public class Sandbox {
     public static void userMain(String[] args) throws Exception {
       localCloud(2, true, args);
 
-      Frame train = TestUtil.parseFrame("smalldata/mnist/train.csv.gz");
-      Frame test = TestUtil.parseFrame("smalldata/mnist/test.csv.gz");
-      new Sample07_NeuralNet().train(train, test);
+      //new Sample07_NeuralNet_Mnist().run();
 
+      mnist();
       // covtype();
       // airlines();
 

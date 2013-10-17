@@ -1,6 +1,5 @@
 package hex;
 
-import hex.KMeans2.TrainJob;
 import hex.Layer.ChunkSoftmax;
 import hex.Layer.ChunksInput;
 import hex.Layer.Input;
@@ -8,13 +7,19 @@ import hex.Layer.Output;
 import hex.Layer.Softmax;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
+
+import java.util.ArrayList;
+
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.Job.ModelJob;
+import water.Job.ValidatedJob;
 import water.api.*;
+import water.api.DocGen.FieldDoc;
 import water.api.Request.API;
 import water.api.Request.Default;
+import water.api.RequestBuilders.Response;
 import water.fvec.*;
 import water.util.RString;
 import water.util.Utils;
@@ -76,12 +81,14 @@ public class NeuralNet extends Model implements water.Job.Progress {
   @API(help = "Confusion matrix")
   public long[][] confusion_matrix;
 
-  private transient Vec[] _train, _valid;
-  private transient Vec _trainResp, _validResp;
+  private transient Vec[] _vecs;
+  private transient Vec _response;
+  private transient boolean _classification;
+  private transient Frame _validation;
 
   public Layer[] build(Vec[] vecs, Vec response) {
     Layer[] ls = new Layer[hidden.length + 2];
-    ls[0] = new VecsInput(vecs);
+    ls[0] = new VecsInput(vecs, null);
     for( int i = 0; i < hidden.length; i++ ) {
       if( activation == Activation.Rectifier )
         ls[i + 1] = new Layer.Rectifier(hidden[i]);
@@ -90,8 +97,8 @@ public class NeuralNet extends Model implements water.Job.Progress {
       ls[i + 1]._rate = (float) rate;
       ls[i + 1]._l2 = (float) l2;
     }
-    if( response.domain() != null )
-      ls[ls.length - 1] = new VecSoftmax(response);
+    if( _classification )
+      ls[ls.length - 1] = new VecSoftmax(response, null);
     else {
       // TODO Gaussian?
     }
@@ -103,45 +110,51 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   public H2OCountedCompleter startTrain(final Job job) {
-    layers = build(_train, _trainResp);
+    layers = build(_vecs, _response);
     final Trainer trainer = new Trainer.MapReduce(layers, epochs, job.self());
 
     // Use a separate thread for monitoring (blocked most of the time)
     Thread thread = new Thread() {
       @Override public void run() {
-        long lastTime = System.nanoTime();
-        long lastItems = 0;
+        long start = System.nanoTime();
+        Frame[] adapted = null;
+        Vec[] valid = null;
+        Vec validResp = null;
+        if( _validation != null ) {
+          adapted = adapt(_validation, false, true);
+          valid = new Vec[adapted[0].vecs().length - 1];
+          System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
+          validResp = adapted[0].vecs()[adapted[0].vecs().length - 1];
+        }
         while( job == null || job.running() ) {
-          long time = System.nanoTime();
-          double delta = (time - lastTime) / 1e9;
-          long items = trainer.items();
-          int ps = (int) ((items - lastItems) / delta);
-          lastTime = time;
-          lastItems = items;
-
           long[][] cm = null;
-          if( _validResp.domain() != null )
-            cm = new long[_validResp.domain().length][_validResp.domain().length];
+          if( _classification ) {
+            int classes = layers[layers.length - 1]._units;
+            cm = new long[classes][classes];
+          }
+          Error trainE = eval(_vecs, _response, EVAL_ROW_COUNT, valid == null ? cm : null);
+          Error validE = null;
+          if( valid != null )
+            validE = eval(valid, validResp, EVAL_ROW_COUNT, cm);
 
-          VecsInput stats = (VecsInput) layers[0];
-          Error train = eval(new VecsInput(_train, stats), new VecSoftmax(_trainResp), EVAL_ROW_COUNT, cm);
-          Error valid = eval(new VecsInput(_valid, stats), new VecSoftmax(_validResp), EVAL_ROW_COUNT, cm);
+          double time = (System.nanoTime() - start) / 1e9;
           NeuralNet nn = NeuralNet.this;
-          nn.items = items;
-          nn.items_per_second = ps;
-          nn.train_classification_error = train.Value;
-          nn.train_sqr_error = train.SqrDist;
-          nn.validation_classification_error = valid.Value;
-          nn.validation_sqr_error = valid.SqrDist;
+          nn.items = trainer.items();
+          nn.items_per_second = (int) (items / time);
+          nn.train_classification_error = trainE.Value;
+          nn.train_sqr_error = trainE.SqrDist;
+          nn.validation_classification_error = validE != null ? validE.Value : Double.NaN;
+          nn.validation_sqr_error = validE != null ? validE.SqrDist : Double.NaN;
           nn.confusion_matrix = cm;
           UKV.put(nn._selfKey, nn);
-
           try {
             Thread.sleep(2000);
           } catch( InterruptedException e ) {
             throw new RuntimeException(e);
           }
         }
+        if( adapted != null && adapted[1] != null )
+          adapted[1].remove();
       }
     };
     trainer.start();
@@ -150,27 +163,21 @@ public class NeuralNet extends Model implements water.Job.Progress {
   }
 
   @Override public float progress() {
-    return 0.1f + Math.min(1, items / (float) (epochs * _train[0].length()));
+    return 0.1f + Math.min(1, items / (float) (epochs * _vecs[0].length()));
   }
 
   public Error eval(Frame frame, long n, long[][] cm) {
-    Frame[] frs = adapt(frame, false, true);
-    Error e = evalAdapted(frs[0], n, cm);
-    frs[1].remove();
-    return e;
-  }
-
-  public Error evalAdapted(Frame frame, long n, long[][] cm) {
     Vec[] vecs = frame.vecs();
-    Vec response = vecs[vecs.length - 1];
+    Vec resp = vecs[vecs.length - 1];
     vecs = Utils.remove(vecs, vecs.length - 1);
-    VecsInput stats = (VecsInput) layers[0];
-    Error e = eval(new VecsInput(vecs, stats), new VecSoftmax(response), n, cm);
-    return e;
+    return eval(vecs, resp, n, cm);
   }
 
-  public Error eval(Input input, Output output, long n, long[][] cm) {
-    return eval(layers, input, output, n, cm);
+  public Error eval(Vec[] vecs, Vec resp, long n, long[][] cm) {
+    return eval(layers, //
+        new VecsInput(vecs, (VecsInput) layers[0]), //
+        new VecSoftmax(resp, (VecSoftmax) layers[layers.length - 1]), //
+        n, cm);
   }
 
   public static Error eval(Layer[] ls, Input input, Output output, long n, long[][] cm) {
@@ -258,6 +265,11 @@ public class NeuralNet extends Model implements water.Job.Progress {
     return rs.toString();
   }
 
+  public Response redirect(Request req, Key key) {
+    String n = NeuralNetProgress.class.getSimpleName();
+    return new Response(Response.Status.redirect, req, -1, -1, n, "dst_key", key);
+  }
+
   public static class Error {
     double Value;
     double SqrDist;
@@ -267,9 +279,42 @@ public class NeuralNet extends Model implements water.Job.Progress {
     }
   }
 
-//  @Override public Job defaultTrainJob() {
-//    return new NeuralNetTrain();
-//  }
+  public static abstract class TrainJob extends ValidatedJob {
+    public Model _model;
+
+    @Override protected ArrayList<Class> getClasses() {
+      ArrayList<Class> classes = super.getClasses();
+      classes.add(0, _model.getClass());
+      return classes;
+    }
+
+    @Override protected Object getTarget() {
+      return _model;
+    }
+
+    @Override protected void init() {
+      super.init();
+      _model._selfKey = destination_key;
+      String sourceArg = input("source");
+      if( sourceArg != null )
+        _model._dataKey = Key.make(sourceArg);
+      _model._names = source.names();
+      _model._domains = source.domains();
+    }
+
+    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
+      super.writeJSONFields(bb);
+      bb.put1(',');
+      _model.writeJSONFields(bb);
+      return bb;
+    }
+
+    @Override public FieldDoc[] toDocField() {
+      FieldDoc[] fs = super.toDocField();
+      fs = Utils.append(fs, _model.toDocField());
+      return fs;
+    }
+  }
 
   public static class NeuralNetTrain extends TrainJob {
     public NeuralNetTrain() {
@@ -283,28 +328,23 @@ public class NeuralNet extends Model implements water.Job.Progress {
 
     @Override public Job fork() {
       init();
-//      start(new H2OEmptyCompleter());
-//      Vec[] vecs = _filteredSource.vecs().clone();
-//      reChunk(vecs);
-//      NeuralNet nn = (NeuralNet) _model;
-//      nn._train = new Vec[vecs.length - 1];
-//      System.arraycopy(vecs, 0, nn._train, 0, nn._train.length);
-//      nn._trainResp = vecs[vecs.length - 1];
-//      if( _filteredValidation == null ) {
-//        nn._valid = nn._train;
-//        nn._validResp = nn._trainResp;
-//      } else {
-//        vecs = _filteredValidation.vecs();
-//        nn._valid = new Vec[vecs.length - 1];
-//        System.arraycopy(vecs, 0, nn._valid, 0, nn._valid.length);
-//        nn._validResp = vecs[vecs.length - 1];
-//      }
-//      if( classification ) {
-//        nn._trainResp.asEnum();
-//        nn._validResp.asEnum();
-//      }
-//      UKV.put(destination_key, nn);
-//      nn.startTrain(this);
+      H2OCountedCompleter start = new H2OCountedCompleter() {
+        @Override public void compute2() {
+          NeuralNet nn = (NeuralNet) _model;
+          Vec[] vecs = Utils.add(_train, response);
+          reChunk(vecs);
+          nn._vecs = new Vec[_train.length];
+          System.arraycopy(vecs, 0, nn._vecs, 0, nn._vecs.length);
+          nn._response = vecs[vecs.length - 1];
+          nn._validation = validation;
+          nn._classification = classification;
+          UKV.put(destination_key, nn);
+          nn.startTrain(NeuralNetTrain.this);
+          tryComplete();
+        }
+      };
+      start(new H2OEmptyCompleter());
+      H2O.submitTask(start);
       return this;
     }
 
@@ -334,12 +374,15 @@ public class NeuralNet extends Model implements water.Job.Progress {
     @Override public boolean toHTML(StringBuilder sb) {
       NeuralNet model = UKV.get(dst_key);
       if( model != null ) {
+        String cmTitle = "Confusion Matrix";
         String trainC = String.format("%5.2f %%", 100 * model.train_classification_error);
-        String trainS = String.format("%.3f %%", model.train_sqr_error);
+        String trainS = String.format("%.3f", model.train_sqr_error);
         String validC = String.format("%5.2f %%", 100 * model.validation_classification_error);
-        String validS = String.format("%.3f %%", model.validation_sqr_error);
-        if( model._valid == model._train )
+        String validS = String.format("%.3f", model.validation_sqr_error);
+        if( Double.isNaN(model.validation_classification_error) ) {
           validC = validS = "N/A";
+          cmTitle += " (Training Data)";
+        }
         DocGen.HTML.section(sb, "Training classification error: " + trainC);
         DocGen.HTML.section(sb, "Training square error: " + trainS);
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
@@ -347,21 +390,14 @@ public class NeuralNet extends Model implements water.Job.Progress {
         DocGen.HTML.section(sb, "Items: " + model.items);
         DocGen.HTML.section(sb, "Items per second: " + model.items_per_second);
 
-        //class='btn btn-danger btn-mini'
-//        sb.append("<a href='Suspend.html?" + job + "'><button>Suspend</button></a>");
-//        sb.append("&nbsp;&nbsp;");
-//        sb.append("<a href='Resume.html?" + job + "'><button>Resume</button></a>");
-//        sb.append("\n");
-
         if( model.confusion_matrix != null ) {
-          String title = "Confusion Matrix (Training Data)";
           String[] classes = model.classNames();
           if( classes == null ) {
             classes = new String[model.confusion_matrix.length];
             for( int i = 0; i < model.confusion_matrix.length; i++ )
               classes[i] = "" + i;
           }
-          NeuralNetScore.confusion(sb, title, classes, model.confusion_matrix);
+          NeuralNetScore.confusion(sb, cmTitle, classes, model.confusion_matrix);
         }
       }
       return true;
@@ -402,13 +438,9 @@ public class NeuralNet extends Model implements water.Job.Progress {
 
     @Override protected void exec() {
       Frame[] frs = model.adapt(source, false, true);
-      Vec[] vecs = new Vec[frs[0].vecs().length - 1];
-      System.arraycopy(frs[0].vecs(), 0, vecs, 0, vecs.length);
-      Input input = new VecsInput(vecs);
-      Output output = new VecSoftmax(frs[0].vecs()[frs[0].vecs().length - 1]);
-      int classes = response.domain().length;
+      int classes = model.layers[model.layers.length - 1]._units;
       confusion_matrix = new long[classes][classes];
-      Error error = model.eval(input, output, max_rows, confusion_matrix);
+      Error error = model.eval(frs[0], max_rows, confusion_matrix);
       classification_error = error.Value;
       sqr_error = error.SqrDist;
       if( frs[1] != null )

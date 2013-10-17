@@ -58,12 +58,12 @@ public class NeuralNetIrisTest extends TestUtil {
     Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
     Vec labels = _train.vecs()[_train.vecs().length - 1];
     labels.asEnum();
-    VecsInput input = new VecsInput(data);
+    VecsInput input = new VecsInput(data, null);
     Layer[] ls = new Layer[3];
     ls[0] = input;
     ls[1] = new Layer.Tanh(7);
     ls[1]._rate = rate;
-    ls[2] = new VecSoftmax(labels);
+    ls[2] = new VecSoftmax(labels, null);
     ls[2]._rate = rate;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);

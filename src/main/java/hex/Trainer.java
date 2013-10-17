@@ -544,20 +544,22 @@ public abstract class Trainer {
       @Override public Value atomic(Value value) {
         assert _key.home();
         MapReduce trainer = MapReduce._instances.get(_key);
-        for( int y = 1; y < trainer._ls.length; y++ ) {
-          for( int i = 0; i < _w[y].length; i++ )
-            trainer._ls[y]._w[i] += _w[y][i];
-          for( int i = 0; i < _b[y].length; i++ )
-            trainer._ls[y]._b[i] += _b[y][i];
+        if( trainer != null ) {
+          for( int y = 1; y < trainer._ls.length; y++ ) {
+            for( int i = 0; i < _w[y].length; i++ )
+              trainer._ls[y]._w[i] += _w[y][i];
+            for( int i = 0; i < _b[y].length; i++ )
+              trainer._ls[y]._b[i] += _b[y][i];
+          }
+          for( int y = 1; y < trainer._ls.length; y++ ) {
+            _w[y] = trainer._ls[y]._w;
+            _b[y] = trainer._ls[y]._b;
+          }
+          for( int i = 0; i < _counts.length; i += 2 )
+            trainer._counts.addAndGet(_counts[i], _counts[i + 1]);
+          _counts = null;
+          _total = trainer.items();
         }
-        for( int y = 1; y < trainer._ls.length; y++ ) {
-          _w[y] = trainer._ls[y]._w;
-          _b[y] = trainer._ls[y]._b;
-        }
-        for( int i = 0; i < _counts.length; i += 2 )
-          trainer._counts.addAndGet(_counts[i], _counts[i + 1]);
-        _counts = null;
-        _total = trainer.items();
         return null;
       }
     }

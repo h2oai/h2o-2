@@ -175,10 +175,6 @@ public abstract class Layer extends Iced {
     float[] _subs, _muls;
     transient Chunk[] _chunks;
 
-    public VecsInput(Vec[] vecs) {
-      this(vecs, null);
-    }
-
     public VecsInput(Vec[] vecs, VecsInput stats) {
       super(stats != null ? stats._subs.length : expand(vecs));
       _vecs = vecs;
@@ -387,10 +383,10 @@ public abstract class Layer extends Iced {
     Vec _vec;
     int _min;
 
-    public VecSoftmax(Vec vec) {
-      super((int) (vec.max() - vec.min() + 1));
+    public VecSoftmax(Vec vec, VecSoftmax stats) {
+      super(stats != null ? stats._units : (int) (vec.max() - vec.min() + 1));
       _vec = vec;
-      _min = (int) vec.min();
+      _min = stats != null ? stats._min : (int) vec.min();
     }
 
     @Override int label() {
