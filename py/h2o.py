@@ -1257,7 +1257,9 @@ class H2O(object):
             params = {
                 "src_key": key,
                 "offset": offset,
-                "view": view
+                # allow view as param here until we sort out the transition
+                # to fvec, but don't pass it to h2o
+                # "view": None
                 }
         else:
             params = {
@@ -1465,7 +1467,6 @@ class H2O(object):
             'ntree': None,
             'class_weights': None,
             'response_variable': None,
-            'clear_confusion_matrix': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
 
@@ -2016,6 +2017,9 @@ class H2O(object):
             args += [
                 '--ip=%s' % self.addr,
                 ]
+
+        # always?
+        args += ["-beta"]
 
         # Need to specify port, since there can be multiple ports for an ip in the flatfile
         if self.port is not None:

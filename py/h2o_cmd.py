@@ -310,9 +310,6 @@ def infoFromSummary(summaryResult, noPrint=False):
         histogram = columns['histogram']
         bin_size = histogram['bin_size']
         bin_names = histogram['bin_names']
-        if not noPrint:
-            for b in bin_names:
-                print "bin_name:", b
 
         bins = histogram['bins']
         nbins = histogram['bins']
