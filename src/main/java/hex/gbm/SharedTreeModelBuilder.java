@@ -339,11 +339,15 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       Frame frs[] = model.adapt(validation,true);
       Frame adapValidation = frs[0]; // adapted validation dataset
       // Adapt vresponse to original response
-      vresponse = vresponse.adaptTo(response, true);
+      vresponse = _nclass > 1 ? vresponse.adaptTo(response, true) : vresponse;
       // Dump in the prob distribution
       adapValidation.add("response",vresponse);
-      for( int i=0; i<_nclass; i++ )
-        adapValidation.add("Work"+i,res.vecs()[i+1]);
+      if (_nclass>1) { // Classification
+        for( int i=0; i<_nclass; i++ )
+          adapValidation.add("Work"+i,res.vecs()[i+1]);
+      } else { // Regression
+        adapValidation.add("Work"+0,res.vecs()[0]);
+      }
       // Compute a CM & MSE
       doAll(adapValidation);
       // Remove the extra adapted Vecs
