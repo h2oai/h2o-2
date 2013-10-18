@@ -295,10 +295,8 @@ class ASTApply extends AST {
     // a scalar and passed an array will be auto-expanded.
     for( int i=1; i<args.length; i++ ) {
       Type ot = op._vtypes[i];
-      if( ot == Type.fun ) {
-        System.out.println(op._vars[i]+" isa? "+args[i]);
-        throw H2O.unimpl();     // Deep function type checking
-      }
+      if( ot == Type.fun )      // Deep function type checking
+        checkType((ASTOp)args[i],op._ftypes[i],E);
       if( args[i]._t == null )
         args[i] = ((ASTId)args[i]).setOnUse(E,ot);
       if( ot == args[i]._t ) continue; // both scalar or both array
@@ -307,6 +305,18 @@ class ASTApply extends AST {
       // Expansion needed, will insert in a later pass
     }
     return new ASTApply(args);
+  }
+
+  // Check function signatures
+  static void checkType( ASTOp a, ASTOp b, Exec2 E ) {
+    if( a._vtypes.length != b._vtypes.length )
+      E.throwErr("Mismatched function argument count: "+a+" vs "+b,E._x);
+    for( int i=0; i<a._vtypes.length; i++ ) {
+      if( a._vtypes[i] != b._vtypes[i] )
+        E.throwErr("Mismatched "+(i==0?"return type":"function arg#"+i)+": "+a._vtypes[i]+" vs "+b._vtypes[i],E._x);
+      if( a._vtypes[i] == Type.fun )
+        throw H2O.unimpl();
+    }
   }
 
   // Parse a prefix operator
@@ -389,15 +399,28 @@ abstract class ASTOp extends AST {
 
     // Variable argcnt
     put(new ASTCat ());
-    put(new ASTByCol());
+    put(new ASTReduce());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
   // All fields are final, because functions are immutable
   final String _vars[];         // Variable names
   final Type   _vtypes[];       // Every arg is typed
-  ASTOp( String vars[], Type vtypes[] ) { 
-    super(Type.fun);  _vars = vars;  _vtypes = vtypes;
+  final ASTOp  _ftypes[];       // Function types recursively have types
+  ASTOp( String vars[], Type vtypes[] ) { this(vars,vtypes,null); }
+  ASTOp( String vars[], Type vtypes[], ASTOp ftypes[] ) { 
+    super(Type.fun);  _vars = vars;  _vtypes = vtypes;  _ftypes=ftypes;
+    assert checkFcn() : this;
+  }
+
+  // Check that all function-typed args have full types themselves
+  private boolean checkFcn() {
+    if( _vtypes == null ) return true;
+    for( int i=0; i<_vtypes.length; i++ ) 
+      if( _vtypes[i]==Type.fun ) 
+        if( _ftypes==null || _ftypes[i]==null )
+          return false;
+    return true;
   }
 
   abstract String opStr();
@@ -455,11 +478,12 @@ class ASTMul  extends ASTBinOp { @Override String opStr(){ return "*"  ;} double
 class ASTDiv  extends ASTBinOp { @Override String opStr(){ return "/"  ;} double op(double d0, double d1) { return d0/d1;}}
 class ASTMin  extends ASTBinOp { @Override String opStr(){ return "min";} double op(double d0, double d1) { return Math.min(d0,d1);}}
 
-class ASTByCol extends ASTOp {
-  static final String VARS[] = new String[]{ "", "ary","op2"};
-  static final Type   TYPES[]= new Type  []{ Type.ary, Type.ary, Type.fun };
-  ASTByCol( ) { super(VARS,TYPES); }
-  @Override String opStr(){ return "byCol";}
+class ASTReduce extends ASTOp {
+  static final String VARS[] = new String[]{ "", "op2", "ary"};
+  static final Type   TYPES[]= new Type  []{ Type.ary, Type.fun, Type.ary };
+  static final ASTOp  FTYPE[]= new ASTOp []{ null, new ASTPlus(), null };
+  ASTReduce( ) { super(VARS,TYPES,FTYPE); }
+  @Override String opStr(){ return "Reduce";}
 }
 
 
@@ -520,7 +544,7 @@ class ASTFunc extends ASTOp {
     types[0] = body._t;         // Return type of body
     for( int j=1; j<xvars.length; j++ ) {
       types[j] = vars.get(xvars[j]);
-      if( types[j]==null ) System.out.println("Warning: var "+xvars[j]+" failed to get typed.");
+      //if( types[j]==null ) System.out.println("Warning: var "+xvars[j]+" failed to get typed.");
     }
     return new ASTFunc(xvars,types,body);
   }  
