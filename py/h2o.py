@@ -981,9 +981,17 @@ class H2O(object):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
 
-        # rfView doesn't have the redirect_request and redirect_request_args
-        url = self.__url(response['redirect_request'])
-        params = response['redirect_request_args']
+        # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
+        # look for 'response'..if not there, assume the rev 2
+
+        if 'redirect_url' in response:
+            url = self.__url(response['redirect_url'] + ".json")
+            params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+
+        else:
+            url = self.__url(response['response']['redirect_request'])
+            params = response['response']['redirect_request_args']
+
         # no need to recreate the string for messaging, in the loop..
         paramsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
 
@@ -1076,8 +1084,7 @@ class H2O(object):
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O kmeans redirect is not Progress. KMeansApply json response precedes.')
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nKMeansApply result:", dump_json(a))
 
@@ -1163,8 +1170,7 @@ class H2O(object):
             print dump_json(a)
             raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
 
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("\n%s result:" % algo, dump_json(a))
@@ -1195,8 +1201,7 @@ class H2O(object):
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O kmeans_grid redirect is not Progress. KMeans json response precedes.')
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nKMeansGrid result:", dump_json(a))
 
@@ -1255,8 +1260,7 @@ class H2O(object):
         # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
         # no noise if None
         verboseprint(algo + ' noise:', noise)
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
 
@@ -1519,14 +1523,14 @@ class H2O(object):
 
         # add a fake redirect_request and redirect_request_args
         # to the RF response, to make it look like everyone else
-        response = a['response']
-        response['redirect_request'] = whichUsed + ".json"
-        response['redirect_request_args'] = params_dict
+        fake_a = {}
+        fake_a['response'] = a['response']
+        fake_a['response']['redirect_request'] = whichUsed + ".json"
+        fake_a['response']['redirect_request_args'] = params_dict
 
         # no redirect_response in rfView? so need to pass params here
         # FIX! do we have to do a 2nd if it's done in the first?
-        rfView = self.poll_url(response,
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
 
@@ -1687,7 +1691,7 @@ class H2O(object):
 
 
         verboseprint("\nGBM first result:", dump_json(a))
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nGBM result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
@@ -1713,7 +1717,7 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCA result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
@@ -1741,7 +1745,7 @@ class H2O(object):
         if 'response' not in a:
             raise Exception("Can't tell where to go..No 'response' key in this polled json response: %s" % a)
 
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCAScore result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
@@ -1772,7 +1776,7 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCAScore result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
@@ -1889,8 +1893,7 @@ class H2O(object):
         if noPoll:
             return a
 
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLM done:", dump_json(a))
@@ -1916,8 +1919,7 @@ class H2O(object):
         if noPoll:
             return a
 
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLMGrid done:", dump_json(a))
