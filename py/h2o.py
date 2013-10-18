@@ -1850,12 +1850,26 @@ class H2O(object):
         parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict = {
-            'family': 'binomial',
-            'key': key,
-            'y': 1,
-            'link': 'familyDefault',
-        }
+        
+        if not beta_features:
+            params_dict = {
+                'family': 'binomial',
+                'key': key,
+                'y': 1,
+                'link': 'familyDefault',
+            }
+        else:
+            params_dict =      {'vresponse'          : None,
+                                'ignored_cols'       : None,
+                                'family'             : None,
+                                'lambda'             : None,
+                                'alpha'              : None,
+                                'n_folds'            : None,
+                                'case_mode'          : None,
+                                'case_val'           : None, 
+                                'destination_key'    : None,
+                               } 
+
         params_dict.update(kwargs)
         print "\n"+parentName, "params list:", params_dict
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)

@@ -7,94 +7,36 @@ benchmarks="benchmarks"
 DATE=`date +%Y-%m-%d`
 archive="Archive"
 
-function ALL() {
-    echo "Running PCA benchmark..."
-    PCA
-    wait
-    echo "Running KMeans benchmark..."
-    KMeans
-    wait
-    echo "Running GLM benchmark..."
-    GLM
-    wait
-    echo "Running GLM2..."
-    GLM2
-    wait
-    echo "Running GBM..."
-    GBM
-    wait
-    echo "Running GBMGrid..."
-    GBMGrid
-    wait
-    echo "Running Big KMeans..."
-    BigKMeans
-    wait
+function all {
+    doAlgo pca
+    doAlgo glm
+    doAlgo kmeans
+    doAlgo gbm
+    doAlgo glm2
+    doAlgo gbmgrid
+    doAlgo bigkmeans
 }
 
-function PCA() {
-    pyScript="BMscripts/pcaBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
+function doAlgo {
+    #echo "Clear caches!"
+    #sudo bash -c "sync; echo 3 > /proc/sys/vm/drop_caches"
+
+    echo "Running $1 benchmark..."
+
+    pyScript="BMscripts/"$1"Bench.py"
+
+    if [ ! $1 = "bigkmeans" ]
+    then
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild}
+        wait
+    else
+        python ${pyScript} ${h2oBuild}
+        wait
+    fi
+    zip -r  ${archive}/${h2oBuild}-${DATE}-$1 sandbox/
     wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-PCA sandbox/
-    wait
-    rm -rf sandbox/
+    rm -rf sandbox/ 
 }
-
-function KMeans() {
-    pyScript="BMscripts/kmeansBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-KMEANS sandbox/
-    wait
-    rm -rf sandbox/
-}
-
-function BigKMeans() {
-    pyScript="BMscripts/bigkmeansBench.py"
-    python ${pyScript} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-BIGKMEANS sandbox/
-    wait
-    rm sandbox/
-}
-
-function GLM() {
-    pyScript="BMscripts/glmBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-GLM sandbox/
-    wait
-    rm -rf sandbox/
-}
-
-function GLM2() {
-    pyScript="BMscripts/glm2Bench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-GLM2 sandbox/
-    wait
-    rm -rf sandbox/
-}
-
-
-function GBM() {
-    pyScript="BMscripts/gbmBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-GBM sandbox/
-    wait
-    rm -rf sandbox/
-}
-
-function GBMGrid() {
-    pyScript="BMscripts/gbmgridBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-GBMGrid sandbox/
-    wait
-    rm -rf sandbox/
-}
-
 
 usage()
 {
@@ -108,12 +50,14 @@ OPTIONS:
    -h      Show this message
    -t      Run task:
                Choices are:
-                   ALL        -- Runs PCA, KMeans, GLM, and BigKMeans
-                   PCA        -- Runs PCA on Airlines/AllBedrooms/Covtype data
-                   KMeans     -- Runs KMeans on Airlines/AllBedrooms/Covtype data
-                   GLM        -- Runs logistic regression on Airlines/AllBedrooms/Covtype data
-                   GBM        -- Runs GBM on Airlines/AllBedrooms/Covtype data
-                   BigKMeans  -- Runs KMeans on 180 GB & 1TB of synthetic data
+                   all        -- Runs PCA, GLM, KMEANS, GBM, GLM2, GBMGRID, and BIGKMEANS
+                   pca        -- Runs PCA on Airlines/AllBedrooms/Covtype data
+                   kmeans     -- Runs KMeans on Airlines/AllBedrooms/Covtype data
+                   glm        -- Runs logistic regression on Airlines/AllBedrooms/Covtype data
+                   glm2       -- Runs logistic regression on Airlines/AllBedrooms/Covtype data
+                   gbm        -- Runs GBM on Airlines/AllBedrooms/Covtype data
+                   gbmgrid    -- Runs GBM grid search on Airlines/AllBedrooms/Covtype data
+                   bigkmeans  -- Runs KMeans on 180 GB & 1TB of synthetic data
                    
    -j      JSON config:
                Choices are:
@@ -121,7 +65,7 @@ OPTIONS:
                    162        -- Runs benchmark(s) on single machine on 162 (100GB)
                    163        -- Runs benchmark(s) on single machine on 163 (100GB)
                    164        -- Runs benchmark(s) on single machine on 164 (100GB)
- 		   161_163    -- Runs benchmark(s) on four machines 161-163 (133GB Each)
+         		   161_163    -- Runs benchmark(s) on four machines 161-163 (133GB Each)
                    161_164    -- Runs benchmark(s) on four machines 161-164 (100GB Each)
 EOF
 }
@@ -166,18 +110,20 @@ if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
 
-if [ ! -d BMLogs/${h2oBuild}/${DATE} ]; then
-  mkdir -p BMLogs/${h2oBuild}/${DATE}
+if [ ! $TEST = "all" ]
+then
+    echo "$TEST"
+    doAlgo $TEST
+else
+    $TEST
 fi
-
-$TEST
 wait
 
 #remove annoying useless files
-rm pytest*flatfile*
-rm benchmark*log
+#rm pytest*flatfile*
+#rm benchmark*log
 
 #archive nohup
-if [ -a nohup.out ]; then
-    mv nohup.out ${archive}/${h2oBuild}-${DATE}-nohup.out
-fi
+#if [ -a nohup.out ]; then
+#    mv nohup.out ${archive}/${h2oBuild}-${DATE}-nohup.out
+#fi

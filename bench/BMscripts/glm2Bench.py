@@ -70,7 +70,7 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
             glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=7200, **kwargs)
             glmTime   = time.time() - glmStart
             row.update( {'glmBuildTime'       : glmTime,
-                         'AverageAccuracy'    : glm['glm_model']['validations'][0]['err'],
+                         'AverageErrorOver10Folds'    : glm['glm_model']['validations'][0]['err'],
                         })
             
             glmScoreStart = time.time()

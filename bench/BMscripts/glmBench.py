@@ -13,6 +13,7 @@ header = ""
 
 def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex, row):
     benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+    benchmarkLogging = None
     date = '-'.join([str(z) for z in list(time.localtime())][0:3])
     for f in fs['train']:
         #h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='GLM'+f+'.csv')
@@ -76,7 +77,7 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
             glmTime   = time.time() - glmStart
             #h2o.cloudPerfH2O.message("=========END GLM========")
             row.update( {'glmBuildTime'       : glmTime,
-                         'AverageAccuracy'    : glm['GLMModel']['validations'][0]['err'],
+                         'AverageErrorOver10Folds'    : glm['GLMModel']['validations'][0]['err'],
                         })
             
             glmScoreStart = time.time()

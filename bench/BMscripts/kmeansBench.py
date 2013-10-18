@@ -13,6 +13,7 @@ build = ""
 
 def doKMeans(fs, folderPath): 
     benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+    benchmarkLogging = None
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
         #h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='KMeans'+f+'.csv')
@@ -36,7 +37,7 @@ def doKMeans(fs, folderPath):
             headerPathname = importFolderPath + "/" + hK
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
             headerKey = h2i.find_key(hK)
-            h#2o.cloudPerfH2O.message("=========PARSE TRAIN========")
+            #h2o.cloudPerfH2O.message("=========PARSE TRAIN========")
             trainParseWallStart = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
                 timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200, benchmarkLogging=benchmarkLogging)

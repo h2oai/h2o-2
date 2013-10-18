@@ -79,7 +79,7 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             #TODO(spencer): Uses jobs to poll for gbm completion
             h2o.beta_features = True
             #h2o.cloudPerfH2O.message("=========GBM========")
-            gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, benchmarkLogging=benchmarkLogging,**kwargs)
+            gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
             h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=120, retryDelaySecs=5)
             h2o.beta_features = False
             #h2o.cloudPerfH2O.message("=========END GBM========")
