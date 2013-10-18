@@ -14,9 +14,10 @@ header = ""
 
 def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
     benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+    benchmarkLogging = None
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
-        h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='GBM'+f+'.csv')
+        #h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='GBM'+f+'.csv')
         overallWallStart = time.time()
         date = '-'.join([str(x) for x in list(time.localtime())][0:3])
         gbmbenchcsv = 'benchmarks/'+build+'/'+date+'/gbmbench.csv'
@@ -38,12 +39,12 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
             headerKey =h2i.find_key(hK)
             trainParseWallStart = time.time()
-            h2o.cloudPerfH2O.message("=========PARSE TRAIN========")
+            #h2o.cloudPerfH2O.message("=========PARSE TRAIN========")
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
                 timeoutSecs=4800,retryDelaySecs=5,pollTimeoutSecs=4800, benchmarkLogging=benchmarkLogging)
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
-            h2o.cloudPerfH2O.message("=========END PARSE TRAIN========")
+            #h2o.cloudPerfH2O.message("=========END PARSE TRAIN========")
         
             inspect_train  = h2o.nodes[0].inspect(parseResult['destination_key'])
             inspect_test   = h2o.nodes[0].inspect(testFilehex)
@@ -77,11 +78,11 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             gbmStart  = time.time()
             #TODO(spencer): Uses jobs to poll for gbm completion
             h2o.beta_features = True
-            h2o.cloudPerfH2O.message("=========GBM========")
+            #h2o.cloudPerfH2O.message("=========GBM========")
             gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, benchmarkLogging=benchmarkLogging,**kwargs)
             h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=120, retryDelaySecs=5)
             h2o.beta_features = False
-            h2o.cloudPerfH2O.message("=========END GBM========")
+            #h2o.cloudPerfH2O.message("=========END GBM========")
             gbmTime   = time.time() - gbmStart
             row.update( {'gbmBuildTime'       : gbmTime,
                         })
@@ -96,7 +97,7 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
 if __name__ == '__main__':
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
-    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
+    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
  
     #AIRLINES
     airlinesTestParseStart      = time.time()

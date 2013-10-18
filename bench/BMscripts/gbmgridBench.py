@@ -14,6 +14,7 @@ header = ""
 
 def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response):
     benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+    benchmarkLogging = None
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
         overallWallStart = time.time()
