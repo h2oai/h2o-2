@@ -2489,7 +2489,7 @@ class RemoteH2O(H2O):
         # kbn: it should be dead now? want to make sure we don't have zombies
         # we should get a connection error. doing a is_alive subset.
         try:
-            gc_output = self.get_cloud()
+            gc_output = self.get_cloud(noExtraErrorCheck=True)
             raise Exception("get_cloud() should fail after we terminate a node. It isn't. %s %s" % (self, gc_output))
         except:
             return True
