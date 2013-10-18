@@ -71,6 +71,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeans Grid",                "Model");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2",                    "Model");
     Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
@@ -112,14 +113,12 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new Parse2());
       registerRequest(new Inspect2());
       registerRequest(new SummaryPage2());
-      registerRequest(new KMeans2());
       registerRequest(new hex.gbm.DRF());
       registerRequest(new hex.LR2());
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
