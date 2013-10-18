@@ -22,7 +22,7 @@ public class Script extends Request {
   public static final String DONE = "_done";
   public static volatile boolean _done;
 
-  @Override protected String href() {
+  @Override public String href() {
     return "script";
   }
 

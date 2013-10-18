@@ -9,6 +9,8 @@ import java.util.*;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import water.deploy.Node;
+import water.deploy.NodeVM;
 import water.fvec.*;
 import water.parser.ParseDataset;
 import water.util.Log;
@@ -18,6 +20,14 @@ import com.google.common.io.Closeables;
 public class TestUtil {
   private static int _initial_keycnt = 0;
 
+  protected static void startCloud(String [] args, int nnodes){
+    for( int i = 1; i < nnodes; i++ ) {
+      Node n = new NodeVM(args);
+      n.inheritIO();
+      n.start();
+    }
+    H2O.waitForCloudSize(nnodes);
+  }
   @BeforeClass
   public static void setupCloud() {
     H2O.main(new String[] {});
@@ -28,8 +38,16 @@ public class TestUtil {
   @AfterClass
   public static void checkLeakedKeys() {
     Job[] jobs = Job.all();
-    for(Job job : jobs)
-      assert job.end_time != 0 : ("UNFINSIHED JOB: " + job + " " + job.description + ", end_time = " + job.end_time);  // No pending job
+    boolean allDone = true;
+//    for(Job job : jobs)
+//      if(job.end_time != 0)allDone = false;
+//    if(!allDone){
+//      try {Thread.sleep(100);
+//      } catch( InterruptedException e ) {}
+//      jobs = Job.all();
+      for(Job job : jobs)
+        assert job.end_time != 0:("UNFINSIHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time);  // No pending job
+//    }
     DKV.remove(Job.LIST);         // Remove all keys
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();

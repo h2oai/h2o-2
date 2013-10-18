@@ -27,7 +27,7 @@ public abstract class Request2 extends Request {
     }
 
     public TypeaheadKey(Class type, boolean required) {
-      super(TypeaheadKeysRequest.class, "", required);
+      super(mapTypeahead(type), "", required);
       _type = type;
       setRefreshOnChange();
     }
@@ -58,7 +58,9 @@ public abstract class Request2 extends Request {
     }
 
     @Override protected String[] errors() {
-      return new String[] { "Key is not a " + _type.getSimpleName() };
+      if( _type != null )
+      	return new String[] { "Key is not a " + _type.getSimpleName() };
+      return super.errors();
     }
   }
 
@@ -177,48 +179,9 @@ public abstract class Request2 extends Request {
           // Create an Argument instance to reuse existing Web framework for now
           Argument arg = null;
 
-          // simplest case, filter is an Argument
+          // Simplest case, filter is an Argument
           if( Argument.class.isAssignableFrom(api.filter()) )
             arg = (Argument) newInstance(api);
-
-          // String
-          else if( f.getType() == String.class )
-            arg = new Str(f.getName(), (String) defaultValue);
-
-          // Real
-          else if( f.getType() == float.class || f.getType() == double.class ) {
-            double val = ((Number) defaultValue).doubleValue();
-            arg = new Real(f.getName(), api.required(), val, api.dmin(), api.dmax(), api.help());
-          }
-
-          // LongInt
-          else if( f.getType() == int.class || f.getType() == long.class ) {
-            long val = ((Number) defaultValue).longValue();
-            arg = new LongInt(f.getName(), api.required(), val, api.lmin(), api.lmax(), api.help());
-          }
-
-          // Bool
-          else if( f.getType() == boolean.class && api.filter()==Default.class ) {
-            boolean val = (Boolean) defaultValue;
-            arg = new Bool(f.getName(), val, api.help());
-          }
-
-          // Enum
-          else if( Enum.class.isAssignableFrom(f.getType()) ) {
-            Enum val = (Enum) defaultValue;
-            arg = new EnumArgument(f.getName(), val);
-          }
-
-          // Key
-          else if( f.getType() == Key.class ) {
-            TypeaheadKey t = new TypeaheadKey();
-            t._defaultValue = (Key) defaultValue;
-            arg = t;
-          }
-
-          // Auto-cast from key to Iced field
-          else if( Freezable.class.isAssignableFrom(f.getType()) && api.filter() == Default.class )
-            arg = new TypeaheadKey(f.getType(), api.required());
 
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
@@ -243,11 +206,68 @@ public abstract class Request2 extends Request {
               FrameClassVec response = classVecs.get(d._ref);
               boolean names = ((MultiVecSelect) d)._namesOnly;
               arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names);
-            } else if( DoClassBoolean.class.isAssignableFrom(api.filter()) ) {
+            } else if( d instanceof DoClassBoolean ) {
               FrameClassVec response = classVecs.get(d._ref);
-              arg = new ClassifyBool(f.getName(),response);
+              arg = new ClassifyBool(f.getName(), response);
             }
           }
+
+          // String
+          else if( f.getType() == String.class )
+            arg = new Str(f.getName(), (String) defaultValue);
+
+          // Real
+          else if( f.getType() == float.class || f.getType() == double.class ) {
+            double val = ((Number) defaultValue).doubleValue();
+            arg = new Real(f.getName(), api.required(), val, api.dmin(), api.dmax(), api.help());
+          }
+
+          // LongInt
+          else if( f.getType() == int.class || f.getType() == long.class ) {
+            long val = ((Number) defaultValue).longValue();
+            arg = new LongInt(f.getName(), api.required(), val, api.lmin(), api.lmax(), api.help());
+          }
+
+          // RSeq
+          else if( f.getType() == int[].class ) {
+            int[] val = (int[]) defaultValue;
+            double[] ds = null;
+            if( val != null ) {
+              ds = new double[val.length];
+              for( int i = 0; i < ds.length; i++ )
+                ds[i] = val[i];
+            }
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null), false);
+          }
+
+          // RSeq
+          else if( f.getType() == double[].class ) {
+            double[] val = (double[]) defaultValue;
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(val, null), false);
+          }
+
+          // Bool
+          else if( f.getType() == boolean.class && api.filter()==Default.class ) {
+            boolean val = (Boolean) defaultValue;
+            arg = new Bool(f.getName(), val, api.help());
+          }
+
+          // Enum
+          else if( Enum.class.isAssignableFrom(f.getType()) ) {
+            Enum val = (Enum) defaultValue;
+            arg = new EnumArgument(f.getName(), val);
+          }
+
+          // Key
+          else if( f.getType() == Key.class ) {
+            TypeaheadKey t = new TypeaheadKey();
+            t._defaultValue = (Key) defaultValue;
+            arg = t;
+          }
+
+          // Generic Freezable field
+          else if( Freezable.class.isAssignableFrom(f.getType()) )
+            arg = new TypeaheadKey(f.getType(), api.required());
 
           if( arg != null ) {
             arg._name = f.getName();
