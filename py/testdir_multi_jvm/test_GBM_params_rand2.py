@@ -156,9 +156,10 @@ class Basic(unittest.TestCase):
                 print h2o_gbm.pp_cm(cm)
 
                 # xList.append(ntrees)
-                xList.append(params['max_depth'])
-                eList.append(pctWrong)
-                fList.append(trainElapsed)
+                if 'max_depth' in params and params['max_depth']:
+                    xList.append(params['max_depth'])
+                    eList.append(pctWrong)
+                    fList.append(trainElapsed)
 
             h2o.beta_features = False
             xLabel = 'max_depth'
