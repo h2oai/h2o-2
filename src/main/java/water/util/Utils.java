@@ -676,4 +676,44 @@ public class Utils {
     }
     return first;
   }
+
+  private static final DecimalFormat default_dformat = new DecimalFormat("0.#####");
+  public static String pprint(double[][] arr){
+    return pprint(arr,default_dformat);
+  }
+  // pretty print Matrix(2D array of doubles)
+  public static String pprint(double[][] arr,DecimalFormat dformat) {
+    int colDim = 0;
+    for( double[] line : arr )
+      colDim = Math.max(colDim, line.length);
+    StringBuilder sb = new StringBuilder();
+    int max_width = 0;
+    int[] ilengths = new int[colDim];
+    Arrays.fill(ilengths, -1);
+    for( double[] line : arr ) {
+      for( int c = 0; c < line.length; ++c ) {
+        double d = line[c];
+        String dStr = dformat.format(d);
+        if( dStr.indexOf('.') == -1 ) dStr += ".0";
+        ilengths[c] = Math.max(ilengths[c], dStr.indexOf('.'));
+        int prefix = (d >= 0 ? 1 : 2);
+        max_width = Math.max(dStr.length() + prefix, max_width);
+      }
+    }
+    for( double[] line : arr ) {
+      for( int c = 0; c < line.length; ++c ) {
+        double d = line[c];
+        String dStr = dformat.format(d);
+        if( dStr.indexOf('.') == -1 ) dStr += ".0";
+        for( int x = dStr.indexOf('.'); x < ilengths[c] + 1; ++x )
+          sb.append(' ');
+        sb.append(dStr);
+        if( dStr.indexOf('.') == -1 ) sb.append('.');
+        for( int i = dStr.length() - Math.max(0, dStr.indexOf('.')); i <= 5; ++i )
+          sb.append('0');
+      }
+      sb.append("\n");
+    }
+    return sb.toString();
+  }
 }
