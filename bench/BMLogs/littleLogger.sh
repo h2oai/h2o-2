@@ -15,7 +15,7 @@ swapPerfFile=$1-`date +%Y-%m-%d`"-sisoPerf_"$mach".csv"
 
 #headers
 cpuheader='time(s)'
-head -n 33 /proc/stat | awk -F' ' 'OFS="," {print $1}' > tmpfile
+head -n 33 /proc/stat | tail -n 32 | awk -F' ' 'OFS="," {print $1}' > tmpfile
 cpuheader=$cpuheader,`./transpose.sh tmpfile`
 rm tmpfile
 memheader='time(s),MemTotal,MemFree,Cached,Writeback'
@@ -57,17 +57,52 @@ checkExists $netReceivePerfFile  $netheader
 checkExists $netTransmitPerfFile $netheader
 checkExists $swapPerfFile        $sisoheader
 
+for i in {0..34}
+do
+    PREVTOTALS[$i]=0
+done
+
 start=`date +%s`
-while [  1  ]; do
-    cat /proc/stat         | head -n 33      | awk -F' ' 'OFS="," {print $2}' > cpuTMP
-    cat /proc/stat         | head -n 33      | awk -F' ' 'OFS="," {print $5}' > idlTMP
-    cat /proc/stat         | head -n 33      | awk -F' ' 'OFS="," {print $6}' > iowTMP
+while :; do
+    a=1
+    for i in {0..34}
+    do
+      TOTALS[$i]=0
+    done
+    while read -a CPU
+    do a=$(($a+1));
+      if [ $a -eq 34 ]
+      then
+          break
+      fi
+      unset CPU[0]
+      CPU=("${CPU[@]}")
+      TOTAL=${TOTALS[$a]}
+      for t in "${CPU[@]}"; do ((TOTAL+=t)); done
+      TOTALS[$a]=$TOTAL
+      PREVTOTAL=${PREVTOTALS[$a]}
+      ((DIFF_TOTAL=$TOTAL-${PREVTOTAL:-0}))
+      OUT_INT_CPU=$((1000*(${CPU[0]} - ${PREV_CPUS[$a]:-0})/DIFF_TOTAL))
+      OUT_INT_IDLE=$((1000*(${CPU[3]} - ${PREV_IDLES[$a]:-0})/DIFF_TOTAL))
+      OUT_INT_IOWAIT=$((1000*(${CPU[4]} - ${PREV_IOWAITS[$a]:-0})/DIFF_TOTAL))
+      OUT_CPU[$a]=$((OUT_INT_CPU/10))
+      OUT_IDLE[$a]=$((OUT_INT_IDLE/10))
+      OUT_IOWAIT[$a]=$((OUT_INT_IOWAIT/10))
+      PREV_CPUS[$a]=${CPU[0]}
+      PREV_IDLES[$a]=${CPU[3]}
+      PREV_IOWAITS[$a]=${CPU[4]}
+    done </proc/stat
+    PREVTOTALS=( "${TOTALS[@]}" )
+    linecpu=`echo "${OUT_CPU[@]}" | tr ' ' ','` 
+    lineidle=`echo "${OUT_IDLE[@]}" | tr ' ' ','`
+    lineiowait=`echo "${OUT_IOWAIT[@]}" | tr ' ' ','`
+    echo $(( `date +%s` - $start )),$linecpu >> $cpuPerfFile
+    echo $(( `date +%s` - $start )),$lineidle >> $idlePerfFile
+    echo $(( `date +%s` - $start )),$lineiowait >> $iowaitPerfFile
+
     cat /proc/meminfo      | awk -F' ' 'OFS="," {gsub(":","", $1); print $2}' > memTMP
     grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > recTMP
     grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > traTMP
-    echoLine cpuTMP $start $cpuPerfFile 1
-    echoLine idlTMP $start $idlePerfFile 1
-    echoLine iowTMP $start $iowaitPerfFile 1
     echoLine memTMP $start $memPerfFile 1 1
     echoLine recTMP $start $netReceivePerfFile 0 
     echoLine traTMP $start $netTransmitPerfFile 0
@@ -78,3 +113,5 @@ while [  1  ]; do
     rm *TMP
     sleep 30
 done
+
+
