@@ -16,22 +16,24 @@ abstract public class AST {
   AST( Type t ) { _t = t; }
   static AST parseCXExpr(Exec2 E ) {
     AST ast2, ast = ASTSlice.parse(E);
-    if( ast == null ) return null;
+    if( ast == null ) return ASTAssign.parseNew(E);
     // Can find '=' between expressions
-    if( (ast2 = ASTAssign.parse  (E,ast)) != null ) return ast2;
+    if( (ast2 = ASTAssign.parse     (E,ast)) != null ) return ast2;
+    // Op followed by ()
+    if( (ast2 = ASTApply.parsePrefix(E,ast)) != null ) return ast2;
     // Can find an infix op between expressions
-    if( (ast2 = ASTApply.parseInfix(E,ast)) != null ) return ast2;
+    if( (ast2 = ASTApply.parseInfix (E,ast)) != null ) return ast2;
     if( E.peek('?') ) { throw H2O.unimpl(); } // infix trinary
-    return ast;
+    return ast;                 // Else a simple slice/expr
   }
 
-  static AST parseExpr(Exec2 E ) {
+  static AST parseVal(Exec2 E ) {
     AST ast;
     // Simple paren expression
     if( E.peek('(') )  return E.xpeek(')',E._x,parseCXExpr(E));
     if( (ast = ASTId   .parse(E)) != null ) return ast;
     if( (ast = ASTNum  .parse(E)) != null ) return ast;
-    if( (ast = ASTApply.parse(E)) != null ) return ast;
+    if( (ast = ASTOp   .parse(E)) != null ) return ast;
     return null;
   }
 
@@ -48,6 +50,32 @@ abstract public class AST {
 }
 
 // --------------------------------------------------------------------------
+class ASTStatement extends AST {
+  final AST[] _asts;
+  ASTStatement( AST[] asts ) { super(asts[asts.length-1]._t); _asts = asts; }
+  @Override boolean isPure() { throw H2O.unimpl(); }
+
+  static ASTStatement parse( Exec2 E ) {
+    ArrayList<AST> asts = new ArrayList<AST>();
+    while( true ) {
+      AST ast = parseCXExpr(E);
+      if( ast == null ) break;
+      asts.add(ast);
+      if( !E.peek(';') ) break;
+    }
+    if( asts.size()==0 ) return null;
+    return new ASTStatement(asts.toArray(new AST[asts.size()]));
+  }
+
+  @Override public String toString() { return ";;;"; }
+  public StringBuilder toString( StringBuilder sb, int d ) {
+    for( int i=0; i<_asts.length-1; i++ )
+      _asts[i].toString(sb,d+1).append(";\n");
+    return _asts[_asts.length-1].toString(sb,d+1);
+  }
+}
+
+// --------------------------------------------------------------------------
 class ASTSlice extends AST {
   final AST _ast, _cols, _rows; // 2-D slice of an expression
   ASTSlice( AST ast, AST cols, AST rows ) { 
@@ -55,7 +83,7 @@ class ASTSlice extends AST {
   }
   static AST parse(Exec2 E ) {
     int x = E._x;
-    AST ast = parseExpr(E);
+    AST ast = parseVal(E);
     if( ast == null ) return null;
     if( !E.peek('[') ) return ast; // No slice
     if( ast._t == null ) ast = ((ASTId)ast).setOnUse(E,Type.ary);
@@ -153,20 +181,33 @@ class ASTSlice extends AST {
 // --------------------------------------------------------------------------
 class ASTId extends AST {
   final String _id;
-  final int _depth;
+  final int _depth;             // Lexical depth of definition
   ASTId( Type t, String id, int d ) { super(t); _id=id; _depth=d; }
-  // Parse a valid H2O Frame Key, or return null;
+  // Parse a valid ID, or return null;
   static ASTId parse(Exec2 E) { 
     int x = E._x;
     String id = E.isID();
     if( id == null ) return null;
+    // Built-in ops parse as ops, not vars
+    if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
+    // See if pre-existing
     for( int d=E._env.size()-1; d >=0; d-- ) {
       HashMap<String,Type> vars = E._env.get(d);
       if( !vars.containsKey(id) ) continue;
       return new ASTId(vars.get(id),id,d);
     }
+    // Never see-before ID?  Treat as a bad parse
     E._x=x;
     return null;
+  }
+  // Parse a NEW valid ID, or return null;
+  static ASTId parseNew(Exec2 E) { 
+    int x = E._x;
+    String id = E.isID();
+    if( id == null ) return null;
+    // Built-in ops parse as ops, not vars
+    if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
+    return new ASTId(null,id,E.lexical_depth()-1);
   }
   ASTId setOnUse( Exec2 E, Type t ) {
     assert _t == null;          // Currently an untyped variable
@@ -182,7 +223,7 @@ class ASTId extends AST {
 class ASTAssign extends AST {
   final AST _lhs;
   final AST _eval;
-  ASTAssign( AST lhs, AST eval ) { super(Type.ary); _lhs=lhs; _eval=eval; }
+  ASTAssign( AST lhs, AST eval ) { super(lhs._t); _lhs=lhs; _eval=eval; }
   // Parse a valid LHS= or return null
   static ASTAssign parse(Exec2 E, AST ast) { 
     int x = E._x;
@@ -194,6 +235,21 @@ class ASTAssign extends AST {
     if( !(ast2 instanceof ASTId) ) E.throwErr("Can only assign to ID (or slice)",x);
     AST eval = parseCXExpr(E);
     return new ASTAssign(ast,eval);
+  }
+  // Parse a valid LHS= or return null - for a new variable
+  static ASTAssign parseNew(Exec2 E) { 
+    int x = E._x;
+    ASTId id = ASTId.parseNew(E);
+    if( id == null ) return null;
+    if( !E.peek('=') ) { E._x=x; return null; }
+    assert id._t==null;         // It is a new var so untyped
+    assert id._depth == E.lexical_depth()-1; // And will be set in the current scope
+    x = E._x;
+    AST eval = parseCXExpr(E);
+    id = new ASTId(eval._t,id._id,id._depth);
+    // Extend the local environment by the new name
+    E._env.get(id._depth).put(id._id,id._t);
+    return new ASTAssign(id,eval);
   }
   boolean isPure() { return false; }
   @Override public String toString() { return "="; }
@@ -238,25 +294,26 @@ class ASTApply extends AST {
     // Check that all arguments match, or can be auto-expanded.  Any op taking
     // a scalar and passed an array will be auto-expanded.
     for( int i=1; i<args.length; i++ ) {
-      if( op._vtypes[i] == Type.fun ) {
+      Type ot = op._vtypes[i];
+      if( ot == Type.fun ) {
         System.out.println(op._vars[i]+" isa? "+args[i]);
         throw H2O.unimpl();     // Deep function type checking
       }
       if( args[i]._t == null )
-        args[i] = ((ASTId)args[i]).setOnUse(E,op._vtypes[i]);
-      if( op._vtypes[i] == args[i]._t ) continue; // both scalar or both array
-      if( op._vtypes[i] != Type.dbl )
-        E.throwErr("Mismatched arg: '"+op._vars[i]+"': "+op._vtypes[i]+" vs "+args[i]._t,x);
+        args[i] = ((ASTId)args[i]).setOnUse(E,ot);
+      if( ot == args[i]._t ) continue; // both scalar or both array
+      if( ot != Type.dbl )
+        E.throwErr("Arg '"+op._vars[i]+"' "+(ot==null?"untyped":" typed as "+ot)+" but passed "+args[i]._t,x);
       // Expansion needed, will insert in a later pass
     }
     return new ASTApply(args);
   }
 
   // Parse a prefix operator
-  static AST parse(Exec2 E) { 
+  static AST parsePrefix(Exec2 E, AST ast) { 
+    if( !(ast instanceof ASTOp) ) return null;
+    ASTOp op = (ASTOp)ast;
     int x = E._x;
-    ASTOp op = ASTOp.parse(E);
-    if( op == null ) return null;
     if( !E.peek('(') ) return null; // Plain op, no prefix application
     AST args[] = new AST[] { op, null };
     int i=1;
@@ -271,7 +328,7 @@ class ASTApply extends AST {
     args = Arrays.copyOf(args,i);
     if( op._vars!=null ) {      // Check fixed-arg length
       if( i != op._vars.length ) 
-        E.throwErr("Expected "+op._vars.length+" args but found "+i,x);
+        E.throwErr("Expected "+(op._vars.length-1)+" args but found "+(i-1),x);
     } else op.set_varargs_types(args);
     return make(args,E,x);
   }
@@ -283,6 +340,7 @@ class ASTApply extends AST {
     if( op._vars.length != 3 ) return null;
     int x = E._x;
     AST rite = parseCXExpr(E);
+    if( rite==null ) E.throwErr("Missing expr or unknown ID",x);
     return make(new AST[]{op,ast,rite},E,x);
   }
 
@@ -292,8 +350,9 @@ class ASTApply extends AST {
     return true;
   }
   @Override public String toString() { return _args[0].toString()+"()"; }
-  @Override public StringBuilder toString( StringBuilder sb, int d ) { 
-    _args[0].toString(sb,d).append("()\n");
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
+    if( _args[0] instanceof ASTFunc ) _args[0].toString(sb,d).append("()\n");
+    else indent(sb,d).append(this).append("\n");
     for( int i=1; i<_args.length-1; i++ )
       _args[i].toString(sb,d+1).append('\n');
     return _args[_args.length-1].toString(sb,d+1);
@@ -330,6 +389,7 @@ abstract class ASTOp extends AST {
 
     // Variable argcnt
     put(new ASTCat ());
+    put(new ASTByCol());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -358,8 +418,7 @@ abstract class ASTOp extends AST {
     if( op != null ) return op;
     E._x = x;                 // Roll back, no parse happened
     // Attempt a user-mode function parse
-    if( (op = ASTFunc.parseFcn(E)) != null ) return op;
-    return null;
+    return ASTFunc.parseFcn(E);
   }
   AST[] set_varargs_types(AST args[]) { throw H2O.fail(); }
 
@@ -395,6 +454,14 @@ class ASTSub  extends ASTBinOp { @Override String opStr(){ return "-"  ;} double
 class ASTMul  extends ASTBinOp { @Override String opStr(){ return "*"  ;} double op(double d0, double d1) { return d0*d1;}}
 class ASTDiv  extends ASTBinOp { @Override String opStr(){ return "/"  ;} double op(double d0, double d1) { return d0/d1;}}
 class ASTMin  extends ASTBinOp { @Override String opStr(){ return "min";} double op(double d0, double d1) { return Math.min(d0,d1);}}
+
+class ASTByCol extends ASTOp {
+  static final String VARS[] = new String[]{ "", "ary","op2"};
+  static final Type   TYPES[]= new Type  []{ Type.ary, Type.ary, Type.fun };
+  ASTByCol( ) { super(VARS,TYPES); }
+  @Override String opStr(){ return "byCol";}
+}
+
 
 // Variable length; instances will be created of required length
 class ASTCat extends ASTOp {
@@ -437,21 +504,23 @@ class ASTFunc extends ASTOp {
         E.xpeek(',',E._x,null);
       }
     }
-    E.xpeek('{',E._x,null);
-    E._env.push(vars);
-    AST body = E.xpeek('}',E._x,parseCXExpr(E));
-    E._env.pop();
-    // The body should force the types.  Build a type signature.
+    // Build a signature.
     String xvars[] = new String[vars.size()+1];
-    Type   types[] = new Type  [vars.size()+1];
-    xvars[0] = "fun";
+    int i=0;   xvars[i++] = "fun";
+    for( String id2 : vars.keySet() )  xvars[i++] = id2;
+
+    E.xpeek('{',(x=E._x),null);
+    E._env.push(vars);
+    AST body = E.xpeek('}',E._x,ASTStatement.parse(E));
+    if( body == null ) E.throwErr("Missing function body",x);
+    E._env.pop();
+
+    // The body should force the types.  Build a type signature.
+    Type types[] = new Type[xvars.length];
     types[0] = body._t;         // Return type of body
-    int i=1;
-    for( String id2 : vars.keySet() ) {
-      xvars[i] = id2;
-      types[i] = vars.get(id2);
-      if( types[i]==null ) System.out.println("Warning: var "+id2+" failed to get typed.");
-      i++;
+    for( int j=1; j<xvars.length; j++ ) {
+      types[j] = vars.get(xvars[j]);
+      if( types[j]==null ) System.out.println("Warning: var "+xvars[j]+" failed to get typed.");
     }
     return new ASTFunc(xvars,types,body);
   }  

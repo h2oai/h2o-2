@@ -36,6 +36,11 @@ public class Expr2Test extends TestUtil {
       checkStr("isNA(h.hex)");
       checkStr("h.hex[ncol(h.hex),nrow(h.hex)]");
       checkStr("1=2");
+      checkStr("x");
+      checkStr("x+2");
+      checkStr("2+x");
+      checkStr("x=1");
+      checkStr("x=+");
       checkStr("(h.hex+1)=2");
       checkStr("h.hex[nrow(h.hex=1),]");
       checkStr("h.hex[2,3]=4");
@@ -51,6 +56,10 @@ public class Expr2Test extends TestUtil {
       checkStr("function(x){x[]}(h.hex)");
       checkStr("function(x){x[]}(2)");
       checkStr("function(x){x+1}(2)");
+      checkStr("function(x){y=x+y}(2)");
+      checkStr("function(x){}(2)");
+      checkStr("function(x){y=x*2; y+1}(2)");
+      checkStr("function(x){y=1+2}(2)");
 
       // Needed examples: 
       // (1) Replace NAs with imputed mean

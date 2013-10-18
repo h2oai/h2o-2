@@ -23,25 +23,29 @@ public class Exec2 {
   //           slice               // (subset) R-value
   //           slice = cxexpr      // L-value: IDs or slices of IDs; exprs must have equal shapes; 
   //                               // does NOT define a new name
+  //           id = cxexpr         // Creates a new named temp
   //           id := cxexpr        // Deep-copy; otherwise same as above
+  //           op(cxexpr...)       // Prefix function application
   //           slice op2 cxexpr    // apply(op2,slice,cxexpr); ....optional INFIX notation
-  //           slice0 ? cxexpr : cxexpr // exprs must have *compatible* shapes
+  //           val ? cxexpr : cxexpr // exprs must have equal types
   //   slice := 
-  //           expr
-  //           expr[]              // whole expr
-  //           expr[,]             // whole expr
-  //           expr[expr1,expr1]   // row & col slice (row FIRST, col SECOND)
-  //           expr[,expr1]        // col-only slice
-  //           expr[expr1,]        // row-only slice
-  //   expr :=
+  //           val                 // Can be a dbl or fcn or ary
+  //           val[]               // whole ary val
+  //           val[,]              // whole ary val
+  //           val[val1,val1]      // row & col ary slice (row FIRST, col SECOND)
+  //           val[,val1]          // col-only ary slice
+  //           val[val1,]          // row-only ary slice
+  //   val :=
   //           ( cxexpr )          // Ordering evaluation
   //           id                  // any visible var; will be typed
   //           key                 // A Frame, dimensions stored in K/V already
   //           num                 // Scalars, treated as 1x1
-  //           op(cxexpr...)       // Prefix function application
+  //           op                  // Built-in functions
   //           function(v0,v1,v2) { statements; ...v0,v1,v2... } // 1st-class lexically scoped functions
   //   op  := sgn sin cos ...any unary op...
   //   op  := min max + - * / % & |    ...any boolean op...
+  //   op  := c // R's "c" operator, returns a Nx1 array
+  //   op  := ary byCol(ary,dbl op2(dbl,dbl))
 
   public static Env exec( String str ) throws IllegalArgumentException {
     System.out.println(str);
@@ -73,6 +77,7 @@ public class Exec2 {
         global.put(v._key.toString(),AST.Type.ary);
     _env.push(global);
   }
+  int lexical_depth() { return _env.size(); }
   
   AST parse() { 
     AST ast = AST.parseCXExpr(this); 
