@@ -329,7 +329,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       _gram.addRow(nums, ncats, cats, w);
     }
     @Override public void map(Chunk [] chunks){
-      _gram = new Gram(fullN(), diagN(), _nums, _cats);
+      _gram = new Gram(fullN(), diagN(), _nums, _cats,true);
       _xy = MemoryManager.malloc8d(fullN());
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
