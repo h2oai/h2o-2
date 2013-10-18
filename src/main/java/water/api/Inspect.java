@@ -149,6 +149,8 @@ public class Inspect extends Request {
       return GBMModelView.redirect(this, key);
     if( f instanceof GLMValidation)
       return GLMValidationView.redirect(this, key);
+    if(f instanceof NeuralNet)
+      return ((NeuralNet) f).redirect(this, key);
     if(f instanceof GridSearch)
       return ((GridSearch) f).redirect();
     return Response.error("No idea how to display a "+f.getClass());
@@ -317,7 +319,7 @@ public class Inspect extends Request {
           + RF.link(key, "Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", or "
-          + KMeansGrid.link(key, "KMeansGrid") + "<br />"
+          + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
