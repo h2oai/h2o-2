@@ -1850,12 +1850,26 @@ class H2O(object):
         parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict = {
-            'family': 'binomial',
-            'key': key,
-            'y': 1,
-            'link': 'familyDefault',
-        }
+        
+        if not beta_features:
+            params_dict = {
+                'family': 'binomial',
+                'key': key,
+                'y': 1,
+                'link': 'familyDefault',
+            }
+        else:
+            params_dict =      {'vresponse'          : None,
+                                'ignored_cols'       : None,
+                                'family'             : None,
+                                'lambda'             : None,
+                                'alpha'              : None,
+                                'n_folds'            : None,
+                                'case_mode'          : None,
+                                'case_val'           : None, 
+                                'destination_key'    : None,
+                               } 
+
         params_dict.update(kwargs)
         print "\n"+parentName, "params list:", params_dict
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
@@ -2489,7 +2503,7 @@ class RemoteH2O(H2O):
         # kbn: it should be dead now? want to make sure we don't have zombies
         # we should get a connection error. doing a is_alive subset.
         try:
-            gc_output = self.get_cloud()
+            gc_output = self.get_cloud(noExtraErrorCheck=True)
             raise Exception("get_cloud() should fail after we terminate a node. It isn't. %s %s" % (self, gc_output))
         except:
             return True

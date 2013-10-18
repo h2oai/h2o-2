@@ -13,9 +13,10 @@ build = ""
 
 def doKMeans(fs, folderPath): 
     benchmarkLogging = ['cpu','disk', 'network', 'iostats']
+    benchmarkLogging = None
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
-        h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='KMeans'+f+'.csv')
+        #h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='KMeans'+f+'.csv')
         overallWallStart = time.time()
         kmeansbenchcsv = 'benchmarks/'+build+'/'+date+'/kmeansbench.csv'
         if not os.path.exists(kmeansbenchcsv):
@@ -36,12 +37,12 @@ def doKMeans(fs, folderPath):
             headerPathname = importFolderPath + "/" + hK
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
             headerKey = h2i.find_key(hK)
-            h2o.cloudPerfH2O.message("=========PARSE TRAIN========")
+            #h2o.cloudPerfH2O.message("=========PARSE TRAIN========")
             trainParseWallStart = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
                 timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200, benchmarkLogging=benchmarkLogging)
             parseWallTime = time.time() - trainParseWallStart
-            h2o.cloudPerfH2O.message("=========END PARSE TRAIN========") 
+            #h2o.cloudPerfH2O.message("=========END PARSE TRAIN========") 
             #End Train File Parse#
             print "Parsing training file took ", parseWallTime ," seconds." 
             
@@ -68,11 +69,11 @@ def doKMeans(fs, folderPath):
                          'destination_key'    : "KMeans("+f+")",
                         }
             kwargs       = params.copy()
-            h2o.cloudPerfH2O.message("=========KMEANS========")
+            #h2o.cloudPerfH2O.message("=========KMEANS========")
             kmeansStart  = time.time()
             kmeans       = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=7200, benchmarkLogging=benchmarkLogging,**kwargs)
             kmeansTime   = time.time() - kmeansStart
-            h2o.cloudPerfH2O.message("=========END KMEANS========")
+            #h2o.cloudPerfH2O.message("=========END KMEANS========")
             row.update({'kmeansBuildTime' : kmeansTime})
             csvWrt.writerow(row)
         finally:
@@ -81,7 +82,7 @@ def doKMeans(fs, folderPath):
 if __name__ == '__main__':
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
-    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
+    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
     doKMeans(files['Airlines'], 'Airlines')
     doKMeans(files['AllBedrooms'], 'AllBedrooms')
     h2o.tear_down_cloud()
