@@ -1,8 +1,10 @@
 package hex;
 
+import hex.Layer.ChunkLinear;
 import hex.Layer.ChunkSoftmax;
 import hex.Layer.ChunksInput;
 import hex.Layer.Input;
+import hex.Layer.VecLinear;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 
@@ -304,7 +306,8 @@ public abstract class Trainer {
         _task._bs[y] = _ls[y]._b;
       }
       Vec[] vecs = ((VecsInput) _ls[0])._vecs;
-      Vec response = ((VecSoftmax) _ls[_ls.length - 1])._vec;
+      Layer out = _ls[_ls.length - 1];
+      Vec response = out instanceof VecSoftmax ? ((VecSoftmax) out)._vec : ((VecLinear) out)._vec;
       _task.dfork(new Frame(null, Utils.add(vecs, response)));
     }
 
@@ -420,7 +423,11 @@ public abstract class Trainer {
       clones[0] = input;
       for( int y = 1; y < _node._ls.length - 1; y++ )
         clones[y] = _node._ls[y].clone();
-      clones[clones.length - 1] = new ChunkSoftmax(_cs[_cs.length - 1], (VecSoftmax) _node._ls[_node._ls.length - 1]);
+      Layer output = _node._ls[_node._ls.length - 1];
+      if( output instanceof VecSoftmax )
+        clones[clones.length - 1] = new ChunkSoftmax(_cs[_cs.length - 1], (VecSoftmax) output);
+      else
+        clones[clones.length - 1] = new ChunkLinear(_cs[_cs.length - 1], (VecLinear) output);
       for( int y = 0; y < clones.length; y++ ) {
         clones[y].init(clones, y, false, _node._total);
         clones[y]._w = _node._ws[y];

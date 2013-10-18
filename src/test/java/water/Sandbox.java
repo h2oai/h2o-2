@@ -23,9 +23,10 @@ public class Sandbox {
 
       //new Sample07_NeuralNet_Mnist().run();
 
-      mnist();
       // covtype();
       // airlines();
+      // mnist();
+      ecology();
 
       //Frame frame = water.TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
       //Frame frame = water.TestUtil.parseFrame("smalldata/categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");
@@ -44,6 +45,22 @@ public class Sandbox {
     water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
 
     File test = new File("smalldata/mnist/test.csv.gz");
+    dest = Key.make("test.hex");
+    fkey = water.fvec.NFSFileVec.make(test);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+  }
+
+  static void ecology() {
+    File train = new File("smalldata/gbm_test/ecology_model.csv");
+    Key dest = Key.make("train.hex");
+    Key fkey = water.fvec.NFSFileVec.make(train);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+    // TODO temp
+    Frame f = UKV.get(dest);
+    f.remove(0);
+    UKV.put(dest, f);
+
+    File test = new File("smalldata/gbm_test/ecology_eval.csv");
     dest = Key.make("test.hex");
     fkey = water.fvec.NFSFileVec.make(test);
     water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });

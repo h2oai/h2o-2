@@ -418,6 +418,73 @@ public abstract class Layer extends Iced {
     }
   }
 
+  public static abstract class Linear extends Output {
+    Linear(int units) {
+      super(units);
+    }
+
+    abstract float value();
+
+    @Override void fprop() {
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        for( int i = 0; i < _in._a.length; i++ )
+          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
+        _a[o] += _b[o];
+      }
+    }
+
+    @Override void bprop() {
+      float v = value();
+      for( int o = 0; o < _a.length; o++ ) {
+        float g = v - _a[o];
+        for( int i = 0; i < _in._a.length; i++ ) {
+          int w = o * _in._a.length + i;
+          _in._e[i] += g * _w[w];
+          _w[w] += _r * (g - _w[w] * _l2) * _in._a[i];
+        }
+        _b[o] += _r * g;
+      }
+    }
+  }
+
+  public static class VecLinear extends Linear {
+    Vec _vec;
+
+    public VecLinear(Vec vec, VecLinear stats) {
+      super(stats != null ? stats._units : 1);
+      _vec = vec;
+    }
+
+    @Override float value() {
+      double d = _vec.at(_input._pos);
+      return Double.isNaN(d) ? 0 : (float) d;
+    }
+  }
+
+  public static class ChunkLinear extends Linear {
+    transient Chunk _chunk;
+
+    public ChunkLinear(Chunk chunk, VecLinear stats) {
+      super(stats._units);
+      _chunk = chunk;
+
+      // TODO extract layer info in separate Ice
+      _rate = stats._rate;
+      _rateAnnealing = stats._rateAnnealing;
+      _momentum = stats._momentum;
+      _momentumAnnealing = stats._momentumAnnealing;
+      _perWeight = stats._perWeight;
+      _perWeightAnnealing = stats._perWeightAnnealing;
+      _l2 = stats._l2;
+    }
+
+    @Override float value() {
+      double d = _chunk.at0((int) _input._pos);
+      return Double.isNaN(d) ? 0 : (float) d;
+    }
+  }
+
   public static class Tanh extends Layer {
     public Tanh(int units) {
       super(units);
