@@ -159,6 +159,7 @@ public final class Gram extends Iced {
 
     }
 
+    @Override
     public String toString() {
       return "";
     }
@@ -173,7 +174,7 @@ public final class Gram extends Iced {
      */
     public final void solve(double[] y) {
       if( !isSPD() ) throw new NonSPDMatrixException();
-      assert _xx.length + _diag.length == y.length;
+      assert _xx.length + _diag.length == y.length:"" + _xx.length + " + " + _diag.length + " != " + y.length;
       // diagonal
       for( int k = 0; k < _diag.length; ++k )
         y[k] /= _diag[k];
@@ -251,11 +252,11 @@ public final class Gram extends Iced {
     public Gram _gram;
 
     public GramTask(Job job, boolean standardize, boolean hasIntercept){
-      super(job,standardize);
+      super(job,standardize,false);
       _hasIntercept = hasIntercept;
     }
-    @Override protected void mapInit(){
-      _gram = new Gram(fullN(), diagN(), _nums, _cats,_hasIntercept);
+    @Override protected void chunkInit(){
+      _gram = new Gram(fullN(), largestCat(), _nums, _cats,_hasIntercept);
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats) {
       _gram.addRow(nums, ncats, cats, 1.0);

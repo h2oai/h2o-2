@@ -7,33 +7,36 @@ import water.fvec.*;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   protected final boolean _standardize;
+  public final boolean standardize(){return _standardize;}
   final int _offset;
   final int _step;
   final boolean _complement;
-  final boolean _hasResponse = false;
+  final boolean _hasResponse;
   final Job _job;
 
   protected int _nums = -1;
+  public final int nums(){return _nums;}
   protected int _cats = -1;
+  public final int cats(){return _cats;}
   // offsets of categorcial variables
   // each categorical with n levels is virtually expanded into a binary vector of length n -1.
   // _catOffsets basically hold a sum of cardinlities of all preceding categorical variables
   // to be able to address correct elements in the beta vector (which must be fully expanded).
   protected int [] _catOffsets;
+  public final int [] catOffsets(){return _catOffsets;}
   // data-regularization params
   double [] _normSub; // means to be subtracted
+  public final double [] normSub(){return _normSub;}
   double [] _normMul; // 1/sigma to multiply each numeric param with
+  public final double [] normMul(){return _normMul;}
   double    _ymu = Double.NaN; // mean of the response
-
   // size of the expanded vector of parameters
-  final protected int fullN(){
-    return _nums + _catOffsets[_cats];
-  }
-  // size of the top-left strictly diagonal region of the gram matrix, currently just the size of the largest categorical
-  final protected int diagN(){if(_catOffsets.length < 2)return 0; return _catOffsets[1];}
+  final protected int fullN(){return _nums + _catOffsets[_cats];}
+  final protected int largestCat(){return _cats > 0?_catOffsets[1]:0;}
 
-  public FrameTask(Job job, boolean standardize) {this(job,standardize,1,0,false);}
-  public FrameTask(Job job, boolean standardize, int step, int offset, boolean complement) {
+  public FrameTask(Job job, boolean standardize, boolean hasResponse) {this(job,standardize,hasResponse, 1,0,false);}
+  public FrameTask(Job job, boolean standardize, boolean hasResponse, int step, int offset, boolean complement) {
+    _hasResponse = hasResponse;
     _standardize = standardize;
     _job = job;
     _step = step;
@@ -42,6 +45,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   }
   protected FrameTask(FrameTask ft){
     _standardize = ft._standardize;
+    _hasResponse = ft._hasResponse;
     _nums = ft._nums;
     _cats = ft._cats;
     _catOffsets = ft._catOffsets;
@@ -115,7 +119,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
     return new Frame(names,vecs2);
   }
-  public T doIt(Frame fr){
+  public T doIt(Frame fr){return dfork2(fr).getResult();}
+  public T dfork2(Frame fr){
     if(_cats == -1 && _nums == -1 ){
       fr = adaptFrame(fr);
       assert _normMul == null;
@@ -142,17 +147,23 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       // get mean of response...
       if(Double.isNaN(_ymu))_ymu = vecs[vecs.length-1].mean();
     }
-    return dfork(fr).getResult();
+    return dfork(fr);
   }
-
-  protected abstract void mapInit();
+  /**
+   * Override this to initialize at the beginning of chunk processing.
+   */
+  protected void chunkInit(){}
+  /**
+   * Override this to do post-chunk processing work.
+   */
+  protected void chunkDone(){}
   /**
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.
    */
-  @Override public void map(Chunk [] chunks){
+  @Override public final void map(Chunk [] chunks){
     if(_job != null && _job.cancelled())throw new RuntimeException("Cancelled");
-    mapInit();
+    chunkInit();
     final int nrows = chunks[0]._len;
     double [] nums = MemoryManager.malloc8d(_nums);
     int    [] cats = MemoryManager.malloc4(_cats);
@@ -173,5 +184,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       if(!_hasResponse) processRow(nums, ncats, cats);
       else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r));
     }
+    chunkDone();
   }
 }

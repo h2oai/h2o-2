@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 import hex.gram.Gram.GramTask;
 
 import java.io.File;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.Test;
 
@@ -67,10 +68,15 @@ GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.3
 
   /**
    * @param args
+   * @throws ExecutionException
+   * @throws InterruptedException
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws InterruptedException, ExecutionException {
     startCloud(args, 1);
     new GramMatrixTest().testProstate();
+    System.out.println("running glm test...");
+    new GLMTest2().testProstate();
+    System.out.println("DONE");
   }
 
 }
