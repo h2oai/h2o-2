@@ -1,17 +1,20 @@
 #!/bin/bash
 
+OUTDIR='LittleLoggerFiles'
+mkdir ${OUTDIR}
+
 #last 3 digits of inet addr
 mach=`ifconfig | grep -o "inet addr:192.168.1.[0-9]*" | grep -o 192.168.1.* | awk -F'.' '{print $4}'`
 
 #log files
-cpuPerfFile=$1-`date +%Y-%m-%d`"-cpuPerf_"$mach".csv"
-idlePerfFile=$1-`date +%Y-%m-%d`"-idlePerf_"$mach".csv"
-iowaitPerfFile=$1-`date +%Y-%m-%d`"-iowaitPerf_"$mach".csv"
-memPerfFile=$1-`date +%Y-%m-%d`"-memPerf_"$mach".csv"
-topPerfFile=$1-`date +%Y-%m-%d`"-topPerf_"$mach".csv"
-netReceivePerfFile=$1-`date +%Y-%m-%d`"-netRPerf_"$mach".csv"
-netTransmitPerfFile=$1-`date +%Y-%m-%d`"-netTPerf_"$mach".csv"
-swapPerfFile=$1-`date +%Y-%m-%d`"-sisoPerf_"$mach".csv"
+cpuPerfFile=${OUTDIR}/$1-`date         +%Y-%m-%d`"-cpuPerf_"$mach".csv"
+idlePerfFile=${OUTDIR}/$1-`date        +%Y-%m-%d`"-idlePerf_"$mach".csv"
+iowaitPerfFile=${OUTDIR}/$1-`date      +%Y-%m-%d`"-iowaitPerf_"$mach".csv"
+memPerfFile=${OUTDIR}/$1-`date         +%Y-%m-%d`"-memPerf_"$mach".csv"
+topPerfFile=${OUTDIR}/$1-`date         +%Y-%m-%d`"-topPerf_"$mach".csv"
+netReceivePerfFile=${OUTDIR}/$1-`date  +%Y-%m-%d`"-netRPerf_"$mach".csv"
+netTransmitPerfFile=${OUTDIR}/$1-`date +%Y-%m-%d`"-netTPerf_"$mach".csv"
+swapPerfFile=${OUTDIR}/$1-`date        +%Y-%m-%d`"-sisoPerf_"$mach".csv"
 
 #headers
 cpuheader='time(s)'
@@ -82,8 +85,8 @@ while :; do
       TOTALS[$a]=$TOTAL
       PREVTOTAL=${PREVTOTALS[$a]}
       ((DIFF_TOTAL=$TOTAL-${PREVTOTAL:-0}))
-      OUT_INT_CPU=$((1000*(${CPU[0]} - ${PREV_CPUS[$a]:-0})/DIFF_TOTAL))
-      OUT_INT_IDLE=$((1000*(${CPU[3]} - ${PREV_IDLES[$a]:-0})/DIFF_TOTAL))
+      OUT_INT_CPU=$((1000*(${CPU[0]}    - ${PREV_CPUS[$a]:-0})/DIFF_TOTAL))
+      OUT_INT_IDLE=$((1000*(${CPU[3]}   - ${PREV_IDLES[$a]:-0})/DIFF_TOTAL))
       OUT_INT_IOWAIT=$((1000*(${CPU[4]} - ${PREV_IOWAITS[$a]:-0})/DIFF_TOTAL))
       OUT_CPU[$a]=$((OUT_INT_CPU/10))
       OUT_IDLE[$a]=$((OUT_INT_IDLE/10))
@@ -96,15 +99,15 @@ while :; do
     linecpu=`echo "${OUT_CPU[@]}" | tr ' ' ','` 
     lineidle=`echo "${OUT_IDLE[@]}" | tr ' ' ','`
     lineiowait=`echo "${OUT_IOWAIT[@]}" | tr ' ' ','`
-    echo $(( `date +%s` - $start )),$linecpu >> $cpuPerfFile
-    echo $(( `date +%s` - $start )),$lineidle >> $idlePerfFile
+    echo $(( `date +%s` - $start )),$linecpu    >> $cpuPerfFile
+    echo $(( `date +%s` - $start )),$lineidle   >> $idlePerfFile
     echo $(( `date +%s` - $start )),$lineiowait >> $iowaitPerfFile
 
     cat /proc/meminfo      | awk -F' ' 'OFS="," {gsub(":","", $1); print $2}' > memTMP
     grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > recTMP
     grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > traTMP
-    echoLine memTMP $start $memPerfFile 1 1
-    echoLine recTMP $start $netReceivePerfFile 0 
+    echoLine memTMP $start $memPerfFile         1 1
+    echoLine recTMP $start $netReceivePerfFile  0 
     echoLine traTMP $start $netTransmitPerfFile 0
     #get top 10 processes from top and then just store them, may/not be interesting...
     ti="$(( `date +%s` - ${start} ))"
