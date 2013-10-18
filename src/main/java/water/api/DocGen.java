@@ -9,6 +9,8 @@ import water.api.RequestArguments.Argument;
 import water.util.Log;
 
 import hex.gbm.*;
+import hex.glm.*;
+import hex.KMeans2;
 
 /**
  * Auto-gen doc support, for JSON & REST API docs
@@ -35,8 +37,13 @@ public abstract class DocGen {
     createFile("ImportFiles2.rst", new ImportFiles2().ReSTHelp());
     createFile("Parse2.rst", new Parse2().ReSTHelp());
     */
+
+    createFile("ImportFiles2.rst", new ImportFiles2().ReSTHelp());
+    createFile("Parse2.rst", new Parse2().ReSTHelp());
     createFile("GBM.rst", new GBM().ReSTHelp());
-    createFile("DRF.rst", new DRF().ReSTHelp());
+    createFile("DRF2.rst", new DRF().ReSTHelp());
+    createFile("GLM2.rst", new GLM2().ReSTHelp());
+    createFile("KMeans2.rst", new KMeans2().ReSTHelp());
   }
 
   public static void main(String[] args) throws Exception {
@@ -267,6 +274,11 @@ public abstract class DocGen {
         else sb.append(c);
       }
       return sb;
+    }
+    public String escape2(String s) {
+      StringBuilder sb = new StringBuilder(s.length());
+      escape(sb, s);
+      return sb.toString();
     }
     @Override public StringBuilder bodyHead( StringBuilder sb ) {
       return sb.append("<div class='container'>"+

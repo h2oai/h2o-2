@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put')
             rfv = h2o_cmd.runRF(parseResult=parseResult, 
-                timeoutSecs=timeoutSecs, retryDelaySecs=1, csvPathname=csvPathname, **kwargs)
+                timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start
 
             cm = rfv['confusion_matrix']

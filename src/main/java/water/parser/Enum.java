@@ -51,7 +51,7 @@ public final class Enum extends Iced implements Cloneable{
     if( m == null ) return Integer.MAX_VALUE;     // Nuked already
     Integer res = m.get(str);
     if(res != null ) return res; // Recorded already
-    assert str._length < 65535;      // Length limit so 65535 can be used as a sentinel
+    assert str.get_length() < 65535;      // Length limit so 65535 can be used as a sentinel
     Integer newVal = new Integer(_id.incrementAndGet());
     res = m.putIfAbsent(new ValueString(str.toString()), newVal);
     if(res != null)return res;
@@ -129,7 +129,7 @@ public final class Enum extends Iced implements Cloneable{
     ab.put1(0);                           // Not killed
     ab.put4(maxId());
     for( ValueString key : _map.keySet() )
-      ab.put2((char)key._length).putA1(key._buf,key._length).put4(_map.get(key));
+      ab.put2((char)key.get_length()).putA1(key.get_buf(),key.get_length()).put4(_map.get(key));
     return ab.put2((char)65535); // End of map marker
   }
 

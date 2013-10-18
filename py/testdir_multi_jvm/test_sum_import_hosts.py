@@ -47,9 +47,8 @@ class Basic(unittest.TestCase):
             ]
         else:
             csvFilenameAll = [
-                ("covtype.data", "cA", 5,  1),
-                ("covtype20x.data", "cD", 50, 20),
-                ("covtype200x.data", "cE", 50, 200),
+                ("covtype20x.data", "cA", 50, 20),
+                ("covtype20x.data", "cB", 50, 20),
             ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)

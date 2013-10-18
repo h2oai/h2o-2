@@ -102,19 +102,16 @@ public class FVecTest extends TestUtil {
     File file = TestUtil.find_test_file("./smalldata/cars.csv");
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
-    Key key2 = Key.make("newKey",(byte)0,Key.VEC);
-    AppendableVec nv = new AppendableVec(key2);
-    Vec res = new TestNewVec().doAll(nv,nfs).vecs(0);
+    Vec res = new TestNewVec().doAll(1,nfs)._outputFrame.anyVec();
     assertEquals(nfs.at8(0)+1,res.at8(0));
     assertEquals(nfs.at8(1)+1,res.at8(1));
     assertEquals(nfs.at8(2)+1,res.at8(2));
-
     UKV.remove(key );
-    UKV.remove(key2);
+    UKV.remove(res._key);
   }
 
   public static class TestNewVec extends MRTask2<TestNewVec> {
-    @Override public void map( NewChunk out, Chunk in ) {
+    @Override public void map( Chunk in, NewChunk out ) {
       for( int i=0; i<in._len; i++ )
         out.append2( in.at8(i)+(in.at8(i) >= ' ' ? 1 : 0),0);
     }

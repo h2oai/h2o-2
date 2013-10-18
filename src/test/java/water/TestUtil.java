@@ -9,6 +9,8 @@ import java.util.*;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import water.deploy.Node;
+import water.deploy.NodeVM;
 import water.fvec.*;
 import water.parser.ParseDataset;
 import water.util.Log;
@@ -18,6 +20,14 @@ import com.google.common.io.Closeables;
 public class TestUtil {
   private static int _initial_keycnt = 0;
 
+  protected static void startCloud(String [] args, int nnodes){
+    for( int i = 1; i < nnodes; i++ ) {
+      Node n = new NodeVM(args);
+      n.inheritIO();
+      n.start();
+    }
+    H2O.waitForCloudSize(nnodes);
+  }
   @BeforeClass
   public static void setupCloud() {
     H2O.main(new String[] {});
@@ -28,8 +38,16 @@ public class TestUtil {
   @AfterClass
   public static void checkLeakedKeys() {
     Job[] jobs = Job.all();
-    for(Job job : jobs)
-      assert job.end_time != 0 : job;  // No pending job
+    boolean allDone = true;
+//    for(Job job : jobs)
+//      if(job.end_time != 0)allDone = false;
+//    if(!allDone){
+//      try {Thread.sleep(100);
+//      } catch( InterruptedException e ) {}
+//      jobs = Job.all();
+      for(Job job : jobs)
+        assert job.end_time != 0:("UNFINSIHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time);  // No pending job
+//    }
     DKV.remove(Job.LIST);         // Remove all keys
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
@@ -38,7 +56,9 @@ public class TestUtil {
       for( Key k : H2O.keySet() ) {
         Value value = DKV.get(k);
         Object o = value.type() != TypeMap.PRIM_B ? value.get() : "byte[]";
-        System.err.println("Leaked key: " + k + " = " + o);
+        // Ok to leak VectorGroups
+        if( o instanceof Vec.VectorGroup ) leaked_keys--;
+        else System.err.println("Leaked key: " + k + " = " + o);
       }
     }
     assertTrue("No keys leaked", leaked_keys<=0);
@@ -337,11 +357,19 @@ public class TestUtil {
     return ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
   }
 
+  public static Frame parseFrame(Key okey, String path) {
+    Key fkey = NFSFileVec.make(new File(path));
+    Frame fr = ParseDataset2.parse(okey, new Key[] { fkey });
+    UKV.remove(fkey);
+    return fr;
+  }
+
   public static Frame frame(String[] names, double[][] rows) {
     assert names == null || names.length == rows[0].length;
     Vec[] vecs = new Vec[rows[0].length];
+    Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
     for( int c = 0; c < vecs.length; c++ ) {
-      AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
+      AppendableVec vec = new AppendableVec(keys[c]);
       NewChunk chunk = new NewChunk(vec, 0);
       for( int r = 0; r < rows.length; r++ )
         chunk.addNum(rows[r][c]);

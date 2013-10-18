@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
 
 /**
@@ -16,9 +17,9 @@ import water.fvec.Vec.VectorGroup;
  */
 public class Frame extends Iced {
   public String[] _names;
-  private Key[] _keys;          // Keys for the vectors
-  private transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
-  private transient Vec _col0;  // First readable vec; fast access to the VecGroup's Chunk layout
+  Key[] _keys;          // Keys for the vectors
+  transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
+  private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
 
   public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
   public Frame( Vec... vecs ){ this(null,vecs);}
@@ -31,14 +32,31 @@ public class Frame extends Iced {
       if( DKV.get(k)==null )    // If not already in KV, put it there
         DKV.put(k,vecs[i]);
     }
+    Vec v0 = anyVec();
+    if( v0 == null ) return;
+    VectorGroup grp = v0.group();
+    for( int i=0; i<vecs.length; i++ )
+      assert grp.equals(vecs[i].group());
   }
 
   public final Vec[] vecs() {
     if( _vecs != null ) return _vecs;
-    _vecs = new Vec[_keys.length];
-    for( int i=0; i<_keys.length; i++ )
-      _vecs[i] = DKV.get(_keys[i]).get();
-    return _vecs;
+    final Vec [] vecs = new Vec[_keys.length];
+    Futures fs = new Futures();
+    for( int i=0; i<_keys.length; i++ ){
+      final int ii = i;
+      final Key k = _keys[i];
+      H2OCountedCompleter t;
+      H2O.submitTask(t = new H2OCountedCompleter(){
+        @Override public void compute2() {
+          vecs[ii] = DKV.get(k).get();
+          tryComplete();
+        }
+      });
+      fs.add(t);
+    }
+    fs.blockForPending();
+    return _vecs = vecs;
   }
   // Force a cache-flush & reload, assuming vec mappings were altered remotely
   public final Vec[] reloadVecs() { _vecs=null; return vecs(); }
@@ -60,7 +78,7 @@ public class Frame extends Iced {
 
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
-    // TODO : needs a compatibility-check!!!
+    assert anyVec().group().equals(vec.group());
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
@@ -216,14 +234,6 @@ public class Frame extends Iced {
         DKV.put(_keys[i],_vecs[i] = ((AppendableVec)v).close(fs),fs);
     }
     return fs;
-  }
-
-  // True if any Appendables exist
-  public boolean hasAppendables() {
-    for( Vec v : vecs() )
-      if( v instanceof AppendableVec )
-        return true;
-    return false;
   }
 
   public void remove() {

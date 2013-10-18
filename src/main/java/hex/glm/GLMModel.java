@@ -75,17 +75,17 @@ public class GLMModel extends Model {
     super(selfKey, dataKey, fr);
     glm = glmt._glm;
     this.threshold = threshold;
-    catOffsets = glmt._catOffsets;
-    if(glmt._standardize){
+    catOffsets = glmt.catOffsets();
+    if(glmt.standardize()){
       this.norm_beta = beta;
       // denormalize beta
       this.beta = beta.clone();
       double norm = 0.0;        // Reverse any normalization on the intercept
       // denormalize only the number coefs (categoricals are not normalized)
-      final int numoff = beta.length - glmt._nums - 1;
+      final int numoff = beta.length - glmt.nums() - 1;
       for( int i=numoff; i< this.beta.length-1; i++ ) {
-        double b = this.beta[i]*glmt._normMul[i-numoff];
-        norm += b*glmt._normSub[i-numoff]; // Also accumulate the intercept adjustment
+        double b = this.beta[i]*glmt.normMul()[i-numoff];
+        norm += b*glmt.normSub()[i-numoff]; // Also accumulate the intercept adjustment
         this.beta[i] = b;
       }
       this.beta[beta.length-1] -= norm;
@@ -126,7 +126,7 @@ public class GLMModel extends Model {
   }
 
   public final int ncoefs() {return beta.length;}
-  
+
   // use general score to reduce number of possible different code paths
   public static class GLMValidationTask extends MRTask2<GLMValidationTask>{
     final GLMModel _model;

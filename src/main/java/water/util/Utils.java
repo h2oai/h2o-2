@@ -16,6 +16,7 @@ import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.api.DocGen.FieldDoc;
 import water.parser.ParseDataset;
+import water.parser.ValueString;
 import water.parser.ParseDataset.Compression;
 
 public class Utils {
@@ -305,6 +306,14 @@ public class Utils {
     return (T[]) ArrayUtils.remove(a, i);
   }
 
+  public static byte[] or(byte[] a, byte[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
+    return a;
+  }
+  public static byte[] add(byte[] a, byte[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] += b[i];
+    return a;
+  }
   public static int[] add(int[] a, int[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
@@ -529,5 +538,182 @@ public class Utils {
     PrintWriter printWriter = new PrintWriter(result);
     t.printStackTrace(printWriter);
     return result.toString();
+  }
+
+  // Deduce if we are looking at a Date/Time value, or not.
+  // If so, return time as msec since Jan 1, 1970 or Long.MIN_VALUE.
+
+  // I tried java.util.SimpleDateFormat, but it just throws too many
+  // exceptions, including ParseException, NumberFormatException, and
+  // ArrayIndexOutOfBoundsException... and the Piece de resistance: a
+  // ClassCastException deep in the SimpleDateFormat code:
+  // "sun.util.calendar.Gregorian$Date cannot be cast to sun.util.calendar.JulianCalendar$Date"
+  public static int digit( int x, int c ) {
+    if( x < 0 || c < '0' || c > '9' ) return -1;
+    return x*10+(c-'0');
+  }
+
+  // So I just brutally parse "dd-MMM-yy".
+  public static final byte MMS[][][] = new byte[][][] {
+    {"jan".getBytes(),null},
+    {"feb".getBytes(),null},
+    {"mar".getBytes(),null},
+    {"apr".getBytes(),null},
+    {"may".getBytes(),null},
+    {"jun".getBytes(),"june".getBytes()},
+    {"jul".getBytes(),"july".getBytes()},
+    {"aug".getBytes(),null},
+    {"sep".getBytes(),"sept".getBytes()},
+    {"oct".getBytes(),null},
+    {"nov".getBytes(),null},
+    {"dec".getBytes(),null}
+  };
+
+  public static long attemptTimeParse( ValueString str ) {
+    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
+    if( t0 != Long.MIN_VALUE ) return t0;
+    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
+    if( t1 != Long.MIN_VALUE ) return t1;
+    return Long.MIN_VALUE;
+  }
+  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
+  private static long attemptTimeParse_0( ValueString str ) {
+    final byte[] buf = str.get_buf();
+    int i=str.get_off();
+    final int end = i+str.get_length();
+    while( i < end && buf[i] == ' ' ) i++;
+    if   ( i < end && buf[i] == '"' ) i++;
+    if( (end-i) < 19 ) return Long.MIN_VALUE;
+    int yy=0, MM=0, dd=0, HH=0, mm=0, ss=0, SS=0;
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    if( yy < 1970 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    MM = digit(MM,buf[i++]);
+    MM = digit(MM,buf[i++]);
+    if( MM < 1 || MM > 12 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    dd = digit(dd,buf[i++]);
+    dd = digit(dd,buf[i++]);
+    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
+    if( buf[i++] != ' ' ) return Long.MIN_VALUE;
+    HH = digit(HH,buf[i++]);
+    HH = digit(HH,buf[i++]);
+    if( HH < 0 || HH > 23 ) return Long.MIN_VALUE;
+    if( buf[i++] != ':' ) return Long.MIN_VALUE;
+    mm = digit(mm,buf[i++]);
+    mm = digit(mm,buf[i++]);
+    if( mm < 0 || mm > 59 ) return Long.MIN_VALUE;
+    if( buf[i++] != ':' ) return Long.MIN_VALUE;
+    ss = digit(ss,buf[i++]);
+    ss = digit(ss,buf[i++]);
+    if( ss < 0 || ss > 59 ) return Long.MIN_VALUE;
+    if( i<end && buf[i] == '.' ) {
+      i++;
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( SS < 0 || SS > 999 ) return Long.MIN_VALUE;
+    }
+    if( i<end && buf[i] == '"' ) i++;
+    if( i<end ) return Long.MIN_VALUE;
+    return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
+  }
+
+  private static long attemptTimeParse_1( ValueString str ) {
+    final byte[] buf = str.get_buf();
+    int i=str.get_off();
+    final int end = i+str.get_length();
+    while( i < end && buf[i] == ' ' ) i++;
+    if   ( i < end && buf[i] == '"' ) i++;
+    if( (end-i) < 8 ) return Long.MIN_VALUE;
+    int yy=0, MM=0, dd=0;
+    dd = digit(dd,buf[i++]);
+    if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
+    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    byte[]mm=null;
+    OUTER: for( ; MM<MMS.length; MM++ ) {
+      byte[][] mms = MMS[MM];
+      INNER: for( int k=0; k<mms.length; k++ ) {
+        mm = mms[k];
+        if( mm == null ) continue;
+        for( int j=0; j<mm.length; j++ )
+          if( mm[j] != Character.toLowerCase(buf[i+j]) )
+            continue INNER;
+        break OUTER;
+      }
+    }
+    if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
+    i += mm.length;             // Skip month bytes
+    MM++;                       // 1-based month
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy += 2000;                 // Y2K bug
+    if( i<end && buf[i] == '"' ) i++;
+    if( i<end ) return Long.MIN_VALUE;
+    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
+  }
+
+  public static int[] mapping(int[] dom) {
+    int max = dom[dom.length-1];
+    int[] result = new int[max+1];
+    for (int i=0; i<result.length; i++) result[i] = -1; // not used fields
+    for (int i=0; i<dom.length; i++) result[dom[i]] = i;
+    return result;
+  }
+  public static String[] toStringMap(int[] dom) {
+    String[] result = new String[dom.length];
+    for (int i=0; i<dom.length; i++) result[i] = String.valueOf(dom[i]);
+    return result;
+  }
+  public static int[] compose(int[] first, int[] transf) {
+    for (int i=0; i<first.length; i++) {
+      if (first[i]!=-1) first[i] = transf[first[i]];
+    }
+    return first;
+  }
+
+  private static final DecimalFormat default_dformat = new DecimalFormat("0.#####");
+  public static String pprint(double[][] arr){
+    return pprint(arr,default_dformat);
+  }
+  // pretty print Matrix(2D array of doubles)
+  public static String pprint(double[][] arr,DecimalFormat dformat) {
+    int colDim = 0;
+    for( double[] line : arr )
+      colDim = Math.max(colDim, line.length);
+    StringBuilder sb = new StringBuilder();
+    int max_width = 0;
+    int[] ilengths = new int[colDim];
+    Arrays.fill(ilengths, -1);
+    for( double[] line : arr ) {
+      for( int c = 0; c < line.length; ++c ) {
+        double d = line[c];
+        String dStr = dformat.format(d);
+        if( dStr.indexOf('.') == -1 ) dStr += ".0";
+        ilengths[c] = Math.max(ilengths[c], dStr.indexOf('.'));
+        int prefix = (d >= 0 ? 1 : 2);
+        max_width = Math.max(dStr.length() + prefix, max_width);
+      }
+    }
+    for( double[] line : arr ) {
+      for( int c = 0; c < line.length; ++c ) {
+        double d = line[c];
+        String dStr = dformat.format(d);
+        if( dStr.indexOf('.') == -1 ) dStr += ".0";
+        for( int x = dStr.indexOf('.'); x < ilengths[c] + 1; ++x )
+          sb.append(' ');
+        sb.append(dStr);
+        if( dStr.indexOf('.') == -1 ) sb.append('.');
+        for( int i = dStr.length() - Math.max(0, dStr.indexOf('.')); i <= 5; ++i )
+          sb.append('0');
+      }
+      sb.append("\n");
+    }
+    return sb.toString();
   }
 }

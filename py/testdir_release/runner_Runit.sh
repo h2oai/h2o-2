@@ -115,8 +115,8 @@ mySetup() {
     cat <<!  > /tmp/libPaths.cmd
     .libPaths()
     myPackages = rownames(installed.packages())
-    if("h2oWrapper" %in% myPackages) {
-      remove.packages("h2oWrapper")
+    if("h2o" %in% myPackages) {
+      remove.packages("h2o")
     }
 !
 
@@ -151,7 +151,7 @@ myR() {
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
     export H2OWrapperDir=../../h2o-downloaded/R
     echo "H2OWrapperDir should be $H2OWrapperDir"
-    ls $H2OWrapperDir/h2oWrapper*.tar.gz
+    ls $H2OWrapperDir/h2o*.tar.gz
 
     # we want $1 used for -name below, to not have .R suffix
     rScript=$H2O_R_HOME/tests/$1.R
@@ -179,13 +179,21 @@ mySetup libPaths
 export H2OWrapperDir=../../h2o-downloaded/R
 echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
 printenv | grep H2OWrapperDir
-myR runit_RF 120
 myR runit_PCA 35
 myR runit_GLM 35
 myR runit_kmeans 60
 myR runit_tail_numeric 60
 myR runit_summary_numeric 60
 myR runit_GBM_ecology 1200
+myR runit_RF 120
+myR runit_libR_prostate 120
+myR runit_sliceColHeadTail_iris 60
+myR runit_sliceColSummary_iris 60
+myR runit_sliceColTypes_iris 60
+# this guy was failing? not sure why
+myR runit_histograms 60
+# airlines is failing summary. put it last
+myR runit_libR_airlines 120
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!

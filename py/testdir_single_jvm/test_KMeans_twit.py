@@ -26,8 +26,6 @@ class Basic(unittest.TestCase):
         # h2b.browseTheCloud()
         parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, hex_key=csvFilename + ".hex", schema='put')
 
-        # loop, to see if we get same centers
-        # should check the means?
         # both of these centers match what different R/Scikit packages get
         expected1 = [
                 # expected centers are from R. rest is just from h2o
@@ -49,7 +47,6 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'k': 3, 
                 'max_iter': 50,
-                'epsilon': 1e-4,
                 'normalize': 0,
                 'cols': '0,1',
                 'initialization': 'Furthest', 
@@ -58,8 +55,12 @@ class Basic(unittest.TestCase):
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310
             }
+            init_choices = ['Furthest', 'PlusPlus']
+            kwargs['initialization'] = init_choices[trial % len(init_choices)]
 
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            inspect = h2o_cmd.runInspect(None, key=kmeans['destination_key'], verbose=True)
+
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
 
             if 1==0:

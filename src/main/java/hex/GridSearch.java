@@ -1,5 +1,7 @@
 package hex;
 
+import hex.KMeans2.KMeans2Model;
+import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.GBM.GBMModel;
@@ -16,7 +18,10 @@ public class GridSearch extends Job {
   @Override protected void exec() {
     UKV.put(destination_key, this);
     for( Job job : jobs )
-      job.fork().join();
+      try { job.fork().get();
+      } catch( Exception e ) {
+        throw new RuntimeException(e);
+      }
   }
 
   @Override protected void onCancelled() {
@@ -38,7 +43,7 @@ public class GridSearch extends Job {
 
   public static class GridSearchProgress extends Progress2 {
     @Override public boolean toHTML(StringBuilder sb) {
-      GridSearch grid = UKV.get(Key.make(dst_key.value()));
+      GridSearch grid = UKV.get(dst_key);
       if( grid != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
@@ -48,13 +53,13 @@ public class GridSearch extends Job {
         filter(args, "destination_key", "source", "cols", "ignored_cols_by_name", "response", "classification", "validation");
         for( int i = 0; i < args.size(); i++ )
           sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
-        sb.append("<td><b>").append("run time (s)").append("</b></td>");
+        sb.append("<td><b>").append("run time").append("</b></td>");
         String perf = grid.jobs[0].speedDescription();
         if( perf != null )
           sb.append("<td><b>").append(perf).append("</b></td>");
         sb.append("<td><b>").append("model key").append("</b></td>");
-        sb.append("<td><b>").append("prediction error %").append("</b></td>");
-        sb.append("<td><b>").append("precision & recall").append("</b></td>");
+        sb.append("<td><b>").append("prediction error").append("</b></td>");
+        sb.append("<td><b>").append("F1 score").append("</b></td>");
         sb.append("</tr>");
 
         ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
@@ -92,8 +97,8 @@ public class GridSearch extends Job {
           }
           String runTime = "Pending", speed = "";
           if( info._job.start_time != 0 ) {
-            runTime = "" + (info._job.runTimeMs()) / 1000;
-            speed = perf != null ? info._job.speedValue() : "";
+            runTime = PrettyPrint.msecs(info._job.runTimeMs(),true);
+            speed = perf != null ? PrettyPrint.msecs(info._job.speedValue(),true) : "";
           }
           sb.append("<td>").append(runTime).append("</td>");
           if( perf != null )
@@ -105,6 +110,8 @@ public class GridSearch extends Job {
               link = GBMModelView.link(link, info._job.destination_key);
             else if( info._model instanceof NeuralNetModel )
               link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
+            if( info._model instanceof KMeans2Model )
+              link = KMeans2ModelView.link(link, info._job.destination_key);
             else
               link = Inspect.link(link, info._job.destination_key);
           }
@@ -139,7 +146,7 @@ public class GridSearch extends Job {
             args.remove(i);
     }
 
-    @Override protected Response jobDone(final Job job, final String dst) {
+    @Override protected Response jobDone(final Job job, final Key dst) {
       return new Response(Response.Status.done, this, 0, 0, null);
     }
   }

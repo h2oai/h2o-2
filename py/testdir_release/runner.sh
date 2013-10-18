@@ -71,6 +71,7 @@ DOIT=../testdir_single_jvm/n0.doit
 
 # avoid for now
 # $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
+$DOIT c9/test_c9_GBM_airlines_hdfs.py || true
 $DOIT c1/test_c1_rel.py || true
 $DOIT c2/test_c2_rel.py || true
 $DOIT c3/test_c3_rel.py || true

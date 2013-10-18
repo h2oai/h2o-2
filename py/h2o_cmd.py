@@ -25,10 +25,15 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
     node.summary_page(myKeyForParseResult)
     return p
 
-def runInspect(node=None, key=None, timeoutSecs=30, **kwargs):
+# normally we don't want inspect to print during verboseprint. verbose=True to get it
+# in specific tests
+def runInspect(node=None, key=None, timeoutSecs=30, verbose=False, **kwargs):
     if not key: raise Exception('No key for Inspect')
     if not node: node = h2o.nodes[0]
-    return node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
+    a = node.inspect(key, timeoutSecs=timeoutSecs, **kwargs)
+    if verbose:
+        print "inspect of %s:" % key, h2o.dump_json(a)
+    return a
 
 def runSummary(node=None, key=None, timeoutSecs=30, **kwargs):
     if not key: raise Exception('No key for Summary')
@@ -49,13 +54,10 @@ def runExec(node=None, timeoutSecs=20, **kwargs):
     # no such thing as GLMView..don't use retryDelaySecs
     return node.exec_query(timeoutSecs, **kwargs)
 
-def runKMeans(node=None, parseResult=None, 
-        timeoutSecs=20, retryDelaySecs=2, **kwargs):
+def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for KMeans')
     if not node: node = h2o.nodes[0]
-    print parseResult['destination_key']
-    return node.kmeans(parseResult['destination_key'], None, 
-        timeoutSecs, retryDelaySecs, **kwargs)
+    return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, noPoll=noPoll, **kwargs)
 
 def runKMeansGrid(node=None, parseResult=None,
         timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
@@ -111,8 +113,6 @@ def runRF(node=None, parseResult=None, trees=5,
         timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for RF')
     if not node: node = h2o.nodes[0]
-    #! FIX! what else is in parseResult that we should check?
-    h2o.verboseprint("runRF parseResult:", parseResult)
     Key = parseResult['destination_key']
     return node.random_forest(Key, trees, timeoutSecs, **kwargs)
 
@@ -120,7 +120,7 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
-def runGBMView(node=None,model_key=None,timeoutSecs=300,retryDelaySecs=2,noPoll=False,**kwargs):
+def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
     if not node: node = h2o.nodes[0]
     if not model_key: 
         raise Exception("\nNo model_key was supplied to the gbm view!")

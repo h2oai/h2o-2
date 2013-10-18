@@ -1751,7 +1751,8 @@ public abstract class DGLM {
         return super.onExceptionalCompletion(ex, caller);
       }
     };
-    H2O.submitTask(job.start(fjtask));
+    job.start(fjtask);
+    H2O.submitTask(fjtask);
     return job;
   }
   public static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,

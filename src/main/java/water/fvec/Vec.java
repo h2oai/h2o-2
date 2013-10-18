@@ -1,9 +1,11 @@
 package water.fvec;
 
 import java.util.Arrays;
+import java.util.UUID;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.util.Utils;
 
 /**
  * A single distributed vector column.
@@ -72,6 +74,16 @@ public class Vec extends Iced {
     _espc = espc;
   }
 
+  // A 1-element Vec
+  public Vec( Key key, double d ) {
+    _key = key;
+    _espc = new long[]{0,1};
+    Futures fs = new Futures();
+    DKV.put(chunkKey(0),new C0DChunk(d,1),fs);
+    DKV.put(_key,this,fs);
+    fs.blockForPending();
+  }
+
   /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
   public Vec makeZero() { return makeCon(0); }
@@ -109,13 +121,30 @@ public class Vec extends Iced {
   }
 
   // Create a vector transforming values according given domain map
-  public Vec makeTransf(final int[] domMap) {
+  public Vec makeTransf(final int[] domMap) { return makeTransf(domMap, null); }
+  public Vec makeTransf(final int[] domMap, final String[] domain) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, domMap, group().addVecs(1)[0],_espc);
+    Vec v0 = new TransfVec(this._key, domMap, domain, group().addVecs(1)[0],_espc);
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
+  }
+  /**
+   * Adapt given vector <code>v</code> to this vector.
+   * I.e., unify domains and call makeTransf().
+   */
+  public Vec adaptTo(Vec v, boolean exact) {
+    int[] domain = null;
+    String[] sdomain = _domain == null
+        ? Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain()) // it is number-column
+        : domain(); // it is enum
+    int[] domMap = Model.getDomainMapping(null, v._domain, sdomain, exact);
+    if (domain!=null) {
+      // do a mapping from INT -> ENUM -> this vector ENUM
+      domMap = Utils.compose(Utils.mapping(domain), domMap);
+    }
+    return this.makeTransf(domMap, sdomain);
   }
 
   /** Number of elements in the vector.  Overridden by subclasses that compute
@@ -193,7 +222,7 @@ public class Vec extends Iced {
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 ) {    // KV store has a better answer
-      _min  = vthis._min;   _max   = vthis._max; 
+      _min  = vthis._min;   _max   = vthis._max;
       _mean = vthis._mean;  _sigma = vthis._sigma;
       _size = vthis._size;  _isInt = vthis._isInt;
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
@@ -354,6 +383,7 @@ public class Vec extends Iced {
   /** Make a Vector-group key.  */
   private Key groupKey(){
     byte [] bits = _key._kb.clone();
+    bits[0] = Key.VGROUP;
     UDP.set4(bits, 2, -1);
     UDP.set4(bits, 6, -1);
     return Key.make(bits);
@@ -470,32 +500,46 @@ public class Vec extends Iced {
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
-
+    public VectorGroup() {
+      byte[] bits = new byte[26];
+      bits[0] = Key.VGROUP;
+      bits[1] = -1;
+      UDP.set4(bits, 2, -1);
+      UDP.set4(bits, 6, -1);
+      UUID uu = UUID.randomUUID();
+      UDP.set8(bits,10,uu.getLeastSignificantBits());
+      UDP.set8(bits,18,uu. getMostSignificantBits());
+      _key = Key.make(bits);
+      _len = 0;
+    }
     public Key vecKey(int vecId){
       byte [] bits = _key._kb.clone();
+      bits[0] = Key.VEC;
       UDP.set4(bits,2,vecId);//
       return Key.make(bits);
     }
-
     /**
      * Task to atomically add vectors into existing group.
      * @author tomasnykodym
      */
     private static class AddVecs2GroupTsk extends TAtomic<VectorGroup>{
       final Key _key;
-      final int _addN;
-      int _finalN;
-      private AddVecs2GroupTsk(Key key, int n){_key = key; _addN = _finalN = n;}
+      int _n;          // INPUT: Keys to allocate; OUTPUT: start of run of keys
+      private AddVecs2GroupTsk(Key key, int n){_key = key; _n = n;}
       @Override public VectorGroup atomic(VectorGroup old) {
-        if(old == null) return new VectorGroup(_key, ++_finalN);
-        return new VectorGroup(_key, _finalN = (_addN + old._len + 1));
+        int n = _n;             // how many
+        // If the old group is missing, assume it is the default group-of-self
+        // (having 1 ID already allocated for self), not a new group with
+        // zero prior vectors.
+        _n = old==null ? 1 : old._len; // start of allocated key run
+        return new VectorGroup(_key, n+_n);
       }
     }
     // reserve range of keys and return index of first new available key
     public int reserveKeys(final int n){
       AddVecs2GroupTsk tsk = new AddVecs2GroupTsk(_key, n);
       tsk.invoke(_key);
-      return tsk._finalN - n;
+      return tsk._n;
     }
     /**
      * Gets the next n keys of this group.
@@ -510,8 +554,45 @@ public class Vec extends Iced {
       tsk.invoke(_key);
       Key [] res = new Key[n];
       for(int i = 0; i < n; ++i)
-        res[i] = vecKey(i + tsk._finalN - n);
+        res[i] = vecKey(i + tsk._n);
       return res;
+    }
+
+    @Override public String toString() {
+      return "VecGrp "+_key.toString()+", next free="+_len;
+    }
+
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof VectorGroup) ) return false;
+      return ((VectorGroup)o)._key.equals(_key);
+    }
+    @Override public int hashCode() {
+      return _key.hashCode();
+    }
+  }
+
+  public static class CollectDomain extends MRTask2<CollectDomain> {
+    final int _nclass;
+    final int _ymin;
+    byte _dom[];
+    public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
+    @Override public void map(Chunk ys) {
+      _dom = new byte[_nclass];
+      int ycls=0;
+      for( int row=0; row<ys._len; row++ ) {
+        if (ys.isNA0(row)) continue;
+        ycls = (int)ys.at80(row)-_ymin;
+        _dom[ycls] = 1;
+      }
+    }
+    @Override public void reduce( CollectDomain that ) { Utils.or(_dom,that._dom); }
+    public int[] domain() {
+      int cnt = 0;
+      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) cnt++;
+      int[] dom = new int[cnt];
+      cnt=0;
+      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) dom[cnt++] = i+_ymin;
+      return dom;
     }
   }
 }

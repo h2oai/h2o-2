@@ -2,12 +2,14 @@ package water.api;
 
 import hex.*;
 import hex.GridSearch.GridSearchProgress;
+import hex.KMeans2.KMeans2ModelView;
+import hex.KMeans2.KMeans2Progress;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
 import hex.glm.*;
 import hex.pca.PCA2;
-import hex.pca.PCAScore2;
+import hex.pca.PCAScore;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -27,6 +29,14 @@ import com.google.common.io.Closeables;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
+  public enum API_VERSION {
+    V_1(1, "/"),
+    V_2(2, "/2/"); // FIXME: better should be /v2/
+    final private int _version;
+    final private String _prefix;
+    public final String prefix() { return _prefix; }
+    private API_VERSION(int version, String prefix) { _version = version; _prefix = prefix; }
+  }
   static RequestServer SERVER;
 
   // cache of all loaded resources
@@ -47,7 +57,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Inspect()),     "Inspect",                    "Data");
     Request.addToNavbar(registerRequest(new StoreView()),   "View All",                   "Data");
     Request.addToNavbar(registerRequest(new Parse()),       "Parse",                      "Data");
-    Request.addToNavbar(registerRequest(new RReader()),     "Parse R Data",               "Data");
     Request.addToNavbar(registerRequest(new ImportFiles()), "Import Files",               "Data");
     Request.addToNavbar(registerRequest(new ImportUrl()),   "Import URL",                 "Data");
     Request.addToNavbar(registerRequest(new ImportS3()),    "Import S3",                  "Data");
@@ -63,11 +72,11 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeans Grid",                "Model");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2",                    "Model");
     Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
-    Request.addToNavbar(registerRequest(new Console()),     "Console",                    "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
@@ -91,7 +100,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",      "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",     "Admin");
     Request.addToNavbar(registerRequest(new Script()),      "Get Script",      "Admin");
-    Request.addToNavbar(registerRequest(new DataDistrib()), "Data Distrib",    "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",        "Admin");
 
     Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help");
@@ -105,23 +113,20 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new ImportFiles2());
       registerRequest(new Parse2());
       registerRequest(new Inspect2());
-      registerRequest(new KMeans2());
+      registerRequest(new SummaryPage2());
       registerRequest(new hex.gbm.DRF());
       registerRequest(new hex.LR2());
       registerRequest(new PCA2());
-      registerRequest(new PCAScore2());
-    }
-    else {
+      registerRequest(new PCAScore());
+    } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",        "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new PCA2()), "PCA2", "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new PCAScore2()), "PCAScore2", "Beta (FluidVecs!)");
-    }
+      Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
+     }
 
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
@@ -129,22 +134,25 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new DRFModelView());
     registerRequest(new DRFProgressPage());
     registerRequest(new DownloadDataset());
-    registerRequest(new Exec());
-    registerRequest(new DataManip());
+    registerRequest(new Exec2());
+    registerRequest(new Exec());      // Will be replaced by Exec2
+    registerRequest(new DataManip()); // Will be replaced by Exec2
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
-    registerRequest(new GetVector());
+    registerRequest(new GetVector()); // Will be replaced by Exec2
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new NeuralNetProgress());
+    registerRequest(new KMeans2Progress());
+    registerRequest(new KMeans2ModelView());
     registerRequest(new PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());
     registerRequest(new PutValue());
-    registerRequest(new PutVector());
+    registerRequest(new PutVector()); // Will be replaced by Exec2
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
     registerRequest(new RPackage());
@@ -153,12 +161,16 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
-    registerRequest(new TypeaheadFileRequest());
+    // Typeahead
+    registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
-    registerRequest(new TypeaheadHdfsPathRequest());
-    registerRequest(new TypeaheadHexKeyRequest());
-    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
     registerRequest(new TypeaheadRFModelKeyRequest());
+    registerRequest(new TypeaheadKMeansModelKeyRequest());
+    registerRequest(new TypeaheadPCAModelKeyRequest());
+    registerRequest(new TypeaheadHexKeyRequest());
+    registerRequest(new TypeaheadFileRequest());
+    registerRequest(new TypeaheadHdfsPathRequest());
+    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
     registerRequest(new TypeaheadS3BucketRequest());
     // testing hooks
     registerRequest(new TestPoll());
@@ -166,6 +178,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMProgressPage2());
     registerRequest(new GLMModelView());
     registerRequest(new GLMValidationView());
+    registerRequest(new FrameSplit());
     Request.initializeNavBar();
   }
 
@@ -173,16 +186,21 @@ public class RequestServer extends NanoHTTPD {
    * Registers the request with the request server.
    */
   public static Request registerRequest(Request req) {
-    String href = req.href();
-    assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
-    _requests.put(href,req);
-    req.registered();
+    assert req.supportedVersions().length > 0;
+    for (API_VERSION ver : req.supportedVersions()) {
+      String href = req.href(ver);
+      assert (! _requests.containsKey(href)) : "Request with href "+href+" already registered";
+      _requests.put(href,req);
+      req.registered(ver);
+    }
     return req;
   }
 
   public static void unregisterRequest(Request req) {
-    String href = req.href();
-    _requests.remove(href);
+    for (API_VERSION ver : req.supportedVersions()) {
+      String href = req.href(ver);
+      _requests.remove(href);
+    }
   }
 
   // Keep spinning until we get to launch the NanoHTTPD

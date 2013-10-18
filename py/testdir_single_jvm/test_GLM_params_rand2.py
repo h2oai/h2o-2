@@ -7,7 +7,7 @@ def define_params():
         'standardize': [None, 0,1],
         'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
         'beta_epsilon': [None, 0.0001],
-        'expert': [None, 0, 1],
+        'expert_settings': [None, 0, 1],
         'family': [None, 'gaussian', 'binomial', 'poisson'],
         'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         # seem to get zero coeffs with lamba=1 case=7

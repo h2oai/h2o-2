@@ -12,9 +12,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=28)
+            h2o.build_cloud(1,java_heap_GB=14)
         else:
-            h2o_hosts.build_cloud_with_hosts(java_heap_GB=28)
+            h2o_hosts.build_cloud_with_hosts(java_heap_GB=14)
 
     @classmethod
     def tearDownClass(cls):
@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 1800
             start = time.time()
-            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutsecs=60, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
             elapsed = time.time() - start
             print "glm completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

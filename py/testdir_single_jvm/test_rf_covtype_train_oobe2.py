@@ -9,7 +9,7 @@ import h2o_browse as h2b
 paramDict = {
     # FIX! if there's a header, can you specify column number or column header
     'response_variable': 54,
-    'class_weight': None,
+    'class_weights': None,
     'ntree': 10,
     'model_key': 'model_keyA',
     'out_of_bag_error_estimate': 1,

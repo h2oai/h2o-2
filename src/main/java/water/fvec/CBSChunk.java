@@ -13,9 +13,8 @@ import water.H2O;
 public class CBSChunk extends Chunk {
   static protected final byte _NA  = 0x02; // Internal representation of NA
   static final int OFF = 2;
-
   protected byte _bpv;
-  protected byte _gap;
+  protected byte _gap;// number of trailing unused bits in the end (== _len % 8, we allocate bytes, but our length i generally not multiple of 8)
   public CBSChunk(byte[] bs, byte gap, byte bpv) {
     assert gap < 8; assert bpv == 1 || bpv == 2;
     _mem = bs; _start = -1; _gap = gap; _bpv = bpv;

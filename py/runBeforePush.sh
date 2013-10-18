@@ -3,8 +3,7 @@
 # @Last Change: 24-Dez-2004.
 # @Revision:    0.0
 
-nosetests test.py
-nosetests test_inspect.py
-nosetests test_putfile.py
+RUNNER="py"
+"$RUNNER" testdir_multi_jvm/test_basics.py
 
 # vi: 

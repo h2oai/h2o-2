@@ -1,6 +1,6 @@
 import logging, psutil
 import h2o
-import time, os
+import time, os, re
 
 class PerfH2O(object):
     # so a test can create multiple logs
@@ -22,6 +22,28 @@ class PerfH2O(object):
         formatter = logging.Formatter("%(asctime)s %(message)s") # date/time stamp
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
+
+    def switch_logfile(self, location, log):
+        #similar to change_logfile, but not for python subtests
+        #used in h2o/bench/BMscripts/* e.g.
+        #location is either an absolute path or a subdirectory
+        #no trailing slashes for location
+        #no leading slashes for log and no suffix
+        location = location.strip('/')
+        log = re.sub("\.[a-z]*","",log)
+        blog = location + "/" + log + ".log"
+        print "\nSwitch log file; appending to %s." %blog, "Between tests, you may want to delete it if it gets too big"
+        
+        logger = logging.getLogger()
+        logger.handlers[0].stream.close()
+        logger.removeHandler(logger.handlers[0])
+
+        file_handler = logging.FileHandler(blog)
+        file_handler.setLevel(logging.CRITICAL) # like the init
+        formatter = logging.Formatter("%(asctime)s %(message)s") # date/time stamp
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
 
     def init_logfile(self, subtest_name):
         # default should just append thru multiple cloud builds.
@@ -100,7 +122,7 @@ class PerfH2O(object):
         # and lots of info we don't want. 
         jstackResult = h2o.nodes[0].jstack()
         node0 = jstackResult['nodes'][0]
-        stack_traces = node0["stack_traces"]
+        stack_traces = node0["traces"]
         # all one string
         stackLines = stack_traces.split('\n')
 
@@ -269,7 +291,6 @@ class PerfH2O(object):
     def get_log_save(self, benchmarkLogging=None, initOnly=False):
         if not benchmarkLogging:
             return
-
         self.snapshotTime = time.time()
         self.elapsedTime = self.snapshotTime - self.pollStats['time']
 

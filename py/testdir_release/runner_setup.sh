@@ -7,8 +7,7 @@ set -e
 # Ensure that all your children are truly dead when you yourself are killed.
 # trap "kill -- -$BASHPID" INT TERM EXIT
 # leave out EXIT for now
-trap "kill -- -$BASHPID" INT TERM
-echo "BASHPID: $BASHPID"
+trap "kill -- -$$" INT TERM
 echo "current PID: $$"
 
 #**************************************
@@ -36,7 +35,7 @@ echo remaining parameters to Bash are $*
 
 #**************************************
 
-# The -PID argument tells bash to kill the process group with id $BASHPID, 
+# The -PID argument tells bash to kill the process group with id $$, 
 # Process groups have the same id as the spawning process, 
 # The process group id remains even after processes have been reparented. (say by init)
 # The -- gets kill not to interpret this as a signal ..

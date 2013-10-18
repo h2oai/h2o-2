@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
             print kwargs
             # slower if parallel=0
             timeoutSecs = 30 + kwargs['ntree'] * 6 * (kwargs['parallel'] and 1 or 5)
-            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs, **kwargs)
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs)
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "Trial #", trial, "completed"
 

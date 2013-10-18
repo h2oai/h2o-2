@@ -1,5 +1,5 @@
 import getpass, json, h2o
-import random, os
+import random, os, sys
 # UPDATE: all multi-machine testing will pass list of IP and base port addresses to H2O
 # means we won't realy on h2o self-discovery of cluster
 
@@ -13,6 +13,7 @@ def find_config(base):
 
 # node_count is sometimes used positionally...break that out. all others are keyword args
 def build_cloud_with_hosts(node_count=None, **kwargs):
+    sys.stdout = h2o.OutWrapper(sys.stdout)
     # legacy: we allow node_count to be positional. 
     # if it's used positionally, stick in in kwargs (overwrite if there too)
     if node_count is not None:
@@ -105,6 +106,7 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
 
     #********************
     global hosts
+    hosts = []
     # Update: special case paramsToUse['ip'] = ["127.0.0.1"] and use the normal build_cloud
     # this allows all the tests in testdir_host to be run with a special config that points to 127.0.0.1
     # hosts should be None for everyone if normal build_cloud is desired
