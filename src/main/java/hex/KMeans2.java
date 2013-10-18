@@ -7,7 +7,7 @@ import java.util.Random;
 
 import water.*;
 import water.Job.ColumnsJob;
-import water.api.DocGen;
+import water.api.*;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -50,6 +50,12 @@ public class KMeans2 extends ColumnsJob {
       names[i] = source._names[cols[i]];
     Vec[] vecs = selectVecs(source);
     Frame frame = new Frame(names, vecs);
+    // Fill-in response based on K
+    Vec response = frame.anyVec().makeZero();
+    response._domain = new String[k];
+    for( int i = 0; i < response._domain.length; i++ )
+      response._domain[i] = "Cluster " + i;
+    frame.add("response", response);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, frame);
 
     double[] subs = null, muls = null;
@@ -99,7 +105,7 @@ public class KMeans2 extends ColumnsJob {
 
         if( cancelled() )
           return;
-        clusters = normalize ? denormalize(clusters, vecs) : clusters;
+        model.clusters = normalize ? denormalize(clusters, vecs) : clusters;
         model.error = sqr._sqr;
         model.iterations++;
         UKV.put(destination_key, model);
@@ -122,7 +128,7 @@ public class KMeans2 extends ColumnsJob {
           }
         }
       }
-      clusters = normalize ? denormalize(clusters, vecs) : clusters;
+      model.clusters = normalize ? denormalize(clusters, vecs) : clusters;
       model.error = task._sqr;
       model.iterations++;
       UKV.put(destination_key, model);
@@ -130,6 +136,64 @@ public class KMeans2 extends ColumnsJob {
         break;
       if( cancelled() )
         break;
+    }
+  }
+
+  @Override protected Response redirect() {
+    String n = KMeans2Progress.class.getSimpleName();
+    return new Response(Response.Status.redirect, this, -1, -1, n, "job", job_key, "dst_key", destination_key);
+  }
+
+  public static class KMeans2Progress extends Progress2 {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @Override protected Response jobDone(Job job, Key dst) {
+      return new Response(Response.Status.redirect, this, 0, 0, new KMeans2ModelView().href(), "model", dst_key);
+    }
+  }
+
+  public static class KMeans2ModelView extends Request2 {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help = "KMeans2 Model", filter = Default.class)
+    public KMeans2Model model;
+
+    public static String link(String txt, Key model) {
+      return "<a href='" + new KMeans2ModelView().href() + ".html?model=" + model + "'>" + txt + "</a>";
+    }
+
+    public static Response redirect(Request req, Key model) {
+      return new Response(Response.Status.redirect, req, -1, -1, new KMeans2ModelView().href(), "model", model);
+    }
+
+    @Override protected Response serve() {
+      return new Response(Response.Status.done, this, -1, -1, null);
+    }
+
+    @Override public boolean toHTML(StringBuilder sb) {
+      if( model != null ) {
+        DocGen.HTML.section(sb, "Error: " + model.error);
+        sb.append("<span style='display: inline-block;'>");
+        sb.append("<table class='table table-striped table-bordered'>");
+        sb.append("<tr>");
+        sb.append("<th>Clusters</th>");
+        for( int i = 0; i < model.clusters[0].length; i++ )
+          sb.append("<th>").append(model._names[i]).append("</th>");
+        sb.append("</tr>");
+
+        for( int r = 0; r < model.clusters.length; r++ ) {
+          sb.append("<tr>");
+          sb.append("<td>").append(r).append("</td>");
+          for( int c = 0; c < model.clusters[r].length; c++ )
+            sb.append("<td>").append(ElementBuilder.format(model.clusters[r][c])).append("</td>");
+          sb.append("</tr>");
+        }
+        sb.append("</table></span>");
+        return true;
+      }
+      return false;
     }
   }
 
@@ -161,8 +225,9 @@ public class KMeans2 extends ColumnsJob {
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
+      double[][] cs = clusters;
       if( normalized && _normClust == null ) {
-        _normClust = normalize(clusters, chunks);
+        cs = _normClust = normalize(clusters, chunks);
         _subs = new double[chunks.length];
         _muls = new double[chunks.length];
         for( int i = 0; i < chunks.length; i++ ) {
@@ -172,7 +237,7 @@ public class KMeans2 extends ColumnsJob {
         }
       }
       data(tmp, chunks, rowInChunk, _subs, _muls);
-      preds[closest(_normClust, tmp, new ClusterDist())._cluster] = 1;
+      preds[closest(cs, tmp, new ClusterDist())._cluster] = 1;
       return preds;
     }
 
@@ -251,8 +316,8 @@ public class KMeans2 extends ColumnsJob {
     double _sqr;           // Total sqr distance
 
     @Override public void map(Chunk[] cs) {
-      double[] values = new double[cs.length];
-      _sums = new double[_clusters.length][cs.length];
+      double[] values = new double[_clusters[0].length];
+      _sums = new double[_clusters.length][values.length];
       _counts = new int[_clusters.length];
       ClusterDist cd = new ClusterDist();
 
@@ -304,7 +369,7 @@ public class KMeans2 extends ColumnsJob {
     for( int cluster = 0; cluster < count; cluster++ ) {
       double sqr = 0;           // Sum of dimensional distances
       int pts = point.length;   // Count of valid points
-      for( int column = 0; column < point.length; column++ ) {
+      for( int column = 0; column < clusters[cluster].length; column++ ) {
         double d = point[column];
         if( Double.isNaN(d) ) { // Bad data?
           pts--;                // Do not count
@@ -416,7 +481,7 @@ public class KMeans2 extends ColumnsJob {
    * filtered out columns with no mean).
    */
   private static void data(double[] values, Vec[] vecs, long row, double[] subs, double[] muls) {
-    for( int i = 0; i < vecs.length - 1; i++ ) {
+    for( int i = 0; i < values.length; i++ ) {
       double d = vecs[i].at(row);
       if( subs != null ) {
         d -= subs[i];
@@ -427,7 +492,7 @@ public class KMeans2 extends ColumnsJob {
   }
 
   private static void data(double[] values, Chunk[] chks, int row, double[] subs, double[] muls) {
-    for( int i = 0; i < chks.length - 1; i++ ) {
+    for( int i = 0; i < values.length; i++ ) {
       double d = chks[i].at0(row);
       if( subs != null ) {
         d -= subs[i];

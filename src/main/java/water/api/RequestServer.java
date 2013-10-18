@@ -2,11 +2,13 @@ package water.api;
 
 import hex.*;
 import hex.GridSearch.GridSearchProgress;
+import hex.KMeans2.KMeans2ModelView;
+import hex.KMeans2.KMeans2Progress;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
 import hex.glm.*;
-import hex.pca.*;
+import hex.pca.PCAScore;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -142,6 +144,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new NeuralNetProgress());
+    registerRequest(new KMeans2Progress());
+    registerRequest(new KMeans2ModelView());
     registerRequest(new PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());
@@ -155,12 +159,16 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
-    registerRequest(new TypeaheadFileRequest());
+    // Typeahead
+    registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
-    registerRequest(new TypeaheadHdfsPathRequest());
-    registerRequest(new TypeaheadHexKeyRequest());
-    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
     registerRequest(new TypeaheadRFModelKeyRequest());
+    registerRequest(new TypeaheadKMeansModelKeyRequest());
+    registerRequest(new TypeaheadPCAModelKeyRequest());
+    registerRequest(new TypeaheadHexKeyRequest());
+    registerRequest(new TypeaheadFileRequest());
+    registerRequest(new TypeaheadHdfsPathRequest());
+    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
     registerRequest(new TypeaheadS3BucketRequest());
     // testing hooks
     registerRequest(new TestPoll());

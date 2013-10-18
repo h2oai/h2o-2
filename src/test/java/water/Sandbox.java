@@ -7,6 +7,7 @@ import org.apache.commons.lang.ArrayUtils;
 import water.api.FrameSplit;
 import water.deploy.*;
 import water.fvec.Frame;
+import water.parser.ParseDataset;
 import water.util.Utils;
 
 public class Sandbox {
@@ -26,7 +27,13 @@ public class Sandbox {
       // covtype();
       // airlines();
       // mnist();
-      ecology();
+      // ecology();
+      // va();
+
+      File f = new File("smalldata/covtype/covtype.20k.data");
+      Key key = TestUtil.load_test_file(f, "train");
+      Key dest = Key.make("train.hex");
+      ParseDataset.parse(dest, new Key[] { key });
 
       //Frame frame = water.TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
       //Frame frame = water.TestUtil.parseFrame("smalldata/categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");
@@ -81,6 +88,18 @@ public class Sandbox {
     frame.remove("LateAircraftDelay");
     frame.remove("IsArrDelayed");
     split(frame);
+  }
+
+  public static void va() {
+    File f = new File("smalldata/gbm_test/ecology_model.csv");
+    Key key = TestUtil.load_test_file(f, "train");
+    Key dest = Key.make("train.hex");
+    ParseDataset.parse(dest, new Key[] { key });
+
+    f = new File("smalldata/gbm_test/ecology_eval.csv");
+    key = TestUtil.load_test_file(f, "test");
+    dest = Key.make("test.hex");
+    ParseDataset.parse(dest, new Key[] { key });
   }
 
   public static void split(Frame frame) {
