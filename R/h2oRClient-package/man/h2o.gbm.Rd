@@ -73,5 +73,5 @@ prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o
 h2o.gbm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, n.trees = 100, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
 # Run regression GBM on CAPSULE ~ AGE + RACE + PSA + DCAPS
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
-h2o.gbm(y = "VOL", x = myX, data = prostate.hex, n.trees = 10, interaction.depth = 5, shrinkage = 0.1)
+h2o.gbm(y = "VOL", x = myX, distribution = "gaussian", data = prostate.hex, n.trees = 10, interaction.depth = 5, shrinkage = 0.1)
 }
