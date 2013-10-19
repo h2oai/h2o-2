@@ -1,7 +1,11 @@
 #!/bin/bash
 
 OUTDIR='LittleLoggerFiles'
-mkdir ${OUTDIR}
+
+if [ ! -d ${OUTDIR} ]
+then
+    mkdir ${OUTDIR}
+fi
 
 #last 3 digits of inet addr
 mach=`ifconfig | grep -o "inet addr:192.168.1.[0-9]*" | grep -o 192.168.1.* | awk -F'.' '{print $4}'`
@@ -20,7 +24,12 @@ swapPerfFile=${OUTDIR}/$1-`date        +%Y-%m-%d`"-sisoPerf_"$mach".csv"
 cpuheader='time(s)'
 head -n 33 /proc/stat | tail -n 32 | awk -F' ' 'OFS="," {print $1}' > tmpfile
 cpuheader=$cpuheader,`./transpose.sh tmpfile`
-rm tmpfile
+
+if [ -a tmpfile ]
+then
+    rm tmpfile
+fi
+
 memheader='time(s),MemTotal,MemFree,Cached,Writeback'
 topheader='time(s),PID,USER,RES,%CPU,%MEM,COMMAND'
 netheader='time(s),bytes,packets,errs,drop'
@@ -65,7 +74,7 @@ do
     PREVTOTALS[$i]=0
 done
 
-start=`date +%s`
+start=`cat starttime`
 while :; do
     a=1
     for i in {0..34}
@@ -103,17 +112,17 @@ while :; do
     echo $(( `date +%s` - $start )),$lineidle   >> $idlePerfFile
     echo $(( `date +%s` - $start )),$lineiowait >> $iowaitPerfFile
 
-    cat /proc/meminfo      | awk -F' ' 'OFS="," {gsub(":","", $1); print $2}' > memTMP
-    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > recTMP
-    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > traTMP
-    echoLine memTMP $start $memPerfFile         1 1
-    echoLine recTMP $start $netReceivePerfFile  0 
-    echoLine traTMP $start $netTransmitPerfFile 0
+    cat /proc/meminfo      | awk -F' ' 'OFS="," {gsub(":","", $1); print $2}' > lmemTMP
+    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > lrecTMP
+    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > ltraTMP
+    echoLine lmemTMP $start $memPerfFile         1 1
+    echoLine lrecTMP $start $netReceivePerfFile  0 
+    echoLine ltraTMP $start $netTransmitPerfFile 0
     #get top 10 processes from top and then just store them, may/not be interesting...
     ti="$(( `date +%s` - ${start} ))"
     top -b | head -n 17 | tail -n 10 | awk -v t=$ti -F' ' 'OFS="," {print t,$1,$2,$6,$9,$10,$12}' >> $topPerfFile
     vmstat | tail -n 1               | awk -v t=$ti -F' ' 'OFS="," {print t,$7,$8}'               >> $swapPerfFile
-    rm *TMP
+    rm l*TMP
     sleep 30
 done
 
