@@ -108,8 +108,8 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
             output.close()
 
 if __name__ == '__main__':
-    build = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
+    build = sys.argv.pop(-1)
     h2o.beta_features = True
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()

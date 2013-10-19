@@ -105,8 +105,8 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             output.close()
 
 if __name__ == '__main__':
-    build = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
+    build = sys.argv.pop(-1)
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
  

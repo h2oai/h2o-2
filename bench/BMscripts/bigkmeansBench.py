@@ -72,8 +72,8 @@ def doKMeans():
         output.close()
 
 if __name__ == '__main__':
-    build = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
+    build = sys.argv.pop(-1)
     h2o.parse_our_args()
     h2o.build_cloud(1, java_heap_GB=240, enable_benchmark_log=False)
     h2o.tear_down_cloud()
