@@ -69,6 +69,8 @@ public class Inspect2 extends Request2 {
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 
+  public static String jsonLink(Key key){return "2/Inspect2.json?src_key=" + key;}
+
   @Override public boolean toHTML( StringBuilder sb ) {
     Key skey = Key.make(input("src_key"));
 
