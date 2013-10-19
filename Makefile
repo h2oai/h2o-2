@@ -24,7 +24,7 @@
 # ec2/			EC2 scripts for use by the public.
 # experiments/		Experimental code built on top of H2O.
 # hadoop/		Hadoop driver and mapper for H2O.
-# h2odocs/              docs.0xdata.com website content.
+# h2o-docs/             docs.0xdata.com website content.
 # installer/		BitRock InstallBuilder code for windows and mac.
 # launcher/		Launcher packaged with the installer.
 # lib/			Libraries used for compiling and running H2O.
@@ -73,16 +73,10 @@ default: nightly_build_stuff
 
 nightly_build_stuff:
 	@echo PROJECT_VERSION is $(PROJECT_VERSION)
-	@echo
-	@echo "PHASE: Cleaning..."
-	@echo
 	$(MAKE) clean PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
-	# @echo
-	# @echo "PHASE: Building docs website..."
-	# @echo
-	# $(MAKE) docs-website PROJECT_VERSION=$(PROJECT_VERSION)
-	 @echo
+	$(MAKE) docs-website PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
 	@echo Build completed successfully.
 
 build:
@@ -169,27 +163,37 @@ TOPDIR:=$(CURDIR)
 BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
 SPHINXBUILD=$(shell which sphinx-build)
 ifeq ($(SPHINXBUILD),)
-docs-website:
+docs-website: dw_announce
 	@echo sphinx-build not found, skipping...
 else
-docs-website: dw_1 dw_2 dw_3 dw_4
+docs-website: dw_announce dw_1 dw_2 dw_3 dw_4
 endif
 
+dw_announce:
+	@echo
+	@echo "PHASE: Building docs website..."
+	@echo
+
+RANDOM_NUMBER := $(shell echo $$$$)
+PORT := $(shell expr "63600" "+" "(" $(RANDOM_NUMBER) "%" "100" ")")
+TMPDIR := $(shell echo /tmp/tmp.h2o.docgen.$(PORT))
 dw_1:
 	rm -fr $(BUILD_WEBSITE_DIR)
-	rm -fr h2odocs/source/developuser/DocGen
-	mkdir -p h2odocs/source/developuser/DocGen
-	cd h2odocs/source/developuser/DocGen && java -cp $(TOPDIR)/target/h2o.jar water.api.DocGen
+	rm -fr h2o-docs/source/developuser/DocGen
+	mkdir -p h2o-docs/source/developuser/DocGen
+	cd h2o-docs/source/developuser/DocGen && java -Xmx1g -cp $(TOPDIR)/target/h2o.jar water.api.DocGen -port $(PORT) -name $(TMPDIR) -ice_root $(TMPDIR) 1> /dev/null
+	rm -rf $(TMPDIR)
 
 # If this fails, you might need to do the following:
 #     $ (possibly sudo) easy_install pip
 #     $ (possibly sudo) pip install sphinxcontrib-fulltoc
 #
 dw_2:
-	(export PROJECT_VERSION=$(PROJECT_VERSION); $(MAKE) -C h2odocs)
+	(export PROJECT_VERSION=$(PROJECT_VERSION); $(MAKE) -C h2o-docs)
 
 dw_3:
-	mv h2odocs/build/html $(BUILD_WEBSITE_DIR)
+	mkdir $(BUILD_WEBSITE_DIR)
+	cp -r h2o-docs/build/html/* $(BUILD_WEBSITE_DIR)
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits
 	cp -p docs/0xdata_H2O_Algorithms.pdf $(BUILD_WEBSITE_DIR)/bits
 	cp -rp target/javadoc $(BUILD_WEBSITE_DIR)/bits
@@ -219,6 +223,9 @@ run:
 	java $(JAVA_HEAP_SIZE) -jar target/h2o.jar
 
 clean:
+	@echo
+	@echo "PHASE: Cleaning..."
+	@echo
 	rm -f $(BUILD_VERSION_JAVA_FILE)
 	rm -fr target
 	./build.sh clean
@@ -226,5 +233,6 @@ clean:
 	$(MAKE) -C R clean
 	$(MAKE) -C launcher clean
 	$(MAKE) -C installer clean
+	$(MAKE) -C h2o-docs clean
 
 .phony: default build test docs-website run clean
