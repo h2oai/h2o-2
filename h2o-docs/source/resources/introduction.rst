@@ -1,6 +1,6 @@
 
 Introduction to H\ :sub:`2`\ O
-============================
+==============================
 
 H\ :sub:`2`\ O by 0xdata brings better algorithms to big data. H\ :sub:`2`\ O is the open
 source math and machine learning platform for speed and scale. With

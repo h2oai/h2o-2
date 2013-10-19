@@ -352,7 +352,7 @@ Returns:
   end
   println("truth/pred")
   cm
-truth/pred
+  truth/pred
 
 Returns: 
 

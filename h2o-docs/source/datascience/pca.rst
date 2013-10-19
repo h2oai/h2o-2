@@ -1,5 +1,5 @@
 H\ :sub:`2`\ OPrincipal Components Analysis
-=============================
+===========================================
 
 **The H\ :sub:`2`\ O PCA algorithm is still in development. If you have
 questions or comments please see our contact us document. 

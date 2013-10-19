@@ -26,7 +26,7 @@ options has a default.
 
   There are two places in the java command where options can be specified. 
   In the call options should be inserted as follows:
-  **java -Xmx<size> [ADDITIONAL JVM OPTIONS GO HERE] -jar h2o.jar [H\ :sub:`2`\ O OPTIONS GO HERE]
+  **java -Xmx<size> [ADDITIONAL JVM OPTIONS GO HERE] -jar h2o.jar [H\ :sub:`2`\ O OPTIONS GO HERE]**
 
 
 JVM Options

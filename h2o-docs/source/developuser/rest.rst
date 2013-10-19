@@ -5,10 +5,12 @@ REST/JSON API
 Data ingestion
 """"""""""""""
 
+.. Disable ImportFiles2 for now.
+.. DocGen/ImportFiles2
+
 .. toctree::
    :maxdepth: 1
 
-   DocGen/ImportFiles2
    DocGen/Parse2
 
 Algorithms
