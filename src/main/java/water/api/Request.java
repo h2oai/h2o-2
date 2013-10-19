@@ -29,6 +29,7 @@ public abstract class Request extends RequestBuilders {
     int until() default Integer.MAX_VALUE;
     Class<? extends Filter> filter() default Filter.class;
     Class<? extends Filter>[] filters() default {};
+    boolean json() default false; // Forces an input field to also appear in JSON
     long   lmin() default Long  .MIN_VALUE;
     long   lmax() default Long  .MAX_VALUE;
     double dmin() default Double.NEGATIVE_INFINITY;

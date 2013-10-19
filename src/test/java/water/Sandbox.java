@@ -24,16 +24,28 @@ public class Sandbox {
 
       //new Sample07_NeuralNet_Mnist().run();
 
-      // covtype();
+      //covtype();
       // airlines();
-      // mnist();
+      mnist();
       // ecology();
       // va();
 
-      File f = new File("smalldata/covtype/covtype.20k.data");
-      Key key = TestUtil.load_test_file(f, "train");
-      Key dest = Key.make("train.hex");
-      ParseDataset.parse(dest, new Key[] { key });
+//      File file = new File("smalldata/covtype/covtype.20k.data");
+//      Key dest = Key.make("train.hex");
+//      Key fkey = water.fvec.NFSFileVec.make(file);
+//      water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+//      Frame frame = UKV.get(dest);
+//      split(frame);
+//      Frame train = UKV.get(Key.make("train.hex"));
+//      Frame valid = UKV.get(Key.make("valid.hex"));
+//      Frame test_ = UKV.get(Key.make("test.hex"));
+//      Utils.writeFileAndClose(new File("../tmp/covtype.20k.data.train"), train.toCSV(false));
+//      Utils.writeFileAndClose(new File("../tmp/covtype.20k.data.valid"), valid.toCSV(false));
+//      Utils.writeFileAndClose(new File("../tmp/covtype.20k.data.test"), test_.toCSV(false));
+
+//      Key key = TestUtil.load_test_file(file, "train");
+//      Key dest = Key.make("train.hex");
+//      ParseDataset.parse(dest, new Key[] { key });
 
       //Frame frame = water.TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
       //Frame frame = water.TestUtil.parseFrame("smalldata/categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");

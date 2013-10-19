@@ -15,7 +15,7 @@ public abstract class Request2 extends Request {
   transient Properties _parms;
 
   public String input(String fieldName) {
-    return _parms==null?null:_parms.getProperty(fieldName);
+    return _parms == null ? null : _parms.getProperty(fieldName);
   }
 
   public class TypeaheadKey extends TypeaheadInputText<Key> {
@@ -59,7 +59,7 @@ public abstract class Request2 extends Request {
 
     @Override protected String[] errors() {
       if( _type != null )
-      	return new String[] { "Key is not a " + _type.getSimpleName() };
+        return new String[] { "Key is not a " + _type.getSimpleName() };
       return super.errors();
     }
   }
@@ -117,9 +117,9 @@ public abstract class Request2 extends Request {
   public class MultiVecSelect extends Dependent {
     boolean _namesOnly;
 
-    private void init (MultiVecSelectType selectType) {
+    private void init(MultiVecSelectType selectType) {
       _namesOnly = false;
-      switch (selectType) {
+      switch( selectType ) {
         case INDEXES_THEN_NAMES:
           _namesOnly = false;
           break;
@@ -132,12 +132,12 @@ public abstract class Request2 extends Request {
 
     protected MultiVecSelect(String key) {
       super(key);
-      init (MultiVecSelectType.INDEXES_THEN_NAMES);
+      init(MultiVecSelectType.INDEXES_THEN_NAMES);
     }
 
     protected MultiVecSelect(String key, MultiVecSelectType selectType) {
       super(key);
-      init (selectType);
+      init(selectType);
     }
   }
 
@@ -247,7 +247,7 @@ public abstract class Request2 extends Request {
           }
 
           // Bool
-          else if( f.getType() == boolean.class && api.filter()==Default.class ) {
+          else if( f.getType() == boolean.class && api.filter() == Default.class ) {
             boolean val = (Boolean) defaultValue;
             arg = new Bool(f.getName(), val, api.help());
           }
@@ -334,22 +334,14 @@ public abstract class Request2 extends Request {
 
   // Expand grid search related argument sets
   @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
-    // TODO: real parser for unified imbricated argument sets, expressions etc
     String[][] values = new String[_arguments.size()][];
     boolean gridSearch = false;
     for( int i = 0; i < _arguments.size(); i++ ) {
       String value = _parms.getProperty(_arguments.get(i)._name);
       if( value != null ) {
-        int off = 0;
-        int next = 0;
-        while( (next = value.indexOf('|', off)) >= 0 ) {
-          if( next != off )
-            values[i] = Utils.add(values[i], value.substring(off, next));
-          off = next + 1;
+        values[i] = split(value);
+        if( values[i].length > 1 )
           gridSearch = true;
-        }
-        if( off < value.length() )
-          values[i] = Utils.add(values[i], value.substring(off));
       }
     }
     if( !gridSearch )
@@ -384,6 +376,44 @@ public abstract class Request2 extends Request {
     GridSearch grid = new GridSearch();
     grid.jobs = jobs.toArray(new Job[jobs.size()]);
     return grid.superServeGrid(server, parms, type);
+  }
+
+  // Splits imbricated expressions like c(4, 5, '2,3', 7)
+  // TODO: switch to real parser for unified imbricated argument sets, expressions etc?
+  public static String[] split(String value) {
+    String[] values = null;
+    value = value.trim();
+    if( value.startsWith("c(") && value.endsWith(")") ) {
+      value = value.substring(2, value.length() - 1);
+      StringTokenizer st = new StringTokenizer(value, ",'", true);
+      String s, current = "";
+      while( (s = getNextToken(st)) != null ) {
+        if( ",".equals(s) ) {
+          values = Utils.add(values, current);
+          current = "";
+        } else if( "'".equals(s) ) {
+          while( !("'".equals((s = getNextToken(st)))) ) {
+            if( s == null )
+              throw new IllegalArgumentException("Missing closing quote");
+            current += s;
+          }
+        } else
+          current += s;
+      }
+      if( current.length() > 0 )
+        values = Utils.add(values, current);
+    } else
+      values = new String[] { value };
+    return values;
+  }
+
+  private static String getNextToken(StringTokenizer st) {
+    while( st.hasMoreTokens() ) {
+      String tok = st.nextToken().trim();
+      if( tok.length() > 0 )
+        return tok;
+    }
+    return null;
   }
 
   public final NanoHTTPD.Response superServeGrid(NanoHTTPD server, Properties parms, RequestType type) {

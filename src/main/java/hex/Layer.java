@@ -530,6 +530,16 @@ public abstract class Layer extends Iced {
       super.init(ls, index, weights, step);
 
       if( weights ) {
+        Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        int count = Math.min(15, _in._units);
+        float min = -.1f, max = +.1f;
+        for( int o = 0; o < _units; o++ ) {
+          for( int n = 0; n < count; n++ ) {
+            int i = rand.nextInt(_in._units);
+            int w = o * _in._units + i;
+            _w[w] = rand(rand, min, max);
+          }
+        }
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
         for( int i = 0; _v != null && i < _v.length; i++ )
