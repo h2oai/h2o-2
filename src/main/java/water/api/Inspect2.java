@@ -56,10 +56,8 @@ public class Inspect2 extends Request2 {
     if( src_key == null ) return RequestServer._http404.serve();
     numRows = src_key.numRows();
     numCols = src_key.numCols();
-    Futures fs = new Futures();
     for( int i=0; i<numCols; i++ )
-      src_key.vecs()[i].rollupStats(fs);
-    fs.blockForPending();
+      src_key.vecs()[i].rollupStats();
 
     byteSize = src_key.byteSize();
     cols = new ColSummary[numCols];
