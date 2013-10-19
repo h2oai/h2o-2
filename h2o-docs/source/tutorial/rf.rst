@@ -33,7 +33,7 @@ tool that predicts whether an object is an internet ad or not.
 
 #. Parsing data into H\ :sub:`2`\ O generates a .hex key ("data name.hex").
 
-.. image:: RFparse.png
+.. image:: RFParse.png
    :width: 100 %
 
 
