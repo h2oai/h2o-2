@@ -212,6 +212,10 @@ else
 	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
 endif
 
+docs-website-clean:
+	rm -rf h2o-docs/source/developuser/DocGen
+	$(MAKE) -C h2o-docs clean
+
 #
 # Set appropriately for your data size to quickly try out H2O.
 # For best results, the Java heap should be at least 4x data size.
@@ -233,6 +237,6 @@ clean:
 	$(MAKE) -C R clean
 	$(MAKE) -C launcher clean
 	$(MAKE) -C installer clean
-	$(MAKE) -C h2o-docs clean
+	$(MAKE) docs-website-clean
 
 .phony: default build test docs-website run clean
