@@ -164,6 +164,13 @@ myR() {
     set +e
     # everything after -- is positional. grabbed by argparse.REMAINDER
     ./sh2junit.py -name $1 -timeout $timeout -- $cmd || true
+
+    # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
+    # think of h2o.check_sandbox_for_errors()
+    rm -f -r sandbox/$1
+    mkdir -p sandbox/$1
+    cp -f sandbox/*log sandbox/$1
+    rm -f sandbox/*log sandbox/$1
     set -e
 }
 
