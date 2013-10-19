@@ -2342,7 +2342,7 @@ class RemoteHost(object):
             except IOError, e:
                 if e.errno == errno.ENOENT:
                     sftp.put(f, dest, callback=progress)
-                    print "\n{0:.3f} seconds".format(time.time() - start)
+                    ### print "\n{0:.3f} seconds".format(time.time() - start)
             finally:
                 sftp.close()
             self.uploaded[f] = dest
