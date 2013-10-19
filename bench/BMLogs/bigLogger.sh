@@ -2,8 +2,6 @@
 
 OUTDIR='BigLoggerFiles'
 rawLogs=${OUTDIR}/rawLogs
-mkdir ${OUTDIR}
-mkdir ${rawLogs}
 
 #last 3 digits of inet addr
 mach=`ifconfig | grep -o "inet addr:192.168.1.[0-9]*" | grep -o 192.168.1.* | awk -F'.' '{print $4}'`
@@ -36,6 +34,13 @@ function checkExists {
     fi
 }
 
+function checkDExists {
+ if [ ! -d $1 ]
+ then
+    mkdir $1
+ fi
+}
+
 function echoLine {
     if [ $4 -eq 0 ]
     then
@@ -52,7 +57,13 @@ function echoLine {
         fi
     fi
 }
-
+checkDExists ${OUTDIR}
+checkDExists ${rawLogs}
+checkDExists ${rawLogs}/procstat
+checkDExists ${rawLogs}/meminfo
+checkDExists ${rawLogs}/netdev
+checkDExists ${rawLogs}/vmstat
+checkDExists ${rawLogs}/top
 checkExists $cpuPerfFile         $cpuheader
 checkExists $idlePerfFile        $cpuheader
 checkExists $iowaitPerfFile      $cpuheader
@@ -70,12 +81,13 @@ done
 start=`date +%s`
 while :; do
     #dump raw logs first
-    cat /proc/stat    >> ${rawLogs}/procstat_$(( `date +%Y-%m-%d-%H-%M` ))_$mach
-    cat /proc/meminfo >> ${rawlogs}/procmeminfo_$(( `date +%Y-%m-%d-%H-%M` ))_$mach
-    cat /proc/net/dev >> ${rawlogs}/procnetdev_$(( `date +%Y-%m-%d-%H-%M` ))_$mach
-    vmstat            >> ${rawlogs}/vmstat_$(( `date +%Y-%m-%d-%H-%M` ))_$mach
-    top -b            >> ${rawlogs}/top_$(( `date +%Y-%m-%d-%H-%M` ))_$mach
-    
+    ts=`date +"%Y-%m-%d-%H-%M-%S"`
+    echo $ts
+    cat /proc/stat    >> ${rawLogs}/procstat/${ts}_procstat_${mach}
+    cat /proc/meminfo >> ${rawLogs}/meminfo/${ts}_meminfo_${mach}
+    cat /proc/net/dev >> ${rawLogs}/netdev/${ts}_netdev_${mach}
+    vmstat            >> ${rawLogs}/vmstat/${ts}_vmstat_${mach}
+    top -b -n 1       >> ${rawLogs}/top/${ts}_top_${mach}
     a=1
     for i in {0..34}
     do
@@ -123,5 +135,5 @@ while :; do
     top -b | head -n 17 | tail -n 10 | awk -v t=$ti -F' ' 'OFS="," {print t,$1,$2,$6,$9,$10,$12}' >> $topPerfFile
     vmstat | tail -n 1               | awk -v t=$ti -F' ' 'OFS="," {print t,$7,$8}'               >> $swapPerfFile
     rm *TMP
-    sleep 30
+    sleep 1
 done
