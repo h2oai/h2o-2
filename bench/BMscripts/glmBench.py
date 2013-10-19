@@ -9,16 +9,19 @@ csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
              }
-header = ""
-
+build = ""
+debug = False
 def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex, row):
-    benchmarkLogging = ['cpu','disk', 'network', 'iostats']
-    benchmarkLogging = None
+    bench = "bench"
+    if debug:
+        print "DOING GLM DEBUG"
+        bench = "bench/debug"
     date = '-'.join([str(z) for z in list(time.localtime())][0:3])
     for f in fs['train']:
-        #h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='GLM'+f+'.csv')
         overallWallStart = time.time()
-        glmbenchcsv = 'benchmarks/'+build+'/'+date+'/glmbench.csv'
+        pre              = ""
+        if debug: pre    = "DEBUG"
+        glmbenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'glmbench.csv'
         if not os.path.exists(glmbenchcsv):
             output = open(glmbenchcsv,'w')
             output.write(','.join(csv_header)+'\n')
@@ -27,26 +30,36 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
         csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
                         dialect='excel', extrasaction='ignore',delimiter=',')
         try:
-            java_heap_GB = h2o.nodes[0].java_heap_GB
-            importFolderPath = "bench/" + folderPath
-            if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x']): csvPathname = importFolderPath + "/" + f + '.csv'
-            else: csvPathname = importFolderPath + "/" + f + "/*linked*"
-            hex_key = f + '.hex'
-            hK = folderPath + "Header.csv"    
-            headerPathname = importFolderPath + "/" + hK
+            java_heap_GB     = h2o.nodes[0].java_heap_GB
+            importFolderPath = bench + "/" + folderPath
+            if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x']): 
+                csvPathname = importFolderPath + "/" + f + '.csv'
+            else: 
+                csvPathname = importFolderPath + "/" + f + "/*linked*"
+            hex_key         = f + '.hex'
+            hK              = folderPath + "Header.csv"    
+            headerPathname  = importFolderPath + "/" + hK
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-            headerKey =h2i.find_key(hK)
+            headerKey       = h2i.find_key(hK)
             trainParseWallStart = time.time()
-            #h2o.cloudPerfH2O.message("=========PARSE TRAIN========") 
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200, benchmarkLogging=benchmarkLogging)
-            parseWallTime = time.time() - trainParseWallStart
+            parseResult = h2i.import_parse(bucket           = 'home-0xdiag-datasets', 
+                                           path             = csvPathname, 
+                                           schema           = 'local', 
+                                           hex_key          = hex_key,  
+                                           header           = 1, 
+                                           header_from_file = headerKey, 
+                                           separator        = 44,
+                                           timeoutSecs      = 7200,
+                                           retryDelaySecs   = 5,
+                                           pollTimeoutSecs  = 7200 
+                                          )
+
+            parseWallTime  = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
-            #h2o.cloudPerfH2O.message("=========END PARSE TRAIN========")
             inspect_train  = h2o.nodes[0].inspect(parseResult['destination_key'])
             inspect_test   = h2o.nodes[0].inspect(testFilehex)
 
-            nMachines = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
+            nMachines      = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
             row.update( {'h2o_build'          : build,
                          'nMachines'          : nMachines,
                          'nJVMs'              : len(h2o.nodes),
@@ -71,17 +84,18 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
                          'expert_settings'    : 0,
                         }
             kwargs    = params.copy()
-            #h2o.cloudPerfH2O.message("=========GLM========")
             glmStart  = time.time()
-            glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=7200, benchmarkLogging=benchmarkLogging, **kwargs)
+            glm       = h2o_cmd.runGLM(parseResult = parseResult, 
+                                       timeoutSecs = 7200, 
+                                       **kwargs)
             glmTime   = time.time() - glmStart
-            #h2o.cloudPerfH2O.message("=========END GLM========")
             row.update( {'glmBuildTime'       : glmTime,
                          'AverageErrorOver10Folds'    : glm['GLMModel']['validations'][0]['err'],
                         })
             
             glmScoreStart = time.time()
-            glmScore      = h2o_cmd.runGLMScore(key=testFilehex,model_key=params['destination_key'])
+            glmScore      = h2o_cmd.runGLMScore(key       = testFilehex,
+                                                model_key = params['destination_key'])
             scoreTime     = time.time() - glmScoreStart
             if family == "binomial":
                 row.update( {'scoreTime'          : scoreTime,
@@ -101,9 +115,10 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
 
 if __name__ == '__main__':
     build = sys.argv.pop(-1)
+    debug = sys.argv.pop(-1)
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
-    #Test File parse
+    
     airlinesTestParseStart      = time.time()
     hK                          =  "AirlinesHeader.csv"
     headerPathname              = "bench/Airlines" + "/" + hK
