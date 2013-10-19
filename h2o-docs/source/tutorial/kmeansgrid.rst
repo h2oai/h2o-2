@@ -66,9 +66,6 @@ Building a Model
 
 #. Press submit.
 
-.. image:: KMgridrequest.png
-   :width: 70%
-
 The separator between alternative levels of K and Max Iter is the vertical bar or pipe. On a US keyboard it is found below the delete key on the right hand side of the keyboard by shift + (backslash). 
 
 K-Means Grid Output
