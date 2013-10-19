@@ -54,7 +54,8 @@ public class KMeans extends Job {
         tryComplete();
       }
     };
-    H2O.submitTask(job.start(task));
+    job.start(task);
+    H2O.submitTask(task);
     return job;
   }
 

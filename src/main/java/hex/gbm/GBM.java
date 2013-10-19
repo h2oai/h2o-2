@@ -1,6 +1,5 @@
 package hex.gbm;
 
-import java.util.Arrays;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.UndecidedNode;
@@ -25,7 +24,7 @@ public class GBM extends SharedTreeModelBuilder {
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int ymin) { super(key,dataKey,testKey,names,domains,ntrees,ymin); }
+    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) { super(key,dataKey,testKey,names,domains,ntrees); }
     public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
@@ -65,7 +64,7 @@ public class GBM extends SharedTreeModelBuilder {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
   @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
-    GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees, _ymin);
+    GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees);
     DKV.put(outputKey, model);
     // Build trees until we hit the limit
     for( int tid=0; tid<ntrees; tid++) {
@@ -114,7 +113,7 @@ public class GBM extends SharedTreeModelBuilder {
         }
 
       } else {                  // Regression
-        
+
         Chunk tr = chk_tree(chks,0); // Prior tree sums
         Chunk wk = chk_work(chks,0); // Predictions
         for( int row=0; row<ys._len; row++ )
@@ -145,7 +144,7 @@ public class GBM extends SharedTreeModelBuilder {
 
         for( int row=0; row<ys._len; row++ ) {
           if( ys.isNA0(row) ) throw H2O.unimpl(); // Set NANs in all works
-          int y = (int)ys.at80(row)-_ymin; // zero-based response variable
+          int y = (int)ys.at80(row); // zero-based response variable
           // Actual is '1' for class 'y' and '0' for all other classes
           for( int k=0; k<_nclass; k++ ) {
             if( _distribution[k] != 0 ) {
@@ -156,7 +155,6 @@ public class GBM extends SharedTreeModelBuilder {
         }
 
       } else {                  // Regression
-
         Chunk wk = chk_work(chks,0); // Prediction==>Residuals
         for( int row=0; row<ys._len; row++ )
           wk.set0(row, (float)(ys.at0(row)-wk.at0(row)) );
@@ -253,7 +251,7 @@ public class GBM extends SharedTreeModelBuilder {
     // ESL2, page 387.  Step 2b iii.  Compute the gammas, and store them back
     // into the tree leaves.  Includes learn_rate.
     //    gamma_i_k = (nclass-1)/nclass * (sum res_i / sum (|res_i|*(1-|res_i|)))
-    // For regression: 
+    // For regression:
     //    gamma_i_k = sum res_i / count(res_i)
     GammaPass gp = new GammaPass(ktrees,leafs).doAll(fr);
     double m1class = _nclass > 1 ? (double)(_nclass-1)/_nclass : 1.0; // K-1/K

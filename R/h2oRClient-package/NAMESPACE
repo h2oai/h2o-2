@@ -14,6 +14,7 @@ exportMethods(
     "h2o.setColNames",
     "show",
     "summary",
+    "histograms",
     "plot"
 )
 exportClasses(
@@ -21,6 +22,7 @@ exportClasses(
      "H2OGLMModel",
      "H2OKMeansModel",
      "H2OParsedData",
+     "H2OParsedData2",
      "H2ORawData",
      "H2ORForestModel",
       "H2OPCAModel",

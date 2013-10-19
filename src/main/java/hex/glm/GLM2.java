@@ -159,7 +159,7 @@ public class GLM2 extends FrameJob {
           _oldModel = res;
           GLMIterationTask nextIter = new GLMIterationTask(glmt, newBeta);
           nextIter.setCompleter(clone()); // we need to clone here as FJT will set status to done after this method
-          nextIter.doIt(fr);
+          nextIter.dfork2(fr);
         }
       } else fjt.onExceptionalCompletion(new RuntimeException("Cancelled!"),null);
     }
@@ -178,9 +178,8 @@ public class GLM2 extends FrameJob {
     }
   }
 
-  public Future run(H2OCountedCompleter completer){
-    final H2OCountedCompleter fjt = new H2OEmptyCompleter();
-    if(completer != null)fjt.setCompleter(completer);
+  public Job run(final H2OCountedCompleter completer){
+    final H2OCountedCompleter fjt = completer == null?new H2OEmptyCompleter():completer;
     start(fjt);
     UKV.remove(dest());
     _oldModel = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime,GLM2.this.case_mode,GLM2.this.case_val);
@@ -201,16 +200,15 @@ public class GLM2 extends FrameJob {
       for(int i = 0; i < cols.length; ++i)cols[i] = constantOrNAs.get(i);
       fr.remove(cols);
     }
-    fr = GLMTask.adaptFrame(fr);
     YMUTask ymut = new YMUTask(this,new GLMParams(family, tweedie_variance_power, link,tweedie_link_power), standardize, case_mode, case_val, fr.anyVec().length());
+    fr = ymut.adaptFrame(fr);
     ymut.doIt(fr).getResult();
     GLMIterationTask firstIter = new GLMIterationTask(this,new GLMParams(family, tweedie_variance_power, link,tweedie_link_power),_beta,standardize, 1.0/ymut.nobs(), case_mode, case_val,_step,_offset,_complement);
     firstIter._ymu = ymut.ymu();
-    if(completer != null)fjt.setCompleter(completer);
     final LSMSolver solver = new ADMMSolver(lambda, alpha);
     firstIter.setCompleter(new Iteration(solver,fr,fjt));
-    firstIter.doIt(fr);
-    return fjt;
+    firstIter.dfork2(fr);
+    return this;
   }
 
   private void xvalidate(final GLMModel model, final H2OCountedCompleter cmp){

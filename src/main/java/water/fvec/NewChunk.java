@@ -1,7 +1,10 @@
 package water.fvec;
 
 import java.util.Arrays;
+import java.util.GregorianCalendar;
+
 import water.parser.Enum;
+import water.parser.ValueString;
 import water.*;
 import water.parser.DParseTask;
 
@@ -94,6 +97,117 @@ public class NewChunk extends Chunk {
   void invalid() { append2(0,Integer.MIN_VALUE); }
   void setInvalid(int idx) { _ls[idx]=0; _xs[idx] = Integer.MIN_VALUE; }
 
+  /*
+   *
+   *
+   *
+   * private long attemptTimeParse( ValueString str ) {
+    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
+    if( t0 != Long.MIN_VALUE ) return t0;
+    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
+    if( t1 != Long.MIN_VALUE ) return t1;
+    return Long.MIN_VALUE;
+  }
+  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
+  private long attemptTimeParse_0( ValueString str ) {
+    final byte[] buf = str._buf;
+    int i=str._off;
+    final int end = i+str._length;
+    while( i < end && buf[i] == ' ' ) i++;
+    if   ( i < end && buf[i] == '"' ) i++;
+    if( (end-i) < 19 ) return Long.MIN_VALUE;
+    int yy=0, MM=0, dd=0, HH=0, mm=0, ss=0, SS=0;
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    if( yy < 1970 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    MM = digit(MM,buf[i++]);
+    MM = digit(MM,buf[i++]);
+    if( MM < 1 || MM > 12 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    dd = digit(dd,buf[i++]);
+    dd = digit(dd,buf[i++]);
+    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
+    if( buf[i++] != ' ' ) return Long.MIN_VALUE;
+    HH = digit(HH,buf[i++]);
+    HH = digit(HH,buf[i++]);
+    if( HH < 0 || HH > 23 ) return Long.MIN_VALUE;
+    if( buf[i++] != ':' ) return Long.MIN_VALUE;
+    mm = digit(mm,buf[i++]);
+    mm = digit(mm,buf[i++]);
+    if( mm < 0 || mm > 59 ) return Long.MIN_VALUE;
+    if( buf[i++] != ':' ) return Long.MIN_VALUE;
+    ss = digit(ss,buf[i++]);
+    ss = digit(ss,buf[i++]);
+    if( ss < 0 || ss > 59 ) return Long.MIN_VALUE;
+    if( i<end && buf[i] == '.' ) {
+      i++;
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( i<end ) SS = digit(SS,buf[i++]);
+      if( SS < 0 || SS > 999 ) return Long.MIN_VALUE;
+    }
+    if( i<end && buf[i] == '"' ) i++;
+    if( i<end ) return Long.MIN_VALUE;
+    return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
+  }
+
+  // So I just brutally parse "dd-MMM-yy".
+  public static final byte MMS[][][] = new byte[][][] {
+    {"jan".getBytes(),null},
+    {"feb".getBytes(),null},
+    {"mar".getBytes(),null},
+    {"apr".getBytes(),null},
+    {"may".getBytes(),null},
+    {"jun".getBytes(),"june".getBytes()},
+    {"jul".getBytes(),"july".getBytes()},
+    {"aug".getBytes(),null},
+    {"sep".getBytes(),"sept".getBytes()},
+    {"oct".getBytes(),null},
+    {"nov".getBytes(),null},
+    {"dec".getBytes(),null}
+  };
+  private long attemptTimeParse_1( ValueString str ) {
+    final byte[] buf = str._buf;
+    int i=str._off;
+    final int end = i+str._length;
+    while( i < end && buf[i] == ' ' ) i++;
+    if   ( i < end && buf[i] == '"' ) i++;
+    if( (end-i) < 8 ) return Long.MIN_VALUE;
+    int yy=0, MM=0, dd=0;
+    dd = digit(dd,buf[i++]);
+    if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
+    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    byte[]mm=null;
+    OUTER: for( ; MM<MMS.length; MM++ ) {
+      byte[][] mms = MMS[MM];
+      INNER: for( int k=0; k<mms.length; k++ ) {
+        mm = mms[k];
+        if( mm == null ) continue;
+        for( int j=0; j<mm.length; j++ )
+          if( mm[j] != Character.toLowerCase(buf[i+j]) )
+            continue INNER;
+        break OUTER;
+      }
+    }
+    if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
+    i += mm.length;             // Skip month bytes
+    MM++;                       // 1-based month
+    if( buf[i++] != '-' ) return Long.MIN_VALUE;
+    yy = digit(yy,buf[i++]);
+    yy = digit(yy,buf[i++]);
+    yy += 2000;                 // Y2K bug
+    if( i<end && buf[i] == '"' ) i++;
+    if( i<end ) return Long.MIN_VALUE;
+    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
+  }
+
+   */
+
+
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
   // (does not live on inside the K/V store).
@@ -128,29 +242,32 @@ public class NewChunk extends Chunk {
           byte [] bs = MemoryManager.malloc1(_len);
           for(int i = 0; i < _len; ++i) bs[i] = (byte)(_xs[i] >= 0 ? (0xFF&_xs[i]) : C1Chunk._NA);
           return new C1Chunk(bs);
-        } else if( sz < 65535 ) { // 2 bytes
-          byte [] bs = MemoryManager.malloc1(_len << 1);
-          int bias = sz < 32767 ? 0 : -(Short.MIN_VALUE+1);
-          for(int i = 0; i < _len; ++i)
-            UDP.set2(bs, i << 1, (short)((_xs[i] >= 0)? _xs[i]-bias : C2Chunk._NA));
-          return sz < 32767 ? new C2Chunk(bs) : new C2SChunk(bs,bias,1);
+        } else if( sz <= 65535 ) { // 2 bytes
+          int bias = 0, off = 0;
+          if(sz >= 32767){
+            bias = 32767;
+            off = C2SChunk.OFF;
+          }
+          byte [] bs = MemoryManager.malloc1((_len << 1) + off);
+          for(int i = 0; i < _len; ++i){
+            if(_xs[i] >= 0) assert (short)(_xs[i]-bias) == (_xs[i]-bias);
+            UDP.set2(bs, off + (i << 1), (short)((_xs[i] > 0)? _xs[i]-bias : C2Chunk._NA));
+          }
+          return bias == 0 ? new C2Chunk(bs) : new C2SChunk(bs,bias,1);
         } else throw H2O.unimpl();
       }
     }
     // If the data was set8 as doubles, we (weanily) give up on compression and
     // just store it as a pile-o-doubles.
-    if( _ds != null ) {
-      for( int i=0; i<_len; i++ ) // Attempt to inject all doubles into floats
-        if( (double)(float)_ds[i] != _ds[i] )
-          return new C8DChunk(bufF(3));
-      return new C4FChunk(bufF(2));
-    }
+    if( _ds != null )return chunkF();
 
     // Look at the min & max & scaling.  See if we can sanely normalize the
     // data in some fixed-point format.
     boolean first = true;
+    boolean hasNA = false;
+
     for( int i=0; i<_len; i++ ) {
-      if( isNA(i) ) continue;
+      if( isNA(i) ) { hasNA = true; continue;}
       long l = _ls[i];
       int  x = _xs[i];
       // Compute per-chunk min/sum/max
@@ -182,21 +299,21 @@ public class NewChunk extends Chunk {
     }
 
     // Constant column?
-    if( _min==_max ) {
+    if(!hasNA && _min==_max ) {
       return ((long)_min  == _min)
           ?new C0LChunk((long)_min,_len)
           :new C0DChunk(_min, _len);
-
     }
 
-    // Boolean column? (or in general two value column)
-    if (lemax-lemin == 1 && lemin == 0 && xmin == 0) {
+    // Boolean column?
+    if (_max == 1 && _min == 0 && xmin == 0) {
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
     }
 
 
+    final boolean fpoint = xmin < 0 || _min < Long.MIN_VALUE || _max > Long.MAX_VALUE;
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like
     // {1.2,23,0.34} then is normalized to always be represented with 2 digits
@@ -208,36 +325,38 @@ public class NewChunk extends Chunk {
     // uniform, so we scale up the largest lmax by the largest scale we need
     // and if that fits in a byte/short - then it's worth compressing.  Other
     // wise we just flip to a float or double representation.
-    if(overflow || ((xmin != 0) && floatOverflow || -35 > xmin || xmin > 35))
-      return new C8DChunk(bufF(3));
-    if( xmin != 0 ) {
+    if(overflow || fpoint && floatOverflow || -35 > xmin || xmin > 35)
+      return chunkF();
+    if( fpoint ) {
       if(lemax-lemin < 255 ) // Fits in scaled biased byte?
         return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
-      if(lemax-lemin < 65535 )
-        return new C2SChunk( bufX(lemin,xmin,C2SChunk.OFF,1),(int)lemin,DParseTask.pow10(xmin));
-      return new C4FChunk( bufF(2));
-    }
+      if(lemax-lemin < 65535 ) { // we use signed 2B short, add -32k to the bias!
+        long bias = 32767 + lemin;
+        return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
+      }
+      if(lemax - lemin < Integer.MAX_VALUE)
+        return new C4SChunk(bufX(lemin, xmin,C4SChunk.OFF,2),(int)lemin,DParseTask.pow10(xmin));
+      return chunkF();
+    } // else an integer column
     // Compress column into a byte
-    if( 0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
+    if(xmin == 0 &&  0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
       return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
-      if( 0 <= lemin && lemax < 255 ) // Span fits in an unbiased byte?
+      if(0 <= _min && _max < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
-      return new C1SChunk( bufX(lemin,0,C1SChunk.OFF,0),(int)lemin,1);
+      return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10i(xmin));
     }
 
     // Compress column into a short
     if( lemax-lemin < 65535 ) {               // Span fits in a biased short?
-      if( Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
+      if( xmin == 0 && Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
         return new C2Chunk( bufX(0,0,C2Chunk.OFF,1));
       int bias = (int)(lemin-(Short.MIN_VALUE+1));
-      return new C2SChunk( bufX(bias,0,C2SChunk.OFF,1),bias,1);
+      return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),bias,DParseTask.pow10i(xmin));
     }
-
     // Compress column into ints
-    if( Integer.MIN_VALUE < lemin && lemax <= Integer.MAX_VALUE )
+    if(Integer.MIN_VALUE < _min && _max <= Integer.MAX_VALUE )
       return new C4Chunk( bufX(0,0,0,2));
-
     return new C8Chunk( bufX(0,0,0,3));
   }
 
@@ -272,24 +391,11 @@ public class NewChunk extends Chunk {
   }
 
   // Compute a compressed float buffer
-  private byte[] bufF( int log ) {
-    byte[] bs = new byte[_len<<log];
-    for( int i=0; i<_len; i++ ) {
-      if(isNA(i)){
-        switch( log ) {
-          case 2: UDP.set4f(bs,(i<<2), Float .NaN); break;
-          case 3: UDP.set8d(bs,(i<<3), Double.NaN); break;
-        }
-      } else {
-        double le = _ds == null ? _ls[i]*DParseTask.pow10(_xs[i]) : _ds[i];
-        switch( log ) {
-        case 2: UDP.set4f(bs,(i<<2), (float)le); break;
-        case 3: UDP.set8d(bs,(i<<3),        le); break;
-        default: H2O.fail();
-        }
-      }
-    }
-    return bs;
+  private Chunk chunkF() {
+    final byte [] bs = MemoryManager.malloc1(_len*8);
+    for(int i = 0; i < _len; ++i)
+      UDP.set8d(bs, 8*i, _ds != null?_ds[i]:isNA0(i)?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]));
+    return new C8DChunk(bs);
   }
 
   // Compute compressed boolean buffer
@@ -301,7 +407,7 @@ public class NewChunk extends Chunk {
     byte b    = 0;
     int  idx  = off;
     for (int i=0; i<_len; i++) {
-      byte val = isNA(i) ? CBSChunk._NA : (byte) _ls[i];
+      byte val = isNA(i) ? CBSChunk._NA : _ls[i] == 0?(byte)0:(byte)1;
       switch (bpv) {
       case 1: assert val!=CBSChunk._NA : "Found NA row "+i+", naCnt="+_naCnt+", strcnt="+_strCnt;
               b = CBSChunk.write1b(b, val, boff); break;
@@ -352,13 +458,13 @@ public class NewChunk extends Chunk {
     _naCnt++;
     return true;
   }
-  @Override public long   at8_impl( int i ) { 
+  @Override public long   at8_impl( int i ) {
     if( _ls == null ) return (long)_ds[i];
-    return _ls[i]*DParseTask.pow10i(_xs[i]); 
+    return _ls[i]*DParseTask.pow10i(_xs[i]);
   }
-  @Override public double atd_impl( int i ) { 
+  @Override public double atd_impl( int i ) {
     if( _ds == null ) return at8_impl(i);
-    assert _xs==null; return _ds[i]; 
+    assert _xs==null; return _ds[i];
   }
   @Override public boolean isNA_impl( int i ) { return isNA(i); }
   @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.fail(); }

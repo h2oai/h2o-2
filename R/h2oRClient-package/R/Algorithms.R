@@ -34,7 +34,7 @@ setMethod("h2o.gbm", signature(x="numeric", y="numeric", distribution="character
     
       result=list()
       categories=length(res2$gbm_model$cm)
-      cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
+      cf_matrix = t(matrix(unlist(res2$gbm_model$cm), nrow=categories))
       cf_names <- res2$gbm_model[['_domains']]
       cf_names <- cf_names[[ length(cf_names) ]]
 
@@ -93,7 +93,7 @@ setMethod("h2o.gbm", signature(x="ANY", y="numeric", distribution='ANY', data="H
     })
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
-# Internally called glm to allow games with method dispatch
+# Internally called GLM to allow games with method dispatch
 h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
       if(family == 'tweedie' && (tweedie.p < 1 || tweedie.p > 2 ))
           stop('tweedie.p must be in (1,2)')
@@ -357,7 +357,7 @@ setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData
       
       myYCol = which(myCol == y)-1
       rand_cbind_key = paste("__PCABind_", UUIDgenerate(), sep="")
-      res = h2o.__remoteSend(data@h2o, "DataManip.json", source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=myYCol, destination_key=rand_cbind_key, operation="cbind")
+      res = h2o.__remoteSend(data@h2o, "2/DataManip.json", source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=myYCol, destination_key=rand_cbind_key, operation="cbind")
       myGLMData = new("H2OParsedData", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
       h2o.glm.FV(paste("PC", 0:(ncomp-1), sep=""), y, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
     })
@@ -505,13 +505,11 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
         # numMatch = colnames(newdata) %in% colnames(object@data)
         numMatch = colnames(newdata) %in% rownames(object@model$rotation)
         numPC = min(length(numMatch[numMatch == TRUE]), length(object@model$sdev))
-        res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
-        h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
+        # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, destination_key=rand_pred_key, num_pc=numPC)
+        res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
+        # h2o.__pollAll(object@data@h2o, timeout = 60)     # Poll until all jobs finished
+        while(h2o.__poll(object@data@h2o, res$job_key) != -1) { Sys.sleep(1) }
         new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
-        # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, model_key=object@key, key=newdata@key, num_pc=numPC)
-        # while(h2o.__poll(object@data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-        # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
-        # new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
       } else
         stop(paste("Prediction has not yet been implemented for", class(object)))
     })
@@ -530,14 +528,14 @@ setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedD
       rand_glm_key = paste("__GLM2Model_", UUIDgenerate(), sep="")
       
       if(family != "tweedie")
-        res = h2o.__remoteSend(data@h2o, "GLM2.json", source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, "2/GLM2.json", source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
       else
-        res = h2o.__remoteSend(data@h2o, "GLM2.json", source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, "2/GLM2.json", source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
       
-      res = h2o.__remoteSend(data@h2o, "GLMModelView.json", '_modelKey'=rand_glm_key)
+      res = h2o.__remoteSend(data@h2o, "2/GLMModelView.json", '_modelKey'=rand_glm_key)
       resModel = res$glm_model
-      res = h2o.__remoteSend(data@h2o, "GLMValidationView.json", '_valKey'=resModel$validations)
+      res = h2o.__remoteSend(data@h2o, "2/GLMValidationView.json", '_valKey'=resModel$validations)
       modelOrig = h2o.__getGLM2Results(resModel, y, res$glm_val)
       new("H2OGLMModel", key=resModel$'_selfKey', data=data, model=modelOrig, xval=list())
   })

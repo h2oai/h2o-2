@@ -212,7 +212,7 @@ class DTree extends Iced {
       if( _pid == -1 ) return;
       DecidedNode dn = _tree.decided(_pid);
       for( int i=0; i<dn._nids.length; i++ )
-        if( dn._nids[i]==_nid ) 
+        if( dn._nids[i]==_nid )
           { dn._nids[i] = -1; return; }
       throw H2O.fail();
     }
@@ -387,7 +387,7 @@ class DTree extends Iced {
                     : (i==0 ? " <  " : " >= "));
           sb.append(_splat).append("\n");
         }
-        if( _nids[i] >= 0 && _nids[i] < _tree._len ) 
+        if( _nids[i] >= 0 && _nids[i] < _tree._len )
           _tree.node(_nids[i]).toString2(sb,depth+1);
       }
       return sb;
@@ -411,7 +411,7 @@ class DTree extends Iced {
         _nodeType |= slen; // Set the size-skip bits
         res += slen;
       }
-      
+
       Node rite = _tree.node(_nids[1]);
       if( rite instanceof LeafNode ) _nodeType |= (byte)(24 << 1*2);
       res += rite.size();
@@ -462,7 +462,7 @@ class DTree extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
     @API(help="MSE rate as trees are added")       public final double [] errs;
-    @API(help="Min class - to zero-bias the CM")   public final int ymin;
+    //@API(help="Min class - to zero-bias the CM")   public final int ymin;
     @API(help="Actual trees built (probably < N)") public final CompressedTree [/*N*/][/*nclass*/] treeBits;
 
     // For classification models, we'll do a Confusion Matrix right in the
@@ -470,18 +470,18 @@ class DTree extends Iced {
     @API(help="Testing key for cm and errs") public final Key testKey;
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int ymin) {
+    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) {
       super(key,dataKey,names,domains);
-      this.N = ntrees; this.errs = new double[0]; this.ymin = ymin; 
+      this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey;  this.cm = null;
       treeBits = new CompressedTree[0][];
     }
     public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
-      this.N = prior.N; this.ymin = prior.ymin; this.testKey = prior.testKey; this.cm = cm;
+      this.N = prior.N; this.testKey = prior.testKey; this.cm = cm;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
       errs[errs.length-1] = err;
-      assert trees.length == nclasses()-ymin : "Trees="+trees.length+" nclasses()="+nclasses()+" ymin="+ymin;
+      assert trees.length == nclasses(): "Trees="+trees.length+" nclasses()="+nclasses();
       treeBits = Arrays.copyOf(prior.treeBits,prior.treeBits.length+1);
       CompressedTree ts[] = treeBits[treeBits.length-1] = new CompressedTree[trees.length];
       for( int c=0; c<trees.length; c++ )
@@ -499,7 +499,7 @@ class DTree extends Iced {
       for( CompressedTree ts[] : treeBits )
         for( int c=0; c<ts.length; c++ )
           if( ts[c] != null )
-            preds[c+ymin] += ts[c].score(data);
+            preds[c] += ts[c].score(data);
       return preds;
     }
 
@@ -508,7 +508,7 @@ class DTree extends Iced {
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
       if(sb.indexOf("<h3>GBMModelView</h3>") != -1) {
-        sb.insert(sb.indexOf("</pre>") +"</pre></div>".length(),  
+        sb.insert(sb.indexOf("</pre>") +"</pre></div>".length(),
         "<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
         "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
         "<pre style=\"overflow-y:scroll;\">"+DocGen.HTML.escape2(toJava())+"</pre></div>");
@@ -517,7 +517,7 @@ class DTree extends Iced {
 
       // Top row of CM
       if( cm != null && nclasses() > 1 ) {
-        assert ymin+cm.length==domain.length;
+        assert cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey.equals(_dataKey) ) {
           sb.append("<div class=\"alert\">Reported on training data</div>");
@@ -531,7 +531,7 @@ class DTree extends Iced {
         sb.append("<tr class='warning'>");
         sb.append("<th>Actual / Predicted</th>"); // Row header
         for( int i=0; i<cm.length; i++ )
-          sb.append("<th>").append(domain[i+ymin]).append("</th>");
+          sb.append("<th>").append(domain[i]).append("</th>");
         sb.append("<th>Error</th>");
         sb.append("</tr>");
 
@@ -539,7 +539,7 @@ class DTree extends Iced {
         long tsum=0, terr=0;               // Total observations & errors
         for( int i=0; i<cm.length; i++ ) { // Actual loop
           sb.append("<tr>");
-          sb.append("<th>").append(domain[i+ymin]).append("</th>");// Row header
+          sb.append("<th>").append(domain[i]).append("</th>");// Row header
           long sum=0, err=0;                     // Per-class observations & errors
           for( int j=0; j<cm[i].length; j++ ) { // Predicted loop
             sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
@@ -583,12 +583,12 @@ class DTree extends Iced {
     // --------------------------------------------------------------------------
     // Highly compressed tree encoding:
     //    tree: 1B nodeType, 2B colId, 4B splitVal, left-tree-size, left, right
-    //    nodeType: (from lsb): 
-    //        2 bits ( 1,2) skip-tree-size-size, 
-    //        1 bit  ( 4) operator flag (0 --> <, 1 --> == ), 
-    //        1 bit  ( 8) left leaf flag, 
+    //    nodeType: (from lsb):
+    //        2 bits ( 1,2) skip-tree-size-size,
+    //        1 bit  ( 4) operator flag (0 --> <, 1 --> == ),
+    //        1 bit  ( 8) left leaf flag,
     //        1 bit  (16) left leaf type flag, (unused)
-    //        1 bit  (32) right leaf flag, 
+    //        1 bit  (32) right leaf flag,
     //        1 bit  (64) right leaf type flag (unused)
     //    left, right: tree | prediction
     //    prediction: 4 bytes of float
@@ -627,7 +627,7 @@ class DTree extends Iced {
           if( (lmask&8)==8 ) return scoreLeaf(ab);
         }
       }
-      
+
       private float scoreLeaf( AutoBuffer ab ) { return ab.get4f(); }
     }
 
@@ -707,9 +707,9 @@ class DTree extends Iced {
         for( int c=0; c<cts.length; c++ ) {
           if( cts[c] == null ) continue;
           sb.indent(2).p("// Tree ").p(i);
-          if( cnames != null ) sb.p(", class=").p(cnames[c+ymin]);
+          if( cnames != null ) sb.p(", class=").p(cnames[c]);
           sb.p("\n");
-          sb.indent(2).p("preds[").p(c+ymin+1).p("] +=");
+          sb.indent(2).p("preds[").p(c+1).p("] +=");
           final int x=c;
           new TreeVisitor<RuntimeException>(this,cts[c]) {
             byte _bits[] = new byte[100];
@@ -718,7 +718,7 @@ class DTree extends Iced {
               if( _depth > 0 ) {
                 int b = _bits[_depth-1];
                 assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
-                if( b==1         ) _bits[_depth-1]=3; 
+                if( b==1         ) _bits[_depth-1]=3;
                 if( b==1 || b==2 ) sb.p('\n').indent(_depth+3).p("?");
                 if( b==2         ) sb.p(' ').p(_fs[_depth]); // Dump the leaf
                 if( b==2 || b==3 ) sb.p('\n').indent(_depth+3).p(":");
@@ -737,7 +737,7 @@ class DTree extends Iced {
                 sb.p(": ").p(pred);
               }
             }
-            @Override protected void post( int col, float fcmp, boolean equal ) { 
+            @Override protected void post( int col, float fcmp, boolean equal ) {
               sb.p(')');
               _bits[_depth]=0;
             }

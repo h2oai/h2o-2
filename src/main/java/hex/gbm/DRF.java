@@ -33,7 +33,7 @@ public class DRF extends SharedTreeModelBuilder {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int ymin) { super(key,dataKey,testKey,names,domains,ntrees,ymin); }
+    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) { super(key,dataKey,testKey,names,domains,ntrees); }
     public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
@@ -94,7 +94,7 @@ public class DRF extends SharedTreeModelBuilder {
     final int cnodesize = (nodesize==-1) ? (classification ? 1 : 5) : nodesize; // computed nodesize
     assert 1 <= cmtries && cmtries <= _ncols : "Too large mtries="+cmtries+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees, _ymin);
+    DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees);
     DKV.put(outputKey, model);
     // --
     System.err.println("Class distribution: " + Arrays.toString(_distribution));
@@ -131,7 +131,7 @@ public class DRF extends SharedTreeModelBuilder {
       Chunk cy = chk_resp(chks);
       for( int i=0; i<cy._len; i++ ) {
         if( cy.isNA0(i) ) continue;
-        int cls = (int)cy.at80(i) - _ymin;
+        int cls = (int)cy.at80(i);
         chk_work(chks,cls).set0(i,1.0f);
       }
     }

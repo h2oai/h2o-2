@@ -3,6 +3,7 @@ package water.parser;
 import java.io.EOFException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
@@ -15,7 +16,6 @@ import water.parser.CustomParser.ParserType;
 import water.parser.DParseTask.Pass;
 import water.util.*;
 import water.util.Utils.IcedArrayList;
-import water.util.Utils;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
@@ -303,52 +303,47 @@ public final class ParseDataset extends Job {
           throw H2O.unimpl();
       }
     }
-    try {
-      UnzipAndParseTask tsk = new UnzipAndParseTask(job, setup);
-      tsk.invoke(keys);
-      DParseTask [] p2s = new DParseTask[keys.length];
-      DParseTask phaseTwo = tsk._tsk.createPassTwo();
-      // too keep original order of the keys...
-      HashMap<Key, FileInfo> fileInfo = new HashMap<Key, FileInfo>();
-      long rowCount = 0;
-      for(int i = 0; i < tsk._fileInfo.length; ++i)
-        fileInfo.put(tsk._fileInfo[i]._ikey,tsk._fileInfo[i]);
-      // run pass 2
-      for(int i = 0; i < keys.length; ++i){
-        FileInfo finfo = fileInfo.get(keys[i]);
-        Key k = finfo._okey;
-        long nrows = finfo._nrows[finfo._nrows.length-1];
-        for(j = 0; j < finfo._nrows.length; ++j)
-          finfo._nrows[j] += rowCount;
-        rowCount += nrows;
-        p2s[i] = phaseTwo.makePhase2Clone(finfo).dfork(k);
-      }
-      phaseTwo._sigma = new double[phaseTwo._ncolumns];
-      phaseTwo._invalidValues = new long[phaseTwo._ncolumns];
-      // now put the results together and create ValueArray header
-      for(int i = 0; i < p2s.length; ++i){
-        DParseTask t = p2s[i];
-        p2s[i].get();
-        Utils.add(phaseTwo._sigma,t._sigma);
-        Utils.add(phaseTwo._invalidValues,t._invalidValues);
-        if ((t._error != null) && !t._error.isEmpty()) {
-          System.err.println(phaseTwo._error);
-          throw new Exception("The dataset format is not recognized/supported");
-        }
-        FileInfo finfo = fileInfo.get(keys[i]);
-        UKV.remove(finfo._okey);
-      }
-      phaseTwo.normalizeSigma();
-      phaseTwo._colNames = setup._columnNames;
-      if(setup._header)
-        phaseTwo.setColumnNames(setup._columnNames);
-      phaseTwo.createValueArrayHeader();
-    } catch (Throwable e) {
-      UKV.put(job.dest(), new Fail(e.getMessage()));
-      throw Throwables.propagate(e);
-    } finally {
-      job.remove();
+    UnzipAndParseTask tsk = new UnzipAndParseTask(job, setup);
+    tsk.invoke(keys);
+    DParseTask [] p2s = new DParseTask[keys.length];
+    DParseTask phaseTwo = tsk._tsk.createPassTwo();
+    // too keep original order of the keys...
+    HashMap<Key, FileInfo> fileInfo = new HashMap<Key, FileInfo>();
+    long rowCount = 0;
+    for(int i = 0; i < tsk._fileInfo.length; ++i)
+      fileInfo.put(tsk._fileInfo[i]._ikey,tsk._fileInfo[i]);
+    // run pass 2
+    for(int i = 0; i < keys.length; ++i){
+      FileInfo finfo = fileInfo.get(keys[i]);
+      Key k = finfo._okey;
+      long nrows = finfo._nrows[finfo._nrows.length-1];
+      for(j = 0; j < finfo._nrows.length; ++j)
+        finfo._nrows[j] += rowCount;
+      rowCount += nrows;
+      p2s[i] = phaseTwo.makePhase2Clone(finfo).dfork(k);
     }
+    phaseTwo._sigma = new double[phaseTwo._ncolumns];
+    phaseTwo._invalidValues = new long[phaseTwo._ncolumns];
+    // now put the results together and create ValueArray header
+    for(int i = 0; i < p2s.length; ++i){
+      DParseTask t = p2s[i];
+      try{
+        p2s[i].get();
+      }catch(Exception e){throw new RuntimeException(e);}
+      Utils.add(phaseTwo._sigma,t._sigma);
+      Utils.add(phaseTwo._invalidValues,t._invalidValues);
+      if ((t._error != null) && !t._error.isEmpty()) {
+        System.err.println(phaseTwo._error);
+        throw new RuntimeException("The dataset format is not recognized/supported");
+      }
+      FileInfo finfo = fileInfo.get(keys[i]);
+      UKV.remove(finfo._okey);
+    }
+    phaseTwo.normalizeSigma();
+    phaseTwo._colNames = setup._columnNames;
+    if(setup._header)
+      phaseTwo.setColumnNames(setup._columnNames);
+    phaseTwo.createValueArrayHeader();
   }
 
   public static class ParserFJTask extends H2OCountedCompleter {
@@ -366,10 +361,19 @@ public final class ParseDataset extends Job {
       parse(job, keys,setup);
       tryComplete();
     }
+
+    @Override public void onCompletion(CountedCompleter cmp){job.remove();}
+
+    @Override
+    public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      UKV.remove(job._progress);
+      job.cancel("Got Exception " + ex.getClass().getSimpleName() + ", with msg " + ex.getMessage());
+      return super.onExceptionalCompletion(ex, caller);
+    }
   }
   public static Job forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
     ParseDataset job = new ParseDataset(dest, keys);
-    H2OCountedCompleter fjt = new ParserFJTask(job, keys, setup);
+    ParserFJTask fjt = new ParserFJTask(job, keys, setup);
     job.start(fjt);
     H2O.submitTask(fjt);
     return job;

@@ -12,7 +12,7 @@ h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
 h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
 h2o.__PAGE_INSPECT = "Inspect.json"
-h2o.__PAGE_INSPECT2 = "Inspect2.json"
+h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
 h2o.__PAGE_PUT = "PutVector.json"
@@ -21,8 +21,9 @@ h2o.__PAGE_VIEWALL = "StoreView.json"
 h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
 h2o.__PAGE_SUMMARY = "SummaryPage.json"
+h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
-h2o.__PAGE_PREDICT2 = "Predict.json"
+h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_PCA = "PCA.json"
 h2o.__PAGE_PCASCORE = "PCAScore.json"
@@ -35,15 +36,20 @@ h2o.__PAGE_RFVIEW = "RFView.json"
 h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
 h2o.__PAGE_GLMGrid = "GLMGrid.json"
 h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
-h2o.__PAGE_GBM = "GBM.json"
-h2o.__PAGE_GBMGrid = "GBMGrid.json"
-h2o.__PAGE_GBMModelView = "GBMModelView.json"
+h2o.__PAGE_GBM = "2/GBM.json"
+h2o.__PAGE_GBMGrid = "2/GBMGrid.json"
+h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
   port = client@port
   
-  #TODO(spencer): Create "commands.log" using: list(...)
+  # if(IS_LOGGING) {
+    # print(substitute(list(...)))
+    # temp = deparse(substitute(list(...)))
+  # }
+  
+  #TODO (Spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
   url = paste("http://", ip, ":", port, "/", page, sep="")
   temp = postForm(url, style = "POST", ...)
@@ -187,6 +193,15 @@ h2o.__func <- function(fname, x, type) {
   else if(type == "Vector")
     new("H2OParsedData", h2o=x@h2o, key=res$key)
   else res
+}
+
+# Check if key_env$key exists in H2O and remove if it does
+h2o.__finalizer <- function(key_env) {
+  if("h2o" %in% ls(key_env) && "key" %in% ls(key_env) && class(key_env$h2o) == "H2OClient" && class(key_env$key) == "character" && key_env$key != "") {
+    res = h2o.__remoteSend(key_env$h2o, h2o.__PAGE_VIEWALL, filter=key_env$key)
+    if(length(res$keys) != 0)
+      h2o.__remoteSend(key_env$h2o, h2o.__PAGE_REMOVE, key=key_env$key)
+  }
 }
 
 h2o.__version <- function(client) {

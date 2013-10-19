@@ -68,7 +68,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
 
   /** Override to do any remote initialization on the 1st remote instance of
    *  this object, for initializing node-local shared data structures.  */
-  protected void setupLocal() { }
+  protected void setupLocal() {} // load the vecs in non-racy way (we will definitely need them and in case we don;t have cached version there will be unnecessary racy update from multiple maps at the same time)!
   /** Override to do any remote cleaning on the last remote instance of
    *  this object, for disposing of node-local shared data structures.  */
   protected void closeLocal() { }
@@ -241,8 +241,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _lo = 0;  _hi = _fr.anyVec().nChunks(); // Do All Chunks
     // If we have any output vectors, make a blockable Futures for them to
     // block on.
-    if( _fr.hasAppendables() )
+    if( _appendables != null && _appendables.length > 0 )
       _fs = new Futures();
+    // get the Vecs from the K/V store, to avoid racing fetches from the map calls
+    _fr.vecs();
     setupLocal();                     // Setup any user's shared local structures
     _profile._localdone = System.currentTimeMillis();
   }

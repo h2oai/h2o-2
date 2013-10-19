@@ -4,81 +4,121 @@ import java.io.File;
 
 import org.apache.commons.lang.ArrayUtils;
 
+import water.api.FrameSplit;
 import water.deploy.*;
-import water.fvec.NFSFileVec;
-import water.fvec.ParseDataset2;
+import water.fvec.Frame;
+import water.parser.ParseDataset;
 import water.util.Utils;
 
 public class Sandbox {
   public static void main(String[] args) throws Exception {
     String line = "-mainClass " + UserCode.class.getName() + " -beta"; // -name s8koPQJ72ZC8Jh66uGeR
-    Boot._init.boot2(Utils.add(args, line.split(" ")));
+    args = Utils.add(args, line.split(" "));
+    Boot._init.boot2(args);
+    //ec2(args);
   }
 
   public static class UserCode {
     public static void userMain(String[] args) throws Exception {
-      localCloud(1, true, args);
+      localCloud(2, true, args);
 
-      File f = new File("smalldata/categoricals/TwoBedrooms_Rent_Neighborhoods.csv.gz");
-      // File f = new File("smalldata/mnist/train.csv.gz");
-      // File f = new File("smalldata/covtype/covtype.20k.data");
-      // File f = new File("syn_5853362476331324036_100x11.csv");
-      // File f = new File("../../aaaa/datasets/millionx7_logreg.data.gz");
-      // File f = new File("smalldata/test/rmodels/iris_x-iris-1-4_y-species_ntree-500.rdata");
-      // File f = new File("py/testdir_single_jvm/syn_datasets/hastie_4x.data");
+      //new Sample07_NeuralNet_Mnist().run();
 
-      Key dest = Key.make("train.hex");
-      Key fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
+      //covtype();
+      // airlines();
+      mnist();
+      // ecology();
+      // va();
 
-      f = new File("smalldata/mnist/test.csv.gz");
-      dest = Key.make("test.hex");
-      fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
+//      File file = new File("smalldata/covtype/covtype.20k.data");
+//      Key dest = Key.make("train.hex");
+//      Key fkey = water.fvec.NFSFileVec.make(file);
+//      water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+//      Frame frame = UKV.get(dest);
+//      split(frame);
+//      Frame train = UKV.get(Key.make("train.hex"));
+//      Frame valid = UKV.get(Key.make("valid.hex"));
+//      Frame test_ = UKV.get(Key.make("test.hex"));
+//      Utils.writeFileAndClose(new File("../tmp/covtype.20k.data.train"), train.toCSV(false));
+//      Utils.writeFileAndClose(new File("../tmp/covtype.20k.data.valid"), valid.toCSV(false));
+//      Utils.writeFileAndClose(new File("../tmp/covtype.20k.data.test"), test_.toCSV(false));
 
-//      Key key = TestUtil.load_test_file(f, "test");
-//      Key dest = Key.make("test.hex");
+//      Key key = TestUtil.load_test_file(file, "train");
+//      Key dest = Key.make("train.hex");
 //      ParseDataset.parse(dest, new Key[] { key });
-//      ValueArray va = (ValueArray) UKV.get(dest);
 
-      Utils.readConsole();
+      //Frame frame = water.TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
+      //Frame frame = water.TestUtil.parseFrame("smalldata/categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");
 
-      // @formatter:off
-//      double[][] array = new double[][] {
-//        new double[] { 0,0,0,0 },
-//        new double[] { 1.63475416828,1.63337340671,-7.01908639681,2.72330313693 },
-//        new double[] { -7.01908639681,2.72330313693,-3.47665202262,4.71153347407 },
-//      };
-      // @formatter:on
-//      Key key = Key.make("test.hex");
-//       final int columns = 100;
-//       double[][] goals = new double[8][columns];
-//       double[][] array = KMeansTest.gauss(columns, 10000, goals);
-//      ValueArray va = TestUtil.va_maker(key, (Object[]) array);
-
-//      Key km = Key.make("test.kmeans");
-//      int[] cols = new int[va._cols.length];
-//      for( int i = 0; i < cols.length; i++ )
-//        cols[i] = i;
-//      for( int i = 0; i < 1; i++ ) {
-//        KMeans job = KMeans.start(km, va, 2, 1e-6, 0, new Random().nextLong(), false, cols);
-//        KMeansModel m = job.get();
-//        System.out.println(m._error);
-//      }
-//
-//      Key ap = Key.make("test.kmeans-apply");
-//      KMeansApply.run(ap, (KMeansModel) UKV.get(km), va);
-
-//    String s = "";
-//    for( int i = 0; i < cols.length; i++ ) {
-//      s += s.length() != 0 ? "%2C" : "";
-//      s += cols[i];
-//    }
 //    String u = "/Plot.png?source_key=test.hex&cols=" + s + "&clusters=test.kmeans";
 //    Desktop.getDesktop().browse(new URI("http://localhost:54321" + u));
 
-      System.out.println("Done!");
+      System.out.println("Ready");
     }
+  }
+
+  static void mnist() {
+    File train = new File("smalldata/mnist/train.csv.gz");
+    Key dest = Key.make("train.hex");
+    Key fkey = water.fvec.NFSFileVec.make(train);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+
+    File test = new File("smalldata/mnist/test.csv.gz");
+    dest = Key.make("test.hex");
+    fkey = water.fvec.NFSFileVec.make(test);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+  }
+
+  static void ecology() {
+    File train = new File("smalldata/gbm_test/ecology_model.csv");
+    Key dest = Key.make("train.hex");
+    Key fkey = water.fvec.NFSFileVec.make(train);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+    // TODO temp
+    Frame f = UKV.get(dest);
+    f.remove(0);
+    UKV.put(dest, f);
+
+    File test = new File("smalldata/gbm_test/ecology_eval.csv");
+    dest = Key.make("test.hex");
+    fkey = water.fvec.NFSFileVec.make(test);
+    water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
+  }
+
+  public static void airlines() {
+    Frame frame = water.TestUtil.parseFrame("smalldata/airlines/allyears2k_headers.zip");
+    frame.remove("DepTime");
+    frame.remove("CRSDepTime");
+    frame.remove("ArrTime");
+    frame.remove("CRSArrTime");
+    frame.remove("ArrDelay");
+    frame.remove("DepDelay");
+    frame.remove("CarrierDelay");
+    frame.remove("WeatherDelay");
+    frame.remove("NASDelay");
+    frame.remove("SecurityDelay");
+    frame.remove("LateAircraftDelay");
+    frame.remove("IsArrDelayed");
+    split(frame);
+  }
+
+  public static void va() {
+    File f = new File("smalldata/gbm_test/ecology_model.csv");
+    Key key = TestUtil.load_test_file(f, "train");
+    Key dest = Key.make("train.hex");
+    ParseDataset.parse(dest, new Key[] { key });
+
+    f = new File("smalldata/gbm_test/ecology_eval.csv");
+    key = TestUtil.load_test_file(f, "test");
+    dest = Key.make("test.hex");
+    ParseDataset.parse(dest, new Key[] { key });
+  }
+
+  public static void split(Frame frame) {
+    Frame[] frames = new FrameSplit().splitFrame(frame, new double[] { .8, .1, .1 });
+    UKV.put(Key.make("train.hex"), frames[0]);
+    UKV.put(Key.make("valid.hex"), frames[1]);
+    UKV.put(Key.make("test.hex"), frames[2]);
   }
 
   /**
@@ -117,6 +157,18 @@ public class Sandbox {
     }
     H2O.main(args(args, local, port, flatfile));
     TestUtil.stall_till_cloudsize(1 + workers.length);
+  }
+
+  public static void ec2(String[] args) throws Exception {
+//    EC2 ec2 = new EC2();
+//    ec2.boxes = 4;
+//    Cloud c = ec2.resize();
+//    c.clientRSyncIncludes.add("experiments/target");
+//    c.clientRSyncIncludes.add("smalldata");
+//    c.fannedRSyncIncludes.add("smalldata");
+//    c.jdk = "../libs/jdk";
+//    String java = "-ea -Xmx12G -Dh2o.debug";
+//    c.start(java.split(" "), args);
   }
 
   private static String[] args(String[] args, String ip, int port, String flatfile) {

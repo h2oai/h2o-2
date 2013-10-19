@@ -22,7 +22,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
     # only use if the build_cloud was for remote H2O
     # Never use the var for remote, if you're doing a put! (which always sources local)
     elif h2o.nodes[0].remoteH2O and schema!='put' and \
-        (os.environ.get('H2O_REMOTE_BUCKETS_ROOT' or h2o.nodes[0].h2o_remote_buckets_root)):
+        (os.environ.get('H2O_REMOTE_BUCKETS_ROOT') or h2o.nodes[0].h2o_remote_buckets_root):
         if (bucket=='smalldata' or bucket=='datasets') and schema=='local':
             msg1 = "\nWARNING: you're using remote nodes, and 'smalldata' or 'datasets' git buckets, with schema!=put"
             msg2 = "\nThose aren't git pull'ed by the test. Since they are user-maintained, not globally-maintained-by-0xdata,"
@@ -287,7 +287,7 @@ def parse_only(node=None, pattern=None, hex_key=None,
     parseResult = node.parse(key=pattern, key2=hex_key,
         timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, 
         initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs, noise=noise,
-        benchmarkLogging=None, noPoll=noPoll, **kwargs)
+        benchmarkLogging=benchmarkLogging, noPoll=noPoll, **kwargs)
 
     parseResult['python_source'] = pattern
     return parseResult

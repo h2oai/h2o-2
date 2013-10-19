@@ -20,7 +20,7 @@ public class GLMProgressPage2 extends Progress2 {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    Job jjob = Job.findJob(Key.make(job.value()));
+    Job jjob = Job.findJob(job);
     Value v = DKV.get(jjob.dest());
     if(v != null){
       GLMModel m = v.get();

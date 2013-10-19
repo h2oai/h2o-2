@@ -1,15 +1,16 @@
-import unittest,os,csv
-import random, sys, time, re, itertools
+import unittest, os, csv, random, sys, time, re, itertools
 from pprint import pprint
 sys.path.extend(['.','..','py'])
-
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf,h2o_jobs as h2j
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
+        global SEED
+        SEED = h2o.setup_random_seed()
         h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
@@ -21,17 +22,15 @@ class Basic(unittest.TestCase):
         bucket = 'home-0xdiag-datasets'
         
         files = [('mnist', 'mnist_training.csv.gz', 'mnistsmalltrain.hex',1800,0)
-                # ('manyfiles-nflx-gz', 'file_95.dat.gz', 'nflx.hex',1800,541),
                 ]
-        #ntrees = 20
-        #learn_rate = 5
-        #max_depth = 20
+
         grid = [[1,10,100,1000], [0.0,0.01,0.001,0.0001,1], [1,2], [1,10,100]] 
         grid = list(itertools.product(*grid))
+        grid = random.sample(grid, 10) #don't do all 120, but get a random sample
         for importFolderPath,csvFilename,trainKey,timeoutSecs,response in files:
             # PARSE train****************************************
             start = time.time()
-            parseResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + csvFilename,
+            parseResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + csvFilename, schema='local',
                 hex_key=trainKey, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\

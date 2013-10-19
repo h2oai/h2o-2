@@ -8,7 +8,7 @@ import water.api.RequestBuilders.Response;
 
 public class DRFProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
-  @Override protected Response jobDone(final Job job, final String dst) {
+  @Override protected Response jobDone(final Job job, final Key dst) {
     JsonObject args = new JsonObject();
     args.addProperty("model_key", job.dest().toString());
     return DRFModelView.redirect(this, job.dest());
@@ -19,7 +19,7 @@ public class DRFProgressPage extends Progress2 {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    Job jjob = Job.findJob(Key.make(job.value()));
+    Job jjob = Job.findJob(job);
     DRFModel m = DKV.get(jjob.dest()).get();
     m.generateHTML("DRF Model", sb);
     return true;

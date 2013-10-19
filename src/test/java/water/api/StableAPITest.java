@@ -7,6 +7,7 @@ import hex.DPCA.PCAModel;
 import hex.*;
 import hex.gbm.GBM;
 import hex.glm.*;
+import hex.pca.*;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -153,7 +154,7 @@ public class StableAPITest {
     regPy(DRFModelView.class);
     regPy(DRFProgressPage.class);
     regPy(Debug.class);
-    regPy(DownloadDataset.class); // not used
+    regPy(DownloadDataset.class, "src_key");
     regPy(Exec.class, "expression");
     regPy(ExportHdfs.class);
     regPy(ExportS3.class);
@@ -187,7 +188,8 @@ public class StableAPITest {
     regPy(LogView.class);
     regPy(NeuralNet.class, "activation", "cols", "destination_key", "epochs", "hidden", "l2", "rate", "response", "source");
     regPy(PCA.class, "destination_key", "key", "standardize", "tolerance");
-    regPy(PCAScore.class, "destination_key", "key", "model_key", "num_pc");
+    // regPy(PCAScore.class, "destination_key", "key", "model_key", "num_pc");
+    regPy(PCAScore.class, "source", "model", "destination_key", "num_pc");
     regPy(Parse.class, "destination_key", "header", "header_from_file", "separator", "source_key");
     //regPy(Parse.class, "alpha", "bin_limit", "case", "case_mode", "class_weights", "depth", "destination_key", "exclude", "family", "features", "header", "header_from_file", "ignore", "iterative_cm", "key_key", "lambda", "link", "model_key", "n_folds", "ntree", "out_of_bag_error_estimate", "parallel", "response_variable", "sample", "sampling_strategy", "seed", "separator", "source_key", "stat_type", "strata_samples", "use_non_local_data", "x", "y");
     regPy(Parse2.class, "destination_key", "header", "source_key");
@@ -228,6 +230,7 @@ public class StableAPITest {
   static public void registerRAPI() {
     regR(Cloud.class);
     regR(DataManip.class, "source", "source2", "destination_key", "cols", "destination_key", "operation");
+    regPy(DownloadDataset.class, "src_key");
     regR(Exec.class, "expression", "destination_key");
     regR(GeneratePredictionsPage.class, "model_key", "data_key");
     regR(GBM.class, "destination_key", "source", "response", "cols", "ntrees", "max_depth", "learn_rate", "min_rows", "classification");
@@ -251,7 +254,8 @@ public class StableAPITest {
     regR(KMeansScore.class, "model_key", "key");
     regR(Parse.class, "source_key", "destination_key", "header", "header_from_file", "separator" );
     regR(PCA.class, "key", "x", "destination_key", "max_pc", "tolerance", "standardize");
-    regR(PCAScore.class, "model_key", "key", "destination_key", "num_pc");
+    // regR(PCAScore.class, "model_key", "key", "destination_key", "num_pc");
+    regR(PCAScore.class, "source", "model", "destination_key", "num_pc");
     regR(Predict.class, "model", "data", "prediction");
     regR(PutVector.class);
     regR(Remove.class, "key");
