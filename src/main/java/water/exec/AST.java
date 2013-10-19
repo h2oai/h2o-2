@@ -207,7 +207,7 @@ class ASTId extends AST {
     if( id == null ) return null;
     // Built-in ops parse as ops, not vars
     if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
-    return new ASTId(null,id,E.lexical_depth()-1);
+    return new ASTId(null/*untyped as of yet*/,id,E.lexical_depth()-1);
   }
   ASTId setOnUse( Exec2 E, Type t ) {
     assert _t == null;          // Currently an untyped variable
@@ -293,16 +293,23 @@ class ASTApply extends AST {
 
     // Check that all arguments match, or can be auto-expanded.  Any op taking
     // a scalar and passed an array will be auto-expanded.
+    boolean expand=false;
     for( int i=1; i<args.length; i++ ) {
       Type ot = op._vtypes[i];
-      if( ot == Type.fun )      // Deep function type checking
+      if( ot == Type.fun && args[i]._t==Type.fun ) // Deep function type checking
         checkType((ASTOp)args[i],op._ftypes[i],E);
       if( args[i]._t == null )
         args[i] = ((ASTId)args[i]).setOnUse(E,ot);
       if( ot == args[i]._t ) continue; // both scalar or both array
       if( ot != Type.dbl )
-        E.throwErr("Arg '"+op._vars[i]+"' "+(ot==null?"untyped":" typed as "+ot)+" but passed "+args[i]._t,x);
-      // Expansion needed, will insert in a later pass
+        E.throwErr("Arg '"+op._vars[i]+"' "+(ot==null?"untyped":"typed as "+ot)+" but passed "+args[i]._t,x);
+      expand=true;              // Replace with an expanding map
+    }
+    if( expand ) {              // Auto-insert a map call
+      args = Arrays.copyOf(args,args.length+1);
+      System.arraycopy(args,0,args,1,args.length-1);
+      args[0] = op = new ASTMap(); // Inserted ASTMap in front of all other args
+      args[0] = op = op.set_varargs_types(args); // Type it
     }
     return new ASTApply(args);
   }
@@ -315,7 +322,7 @@ class ASTApply extends AST {
       if( a._vtypes[i] != b._vtypes[i] )
         E.throwErr("Mismatched "+(i==0?"return type":"function arg#"+i)+": "+a._vtypes[i]+" vs "+b._vtypes[i],E._x);
       if( a._vtypes[i] == Type.fun )
-        throw H2O.unimpl();
+        throw H2O.unimpl();     // Recursive type-check
     }
   }
 
@@ -336,10 +343,11 @@ class ASTApply extends AST {
       }
     }
     args = Arrays.copyOf(args,i);
-    if( op._vars!=null ) {      // Check fixed-arg length
-      if( i != op._vars.length ) 
-        E.throwErr("Expected "+(op._vars.length-1)+" args but found "+(i-1),x);
-    } else op.set_varargs_types(args);
+    if( op._vars==null )        // Type varargs functions
+      args[0] = op = op.set_varargs_types(args);
+    // Check fixed-arg length
+    if( i != op._vars.length ) 
+      E.throwErr("Expected "+(op._vars.length-1)+" args but found "+(i-1),x);
     return make(args,E,x);
   }
 
@@ -400,6 +408,7 @@ abstract class ASTOp extends AST {
     // Variable argcnt
     put(new ASTCat ());
     put(new ASTReduce());
+    put(new ASTMap());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -443,7 +452,7 @@ abstract class ASTOp extends AST {
     // Attempt a user-mode function parse
     return ASTFunc.parseFcn(E);
   }
-  AST[] set_varargs_types(AST args[]) { throw H2O.fail(); }
+  ASTOp set_varargs_types(AST args[]) { throw H2O.fail(); }
 
   @Override void exec(Env env) { env.push(this); }
   void apply(Env env) {
@@ -486,22 +495,57 @@ class ASTReduce extends ASTOp {
   @Override String opStr(){ return "Reduce";}
 }
 
-
 // Variable length; instances will be created of required length
 class ASTCat extends ASTOp {
   @Override String opStr() { return "c"; }
   ASTCat( ) { super(null,null); }
   private ASTCat( String[] vars, Type[] types ) { super(vars,types); }
   // Make a custom-typed function with explicit types for the varargs
-  @Override AST[] set_varargs_types(AST args[]) {
+  @Override ASTOp set_varargs_types(AST args[]) {
     String[] vars  = new String[args.length];
     Type  [] types = new Type  [args.length];
     Arrays.fill(vars,"x");
     Arrays.fill(types,Type.dbl);
     vars [0] = opStr();
     types[0] = Type.ary;        // Always array-type result
-    args[0] = new ASTCat(vars,types);
-    return args;
+    return new ASTCat(vars,types);
+  }
+}
+
+class ASTMap extends ASTOp {
+  ASTMap( ) { super(null,null); }
+  private ASTMap( String[] vars, Type[] types, ASTOp[] ops ) { super(vars,types,ops); }
+  @Override String opStr(){ return "map";}
+  // Make a custom-typed function with explicit types for the varargs.
+  // Must be passed a fcn as 1st arg, then as many args as function takes.
+  @Override ASTOp set_varargs_types(AST args[]) {
+    // Map demands a 1st argument of a function.
+    if( args.length<=1 ||             // No args, so missing the fcn arg
+        !(args[1] instanceof ASTOp) ) // First arg is not a function
+      return new ASTMap(new String[] { "" ,  "fun" }, 
+                        new Type  [] {null, Type.fun }, 
+                        new ASTOp [] {null,new ASTPlus() });
+
+    // Get the function to map over.  Map will expect all the args this
+    // function needs.... and will demand the function returns a dbl.
+    // Map will allow the fun to take a dbl when passed an ary.
+    ASTOp fun = (ASTOp)args[1];
+    if( fun._vtypes[0] != Type.dbl ) throw H2O.unimpl();
+
+    String[] vars  = new String[fun._vars.length+1];
+    Type  [] vtypes= new Type  [fun._vars.length+1];
+    ASTOp [] ftypes= new ASTOp [fun._vars.length+1];
+    vars  [0]= opStr();  vars  [1]= "fun"  ;  System.arraycopy(fun._vars   ,1,vars  ,2,fun._vars.length-1);
+    vtypes[0]=Type.dbl;  vtypes[1]=Type.fun;  System.arraycopy(fun._vtypes ,1,vtypes,2,fun._vars.length-1);
+    ftypes[0]=  null  ;  ftypes[1]= fun    ;  if( fun._ftypes != null ) System.arraycopy(fun._ftypes,1,ftypes,2,fun._vars.length-1);
+
+    // Allow arys, if passed arys & fun is taking a double.  These will be
+    // mapped over at runtime.  If any arys are found, then map returns an ary.
+    for( int i=1; i<fun._vtypes.length; i++ )
+      if( fun._vtypes[i]==Type.dbl &&
+          args[i+1]._t ==Type.ary )
+        vtypes[0] = vtypes[i+1] = Type.ary;
+    return new ASTMap(vars,vtypes,ftypes);
   }
 }
 

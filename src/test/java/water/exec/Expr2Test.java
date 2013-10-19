@@ -64,6 +64,11 @@ public class Expr2Test extends TestUtil {
       checkStr("Reduce(isNA,h.hex)");
       checkStr("Reduce(function(x,y){x[]+y},h.hex)");
       checkStr("Reduce(function(x,y){x=y=1;h.hex},h.hex)");
+      checkStr("map()");
+      checkStr("map(1)");
+      checkStr("map(+,h.hex,1)");
+      checkStr("map(+,1,2)");
+      checkStr("map(function(x){x[];1},h.hex)");
 
       // Needed examples: 
       // (1) Replace NAs with imputed mean

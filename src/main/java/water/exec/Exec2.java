@@ -150,9 +150,7 @@ public class Exec2 {
   AST throwErr( String msg, int idx ) {
     int lo = _x, hi=idx;
     if( idx < _x ) { lo = idx; hi=_x; }
-    String s = msg+" @ "+lo;
-    if( lo != hi ) s += "-"+hi;
-    s += '\n'+_str+'\n';
+    String s = msg+ '\n'+_str+'\n';
     int i;
     for( i=0; i<lo; i++ ) s+= ' ';
     s+='^'; i++;
