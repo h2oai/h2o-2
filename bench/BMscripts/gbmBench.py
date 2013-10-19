@@ -10,17 +10,19 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
               'AllBedrooms': {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
               'Covtype'     : {'train': ('CovTypeTrain1x', 'CovTypeTrain10x', 'CovTypeTrain100x'),            'test' : 'CovTypeTest'},
              }
-header = ""
-
+build = ""
+debug = False
 def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
-    benchmarkLogging = ['cpu','disk', 'network', 'iostats']
-    benchmarkLogging = None
+    bench = "bench"
+    if debug:
+        print "Doing GBM DEBUG"
+        bench = "bench/debug"
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
-        #h2o.cloudPerfH2O.switch_logfile(location='./BMLogs/'+build+ '/' + date, log='GBM'+f+'.csv')
         overallWallStart = time.time()
-        date = '-'.join([str(x) for x in list(time.localtime())][0:3])
-        gbmbenchcsv = 'benchmarks/'+build+'/'+date+'/gbmbench.csv'
+        pre = ""
+        if debug: pre    = 'DEBUG'
+        gbmbenchcsv = 'benchmarks/'+build+'/'+date+'/'+pre+'gbmbench.csv'
         if not os.path.exists(gbmbenchcsv):
             output = open(gbmbenchcsv,'w')
             output.write(','.join(csv_header)+'\n')
@@ -30,21 +32,31 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
                         dialect='excel', extrasaction='ignore',delimiter=',')
         try:
             java_heap_GB = h2o.nodes[0].java_heap_GB
-            importFolderPath = "bench/" + folderPath
-            if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x','CovTypeTrain1x', 'CovTypeTrain10x', 'CovTypeTrain100x']): csvPathname = importFolderPath + "/" + f + '.csv'
-            else: csvPathname = importFolderPath + "/" + f + "/*linked*"
+            importFolderPath = bench + folderPath
+            if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x','CovTypeTrain1x', 'CovTypeTrain10x', 'CovTypeTrain100x']): 
+                csvPathname = importFolderPath + "/" + f + '.csv'
+            else: 
+                csvPathname = importFolderPath + "/" + f + "/*linked*"
             hex_key = f + '.hex'
             hK = folderPath + "Header.csv"    
             headerPathname = importFolderPath + "/" + hK
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-            headerKey =h2i.find_key(hK)
+            headerKey = h2i.find_key(hK)
             trainParseWallStart = time.time()
-            #h2o.cloudPerfH2O.message("=========PARSE TRAIN========")
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=4800,retryDelaySecs=5,pollTimeoutSecs=4800, benchmarkLogging=benchmarkLogging)
+            parseResult = h2i.import_parse(bucket           = 'home-0xdiag-datasets',
+                                           path             = csvPathname,
+                                           schema           = 'local',
+                                           hex_key          = hex_key,
+                                           header           = 1,
+                                           header_from_file = headerKey,
+                                           separator        = 44,
+                                           timeoutSecs      = 7200,
+                                           retryDelaySecs   = 5,
+                                           pollTimeoutSecs  = 7200
+                                          )             
+
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
-            #h2o.cloudPerfH2O.message("=========END PARSE TRAIN========")
         
             inspect_train  = h2o.nodes[0].inspect(parseResult['destination_key'])
             inspect_test   = h2o.nodes[0].inspect(testFilehex)
@@ -55,9 +67,9 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
                          'nJVMs'              : len(h2o.nodes),
                          'Xmx/JVM'            : java_heap_GB,
                          'dataset'            : f,
-                         'nTrainRows'         : inspect_train['num_rows'],
-                         'nTestRows'          : inspect_test['num_rows'],
-                         'nCols'              : inspect_train['num_cols'],
+                         'nTrainRows'         : inspect_train['numRows'],
+                         'nTestRows'          : inspect_test['numRows'],
+                         'nCols'              : inspect_train['numCols'],
                          'trainParseWallTime' : parseWallTime,
                          'classification'     : classification,
                         })
@@ -78,11 +90,9 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             gbmStart  = time.time()
             #TODO(spencer): Uses jobs to poll for gbm completion
             h2o.beta_features = True
-            #h2o.cloudPerfH2O.message("=========GBM========")
             gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
             h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=120, retryDelaySecs=5)
             h2o.beta_features = False
-            #h2o.cloudPerfH2O.message("=========END GBM========")
             gbmTime   = time.time() - gbmStart
             row.update( {'gbmBuildTime'       : gbmTime,
                         })
@@ -90,11 +100,12 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             #gbmScoreStart = time.time()
             #gbmScore      = h2o_cmd.runGLMScore(key=testFilehex,model_key=params['destination_key'])
             #scoreTime     = time.time() - gbmScoreStart
-            #csvWrt.writerow(row)
+            csvWrt.writerow(row)
         finally:
             output.close()
 
 if __name__ == '__main__':
+    debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
@@ -125,29 +136,29 @@ if __name__ == '__main__':
          )
     
     #COVTYPE
-    covTypeTestParseStart   = time.time()
-    hK                          = "CovTypeHeader.csv"
-    headerPathname              = "bench/CovType" + "/" + hK
-    h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-    headerKey                   = h2i.find_key(hK)
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/CovType/CovTypeTest.csv', schema='local', hex_key="covTtest.hex", header=1, header_from_file=headerKey, separator=44,
-                                  timeoutSecs=4800,retryDelaySecs=5, pollTimeoutSecs=4800)
-    elapsedCovTypeTestParse = time.time() - covTypeTestParseStart
-    row = {'testParseWallTime' : elapsedCovTypeTestParse}
-    response = 'C55'
-    ignored  = None
-    doGBM(files['Covtype'], folderPath='CovType', 
-            ignored_cols    = ignored, 
-            classification  = 1,
-            testFilehex     = testFile['destination_key'], 
-            ntrees          = 100,
-            depth           = 5,
-            minrows         = 10, 
-            nbins           = 100,
-            learnRate       = 0.01,
-            response        = response,
-            row             = row
-         ) 
+    #covTypeTestParseStart   = time.time()
+    #hK                          = "CovTypeHeader.csv"
+    #headerPathname              = "bench/CovType" + "/" + hK
+    #h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+    #headerKey                   = h2i.find_key(hK)
+    #testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/CovType/CovTypeTest.csv', schema='local', hex_key="covTtest.hex", header=1, header_from_file=headerKey, separator=44,
+    #                              timeoutSecs=4800,retryDelaySecs=5, pollTimeoutSecs=4800)
+    #elapsedCovTypeTestParse = time.time() - covTypeTestParseStart
+    #row = {'testParseWallTime' : elapsedCovTypeTestParse}
+    #response = 'C55'
+    #ignored  = None
+    #doGBM(files['Covtype'], folderPath='CovType', 
+    #        ignored_cols    = ignored, 
+    #        classification  = 1,
+    #        testFilehex     = testFile['destination_key'], 
+    #        ntrees          = 100,
+    #        depth           = 5,
+    #        minrows         = 10, 
+    #        nbins           = 100,
+    #        learnRate       = 0.01,
+    #        response        = response,
+    #        row             = row
+    #     ) 
     
     #ALLBEDROOMS
     allBedroomsTestParseStart   = time.time()

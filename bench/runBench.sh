@@ -22,20 +22,29 @@ function doAlgo {
     #sudo bash -c "sync; echo 3 > /proc/sys/vm/drop_caches"
 
     echo "Running $1 benchmark..."
+    echo "Changing little logger phase..."
+    bash startLoggers.sh ${JSON} changePhase $1
 
     pyScript="BMscripts/"$1"Bench.py"
-
+    wait
     if [ ! $1 = "bigkmeans" ]
     then
-        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild}
-        wait
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
+        wait 
     else
-        python ${pyScript} ${h2oBuild}
+        python ${pyScript} ${h2oBuild} ${DEBUG} #bigKM can also run in debug
         wait
     fi
     zip -r  ${archive}/${h2oBuild}-${DATE}-$1 sandbox/
     wait
     rm -rf sandbox/ 
+}
+
+function debug {
+    for a in $@
+    do
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
+    done
 }
 
 usage()
@@ -72,7 +81,11 @@ EOF
 
 TASK=
 JSON=
-while getopts "ht:j:" OPTION
+BUILDN=
+DEBUG=false
+LOG=true
+
+while getopts "ht:j:b:dL" OPTION
 do
   case $OPTION in
     h)
@@ -84,6 +97,16 @@ do
       ;;
     j)
       JSON=$OPTARG
+      ;;
+    b)
+      BUILDN=$OPTARG
+      ;;
+    d)
+      DEBUG=true
+      LOG=false
+      ;;
+    L)
+      LOG=false
       ;;
     ?)
       usage
@@ -110,14 +133,40 @@ if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
 
-if [ ! $TEST = "all" ]
+if [ $LOG ]
 then
-    echo "$TEST"
-    doAlgo $TEST
-else
-    $TEST
+    #global starttime out to all loggers
+    starttime=`date +%s`
+    echo $starttime > BMLogs/starttime
+
+    #Gentlemen...Start your loggers!
+    bash startLoggers.sh ${JSON} big
+    bash startLoggers.sh ${JSON} little
 fi
-wait
+
+if [ $DEBUG ]
+then
+    echo "Running in debug mode... "
+    if [ $TEST = "all" ] 
+    then
+        debug pca glm kmeans glm2 gbm gbmgrid bigkmeans
+        wait
+    else
+        debug $TEST
+        wait
+    fi
+    wait
+else
+    if [ ! $TEST = "all" ]
+        then
+            doAlgo $TEST
+        else
+            $TEST
+        fi
+        wait
+fi
+
+bash startLoggers.sh ${JSON} stop_
 
 #remove annoying useless files
 #rm pytest*flatfile*
