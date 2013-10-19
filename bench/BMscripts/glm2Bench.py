@@ -9,14 +9,19 @@ csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCo
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
              }
-header = ""
-
+build = ""
+debug = False
 def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row, case_mode, case_val):
+    bench = "bench"
+    if debug:
+        print "DOING GLM2 DEBUG"
+        bench = "bench/debug"
+    date = '-'.join([str(z) for z in list(time.localtime())][0:3])
     for f in fs['train']:
-        if f != 'AirlinesTrain1x': continue #in ['AirlinesTrain10x', 'AirlinesTrain100x']: continue
-        overallWallStart = time.time()
-        date = '-'.join([str(z) for z in list(time.localtime())][0:3])
-        glm2benchcsv = 'benchmarks/'+build+'/'+date+'/glm2bench.csv'
+        overallWallStart  = time.time()
+        pre               = ""
+        if debug: pre     = "DEBUG"
+        glm2benchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'glm2bench.csv'
         if not os.path.exists(glm2benchcsv):
             output = open(glm2benchcsv,'w')
             output.write(','.join(csv_header)+'\n')
@@ -25,18 +30,29 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
         csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
                         dialect='excel', extrasaction='ignore',delimiter=',')
         try:
-            java_heap_GB = h2o.nodes[0].java_heap_GB
+            java_heap_GB     = h2o.nodes[0].java_heap_GB
             importFolderPath = "bench/" + folderPath
-            if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x']): csvPathname = importFolderPath + "/" + f + '.csv'
-            else: csvPathname = importFolderPath + "/" + f + "/*linked*"
-            hex_key = f + '.hex'
-            hK = folderPath + "Header.csv"    
-            headerPathname = importFolderPath + "/" + hK
+            if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x']): 
+                csvPathname = importFolderPath + "/" + f + '.csv'
+            else: 
+                csvPathname = importFolderPath + "/" + f + "/*linked*"
+            hex_key         = f + '.hex'
+            hK              = folderPath + "Header.csv"    
+            headerPathname  = importFolderPath + "/" + hK
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-            headerKey =h2i.find_key(hK)
+            headerKey       = h2i.find_key(hK)
             trainParseWallStart = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=7200,retryDelaySecs=5,pollTimeoutSecs=7200)
+            parseResult = h2i.import_parse(bucket           = 'home-0xdiag-datasets',
+                                           path             = csvPathname,
+                                           schema           = 'local',
+                                           hex_key          = hex_key,
+                                           header           = 1,
+                                           header_from_file = headerKey,
+                                           separator        = 44,
+                                           timeoutSecs      = 7200,
+                                           retryDelaySecs   = 5,
+                                           pollTimeoutSecs  = 7200
+                                          )
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
             
@@ -46,9 +62,9 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
             row.update( {'h2o_build'          : build,  
                          'java_heap_GB'       : java_heap_GB,
                          'dataset'            : f,
-                         'nTrainRows'         : inspect_train['num_rows'],
-                         'nTestRows'          : inspect_test['num_rows'],
-                         'nCols'              : inspect_train['num_cols'],
+                         'nTrainRows'         : inspect_train['numRows'],
+                         'nTestRows'          : inspect_test['numRows'],
+                         'nCols'              : inspect_train['numCols'],
                          'trainParseWallTime' : parseWallTime,
                          'nfolds'             : nfolds,
                         })
@@ -59,10 +75,9 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
                          'lambda'             : lambda_,
                          'alpha'              : alpha,
                          'n_folds'            : nfolds,
-                         'case_mode'          : case_mode,
-                         'case_val'           : case_val, 
+                         #'case_mode'          : case_mode,
+                         #'case_val'           : case_val, 
                          'destination_key'    : "GLM("+f+")",
-                         'expert_settings'    : 0,
                         }
             h2o.beta_features = True
             kwargs    = params.copy()
@@ -94,6 +109,7 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
 
 if __name__ == '__main__':
     build = sys.argv.pop(-1)
+    debug = sys.argv.pop(-1)
     h2o.beta_features = True
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()
