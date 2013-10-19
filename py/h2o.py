@@ -1863,7 +1863,8 @@ class H2O(object):
                 'link': 'familyDefault',
             }
         else:
-            params_dict =      {'vresponse'          : None,
+            params_dict =      {'source'             : key,
+                                'vresponse'          : None,
                                 'ignored_cols'       : None,
                                 'family'             : None,
                                 'lambda'             : None,
