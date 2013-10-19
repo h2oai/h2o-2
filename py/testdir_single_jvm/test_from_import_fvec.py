@@ -46,11 +46,11 @@ class Basic(unittest.TestCase):
             # creates csvFilename.hex from file in importFolder dir 
             csvPathname = importFolderPath + "/" + csvFilename 
             
-            h2o.beta_features = False
+            ### h2o.beta_features = False
 
             (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=50)
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key='c.hex', 
-                timeoutSecs=500, noPoll=True, doSummary=False) # can't do summary until parse result is correct json
+                timeoutSecs=500, noPoll=False, doSummary=False) # can't do summary until parse result is correct json
 
             h2o.check_sandbox_for_errors()
 

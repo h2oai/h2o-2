@@ -186,12 +186,14 @@ myR runit_tail_numeric 60
 myR runit_summary_numeric 60
 myR runit_GBM_ecology 1200
 myR runit_RF 120
-myR runit_histograms 60
-myR runit_libR_airlines 120
 myR runit_libR_prostate 120
 myR runit_sliceColHeadTail_iris 60
 myR runit_sliceColSummary_iris 60
 myR runit_sliceColTypes_iris 60
+# this guy was failing? not sure why
+myR runit_histograms 60
+# airlines is failing summary. put it last
+myR runit_libR_airlines 120
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!

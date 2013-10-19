@@ -22,9 +22,11 @@ function doAlgo {
     #sudo bash -c "sync; echo 3 > /proc/sys/vm/drop_caches"
 
     echo "Running $1 benchmark..."
+    echo "Changing little logger phase..."
+    bash startLoggers.sh ${JSON} changePhase $1
 
     pyScript="BMscripts/"$1"Bench.py"
-
+    wait
     if [ ! $1 = "bigkmeans" ]
     then
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild}
@@ -110,14 +112,23 @@ if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
 
+#global starttime out to all loggers
+starttime=`date +%s`
+echo $starttime > BMLogs/starttime
+
+#Gentlemen...Start your loggers!
+bash startLoggers.sh ${JSON} big
+bash startLoggers.sh {$JSON} little
+
 if [ ! $TEST = "all" ]
 then
-    echo "$TEST"
     doAlgo $TEST
 else
     $TEST
 fi
 wait
+
+bash startLoggers.sh ${JSON} stop_
 
 #remove annoying useless files
 #rm pytest*flatfile*

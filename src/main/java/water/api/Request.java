@@ -1,5 +1,10 @@
 package water.api;
 
+import hex.DPCA.PCAModel;
+import hex.KMeansModel;
+import hex.glm.GLMModel;
+import hex.rf.RFModel;
+
 import java.io.InputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -7,6 +12,7 @@ import java.util.*;
 
 import water.*;
 import water.api.RequestServer.API_VERSION;
+import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -23,6 +29,7 @@ public abstract class Request extends RequestBuilders {
     int until() default Integer.MAX_VALUE;
     Class<? extends Filter> filter() default Filter.class;
     Class<? extends Filter>[] filters() default {};
+    boolean json() default false; // Forces an input field to also appear in JSON
     long   lmin() default Long  .MIN_VALUE;
     long   lmax() default Long  .MAX_VALUE;
     double dmin() default Double.NEGATIVE_INFINITY;
@@ -51,7 +58,7 @@ public abstract class Request extends RequestBuilders {
   protected Request() {
   }
 
-  protected String href() { return href(supportedVersions()[0]); }
+  public String href() { return href(supportedVersions()[0]); }
   protected String href(API_VERSION v) {
     return v.prefix() + getClass().getSimpleName();
   }
@@ -214,6 +221,26 @@ public abstract class Request extends RequestBuilders {
     }
     arl.add(new MenuItem(r, name));
     return r;
+  }
+
+
+  // TODO clean this stuff, typeahead should take type name
+  protected static Class mapTypeahead(Class c) {
+    if(c != null) {
+      if( PCAModel.class.isAssignableFrom(c) )
+        return TypeaheadPCAModelKeyRequest.class;
+      if( GLMModel.class.isAssignableFrom(c))
+        return TypeaheadGLMModelKeyRequest.class;
+      if( RFModel.class.isAssignableFrom(c))
+        return TypeaheadRFModelKeyRequest.class;
+      if( KMeansModel.class.isAssignableFrom(c))
+        return TypeaheadKMeansModelKeyRequest.class;
+      if( Model.class.isAssignableFrom(c))
+        return TypeaheadModelKeyRequest.class;
+      if( Frame.class.isAssignableFrom(c) || ValueArray.class.isAssignableFrom(c) )
+        return TypeaheadHexKeyRequest.class;
+    }
+    return TypeaheadKeysRequest.class;
   }
 
   // ==========================================================================

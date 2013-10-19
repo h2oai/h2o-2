@@ -1,10 +1,15 @@
+MAX_INSPECT_VIEW = 10000
+
 # Class definitions
+# WARNING: Do NOT touch the env slot! It is used to link garbage collection between R and H2O
+# setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
-setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
-setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
+setClass("H2ORawData", representation(h2o="H2OClient", key="character", env="environment"))
+# setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
+setClass("H2OParsedData", representation(h2o="H2OClient", key="character", env="environment"))
 setClass("H2OParsedData2", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
-setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
+setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
@@ -15,7 +20,46 @@ setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel")
 setClass("H2OGBMGrid", contains="H2OGrid")
 
-MAX_INSPECT_VIEW = 10000
+# Register finalizers for H2O data and model objects
+setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
+  .Object@h2o = h2o
+  .Object@key = key
+  .Object@env = new.env()
+  
+  assign("h2o", .Object@h2o, envir = .Object@env)
+  assign("key", .Object@key, envir = .Object@env)
+  
+  # Empty keys don't refer to any object in H2O
+  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+  return(.Object)
+})
+
+setMethod("initialize", "H2OParsedData", function(.Object, h2o = new("H2OClient"), key = "") {
+  .Object@h2o = h2o
+  .Object@key = key
+  .Object@env = new.env()
+  
+  assign("h2o", .Object@h2o, envir = .Object@env)
+  assign("key", .Object@key, envir = .Object@env)
+  
+  # Empty keys don't refer to any object in H2O
+  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+  return(.Object)
+})
+
+setMethod("initialize", "H2OModel", function(.Object, key = "", data = new("H2OParsedData"), model = list()) {
+  .Object@key = key
+  .Object@data = data
+  .Object@model = model
+  .Object@env = new.env()
+  
+  assign("h2o", .Object@data@h2o, envir = .Object@env)
+  assign("key", .Object@key, envir = .Object@env)
+  
+  # Empty keys don't refer to any object in H2O
+  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+  return(.Object)
+})
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -260,7 +304,7 @@ setMethod("summary", "H2OParsedData", function(object) {
   result
 })
 
-histograms <- function(object) {UseMethod("histograms", object)}
+histograms <- function(object) { UseMethod("histograms", object) }
 setMethod("histograms", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
   list.of.bins <- lapply(res$summaries, function(res) {

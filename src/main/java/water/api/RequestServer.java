@@ -2,11 +2,13 @@ package water.api;
 
 import hex.*;
 import hex.GridSearch.GridSearchProgress;
+import hex.KMeans2.KMeans2ModelView;
+import hex.KMeans2.KMeans2Progress;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
 import hex.glm.*;
-import hex.pca.*;
+import hex.pca.PCAScore;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -69,6 +71,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeans Grid",                "Model");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2",                    "Model");
     Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
@@ -110,14 +113,12 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new Parse2());
       registerRequest(new Inspect2());
       registerRequest(new SummaryPage2());
-      registerRequest(new KMeans2());
       registerRequest(new hex.gbm.DRF());
       registerRequest(new hex.LR2());
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new KMeans2()),        "KMeans2",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
@@ -142,6 +143,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new NeuralNetProgress());
+    registerRequest(new KMeans2Progress());
+    registerRequest(new KMeans2ModelView());
     registerRequest(new PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());
@@ -155,12 +158,16 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
-    registerRequest(new TypeaheadFileRequest());
+    // Typeahead
+    registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());
-    registerRequest(new TypeaheadHdfsPathRequest());
-    registerRequest(new TypeaheadHexKeyRequest());
-    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
     registerRequest(new TypeaheadRFModelKeyRequest());
+    registerRequest(new TypeaheadKMeansModelKeyRequest());
+    registerRequest(new TypeaheadPCAModelKeyRequest());
+    registerRequest(new TypeaheadHexKeyRequest());
+    registerRequest(new TypeaheadFileRequest());
+    registerRequest(new TypeaheadHdfsPathRequest());
+    registerRequest(new TypeaheadKeysRequest("Existing H2O Key", "", null));
     registerRequest(new TypeaheadS3BucketRequest());
     // testing hooks
     registerRequest(new TestPoll());
