@@ -20,14 +20,16 @@ public class Exec2 {
   // Grammar:
   //   statements := cxexpr ; statements
   //   cxexpr :=                   // COMPLEX expr 
-  //           slice               // (subset) R-value
+  //           expr                // Simple R-expr
+  //           expr ? cxexpr : cxexpr  // exprs must have equal types
+  //           cxexpr op2 expr     // Infix notation, evals LEFT TO RIGHT
   //           slice = cxexpr      // L-value: IDs or slices of IDs; exprs must have equal shapes; 
   //                               // does NOT define a new name
   //           id = cxexpr         // Creates a new named temp
   //           id := cxexpr        // Deep-copy; otherwise same as above
-  //           op(cxexpr...)       // Prefix function application
-  //           slice op2 cxexpr    // apply(op2,slice,cxexpr); ....optional INFIX notation
-  //           val ? cxexpr : cxexpr // exprs must have equal types
+  //   expr :=
+  //           slice               // (subset) R-value
+  //           expr(cxexpr,...)    // Prefix function application, evals LEFT TO RIGHT
   //   slice := 
   //           val                 // Can be a dbl or fcn or ary
   //           val[]               // whole ary val
@@ -80,7 +82,7 @@ public class Exec2 {
   int lexical_depth() { return _env.size(); }
   
   AST parse() { 
-    AST ast = AST.parseCXExpr(this); 
+    AST ast = ASTStatement.parse(this); 
     skipWS();                   // No trailing crud
     return _x == _buf.length ? ast : throwErr("Junk at end of line",_buf.length-1);
   }

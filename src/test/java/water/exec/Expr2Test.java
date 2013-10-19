@@ -18,6 +18,7 @@ public class Expr2Test extends TestUtil {
 
       checkStr("1.23");         // 1.23
       checkStr(" 1.23 + 2.34"); // 3.57
+      checkStr(" 1.23 + 2.34 * 3"); // 10.71, L2R eval order
       checkStr(" 1.23 2.34");   // Syntax error
       checkStr("h.hex");        // Simple ref
       checkStr("+(1.23,2.34)"); // prefix 3.57
@@ -34,6 +35,7 @@ public class Expr2Test extends TestUtil {
       checkStr("(1.23+h.hex)-h.hex");
       checkStr("min(h.hex,1+2)");
       checkStr("isNA(h.hex)");
+      checkStr("nrow(h.hex)*3");
       checkStr("h.hex[ncol(h.hex),nrow(h.hex)]");
       checkStr("1=2");
       checkStr("x");
@@ -69,6 +71,11 @@ public class Expr2Test extends TestUtil {
       checkStr("map(+,h.hex,1)");
       checkStr("map(+,1,2)");
       checkStr("map(function(x){x[];1},h.hex)");
+      checkStr("map(function(a,b,d){a+b+d},h.hex,h.hex,1)");
+      checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
+      checkStr("function(a){a[];a=1}");
+      checkStr("a=1;a=2;function(x){x=a;a=3}");
+      checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
 
       // Needed examples: 
       // (1) Replace NAs with imputed mean

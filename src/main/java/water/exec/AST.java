@@ -233,7 +233,17 @@ class ASTAssign extends AST {
       ast2 = ((ASTSlice)ast)._ast;
     // Must be a simple in-scope ID
     if( !(ast2 instanceof ASTId) ) E.throwErr("Can only assign to ID (or slice)",x);
+    ASTId id = (ASTId)ast2;
+    if( id._depth < E.lexical_depth()-1 ) { // Shadowing an outer scope?
+      id = new ASTId(null,id._id,E.lexical_depth()-1);
+      // Extend the local environment by the new name
+      E._env.get(id._depth).put(id._id,null); 
+    }
+    x = E._x;
     AST eval = parseCXExpr(E);
+    if( id._t == null && eval._t != null ) ast = id = id.setOnUse(E,eval._t);
+    if( id._t != eval._t )      // Disallow type changes in local scope
+      E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
     return new ASTAssign(ast,eval);
   }
   // Parse a valid LHS= or return null - for a new variable
@@ -241,7 +251,10 @@ class ASTAssign extends AST {
     int x = E._x;
     ASTId id = ASTId.parseNew(E);
     if( id == null ) return null;
-    if( !E.peek('=') ) { E._x=x; return null; }
+    if( !E.peek('=') ) {        // Not an assignment
+      if( E.isLetter(id._id.charAt(0) ) ) E.throwErr("Unknown id "+id._id,x);
+      E._x=x; return null;      // Let higher parse levels sort it out
+    }
     assert id._t==null;         // It is a new var so untyped
     assert id._depth == E.lexical_depth()-1; // And will be set in the current scope
     x = E._x;
@@ -464,11 +477,18 @@ abstract class ASTUniOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x"};
   static final Type   TYPES[]= new Type  []{ Type.dbl, Type.dbl };
   ASTUniOp( ) { super(VARS,TYPES); }
+  protected ASTUniOp( String[] vars, Type[] types ) { super(vars,types); }
 }
 class ASTIsNA extends ASTUniOp { @Override String opStr() { return "isNA"; }  }
 class ASTSgn  extends ASTUniOp { @Override String opStr() { return "sgn" ; }  }
-class ASTNrow extends ASTUniOp { @Override String opStr() { return "nrow"; }  }
-class ASTNcol extends ASTUniOp { @Override String opStr() { return "ncol"; }  }
+class ASTNrow extends ASTUniOp { 
+  ASTNrow() { super(VARS,new Type[]{Type.dbl,Type.ary}); }
+  @Override String opStr() { return "nrow"; }  
+}
+class ASTNcol extends ASTUniOp { 
+  ASTNcol() { super(VARS,new Type[]{Type.dbl,Type.ary}); }
+  @Override String opStr() { return "ncol"; }  
+}
 
 abstract class ASTBinOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x","y"};
