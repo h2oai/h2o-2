@@ -5,7 +5,7 @@ sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 from pprint import pprint
 
-csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error')
+csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','nPredictors','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','nIterations','AUC','AIC','AverageError')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
@@ -36,16 +36,16 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
             if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x']): 
                 csvPathname = importFolderPath + "/" + f + '.csv'
             else:
-                print "Not doing Airlines10x and 100x for Parse2, regex seems to be broken..." 
-                continue
-                #csvPathname = importFolderPath + "/" + f + "/*linked*"
+                #print "Not doing Airlines10x and 100x for Parse2, regex seems to be broken..." 
+                #continue
+                csvPathname = importFolderPath + "/" + f + "/*"
             hex_key         = f + '.hex'
             hK              = folderPath + "Header.csv"    
             headerPathname  = importFolderPath + "/" + hK
             h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
             headerKey       = h2i.find_key(hK)
             trainParseWallStart = time.time()
-            h2o.beta_features=True
+            if f in (['AirlinesTrain10x', 'AirlinesTrain100x']): h2o.beta_features = False #regex parsing acting weird when not using browser, use VA -> FVEC converter
             parseResult = h2i.import_parse(bucket           = 'home-0xdiag-datasets',
                                            path             = csvPathname,
                                            schema           = 'local',
@@ -63,7 +63,7 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
             parseResult = {'destination_key':hex_key}
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
-            
+            h2o.beta_features = True
             inspect_train  = h2o.nodes[0].inspect(hex_key)
             inspect_test   = h2o.nodes[0].inspect(testFilehex)
             
@@ -97,24 +97,27 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
             row.update( {'glmBuildTime'       : glmTime,
                          #'AverageErrorOver10Folds'    : glm['glm_model']['validations'][0]['err'],
                         })
+            #if "Bedrooms" in f: 
+                #print "Sleeping 30"
+                #time.sleep(30)
             glmView = h2o_cmd.runGLMView(modelKey = "GLM("+f+")", timeoutSecs=380)
-            pprint(glmView)
 
             #glmScoreStart = time.time()
             #glmScore      = h2o_cmd.runGLMScore(key=testFilehex,model_key=params['destination_key'])
             #scoreTime     = time.time() - glmScoreStart
-            #if family == "binomial":
-            #    row.update( {'scoreTime'          : scoreTime,
-            #                 'AUC'                : glmScore['validation']['auc'],
-            #                 'AIC'                : glmScore['validation']['aic'],
-            #                 'error'              : glmScore['validation']['err'],
-            #                })
-            #else:
-            #    row.update( {'scoreTime'          : scoreTime,
-            #                 'AIC'                : glmScore['validation']['aic'],
-            #                 'AUC'                : 'NA',
-            #                 'error'              : glmScore['validation']['err'],
-            #                })
+            row.update( {'AIC'          : glmView['glm_model']['validation']['aic'],
+                         'nIterations'  : glmView['glm_model']['iteration'],
+                         'nPredictors'  : len(glmView['glm_model']['beta']),
+                         'AverageError' : glmView['glm_model']['validation']['avg_err'],
+                        })
+            if family == "binomial":
+                row.update( {#'scoreTime'          : scoreTime,
+                             'AUC'                : glmView['glm_model']['validation']['auc'],
+                            })
+            else:
+                row.update( {#'scoreTime'          : scoreTime,
+                             'AUC'                : 'NA',
+                            })
             csvWrt.writerow(row)
         finally:
             output.close()
