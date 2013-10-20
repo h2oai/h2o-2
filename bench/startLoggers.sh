@@ -10,7 +10,7 @@ function startBigLoggers {
     do
         echo "Starting bigLogger on ${i}"
         scp BMLogs/starttime spencer@$i:/home/spencer/h2o/bench/BMLogs
-  #      ssh spencer@$i "cd /home/spencer/h2o/bench/BMLogs; bash bigLogger.sh" &
+        ssh spencer@$i "cd /home/spencer/h2o/bench/BMLogs; bash bigLogger.sh" &
     done
 }
 

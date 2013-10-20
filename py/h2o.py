@@ -1583,7 +1583,7 @@ class H2O(object):
     def glm_view(self, modelKey, timeoutSecs=300,print_params=False, **kwargs):
         #this function is only for glm2, may remove it in future.
         params_dict = {
-            'modelKey' : modelKey,
+            '_modelKey' : modelKey,
         }
         check_params_update_kwargs(params_dict, kwargs, 'glm_view', print_params)
         a = self.__do_json_request('2/GLMModelView.json',timeout=timeoutSecs,params=params_dict)
@@ -1897,6 +1897,8 @@ class H2O(object):
         parentName = "2/GLM2" if beta_features else "GLM"
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName ,destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
+        if noPoll:
+            return a
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
             raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
