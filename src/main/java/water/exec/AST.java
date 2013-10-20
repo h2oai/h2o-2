@@ -305,14 +305,7 @@ class ASTId extends AST {
     if( id == null ) return null;
     // Built-in ops parse as ops, not vars
     if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
-    return new ASTId(Type.unbound(x)/*untyped as of yet*/,id,E.lexical_depth()-1);
-  }
-  ASTId setOnUse( Exec2 E, Type t ) {
-    assert _t == null;          // Currently an untyped variable
-    HashMap<String,Type> vars = E._env.get(_depth);
-    assert vars.containsKey(_id) && vars.get(_id)==null;
-    vars.put(_id,t);            // Set type on 1st use
-    return new ASTId(t,_id,_depth);
+    return new ASTId(Type.unbound(x)/*untyped as of yet*/,id,E.lexical_depth());
   }
   @Override public String toString() { return _id; }
 }
@@ -332,15 +325,14 @@ class ASTAssign extends AST {
     // Must be a simple in-scope ID
     if( !(ast2 instanceof ASTId) ) E.throwErr("Can only assign to ID (or slice)",x);
     ASTId id = (ASTId)ast2;
-    if( id._depth < E.lexical_depth()-1 ) { // Shadowing an outer scope?
-      id = new ASTId(null,id._id,E.lexical_depth()-1);
+    if( id._depth < E.lexical_depth() ) { // Shadowing an outer scope?
+      id = new ASTId(Type.unbound(x),id._id,E.lexical_depth());
       // Extend the local environment by the new name
-      E._env.get(id._depth).put(id._id,null); 
+      E._env.get(id._depth).put(id._id,id._t); 
     }
     x = E._x;
     AST eval = parseCXExpr(E);
-    if( id._t == null && eval._t != null ) ast = id = id.setOnUse(E,eval._t);
-    if( id._t != eval._t )      // Disallow type changes in local scope
+    if( !id._t.union(eval._t) ) // Disallow type changes in local scope
       E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
     return new ASTAssign(ast,eval);
   }
@@ -354,7 +346,7 @@ class ASTAssign extends AST {
       E._x=x; return null;      // Let higher parse levels sort it out
     }
     assert id._t._t==0;         // It is a new var so untyped
-    assert id._depth == E.lexical_depth()-1; // And will be set in the current scope
+    assert id._depth == E.lexical_depth(); // And will be set in the current scope
     x = E._x;
     AST eval = parseCXExpr(E);
     id = new ASTId(eval._t,id._id,id._depth);
@@ -494,15 +486,15 @@ class ASTCat extends ASTOp {
   ASTCat( ) { super(null,null); }
   private ASTCat( String[] vars, Type[] types ) { super(vars,types); }
   // Make a custom-typed function with explicit types for the varargs
-  @Override ASTOp set_varargs_types(Type) {
-    String[] vars  = new String[args.length];
-    Type  [] types = new Type  [args.length];
-    Arrays.fill(vars,"x");
-    Arrays.fill(types,Type.DBL);
-    vars [0] = opStr();
-    types[0] = Type.ARY;        // Always array-type result
-    return new ASTCat(vars,types);
-  }
+//  @Override ASTOp set_varargs_types(Type t) {
+//    String[] vars  = new String[args.length];
+//    Type  [] types = new Type  [args.length];
+//    Arrays.fill(vars,"x");
+//    Arrays.fill(types,Type.DBL);
+//    vars [0] = opStr();
+//    types[0] = Type.ARY;        // Always array-type result
+//    return new ASTCat(vars,types);
+//  }
 }
 
 class ASTMap extends ASTOp {
@@ -511,35 +503,34 @@ class ASTMap extends ASTOp {
   @Override String opStr(){ return "map";}
   // Make a custom-typed function with explicit types for the varargs.
   // Must be passed a fcn as 1st arg, then as many args as function takes.
-  @Override ASTOp set_varargs_types(AST args[]) {
-    // Map demands a 1st argument of a function.
-    if( args.length<=1 ||             // No args, so missing the fcn arg
-        !(args[1] instanceof ASTOp) ) // First arg is not a function
-      return new ASTMap(new String[] { "" ,  "fun" }, 
-                        new Type  [] {null, Type.fcn(0,ASTBinOp.TYPES) });
-
-    // Get the function to map over.  Map will expect all the args this
-    // function needs.... and will demand the function returns a DBL.
-    // Map will allow the fun to take a DBL when passed an ary.
-    throw H2O.unimpl();
-    //ASTOp fun = (ASTOp)args[1];
-    //if( fun._typs[0] != Type.dbl ) throw H2O.unimpl();
-    //
-    //String[] vars  = new String[fun._vars.length+1];
-    //Type  [] vtypes= new Type  [fun._vars.length+1];
-    //ASTOp [] ftypes= new ASTOp [fun._vars.length+1];
-    //vars  [0]= opStr();  vars  [1]= "fun"  ;  System.arraycopy(fun._vars   ,1,vars  ,2,fun._vars.length-1);
-    //vtypes[0]=Type.dbl;  vtypes[1]=Type.fun;  System.arraycopy(fun._typs ,1,vtypes,2,fun._vars.length-1);
-    //ftypes[0]=  null  ;  ftypes[1]= fun    ;  if( fun._ftypes != null ) System.arraycopy(fun._ftypes,1,ftypes,2,fun._vars.length-1);
-    //
-    //// Allow arys, if passed arys & fun is taking a double.  These will be
-    //// mapped over at runtime.  If any arys are found, then map returns an ary.
-    //for( int i=1; i<fun._typs.length; i++ )
-    //  if( fun._typs[i]==Type.dbl &&
-    //      args[i+1]._t ==Type.ary )
-    //    vtypes[0] = vtypes[i+1] = Type.ary;
-    //return new ASTMap(vars,vtypes,ftypes);
-  }
+  //@Override ASTOp set_varargs_types(AST args[]) {
+  //  // Map demands a 1st argument of a function.
+  //  if( args.length<=1 ||             // No args, so missing the fcn arg
+  //      !(args[1] instanceof ASTOp) ) // First arg is not a function
+  //    return new ASTMap(new String[] { "" ,  "fun" }, 
+  //                      new Type  [] {null, Type.fcn(0,ASTBinOp.TYPES) });
+  //
+  //  // Get the function to map over.  Map will expect all the args this
+  //  // function needs.... and will demand the function returns a DBL.
+  //  // Map will allow the fun to take a DBL when passed an ary.
+  //  ASTOp fun = (ASTOp)args[1];
+  //  if( fun._typs[0] != Type.dbl ) throw H2O.unimpl();
+  //  
+  //  String[] vars  = new String[fun._vars.length+1];
+  //  Type  [] vtypes= new Type  [fun._vars.length+1];
+  //  ASTOp [] ftypes= new ASTOp [fun._vars.length+1];
+  //  vars  [0]= opStr();  vars  [1]= "fun"  ;  System.arraycopy(fun._vars   ,1,vars  ,2,fun._vars.length-1);
+  //  vtypes[0]=Type.dbl;  vtypes[1]=Type.fun;  System.arraycopy(fun._typs ,1,vtypes,2,fun._vars.length-1);
+  //  ftypes[0]=  null  ;  ftypes[1]= fun    ;  if( fun._ftypes != null ) System.arraycopy(fun._ftypes,1,ftypes,2,fun._vars.length-1);
+  //  
+  //  // Allow arys, if passed arys & fun is taking a double.  These will be
+  //  // mapped over at runtime.  If any arys are found, then map returns an ary.
+  //  for( int i=1; i<fun._typs.length; i++ )
+  //    if( fun._typs[i]==Type.dbl &&
+  //        args[i+1]._t ==Type.ary )
+  //      vtypes[0] = vtypes[i+1] = Type.ary;
+  //  return new ASTMap(vars,vtypes,ftypes);
+  //}
 }
 
 // --------------------------------------------------------------------------

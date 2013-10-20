@@ -81,7 +81,7 @@ public class Exec2 {
         global.put(v._key.toString(),Type.ARY);
     _env.push(global);
   }
-  int lexical_depth() { return _env.size(); }
+  int lexical_depth() { return _env.size()-1; }
   
   AST parse() { 
     AST ast = ASTStatement.parse(this); 
