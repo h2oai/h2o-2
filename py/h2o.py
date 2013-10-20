@@ -1580,6 +1580,16 @@ class H2O(object):
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
+    def glm_view(self, modelKey, timeoutSecs=300,print_params=False, **kwargs):
+        #this function is only for glm2, may remove it in future.
+        params_dict = {
+            'modelKey' : modelKey,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'glm_view', print_params)
+        a = self.__do_json_request('2/GLMModelView.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\nglm_view result:", dump_json(a))
+        return a
+
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
         algo = '2/Predict' if beta_features else 'GeneratePredictionsPage'
         algoView = '2/Inspect2' if beta_features else 'Inspect'

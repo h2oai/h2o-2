@@ -127,6 +127,13 @@ def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noP
     gbmView = node.gbm_view(model_key,timeoutSecs=timeoutSecs)
     return gbmView
 
+def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+    if not node: node = h2o.nodes[0]
+    if not modelKey:
+        raise Exception("\nNo modelKey was supplied to the glm view!")
+    glmView = node.glm_view(modelKey,timeoutSecs-timeoutSecs)
+    return glmView
+
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
     noise=None, noPoll=False, noPrint=False, **kwargs):
