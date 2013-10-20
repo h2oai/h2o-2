@@ -149,7 +149,7 @@ public class KMeans2 extends ColumnsJob {
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @Override protected Response jobDone(Job job, Key dst) {
-      return new Response(Response.Status.redirect, this, 0, 0, new KMeans2ModelView().href(), "model", dst_key);
+      return new Response(Response.Status.redirect, this, 0, 0, new KMeans2ModelView().href(), "model", destination_key);
     }
   }
 
