@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
             # PARSE test****************************************
             testKey2 = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="mnist/" + testCsvFilename, schema='put', 
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path="mnist/" + testCsvFilename,
                 hex_key=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\

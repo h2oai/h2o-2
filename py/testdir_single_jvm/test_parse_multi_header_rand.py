@@ -290,7 +290,7 @@ class Basic(unittest.TestCase):
                 pattern = SYNDATASETS_DIR + '/syn_data_*'+str(trial)+"_"+rowxcol+'*'
             # don't pass to parse
             kwargs.pop('hdr_separator', None)
-            parseResult = h2i.import_parse(path=pattern, hex_key=hex_key, 
+            parseResult = h2i.import_parse(path=pattern, hex_key=hex_key, schema='put',
                 timeoutSecs=timeoutSecs, **kwargs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']
