@@ -23,7 +23,7 @@ function doAlgo {
 
     echo "Running $1 benchmark..."
     echo "Changing little logger phase..."
-    bash startLoggers.sh ${JSON} changePhase $1
+    bash startloggers.sh ${JSON} changePhase $1
 
     pyScript="BMscripts/"$1"Bench.py"
     wait
@@ -139,8 +139,8 @@ then
     echo $starttime > BMLogs/starttime
 
     #Gentlemen...Start your loggers!
-    bash startLoggers.sh ${JSON} big
-    bash startLoggers.sh ${JSON} little
+    bash startloggers.sh ${JSON} big
+    bash startloggers.sh ${JSON} little
 fi
 
 if [ ${DEBUG} -eq 1 ]
@@ -165,13 +165,12 @@ else
         wait
 fi
 
-bash startLoggers.sh ${JSON} stop_
+bash startloggers.sh ${JSON} stop_
 
 #remove annoying useless files
-#rm pytest*flatfile*
-#rm benchmark*log
+rm pytest*flatfile*
 
 #archive nohup
-#if [ -a nohup.out ]; then
-#    mv nohup.out ${archive}/${h2oBuild}-${DATE}-nohup.out
-#fi
+if [ -a nohup.out ]; then
+    mv nohup.out ${archive}/${h2oBuild}-${DATE}-nohup.out
+fi

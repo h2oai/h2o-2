@@ -25,8 +25,8 @@ function startLittleLoggers {
 function stopLittleLoggers {
     for i in ${MACHINES[@]}
     do
-        "Stopping little loggers on machine $i"
-        pids=`echo spencer@$i ps ax|grep bash|grep littleLogger|awk '{print $1}'| xargs`
+        echo "Changing little logger $i to phase $1"
+        pids=`ssh spencer@$i ps ax|grep bash|grep littleLogger|awk '{print $1}'| xargs`
         ssh spencer@$i kill $pids
     done
 }
@@ -34,15 +34,14 @@ function stopLittleLoggers {
 function stopAllLoggers {
     for i in ${MACHINES[@]}
     do
-        "Stopping all loggers on machine $i"
-        pids=`echo ssh spencer@$i ps ax|grep bash|grep Logger|awk '{print $1}'| xargs`
+        echo "Stopping all loggers on machine $i"
+        pids=`ssh spencer@$i ps ax|grep bash|grep Logger|awk '{print $1}'| xargs`
         ssh spencer@$i kill $pids
     done
 }
 
 function changePhase {
-  echo "Stopping little loggers"
-  stopLittleLoggers >/dev/null
+  stopLittleLoggers $1
   newPhase=$1
   startLittleLoggers $1 >/dev/null
 }
@@ -59,7 +58,7 @@ fi
 
 if [ $2 = "changePhase" ]
 then
-    changePhase $3 >/dev/null
+    changePhase $3
 fi
 
 if [ $2 = "stop_" ]
