@@ -879,7 +879,7 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
-            print(r.text)
+            print dump_json(r.text)
             if not isinstance(r,(list,dict)): 
                 raise Exception("h2o json responses should always be lists or dicts, see previous for text")
 
@@ -985,15 +985,21 @@ class H2O(object):
         # look for 'response'..if not there, assume the rev 2
 
         if 'redirect_url' in response:
-            url = self.__url(response['redirect_url'] + ".json")
-            params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+            # url = self.__url(response['redirect_url'] + ".json")
+            # this is the full url now, with params?
+            url = self.__url(response['redirect_url'])
+            # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+            params = None
 
         else:
             url = self.__url(response['response']['redirect_request'])
             params = response['response']['redirect_request_args']
 
         # no need to recreate the string for messaging, in the loop..
-        paramsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        if params:
+            paramsStr = '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        else:
+            paramsStr = ''
 
         # FIX! don't do JStack noise for tests that ask for it. JStack seems to have problems
         noise_enable = noise is not None and noise != ("JStack", None)
@@ -1035,7 +1041,7 @@ class H2O(object):
             r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
             if ((count%5)==0):
-                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r['response']))
+                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
             # if ((count%15)==0):
@@ -1047,7 +1053,10 @@ class H2O(object):
                 # a 'return r' being interpreted from a noise response
                 status = 'poll'
             else:
-                status = r['response']['status']
+                if beta_features:
+                    status = r['status']
+                else:
+                    status = r['response']['status']
 
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with

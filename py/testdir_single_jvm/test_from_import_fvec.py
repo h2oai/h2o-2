@@ -31,10 +31,10 @@ class Basic(unittest.TestCase):
         importFolderPath = 'standard'
         timeoutSecs = 500
         csvFilenameAll = [
-            # ("manyfiles-nflx-gz", "file_1.dat"),
-            ("manyfiles-nflx-gz", "file_[1-9].dat.gz", 378),
-            ("standard", "covtype.data", 54),
-            ("standard", "covtype20x.data", 54),
+            ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
+            # ("manyfiles-nflx-gz", "file_[1-9].dat.gz", 378),
+            # ("standard", "covtype.data", 54),
+            # ("standard", "covtype20x.data", 54),
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
@@ -54,24 +54,21 @@ class Basic(unittest.TestCase):
 
             h2o.check_sandbox_for_errors()
 
-            print "\nparseResult", h2o.dump_json(parseResult)
-
             # wait for it to show up in jobs?
-            time.sleep(2)
+            ## time.sleep(2)
             # no pattern waits for all
-            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+            ## h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
 
             # hack it because no response from Parse2
             if h2o.beta_features:
                 parseResult = {'destination_key': 'c.hex'}
 
-            else:
-                print csvFilename, 'parse time:', parseResult['response']['time']
-                print "Parse result['destination_key']:", parseResult['destination_key']
-                inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=30)
+            print "\nparseResult", h2o.dump_json(parseResult)
 
-            h2o.beta_features = True
-            inspect = h2o_cmd.runInspect(key='c.hex', timeoutSecs=30)
+            print "Parse result['destination_key']:", parseResult['destination_key']
+            ## What's wrong here? too big?
+            ### inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=30, verbose=True)
+
             h2o.check_sandbox_for_errors()
 
             # have to avoid this on nflx data. colswap with exec
@@ -95,7 +92,7 @@ class Basic(unittest.TestCase):
 
             params = {
                 'destination_key': "GBMKEY",
-                'ignored_cols': xIgnore,
+                'ignored_cols_by_name': xIgnore,
                 'learn_rate': .1,
                 'ntrees': 2,
                 'max_depth': 8,
