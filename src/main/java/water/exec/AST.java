@@ -11,18 +11,15 @@ import water.fvec.*;
 
 // --------------------------------------------------------------------------
 abstract public class AST {
-  enum Type { fun, ary, dbl }
   final Type _t;
-  AST( Type t ) { _t = t; }
+  AST( Type t ) { assert t != null; _t = t; }
   static AST parseCXExpr(Exec2 E ) {
     AST ast2, ast = ASTSlice.parse(E);
     if( ast == null ) return ASTAssign.parseNew(E);
+    // Can find an infix: {op expr}*
+    if( (ast2 = ASTApply.parseInfix (E,ast)) != null ) return ast2;
     // Can find '=' between expressions
     if( (ast2 = ASTAssign.parse     (E,ast)) != null ) return ast2;
-    // Op followed by ()
-    if( (ast2 = ASTApply.parsePrefix(E,ast)) != null ) return ast2;
-    // Can find an infix op between expressions
-    if( (ast2 = ASTApply.parseInfix (E,ast)) != null ) return ast2;
     if( E.peek('?') ) { throw H2O.unimpl(); } // infix trinary
     return ast;                 // Else a simple slice/expr
   }
@@ -47,6 +44,7 @@ abstract public class AST {
     throw H2O.unimpl(); 
   }
   public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
+  Type set_varargs_types(Type ft, Type argt) { return ft; }
 }
 
 // --------------------------------------------------------------------------
@@ -76,18 +74,118 @@ class ASTStatement extends AST {
 }
 
 // --------------------------------------------------------------------------
+class ASTApply extends AST {
+  final AST _args[];
+  private ASTApply( AST args[] ) { super(((ASTOp)args[0])._t);  _args = args;  }
+
+  // Wrap compatible but different-sized ops in reduce/bulk ops.
+  static ASTApply make(AST args[],Exec2 E, int x) {
+    // Make a type variable for this application
+    Type ts[] = new Type[args.length];
+    ts[0] = Type.unbound(x);
+    for( int i=1; i<ts.length; i++ )
+      ts[i] = args[i]._t;
+    Type ft1 = Type.fcn(x,ts);
+    AST fast = args[0];
+    Type ft2 = fast._t;         // Should be a function type
+    
+    if( ft1.union(ft2) )        // Union 'em
+      return new ASTApply(args);
+    // Error handling
+    if( ft2.isNotFun() )      // Oops, failed basic sanity
+      E.throwErr("Function-parens following a "+ft2,x);
+    if( ft2._ts.length != ts.length )
+      E.throwErr("Passed "+(ts.length-1)+" args but expected "+(ft2._ts.length-1),x);
+    String vars[] = (fast instanceof ASTOp) ? ((ASTOp)fast)._vars : null;
+    for( int i=1; i<ts.length; i++ )
+      if( !ft2._ts[i].union(args[i]._t) )
+        E.throwErr("Arg "+(vars==null?("#"+i):("'"+vars[i]+"'"))+" typed as "+ft2._ts[i]+" but passed "+args[i]._t,x);
+    throw H2O.fail();
+    //// Check that all arguments match, or can be auto-expanded.  Any op taking
+    //// a scalar and passed an array will be auto-expanded.
+    //boolean expand=false;
+    //if( expand ) {              // Auto-insert a map call
+    //  args = Arrays.copyOf(args,args.length+1);
+    //  System.arraycopy(args,0,args,1,args.length-1);
+    //  args[0] = op = new ASTMap(); // Inserted ASTMap in front of all other args
+    //  args[0] = op = op.set_varargs_types(args); // Type it
+    //}
+  }
+
+  // Parse a prefix operator
+  static AST parsePrefix(Exec2 E) { 
+    AST pre = parseVal(E);
+    if( pre == null ) return null;
+    while( true ) {
+      if( pre._t.isNotFun() ) return pre; // Bail now if clearly not a function
+      int x = E._x;
+      if( !E.peek('(') ) return pre; // Plain op, no prefix application
+      AST args[] = new AST[] { pre, null };
+      int i=1;
+      if( !E.peek(')') ) {
+        while( true ) {
+          args[i++] = parseCXExpr(E);
+          if( E.peek(')') ) break;
+          E.xpeek(',',E._x,null);
+          if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);
+        }
+      }
+      args = Arrays.copyOf(args,i);
+      pre = make(args,E,x);
+    }
+  }
+
+  // Parse an infix boolean operator
+  static AST parseInfix(Exec2 E, AST ast) {
+    AST inf = null;
+    while( true ) {
+      ASTOp op = ASTOp.parse(E);
+      if( op == null || op._vars.length != 3 ) return inf;
+      int x = E._x;
+      AST rite = ASTSlice.parse(E);
+      if( rite==null ) E.throwErr("Missing expr or unknown ID",x);
+      ast = inf = make(new AST[]{op,ast,rite},E,x);
+    }
+  }
+
+  boolean isPure() {
+    for( AST arg : _args )
+      if( !arg.isPure() ) return false;
+    return true;
+  }
+  @Override public String toString() { return _args[0].toString()+"()"; }
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
+    if( _args[0] instanceof ASTFunc ) _args[0].toString(sb,d).append("()\n");
+    else indent(sb,d).append(this).append("\n");
+    for( int i=1; i<_args.length-1; i++ )
+      _args[i].toString(sb,d+1).append('\n');
+    return _args[_args.length-1].toString(sb,d+1);
+  }
+  // Apply: execute all arguments (including the function argument) yielding
+  // the function itself, plus all normal arguments on the stack.  Then execute
+  // the function, which is responsible for popping all arguments and pushing
+  // the result.
+  @Override void exec(Env env) {
+    int sp = env._sp;
+    for( AST arg : _args ) arg.exec(env);
+    assert sp+_args.length==env._sp;
+    assert env.isFun(-_args.length);
+    env.fun(-_args.length).apply(env);
+  }
+}
+
+// --------------------------------------------------------------------------
 class ASTSlice extends AST {
   final AST _ast, _cols, _rows; // 2-D slice of an expression
   ASTSlice( AST ast, AST cols, AST rows ) { 
-    super(Type.ary); _ast = ast; _cols = cols; _rows = rows; 
+    super(Type.ARY); _ast = ast; _cols = cols; _rows = rows; 
   }
   static AST parse(Exec2 E ) {
     int x = E._x;
-    AST ast = parseVal(E);
+    AST ast = ASTApply.parsePrefix(E);
     if( ast == null ) return null;
     if( !E.peek('[') ) return ast; // No slice
-    if( ast._t == null ) ast = ((ASTId)ast).setOnUse(E,Type.ary);
-    if( ast._t != Type.ary ) E.throwErr("Not an ary",x);
+    if( !Type.ARY.union(ast._t) ) E.throwErr("Not an ary",x);
     if(  E.peek(']') ) return ast; // [] ===> same as no slice
     AST rows=E.xpeek(',',E._x,parseCXExpr(E));
     AST cols=E.xpeek(']',E._x,parseCXExpr(E));
@@ -207,7 +305,7 @@ class ASTId extends AST {
     if( id == null ) return null;
     // Built-in ops parse as ops, not vars
     if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
-    return new ASTId(null/*untyped as of yet*/,id,E.lexical_depth()-1);
+    return new ASTId(Type.unbound(x)/*untyped as of yet*/,id,E.lexical_depth()-1);
   }
   ASTId setOnUse( Exec2 E, Type t ) {
     assert _t == null;          // Currently an untyped variable
@@ -255,7 +353,7 @@ class ASTAssign extends AST {
       if( E.isLetter(id._id.charAt(0) ) ) E.throwErr("Unknown id "+id._id,x);
       E._x=x; return null;      // Let higher parse levels sort it out
     }
-    assert id._t==null;         // It is a new var so untyped
+    assert id._t._t==0;         // It is a new var so untyped
     assert id._depth == E.lexical_depth()-1; // And will be set in the current scope
     x = E._x;
     AST eval = parseCXExpr(E);
@@ -279,7 +377,7 @@ class ASTNum extends AST {
   static final NumberFormat NF = NumberFormat.getInstance();
   static { NF.setGroupingUsed(false); }
   final double _d;
-  ASTNum(double d) { super(Type.dbl); _d=d; }
+  ASTNum(double d) { super(Type.DBL); _d=d; }
   // Parse a number, or throw a parse error
   static ASTNum parse(Exec2 E) { 
     ParsePosition pp = new ParsePosition(E._x);
@@ -292,113 +390,6 @@ class ASTNum extends AST {
   }
   @Override void exec(Env env) { env.push(_d); }
   @Override public String toString() { return Double.toString(_d); }
-}
-
-// --------------------------------------------------------------------------
-class ASTApply extends AST {
-  final AST _args[];
-  private ASTApply( AST args[] ) { super(((ASTOp)args[0])._vtypes[0]);  _args = args;  }
-
-  // Wrap compatible but different-sized ops in reduce/bulk ops.
-  static ASTApply make(AST args[],Exec2 E, int x) {
-    ASTOp op = (ASTOp)args[0]; // Checked before I get here
-    assert op._vtypes.length == args.length;
-
-    // Check that all arguments match, or can be auto-expanded.  Any op taking
-    // a scalar and passed an array will be auto-expanded.
-    boolean expand=false;
-    for( int i=1; i<args.length; i++ ) {
-      Type ot = op._vtypes[i];
-      if( ot == Type.fun && args[i]._t==Type.fun ) // Deep function type checking
-        checkType((ASTOp)args[i],op._ftypes[i],E);
-      if( args[i]._t == null )
-        args[i] = ((ASTId)args[i]).setOnUse(E,ot);
-      if( ot == args[i]._t ) continue; // both scalar or both array
-      if( ot != Type.dbl )
-        E.throwErr("Arg '"+op._vars[i]+"' "+(ot==null?"untyped":"typed as "+ot)+" but passed "+args[i]._t,x);
-      expand=true;              // Replace with an expanding map
-    }
-    if( expand ) {              // Auto-insert a map call
-      args = Arrays.copyOf(args,args.length+1);
-      System.arraycopy(args,0,args,1,args.length-1);
-      args[0] = op = new ASTMap(); // Inserted ASTMap in front of all other args
-      args[0] = op = op.set_varargs_types(args); // Type it
-    }
-    return new ASTApply(args);
-  }
-
-  // Check function signatures
-  static void checkType( ASTOp a, ASTOp b, Exec2 E ) {
-    if( a._vtypes.length != b._vtypes.length )
-      E.throwErr("Mismatched function argument count: "+a+" vs "+b,E._x);
-    for( int i=0; i<a._vtypes.length; i++ ) {
-      if( a._vtypes[i] != b._vtypes[i] )
-        E.throwErr("Mismatched "+(i==0?"return type":"function arg#"+i)+": "+a._vtypes[i]+" vs "+b._vtypes[i],E._x);
-      if( a._vtypes[i] == Type.fun )
-        throw H2O.unimpl();     // Recursive type-check
-    }
-  }
-
-  // Parse a prefix operator
-  static AST parsePrefix(Exec2 E, AST ast) { 
-    if( !(ast instanceof ASTOp) ) return null;
-    ASTOp op = (ASTOp)ast;
-    int x = E._x;
-    if( !E.peek('(') ) return null; // Plain op, no prefix application
-    AST args[] = new AST[] { op, null };
-    int i=1;
-    if( !E.peek(')') ) {
-      while( true ) {
-        args[i++] = parseCXExpr(E);
-        if( E.peek(')') ) break;
-        E.xpeek(',',E._x,null);
-        if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);
-      }
-    }
-    args = Arrays.copyOf(args,i);
-    if( op._vars==null )        // Type varargs functions
-      args[0] = op = op.set_varargs_types(args);
-    // Check fixed-arg length
-    if( i != op._vars.length ) 
-      E.throwErr("Expected "+(op._vars.length-1)+" args but found "+(i-1),x);
-    return make(args,E,x);
-  }
-
-  // Parse an infix boolean operator
-  static AST parseInfix(Exec2 E, AST ast) { 
-    ASTOp op = ASTOp.parse(E);
-    if( op == null ) return null;
-    if( op._vars.length != 3 ) return null;
-    int x = E._x;
-    AST rite = parseCXExpr(E);
-    if( rite==null ) E.throwErr("Missing expr or unknown ID",x);
-    return make(new AST[]{op,ast,rite},E,x);
-  }
-
-  boolean isPure() {
-    for( AST arg : _args )
-      if( !arg.isPure() ) return false;
-    return true;
-  }
-  @Override public String toString() { return _args[0].toString()+"()"; }
-  @Override public StringBuilder toString( StringBuilder sb, int d ) {
-    if( _args[0] instanceof ASTFunc ) _args[0].toString(sb,d).append("()\n");
-    else indent(sb,d).append(this).append("\n");
-    for( int i=1; i<_args.length-1; i++ )
-      _args[i].toString(sb,d+1).append('\n');
-    return _args[_args.length-1].toString(sb,d+1);
-  }
-  // Apply: execute all arguments (including the function argument) yielding
-  // the function itself, plus all normal arguments on the stack.  Then execute
-  // the function, which is responsible for popping all arguments and pushing
-  // the result.
-  @Override void exec(Env env) {
-    int sp = env._sp;
-    for( AST arg : _args ) arg.exec(env);
-    assert sp+_args.length==env._sp;
-    assert env.isFun(-_args.length);
-    env.fun(-_args.length).apply(env);
-  }
 }
 
 // --------------------------------------------------------------------------
@@ -427,29 +418,13 @@ abstract class ASTOp extends AST {
 
   // All fields are final, because functions are immutable
   final String _vars[];         // Variable names
-  final Type   _vtypes[];       // Every arg is typed
-  final ASTOp  _ftypes[];       // Function types recursively have types
-  ASTOp( String vars[], Type vtypes[] ) { this(vars,vtypes,null); }
-  ASTOp( String vars[], Type vtypes[], ASTOp ftypes[] ) { 
-    super(Type.fun);  _vars = vars;  _vtypes = vtypes;  _ftypes=ftypes;
-    assert checkFcn() : this;
-  }
-
-  // Check that all function-typed args have full types themselves
-  private boolean checkFcn() {
-    if( _vtypes == null ) return true;
-    for( int i=0; i<_vtypes.length; i++ ) 
-      if( _vtypes[i]==Type.fun ) 
-        if( _ftypes==null || _ftypes[i]==null )
-          return false;
-    return true;
-  }
+  ASTOp( String vars[], Type ts[] ) { super(Type.fcn(0,ts)); _vars=vars; }
 
   abstract String opStr();
-  @Override public String toString() { 
-    String s = _vtypes[0]+" "+opStr()+"(";
+  @Override public String toString() {
+    String s = opStr()+"(";
     for( int i=1; i<_vars.length; i++ )
-      s += _vtypes[i]+" "+_vars[i]+",";
+      s += _vars[i]+",";
     s += ')';
     return s;
   }
@@ -465,7 +440,6 @@ abstract class ASTOp extends AST {
     // Attempt a user-mode function parse
     return ASTFunc.parseFcn(E);
   }
-  ASTOp set_varargs_types(AST args[]) { throw H2O.fail(); }
 
   @Override void exec(Env env) { env.push(this); }
   void apply(Env env) {
@@ -475,24 +449,24 @@ abstract class ASTOp extends AST {
 
 abstract class ASTUniOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x"};
-  static final Type   TYPES[]= new Type  []{ Type.dbl, Type.dbl };
+  static final Type   TYPES[]= new Type  []{ Type.DBL, Type.DBL };
   ASTUniOp( ) { super(VARS,TYPES); }
   protected ASTUniOp( String[] vars, Type[] types ) { super(vars,types); }
 }
 class ASTIsNA extends ASTUniOp { @Override String opStr() { return "isNA"; }  }
 class ASTSgn  extends ASTUniOp { @Override String opStr() { return "sgn" ; }  }
 class ASTNrow extends ASTUniOp { 
-  ASTNrow() { super(VARS,new Type[]{Type.dbl,Type.ary}); }
+  ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }  
 }
 class ASTNcol extends ASTUniOp { 
-  ASTNcol() { super(VARS,new Type[]{Type.dbl,Type.ary}); }
+  ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }  
 }
 
 abstract class ASTBinOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x","y"};
-  static final Type   TYPES[]= new Type  []{ Type.dbl, Type.dbl, Type.dbl };
+  static final Type   TYPES[]= new Type  []{ Type.DBL, Type.DBL, Type.DBL };
   ASTBinOp( ) { super(VARS,TYPES); }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env) {
@@ -509,9 +483,8 @@ class ASTMin  extends ASTBinOp { @Override String opStr(){ return "min";} double
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
-  static final Type   TYPES[]= new Type  []{ Type.ary, Type.fun, Type.ary };
-  static final ASTOp  FTYPE[]= new ASTOp []{ null, new ASTPlus(), null };
-  ASTReduce( ) { super(VARS,TYPES,FTYPE); }
+  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.fcn(0,ASTBinOp.TYPES), Type.ARY };
+  ASTReduce( ) { super(VARS,TYPES); }
   @Override String opStr(){ return "Reduce";}
 }
 
@@ -521,20 +494,20 @@ class ASTCat extends ASTOp {
   ASTCat( ) { super(null,null); }
   private ASTCat( String[] vars, Type[] types ) { super(vars,types); }
   // Make a custom-typed function with explicit types for the varargs
-  @Override ASTOp set_varargs_types(AST args[]) {
+  @Override ASTOp set_varargs_types(Type) {
     String[] vars  = new String[args.length];
     Type  [] types = new Type  [args.length];
     Arrays.fill(vars,"x");
-    Arrays.fill(types,Type.dbl);
+    Arrays.fill(types,Type.DBL);
     vars [0] = opStr();
-    types[0] = Type.ary;        // Always array-type result
+    types[0] = Type.ARY;        // Always array-type result
     return new ASTCat(vars,types);
   }
 }
 
 class ASTMap extends ASTOp {
   ASTMap( ) { super(null,null); }
-  private ASTMap( String[] vars, Type[] types, ASTOp[] ops ) { super(vars,types,ops); }
+  private ASTMap( String[] vars, Type[] types ) { super(vars,types); }
   @Override String opStr(){ return "map";}
   // Make a custom-typed function with explicit types for the varargs.
   // Must be passed a fcn as 1st arg, then as many args as function takes.
@@ -543,29 +516,29 @@ class ASTMap extends ASTOp {
     if( args.length<=1 ||             // No args, so missing the fcn arg
         !(args[1] instanceof ASTOp) ) // First arg is not a function
       return new ASTMap(new String[] { "" ,  "fun" }, 
-                        new Type  [] {null, Type.fun }, 
-                        new ASTOp [] {null,new ASTPlus() });
+                        new Type  [] {null, Type.fcn(0,ASTBinOp.TYPES) });
 
     // Get the function to map over.  Map will expect all the args this
-    // function needs.... and will demand the function returns a dbl.
-    // Map will allow the fun to take a dbl when passed an ary.
-    ASTOp fun = (ASTOp)args[1];
-    if( fun._vtypes[0] != Type.dbl ) throw H2O.unimpl();
-
-    String[] vars  = new String[fun._vars.length+1];
-    Type  [] vtypes= new Type  [fun._vars.length+1];
-    ASTOp [] ftypes= new ASTOp [fun._vars.length+1];
-    vars  [0]= opStr();  vars  [1]= "fun"  ;  System.arraycopy(fun._vars   ,1,vars  ,2,fun._vars.length-1);
-    vtypes[0]=Type.dbl;  vtypes[1]=Type.fun;  System.arraycopy(fun._vtypes ,1,vtypes,2,fun._vars.length-1);
-    ftypes[0]=  null  ;  ftypes[1]= fun    ;  if( fun._ftypes != null ) System.arraycopy(fun._ftypes,1,ftypes,2,fun._vars.length-1);
-
-    // Allow arys, if passed arys & fun is taking a double.  These will be
-    // mapped over at runtime.  If any arys are found, then map returns an ary.
-    for( int i=1; i<fun._vtypes.length; i++ )
-      if( fun._vtypes[i]==Type.dbl &&
-          args[i+1]._t ==Type.ary )
-        vtypes[0] = vtypes[i+1] = Type.ary;
-    return new ASTMap(vars,vtypes,ftypes);
+    // function needs.... and will demand the function returns a DBL.
+    // Map will allow the fun to take a DBL when passed an ary.
+    throw H2O.unimpl();
+    //ASTOp fun = (ASTOp)args[1];
+    //if( fun._typs[0] != Type.dbl ) throw H2O.unimpl();
+    //
+    //String[] vars  = new String[fun._vars.length+1];
+    //Type  [] vtypes= new Type  [fun._vars.length+1];
+    //ASTOp [] ftypes= new ASTOp [fun._vars.length+1];
+    //vars  [0]= opStr();  vars  [1]= "fun"  ;  System.arraycopy(fun._vars   ,1,vars  ,2,fun._vars.length-1);
+    //vtypes[0]=Type.dbl;  vtypes[1]=Type.fun;  System.arraycopy(fun._typs ,1,vtypes,2,fun._vars.length-1);
+    //ftypes[0]=  null  ;  ftypes[1]= fun    ;  if( fun._ftypes != null ) System.arraycopy(fun._ftypes,1,ftypes,2,fun._vars.length-1);
+    //
+    //// Allow arys, if passed arys & fun is taking a double.  These will be
+    //// mapped over at runtime.  If any arys are found, then map returns an ary.
+    //for( int i=1; i<fun._typs.length; i++ )
+    //  if( fun._typs[i]==Type.dbl &&
+    //      args[i+1]._t ==Type.ary )
+    //    vtypes[0] = vtypes[i+1] = Type.ary;
+    //return new ASTMap(vars,vtypes,ftypes);
   }
 }
 

@@ -76,6 +76,8 @@ public class Expr2Test extends TestUtil {
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
+      // Higher-order function typing: fun is typed in the body of function(x)
+      checkStr("function(fun){function(x){fun(x)*fun(x)}}(sgn)(-2)");
 
       // Needed examples: 
       // (1) Replace NAs with imputed mean

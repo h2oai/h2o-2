@@ -11,6 +11,7 @@ public class Exec2 {
   // Basic types: Frame, Scalar, Function
   // Functions are 1st class; every argument typed one of the above.
   // Assignment is always to in-scope variables only.
+  // Initial environment has all Frame Keys mapped to Frame-typed variables
 
   // Big Allocation: all expressions are eval'd in a context where a large temp
   // is available, and all allocations are compatible with that temp.  Linear-
@@ -20,27 +21,28 @@ public class Exec2 {
   // Grammar:
   //   statements := cxexpr ; statements
   //   cxexpr :=                   // COMPLEX expr 
-  //           expr                // Simple R-expr
-  //           expr ? cxexpr : cxexpr  // exprs must have equal types
-  //           cxexpr op2 expr     // Infix notation, evals LEFT TO RIGHT
-  //           slice = cxexpr      // L-value: IDs or slices of IDs; exprs must have equal shapes; 
-  //                               // does NOT define a new name
-  //           id = cxexpr         // Creates a new named temp
-  //           id := cxexpr        // Deep-copy; otherwise same as above
-  //   expr :=
-  //           slice               // (subset) R-value
-  //           expr(cxexpr,...)    // Prefix function application, evals LEFT TO RIGHT
+  //           iexpr               // Simple RHS-expr
+  //           id = cxexpr         // Shadows outer var with a ptr assignment; no copy, read-only
+  //                               // Overwrites inner var; types must match.
+  //           id := cxexpr        // Deep-copy writable temp; otherwise same as above
+  //           id[] = cxexpr       // Only for writable temps; slice assignment
+  //           id[] := cxexpr      // Deep-copy, then slice assignment
+  //           iexpr ? cxexpr : cxexpr  // exprs must have equal types
+  //   iexpr := 
+  //           slice {op2 slice}*  // Infix notation, evals LEFT TO RIGHT
   //   slice := 
-  //           val                 // Can be a dbl or fcn or ary
-  //           val[]               // whole ary val
-  //           val[,]              // whole ary val
-  //           val[val1,val1]      // row & col ary slice (row FIRST, col SECOND)
-  //           val[,val1]          // col-only ary slice
-  //           val[val1,]          // row-only ary slice
+  //           expr                // Can be a dbl or fcn or ary
+  //           expr[]              // whole ary val
+  //           expr[,]             // whole ary val
+  //           expr[cxexpr,cxexpr] // row & col ary slice (row FIRST, col SECOND)
+  //           expr[,cxexpr]       // col-only ary slice
+  //           expr[cxexpr,]       // row-only ary slice
+  //   expr :=
+  //           val
+  //           val(cxexpr,...)*    // Prefix function application, evals LEFT TO RIGHT
   //   val :=
   //           ( cxexpr )          // Ordering evaluation
   //           id                  // any visible var; will be typed
-  //           key                 // A Frame, dimensions stored in K/V already
   //           num                 // Scalars, treated as 1x1
   //           op                  // Built-in functions
   //           function(v0,v1,v2) { statements; ...v0,v1,v2... } // 1st-class lexically scoped functions
@@ -67,16 +69,16 @@ public class Exec2 {
   final String _str;
   final char _buf[];            // Chars from the string
   int _x;                       // Parse pointer
-  Stack<LinkedHashMap<String,AST.Type>> _env;
+  Stack<LinkedHashMap<String,Type>> _env;
   private Exec2( String str ) {
     _str = str;
     _buf = str.toCharArray();
     _env = new Stack();
     // Preload the global environment from existing Frames
-    LinkedHashMap<String,AST.Type> global = new LinkedHashMap();
+    LinkedHashMap<String,Type> global = new LinkedHashMap();
     for( Value v : H2O.values() )
       if( v.type()==TypeMap.FRAME )
-        global.put(v._key.toString(),AST.Type.ary);
+        global.put(v._key.toString(),Type.ARY);
     _env.push(global);
   }
   int lexical_depth() { return _env.size(); }
