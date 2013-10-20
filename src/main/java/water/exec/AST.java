@@ -44,7 +44,6 @@ abstract public class AST {
     throw H2O.unimpl(); 
   }
   public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
-  Type set_varargs_types(Type ft, Type argt) { return ft; }
 }
 
 // --------------------------------------------------------------------------
@@ -76,7 +75,7 @@ class ASTStatement extends AST {
 // --------------------------------------------------------------------------
 class ASTApply extends AST {
   final AST _args[];
-  private ASTApply( AST args[] ) { super(((ASTOp)args[0])._t);  _args = args;  }
+  private ASTApply( AST args[] ) { super(args[0]._t.ret());  _args = args;  }
 
   // Wrap compatible but different-sized ops in reduce/bulk ops.
   static ASTApply make(AST args[],Exec2 E, int x) {
@@ -155,9 +154,7 @@ class ASTApply extends AST {
   }
   @Override public String toString() { return _args[0].toString()+"()"; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
-    if( _args[0] instanceof ASTFunc ) _args[0].toString(sb,d).append("()\n");
-    else indent(sb,d).append(this).append("\n");
-    for( int i=1; i<_args.length-1; i++ )
+    for( int i=0; i<_args.length-1; i++ )
       _args[i].toString(sb,d+1).append('\n');
     return _args[_args.length-1].toString(sb,d+1);
   }
@@ -404,7 +401,6 @@ abstract class ASTOp extends AST {
     // Variable argcnt
     put(new ASTCat ());
     put(new ASTReduce());
-    put(new ASTMap());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -483,54 +479,8 @@ class ASTReduce extends ASTOp {
 // Variable length; instances will be created of required length
 class ASTCat extends ASTOp {
   @Override String opStr() { return "c"; }
-  ASTCat( ) { super(null,null); }
-  private ASTCat( String[] vars, Type[] types ) { super(vars,types); }
-  // Make a custom-typed function with explicit types for the varargs
-//  @Override ASTOp set_varargs_types(Type t) {
-//    String[] vars  = new String[args.length];
-//    Type  [] types = new Type  [args.length];
-//    Arrays.fill(vars,"x");
-//    Arrays.fill(types,Type.DBL);
-//    vars [0] = opStr();
-//    types[0] = Type.ARY;        // Always array-type result
-//    return new ASTCat(vars,types);
-//  }
-}
-
-class ASTMap extends ASTOp {
-  ASTMap( ) { super(null,null); }
-  private ASTMap( String[] vars, Type[] types ) { super(vars,types); }
-  @Override String opStr(){ return "map";}
-  // Make a custom-typed function with explicit types for the varargs.
-  // Must be passed a fcn as 1st arg, then as many args as function takes.
-  //@Override ASTOp set_varargs_types(AST args[]) {
-  //  // Map demands a 1st argument of a function.
-  //  if( args.length<=1 ||             // No args, so missing the fcn arg
-  //      !(args[1] instanceof ASTOp) ) // First arg is not a function
-  //    return new ASTMap(new String[] { "" ,  "fun" }, 
-  //                      new Type  [] {null, Type.fcn(0,ASTBinOp.TYPES) });
-  //
-  //  // Get the function to map over.  Map will expect all the args this
-  //  // function needs.... and will demand the function returns a DBL.
-  //  // Map will allow the fun to take a DBL when passed an ary.
-  //  ASTOp fun = (ASTOp)args[1];
-  //  if( fun._typs[0] != Type.dbl ) throw H2O.unimpl();
-  //  
-  //  String[] vars  = new String[fun._vars.length+1];
-  //  Type  [] vtypes= new Type  [fun._vars.length+1];
-  //  ASTOp [] ftypes= new ASTOp [fun._vars.length+1];
-  //  vars  [0]= opStr();  vars  [1]= "fun"  ;  System.arraycopy(fun._vars   ,1,vars  ,2,fun._vars.length-1);
-  //  vtypes[0]=Type.dbl;  vtypes[1]=Type.fun;  System.arraycopy(fun._typs ,1,vtypes,2,fun._vars.length-1);
-  //  ftypes[0]=  null  ;  ftypes[1]= fun    ;  if( fun._ftypes != null ) System.arraycopy(fun._ftypes,1,ftypes,2,fun._vars.length-1);
-  //  
-  //  // Allow arys, if passed arys & fun is taking a double.  These will be
-  //  // mapped over at runtime.  If any arys are found, then map returns an ary.
-  //  for( int i=1; i<fun._typs.length; i++ )
-  //    if( fun._typs[i]==Type.dbl &&
-  //        args[i+1]._t ==Type.ary )
-  //      vtypes[0] = vtypes[i+1] = Type.ary;
-  //  return new ASTMap(vars,vtypes,ftypes);
-  //}
+  ASTCat( ) { super(new String[]{"cat","dbls"},
+                    new Type[]{Type.ARY,Type.varargs(Type.DBL)}); }
 }
 
 // --------------------------------------------------------------------------
@@ -551,7 +501,7 @@ class ASTFunc extends ASTOp {
         id = E.isID();
         if( id == null ) E.throwErr("Invalid id",x);
         if( vars.containsKey(id) ) E.throwErr("Repeated argument",x);
-        vars.put(id,null);        // Add unknown-type variable to new vars list
+        vars.put(id,Type.unbound(x)); // Add unknown-type variable to new vars list
         if( E.peek(')') ) break;
         E.xpeek(',',E._x,null);
       }
@@ -570,10 +520,8 @@ class ASTFunc extends ASTOp {
     // The body should force the types.  Build a type signature.
     Type types[] = new Type[xvars.length];
     types[0] = body._t;         // Return type of body
-    for( int j=1; j<xvars.length; j++ ) {
+    for( int j=1; j<xvars.length; j++ )
       types[j] = vars.get(xvars[j]);
-      //if( types[j]==null ) System.out.println("Warning: var "+xvars[j]+" failed to get typed.");
-    }
     return new ASTFunc(xvars,types,body);
   }  
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
