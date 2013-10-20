@@ -82,9 +82,8 @@ EOF
 TASK=
 JSON=
 BUILDN=
-DEBUG=false
-LOG=true
-
+DEBUG=0
+LOG=0
 while getopts "ht:j:b:dL" OPTION
 do
   case $OPTION in
@@ -102,11 +101,11 @@ do
       BUILDN=$OPTARG
       ;;
     d)
-      DEBUG=true
-      LOG=false
+      DEBUG=1
+      LOG=0
       ;;
     L)
-      LOG=false
+      LOG=1
       ;;
     ?)
       usage
@@ -133,7 +132,7 @@ if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
 
-if [ $LOG ]
+if [ ${LOG} -eq 1 ]
 then
     #global starttime out to all loggers
     starttime=`date +%s`
@@ -144,24 +143,24 @@ then
     bash startLoggers.sh ${JSON} little
 fi
 
-if [ $DEBUG ]
+if [ ${DEBUG} -eq 1 ]
 then
     echo "Running in debug mode... "
-    if [ $TEST = "all" ] 
+    if [ ${TEST} = "all" ] 
     then
-        debug pca glm kmeans glm2 gbm gbmgrid bigkmeans
+        debug pca glm kmeans glm2 gbm #gbmgrid bigkmeans
         wait
     else
-        debug $TEST
+        debug ${TEST}
         wait
     fi
     wait
 else
-    if [ ! $TEST = "all" ]
+    if [ ! ${TEST} = "all" ]
         then
-            doAlgo $TEST
+            doAlgo ${TEST}
         else
-            $TEST
+            ${TEST}
         fi
         wait
 fi

@@ -131,7 +131,7 @@ def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPo
     if not node: node = h2o.nodes[0]
     if not modelKey:
         raise Exception("\nNo modelKey was supplied to the glm view!")
-    glmView = node.glm_view(modelKey,timeoutSecs-timeoutSecs)
+    glmView = node.glm_view(modelKey,timeoutSecs=timeoutSecs)
     return glmView
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 

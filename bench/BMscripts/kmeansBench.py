@@ -52,7 +52,8 @@ def doKMeans(fs, folderPath):
                                                separator        = 44,
                                                timeoutSecs      = 7200,
                                                retryDelaySecs   = 5,
-                                               pollTimeoutSecs  = 7200
+                                               pollTimeoutSecs  = 7200,
+                                               doSummary        = False
                                               )
             parseWallTime   = time.time() - trainParseWallStart
             #End Train File Parse#
