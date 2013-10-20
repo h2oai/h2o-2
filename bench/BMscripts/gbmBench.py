@@ -13,6 +13,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
 build = ""
 debug = False
 def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
+    debug = False
     h2o.beta_features = True
     bench = "bench"
     if debug:
@@ -62,8 +63,8 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
             h2o.beta_features = True
-            inspect_train  = h2o.nodes[0].inspect(hex_key)
-            inspect_test   = h2o.nodes[0].inspect(testFilehex)
+            inspect_train  = h2o.nodes[0].inspect(hex_key, timeoutSecs=7200)
+            inspect_test   = h2o.nodes[0].inspect(testFilehex, timeoutSecs=7200)
             
             nMachines = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
             row.update( {'h2o_build'          : build,

@@ -13,6 +13,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
 build = ""
 debug = False
 def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row, case_mode, case_val):
+    debug = False
     bench = "bench"
     if debug:
         print "DOING GLM2 DEBUG"
@@ -64,8 +65,8 @@ def doGLM2(fs, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, ro
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
             h2o.beta_features = True
-            inspect_train  = h2o.nodes[0].inspect(hex_key)
-            inspect_test   = h2o.nodes[0].inspect(testFilehex)
+            inspect_train  = h2o.nodes[0].inspect(hex_key, timeoutSecs=7200)
+            inspect_test   = h2o.nodes[0].inspect(testFilehex, timeoutSecs=7200)
             
             row.update( {'h2o_build'          : build,  
                          'java_heap_GB'       : java_heap_GB,
