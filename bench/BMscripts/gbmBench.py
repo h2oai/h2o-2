@@ -13,6 +13,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
 build = ""
 debug = False
 def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
+    h2o.beta_features = True
     bench = "bench"
     if debug:
         print "Doing GBM DEBUG"
@@ -52,9 +53,11 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
                                            separator        = 44,
                                            timeoutSecs      = 7200,
                                            retryDelaySecs   = 5,
-                                           pollTimeoutSecs  = 7200
+                                           pollTimeoutSecs  = 7200,
+                                           noPoll           = True,
+                                           doSummary        = False
                                           )             
-
+            h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
         
@@ -89,10 +92,8 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             kwargs    = params.copy()
             gbmStart  = time.time()
             #TODO(spencer): Uses jobs to poll for gbm completion
-            h2o.beta_features = True
             gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
             h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=120, retryDelaySecs=5)
-            h2o.beta_features = False
             gbmTime   = time.time() - gbmStart
             row.update( {'gbmBuildTime'       : gbmTime,
                         })
@@ -109,15 +110,18 @@ if __name__ == '__main__':
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
- 
+    bench = "bench"
+    h2o.beta_features = True
+    if debug:
+        bench = "bench/debug" 
     #AIRLINES
     airlinesTestParseStart      = time.time()
     hK                          =  "AirlinesHeader.csv"
-    headerPathname              = "bench/Airlines" + "/" + hK
+    headerPathname              = bench+"/Airlines" + "/" + hK
     h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
     headerKey                   = h2i.find_key(hK)
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44,
-                                  timeoutSecs=4800,retryDelaySecs=5, pollTimeoutSecs=4800)
+    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, noPoll=True,doSummary=False)
+    h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
     elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
     row = {'testParseWallTime' : elapsedAirlinesTestParse}
     response = 'IsDepDelayed'
@@ -138,11 +142,11 @@ if __name__ == '__main__':
     #COVTYPE
     #covTypeTestParseStart   = time.time()
     #hK                          = "CovTypeHeader.csv"
-    #headerPathname              = "bench/CovType" + "/" + hK
+    #headerPathname              = bench+"/CovType" + "/" + hK
     #h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
     #headerKey                   = h2i.find_key(hK)
-    #testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/CovType/CovTypeTest.csv', schema='local', hex_key="covTtest.hex", header=1, header_from_file=headerKey, separator=44,
-    #                              timeoutSecs=4800,retryDelaySecs=5, pollTimeoutSecs=4800)
+    #testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/CovType/CovTypeTest.csv', schema='local', hex_key="covTtest.hex", header=1, header_from_file=headerKey, separator=44, noPoll=True,doSummary=False)
+    #h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
     #elapsedCovTypeTestParse = time.time() - covTypeTestParseStart
     #row = {'testParseWallTime' : elapsedCovTypeTestParse}
     #response = 'C55'
@@ -163,11 +167,11 @@ if __name__ == '__main__':
     #ALLBEDROOMS
     allBedroomsTestParseStart   = time.time()
     hK                          =  "AllBedroomsHeader.csv"
-    headerPathname              = "bench/AllBedrooms" + "/" + hK
+    headerPathname              = bench+"/AllBedrooms" + "/" + hK
     h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
     headerKey                   = h2i.find_key(hK)
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBTest.hex", header=1, header_from_file=headerKey, separator=44,
-                                  timeoutSecs=4800,retryDelaySecs=5, pollTimeoutSecs=4800)
+    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBTest.hex", header=1, header_from_file=headerKey, separator=44,noPoll=True,doSummary=False)
+    h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
     elapsedAllBedroomsParse = time.time() - allBedroomsTestParseStart
     row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
     response = 'medrent'
