@@ -12,6 +12,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
 build = ""
 debug = False
 def doKMeans(fs, folderPath): 
+    debug = False
     bench = "bench"
     if debug:
         print "Debugging KMEANS"
@@ -52,13 +53,14 @@ def doKMeans(fs, folderPath):
                                                separator        = 44,
                                                timeoutSecs      = 7200,
                                                retryDelaySecs   = 5,
-                                               pollTimeoutSecs  = 7200
+                                               pollTimeoutSecs  = 7200,
+                                               doSummary        = False
                                               )
             parseWallTime   = time.time() - trainParseWallStart
             #End Train File Parse#
             print "Parsing training file took ", parseWallTime ," seconds." 
             
-            inspect         = h2o.nodes[0].inspect(parseResult['destination_key'])
+            inspect         = h2o.nodes[0].inspect(parseResult['destination_key'], timeoutSecs=7200)
             
             nMachines       = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts) 
             row             =  {'h2o_build'          : build,

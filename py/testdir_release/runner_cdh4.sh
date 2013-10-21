@@ -153,7 +153,7 @@ myPy() {
     rm -f -r sandbox/$1
     mkdir -p sandbox/$1
     cp -f sandbox/*log sandbox/$1
-    rm -f sandbox/*log
+    # rm -f sandbox/*log
 }
 
 # myPy c5 test_c5_KMeans_sphere15_180GB.py

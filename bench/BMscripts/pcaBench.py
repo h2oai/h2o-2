@@ -13,13 +13,14 @@ files      = {'Airlines'   : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', '
 build = ""
 debug = False
 def doPCA(fs, folderPath):
+    debug = False
     bench = "bench"
     if debug:
         print "Doing PCA DEBUG"
         bench = "bench/debug"
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     for f in fs['train']:
-        retryDelaySecs = 5 if f == 'AirlinesTrain1x' else 30
+        retryDelaySecs = 5 #if f == 'AirlinesTrain1x' else 30
         overallWallStart = time.time()
         pre = ""
         if debug: pre    = 'DEBUG'
@@ -55,12 +56,13 @@ def doPCA(fs, folderPath):
                                            separator        = 44,
                                            timeoutSecs      = 7200, 
                                            retryDelaySecs   = retryDelaySecs,
-                                           pollTimeoutSecs  = 7200
+                                           pollTimeoutSecs  = 7200,
+                                           doSummary        = False
                                           )
             parseWallTime       = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
             
-            inspect             = h2o.nodes[0].inspect(parseResult['destination_key'])
+            inspect             = h2o.nodes[0].inspect(parseResult['destination_key'], timeoutSecs=7200)
             
             nMachines           = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
             row                 =  {'h2o_build'          : build, 
@@ -94,7 +96,7 @@ if __name__ == '__main__':
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
-    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
+    h2o_hosts.build_cloud_with_hosts()
     doPCA(files['Airlines'], 'Airlines')
     doPCA(files['AllBedrooms'], 'AllBedrooms')
     h2o.tear_down_cloud()
