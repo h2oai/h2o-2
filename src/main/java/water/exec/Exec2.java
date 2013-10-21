@@ -59,12 +59,14 @@ public class Exec2 {
     Env env = new Env();
     ArrayList<ASTId> global = new ArrayList<ASTId>();
     for( Value v : H2O.values() )
-      if( v.type()==TypeMap.FRAME ) {
-        int num = global.size(); // Slot number in global scope
-        // Add to parser's namespace
-        global.add(new ASTId(Type.ARY,v._key.toString(),0,num));
+      if( v.type()==TypeMap.FRAME ) { // Add to parser's namespace
+        global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
         env.push((Frame)v.get());
       }
+
+    // Some global constants
+    global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
+    global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
 
     // Parse.  Type-errors get caught here and throw IAE
     AST ast = new Exec2(str,global).parse();

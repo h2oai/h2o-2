@@ -35,6 +35,7 @@ abstract public class AST {
     return null;
   }
   abstract void exec(Env env);
+  boolean isPosConstant() { return false; }
   protected StringBuilder indent( StringBuilder sb, int d ) { 
     for( int i=0; i<d; i++ ) sb.append("  "); 
     return sb.append(_t).append(' ');
@@ -155,8 +156,8 @@ class ASTApply extends AST {
 // --------------------------------------------------------------------------
 class ASTSlice extends AST {
   final AST _ast, _cols, _rows; // 2-D slice of an expression
-  ASTSlice( AST ast, AST cols, AST rows ) { 
-    super(Type.ARY); _ast = ast; _cols = cols; _rows = rows; 
+  ASTSlice( Type t, AST ast, AST cols, AST rows ) { 
+    super(t); _ast = ast; _cols = cols; _rows = rows; 
   }
   static AST parse(Exec2 E ) {
     int x = E._x;
@@ -165,43 +166,34 @@ class ASTSlice extends AST {
     if( !E.peek('[') ) return ast; // No slice
     if( !Type.ARY.union(ast._t) ) E.throwErr("Not an ary",x);
     if(  E.peek(']') ) return ast; // [] ===> same as no slice
-    AST rows=E.xpeek(',',E._x,parseCXExpr(E));
-    AST cols=E.xpeek(']',E._x,parseCXExpr(E));
-    return new ASTSlice(ast,cols,rows);
+    AST rows=E.xpeek(',',(x=E._x),parseCXExpr(E));
+    if( rows != null && !rows._t.union(Type.dblary()) ) E.throwErr("Must be scalar or array",x);
+    AST cols=E.xpeek(']',(x=E._x),parseCXExpr(E));
+    if( cols != null && !cols._t.union(Type.dblary()) ) E.throwErr("Must be scalar or array",x);
+    Type t =                    // Provable scalars will type as a scalar
+      rows != null && rows.isPosConstant() && 
+      cols != null && cols.isPosConstant() ? Type.DBL : Type.ARY;
+    return new ASTSlice(t,ast,cols,rows);
   }
 
   @Override void exec(Env env) {
-    int sp = env._sp;
-    _ast.exec(env);
-    assert sp+1==env._sp;
+    int sp = env._sp;  _ast.exec(env);  assert sp+1==env._sp;
     Frame fr=env.popFrame();
-  
-    // Column subselection?
-    int cols[];
-    if( _cols != null ) {
-      _cols.exec(env);
-      assert sp+1==env._sp;
-      if( !env.isFrame() ) {
-        int col = (int)env.popDbl(); // Silent truncation
-        cols = new int[]{col};
-      } else {
-        throw H2O.unimpl();
-      }
 
-      // Decide if we're a toss-out or toss-in list
-      int mode=0;
-      for( int c : cols ) {
-        if( c==0 ) continue;
-        if( mode==0 ) mode=c;
-        if( (mode^c) < 0 ) 
-          throw new IllegalArgumentException("Cannot mix selection signs: "+mode+" vs "+c);
-        if( c < 0 ) throw H2O.unimpl();
-      }
-
-    } else {
-      cols = new int[fr.numCols()];
-      for( int i=0; i<cols.length; i++ ) cols[i]=i;
+    // Scalar load?  Throws AIIOOB if out-of-bounds
+    if( _t.isDbl() ) {
+      // Known that rows & cols are simple positive constants.
+      // Use them directly, throwing a runtime error if OOB.
+      long row = (long)((ASTNum)_rows)._d;
+      int  col = (int )((ASTNum)_cols)._d;
+      double d = fr.vecs()[col].at(row);
+      env.push(d);
+      return;
     }
+  
+    long rows[] = select(_rows,env);
+    long cols[] = select(_cols,env);
+    System.out.println(fr+"["+Arrays.toString(rows)+","+Arrays.toString(cols)+"]");
     throw H2O.unimpl();
 
     //// Shallow copy all requested columns
@@ -233,7 +225,25 @@ class ASTSlice extends AST {
     else      _rows.toString(sb,d+1);
     return sb;
   }
-  
+
+  // Execute a col/row selection & return the selection.  NULL means "all".
+  // Error to mix negatives & positive.  Negative list is sorted, with dups
+  // removed.  Positive list can have dups (which replicates cols) and is
+  // ordered.  numbers.  1-based numbering; 0 is ignored & removed.
+  static long[] select( AST ast, Env env ) {
+    if( ast == null ) return null; // Trivial "all"
+    int sp = env._sp;  ast.exec(env);  assert sp+1==env._sp;
+    long cols[];
+    if( !env.isFrame() ) {
+      int col = (int)env.popDbl(); // Silent truncation
+      if( col == 0 ) return new long[0];
+      return new long[]{col};
+    }
+    // Got a frame/list of results.
+    // Decide if we're a toss-out or toss-in list
+    throw H2O.unimpl();
+  }
+
   //// Bulk (expensive) copy from 2nd cols into 1st cols.
   //// Sliced by the given cols & rows
   //private static class DeepSlice extends MRTask2<DeepSlice> {
@@ -314,7 +324,7 @@ class ASTAssign extends AST {
     String var = ASTId.parseNew(E);
     if( var == null ) return null;
     if( !E.peek('=') ) {        // Not an assignment
-      if( E.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
+      if( Exec2.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
       E._x=x; return null;      // Let higher parse levels sort it out
     }
     x = E._x;
@@ -357,6 +367,7 @@ class ASTNum extends AST {
     double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
     return new ASTNum(d);
   }
+  boolean isPosConstant() { return _d >= 0; }
   @Override void exec(Env env) { env.push(_d); }
   @Override public String toString() { return Double.toString(_d); }
 }

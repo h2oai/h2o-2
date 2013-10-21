@@ -25,6 +25,7 @@ public class Expr2Test extends TestUtil {
       checkStr("+(1.23)");      // Syntax error, not enuf args
       checkStr("+(1.23,2,3)");  // Syntax error, too many args
       checkStr("h.hex[2,3]");   // Scalar selection
+      checkStr("h.hex[2,+]");   // Function not allowed
       checkStr("h.hex[2+3,-4*5]");
       checkStr("h.hex[2+3,h.hex]");
       checkStr("h.hex[2,]");
@@ -42,6 +43,7 @@ public class Expr2Test extends TestUtil {
       checkStr("x+2");
       checkStr("2+x");
       checkStr("x=1");
+      checkStr("x=1;x=h.hex");
       checkStr("x=+");
       checkStr("(h.hex+1)=2");
       checkStr("h.hex[nrow(h.hex=1),]");
