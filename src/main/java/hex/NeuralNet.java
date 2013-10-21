@@ -362,8 +362,8 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
-      Job nn = Job.findJob(job);
-      NeuralNetModel model = UKV.get(dst_key);
+      Job nn = Job.findJob(job_key);
+      NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
         String cmTitle = "Confusion Matrix";
         String trainC = String.format("%5.2f %%", 100 * model.train_classification_error);

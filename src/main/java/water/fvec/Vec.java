@@ -4,7 +4,9 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import water.*;
+import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
+import water.H2O.H2OEmptyCompleter;
 import water.util.Utils;
 
 /**
@@ -217,8 +219,18 @@ public class Vec extends Iced {
   }
 
   /** Compute the roll-up stats as-needed, and copy into the Vec object */
-  Vec rollupStats() {
-    if( _naCnt >= 0 ) return this;
+  public Vec rollupStats() {
+    rollupStats((H2OCountedCompleter)null);
+    return this;
+  }
+  // wrap CPS style invocation into more convenient interface using Futures
+  public void rollupStats(Futures fs) {
+    H2OEmptyCompleter ec = new H2OEmptyCompleter();
+    rollupStats(ec);
+    fs.add(ec);
+  }
+  // Allow a bunch of rollups to run in parallel allowing CPS style invocation
+  public void rollupStats(final H2OCountedCompleter cc) {
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 ) {    // KV store has a better answer
@@ -226,37 +238,39 @@ public class Vec extends Iced {
       _mean = vthis._mean;  _sigma = vthis._sigma;
       _size = vthis._size;  _isInt = vthis._isInt;
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
-      return this;
+      // tell the caller we're done!
+      if(cc != null) H2O.submitTask(new H2OCountedCompleter() {  // submit new task to do the completion
+        @Override public byte priority() {return cc.priority();} // as the completer may have some extensive work to do.
+        @Override public void compute2() {cc.tryComplete();}
+      });
+      return;
     }
-    // Compute the hard way
-    final RollupStats rs = new RollupStats().doAll(this);
-    setRollupStats(rs);
-    // Now do this remotely also
-    new TAtomic<Vec>() {
-      @Override public Vec atomic(Vec v) {
-        if( v!=null && v._naCnt == -1 ) v.setRollupStats(rs);  return v;
-      }
-    }.fork(_key);
-    return this;
+    RollupStats rs = new RollupStats();
+    if(cc != null) {
+      rs.setCompleter(cc);
+      rs.dfork(this);
+    } else
+      rs.doAll(this);
   }
-
-  // Allow a bunch of rollups to run in parallel
-  public void rollupStats(Futures fs) {
-    if( _naCnt != -1 ) return;
-    H2OCountedCompleter cc = new H2OCountedCompleter() {
-        final Vec _vec=Vec.this;
-        @Override public void compute2() {_vec.rollupStats(); tryComplete();}
-      };
-    H2O.submitTask(cc);
-    fs.add(cc);
-  }
-
 
   /** A private class to compute the rollup stats */
   private static class RollupStats extends MRTask2<RollupStats> {
     double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;
     long _rows, _naCnt, _size;
     boolean _isInt=true;
+
+    @Override public void postGlobal(){
+      System.out.println("postGLobal!!!");
+      final RollupStats rs = this;
+      _fr.vecs()[0].setRollupStats(rs);
+      // Now do this remotely also
+      new TAtomic<Vec>() {
+        @Override public Vec atomic(Vec v) {
+          if( v!=null && v._naCnt == -1 ) v.setRollupStats(rs);  return v;
+        }
+      }.fork(_fr._keys[0]);
+    }
+
     @Override public void map( Chunk c ) {
       _size = c.byteSize();
       for( int i=0; i<c._len; i++ ) {

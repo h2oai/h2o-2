@@ -19,7 +19,7 @@ public class DRFProgressPage extends Progress2 {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    Job jjob = Job.findJob(job);
+    Job jjob = Job.findJob(job_key);
     DRFModel m = DKV.get(jjob.dest()).get();
     m.generateHTML("DRF Model", sb);
     return true;

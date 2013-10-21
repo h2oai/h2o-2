@@ -879,7 +879,7 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
-            print(r.text)
+            print dump_json(r.text)
             if not isinstance(r,(list,dict)): 
                 raise Exception("h2o json responses should always be lists or dicts, see previous for text")
 
@@ -985,15 +985,21 @@ class H2O(object):
         # look for 'response'..if not there, assume the rev 2
 
         if 'redirect_url' in response:
-            url = self.__url(response['redirect_url'] + ".json")
-            params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+            # url = self.__url(response['redirect_url'] + ".json")
+            # this is the full url now, with params?
+            url = self.__url(response['redirect_url'])
+            # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+            params = None
 
         else:
             url = self.__url(response['response']['redirect_request'])
             params = response['response']['redirect_request_args']
 
         # no need to recreate the string for messaging, in the loop..
-        paramsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        if params:
+            paramsStr = '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        else:
+            paramsStr = ''
 
         # FIX! don't do JStack noise for tests that ask for it. JStack seems to have problems
         noise_enable = noise is not None and noise != ("JStack", None)
@@ -1035,7 +1041,7 @@ class H2O(object):
             r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
             if ((count%5)==0):
-                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r['response']))
+                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
             # if ((count%15)==0):
@@ -1047,7 +1053,10 @@ class H2O(object):
                 # a 'return r' being interpreted from a noise response
                 status = 'poll'
             else:
-                status = r['response']['status']
+                if beta_features:
+                    status = r['status']
+                else:
+                    status = r['response']['status']
 
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with
@@ -1580,6 +1589,16 @@ class H2O(object):
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
+    def glm_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+        #this function is only for glm2, may remove it in future.
+        params_dict = {
+            '_modelKey' : modelKey,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'glm_view', print_params)
+        a = self.__do_json_request('2/GLMModelView.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\nglm_view result:", dump_json(a))
+        return a
+
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
         algo = '2/Predict' if beta_features else 'GeneratePredictionsPage'
         algoView = '2/Inspect2' if beta_features else 'Inspect'
@@ -1784,15 +1803,27 @@ class H2O(object):
         return a
 
     def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
-        params_dict = {
-            'key': key,
-            'max_column_display': max_column_display,
-            }
+        if beta_features:
+            params_dict = {
+                'source': key,
+                'cols': None,
+                'max_ncols': max_column_display,
+                }
+        else:
+            params_dict = {
+                'key': key,
+                'x': None,
+                'max_column_display': max_column_display,
+                }
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict.update(kwargs)
-        a = self.__do_json_request('SummaryPage.json', timeout=timeoutSecs, params=params_dict)
+        check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
+        a = self.__do_json_request('2/SummaryPage2.json' if beta_features else 'SummaryPage.json', 
+            timeout=timeoutSecs, params=params_dict)
         verboseprint("\nsummary_page result:", dump_json(a))
-        h2o_cmd.infoFromSummary(a, noPrint=noPrint)
+        
+        # FIX!..not there yet for 2
+        if not beta_features:
+            h2o_cmd.infoFromSummary(a, noPrint=noPrint)
         return a
 
     def log_view(self, timeoutSecs=10, **kwargs):
@@ -1863,7 +1894,8 @@ class H2O(object):
                 'link': 'familyDefault',
             }
         else:
-            params_dict =      {'vresponse'          : None,
+            params_dict =      {'source'             : key,
+                                'vresponse'          : None,
                                 'ignored_cols'       : None,
                                 'family'             : None,
                                 'lambda'             : None,
@@ -1886,6 +1918,8 @@ class H2O(object):
         parentName = "2/GLM2" if beta_features else "GLM"
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName ,destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
+        if noPoll:
+            return a
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
             raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
@@ -2344,7 +2378,7 @@ class RemoteHost(object):
             except IOError, e:
                 if e.errno == errno.ENOENT:
                     sftp.put(f, dest, callback=progress)
-                    print "\n{0:.3f} seconds".format(time.time() - start)
+                    ### print "\n{0:.3f} seconds".format(time.time() - start)
             finally:
                 sftp.close()
             self.uploaded[f] = dest

@@ -57,6 +57,7 @@ function echoLine {
         fi
     fi
 }
+
 checkDExists ${OUTDIR}
 checkDExists ${rawLogs}
 checkDExists ${rawLogs}/procstat
@@ -78,11 +79,10 @@ do
     PREVTOTALS[$i]=0
 done
 
-start=`date +%s`
+start=`cat starttime`
 while :; do
     #dump raw logs first
     ts=`date +"%Y-%m-%d-%H-%M-%S"`
-    echo $ts
     cat /proc/stat    >> ${rawLogs}/procstat/${ts}_procstat_${mach}
     cat /proc/meminfo >> ${rawLogs}/meminfo/${ts}_meminfo_${mach}
     cat /proc/net/dev >> ${rawLogs}/netdev/${ts}_netdev_${mach}
@@ -124,16 +124,17 @@ while :; do
     echo $(( `date +%s` - $start )),$lineidle   >> $idlePerfFile
     echo $(( `date +%s` - $start )),$lineiowait >> $iowaitPerfFile
 
-    cat /proc/meminfo      | awk -F' ' 'OFS="," {gsub(":","", $1); print $2}' > memTMP
-    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > recTMP
-    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > traTMP
-    echoLine memTMP $start $memPerfFile         1 1
-    echoLine recTMP $start $netReceivePerfFile  0 
-    echoLine traTMP $start $netTransmitPerfFile 0
+    cat /proc/meminfo      | awk -F' ' 'OFS="," {gsub(":","", $1); print $2}' > bmemTMP
+    echo $pwd
+    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > brecTMP
+    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > btraTMP
+    echoLine bmemTMP $start $memPerfFile         1 1
+    echoLine brecTMP $start $netReceivePerfFile  0 
+    echoLine btraTMP $start $netTransmitPerfFile 0
     #get top 10 processes from top and then just store them, may/not be interesting...
     ti="$(( `date +%s` - ${start} ))"
     top -b | head -n 17 | tail -n 10 | awk -v t=$ti -F' ' 'OFS="," {print t,$1,$2,$6,$9,$10,$12}' >> $topPerfFile
     vmstat | tail -n 1               | awk -v t=$ti -F' ' 'OFS="," {print t,$7,$8}'               >> $swapPerfFile
-    rm *TMP
-    sleep 1
+    rm b*TMP
+    sleep 30
 done
