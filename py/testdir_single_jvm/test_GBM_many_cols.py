@@ -9,7 +9,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            ri = r1.randint(0,1)
+            # ri = r1.randint(0,1)
+            # get some reals, to get a bigger file?
+            ri = round(r1.uniform(0,1),2)
             rowData.append(ri)
 
         ri = r1.randint(0,1)
@@ -30,7 +32,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10, enable_benchmark_log=True)
+            # fails
+            # h2o.build_cloud(1,java_heap_MB=100, enable_benchmark_log=True)
+            h2o.build_cloud(1,java_heap_MB=400, enable_benchmark_log=True)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
@@ -44,18 +48,16 @@ class Basic(unittest.TestCase):
 
         if localhost:
             tryList = [
-                (10000, 100, 'cA', 300), 
+                (100000, 400, 'cA', 300), 
                 ]
         else:
             tryList = [
                 # (10000, 10, 'cB', 300), 
                 # (10000, 50, 'cC', 300), 
-                (10000, 100, 'cD', 300), 
-                (10000, 200, 'cE', 300), 
-                (10000, 300, 'cF', 300), 
-                (10000, 400, 'cG', 300), 
-                (10000, 500, 'cH', 300), 
-                (10000, 1000, 'cI', 300), 
+                (100000, 100, 'cD', 300), 
+                (100000, 200, 'cE', 300), 
+                (100000, 500, 'cG', 300), 
+                (100000, 1000, 'cI', 300), 
                 ]
 
         ### h2b.browseTheCloud()
@@ -95,8 +97,10 @@ class Basic(unittest.TestCase):
 
             # Logging to a benchmark file
             algo = "Parse"
-            l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
+            # l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
+                # len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
+            l = '{:d} jvms, {:d}MB heap, {:s} {:s} {:6.2f} secs'.format(
+                len(h2o.nodes), h2o.nodes[0].java_heap_MB, algo, csvFilename, elapsed)
             print l
             h2o.cloudPerfH2O.message(l)
 
@@ -108,6 +112,8 @@ class Basic(unittest.TestCase):
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
+            h2o_cmd.infoFromInspect(inspect, csvPathname)
+
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
