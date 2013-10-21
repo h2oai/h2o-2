@@ -260,7 +260,6 @@ public class Vec extends Iced {
     boolean _isInt=true;
 
     @Override public void postGlobal(){
-      System.out.println("postGLobal!!!");
       final RollupStats rs = this;
       _fr.vecs()[0].setRollupStats(rs);
       // Now do this remotely also
