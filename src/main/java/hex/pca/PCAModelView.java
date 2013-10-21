@@ -16,11 +16,11 @@ public class PCAModelView extends Request2 {
   PCAModel pca_model;
 
   public static String link(String txt, Key model) {
-    return "<a href='PCAModelView.html?_modelKey=" + model + "'>" + txt + "</a>";
+    return "<a href='/2/PCAModelView.html?_modelKey=" + model + "'>" + txt + "</a>";
   }
 
   public static Response redirect(Request req, Key modelKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "PCAModelView", "_modelKey", modelKey);
+    return new Response(Response.Status.redirect, req, -1, -1, "/2/PCAModelView", "_modelKey", modelKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){

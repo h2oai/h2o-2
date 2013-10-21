@@ -58,9 +58,9 @@ public class PCAModel extends Model {
     if(title != null && !title.isEmpty()) DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _selfKey);
 
-    sb.append("<script type=\"text/javascript\" src='h2o/js/d3.v3.js'></script>");
+    sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.js'></script>");
     sb.append("<div class='alert'>Actions: " + PCAScore.link(_selfKey, "Score on dataset") + ", "
-        + PCA.link(_dataKey, "Compute new model") + "</div>");
+        + PCA2.link(_dataKey, "Compute new model") + "</div>");
     screevarString(sb);
     sb.append("<span style='display: inline-block;'>");
     sb.append("<table class='table table-striped table-bordered'>");

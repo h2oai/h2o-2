@@ -9,35 +9,39 @@ public class PCAParams extends Iced {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help = "feature names")
-  String[] names;
+  final String[] names;
 
   @API(help = "maximum number of principal components")
-  public int max_pc;
+  final int max_pc;
 
   @API(help = "tolerance")
-  public double tolerance;
+  final double tolerance;
 
   @API(help = "standardize")
-  public boolean standardize = true;
+  // final boolean standardize;
+  final int standardize;
 
   public PCAParams(String[] feat, boolean std) {
     names = feat;
     max_pc = 10000;
     tolerance = 0;
-    standardize = std;
+    // standardize = std;
+    standardize = std ? 1 : 0;
   }
 
   public PCAParams(String[] feat, double tol, boolean std) {
     names = feat;
     max_pc = 10000;
     tolerance = tol;
-    standardize = std;
+    // standardize = std;
+    standardize = std ? 1 : 0;
   }
 
   public PCAParams(String[] feat, int max, double tol, boolean std) {
     names = feat;
     max_pc = max;
     tolerance = tol;
-    standardize = std;
+    // standardize = std;
+    standardize = std ? 1 : 0;
   }
 }

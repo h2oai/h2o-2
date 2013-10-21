@@ -1,8 +1,6 @@
 package hex.pca;
 
-import hex.pca.PCAModel;
-import hex.pca.PCAParams;
-import hex.gram.Gram;
+import hex.gram.Gram.GramTask;
 
 import java.util.*;
 
@@ -14,6 +12,7 @@ import water.*;
 import water.Job.*;
 import water.api.DocGen;
 import water.fvec.*;
+import water.util.RString;
 
 /**
  * Principal Components Analysis
@@ -67,9 +66,14 @@ public class PCA2 extends ColumnsJob {
       fr.remove(cols);
     }
 
-    PCATask tsk = new PCATask(this, -1, -1, standardize).doAll(fr);
+    GramTask tsk = new GramTask(this, standardize, false);
+    tsk.doIt(fr);
     PCAModel myModel = buildModel(fr, tsk._gram.getXX());
     UKV.put(destination_key, myModel);
+  }
+
+  @Override protected Response redirect() {
+    return PCAProgressPage.redirect(this, self(), dest());
   }
 
   public PCAModel buildModel(Frame data, double[][] gram) {
@@ -119,86 +123,16 @@ public class PCA2 extends ColumnsJob {
     return Math.abs(ind+1);
   }
 
+  public static String link(Key src_key, String content) {
+      RString rs = new RString("<a href='/2/PCA2.query?%key_param=%$key'>%content</a>");
+      rs.replace("key_param", "source");
+      rs.replace("key", src_key.toString());
+      rs.replace("content", content);
+      return rs.toString();
+  }
+
   /*@Override public float progress() {
     ChunkProgress progress = UKV.get(progressKey());
     return (progress != null ? progress.progress() : 0);
   }*/
-
-  public static class PCATask extends MRTask2<PCATask> {
-    Gram _gram;
-    Job _job;
-    int _nums;          // Number of numerical columns
-    int _cats;          // Number of categorical columns
-    int[] _catOffsets;
-    double[] _normSub;
-    double[] _normMul;
-    boolean _standardize;
-
-    public PCATask(Job job, int nums, int cats, boolean standardize) {
-      _job = job;
-      _nums = nums;
-      _cats = cats;
-      _catOffsets = null;
-      _normSub = null;
-      _normMul = null;
-      _standardize = standardize;
-    }
-
-    private int fullSize() {
-      return _nums;   // TODO: Change when dealing with categoricals
-    }
-
-    @Override public void map(Chunk [] chunks) {
-      _gram = new Gram(fullSize(), 0, _nums, 0);  // TODO: Update to deal with categoricals
-
-      if(_job.cancelled()) throw new RuntimeException("Cancelled");
-      final int nrows = chunks[0]._len;
-      double [] nums = MemoryManager.malloc8d(_nums);
-      int    [] cats = MemoryManager.malloc4(_cats);
-
-      OUTER:
-      for(int r = 0; r < nrows; r ++) {
-        for(Chunk c:chunks) if(c.isNA0(r)) continue OUTER; // skip rows with NAs!
-        int i = 0, ncats = 0;
-        for(; i < _cats; ++i){
-          int c = (int)chunks[i].at80(r);
-          if(c != 0) cats[ncats++] = c + _catOffsets[i] - 1;
-        }
-        for(;i < chunks.length;++i)
-          nums[i-_cats] = (chunks[i].at0(r) - _normSub[i-_cats])*_normMul[i-_cats];
-        _gram.addRow(nums, 0, cats, 1);
-      }
-    }
-
-    @Override public void reduce(PCATask tsk) {
-      _gram.add(tsk._gram);
-    }
-
-    @Override public PCATask dfork(Frame fr) {
-      if(_cats == -1 && _nums == -1 ){
-        assert _normMul == null;
-        assert _normSub == null;
-        int i = 0;
-        final Vec [] vecs = fr.vecs();
-        final int n = vecs.length;
-        while(i < n && vecs[i].isEnum())++i;
-        _cats = i;
-        while(i < n && !vecs[i].isEnum())++i;
-        _nums = i-_cats;
-        if(_cats != 0)
-          throw H2O.unimpl();     // TODO: Categorical PCA not implemented yet
-        _normSub = MemoryManager.malloc8d(_nums);
-        _normMul = MemoryManager.malloc8d(_nums); Arrays.fill(_normMul, 1);
-        if(_standardize) for(i = 0; i < _nums; ++i){
-          _normSub[i] = vecs[i+_cats].mean();
-          _normMul[i] = 1.0/vecs[i+_cats].sigma();
-        }
-        _catOffsets = MemoryManager.malloc4(_cats+1);
-        int len = _catOffsets[0] = 0;
-        for(i = 0; i < _cats; ++i)
-          _catOffsets[i+1] = (len += vecs[i].domain().length - 1);
-      }
-      return super.dfork(fr);
-    }
-  }
 }

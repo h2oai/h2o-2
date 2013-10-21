@@ -8,8 +8,7 @@ import hex.NeuralNet.NeuralNetProgress;
 import hex.NeuralNet.NeuralNetScore;
 import hex.gbm.GBM;
 import hex.glm.*;
-import hex.pca.PCA2;
-import hex.pca.PCAScore;
+import hex.pca.*;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -73,7 +72,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
     Request.addToNavbar(registerRequest(new KMeansGrid()),  "KMeans Grid",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2",                    "Model");
-    Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
+    Request.addToNavbar(registerRequest(new PCA()),         "PCA",                        "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
@@ -116,14 +115,13 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new SummaryPage2());
       registerRequest(new hex.gbm.DRF());
       registerRequest(new hex.LR2());
-      registerRequest(new PCA2());
-      registerRequest(new PCAScore());
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.gbm.DRF()),    "DRF2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new PCA2()),           "PCA2",                 "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
      }
@@ -148,6 +146,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new NeuralNetProgress());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
+    registerRequest(new PCAProgressPage());
+    registerRequest(new PCAModelView());
     registerRequest(new PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());

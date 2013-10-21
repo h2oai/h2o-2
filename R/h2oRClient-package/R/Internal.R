@@ -40,10 +40,10 @@ h2o.__PAGE_GBM = "2/GBM.json"
 h2o.__PAGE_GBMGrid = "2/GBMGrid.json"
 h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
 
-h2o.__PAGE_GLM2 = "GLM2.json"
-h2o.__PAGE_GLMModelView = "GLMModelView.json"
-h2o.__PAGE_GLMValidView = "GLMValidationView.json"
-h2o.__PAGE_FVEXEC = "DataManip.json"     # This is temporary until FluidVec Exec query is finished!
+h2o.__PAGE_GLM2 = "2/GLM2.json"
+h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
+h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
+h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
@@ -201,13 +201,13 @@ h2o.__func <- function(fname, x, type) {
 }
 
 # Check if key_env$key exists in H2O and remove if it does
-h2o.__finalizer <- function(key_env) {
-  if("h2o" %in% ls(key_env) && "key" %in% ls(key_env) && class(key_env$h2o) == "H2OClient" && class(key_env$key) == "character" && key_env$key != "") {
-    res = h2o.__remoteSend(key_env$h2o, h2o.__PAGE_VIEWALL, filter=key_env$key)
-    if(length(res$keys) != 0)
-      h2o.__remoteSend(key_env$h2o, h2o.__PAGE_REMOVE, key=key_env$key)
-  }
-}
+# h2o.__finalizer <- function(key_env) {
+#   if("h2o" %in% ls(key_env) && "key" %in% ls(key_env) && class(key_env$h2o) == "H2OClient" && class(key_env$key) == "character" && key_env$key != "") {
+#     res = h2o.__remoteSend(key_env$h2o, h2o.__PAGE_VIEWALL, filter=key_env$key)
+#     if(length(res$keys) != 0)
+#       h2o.__remoteSend(key_env$h2o, h2o.__PAGE_REMOVE, key=key_env$key)
+#   }
+# }
 
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)

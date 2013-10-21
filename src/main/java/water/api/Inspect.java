@@ -2,6 +2,7 @@ package water.api;
 
 import hex.DGLM.GLMModel;
 import hex.DPCA.PCAModel;
+import hex.pca.PCAModelView;
 import hex.*;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
@@ -159,6 +160,8 @@ public class Inspect extends Request {
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
       return ((GridSearch) f).redirect();
+    if(f instanceof hex.pca.PCAModel)
+      return PCAModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
   }
 

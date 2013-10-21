@@ -23,8 +23,8 @@ public class PCAScore extends FrameJob {
   static final String DOC_GET = "pca_score";
 
   @API(help = "PCA model to use for scoring", required = true, filter = Default.class)
-  // PCAModel model;
-  hex.DPCA.PCAModel model;
+  PCAModel model;
+  // hex.DPCA.PCAModel model;
 
   @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 10000)
   int num_pc = 1;
@@ -32,7 +32,7 @@ public class PCAScore extends FrameJob {
   // Note: Source data MUST contain all features (matched by name) used to build PCA model!
   // If additional columns exist in source, they are automatically ignored in scoring
   @Override protected void exec() {
-    String[] fnames = new String[model._va._cols.length];
+    /*String[] fnames = new String[model._va._cols.length];
     for(int i = 0; i < fnames.length; i++)
       fnames[i] = model._va._cols[i]._name;
 
@@ -41,15 +41,16 @@ public class PCAScore extends FrameJob {
     Vec[] vecs = Arrays.copyOf(fr.vecs(), nfeat + num_pc);
     for(int i = 0; i < num_pc; i++)
       vecs[nfeat+i] = vecs[0].makeZero();
-    PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model._eigVec, model._pcaParams._standardized);
+    PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model._eigVec, model._pcaParams._standardized); */
 
-    /* Frame fr = subset(source, model.params.names);
-      int nfeat = model.params.names.length;
-      Vec[] vecs = Arrays.copyOf(fr.vecs(), nfeat + num_pc);
-      for(int i = 0; i < num_pc; i++)
-        vecs[nfeat+i] = vecs[0].makeZero();
-      PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model.eigVec, model.params.standardize);
-      tsk.doAll(vecs); */
+    Frame fr = subset(source, model.params.names);
+    int nfeat = model.params.names.length;
+    Vec[] vecs = Arrays.copyOf(fr.vecs(), nfeat + num_pc);
+    for(int i = 0; i < num_pc; i++)
+      vecs[nfeat+i] = vecs[0].makeZero();
+    // PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model.eigVec, model.params.standardize);
+    boolean temp = model.params.standardize == 1 ? true : false;
+    PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model.eigVec, temp);
     tsk.doIt(new Frame(vecs));
     Vec[] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), nfeat, nfeat + num_pc);
     String [] names = new String[num_pc];
@@ -60,9 +61,9 @@ public class PCAScore extends FrameJob {
 
   @Override protected void init() {
     super.init();
-    if(model != null && num_pc > model._num_pc)
-      throw new IllegalArgumentException("Argument 'num_pc' must be between 1 and " + model._num_pc);
-    }
+    if(model != null && num_pc > model.num_pc)
+      throw new IllegalArgumentException("Argument 'num_pc' must be between 1 and " + model.num_pc);
+  }
 
   /* @Override public float progress() {
     ChunkProgress progress = UKV.get(progressKey());
