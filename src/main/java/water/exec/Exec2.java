@@ -53,7 +53,8 @@ public class Exec2 {
 
   public static Env exec( String str ) throws IllegalArgumentException {
     System.out.println(str);
-    AST ast = new Exec2(str).parse();
+    AST ast = new Exec2(str).parse(); // Parse; allow type errors.
+    ast.expand_over_arrays(new Exec2(str)); // Expand scalar ops over arrays.
     System.out.println(ast.toString(new StringBuilder(),0).toString());
     Env env = new Env();
     try {

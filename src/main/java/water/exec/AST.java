@@ -34,6 +34,11 @@ abstract public class AST {
     return null;
   }
 
+  void expand_over_arrays(Exec2 E) {
+    System.out.println("Expand not impl for: "+getClass());
+    throw H2O.unimpl(); 
+  }
+
   protected StringBuilder indent( StringBuilder sb, int d ) { 
     for( int i=0; i<d; i++ ) sb.append("  "); 
     return sb.append(_t).append(' ');
@@ -63,6 +68,7 @@ class ASTStatement extends AST {
     if( asts.size()==0 ) return null;
     return new ASTStatement(asts.toArray(new AST[asts.size()]));
   }
+  @Override void expand_over_arrays(Exec2 E) { for( AST ast : _asts ) ast.expand_over_arrays(E); }
 
   @Override public String toString() { return ";;;"; }
   public StringBuilder toString( StringBuilder sb, int d ) {
@@ -75,7 +81,8 @@ class ASTStatement extends AST {
 // --------------------------------------------------------------------------
 class ASTApply extends AST {
   final AST _args[];
-  private ASTApply( AST args[] ) { super(args[0]._t.ret());  _args = args;  }
+  boolean _expand;              // Expand ary over dbl args
+  private ASTApply( AST args[], int x ) { super(args[0]._t.ret());  _args = args;  }
 
   // Wrap compatible but different-sized ops in reduce/bulk ops.
   static ASTApply make(AST args[],Exec2 E, int x) {
@@ -87,9 +94,8 @@ class ASTApply extends AST {
     Type ft1 = Type.fcn(x,ts);
     AST fast = args[0];
     Type ft2 = fast._t;         // Should be a function type
-    
     if( ft1.union(ft2) )        // Union 'em
-      return new ASTApply(args);
+      return new ASTApply(args,x);
     // Error handling
     if( ft2.isNotFun() )      // Oops, failed basic sanity
       E.throwErr("Function-parens following a "+ft2,x);
@@ -100,15 +106,6 @@ class ASTApply extends AST {
       if( !ft2._ts[i].union(args[i]._t) )
         E.throwErr("Arg "+(vars==null?("#"+i):("'"+vars[i]+"'"))+" typed as "+ft2._ts[i]+" but passed "+args[i]._t,x);
     throw H2O.fail();
-    //// Check that all arguments match, or can be auto-expanded.  Any op taking
-    //// a scalar and passed an array will be auto-expanded.
-    //boolean expand=false;
-    //if( expand ) {              // Auto-insert a map call
-    //  args = Arrays.copyOf(args,args.length+1);
-    //  System.arraycopy(args,0,args,1,args.length-1);
-    //  args[0] = op = new ASTMap(); // Inserted ASTMap in front of all other args
-    //  args[0] = op = op.set_varargs_types(args); // Type it
-    //}
   }
 
   // Parse a prefix operator
@@ -147,6 +144,30 @@ class ASTApply extends AST {
     }
   }
 
+  // Expand any function application over arrays, as needed.  If the function
+  // takes any dbl args and is passed an ary arg, treat the Apply as a Function
+  // Broadcast, mapping the function over all array elements.
+  @Override void expand_over_arrays(Exec2 E) {
+    for( AST ast : _args ) ast.expand_over_arrays(E);
+    //Type ft = _args[0]._t.find();  // Hopefully this is a function?
+    //if( ft.isUnbound() ) throw water.H2O.unimpl(); // Cannot resolve at this type
+    //if( !ft.isFcn() ) E.throwErr("Function-parens following a "+ft,ft._x);
+    //// Definitely a function.  Now do arg checks.
+    //if( ft._ts.length != _args.length )
+    //  E.throwErr("Passed "+(_args.length-1)+" args but expected "+(ft._ts.length-1),ft._x);
+    //String vars[] = (_args[0] instanceof ASTOp) ? ((ASTOp)_args[0])._vars : null;
+    //for( int i=1; i<_args.length; i++ ) {   // All args
+    //  if( !ft._ts[i].union(_args[i]._t) ) { // Compatible?
+    //    if( _args[i]._t.find().isAry() &&   // Nope ... allow the ary/dbl expansion
+    //        ft._ts[i]  .find().isDbl() ) _expand=true;
+    //    else                    // Just plain broken args
+    //      E.throwErr("Arg "+(vars==null?("#"+i):("'"+vars[i]+"'"))+" typed as "+ft._ts[i]+" but passed "+_args[i]._t,ft._x);
+    //  }
+    //}
+    //// Expanded Applys return an ary.
+    //if( _expand == true ) _t.union(Type.ARY);
+  }
+
   boolean isPure() {
     for( AST arg : _args )
       if( !arg.isPure() ) return false;
@@ -154,7 +175,8 @@ class ASTApply extends AST {
   }
   @Override public String toString() { return _args[0].toString()+"()"; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
-    for( int i=0; i<_args.length-1; i++ )
+    _args[0].toString(sb,d).append(_expand?" expand":"").append("\n");
+    for( int i=1; i<_args.length-1; i++ )
       _args[i].toString(sb,d+1).append('\n');
     return _args[_args.length-1].toString(sb,d+1);
   }
@@ -187,6 +209,12 @@ class ASTSlice extends AST {
     AST rows=E.xpeek(',',E._x,parseCXExpr(E));
     AST cols=E.xpeek(']',E._x,parseCXExpr(E));
     return new ASTSlice(ast,cols,rows);
+  }
+
+  @Override void expand_over_arrays(Exec2 E) {
+    Type ft = _t.find();  // Hopefully this is an array?
+    if( ft.isUnbound() ) throw water.H2O.unimpl(); // Cannot resolve at this type
+    if( !ft.isAry() ) E.throwErr("Not an ary",ft._x);
   }
 
   @Override boolean isPure() {
@@ -305,6 +333,7 @@ class ASTId extends AST {
     return new ASTId(Type.unbound(x)/*untyped as of yet*/,id,E.lexical_depth());
   }
   @Override public String toString() { return _id; }
+  @Override void expand_over_arrays(Exec2 E) { }
 }
 
 // --------------------------------------------------------------------------
@@ -351,6 +380,7 @@ class ASTAssign extends AST {
     E._env.get(id._depth).put(id._id,id._t);
     return new ASTAssign(id,eval);
   }
+  @Override void expand_over_arrays(Exec2 E) { _lhs.expand_over_arrays(E);  _eval.expand_over_arrays(E); }
   boolean isPure() { return false; }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) { 
@@ -377,6 +407,7 @@ class ASTNum extends AST {
     double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
     return new ASTNum(d);
   }
+  @Override void expand_over_arrays(Exec2 E) { }
   @Override void exec(Env env) { env.push(_d); }
   @Override public String toString() { return Double.toString(_d); }
 }
@@ -409,6 +440,7 @@ abstract class ASTOp extends AST {
   ASTOp( String vars[], Type ts[] ) { super(Type.fcn(0,ts)); _vars=vars; }
 
   abstract String opStr();
+  abstract ASTOp make();
   @Override public String toString() {
     String s = opStr()+"(";
     for( int i=1; i<_vars.length; i++ )
@@ -423,12 +455,13 @@ abstract class ASTOp extends AST {
     String id = E.isID();
     if( id == null ) return null;
     ASTOp op = OPS.get(id);
-    if( op != null ) return op;
+    if( op != null ) return op.make();
     E._x = x;                 // Roll back, no parse happened
     // Attempt a user-mode function parse
     return ASTFunc.parseFcn(E);
   }
 
+  @Override void expand_over_arrays(Exec2 E ) { }
   @Override void exec(Env env) { env.push(this); }
   void apply(Env env) {
     System.out.println("Apply not impl for: "+getClass());
@@ -437,25 +470,33 @@ abstract class ASTOp extends AST {
 
 abstract class ASTUniOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x"};
-  static final Type   TYPES[]= new Type  []{ Type.DBL, Type.DBL };
-  ASTUniOp( ) { super(VARS,TYPES); }
+  static Type[] newsig() {
+    Type t1 = Type.dblary();
+    return new Type[]{Type.anyary(new Type[]{t1}),t1};
+  }
+  ASTUniOp( ) { super(VARS,newsig()); }
   protected ASTUniOp( String[] vars, Type[] types ) { super(vars,types); }
 }
-class ASTIsNA extends ASTUniOp { @Override String opStr() { return "isNA"; }  }
-class ASTSgn  extends ASTUniOp { @Override String opStr() { return "sgn" ; }  }
+class ASTIsNA extends ASTUniOp { String opStr(){ return "isNA"; } ASTOp make() {return new ASTIsNA();} }
+class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ; } ASTOp make() {return new ASTSgn ();} }
 class ASTNrow extends ASTUniOp { 
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }  
+  @Override ASTOp make() {return this;} 
 }
 class ASTNcol extends ASTUniOp { 
   ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }  
+  @Override ASTOp make() {return this;} 
 }
 
 abstract class ASTBinOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x","y"};
-  static final Type   TYPES[]= new Type  []{ Type.DBL, Type.DBL, Type.DBL };
-  ASTBinOp( ) { super(VARS,TYPES); }
+  static Type[] newsig() {
+    Type t1 = Type.dblary(), t2 = Type.dblary();
+    return new Type[]{Type.anyary(new Type[]{t1,t2}),t1,t2};
+  }
+  ASTBinOp( ) { super(VARS, newsig()); }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env) {
     double d1 = env.popDbl();
@@ -463,17 +504,18 @@ abstract class ASTBinOp extends ASTOp {
     env.poppush(op(d0,d1));
   }
 }
-class ASTPlus extends ASTBinOp { @Override String opStr(){ return "+"  ;} double op(double d0, double d1) { return d0+d1;}}
-class ASTSub  extends ASTBinOp { @Override String opStr(){ return "-"  ;} double op(double d0, double d1) { return d0-d1;}}
-class ASTMul  extends ASTBinOp { @Override String opStr(){ return "*"  ;} double op(double d0, double d1) { return d0*d1;}}
-class ASTDiv  extends ASTBinOp { @Override String opStr(){ return "/"  ;} double op(double d0, double d1) { return d0/d1;}}
-class ASTMin  extends ASTBinOp { @Override String opStr(){ return "min";} double op(double d0, double d1) { return Math.min(d0,d1);}}
+class ASTPlus extends ASTBinOp { String opStr(){ return "+"  ;} ASTOp make() {return new ASTPlus();} double op(double d0, double d1) { return d0+d1;}}
+class ASTSub  extends ASTBinOp { String opStr(){ return "-"  ;} ASTOp make() {return new ASTSub ();} double op(double d0, double d1) { return d0-d1;}}
+class ASTMul  extends ASTBinOp { String opStr(){ return "*"  ;} ASTOp make() {return new ASTMul ();} double op(double d0, double d1) { return d0*d1;}}
+class ASTDiv  extends ASTBinOp { String opStr(){ return "/"  ;} ASTOp make() {return new ASTDiv ();} double op(double d0, double d1) { return d0/d1;}}
+class ASTMin  extends ASTBinOp { String opStr(){ return "min";} ASTOp make() {return new ASTMin ();} double op(double d0, double d1) { return Math.min(d0,d1);}}
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
-  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.fcn(0,ASTBinOp.TYPES), Type.ARY };
+  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.fcn(0,new Type[]{Type.DBL,Type.DBL,Type.DBL}), Type.ARY };
   ASTReduce( ) { super(VARS,TYPES); }
   @Override String opStr(){ return "Reduce";}
+  @Override ASTOp make() {return this;} 
 }
 
 // Variable length; instances will be created of required length
@@ -481,6 +523,7 @@ class ASTCat extends ASTOp {
   @Override String opStr() { return "c"; }
   ASTCat( ) { super(new String[]{"cat","dbls"},
                     new Type[]{Type.ARY,Type.varargs(Type.DBL)}); }
+  @Override ASTOp make() {return this;} 
 }
 
 // --------------------------------------------------------------------------
@@ -488,6 +531,7 @@ class ASTFunc extends ASTOp {
   AST _body;
   ASTFunc( String vars[], Type vtypes[], AST body ) { super(vars,vtypes); _body = body; }
   @Override String opStr() { return "fun"; }
+  @Override ASTOp make() { throw H2O.fail();} 
   static ASTOp parseFcn(Exec2 E ) {
     int x = E._x;
     String id = E.isID();
