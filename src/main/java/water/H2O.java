@@ -276,6 +276,79 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
+  /**
+   * Return a list of interfaces sorted by importance (most important first).
+   * This is the order we want to test for matches when selecting an interface.
+   */
+  private static ArrayList<NetworkInterface> calcPrioritizedInterfaceList() {
+    ArrayList<NetworkInterface> networkInterfaceList = null;
+    try {
+      Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
+      ArrayList<NetworkInterface> tmpList = Collections.list(nis);
+
+      Comparator<NetworkInterface> c = new Comparator<NetworkInterface>() {
+        public int compare(NetworkInterface lhs, NetworkInterface rhs) {
+          // Handle null inputs.
+          if ((lhs == null) && (rhs == null)) { return 0; }
+          if (lhs == null) { return 1; }
+          if (rhs == null) { return -1; }
+
+          // If the names are equal, then they are equal.
+          if (lhs.getName().equals (rhs.getName())) { return 0; }
+
+          // If both are bond drivers, choose a precedence.
+          if (lhs.getName().startsWith("bond") && (rhs.getName().startsWith("bond"))) {
+            Integer li = lhs.getName().length();
+            Integer ri = rhs.getName().length();
+
+            // Bond with most number of characters is always highest priority.
+            if (li.compareTo(ri) != 0) {
+              return li.compareTo(ri);
+            }
+
+            // Otherwise, sort lexicographically by name.
+            return lhs.getName().compareTo(rhs.getName());
+          }
+
+          // If only one is a bond driver, give that precedence.
+          if (lhs.getName().startsWith("bond")) { return -1; }
+          if (rhs.getName().startsWith("bond")) { return 1; }
+
+          // Everything that isn't a bond driver is equal.
+          return 0;
+        }
+      };
+
+      Collections.sort(tmpList, c);
+      networkInterfaceList = tmpList;
+    } catch( SocketException e ) { Log.err(e); }
+
+    return networkInterfaceList;
+  }
+
+  /**
+   * Return a list of internet addresses sorted by importance (most important first).
+   * This is the order we want to test for matches when selecting an internet address.
+   */
+  public static ArrayList<java.net.InetAddress> calcPrioritizedInetAddressList() {
+    ArrayList<java.net.InetAddress> ips = new ArrayList<java.net.InetAddress>();
+    {
+      ArrayList<NetworkInterface> networkInterfaceList = calcPrioritizedInterfaceList();
+
+      for (int i = 0; i < networkInterfaceList.size(); i++) {
+        NetworkInterface ni = networkInterfaceList.get(i);
+        Enumeration<InetAddress> ias = ni.getInetAddresses();
+        while( ias.hasMoreElements() ) {
+          InetAddress ia;
+          ia = ias.nextElement();
+          ips.add(ia);
+          Log.info("Possible IP Address: " + ni.getName() + " (" + ni.getDisplayName() + "), " + ia.getHostAddress());
+        }
+      }
+    }
+
+    return ips;
+  }
 
   public static InetAddress findInetAddressForSelf() throws Error {
     if(SELF_ADDRESS == null) {
@@ -290,19 +363,8 @@ public final class H2O {
         H2O.exit(-1);
       }
 
-      // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
-      // Windows, but could be many on Linux or if a hypervisor is present.
-      ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
-      try {
-        Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
-        while( nis.hasMoreElements() ) {
-          NetworkInterface ni = nis.nextElement();
-          Enumeration<InetAddress> ias = ni.getInetAddresses();
-          while( ias.hasMoreElements() ) {
-            ips.add(ias.nextElement());
-          }
-        }
-      } catch( SocketException e ) { Log.err(e); }
+      // Get a list of all valid IPs on this machine.
+      ArrayList<InetAddress> ips = calcPrioritizedInetAddressList();
 
       InetAddress local = null;   // My final choice
 
