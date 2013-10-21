@@ -290,6 +290,60 @@ greater than (N/CPUs), O is dominated by p.
 
    Complexity = O(p^3 + N*p^2) 
 
+GLM Algorithm
+"""""""""""""
+
+Following the definitive text by P. McCullagh and J.A. Nelder (1989) on the generalization of linear models to non-linear distributions of the response variable Y, H2O fits GLM models based on the maximum likelihood estimation via iteratively reweighed least squares. 
+
+Let :math:`y_{1},…,y_{n}` be n observations of the independent, random response variable :math:`Y_{i}`
+
+Assume that the observations are distributed according to a function from the exponential family and have a probability density function of the form:
+
+ :math:`f(y_{i})=exp[\frac{y_{i}\theta_{i} - b(\theta_{i})}{a_{i}(\phi)} + c(y_{i}; \phi)]`
+
+ :math:`where\: \theta \:and \: \phi \:are \: location \: and \: scale\: parameters,`
+ :math:`and \: a_{i}(\phi), \:b_{i}(\theta_{i}),\: c_{i}(y_{i}; \phi)\:are\:known\:functions.`
+
+ :math:`a_{i}\:is\:of\:the\: form: \:a_{i}=\frac{\phi}{p_{i}}; p_{i}\: is\: a\: known\: prior\: weight.`
+
+When :math:`Y` has a pdf from the exponential family: 
+
+ :math:`E(Y_{i})=\mu_{i}=b^{\prime}`
+ :math:`var(Y_{i})=\sigma_{i}^2=b^{\prime\prime}(\theta_{i})a_{i}(\phi)`
+
+Let :math:`g(\mu_{i})=\eta_{i}` be a monotonic, differentiable transformation of the expected value of :math:`y_{i}`. The function :math:`\eta_{i}` is the link function and follows a linear model.
+ :math:`g(\mu_{i})=\eta_{i}=\vec{x_{i}^{\prime}}\beta`
+When inverted: 
+ :math:`\mu=g^{-1}(\vec{x_{i}^{\prime}}\beta)`
+
+
+**Maximum Likelihood Estimation**
+
+Suppose some initial rough estimate of the parameters :math:`\hat{\beta}`.
+Use the estimate to generate fitted values: 
+ :math:`\mu_{i}=g^{-1}(\hat{\eta_{i}})`
+
+Let :math:`z` be a working dependent variable such that 
+ :math:`z_{i}=\hat{\eta_{i}}+(y_{i}-\hat{\mu_{i}})\frac{d\eta_{i}}{d\mu_{i}}`
+
+where :math:`\frac{d\eta_{i}}{d\mu_{i}}` is the derivative of the link function evaluated at the trial estimate. 
+
+Calculate the iterative weights:
+ :math:`w_{i}=\frac{p_{i}}{[b^{\prime\prime}(\theta_{i})\frac{d\eta_{i}}{d\mu_{i}}^{2}]}`
+
+ :math:`b^{\prime\prime}` is the second derivative of :math:`b(\theta_{i})` evaluated at the trial estimate. 
+
+
+Assume :math:`a_{i}(\phi)` is of the form :math:`\frac{\phi}{p_{i}}`. The weight :math:`w_{i}` is inversely proportional to the variance of the working dependent variable :math:`z_{i}` for current parameter estimates and proportionality factor :math:`\phi`.
+
+Regress :math:`z_{i}` on the predictors :math:`x_{i}` using the weights :math:`w_{i}` to obtain new estimates of :math:`\beta`. 
+ :math:`\hat{\beta}=(\vec{X}^{\prime}\vec{W}\vec{X})^{-1}\vec{X}^{\prime}\vec{W}\vec{z}`
+Where :math:`\vec{X}` is the model matrix, :math:`\vec{W}` is a diagonal matrix of :math:`w_{i}`, and :math:`\vec{z}` is a vector of the working response variable :math:`z_{i}`.
+
+This process is repeated until the estimates :math:`\hat{\beta}` change by less than a specified amount. 
+
+ 
+
 
 References
 """"""""""
