@@ -13,6 +13,7 @@ files      = {'Airlines'   : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', '
 build = ""
 debug = False
 def doPCA(fs, folderPath):
+    debug = False
     bench = "bench"
     if debug:
         print "Doing PCA DEBUG"
@@ -61,7 +62,7 @@ def doPCA(fs, folderPath):
             parseWallTime       = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
             
-            inspect             = h2o.nodes[0].inspect(parseResult['destination_key'])
+            inspect             = h2o.nodes[0].inspect(parseResult['destination_key'], timeoutSecs=7200)
             
             nMachines           = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
             row                 =  {'h2o_build'          : build, 

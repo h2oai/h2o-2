@@ -13,13 +13,13 @@ function all {
     doAlgo kmeans
     doAlgo gbm
     doAlgo glm2
-    doAlgo gbmgrid
-    doAlgo bigkmeans
+#    doAlgo gbmgrid
+#    doAlgo bigkmeans
 }
 
 function doAlgo {
-    #echo "Clear caches!"
-    #sudo bash -c "sync; echo 3 > /proc/sys/vm/drop_caches"
+    echo "Clear caches!"
+    bash startloggers.sh ${JSON} clear_ 
 
     echo "Running $1 benchmark..."
     echo "Changing little logger phase..."
@@ -29,7 +29,7 @@ function doAlgo {
     wait
     if [ ! $1 = "bigkmeans" ]
     then
-        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False
         wait 
     else
         python ${pyScript} ${h2oBuild} ${DEBUG} #bigKM can also run in debug
@@ -126,6 +126,14 @@ fi
 
 #bash S3getLatest.sh
 #wait
+dir=`pwd`
+latest=$dir/latest
+if [ ! -f $latest ]
+then
+    echo "No 'latest' file was found..."
+    echo "Either create one, or use S3getLatest.sh."
+    exit 1
+fi
 h2oBuild=`cat latest`
 
 if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then

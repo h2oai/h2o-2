@@ -46,6 +46,15 @@ function changePhase {
   startLittleLoggers $1 >/dev/null
 }
 
+function clearCaches {
+    for i in ${MACHINES[@]}
+    do
+        echo "Clearing caches on machine $i"
+        ssh spencer@$i ./flushCaches
+        ssh 0xdiag@$i rm -rf /home/0xdiag/ice.55555*
+    done
+}
+
 if [ $2 = "big" ]
 then
     startBigLoggers >/dev/null
@@ -64,4 +73,9 @@ fi
 if [ $2 = "stop_" ]
 then
     stopAllLoggers
+fi
+
+if [ $2 = "clear_" ]
+then
+    clearCaches
 fi
