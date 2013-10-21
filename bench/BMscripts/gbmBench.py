@@ -8,6 +8,7 @@ csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),         'test' : 'AirlinesTest'},
               'AllBedrooms': {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
+              'Airlines100'   : {'train': ('AirlinesTrain100x'), 'test' : 'AirlinesTest'},
               'Covtype'     : {'train': ('CovTypeTrain1x', 'CovTypeTrain10x', 'CovTypeTrain100x'),            'test' : 'CovTypeTest'},
              }
 build = ""
@@ -62,19 +63,19 @@ def doGBM(fs, folderPath, ignored_cols, classification, testFilehex, ntrees, dep
             h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
             parseWallTime = time.time() - trainParseWallStart
             print "Parsing training file took ", parseWallTime ," seconds." 
-            h2o.beta_features = True
+            #h2o.beta_features = True
             inspect_train  = h2o.nodes[0].inspect(hex_key, timeoutSecs=7200)
             inspect_test   = h2o.nodes[0].inspect(testFilehex, timeoutSecs=7200)
-            
+            h2o.beta_features = True
             nMachines = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
             row.update( {'h2o_build'          : build,
                          'nMachines'          : nMachines,
                          'nJVMs'              : len(h2o.nodes),
                          'Xmx/JVM'            : java_heap_GB,
                          'dataset'            : f,
-                         'nTrainRows'         : inspect_train['numRows'],
-                         'nTestRows'          : inspect_test['numRows'],
-                         'nCols'              : inspect_train['numCols'],
+                         'nTrainRows'         : inspect_train['num_rows'],
+                         'nTestRows'          : inspect_test['num_rows'],
+                         'nCols'              : inspect_train['num_cols'],
                          'trainParseWallTime' : parseWallTime,
                          'classification'     : classification,
                         })
@@ -189,6 +190,33 @@ if __name__ == '__main__':
             ntrees          = 100,
             depth           = 5,
             minrows         = 10,
+            nbins           = 100,
+            learnRate       = 0.01,
+            response        = response,
+            row             = row 
+         )
+    ##################Do Airlines100 here
+    if debug:
+        bench = "bench/debug" 
+    #AIRLINES
+    airlinesTestParseStart      = time.time()
+    hK                          =  "AirlinesHeader.csv"
+    headerPathname              = bench+"/Airlines" + "/" + hK
+    h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+    headerKey                   = h2i.find_key(hK)
+    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, noPoll=True,doSummary=False)
+    h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+    elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
+    row = {'testParseWallTime' : elapsedAirlinesTestParse}
+    response = 'IsDepDelayed'
+    ignored  = None
+    doGBM(files['Airlines100'], folderPath='Airlines', 
+            ignored_cols    = ignored, 
+            classification  = 1,
+            testFilehex     = 'atest.hex',
+            ntrees          = 100,
+            depth           = 5,
+            minrows         = 10, 
             nbins           = 100,
             learnRate       = 0.01,
             response        = response,

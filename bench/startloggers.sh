@@ -51,7 +51,7 @@ function clearCaches {
     do
         echo "Clearing caches on machine $i"
         ssh spencer@$i ./flushCaches
-        ssh 0xdiag@$i rm -rf /home/0xdiag/ice.55555*
+        ssh 0xdiag@$i rm -rf /home/0xdiag/ice.55555* /home/0xdiag/*zip
     done
 }
 

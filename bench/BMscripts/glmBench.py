@@ -6,8 +6,9 @@ import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2
 
 csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error')
 
-files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
+files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
+              'Airlines100'   : {'train': ('AirlinesTrain100x'), 'test' : 'AirlinesTest'},
              }
 build = ""
 debug = False
@@ -85,6 +86,7 @@ def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehe
                          'destination_key'    : "GLM("+f+")",
                          'expert_settings'    : 0,
                         }
+
             kwargs    = params.copy()
             glmStart  = time.time()
             glm       = h2o_cmd.runGLM(parseResult = parseResult, 
@@ -150,5 +152,22 @@ if __name__ == '__main__':
     
     row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
     doGLM(files['AllBedrooms'], 'AllBedrooms', 'gaussian', 'identity', 1E-4, 0.75, 10, 'medrent',x, testFile['destination_key'],row)
+    ######################################Because Airline100x is risky, do it last
+    bench = "bench"
+    if debug:
+        bench = "bench/debug"
+    airlinesTestParseStart      = time.time()
+    hK                          =  "AirlinesHeader.csv"
+    headerPathname              =  bench+"/Airlines" + "/" + hK
+    h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+    headerKey                   = h2i.find_key(hK)
+    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench +'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, doSummary=False,
+                                  timeoutSecs=7200,retryDelaySecs=5, pollTimeoutSecs=7200)
+    elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
+    
+    row = {'testParseWallTime' : elapsedAirlinesTestParse}
+    x = "Year,Month,DayofMonth,DayofWeek,CRSDepTime,CRSArrTime,UniqueCarrier,CRSElapsedTime,Origin,Dest,Distance"
+    doGLM(files['Airlines100'], 'Airlines', 'binomial', 'logit', 1E-5, 0.5, 10, 'IsDepDelayed', x, testFile['destination_key'], row)
 
+    
     h2o.tear_down_cloud()

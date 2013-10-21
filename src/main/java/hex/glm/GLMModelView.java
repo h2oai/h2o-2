@@ -24,6 +24,10 @@ public class GLMModelView extends Request2 {
     return new Response(Response.Status.redirect, req, -1, -1, "GLMModelView", "_modelKey", modelKey);
   }
 
+  public static Response redirect2(Request req, Key modelKey) {
+    return new Response(Response.Status.redirect, req, -1, -1, "2/GLMModelView", "_modelKey", modelKey);
+  }
+
   @Override public boolean toHTML(StringBuilder sb){
     glm_model.generateHTML("", sb);
     return true;
