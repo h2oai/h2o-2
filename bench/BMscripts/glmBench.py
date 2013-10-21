@@ -128,8 +128,8 @@ if __name__ == '__main__':
     if dat == 'AllB10x'  : fs = files['AllBedrooms']['train'][1]
     if dat == 'AllB100x' : fs = files['AllBedrooms']['train'][2]
     bench = "bench"
-        if debug:
-            bench = "bench/debug"
+    if debug:
+        bench = "bench/debug"
     
     if fp == 'Airlines':
         airlinesTestParseStart      = time.time()
