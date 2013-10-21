@@ -34,14 +34,10 @@ abstract public class AST {
     if( (ast = ASTOp   .parse(E)) != null ) return ast;
     return null;
   }
-
+  abstract void exec(Env env);
   protected StringBuilder indent( StringBuilder sb, int d ) { 
     for( int i=0; i<d; i++ ) sb.append("  "); 
     return sb.append(_t).append(' ');
-  }
-  void exec(Env env) { 
-    System.out.println("Exec not impl for: "+getClass());
-    throw H2O.unimpl(); 
   }
   public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
 }
@@ -62,6 +58,7 @@ class ASTStatement extends AST {
     if( asts.size()==0 ) return null;
     return new ASTStatement(asts.toArray(new AST[asts.size()]));
   }
+  void exec(Env env) { for( AST ast : _asts ) ast.exec(env); }
   @Override public String toString() { return ";;;"; }
   public StringBuilder toString( StringBuilder sb, int d ) {
     for( int i=0; i<_asts.length-1; i++ )
@@ -255,34 +252,36 @@ class ASTSlice extends AST {
 // --------------------------------------------------------------------------
 class ASTId extends AST {
   final String _id;
-  final int _depth;             // Lexical depth of definition
-  ASTId( Type t, String id, int d ) { super(t); _id=id; _depth=d; }
+  final int _depth;             // *Relative* lexical depth of definition
+  final int _num;               // Number/slot in the lexical scope
+  ASTId( Type t, String id, int d, int n ) { super(t); _id=id; _depth=d; _num=n; }
   // Parse a valid ID, or return null;
   static ASTId parse(Exec2 E) { 
     int x = E._x;
-    String id = E.isID();
-    if( id == null ) return null;
+    String var = E.isID();
+    if( var == null ) return null;
     // Built-in ops parse as ops, not vars
-    if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
+    if( ASTOp.OPS.containsKey(var) ) { E._x=x; return null; }
     // See if pre-existing
-    for( int d=E._env.size()-1; d >=0; d-- ) {
-      HashMap<String,Type> vars = E._env.get(d);
-      if( !vars.containsKey(id) ) continue;
-      return new ASTId(vars.get(id),id,d);
-    }
+    for( int d=E.lexical_depth(); d >=0; d-- )
+      for( ASTId id : E._env.get(d) ) 
+        if( var.equals(id._id) )
+          // Return an ID with a relative lexical depth and same slot#
+          return new ASTId(id._t,id._id,E.lexical_depth()-d,id._num);
     // Never see-before ID?  Treat as a bad parse
     E._x=x;
     return null;
   }
   // Parse a NEW valid ID, or return null;
-  static ASTId parseNew(Exec2 E) { 
+  static String parseNew(Exec2 E) { 
     int x = E._x;
     String id = E.isID();
     if( id == null ) return null;
     // Built-in ops parse as ops, not vars
     if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
-    return new ASTId(Type.unbound(x)/*untyped as of yet*/,id,E.lexical_depth());
+    return id;
   }
+  @Override void exec(Env env) { env.push_slot(_depth,_num);  }
   @Override public String toString() { return _id; }
 }
 
@@ -300,36 +299,39 @@ class ASTAssign extends AST {
       ast2 = ((ASTSlice)ast)._ast;
     // Must be a simple in-scope ID
     if( !(ast2 instanceof ASTId) ) E.throwErr("Can only assign to ID (or slice)",x);
+    AST eval = parseCXExpr(E);
+    if( eval == null ) E.throwErr("Missing RHS",x);
     ASTId id = (ASTId)ast2;
     if( id._depth < E.lexical_depth() ) { // Shadowing an outer scope?
-      id = new ASTId(Type.unbound(x),id._id,E.lexical_depth());
-      // Extend the local environment by the new name
-      E._env.get(id._depth).put(id._id,id._t); 
-    }
-    x = E._x;
-    AST eval = parseCXExpr(E);
-    if( !id._t.union(eval._t) ) // Disallow type changes in local scope
+      id = extend_local(E,eval._t,id._id);
+    } else if( !id._t.union(eval._t) ) // Disallow type changes in local scope
       E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
-    return new ASTAssign(ast,eval);
+    return new ASTAssign(id,eval);
   }
   // Parse a valid LHS= or return null - for a new variable
   static ASTAssign parseNew(Exec2 E) { 
     int x = E._x;
-    ASTId id = ASTId.parseNew(E);
-    if( id == null ) return null;
+    String var = ASTId.parseNew(E);
+    if( var == null ) return null;
     if( !E.peek('=') ) {        // Not an assignment
-      if( E.isLetter(id._id.charAt(0) ) ) E.throwErr("Unknown id "+id._id,x);
+      if( E.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
       E._x=x; return null;      // Let higher parse levels sort it out
     }
-    assert id._t._t==0;         // It is a new var so untyped
-    assert id._depth == E.lexical_depth(); // And will be set in the current scope
     x = E._x;
     AST eval = parseCXExpr(E);
-    id = new ASTId(eval._t,id._id,id._depth);
+    if( eval == null ) E.throwErr("Missing RHS",x);
     // Extend the local environment by the new name
-    E._env.get(id._depth).put(id._id,id._t);
-    return new ASTAssign(id,eval);
+    return new ASTAssign(extend_local(E,eval._t,var),eval);
   }
+  static ASTId extend_local( Exec2 E, Type t, String var ) {
+    int d = E.lexical_depth();      // Innermost scope
+    ArrayList<ASTId> vars = E._env.get(d);
+    ASTId id = new ASTId(t,var,0,vars.size());
+    vars.add(id);
+    return id;
+  }
+
+  @Override void exec(Env env) { throw H2O.unimpl(); }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) { 
     indent(sb,d).append(this).append('\n');
@@ -496,7 +498,6 @@ class ASTIfElse extends ASTOp {
   }
 }
 
-
 // --------------------------------------------------------------------------
 class ASTFunc extends ASTOp {
   AST _body;
@@ -505,27 +506,25 @@ class ASTFunc extends ASTOp {
   @Override ASTOp make() { throw H2O.fail();} 
   static ASTOp parseFcn(Exec2 E ) {
     int x = E._x;
-    String id = E.isID();
-    if( id == null ) return null;
-    if( !"function".equals(id) ) { E._x = x; return null; }
+    String var = E.isID();
+    if( var == null ) return null;
+    if( !"function".equals(var) ) { E._x = x; return null; }
     E.xpeek('(',E._x,null);
-    LinkedHashMap<String,Type> vars = new LinkedHashMap<String,Type>();
+    ArrayList<ASTId> vars = new ArrayList<ASTId>();
     if( !E.peek(')') ) {
       while( true ) {
         x = E._x;
-        id = E.isID();
-        if( id == null ) E.throwErr("Invalid id",x);
-        if( vars.containsKey(id) ) E.throwErr("Repeated argument",x);
-        vars.put(id,Type.unbound(x)); // Add unknown-type variable to new vars list
+        var = E.isID();
+        if( var == null ) E.throwErr("Invalid var",x);
+        for( ASTId id : vars ) if( var.equals(id._id) ) E.throwErr("Repeated argument",x);
+        // Add unknown-type variable to new vars list
+        vars.add(new ASTId(Type.unbound(x),var,0,vars.size()));
         if( E.peek(')') ) break;
         E.xpeek(',',E._x,null);
       }
     }
-    // Build a signature.
-    String xvars[] = new String[vars.size()+1];
-    int i=0;   xvars[i++] = "fun";
-    for( String id2 : vars.keySet() )  xvars[i++] = id2;
-
+    int argcnt = vars.size();   // Record current size, as body may extend
+    // Parse the body
     E.xpeek('{',(x=E._x),null);
     E._env.push(vars);
     AST body = E.xpeek('}',E._x,ASTStatement.parse(E));
@@ -533,10 +532,15 @@ class ASTFunc extends ASTOp {
     E._env.pop();
 
     // The body should force the types.  Build a type signature.
-    Type types[] = new Type[xvars.length];
+    String xvars[] = new String[argcnt+1];
+    Type   types[] = new Type  [argcnt+1];
+    xvars[0] = "fun";
     types[0] = body._t;         // Return type of body
-    for( int j=1; j<xvars.length; j++ )
-      types[j] = vars.get(xvars[j]);
+    for( int i=0; i<argcnt; i++ ) {
+      ASTId id = vars.get(i);
+      xvars[i+1] = id._id;
+      types[i+1] = id._t;
+    }
     return new ASTFunc(xvars,types,body);
   }  
   @Override public StringBuilder toString( StringBuilder sb, int d ) {

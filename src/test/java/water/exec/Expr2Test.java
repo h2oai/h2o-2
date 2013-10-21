@@ -96,7 +96,7 @@ public class Expr2Test extends TestUtil {
     Env env=null;
     try { 
       env = Exec2.exec(s); 
-      System.out.println(env);
+      System.out.println(env.result());
     } 
     catch( IllegalArgumentException iae ) { System.out.println(iae.getMessage()); }
     if( env != null ) env.remove();

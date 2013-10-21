@@ -19,11 +19,17 @@ public class Env {
   ASTOp  _fun[];                // Functions (or null if not a function)
   int    _sp;                   // Stack pointer
 
+  // Also a Pascal-style display, one display entry per lexical scope.  Slot
+  // zero is the start of the global scope (which contains all global vars like
+  // hex Keys) and always starts at offset 0.
+  int _display[];
+  int _tod;
+
   boolean _allow_tmp;           // Deep-copy allowed to tmp
   boolean _busy_tmp;            // Assert temp is available for use
   Frame  _tmp;                  // The One Big Active Tmp
 
-  Env( ) { _fr=new Frame[2]; _d=new double[2]; _fun=new ASTOp[2]; }
+  Env( ) { _fr=new Frame[2]; _d=new double[2]; _fun=new ASTOp[2]; _display=new int[4]; }
   public int sp() { return _sp; }
   public boolean isFrame() { return _fr [_sp-1] != null; }
   public boolean isFun  () { return _fun[_sp-1] != null; }
@@ -45,6 +51,15 @@ public class Env {
   void push( Frame fr ) { push(1); _fr [_sp-1] = fr ; }
   void push( double d ) { push(1); _d  [_sp-1] = d  ; }
   void push( ASTOp fun) { push(1); _fun[_sp-1] = fun; }
+
+  // Copy from display offset d, nth slot
+  void push_slot( int d, int n ) {
+    int idx = _display[_tod-d]+n;
+    push(1);
+    _fr [_sp-1] = _fr [idx];
+    _d  [_sp-1] = _d  [idx];
+    _fun[_sp-1] = _fun[idx];
+  }
 
   // Pop a slot
   void pop( ) {
@@ -104,6 +119,16 @@ public class Env {
     removeRef(_tmp);  _tmp=null;
   }
 
+  public String result( ) {
+    assert _tod==0 : "Still have lexical scopes past the global";
+    return toString(_sp-1);
+  }
+
+  public String toString(int i) {
+    if( _fr[i] != null ) return _fr[i].numCols()+"x"+_fr[i].numRows();
+    else if( _fun[i] != null ) return _fun[i].toString();
+    return Double.toString(_d[i]);
+  }
   @Override public String toString() {
     String s="{";
     for( int i=0; i<_sp; i++ ) {

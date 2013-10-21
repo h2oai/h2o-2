@@ -2,6 +2,7 @@ package water.exec;
 
 import java.util.*;
 import water.*;
+import water.fvec.*;
 
 /** Parse & execute a generic R-like string, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -53,11 +54,24 @@ public class Exec2 {
 
   public static Env exec( String str ) throws IllegalArgumentException {
     System.out.println(str);
-    AST ast = new Exec2(str).parse(); // Parse; allow type errors.
-    System.out.println(ast.toString(new StringBuilder(),0).toString());
+
+    // Preload the global environment from existing Frames
     Env env = new Env();
+    ArrayList<ASTId> global = new ArrayList<ASTId>();
+    for( Value v : H2O.values() )
+      if( v.type()==TypeMap.FRAME ) {
+        int num = global.size(); // Slot number in global scope
+        // Add to parser's namespace
+        global.add(new ASTId(Type.ARY,v._key.toString(),0,num));
+        env.push((Frame)v.get());
+      }
+
+    // Parse.  Type-errors get caught here and throw IAE
+    AST ast = new Exec2(str,global).parse();
+    System.out.println(ast.toString(new StringBuilder(),0).toString());
+
     try {
-      //ast.exec(env); 
+      ast.exec(env); 
     } catch( RuntimeException t ) {
       env.remove();
       throw t;
@@ -69,16 +83,11 @@ public class Exec2 {
   final String _str;
   final char _buf[];            // Chars from the string
   int _x;                       // Parse pointer
-  Stack<LinkedHashMap<String,Type>> _env;
-  private Exec2( String str ) {
+  Stack<ArrayList<ASTId>> _env;
+  private Exec2( String str, ArrayList<ASTId> global ) {
     _str = str;
     _buf = str.toCharArray();
-    _env = new Stack();
-    // Preload the global environment from existing Frames
-    LinkedHashMap<String,Type> global = new LinkedHashMap();
-    for( Value v : H2O.values() )
-      if( v.type()==TypeMap.FRAME )
-        global.put(v._key.toString(),Type.ARY);
+    _env = new Stack<ArrayList<ASTId>>();
     _env.push(global);
   }
   int lexical_depth() { return _env.size()-1; }
