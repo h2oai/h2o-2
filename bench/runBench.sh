@@ -29,8 +29,12 @@ function doAlgo {
     wait
     if [ ! $1 = "bigkmeans" ]
     then
-        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False
-        wait 
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air1x;    wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air10x;   wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB1x;   wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB10x;  wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB100x; wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air100x;  wait; makeDead > /dev/null;
     else
         python ${pyScript} ${h2oBuild} ${DEBUG} #bigKM can also run in debug
         wait
@@ -49,7 +53,13 @@ function makeDead {
 function debug {
     for a in $@
     do
-        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air1x;    wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air10x;   wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB1x;   wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB10x;  wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB100x; wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air100x;  wait; 
+        #python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
     done
 }
 
@@ -131,8 +141,8 @@ then
     exit
 fi
 
-bash S3getLatest.sh
-wait
+#bash S3getLatest.sh
+#wait
 dir=`pwd`
 latest=$dir/latest
 if [ ! -f $latest ]
