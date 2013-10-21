@@ -123,62 +123,75 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
         output.close()
 
 if __name__ == '__main__':
+    dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()
+    fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
     h2o.beta_features = True
+    if dat == 'Air1x'    : fs = files['Airlines']['train'][0]
+    if dat == 'Air10x'   : fs = files['Airlines']['train'][1]
+    if dat == 'Air100x'  : fs = files['Airlines']['train'][2]
+    if dat == 'AllB1x'   : fs = files['AllBedrooms']['train'][0]
+    if dat == 'AllB10x'  : fs = files['AllBedrooms']['train'][1]
+    if dat == 'AllB100x' : fs = files['AllBedrooms']['train'][2]
+
+    
     bench = "bench"
     if debug:
         bench = "bench/debug"
-    #AIRLINES
-    airlinesTestParseStart      = time.time()
-    hK                          =  "AirlinesHeader.csv"
-    headerPathname              = bench+"/Airlines" + "/" + hK
-    h2i.import_only(bucket      = 'home-0xdiag-datasets', path=headerPathname)
-    headerKey                   = h2i.find_key(hK)
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, noPoll = True, doSummary = False)
-    h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
-    elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
     
-    row = {'testParseWallTime' : elapsedAirlinesTestParse}
-    x = None #"DepTime,ArrTime,FlightNum,TailNum,ActualElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed" #columns to be ignored
-    doGLM2(files['Airlines'], 'Airlines', 
-            family      = 'binomial',
-            lambda_     = 1E-5, 
-            alpha       = 0.5, 
-            nfolds      = 10, 
-            y           = 'IsDepDelayed',
-            x           = x,  
-            testFilehex = 'atest.hex',
-            row         = row,
-            case_mode   = "%3D",
-            case_val    = 1.0 
-          ) 
+    if fp == "Airlines":
+        #AIRLINES
+        airlinesTestParseStart      = time.time()
+        hK                          =  "AirlinesHeader.csv"
+        headerPathname              = bench+"/Airlines" + "/" + hK
+        h2i.import_only(bucket      = 'home-0xdiag-datasets', path=headerPathname)
+        headerKey                   = h2i.find_key(hK)
+        testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, noPoll = True, doSummary = False)
+        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+        elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
+        
+        row = {'testParseWallTime' : elapsedAirlinesTestParse}
+        x = None #"DepTime,ArrTime,FlightNum,TailNum,ActualElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed" #columns to be ignored
+        doGLM2(fs, fp,
+                family      = 'binomial',
+                lambda_     = 1E-5, 
+                alpha       = 0.5, 
+                nfolds      = 10, 
+                y           = 'IsDepDelayed',
+                x           = x,  
+                testFilehex = 'atest.hex',
+                row         = row,
+                case_mode   = "%3D",
+                case_val    = 1.0 
+              ) 
     
-    #ALLBEDROOMS
-    allBedroomsTestParseStart   = time.time()
-    hK                          =  "AllBedroomsHeader.csv"
-    headerPathname              = bench+"/AllBedrooms" + "/" + hK
-    h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-    headerKey                   = h2i.find_key(hK)
+    if fp == "AllBedrooms": 
+        #ALLBEDROOMS
+        allBedroomsTestParseStart   = time.time()
+        hK                          =  "AllBedroomsHeader.csv"
+        headerPathname              = bench+"/AllBedrooms" + "/" + hK
+        h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+        headerKey                   = h2i.find_key(hK)
 
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBtest.hex", header=1, header_from_file=headerKey, separator=44, noPoll = True, doSummary = False)
-    h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
-    elapsedAllBedroomsTestParse = time.time() - allBedroomsTestParseStart
-    
-    row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
-    x = "county,place,Rent_Type,mcd" #columns to be ignored
-    doGLM2(files['AllBedrooms'], 'AllBedrooms', 
-            family      = 'gaussian',
-            lambda_     = 1E-4, 
-            alpha       = 0.75, 
-            nfolds      = 10, 
-            y           = 'medrent',
-            x           = x, 
-            testFilehex = 'allBtest.hex', 
-            row         = row,
-            case_mode   = "n/a",
-            case_val    = 0.0
-          )
+        testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBtest.hex", header=1, header_from_file=headerKey, separator=44, noPoll = True, doSummary = False)
+        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+        elapsedAllBedroomsTestParse = time.time() - allBedroomsTestParseStart
+        
+        row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
+        x = "county,place,Rent_Type,mcd" #columns to be ignored
+        doGLM2(fs, fp,
+                family      = 'gaussian',
+                lambda_     = 1E-4, 
+                alpha       = 0.75, 
+                nfolds      = 10, 
+                y           = 'medrent',
+                x           = x, 
+                testFilehex = 'allBtest.hex', 
+                row         = row,
+                case_mode   = "n/a",
+                case_val    = 0.0
+              )
     h2o.tear_down_cloud()

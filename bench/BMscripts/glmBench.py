@@ -119,21 +119,19 @@ if __name__ == '__main__':
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
-    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
-    fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
-    h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()
+    fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
     if dat == 'Air1x'    : fs = files['Airlines']['train'][0]
     if dat == 'Air10x'   : fs = files['Airlines']['train'][1]
     if dat == 'Air100x'  : fs = files['Airlines']['train'][2]
     if dat == 'AllB1x'   : fs = files['AllBedrooms']['train'][0]
     if dat == 'AllB10x'  : fs = files['AllBedrooms']['train'][1]
     if dat == 'AllB100x' : fs = files['AllBedrooms']['train'][2]
-
-    if fp == 'Airlines':
-        bench = "bench"
+    bench = "bench"
         if debug:
             bench = "bench/debug"
+    
+    if fp == 'Airlines':
         airlinesTestParseStart      = time.time()
         hK                          =  "AirlinesHeader.csv"
         headerPathname              =  bench+"/Airlines" + "/" + hK
@@ -162,22 +160,5 @@ if __name__ == '__main__':
         
         row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
         doGLM(fs, 'AllBedrooms', 'gaussian', 'identity', 1E-4, 0.75, 10, 'medrent',x, testFile['destination_key'],row)
-    ######################################Because Airline100x is risky, do it last
-    #bench = "bench"
-    #if debug:
-    #    bench = "bench/debug"
-    #airlinesTestParseStart      = time.time()
-    #hK                          =  "AirlinesHeader.csv"
-    #headerPathname              =  bench+"/Airlines" + "/" + hK
-    #h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-    #headerKey                   = h2i.find_key(hK)
-    #testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench +'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, doSummary=False,
-    #                              timeoutSecs=7200,retryDelaySecs=5, pollTimeoutSecs=7200)
-    #elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
-    #
-    #row = {'testParseWallTime' : elapsedAirlinesTestParse}
-    #x = "Year,Month,DayofMonth,DayofWeek,CRSDepTime,CRSArrTime,UniqueCarrier,CRSElapsedTime,Origin,Dest,Distance"
-    #doGLM(files['Airlines100'], 'Airlines', 'binomial', 'logit', 1E-5, 0.5, 10, 'IsDepDelayed', x, testFile['destination_key'], row)
-
     
     h2o.tear_down_cloud()
