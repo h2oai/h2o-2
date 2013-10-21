@@ -55,6 +55,34 @@ function clearCaches {
     done
 }
 
+function gatherLogs {
+    for i in ${MACHINES[@]}
+    do
+        echo "Gather logs from machine $i"
+        mach=`echo $i | awk -F. '{print $4}'`
+        if [ ! -d machine_${mach}_logs ]
+        then
+            mkdir machine_${mach}_logs
+        fi
+        scp -r spencer@$i:~/h2o/bench/BMLogs/ machine_${mach}_logs
+    done
+}
+
+function gatherICE {
+    phase=$1
+    for i in ${MACHINES[@]}
+    do
+        echo "Gather ICE from machine $i"
+        mach=`echo $i | awk -F. '{print $4}'`
+        ssh 0xdiag@$i zip -r ice_${phase}_${mach} ice.55555*/h2ologs
+        if [ ! -d ICES ]
+        then
+            mkdir ICES
+        fi
+        scp 0xdiag@$i:~/ice_${phase}_${mach}.zip ICES/
+    done
+}
+
 if [ $2 = "big" ]
 then
     startBigLoggers >/dev/null
@@ -78,4 +106,14 @@ fi
 if [ $2 = "clear_" ]
 then
     clearCaches
+fi
+
+if [ $2 = "gather" ]
+then
+    gatherLogs >/dev/null
+fi
+
+if [ $2 = "ice" ]
+then
+    gatherICE $3
 fi

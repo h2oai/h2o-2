@@ -37,7 +37,8 @@ function doAlgo {
     fi
     zip -r  ${archive}/${h2oBuild}-${DATE}-$1 sandbox/
     wait
-    rm -rf sandbox/ 
+    rm -rf sandbox/
+    bash startloggers.sh ${JSON} ice $1
 }
 
 function debug {
