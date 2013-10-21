@@ -1589,7 +1589,7 @@ class H2O(object):
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
-    def glm_view(self, modelKey, timeoutSecs=300,print_params=False, **kwargs):
+    def glm_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
         #this function is only for glm2, may remove it in future.
         params_dict = {
             '_modelKey' : modelKey,
@@ -1803,15 +1803,27 @@ class H2O(object):
         return a
 
     def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
-        params_dict = {
-            'key': key,
-            'max_column_display': max_column_display,
-            }
+        if beta_features:
+            params_dict = {
+                'source': key,
+                'cols': None,
+                'max_ncols': max_column_display,
+                }
+        else:
+            params_dict = {
+                'key': key,
+                'x': None,
+                'max_column_display': max_column_display,
+                }
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict.update(kwargs)
-        a = self.__do_json_request('SummaryPage.json', timeout=timeoutSecs, params=params_dict)
+        check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
+        a = self.__do_json_request('2/SummaryPage2.json' if beta_features else 'SummaryPage.json', 
+            timeout=timeoutSecs, params=params_dict)
         verboseprint("\nsummary_page result:", dump_json(a))
-        h2o_cmd.infoFromSummary(a, noPrint=noPrint)
+        
+        # FIX!..not there yet for 2
+        if not beta_features:
+            h2o_cmd.infoFromSummary(a, noPrint=noPrint)
         return a
 
     def log_view(self, timeoutSecs=10, **kwargs):
