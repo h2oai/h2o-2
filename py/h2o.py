@@ -879,7 +879,7 @@ class H2O(object):
         try:
             rjson = r.json()
         except:
-            print(r.text)
+            print dump_json(r.text)
             if not isinstance(r,(list,dict)): 
                 raise Exception("h2o json responses should always be lists or dicts, see previous for text")
 
@@ -981,11 +981,25 @@ class H2O(object):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
 
-        # rfView doesn't have the redirect_request and redirect_request_args
-        url = self.__url(response['redirect_request'])
-        params = response['redirect_request_args']
+        # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
+        # look for 'response'..if not there, assume the rev 2
+
+        if 'redirect_url' in response:
+            # url = self.__url(response['redirect_url'] + ".json")
+            # this is the full url now, with params?
+            url = self.__url(response['redirect_url'])
+            # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+            params = None
+
+        else:
+            url = self.__url(response['response']['redirect_request'])
+            params = response['response']['redirect_request_args']
+
         # no need to recreate the string for messaging, in the loop..
-        paramsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        if params:
+            paramsStr = '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
+        else:
+            paramsStr = ''
 
         # FIX! don't do JStack noise for tests that ask for it. JStack seems to have problems
         noise_enable = noise is not None and noise != ("JStack", None)
@@ -1027,7 +1041,7 @@ class H2O(object):
             r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
             if ((count%5)==0):
-                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r['response']))
+                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
             # if ((count%15)==0):
@@ -1039,7 +1053,10 @@ class H2O(object):
                 # a 'return r' being interpreted from a noise response
                 status = 'poll'
             else:
-                status = r['response']['status']
+                if beta_features:
+                    status = r['status']
+                else:
+                    status = r['response']['status']
 
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with
@@ -1066,7 +1083,9 @@ class H2O(object):
             'data_key': data_key,
             }
         browseAlso = kwargs.get('browseAlso', False)
-        params_dict.update(kwargs)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans_apply', print_params=True)
+
         print "\nKMeansApply params list:", params_dict
         a = self.__do_json_request('KMeansApply.json', timeout=timeoutSecs, params=params_dict)
 
@@ -1074,8 +1093,7 @@ class H2O(object):
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O kmeans redirect is not Progress. KMeansApply json response precedes.')
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nKMeansApply result:", dump_json(a))
 
@@ -1096,7 +1114,8 @@ class H2O(object):
             'model_key': model_key,
             }
         browseAlso = kwargs.get('browseAlso', False)
-        params_dict.update(kwargs)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans_score', print_params=True)
         print "\nKMeansScore params list:", params_dict
         a = self.__do_json_request('KMeansScore.json', timeout=timeoutSecs, params=params_dict)
 
@@ -1111,38 +1130,56 @@ class H2O(object):
 
     # additional params include: cols=.
     # don't need to include in params_dict it doesn't need a default
-    def kmeans(self, key, key2=None,
+    # FIX! cols should be renamed in test for fvec
+    def kmeans(self, key, key2=None, 
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         # defaults
         # KMeans has more params than shown here
         # KMeans2 has these params?
         # max_iter=100&max_iter2=1&iterations=0
-        params_dict = {
-            'initialization': 'Furthest',
-            'k': 1,
-            'source_key': key,
-            'destination_key': None,
-            }
+        if beta_features:
+            params_dict = {
+                'initialization': 'Furthest',
+                'k': 1,
+                'source': key,
+                'destination_key': key2,
+                'seed': None,
+                'ignored_cols_by_name': None,
+                'max_iter': None,
+                'normalize': None,
+                }
+        else:
+            params_dict = {
+                'initialization': 'Furthest',
+                'k': 1,
+                'source_key': key,
+                'destination_key': key2,
+                'seed': None,
+                'cols': None,
+                'max_iter': None,
+                'normalize': None,
+                }
+
         if key2 is not None: params_dict['destination_key'] = key2
         browseAlso = kwargs.get('browseAlso', False)
-        params_dict.update(kwargs)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans', print_params=True)
         algo = '2/KMeans2' if beta_features else 'KMeans'
 
         print "\n%s params list:" % algo, params_dict
         a = self.__do_json_request(algo + '.json', 
             timeout=timeoutSecs, params=params_dict)
 
-        # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request']!='Progress':
-            print dump_json(a)
-            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
-
         if noPoll:
             return a
 
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        # Check that the response has the right Progress url it's going to steer us to.
+        if 'response' not in a or a['response']['redirect_request']!='Progress':
+            print dump_json(a)
+            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("\n%s result:" % algo, dump_json(a))
@@ -1173,8 +1210,7 @@ class H2O(object):
         if a['response']['redirect_request']!='Progress':
             print dump_json(a)
             raise Exception('H2O kmeans_grid redirect is not Progress. KMeans json response precedes.')
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nKMeansGrid result:", dump_json(a))
 
@@ -1233,8 +1269,7 @@ class H2O(object):
         # noise is a 2-tuple ("StoreView, none) for url plus args for doing during poll to create noise
         # no noise if None
         verboseprint(algo + ' noise:', noise)
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
 
@@ -1497,14 +1532,14 @@ class H2O(object):
 
         # add a fake redirect_request and redirect_request_args
         # to the RF response, to make it look like everyone else
-        response = a['response']
-        response['redirect_request'] = whichUsed + ".json"
-        response['redirect_request_args'] = params_dict
+        fake_a = {}
+        fake_a['response'] = a['response']
+        fake_a['response']['redirect_request'] = whichUsed + ".json"
+        fake_a['response']['redirect_request_args'] = params_dict
 
         # no redirect_response in rfView? so need to pass params here
         # FIX! do we have to do a 2nd if it's done in the first?
-        rfView = self.poll_url(response,
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
 
@@ -1552,6 +1587,16 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
         a = self.__do_json_request('2/GBMModelView.json',timeout=timeoutSecs,params=params_dict)
         verboseprint("\ngbm_view result:", dump_json(a))
+        return a
+
+    def glm_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+        #this function is only for glm2, may remove it in future.
+        params_dict = {
+            '_modelKey' : modelKey,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'glm_view', print_params)
+        a = self.__do_json_request('2/GLMModelView.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\nglm_view result:", dump_json(a))
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True, **kwargs):
@@ -1665,7 +1710,7 @@ class H2O(object):
 
 
         verboseprint("\nGBM first result:", dump_json(a))
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nGBM result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
@@ -1691,7 +1736,7 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCA result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
@@ -1719,7 +1764,7 @@ class H2O(object):
         if 'response' not in a:
             raise Exception("Can't tell where to go..No 'response' key in this polled json response: %s" % a)
 
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCAScore result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
@@ -1750,7 +1795,7 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
-        a = self.poll_url(a['response'], timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCAScore result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
@@ -1758,15 +1803,27 @@ class H2O(object):
         return a
 
     def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
-        params_dict = {
-            'key': key,
-            'max_column_display': max_column_display,
-            }
+        if beta_features:
+            params_dict = {
+                'source': key,
+                'cols': None,
+                'max_ncols': max_column_display,
+                }
+        else:
+            params_dict = {
+                'key': key,
+                'x': None,
+                'max_column_display': max_column_display,
+                }
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict.update(kwargs)
-        a = self.__do_json_request('SummaryPage.json', timeout=timeoutSecs, params=params_dict)
+        check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
+        a = self.__do_json_request('2/SummaryPage2.json' if beta_features else 'SummaryPage.json', 
+            timeout=timeoutSecs, params=params_dict)
         verboseprint("\nsummary_page result:", dump_json(a))
-        h2o_cmd.infoFromSummary(a, noPrint=noPrint)
+        
+        # FIX!..not there yet for 2
+        if not beta_features:
+            h2o_cmd.infoFromSummary(a, noPrint=noPrint)
         return a
 
     def log_view(self, timeoutSecs=10, **kwargs):
@@ -1828,12 +1885,27 @@ class H2O(object):
         parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict = {
-            'family': 'binomial',
-            'key': key,
-            'y': 1,
-            'link': 'familyDefault',
-        }
+        
+        if not beta_features:
+            params_dict = {
+                'family': 'binomial',
+                'key': key,
+                'y': 1,
+                'link': 'familyDefault',
+            }
+        else:
+            params_dict =      {'source'             : key,
+                                'vresponse'          : None,
+                                'ignored_cols'       : None,
+                                'family'             : None,
+                                'lambda'             : None,
+                                'alpha'              : None,
+                                'n_folds'            : None,
+                                'case_mode'          : None,
+                                'case_val'           : None, 
+                                'destination_key'    : None,
+                               } 
+
         params_dict.update(kwargs)
         print "\n"+parentName, "params list:", params_dict
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
@@ -1846,6 +1918,8 @@ class H2O(object):
         parentName = "2/GLM2" if beta_features else "GLM"
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName ,destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
+        if noPoll:
+            return a
         if a['response']['redirect_request']!='GLMProgressPage':
             print dump_json(a)
             raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
@@ -1853,8 +1927,7 @@ class H2O(object):
         if noPoll:
             return a
 
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLM done:", dump_json(a))
@@ -1880,8 +1953,7 @@ class H2O(object):
         if noPoll:
             return a
 
-        a = self.poll_url(a['response'],
-            timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
             noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLMGrid done:", dump_json(a))
@@ -2306,7 +2378,7 @@ class RemoteHost(object):
             except IOError, e:
                 if e.errno == errno.ENOENT:
                     sftp.put(f, dest, callback=progress)
-                    print "\n{0:.3f} seconds".format(time.time() - start)
+                    ### print "\n{0:.3f} seconds".format(time.time() - start)
             finally:
                 sftp.close()
             self.uploaded[f] = dest
@@ -2467,7 +2539,7 @@ class RemoteH2O(H2O):
         # kbn: it should be dead now? want to make sure we don't have zombies
         # we should get a connection error. doing a is_alive subset.
         try:
-            gc_output = self.get_cloud()
+            gc_output = self.get_cloud(noExtraErrorCheck=True)
             raise Exception("get_cloud() should fail after we terminate a node. It isn't. %s %s" % (self, gc_output))
         except:
             return True

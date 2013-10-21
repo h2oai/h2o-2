@@ -1,11 +1,12 @@
 package hex;
 
+import hex.KMeans2.KMeans2Model;
+import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.GBM.GBMModel;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 
 import water.*;
 import water.api.*;
@@ -42,7 +43,7 @@ public class GridSearch extends Job {
 
   public static class GridSearchProgress extends Progress2 {
     @Override public boolean toHTML(StringBuilder sb) {
-      GridSearch grid = UKV.get(dst_key);
+      GridSearch grid = UKV.get(destination_key);
       if( grid != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
@@ -109,6 +110,8 @@ public class GridSearch extends Job {
               link = GBMModelView.link(link, info._job.destination_key);
             else if( info._model instanceof NeuralNetModel )
               link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
+            if( info._model instanceof KMeans2Model )
+              link = KMeans2ModelView.link(link, info._job.destination_key);
             else
               link = Inspect.link(link, info._job.destination_key);
           }

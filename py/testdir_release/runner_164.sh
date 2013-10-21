@@ -58,23 +58,32 @@ ls -lt ./h2o-nodes.json
 echo "If it exists, pytest_config-<username>.json in this dir will be used"
 echo "i.e. pytest_config-jenkins.json"
 echo "Used to run as 0xcust.., with multi-node targets (possibly)"
-DOIT=../testdir_single_jvm/n0.doit
+myPy() {
+    DOIT=../testdir_single_jvm/n0.doit
+    $DOIT $1/$2 || true
+    # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
+    # think of h2o.check_sandbox_for_errors()
+    rm -f -r sandbox/$1
+    mkdir -p sandbox/$1
+    cp -f sandbox/*log sandbox/$1
+    # rm -f sandbox/*log
+}
+
 
 # $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
-$DOIT c1/test_c1_rel.py || true
-$DOIT c2/test_c2_rel.py || true
-$DOIT c3/test_c3_rel.py || true
-$DOIT c4/test_c4_four_billion_rows.py || true
-$DOIT c8/test_c8_rf_airlines_hdfs.py || true
+myPy c1 test_c1_rel.py
+myPy c2 test_c2_rel.py
+myPy c3 test_c3_rel.py
+myPy c4 test_c4_four_billion_rows.py
+myPy c8 test_c8_rf_airlines_hdfs.py
 # fails with summary. currently disable summary
-$DOIT c7/test_c7_rel.py || true
+myPy c7 test_c7_rel.py
 # known failure last
-$DOIT c6/test_c6_hdfs.py || true
-
+myPy c6 test_c6_hdfs.py
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
-../testdir_single_jvm/n0.doit test_shutdown.py
+myPy shutdown test_shutdown.py
 
 if ps -p $CLOUD_PID > /dev/null
 then

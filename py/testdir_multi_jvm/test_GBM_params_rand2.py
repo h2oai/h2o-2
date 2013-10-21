@@ -27,6 +27,9 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
+
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(3, java_heap_GB=4)
@@ -156,9 +159,10 @@ class Basic(unittest.TestCase):
                 print h2o_gbm.pp_cm(cm)
 
                 # xList.append(ntrees)
-                xList.append(params['max_depth'])
-                eList.append(pctWrong)
-                fList.append(trainElapsed)
+                if 'max_depth' in params and params['max_depth']:
+                    xList.append(params['max_depth'])
+                    eList.append(pctWrong)
+                    fList.append(trainElapsed)
 
             h2o.beta_features = False
             xLabel = 'max_depth'

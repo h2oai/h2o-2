@@ -8,6 +8,7 @@ import hex.rf.RFModel;
 import java.util.Arrays;
 
 import water.*;
+import water.fvec.Frame;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
@@ -33,7 +34,7 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
         continue;
       Value val = DKV.get(key);
       if( val == null ) continue; // Deleted key?
-      if( _typeid != 0 && val.type() != _typeid ) continue; // Wrong type?
+      if( !matchesType(val) ) continue; // Wrong type?
       if( !shouldIncludeKey(key) ) continue; // Generic override
       keys[len++] = key;        // Capture the key
       if( len == keys.length ) break;
@@ -42,6 +43,10 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
     Arrays.sort(keys,0,len);
     for( int i = 0; i < len; ++i) array.add(new JsonPrimitive(keys[i].toString()));
     return array;
+  }
+
+  protected boolean matchesType(Value val) {
+    return _typeid == 0 || val.type() == _typeid;
   }
 
   // By default, all keys passing filters
@@ -90,9 +95,18 @@ class TypeaheadPCAModelKeyRequest extends TypeaheadKeysRequest {
 }
 
 class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
+  final int _frame = TypeMap.onLoad(Frame.class.getName());
+  final int _va = TypeMap.onLoad(ValueArray.class.getName());
+
   public TypeaheadHexKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
           "current node that are ValueArrays at the time of calling.",
           null,ValueArray.class);
+  }
+
+  @Override protected boolean matchesType(Value val) {
+    if(val.type() == _va)
+      return val.isHex();
+    return val.type() == _frame;
   }
 }

@@ -3,6 +3,9 @@ package water.api;
 import hex.DGLM.GLMModel;
 import hex.DPCA.PCAModel;
 import hex.*;
+import hex.KMeans2.KMeans2Model;
+import hex.KMeans2.KMeans2ModelView;
+import hex.NeuralNet.NeuralNetModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.*;
 import hex.rf.RFModel;
@@ -12,7 +15,8 @@ import java.util.HashMap;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.parser.CustomParser.PSetupGuess;
 import water.parser.ParseDataset;
 import water.util.Utils;
@@ -149,6 +153,10 @@ public class Inspect extends Request {
       return GBMModelView.redirect(this, key);
     if( f instanceof GLMValidation)
       return GLMValidationView.redirect(this, key);
+    if(f instanceof NeuralNetModel)
+      return ((NeuralNet) f).redirect(this, key);
+    if(f instanceof KMeans2Model)
+      return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
       return ((GridSearch) f).redirect();
     return Response.error("No idea how to display a "+f.getClass());
@@ -317,7 +325,7 @@ public class Inspect extends Request {
           + RF.link(key, "Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
           + KMeans.link(key, "KMeans") + ", or "
-          + KMeansGrid.link(key, "KMeansGrid") + "<br />"
+          + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
           + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")

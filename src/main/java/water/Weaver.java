@@ -224,13 +224,13 @@ public class Weaver {
               ".put1(',');\n",
               ";\n  return ab;\n}",
               new FieldFilter() {
-                boolean filter(CtField ctf) throws NotFoundException {
+    	        @Override boolean filter(CtField ctf) throws NotFoundException {
                   Object[] as;
                   try { as = ctf.getAnnotations(); }
                   catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
                   API api = null;
                   for(Object o : as) if(o instanceof API) { api = (API) o; break; }
-                  return api != null && !isInput(ctf.getType(), api);
+                  return api != null && (api.json() || !isInput(ctf.getType(), api));
                 }
               });
 

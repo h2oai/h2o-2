@@ -6,7 +6,7 @@
 	<classpathentry kind="src" path="src/samples/java"/>
 	<classpathentry kind="lib" path="lib/apache/commons-configuration-1.6.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-lang-2.4.jar" sourcepath="lib/apache/commons-lang-2.4-sources.jar"/>
-	<classpathentry kind="lib" path="lib/apache/commons-logging-1.1.1.jar" sourcepath="lib/apache/commons-logging-1.1.1-src.zip"/>
+	<classpathentry kind="lib" path="lib/apache/commons-logging-1.1.1.jar" sourcepath="lib/apache/commons-logging-1.1.1-sources.zip"/>
 	<classpathentry kind="lib" path="lib/apache/httpclient-4.1.1.jar" sourcepath="lib/apache/httpclient-4.1.1-sources.zip"/>
 	<classpathentry kind="lib" path="lib/apache/httpcore-4.1.jar" sourcepath="lib/apache/httpcore-4.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/junit/junit-4.11.jar" sourcepath="lib/junit/junit-4.11-sources.jar"/>

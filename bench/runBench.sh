@@ -7,94 +7,46 @@ benchmarks="benchmarks"
 DATE=`date +%Y-%m-%d`
 archive="Archive"
 
-function ALL() {
-    echo "Running PCA benchmark..."
-    PCA
-    wait
-    echo "Running KMeans benchmark..."
-    KMeans
-    wait
-    echo "Running GLM benchmark..."
-    GLM
-    wait
-    echo "Running GLM2..."
-    GLM2
-    wait
-    echo "Running GBM..."
-    GBM
-    wait
-    echo "Running GBMGrid..."
-    GBMGrid
-    wait
-    echo "Running Big KMeans..."
-    BigKMeans
-    wait
+function all {
+    doAlgo pca
+    doAlgo glm
+    doAlgo kmeans
+    doAlgo gbm
+    doAlgo glm2
+#    doAlgo gbmgrid
+#    doAlgo bigkmeans
 }
 
-function PCA() {
-    pyScript="BMscripts/pcaBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
+function doAlgo {
+    echo "Clear caches!"
+    bash startloggers.sh ${JSON} clear_ 
+
+    echo "Running $1 benchmark..."
+    echo "Changing little logger phase..."
+    bash startloggers.sh ${JSON} changePhase $1
+
+    pyScript="BMscripts/"$1"Bench.py"
     wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-PCA sandbox/
+    if [ ! $1 = "bigkmeans" ]
+    then
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False
+        wait 
+    else
+        python ${pyScript} ${h2oBuild} ${DEBUG} #bigKM can also run in debug
+        wait
+    fi
+    zip -r  ${archive}/${h2oBuild}-${DATE}-$1 sandbox/
     wait
     rm -rf sandbox/
+    bash startloggers.sh ${JSON} ice $1
 }
 
-function KMeans() {
-    pyScript="BMscripts/kmeansBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-KMEANS sandbox/
-    wait
-    rm -rf sandbox/
+function debug {
+    for a in $@
+    do
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
+    done
 }
-
-function BigKMeans() {
-    pyScript="BMscripts/bigkmeansBench.py"
-    python ${pyScript} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-BIGKMEANS sandbox/
-    wait
-    rm sandbox/
-}
-
-function GLM() {
-    pyScript="BMscripts/glmBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-GLM sandbox/
-    wait
-    rm -rf sandbox/
-}
-
-function GLM2() {
-    pyScript="BMscripts/glm2Bench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-GLM2 sandbox/
-    wait
-    rm -rf sandbox/
-}
-
-
-function GBM() {
-    pyScript="BMscripts/gbmBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-GBM sandbox/
-    wait
-    rm -rf sandbox/
-}
-
-function GBMGrid() {
-    pyScript="BMscripts/gbmgridBench.py"
-    python ${pyScript} --config_json BMscripts/${JSON} ${h2oBuild}
-    wait
-    zip -r  ${archive}/${h2oBuild}-${DATE}-GBMGrid sandbox/
-    wait
-    rm -rf sandbox/
-}
-
 
 usage()
 {
@@ -108,12 +60,14 @@ OPTIONS:
    -h      Show this message
    -t      Run task:
                Choices are:
-                   ALL        -- Runs PCA, KMeans, GLM, and BigKMeans
-                   PCA        -- Runs PCA on Airlines/AllBedrooms/Covtype data
-                   KMeans     -- Runs KMeans on Airlines/AllBedrooms/Covtype data
-                   GLM        -- Runs logistic regression on Airlines/AllBedrooms/Covtype data
-                   GBM        -- Runs GBM on Airlines/AllBedrooms/Covtype data
-                   BigKMeans  -- Runs KMeans on 180 GB & 1TB of synthetic data
+                   all        -- Runs PCA, GLM, KMEANS, GBM, GLM2, GBMGRID, and BIGKMEANS
+                   pca        -- Runs PCA on Airlines/AllBedrooms/Covtype data
+                   kmeans     -- Runs KMeans on Airlines/AllBedrooms/Covtype data
+                   glm        -- Runs logistic regression on Airlines/AllBedrooms/Covtype data
+                   glm2       -- Runs logistic regression on Airlines/AllBedrooms/Covtype data
+                   gbm        -- Runs GBM on Airlines/AllBedrooms/Covtype data
+                   gbmgrid    -- Runs GBM grid search on Airlines/AllBedrooms/Covtype data
+                   bigkmeans  -- Runs KMeans on 180 GB & 1TB of synthetic data
                    
    -j      JSON config:
                Choices are:
@@ -121,14 +75,17 @@ OPTIONS:
                    162        -- Runs benchmark(s) on single machine on 162 (100GB)
                    163        -- Runs benchmark(s) on single machine on 163 (100GB)
                    164        -- Runs benchmark(s) on single machine on 164 (100GB)
- 		   161_163    -- Runs benchmark(s) on four machines 161-163 (133GB Each)
+         		   161_163    -- Runs benchmark(s) on four machines 161-163 (133GB Each)
                    161_164    -- Runs benchmark(s) on four machines 161-164 (100GB Each)
 EOF
 }
 
 TASK=
 JSON=
-while getopts "ht:j:" OPTION
+BUILDN=
+DEBUG=0
+LOG=0
+while getopts "ht:j:b:dL" OPTION
 do
   case $OPTION in
     h)
@@ -140,6 +97,16 @@ do
       ;;
     j)
       JSON=$OPTARG
+      ;;
+    b)
+      BUILDN=$OPTARG
+      ;;
+    d)
+      DEBUG=1
+      LOG=0
+      ;;
+    L)
+      LOG=1
       ;;
     ?)
       usage
@@ -160,22 +127,57 @@ fi
 
 #bash S3getLatest.sh
 #wait
+dir=`pwd`
+latest=$dir/latest
+if [ ! -f $latest ]
+then
+    echo "No 'latest' file was found..."
+    echo "Either create one, or use S3getLatest.sh."
+    exit 1
+fi
 h2oBuild=`cat latest`
 
 if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
 
-if [ ! -d BMLogs/${h2oBuild}/${DATE} ]; then
-  mkdir -p BMLogs/${h2oBuild}/${DATE}
+if [ ${LOG} -eq 1 ]
+then
+    #global starttime out to all loggers
+    starttime=`date +%s`
+    echo $starttime > BMLogs/starttime
+
+    #Gentlemen...Start your loggers!
+    bash startloggers.sh ${JSON} big
+    bash startloggers.sh ${JSON} little
 fi
 
-$TEST
-wait
+if [ ${DEBUG} -eq 1 ]
+then
+    echo "Running in debug mode... "
+    if [ ${TEST} = "all" ] 
+    then
+        debug pca glm kmeans glm2 gbm #gbmgrid bigkmeans
+        wait
+    else
+        debug ${TEST}
+        wait
+    fi
+    wait
+else
+    if [ ! ${TEST} = "all" ]
+        then
+            doAlgo ${TEST}
+        else
+            ${TEST}
+        fi
+        wait
+fi
+
+bash startloggers.sh ${JSON} stop_
 
 #remove annoying useless files
 rm pytest*flatfile*
-rm benchmark*log
 
 #archive nohup
 if [ -a nohup.out ]; then

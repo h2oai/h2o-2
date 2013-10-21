@@ -34,7 +34,7 @@ setMethod("h2o.gbm", signature(x="numeric", y="numeric", distribution="character
     
       result=list()
       categories=length(res2$gbm_model$cm)
-      cf_matrix = t(matrix(unlist(res2$gbm_model$cm),nrow=categories ))
+      cf_matrix = t(matrix(unlist(res2$gbm_model$cm), nrow=categories))
       cf_names <- res2$gbm_model[['_domains']]
       cf_names <- cf_names[[ length(cf_names) ]]
 
@@ -93,7 +93,7 @@ setMethod("h2o.gbm", signature(x="ANY", y="numeric", distribution='ANY', data="H
     })
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
-# Internally called glm to allow games with method dispatch
+# Internally called GLM to allow games with method dispatch
 h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
       if(family == 'tweedie' && (tweedie.p < 1 || tweedie.p > 2 ))
           stop('tweedie.p must be in (1,2)')
