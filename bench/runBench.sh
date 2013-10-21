@@ -8,11 +8,11 @@ DATE=`date +%Y-%m-%d`
 archive="Archive"
 
 function all {
-    doAlgo pca
-    doAlgo glm
-    doAlgo kmeans
-    doAlgo gbm
-    doAlgo glm2
+    doAlgo pca;   wait;  makeDead > /dev/null;
+    doAlgo kmeans wait;  makeDead > /dev/null;
+    doAlgo glm;   wait;  makeDead > /dev/null;
+    doAlgo glm2;  wait;  makeDead > /dev/null;
+    doAlgo gbm;   wait;  makeDead > /dev/null;
 #    doAlgo gbmgrid
 #    doAlgo bigkmeans
 }
@@ -41,12 +41,18 @@ function doAlgo {
     bash startloggers.sh ${JSON} ice $1
 }
 
+function makeDead {
+    ps -efww | grep h2o|grep spencer|grep jar| awk '{print $2}' | xargs kill
+    ps -efww | grep h2o|grep 0xdiag |grep jar| awk '{print $2}' | xargs kill
+}
+
 function debug {
     for a in $@
     do
         python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
     done
 }
+
 
 usage()
 {
@@ -125,8 +131,8 @@ then
     exit
 fi
 
-#bash S3getLatest.sh
-#wait
+bash S3getLatest.sh
+wait
 dir=`pwd`
 latest=$dir/latest
 if [ ! -f $latest ]

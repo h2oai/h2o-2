@@ -9,6 +9,7 @@ csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCo
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
+              'Airlines100'   : {'train': ('AirlinesTrain100x'), 'test' : 'AirlinesTest'},
              }
 build = ""
 debug = False
@@ -181,6 +182,34 @@ if __name__ == '__main__':
             row         = row,
             case_mode   = "n/a",
             case_val    = 0.0
+          )
+    #################################Do Airlines100 here because too risky
+    bench = "bench"
+    if debug:
+        bench = "bench/debug"
+    #AIRLINES
+    airlinesTestParseStart      = time.time()
+    hK                          =  "AirlinesHeader.csv"
+    headerPathname              = bench+"/Airlines" + "/" + hK
+    h2i.import_only(bucket      = 'home-0xdiag-datasets', path=headerPathname)
+    headerKey                   = h2i.find_key(hK)
+    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, noPoll = True, doSummary = False)
+    h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+    elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
+    
+    row = {'testParseWallTime' : elapsedAirlinesTestParse}
+    x = None #"DepTime,ArrTime,FlightNum,TailNum,ActualElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed" #columns to be ignored
+    doGLM2(files['Airlines100'], 'Airlines', 
+            family      = 'binomial',
+            lambda_     = 1E-5, 
+            alpha       = 0.5, 
+            nfolds      = 10, 
+            y           = 'IsDepDelayed',
+            x           = x,  
+            testFilehex = 'atest.hex',
+            row         = row,
+            case_mode   = "%3D",
+            case_val    = 1.0 
           )
 
     h2o.tear_down_cloud()
