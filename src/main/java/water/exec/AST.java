@@ -17,10 +17,11 @@ abstract public class AST {
     AST ast2, ast = ASTSlice.parse(E);
     if( ast == null ) return ASTAssign.parseNew(E);
     // Can find an infix: {op expr}*
-    if( (ast2 = ASTApply.parseInfix (E,ast)) != null ) return ast2;
+    if( (ast2 = ASTApply.parseInfix(E,ast)) != null ) return ast2;
     // Can find '=' between expressions
-    if( (ast2 = ASTAssign.parse     (E,ast)) != null ) return ast2;
-    if( E.peek('?') ) { throw H2O.unimpl(); } // infix trinary
+    if( (ast2 = ASTAssign.parse    (E,ast)) != null ) return ast2;
+    // Infix trinay
+    if( (ast2 = ASTIfElse.parse    (E,ast)) != null ) return ast2;
     return ast;                 // Else a simple slice/expr
   }
 
@@ -482,6 +483,17 @@ class ASTIfElse extends ASTOp {
   ASTIfElse( ) { super(VARS, newsig()); }
   @Override ASTOp make() {return new ASTIfElse();} 
   @Override String opStr() { return "ifelse"; }
+  // Parse an infix trinary ?: operator
+  static AST parse(Exec2 E, AST tst) {
+    if( !E.peek('?') ) return null;
+    int x=E._x;
+    AST tru=E.xpeek(':',E._x,parseCXExpr(E));
+    if( tru == null ) E.throwErr("Missing expression in trinary",x);
+    x = E._x;
+    AST fal=parseCXExpr(E);
+    if( fal == null ) E.throwErr("Missing expression in trinary",x);
+    return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
+  }
 }
 
 
