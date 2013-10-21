@@ -52,16 +52,17 @@ public class Type {
   // If 2+ unbound, then might be ary someday so return self
   // If all bound to dbl, then dbl
   private Type findAnyAry() {
-    Type unb=null;
-    int unbound = 0;
+    int len=0;
     for( int i=0; i<_ts.length; i++ ) {
-      Type t2 = _ts[i] = _ts[i].find();
-      if( t2._t==ARY0 ) { _t=BOUND; return (_ts[0] = ARY); }
-      if( t2._t==UNBOUND || t2._t==DBLARY0 ) { unb=t2; unbound++; }
-      else if( t2._t!=DBL0 ) return this;
+      Type t = _ts[i].find();
+      if( t._t == ARY0    ) { _t=BOUND; return (_ts[0] = ARY); } // Any array==> typed as array
+      if( t._t == DBLARY0 ) _ts[len++] = t;
+      else assert t._t == DBL0; // By construction, only set with DBLARY or DBL or ARY
     }
-    if( unbound==0 ) { _t=BOUND; return (_ts[0] = DBL); }
-    if( unbound==1 ) { _t=BOUND; return (_ts[0] = unb); }
+    // No more ARY types?  Defaults to DBL
+    if( len == 0 ) { _t=BOUND; return (_ts[0] = DBL); }
+    // Single variant type?  Defaults to that type
+    if( len == 1 ) { _t=BOUND; return  _ts[0]; }
     return this;
   }
   boolean union( Type t ) {
@@ -70,7 +71,8 @@ public class Type {
     int tta = ta._t&(VARARGS-1); // Strip off varargs
     int ttb = tb._t&(VARARGS-1); // Strip off varargs
     if( ta==tb ) return true;
-    else if( tta==FCN0 && ttb==FCN0 ) { // Functions are equal?
+    else if( (tta==   FCN0 && ttb==   FCN0) ||  // Functions are equal?
+             (tta==ANYARY0 && ttb==ANYARY0) ) { // AnyArys   are equal?
       // Structural breakdown of function-type equality.
       // Made more complex by allowing varargs types.
       Type t0 = ta, t1 = tb;    // Shorter type in t0
@@ -92,7 +94,6 @@ public class Type {
     else if( tta==UNBOUND || (tta==DBLARY0 && tb.isDblAry()) ) { ta._t=BOUND; ta._ts[0]= tb; }
     else if( ttb==UNBOUND || (ttb==DBLARY0 && ta.isDblAry()) ) { tb._t=BOUND; tb._ts[0]= ta; }
     else if( tta==DBLARY0 && ttb==DBLARY0 ) { ta._t=BOUND; ta._ts[0]=tb; }
-    else if( tta==ANYARY0 && ttb==ANYARY0 ) throw water.H2O.unimpl(); // Combine lists
     else if( tta==ANYARY0 && ttb==DBLARY0 ) throw water.H2O.unimpl(); // ???
     else if( tta==ANYARY0 && ttb==ARY0 )    throw water.H2O.unimpl(); // ?one of many must be an array?
     else if( tta==ANYARY0 && ttb==DBL0 )    { // Force all to DBL
