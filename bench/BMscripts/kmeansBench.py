@@ -96,8 +96,6 @@ if __name__ == '__main__':
     dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
-    if debug:
-        print sys.argv.pop(-1)
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
