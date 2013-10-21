@@ -101,8 +101,6 @@ if __name__ == '__main__':
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
-    h2o.parse_our_args()
-    h2o_hosts.build_cloud_with_hosts()
     if dat == 'Air1x'    : fs = files['Airlines']['train'][0]
     if dat == 'Air10x'   : fs = files['Airlines']['train'][1]
     if dat == 'Air100x'  : fs = files['Airlines']['train'][2]
