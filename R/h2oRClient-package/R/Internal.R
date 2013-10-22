@@ -52,7 +52,11 @@ h2o.__remoteSend <- function(client, page, ...) {
   #TODO (Spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
   url = paste("http://", ip, ":", port, "/", page, sep="")
-  temp = postForm(url, style = "POST", ...)
+  # temp = postForm(url, style = "POST", ...)
+  if(length(list(...)) == 0)
+    temp = getURLContent(url)
+  else
+    temp = getForm(url, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
   # after = gsub("NaN", "\"NaN\"", temp[1])
   after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
   after = gsub("NaN", "\"NaN\"", after)
