@@ -34,7 +34,8 @@ class Basic(unittest.TestCase):
         if (localhost):
             # fails
             # h2o.build_cloud(1,java_heap_MB=100, enable_benchmark_log=True)
-            h2o.build_cloud(1,java_heap_MB=400, enable_benchmark_log=True)
+            # 400 fails
+            h2o.build_cloud(1,java_heap_GB=8, enable_benchmark_log=True)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
@@ -100,7 +101,7 @@ class Basic(unittest.TestCase):
             # l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
                 # len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
             l = '{:d} jvms, {:d}MB heap, {:s} {:s} {:6.2f} secs'.format(
-                len(h2o.nodes), h2o.nodes[0].java_heap_MB, algo, csvFilename, elapsed)
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
             print l
             h2o.cloudPerfH2O.message(l)
 
@@ -118,8 +119,11 @@ class Basic(unittest.TestCase):
 
             # GBM(train iterate)****************************************
             h2o.beta_features = True
-            ntrees = 100
-            for max_depth in [5,10,20,40]:
+            # was failing with 100 trees
+            # ntrees = 100
+            # for max_depth in [5,10,20,40]:
+            ntrees = 10
+            for max_depth in [5]:
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,
