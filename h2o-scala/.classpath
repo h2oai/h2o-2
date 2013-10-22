@@ -1,0 +1,33 @@
+<classpath>
+  <classpathentry kind="src" path="src/main/scala" output="target/scala-2.10/classes"/>
+  <classpathentry kind="src" path="src/main/java" output="target/scala-2.10/classes"/>
+  <classpathentry kind="src" path="src/test/scala" output="target/scala-2.10/test-classes"/>
+  <classpathentry kind="src" path="src/test/java" output="target/scala-2.10/test-classes"/>
+  <classpathentry kind="lib" path="./../target/h2o-sources.jar"/>
+  <classpathentry kind="lib" path="./../target/h2o.jar"/>
+  <classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_COMPILER_CONTAINER"/>
+  <classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/com.amazonaws/aws-java-sdk/jars/aws-java-sdk-1.6.2.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-logging/commons-logging/jars/commons-logging-1.1.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.httpcomponents/httpclient/jars/httpclient-4.2.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.httpcomponents/httpcore/jars/httpcore-4.2.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/com.fasterxml.jackson.core/jackson-core/jars/jackson-core-2.1.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/com.fasterxml.jackson.core/jackson-databind/jars/jackson-databind-2.1.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/com.fasterxml.jackson.core/jackson-annotations/jars/jackson-annotations-2.1.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/log4j/log4j/bundles/log4j-1.2.17.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/com.google.code.gson/gson/jars/gson-2.2.2.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.poi/poi-ooxml/jars/poi-ooxml-3.8.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.poi/poi/jars/poi-3.8.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-codec/commons-codec/jars/commons-codec-1.5.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.poi/poi-ooxml-schemas/jars/poi-ooxml-schemas-3.8.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.xmlbeans/xmlbeans/jars/xmlbeans-2.3.0.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/stax/stax-api/jars/stax-api-1.0.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/dom4j/dom4j/jars/dom4j-1.6.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/xml-apis/xml-apis/jars/xml-apis-1.0.b2.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.specs2/specs2_2.10/jars/specs2_2.10-2.2.3.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.scalaz/scalaz-core_2.10/bundles/scalaz-core_2.10-7.0.2.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.scalaz/scalaz-concurrent_2.10/bundles/scalaz-concurrent_2.10-7.0.2.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.scalaz/scalaz-effect_2.10/bundles/scalaz-effect_2.10-7.0.2.jar"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="output" path="bin"/>
+</classpath>

@@ -327,7 +327,7 @@ public class Frame extends Iced {
   }
   public StringBuilder toString( StringBuilder sb, String[] fs, long idx ) {
     for( int c=0; c<fs.length; c++ ) {
-      if( vecs()[c].isInt() ) {
+      if( vecs()[c].isInt() && !fs[c].contains("e")) { // This is dummy!!! FIXME
         if( _vecs[c].isNA(idx) ) {
           Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
           int len = C.pformat_len0();  // Printable width
@@ -343,12 +343,16 @@ public class Frame extends Iced {
     sb.append('\n');
     return sb;
   }
-  public String toStringAll() {
+  public String toStringHead(long h) {
     StringBuilder sb = new StringBuilder();
     String[] fs = toStringHdr(sb);
-    for( int i=0; i<numRows(); i++ )
+    h = Math.min(h, numRows());
+    for( int i=0; i<h; i++ )
       toString(sb,fs,i);
     return sb.toString();
+  }
+  public String toStringAll() {
+    return toStringHead(numRows());
   }
 
   // Return the entire Frame as a CSV stream
