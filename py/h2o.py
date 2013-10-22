@@ -1756,6 +1756,8 @@ class H2O(object):
             'source': data_key,
             # this is ignore??
             'cols': None,
+            'ignored_cols': None,
+            'validation': None,
             'response': None,
             'activation': None,
             'hidden': None,

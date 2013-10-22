@@ -71,15 +71,15 @@ class Basic(unittest.TestCase):
             h2o_cmd.infoFromInspect(inspect, csvFilename)
 
             # KMEANS******************************************
-            for trial in range(2):
+            for trial in range(1):
                 kwargs = {
                     'k': 3, 
                     'initialization': 'Furthest',
-                    # 'cols': 2, 
+                    'cols': range(10),
                     # 'max_iter': 10,
                     # 'normalize': 0,
                     # reuse the same seed, to get deterministic results (otherwise sometimes fails
-                    'seed': 265211114317615310
+                    'seed': 265211114317615310,
                 }
 
                 # fails if I put this in kwargs..i.e. source = dest
