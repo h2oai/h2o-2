@@ -27,6 +27,7 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[2,3]");   // Scalar selection
       checkStr("h.hex[2,+]");   // Function not allowed
       checkStr("h.hex[2+4,-4]");// Select row 6, all-cols but 4
+      checkStr("h.hex[1,-1]; h.hex[2,-2]; h.hex[3,-3]");// Partial results are freed
       checkStr("h.hex[2+3,h.hex]"); // Error: col selector has too many columns
       checkStr("h.hex[2,]");    // Row 2 all cols
       checkStr("h.hex[,3]");    // Col 3 all rows
@@ -98,7 +99,13 @@ public class Expr2Test extends TestUtil {
     Env env=null;
     try { 
       env = Exec2.exec(s); 
-      System.out.println(env.resultString());
+      if( env.isFrame() ) {     // Print complete frames for inspection
+        Frame res = env.popFrame();
+        System.out.println(res.toStringAll());
+        env.subRef(res);        // But then end lifetime
+      } else {
+        System.out.println( env.resultString() );
+      }
     } 
     catch( IllegalArgumentException iae ) { System.out.println(iae.getMessage()); }
     if( env != null ) env.remove();

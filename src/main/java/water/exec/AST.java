@@ -10,8 +10,8 @@ import water.fvec.*;
  */
 
 // --------------------------------------------------------------------------
-abstract public class AST {
-  final Type _t;
+abstract public class AST extends Iced {
+  final transient Type _t;
   AST( Type t ) { assert t != null; _t = t; }
   static AST parseCXExpr(Exec2 E ) {
     AST ast2, ast = ASTSlice.parse(E);
@@ -59,7 +59,13 @@ class ASTStatement extends AST {
     if( asts.size()==0 ) return null;
     return new ASTStatement(asts.toArray(new AST[asts.size()]));
   }
-  void exec(Env env) { for( AST ast : _asts ) ast.exec(env); }
+  void exec(Env env) { 
+    for( int i=0; i<_asts.length-1; i++ ) {
+      _asts[i].exec(env);       // Exec all statements
+      env.pop();                // Pop all intermediate results
+    } 
+    _asts[_asts.length-1].exec(env); // Return final statement as result
+  }
   @Override public String toString() { return ";;;"; }
   public StringBuilder toString( StringBuilder sb, int d ) {
     for( int i=0; i<_asts.length-1; i++ )
@@ -148,7 +154,6 @@ class ASTApply extends AST {
     int sp = env._sp;
     for( AST arg : _args ) arg.exec(env);
     assert sp+_args.length==env._sp;
-    assert env.isFun(-_args.length);
     env.fun(-_args.length).apply(env);
   }
 }
@@ -433,9 +438,56 @@ abstract class ASTBinOp extends ASTOp {
   ASTBinOp( ) { super(VARS, newsig()); }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env) {
-    double d1 = env.popDbl();
-    double d0 = env.popDbl();
-    env.poppush(op(d0,d1));
+    // Expect we can broadcast across all functions as needed.
+    Frame fr0 = null, fr1 = null;
+    double d0=0, d1=0;
+    if( env.isFrame() ) fr1 = env.popFrame(); else d1 = env.popDbl();
+    if( env.isFrame() ) fr0 = env.popFrame(); else d0 = env.popDbl();
+    if( fr0==null && fr1==null ) {
+      env.poppush(op(d0,d1));
+      return;
+    }
+    env.pop();                  // Pop self
+    final ASTBinOp bin = this;
+    Frame fr  = null;
+    Frame fr2 = null;
+    if( fr0 !=null && fr1 != null ) {
+      if( fr0.numCols() != fr1.numCols() ||
+          fr0.numRows() != fr1.numRows() ) 
+        throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
+      fr = fr0;
+      fr2 = new MRTask2() {
+          @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+            for( int i=0; i<nchks.length; i++ ) {
+              Chunk    c0= chks[i];
+              Chunk    c1= chks[i+nchks.length];
+              NewChunk n =nchks[i];
+              for( int r=0; r<c0._len; r++ )
+                n.addNum(bin.op(c0.at0(r),c1.at0(r))); // frame left, frame right
+            }
+          }
+        }.doAll(fr0.numCols(),new Frame(fr0).add(fr1))._outputFrame;
+
+
+    } else if( fr0 != null ) {  // Frame & scalar
+      fr = fr0;
+      final double d = d1;
+      final int ncols = fr.numCols();
+      fr2 = new MRTask2() {
+          @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+            for( int i=0; i<nchks.length; i++ ) {
+              Chunk    c= chks[i];
+              NewChunk n=nchks[i];
+              for( int r=0; r<c._len; r++ )
+                n.addNum(bin.op(c.at0(r),d)); // frame left, scalar right
+            }
+          }
+        }.doAll(fr.numCols(),fr)._outputFrame;
+
+    } else {
+      throw H2O.unimpl();
+    }
+    env.push(fr.copyHeaders(fr2,null));
   }
 }
 class ASTPlus extends ASTBinOp { String opStr(){ return "+"  ;} ASTOp make() {return new ASTPlus();} double op(double d0, double d1) { return d0+d1;}}
