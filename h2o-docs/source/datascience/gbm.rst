@@ -1,6 +1,8 @@
 Gradient Boosted Regression and Classification
 ----------------------------------------------
-Gradient boosted regression and gradient boosted classification are forward learning ensemble methods. The guiding principal is that good predictive results can be obtained through increasingly refined approximations. 
+Gradient boosted regression and gradient boosted classification are
+forward learning ensemble methods. The guiding principal is that good
+predictive results can be obtained through increasingly refined approximations. 
 
 Defining a GBM Model
 """"""""""""""""""""
@@ -19,11 +21,15 @@ Defining a GBM Model
 
 **Ignored Columns**
 
-  By default all of the information submitted in a data frame will be used in building the   GBM model. Users specify those attributes that should be omitted from analysis. 
+  By default all of the information submitted in a data frame will be
+  used in building the   GBM model. Users specify those attributes
+  that should be omitted from analysis. 
 
 **Classification**
 
-  A tic-box option that, when checked, treats the outcome variable as categorical, and when unchecked treats the outcome variable as continuous and normally distributed. 
+  A tic-box option that, when checked, treats the outcome variable as
+  categorical, and when unchecked treats the outcome variable as
+  continuous and normally distributed. 
 
 **Validation** 
 
@@ -39,15 +45,21 @@ Defining a GBM Model
 
 **Min Rows** 
 
-  The minimum number of observations to be included in a terminal leaf. If any classification must consist of no fewer than five elements, min rows should be set to five. 
+  The minimum number of observations to be included in a terminal
+  leaf. If any classification must consist of no fewer than five
+  elements, min rows should be set to five. 
 
 **N Bins**
 
-  The number of bins data are partitioned into before the best split point is determined. A high number of bins relative to a low number of observations will have a small number of observations in each bin. 
+  The number of bins data are partitioned into before the best split
+  point is determined. A high number of bins relative to a low number
+  of observations will have a small number of observations in each bin. 
 
 **Learn Rate**
 
-  A number between 0 and 1 that specifies the rate at which the algorithm should converge. Learning rate is inversely related to the number of iterations taken for the algorithm to complete. 
+  A number between 0 and 1 that specifies the rate at which the
+  algorithm should converge. Learning rate is inversely related to the
+  number of iterations taken for the algorithm to complete. 
 
 Interpreting Results
 """""""""""""""""""""
@@ -66,18 +78,16 @@ the proportion of incorrect predictions overall.
 
 **MSE**
 
-  Mean squared error is an indicator of goodness of fit. It measures the squared distance between an estimator and the estimated parameter. 
+  Mean squared error is an indicator of goodness of fit. It measures
+  the squared distance between an estimator and the estimated parameter. 
 
 
 GBM Algorithm
 """"""""""""""
 
-H\ :sub:`2`\ O's Gradient Boosting Algorithm follows the standard set by Hastie et
+H\ :sub:`2`\ O's Gradient Boosting Algorithms follow the algorithm specified by Hastie et
 al (2001):
-GBM
------
 
-H2O's gradient boosted regression and gradient boosted classification follow the algorithm specified in Elements of Statistical Learning (year). 
 
 Initialize :math:`f_{k0} = 0,\: k=1,2,…,K`
 
