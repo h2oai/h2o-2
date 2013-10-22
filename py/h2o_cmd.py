@@ -59,13 +59,6 @@ def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noP
     if not node: node = h2o.nodes[0]
     return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, noPoll=noPoll, **kwargs)
 
-def runKMeansGrid(node=None, parseResult=None,
-        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
-    if not parseResult: raise Exception('No parseResult for KMeansGrid')
-    if not node: node = h2o.nodes[0]
-    # no such thing as KMeansGridView..don't use retryDelaySecs
-    return node.kmeans_grid(parseResult['destination_key'], timeoutSecs, **kwargs)
-
 def runGLM(node=None, parseResult=None, 
         timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLM')

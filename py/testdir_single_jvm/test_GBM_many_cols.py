@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
             # fails
             # h2o.build_cloud(1,java_heap_MB=100, enable_benchmark_log=True)
             # 400 fails
-            h2o.build_cloud(1,java_heap_GB=8, enable_benchmark_log=True)
+            h2o.build_cloud(1,java_heap_GB=2, enable_benchmark_log=True)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 

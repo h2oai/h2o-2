@@ -53,16 +53,16 @@ class Basic(unittest.TestCase):
                 'initialization': None,
                 'seed': 3923021996079663354, 
                 'normalize': 0, 
-                'max_iter': 10
+                'max_iter': "c(2,5,10)"
             }
             for trial in range(3):
                 kwargs = params.copy()
 
                 start = time.time()
-                kmeans = h2o_cmd.runKMeansGrid(parseResult=parseResult, \
+                kmeans = h2o_cmd.runKMeans(parseResult=parseResult, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
                 elapsed = time.time() - start
-                print "kmeans grid end on ", csvPathname, 'took', elapsed, 'seconds.', \
+                print "kmeans (with grid) end on ", csvPathname, 'took', elapsed, 'seconds.', \
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
                 h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
