@@ -15,7 +15,7 @@ public class GBMProgressPage extends Progress2 {
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "GBMProgressPage", "job", jobkey, "dst_key", dest);
+    return new Response(Response.Status.redirect, req, -1, -1, "GBMProgressPage", "job_key", jobkey, "destination_key", dest);
   }
 
   @Override public boolean toHTML(StringBuilder sb) {
