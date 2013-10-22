@@ -146,10 +146,17 @@ public class NewChunk extends Chunk {
     // If the data was set8 as doubles, we (weanily) give up on compression and
     // just store it as a pile-o-doubles.
     if( _ds != null ) {
-      for( int i=0; i<_len; i++ ) // Attempt to inject all doubles into floats
+      boolean isInt=true;
+      for( int i=0; i<_len; i++ ) { // Attempt to inject all doubles into floats
+        if( (double)(long)_ds[i] != _ds[i] ) isInt=false;
         if( (double)(float)_ds[i] != _ds[i] )
           return new C8DChunk(bufF(3));
-      return new C4FChunk(bufF(2));
+      }
+      if( !isInt ) return new C4FChunk(bufF(2));
+      _ls = new long[_ds.length];
+      _xs = new int [_ds.length];
+      for( int i=0; i<_len; i++ ) // Inject all doubles into longs
+        _ls[i] = (long)_ds[i];
     }
 
     // Look at the min & max & scaling.  See if we can sanely normalize the

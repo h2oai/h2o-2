@@ -419,4 +419,97 @@ public class Frame extends Iced {
       return n;
     }
   }
+
+  // In support of R, a generic Deep Copy & Slice.
+  // Semantics are a little odd, to match R's.
+  // Each dimension spec can be:
+  //   null - all of them
+  //   a sorted list of negative numbers (no dups) - all BUT these
+  //   an unordered list of positive - just these, allowing dups
+  // The numbering is 1-based; zero's are not allowed in the lists, nor are out-of-range.
+  public Frame deepSlice( long rows[], long cols[] ) {
+    // Since cols is probably short convert to a positive list.
+    int c2[] = null;
+    if( cols==null ) {
+      c2 = new int[numCols()];
+      for( int i=0; i<cols.length; i++ ) cols[i]=i;
+    } else if( cols.length==0 ) {
+      c2 = new int[0];
+    } else if( cols[0] > 0 ) {
+      c2 = new int[cols.length];
+      for( int i=0; i<cols.length; i++ )
+        c2[i] = (int)cols[i]-1;
+    } else {
+      c2 = new int[numCols()-cols.length];
+      int j=0;
+      for( int i=0; i<numCols(); i++ ) {
+        if( j >= cols.length || i < (-cols[j]-1) ) c2[i-j] = i;
+        else j++;
+      }
+    }
+
+    // Do Da Slice
+    Frame fr2 = new DeepSlice(rows,c2).doAll(c2.length,this)._outputFrame;
+
+    // Copy over column headers & enum domains
+    Futures fs = new Futures();
+    Vec[] vec2 = fr2.vecs();
+    String domains[][] = domains();
+    String ns[]  = new String[c2.length];
+    for( int i=0; i<c2.length; i++ ) {
+      ns[i] = _names [c2[i]];
+      vec2[i]._domain = domains[c2[i]];
+      DKV.put(vec2[i]._key,vec2[i],fs);
+    }
+    fr2._names = ns;
+    fs.blockForPending();
+    System.out.println(fr2.toStringAll());
+    return fr2;
+  }
+
+  // Bulk (expensive) copy from 2nd cols into 1st cols.
+  // Sliced by the given cols & rows
+  private static class DeepSlice extends MRTask2<DeepSlice> {
+    final int  _cols[];
+    final long _rows[];
+    DeepSlice( long rows[], int cols[] ) { _cols=cols; _rows=rows; }
+    @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+      long rstart = chks[0]._start;
+      int rlen = chks[0]._len;  // Total row count
+      int rx = 0;               // Which row to in/ex-clude
+      int rlo = 0;              // Lo/Hi for this block of rows
+      int rhi = rlen;
+      while( rlo < rlen ) {     // Still got rows to include?
+        if( _rows != null ) {   // Got a row selector?
+          if( rx >= _rows.length ) break; // All done with row selections
+          long r = _rows[rx++]; // Next row selector
+          if( r < 0 ) {         // Row exclusion?
+            throw H2O.unimpl();
+          } else {              // Positive row list?
+            if( r < rstart ) continue;
+            rlo = (int)(r-rstart);
+            rhi = rlo+1;        // Stop at the next row
+            while( rx < _rows.length && (_rows[rx]-rstart)==rhi && rhi < rlen ) {
+              rx++; rhi++;      // Grab sequential rows
+            }
+          }
+        }
+        // Process this next set of rows
+        // For all cols in the new set
+        for( int i=0; i<_cols.length; i++ ) {
+          Chunk    oc =  chks[_cols[i]];
+          NewChunk nc = nchks[      i ];
+          if( oc._vec.isInt() ) { // Slice on integer columns
+            for( int j=rlo; j<rhi; j++ )
+              if( oc.isNA0(j) ) nc.addNA();
+              else              nc.addNum(oc.at80(j),0);
+          } else {                // Slice on double columns
+            for( int j=rlo; j<rhi; j++ )
+              nc.addNum(oc.at0(j));
+          }
+        }
+        rlo=rhi;
+      }
+    }
+  }
 }

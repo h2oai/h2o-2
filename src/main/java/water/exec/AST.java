@@ -188,32 +188,14 @@ class ASTSlice extends AST {
       int  col = (int )((ASTNum)_cols)._d;
       double d = fr.vecs()[col].at(row);
       env.push(d);
-      return;
+    } else {
+      // Else It's A Big Copy.  Some Day look at proper memory sharing,
+      // disallowing unless an active-temp is available, etc.
+      long rows[] = select(fr.numRows(),_rows,env);
+      long cols[] = select(fr.numCols(),_cols,env);
+      Frame fr2 = fr.deepSlice(rows,cols);
+      env.push(fr2);
     }
-  
-    long rows[] = select(_rows,env);
-    long cols[] = select(_cols,env);
-    System.out.println(fr+"["+Arrays.toString(rows)+","+Arrays.toString(cols)+"]");
-    throw H2O.unimpl();
-
-    //// Shallow copy all requested columns
-    //// ...really: if allowed, we can make as many Vec copies as
-    //// requested... and can make more later even in the same
-    //
-    //
-    //Frame fr2 = new Frame();
-    //for( int i=0; i<cols.length; i++ )
-    //  if( cols[i]>0 && cols[i] < fr.numCols() )
-    //    fr2.add(fr._names[cols[i]],fr.vecs()[cols[i]]);
-    //
-    //// Row subselection? 
-    //long rows[] = null;
-    //if( _rows != null ) throw H2O.unimpl();
-    //
-    //Frame tmp = env.tmp(fr2);   // My Handy Temp
-    //
-    //// Bulk (expensive) copy into the temp
-    //new DeepSlice(cols,rows).doAll(new Frame(tmp).add(fr));
   }
   @Override public String toString() { return "[,]"; }
   public StringBuilder toString( StringBuilder sb, int d ) {
@@ -230,12 +212,14 @@ class ASTSlice extends AST {
   // Error to mix negatives & positive.  Negative list is sorted, with dups
   // removed.  Positive list can have dups (which replicates cols) and is
   // ordered.  numbers.  1-based numbering; 0 is ignored & removed.
-  static long[] select( AST ast, Env env ) {
+  static long[] select( long len, AST ast, Env env ) {
     if( ast == null ) return null; // Trivial "all"
     int sp = env._sp;  ast.exec(env);  assert sp+1==env._sp;
     long cols[];
     if( !env.isFrame() ) {
       int col = (int)env.popDbl(); // Silent truncation
+      if( col > 0 && col >  len ) throw new ArrayIndexOutOfBoundsException("Trying to select column "+col+" but only "+len+" present.");
+      if( col < 0 && col < -len ) col=0; // Ignore a non-existent column
       if( col == 0 ) return new long[0];
       return new long[]{col};
     }
@@ -243,20 +227,6 @@ class ASTSlice extends AST {
     // Decide if we're a toss-out or toss-in list
     throw H2O.unimpl();
   }
-
-  //// Bulk (expensive) copy from 2nd cols into 1st cols.
-  //// Sliced by the given cols & rows
-  //private static class DeepSlice extends MRTask2<DeepSlice> {
-  //  final int  _cols[];
-  //  final long _rows[];
-  //  DeepSlice( int cols[], long rows[] ) { _cols=cols; _rows=rows; }
-  //  @Override public void map( Chunk chks[] ) {
-  //    if( _rows != null ) throw H2O.unimpl();
-  //    for( int i=0; i<_cols.length; i++ ) {
-  //      throw H2O.unimpl();
-  //    }
-  //  }
-  //}
 }
 
 // --------------------------------------------------------------------------

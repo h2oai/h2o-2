@@ -26,7 +26,7 @@ public class Expr2Test extends TestUtil {
       checkStr("+(1.23,2,3)");  // Syntax error, too many args
       checkStr("h.hex[2,3]");   // Scalar selection
       checkStr("h.hex[2,+]");   // Function not allowed
-      checkStr("h.hex[2+3,-4*5]");
+      checkStr("h.hex[2+4,-4]");
       checkStr("h.hex[2+3,h.hex]");
       checkStr("h.hex[2,]");
       checkStr("h.hex[,3]");

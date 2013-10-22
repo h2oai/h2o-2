@@ -125,18 +125,13 @@ public class Env {
   }
 
   public String toString(int i) {
-    if( _fr[i] != null ) return _fr[i].numCols()+"x"+_fr[i].numRows();
+    if( _fr[i] != null ) return _fr[i].numRows()+"x"+_fr[i].numCols();
     else if( _fun[i] != null ) return _fun[i].toString();
     return Double.toString(_d[i]);
   }
   @Override public String toString() {
     String s="{";
-    for( int i=0; i<_sp; i++ ) {
-      if( _fr[i] != null ) s += _fr[i].numCols()+"x"+_fr[i].numRows();
-      else if( _fun[i] != null ) s += _fun[i];
-      else s += _d[i];
-      s += ',';
-    }
+    for( int i=0; i<_sp; i++ )   s += toString(i)+",";
     return s+"}";
   }
 }
