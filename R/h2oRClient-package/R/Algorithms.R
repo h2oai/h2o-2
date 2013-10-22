@@ -3,6 +3,7 @@ setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lam
 # setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.glm.FV", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm.FV") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
+setGeneric("h2o.kmeans.FV", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans.FV") })
 setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALSE) { standardGeneric("h2o.prcomp") })
 setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
 setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
@@ -574,3 +575,25 @@ h2o.__getGLM2Results <- function(model, y, valid) {
   }
   return(result)
 }
+
+setMethod("h2o.kmeans.FV", signature(data="H2OParsedData", centers="numeric", cols="character", iter.max="numeric"),
+  function(data, centers, cols, iter.max) {
+    myIgnore = ifelse(cols == "", cols, setdiff(colnames(data), cols))
+    
+    rand_kmeans_key = paste("__KMeans2Model_", UUIDgenerate(), sep="")
+    res = h2o.__remoteSend(data@h2o, "2/KMeans2.json", source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
+    while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+    
+    res = h2o.__remoteSend(data@h2o, "2/KMeans2ModelView.json", '_modelKey'=rand_kmeans_key)
+  })
+
+setMethod("h2o.kmeans.FV", signature(data="H2OParsedData", centers="ANY", cols="ANY", iter.max="ANY"),
+  function(data, centers, cols, iter.max) {
+    if(!(missing(centers) || class(centers) == "numeric"))
+      stop(paste("centers cannot be of class", class(centers)))
+    if(!(missing(cols) || class(cols) == "character"))
+      stop(paste("cols cannot be of class", class(cols)))
+    if(!(missing(iter.max) || class(iter.max) == "numeric"))
+      stop(paste("iter.max cannot be of class", class(iter.max)))
+    h2o.kmeans.FV(data, centers, cols, iter.max)
+  })
