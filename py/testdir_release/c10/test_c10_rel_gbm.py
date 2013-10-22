@@ -53,7 +53,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # see README.txt in 0xcustomer-datasets/c3 for the col names to use in keepList above, to get the indices
         # GBM Train***********************************************************
         x = [6,7,8,10,12,31,32,33,34,35,36,37,40,41,42,43,44,45,46,47,49,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70]
-        response = 0
+        # response = 0
+        # doesn't work if index is used?
+        response = 'outcome'
 
         # x = range(inspect['num_cols'])
         # del x[response]
