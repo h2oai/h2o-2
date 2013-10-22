@@ -72,6 +72,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         print "Using these parameters for GBM: ", params
         kwargs = params.copy()
         h2o.beta_features = True
+        timeoutSecs = 900
 
         trainStart = time.time()
         gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
