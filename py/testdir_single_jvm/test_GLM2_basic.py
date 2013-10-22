@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
         case_val  = '1'
         f         = 'prostate'
 
-        kwargs = {       'vresponse'          : y,
+        kwargs = {       'response'          : y,
                          'ignored_cols'       : x,
                          'family'             : family,
                          'lambda'             : lambda_,

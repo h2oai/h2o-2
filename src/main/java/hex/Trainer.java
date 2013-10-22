@@ -308,7 +308,7 @@ public abstract class Trainer {
       Vec[] vecs = ((VecsInput) _ls[0])._vecs;
       Layer out = _ls[_ls.length - 1];
       Vec response = out instanceof VecSoftmax ? ((VecSoftmax) out)._vec : ((VecLinear) out)._vec;
-      _task.dfork(new Frame(null, Utils.add(vecs, response)));
+      _task.dfork(new Frame(null, Utils.append(vecs, response)));
     }
 
     @Override public void join() {

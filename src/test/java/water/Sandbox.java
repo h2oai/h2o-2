@@ -13,7 +13,7 @@ import water.util.Utils;
 public class Sandbox {
   public static void main(String[] args) throws Exception {
     String line = "-mainClass " + UserCode.class.getName() + " -beta"; // -name s8koPQJ72ZC8Jh66uGeR
-    args = Utils.add(args, line.split(" "));
+    args = Utils.append(args, line.split(" "));
     Boot._init.boot2(args);
     //ec2(args);
   }
@@ -24,13 +24,12 @@ public class Sandbox {
 
       //new Sample07_NeuralNet_Mnist().run();
 
-      //covtype();
       // airlines();
-      mnist();
+      //mnist();
       // ecology();
       // va();
 
-//      File file = new File("smalldata/covtype/covtype.20k.data");
+      File file = new File("smalldata/covtype/covtype.20k.data");
 //      Key dest = Key.make("train.hex");
 //      Key fkey = water.fvec.NFSFileVec.make(file);
 //      water.fvec.ParseDataset2.parse(dest, new Key[] { fkey });
@@ -43,9 +42,9 @@ public class Sandbox {
 //      Utils.writeFileAndClose(new File("../tmp/covtype.20k.data.valid"), valid.toCSV(false));
 //      Utils.writeFileAndClose(new File("../tmp/covtype.20k.data.test"), test_.toCSV(false));
 
-//      Key key = TestUtil.load_test_file(file, "train");
-//      Key dest = Key.make("train.hex");
-//      ParseDataset.parse(dest, new Key[] { key });
+      Key key = TestUtil.load_test_file(file, "train");
+      Key dest = Key.make("train.hex");
+      ParseDataset.parse(dest, new Key[] { key });
 
       //Frame frame = water.TestUtil.parseFrame("smalldata/covtype/covtype.20k.data");
       //Frame frame = water.TestUtil.parseFrame("smalldata/categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");

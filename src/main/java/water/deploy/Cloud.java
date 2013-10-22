@@ -11,6 +11,8 @@ import water.util.Log;
 import water.util.Utils;
 
 public class Cloud {
+  public static final int PORT = 55555;
+
   public final List<String> publicIPs = new ArrayList<String>();
   public final List<String> privateIPs = new ArrayList<String>();
   /** Includes for rsync to the master */
@@ -38,10 +40,11 @@ public class Cloud {
       throw new IllegalArgumentException("Please specify the JDK to rsync and run on");
     incls.add(jdk);
     File flatfile;
-    if( privateIPs.size() > 0 )
-      flatfile = Utils.writeFile(Utils.join('\n', privateIPs));
-    else
-      flatfile = Utils.writeFile(Utils.join('\n', publicIPs));
+    List<String> ips = privateIPs.size() > 0 ? privateIPs : publicIPs;
+    String s = "";
+    for( Object o : ips )
+      s += (s.length() == 0 ? "" : '\n') + o.toString() + ":" + PORT;
+    flatfile = Utils.writeFile(s);
     incls.add(flatfile.getAbsolutePath());
     master.rsync(incls, excls, false);
 
@@ -58,7 +61,7 @@ public class Cloud {
     p._incls.add(new File(jdk).getName());
     list.add(VM.write(p));
     list.addAll(Arrays.asList(args));
-    String[] java = Utils.add(java_args, NodeVM.class.getName());
+    String[] java = Utils.append(java_args, NodeVM.class.getName());
     SSHWatchdog r = new SSHWatchdog(master, java, list.toArray(new String[0]));
     r.inheritIO();
     r.start();
@@ -81,7 +84,7 @@ public class Cloud {
       Host host = new Host(p._host[0], p._host[1], p._host[2]);
       String key = host.key() != null ? host.key() : "";
       String s = "ssh-agent sh -c \"ssh-add " + key + "; ssh -l " + host.user() + " -A" + Host.SSH_OPTS;
-      s += " -L 54321:127.0.0.1:54321"; // Port forwarding
+      s += " -L " + PORT + ":127.0.0.1:" + PORT; // Port forwarding
       s += " " + host.address() + " '" + SSH.command(p._java, p._node) + "'\"";
       s = s.replace("\\", "\\\\").replace("$", "\\$");
       ArrayList<String> list = new ArrayList<String>();
@@ -103,7 +106,7 @@ public class Cloud {
       VM.exitWithParent();
 
       CloudParams params = VM.read(args[0]);
-      String[] workerArgs = new String[] { "-flatfile", params._flatfile };
+      String[] workerArgs = new String[] { "-flatfile", params._flatfile, "-port", "" + PORT };
 
       List<FlatFileEntry> flatfile = H2O.parseFlatFile(new File(params._flatfile));
       HashMap<String, Host> hosts = new HashMap<String, Host>();
@@ -131,7 +134,7 @@ public class Cloud {
         Thread.sleep(1000);
         Log.unwrap(System.out, "");
         Log.unwrap(System.out, "The cloud is running, with a port forwarded to:");
-        Log.unwrap(System.out, "http://127.0.0.1:54321");
+        Log.unwrap(System.out, "http://127.0.0.1:" + PORT);
       }
     }
   }
