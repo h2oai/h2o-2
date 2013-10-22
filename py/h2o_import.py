@@ -120,17 +120,23 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
     elif "/" in pathWithRegex:
         (head, tail) = os.path.split(pathWithRegex)
         folderPath = os.path.abspath(os.path.join(bucketPath, head))
+
+        # accept all 0xcustomer-datasets without checking..since the current python user
+        # may not have permission, but h2o will
         # try a couple times with os.stat in between, in case it's not automounting
-        retry = 0
-        while checkPath and (not os.path.exists(folderPath)) and retry<5:
-            # we can't stat an actual file, because we could have a regex at the end of the pathname
-            print "Retrying", folderPath, "in case there's a autofs mount problem"
-            os.stat(folderPath)
-            retry += 1
-            time.sleep(1)
-        
-        if checkPath and not os.path.exists(folderPath):
-            raise Exception("%s doesn't exist. %s under %s may be wrong?" % (folderPath, head, bucketPath))
+        if '/mnt/0xcustomer-datasets' in folderPath:
+            pass
+        else:
+            retry = 0
+            while checkPath and (not os.path.exists(folderPath)) and retry<5:
+                # we can't stat an actual file, because we could have a regex at the end of the pathname
+                print "Retrying", folderPath, "in case there's a autofs mount problem"
+                os.stat(folderPath)
+                retry += 1
+                time.sleep(1)
+            
+            if checkPath and not os.path.exists(folderPath):
+                raise Exception("%s doesn't exist. %s under %s may be wrong?" % (folderPath, head, bucketPath))
     else:
         folderPath = bucketPath
         tail = pathWithRegex

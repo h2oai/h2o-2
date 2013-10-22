@@ -8,11 +8,12 @@ def define_params():
         'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
         'beta_epsilon': [None, 0.0001],
         'expert_settings': [None, 0, 1],
-        'family': [None, 'gaussian', 'binomial', 'poisson'],
+        'family': [None, 'gaussian', 'binomial', 'poisson', 'tweedie'],
         'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         'x': [0,1,15,33],
         'lambda': [0, 1e-8, 1e-4],
         'alpha': [0,0.2,0.8],
+        'tweedie_power': [1.00001, 1.9999999],
         # can't use < or <= case_mode if 1!
         # same with > or > if 7
         # maybe don't use 7 because of low frequency in dataset (think xval sampling)
@@ -23,6 +24,9 @@ def define_params():
         'link': [None, 'logit'],
         'max_iter': [None, 10],
         'weight': [None, 1, 2, 4],
+        'n_folds': [None, 0, 1, 2],
+        'standardize': [None, 0, 1],
+
         }
     return paramDict
     
