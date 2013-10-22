@@ -84,6 +84,7 @@ public class Constants extends Iced {
   public static final String ITEMS                 = "items";
   public static final String ITERATIVE_CM          = "iterative_cm";
   public static final String JOB                   = "job";
+  public static final String JOB_KEY               = "job_key";
   public static final String JOBS                  = "jobs";
   public static final String JSON_H2O              = "h2o";
   public static final String KEY                   = "key";
