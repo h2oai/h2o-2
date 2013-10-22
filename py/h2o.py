@@ -1897,7 +1897,7 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'destination_key': None,
-                'vresponse': None,
+                'response': None,
                 'ignored_cols': None,
                 'max_iter': None,
                 'standardize': None,

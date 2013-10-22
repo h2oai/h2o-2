@@ -236,7 +236,7 @@ public class StableAPITest {
     regR(GBM.class, "destination_key", "source", "response", "cols", "ntrees", "max_depth", "learn_rate", "min_rows", "classification");
     regR(GBMModelView.class, "_modelKey");
     regR(GLM.class, "key", "y", "x", "family", "n_folds", "alpha", "lambda", "expert_settings", "beta_epsilon", "standardize", "case_mode", "case", "tweedie_power");
-    regR(GLM2.class, "source", "destination_key", "vresponse", "ignored_cols", "family", "n_folds", "alpha", "lambda", "standardize", "tweedie_variance_power");
+    regR(GLM2.class, "source", "destination_key", "response", "ignored_cols", "family", "n_folds", "alpha", "lambda", "standardize", "tweedie_variance_power");
     regR(GLMGrid.class, "key", "y", "x", "family", "n_folds", "alpha", "lambda", "case_mode", "case", "parallel" );
     regR(GLMGridProgress.class, "destination_key");
     regR(GLMModelView.class, "_modelKey");
