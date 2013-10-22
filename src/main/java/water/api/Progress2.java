@@ -1,7 +1,6 @@
 package water.api;
 
 import water.*;
-import water.api.Request.Default;
 import water.api.RequestServer.API_VERSION;
 
 public class Progress2 extends Request2 {
