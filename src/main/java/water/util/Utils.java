@@ -716,4 +716,15 @@ public class Utils {
     }
     return sb.toString();
   }
+
+  static public boolean isEmpty(int[] a) { return a==null || a.length == 0; }
+  static public boolean contains(int[] a, int d) { for(int i=0; i<a.length; i++) if (a[i]==d) return true; return false; }
+  static public int[] difference(int a[], int b[]) {
+    int[] r = new int[a.length];
+    int cnt = 0;
+    for (int i=0; i<a.length; i++) {
+      if (!contains(b, a[i])) r[cnt++] = a[i];
+    }
+    return Arrays.copyOf(r, cnt);
+  }
 }

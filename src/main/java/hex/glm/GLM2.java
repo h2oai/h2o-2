@@ -9,32 +9,21 @@ import hex.glm.GLMTask.YMUTask;
 import hex.glm.GLMValidation.GLMXValidation;
 import hex.glm.LSMSolver.ADMMSolver;
 
-import java.io.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.concurrent.Future;
 
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
-import water.Job.FrameJob;
+import water.Job.ModelJob;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Utils;
 
-public class GLM2 extends FrameJob {
-
-  @API(help="", required=true, filter=GLMResponseVecSelect.class)
-  public Vec vresponse;
-  class GLMResponseVecSelect extends VecClassSelect { GLMResponseVecSelect() { super("source"); } }
-
-  @API(help="columns to ignore",required=false,filter=GLMMultiVecSelect.class)
-  public int [] ignored_cols = new int []{};
-  class GLMMultiVecSelect extends MultiVecSelect { GLMMultiVecSelect() { super("source");} }
-
-  @API(help = "The GLM Model")
-  public GLMModel glm_model;
+public class GLM2 extends ModelJob {
 
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000)
   int max_iter = 50;
@@ -189,7 +178,7 @@ public class GLM2 extends FrameJob {
     final Vec [] vecs =  fr.vecs();
     ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
     for(int i = 0; i < vecs.length-1; ++i)// put response to the end
-      if(vecs[i] == vresponse){
+      if(vecs[i] == response){
         fr.add(fr._names[i], fr.remove(i));
         break;
       }
