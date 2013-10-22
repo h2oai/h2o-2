@@ -21,45 +21,45 @@ setClass("H2OGBMModel", contains="H2OModel")
 setClass("H2OGBMGrid", contains="H2OGrid")
 
 # Register finalizers for H2O data and model objects
-setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
-  .Object@h2o = h2o
-  .Object@key = key
-  .Object@env = new.env()
-  
-  assign("h2o", .Object@h2o, envir = .Object@env)
-  assign("key", .Object@key, envir = .Object@env)
-  
-  # Empty keys don't refer to any object in H2O
-  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
-  return(.Object)
-})
-
-setMethod("initialize", "H2OParsedData", function(.Object, h2o = new("H2OClient"), key = "") {
-  .Object@h2o = h2o
-  .Object@key = key
-  .Object@env = new.env()
-  
-  assign("h2o", .Object@h2o, envir = .Object@env)
-  assign("key", .Object@key, envir = .Object@env)
-  
-  # Empty keys don't refer to any object in H2O
-  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
-  return(.Object)
-})
-
-setMethod("initialize", "H2OModel", function(.Object, key = "", data = new("H2OParsedData"), model = list()) {
-  .Object@key = key
-  .Object@data = data
-  .Object@model = model
-  .Object@env = new.env()
-  
-  assign("h2o", .Object@data@h2o, envir = .Object@env)
-  assign("key", .Object@key, envir = .Object@env)
-  
-  # Empty keys don't refer to any object in H2O
-  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
-  return(.Object)
-})
+# setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
+#   .Object@h2o = h2o
+#   .Object@key = key
+#   .Object@env = new.env()
+#   
+#   assign("h2o", .Object@h2o, envir = .Object@env)
+#   assign("key", .Object@key, envir = .Object@env)
+#   
+#   # Empty keys don't refer to any object in H2O
+#   if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+#   return(.Object)
+# })
+# 
+# setMethod("initialize", "H2OParsedData", function(.Object, h2o = new("H2OClient"), key = "") {
+#   .Object@h2o = h2o
+#   .Object@key = key
+#   .Object@env = new.env()
+#   
+#   assign("h2o", .Object@h2o, envir = .Object@env)
+#   assign("key", .Object@key, envir = .Object@env)
+#   
+#   # Empty keys don't refer to any object in H2O
+#   if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+#   return(.Object)
+# })
+# 
+# setMethod("initialize", "H2OModel", function(.Object, key = "", data = new("H2OParsedData"), model = list()) {
+#   .Object@key = key
+#   .Object@data = data
+#   .Object@model = model
+#   .Object@env = new.env()
+#   
+#   assign("h2o", .Object@data@h2o, envir = .Object@env)
+#   assign("key", .Object@key, envir = .Object@env)
+#   
+#   # Empty keys don't refer to any object in H2O
+#   if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+#   return(.Object)
+# })
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -378,7 +378,7 @@ setMethod("summary", "H2OPCAModel", function(object) {
 })
 
 setMethod("as.data.frame", "H2OParsedData", function(x) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/DownloadDataset?src_key=', x@key, sep='')
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
   ttt <- getURL(url)
   read.csv(textConnection(ttt))
 })

@@ -1243,9 +1243,15 @@ class H2O(object):
         params_dict = {
             'source_key': key, # can be a regex
             'destination_key': key2,
+            'parser_type': None,
+            'separator': None,
+            'header': None,
+            'single_quotes': None,
+            'header_from_file': None,
+            'exclude': None,
+            'preview': None,
             }
-        params_dict.update(kwargs)
-        print "\n%s params list:" % algo, params_dict
+        check_params_update_kwargs(params_dict, kwargs, 'parse', print_params=True)
 
         # h2o requires header=1 if header_from_file is used. Force it here to avoid bad test issues
         if kwargs.get('header_from_file'): # default None
@@ -1885,29 +1891,54 @@ class H2O(object):
         parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso',False)
-        
-        if not beta_features:
+        if beta_features:
             params_dict = {
-                'family': 'binomial',
-                'key': key,
-                'y': 1,
-                'link': 'familyDefault',
-            }
+                'source': key,
+                'destination_key': None,
+                'vresponse': None,
+                'ignored_cols': None,
+                'max_iter': None,
+                'standardize': None,
+                'family': None,
+                'link': None,
+                'alpha': None,
+                'lambda': None,
+                'beta_epsilon': None,
+                'tweedie_variance_power': None,
+                'n_folds': None,
+                'case_mode': None,
+                'case_val': None, 
+                'weight': None,
+                'thresholds': None,
+                # only GLMGrid has this..we should complain about it on GLM?
+                'parallel': None,
+            } 
         else:
-            params_dict =      {'source'             : key,
-                                'vresponse'          : None,
-                                'ignored_cols'       : None,
-                                'family'             : None,
-                                'lambda'             : None,
-                                'alpha'              : None,
-                                'n_folds'            : None,
-                                'case_mode'          : None,
-                                'case_val'           : None, 
-                                'destination_key'    : None,
-                               } 
+            params_dict = {
+                'key': key,
+                'destination_key': None,
+                'x': None,
+                'y': None,
+                'max_iter': None,
+                'standardize': None,
+                'family': None,
+                'link': None,
+                'alpha': None,
+                'lambda': None,
+                'beta_epsilon': None,
+                'tweedie_power': None,
+                'n_folds': None,
+                'case_mode': None,
+                'case': None, 
+                'weight': None,
+                'lsm_solver': None,
+                'expert_settings': None,
+                'thresholds': None,
+                # only GLMGrid has these..we should complain about it on GLM?
+                'parallel': None,
+            }
 
-        params_dict.update(kwargs)
-        print "\n"+parentName, "params list:", params_dict
+        check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
         verboseprint(parentName, dump_json(a))
         return a
@@ -1920,9 +1951,13 @@ class H2O(object):
         # Check that the response has the right Progress url it's going to steer us to.
         if noPoll:
             return a
-        if a['response']['redirect_request']!='GLMProgressPage':
+        
+        if not beta_features:
+            if a['response']['redirect_request']!='GLMProgressPage':
+                print dump_json(a)
+                raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
+        else:
             print dump_json(a)
-            raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
 
         if noPoll:
             return a
@@ -1939,16 +1974,19 @@ class H2O(object):
             time.sleep(5)
         return a
 
-    # this only exists in new. old will fail
     def GLMGrid(self, key,
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", parallel=1, **kwargs)
+
         # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request']!='GLMGridProgress':
+        if not beta_features:
+            if a['response']['redirect_request']!='GLMGridProgress':
+                print dump_json(a)
+                raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
+        else:
             print dump_json(a)
-            raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
 
         if noPoll:
             return a

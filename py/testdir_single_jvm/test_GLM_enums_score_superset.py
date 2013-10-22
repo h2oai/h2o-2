@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
             # score with same dataset (will change to recreated dataset with one less enum
             glmScore = h2o_cmd.runGLMScore(key=parseResult['destination_key'],
                 model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-            print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+            print "glmScore end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             ### print h2o.dump_json(glmScore)
             classErr = glmScore['validation']['classErr']
             auc = glmScore['validation']['auc']

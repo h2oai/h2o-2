@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
         csvPathname = importFolderPath + "/" + csvFilename
         hex_key = csvFilename + ".hex"
 
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='local', hex_key=hex_key,
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='local', hex_key=hex_key, 
              timeoutSecs=180, noPoll=True, doSummary=False)
         h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -41,7 +41,8 @@ class Basic(unittest.TestCase):
         family    = 'binomial'
         alpha     = '0.5'
         lambda_   = '1E-4'
-        nfolds    = '5'
+        nfolds    = '5' # fails
+        nfolds    = '0'
         case_mode = '='
         case_val  = '1'
         f         = 'prostate'
@@ -51,15 +52,19 @@ class Basic(unittest.TestCase):
                          'family'             : family,
                          'lambda'             : lambda_,
                          'alpha'              : alpha,
-                         'n_folds'            : nfolds,
+                         'n_folds'            : nfolds, # passes if 0, fails otherwise
                          #'case_mode'          : case_mode,
                          #'case_val'           : case_val, 
                          'destination_key'    : "GLM("+f+")",
                  }
+
+
+        BUG1 = True
+
         timeoutSecs = 60
         
         start = time.time()
-        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, noPoll=True, **kwargs)
+        glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=0.25, pollTimeoutSecs=180, noPoll=BUG1, **kwargs)
 
         h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
 

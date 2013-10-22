@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
 
         importFolderPath = "mnist"
         csvPathname = importFolderPath + "/*"
-        (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3n')
+        (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3n', timeoutSecs=120)
         s3nFullList = importHDFSResult['succeeded']
         self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 

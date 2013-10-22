@@ -8,11 +8,11 @@ DATE=`date +%Y-%m-%d`
 archive="Archive"
 
 function all {
-    doAlgo pca
-    doAlgo glm
-    doAlgo kmeans
-    doAlgo gbm
-    doAlgo glm2
+    doAlgo pca;   wait;  makeDead > /dev/null;
+    doAlgo kmeans wait;  makeDead > /dev/null;
+    doAlgo glm;   wait;  makeDead > /dev/null;
+    doAlgo glm2;  wait;  makeDead > /dev/null;
+    doAlgo gbm;   wait;  makeDead > /dev/null;
 #    doAlgo gbmgrid
 #    doAlgo bigkmeans
 }
@@ -29,8 +29,12 @@ function doAlgo {
     wait
     if [ ! $1 = "bigkmeans" ]
     then
-        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False
-        wait 
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air1x;    wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air10x;   wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB1x;   wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB10x;  wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB100x; wait; makeDead > /dev/null;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air100x;  wait; makeDead > /dev/null;
     else
         python ${pyScript} ${h2oBuild} ${DEBUG} #bigKM can also run in debug
         wait
@@ -41,12 +45,24 @@ function doAlgo {
     bash startloggers.sh ${JSON} ice $1
 }
 
+function makeDead {
+    ps -efww | grep h2o|grep spencer|grep jar| awk '{print $2}' | xargs kill
+    ps -efww | grep h2o|grep 0xdiag |grep jar| awk '{print $2}' | xargs kill
+}
+
 function debug {
     for a in $@
     do
-        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air1x;    wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air10x;   wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB1x;   wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB10x;  wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB100x; wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air100x;  wait; 
+        #python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
     done
 }
+
 
 usage()
 {
