@@ -90,7 +90,7 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
         h2o.beta_features = True
         kwargs    = params.copy()
         glmStart  = time.time()
-        glm       = h2o_cmd.runGLM(parseResult = parseResult, noPoll=True, **kwargs)
+        glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=1800, noPoll=True, **kwargs)
         h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
         glmTime   = time.time() - glmStart
         #glm       = h2o.nodes[0].inspect("GLM("+f+")")
