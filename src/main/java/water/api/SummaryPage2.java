@@ -73,7 +73,7 @@ public class SummaryPage2 extends Request2 {
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++) {
-        (_summaries[i]=new Summary2(cs[i]._vec)).add(cs[i]);
+        (_summaries[i]=new Summary2(_fr.vecs()[i])).add(cs[i]);
       }
     }
     @Override public void reduce(SummaryTask2 other) {

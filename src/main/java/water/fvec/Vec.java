@@ -297,8 +297,11 @@ public class Vec extends Iced {
       _max = Math.max(_max,rs._max);
       _naCnt += rs._naCnt;
       double delta = _mean - rs._mean;
-      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
-      _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
+      if (_rows == 0) { _mean = rs._mean;  _sigma = rs._sigma; }
+      else if (rs._rows > 0) {
+        _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
+        _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
+      }
       _rows += rs._rows;
       _size += rs._size;
       _isInt &= rs._isInt;
