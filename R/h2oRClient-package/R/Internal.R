@@ -57,11 +57,11 @@ h2o.__remoteSend <- function(client, page, ...) {
     temp = getURLContent(url)
   else
     temp = getForm(url, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
-  # after = gsub("NaN", "\"NaN\"", temp[1])
-  after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
-  after = gsub("NaN", "\"NaN\"", after)
-  after = gsub("-Infinity", "\"-Inf\"", after)
-  after = gsub("Infinity", "\"Inf\"", after)
+  # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
+  # after = gsub("NaN", "\"NaN\"", after)
+  # after = gsub("-Infinity", "\"-Inf\"", temp[1])
+  # after = gsub("Infinity", "\"Inf\"", after)
+  after = gsub("Infinity", "Inf", temp[1])
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
