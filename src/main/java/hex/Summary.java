@@ -36,7 +36,8 @@ public class Summary extends Iced {
       _colId = colId;
       Column c = s.ary()._cols[colId];
       _enum = c.isEnum();
-      if(c._min == c._max){ // constant columns pecial case, not really any meaningfull data here, just don't blow up
+      // special case constant columns or columns entirely NA
+      if(c._min == c._max || (Double.isInfinite(c._min) && Double.isInfinite(c._max))){
         _start = c._min;
         _binsz = _binszInv = 1;
         _end = _start+1;
@@ -127,7 +128,9 @@ public class Summary extends Iced {
 
     void add(ColSummary other) {
       assert _bins.length == other._bins.length;
-      assert Math.abs(_start - other._start) < 0.000001:"start - other._start = " + (_start - other._start);
+
+      // double infinity checks: column that is entirely NA
+      assert Math.abs(_start - other._start) < 0.000001 || (Double.isInfinite(_start) && Double.isInfinite(other._start)):"start - other._start = " + (_start - other._start);
       assert Math.abs(_binszInv - other._binszInv) < 0.000000001;
       _n += other._n;
       _nzero += other._nzero;
@@ -237,7 +240,7 @@ public class Summary extends Iced {
         }
         res.add("max", max);
         res.addProperty("mean", _summary._ary._cols[_colId]._mean);
-        res.addProperty("sigma", _summary._ary._cols[_colId]._sigma);
+        res.addProperty("sigma", _summary._ary._cols[_colId]._sigma + 0.f  /* elh: get rid of negative zero*/);
         res.addProperty("zeros", _nzero);
       }
       res.addProperty("N", _n);
