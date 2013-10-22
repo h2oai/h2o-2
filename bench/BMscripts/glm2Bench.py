@@ -5,7 +5,7 @@ sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 from pprint import pprint
 
-csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','nPredictors','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','nIterations','AUC','AIC','AverageError')
+csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','nPredictors','trainParseWallTime','nfolds','glm2BuildTime','testParseWallTime','nIterations','AUC','AIC','AverageError')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},

@@ -13,7 +13,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
 build = ""
 debug = False
 def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
-    debug = False
+    #debug = False
     bench = "bench"
     if debug:
         print "Doing GBM DEBUG"

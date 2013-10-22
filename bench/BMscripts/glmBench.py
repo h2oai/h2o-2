@@ -6,13 +6,13 @@ import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2
 
 csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error')
 
-files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x'),          'test' : 'AirlinesTest'},
+files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
              }
 build = ""
 debug = False
 def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex, row):
-    debug = False
+    #debug = False
     bench = "bench"
     if debug:
         print "DOING GLM DEBUG"
@@ -144,7 +144,7 @@ if __name__ == '__main__':
         
         row = {'testParseWallTime' : elapsedAirlinesTestParse}
         x = "Year,Month,DayofMonth,DayofWeek,CRSDepTime,CRSArrTime,UniqueCarrier,CRSElapsedTime,Origin,Dest,Distance"
-        doGLM(f, 'Airlines', 'binomial', 'logit', 1E-5, 0.5, 10, 'IsDepDelayed', x, testFile['destination_key'], row)
+        doGLM(fs, 'Airlines', 'binomial', 'logit', 1E-5, 0.5, 10, 'IsDepDelayed', x, testFile['destination_key'], row)
 
     if fp == 'AllBedrooms':
         allBedroomsTestParseStart   = time.time()
