@@ -225,7 +225,11 @@ class ASTSlice extends AST {
     }
     // Got a frame/list of results.
     // Decide if we're a toss-out or toss-in list
-    throw H2O.unimpl();
+    Frame fr = env.popFrame();
+    try {
+      if( fr.numCols() > 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
+      throw H2O.unimpl();
+    } finally { env.subRef(fr); }
   }
 }
 

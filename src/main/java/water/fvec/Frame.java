@@ -441,7 +441,7 @@ public class Frame extends Iced {
     int c2[] = null;
     if( cols==null ) {
       c2 = new int[numCols()];
-      for( int i=0; i<cols.length; i++ ) cols[i]=i;
+      for( int i=0; i<c2.length; i++ ) c2[i]=i;
     } else if( cols.length==0 ) {
       c2 = new int[0];
     } else if( cols[0] > 0 ) {

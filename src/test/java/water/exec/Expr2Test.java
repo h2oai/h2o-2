@@ -11,7 +11,7 @@ public class Expr2Test extends TestUtil {
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
-      File file = TestUtil.find_test_file("smalldata/cars.csv");
+      File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
@@ -26,11 +26,11 @@ public class Expr2Test extends TestUtil {
       checkStr("+(1.23,2,3)");  // Syntax error, too many args
       checkStr("h.hex[2,3]");   // Scalar selection
       checkStr("h.hex[2,+]");   // Function not allowed
-      checkStr("h.hex[2+4,-4]");
-      checkStr("h.hex[2+3,h.hex]");
-      checkStr("h.hex[2,]");
-      checkStr("h.hex[,3]");
-      checkStr("h.hex+1");
+      checkStr("h.hex[2+4,-4]");// Select row 6, all-cols but 4
+      checkStr("h.hex[2+3,h.hex]"); // Error: col selector has too many columns
+      checkStr("h.hex[2,]");    // Row 2 all cols
+      checkStr("h.hex[,3]");    // Col 3 all rows
+      checkStr("h.hex+1");      // Broadcast scalar over ary
       checkStr("h.hex-h.hex");
       checkStr("1.23+(h.hex-h.hex)");
       checkStr("(1.23+h.hex)-h.hex");
@@ -98,7 +98,7 @@ public class Expr2Test extends TestUtil {
     Env env=null;
     try { 
       env = Exec2.exec(s); 
-      System.out.println(env.result());
+      System.out.println(env.resultString());
     } 
     catch( IllegalArgumentException iae ) { System.out.println(iae.getMessage()); }
     if( env != null ) env.remove();
