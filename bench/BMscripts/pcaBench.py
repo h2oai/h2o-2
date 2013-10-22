@@ -13,7 +13,7 @@ files      = {'Airlines'   : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', '
 build = ""
 debug = False
 def doPCA(f, folderPath):
-    #debug = False
+    debug = False
     bench = "bench"
     if debug:
         print "Doing PCA DEBUG"
