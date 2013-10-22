@@ -2,7 +2,6 @@ package hex;
 
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-import hex.NeuralNet.NeuralNetScore;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.File;
@@ -59,12 +58,12 @@ public class NeuralNetIrisTest extends TestUtil {
     Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
     Vec labels = _train.vecs()[_train.vecs().length - 1];
     labels.asEnum();
-    VecsInput input = new VecsInput(data);
+    VecsInput input = new VecsInput(data, null);
     Layer[] ls = new Layer[3];
     ls[0] = input;
     ls[1] = new Layer.Tanh(7);
     ls[1]._rate = rate;
-    ls[2] = new VecSoftmax(labels);
+    ls[2] = new VecSoftmax(labels, null);
     ls[2]._rate = rate;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
@@ -110,13 +109,13 @@ public class NeuralNetIrisTest extends TestUtil {
     }
 
     // Make sure errors are equal
-    NeuralNet.Error train = NeuralNetScore.run(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    NeuralNet.Error train = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
     data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
     labels = _test.vecs()[_test.vecs().length - 1];
     input._vecs = data;
     input._len = data[0].length();
     ((VecSoftmax) ls[2])._vec = labels;
-    NeuralNet.Error test = NeuralNetScore.run(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    NeuralNet.Error test = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
     Assert.assertEquals(trainAcc, train.Value, epsilon);
     float testAcc = ref._nn.Accuracy(ref._testData);

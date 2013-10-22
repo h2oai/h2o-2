@@ -12,11 +12,22 @@ def pickRandGlmParams(paramDict, params):
         if (randomKey=='x'):
             colX = randomValue
 
+        # force legal family/ink combos
         if 'family' in params and 'link' in params: 
-            # don't allow logit for poisson
-            if params['family'] is not None and params['family'] == 'poisson':
-                if params['link'] is not None and params['link'] in ('logit'):
-                    params['link'] = None # use default link for poisson always
+            if params['family'] is not None:
+                if params['family'] == 'poisson':
+                    if params['link'] is not None and params['link'] not in ('identity', 'log', 'inverse', 'familyDefault'):
+                        params['link'] = None 
+                # only tweedie/tweedie is legal?
+                if params['family'] == 'tweedie':
+                    if params['link'] is not None and params['link'] not in ('tweedie'):
+                        params['link'] = None
+                if params['family'] == 'binomial':
+                    if params['link'] is not None and params['link'] not in ('logit', 'identity', 'log', 'inverse', 'familyDefault'):
+                        params['link'] = None
+                if params['family'] == 'gaussian':
+                    if params['link'] is not None and params['link'] not in ('logit', 'identity', 'log', 'inverse', 'familyDefault'):
+                        params['link'] = None
 
         # case only used if binomial? binomial is default if no family
         if 'family' not in params or params['family'] == 'binomial':
@@ -430,4 +441,28 @@ def goodXFromColumnInfo(y,
     else:
         return x
 
+# keepList is a list of column names
+def findXFromColumnInfo(key=None, keepList=None, timeoutSecs=120, noPrint=False):
+
+    (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
+        h2o_cmd.columnInfoFromInspect(key, exceptionOnMissingValues=False, 
+        max_column_display=99999999, timeoutSecs=timeoutSecs)
+
+    num_cols = len(colNameDict)
+    x = range(num_cols)
+
+    # need to walk over a copy, cause we change x
+    xOrig = x[:]
+    for k in xOrig:
+        name = colNameDict[k]
+        if not name in keepList:
+            if not noPrint:
+                print "Removing %d because name: %s isn't in keepList %s" % (k, name, keepList)
+            x.remove(k)
+
+    if not noPrint:
+        print "x has", len(x), "cols"
+        strX = ",".join(map(str,x))
+        print "\nmatching keepList x:",strX 
+    return strX
 

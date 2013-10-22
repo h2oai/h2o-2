@@ -224,7 +224,7 @@ public class GLMTest2  extends TestUtil {
         for(String s:ignores) UKV.remove(fr.remove(s)._key);
       // put the response to the end
       fr.add(response, fr.remove(response));
-      return GLMTask.adaptFrame(fr);
+      return fr;
     }finally{
       UKV.remove(k);
     }

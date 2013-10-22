@@ -5,7 +5,6 @@ import hex.Layer.Tanh;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.NeuralNet.Error;
-import hex.NeuralNet.NeuralNetScore;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -32,11 +31,19 @@ public class Sample07_NeuralNet_Mnist {
     }
   }
 
-  public Layer[] build(Vec[] data, Vec labels, VecsInput stats) {
+  protected Vec[] _train, _test;
+
+  public void load() {
+    _train = TestUtil.parseFrame("smalldata/mnist/train.csv.gz").vecs();
+    _test = TestUtil.parseFrame("smalldata/mnist/test.csv.gz").vecs();
+    NeuralNet.reChunk(_train);
+  }
+
+  public Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[3];
-    ls[0] = new VecsInput(data, stats);
+    ls[0] = new VecsInput(data, inputStats);
     ls[1] = new Tanh(500);
-    ls[2] = new VecSoftmax(labels);
+    ls[2] = new VecSoftmax(labels, outputStats);
     ls[1]._rate = .05f;
     ls[2]._rate = .02f;
     ls[1]._l2 = .0001f;
@@ -49,27 +56,23 @@ public class Sample07_NeuralNet_Mnist {
   }
 
   public void run() {
-    // Load data
-    Vec[] train = TestUtil.parseFrame("smalldata/mnist/train.csv.gz").vecs();
-    Vec[] test = TestUtil.parseFrame("smalldata/mnist/test.csv.gz").vecs();
-    NeuralNet.reChunk(train);
+    load();
 
     // Labels are on last column for this dataset
-    Vec trainLabels = train[train.length - 1];
+    Vec trainLabels = _train[_train.length - 1];
     trainLabels.asEnum();
-    train = Utils.remove(train, train.length - 1);
-    Vec testLabels = test[test.length - 1];
-    test = Utils.remove(test, test.length - 1);
+    _train = Utils.remove(_train, _train.length - 1);
+    Vec testLabels = _test[_test.length - 1];
+    _test = Utils.remove(_test, _test.length - 1);
 
     // Build net and start training
-    Layer[] ls = build(train, trainLabels, null);
-    Trainer trainer = new Trainer.MapReduce(ls);
+    Layer[] ls = build(_train, trainLabels, null, null);
+    //Trainer trainer = new Trainer.MapReduce(ls);
+    Trainer trainer = new Trainer.Direct(ls);
     trainer.start();
 
     // Monitor training
     long start = System.nanoTime();
-    long lastTime = start;
-    long lastItems = 0;
     for( ;; ) {
       try {
         Thread.sleep(2000);
@@ -77,24 +80,20 @@ public class Sample07_NeuralNet_Mnist {
         throw new RuntimeException(e);
       }
 
-      long time = System.nanoTime();
-      double delta = (time - lastTime) / 1e9;
-      double total = (time - start) / 1e9;
+      double time = (System.nanoTime() - start) / 1e9;
       long steps = trainer.items();
-      int ps = (int) ((steps - lastItems) / delta);
-      String text = (int) total + "s, " + steps + " steps (" + (ps) + "/s) ";
-      lastTime = time;
-      lastItems = steps;
+      int ps = (int) (steps / time);
+      String text = (int) time + "s, " + steps + " steps (" + (ps) + "/s) ";
 
       // Build separate nets for scoring purposes, use same normalization stats as for training
-      Layer[] temp = build(train, trainLabels, (VecsInput) ls[0]);
+      Layer[] temp = build(_train, trainLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
       Layer.copyWeights(ls, temp);
-      Error error = NeuralNetScore.run(temp, NeuralNet.EVAL_ROW_COUNT, null);
+      Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
       text += "train: " + error;
 
-      temp = build(test, testLabels, (VecsInput) ls[0]);
+      temp = build(_test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
       Layer.copyWeights(ls, temp);
-      error = NeuralNetScore.run(temp, NeuralNet.EVAL_ROW_COUNT, null);
+      error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
       text += ", test: " + error;
 
       System.out.println(text);

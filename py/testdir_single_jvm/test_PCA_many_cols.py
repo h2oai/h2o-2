@@ -154,9 +154,9 @@ class Basic(unittest.TestCase):
                     # just score with same data
                     score_params = {
                         'destination_key': scoreKey,
-                        'model_key': modelKey,
+                        'model': modelKey,
                         'num_pc': 2,
-                        'key':  hex_key,
+                        'source':  hex_key,
                     }
                     kwargs = score_params.copy()
                     pcaScoreResult = h2o.nodes[0].pca_score(timeoutSecs=timeoutSecs, **kwargs)

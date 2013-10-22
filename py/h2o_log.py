@@ -28,21 +28,3 @@ def checkH2OLogs(timeoutSecs=3, expectedMinLines=12):
     # now that all the logs are there
     h2o.check_sandbox_for_errors()
     return (logNameList, lineCountList)
-
-def getH2OScripts(timeoutSecs=30):
-    # download and view using each node, just to see we can
-    # each overwrites
-    scriptNameList = []
-    lineCountList = []
-    for i,h in enumerate(h2o.nodes):
-        pathname = "sandbox/script_" + str(i) + ".txt"
-        h.script_download(pathname, timeoutSecs)
-        scriptNameList.append(pathname)
-
-    for scriptName in scriptNameList:
-        lineCount = h2o_util.file_line_count(scriptName)
-        print scriptName, "lineCount:", lineCount
-        lineCountList.append(lineCount)
-
-    print scriptNameList
-    return (scriptNameList, lineCountList)

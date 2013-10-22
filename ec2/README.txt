@@ -19,8 +19,14 @@ At a minimum, you need to specify an ssh key name and a security group name.
 
 % ./h2o-cluster-launch-instances.py
 % ./h2o-cluster-distribute-h2o.sh  --OR--  ./h2o-cluster-download-h2o.sh
+% [optional] ./h2o-cluster-distribute-aws-credentials.sh
 
-(Download may be faster than distribute, since download pulls from S3.)
+Note:  Download may be faster than distribute, since download pulls from S3.
+
+Note:  Distributing the AWS credentials copies the Amazon AWS_ACCESS_KEY_ID
+       and AWS_SECRET_ACCESS_KEY to the instances.  This enables S3 and S3N
+       access.  Take precaution when putting your security keys in the 
+       cloud.
 
 
 STEP 2:  Start H2O, one H2O node per EC2 instance
@@ -60,6 +66,10 @@ Control files (generated when starting the cluster and/or H2O)
 
     project_version (produced by h2o-cluster-download-h2o.sh)
         Full project version number for the requested build.
+
+    core-site.xml (produced by ./h2o-cluster-distribute-aws-credentials.sh)
+    aws_credentials.properties (produced by ./h2o-cluster-distribute-aws-credentials.sh)
+        AWS credentials copied to each instance.
 
 
 Stopping/Terminating the cluster

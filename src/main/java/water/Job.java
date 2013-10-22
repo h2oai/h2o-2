@@ -7,11 +7,15 @@ import org.apache.commons.lang.ArrayUtils;
 
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
+import water.H2O.H2OEmptyCompleter;
 import water.api.*;
+import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
 import water.util.Utils.ExpectedExceptionForDebug;
+import static water.util.Utils.isEmpty;
+import static water.util.Utils.difference;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -21,6 +25,7 @@ public class Job extends Request2 {
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
   private static final int KEEP_LAST_COUNT = 100;
   public static final long CANCELLED_END_TIME = -1;
+  private static final int[] EMPTY = new int[0];
 
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
@@ -76,52 +81,57 @@ public class Job extends Request2 {
     public int[] cols;
     class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
-    @API(help = "Ignored columns by name", filter=colsFilter.class, displayName="Ignored columns")
-    public int[] ignored_cols_by_name;
+    @API(help = "Ignored columns by name and zero-based index", filter=colsNamesIdxFilter.class, displayName="Ignored columns")
+    public int[] ignored_cols = EMPTY;
+    class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
+
+    @API(help = "Ignored columns by name", filter=colsNamesFilter.class, displayName="Ignored columns by name", hide=true)
+    public int[] ignored_cols_by_name = EMPTY;
     class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
 
     @Override protected void logStart() {
       super.logStart();
       if (cols == null) {
         Log.info("    cols: null");
-      }
-      else {
+      } else {
         Log.info("    cols: " + cols.length + " columns selected");
       }
 
-      if (ignored_cols_by_name == null) {
+      if (ignored_cols == null) {
         Log.info("    ignored_cols: null");
-      }
-      else {
-        Log.info("    ignored_cols: " + ignored_cols_by_name.length + " columns ignored");
+      } else {
+        Log.info("    ignored_cols: " + ignored_cols.length + " columns ignored");
       }
     }
 
     @Override protected void init() {
       super.init();
 
-      if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
-        throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
-      if( (cols != null && cols.length > 0) && (ignored_cols_by_name != null && ignored_cols_by_name.length > 0) )
-        throw new IllegalArgumentException("Arguments 'cols' and 'ignored_cols_by_name' are exclusive");
-      if(cols == null || cols.length == 0) {
+      // At most one of the following may be specified.
+      int specified = 0;
+      if (!isEmpty(cols)) { specified++; }
+      if (!isEmpty(ignored_cols)) { specified++; }
+      if (!isEmpty(ignored_cols_by_name)) { specified++; }
+      if (specified > 1) throw new IllegalArgumentException("Arguments 'cols', 'ignored_cols_by_name', and 'ignored_cols' are exclusive");
+
+      // If the column are not specified, then select everything.
+      if (isEmpty(cols)) {
         cols = new int[source.vecs().length];
         for( int i = 0; i < cols.length; i++ )
           cols[i] = i;
+      } else {
+        if (!checkIdx(source, cols)) throw new IllegalArgumentException("Argument 'cols' specified invalid column!");
       }
-      int length = cols.length;
-      for( int g = 0; ignored_cols_by_name != null && g < ignored_cols_by_name.length; g++ ) {
-        for( int i = 0; i < cols.length; i++ ) {
-          if(cols[i] == ignored_cols_by_name[g]) {
-            length--;
-            // Move all, try to keep ordering
-            System.arraycopy(cols, i + 1, cols, i, length - i);
-            break;
-          }
-        }
+      // Make a set difference between cols and (ignored_cols || ignored_cols_by_name)
+      if (!isEmpty(ignored_cols) || !isEmpty(ignored_cols_by_name)) {
+        int[] icols = ! isEmpty(ignored_cols) ? ignored_cols : ignored_cols_by_name;
+        if (!checkIdx(source, icols)) throw new IllegalArgumentException("Argument '"+(!isEmpty(ignored_cols) ? "ignored_cols" : "ignored_cols_by_name")+"' specified invalid column!");
+        cols = difference(cols, icols);
+        // Setup all variables in consistence way
+        ignored_cols = icols;
+        ignored_cols_by_name = icols;
       }
-      if( length != cols.length )
-        cols = ArrayUtils.subarray(cols, 0, length);
+
       if( cols.length == 0 )
         throw new IllegalArgumentException("No column selected");
     }
@@ -146,9 +156,9 @@ public class Job extends Request2 {
     public boolean classification = true;
     class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
-    @Override protected void registered() {
-      super.registered();
-      Argument c = find("ignored_cols_by_name");
+    @Override protected void registered(API_VERSION ver) {
+      super.registered(ver);
+      Argument c = find("ignored_cols");
       Argument r = find("response");
       int ci = _arguments.indexOf(c);
       int ri = _arguments.indexOf(r);
@@ -244,6 +254,15 @@ public class Job extends Request2 {
 
   static final class List extends Iced {
     Job[] _jobs = new Job[0];
+
+    @Override
+    public List clone(){
+      List l = new List();
+      l._jobs = _jobs.clone();
+      for(int i = 0; i < l._jobs.length; ++i)
+        l._jobs[i] = (Job)l._jobs[i].clone();
+      return l;
+    }
   }
 
   public static Job[] all() {
@@ -266,9 +285,15 @@ public class Job extends Request2 {
     return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
   }
 
-  public <T extends H2OCountedCompleter> T start(final T fjtask) {
-    _fjtask = fjtask;
-    DKV.put(job_key, new Value(job_key, new byte[0]));
+  public void start(final H2OCountedCompleter fjtask) {
+    // Subtle FJ stuff: we create another counted completer and set it as completer of the user's task.
+    // This is to ensure that if anyone calls this.get() it will block until all completion methods
+    // (if there are any) of the _fjtask completed. Common case is that the user's FJtask has
+    // on(Exceptionl)Completion method removing the job. Calling get() directly on it opens up a race when the
+    // get() may return before the onCompletion ran and the job might not have been removed yet.
+    fjtask.setCompleter(_fjtask = new H2OEmptyCompleter());
+    Futures fs = new Futures();
+    DKV.put(job_key, new Value(job_key, new byte[0]),fs);
     start_time = System.currentTimeMillis();
     new TAtomic<List>() {
       @Override public List atomic(List old) {
@@ -279,9 +304,8 @@ public class Job extends Request2 {
         return old;
       }
     }.invoke(LIST);
-    return fjtask;
+    fs.blockForPending();
   }
-
   // Overridden for Parse
   public float progress() {
     Freezable f = UKV.get(destination_key);
@@ -310,27 +334,29 @@ public class Job extends Request2 {
     DKV.remove(self);
     DKV.write_barrier();
     new TAtomic<List>() {
+      transient private Job _job;
       @Override public List atomic(List old) {
         if( old == null ) old = new List();
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
           if( jobs[i].job_key.equals(self) ) {
-            final Job job = jobs[i];
-            job.end_time = CANCELLED_END_TIME;
-            job.exception = exception;
-            H2OCountedCompleter task = new H2OCountedCompleter() {
-              @Override public void compute2() {
-                job.onCancelled();
-                tryComplete();
-              }
-            };
-            H2O.submitTask(task);
+            jobs[i].end_time = CANCELLED_END_TIME;
+            jobs[i].exception = exception;
+            _job = jobs[i];
             break;
           }
         }
         return old;
       }
-    }.fork(LIST);
+      @Override public void onSuccess(){
+        if(_job != null){
+          final Job job = _job;
+          H2O.submitTask(new H2OCountedCompleter() {
+            @Override public void compute2() {job.onCancelled();}
+          });
+        }
+      }
+    }.invoke(LIST);
   }
 
   protected void onCancelled() {
@@ -428,7 +454,7 @@ public class Job extends Request2 {
 
   //
 
-  public H2OCountedCompleter fork() {
+  public Job fork() {
     init();
     H2OCountedCompleter task = new H2OCountedCompleter() {
       @Override public void compute2() {
@@ -447,8 +473,9 @@ public class Job extends Request2 {
           update(Job.this, Utils.getStackAsString(t));
       }
     };
-    H2O.submitTask(start(task));
-    return task;
+    start(task);
+    H2O.submitTask(task);
+    return this;
   }
 
   private static void update(final Job job, final String exception) {
@@ -627,5 +654,10 @@ public class Job extends Request2 {
       }
       cancel();
     }
+  }
+
+  public static boolean checkIdx(Frame source, int[] idx) {
+    for (int i : idx) if (i<0 || i>source.vecs().length-1) return false;
+    return true;
   }
 }

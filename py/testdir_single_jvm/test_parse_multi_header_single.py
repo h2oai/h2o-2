@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             print "Header Key = " + header
             start = time.time()
-            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*',
+            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', schema='put',
                 src_key=src_key, hex_key=hex_key, timeoutSecs=timeoutSecs, header="1", header_from_file=header)
 
             print "parseResult['destination_key']: " + parseResult['destination_key']

@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
 
     def test_rf_params_rand2(self):
         csvPathname = 'ncaa/Players.csv'
-        for trial in range(10):
+        for trial in range(4):
             # params is mutable. This is default.
             params = {'ntree': 13, 'parallel': 1, 'features': 4}
             colX = h2o_rf.pickRandRfParams(paramDict, params)

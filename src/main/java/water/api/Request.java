@@ -1,18 +1,23 @@
 package water.api;
 
+import hex.DPCA.PCAModel;
+import hex.KMeansModel;
+import hex.glm.GLMModel;
+import hex.rf.RFModel;
+
 import java.io.InputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.*;
-import java.util.Map.Entry;
 
 import water.*;
+import water.api.RequestServer.API_VERSION;
+import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
@@ -24,6 +29,7 @@ public abstract class Request extends RequestBuilders {
     int until() default Integer.MAX_VALUE;
     Class<? extends Filter> filter() default Filter.class;
     Class<? extends Filter>[] filters() default {};
+    boolean json() default false; // Forces an input field to also appear in JSON
     long   lmin() default Long  .MIN_VALUE;
     long   lmax() default Long  .MAX_VALUE;
     double dmin() default Double.NEGATIVE_INFINITY;
@@ -52,8 +58,9 @@ public abstract class Request extends RequestBuilders {
   protected Request() {
   }
 
-  protected String href() {
-    return getClass().getSimpleName();
+  public String href() { return href(supportedVersions()[0]); }
+  protected String href(API_VERSION v) {
+    return v.prefix() + getClass().getSimpleName();
   }
 
   protected RequestType hrefType() {
@@ -64,7 +71,7 @@ public abstract class Request extends RequestBuilders {
     return true;
   }
 
-  protected void registered() {
+  protected void registered(API_VERSION version) {
   }
 
   protected Request create(Properties parms) {
@@ -216,6 +223,26 @@ public abstract class Request extends RequestBuilders {
     return r;
   }
 
+
+  // TODO clean this stuff, typeahead should take type name
+  protected static Class mapTypeahead(Class c) {
+    if(c != null) {
+      if( PCAModel.class.isAssignableFrom(c) )
+        return TypeaheadPCAModelKeyRequest.class;
+      if( GLMModel.class.isAssignableFrom(c))
+        return TypeaheadGLMModelKeyRequest.class;
+      if( RFModel.class.isAssignableFrom(c))
+        return TypeaheadRFModelKeyRequest.class;
+      if( KMeansModel.class.isAssignableFrom(c))
+        return TypeaheadKMeansModelKeyRequest.class;
+      if( Model.class.isAssignableFrom(c))
+        return TypeaheadModelKeyRequest.class;
+      if( Frame.class.isAssignableFrom(c) || ValueArray.class.isAssignableFrom(c) )
+        return TypeaheadHexKeyRequest.class;
+    }
+    return TypeaheadKeysRequest.class;
+  }
+
   // ==========================================================================
 
   public boolean toHTML(StringBuilder sb) {
@@ -249,4 +276,16 @@ public abstract class Request extends RequestBuilders {
   // Dummy write of a leading field, so the auto-gen JSON can just add commas
   // before each succeeding field.
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb.putJSON4("Request2",0); }
+
+  /**
+   * Request API versioning.
+   * TODO: better solution would be to have an explicit annotation for each request
+   *  - something like <code>@API-VERSION(2) @API-VERSION(1)</code>
+   *  Annotation will be processed during start of RequestServer and default version will be registered
+   *  under /, else /version/name_of_request.
+   */
+  protected static final API_VERSION[] SUPPORTS_ONLY_V1 = new API_VERSION[] { API_VERSION.V_1 };
+  protected static final API_VERSION[] SUPPORTS_ONLY_V2 = new API_VERSION[] { API_VERSION.V_2 };
+  protected static final API_VERSION[] SUPPORTS_V1_V2   = new API_VERSION[] { API_VERSION.V_1, API_VERSION.V_2 };
+  public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V1; }
 }

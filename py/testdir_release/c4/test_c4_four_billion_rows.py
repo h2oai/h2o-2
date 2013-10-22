@@ -60,7 +60,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             kwargs = {
                 'k': 3,
                 'initialization': 'Furthest',
-                'epsilon': 1e-6,
                 'max_iter': 4,
                 'cols': None,
                 'normalize': 0,

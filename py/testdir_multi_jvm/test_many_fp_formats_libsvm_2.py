@@ -144,7 +144,6 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, sel, distrib
 
 class Basic(unittest.TestCase):
     def tearDown(self):
-        time.sleep(3600)
         h2o.check_sandbox_for_errors()
 
     @classmethod
@@ -167,8 +166,8 @@ class Basic(unittest.TestCase):
         tryList = [
             (100, 10000, 'cA', 300, 'sparse50'),
             (100, 10000, 'cB', 300, 'sparse'),
-            (100, 40000, 'cC', 300, 'sparse50'),
-            (100, 40000, 'cD', 300, 'sparse'),
+            # (100, 40000, 'cC', 300, 'sparse50'),
+            # (100, 40000, 'cD', 300, 'sparse'),
             ]
 
         # h2b.browseTheCloud()

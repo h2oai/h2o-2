@@ -1,6 +1,6 @@
 import unittest, sys, time
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print
+import h2o, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_glm
 
 print "Assumes you ran ../../cloud.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
@@ -28,7 +28,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # looks like it takes the hex string (two chars)
         start = time.time()
         # hardwire TAB as a separator, as opposed to white space (9)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9)
+        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=False)
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
         print csvFilename, 'parse time:', parseResult['response']['time']
@@ -63,7 +63,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             'beta_epsilon': 1.0E-4,
             }
 
-        timeoutSecs = 1800
+        timeoutSecs = 3600
         start = time.time()
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
         elapsed = time.time() - start
@@ -72,6 +72,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
+        # do summary of the parsed dataset last, since we know it fails on this dataset
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
+        h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
 
 if __name__ == '__main__':
     h2o.unit_main()

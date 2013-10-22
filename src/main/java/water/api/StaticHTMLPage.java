@@ -9,11 +9,10 @@ public class StaticHTMLPage extends HTMLOnlyRequest {
     _href = href;
     _html = Boot._init.loadContent(file);
   }
-  @Override
-  protected String build(Response response) {
+  @Override protected String build(Response response) {
     return _html;
   }
-  protected String href() {
+  @Override public String href() {
     return _href;
   }
 }

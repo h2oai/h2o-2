@@ -289,7 +289,7 @@ public abstract class DRF {
       description = "RandomForest_" + drfTask._params._ntrees + "trees";
     }
 
-    @Override public H2OCountedCompleter start(H2OCountedCompleter fjtask) {
+    @Override public void start(H2OCountedCompleter fjtask) {
       H2OCountedCompleter jobRemoval = new H2O.H2OCountedCompleter() {
         @Override public void compute2() {
           new TAtomic<RFModel>() {
@@ -305,8 +305,7 @@ public abstract class DRF {
         }
       };
       fjtask.setCompleter(jobRemoval);
-
-      return super.start(jobRemoval);
+      super.start(jobRemoval);
     }
     @Override public float progress() {
       Progress p = (Progress) UKV.get(destination_key);

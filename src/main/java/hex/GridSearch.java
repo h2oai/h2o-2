@@ -1,5 +1,7 @@
 package hex;
 
+import hex.KMeans2.KMeans2Model;
+import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.GBM.GBMModel;
@@ -16,7 +18,10 @@ public class GridSearch extends Job {
   @Override protected void exec() {
     UKV.put(destination_key, this);
     for( Job job : jobs )
-      job.fork().join();
+      try { job.fork().get();
+      } catch( Exception e ) {
+        throw new RuntimeException(e);
+      }
   }
 
   @Override protected void onCancelled() {
@@ -33,12 +38,12 @@ public class GridSearch extends Job {
 
   @Override public Response redirect() {
     String n = GridSearchProgress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, "job", job_key, "dst_key", destination_key);
+    return new Response(Response.Status.redirect, this, -1, -1, n, "job_key", job_key, "destination_key", destination_key);
   }
 
   public static class GridSearchProgress extends Progress2 {
     @Override public boolean toHTML(StringBuilder sb) {
-      GridSearch grid = UKV.get(Key.make(dst_key.value()));
+      GridSearch grid = UKV.get(destination_key);
       if( grid != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
@@ -100,11 +105,13 @@ public class GridSearch extends Job {
             sb.append("<td>").append(speed).append("</td>");
 
           String link = info._job.destination_key.toString();
-          if( info._job.start_time != 0 ) {
+          if( info._job.start_time != 0 && DKV.get(info._job.destination_key) != null ) {
             if( info._model instanceof GBMModel )
               link = GBMModelView.link(link, info._job.destination_key);
             else if( info._model instanceof NeuralNetModel )
               link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
+            if( info._model instanceof KMeans2Model )
+              link = KMeans2ModelView.link(link, info._job.destination_key);
             else
               link = Inspect.link(link, info._job.destination_key);
           }
@@ -139,7 +146,7 @@ public class GridSearch extends Job {
             args.remove(i);
     }
 
-    @Override protected Response jobDone(final Job job, final String dst) {
+    @Override protected Response jobDone(final Job job, final Key dst) {
       return new Response(Response.Status.done, this, 0, 0, null);
     }
   }

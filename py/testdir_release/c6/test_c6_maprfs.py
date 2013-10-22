@@ -97,7 +97,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             print "Loading", csvFilename, 'from maprfs'
             start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs,
+            parseResult = h2i.import_parse(path=csvPathname, schema="maprfs", timeoutSecs=timeoutSecs, pollTimeoutSecs=360,
                 doSummary=False, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)

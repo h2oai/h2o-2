@@ -1,11 +1,10 @@
 package water.api;
 
 
-import java.util.*;
+import java.util.Random;
 
 import water.*;
 import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
 import water.util.Log;
 
 import com.google.gson.*;
@@ -21,36 +20,16 @@ public class FrameSplit extends Request2 {
   @API(help = "Destination keys, comma separated", required = false, filter = Default.class)
   public String destination_keys; // Key holding final value after job is removed
 
-  @API(help = "fraction per frame, comma separated", required = true, filter = Default.class)
-  public String fractions;
+  @API(help = "Fraction per frame, comma separated", required = true, filter = Default.class)
+  public double[] fractions;
 
 
   public static final String KEY_PREFIX = "__FRAME_SPLIT__";
   public static final Key makeKey() { return Key.make(KEY_PREFIX + Key.make());  }
 
-
-  public FrameSplit(){ }
-
-
   @Override protected Response serve() {
     if( source == null || source.equals(""))
       return Response.error("source is required");
-    if( fractions == null || fractions.length() == 0 )
-      return Response.error("fractions must be set");
-
-    final Frame fr = new Frame(source);
-
-    ArrayList< Double > fs = new ArrayList< Double >();
-    for( String s : fractions.split(",") ){
-      try {
-        fs.add( Double.parseDouble( s ) );
-      } catch(NumberFormatException nfe){
-        Response.error("invalid number format: " + s);
-      }
-    }
-    double[] fractions = new double[ fs.size() ];
-    for( int i=0; i < fractions.length; i++ )
-      fractions[i] = fs.get(i);
 
     Key[] keys = new Key[ fractions.length ];
     if( this.destination_keys == null || "".equals(this.destination_keys) ){
@@ -198,7 +177,8 @@ public class FrameSplit extends Request2 {
 
       for( int f = 0; f < _splits.length; f++ ) {
         Vec[] vecs = new Vec[_num_columns];
-        System.arraycopy(_fr.vecs(), (f + 1) * _num_columns, vecs, 0, _num_columns);
+        for( int i = 0; i < _num_columns; i++ )
+          vecs[i] = ((AppendableVec) _fr.vecs()[(f + 1) * _num_columns + i]).close(null);
 
         for( int column = 0; column < _num_columns; column++ )
           if( _fr.vecs()[column].isEnum() )

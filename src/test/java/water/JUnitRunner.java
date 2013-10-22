@@ -1,7 +1,5 @@
 package water;
 
-import hex.gbm.GBMDomainTest;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.*;
@@ -17,7 +15,6 @@ import org.junit.runner.notification.Failure;
 
 import water.deploy.Node;
 import water.deploy.NodeVM;
-import water.fvec.CBSChunkTest;
 import water.parser.ParseFolderTestBig;
 import water.util.Log;
 import water.util.Utils;
@@ -35,7 +32,7 @@ public class JUnitRunner {
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(ValueArrayToFrameTestAll.class);
     // Pure JUnit test
-    tests.remove(CBSChunkTest.class);
+//    tests.remove(CBSChunkTest.class);
     //tests.remove(GBMDomainTest.class);
   }
 
@@ -63,10 +60,10 @@ public class JUnitRunner {
 
     ArrayList<Node> nodes = new ArrayList<Node>();
     for( int i = 1; i < ports.length; i++ )
-      nodes.add(new NodeVM(Utils.add(args, "-port", "" + ports[i])));
+      nodes.add(new NodeVM(Utils.append(args, "-port", "" + ports[i])));
 
-    args = Utils.add(new String[] { "-mainClass", Master.class.getName() }, args);
-    Node master = new NodeVM(Utils.add(args, "-port", "" + ports[0]));
+    args = Utils.append(new String[] { "-mainClass", Master.class.getName() }, args);
+    Node master = new NodeVM(Utils.append(args, "-port", "" + ports[0]));
     nodes.add(master);
 
     File out = null, err = null, sandbox = new File("sandbox");

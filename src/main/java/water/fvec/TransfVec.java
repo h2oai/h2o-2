@@ -11,9 +11,13 @@ public class TransfVec extends Vec {
   transient Vec _masterVec;
 
   public TransfVec(Key masterVecKey, int[] domMap, Key key, long[] espc) {
+    this(masterVecKey, domMap, null, key, espc);
+  }
+  public TransfVec(Key masterVecKey, int[] domMap, String[] domain, Key key, long[] espc) {
     super(key, espc);
     _masterVecKey = masterVecKey;
     _domMap = domMap;
+    _domain = domain;
   }
 
   private Vec masterVec() {
@@ -33,7 +37,7 @@ public class TransfVec extends Vec {
   static class TransfChunk extends Chunk {
     Chunk _c;
     int[] _domMap;
-    public TransfChunk(Chunk c, int[] domMap) { _c  = c; _domMap = domMap; }
+    public TransfChunk(Chunk c, int[] domMap) { _c  = c; _domMap = domMap; _len = _c._len; _start = _c._start; }
     @Override protected long at8_impl(int idx) { return _domMap[(int)_c.at8_impl(idx)]; }
     @Override protected double atd_impl(int idx) { return at8_impl(idx);  }
     @Override protected boolean isNA_impl(int idx) {

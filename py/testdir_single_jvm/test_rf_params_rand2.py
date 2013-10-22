@@ -8,7 +8,6 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
 # Comment out illegal rest api parameter.
-#    'clear_confusion_matrix': [None, None, 0, 1],
     'use_non_local_data': [None, 0, 1],
     'iterative_cm': [None, 0, 1],
     'response_variable': [None,54],

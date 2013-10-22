@@ -19,7 +19,7 @@ def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     x = ""
     # NOTE: hastie has two values, -1 and 1. To make H2O work if two valued and not 0,1 have
     kwargs = {
-        'x': x, 'y':  y, 'case': '1', 'destination_key': 'gg',
+        'x': x, 'y':  y, 'case': '1',
         # better classifier it flipped? (better AUC?)
         'max_iter': 10,
         'case': -1, 'case_mode': '=',

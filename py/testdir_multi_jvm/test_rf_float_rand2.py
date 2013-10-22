@@ -71,9 +71,8 @@ class parse_rand_schmoo(unittest.TestCase):
             hex_key = csvFilename + "_" + str(trial) + ".hex"
             # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
             kwargs = {'ntree': 5, 'depth': 5}
-            parseResult = h2i.import_parse(path=csvPathname, schema='put')
-            h2o_cmd.runRF(parseResult=parseResult, hex_key=hex_key, 
-                timeoutSecs=10, pollTimeoutSecs=5, **kwargs)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
+            h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=10, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             ### h2o_cmd.runInspect(key=hex_key)

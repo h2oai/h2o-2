@@ -18,7 +18,7 @@ test.LiblineaR <- function(con) {
     logging("   cost =  100: Cost of constraints parameter\n")
     logging("epsilon = 1E-2: Tolerance of termination criterion\n")
     logging("  cross =    0: No k-fold cross-validation\n")
-    LibR.m      <- LiblineaR(train, trainLabels,type=0, epsilon=1E-2, 100)#cost= 1 / (34 * 7))
+    LibR.m      <- LiblineaR(train, trainLabels,type=0, epsilon=1E-2, cost=100)#cost= 1 / (34 * 7))
     LibRpreds   <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
     LibRCM      <- table(testLabels, LibRpreds$predictions)
     
@@ -38,9 +38,9 @@ test.LiblineaR <- function(con) {
                      data         = trainhex,
                      family       = "binomial",
                      nfolds       = 1,
-                     lambda       = 1 / 700,
+                     lambda       = 1 / (7 * 100), #700,
                      alpha        = 0.0,
-                     beta_epsilon = 1E-2)
+                     epsilon = 1E-2)
     
     h2op         <- h2o.predict(h2o.m, testhex)
     h2opreds     <- head(h2op, nrow(h2op))
@@ -96,7 +96,7 @@ test.LiblineaR <- function(con) {
                      nfolds       = 1, 
                      lambda       = 1/70,
                      alpha        = 0.00,
-                     beta_epsilon = 1E-2)
+                     epsilon = 1E-2)
     
     h2op     <- h2o.predict(h2o.m, testhex)
     h2opreds <- head(h2op, nrow(h2op))

@@ -75,8 +75,8 @@ public class RequestStatics extends Constants {
      */
     public String requestName(String requestUrl) {
       String result = (requestUrl.endsWith(_suffix)) ? requestUrl.substring(0, requestUrl.length()-_suffix.length()) : requestUrl;
-      if (result.charAt(0) == '/')
-        return result.substring(1);
+      //if (result.charAt(0) == '/')
+      //  return result.substring(1);
       return result;
     }
   }

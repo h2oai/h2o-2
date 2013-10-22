@@ -38,11 +38,13 @@ public class HttpTest extends TestUtil {
       boolean exists = false;
       Get get = get("Jobs.json", JobsRes.class);
       assert get._status == 200;
-      for( Job job : ((JobsRes) get._res).jobs ) {
-        if( job.destination_key.equals(dst.toString()) ) {
-          exists = true;
-          if( job.end_time.length() > 0 )
-            return job.exception;
+      if( ((JobsRes) get._res).jobs != null ) {
+        for( Job job : ((JobsRes) get._res).jobs ) {
+          if( job.destination_key != null && job.destination_key.equals(dst.toString()) ) {
+            exists = true;
+            if( job.end_time != null && job.end_time.length() > 0 )
+              return job.exception != null && job.exception.length() > 0 ? job.exception : null;
+          }
         }
       }
       if( !exists )

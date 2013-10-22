@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         #parse
         trainKey = csvFilename + "_" + ".hex"
         start = time.time()
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename,
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, schema='put',
             hex_key=trainKey, timeoutSecs=timeoutSecs)
         elapsed = time.time() - start
         print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\

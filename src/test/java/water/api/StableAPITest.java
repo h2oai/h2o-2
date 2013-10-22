@@ -154,7 +154,7 @@ public class StableAPITest {
     regPy(DRFModelView.class);
     regPy(DRFProgressPage.class);
     regPy(Debug.class);
-    regPy(DownloadDataset.class); // not used
+    regPy(DownloadDataset.class, "src_key");
     regPy(Exec.class, "expression");
     regPy(ExportHdfs.class);
     regPy(ExportS3.class);
@@ -230,12 +230,13 @@ public class StableAPITest {
   static public void registerRAPI() {
     regR(Cloud.class);
     regR(DataManip.class, "source", "source2", "destination_key", "cols", "destination_key", "operation");
+    regPy(DownloadDataset.class, "src_key");
     regR(Exec.class, "expression", "destination_key");
     regR(GeneratePredictionsPage.class, "model_key", "data_key");
     regR(GBM.class, "destination_key", "source", "response", "cols", "ntrees", "max_depth", "learn_rate", "min_rows", "classification");
     regR(GBMModelView.class, "_modelKey");
     regR(GLM.class, "key", "y", "x", "family", "n_folds", "alpha", "lambda", "expert_settings", "beta_epsilon", "standardize", "case_mode", "case", "tweedie_power");
-    regR(GLM2.class, "source", "destination_key", "vresponse", "ignored_cols", "family", "n_folds", "alpha", "lambda", "standardize", "tweedie_variance_power");
+    regR(GLM2.class, "source", "destination_key", "response", "ignored_cols", "family", "n_folds", "alpha", "lambda", "standardize", "tweedie_variance_power");
     regR(GLMGrid.class, "key", "y", "x", "family", "n_folds", "alpha", "lambda", "case_mode", "case", "parallel" );
     regR(GLMGridProgress.class, "destination_key");
     regR(GLMModelView.class, "_modelKey");

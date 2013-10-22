@@ -70,10 +70,10 @@ public class NewVectorTest extends TestUtil {
     testImpl(new long[] {123456,2345678,34567890},
              new int [] {     0,      0,       0},
              C4Chunk.class,false);
-    // Floats
+//    // Floats
     testImpl(new long[] {1234,2345,314},
              new int [] {  -1,  -5, -2},
-             C4FChunk.class, true);
+             C4SChunk.class, true);
     // Doubles
     testImpl(new long[] {1234,2345678,31415},
              new int [] {  40,     10,  -40},

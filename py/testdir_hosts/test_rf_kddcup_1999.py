@@ -43,7 +43,6 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'response_variable': 'classifier',
                 'ntree': 200,
-                'gini': 1,
                 'class_weights': None,
                 # 'features': None,
                 'features': 7,

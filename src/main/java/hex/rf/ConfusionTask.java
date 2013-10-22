@@ -138,7 +138,8 @@ public class ConfusionTask extends MRTask {
           return super.onExceptionalCompletion(ex, caller);
         }
       };
-      H2O.submitTask(cmJob.start(fjtask));
+      cmJob.start(fjtask);
+      H2O.submitTask(fjtask);
       // FIXME the the job should be invoked asynchronously but for now we block immediately
       // since we do not store a list of previous jobs
       cmJob.get();

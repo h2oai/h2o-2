@@ -4,7 +4,10 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import water.*;
+import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
+import water.H2O.H2OEmptyCompleter;
+import water.util.Utils;
 
 /**
  * A single distributed vector column.
@@ -122,13 +125,30 @@ public class Vec extends Iced {
   }
 
   // Create a vector transforming values according given domain map
-  public Vec makeTransf(final int[] domMap) {
+  public Vec makeTransf(final int[] domMap) { return makeTransf(domMap, null); }
+  public Vec makeTransf(final int[] domMap, final String[] domain) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, domMap, group().addVecs(1)[0],_espc);
+    Vec v0 = new TransfVec(this._key, domMap, domain, group().addVecs(1)[0],_espc);
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
+  }
+  /**
+   * Adapt given vector <code>v</code> to this vector.
+   * I.e., unify domains and call makeTransf().
+   */
+  public Vec adaptTo(Vec v, boolean exact) {
+    int[] domain = null;
+    String[] sdomain = _domain == null
+        ? Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain()) // it is number-column
+        : domain(); // it is enum
+    int[] domMap = Model.getDomainMapping(null, v._domain, sdomain, exact);
+    if (domain!=null) {
+      // do a mapping from INT -> ENUM -> this vector ENUM
+      domMap = Utils.compose(Utils.mapping(domain), domMap);
+    }
+    return this.makeTransf(domMap, sdomain);
   }
 
   /** Number of elements in the vector.  Overridden by subclasses that compute
@@ -201,46 +221,57 @@ public class Vec extends Iced {
   }
 
   /** Compute the roll-up stats as-needed, and copy into the Vec object */
-  Vec rollupStats() {
-    if( _naCnt >= 0 ) return this;
+  public Vec rollupStats() {
+    rollupStats((H2OCountedCompleter)null);
+    return this;
+  }
+  // wrap CPS style invocation into more convenient interface using Futures
+  public void rollupStats(Futures fs) {
+    H2OEmptyCompleter ec = new H2OEmptyCompleter();
+    rollupStats(ec);
+    fs.add(ec);
+  }
+  // Allow a bunch of rollups to run in parallel allowing CPS style invocation
+  public void rollupStats(final H2OCountedCompleter cc) {
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 ) {    // KV store has a better answer
-      _min  = vthis._min;   _max   = vthis._max; 
+      _min  = vthis._min;   _max   = vthis._max;
       _mean = vthis._mean;  _sigma = vthis._sigma;
       _size = vthis._size;  _isInt = vthis._isInt;
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
-      return this;
+      // tell the caller we're done!
+      if(cc != null) H2O.submitTask(new H2OCountedCompleter() {  // submit new task to do the completion
+        @Override public byte priority() {return cc.priority();} // as the completer may have some extensive work to do.
+        @Override public void compute2() {cc.tryComplete();}
+      });
+      return;
     }
-    // Compute the hard way
-    final RollupStats rs = new RollupStats().doAll(this);
-    setRollupStats(rs);
-    // Now do this remotely also
-    new TAtomic<Vec>() {
-      @Override public Vec atomic(Vec v) {
-        if( v!=null && v._naCnt == -1 ) v.setRollupStats(rs);  return v;
-      }
-    }.fork(_key);
-    return this;
+    RollupStats rs = new RollupStats();
+    if(cc != null) {
+      rs.setCompleter(cc);
+      rs.dfork(this);
+    } else
+      rs.doAll(this);
   }
-
-  // Allow a bunch of rollups to run in parallel
-  public void rollupStats(Futures fs) {
-    if( _naCnt != -1 ) return;
-    H2OCountedCompleter cc = new H2OCountedCompleter() {
-        final Vec _vec=Vec.this;
-        @Override public void compute2() {_vec.rollupStats(); tryComplete();}
-      };
-    H2O.submitTask(cc);
-    fs.add(cc);
-  }
-
 
   /** A private class to compute the rollup stats */
   private static class RollupStats extends MRTask2<RollupStats> {
     double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;
     long _rows, _naCnt, _size;
     boolean _isInt=true;
+
+    @Override public void postGlobal(){
+      final RollupStats rs = this;
+      _fr.vecs()[0].setRollupStats(rs);
+      // Now do this remotely also
+      new TAtomic<Vec>() {
+        @Override public Vec atomic(Vec v) {
+          if( v!=null && v._naCnt == -1 ) v.setRollupStats(rs);  return v;
+        }
+      }.fork(_fr._keys[0]);
+    }
+
     @Override public void map( Chunk c ) {
       _size = c.byteSize();
       for( int i=0; i<c._len; i++ ) {
@@ -267,8 +298,11 @@ public class Vec extends Iced {
       _max = Math.max(_max,rs._max);
       _naCnt += rs._naCnt;
       double delta = _mean - rs._mean;
-      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
-      _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
+      if (_rows == 0) { _mean = rs._mean;  _sigma = rs._sigma; }
+      else if (rs._rows > 0) {
+        _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
+        _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
+      }
       _rows += rs._rows;
       _size += rs._size;
       _isInt &= rs._isInt;
@@ -367,6 +401,7 @@ public class Vec extends Iced {
   /** Make a Vector-group key.  */
   private Key groupKey(){
     byte [] bits = _key._kb.clone();
+    bits[0] = Key.VGROUP;
     UDP.set4(bits, 2, -1);
     UDP.set4(bits, 6, -1);
     return Key.make(bits);
@@ -483,9 +518,9 @@ public class Vec extends Iced {
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
-    public VectorGroup() { 
+    public VectorGroup() {
       byte[] bits = new byte[26];
-      bits[0] = Key.VEC;
+      bits[0] = Key.VGROUP;
       bits[1] = -1;
       UDP.set4(bits, 2, -1);
       UDP.set4(bits, 6, -1);
@@ -495,13 +530,12 @@ public class Vec extends Iced {
       _key = Key.make(bits);
       _len = 0;
     }
-
     public Key vecKey(int vecId){
       byte [] bits = _key._kb.clone();
+      bits[0] = Key.VEC;
       UDP.set4(bits,2,vecId);//
       return Key.make(bits);
     }
-
     /**
      * Task to atomically add vectors into existing group.
      * @author tomasnykodym
@@ -552,6 +586,31 @@ public class Vec extends Iced {
     }
     @Override public int hashCode() {
       return _key.hashCode();
+    }
+  }
+
+  public static class CollectDomain extends MRTask2<CollectDomain> {
+    final int _nclass;
+    final int _ymin;
+    byte _dom[];
+    public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
+    @Override public void map(Chunk ys) {
+      _dom = new byte[_nclass];
+      int ycls=0;
+      for( int row=0; row<ys._len; row++ ) {
+        if (ys.isNA0(row)) continue;
+        ycls = (int)ys.at80(row)-_ymin;
+        _dom[ycls] = 1;
+      }
+    }
+    @Override public void reduce( CollectDomain that ) { Utils.or(_dom,that._dom); }
+    public int[] domain() {
+      int cnt = 0;
+      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) cnt++;
+      int[] dom = new int[cnt];
+      cnt=0;
+      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) dom[cnt++] = i+_ymin;
+      return dom;
     }
   }
 }

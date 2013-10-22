@@ -1,5 +1,6 @@
 package hex.glm;
 
+import hex.FrameTask;
 import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
@@ -19,23 +20,8 @@ import water.util.Utils;
  * @author tomasnykodym
  *
  */
-public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
-  protected final boolean _standardize;
-  final int _offset;
-  final int _step;
-  final boolean _complement;
-  final Job _job;
-
-  int _nums = -1;
-  int _cats = -1;
-  // offsets of categorcial variables
-  // each categorical with n levels is virtually expanded into a binary vector of length n -1.
-  // _catOffsets basically hold a sum of cardinlities of all preceding categorical variables
-  // to be able to address correct elements in the beta vector (which must be fully expanded).
-  protected int [] _catOffsets;
+public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T>{
   // data-regularization params
-  double [] _normSub; // means to be subtracted
-  double [] _normMul; // 1/sigma to multiply each numeric param with
   double    _ymu = Double.NaN; // mean of the response
 
   protected final double [] _beta; // beta vector from previous computation or null if this is the first iteration
@@ -46,156 +32,21 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
   // CaseVaue to be used together with the Case predicate to turn the response into binary variable
   protected final double _caseVal;
 
-  // size of the expanded vector of parameters, equal to number of columns + 1(intercept) + sum of categorical levels.
-  final protected int fullN(){
-    return _nums + _catOffsets[_cats] + 1; // + 1 is for intercept!
-  }
   // size of the top-left strictly diagonal region of the gram matrix, currently just the size of the largest categorical
-  final protected int diagN(){if(_catOffsets.length < 2)return 0; return _catOffsets[1];}
+  final protected int diagN(){return largestCat() > 1?largestCat():0;}
 
   public GLMTask(Job job, GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {this(job,glm, beta, standardize, cm, cv, 1,0,false);}
   public GLMTask(Job job, GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv, int step, int offset, boolean complement) {
-    _standardize = standardize; _caseMode = cm; _caseVal = cv; _beta = beta;
+    super(job, standardize,true, step, offset, complement);
+    _caseMode = cm; _caseVal = cv; _beta = beta;
     _glm = glm;
-    _step = step;
-    _offset = offset;
-    _complement = complement;
-    _job = job;
   }
   protected GLMTask(GLMTask gt, double [] beta){
-    _standardize = gt._standardize;
+    super(gt);
     _glm = gt._glm;
     _caseMode = gt._caseMode;
     _caseVal = gt._caseVal;
     _beta = beta;
-    _ymu = gt._ymu;
-    _nums = gt._nums;
-    _cats = gt._cats;
-    _catOffsets = gt._catOffsets;
-    _normMul = gt._normMul;
-    _normSub = gt._normSub;
-    _step = gt._step;
-   _offset = gt._offset;
-   _complement = gt._complement;
-   _job = gt._job;
-  }
-
-  /**
-   * Method to process one row of the data for GLM functions.
-   * Numeric and categorical values are passed separately, as is reponse.
-   * Categoricals are passed as absolute indexes into the expanded beta vector, 0-levels are skipped
-   * (so the number of passed categoricals will not be the same for every row).
-   *
-   * Categorical expansion/indexing:
-   *   Categoricals are placed in the beginning of the beta vector.
-   *   Each cat variable with n levels is expanded into n-1 independent binary variables.
-   *   Indexes in cats[] will point to the appropriate coefficient in the beta vector, so e.g.
-   *   assume we have 2 categorical columns both with values A,B,C, then the following rows will have following indexes:
-   *      A,A - ncats = 0, we do not pass any categorical here
-   *      A,B - ncats = 1, indexes = [2]
-   *      B,B - ncats = 2, indexes = [0,2]
-   *      and so on
-   *
-   * @param nums     - numeric values of this row
-   * @param ncats    - number of passed (non-zero) categoricals
-   * @param cats     - indexes of categoricals into the expanded beta-vector.
-   * @param response - numeric value for the response
-   */
-  protected abstract void processRow(double [] nums, int ncats, int [] cats, double response);
-
-  /**
-   * Reorder the frame's columns so that numeric columns come first followed by categoricals ordered by cardinality in decreasing order and
-   * the response is the last.
-   * @param fr
-   * @return
-   */
-  public static Frame adaptFrame(Frame fr){
-    final Vec [] vecs = fr.vecs();
-    final int n = vecs.length-1; // -1 for response
-    int [] nums = MemoryManager.malloc4(n);
-    int [] cats = MemoryManager.malloc4(n);
-    int nnums = 0, ncats = 0;
-    for(int i = 0; i < n; ++i){
-      if(vecs[i].isEnum())
-        cats[ncats++] = i;
-      else
-        nums[nnums++] = i;
-    }
-    // sort the cats in the decreasing order according to their size
-    for(int i = 0; i < ncats; ++i)
-      for(int j = i+1; j < ncats; ++j)
-        if(vecs[cats[i]].domain().length < vecs[cats[j]].domain().length){
-          int x = cats[i];
-          cats[i] = cats[j];
-          cats[j] = x;
-        }
-    Vec [] vecs2 = vecs.clone();
-    String [] names = fr._names.clone();
-    for(int i = 0; i < ncats; ++i){
-      vecs2[i] = vecs[cats[i]];
-      names[i] = fr._names[cats[i]];
-    }
-    for(int i = 0; i < nnums; ++i){
-      vecs2[i+ncats]  = vecs [nums[i]];
-      names[i+ncats] = fr._names[nums[i]];
-    }
-    return new Frame(names,vecs2);
-  }
-  public T doIt(Frame fr){
-    if(_cats == -1 && _nums == -1 ){
-      assert _normMul == null;
-      assert _normSub == null;
-      int i = 0;
-      final Vec [] vecs = fr.vecs();
-      final int n = vecs.length-1; // -1 for response
-      while(i < n && vecs[i].isEnum())++i;
-      _cats = i;
-      while(i < n && !vecs[i].isEnum())++i;
-      _nums = i-_cats;
-      if(i != n)
-        throw new RuntimeException("Incorrect format of the input frame. Frame is assumed to be ordered so that categorical columns come before numerics.");
-      _normSub = MemoryManager.malloc8d(_nums);
-      _normMul = MemoryManager.malloc8d(_nums); Arrays.fill(_normMul, 1);
-      if(_standardize) for(i = 0; i < _nums; ++i){
-        _normSub[i] = vecs[i+_cats].mean();
-        _normMul[i] = 1.0/vecs[i+_cats].sigma();
-      }
-      _catOffsets = MemoryManager.malloc4(_cats+1);
-      int len = _catOffsets[0] = 0;
-      for(i = 0; i < _cats; ++i)
-        _catOffsets[i+1] = (len += vecs[i].domain().length - 1);
-      // get mean of response...
-      if(Double.isNaN(_ymu))_ymu = vecs[vecs.length-1].mean();
-    }
-    return dfork(fr);
-  }
-  /**
-   * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
-   * and adapts response according to the CaseMode/CaseValue if set.
-   */
-  @Override public void map(Chunk [] chunks){
-    if(_job.cancelled())throw new RuntimeException("Cancelled");
-    final int nrows = chunks[0]._len;
-    double [] nums = MemoryManager.malloc8d(_nums);
-    int    [] cats = MemoryManager.malloc4(_cats);
-    final int step = _complement?_step:1;
-    final int start = _complement?_offset:0;
-
-    OUTER:
-    for(int r = start; r < nrows; r += step){
-      if(_step > step && (r % _step) == _offset)continue;
-      for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
-      int i = 0, ncats = 0;
-      for(; i < _cats; ++i){
-        int c = (int)chunks[i].at80(r);
-        if(c != 0)cats[ncats++] = c + _catOffsets[i] - 1;
-      }
-      for(;i < chunks.length-1;++i)
-        nums[i-_cats] = (chunks[i].at0(r) - _normSub[i-_cats])*_normMul[i-_cats];
-      double y = chunks[chunks.length-1].at0(r);
-      if( _caseMode != CaseMode.none ) y = (_caseMode.isCase(y, _caseVal)) ? 1 : 0;
-      processRow(nums, ncats, cats,y);
-    }
   }
 
   // inner helper function to compute eta - i.e. beta * row
@@ -231,10 +82,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       _ymu += t._ymu;
       _nobs += t._nobs;
     }
-    @Override public void map(Chunk [] chunks){
-      super.map(chunks);
-      _ymu *= _reg;
-    }
+    @Override protected void chunkDone(){_ymu *= _reg;}
+
     public double ymu(){return _ymu /(_reg*_nobs);}
     public long nobs(){return _nobs;}
   }
@@ -328,13 +177,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
       _xy[numStart + _nums] += wz;
       _gram.addRow(nums, ncats, cats, w);
     }
-    @Override public void map(Chunk [] chunks){
-      _gram = new Gram(fullN(), diagN(), _nums, _cats);
-      _xy = MemoryManager.malloc8d(fullN());
+    @Override protected void chunkInit(){
+      _gram = new Gram(fullN(), diagN(), _nums, _cats,true);
+      _xy = MemoryManager.malloc8d(fullN()+1); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
       _val = new GLMValidation(null,_ymu, _glm,rank);
-      super.map(chunks);
+    }
+    @Override protected void chunkDone(){
       _gram.mul(_reg);
       _val.regularize(_reg);
       for(int i = 0; i < _xy.length; ++i)
@@ -342,10 +192,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends MRTask2<T>{
     }
     @Override
     public void reduce(GLMIterationTask git){
-      _gram.add(git._gram);
       Utils.add(_xy, git._xy);
       _yy += git._yy;
       _val.add(git._val);
+      super.reduce(git);
     }
   }
 

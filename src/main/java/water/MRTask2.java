@@ -68,7 +68,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
 
   /** Override to do any remote initialization on the 1st remote instance of
    *  this object, for initializing node-local shared data structures.  */
-  protected void setupLocal() { }
+  protected void setupLocal() {} // load the vecs in non-racy way (we will definitely need them and in case we don;t have cached version there will be unnecessary racy update from multiple maps at the same time)!
   /** Override to do any remote cleaning on the last remote instance of
    *  this object, for disposing of node-local shared data structures.  */
   protected void closeLocal() { }
@@ -241,8 +241,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _lo = 0;  _hi = _fr.anyVec().nChunks(); // Do All Chunks
     // If we have any output vectors, make a blockable Futures for them to
     // block on.
-    if( _fr.hasAppendables() )
+    if( _appendables != null && _appendables.length > 0 )
       _fs = new Futures();
+    // get the Vecs from the K/V store, to avoid racing fetches from the map calls
+    _fr.vecs();
     setupLocal();                     // Setup any user's shared local structures
     _profile._localdone = System.currentTimeMillis();
   }
@@ -359,6 +361,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     else _fs.add(mrt._fs);
   }
 
+  protected void postGlobal(){}
   // Work done after all the main local work is done.
   // Gather/reduce remote work.
   // Block for other queued pending tasks.
@@ -379,14 +382,17 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       copyOver(_res);             // So copy into self
     }
     closeLocal();
-    if( ns == (1L<<H2O.CLOUD.size())-1 && _noutputs > 0){ // All-done on head of whole MRTask tree?
-      // close the appendables and make the output frame
-      Futures fs = new Futures();
-      Vec [] vecs = new Vec[_noutputs];
-      for(int i = 0; i < _noutputs; ++i)
-        vecs[i] = _appendables[i].close(fs);
-      fs.blockForPending();
-      _outputFrame = new Frame(vecs);
+    if( ns == (1L<<H2O.CLOUD.size())-1){
+      if(_noutputs > 0){ // All-done on head of whole MRTask tree?
+        // close the appendables and make the output frame
+        Futures fs = new Futures();
+        Vec [] vecs = new Vec[_noutputs];
+        for(int i = 0; i < _noutputs; ++i)
+          vecs[i] = _appendables[i].close(fs);
+        fs.blockForPending();
+        _outputFrame = new Frame(vecs);
+      }
+      postGlobal();
     }
   }
 

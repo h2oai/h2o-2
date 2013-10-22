@@ -1,6 +1,6 @@
 package water;
 
-import hex.NeuralNetIrisTest;
+import hex.KMeans2Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +39,7 @@ public class JUnitRunnerDebug {
 
       // Classes to test:
       //tests = JUnitRunner.all();
-      tests.add(NeuralNetIrisTest.class);
+      tests.add(KMeans2Test.class);
 
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());

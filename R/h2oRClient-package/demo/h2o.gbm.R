@@ -1,6 +1,7 @@
 # This is a demo of H2O's GBM function
 # It imports a data set, parses it, and prints a summary
 # Then, it runs GBM on a subset of the dataset
+# Note: This demo runs H2O on localhost:54321
 library(h2o)
 h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)

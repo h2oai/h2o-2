@@ -6,6 +6,7 @@ import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Vec;
 import water.util.Utils;
+import water.util.Log;
 
 import java.util.Arrays;
 
@@ -72,6 +73,7 @@ public class Summary2 extends Iced {
       if (d < 1. && _isInt) d = 1.;
       binsz = d;
       start = binsz * Math.floor(vec.min()/binsz);
+
       int nbin = (int)Math.floor((vec.max() + (_isInt?.5:0) - start)/binsz) + 1;
       bins = new long[nbin];
     }
@@ -98,10 +100,8 @@ public class Summary2 extends Iced {
             minmax = k;
       }
       // update histogram
-
-      int binIdx = _isInt ? (int)(((long)val - (long)start)/(long)binsz)
-              : (int)Math.floor((val - start)/binsz);
-      ++bins[binIdx];
+      long binIdx = Math.round((val-start)*1000000.0/binsz)/1000000;
+      ++bins[(int)binIdx];
     }
 
     /* sort min and max */

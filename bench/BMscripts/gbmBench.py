@@ -1,127 +1,210 @@
-#GLM bench
+#GBM bench
 import os, sys, time, csv
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
-csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error','AverageErrorOver10Folds')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','classification','gbmBuildTime','Error')
 
-files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
-              'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
+files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),         'test' : 'AirlinesTest'},
+              'AllBedrooms': {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
+              'Covtype'     : {'train': ('CovTypeTrain1x', 'CovTypeTrain10x', 'CovTypeTrain100x'),            'test' : 'CovTypeTest'},
              }
-header = ""
-
-def doGLM(fs, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex, row):
-    for f in fs['train']:
-        overallWallStart = time.time()
-        date = '-'.join([str(x) for x in list(time.localtime())][0:3])
-        glmbenchcsv = 'benchmarks/'+build+'/'+date+'/glmbench.csv'
-        if not os.path.exists(glmbenchcsv):
-            output = open(glmbenchcsv,'w')
-            output.write(','.join(csv_header)+'\n')
+build = ""
+debug = False
+def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
+    debug = False
+    h2o.beta_features = True
+    bench = "bench"
+    if debug:
+        print "Doing GBM DEBUG"
+        bench = "bench/debug"
+    date = '-'.join([str(x) for x in list(time.localtime())][0:3])
+    overallWallStart = time.time()
+    pre = ""
+    if debug: pre    = 'DEBUG'
+    gbmbenchcsv = 'benchmarks/'+build+'/'+date+'/'+pre+'gbmbench.csv'
+    if not os.path.exists(gbmbenchcsv):
+        output = open(gbmbenchcsv,'w')
+        output.write(','.join(csv_header)+'\n')
+    else:
+        output = open(gbmbenchcsv,'a')
+    csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
+                    dialect='excel', extrasaction='ignore',delimiter=',')
+    try:
+        java_heap_GB = h2o.nodes[0].java_heap_GB
+        importFolderPath = bench + "/" + folderPath
+        if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x','CovTypeTrain1x', 'CovTypeTrain10x', 'CovTypeTrain100x']): 
+            csvPathname = importFolderPath + "/" + f + '.csv'
+        else: 
+            csvPathname = importFolderPath + "/" + f + "/*linked*"
+        hex_key = f + '.hex'
+        hK = folderPath + "Header.csv"    
+        headerPathname = importFolderPath + "/" + hK
+        h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+        headerKey = h2i.find_key(hK)
+        trainParseWallStart = time.time()
+        if f in (['AirlinesTrain10x', 'AirlinesTrain100x']): h2o.beta_features = False #regex parsing acting weird when not using browser, use VA -> FVEC converter
+        parseResult = h2i.import_parse(bucket           = 'home-0xdiag-datasets',
+                                       path             = csvPathname,
+                                       schema           = 'local',
+                                       hex_key          = hex_key,
+                                       header           = 1,
+                                       header_from_file = headerKey,
+                                       separator        = 44,
+                                       timeoutSecs      = 7200,
+                                       retryDelaySecs   = 5,
+                                       pollTimeoutSecs  = 7200,
+                                       noPoll           = True,
+                                       doSummary        = False
+                                      )
+        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+        parseWallTime = time.time() - trainParseWallStart
+        print "Parsing training file took ", parseWallTime ," seconds." 
+        #h2o.beta_features = True
+        inspect_train  = h2o.nodes[0].inspect(hex_key, timeoutSecs=7200)
+        inspect_test   = h2o.nodes[0].inspect(testFilehex, timeoutSecs=7200)
+        h2o.beta_features = True
+        nMachines = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
+        row.update( {'h2o_build'          : build,
+                     'nMachines'          : nMachines,
+                     'nJVMs'              : len(h2o.nodes),
+                     'Xmx/JVM'            : java_heap_GB,
+                     'dataset'            : f,
+                     'nTrainRows'         : inspect_train['num_rows'],
+                     'nTestRows'          : inspect_test['num_rows'],
+                     'nCols'              : inspect_train['num_cols'],
+                     'trainParseWallTime' : parseWallTime,
+                     'classification'     : classification,
+                    })
+    
+        params   =  {'destination_key'      : 'GBM('+f+')',
+                     'response'             : response,
+                     'ignored_cols_by_name' : ignored_cols,
+                     'classification'       : classification,
+                     'validation'           : testFilehex,
+                     'ntrees'               : ntrees,
+                     'max_depth'            : depth,
+                     'min_rows'             : minrows,
+                     'nbins'                : nbins,
+                     'learn_rate'           : learnRate,
+                    }
+    
+        parseResult = {'destination_key' : hex_key}
+        kwargs    = params.copy()
+        gbmStart  = time.time()
+        #TODO(spencer): Uses jobs to poll for gbm completion
+        gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
+        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=120, retryDelaySecs=5)
+        gbmTime   = time.time() - gbmStart
+        row.update( {'gbmBuildTime'       : gbmTime,
+                    })
+        gbmTrainView = h2o_cmd.runGBMView(model_key='GBM('+f+')')
+        if classification:
+            cm = gbmTrainView['gbm_model']['cm']
+            err = 1.0*(cm[0][1] + cm[1][0]) / (cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1])
         else:
-            output = open(glmbenchcsv,'a')
-        csvWrt = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
-                        dialect='excel', extrasaction='ignore',delimiter=',')
-        try:
-            java_heap_GB = h2o.nodes[0].java_heap_GB
-            importFolderPath = "bench/" + folderPath
-            if (f in ['AirlinesTrain1x','AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x']): csvPathname = importFolderPath + "/" + f + '.csv'
-            else: csvPathname = importFolderPath + "/" + f + "/*linked*"
-            hex_key = f + '.hex'
-            hK = folderPath + "Header.csv"    
-            headerPathname = importFolderPath + "/" + hK
-            h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-            headerKey =h2i.find_key(hK)
-            trainParseWallStart = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, header=1, header_from_file=headerKey, separator=44,
-                timeoutSecs=4800,retryDelaySecs=5,pollTimeoutSecs=4800)
-            parseWallTime = time.time() - trainParseWallStart
-            print "Parsing training file took ", parseWallTime ," seconds." 
-            
-            inspect_train  = h2o.nodes[0].inspect(parseResult['destination_key'])
-            inspect_test   = h2o.nodes[0].inspect(testFilehex)
-
-            row.update( {'h2o_build'          : build,  
-                         'java_heap_GB'       : java_heap_GB,
-                         'dataset'            : f,
-                         'nTrainRows'         : inspect_train['num_rows'],
-                         'nTestRows'          : inspect_test['num_rows'],
-                         'nCols'              : inspect_train['num_cols'],
-                         'trainParseWallTime' : parseWallTime,
-                         'nfolds'             : nfolds,
-                        })
-        
-            params   =  {'y'                  : y,
-                         'x'                  : x,
-                         'family'             : family,
-                         'link'               : link,
-                         'lambda'             : lambda_,
-                         'alpha'              : alpha,
-                         'n_folds'            : nfolds,
-                         'case_mode'          : "n/a",
-                         'destination_key'    : "GLM("+f+")",
-                         'expert_settings'    : 0,
-                        }
-
-            kwargs    = params.copy()
-            glmStart  = time.time()
-            glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=4800, **kwargs)
-            glmTime   = time.time() - glmStart
-            row.update( {'glmBuildTime'       : glmTime,
-                         'AverageAccuracy'    : glm['GLMModel']['validations'][0]['err'],
-                        })
-            
-            glmScoreStart = time.time()
-            glmScore      = h2o_cmd.runGLMScore(key=testFilehex,model_key=params['destination_key'])
-            scoreTime     = time.time() - glmScoreStart
-            if family == "binomial":
-                row.update( {'scoreTime'          : scoreTime,
-                             'AUC'                : glmScore['validation']['auc'],
-                             'AIC'                : glmScore['validation']['aic'],
-                             'error'              : glmScore['validation']['err'],
-                            })
-            else:
-                row.update( {'scoreTime'          : scoreTime,
-                             'AIC'                : glmScore['validation']['aic'],
-                             'AUC'                : 'NA',
-                             'error'              : glmScore['validation']['err'],
-                            })
-            csvWrt.writerow(row)
-        finally:
-            output.close()
+            err = gbmTrainView['gbm_model']['errs'][-1]
+        row.update({'Error' : err})
+        csvWrt.writerow(row)
+    finally:
+        output.close()
 
 if __name__ == '__main__':
+    dat   = sys.argv.pop(-1)
+    debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
-    h2o_hosts.build_cloud_with_hosts()
-    #Test File parse
-    airlinesTestParseStart      = time.time()
-    hK                          =  "AirlinesHeader.csv"
-    headerPathname              = "bench/Airlines" + "/" + hK
-    h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-    headerKey                   = h2i.find_key(hK)
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44,
-                                  timeoutSecs=4800,retryDelaySecs=5, pollTimeoutSecs=4800)
-    elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
+    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
+    fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
+    bench = "bench"
+    h2o.beta_features = True
+    if debug:
+        bench = "bench/debug"
+
+    if dat == 'Air1x'    : fs = files['Airlines']['train'][0]
+    if dat == 'Air10x'   : fs = files['Airlines']['train'][1]
+    if dat == 'Air100x'  : fs = files['Airlines']['train'][2]
+    if dat == 'AllB1x'   : fs = files['AllBedrooms']['train'][0]
+    if dat == 'AllB10x'  : fs = files['AllBedrooms']['train'][1]
+    if dat == 'AllB100x' : fs = files['AllBedrooms']['train'][2]
+
+    if fp == "Airlines":
+        #AIRLINES
+        airlinesTestParseStart      = time.time()
+        hK                          =  "AirlinesHeader.csv"
+        headerPathname              = bench+"/Airlines" + "/" + hK
+        h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+        headerKey                   = h2i.find_key(hK)
+        testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, noPoll=True,doSummary=False)
+        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+        elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
+        row = {'testParseWallTime' : elapsedAirlinesTestParse}
+        response = 'IsDepDelayed'
+        ignored  = None
+        doGBM(fs, fp,
+                ignored_cols    = ignored, 
+                classification  = 1,
+                testFilehex     = 'atest.hex',
+                ntrees          = 100,
+                depth           = 5,
+                minrows         = 10,
+                nbins           = 100,
+                learnRate       = 0.01,
+                response        = response,
+                row             = row
+             )
     
-    row = {'testParseWallTime' : elapsedAirlinesTestParse}
-    x = "Year,Month,DayofMonth,DayofWeek,CRSDepTime,CRSArrTime,UniqueCarrier,CRSElapsedTime,Origin,Dest,Distance"
-    doGLM(files['Airlines'], 'Airlines', 'binomial', 'logit', 1E-5, 0.5, 10, 'IsDepDelayed', x, testFile['destination_key'], row)
+    if fp == "AllBedrooms":    
+        #ALLBEDROOMS
+        allBedroomsTestParseStart   = time.time()
+        hK                          =  "AllBedroomsHeader.csv"
+        headerPathname              = bench+"/AllBedrooms" + "/" + hK
+        h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+        headerKey                   = h2i.find_key(hK)
+        testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBTest.hex", header=1, header_from_file=headerKey, separator=44,noPoll=True,doSummary=False)
+        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+        elapsedAllBedroomsTestParse = time.time() - allBedroomsTestParseStart
+        row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
+        response = 'medrent'
+        ignored  = None
+        doGBM(fs, fp,
+                ignored_cols    = ignored,
+                classification  = 0,
+                testFilehex     = "allBTest.hex",
+                ntrees          = 100,
+                depth           = 5,
+                minrows         = 10,
+                nbins           = 100,
+                learnRate       = 0.01,
+                response        = response,
+                row             = row 
+             )
+            
+    #COVTYPE
+    #covTypeTestParseStart   = time.time()
+    #hK                          = "CovTypeHeader.csv"
+    #headerPathname              = bench+"/CovType" + "/" + hK
+    #h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
+    #headerKey                   = h2i.find_key(hK)
+    #testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/CovType/CovTypeTest.csv', schema='local', hex_key="covTtest.hex", header=1, header_from_file=headerKey, separator=44, noPoll=True,doSummary=False)
+    #h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+    #elapsedCovTypeTestParse = time.time() - covTypeTestParseStart
+    #row = {'testParseWallTime' : elapsedCovTypeTestParse}
+    #response = 'C55'
+    #ignored  = None
+    #doGBM(files['Covtype'], folderPath='CovType', 
+    #        ignored_cols    = ignored, 
+    #        classification  = 1,
+    #        testFilehex     = testFile['destination_key'], 
+    #        ntrees          = 100,
+    #        depth           = 5,
+    #        minrows         = 10, 
+    #        nbins           = 100,
+    #        learnRate       = 0.01,
+    #        response        = response,
+    #        row             = row
+    #     ) 
 
-    allBedroomsTestParseStart   = time.time()
-    x = 'sumlevel,metro,Rent_Type,mcd,count1,count2,count3,count4,count5,count6,count7,count8,count9,count10,count11,count12,count13,count14,count15,count16,count17,count18,count19,count20,count21,count22,count23,count24,count25,count26,count27,count28,count29,count30,count31,count32,count33,count34,count35,count36,count37,count38,count39,count40,count41,count42,count43,count44,count45,count46,count47,count48,count49,count50,count51,count52,count53,count54,count55,count56,count57,count58,count59,count60,count61,count62,count63,count64,count65,count66,count67,count68,count69,count70,count71,count72,count73,count74,count75,count76,count77,count78,count79,count80,count81,count82,count83,count84,count85,count86,count87,count88,count89,count90,count91,count92,count93,count94,count95,count96,count97,count98,count99'
-    hK                          =  "AllBedroomsHeader.csv"
-    headerPathname              = "bench/AllBedrooms" + "/" + hK
-    h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
-    headerKey                   = h2i.find_key(hK)
-
-    testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path='bench/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBtest.hex", header=1, header_from_file=headerKey, separator=44,
-                                  timeoutSecs=4800,retryDelaySecs=5, pollTimeoutSecs=4800)
-
-    elapsedAllBedroomsTestParse = time.time() - allBedroomsTestParseStart
-    
-    row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
-    doGLM(files['AllBedrooms'], 'AllBedrooms', 'gaussian', 'identity', 1E-2, 0.5, 10, 'medrent',x, testFile['destination_key'],row)
 
     h2o.tear_down_cloud()
