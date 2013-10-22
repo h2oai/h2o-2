@@ -38,7 +38,7 @@ public class GridSearch extends Job {
 
   @Override public Response redirect() {
     String n = GridSearchProgress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, "job", job_key, "dst_key", destination_key);
+    return new Response(Response.Status.redirect, this, -1, -1, n, "job_key", job_key, "destination_key", destination_key);
   }
 
   public static class GridSearchProgress extends Progress2 {
@@ -105,7 +105,7 @@ public class GridSearch extends Job {
             sb.append("<td>").append(speed).append("</td>");
 
           String link = info._job.destination_key.toString();
-          if( info._job.start_time != 0 ) {
+          if( info._job.start_time != 0 && DKV.get(info._job.destination_key) != null ) {
             if( info._model instanceof GBMModel )
               link = GBMModelView.link(link, info._job.destination_key);
             else if( info._model instanceof NeuralNetModel )

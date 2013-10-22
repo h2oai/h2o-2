@@ -1700,10 +1700,12 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'ignored_cols_by_name': None,
+            'ignored_cols_by_name': None, # either this or cols..not both
+            'cols': None,
             'nbins': None,
             'classification': None,
         }
+
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm', print_params)
 

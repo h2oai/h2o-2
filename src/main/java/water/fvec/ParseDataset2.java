@@ -266,33 +266,30 @@ public final class ParseDataset2 extends Job {
     }
     Vec v = getVec(fkeys[0]);
     MultiFileParseTask uzpt = new MultiFileParseTask(v.group(),setup,job._progress).invoke(fkeys);
-    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(setup._ncols),uzpt._dout.closeVecs());
-    // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
-    SVFTask t = new SVFTask(fr);
-    t.invokeOnAllNodes();
-    int [] ecols = new int[fr.vecs().length];
+    EnumUpdateTask eut = null;
+    // Calculate enum domain
     int n = 0;
+    int [] ecols = new int[uzpt._dout._nCols];
     for(int i = 0; i < ecols.length; ++i)
-      if(fr.vecs()[i].isEnum() )
+      if(uzpt._dout._vecs[i].shouldBeEnum())
         ecols[n++] = i;
     ecols =  Arrays.copyOf(ecols, n);
-    // Rollup all the enum columns; uniformly renumber enums per chunk, etc.
     if( ecols != null && ecols.length > 0 ) {
       EnumFetchTask eft = new EnumFetchTask(H2O.SELF.index(), uzpt._eKey, ecols).invokeOnAllNodes();
       Enum [] enums = eft._gEnums;
       String [][] ds = new String[ecols.length][];
       int j = 0;
-      final Vec [] vecs = fr.vecs();
-      for(int i:ecols)ds[j++] =  vecs[i]._domain = enums[i].computeColumnDomain();
+      for(int i:ecols)ds[j++] =  uzpt._dout._vecs[i]._domain = enums[i].computeColumnDomain();
+      eut = new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols);
+    }
+    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(setup._ncols),uzpt._dout.closeVecs());
+    // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
+    SVFTask t = new SVFTask(fr);
+    t.invokeOnAllNodes();
+    if(eut != null){
       Vec [] evecs = new Vec[ecols.length];
       for(int i = 0; i < evecs.length; ++i)evecs[i] = fr.vecs()[ecols[i]];
-      new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols).doAll(evecs);
-      Futures fs = new Futures();
-      for(Vec v2:evecs){
-        v2.postWrite();
-        DKV.put(v2._key, v2,fs);
-      }
-      fs.blockForPending();
+      eut.doAll(evecs);
     }
     // Jam the frame of columns into the K/V store
     UKV.put(job.dest(),fr);

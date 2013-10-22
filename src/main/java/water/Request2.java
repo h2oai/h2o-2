@@ -389,7 +389,7 @@ public abstract class Request2 extends Request {
       String s, current = "";
       while( (s = getNextToken(st)) != null ) {
         if( ",".equals(s) ) {
-          values = Utils.add(values, current);
+          values = Utils.append(values, current);
           current = "";
         } else if( "'".equals(s) ) {
           while( !("'".equals((s = getNextToken(st)))) ) {
@@ -401,7 +401,7 @@ public abstract class Request2 extends Request {
           current += s;
       }
       if( current.length() > 0 )
-        values = Utils.add(values, current);
+        values = Utils.append(values, current);
     } else
       values = new String[] { value };
     return values;
