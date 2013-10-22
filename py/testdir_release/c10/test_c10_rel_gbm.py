@@ -24,6 +24,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         importFolderPath = '/mnt/0xcustomer-datasets/c3'
         csvFilename = 'classification1Test.txt'
         csvPathname = importFolderPath + "/" + csvFilename
+
+        start = time.time()
         parseTestResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, doSummary=False)
         print "Parse of", parseTestResult['destination_key'], "took", time.time() - start, "seconds"
 
