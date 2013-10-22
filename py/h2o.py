@@ -1905,7 +1905,7 @@ class H2O(object):
                 'link': None,
                 'alpha': None,
                 'lambda': None,
-                'beta_epsilon': None,
+                'beta_epsilon': None, # GLMGrid doesn't use this name
                 'tweedie_variance_power': None,
                 'n_folds': None,
                 'case_mode': None,
@@ -1914,6 +1914,7 @@ class H2O(object):
                 'thresholds': None,
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallel': None,
+                'beta_eps': None,
             } 
         else:
             params_dict = {
@@ -1927,7 +1928,7 @@ class H2O(object):
                 'link': None,
                 'alpha': None,
                 'lambda': None,
-                'beta_epsilon': None,
+                'beta_epsilon': None, # GLMGrid doesn't use this name
                 'tweedie_power': None,
                 'n_folds': None,
                 'case_mode': None,
@@ -1938,6 +1939,7 @@ class H2O(object):
                 'thresholds': None,
                 # only GLMGrid has these..we should complain about it on GLM?
                 'parallel': None,
+                'beta_eps': None,
             }
 
         check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)

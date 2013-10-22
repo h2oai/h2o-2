@@ -257,6 +257,7 @@ public final class ParseDataset2 extends Job {
   // --------------------------------------------------------------------------
   // Top-level parser driver
   private static void parse_impl(ParseDataset2 job, Key [] fkeys, CustomParser.ParserSetup setup) {
+    assert setup._ncols > 0;
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
     UKV.remove(job.dest());
