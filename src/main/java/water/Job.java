@@ -25,6 +25,7 @@ public class Job extends Request2 {
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
   private static final int KEEP_LAST_COUNT = 100;
   public static final long CANCELLED_END_TIME = -1;
+  private static final int[] EMPTY = new int[0];
 
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
@@ -81,11 +82,11 @@ public class Job extends Request2 {
     class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
     @API(help = "Ignored columns by name and zero-based index", filter=colsNamesIdxFilter.class, displayName="Ignored columns")
-    public int[] ignored_cols;
+    public int[] ignored_cols = EMPTY;
     class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
 
     @API(help = "Ignored columns by name", filter=colsNamesFilter.class, displayName="Ignored columns by name", hide=true)
-    public int[] ignored_cols_by_name;
+    public int[] ignored_cols_by_name = EMPTY;
     class colsNamesFilter extends MultiVecSelect { public colsNamesFilter() {super("source", MultiVecSelectType.NAMES_ONLY); } }
 
     @Override protected void logStart() {
@@ -129,8 +130,6 @@ public class Job extends Request2 {
         // Setup all variables in consistence way
         ignored_cols = icols;
         ignored_cols_by_name = icols;
-      } else {
-        //ignored_cols = ignored_cols_by_name = new int[0];
       }
 
       if( cols.length == 0 )
