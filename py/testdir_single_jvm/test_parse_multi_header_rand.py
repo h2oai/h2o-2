@@ -93,6 +93,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        time.sleep(3600)
         h2o.tear_down_cloud()
     
     def test_parse_multi_header_rand(self):
@@ -115,7 +116,7 @@ class Basic(unittest.TestCase):
             (10, 100, 500, 'cA', 60, 0),
             ]
 
-        for trial in range(50):
+        for trial in range(10):
             (fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader) = random.choice(tryList)
             print fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader
             # FIX! should we add a header to them randomly???
@@ -244,7 +245,12 @@ class Basic(unittest.TestCase):
             # use it at the node level directly (because we gen'ed the files.
             # I suppose we could force the redirect state bits in h2o.nodes[0] to False, instead?:w
 
-            (importFolderResult, importPattern) = h2i.import_only(path=SYNDATASETS_DIR + "/*", timeoutSecs=15)
+            # put them, rather than using import files, so this works if remote h2o is used
+            # and python creates the files locally
+            fileList = os.listdir(SYNDATASETS_DIR)
+            for f in fileList:
+                h2i.import_only(path=SYNDATASETS_DIR + "/" + f, schema='put', noPrint=True)
+
             h2o_cmd.runStoreView()
             headerKey = h2i.find_key(hdrFilename)
             dataKey = h2i.find_key(csvFilename)
@@ -285,13 +291,13 @@ class Basic(unittest.TestCase):
             # may have error if h2o doesn't get anything!
             start = time.time()
             if PARSE_PATTERN_INCLUDES_HEADER and HEADER_HAS_HDR_ROW:
-                pattern = SYNDATASETS_DIR + '/syn_*'+str(trial)+"_"+rowxcol+'*'
+                pattern = 'syn_*'+str(trial)+"_"+rowxcol+'*'
             else:
-                pattern = SYNDATASETS_DIR + '/syn_data_*'+str(trial)+"_"+rowxcol+'*'
+                pattern = 'syn_data_*'+str(trial)+"_"+rowxcol+'*'
+
             # don't pass to parse
             kwargs.pop('hdr_separator', None)
-            parseResult = h2i.import_parse(path=pattern, hex_key=hex_key, schema='put',
-                timeoutSecs=timeoutSecs, **kwargs)
+            parseResult = h2i.parse_only(pattern=pattern, hex_key=hex_key, timeoutSecs=timeoutSecs, **kwargs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']
 
