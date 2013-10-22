@@ -55,9 +55,10 @@ class Basic(unittest.TestCase):
                 'normalize': 0, 
                 'max_iter': "c(2,5,10)"
             }
+    
             for trial in range(3):
                 kwargs = params.copy()
-
+                h2o.beta_features = True
                 start = time.time()
                 kmeans = h2o_cmd.runKMeans(parseResult=parseResult, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)

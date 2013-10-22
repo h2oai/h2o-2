@@ -60,6 +60,7 @@ class Basic(unittest.TestCase):
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
 
             paramDict = define_params(SEED)
+            h2o.beta_features = True # no grid for VA
             for trial in range(3):
                 # default
                 params = {'k': 'c(1,2,3)' }
@@ -67,7 +68,7 @@ class Basic(unittest.TestCase):
 
                 h2o_kmeans.pickRandKMeansParams(paramDict, params)
                 kwargs = params.copy()
-
+        
                 start = time.time()
                 kmeans = h2o_cmd.runKMeans(parseResult=parseResult, \
                     timeoutSecs=timeoutSecs, retryDelaySecs=2, pollTimeoutSecs=60, **kwargs)
