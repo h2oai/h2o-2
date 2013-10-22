@@ -288,8 +288,8 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
     })
 
 #------------------------------- Principal Components Analysis ----------------------------------#
-h2o.prcomp.internal <- function(data, x, dest, max_pc, tol, standardize) {
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, x=x, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
+h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc, tol, standardize) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, ignored_cols_by_name=x_ignore, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   destKey = res$destination_key
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
@@ -310,20 +310,20 @@ h2o.prcomp.internal <- function(data, x, dest, max_pc, tol, standardize) {
 
 setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical", retx="logical"), 
     function(data, tol, standardize, retx) {
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, tolerance=tol, standardize=as.numeric(standardize))
-      while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-      destKey = res$destination_key
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
-      res = res$PCAModel
+      destKey = paste("__PCA_Model__", UUIDgenerate(), sep="")
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, destination_key=destKey, tolerance=tol, standardize=as.numeric(standardize))
+      while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
+      res = res$pca_model
       
       result = list()
       result$standardized = standardize
-      result$sdev = as.numeric(unlist(res$stdDev))
+      result$sdev = res$sdev
       # result$rotation = do.call(rbind, res$eigenvectors)
       # temp = t(do.call(rbind, res$eigenvectors))
-      nfeat = length(res$eigenvectors[[1]])
-      temp = matrix(unlist(res$eigenvectors), nrow = nfeat)
-      rownames(temp) = names(res$eigenvectors[[1]])
+      nfeat = length(res$eigVec[[1]])
+      temp = t(matrix(unlist(res$eigVec), nrow = nfeat))
+      rownames(temp) = res$'_names'
       colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
       result$rotation = temp
       if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result))
@@ -350,9 +350,10 @@ setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData
       if(any(!x %in% myCol)) stop("Invalid column names: ", paste(x[which(!x %in% myCol)], collapse=", "))
       if(ncomp < 1 || ncomp > ncol(data)) stop("Number of components must be between 1 and ", ncol(data))
       
-      myXCol = which(myCol %in% x)-1
+      myIgnore = which(!myCol %in% x)-1
+      if(length(myIgnore) == 0) myIgnore = ""
       # myModel = h2o.prcomp(data, myXCol, standardize = TRUE, retx = TRUE)
-      myModel = h2o.prcomp.internal(data=data, x=myXCol, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
+      myModel = h2o.prcomp.internal(data=data, x_ignore=myIgnore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
       myScore = h2o.predict(myModel)
       
       myYCol = which(myCol == y)-1
@@ -528,7 +529,6 @@ setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedD
       rand_glm_key = paste("__GLM2Model_", UUIDgenerate(), sep="")
       
       if(family != "tweedie")
-<<<<<<< HEAD:R/h2o-package/R/Algorithms.R
         res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
       else
         res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))

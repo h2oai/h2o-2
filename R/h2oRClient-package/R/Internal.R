@@ -25,8 +25,8 @@ h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
-h2o.__PAGE_PCA = "PCA.json"
-h2o.__PAGE_PCASCORE = "PCAScore.json"
+h2o.__PAGE_PCA = "2/PCA.json"
+h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"
@@ -44,6 +44,7 @@ h2o.__PAGE_GLM2 = "2/GLM2.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
 h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
+h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip

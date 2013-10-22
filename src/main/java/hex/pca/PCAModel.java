@@ -43,6 +43,9 @@ public class PCAModel extends Model {
     this.num_pc = num_pc;
   }
 
+  public double[] sdev() { return sdev; }
+  public double[][] eigVec() { return eigVec; }
+
   @Override protected float[] score0(double[] data, float[] preds) {
     throw new RuntimeException("TODO Auto-generated method stub");
   }
@@ -60,7 +63,7 @@ public class PCAModel extends Model {
 
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.js'></script>");
     sb.append("<div class='alert'>Actions: " + PCAScore.link(_selfKey, "Score on dataset") + ", "
-        + PCA2.link(_dataKey, "Compute new model") + "</div>");
+        + PCA.link(_dataKey, "Compute new model") + "</div>");
     screevarString(sb);
     sb.append("<span style='display: inline-block;'>");
     sb.append("<table class='table table-striped table-bordered'>");

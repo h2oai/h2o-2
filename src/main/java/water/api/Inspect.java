@@ -1,7 +1,7 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.DPCA.PCAModel;
+import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.*;
 import hex.KMeans2.KMeans2Model;
@@ -136,14 +136,14 @@ public class Inspect extends Request {
       JsonObject response = new JsonObject();
       return RFView.redirect(response, rfModel._selfKey, rfModel._dataKey, true);
     }
-    if( f instanceof PCAModel ) {
+    /*if( f instanceof PCAModel ) {
       PCAModel m = (PCAModel)f;
       JsonObject res = new JsonObject();
       res.add(PCAModel.NAME, m.toJson());
       Response r = Response.done(res);
       r.setBuilder(PCAModel.NAME, new PCA.Builder(m));
       return r;
-    }
+    }*/
     if( f instanceof Job.Fail ) {
       UKV.remove(val._key);   // Not sure if this is a good place to do this
       return Response.error(((Job.Fail)f)._message);

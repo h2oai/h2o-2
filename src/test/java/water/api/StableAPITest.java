@@ -3,7 +3,7 @@
  */
 package water.api;
 
-import hex.DPCA.PCAModel;
+import hex.pca.PCAModel;
 import hex.*;
 import hex.gbm.GBM;
 import hex.glm.*;
@@ -187,7 +187,8 @@ public class StableAPITest {
     regPy(KMeansScore.class, "key", "model_key");
     regPy(LogView.class);
     regPy(NeuralNet.class, "activation", "cols", "destination_key", "epochs", "hidden", "l2", "rate", "response", "source");
-    regPy(PCA.class, "destination_key", "key", "standardize", "tolerance");
+    // regPy(PCA.class, "destination_key", "key", "standardize", "tolerance");
+    regPy(PCA.class, "destination_key", "source", "standardize", "tolerance");
     // regPy(PCAScore.class, "destination_key", "key", "model_key", "num_pc");
     regPy(PCAScore.class, "source", "model", "destination_key", "num_pc");
     regPy(Parse.class, "destination_key", "header", "header_from_file", "separator", "source_key");
@@ -253,7 +254,8 @@ public class StableAPITest {
     regR(KMeansApply.class, "model_key", "data_key", "destination_key");
     regR(KMeansScore.class, "model_key", "key");
     regR(Parse.class, "source_key", "destination_key", "header", "header_from_file", "separator" );
-    regR(PCA.class, "key", "x", "destination_key", "max_pc", "tolerance", "standardize");
+    // regR(PCA.class, "key", "x", "destination_key", "max_pc", "tolerance", "standardize");
+    regR(PCA.class, "source", "ignored_cols", "destination_key", "max_pc", "tolerance", "standardize");
     // regR(PCAScore.class, "model_key", "key", "destination_key", "num_pc");
     regR(PCAScore.class, "source", "model", "destination_key", "num_pc");
     regR(Predict.class, "model", "data", "prediction");

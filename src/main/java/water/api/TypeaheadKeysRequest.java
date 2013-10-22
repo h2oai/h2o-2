@@ -1,7 +1,7 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.DPCA.PCAModel;
+import hex.pca.PCAModel;
 import hex.*;
 import hex.rf.RFModel;
 
@@ -89,7 +89,7 @@ class TypeaheadKMeansModelKeyRequest extends TypeaheadKeysRequest {
 class TypeaheadPCAModelKeyRequest extends TypeaheadKeysRequest {
   public TypeaheadPCAModelKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
-          "current node that are KMeansModels at the time of calling.",
+          "current node that are PCAModels at the time of calling.",
           null,PCAModel.class);
   }
 }

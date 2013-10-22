@@ -21,7 +21,7 @@ import water.util.RString;
  * @author anqi_fu
  *
  */
-public class PCA2 extends ColumnsJob {
+public class PCA extends ColumnsJob {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "pca";
@@ -38,25 +38,29 @@ public class PCA2 extends ColumnsJob {
   @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class)
   boolean standardize = true;
 
-  /*
-  public PCA2(String desc, Key dest, Frame src, int max_pc, double tol, boolean standardize) {
+  public PCA() {tolerance = 0; standardize = true;}
+
+  public PCA(String desc, Key dest, Frame src, double tolerance, boolean standardize) {
+    this(desc, dest, src, 10000, tolerance, standardize);
+  }
+
+  public PCA(String desc, Key dest, Frame src, int max_pc, double tolerance, boolean standardize) {
     description = desc;
     destination_key = dest;
     source = src;
     this.max_pc = max_pc;
-    this.tolerance = tol;
+    this.tolerance = tolerance;
     this.standardize = standardize;
   }
-  */
 
   @Override protected void exec() {
     Frame fr = selectFrame(source);
     Vec[] vecs = fr.vecs();
 
-    // Remove constant cols, non-numeric cols, and cols with too many NAs
+    // Remove constant cols and cols with too many NAs
     ArrayList<Integer> removeCols = new ArrayList<Integer>();
     for(int i = 0; i < vecs.length; i++) {
-      if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2 || vecs[i].domain() != null)
+      if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)
         removeCols.add(i);
     }
     if(!removeCols.isEmpty()) {
@@ -66,8 +70,7 @@ public class PCA2 extends ColumnsJob {
       fr.remove(cols);
     }
 
-    GramTask tsk = new GramTask(this, standardize, false);
-    tsk.doIt(fr);
+    GramTask tsk = new GramTask(this, standardize, false).doIt(fr);
     PCAModel myModel = buildModel(fr, tsk._gram.getXX());
     UKV.put(destination_key, myModel);
   }
@@ -124,7 +127,7 @@ public class PCA2 extends ColumnsJob {
   }
 
   public static String link(Key src_key, String content) {
-      RString rs = new RString("<a href='/2/PCA2.query?%key_param=%$key'>%content</a>");
+      RString rs = new RString("<a href='/2/PCA.query?%key_param=%$key'>%content</a>");
       rs.replace("key_param", "source");
       rs.replace("key", src_key.toString());
       rs.replace("content", content);
