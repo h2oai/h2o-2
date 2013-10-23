@@ -337,7 +337,7 @@ public class Inspect extends Request {
         + "</div>"
         + "<p><b><font size=+1>"
           + cols + " columns"
-          + (bytesPerRow != 0 ? (", " + bytesPerRow + " bytes-per-row * " + Utils.pprintLong(rows) + " rows = " + PrettyPrint.bytes(bytes)) : "")
+          + (bytesPerRow != 0 ? (", " + bytesPerRow + " bytes-per-row * " + String.format("%,d",rows) + " rows = " + PrettyPrint.bytes(bytes)) : "")
         + "</font></b></p>");
       // sb.append(
       // " <script>$('#inspect').submit( function() {" +
