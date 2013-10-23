@@ -9,9 +9,8 @@ import hex.glm.GLMTask.YMUTask;
 import hex.glm.GLMValidation.GLMXValidation;
 import hex.glm.LSMSolver.ADMMSolver;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import jsr166y.CountedCompleter;
 import water.*;
@@ -62,13 +61,13 @@ public class GLM2 extends ModelJob {
   public GLM2 setTweedieVarPower(double d){tweedie_variance_power = d; return this;}
 
   public GLM2() {_step = 1; _offset = 0; _complement = false;}
-  public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda){
-    this(desc, dest, src, standardize, family, link, alpha, lambda, 1,0,false,null);
+  public GLM2(String desc, Key dest, Frame src,Vec response,  boolean standardize, Family family, Link link, double alpha, double lambda){
+    this(desc, dest, src, response, standardize, family, link, alpha, lambda, 1,0,false,null);
   }
-  public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int skip, boolean complement, double [] beta) {
-    this(desc, dest, src, standardize, family, link, alpha, lambda,step,skip,complement,beta,0);
+  public GLM2(String desc, Key dest, Frame src,Vec response, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int skip, boolean complement, double [] beta) {
+    this(desc, dest, src,response, standardize, family, link, alpha, lambda,step,skip,complement,beta,0);
   }
-  public GLM2(String desc, Key dest, Frame src, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int offset, boolean complement, double [] beta,int nfold) {
+  public GLM2(String desc, Key dest, Frame src,Vec response, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int offset, boolean complement, double [] beta,int nfold) {
     description = desc;
     destination_key = dest;
     source = src;
@@ -82,6 +81,7 @@ public class GLM2 extends ModelJob {
     _complement = complement;
     _beta = beta;
     this.n_folds = nfold;
+    this.response = response;
   }
 
   @Override public void cancel(String msg){
@@ -170,7 +170,8 @@ public class GLM2 extends ModelJob {
     UKV.remove(dest());
     _oldModel = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime,GLM2.this.case_mode,GLM2.this.case_val);
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
-    Frame fr = (Frame)source.clone();
+    Frame fr = new Frame(source._names.clone(),source.vecs().clone());
+    System.out.println("Frame = " + Arrays.toString(fr._names));
     fr.remove(ignored_cols);
     final Vec [] vecs =  fr.vecs();
     ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
@@ -214,6 +215,6 @@ public class GLM2 extends ModelJob {
     callback.setCompleter(cmp);
     _subjobs = new GLM2[n_folds];
     for(int i = 0; i < n_folds; ++i)
-      (_subjobs[i] =  new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta)).run(callback);
+      (_subjobs[i] =  new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, response, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta)).run(callback);
   }
 }
