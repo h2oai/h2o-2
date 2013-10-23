@@ -24,7 +24,7 @@ import water.fvec.Vec;
 import water.util.Utils;
 
 public class GLM2 extends ModelJob {
-
+  private GLM2 [] _subjobs;
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000)
   int max_iter = 50;
   @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class)
@@ -82,6 +82,11 @@ public class GLM2 extends ModelJob {
     _complement = complement;
     _beta = beta;
     this.n_folds = nfold;
+  }
+
+  @Override public void cancel(String msg){
+    if(_subjobs != null)for(GLM2 g:_subjobs)g.cancel("Parent job cancelled with msg: " + msg);
+    super.cancel(msg);
   }
 
   private long _startTime;
@@ -153,15 +158,7 @@ public class GLM2 extends ModelJob {
       } else fjt.onExceptionalCompletion(new RuntimeException("Cancelled!"),null);
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      final String msg = ex.getMessage();
-      if(msg == null || !msg.equals("Cancelled")){
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        ex.printStackTrace(pw);
-        String stackTrace = sw.toString();
-        GLM2.this.cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
-        System.out.println(stackTrace);
-      }
+      GLM2.this.cancel(ex);
       fjt.completeExceptionally(ex);
       return false;
     }
@@ -208,10 +205,15 @@ public class GLM2 extends ModelJob {
         DKV.put(model._selfKey, model);
         GLM2.this.remove();
       }
+      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+        GLM2.this.cancel(ex);
+        return true;
+      }
     };
     callback.addToPendingCount(n_folds-1);
     callback.setCompleter(cmp);
+    _subjobs = new GLM2[n_folds];
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta).run(callback);
+      (_subjobs[i] =  new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta)).run(callback);
   }
 }
