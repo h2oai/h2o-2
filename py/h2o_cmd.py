@@ -60,11 +60,11 @@ def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noP
     return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, noPoll=noPoll, **kwargs)
 
 def runGLM(node=None, parseResult=None, 
-        timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
+        timeoutSecs=20, retryDelaySecs=2, noise=None, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLM')
     if not node: node = h2o.nodes[0]
     return node.GLM(parseResult['destination_key'], 
-        timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
+        timeoutSecs, retryDelaySecs, noise=noise, noPoll=noPoll,**kwargs)
 
 def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
@@ -77,23 +77,23 @@ def runGLMGrid(node=None, parseResult=None,
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
-def runPCA(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for PCA')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
+    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
 
-def runNNet(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for NN')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
+    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=False, **kwargs)
 
 def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs,**kwargs) 
+    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs) 
 
 def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwargs):
     if not data_key: raise Exception('No data_key for run Predict')
