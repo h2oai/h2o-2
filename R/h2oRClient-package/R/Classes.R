@@ -308,7 +308,7 @@ histograms <- function(object) { UseMethod("histograms", object) }
 setMethod("histograms", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
   list.of.bins <- lapply(res$summaries, function(res) {
-    if (res$start == "NaN") {
+    if (res$rows == 0) {
       bins <- NULL
     } else {
       domains <- res$domains
