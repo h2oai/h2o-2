@@ -77,11 +77,11 @@ def runGLMGrid(node=None, parseResult=None,
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
-def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
+def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, returnFast=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for PCA')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, returnFast=returnFast, **kwargs)
 
 def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for NN')
@@ -119,6 +119,13 @@ def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noP
         raise Exception("\nNo model_key was supplied to the gbm view!")
     gbmView = node.gbm_view(model_key,timeoutSecs=timeoutSecs)
     return gbmView
+
+def runPCAView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+    if not node: node = h2o.nodes[0]
+    if not modelKey:
+        raise Exception("\nNo modelKey was supplied to the pca view!")
+    pcaView = node.pca_view(modelKey, timeoutSecs=timeoutSecs)
+    return pcaView
 
 def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
     if not node: node = h2o.nodes[0]

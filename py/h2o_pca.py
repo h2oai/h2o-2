@@ -12,18 +12,17 @@ def simpleCheckPCA(self, pca, **kwargs):
             if re.search(x,w): raise Exception(w)
 
     # Check other things in the json response dictionary 'pca' here
-    destination_key = pca['destination_key']
-    pcaResult = h2o_cmd.runInspect(key=destination_key, view=100)
+    pcaResult = pca
     h2o.verboseprint('pcaResult Inspect:', h2o.dump_json(pcaResult))
     
     #Check no NaN in sdevs, propVars, or in PCs 
     print "Checking sdevs..."
-    sdevs = pcaResult["PCAModel"]["stdDev"]
+    sdevs = pcaResult["pca_model"]["sdev"]
     h2o.verboseprint("pca sdevs:", h2o.dump_json(sdevs))
     
     # sdevs is supposed to be a list sorted by s 
     # sFirst = sdevs[0].s
-    for PC,s in sdevs.iteritems():
+    for PC,s in enumerate(sdevs):
         if math.isnan(s):
             raise Exception("sdev %s is NaN: %s" % (PC,s))
         # anqi says the list should be sorted..i.e. first first
@@ -32,17 +31,17 @@ def simpleCheckPCA(self, pca, **kwargs):
             
 
     print "Checking propVars...",
-    propVars = pcaResult["PCAModel"]["propVar"]
+    propVars = pcaResult["pca_model"]["propVar"]
     h2o.verboseprint("pca propVars:", h2o.dump_json(propVars))
-    for PC,propvar in propVars.iteritems():
+    for PC,propvar in enumerate(propVars):
         if math.isnan(propvar):
             raise Exception("propVar %s is NaN: %s", (PC, propvar))
     print " Good!"
-    print "Checking eigenvectors...",
-    pcs = pcaResult["PCAModel"]["eigenvectors"]
-    h2o.verboseprint("pca eigenvectors:", h2o.dump_json(pcs))
+    print "Checking eigVec...",
+    pcs = pcaResult["pca_model"]["eigVec"]
+    h2o.verboseprint("pca eigVec:", h2o.dump_json(pcs))
     for i,s in enumerate(pcs):
-        for r,e in s.iteritems():
+        for r,e in enumerate(s):
             if math.isnan(e):
                 raise Exception("Component %s has NaN: %s eigenvector %s", (i, e, s))
     print " Good!"
@@ -52,10 +51,10 @@ def simpleCheckPCA(self, pca, **kwargs):
     # now print the top ten. Sorting by the value...getting key,value tuples (so we can see the column)
     # it should match the column numbering..even if it skips cols due to enums
     import operator
-    print "Just look at the sort for the first row in pca eigenvectors"
+    print "Just look at the sort for the first row in pca eigVec"
     i = 0
     s = pcs[i]
-    sorted_s = sorted(s.iteritems(), key=lambda t: abs(t[1]))
+    sorted_s = sorted(enumerate(s), key=lambda t: abs(t[1]))
     num = min(10, len(s))
     print "\n%s First (smallest) %d. sorted_pcs[0:9]: %s\n" % (i, num, sorted_s[0:num-1])
     print "The first entry from the eigenvector, should have the largest std dev, because it's sorted"
@@ -65,27 +64,24 @@ def simpleCheckPCA(self, pca, **kwargs):
 
     # shouldn't have any errors
     h2o.check_sandbox_for_errors()
-
     return warnings
 
 def resultsCheckPCA(self, pca, **kwargs):
-    #print h2o.dump_json(pca)
-    destination_key = pca['destination_key']
-    pcaResult = h2o_cmd.runInspect(key=destination_key, **{'view':100})
+    pcaResult = pca
 
     print "Checking that propVars sum to 1",
-    propVars = pcaResult["PCAModel"]["propVar"]
+    propVars = pcaResult["pca_model"]["propVar"]
     sum_ = 1.0
-    for PC,propVar in propVars.iteritems(): sum_ -= propVar
+    for PC,propVar in enumerate(propVars): sum_ -= propVar
     self.assertAlmostEqual(sum_,0,msg="PropVar does not sum to 1.")
     print " Good!"
-    if pcaResult["PCAModel"]["PCAParams"]["tolerance"] != 0.0 or pcaResult["PCAModel"]["PCAParams"]["standardized"] != True: 
+    if pcaResult["pca_model"]["params"]["tolerance"] != 0.0 or pcaResult["pca_model"]["params"]["standardize"] != True: 
         return
     print "Checking that sdevs^2 sums to number of variables"
-    #if not standardized or tolerance != 0, don't do check
-    sdevs = pcaResult["PCAModel"]["stdDev"]
+    #if not standardize or tolerance != 0, don't do check
+    sdevs = pcaResult["pca_model"]["sdev"]
     sum_ = len(sdevs)
-    for PC,sdev in sdevs.iteritems(): sum_ -= sdev**2
+    for PC,sdev in enumerate(sdevs): sum_ -= sdev**2
     if not ((sum_ -.5) < 0 < (sum_ +.5)):
         print "sum(sdevs^2) are not within .5 of 0. sdevs incorrect?"
         h2o.dump_json(sdevs)
@@ -94,10 +90,9 @@ def resultsCheckPCA(self, pca, **kwargs):
 
     print "Checking that the sum of square component loadings is 1 for each component." 
     print "In symbols, we are checking: sum_j(a_ij)^2 == 1 for all i"
-    pcs = pcaResult["PCAModel"]["eigenvectors"]
-    sums = [round(sum([a**2 for a in eigenvector.values()]),5) for eigenvector in pcs]
+    pcs = pcaResult["pca_model"]["eigVec"]
+    sums = [round(sum([a**2 for a in eigenvector]),5) for eigenvector in pcs]
     print "Sum of the square PC loadings are: ", sums
     if  sums != [1 for i in range(len(pcs))]:
         raise Exception("Sum of the square loadings do not add up to 1 for at least one eigenvector!")
     print "Good!"
-        
