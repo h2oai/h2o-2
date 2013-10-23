@@ -354,7 +354,7 @@ setMethod("summary", "H2OParsedData2", function(object) {
       counts <- res$bins[res$maxs + 1]
       width <- max(cbind(nchar(domains), nchar(counts)))
       result <- paste(domains,
-                      mapply(function(x, y) { paste(rep(' ',width + 1 - nchar(x) - nchar(y)), collapse='') }, domains, counts),
+                      mapply(function(x, y) { paste(rep(' ', max(width + 1 - nchar(x) - nchar(y),0)), collapse='') }, domains, counts),
                       ":",
                       counts,
                       " ",

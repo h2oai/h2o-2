@@ -986,12 +986,16 @@ class H2O(object):
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
 
-        if 'redirect_url' in response:
-            # url = self.__url(response['redirect_url'] + ".json")
-            # this is the full url now, with params?
-            url = self.__url(response['redirect_url'])
-            # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
-            params = None
+
+        if beta_features:
+            if 'redirect_url' in response:
+                # url = self.__url(response['redirect_url'] + ".json")
+                # this is the full url now, with params?
+                url = self.__url(response['redirect_url'])
+                # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+                params = None
+            else:
+                raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
 
         else:
             url = self.__url(response['response']['redirect_request'])

@@ -758,4 +758,14 @@ public class Utils {
     for(int i=start; i<stop;i++) res[i-start] = i;
     return res;
   }
+  public static String pprintLong(long l){
+    long rem = l;
+    StringBuilder sb = new StringBuilder();
+    while((rem = l/1000) > 0){
+      sb.append((1000 + l%1000 + ",").substring(1));
+      l = rem;
+    }
+    sb.append(l % 1000);
+    return sb.reverse().toString();
+  }
 }

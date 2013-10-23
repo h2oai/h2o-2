@@ -21,6 +21,9 @@ public class GBM extends SharedTreeModelBuilder {
   @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   public double learn_rate = 0.1;
 
+  @API(help = "Grid search parallelism", filter = Default.class, lmax = 4)
+  public int grid_parallelism = 1;
+
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -51,6 +54,10 @@ public class GBM extends SharedTreeModelBuilder {
     buildModel();
   }
 
+  @Override public int gridParallelism() {
+    return grid_parallelism;
+  }
+
   @Override protected Response redirect() {
     return GBMProgressPage.redirect(this, self(), dest());
   }
@@ -67,7 +74,9 @@ public class GBM extends SharedTreeModelBuilder {
     GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees);
     DKV.put(outputKey, model);
     // Build trees until we hit the limit
-    for( int tid=0; tid<ntrees; tid++) {
+    int tid;
+    DTree[] ktrees = null;
+    for( tid=0; tid<ntrees; tid++) {
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
       //   Work <== f(Tree)
@@ -79,7 +88,7 @@ public class GBM extends SharedTreeModelBuilder {
       new ComputeRes().doAll(fr);
 
       // ESL2, page 387, Step 2b ii, iii, iv
-      DTree[] ktrees = buildNextKTrees(fr);
+      ktrees = buildNextKTrees(fr);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
@@ -87,7 +96,9 @@ public class GBM extends SharedTreeModelBuilder {
       model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
       DKV.put(outputKey, model);
     }
-
+    Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid+1,ktrees);
+    model = new GBMModel(model, null, (float)sc._sum/_nrows, sc._cm);
+    DKV.put(outputKey, model);
     cleanUp(fr,t_build); // Shared cleanup
   }
 
