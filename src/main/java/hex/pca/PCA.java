@@ -71,7 +71,7 @@ public class PCA extends ColumnsJob {
     }
 
     GramTask tsk = new GramTask(this, standardize, false).doIt(fr);
-    PCAModel myModel = buildModel(fr, tsk._gram.getXX());
+    PCAModel myModel = buildModel(fr, tsk);
     UKV.put(destination_key, myModel);
   }
 
@@ -79,8 +79,8 @@ public class PCA extends ColumnsJob {
     return PCAProgressPage.redirect(this, self(), dest());
   }
 
-  public PCAModel buildModel(Frame data, double[][] gram) {
-    Matrix myGram = new Matrix(gram);   // X'X/n where n = num rows
+  public PCAModel buildModel(Frame data, GramTask tsk) {
+    Matrix myGram = new Matrix(tsk._gram.getXX());   // X'X/n where n = num rows
     SingularValueDecomposition mySVD = myGram.svd();
 
     // Extract eigenvalues and eigenvectors
@@ -110,7 +110,7 @@ public class PCA extends ColumnsJob {
     Key dataKey = Key.make(input("source"));
     int ncomp = Math.min(getNumPC(sdev, tolerance), max_pc);
     PCAParams params = new PCAParams(max_pc, tolerance, standardize);
-    return new PCAModel(destination_key, dataKey, data, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
+    return new PCAModel(destination_key, dataKey, data, tsk, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
   }
 
   static class reverseDouble implements Comparator<Double> {
