@@ -1,11 +1,11 @@
 #GLM2 bench
-import os, sys, time, csv
+import os, sys, time, csv, re, requests
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 from pprint import pprint
 
-csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','nPredictors','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','nIterations','AUC','AIC','AverageError')
+csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','nPredictors','trainParseWallTime','nfolds','glm2BuildTime','testParseWallTime','nIterations','AUC','AIC','AverageError')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
@@ -90,7 +90,7 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
         h2o.beta_features = True
         kwargs    = params.copy()
         glmStart  = time.time()
-        glm       = h2o_cmd.runGLM(parseResult = parseResult, noPoll=True, **kwargs)
+        glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=1800, noPoll=True, **kwargs)
         h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
         glmTime   = time.time() - glmStart
         #glm       = h2o.nodes[0].inspect("GLM("+f+")")
@@ -108,15 +108,27 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
         row.update( {'AIC'          : glmView['glm_model']['validation']['aic'],
                      'nIterations'  : glmView['glm_model']['iteration'],
                      'nPredictors'  : len(glmView['glm_model']['beta']),
-                     'AverageError' : glmView['glm_model']['validation']['avg_err'],
+                     #'AverageError' : glmView['glm_model']['validation']['avg_err'],
                     })
         if family == "binomial":
+            #Scrape html of 2/glmmodelview to get best threshold,
+            #then, multiply by 100 and cast to int...
+            #then ask for the coresponding CM from _cms inside glmView
+            url     = 'http://%s:%d/2/GLMModelView.html?_modelKey=%s' % (h2o.nodes[0].http_addr, 55555, 'GLM('+f+')')
+            r       = requests.get(url).text
+            p1      = re.compile('threshold[:<>/a-z]*[0-9]\.[0-9]*')
+            p2      = re.compile('[0-9]\.[0-9]*')
+            best    = int(float(p2.search(p1.search(text).group()).group()) * 100)
+            best_cm = glmView['glm_model']['validation']['_cms'][best]['_arr']
+            avg_err = (best_cm[0][1] + best_cm[1][0]) / (sum([i for sublist in best_cm for i in sublist]))
             row.update( {#'scoreTime'          : scoreTime,
                          'AUC'                : glmView['glm_model']['validation']['auc'],
+                         'AverageError'       : avg_err,
                         })
         else:
             row.update( {#'scoreTime'          : scoreTime,
                          'AUC'                : 'NA',
+                         'AverageError'       : glmView['glm_model']['validation']['avg_err'],
                         })
         csvWrt.writerow(row)
     finally:

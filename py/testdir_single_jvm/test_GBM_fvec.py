@@ -4,6 +4,7 @@ import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, 
 import time, random
 
 DELETE_KEYS = True
+EXEC_FVEC = False
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -24,14 +25,15 @@ class Basic(unittest.TestCase):
 
     def test_from_import_fvec(self):
 
-        print "Sets h2o.beat_features like -bf at command line"
+        print "Sets h2o.beta_features like -bf at command line"
         print "this will redirect import and parse to the 2 variants"
         h2o.beta_features = True
 
         importFolderPath = 'standard'
         timeoutSecs = 500
         csvFilenameAll = [
-            ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
+            # have to use col name for response?
+            ("manyfiles-nflx-gz", "file_1.dat.gz", 'C378'),
             # ("manyfiles-nflx-gz", "file_[1-9].dat.gz", 378),
             # ("standard", "covtype.data", 54),
             # ("standard", "covtype20x.data", 54),
@@ -73,9 +75,11 @@ class Basic(unittest.TestCase):
 
             # have to avoid this on nflx data. colswap with exec
             # Exception: rjson error in gbm: Argument 'response' error: Only integer or enum/factor columns can be classified
+
             if importFolderPath=='manyfiles-nflx-gz':
-                execExpr = 'c.hex=colSwap(c.hex,378,(c.hex[378]>15 ? 1 : 0))'
-                resultExec = h2o_cmd.runExec(expression=execExpr)
+                if EXEC_FVEC:
+                    execExpr = 'c.hex=colSwap(c.hex,378,(c.hex[378]>15 ? 1 : 0))'
+                    resultExec = h2o_cmd.runExec(expression=execExpr)
                 x = range(542) # don't include the output column
                 # remove the output too! (378)
                 xIgnore = []
@@ -85,7 +89,8 @@ class Basic(unittest.TestCase):
                     xIgnore.append(i)
 
                 x = ",".join(map(str,x))
-                xIgnore = ",".join(map(str,xIgnore))
+                def colIt(x): return "C" + str(x)
+                xIgnore = ",".join(map(colIt, xIgnore))
             else:
                 # leave one col ignored, just to see?
                 xIgnore = 0
@@ -97,14 +102,15 @@ class Basic(unittest.TestCase):
                 'ntrees': 2,
                 'max_depth': 8,
                 'min_rows': 1,
-                'response': response
+                'response': response,
+                'classification': 0,
                 }
 
             kwargs = params.copy()
             h2o.beta_features = True
             timeoutSecs = 1800
             start = time.time()
-            GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+            GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=False,**kwargs)
             # wait for it to show up in jobs?
             time.sleep(2)
             # no pattern waits for all

@@ -822,7 +822,7 @@ class H2O(object):
         u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
         return u
 
-    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None,
+    def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, returnFast=False,
         cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorCheck=False, **kwargs):
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
@@ -876,6 +876,8 @@ class H2O(object):
             raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
 
         rjson = None
+        if returnFast:
+            return
         try:
             rjson = r.json()
         except:
@@ -1187,36 +1189,6 @@ class H2O(object):
         if (browseAlso | browse_json):
             print "Redoing the %s through the browser, no results saved though" % algo
             h2b.browseJsonHistoryAsUrlLastMatch(algo)
-            time.sleep(5)
-        return a
-
-    def kmeans_grid(self, key, key2=None,
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-        **kwargs):
-        # defaults
-        params_dict = {
-            'initialization': 'Furthest',
-            'k': 1,
-            'max_iter': 10,
-            'source_key': key,
-            'destination_key': 'python_KMeans_Grid_destination.hex',
-            }
-        browseAlso = kwargs.get('browseAlso', False)
-        params_dict.update(kwargs)
-        print "\nKMeansGrid params list:", params_dict
-        a = self.__do_json_request('KMeansGrid.json', timeout=timeoutSecs, params=params_dict)
-
-        # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request']!='Progress':
-            print dump_json(a)
-            raise Exception('H2O kmeans_grid redirect is not Progress. KMeans json response precedes.')
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-        verboseprint("\nKMeansGrid result:", dump_json(a))
-
-        if (browseAlso | browse_json):
-            print "Redoing the KMeansGrid through the browser, no results saved though"
-            h2b.browseJsonHistoryAsUrlLastMatch('KMeansGrid')
             time.sleep(5)
         return a
 
@@ -1595,6 +1567,16 @@ class H2O(object):
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
+    def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+        #this function is only for pca on fvec! may replace in future.
+        params_dict = {
+           '_modelKey' : modelKey,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'pca_view', print_params)
+        a = self.__do_json_request('2/PCAModelView.json',timeout=timeoutSecs,params=params_dict)
+        verboseprint("\npca_view_result:", dump_json(a))
+        return a
+
     def glm_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
         #this function is only for glm2, may remove it in future.
         params_dict = {
@@ -1691,19 +1673,20 @@ class H2O(object):
     def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
-            'destination_key': None,
-            'validation': data_key, # what is this..default it to match the source..is it holdout data
-            'response': None,
-            'ignored_cols_by_name': None, 
-            'source': data_key,
-            'learn_rate': None,
-            'ntrees': None,
-            'max_depth': None,
-            'min_rows': None,
-            'ignored_cols_by_name': None,
-            'nbins': None,
-            'classification': None,
+            'destination_key'      : None,
+            'validation'           : data_key, # what is this..default it to match the source..is it holdout data
+            'response'             : None,
+            'source'               : data_key,
+            'learn_rate'           : None,
+            'ntrees'               : None,
+            'max_depth'            : None,
+            'min_rows'             : None,
+            'ignored_cols_by_name' : None, # either this or cols..not both
+            'cols'                 : None,
+            'nbins'                : None,
+            'classification'       : None,
         }
+
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm', print_params)
 
@@ -1724,22 +1707,23 @@ class H2O(object):
         return a
 
     def pca(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
-        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
+        noPoll=False, print_params=True, benchmarkLogging=None, returnFast=False, **kwargs):
         params_dict = {
-            'destination_key': None,
-            'key': data_key,
-            'X': None,
-            'tolerance': None,
-            'standardize': None
+            'destination_key' : None,
+            'source'          : data_key,
+            'ignored_cols'    : None,
+            'tolerance'       : None,
+            'max_pc'          : None,
+            'standardize'     : None,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'pca', print_params)
         start = time.time()
-        a = self.__do_json_request('PCA.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/PCA.json', timeout=timeoutSecs, params=params_dict, returnFast=returnFast)
 
         if noPoll:
-            a['python_elapsed'] = time.time() - start
-            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            #a['python_elapsed'] = time.time() - start
+            #a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
@@ -1752,10 +1736,10 @@ class H2O(object):
     def pca_score(self, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
-            'model': None,
-            'destination_key': None,
-            'source': None,
-            'num_pc': None,
+            'model'           : None,
+            'destination_key' : None,
+            'source'          : None,
+            'num_pc'          : None,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'pca_score', print_params)
@@ -1784,6 +1768,8 @@ class H2O(object):
             'source': data_key,
             # this is ignore??
             'cols': None,
+            'ignored_cols': None,
+            'validation': None,
             'response': None,
             'activation': None,
             'hidden': None,
@@ -1895,7 +1881,7 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'destination_key': None,
-                'vresponse': None,
+                'response': None,
                 'ignored_cols': None,
                 'max_iter': None,
                 'standardize': None,
@@ -1903,7 +1889,7 @@ class H2O(object):
                 'link': None,
                 'alpha': None,
                 'lambda': None,
-                'beta_epsilon': None,
+                'beta_epsilon': None, # GLMGrid doesn't use this name
                 'tweedie_variance_power': None,
                 'n_folds': None,
                 'case_mode': None,
@@ -1912,6 +1898,7 @@ class H2O(object):
                 'thresholds': None,
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallel': None,
+                'beta_eps': None,
             } 
         else:
             params_dict = {
@@ -1925,7 +1912,7 @@ class H2O(object):
                 'link': None,
                 'alpha': None,
                 'lambda': None,
-                'beta_epsilon': None,
+                'beta_epsilon': None, # GLMGrid doesn't use this name
                 'tweedie_power': None,
                 'n_folds': None,
                 'case_mode': None,
@@ -1936,6 +1923,7 @@ class H2O(object):
                 'thresholds': None,
                 # only GLMGrid has these..we should complain about it on GLM?
                 'parallel': None,
+                'beta_eps': None,
             }
 
         check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)

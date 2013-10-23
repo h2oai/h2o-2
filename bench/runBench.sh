@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #set -x
-
+sleep 13000
 h2oBuild=
 benchmarks="benchmarks"
 DATE=`date +%Y-%m-%d`
@@ -30,19 +30,22 @@ function doAlgo {
     if [ ! $1 = "bigkmeans" ]
     then
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air1x;    wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air1x;                      wait; rm -rf sandbox/;
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air10x;   wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air10x;                     wait; rm -rf sandbox/;
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB1x;   wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB1x;                     wait; rm -rf sandbox/;
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB10x;  wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB10x;                    wait; rm -rf sandbox/;
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB100x; wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB100x;                   wait; rm -rf sandbox/;
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air100x;  wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air100x;                    wait; rm -rf sandbox/;
     else
         python ${pyScript} ${h2oBuild} ${DEBUG} #bigKM can also run in debug
         wait
     fi
-    zip -r  ${archive}/${h2oBuild}-${DATE}-$1 sandbox/
-    wait
-    rm -rf sandbox/
-    bash startloggers.sh ${JSON} ice $1
+    bash startloggers.sh ${JSON} ice $1 #gather up the ice h2ologs from the machines for this phase
 }
 
 function makeDead {
@@ -141,8 +144,8 @@ then
     exit
 fi
 
-#bash S3getLatest.sh
-#wait
+bash S3getLatest.sh
+wait
 dir=`pwd`
 latest=$dir/latest
 if [ ! -f $latest ]

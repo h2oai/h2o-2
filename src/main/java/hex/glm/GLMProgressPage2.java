@@ -13,11 +13,11 @@ public class GLMProgressPage2 extends Progress2 {
   @Override
   protected Response jobDone(final Job job, final Key dst) {
     JsonObject args = new JsonObject();
-    args.addProperty("model_key", job.dest().toString());
+    args.addProperty(MODEL_KEY, job.dest().toString());
     return GLMModelView.redirect(this, job.dest());
   }
   public static Response redirect(Request req, Key jobkey, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "GLMProgressPage2", "job_key", jobkey, "destination_key", dest );
+    return new Response(Response.Status.redirect, req, -1, -1, "GLMProgressPage2", JOB_KEY, jobkey, DEST_KEY, dest );
   }
   @Override public boolean toHTML( StringBuilder sb ) {
     Job jjob = Job.findJob(job_key);

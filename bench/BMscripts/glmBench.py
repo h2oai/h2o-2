@@ -96,8 +96,9 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
                     })
         
         glmScoreStart = time.time()
-        glmScore      = h2o_cmd.runGLMScore(key       = testFilehex,
-                                            model_key = params['destination_key'])
+        glmScore      = h2o_cmd.runGLMScore(key         = testFilehex,
+                                            model_key   = params['destination_key'],
+                                            timeoutSecs = 1800)
         scoreTime     = time.time() - glmScoreStart
         if family == "binomial":
             row.update( {'scoreTime'          : scoreTime,
@@ -116,6 +117,7 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
         output.close()
 
 if __name__ == '__main__':
+    dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
     h2o.parse_our_args()

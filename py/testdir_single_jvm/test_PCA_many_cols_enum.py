@@ -135,30 +135,36 @@ class Basic(unittest.TestCase):
                 print "Using these parameters for PCA: ", params
                 kwargs = params.copy()
                 #h2o.beta_features = True
-
-                pcaResult = h2o_cmd.runPCA(parseResult=parseResult,
+                PCAResult = {'python_elapsed': 0, 'python_%timeout': 0}
+                start = time.time()
+                pcaResult = h2o_cmd.runPCA(parseResult=parseResult, noPoll = True,
                      timeoutSecs=timeoutSecs, **kwargs)
-                print "PCA completed in", pcaResult['python_elapsed'], "seconds. On dataset: ", csvPathname
-                print "Elapsed time was ", pcaResult['python_%timeout'], "% of the timeout"
+                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=2)
+                elapsed = time.time() - start
+                PCAResult['python_elapsed']  = elapsed
+                PCAResult['python_%timeout'] = 1.0*elapsed / timeoutSecs
+                print "PCA completed in",     PCAResult['python_elapsed'], "seconds.", \
+                      "%f pct. of timeout" % (PCAResult['python_%timeout'])            
+    
                 print "Checking PCA results: "
-        
-                h2o_pca.simpleCheckPCA(self,pcaResult)
-                h2o_pca.resultsCheckPCA(self,pcaResult)
+                pcaView = h2o_cmd.runPCAView(modelKey = modelKey) 
+                h2o_pca.simpleCheckPCA(self,pcaView)
+                h2o_pca.resultsCheckPCA(self,pcaView)
 
                 # Logging to a benchmark file
                 algo = "PCA " + " tolerance=" + str(tolerance)
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, pcaResult['python_elapsed'])
+                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, PCAResult['python_elapsed'])
                 print l
                 h2o.cloudPerfH2O.message(l)
                 #h2o.beta_features = True
-                pcaInspect = h2o_cmd.runInspect(key=modelKey)
+                pcaInspect = pcaView
                 # errrs from end of list? is that the last tree?
-                sdevs = pcaInspect["PCAModel"]["stdDev"] 
+                sdevs = pcaInspect["pca_model"]["sdev"] 
                 print "PCA: standard deviations are :", sdevs
                 print
                 print
-                propVars = pcaInspect["PCAModel"]["propVar"]
+                propVars = pcaInspect["pca_model"]["propVar"]
                 print "PCA: Proportions of variance by eigenvector are :", propVars
                 print
                 print

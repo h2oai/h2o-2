@@ -595,12 +595,12 @@ NEXT_CHAR:
         try {
           String[] t1 = determineTokens(l1, separators[i]);
           String[] t2 = determineTokens(l2, separators[i]);
-          if (t1.length != t2.length)
+          if (t1.length == 0 || t1.length != t2.length)
             continue;
           return separators[i];
         } catch (Exception e) { /*pass; try another parse attempt*/ }
       }
-    return (byte)' ';
+    return AUTO_SEP;
   }
 
 
@@ -673,8 +673,12 @@ NEXT_CHAR:
       ncols = (setup._ncols > 0)?setup._ncols:data[0].length;
       hasHeader = (checkHeader && allStrings(data[0])) || setup._header;
     } else {
-      if(setup._separator == AUTO_SEP) // first guess the separator
+      if(setup._separator == AUTO_SEP){ // first guess the separator{
         sep = guessSeparator(lines.get(0), lines.get(1));
+        if(sep == AUTO_SEP)sep = guessSeparator(lines.get(1), lines.get(2));
+        if(sep == AUTO_SEP)sep = guessSeparator(lines.get(0), lines.get(2));
+        if(sep == AUTO_SEP)sep = (byte)' ';
+      }
       for(int i = 0; i < lines.size(); ++i)
         data[i] = determineTokens(lines.get(i), sep);
       // we do not have enough lines to decide

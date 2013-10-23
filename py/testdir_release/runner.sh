@@ -82,7 +82,7 @@ myPy() {
 
 # avoid for now
 # myPy c5 test_c5_KMeans_sphere15_180GB.py
-myPy c10  test_c10_rel.py
+myPy c10  test_c10_rel_gbm.py
 
 if [[ $USER == "jenkins" ]]
 then 

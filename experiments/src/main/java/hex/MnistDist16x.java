@@ -4,22 +4,21 @@ import java.io.File;
 
 import water.*;
 import water.deploy.Cloud;
-import water.fvec.NFSFileVec;
-import water.fvec.ParseDataset2;
+import water.fvec.*;
 import water.util.Log;
+import water.util.Utils;
 
 public class MnistDist16x {
   public static void main(String[] args) throws Exception {
     Cloud cloud = new Cloud();
     for( int i = LOW; i < LOW + LEN; i++ )
-      cloud._publicIPs.add("192.168.1." + (161 + i));
-    cloud._clientRSyncIncludes.add("../libs/jdk");
-    cloud._clientRSyncIncludes.add("smalldata");
-    cloud._clientRSyncIncludes.add("experiments/target");
-    cloud._fannedRSyncIncludes.add("jdk");
-    cloud._fannedRSyncIncludes.add("smalldata");
+      cloud.publicIPs.add("192.168.1." + (161 + i));
+    cloud.clientRSyncIncludes.add("smalldata");
+    cloud.clientRSyncIncludes.add("experiments/target");
+    cloud.fannedRSyncIncludes.add("smalldata");
+    cloud.jdk = "../libs/jdk";
     String java = "-ea -Xmx120G -Dh2o.debug";
-    String node = "-mainClass " + MnistDist16x.UserCode.class.getName() + " -beta";
+    String node = "-mainClass " + UserCode.class.getName() + " -beta";
     cloud.start(java.split(" "), node.split(" "));
   }
 
@@ -29,22 +28,25 @@ public class MnistDist16x {
     public static void userMain(String[] args) throws Exception {
       H2O.main(args);
 
-      Log.info("blah: " + System.getProperty("java.home"));
+      Log.info("java: " + System.getProperty("java.home"));
 
       TestUtil.stall_till_cloudsize(LEN);
       //Sample08_DeepNeuralNet_EC2.run();
       //Sample07_NeuralNet_Mnist8m.run();
-      //Sample07_NeuralNet_Mnist.run();
+      //new Sample07_NeuralNetLowLevel().run();
 
-      File f = new File("smalldata/mnist/train.csv.gz");
-      Key dest = Key.make("train.hex");
-      Key fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
+      Key fkey = NFSFileVec.make(new File("/home/0xdiag/home-0xdiag-datasets/mnist/mnist8m.csv"));
+      Key mnist8m = Key.make("mnist8m.csv");
+      Frame frame = ParseDataset2.parse(mnist8m, new Key[] { fkey });
 
-      f = new File("smalldata/mnist/test.csv.gz");
-      dest = Key.make("test.hex");
-      fkey = NFSFileVec.make(f);
-      ParseDataset2.parse(dest, new Key[] { fkey });
+      Vec response = frame.vecs()[0];
+      Vec[] vecs = Utils.remove(frame.vecs(), 0);
+      Key train = Key.make("train.hex");
+      UKV.put(train, new Frame(frame.names(), Utils.append(vecs, response)));
+
+      Key dest = Key.make("test.hex");
+      Key ftest = NFSFileVec.make(new File("smalldata/mnist/test.csv.gz"));
+      ParseDataset2.parse(dest, new Key[] { ftest });
 
       // Basic visualization of images and weights
 //      JFrame frame = new JFrame("H2O");
@@ -54,6 +56,7 @@ public class MnistDist16x {
 //      frame.pack();
 //      frame.setLocationRelativeTo(null);
 //      frame.setVisible(true);
+      Log.info("Ready");
     }
   }
 }
