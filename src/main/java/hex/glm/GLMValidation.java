@@ -30,6 +30,9 @@ public class GLMValidation extends Iced {
   @API(help="")
   long nobs;
 
+  @API(help="best decision threshold")
+  float best_threshold;
+
   @API(help="")
   double auc = Double.NaN;
 
@@ -172,6 +175,14 @@ public class GLMValidation extends Iced {
     }
     auc += trapeziod_area(FPR_pre, 0, TPR_pre, 0);
     this.auc = auc;
+    if(_glm.family == Family.binomial){
+      int best = 0;
+      for(int i = 1; i < _cms.length; ++i){
+        if(Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))
+          best = i;
+      }
+      best_threshold = best*0.01f;
+    }
   }
 
   private double trapeziod_area(double x1, double x2, double y1, double y2) {
@@ -193,11 +204,7 @@ public class GLMValidation extends Iced {
     sb.append("</table>");
 
     if(_glm.family == Family.binomial){
-      int best = 0;
-      for(int i = 1; i < _cms.length; ++i){
-        if(Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))
-          best = i;
-      }
+      int best = (int)(100*best_threshold);
       sb.append("<span><b>Confusion Matrix at decision threshold:</b></span><span>" + DEFAULT_THRESHOLDS[best] + "</span>");
       confusionHTML(_cms[best], sb);
     }
