@@ -13,7 +13,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
 build = ""
 debug = False
 def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row, case_mode, case_val):
-    debug = False
+    #debug = False
     bench = "bench"
     if debug:
         print "DOING GLM2 DEBUG"
@@ -118,7 +118,7 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
             r       = requests.get(url).text
             p1      = re.compile('threshold[:<>/a-z]*[0-9]\.[0-9]*')
             p2      = re.compile('[0-9]\.[0-9]*')
-            best    = int(float(p2.search(p1.search(text).group()).group()) * 100)
+            best    = int(float(p2.search(p1.search(r).group()).group()) * 100)
             best_cm = glmView['glm_model']['validation']['_cms'][best]['_arr']
             avg_err = (best_cm[0][1] + best_cm[1][0]) / (sum([i for sublist in best_cm for i in sublist]))
             row.update( {#'scoreTime'          : scoreTime,
