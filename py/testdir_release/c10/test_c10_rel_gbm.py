@@ -26,7 +26,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         testPathname = importFolderPath + "/" + testFilename
 
         start = time.time()
-        parseTestResult = h2i.import_parse(path=testPathname, schema='local', timeoutSecs=500, doSummary=False)
+        parseTestResult = h2i.import_parse(path=testPathname, schema='local', timeoutSecs=500, doSummary=True)
         print "Parse of", parseTestResult['destination_key'], "took", time.time() - start, "seconds"
 
         # Parse Train***********************************************************
@@ -35,7 +35,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         trainPathname = importFolderPath + "/" + trainFilename
 
         start = time.time()
-        parseTrainResult = h2i.import_parse(path=trainPathname, schema='local', timeoutSecs=500, doSummary=False)
+        parseTrainResult = h2i.import_parse(path=trainPathname, schema='local', timeoutSecs=500, doSummary=True)
         print "Parse of", parseTrainResult['destination_key'], "took", time.time() - start, "seconds"
 
         start = time.time()

@@ -91,7 +91,7 @@ public class PCAScore extends FrameJob {
   }
 
   public static String link(String key_param, Key k, String content) {
-    RString rs = new RString("<a href='PCAScore.query?%key_param=%$key'>%content</a>");
+    RString rs = new RString("<a href='/2/PCAScore.query?%key_param=%$key'>%content</a>");
     rs.replace("key_param", key_param);
     rs.replace("key", k.toString());
     rs.replace("content", content);

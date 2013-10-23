@@ -27,7 +27,6 @@ public class Summary2 extends Iced {
   // INPUTS
   final transient boolean _enum;
   final transient boolean _isInt;
-  final transient long _avail_rows;
 
   // OUTPUTS
   @API(help="categories"  ) final String[] domains;
@@ -35,6 +34,7 @@ public class Summary2 extends Iced {
   @API(help="bin step"    ) final double   binsz;
   @API(help="histogram"   ) final long []  bins; // bins for histogram
   @API(help="#zeros"      ) long           zeros;
+  @API(help="#rows"       ) public final long rows;      
   @API(help="min elements") double []      mins; // min N elements
   @API(help="max elements") double []      maxs; // max N elements
   @API(help="percentiles" ) double []      percentileValues;
@@ -44,7 +44,7 @@ public class Summary2 extends Iced {
     _isInt = vec.isInt();
     if (_enum) domains = vec.domain(); else domains = null;
     long len = vec.length();
-    _avail_rows = len - vec.naCnt();
+    rows = len - vec.naCnt();
     if (_enum) {
       mins = MemoryManager.malloc8d(Math.min(domains.length, NMAX));
       maxs = MemoryManager.malloc8d(Math.min(domains.length, NMAX));
@@ -62,7 +62,9 @@ public class Summary2 extends Iced {
       bins = new long[(int)span];
     } else {
       // guard against improper parse (date type) or zero c._sigma
-      double b = Math.max(1e-4,3.5 * vec.sigma()/ Math.cbrt(len));
+      double sigma = vec.sigma();
+      if (Double.isNaN(sigma)) sigma = 0; 
+      double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(len));
       double d = Math.pow(10, Math.floor(Math.log10(b)));
       if (b > 20*d/3)
         d *= 10;
@@ -73,7 +75,6 @@ public class Summary2 extends Iced {
       if (d < 1. && _isInt) d = 1.;
       binsz = d;
       start = binsz * Math.floor(vec.min()/binsz);
-
       int nbin = (int)Math.floor((vec.max() + (_isInt?.5:0) - start)/binsz) + 1;
       bins = new long[nbin];
     }
@@ -135,7 +136,7 @@ public class Summary2 extends Iced {
     int k = 0;
     long s = 0;
     for(int j = 0; j < DEFAULT_PERCENTILES.length; ++j) {
-      final double s1 = DEFAULT_PERCENTILES[j]*_avail_rows;
+      final double s1 = DEFAULT_PERCENTILES[j]*rows;
       long bc = 0;
       while(s1 > s+(bc = bins[k])){
         s  += bc;
@@ -191,7 +192,11 @@ public class Summary2 extends Iced {
 
   public void toHTML( Vec vec, String cname, StringBuilder sb ) {
     sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;border-top-style:solid;'>" +
-            "<div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
+    "<div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
+    if ( rows == 0 ) {
+      sb.append("<div class='alert'>Empty column, no summary!</div></div>\n");
+      return;
+    }
     // Base stats
     if( !vec.isEnum() ) {
       sb.append("<div style='width:100%;'><table class='table-bordered'>");
@@ -237,7 +242,7 @@ public class Summary2 extends Iced {
     sb.append("</tr>");
     sb.append("<tr>");
     for( int i=0; i<len; i++ )
-      sb.append(String.format("<td>%.1f%%</td>",(100.0*bins[i]/_avail_rows)));
+      sb.append(String.format("<td>%.1f%%</td>",(100.0*bins[i]/rows)));
     sb.append("</tr>");
     if( bins.length >= MAX_HISTO_BINS_DISPLAYED )
       sb.append("<div class='alert'>Histogram for this column was too big and was truncated to 1000 values!</div>");

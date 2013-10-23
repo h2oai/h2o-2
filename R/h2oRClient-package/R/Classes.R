@@ -308,10 +308,15 @@ histograms <- function(object) { UseMethod("histograms", object) }
 setMethod("histograms", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
   list.of.bins <- lapply(res$summaries, function(res) {
-    counts <- res$bins
-    breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins) + 1)
-    bins <- list(counts,breaks)
-    names(bins) <- cbind('counts', 'breaks')
+    if (res$rows == 0) {
+      bins <- NULL
+    } else {
+      domains <- res$domains
+      counts <- res$bins
+      breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins) + 1)
+      bins <- list(domains,counts,breaks)
+      names(bins) <- cbind('domains', 'counts', 'breaks')
+    }
     bins
   })
 })
