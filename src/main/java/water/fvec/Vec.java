@@ -70,6 +70,9 @@ public class Vec extends Iced {
    *  modification.   */
   volatile long _naCnt=-1;
 
+  /** Maximal size of enum domain */
+  public static final int MAX_ENUM_SIZE = 10000;
+
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
   Vec( Key key, long espc[] ) {
@@ -197,6 +200,7 @@ public class Vec extends Iced {
       int[] domain;
       String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
       int[] domMap = Utils.mapping(domain);
+      if( domain.length > MAX_ENUM_SIZE ) throw H2O.unimpl();
       return this.makeTransf(domMap, sdomain);
     }
   }
