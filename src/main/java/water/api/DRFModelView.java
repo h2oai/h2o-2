@@ -16,7 +16,7 @@ public class DRFModelView extends Request2 {
   DRFModel drf_model;
 
   public static Response redirect(Request req, Key modelKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "DRFModelView", "_modelKey", modelKey);
+    return new Response(Response.Status.redirect, req, -1, -1, "/2/DRFModelView", "_modelKey", modelKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){

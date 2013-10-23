@@ -14,7 +14,6 @@ build = ""
 debug = False
 def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
     debug = False
-    h2o.beta_features = True
     bench = "bench"
     if debug:
         print "Doing GBM DEBUG"
@@ -44,6 +43,7 @@ def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, dept
         h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
         headerKey = h2i.find_key(hK)
         trainParseWallStart = time.time()
+        h2o.beta_features = False #ensure this is false! 
         if f in (['AirlinesTrain10x', 'AirlinesTrain100x']): h2o.beta_features = False #regex parsing acting weird when not using browser, use VA -> FVEC converter
         parseResult = h2i.import_parse(bucket           = 'home-0xdiag-datasets',
                                        path             = csvPathname,
@@ -61,10 +61,10 @@ def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, dept
         h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
         parseWallTime = time.time() - trainParseWallStart
         print "Parsing training file took ", parseWallTime ," seconds." 
-        #h2o.beta_features = True
+        h2o.beta_features = False #make sure false for the inspect as well!
         inspect_train  = h2o.nodes[0].inspect(hex_key, timeoutSecs=7200)
         inspect_test   = h2o.nodes[0].inspect(testFilehex, timeoutSecs=7200)
-        h2o.beta_features = True
+        h2o.beta_features = True #ok, can be true again
         nMachines = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
         row.update( {'h2o_build'          : build,
                      'nMachines'          : nMachines,

@@ -1,6 +1,6 @@
 import unittest, sys, time
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_glm
+import h2o, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_glm, h2o_jobs as h2j, h2o_gbm
 
 print "Assumes you ran ../../cloud.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
@@ -22,26 +22,26 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         # Parse Test***********************************************************
         importFolderPath = '/mnt/0xcustomer-datasets/c3'
-        csvFilename = 'classification1Test.txt'
-        csvPathname = importFolderPath + "/" + csvFilename
+        testFilename = 'classification1Test.txt'
+        testPathname = importFolderPath + "/" + testFilename
 
         start = time.time()
-        parseTestResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, doSummary=False)
+        parseTestResult = h2i.import_parse(path=testPathname, schema='local', timeoutSecs=500, doSummary=True)
         print "Parse of", parseTestResult['destination_key'], "took", time.time() - start, "seconds"
 
         # Parse Train***********************************************************
         importFolderPath = '/mnt/0xcustomer-datasets/c3'
-        csvFilename = 'classification1Train.txt'
-        csvPathname = importFolderPath + "/" + csvFilename
+        trainFilename = 'classification1Train.txt'
+        trainPathname = importFolderPath + "/" + trainFilename
 
         start = time.time()
-        parseTrainResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, doSummary=False)
+        parseTrainResult = h2i.import_parse(path=trainPathname, schema='local', timeoutSecs=500, doSummary=True)
         print "Parse of", parseTrainResult['destination_key'], "took", time.time() - start, "seconds"
 
         start = time.time()
         inspect = h2o_cmd.runInspect(None, parseTrainResult['destination_key'], timeoutSecs=500)
         print "Inspect:", parseTrainResult['destination_key'], "took", time.time() - start, "seconds"
-        h2o_cmd.infoFromInspect(inspect, csvPathname)
+        h2o_cmd.infoFromInspect(inspect, trainPathname)
         # num_rows = inspect['num_rows']
         # num_cols = inspect['num_cols']
         # do summary of the parsed dataset last, since we know it fails on this dataset
@@ -53,11 +53,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # see README.txt in 0xcustomer-datasets/c3 for the col names to use in keepList above, to get the indices
         # GBM Train***********************************************************
         x = [6,7,8,10,12,31,32,33,34,35,36,37,40,41,42,43,44,45,46,47,49,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70]
-        response = 0
+        # response = 0
+        # doesn't work if index is used?
+        response = 'outcome'
 
         # x = range(inspect['num_cols'])
         # del x[response]
-        ntrees = 10
+        ntrees = 100
         # fails with 40
         params = {
             'learn_rate': .2,

@@ -1,5 +1,9 @@
 package water;
 
+import hex.glm.GLM2;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -141,6 +145,16 @@ public class Job extends Request2 {
       for( int i = 0; i < cols.length; i++ )
         vecs[i] = frame.vecs()[cols[i]];
       return vecs;
+    }
+
+    protected final Frame selectFrame(Frame frame) {
+      Vec[] vecs = new Vec[cols.length];
+      String[] names = new String[cols.length];
+      for( int i = 0; i < cols.length; i++ ) {
+        vecs[i] = frame.vecs()[cols[i]];
+        names[i] = frame.names()[cols[i]];
+      }
+      return new Frame(names, vecs);
     }
   }
 
@@ -329,6 +343,13 @@ public class Job extends Request2 {
   }
 
   public void cancel() { cancel("cancelled by user"); }
+  public void cancel(Throwable ex){
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    ex.printStackTrace(pw);
+    String stackTrace = sw.toString();
+    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
+  }
   public void cancel(String msg) { cancel(job_key,msg); }
   public static void cancel(final Key self, final String exception) {
     DKV.remove(self);

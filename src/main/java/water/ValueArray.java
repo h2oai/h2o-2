@@ -573,35 +573,37 @@ public class ValueArray extends Iced implements Cloneable {
 
   private Frame convert() {
     String[] names = new String[_cols.length];
-    AppendableVec[] avs = new AppendableVec[_cols.length];
     // A new random VectorGroup
     Key keys[] = new Vec.VectorGroup().addVecs(_cols.length);
-    for(int i = 0; i < _cols.length; ++i) {
+    for(int i = 0; i < _cols.length; ++i)
       names[i] = _cols[i]._name;
-      avs[i] = new AppendableVec(keys[i]);
-    }
-    avs = new Converter(_key,avs).invoke(_key)._vecs;
+    AppendableVec[] avs = new Converter(_key, keys).invoke(_key)._vecs;
     Vec[] vecs = new Vec[avs.length];
     for(int i = 0; i < avs.length; ++i) {
+      avs[i]._domain = _cols[i]._domain;
       vecs[i] = avs[i].close(null);
-      vecs[i]._domain = _cols[i]._domain;
     }
     return new Frame(names, vecs);
   }
 
   static class Converter extends MRTask<Converter> {
     final Key _vaKey;
-    final AppendableVec[] _vecs;
-    Converter( Key vaKey, AppendableVec vecs[] ) { _vaKey=vaKey; _vecs = vecs; }
+    final Key[] _keys;
+    AppendableVec[] _vecs;
+
+    Converter( Key vaKey, Key[] keys ) { _vaKey = vaKey; _keys = keys; }
     @Override public void map(Key key) {
       ValueArray va = DKV.get(_vaKey).get();
       AutoBuffer bits = va.getChunk(key);
       int cidx = (int) ValueArray.getChunkIndex(key);
       int rows = va.rpc(cidx);
 
-      NewChunk[] chunks = new NewChunk[_vecs.length];
-      for(int i = 0; i < _vecs.length; ++i)
+      NewChunk[] chunks = new NewChunk[_keys.length];
+      _vecs = new AppendableVec[_keys.length];
+      for(int i = 0; i < _keys.length; ++i) {
+        _vecs[i] = new AppendableVec(_keys[i]);
         chunks[i] = new NewChunk(_vecs[i], cidx);
+      }
 
       for( int row = 0; row < rows; row++ ) {
         for( int i = 0; i < _vecs.length; i++ ) {
@@ -623,13 +625,17 @@ public class ValueArray extends Iced implements Cloneable {
           }
         }
       }
-      for(int i = 0; i < _vecs.length; ++i)
+      for(int i = 0; i < chunks.length; ++i)
         chunks[i].close(cidx, null);
     }
 
     @Override public void reduce(Converter other) {
-      for(int i = 0; i < _vecs.length; i++)
-        _vecs[i].reduce(other._vecs[i]);
+      if(_vecs == null)
+        _vecs = other._vecs;
+      else {
+        for(int i = 0; i < _vecs.length; i++)
+          _vecs[i].reduce(other._vecs[i]);
+      }
     }
   }
 }

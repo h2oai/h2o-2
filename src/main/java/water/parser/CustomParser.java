@@ -45,7 +45,7 @@ public abstract class CustomParser extends Iced {
       _data = data;
     }
     public final boolean valid(){
-      return _validLines > 0 && _invalidLines < _validLines;
+      return _setup._ncols > 0 && _validLines > 0 && _invalidLines < _validLines;
     }
     public final boolean hasErrors(){
       return _errors != null && _errors.length > 0;

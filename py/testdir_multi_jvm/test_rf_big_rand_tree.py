@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(2, java_heap_GB=7)
         else:
             import h2o_hosts
-            h2o_hosts.build_cloud_with_hosts(2, java_heap_GB=7)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -77,6 +77,8 @@ class Basic(unittest.TestCase):
                 'took', time.time() - start, 'seconds'
 
             inspect = h2o_cmd.runInspect(key=hex_key)
+            h2o_cmd.infoFromInspect(inspect, csvPathname)
+
             cols = inspect['cols']
             num_cols = inspect['num_cols']
             for i,c in enumerate(cols):

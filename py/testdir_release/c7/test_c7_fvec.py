@@ -16,7 +16,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c7_rel(self):
 
-        DO_INSPECT = False
+        DO_INSPECT = True
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
@@ -39,7 +39,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # looks like it takes the hex string (two chars)
         start = time.time()
         # hardwire TAB as a separator, as opposed to white space (9)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=False)
+        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=True)
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
         print "Parse result['destination_key']:", parseResult['destination_key']

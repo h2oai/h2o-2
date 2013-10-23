@@ -3,6 +3,7 @@ setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lam
 # setGeneric("h2o.glmgrid", function(x, y, data, family, nfolds = 10, alpha = c(0.25,0.5), lambda = 1.0e-5) { standardGeneric("h2o.glmgrid") })
 setGeneric("h2o.glm.FV", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm.FV") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
+setGeneric("h2o.kmeans.FV", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans.FV") })
 setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALSE) { standardGeneric("h2o.prcomp") })
 setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
 setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
@@ -288,8 +289,8 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
     })
 
 #------------------------------- Principal Components Analysis ----------------------------------#
-h2o.prcomp.internal <- function(data, x, dest, max_pc, tol, standardize) {
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, x=x, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
+h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc, tol, standardize) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, ignored_cols_by_name=x_ignore, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   destKey = res$destination_key
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
@@ -310,20 +311,20 @@ h2o.prcomp.internal <- function(data, x, dest, max_pc, tol, standardize) {
 
 setMethod("h2o.prcomp", signature(data="H2OParsedData", tol="numeric", standardize="logical", retx="logical"), 
     function(data, tol, standardize, retx) {
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, key=data@key, tolerance=tol, standardize=as.numeric(standardize))
-      while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
-      destKey = res$destination_key
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
-      res = res$PCAModel
+      destKey = paste("__PCA_Model__", UUIDgenerate(), sep="")
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, destination_key=destKey, tolerance=tol, standardize=as.numeric(standardize))
+      while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
+      res = res$pca_model
       
       result = list()
       result$standardized = standardize
-      result$sdev = as.numeric(unlist(res$stdDev))
+      result$sdev = res$sdev
       # result$rotation = do.call(rbind, res$eigenvectors)
       # temp = t(do.call(rbind, res$eigenvectors))
-      nfeat = length(res$eigenvectors[[1]])
-      temp = matrix(unlist(res$eigenvectors), nrow = nfeat)
-      rownames(temp) = names(res$eigenvectors[[1]])
+      nfeat = length(res$eigVec[[1]])
+      temp = t(matrix(unlist(res$eigVec), nrow = nfeat))
+      rownames(temp) = res$'_names'
       colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
       result$rotation = temp
       if(retx) result$x = h2o.predict(new("H2OPCAModel", key=destKey, data=data, model=result))
@@ -350,14 +351,15 @@ setMethod("h2o.pcr", signature(x="character", y="character", data="H2OParsedData
       if(any(!x %in% myCol)) stop("Invalid column names: ", paste(x[which(!x %in% myCol)], collapse=", "))
       if(ncomp < 1 || ncomp > ncol(data)) stop("Number of components must be between 1 and ", ncol(data))
       
-      myXCol = which(myCol %in% x)-1
+      myIgnore = which(!myCol %in% x)-1
+      if(length(myIgnore) == 0) myIgnore = ""
       # myModel = h2o.prcomp(data, myXCol, standardize = TRUE, retx = TRUE)
-      myModel = h2o.prcomp.internal(data=data, x=myXCol, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
+      myModel = h2o.prcomp.internal(data=data, x_ignore=myIgnore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
       myScore = h2o.predict(myModel)
       
       myYCol = which(myCol == y)-1
       rand_cbind_key = paste("__PCABind_", UUIDgenerate(), sep="")
-      res = h2o.__remoteSend(data@h2o, "2/DataManip.json", source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=myYCol, destination_key=rand_cbind_key, operation="cbind")
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_FVEXEC, source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=myYCol, destination_key=rand_cbind_key, operation="cbind")
       myGLMData = new("H2OParsedData", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
       h2o.glm.FV(paste("PC", 0:(ncomp-1), sep=""), y, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
     })
@@ -496,7 +498,7 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
         res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
         new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
         # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key)
-        # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, key=res$response$redirect_request_args$key)
+        # res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, src_key=res$response$redirect_request_args$key)
         # h2o.__pollAll(object@data@h2o, 60)
         # new("H2OParsedData2", h2o=object@data@h2o, key=res$key)
       } else if(class(object) == "H2OPCAModel") {
@@ -528,14 +530,14 @@ setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedD
       rand_glm_key = paste("__GLM2Model_", UUIDgenerate(), sep="")
       
       if(family != "tweedie")
-        res = h2o.__remoteSend(data@h2o, "2/GLM2.json", source = data@key, destination_key = rand_glm_key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
       else
-        res = h2o.__remoteSend(data@h2o, "2/GLM2.json", source = data@key, destination_key = rand_glm_key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
       
-      res = h2o.__remoteSend(data@h2o, "2/GLMModelView.json", '_modelKey'=rand_glm_key)
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=rand_glm_key)
       resModel = res$glm_model
-      res = h2o.__remoteSend(data@h2o, "2/GLMValidationView.json", '_valKey'=resModel$validations)
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMValidView, '_valKey'=resModel$validations)
       modelOrig = h2o.__getGLM2Results(resModel, y, res$glm_val)
       new("H2OGLMModel", key=resModel$'_selfKey', data=data, model=modelOrig, xval=list())
   })
@@ -574,3 +576,25 @@ h2o.__getGLM2Results <- function(model, y, valid) {
   }
   return(result)
 }
+
+setMethod("h2o.kmeans.FV", signature(data="H2OParsedData", centers="numeric", cols="character", iter.max="numeric"),
+  function(data, centers, cols, iter.max) {
+    myIgnore = ifelse(cols == "", cols, setdiff(colnames(data), cols))
+    
+    rand_kmeans_key = paste("__KMeans2Model_", UUIDgenerate(), sep="")
+    res = h2o.__remoteSend(data@h2o, "2/KMeans2.json", source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
+    while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+    
+    res = h2o.__remoteSend(data@h2o, "2/KMeans2ModelView.json", '_modelKey'=rand_kmeans_key)
+  })
+
+setMethod("h2o.kmeans.FV", signature(data="H2OParsedData", centers="ANY", cols="ANY", iter.max="ANY"),
+  function(data, centers, cols, iter.max) {
+    if(!(missing(centers) || class(centers) == "numeric"))
+      stop(paste("centers cannot be of class", class(centers)))
+    if(!(missing(cols) || class(cols) == "character"))
+      stop(paste("cols cannot be of class", class(cols)))
+    if(!(missing(iter.max) || class(iter.max) == "numeric"))
+      stop(paste("iter.max cannot be of class", class(iter.max)))
+    h2o.kmeans.FV(data, centers, cols, iter.max)
+  })
