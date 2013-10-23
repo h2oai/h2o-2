@@ -579,13 +579,25 @@ h2o.__getGLM2Results <- function(model, y, valid) {
 
 setMethod("h2o.kmeans.FV", signature(data="H2OParsedData", centers="numeric", cols="character", iter.max="numeric"),
   function(data, centers, cols, iter.max) {
+    if(centers <= 0) stop("centers must be an integer greater than 0")
     myIgnore = ifelse(cols == "", cols, setdiff(colnames(data), cols))
     
     rand_kmeans_key = paste("__KMeans2Model_", UUIDgenerate(), sep="")
-    res = h2o.__remoteSend(data@h2o, "2/KMeans2.json", source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
+    res = h2o.__remoteSend(data@h2o, "2/KMeans2.json", source=data@key, destination_key=rand_kmeans_key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+    res = h2o.__remoteSend(data@h2o, "2/KMeans2ModelView.json", model=rand_kmeans_key)
+    res = res$model
     
-    res = h2o.__remoteSend(data@h2o, "2/KMeans2ModelView.json", '_modelKey'=rand_kmeans_key)
+    rand_pred_key = paste("__KMeans2Clusters_", UUIDgenerate(), sep="")
+    h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
+    
+    result = list()
+    result$clusters = new("H2OParsedData2", h2o=data@h2o, key=rand_pred_key)
+    feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
+    result$centers = t(matrix(unlist(res$clusters), ncol = centers))
+    dimnames(result$centers) = list(seq(1,centers), feat)
+    result$withinss = res$cluster_variances    # TODO: Not sure if this is within or between SS?
+    new("H2OKMeansModel", key=res$'_selfKey', data=data, model=result)
   })
 
 setMethod("h2o.kmeans.FV", signature(data="H2OParsedData", centers="ANY", cols="ANY", iter.max="ANY"),
