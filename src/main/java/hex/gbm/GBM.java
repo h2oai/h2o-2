@@ -21,6 +21,9 @@ public class GBM extends SharedTreeModelBuilder {
   @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   public double learn_rate = 0.1;
 
+  @API(help = "Grid search parallelism", filter = Default.class, lmax = 4)
+  public int grid_parallelism = 1;
+
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -49,6 +52,10 @@ public class GBM extends SharedTreeModelBuilder {
   @Override protected void exec() {
     logStart();
     buildModel();
+  }
+
+  @Override public int gridParallelism() {
+    return grid_parallelism;
   }
 
   @Override protected Response redirect() {

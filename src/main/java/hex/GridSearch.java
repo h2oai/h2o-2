@@ -15,8 +15,19 @@ public class GridSearch extends Job {
 
   @Override protected void exec() {
     UKV.put(destination_key, this);
-    for( Job job : jobs )
-      job.fork().join();
+    int max = jobs[0].gridParallelism();
+    int head = 0, tail = 0;
+    while( head < jobs.length ) {
+      if( tail - head < max && tail < jobs.length )
+        jobs[tail++].fork();
+      else {
+        try {
+          jobs[head++].get();
+        } catch( Exception e ) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
   }
 
   @Override protected void onCancelled() {
