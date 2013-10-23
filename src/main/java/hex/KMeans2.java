@@ -2,8 +2,7 @@ package hex;
 
 import hex.KMeans.Initialization;
 
-import java.util.ArrayList;
-import java.util.Random;
+import java.util.*;
 
 import water.*;
 import water.Job.ColumnsJob;
@@ -58,15 +57,14 @@ public class KMeans2 extends ColumnsJob {
     String[][] domaiResp = (String[][]) Utils.append(source.domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
 
-    double[] subs = null, muls = null;
-    if( normalize ) {
-      subs = new double[vecs.length];
-      muls = new double[vecs.length];
-
-      for( int i = 0; i < vecs.length; i++ ) {
-        subs[i] = (float) vecs[i].mean();
+    // TODO remove when stats are propagated with vecs?
+    double[] means = new double[vecs.length];
+    double[] mults = normalize ? new double[vecs.length] : null;
+    for( int i = 0; i < vecs.length; i++ ) {
+      means[i] = (float) vecs[i].mean();
+      if( mults != null ) {
         double sigma = vecs[i].sigma();
-        muls[i] = normalize(sigma) ? 1 / sigma : 1;
+        mults[i] = normalize(sigma) ? 1 / sigma : 1;
       }
     }
 
@@ -77,19 +75,19 @@ public class KMeans2 extends ColumnsJob {
       // Initialize all clusters to random rows
       clusters = new double[k][vecs.length];
       for( int i = 0; i < clusters.length; i++ )
-        randomRow(vecs, rand, clusters[i], subs, muls);
+        randomRow(vecs, rand, clusters[i], means, mults);
     } else {
       // Initialize first cluster to random row
       clusters = new double[1][];
       clusters[0] = new double[vecs.length];
-      randomRow(vecs, rand, clusters[0], subs, muls);
+      randomRow(vecs, rand, clusters[0], means, mults);
 
       while( model.iterations < 5 ) {
         // Sum squares distances to clusters
         SumSqr sqr = new SumSqr();
         sqr._clusters = clusters;
-        sqr._subs = subs;
-        sqr._muls = muls;
+        sqr._means = means;
+        sqr._mults = mults;
         sqr.doAll(vecs);
 
         // Sample with probability inverse to square distance
@@ -98,8 +96,8 @@ public class KMeans2 extends ColumnsJob {
         sampler._sqr = sqr._sqr;
         sampler._probability = k * 3; // Over-sampling
         sampler._seed = seed;
-        sampler._subs = subs;
-        sampler._muls = muls;
+        sampler._means = means;
+        sampler._mults = mults;
         sampler.doAll(vecs);
         clusters = Utils.append(clusters, sampler._sampled);
 
@@ -117,14 +115,14 @@ public class KMeans2 extends ColumnsJob {
     for( ;; ) {
       Lloyds task = new Lloyds();
       task._clusters = clusters;
-      task._subs = subs;
-      task._muls = muls;
+      task._means = means;
+      task._mults = mults;
       task.doAll(vecs);
-      model.clusters = normalize ? denormalize(task._means, vecs) : task._means;
-      double[] variances = new double[task._sqrs.length];
-      for( int clu = 0; clu < task._sqrs.length; clu++ )
-        for( int col = 0; col < task._sqrs[clu].length; col++ )
-          variances[clu] += task._sqrs[clu][col];
+      model.clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
+      double[] variances = new double[task._cSqrs.length];
+      for( int clu = 0; clu < task._cSqrs.length; clu++ )
+        for( int col = 0; col < task._cSqrs[clu].length; col++ )
+          variances[clu] += task._cSqrs[clu][col];
       model.cluster_variances = variances;
       model.error = task._sqr;
       model.iterations++;
@@ -218,8 +216,9 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "Sum of square distances per cluster")
     public double[] cluster_variances;
 
-    private transient double[] _subs, _muls; // Normalization
+    // Normalization caches
     private transient double[][] _normClust;
+    private transient double[] _means, _mults;
 
     public KMeans2Model(Key selfKey, Key dataKey, String names[], String domains[][]) {
       super(selfKey, dataKey, names, domains);
@@ -231,17 +230,22 @@ public class KMeans2 extends ColumnsJob {
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
       double[][] cs = clusters;
-      if( normalized && _normClust == null ) {
+      if( normalized && _normClust == null )
         cs = _normClust = normalize(clusters, chunks);
-        _subs = new double[chunks.length];
-        _muls = new double[chunks.length];
+      if( _means == null ) {
+        _means = new double[chunks.length];
+        for( int i = 0; i < chunks.length; i++ )
+          _means[i] = chunks[i]._vec.mean();
+      }
+      if( normalized && _mults == null ) {
+        _mults = new double[chunks.length];
         for( int i = 0; i < chunks.length; i++ ) {
-          _subs[i] = (float) chunks[i]._vec.mean();
           double sigma = chunks[i]._vec.sigma();
-          _muls[i] = normalize(sigma) ? 1 / sigma : 1;
+          _mults[i] = normalize(sigma) ? 1 / sigma : 1;
         }
       }
-      data(tmp, chunks, rowInChunk, _subs, _muls);
+      data(tmp, chunks, rowInChunk, _means, _mults);
+      Arrays.fill(preds,0);
       preds[closest(cs, tmp, new ClusterDist())._cluster] = 1;
       return preds;
     }
@@ -253,7 +257,7 @@ public class KMeans2 extends ColumnsJob {
 
   public static class SumSqr extends MRTask2<SumSqr> {
     // IN
-    double[] _subs, _muls; // Normalization
+    double[] _means, _mults; // Normalization
     double[][] _clusters;
 
     // OUT
@@ -263,10 +267,10 @@ public class KMeans2 extends ColumnsJob {
       double[] values = new double[cs.length];
       ClusterDist cd = new ClusterDist();
       for( int row = 0; row < cs[0]._len; row++ ) {
-        data(values, cs, row, _subs, _muls);
+        data(values, cs, row, _means, _mults);
         _sqr += minSqr(_clusters, values, cd);
       }
-      _subs = _muls = null;
+      _means = _mults = null;
       _clusters = null;
     }
 
@@ -281,7 +285,7 @@ public class KMeans2 extends ColumnsJob {
     double _sqr;           // Min-square-error
     double _probability;   // Odds to select this point
     long _seed;
-    double[] _subs, _muls; // Normalization
+    double[] _means, _mults; // Normalization
 
     // OUT
     double[][] _sampled;   // New clusters
@@ -293,7 +297,7 @@ public class KMeans2 extends ColumnsJob {
       ClusterDist cd = new ClusterDist();
 
       for( int row = 0; row < cs[0]._len; row++ ) {
-        data(values, cs, row, _subs, _muls);
+        data(values, cs, row, _means, _mults);
         double sqr = minSqr(_clusters, values, cd);
         if( _probability * sqr > rand.nextDouble() * _sqr )
           list.add(values.clone());
@@ -302,7 +306,7 @@ public class KMeans2 extends ColumnsJob {
       _sampled = new double[list.size()][];
       list.toArray(_sampled);
       _clusters = null;
-      _subs = _muls = null;
+      _means = _mults = null;
     }
 
     @Override public void reduce(Sampler other) {
@@ -313,16 +317,16 @@ public class KMeans2 extends ColumnsJob {
   public static class Lloyds extends MRTask2<Lloyds> {
     // IN
     double[][] _clusters;
-    double[] _subs, _muls;      // Normalization
+    double[] _means, _mults;      // Normalization
 
     // OUT
-    double[][] _means, _sqrs;   // Means and sum of squares for each cluster
+    double[][] _cMeans, _cSqrs; // Means and sum of squares for each cluster
     long[] _rows;               // Rows per cluster
     double _sqr;                // Total sqr distance
 
     @Override public void map(Chunk[] cs) {
-      _means = new double[_clusters.length][_clusters[0].length];
-      _sqrs = new double[_clusters.length][_clusters[0].length];
+      _cMeans = new double[_clusters.length][_clusters[0].length];
+      _cSqrs = new double[_clusters.length][_clusters[0].length];
       _rows = new long[_clusters.length];
 
       // Find closest cluster for each row
@@ -330,7 +334,7 @@ public class KMeans2 extends ColumnsJob {
       ClusterDist cd = new ClusterDist();
       int[] clusters = new int[cs[0]._len];
       for( int row = 0; row < cs[0]._len; row++ ) {
-        data(values, cs, row, _subs, _muls);
+        data(values, cs, row, _means, _mults);
         closest(_clusters, values, cd);
         int clu = clusters[row] = cd._cluster;
         _sqr += cd._dist;
@@ -339,30 +343,30 @@ public class KMeans2 extends ColumnsJob {
 
         // Add values and increment counter for chosen cluster
         for( int col = 0; col < values.length; col++ )
-          _means[clu][col] += values[col];
+          _cMeans[clu][col] += values[col];
         _rows[clu]++;
       }
-      for( int clu = 0; clu < _means.length; clu++ )
-        for( int col = 0; col < _means[clu].length; col++ )
-          _means[clu][col] /= _rows[clu];
+      for( int clu = 0; clu < _cMeans.length; clu++ )
+        for( int col = 0; col < _cMeans[clu].length; col++ )
+          _cMeans[clu][col] /= _rows[clu];
       // Second pass for in-cluster variances
       for( int row = 0; row < cs[0]._len; row++ ) {
         int clu = clusters[row];
         if( clu == -1 )
           continue;
-        data(values, cs, row, _subs, _muls);
+        data(values, cs, row, _means, _mults);
         for( int col = 0; col < values.length; col++ ) {
-          double delta = values[col] - _means[clu][col];
-          _sqrs[clu][col] += delta * delta;
+          double delta = values[col] - _cMeans[clu][col];
+          _cSqrs[clu][col] += delta * delta;
         }
       }
       _clusters = null;
-      _subs = _muls = null;
+      _means = _mults = null;
     }
 
     @Override public void reduce(Lloyds mr) {
-      for( int clu = 0; clu < _means.length; clu++ )
-        Layer.Stats.reduce(_means[clu], _sqrs[clu], _rows[clu], mr._means[clu], mr._sqrs[clu], mr._rows[clu]);
+      for( int clu = 0; clu < _cMeans.length; clu++ )
+        Layer.Stats.reduce(_cMeans[clu], _cSqrs[clu], _rows[clu], mr._cMeans[clu], mr._cSqrs[clu], mr._rows[clu]);
       Utils.add(_rows, mr._rows);
       _sqr += mr._sqr;
     }
@@ -407,7 +411,7 @@ public class KMeans2 extends ColumnsJob {
       // average of other error terms.  Same math another way:
       //   double avg_dist = sqr / pts; // average distance per feature/column/dimension
       //   sqr = sqr * point.length;    // Total dist is average*#dimensions
-      if( pts < point.length )
+      if( 0 < pts && pts < point.length )
         sqr *= point.length / pts;
       if( sqr < minSqr ) {
         min = cluster;
@@ -462,9 +466,9 @@ public class KMeans2 extends ColumnsJob {
     return res;
   }
 
-  private void randomRow(Vec[] vecs, Random rand, double[] cluster, double[] subs, double[] muls) {
+  private void randomRow(Vec[] vecs, Random rand, double[] cluster, double[] means, double[] mults) {
     long row = Math.max(0, (long) (rand.nextDouble() * vecs[0].length()) - 1);
-    data(cluster, vecs, row, subs, muls);
+    data(cluster, vecs, row, means, mults);
   }
 
   private static boolean normalize(double sigma) {
@@ -499,29 +503,30 @@ public class KMeans2 extends ColumnsJob {
     return value;
   }
 
-  /**
-   * Return a row of normalized values. If missing, use the mean (which we know exists because we
-   * filtered out columns with no mean).
-   */
-  private static void data(double[] values, Vec[] vecs, long row, double[] subs, double[] muls) {
+  private static void data(double[] values, Vec[] vecs, long row, double[] means, double[] mults) {
     for( int i = 0; i < values.length; i++ ) {
       double d = vecs[i].at(row);
-      if( subs != null ) {
-        d -= subs[i];
-        d *= muls[i];
-      }
-      values[i] = d;
+      values[i] = data(d, i, means, mults);
     }
   }
 
-  private static void data(double[] values, Chunk[] chks, int row, double[] subs, double[] muls) {
+  private static void data(double[] values, Chunk[] chks, int row, double[] means, double[] mults) {
     for( int i = 0; i < values.length; i++ ) {
       double d = chks[i].at0(row);
-      if( subs != null ) {
-        d -= subs[i];
-        d *= muls[i];
-      }
-      values[i] = d;
+      values[i] = data(d, i, means, mults);
     }
+  }
+
+  /**
+   * Takes mean if NaN, normalize if requested.
+   */
+  private static double data(double d, int i, double[] means, double[] mults) {
+    if( Double.isNaN(d) )
+      d = means[i];
+    if( mults != null ) {
+      d -= means[i];
+      d *= mults[i];
+    }
+    return d;
   }
 }
