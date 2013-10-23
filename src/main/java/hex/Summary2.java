@@ -60,9 +60,12 @@ public class Summary2 extends Iced {
       start = vec.min();
       binsz = 1;
       bins = new long[(int)span];
+//       Log.err("ENUM COLUMN  START " + start + "  STEP " + binsz);
     } else {
       // guard against improper parse (date type) or zero c._sigma
-      double b = Math.max(1e-4,3.5 * vec.sigma()/ Math.cbrt(len));
+      double sigma = vec.sigma();
+      if (Double.isNaN(sigma)) sigma = 0; 
+      double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(len));
       double d = Math.pow(10, Math.floor(Math.log10(b)));
       if (b > 20*d/3)
         d *= 10;
@@ -73,7 +76,11 @@ public class Summary2 extends Iced {
       if (d < 1. && _isInt) d = 1.;
       binsz = d;
       start = binsz * Math.floor(vec.min()/binsz);
-
+      
+//       if (_isInt)
+//         Log.err("INT COLUMN  START " + start + "  STEP " + binsz);
+//       else
+//         Log.err("FLOAT COLUMN  START " + start + "  STEP " + binsz);
       int nbin = (int)Math.floor((vec.max() + (_isInt?.5:0) - start)/binsz) + 1;
       bins = new long[nbin];
     }
