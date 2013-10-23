@@ -37,38 +37,44 @@ public class ConfusionMatrix extends Request2 {
   //}
 
   @Override public Response serve() {
+    Vec va = null, vp = null;
     try {
       if( vactual==null || vpredict==null )
         throw new IllegalArgumentException("Missing actual or predict?");
-      if( !vactual .isEnum() ) vactual .asEnum();
-      if( !vpredict.isEnum() ) vpredict.asEnum();
-      cm = new CM().doAll(vactual,vpredict)._cm;
+      // Create a new vectors - it is cheap since vector are only adaptation vectors
+      va = vactual .toEnum();
+      vp = vpredict.toEnum();
+      cm = new CM(va.domain().length, vp.domain().length).doAll(vactual,vpredict)._cm;
       return new Response(Response.Status.done,this,-1,-1,null);
     } catch (Throwable t) {
       Log.err(t);
       return Response.error(t.getMessage());
+    } finally {       // Delete adaptation vectors
+      if (va!=null) UKV.remove(va._key);
+      if (vp!=null) UKV.remove(vp._key);
     }
   }
 
   // Compute the co-occurence matrix
   private static class CM extends MRTask2<CM> {
-    long _cm[][];
+    /* @IN */ final int _ca_len;
+    /* @IN */ final int _cp_len;
+    /* @OUT */ long _cm[][];
+    CM(int ca_len, int cp_len) { _ca_len = ca_len; _cp_len = cp_len; }
     @Override public void map( Chunk ca, Chunk cp ) {
-      int ca_len=ca._vec.domain().length;
-      int cp_len=cp._vec.domain().length;
-      _cm = new long[ca_len+1][cp_len+1];
+      _cm = new long[_ca_len+1][_cp_len+1];
       int len=Math.min(ca._len,cp._len);
       for( int i=0; i < len; i++ ) {
-        int a=ca.isNA0(i) ? ca_len : (int)ca.at80(i);
-        int p=cp.isNA0(i) ? cp_len : (int)cp.at80(i);
+        int a=ca.isNA0(i) ? _ca_len : (int)ca.at80(i);
+        int p=cp.isNA0(i) ? _cp_len : (int)cp.at80(i);
         _cm[a][p]++;
       }
       if( len < ca._len )
         for( int i=len; i < ca._len; i++ )
-          _cm[ca.isNA0(i) ? ca_len : (int)ca.at80(i)][cp_len]++;
+          _cm[ca.isNA0(i) ? _ca_len : (int)ca.at80(i)][_cp_len]++;
       if( len < cp._len )
         for( int i=len; i < cp._len; i++ )
-          _cm[ca_len][cp.isNA0(i) ? cp_len : (int)cp.at80(i)]++;
+          _cm[_ca_len][cp.isNA0(i) ? _cp_len : (int)cp.at80(i)]++;
     }
     @Override public void reduce( CM cm ) { Utils.add(_cm,cm._cm); }
   }

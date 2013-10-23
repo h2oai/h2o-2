@@ -1,6 +1,6 @@
 package water.api;
 
-import hex.DPCA.PCAModel;
+import hex.pca.PCAModel;
 import hex.KMeansModel;
 import hex.glm.GLMModel;
 import hex.rf.RFModel;

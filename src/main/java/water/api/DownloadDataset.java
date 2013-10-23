@@ -22,7 +22,7 @@ public class DownloadDataset extends Request2 {
   Key src_key;
 
   public static String link(Key k, String content){
-    return  "<a href='2/DownloadDataset?src_key=" + k.toString() + "'>" + content + "</a>";
+    return  "<a href='/2/DownloadDataset?src_key=" + k.toString() + "'>" + content + "</a>";
   }
 
   @SuppressWarnings("resource")

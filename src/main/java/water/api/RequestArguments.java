@@ -4,7 +4,7 @@ import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.DPCA.PCAModel;
+import hex.pca.PCAModel;
 import hex.*;
 import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
@@ -1639,11 +1639,11 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
-  public class H2OPCAModelKey extends H2OModelKey<PCAModel, TypeaheadPCAModelKeyRequest> {
+  /*public class H2OPCAModelKey extends H2OModelKey<PCAModel, TypeaheadPCAModelKeyRequest> {
     public H2OPCAModelKey(String name, boolean req) {
       super(new TypeaheadPCAModelKeyRequest(),name, req);
     }
-  }
+  }*/
 
   // ---------------------------------------------------------------------------
   // StringListArgument
