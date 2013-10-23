@@ -448,58 +448,40 @@ abstract class ASTBinOp extends ASTOp {
       return;
     }
     env.pop();                  // Pop self
-    final ASTBinOp bin = this;
-    Frame fr  = null;
-    Frame fr2 = null;
-    if( fr0 !=null && fr1 != null ) {
-      if( fr0.numCols() != fr1.numCols() ||
-          fr0.numRows() != fr1.numRows() ) 
-        throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
-      fr = fr0;
-      fr2 = new MRTask2() {
-          @Override public void map( Chunk chks[], NewChunk nchks[] ) {
-            for( int i=0; i<nchks.length; i++ ) {
-              Chunk    c0= chks[i];
-              Chunk    c1= chks[i+nchks.length];
-              NewChunk n =nchks[i];
-              for( int r=0; r<c0._len; r++ )
-                n.addNum(bin.op(c0.at0(r),c1.at0(r))); // frame left, frame right
-            }
-          }
-        }.doAll(fr0.numCols(),new Frame(fr0).add(fr1))._outputFrame;
-
-
-    } else if( fr0 != null ) {  // Frame & scalar
-      fr = fr0;
-      final double d = d1;
-      final int ncols = fr.numCols();
-      fr2 = new MRTask2() {
-          @Override public void map( Chunk chks[], NewChunk nchks[] ) {
-            for( int i=0; i<nchks.length; i++ ) {
-              Chunk    c= chks[i];
-              NewChunk n=nchks[i];
-              for( int r=0; r<c._len; r++ )
-                n.addNum(bin.op(c.at0(r),d)); // frame left, scalar right
-            }
-          }
-        }.doAll(fr.numCols(),fr)._outputFrame;
-
-    } else {                    // Scalar & frame
+    final boolean lf = fr0 != null;
+    final boolean rf = fr1 != null;
+    final double fd0 = d0;
+    final double fd1 = d1;
+    Frame fr  = null;           // Do-All frame
+    int ncols = 0;              // Result column count
+    if( fr0 !=null ) {          // Left?
+      ncols = fr0.numCols();
+      if( fr1 != null ) {
+        if( fr0.numCols() != fr1.numCols() ||
+            fr0.numRows() != fr1.numRows() ) 
+          throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
+        fr = new Frame(fr0).add(fr1);
+      } else {
+        fr = fr0;
+      }
+    } else {
+      ncols = fr1.numCols();
       fr = fr1;
-      final double d = d0;
-      final int ncols = fr.numCols();
-      fr2 = new MRTask2() {
-          @Override public void map( Chunk chks[], NewChunk nchks[] ) {
-            for( int i=0; i<nchks.length; i++ ) {
-              Chunk    c= chks[i];
-              NewChunk n=nchks[i];
-              for( int r=0; r<c._len; r++ )
-                n.addNum(bin.op(d,c.at0(r))); // scalar left, frame right
-            }
-          }
-        }.doAll(fr.numCols(),fr)._outputFrame;
-
     }
+    final ASTBinOp bin = this;  // Final 'this' so can use in closure
+
+    Frame fr2 = new MRTask2() {
+        @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+          for( int i=0; i<nchks.length; i++ ) {
+            NewChunk n =nchks[i];
+            Chunk c0= !lf ? null : chks[i];
+            Chunk c1= !rf ? null : chks[i+(lf?nchks.length:0)];
+            int rlen = (lf ? c0 : c1)._len;
+            for( int r=0; r<rlen; r++ )
+              n.addNum(bin.op(lf ? c0.at0(r) : fd0, rf ? c1.at0(r) : fd1));
+          }
+        }
+      }.doAll(ncols,fr)._outputFrame;
     env.push(fr.copyHeaders(fr2,null));
   }
 }
