@@ -2,7 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j
 
-DO_PLOT_IF_KEVIN = True
+DO_PLOT_IF_KEVIN = False
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
             # fails
             # h2o.build_cloud(1,java_heap_MB=100, enable_benchmark_log=True)
             # 400 fails
-            h2o.build_cloud(1,java_heap_MB=400, enable_benchmark_log=True)
+            h2o.build_cloud(1,java_heap_MB=1600, enable_benchmark_log=True)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
@@ -151,7 +151,7 @@ class Basic(unittest.TestCase):
                 # Logging to a benchmark file
                 algo = "GBM " + " ntrees=" + str(ntrees) + " max_depth=" + str(max_depth)
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, trainElapsed)
+                    len(h2o.nodes), h2o.nodes[0].java_heap_MB, algo, csvFilename, trainElapsed)
                 print l
                 h2o.cloudPerfH2O.message(l)
 
