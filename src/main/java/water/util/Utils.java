@@ -658,6 +658,8 @@ public class Utils {
     return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
   }
 
+  /** Returns a mapping of given domain to values (0, ... max(dom)).
+   * Unused domain items has mapping to -1. */
   public static int[] mapping(int[] dom) {
     int max = dom[dom.length-1];
     int[] result = new int[max+1];
@@ -715,5 +717,24 @@ public class Utils {
       sb.append("\n");
     }
     return sb.toString();
+  }
+
+  static public boolean isEmpty(int[] a) { return a==null || a.length == 0; }
+  static public boolean contains(int[] a, int d) { for(int i=0; i<a.length; i++) if (a[i]==d) return true; return false; }
+  static public int[] difference(int a[], int b[]) {
+    int[] r = new int[a.length];
+    int cnt = 0;
+    for (int i=0; i<a.length; i++) {
+      if (!contains(b, a[i])) r[cnt++] = a[i];
+    }
+    return Arrays.copyOf(r, cnt);
+  }
+  /** Generates sequence <start, stop) of integers: (start, start+1, ...., stop-1) */
+  static public int[] seq(int start, int stop) {
+    assert start<stop;
+    int len = stop-start;
+    int[] res = new int[len];
+    for(int i=start; i<stop;i++) res[i-start] = i;
+    return res;
   }
 }
