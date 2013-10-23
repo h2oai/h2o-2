@@ -1,10 +1,10 @@
-H\ :sub:`2`\ OPrincipal Components Analysis
+Principal Components Analysis
 ===========================================
 
-**The H\ :sub:`2`\ O PCA algorithm is still in development. If you have
+The H\ :sub:`2`\ O PCA algorithm is still in development. If you have
 questions or comments please see our contact us document. 
 H\ :sub:`2`\ O is an open source tool and welcomes user  
-collaboration.**
+collaboration.
 
 
 Defining a PCA Model
@@ -100,9 +100,7 @@ related, but not equivalent. Specifically, the correlation between two
 variables is their normalized covariance. For this reason, it's
 recommended that users standardize data before running a PCA analysis. 
 
-Additionally, modeling is driven by the simple assumption that the
-variance observed in a dependent variable can be explained by a subset
-or combinations of a subset of other variables. PCA generates a set of
+Additionally, modeling is driven by the simple assumption that set of derived variables can be appropriately characterized by a linear combination. PCA generates a set of
 new variables composed of combinations of the original variables. The
 variance explained by PCA is the covariance observed in the whole set
 of variables. If the objective of a PCA analysis is to use the new
@@ -110,3 +108,54 @@ variables generated to predict an outcome of interest, that outcome
 must not be included in the PCA analysis. Otherwise, when the new
 variables are used to generate a model, the dependent variable will
 occur on both sides of the predictive equation. 
+
+PCA Algorithm
+---------------
+
+Let :math:`X` be an :math:`M\times N` matrix where
+ 
+1. Each row corresponds to the set of all measurements on a particular attribute, and 
+
+2. Each column corresponds to a set of measurements from a given observation or trial
+
+The covariance matrix :math:`C_{x}` is
+
+:math:`C_{x}=\frac{1}{n}XX^{T}`
+
+where :math:`n` is the number of observations. 
+
+:math:`C_{x}` is a square, symmetric :math:`m\times m` matrix, the diagonal entries of which are the variances of attributes, and the off diagonal entries are covariances between attributes. 
+
+The objective of PCA is to maximize variance while minimizing covariance. 
+
+To accomplish this suppose a new matrix :math:`C_{y}` with off diagonal entries of 0, and each successive dimension of Y ranked according to variance. 
+
+PCA finds an orthonormal matrix :math:`P` such that :math:`Y=PX` constrained by the requirement that 
+ 
+:math:`C_{y}=\frac{1}{n}YY^{T}` 
+
+be a diagonal matrix. 
+
+The rows of :math:`P` are the principal components of X.
+
+:math:`C_{y}=\frac{1}{n}YY^{T}`
+
+:math:`=\frac{1}{n}(PX)(PX)^{T}`
+
+:math:`C_{y}=PC_{x}P^{T}`. 
+
+Because any symmetric matrix is diagonalized by an orthogonal matrix of its eigenvectors, solve matrix :math:`P` to be a matrix where each row is an eigenvector of 
+:math:`\frac{1}{n}XX^{T}=C_{x}`
+
+Then the principal components of :math:`X` are the eigenvectors of :math:`C_{x}`, and the :math:`i^{th}` diagonal value of :math:`C_{y}` is the variance of :math:`X` along :math:`p_{i}`. 
+
+Eigenvectors of :math:`C_{x}` are found by first finding the eigenvalues 
+:math:`\lambda` of :math:`C_{x}`.
+
+For each eigenvalue :math:`lambda` 
+:math:`(C-{x}-\lambda I)x =0` where :math:`x` is the eigenvector associated with :math:`\lambda`. 
+
+Solve for :math:`x` by Gaussian elimination. 
+
+
+
