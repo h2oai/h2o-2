@@ -121,10 +121,11 @@ public class KMeans2 extends ColumnsJob {
       task._muls = muls;
       task.doAll(vecs);
       model.clusters = normalize ? denormalize(task._means, vecs) : task._means;
-      for( int clu = 0; clu < task._sigms.length; clu++ )
-        for( int col = 0; col < task._sigms[clu].length; col++ )
-          task._sigms[clu][col] = task._sigms[clu][col] / (task._rows[clu] - 1);
-      model.variances = task._sigms;
+      double[] variances = new double[task._sqrs.length];
+      for( int clu = 0; clu < task._sqrs.length; clu++ )
+        for( int col = 0; col < task._sqrs[clu].length; col++ )
+          variances[clu] += task._sqrs[clu][col];
+      model.cluster_variances = variances;
       model.error = task._sqr;
       model.iterations++;
       UKV.put(destination_key, model);
@@ -155,7 +156,7 @@ public class KMeans2 extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "KMeans2 Model", filter = Default.class)
+    @API(help = "KMeans2 Model", json = true, filter = Default.class)
     public KMeans2Model model;
 
     public static String link(String txt, Key model) {
@@ -196,6 +197,9 @@ public class KMeans2 extends ColumnsJob {
   }
 
   public static class KMeans2Model extends Model implements Progress {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
     @API(help = "Cluster centers, always denormalized")
     public double[][] clusters;
 
@@ -211,8 +215,8 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "Iterations the algorithm ran")
     public int iterations;
 
-    @API(help = "In-cluster variances")
-    public double[][] variances;
+    @API(help = "Sum of square distances per cluster")
+    public double[] cluster_variances;
 
     private transient double[] _subs, _muls; // Normalization
     private transient double[][] _normClust;
@@ -312,13 +316,13 @@ public class KMeans2 extends ColumnsJob {
     double[] _subs, _muls;      // Normalization
 
     // OUT
-    double[][] _means, _sigms;  // Means and sigma for each cluster
+    double[][] _means, _sqrs;   // Means and sum of squares for each cluster
     long[] _rows;               // Rows per cluster
     double _sqr;                // Total sqr distance
 
     @Override public void map(Chunk[] cs) {
       _means = new double[_clusters.length][_clusters[0].length];
-      _sigms = new double[_clusters.length][_clusters[0].length];
+      _sqrs = new double[_clusters.length][_clusters[0].length];
       _rows = new long[_clusters.length];
 
       // Find closest cluster for each row
@@ -349,7 +353,7 @@ public class KMeans2 extends ColumnsJob {
         data(values, cs, row, _subs, _muls);
         for( int col = 0; col < values.length; col++ ) {
           double delta = values[col] - _means[clu][col];
-          _sigms[clu][col] += delta * delta;
+          _sqrs[clu][col] += delta * delta;
         }
       }
       _clusters = null;
@@ -358,7 +362,7 @@ public class KMeans2 extends ColumnsJob {
 
     @Override public void reduce(Lloyds mr) {
       for( int clu = 0; clu < _means.length; clu++ )
-        Layer.Stats.reduce(_means[clu], _sigms[clu], _rows[clu], mr._means[clu], mr._sigms[clu], mr._rows[clu]);
+        Layer.Stats.reduce(_means[clu], _sqrs[clu], _rows[clu], mr._means[clu], mr._sqrs[clu], mr._rows[clu]);
       Utils.add(_rows, mr._rows);
       _sqr += mr._sqr;
     }

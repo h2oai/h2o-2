@@ -37,16 +37,21 @@ public class ConfusionMatrix extends Request2 {
   //}
 
   @Override public Response serve() {
+    Vec va = null, vp = null;
     try {
       if( vactual==null || vpredict==null )
         throw new IllegalArgumentException("Missing actual or predict?");
-      if( !vactual .isEnum() ) vactual .asEnum();
-      if( !vpredict.isEnum() ) vpredict.asEnum();
-      cm = new CM(vactual.domain().length, vpredict.domain().length).doAll(vactual,vpredict)._cm;
+      // Create a new vectors - it is cheap since vector are only adaptation vectors
+      va = vactual .toEnum();
+      vp = vpredict.toEnum();
+      cm = new CM(va.domain().length, vp.domain().length).doAll(vactual,vpredict)._cm;
       return new Response(Response.Status.done,this,-1,-1,null);
     } catch (Throwable t) {
       Log.err(t);
       return Response.error(t.getMessage());
+    } finally {       // Delete adaptation vectors
+      if (va!=null) UKV.remove(va._key);
+      if (vp!=null) UKV.remove(vp._key);
     }
   }
 
