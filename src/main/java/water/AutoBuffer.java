@@ -294,12 +294,13 @@ public final class AutoBuffer {
             // Read the writer-handshake-byte.
             SocketChannel sock = (SocketChannel)_chan;
             int x = sock.socket().getInputStream().read();
+            // either TCP con was dropped or other side closed connection without reading/confirming (e.g. task was cancelled).
+            if(x == -1)throw new TCPIsUnreliableException(new IOException("Other side closed connection unexpectedly."));
             assert x == 0xcd : "Handshake; writer expected a 0xcd from reader but got "+x;
             _h2o.freeTCPSocket(sock); // Recycle writeable TCP channel
           }
         }
         restorePriority();      // And if we raised priority, lower it back
-
       } else {                  // FileChannel
         if( !_read ) sendPartial(); // Finish partial file-system writes
         _chan.close();
@@ -321,11 +322,12 @@ public final class AutoBuffer {
     _chan = _h2o.getTCPSocket();
     raisePriority();
   }
-
+  // Just close the channel here without reading anything. Without the task object at hand we do not know what (how many bytes) should
+  // we read from the channel. And since the other side will try to read confirmation from us in before closing the channel,
+  // we can not read till the end. So we just close the channel and let the other side to deal with it and figure out the task has been cancelled
+  // (still sending ack ack back).
   public void drainClose() {
     try {
-      while( _chan.read(_bb) != -1 )
-        _bb.clear();
       _chan.close();
       restorePriority();        // And if we raised priority, lower it back
       bbFree();
