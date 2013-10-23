@@ -1,5 +1,9 @@
 package water;
 
+import hex.glm.GLM2;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -339,6 +343,13 @@ public class Job extends Request2 {
   }
 
   public void cancel() { cancel("cancelled by user"); }
+  public void cancel(Throwable ex){
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    ex.printStackTrace(pw);
+    String stackTrace = sw.toString();
+    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
+  }
   public void cancel(String msg) { cancel(job_key,msg); }
   public static void cancel(final Key self, final String exception) {
     DKV.remove(self);
