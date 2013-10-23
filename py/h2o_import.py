@@ -120,17 +120,23 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
     elif "/" in pathWithRegex:
         (head, tail) = os.path.split(pathWithRegex)
         folderPath = os.path.abspath(os.path.join(bucketPath, head))
+
+        # accept all 0xcustomer-datasets without checking..since the current python user
+        # may not have permission, but h2o will
         # try a couple times with os.stat in between, in case it's not automounting
-        retry = 0
-        while checkPath and (not os.path.exists(folderPath)) and retry<5:
-            # we can't stat an actual file, because we could have a regex at the end of the pathname
-            print "Retrying", folderPath, "in case there's a autofs mount problem"
-            os.stat(folderPath)
-            retry += 1
-            time.sleep(1)
-        
-        if checkPath and not os.path.exists(folderPath):
-            raise Exception("%s doesn't exist. %s under %s may be wrong?" % (folderPath, head, bucketPath))
+        if '/mnt/0xcustomer-datasets' in folderPath:
+            pass
+        else:
+            retry = 0
+            while checkPath and (not os.path.exists(folderPath)) and retry<5:
+                # we can't stat an actual file, because we could have a regex at the end of the pathname
+                print "Retrying", folderPath, "in case there's a autofs mount problem"
+                os.stat(folderPath)
+                retry += 1
+                time.sleep(1)
+            
+            if checkPath and not os.path.exists(folderPath):
+                raise Exception("%s doesn't exist. %s under %s may be wrong?" % (folderPath, head, bucketPath))
     else:
         folderPath = bucketPath
         tail = pathWithRegex
@@ -151,7 +157,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
 # path should point to a file or regex of files. (maybe folder works? but unnecessary
 def import_only(node=None, schema='local', bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    benchmarkLogging=None, noPoll=False, doSummary=True, src_key='python_src_key', **kwargs):
+    benchmarkLogging=None, noPoll=False, doSummary=True, src_key=None, noPrint=False, **kwargs):
 
     # no bucket is sometimes legal (fixed path)
     if not node: node = h2o.nodes[0]
@@ -182,9 +188,12 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
-        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/%s" % filePath) 
-        h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
-        h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
+
+        if not noPrint:
+            h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/%s" % filePath) 
+            h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
+            h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
+
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     

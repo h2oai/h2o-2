@@ -25,8 +25,8 @@ h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
-h2o.__PAGE_PCA = "PCA.json"
-h2o.__PAGE_PCASCORE = "PCAScore.json"
+h2o.__PAGE_PCA = "2/PCA.json"
+h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"
@@ -40,6 +40,12 @@ h2o.__PAGE_GBM = "2/GBM.json"
 h2o.__PAGE_GBMGrid = "2/GBMGrid.json"
 h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
 
+h2o.__PAGE_GLM2 = "2/GLM2.json"
+h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
+h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
+h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
+h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
+
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
   port = client@port
@@ -52,12 +58,16 @@ h2o.__remoteSend <- function(client, page, ...) {
   #TODO (Spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
   url = paste("http://", ip, ":", port, "/", page, sep="")
-  temp = postForm(url, style = "POST", ...)
-  # after = gsub("NaN", "\"NaN\"", temp[1])
-  after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
-  after = gsub("NaN", "\"NaN\"", after)
-  after = gsub("-Infinity", "\"-Inf\"", after)
-  after = gsub("Infinity", "\"Inf\"", after)
+  # temp = postForm(url, style = "POST", ...)
+  if(length(list(...)) == 0)
+    temp = getURLContent(url)
+  else
+    temp = getForm(url, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
+  # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
+  # after = gsub("NaN", "\"NaN\"", after)
+  # after = gsub("-Infinity", "\"-Inf\"", temp[1])
+  # after = gsub("Infinity", "\"Inf\"", after)
+  after = gsub("Infinity", "Inf", temp[1])
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
@@ -196,13 +206,13 @@ h2o.__func <- function(fname, x, type) {
 }
 
 # Check if key_env$key exists in H2O and remove if it does
-h2o.__finalizer <- function(key_env) {
-  if("h2o" %in% ls(key_env) && "key" %in% ls(key_env) && class(key_env$h2o) == "H2OClient" && class(key_env$key) == "character" && key_env$key != "") {
-    res = h2o.__remoteSend(key_env$h2o, h2o.__PAGE_VIEWALL, filter=key_env$key)
-    if(length(res$keys) != 0)
-      h2o.__remoteSend(key_env$h2o, h2o.__PAGE_REMOVE, key=key_env$key)
-  }
-}
+# h2o.__finalizer <- function(key_env) {
+#   if("h2o" %in% ls(key_env) && "key" %in% ls(key_env) && class(key_env$h2o) == "H2OClient" && class(key_env$key) == "character" && key_env$key != "") {
+#     res = h2o.__remoteSend(key_env$h2o, h2o.__PAGE_VIEWALL, filter=key_env$key)
+#     if(length(res$keys) != 0)
+#       h2o.__remoteSend(key_env$h2o, h2o.__PAGE_REMOVE, key=key_env$key)
+#   }
+# }
 
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)

@@ -87,7 +87,7 @@ class Basic(unittest.TestCase):
 
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             start = time.time()
-            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', 
+            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', schema='put',
                 hex_key=hex_key, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']

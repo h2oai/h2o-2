@@ -73,7 +73,7 @@ public class NeuralNet extends ValidatedJob {
   }
 
   public void startTrain() {
-    Vec[] vecs = Utils.add(_train, response);
+    Vec[] vecs = Utils.append(_train, response);
     reChunk(vecs);
     final Vec[] train = new Vec[vecs.length - 1];
     System.arraycopy(vecs, 0, train, 0, train.length);
@@ -243,7 +243,9 @@ public class NeuralNet extends ValidatedJob {
 
   @Override protected Response redirect() {
     String n = NeuralNetProgress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, "job", job_key, "dst_key", destination_key);
+    return new Response(Response.Status.redirect, this, -1, -1, n, //
+        "job_key", job_key, //
+        "destination_key", destination_key);
   }
 
   public Response redirect(Request req, Key key) {
@@ -362,8 +364,8 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
-      Job nn = Job.findJob(job);
-      NeuralNetModel model = UKV.get(dst_key);
+      Job nn = Job.findJob(job_key);
+      NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
         String cmTitle = "Confusion Matrix";
         String trainC = String.format("%5.2f %%", 100 * model.train_classification_error);

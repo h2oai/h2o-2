@@ -298,7 +298,7 @@ public class RequestBuilders extends RequestQueries {
     protected final JsonObject _response;
     protected final Request _req;
 
-    protected boolean _strictJsonCompliance = false;
+    protected boolean _strictJsonCompliance = true;
 
     /** Custom builders for JSON elements when converting to HTML automatically.
      */

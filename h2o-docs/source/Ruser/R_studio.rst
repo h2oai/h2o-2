@@ -24,12 +24,12 @@ Users should be aware that in order for H\ :sub:`2`\ O to successfully run throu
 
 Install the H\ :sub:`2`\ O package, and the H\ :sub:`2`\ O client package simultaneously by clicking on install package 
 
-.. image:: RSinstall.png
+.. image:: Rinstall.png
    :width: 70%
  
 Walk through the installer helper to the H\ :sub:`2`\ O downloaded folder.  
 
-.. image:: RSfilefinder.png
+.. image:: Rfilefinder.png
    :width: 70%
 
 
@@ -39,7 +39,7 @@ Once the correct path has been specified click "Install." This will install the 
 Start the H\ :sub:`2`\ O package by clicking the check box next to the package name "h2o". 
   
 
-.. image:: RScheckbox.png
+.. image:: Rcheckbox.png
    :width: 70%
 
 
@@ -55,6 +55,8 @@ Install dependencies for the R package by typing in the call:
   >h2o.installDepPkgs()
   
 
+.. image:: Rinstalldep.png
+   :width: 70%
 
 **STEP 6**
 
@@ -67,7 +69,7 @@ Get RStudio talking to your instance of H\ :sub:`2`\ O by typing in the call:
 Your IP and port may be different, depending on whether you are running H\ :sub:`2`\ O from your computer or a server. If you are running on a server, where it says IP enter the IP address of the server, and the appropriate port number. In the picture below the IP number is everything before the colon, and the port number is the 5 digit string after the colon.
 
 
-.. image:: RSipandport.png
+.. image:: Ripandport.png
    :width: 70%
 
 

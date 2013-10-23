@@ -1,51 +1,71 @@
 #!/bin/bash
 
 #set -x
-
+sleep 13000
 h2oBuild=
 benchmarks="benchmarks"
 DATE=`date +%Y-%m-%d`
 archive="Archive"
 
 function all {
-    doAlgo pca
-    doAlgo glm
-    doAlgo kmeans
-    doAlgo gbm
-    doAlgo glm2
-    doAlgo gbmgrid
-    doAlgo bigkmeans
+    doAlgo pca;   wait;  makeDead > /dev/null;
+    doAlgo kmeans wait;  makeDead > /dev/null;
+    doAlgo glm;   wait;  makeDead > /dev/null;
+    doAlgo glm2;  wait;  makeDead > /dev/null;
+    doAlgo gbm;   wait;  makeDead > /dev/null;
+#    doAlgo gbmgrid
+#    doAlgo bigkmeans
 }
 
 function doAlgo {
-    #echo "Clear caches!"
-    #sudo bash -c "sync; echo 3 > /proc/sys/vm/drop_caches"
+    echo "Clear caches!"
+    bash startloggers.sh ${JSON} clear_ 
 
     echo "Running $1 benchmark..."
     echo "Changing little logger phase..."
-    bash startLoggers.sh ${JSON} changePhase $1
+    bash startloggers.sh ${JSON} changePhase $1
 
     pyScript="BMscripts/"$1"Bench.py"
     wait
     if [ ! $1 = "bigkmeans" ]
     then
-        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
-        wait 
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air1x;    wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air1x;                      wait; rm -rf sandbox/;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air10x;   wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air10x;                     wait; rm -rf sandbox/;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB1x;   wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB1x;                     wait; rm -rf sandbox/;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB10x;  wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB10x;                    wait; rm -rf sandbox/;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB100x; wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB100x;                   wait; rm -rf sandbox/;
+        python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air100x;  wait; makeDead > /dev/null;
+        zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air100x;                    wait; rm -rf sandbox/;
     else
         python ${pyScript} ${h2oBuild} ${DEBUG} #bigKM can also run in debug
         wait
     fi
-    zip -r  ${archive}/${h2oBuild}-${DATE}-$1 sandbox/
-    wait
-    rm -rf sandbox/ 
+    bash startloggers.sh ${JSON} ice $1 #gather up the ice h2ologs from the machines for this phase
+}
+
+function makeDead {
+    ps -efww | grep h2o|grep spencer|grep jar| awk '{print $2}' | xargs kill
+    ps -efww | grep h2o|grep 0xdiag |grep jar| awk '{print $2}' | xargs kill
 }
 
 function debug {
     for a in $@
     do
-        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air1x;    wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air10x;   wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB1x;   wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB10x;  wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True AllB100x; wait; 
+        python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} True Air100x;  wait; 
+        #python BMscripts/$a"Bench.py" -cj BMscripts/${JSON} ${h2oBuild} ${DEBUG}
     done
 }
+
 
 usage()
 {
@@ -82,9 +102,8 @@ EOF
 TASK=
 JSON=
 BUILDN=
-DEBUG=false
-LOG=true
-
+DEBUG=0
+LOG=0
 while getopts "ht:j:b:dL" OPTION
 do
   case $OPTION in
@@ -102,11 +121,11 @@ do
       BUILDN=$OPTARG
       ;;
     d)
-      DEBUG=true
-      LOG=false
+      DEBUG=1
+      LOG=0
       ;;
     L)
-      LOG=false
+      LOG=1
       ;;
     ?)
       usage
@@ -125,54 +144,61 @@ then
     exit
 fi
 
-#bash S3getLatest.sh
-#wait
+bash S3getLatest.sh
+wait
+dir=`pwd`
+latest=$dir/latest
+if [ ! -f $latest ]
+then
+    echo "No 'latest' file was found..."
+    echo "Either create one, or use S3getLatest.sh."
+    exit 1
+fi
 h2oBuild=`cat latest`
 
 if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
   mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
 fi
 
-if [ $LOG ]
+if [ ${LOG} -eq 1 ]
 then
     #global starttime out to all loggers
     starttime=`date +%s`
     echo $starttime > BMLogs/starttime
 
     #Gentlemen...Start your loggers!
-    bash startLoggers.sh ${JSON} big
-    bash startLoggers.sh ${JSON} little
+    bash startloggers.sh ${JSON} big
+    bash startloggers.sh ${JSON} little
 fi
 
-if [ $DEBUG ]
+if [ ${DEBUG} -eq 1 ]
 then
     echo "Running in debug mode... "
-    if [ $TEST = "all" ] 
+    if [ ${TEST} = "all" ] 
     then
-        debug pca glm kmeans glm2 gbm gbmgrid bigkmeans
+        debug pca glm kmeans glm2 gbm #gbmgrid bigkmeans
         wait
     else
-        debug $TEST
+        debug ${TEST}
         wait
     fi
     wait
 else
-    if [ ! $TEST = "all" ]
+    if [ ! ${TEST} = "all" ]
         then
-            doAlgo $TEST
+            doAlgo ${TEST}
         else
-            $TEST
+            ${TEST}
         fi
         wait
 fi
 
-bash startLoggers.sh ${JSON} stop_
+bash startloggers.sh ${JSON} stop_
 
 #remove annoying useless files
-#rm pytest*flatfile*
-#rm benchmark*log
+rm pytest*flatfile*
 
 #archive nohup
-#if [ -a nohup.out ]; then
-#    mv nohup.out ${archive}/${h2oBuild}-${DATE}-nohup.out
-#fi
+if [ -a nohup.out ]; then
+    mv nohup.out ${archive}/${h2oBuild}-${DATE}-nohup.out
+fi

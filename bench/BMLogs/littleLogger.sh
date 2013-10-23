@@ -123,7 +123,7 @@ while :; do
     top -b | head -n 17 | tail -n 10 | awk -v t=$ti -F' ' 'OFS="," {print t,$1,$2,$6,$9,$10,$12}' >> $topPerfFile
     vmstat | tail -n 1               | awk -v t=$ti -F' ' 'OFS="," {print t,$7,$8}'               >> $swapPerfFile
     rm l*TMP
-    sleep 30
+    sleep 10
 done
 
 

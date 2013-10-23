@@ -47,8 +47,10 @@ public class SummaryPage2 extends Request2 {
   @Override protected Response serve() {
     if( source == null ) return RequestServer._http404.serve();
     // select all columns by default
-    if( cols == null ) cols = new int[Math.min(source.vecs().length,max_ncols)];
-    for(int i = 0; i < cols.length; i++) cols[i] = i;
+    if( cols == null ) {
+      cols = new int[Math.min(source.vecs().length,max_ncols)];
+      for(int i = 0; i < cols.length; i++) cols[i] = i;
+    }
     names = new String[cols.length];
     means = new double[cols.length];
     Vec[] vecs = new Vec[cols.length];
@@ -71,7 +73,7 @@ public class SummaryPage2 extends Request2 {
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++) {
-        (_summaries[i]=new Summary2(cs[i]._vec)).add(cs[i]);
+        (_summaries[i]=new Summary2(_fr.vecs()[i])).add(cs[i]);
       }
     }
     @Override public void reduce(SummaryTask2 other) {

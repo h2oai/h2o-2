@@ -165,8 +165,14 @@ SPHINXBUILD=$(shell which sphinx-build)
 ifeq ($(SPHINXBUILD),)
 docs-website: dw_announce
 	@echo sphinx-build not found, skipping...
+
+docs-website-clean:
 else
 docs-website: dw_announce dw_1 dw_2 dw_3 dw_4
+
+docs-website-clean:
+	rm -rf h2o-docs/source/developuser/DocGen
+	$(MAKE) -C h2o-docs clean
 endif
 
 dw_announce:
@@ -211,10 +217,6 @@ ifeq ($(PDFUNITE),)
 else
 	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
 endif
-
-docs-website-clean:
-	rm -rf h2o-docs/source/developuser/DocGen
-	$(MAKE) -C h2o-docs clean
 
 #
 # Set appropriately for your data size to quickly try out H2O.

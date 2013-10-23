@@ -8,7 +8,8 @@ import java.util.Random;
 import water.*;
 import water.Job.ColumnsJob;
 import water.api.*;
-import water.fvec.*;
+import water.fvec.Chunk;
+import water.fvec.Vec;
 import water.util.Utils;
 
 /**
@@ -49,14 +50,13 @@ public class KMeans2 extends ColumnsJob {
     for( int i = 0; i < cols.length; i++ )
       names[i] = source._names[cols[i]];
     Vec[] vecs = selectVecs(source);
-    Frame frame = new Frame(names, vecs);
     // Fill-in response based on K
-    Vec response = frame.anyVec().makeZero();
-    response._domain = new String[k];
-    for( int i = 0; i < response._domain.length; i++ )
-      response._domain[i] = "Cluster " + i;
-    frame.add("response", response);
-    KMeans2Model model = new KMeans2Model(destination_key, sourceKey, frame);
+    String[] domain = new String[k];
+    for( int i = 0; i < domain.length; i++ )
+      domain[i] = "Cluster " + i;
+    String[] namesResp = Utils.append(names, "response");
+    String[][] domaiResp = (String[][]) Utils.append(source.domains(), (Object) domain);
+    KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
 
     double[] subs = null, muls = null;
     if( normalize ) {
@@ -101,7 +101,7 @@ public class KMeans2 extends ColumnsJob {
         sampler._subs = subs;
         sampler._muls = muls;
         sampler.doAll(vecs);
-        clusters = DRemoteTask.merge(clusters, sampler._sampled);
+        clusters = Utils.append(clusters, sampler._sampled);
 
         if( cancelled() )
           return;
@@ -120,15 +120,12 @@ public class KMeans2 extends ColumnsJob {
       task._subs = subs;
       task._muls = muls;
       task.doAll(vecs);
-      for( int cluster = 0; cluster < clusters.length; cluster++ ) {
-        if( task._counts[cluster] > 0 ) {
-          for( int vec = 0; vec < vecs.length; vec++ ) {
-            double value = task._sums[cluster][vec] / task._counts[cluster];
-            clusters[cluster][vec] = value;
-          }
-        }
-      }
-      model.clusters = normalize ? denormalize(clusters, vecs) : clusters;
+      model.clusters = normalize ? denormalize(task._means, vecs) : task._means;
+      double[] variances = new double[task._sqrs.length];
+      for( int clu = 0; clu < task._sqrs.length; clu++ )
+        for( int col = 0; col < task._sqrs[clu].length; col++ )
+          variances[clu] += task._sqrs[clu][col];
+      model.cluster_variances = variances;
       model.error = task._sqr;
       model.iterations++;
       UKV.put(destination_key, model);
@@ -141,7 +138,9 @@ public class KMeans2 extends ColumnsJob {
 
   @Override protected Response redirect() {
     String n = KMeans2Progress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, "job", job_key, "dst_key", destination_key);
+    return new Response(Response.Status.redirect, this, -1, -1, n, //
+        "job_key", job_key, //
+        "destination_key", destination_key);
   }
 
   public static class KMeans2Progress extends Progress2 {
@@ -149,7 +148,7 @@ public class KMeans2 extends ColumnsJob {
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @Override protected Response jobDone(Job job, Key dst) {
-      return new Response(Response.Status.redirect, this, 0, 0, new KMeans2ModelView().href(), "model", dst_key);
+      return new Response(Response.Status.redirect, this, 0, 0, new KMeans2ModelView().href(), "model", destination_key);
     }
   }
 
@@ -157,7 +156,7 @@ public class KMeans2 extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "KMeans2 Model", filter = Default.class)
+    @API(help = "KMeans2 Model", json = true, filter = Default.class)
     public KMeans2Model model;
 
     public static String link(String txt, Key model) {
@@ -198,13 +197,16 @@ public class KMeans2 extends ColumnsJob {
   }
 
   public static class KMeans2Model extends Model implements Progress {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
     @API(help = "Cluster centers, always denormalized")
     public double[][] clusters;
 
     @API(help = "Sum of min square distances")
     public double error;
 
-    @API(help = "Whether data should be normalized")
+    @API(help = "Whether data was normalized")
     public boolean normalized;
 
     @API(help = "Maximum number of iterations before stopping")
@@ -213,11 +215,14 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "Iterations the algorithm ran")
     public int iterations;
 
+    @API(help = "Sum of square distances per cluster")
+    public double[] cluster_variances;
+
     private transient double[] _subs, _muls; // Normalization
     private transient double[][] _normClust;
 
-    public KMeans2Model(Key selfKey, Key dataKey, Frame fr) {
-      super(selfKey, dataKey, fr);
+    public KMeans2Model(Key selfKey, Key dataKey, String names[], String domains[][]) {
+      super(selfKey, dataKey, names, domains);
     }
 
     @Override public float progress() {
@@ -301,47 +306,65 @@ public class KMeans2 extends ColumnsJob {
     }
 
     @Override public void reduce(Sampler other) {
-      _sampled = DRemoteTask.merge(_sampled, other._sampled);
+      _sampled = Utils.append(_sampled, other._sampled);
     }
   }
 
   public static class Lloyds extends MRTask2<Lloyds> {
     // IN
     double[][] _clusters;
-    double[] _subs, _muls; // Normalization
+    double[] _subs, _muls;      // Normalization
 
     // OUT
-    double[][] _sums;      // Sum of (normalized) features in each cluster
-    int[] _counts;         // Count of rows in cluster
-    double _sqr;           // Total sqr distance
+    double[][] _means, _sqrs;   // Means and sum of squares for each cluster
+    long[] _rows;               // Rows per cluster
+    double _sqr;                // Total sqr distance
 
     @Override public void map(Chunk[] cs) {
-      double[] values = new double[_clusters[0].length];
-      _sums = new double[_clusters.length][values.length];
-      _counts = new int[_clusters.length];
-      ClusterDist cd = new ClusterDist();
+      _means = new double[_clusters.length][_clusters[0].length];
+      _sqrs = new double[_clusters.length][_clusters[0].length];
+      _rows = new long[_clusters.length];
 
       // Find closest cluster for each row
+      double[] values = new double[_clusters[0].length];
+      ClusterDist cd = new ClusterDist();
+      int[] clusters = new int[cs[0]._len];
       for( int row = 0; row < cs[0]._len; row++ ) {
         data(values, cs, row, _subs, _muls);
         closest(_clusters, values, cd);
-        int cluster = cd._cluster;
+        int clu = clusters[row] = cd._cluster;
         _sqr += cd._dist;
-        if( cluster == -1 )
+        if( clu == -1 )
           continue; // Ignore broken row
 
         // Add values and increment counter for chosen cluster
-        Utils.add(_sums[cluster], values);
-        _counts[cluster]++;
+        for( int col = 0; col < values.length; col++ )
+          _means[clu][col] += values[col];
+        _rows[clu]++;
+      }
+      for( int clu = 0; clu < _means.length; clu++ )
+        for( int col = 0; col < _means[clu].length; col++ )
+          _means[clu][col] /= _rows[clu];
+      // Second pass for in-cluster variances
+      for( int row = 0; row < cs[0]._len; row++ ) {
+        int clu = clusters[row];
+        if( clu == -1 )
+          continue;
+        data(values, cs, row, _subs, _muls);
+        for( int col = 0; col < values.length; col++ ) {
+          double delta = values[col] - _means[clu][col];
+          _sqrs[clu][col] += delta * delta;
+        }
       }
       _clusters = null;
       _subs = _muls = null;
     }
 
-    @Override public void reduce(Lloyds other) {
-      Utils.add(_sums, other._sums);
-      Utils.add(_counts, other._counts);
-      _sqr += other._sqr;
+    @Override public void reduce(Lloyds mr) {
+      for( int clu = 0; clu < _means.length; clu++ )
+        Layer.Stats.reduce(_means[clu], _sqrs[clu], _rows[clu], mr._means[clu], mr._sqrs[clu], mr._rows[clu]);
+      Utils.add(_rows, mr._rows);
+      _sqr += mr._sqr;
     }
   }
 

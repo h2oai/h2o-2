@@ -247,9 +247,15 @@ public final class Gram extends Iced {
         _xx[i][j] *= x;
   }
 
+  /**
+   * Task to compute gram matrix normalized by the number of observations (not counting rows with NAs).
+   * in R's notation g = t(X)%*%X/nobs, nobs = number of rows of X with no NA.
+   * @author tomasnykodym
+   */
   public static class GramTask extends FrameTask<GramTask> {
     final boolean _hasIntercept;
     public Gram _gram;
+    public long _nobs;
 
     public GramTask(Job job, boolean standardize, boolean hasIntercept){
       super(job,standardize,false);
@@ -260,11 +266,17 @@ public final class Gram extends Iced {
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats) {
       _gram.addRow(nums, ncats, cats, 1.0);
+      ++_nobs;
     }
+    @Override protected void chunkDone(){_gram.mul(1.0/_nobs);}
     @Override public void reduce(GramTask gt){
+      double r = (double)_nobs/(_nobs+gt._nobs);
+      _gram.mul(r);
+      double r2 = (double)gt._nobs/(_nobs+gt._nobs);
+      gt._gram.mul(r2);
       _gram.add(gt._gram);
+      _nobs += gt._nobs;
     }
-
   }
 }
 
