@@ -484,8 +484,21 @@ abstract class ASTBinOp extends ASTOp {
           }
         }.doAll(fr.numCols(),fr)._outputFrame;
 
-    } else {
-      throw H2O.unimpl();
+    } else {                    // Scalar & frame
+      fr = fr1;
+      final double d = d0;
+      final int ncols = fr.numCols();
+      fr2 = new MRTask2() {
+          @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+            for( int i=0; i<nchks.length; i++ ) {
+              Chunk    c= chks[i];
+              NewChunk n=nchks[i];
+              for( int r=0; r<c._len; r++ )
+                n.addNum(bin.op(d,c.at0(r))); // scalar left, frame right
+            }
+          }
+        }.doAll(fr.numCols(),fr)._outputFrame;
+
     }
     env.push(fr.copyHeaders(fr2,null));
   }
