@@ -58,6 +58,10 @@ public class Job extends Request2 {
     Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
   }
 
+  public int gridParallelism() {
+    return 1;
+  }
+
   public static abstract class FrameJob extends Job {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
