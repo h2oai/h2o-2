@@ -12,7 +12,6 @@ test.histogram <- function (con, path, key) {
   h2o.data@key <- key
   h2o.hists <- histograms(h2o.data)
   df<- as.data.frame(h2o.data)
-#  r.data <- read.csv(path)
   if (is.null(h2o.hists) || length(h2o.hists) == 0) {
     h2o.rm(con,key)
     return(0)
@@ -45,14 +44,9 @@ test.histogram <- function (con, path, key) {
 }
 
 csv.files <- list.files('../../smalldata/', recursive=T, full.names=T, pattern='*.csv$')
-exclude <- c("../../smalldata//datagen1.csv",
-             "../../smalldata//empty.csv",
-             "../../smalldata//logreg/umass_chdage.csv",
-             "../../smalldata//parse_fail_double_space.csv",
-             "../../smalldata//parse_folder_test/prostate_1.csv",
-             "../../smalldata//randomdata2.csv",
-             "../../smalldata//test/test_less_than_65535_unique_names.csv",
-             "../../smalldata//test/test_more_than_65535_unique_names.csv")
+exclude <- c("../../smalldata//empty.csv",
+              "../../smalldata//test/test_less_than_65535_unique_names.csv",
+              "../../smalldata//test/test_more_than_65535_unique_names.csv")
 csv.files <- csv.files[-which(csv.files %in% exclude)]
 for ( f in csv.files ) {
   print(f)
