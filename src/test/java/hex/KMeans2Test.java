@@ -15,6 +15,7 @@ import water.util.Log.Tag.Sys;
 
 public class KMeans2Test extends TestUtil {
   private static final long SEED = 8683452581122892189L;
+  private static final double SIGMA = 3;
 
   @BeforeClass public static void stall() {
     stall_till_cloudsize(3);
@@ -107,7 +108,7 @@ public class KMeans2Test extends TestUtil {
     for( int r = 0; r < array.length; r++ ) {
       final int goal = rand.nextInt(goals.length);
       for( int c = 0; c < array[r].length; c++ )
-        array[r][c] = goals[goal][c] + rand.nextGaussian();
+        array[r][c] = goals[goal][c] + rand.nextGaussian() * SIGMA;
     }
   }
 
