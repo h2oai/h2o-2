@@ -1190,36 +1190,6 @@ class H2O(object):
             time.sleep(5)
         return a
 
-    def kmeans_grid(self, key, key2=None,
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-        **kwargs):
-        # defaults
-        params_dict = {
-            'initialization': 'Furthest',
-            'k': 1,
-            'max_iter': 10,
-            'source_key': key,
-            'destination_key': 'python_KMeans_Grid_destination.hex',
-            }
-        browseAlso = kwargs.get('browseAlso', False)
-        params_dict.update(kwargs)
-        print "\nKMeansGrid params list:", params_dict
-        a = self.__do_json_request('KMeansGrid.json', timeout=timeoutSecs, params=params_dict)
-
-        # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request']!='Progress':
-            print dump_json(a)
-            raise Exception('H2O kmeans_grid redirect is not Progress. KMeans json response precedes.')
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-        verboseprint("\nKMeansGrid result:", dump_json(a))
-
-        if (browseAlso | browse_json):
-            print "Redoing the KMeansGrid through the browser, no results saved though"
-            h2b.browseJsonHistoryAsUrlLastMatch('KMeansGrid')
-            time.sleep(5)
-        return a
-
     # params:
     # header=1,
     # header_from_file
@@ -1786,6 +1756,8 @@ class H2O(object):
             'source': data_key,
             # this is ignore??
             'cols': None,
+            'ignored_cols': None,
+            'validation': None,
             'response': None,
             'activation': None,
             'hidden': None,
@@ -1905,7 +1877,7 @@ class H2O(object):
                 'link': None,
                 'alpha': None,
                 'lambda': None,
-                'beta_epsilon': None,
+                'beta_epsilon': None, # GLMGrid doesn't use this name
                 'tweedie_variance_power': None,
                 'n_folds': None,
                 'case_mode': None,
@@ -1914,6 +1886,7 @@ class H2O(object):
                 'thresholds': None,
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallel': None,
+                'beta_eps': None,
             } 
         else:
             params_dict = {
@@ -1927,7 +1900,7 @@ class H2O(object):
                 'link': None,
                 'alpha': None,
                 'lambda': None,
-                'beta_epsilon': None,
+                'beta_epsilon': None, # GLMGrid doesn't use this name
                 'tweedie_power': None,
                 'n_folds': None,
                 'case_mode': None,
@@ -1938,6 +1911,7 @@ class H2O(object):
                 'thresholds': None,
                 # only GLMGrid has these..we should complain about it on GLM?
                 'parallel': None,
+                'beta_eps': None,
             }
 
         check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)
