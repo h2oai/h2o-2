@@ -17,11 +17,19 @@ public class GridSearch extends Job {
 
   @Override protected void exec() {
     UKV.put(destination_key, this);
-    for( Job job : jobs )
-      try { job.fork().get();
-      } catch( Exception e ) {
-        throw new RuntimeException(e);
+    int max = jobs[0].gridParallelism();
+    int head = 0, tail = 0;
+    while( head < jobs.length ) {
+      if( tail - head < max && tail < jobs.length )
+        jobs[tail++].fork();
+      else {
+        try {
+          jobs[head++].get();
+        } catch( Exception e ) {
+          throw new RuntimeException(e);
+        }
       }
+    }
   }
 
   @Override protected void onCancelled() {
@@ -97,8 +105,8 @@ public class GridSearch extends Job {
           }
           String runTime = "Pending", speed = "";
           if( info._job.start_time != 0 ) {
-            runTime = PrettyPrint.msecs(info._job.runTimeMs(),true);
-            speed = perf != null ? PrettyPrint.msecs(info._job.speedValue(),true) : "";
+            runTime = PrettyPrint.msecs(info._job.runTimeMs(), true);
+            speed = perf != null ? PrettyPrint.msecs(info._job.speedValue(), true) : "";
           }
           sb.append("<td>").append(runTime).append("</td>");
           if( perf != null )
