@@ -2,12 +2,14 @@ package water.fvec;
 
 import java.util.Arrays;
 import java.util.UUID;
+import sun.security.krb5.internal.SeqNumber;
 
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.util.Utils;
+import static water.util.Utils.seq;
 
 /**
  * A single distributed vector column.
@@ -170,7 +172,13 @@ public class Vec extends Iced {
   public String[] domain() { return _domain; }
 
   /** Convert an integer column to an enum column, with just number strings for
-   *  the factors or levels.  */
+   *  the factors or levels.
+   *
+   *  Deprecated - you should use toEnum ALWAYS returning a new vector which
+   *  provides a correct transformation to enum. The caller of {@link #toEnum()} is ALWAYS responsible
+   *  for its deletion!!!
+   *  */
+  @Deprecated
   public void asEnum() {
     if( _domain!=null ) return;
     if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
@@ -178,6 +186,22 @@ public class Vec extends Iced {
     DKV.put(_key,this);
   }
 
+  /** Transform this vector to enum.
+   * Transformation is done by a {@link TransfVec} which provides a mapping between values.
+   *
+   * The caller is responsible for vector deletion!
+   */
+  public Vec toEnum() {
+    if( _domain!=null ) return this.makeTransf(seq(0,_domain.length), _domain);
+    else {
+      int[] domain;
+      String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
+      int[] domMap = Utils.mapping(domain);
+      return this.makeTransf(domMap, sdomain);
+    }
+  }
+
+  @Deprecated
   public String[] defaultLevels() {
     long min = (long)min(), max = (long)max();
     if( min < 0 || max > 100000L ) throw H2O.unimpl();
