@@ -2,6 +2,7 @@ package water.api;
 
 import water.*;
 import water.fvec.*;
+import water.util.Utils;
 import hex.gbm.DRF;
 import hex.gbm.GBM;
 
@@ -78,7 +79,7 @@ public class Inspect2 extends Request2 {
       naCnt += cols[i].naCnt;
 
     DocGen.HTML.title(sb,skey.toString());
-    DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+
+    DocGen.HTML.section(sb,""+Utils.pprintLong(numCols)+" columns, "+Utils.pprintLong(numRows)+" rows, "+
                         PrettyPrint.bytes(byteSize)+" bytes (compressed), "+
                         (naCnt== 0 ? "no":PrettyPrint.bytes(naCnt))+" missing elements");
 
