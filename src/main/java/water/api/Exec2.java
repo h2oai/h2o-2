@@ -9,7 +9,7 @@ public class Exec2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
   // This Request supports the HTML 'GET' command, and this is the help text for GET.
-  static final String DOC_GET = "Executes a string.";
+  static final String DOC_GET = "Executes a string in H2O's R-like language.";
   @API(help="String to execute", required=true, filter=Default.class)
   String str;
 

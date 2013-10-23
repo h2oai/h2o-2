@@ -88,7 +88,8 @@ public class Expr2Test extends TestUtil {
       // Needed examples: 
       // (1) Replace NAs with imputed mean
       // (2) Drop 95% outliers (top & bot 2.5% outliers)
-
+      // (3) Table command? (co-occurance matrix)
+      // (4) Cut command?
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
