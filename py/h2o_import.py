@@ -5,7 +5,8 @@ import getpass
 #****************************************************************************************
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
-def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=False):
+# using this standalone, we probably want 'put' decision making by default (can always pass schema='local')
+def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath=False):
     checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
     giveUpAndSearchLocally = False
@@ -23,7 +24,9 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
     # Never use the var for remote, if you're doing a put! (which always sources local)
     elif h2o.nodes[0].remoteH2O and schema!='put' and \
         (os.environ.get('H2O_REMOTE_BUCKETS_ROOT') or h2o.nodes[0].h2o_remote_buckets_root):
+        print "kbn a"
         if (bucket=='smalldata' or bucket=='datasets') and schema=='local':
+            print "kbn a1. bucket: %s" % bucket
             msg1 = "\nWARNING: you're using remote nodes, and 'smalldata' or 'datasets' git buckets, with schema!=put"
             msg2 = "\nThose aren't git pull'ed by the test. Since they are user-maintained, not globally-maintained-by-0xdata,"
             msg3 = "\nthey may be out of date at those remote nodes?"
@@ -31,16 +34,21 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
             h2p.red_print(msg1, msg2, msg3, msg4)
             giveUpAndSearchLocally = True
         else:
+            print "kbn a2. bucket: %s" % bucket
             if os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
                 rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
+                print "Found H2O_REMOTE_BUCKETS_ROOT:", rootPath
             else:
                 rootPath = h2o.nodes[0].h2o_remote_buckets_root
+                print "Found h2o_nodes[0].h2o_remote_buckets_root:", rootPath
 
             bucketPath = os.path.join(rootPath, bucket)
             checkPath = False
 
     # does it work to use bucket "." to get current directory
-    elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
+    # this covers reote with put too
+    elif os.environ.get('H2O_BUCKETS_ROOT'):
+        print "kbn b"
         rootPath = os.environ.get('H2O_BUCKETS_ROOT')
         print "Using H2O_BUCKETS_ROOT environment variable:", rootPath
 
@@ -52,6 +60,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
             raise Exception("H2O_BUCKETS_ROOT and path used to form %s which doesn't exist." % bucketPath)
 
     else:
+        print "kbn c"
         giveUpAndSearchLocally = True
         
 
