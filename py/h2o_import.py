@@ -355,7 +355,7 @@ def find_key(pattern=None):
 # supposed to be the same? In any case
 # pattern can't be regex to h2o?
 # None should be same as no pattern
-def delete_keys(node=None, pattern=None, timeoutSecs=30):
+def delete_keys(node=None, pattern=None, timeoutSecs=90):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
     deletedCnt = 0
@@ -371,7 +371,7 @@ def delete_keys(node=None, pattern=None, timeoutSecs=30):
         # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return deletedCnt
 
-def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
+def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=90):
     if not node: node = h2o.nodes[0]
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
@@ -389,7 +389,7 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
     return totalDeletedCnt
 
 
-def count_keys(node=None, pattern=None, timeoutSecs=30):
+def count_keys(node=None, pattern=None, timeoutSecs=90):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
     nodeCnt = 0
@@ -409,7 +409,7 @@ def count_keys(node=None, pattern=None, timeoutSecs=30):
     print nodeCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return nodeCnt
 
-def count_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
+def count_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=90):
     if not node: node = h2o.nodes[0]
     totalCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
