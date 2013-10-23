@@ -80,11 +80,18 @@ def resultsCheckPCA(self, pca, **kwargs):
     print "Checking that sdevs^2 sums to number of variables"
     #if not standardize or tolerance != 0, don't do check
     sdevs = pcaResult["pca_model"]["sdev"]
+    sumsdevs2 = sum([s**2 for s in sdevs])
     sum_ = len(sdevs)
     for PC,sdev in enumerate(sdevs): sum_ -= sdev**2
     if not ((sum_ -.5) < 0 < (sum_ +.5)):
-        print "sum(sdevs^2) are not within .5 of 0. sdevs incorrect?"
-        h2o.dump_json(sdevs)
+        print "sum(sdevs^2) are not within .5 of 0. sdevs incorrect? The difference between the number of variables and sum(sdevs^2) is: ", sum_
+        print "Perhaps the data was not standardized after all?"
+        print "These were the parameters used for pca: ", pcaResult["pca_model"]["params"] 
+        print "Dumping out the standard deviations: "
+        print sdevs
+        print "sum(sdevs^2) = ", sumsdevs2
+        print "Expected     = ", len(sdevs)
+        print "Difference   = ", sum_  
         raise Exception("Standard Deviations are possibly incorrect!")
     print " Good!"
 
