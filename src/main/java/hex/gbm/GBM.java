@@ -21,8 +21,8 @@ public class GBM extends SharedTreeModelBuilder {
   @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   public double learn_rate = 0.1;
 
-  @API(help = "Grid search parallelism", filter = Default.class, lmax = 4)
-  public int grid_parallelism = 1;
+  @API(help = "Grid search parallelism", filter = Default.class, lmax = 10)
+  public int grid_parallelism = 2;
 
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
