@@ -1265,6 +1265,13 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+
+  public AutoBuffer putJSONZ( String name, boolean value ) {
+    putJSONStr(name).put1(':');
+    putJSONStr("" + value);
+    return this;
+  }
+
   public AutoBuffer putJSON1( byte b ) { return putJSON4(b); }
   public AutoBuffer putJSONA1( byte ary[] ) {
     if( ary == null ) return putNULL();
