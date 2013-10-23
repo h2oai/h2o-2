@@ -223,7 +223,7 @@ class ASTSlice extends AST {
     long cols[];
     if( !env.isFrame() ) {
       int col = (int)env.popDbl(); // Silent truncation
-      if( col > 0 && col >  len ) throw new ArrayIndexOutOfBoundsException("Trying to select column "+col+" but only "+len+" present.");
+      if( col > 0 && col >  len ) throw new IllegalArgumentException("Trying to select column "+col+" but only "+len+" present.");
       if( col < 0 && col < -len ) col=0; // Ignore a non-existent column
       if( col == 0 ) return new long[0];
       return new long[]{col};
@@ -414,19 +414,42 @@ abstract class ASTUniOp extends ASTOp {
     return new Type[]{Type.anyary(new Type[]{t1}),t1};
   }
   ASTUniOp( ) { super(VARS,newsig()); }
+  double op( double d ) { throw H2O.fail(); }
   protected ASTUniOp( String[] vars, Type[] types ) { super(vars,types); }
+  @Override void apply(Env env) {
+    // Expect we can broadcast across all functions as needed.
+    if( !env.isFrame() ) { env.poppush(op(env.popDbl())); return; }
+    Frame fr = env.popFrame();
+    env.pop();                  // Pop self
+    final ASTUniOp uni = this;  // Final 'this' so can use in closure
+    Frame fr2 = new MRTask2() {
+        @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+          for( int i=0; i<nchks.length; i++ ) {
+            NewChunk n =nchks[i];
+            Chunk c = chks[i];
+            int rlen = c._len;
+            for( int r=0; r<rlen; r++ )
+              n.addNum(uni.op(c.at0(r)));
+          }
+        }
+      }.doAll(fr.numCols(),fr)._outputFrame;
+    env.push(fr.copyHeaders(fr2,null));
+  }
 }
-class ASTIsNA extends ASTUniOp { String opStr(){ return "isNA"; } ASTOp make() {return new ASTIsNA();} }
-class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ; } ASTOp make() {return new ASTSgn ();} }
+
+class ASTIsNA extends ASTUniOp { String opStr(){ return "isNA"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
+class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ; } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}
 class ASTNrow extends ASTUniOp { 
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }  
   @Override ASTOp make() {return this;} 
+  @Override void apply(Env env) { env.poppush(env.popFrame().numRows());  }
 }
 class ASTNcol extends ASTUniOp { 
   ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }  
   @Override ASTOp make() {return this;} 
+  @Override void apply(Env env) { env.poppush(env.popFrame().numCols());  }
 }
 
 abstract class ASTBinOp extends ASTOp {
