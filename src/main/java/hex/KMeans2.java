@@ -172,25 +172,32 @@ public class KMeans2 extends ColumnsJob {
     @Override public boolean toHTML(StringBuilder sb) {
       if( model != null ) {
         DocGen.HTML.section(sb, "Error: " + model.error);
-        sb.append("<span style='display: inline-block;'>");
-        sb.append("<table class='table table-striped table-bordered'>");
-        sb.append("<tr>");
-        sb.append("<th>Clusters</th>");
-        for( int i = 0; i < model.clusters[0].length; i++ )
-          sb.append("<th>").append(model._names[i]).append("</th>");
-        sb.append("</tr>");
-
-        for( int r = 0; r < model.clusters.length; r++ ) {
-          sb.append("<tr>");
-          sb.append("<td>").append(r).append("</td>");
-          for( int c = 0; c < model.clusters[r].length; c++ )
-            sb.append("<td>").append(ElementBuilder.format(model.clusters[r][c])).append("</td>");
-          sb.append("</tr>");
-        }
-        sb.append("</table></span>");
+        table(sb, "Clusters", model._names, model.clusters);
+        double[][] rows = new double[model.cluster_variances.length][1];
+        for( int i = 0; i < rows.length; i++ )
+          rows[i][0] = model.cluster_variances[i];
+        table(sb, "In-cluster variances", model._names, rows);
         return true;
       }
       return false;
+    }
+
+    private static void table(StringBuilder sb, String title, String[] names, double[][] rows) {
+      sb.append("<span style='display: inline-block;'>");
+      sb.append("<table class='table table-striped table-bordered'>");
+      sb.append("<tr>");
+      sb.append("<th>" + title + "</th>");
+      for( int i = 0; names != null && i < rows[0].length; i++ )
+        sb.append("<th>").append(names[i]).append("</th>");
+      sb.append("</tr>");
+      for( int r = 0; r < rows.length; r++ ) {
+        sb.append("<tr>");
+        sb.append("<td>").append(r).append("</td>");
+        for( int c = 0; c < rows[r].length; c++ )
+          sb.append("<td>").append(ElementBuilder.format(rows[r][c])).append("</td>");
+        sb.append("</tr>");
+      }
+      sb.append("</table></span>");
     }
   }
 
@@ -245,7 +252,7 @@ public class KMeans2 extends ColumnsJob {
         }
       }
       data(tmp, chunks, rowInChunk, _means, _mults);
-      Arrays.fill(preds,0);
+      Arrays.fill(preds, 0);
       preds[closest(cs, tmp, new ClusterDist())._cluster] = 1;
       return preds;
     }
