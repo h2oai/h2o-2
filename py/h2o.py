@@ -1641,9 +1641,9 @@ class H2O(object):
     def predict_confusion_matrix(self, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'actual': None,
-            'vactual': None,
+            'vactual': 'predict' 
             'predict': None,
-            'vpredict': None,
+            'vpredict': 'predict',
         }
         # everyone should move to using this, and a full list in params_dict
         # only lets these params thru
@@ -1689,6 +1689,7 @@ class H2O(object):
             'cols'                 : None,
             'nbins'                : None,
             'classification'       : None,
+            'grid_parallelism'       : None,
         }
 
         # only lets these params thru

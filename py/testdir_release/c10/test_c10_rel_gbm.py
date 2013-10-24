@@ -117,7 +117,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         print "This is crazy!"
         gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
             actual=parseTestResult['destination_key'],
-            vactual=response,
+            vactual='predict',
             predict=predictKey,
             vpredict='predict', # choices are 7 (now) and 'predict'
             )
