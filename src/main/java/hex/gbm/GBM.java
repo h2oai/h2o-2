@@ -92,11 +92,11 @@ public class GBM extends SharedTreeModelBuilder {
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
-      Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid+1,ktrees);
+      Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid,ktrees);
       model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
       DKV.put(outputKey, model);
     }
-    Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid+1,ktrees);
+    Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid,ktrees);
     model = new GBMModel(model, null, (float)sc._sum/_nrows, sc._cm);
     DKV.put(outputKey, model);
     cleanUp(fr,t_build); // Shared cleanup
