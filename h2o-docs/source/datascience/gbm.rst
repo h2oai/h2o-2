@@ -81,6 +81,12 @@ the proportion of incorrect predictions overall.
   Mean squared error is an indicator of goodness of fit. It measures
   the squared distance between an estimator and the estimated parameter. 
 
+**Cost of Computation**
+
+  The cost of computation in GBM is bounded above in the following way:
+
+  :math:`Cost = bins\times (2^{leaves}) \times columns \times classes`
+
 
 GBM Algorithm
 """"""""""""""
