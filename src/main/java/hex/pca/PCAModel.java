@@ -13,7 +13,7 @@ public class PCAModel extends Model {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help = "Column names expanded to accommodate categoricals")
-  final String[] expNames;
+  final String[] namesExp;
 
   @API(help = "Standard deviation of each principal component")
   final double[] sdev;
@@ -41,13 +41,13 @@ public class PCAModel extends Model {
 
   public PCAModel(Key selfKey, Key dataKey, Frame fr, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
     super(selfKey, dataKey, fr);
-    this.expNames = expNames();
     this.sdev = sdev;
     this.propVar = propVar;
     this.cumVar = cumVar;
     this.eigVec = eigVec;
     this.params = params;
     this.catOffsets = gramt.catOffsets();
+    this.namesExp = namesExp();
     this.rank = rank;
     this.num_pc = num_pc;
   }
@@ -66,7 +66,7 @@ public class PCAModel extends Model {
     return sb.toString();
   }
 
-  public String[] expNames(){
+  public String[] namesExp(){
     final int cats = catOffsets.length-1;
     int k = 0;
     String [] res = new String[sdev.length];
@@ -123,7 +123,7 @@ public class PCAModel extends Model {
     // Each row is component of eigenvector
     for(int r = 0; r < eigVec.length; r++) {
       sb.append("<tr>");
-      sb.append("<th>").append(expNames[r]).append("</th>");
+      sb.append("<th>").append(namesExp[r]).append("</th>");
       for( int c = 0; c < num_pc; c++ ) {
         double e = eigVec[r][c];
         sb.append("<td>").append(ElementBuilder.format(e)).append("</td>");
