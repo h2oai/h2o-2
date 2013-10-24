@@ -1641,7 +1641,7 @@ class H2O(object):
     def predict_confusion_matrix(self, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'actual': None,
-            'vactual': 'predict' 
+            'vactual': 'predict',
             'predict': None,
             'vpredict': 'predict',
         }
