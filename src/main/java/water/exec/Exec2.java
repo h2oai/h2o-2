@@ -67,12 +67,14 @@ public class Exec2 {
     // Some global constants
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
     global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
+    int argcnt = global.size();
 
     // Parse.  Type-errors get caught here and throw IAE
     AST ast = new Exec2(str,global).parse();
     System.out.println(ast.toString(new StringBuilder(),0).toString());
 
     try {
+      env.push(global.size()-argcnt);   // Push space for temps
       ast.exec(env);
       env.postWrite();
     } catch( RuntimeException t ) {

@@ -85,10 +85,10 @@ class ASTApply extends AST {
     Type ts[] = new Type[args.length];
     ts[0] = Type.unbound(x);
     for( int i=1; i<ts.length; i++ )
-      ts[i] = args[i]._t;
+      ts[i] = args[i]._t.find();
     Type ft1 = Type.fcn(x,ts);
     AST fast = args[0];
-    Type ft2 = fast._t;         // Should be a function type
+    Type ft2 = fast._t.find();  // Should be a function type
     if( ft1.union(ft2) )        // Union 'em
       return new ASTApply(args,x);
     // Error handling
@@ -99,7 +99,7 @@ class ASTApply extends AST {
     String vars[] = (fast instanceof ASTOp) ? ((ASTOp)fast)._vars : null;
     for( int i=1; i<ts.length; i++ )
       if( !ft2._ts[i].union(args[i]._t) )
-        E.throwErr("Arg "+(vars==null?("#"+i):("'"+vars[i]+"'"))+" typed as "+ft2._ts[i]+" but passed "+args[i]._t,x);
+        E.throwErr("Arg "+(vars==null?("#"+i):("'"+vars[i]+"'"))+" typed as "+ft2._ts[i]+" but passed "+args[i]._t.find(),x);
     throw H2O.fail();
   }
 
@@ -292,8 +292,10 @@ class ASTAssign extends AST {
     AST eval = parseCXExpr(E);
     if( eval == null ) E.throwErr("Missing RHS",x);
     ASTId id = (ASTId)ast2;
-    if( id._depth < E.lexical_depth() ) { // Shadowing an outer scope?
+    if( id._depth > 0 ) {       // Shadowing an outer scope?
       id = extend_local(E,eval._t,id._id);
+      if( ast2 != ast ) throw H2O.unimpl(); // Must copy whole array locally, before updating the local copy
+      else ast = id;
     } else if( !ast._t.union(eval._t) ) // Disallow type changes in local scope
       E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
     return new ASTAssign(ast,eval);
@@ -314,8 +316,7 @@ class ASTAssign extends AST {
     return new ASTAssign(extend_local(E,eval._t,var),eval);
   }
   static ASTId extend_local( Exec2 E, Type t, String var ) {
-    int d = E.lexical_depth();      // Innermost scope
-    ArrayList<ASTId> vars = E._env.get(d);
+    ArrayList<ASTId> vars = E._env.get(E.lexical_depth());
     ASTId id = new ASTId(t,var,0,vars.size());
     vars.add(id);
     return id;
@@ -424,7 +425,9 @@ abstract class ASTOp extends AST {
     return ASTFunc.parseFcn(E);
   }
 
-  @Override void exec(Env env) { env.push(this); }
+  @Override void exec(Env env) { 
+    env.push(this); 
+  }
   abstract void apply(Env env, int argcnt);
 }
 

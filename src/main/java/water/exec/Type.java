@@ -56,8 +56,10 @@ public class Type {
     for( int i=0; i<_ts.length; i++ ) {
       Type t = _ts[i].find();
       if( t._t == ARY0    ) { _t=BOUND; return (_ts[0] = ARY); } // Any array==> typed as array
-      if( t._t == DBLARY0 ) _ts[len++] = t;
-      else assert t._t == DBL0; // By construction, only set with DBLARY or DBL or ARY
+      if( t._t == DBLARY0 ) {   // Nebulous DBLARY must be kept
+        if( !dupType(len,t) )   // But remove dups
+          _ts[len++] = t;
+      } else assert t._t == DBL0; // By construction, only set with DBLARY or DBL or ARY
     }
     // No more ARY types?  Defaults to DBL
     if( len == 0 ) { _t=BOUND; return (_ts[0] = DBL); }
@@ -65,6 +67,11 @@ public class Type {
     if( len == 1 ) { _t=BOUND; return  _ts[0]; }
     return this;
   }
+  private boolean dupType( int len, Type t ) {
+    for( int j=0; j<len; j++ ) if( _ts[j]==t ) return true;
+    return false;
+  }
+
   boolean union( Type t ) {
     Type ta=  find();
     Type tb=t.find();
