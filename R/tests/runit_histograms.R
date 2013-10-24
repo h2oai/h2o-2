@@ -12,7 +12,6 @@ test.histogram <- function (con, path, key) {
   h2o.data@key <- key
   h2o.hists <- histograms(h2o.data)
   df<- as.data.frame(h2o.data)
-  x <- read.csv(path)
   if (is.null(h2o.hists) || length(h2o.hists) == 0) {
     h2o.rm(con,key)
     return(0)
