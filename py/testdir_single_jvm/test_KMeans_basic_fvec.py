@@ -54,16 +54,15 @@ class Basic(unittest.TestCase):
 
             # for fvec only?
             kwargs.update({'max_iter': 10})
-
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, noPoll=h2o.beta_features, **kwargs)
 
             if h2o.beta_features:
                 h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
                 # hack..supposed to be there like va
                 kmeans['destination_key'] = 'benign_k.hex'
-            h2o.verboseprint("kmeans result:", h2o.dump_json(kmeans))
+            ## h2o.verboseprint("kmeans result:", h2o.dump_json(kmeans))
             modelView = h2o.nodes[0].kmeans_model_view(model='benign_k.hex')
-            print "KMeans2ModelView:", h2o.dump_json(modelView)
+            h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
             model = modelView['model']
             clusters = model['clusters']
             cluster_variances = model['cluster_variances']
@@ -113,7 +112,7 @@ class Basic(unittest.TestCase):
             # can't do this
             # inspect = h2o_cmd.runInspect(key='prostate_k.hex')
             modelView = h2o.nodes[0].kmeans_model_view(model='prostate_k.hex')
-            print "KMeans2ModelView:", h2o.dump_json(modelView)
+            h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
 
             model = modelView['model']
             clusters = model['clusters']
@@ -121,6 +120,9 @@ class Basic(unittest.TestCase):
             error = model['error']
             print "cluster_variances:", cluster_variances
             print "error:", error
+            for i,c in enumerate(cluster_variances):
+                if c < 0.1:
+                    raise Exception("cluster_variance %s for cluster %s is too small. Doesn't make sense. Ladies and gentlemen, this is Chewbacca. Chewbacca is a Wookiee from the planet Kashyyyk. But Chewbacca lives on the planet Endor. Now think about it...that does not make sense!" % (c, i))
             
 
             # make this fvec legal?
