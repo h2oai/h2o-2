@@ -2,14 +2,14 @@
 Quick Start Videos
 ==================
 
-Getting Started from H2O jar 
------------------------------
+Getting Started from H\ :sub:`2`\ O jar 
+----------------------------------------
 .. raw:: html
    
   <object width="420" height="315"><param name="movie" value="http://www.youtube.com/v/_-iBnhOPjvw?hl=en_US&amp;version=3"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/_-iBnhOPjvw?hl=en_US&amp;version=3" type="application/x-shockwave-flash" width="420" height="315" allowscriptaccess="always" allowfullscreen="true"></embed></object>
 
-Getting Started with H2O in R
------------------------------
+Getting Started with H\ :sub:`2`\ O in R
+------------------------------------------
 
 .. raw:: html
 
