@@ -108,6 +108,7 @@ public class JUnitRunner {
     names.remove("water.Weaver");
     Collections.sort(names); // For deterministic runs
     List<Class> tests = new ArrayList<Class>();
+    Log._dontDie = true;
     for( String name : names ) {
       try {
         Class c = Class.forName(name);

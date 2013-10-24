@@ -14,6 +14,8 @@ import hex.pca.*;
 public class PCATest extends TestUtil {
   public final double threshold = 0.000001;
 
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+
   private static Frame getFrameForFile(Key outputKey, String path, String [] ignores) {
     File f = TestUtil.find_test_file(path);
     Key k = NFSFileVec.make(f);
@@ -67,6 +69,7 @@ public class PCATest extends TestUtil {
     // PCAParams params = new PCAParams(0.0, standardize);
     // DPCA.startPCAJob(kpca, df, params).get();
     } finally {
+      UKV.remove(kraw);
       UKV.remove(kdata);
       UKV.remove(kpca);
       if(model != null) model.delete();
@@ -92,6 +95,7 @@ public class PCATest extends TestUtil {
       for(int i = 0; i < model.sdev().length; i++)
         Assert.assertEquals(sdev_R[i], model.sdev()[i], threshold);
     } finally {
+      UKV.remove(kraw);
       UKV.remove(kdata);
       UKV.remove(kpca);
       if(model != null) model.delete();
