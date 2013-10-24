@@ -113,6 +113,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         elapsed = time.time() - start
         print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
+
+        time.sleep(3600)
+
         print "This is crazy!"
         gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
             actual=parseTestResult['destination_key'],
