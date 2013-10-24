@@ -113,7 +113,7 @@ public class Type {
   boolean isAry()    { Type t=find(); return t._t==ARY0; }
   boolean isDbl()    { Type t=find(); return t._t==DBL0; }
   boolean isFcn()    { Type t=find(); return t._t==FCN0; }
-  boolean isNotFun() { Type t=find(); return t._t==DBL0 || t._t==ARY0; }
+  boolean isNotFun() { Type t=find(); return t._t==DBL0 || t._t==ARY0 || t._t==DBLARY0; }
   boolean isDblAry() { Type t=find(); return t._t==DBL0 || t._t==ARY0; }
   // Return type of functions
   public Type ret()  { Type t=find(); assert t._t == FCN0; return t._ts[0].find(); }

@@ -36,7 +36,7 @@ public class Expr2Test extends TestUtil {
       checkStr("1.23+(h.hex-h.hex)");
       checkStr("(1.23+h.hex)-h.hex");
       checkStr("min(h.hex,1+2)");
-      checkStr("isNA(h.hex)");
+      checkStr("is.na(h.hex)");
       checkStr("nrow(h.hex)*3");
       checkStr("h.hex[ncol(h.hex),nrow(h.hex)]");
       checkStr("1=2");
@@ -60,10 +60,9 @@ public class Expr2Test extends TestUtil {
       checkStr("function(x){}(2)");
       checkStr("function(x){y=x*2; y+1}(2)");
       checkStr("function(x){y=1+2}(2)");
-      checkStr("Reduce(+,h.hex)");
-      checkStr("Reduce(isNA,h.hex)");
-      checkStr("Reduce(function(x,y){x[]+y},h.hex)");
-      checkStr("Reduce(function(x,y){x=y=1;h.hex},h.hex)");
+      checkStr("apply(h.hex,2,sum)");
+      checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
+      checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
@@ -82,11 +81,13 @@ public class Expr2Test extends TestUtil {
       checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
       checkStr("h.hex[2,]=h.hex[7,]");
       checkStr("h.hex[,2]=h.hex[,7]+1");
+      checkStr("h.hex[,c(1,3,5)]");
       checkStr("h.hex[c(1,3,5),]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
 
       // Needed examples: 
+      // (0) Whole column subset selection
       // (1) Replace NAs with imputed mean
       // (2) Drop 95% outliers (top & bot 2.5% outliers)
       // (3) Table command? (co-occurance matrix)

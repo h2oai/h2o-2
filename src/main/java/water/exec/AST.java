@@ -458,7 +458,7 @@ abstract class ASTUniOp extends ASTOp {
   }
 }
 
-class ASTIsNA extends ASTUniOp { String opStr(){ return "isNA"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
+class ASTIsNA extends ASTUniOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
 class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ; } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}
 class ASTNrow extends ASTUniOp { 
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
@@ -585,6 +585,28 @@ class ASTIfElse extends ASTOp {
     return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
   }
   @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
+}
+
+// --------------------------------------------------------------------------
+// R's Apply.  Function is limited to taking a single column and returning
+// a single column.  Double is limited to 1 or 2, statically determined.
+class ASTRApply extends ASTOp {
+  static final String VARS[] = new String[]{ "", "ary", "dbl1.2", "fun"};
+  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(0,new Type[]{Type.ARY,Type.ARY}) };
+  ASTRApply( ) { super(VARS,TYPES); }
+  @Override String opStr(){ return "apply";}
+  @Override ASTOp make() {return this;} 
+  @Override void apply(Env env, int argcnt) {
+    ASTOp op = (ASTOp)env.popFun();    // ary->ary but better be ary[,1]->ary[,1]
+    double d = env.popDbl();
+    Frame fr = env.popFrame();  // The Frame to work on
+    if( d==2 || d== -1 ) {      // Work on columns
+
+      throw H2O.unimpl();
+    } else if( d==1 || d == -2 ) { // Work on rows
+      throw H2O.unimpl();
+    } else throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
+  }
 }
 
 // --------------------------------------------------------------------------
