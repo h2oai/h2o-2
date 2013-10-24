@@ -73,7 +73,8 @@ public class Exec2 {
     System.out.println(ast.toString(new StringBuilder(),0).toString());
 
     try {
-      ast.exec(env); 
+      ast.exec(env);
+      env.postWrite();
     } catch( RuntimeException t ) {
       env.remove();
       throw t;

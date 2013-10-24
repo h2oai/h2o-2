@@ -48,17 +48,12 @@ public class Expr2Test extends TestUtil {
       checkStr("x=+");
       checkStr("(h.hex+1)=2");
       checkStr("h.hex[nrow(h.hex=1),]");
-      checkStr("h.hex[2,3]=4");
-      checkStr("h.hex[2,]=h.hex[7,]");
-      checkStr("h.hex[,2]=h.hex[,7]+1");
+      checkStr("h.hex[2,3]=4;");
       checkStr("c(1,3,5)");
-      checkStr("h.hex[c(1,3,5),]");
-      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
-      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
       checkStr("function(=){x+1}(2)");
       checkStr("function(x,=){x+1}(2)");
       checkStr("function(x,x){x+1}(2)");
-      checkStr("function(x){x[]}(h.hex)");
+      checkStr("function(x,y,z){x[]}(h.hex,1,2)");
       checkStr("function(x){x[]}(2)");
       checkStr("function(x){x+1}(2)");
       checkStr("function(x){y=x+y}(2)");
@@ -69,13 +64,6 @@ public class Expr2Test extends TestUtil {
       checkStr("Reduce(isNA,h.hex)");
       checkStr("Reduce(function(x,y){x[]+y},h.hex)");
       checkStr("Reduce(function(x,y){x=y=1;h.hex},h.hex)");
-      checkStr("map()");
-      checkStr("map(1)");
-      checkStr("map(+,h.hex,1)");
-      checkStr("map(+,1,2)");
-      checkStr("map(function(x){x[];1},h.hex)");
-      checkStr("map(function(a,b,d){a+b+d},h.hex,h.hex,1)");
-      checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
@@ -84,6 +72,19 @@ public class Expr2Test extends TestUtil {
       checkStr("ifelse(0,+,*)(1,2)");
       checkStr("(0?+:*)(1,2)");
       checkStr("(1? h.hex : (h.hex+1))[1,2]");
+      // Slice assignment & map
+      checkStr("map()");
+      checkStr("map(1)");
+      checkStr("map(+,h.hex,1)");
+      checkStr("map(+,1,2)");
+      checkStr("map(function(x){x[];1},h.hex)");
+      checkStr("map(function(a,b,d){a+b+d},h.hex,h.hex,1)");
+      checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
+      checkStr("h.hex[2,]=h.hex[7,]");
+      checkStr("h.hex[,2]=h.hex[,7]+1");
+      checkStr("h.hex[c(1,3,5),]");
+      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
+      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
 
       // Needed examples: 
       // (1) Replace NAs with imputed mean

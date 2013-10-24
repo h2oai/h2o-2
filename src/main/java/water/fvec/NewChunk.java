@@ -449,11 +449,8 @@ public class NewChunk extends Chunk {
   @Override boolean set_impl(int i, double d) {
     if( _ls != null ) {
       _ds = MemoryManager.malloc8d(_len);
-      for( int j = 0; j<_len; j++ ) {
-        long l = at8_impl(j);
-        _ds[j] = l;
-        if( _ds[j] != l )  throw H2O.unimpl();
-      }
+      for( int j = 0; j<_len; j++ )
+        _ds[j] = _ls[i]*Math.pow(10,_xs[i]);
       _ls = null;  _xs = null;
     }
     _ds[i]=d;

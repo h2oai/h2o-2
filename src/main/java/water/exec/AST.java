@@ -154,7 +154,7 @@ class ASTApply extends AST {
     int sp = env._sp;
     for( AST arg : _args ) arg.exec(env);
     assert sp+_args.length==env._sp;
-    env.fun(-_args.length).apply(env);
+    env.fun(-_args.length).apply(env,_args.length);
   }
 }
 
@@ -196,8 +196,9 @@ class ASTSlice extends AST {
     } else {
       // Else It's A Big Copy.  Some Day look at proper memory sharing,
       // disallowing unless an active-temp is available, etc.
-      long rows[] = select(fr.numRows(),_rows,env);
+      // Eval cols before rows (R's eval order).
       long cols[] = select(fr.numCols(),_cols,env);
+      long rows[] = select(fr.numRows(),_rows,env);
       Frame fr2 = fr.deepSlice(rows,cols);
       env.push(fr2);
     }
@@ -293,9 +294,9 @@ class ASTAssign extends AST {
     ASTId id = (ASTId)ast2;
     if( id._depth < E.lexical_depth() ) { // Shadowing an outer scope?
       id = extend_local(E,eval._t,id._id);
-    } else if( !id._t.union(eval._t) ) // Disallow type changes in local scope
+    } else if( !ast._t.union(eval._t) ) // Disallow type changes in local scope
       E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
-    return new ASTAssign(id,eval);
+    return new ASTAssign(ast,eval);
   }
   // Parse a valid LHS= or return null - for a new variable
   static ASTAssign parseNew(Exec2 E) { 
@@ -320,7 +321,29 @@ class ASTAssign extends AST {
     return id;
   }
 
-  @Override void exec(Env env) { throw H2O.unimpl(); }
+  @Override void exec(Env env) {
+    _eval.exec(env);            // RHS before LHS (R eval order)
+    if( _lhs instanceof ASTId ) {
+      ASTId id = (ASTId)_lhs;
+      env.tos_into_slot(id._depth,id._num);
+      return;
+    }
+    // Peel apart a slice assignment
+    ASTSlice slice = (ASTSlice)_lhs;
+    ASTId id = (ASTId)slice._ast;
+    // Typed as a double ==> the row & col selectors are simple constants
+    if( slice._t == Type.DBL ) { // Typed as a double?
+      double d = env.popDbl();   // Only allows double into a double
+      long row = (long)((ASTNum)slice._rows)._d;
+      int  col = (int )((ASTNum)slice._cols)._d;
+      env.frId(id._depth,id._num).vecs()[col].set(row,d);
+      env.push(d);
+      return;
+    }
+
+    // Slice assignment
+    throw H2O.unimpl(); 
+  }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) { 
     indent(sb,d).append(this).append('\n');
@@ -402,9 +425,7 @@ abstract class ASTOp extends AST {
   }
 
   @Override void exec(Env env) { env.push(this); }
-  void apply(Env env) {
-    System.out.println("Apply not impl for: "+getClass());
-  }
+  abstract void apply(Env env, int argcnt);
 }
 
 abstract class ASTUniOp extends ASTOp {
@@ -416,7 +437,7 @@ abstract class ASTUniOp extends ASTOp {
   ASTUniOp( ) { super(VARS,newsig()); }
   double op( double d ) { throw H2O.fail(); }
   protected ASTUniOp( String[] vars, Type[] types ) { super(vars,types); }
-  @Override void apply(Env env) {
+  @Override void apply(Env env, int argcnt) {
     // Expect we can broadcast across all functions as needed.
     if( !env.isFrame() ) { env.poppush(op(env.popDbl())); return; }
     Frame fr = env.popFrame();
@@ -443,13 +464,13 @@ class ASTNrow extends ASTUniOp {
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }  
   @Override ASTOp make() {return this;} 
-  @Override void apply(Env env) { env.poppush(env.popFrame().numRows());  }
+  @Override void apply(Env env, int argcnt) { env.poppush(env.popFrame().numRows());  }
 }
 class ASTNcol extends ASTUniOp { 
   ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }  
   @Override ASTOp make() {return this;} 
-  @Override void apply(Env env) { env.poppush(env.popFrame().numCols());  }
+  @Override void apply(Env env, int argcnt) { env.poppush(env.popFrame().numCols());  }
 }
 
 abstract class ASTBinOp extends ASTOp {
@@ -460,7 +481,7 @@ abstract class ASTBinOp extends ASTOp {
   }
   ASTBinOp( ) { super(VARS, newsig()); }
   abstract double op( double d0, double d1 );
-  @Override void apply(Env env) {
+  @Override void apply(Env env, int argcnt) {
     // Expect we can broadcast across all functions as needed.
     Frame fr0 = null, fr1 = null;
     double d0=0, d1=0;
@@ -493,6 +514,7 @@ abstract class ASTBinOp extends ASTOp {
     }
     final ASTBinOp bin = this;  // Final 'this' so can use in closure
 
+    // Run an arbitrary binary op on one or two frames & scalars
     Frame fr2 = new MRTask2() {
         @Override public void map( Chunk chks[], NewChunk nchks[] ) {
           for( int i=0; i<nchks.length; i++ ) {
@@ -520,6 +542,7 @@ class ASTReduce extends ASTOp {
   ASTReduce( ) { super(VARS,TYPES); }
   @Override String opStr(){ return "Reduce";}
   @Override ASTOp make() {return this;} 
+  @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
 }
 
 // Variable length; instances will be created of required length
@@ -528,6 +551,16 @@ class ASTCat extends ASTOp {
   ASTCat( ) { super(new String[]{"cat","dbls"},
                     new Type[]{Type.ARY,Type.varargs(Type.DBL)}); }
   @Override ASTOp make() {return this;} 
+  @Override void apply(Env env, int argcnt) {
+    AppendableVec av = new AppendableVec(Vec.newKey());
+    NewChunk nc = new NewChunk(av,0);
+    for( int i=0; i<argcnt-1; i++ )
+      nc.addNum(env.dbl(-argcnt+1+i));
+    nc.close(0,null);
+    Vec v = av.close(null);
+    env.pop(argcnt);
+    env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
+  }
 }
 
 // Selective return
@@ -551,12 +584,14 @@ class ASTIfElse extends ASTOp {
     if( fal == null ) E.throwErr("Missing expression in trinary",x);
     return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
   }
+  @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
 }
 
 // --------------------------------------------------------------------------
 class ASTFunc extends ASTOp {
-  AST _body;
-  ASTFunc( String vars[], Type vtypes[], AST body ) { super(vars,vtypes); _body = body; }
+  final AST _body;
+  final int _tmps;
+  ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) { super(vars,vtypes); _body = body; _tmps=tmps; }
   @Override String opStr() { return "fun"; }
   @Override ASTOp make() { throw H2O.fail();} 
   static ASTOp parseFcn(Exec2 E ) {
@@ -596,8 +631,15 @@ class ASTFunc extends ASTOp {
       xvars[i+1] = id._id;
       types[i+1] = id._t;
     }
-    return new ASTFunc(xvars,types,body);
+    return new ASTFunc(xvars,types,body,vars.size()-argcnt);
   }  
+  @Override void apply(Env env, int argcnt) { 
+    int res_idx = env.pushScope(argcnt-1);
+    env.push(_tmps);
+    _body.exec(env);
+    env.tos_into_slot(1,res_idx-1);
+    env.popScope();
+  }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append(") {\n");
     _body.toString(sb,d+1).append("\n");

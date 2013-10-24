@@ -37,7 +37,13 @@ public class Env {
   public boolean isFun  () { return _fun[_sp-1] != null; }
   public boolean isDbl  () { return !isFrame() && !isFun(); }
   public boolean isFun  (int i) { return _fun[_sp+i] != null; }
-  public ASTOp fun(int i) { ASTOp op = _fun[_sp+i]; assert op != null; return op; }
+  public ASTOp  fun(int i) { ASTOp op = _fun[_sp+i]; assert op != null; return op; }
+  public double dbl(int i) { double d = _d  [_sp+i]; return d; }
+  public Frame frId(int d, int n) {
+    int idx = _display[_tod-d]+n;
+    assert _fr[idx]!=null;
+    return _fr[idx];
+  }
 
   // Push k empty slots
   void push( int slots ) {
@@ -62,6 +68,16 @@ public class Env {
     _d  [_sp-1] = _d  [idx];
     _fun[_sp-1] = _fun[idx];
   }
+  // Copy from TOS into a slot.  Does NOT pop results.
+  void tos_into_slot( int d, int n ) {
+    int idx = _display[_tod-d]+n;
+    _fr [idx] = addRef(_fr[_sp-1]);
+    _d  [idx] = _d  [_sp-1];
+    _fun[idx] = _fun[_sp-1];
+  }
+
+  // Push a scope, leaving room for passed args
+  int pushScope(int args) { return _display[++_tod] = _sp-args; }
 
   // Pop a slot.  Lowers refcnts on vectors.  Always leaves stack null behind
   // (to avoid dangling pointers stretching lifetimes).
@@ -70,11 +86,12 @@ public class Env {
     _fun[--_sp]=null;
     _fr [  _sp]=subRef(_fr[_sp]);
   }
+  void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
 
   void popScope() {
     assert _tod > 0;            // Something to pop?
     assert _sp >= _display[_tod]; // Did not over-pop already?
-    while( _sp >= _display[_tod] ) pop();
+    while( _sp > _display[_tod] ) pop();
     _tod--;
   }
 
@@ -131,6 +148,13 @@ public class Env {
 
   // Remove all embedded frames, but not things in the global scope.
   public void remove() {  while( _tod > 0 ) popScope();  }
+
+  // Done writing into all things.  Allow rollups.
+  public void postWrite() {
+    for( Vec vec : _refcnt.keySet() )
+      vec.postWrite();
+  }
+
 
   // Pop and return the result as a string
   public String resultString( ) {

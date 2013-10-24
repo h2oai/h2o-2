@@ -358,8 +358,9 @@ public class Vec extends Iced {
 
   /** Stop writing into this Vec.  Rollup stats will again (lazily) be computed. */
   public void postWrite() {
-    if( _naCnt==-2 ) {
-      _naCnt=-1;
+    Vec vthis = DKV.get(_key).get();
+    if( vthis._naCnt==-2 ) {
+      _naCnt = vthis._naCnt=-1;
       new TAtomic<Vec>() {
         @Override public Vec atomic(Vec v) { if( v!=null && v._naCnt==-2 ) v._naCnt=-1; return v; }
       }.invoke(_key);
@@ -411,7 +412,7 @@ public class Vec extends Iced {
   }
 
   /** Make a new random Key that fits the requirements for a Vec key. */
-  static Key newKey(){return newKey(Key.make());}
+  static public Key newKey(){return newKey(Key.make());}
 
   /** Make a new Key that fits the requirements for a Vec key, based on the
    *  passed-in key.  Used to make Vecs that back over e.g. disk files. */

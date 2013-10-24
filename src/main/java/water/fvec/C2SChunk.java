@@ -49,8 +49,8 @@ public class C2SChunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
+    assert DParseTask.fitsIntoInt(dx);
     int x = (int)dx;
-    if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
     for( int i=0; i<_len; i++ ) {
       long res = UDP.get2(_mem,(i<<1)+OFF);
       if( res == _NA ) nc.setInvalid(i);

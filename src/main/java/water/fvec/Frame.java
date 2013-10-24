@@ -261,10 +261,8 @@ public class Frame extends Iced {
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   public void remove(Futures fs){
     if(vecs().length > 0){
-      VectorGroup vg = _vecs[0].group();
       for( Vec v : _vecs )
         UKV.remove(v._key,fs);
-      DKV.remove(vg._key);
     }
     _names = new String[0];
     _vecs = new Vec[0];
