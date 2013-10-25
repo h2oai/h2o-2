@@ -1,36 +1,51 @@
 <!DOCTYPE html>
-<html ng-app="h2o.inspectApp">
+<html ng-app="h2o.inspect">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="copyright" content="Swing Development Poland" />  
+    <meta name="copyright" content="Swing Development Europe" />  
     <meta name="Author" content="Tomasz Kopczuk, Marcin Mincer" />
-    <title>Inspect data - H20</title>
+    <title>Inspect data - H2O</title>
+    <style type="text/css">
+        body {
+            display:none;
+        }
+    </style>
+
     <script type="text/javascript" src="js/vendor/URI.v1.11.2.min.js"></script>
 
     <script type="text/javascript" src="js/vendor/jquery-1.9.1.js"></script>
-
-    <script type="text/javascript" src="js/vendor/bootstrap.js"></script>
-    <script type="text/javascript" src="js/vendor/plugins.js"></script>
 
     <script type="text/javascript" src="js/vendor/angular.js"></script>
     <script type="text/javascript" src="js/vendor/d3.v3.min.js"></script>
     <script type="text/javascript" src="js/vendor/humanize.js"></script>
     <script type="text/javascript" src="js/vendor/jquery-ui-1.10.3.custom.min.js"></script>
-    <script type="text/javascript" src="js/vendor/jquery.dragtable.js"></script>
     <script type="text/javascript" src="js/vendor/jquery-ui-rangedrag.js"></script>
-    <script type="text/javascript" src="js/vendor/jquery.tooltipster.min.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery.tooltipster.swing.js"></script>
     <script type="text/javascript" src="js/vendor/moment.min.js"></script>
 
-    <script type="text/javascript" src="js/plugins.js"></script>
-    <script type="text/javascript" src="js/config.js"></script>
-    <script type="text/javascript" src="js/app.js"></script>
-    <script type="text/javascript" src="js/datasource.js"></script>
-    <script type="text/javascript" src="js/table.js"></script>
-    <script type="text/javascript" src="js/utilities.js"></script>
-    <script type="text/javascript" src="js/widgets.js"></script>
+    <script type="text/javascript" src="js/plugins/arrayExtensions.js"></script>
+    <script type="text/javascript" src="js/plugins/jquery.isOnScreen.js"></script>
+    <script type="text/javascript" src="js/plugins/jquery.reorderableTable.js"></script>
 
-    <script type="text/javascript" src="js/inspect.js"></script>
+    <script type="text/javascript" src="js/app.js"></script>
+    <script type="text/javascript" src="js/config.js"></script>
+
+    <script type="text/javascript" src="js/controllers/page/inspect.js"></script>
+
+    <script type="text/javascript" src="js/directives/inspect.dataServiceSpinner.js"></script>
+    <script type="text/javascript" src="js/directives/inspect.dataServiceStatus.js"></script>
+    <script type="text/javascript" src="js/directives/inspect.table.js"></script>
+    <script type="text/javascript" src="js/directives/slider.js"></script>
+    <script type="text/javascript" src="js/directives/table.reorderable.js"></script>
+    <script type="text/javascript" src="js/directives/table.showHeaderOnHover.js"></script>
+    <script type="text/javascript" src="js/directives/textfield.blurOnEnter.js"></script>
+
+    <script type="text/javascript" src="js/filters/humanize.js"></script>
+    <script type="text/javascript" src="js/filters/numeric.js"></script>
+
+    <script type="text/javascript" src="js/services/h2o.dataService.js"></script>
+    <script type="text/javascript" src="js/services/h2o.menuService.js"></script>
 
     <link rel="stylesheet" type="text/css" href="css/vendor/font-awesome.min.css">
 
@@ -42,36 +57,129 @@
 
 <body ng-controller="InspectAppController">
     <div class="header ensure-min-width">
-        <div class="menu yellow" ng-class='{"open":H2OMenuService.isOpen("h2oMenu")}'><a class="logo" ng-click="H2OMenuService.toggleOpen('h2oMenu')">H<sub>2</sub>O</a></div>
-        <div class="menu">{{ InspectDataService.meta.key }}</div>
-        <div class="menu lighter right" ng-click="H2OMenuService.toggleOpen('inspect.modelMenu')">Models</div>
-        <div class="menu light right" ng-click="H2OMenuService.toggleOpen('inspect.columnMenu')">Columns</div>
+        <div class="menu yellow" ng-class='{"open":MenuService.isOpen("h2oMenu")}'><a class="logo" ng-click="MenuService.toggleOpen('h2oMenu')">H<sub>2</sub>O&nbsp;<i style="line-height: 15px; margin-left: -5px; color: #000;" class="arrow-down icon-angle-down"></i></a></div>
+        <div class="menu data-key">{{ InspectDataService.meta.key }} <i class="arrow-down icon-angle-down"></i>
+            <div class="data-key-info">
+                <ul>
+                    <li><a href="SetColumnNames.query?target=allyears2k_headers 21.hex">Set Column Names</a></li>
+                    <li><a href="SummaryPage.html?key=allyears2k_headers 21.hex">View Summary</a></li>
+                    <li><a href="2/DownloadDataset?src_key=allyears2k_headers 21.hex">Download as CSV</a></li>
+                    <li>&nbsp;</li>
+                    <li>
+                        {{ InspectDataService.numRows }} <ng-pluralize count="InspectDataService.numRows" when="{'0': 'rows', 'one': 'row', 'other': 'rows'}"></ng-pluralize>
+                    </li> 
+                    <li>                
+                        {{ InspectDataService.numCols }} <ng-pluralize count="InspectDataService.numCols" when="{'0': 'cols', 'one': 'col', 'other': 'cols'}"></ng-pluralize>
+
+                    </li>
+                    <li>
+                        {{ (InspectDataService.meta.rowSize * InspectDataService.numRows) | humanizeFilesize }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="menu lighter right" ng-class='{"open":MenuService.isOpen("inspect.modelMenu")}' ng-click="MenuService.toggleOpen('inspect.modelMenu')">Models <i class="arrow-down icon-angle-down"></i> </div>
+        <div class="menu light right" ng-class='{"open":MenuService.isOpen("inspect.columnMenu")}' ng-click="MenuService.toggleOpen('inspect.columnMenu')">Columns <i class="arrow-down icon-angle-down"></i> </div>
     </div>
 
-    <div id="h2o-menu-container" class="slided-in-menu left" ng-class='{"open":H2OMenuService.isOpen("h2oMenu")}'>
-        <ul>
-            <li>Data</li>
-            <li>Model</li>
-            <li>Score</li>
-            <li>Admin</li>
-            <li>Help</li>
+    <div id="h2o-menu-container" class="slided-in-menu left" ng-class='{"open":MenuService.isOpen("h2oMenu")}'>
+        <ul class="main-menu">
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.data")}' ng-click="MenuService.toggleOpen('mainMenu.data')">Data</li>
+            <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.data")}'>
+                <li><a href="/Inspect.html">Inspect</a></li><li><a href="/StoreView.html">View All</a></li>
+                <li><a href="/Parse.html">Parse</a></li>
+                <li><a href="/ImportFiles.html">Import Files</a></li>
+                <li><a href="/ImportUrl.html">Import URL</a></li>
+                <li><a href="/ImportS3.html">Import S3</a></li>
+                <li><a href="/ExportS3.html">Export S3</a></li>
+                <li><a href="/ImportHdfs.html">Import HDFS</a></li>
+                <li><a href="/ExportHdfs.html">Export HDFS</a></li>
+                <li><a href="/Upload.html">Upload</a></li>
+                <li><a href="/Get.html">Download</a></li>
+                <li><a href="/SummaryPage.html">Summary</a></li>
+            </ul>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.model")}' ng-click="MenuService.toggleOpen('mainMenu.model')">Model</li>
+            <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.model")}'>
+                <li><a href="/RF.html">Random Forest</a></li>
+                <li><a href="/GLM.html">GLM</a></li>
+                <li><a href="/GLMGrid.html">GLM Grid</a></li>
+                <li><a href="/KMeans.html">KMeans</a></li>
+                <li><a href="/2/KMeans2.html">KMeans2</a></li>
+                <li><a href="/PCA.html">PCA (Beta)</a></li>
+                <li><a href="/2/GBM.html">GBM (Beta)</a></li>
+                <li><a href="/2/GLM2.html">GLM2 (Beta)</a></li>
+                <li><a href="/2/NeuralNet.html">Neural Network (Beta)</a></li>
+            </ul>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.score")}' ng-click="MenuService.toggleOpen('mainMenu.score')">Score</li>
+            <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.score")}'>
+                <li><a href="/RFScore.html">Random Forest</a></li>
+                <li><a href="/GLMScore.html">GLM</a></li>
+                <li><a href="/KMeansScore.html">KMeans</a></li>
+                <li><a href="/KMeansApply.html">KMeans Apply</a></li>
+                <li><a href="/2/PCAScore.html">PCA (Beta)</a></li>
+                <li><a href="/2/NeuralNetScore.html">Neural Network (Beta)</a></li>
+                <li><a href="/GeneratePredictionsPage.html">Predict</a></li>
+                <li><a href="/2/Predict.html">Predict2</a></li>
+                <li><a href="/Score.html">Apply Model</a></li>
+                <li><a href="/2/ConfusionMatrix.html">Confusion Matrix</a></li>
+            </ul>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.admin")}' ng-click="MenuService.toggleOpen('mainMenu.admin')">Admin</li>
+            <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.admin")}'>
+                <li><a href="/Jobs.html">Jobs</a></li>
+                <li><a href="/Cloud.html">Cluster Status</a></li>
+                <li><a href="/IOStatus.html">Cluster I/O</a></li>
+                <li><a href="/Timeline.html">Timeline</a></li>
+                <li><a href="/JStack.html">Stack Dump</a></li>
+                <li><a href="/Debug.html">Debug Dump</a></li>
+                <li><a href="/LogView.html">Inspect Log</a></li>
+                <li><a href="script.txt">Get Script</a></li>
+                <li><a href="/Shutdown.html">Shutdown</a></li>
+            </ul>
+            <li ng-class='{"open":MenuService.isOpen("mainMenu.help")}' ng-click="MenuService.toggleOpen('mainMenu.help')">Help</li>
+            <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("mainMenu.help")}'>
+                <li><a href="/Documentation.html">H2O Documentation</a></li>
+                    <li><a href="/Tutorials.html">Tutorials Home</a></li>
+                    <li><a href="/TutorialRFIris.html">Random Forest Tutorial</a></li>
+                    <li><a href="/TutorialGLMProstate.html">GLM Tutorial</a></li>
+                    <li><a href="/TutorialKMeans.html">KMeans Tutorial</a></li>
+                </ul>
         </ul>
     </div>
 
-    <div id="column-menu-container" class="slided-in-menu right" ng-class='{"open":H2OMenuService.isOpen("inspect.columnMenu")}' ng-controller="InspectColumnController">
+    <div id="column-menu-container" class="slided-in-menu right" ng-class='{"open":MenuService.isOpen("inspect.columnMenu")}' ng-controller="InspectColumnController">
+        <div class="sort-by">
+            Sort by: <button class="in-menu-button" ng-click="sortByVariance()">Variance</button> <button class="in-menu-button" ng-click="InspectColumnService.revertToDefaultOrder()">Default</button> 
+        </div>
+        <div class="select-deselect-all">
+            <button class="in-menu-button" ng-click="showAllColumns()">Select All</button><button class="in-menu-button" style="margin-left: 20px;" ng-click="hideAllColumns()">Deselect All</button>
+        </div>
         <div class="table-filters" ng-repeat="column in InspectColumnService.filterableTableHeaders">
             <label><input type="checkbox" ng-model="InspectColumnService.shownTableHeaders[column.name]" ng-change="InspectColumnService.refilter()"/><span class="real-label">{{column.visual}}</span></label>
         </div>
 
     </div>
 
-    <div id="model-menu-container" class="slided-in-menu right" ng-class='{"open":H2OMenuService.isOpen("inspect.modelMenu")}'>
+    <div id="model-menu-container" class="slided-in-menu right" ng-class='{"open":MenuService.isOpen("inspect.modelMenu")}'>
+        <ul class="main-menu">
+            <li ng-class='{"open":MenuService.isOpen("modelsMenu.data")}' ng-click="MenuService.toggleOpen('modelsMenu.data')">Score Data</li>
+            <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("modelsMenu.data")}'>
+                <li><a href="/RFScore.html">Random Forest</a></li>
+                <li><a href="/GLMScore.html">GLM</a></li>
+            </ul>
+            <li ng-class='{"open":MenuService.isOpen("modelsMenu.model")}' ng-click="MenuService.toggleOpen('modelsMenu.model')">Build Models</li>
+            <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("modelsMenu.model")}'>
+                <li><a href="/RF.html">Random Forest</a></li>
+                <li><a href="/GLM.html">GLM</a></li>
+                <li><a href="/GLMGrid.html">GLM Grid Search</a></li>
+                <li><a href="/KMeans.html">KMeans</a></li>
+                <li><a href="/2/NeuralNet.html">Neural Network (Beta)</a></li>
+            </ul>
     </div>
 
 	<div class="content" ng-controller="InspectTableController">
-		<datasourcespinner></datasourcespinner>
+		<dataservicespinner></dataservicespinner>
 		
-		<table d3table show-header-on-hover class="big-table" dataset="tableData" headers="tableHeaders" summaries="[['min','MIN'], ['max','MAX'],['mean','AVG'],['variance','ST.DEV.'],['num_missing_values','N/A']]" header-classmap="{'row':'drag-boundary no-drag'}" reorderable="reorder"></table>
+		<table inspect-table show-header-on-hover class="big-table" dataset="tableData" headers="tableHeaders" summaries="[['min','MIN'], ['max','MAX'],['mean','AVG'],['variance','ST.DEV.'],['num_missing_values','N/A']]" header-classmap="{'row':'drag-boundary no-drag'}" reorderable="reorder"></table>
 	</div>
 	<div class="footer ensure-min-width">
 		<div class="pagination-box" ng-controller="InspectPaginationController">
@@ -87,42 +195,5 @@
 		</div>
 	</div>
 	<div class="spacer40"></div>
-	<script type="text/javascript">
-		$('.toggle-popover').popover();
-
-        function hideAllModelGroups() {$('.models-list').hide();}
-        function showSelectedModelGroup() {
-            var g = $('#ul-model-groups .active').data('model-group');
-            $('#'+g).show();
-        }
-        function clickModelGroup(eventObject) {
-            $('#ul-model-groups li').removeClass('active');
-            $(this).addClass('active');
-            hideAllModelGroups();
-            showSelectedModelGroup();
-        }
-
-        function setTableHeight(initialPopoverWidth) {
-        	var h = window.innerHeight - 280;
-        	var popoverH = window.innerHeight - 280;
-        	$('#table-wrapper').css('height', h + 'px');
-        	$('.popover').css('max-height', popoverH + 'px');
-        	var innerPopover = popoverH - 20;
-        	var popoverWidth = initialPopoverWidth + 30
-        	$('.popover-content').css('max-height', innerPopover + 'px');
-        	$('.popover').css('width', popoverWidth + 'px');
-        }
-        
-        var initialPopoverWidth = $('.popover').width();
-        setTableHeight(initialPopoverWidth);
-        hideAllModelGroups();
-        showSelectedModelGroup();
-        $('#columns-popover').hide();
-        $('#sorting-popover').hide();
-        $('#ul-model-groups li').click(clickModelGroup);
-        $('#columns-button').click(function() {$('#columns-popover').toggle(); $('#columns-popover').toggleClass('in');});
-        $('#sort-button').click(function() {$('#sorting-popover').toggle(); $('#sorting-popover').toggleClass('in');});
-        $(window).resize(setTableHeight);
-    </script>
 </body>
 </html>
