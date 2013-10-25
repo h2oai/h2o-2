@@ -10,11 +10,13 @@ h2o.__PAGE_EXEC = "Exec.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
+h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
 h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
 h2o.__PAGE_INSPECT = "Inspect.json"
 h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
+h2o.__PAGE_PARSE2 = "2/Parse2.json"
 h2o.__PAGE_PUT = "PutVector.json"
 h2o.__PAGE_REMOVE = "Remove.json"
 h2o.__PAGE_VIEWALL = "StoreView.json"
@@ -44,6 +46,7 @@ h2o.__PAGE_GLM2 = "2/GLM2.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
 h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
+h2o.__PAGE_EXEC2 = "2/Exec2.json"
 h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 
 h2o.__remoteSend <- function(client, page, ...) {
@@ -236,4 +239,28 @@ h2o.__getFamily <- function(family, link, tweedie.var.p = 0, tweedie.link.p = 1-
            poisson = poisson(link),
            gamma = gamma(link))
   }
+}
+
+#------------------------------------ FluidVecs -----------------------------------------#
+h2o.__exec2 <- function(client, expr) {
+  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
+  if (type != "character")
+    expr = deparse(substitute(expr))
+  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC2, str=expr)
+  res$key
+}
+
+h2o.__operator2 <- function(op, x, y) {
+  # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
+  #  stop("Can only operate on single column vectors")
+  LHS = ifelse(class(x) == "H2OParsedData2", x@key, x)
+  RHS = ifelse(class(y) == "H2OParsedData2", y@key, y)
+  expr = paste(LHS, op, RHS)
+  if(class(x) == "H2OParsedData2") myClient = x@h2o
+  else myClient = y@h2o
+  res = h2o.__exec2(myClient, expr)
+  if(op %in% LOGICAL_OPERATORS)
+    new("H2OLogicalData2", h2o=myClient, key=res)
+  else
+    new("H2OParsedData2", h2o=myClient, key=res)
 }
