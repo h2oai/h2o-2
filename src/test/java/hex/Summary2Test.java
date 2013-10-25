@@ -22,10 +22,10 @@ public class Summary2Test extends TestUtil {
     Frame fr = parseFrame(key, "./smalldata/constantColumn.csv");
 
     Vec vec = fr.vecs()[0];
-    Summary2 s = new Summary2(vec);
+    Summary2 s = new Summary2(vec, "");
     s.add(vec.chunk(0));
     for (int i = 1; i < vec.nChunks(); i++) {
-      Summary2 s1 = new Summary2(vec); s1.add(vec.chunk(i)); s.add(s1);
+      Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1);
     }
     s.toString();
 
@@ -42,10 +42,10 @@ public class Summary2Test extends TestUtil {
     Key key = Key.make("cars.hex");
     Frame fr = parseFrame(key, "./smalldata/cars.csv");
     Vec vec = fr.vecs()[fr.find("name")];
-    Summary2 s = new Summary2(vec);
+    Summary2 s = new Summary2(vec, "");
     s.add(vec.chunk(0));
     for( int i = 1; i < vec.nChunks(); i++ )
-    { Summary2 s1 = new Summary2(vec); s1.add(vec.chunk(i)); s.add(s1); }
+      { Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1); }
     s.toString();
 
     assertEquals(306, s.bins.length);
@@ -56,10 +56,10 @@ public class Summary2Test extends TestUtil {
     Key key = Key.make("cars.hex");
     Frame fr = parseFrame(key, "./smalldata/cars.csv");
     Vec vec = fr.vecs()[fr.find("cylinders")];
-    Summary2 s = new Summary2(vec);
+    Summary2 s = new Summary2(vec, "");
     s.add(vec.chunk(0));
     for( int i = 1; i < vec.nChunks(); i++ )
-    { Summary2 s1 = new Summary2(vec); s1.add(vec.chunk(i)); s.add(s1); }
+      { Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1); }
     s.toString();
 
     assertEquals(0, s.bins[4]); // no 7 cylinder cars

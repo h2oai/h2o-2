@@ -27,6 +27,9 @@ public class Summary2 extends Iced {
   // INPUTS
   final transient boolean _enum;
   final transient boolean _isInt;
+  final transient double  _min;
+  final transient double  _max;
+  final transient String  _colname;
 
   // OUTPUTS
   @API(help="categories"  ) final String[] domains;
@@ -39,7 +42,8 @@ public class Summary2 extends Iced {
   @API(help="max elements") double []      maxs; // max N elements
   @API(help="percentiles" ) double []      percentileValues;
 
-  public Summary2(Vec vec) {
+  public Summary2(Vec vec, String colname) {
+    _colname = colname;
     _enum = vec.isEnum();
     _isInt = vec.isInt();
     if (_enum) domains = vec.domain(); else domains = null;
@@ -54,7 +58,8 @@ public class Summary2 extends Iced {
     }
     Arrays.fill(mins, Double.POSITIVE_INFINITY);
     Arrays.fill(maxs, Double.NEGATIVE_INFINITY);
-
+    
+    _min = vec.min();_max = vec.max();
     double span = vec.max()-vec.min() + 1;
     if( vec.isEnum() && span < MAX_HIST_SZ ) {
       start = vec.min();
@@ -76,6 +81,7 @@ public class Summary2 extends Iced {
       binsz = d;
       start = binsz * Math.floor(vec.min()/binsz);
       int nbin = (int)Math.floor((vec.max() + (_isInt?.5:0) - start)/binsz) + 1;
+      assert nbin > 0;
       bins = new long[nbin];
     }
   }
@@ -86,6 +92,8 @@ public class Summary2 extends Iced {
     for (int i = 0; i < chk._len; i++) {
       if( chk.isNA0(i) ) continue;
       double val = chk.at0(i);
+      assert val >= _min : "ERROR: ON COLUMN " + _colname + "   VALUE " + val + " < VEC.MIN " + _min;
+      assert val <= _max : "ERROR: ON COLUMN " + _colname + "   VALUE " + val + " > VEC.MAX " + _max;
       if (val == 0.) zeros++;
       // update min/max
       if (val < mins[mins.length-1]) {
