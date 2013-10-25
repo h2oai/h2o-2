@@ -28,8 +28,10 @@ public abstract class ASTOp extends AST {
 
     // Misc
     put(new ASTCat ());
+    put(new ASTSum ());
     put(new ASTReduce());
     put(new ASTIfElse());
+    put(new ASTRApply());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -213,6 +215,38 @@ class ASTCat extends ASTOp {
     Vec v = av.close(null);
     env.pop(argcnt);
     env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
+  }
+}
+
+// Variable length; instances will be created of required length
+class ASTSum extends ASTOp {
+  @Override String opStr() { return "sum"; }
+  ASTSum( ) { super(new String[]{"sum","dbls"},
+                    new Type[]{Type.DBL,Type.varargs(Type.dblary())}); }
+  @Override ASTOp make() {return new ASTSum();} 
+  @Override void apply(Env env, int argcnt) {
+    double sum=0;
+    for( int i=0; i<argcnt-1; i++ )
+      if( env.isDbl() ) sum += env.popDbl();
+      else {
+        Frame fr = env.popFrame();
+        sum += new Sum().doAll(fr)._d;
+        env.subRef(fr);
+      }
+    env.poppush(sum);
+  }
+
+  private static class Sum extends MRTask2<Sum> {
+    double _d;
+    @Override public void map( Chunk chks[] ) {
+      for( int i=0; i<chks.length; i++ ) {
+        Chunk C = chks[i];
+        for( int r=0; r<C._len; r++ )
+          _d += C.at(r);
+        if( Double.isNaN(_d) ) break;
+      }
+    }
+    @Override public void reduce( Sum s ) { _d+=s._d; }
   }
 }
 
