@@ -67,7 +67,7 @@ public class Expr2Test extends TestUtil {
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
       // Higher-order function typing: fun is typed in the body of function(x)
-      checkStr("function(fun){function(x){fun(x)*fun(x)}}(sgn)(-2)");
+      checkStr("function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)");
       // Slice assignment & map
       checkStr("map()");
       checkStr("map(1)");
@@ -101,6 +101,7 @@ public class Expr2Test extends TestUtil {
   void checkStr( String s ) {
     Env env=null;
     try { 
+      System.out.println(s);
       env = Exec2.exec(s); 
       if( env.isFrame() ) {     // Print complete frames for inspection
         Frame res = env.popFrame();

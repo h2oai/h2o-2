@@ -28,19 +28,25 @@ public class Exec2 extends Request2 {
     try {
       Env env = water.exec.Exec2.exec(str);
       if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
-      key = Key.make(".Last.value");
-      UKV.remove(key);
+      //key = Key.make(".Last.value");
+      //UKV.remove(key);
       if( env.sp() == 0 ) {      // Empty stack
       } else if( env.isFrame() ) { 
         Frame fr = env.popFrame();
-        UKV.put(key,fr);
+        //UKV.put(key,fr);
         num_rows = fr.numRows();
         num_cols = fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];
         for( int i=0; i<num_cols; i++ )
           cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
-      } else if( env.isFun() ) funstr = env.popFun().toString();
-        else scalar = env.popDbl();
+        env.subRef(fr);
+      } else if( env.isFun() ) {
+        ASTOp op = env.popFun();
+        funstr = op.toString();
+        env.subRef(op);
+      } else {
+        scalar = env.popDbl();
+      }
       env.remove();
       return new Response(Response.Status.done, this, -1, -1, null);
     } 

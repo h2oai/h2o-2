@@ -53,8 +53,6 @@ public class Exec2 {
   //   op  := ary byCol(ary,dbl op2(dbl,dbl))
 
   public static Env exec( String str ) throws IllegalArgumentException {
-    System.out.println(str);
-
     // Preload the global environment from existing Frames
     Env env = new Env();
     ArrayList<ASTId> global = new ArrayList<ASTId>();
@@ -73,7 +71,6 @@ public class Exec2 {
 
     // Parse.  Type-errors get caught here and throw IAE
     AST ast = new Exec2(str,global).parse();
-    System.out.println(ast.toString(new StringBuilder(),0).toString());
 
     try {
       env.push(global.size()-argcnt);   // Push space for temps

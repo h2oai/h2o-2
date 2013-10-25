@@ -65,7 +65,7 @@ public class Env extends Iced {
       _fun= Arrays.copyOf(_fun,len<<=1);
     }
   }
-  void push( Frame fr ) { push(1); _fr [_sp-1] = addRef(fr) ; }
+  void push( Frame fr ) { push(1); _fr [_sp-1] = addRef(fr) ; assert check_refcnt(fr.anyVec()); }
   void push( double d ) { push(1); _d  [_sp-1] = d  ; }
   void push( ASTOp fun) { push(1); _fun[_sp-1] = fun; }
 
@@ -77,6 +77,7 @@ public class Env extends Iced {
     _fr [_sp-1] = addRef(_fr [idx]);
     _d  [_sp-1] =        _d  [idx];
     _fun[_sp-1] = addRef(_fun[idx]);
+    assert check_refcnt(_fr[0].anyVec()); 
   }
   void push_slot( int d, int n, Env global ) {
     assert _refcnt==null;       // Should use a fcn's closure for d>1
@@ -86,6 +87,7 @@ public class Env extends Iced {
     global._fr [gidx] = global.addRef(_fr [idx]);
     global._d  [gidx] =               _d  [idx] ;
     global._fun[gidx] = global.addRef(_fun[idx]);
+    assert global.check_refcnt(global._fr[0].anyVec()); 
   }
   // Copy from TOS into a slot.  Does NOT pop results.
   void tos_into_slot( int d, int n ) {
@@ -96,6 +98,7 @@ public class Env extends Iced {
     _fr [idx] = addRef(_fr [_sp-1]);
     _d  [idx] =       _d   [_sp-1] ;
     _fun[idx] = addRef(_fun[_sp-1]);
+    assert check_refcnt(_fr[0].anyVec()); 
   }
 
   // Push a scope, leaving room for passed args
@@ -113,6 +116,7 @@ public class Env extends Iced {
     _sp--;
     _fun[_sp]=global.subRef(_fun[_sp]);
     _fr [_sp]=global.subRef(_fr [_sp]);
+    assert _sp==0 || check_refcnt(_fr[0].anyVec()); 
   }
   void pop( ) { pop(this); }
   void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
@@ -124,11 +128,11 @@ public class Env extends Iced {
     _tod--;
   }
 
-  public double popDbl  () { assert isDbl(); pop(); return _d  [_sp]; }
-  public AST    popFun  () { assert isFun(); pop(); return _fun[_sp]; }
+  public double  popDbl  () { assert isDbl(); return _d  [--_sp]; }
+  public ASTOp   popFun  () { assert isFun(); ASTOp  op = _fun[--_sp]; _fun[_sp]=null; return op; }
   // Pop & return a Frame; ref-cnt of all things remains unchanged.  
   // Caller is responsible for tracking lifetime.
-  public Frame  popFrame() { assert isFrame(); Frame fr = _fr[--_sp]; _fr[_sp]=null; assert allAlive(fr); return fr; }
+  public Frame  popFrame() { assert isFrame(); Frame fr = _fr [--_sp]; _fr [_sp]=null; assert allAlive(fr); return fr; }
   // Replace a function invocation with it's result
   public void poppush(double d) { pop(); push(d); }
 
@@ -162,7 +166,7 @@ public class Env extends Iced {
   // Lower the refcnt on all vecs in this frame.
   // Immediately free all vecs with zero count.
   // Always return a null.
-  Frame subRef( Frame fr ) {
+  public Frame subRef( Frame fr ) {
     if( fr == null ) return null;
     Futures fs = null;
     for( Vec vec : fr.vecs() ) {
@@ -170,7 +174,7 @@ public class Env extends Iced {
       if( cnt > 0 ) _refcnt.put(vec,cnt);
       else {
         if( fs == null ) fs = new Futures();
-        System.out.println("Removing "+vec);
+        System.out.println("Removing "+vec._key+" "+vec);
         UKV.remove(vec._key,fs);
         _refcnt.remove(vec);
       }
@@ -180,7 +184,7 @@ public class Env extends Iced {
     return null;
   }
   // Lower refcounts on all vecs captured in the inner environment
-  ASTOp subRef( ASTOp op ) {
+  public ASTOp subRef( ASTOp op ) {
     if( op == null ) return null;
     if( !(op instanceof ASTFunc) ) return null;
     ASTFunc fun = (ASTFunc)op;
@@ -231,23 +235,50 @@ public class Env extends Iced {
       vec.postWrite();
   }
 
+  // Count references the "hard way" - used to check refcnting math.
+  int compute_refcnt( Vec vec ) {
+    int cnt = compute_refcnt0(vec);
+    // For Vecs in the global state, we added 1 to prevent deletion
+    for( int i=0; _fr[i] != null; i++ )
+      if( _fr[i].find(vec) != -1 )
+        cnt++;
+    return cnt;
+  }
+  // Compute refcnt recursively
+  int compute_refcnt0( Vec vec ) {
+    int cnt=0;
+    for( int i=0; i<_sp; i++ )
+      if( _fr[i] != null && _fr[i].find(vec) != -1 ) cnt++;
+      else if( _fun[i] != null && (_fun[i] instanceof ASTFunc) )
+        cnt += ((ASTFunc)_fun[i])._env.compute_refcnt0(vec);
+    return cnt;
+  }
+  boolean check_refcnt( Vec vec ) {
+    Integer I = _refcnt.get(vec);
+    int cnt0 = I==null ? 0 : I;
+    int cnt1 = compute_refcnt(vec);
+    if( cnt0==cnt1 ) return true;
+    System.out.println("Refcnt is "+cnt0+" but computed as "+cnt1);
+    return false;
+  }
+
 
   // Pop and return the result as a string
   public String resultString( ) {
     assert _tod==0 : "Still have lexical scopes past the global";
-    String s = toString(_sp-1);
+    String s = toString(_sp-1,true);
     pop();
     return s;
   }
 
-  public String toString(int i) {
+  public String toString(int i, boolean verbose_fun) {
     if( _fr[i] != null ) return _fr[i].numRows()+"x"+_fr[i].numCols();
-    else if( _fun[i] != null ) return _fun[i].toString();
+    else if( _fun[i] != null ) return _fun[i].toString(verbose_fun);
     return Double.toString(_d[i]);
   }
   @Override public String toString() {
     String s="{";
-    for( int i=0; i<_sp; i++ )   s += toString(i)+",";
+    for( int i=0; i<_sp; i++ )   s += toString(i,false)+",";
     return s+"}";
   }
 }

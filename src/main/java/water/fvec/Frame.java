@@ -74,7 +74,7 @@ public class Frame extends Iced {
 
   public int find( Vec vec ) {
     for( int i=0; i<_vecs.length; i++ )
-      if( vec==_vecs[i] )
+      if( vec.equals(_vecs[i]) )
         return i;
     return -1;
   }

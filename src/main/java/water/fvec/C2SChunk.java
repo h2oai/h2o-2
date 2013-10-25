@@ -34,7 +34,14 @@ public class C2SChunk extends Chunk {
     UDP.set2(_mem,(idx<<1)+OFF,(short)res);
     return true;
   }
-  @Override boolean set_impl(int i, double d) { throw H2O.unimpl(); }
+  @Override boolean set_impl(int i, double d) {
+    short s = (short)((d/_scale)-_bias);
+    if( s == _NA ) return false;
+    double d2 = (s+_bias)*_scale;
+    if( d!=d2 ) return false;
+    UDP.set2(_mem,(i<<1)+OFF,s);
+    return true;
+  }
   @Override boolean set_impl(int i, float f ) { return false; }
   @Override boolean setNA_impl(int idx) { UDP.set2(_mem,(idx<<1)+OFF,(short)_NA); return true; }
   @Override boolean hasFloat() { return _scale < 1.0; }

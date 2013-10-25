@@ -1,9 +1,11 @@
 package water.exec;
 
-import java.text.*;
+import java.text.NumberFormat;
+import java.text.ParsePosition;
 import java.util.*;
-import water.*;
-import water.fvec.*;
+import water.H2O;
+import water.Iced;
+import water.fvec.Frame;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -183,7 +185,6 @@ class ASTSlice extends AST {
 
   @Override void exec(Env env) {
     int sp = env._sp;  _ast.exec(env);  assert sp+1==env._sp;
-    Frame fr=env.popFrame();
 
     // Scalar load?  Throws AIIOOB if out-of-bounds
     if( _t.isDbl() ) {
@@ -191,27 +192,21 @@ class ASTSlice extends AST {
       // Use them directly, throwing a runtime error if OOB.
       long row = (long)((ASTNum)_rows)._d;
       int  col = (int )((ASTNum)_cols)._d;
-      double d = fr.vecs()[col].at(row);
+      Frame fr=env.popFrame();
+      double d = fr.vecs()[col-1].at(row-1);
+      env.subRef(fr);           // Toss away after loading from it
       env.push(d);
     } else {
       // Else It's A Big Copy.  Some Day look at proper memory sharing,
       // disallowing unless an active-temp is available, etc.
       // Eval cols before rows (R's eval order).
+      Frame fr=env._fr[env._sp-1];  // Get without popping
       long cols[] = select(fr.numCols(),_cols,env);
       long rows[] = select(fr.numRows(),_rows,env);
       Frame fr2 = fr.deepSlice(rows,cols);
+      env.pop();                // Pop frame, lower ref
       env.push(fr2);
     }
-  }
-  @Override public String toString() { return "[,]"; }
-  public StringBuilder toString( StringBuilder sb, int d ) {
-    indent(sb,d).append(this).append('\n');
-    _ast.toString(sb,d+1).append("\n");
-    if( _cols==null ) indent(sb,d+1).append("all\n");
-    else      _cols.toString(sb,d+1).append("\n");
-    if( _rows==null ) indent(sb,d+1).append("all");
-    else      _rows.toString(sb,d+1);
-    return sb;
   }
 
   // Execute a col/row selection & return the selection.  NULL means "all".
@@ -220,7 +215,7 @@ class ASTSlice extends AST {
   // ordered.  numbers.  1-based numbering; 0 is ignored & removed.
   static long[] select( long len, AST ast, Env env ) {
     if( ast == null ) return null; // Trivial "all"
-    int sp = env._sp;  ast.exec(env);  assert sp+1==env._sp;
+    ast.exec(env);  
     long cols[];
     if( !env.isFrame() ) {
       int col = (int)env.popDbl(); // Silent truncation
@@ -236,6 +231,17 @@ class ASTSlice extends AST {
       if( fr.numCols() > 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
       throw H2O.unimpl();
     } finally { env.subRef(fr); }
+  }
+
+  @Override public String toString() { return "[,]"; }
+  public StringBuilder toString( StringBuilder sb, int d ) {
+    indent(sb,d).append(this).append('\n');
+    _ast.toString(sb,d+1).append("\n");
+    if( _cols==null ) indent(sb,d+1).append("all\n");
+    else      _cols.toString(sb,d+1).append("\n");
+    if( _rows==null ) indent(sb,d+1).append("all");
+    else      _rows.toString(sb,d+1);
+    return sb;
   }
 }
 
@@ -382,319 +388,4 @@ class ASTNum extends AST {
   boolean isPosConstant() { return _d >= 0; }
   @Override void exec(Env env) { env.push(_d); }
   @Override public String toString() { return Double.toString(_d); }
-}
-
-// --------------------------------------------------------------------------
-abstract class ASTOp extends AST {
-  static final HashMap<String,ASTOp> OPS = new HashMap();
-  static {
-    // Unary ops
-    put(new ASTIsNA());
-    put(new ASTSgn ());
-    put(new ASTNrow());
-    put(new ASTNcol());
-
-    // Binary ops
-    put(new ASTPlus());
-    put(new ASTSub ());
-    put(new ASTMul ());
-    put(new ASTDiv ());
-    put(new ASTMin ());
-
-    // Misc
-    put(new ASTCat ());
-    put(new ASTReduce());
-    put(new ASTIfElse());
-  }
-  static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
-
-  // All fields are final, because functions are immutable
-  final String _vars[];         // Variable names
-  ASTOp( String vars[], Type ts[] ) { super(Type.fcn(0,ts)); _vars=vars; }
-
-  abstract String opStr();
-  abstract ASTOp make();
-  @Override public String toString() {
-    String s = opStr()+"(";
-    for( int i=1; i<_vars.length; i++ )
-      s += _vars[i]+",";
-    s += ')';
-    return s;
-  }
-
-  // Parse an OP or return null.
-  static ASTOp parse(Exec2 E) {
-    int x = E._x;
-    String id = E.isID();
-    if( id == null ) return null;
-    ASTOp op = OPS.get(id);
-    if( op != null ) return op.make();
-    E._x = x;                 // Roll back, no parse happened
-    // Attempt a user-mode function parse
-    return ASTFunc.parseFcn(E);
-  }
-
-  @Override void exec(Env env) { env.push(this); }
-  abstract void apply(Env env, int argcnt);
-}
-
-abstract class ASTUniOp extends ASTOp {
-  static final String VARS[] = new String[]{ "", "x"};
-  static Type[] newsig() {
-    Type t1 = Type.dblary();
-    return new Type[]{Type.anyary(new Type[]{t1}),t1};
-  }
-  ASTUniOp( ) { super(VARS,newsig()); }
-  double op( double d ) { throw H2O.fail(); }
-  protected ASTUniOp( String[] vars, Type[] types ) { super(vars,types); }
-  @Override void apply(Env env, int argcnt) {
-    // Expect we can broadcast across all functions as needed.
-    if( !env.isFrame() ) { env.poppush(op(env.popDbl())); return; }
-    Frame fr = env.popFrame();
-    env.pop();                  // Pop self
-    final ASTUniOp uni = this;  // Final 'this' so can use in closure
-    Frame fr2 = new MRTask2() {
-        @Override public void map( Chunk chks[], NewChunk nchks[] ) {
-          for( int i=0; i<nchks.length; i++ ) {
-            NewChunk n =nchks[i];
-            Chunk c = chks[i];
-            int rlen = c._len;
-            for( int r=0; r<rlen; r++ )
-              n.addNum(uni.op(c.at0(r)));
-          }
-        }
-      }.doAll(fr.numCols(),fr)._outputFrame;
-    env.push(fr.copyHeaders(fr2,null));
-  }
-}
-
-class ASTIsNA extends ASTUniOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
-class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ; } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}
-class ASTNrow extends ASTUniOp { 
-  ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
-  @Override String opStr() { return "nrow"; }  
-  @Override ASTOp make() {return this;} 
-  @Override void apply(Env env, int argcnt) {
-    Frame fr = env.popFrame();
-    double d = fr.numRows();
-    env.subRef(fr);
-    env.poppush(d);
-  }
-}
-class ASTNcol extends ASTUniOp { 
-  ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
-  @Override String opStr() { return "ncol"; }  
-  @Override ASTOp make() {return this;} 
-  @Override void apply(Env env, int argcnt) {
-    Frame fr = env.popFrame();
-    double d = fr.numCols();
-    env.subRef(fr);
-    env.poppush(d);
-  }
-}
-
-abstract class ASTBinOp extends ASTOp {
-  static final String VARS[] = new String[]{ "", "x","y"};
-  static Type[] newsig() {
-    Type t1 = Type.dblary(), t2 = Type.dblary();
-    return new Type[]{Type.anyary(new Type[]{t1,t2}),t1,t2};
-  }
-  ASTBinOp( ) { super(VARS, newsig()); }
-  abstract double op( double d0, double d1 );
-  @Override void apply(Env env, int argcnt) {
-    // Expect we can broadcast across all functions as needed.
-    Frame fr0 = null, fr1 = null;
-    double d0=0, d1=0;
-    if( env.isFrame() ) fr1 = env.popFrame(); else d1 = env.popDbl();
-    if( env.isFrame() ) fr0 = env.popFrame(); else d0 = env.popDbl();
-    if( fr0==null && fr1==null ) {
-      env.poppush(op(d0,d1));
-      return;
-    }
-    env.pop();                  // Pop self
-    final boolean lf = fr0 != null;
-    final boolean rf = fr1 != null;
-    final double fd0 = d0;
-    final double fd1 = d1;
-    Frame fr  = null;           // Do-All frame
-    int ncols = 0;              // Result column count
-    if( fr0 !=null ) {          // Left?
-      ncols = fr0.numCols();
-      if( fr1 != null ) {
-        if( fr0.numCols() != fr1.numCols() ||
-            fr0.numRows() != fr1.numRows() ) 
-          throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
-        fr = new Frame(fr0).add(fr1);
-      } else {
-        fr = fr0;
-      }
-    } else {
-      ncols = fr1.numCols();
-      fr = fr1;
-    }
-    final ASTBinOp bin = this;  // Final 'this' so can use in closure
-
-    // Run an arbitrary binary op on one or two frames & scalars
-    Frame fr2 = new MRTask2() {
-        @Override public void map( Chunk chks[], NewChunk nchks[] ) {
-          for( int i=0; i<nchks.length; i++ ) {
-            NewChunk n =nchks[i];
-            Chunk c0= !lf ? null : chks[i];
-            Chunk c1= !rf ? null : chks[i+(lf?nchks.length:0)];
-            int rlen = (lf ? c0 : c1)._len;
-            for( int r=0; r<rlen; r++ )
-              n.addNum(bin.op(lf ? c0.at0(r) : fd0, rf ? c1.at0(r) : fd1));
-          }
-        }
-      }.doAll(ncols,fr)._outputFrame;
-    env.push(fr.copyHeaders(fr2,null));
-  }
-}
-class ASTPlus extends ASTBinOp { String opStr(){ return "+"  ;} ASTOp make() {return new ASTPlus();} double op(double d0, double d1) { return d0+d1;}}
-class ASTSub  extends ASTBinOp { String opStr(){ return "-"  ;} ASTOp make() {return new ASTSub ();} double op(double d0, double d1) { return d0-d1;}}
-class ASTMul  extends ASTBinOp { String opStr(){ return "*"  ;} ASTOp make() {return new ASTMul ();} double op(double d0, double d1) { return d0*d1;}}
-class ASTDiv  extends ASTBinOp { String opStr(){ return "/"  ;} ASTOp make() {return new ASTDiv ();} double op(double d0, double d1) { return d0/d1;}}
-class ASTMin  extends ASTBinOp { String opStr(){ return "min";} ASTOp make() {return new ASTMin ();} double op(double d0, double d1) { return Math.min(d0,d1);}}
-
-class ASTReduce extends ASTOp {
-  static final String VARS[] = new String[]{ "", "op2", "ary"};
-  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.fcn(0,new Type[]{Type.DBL,Type.DBL,Type.DBL}), Type.ARY };
-  ASTReduce( ) { super(VARS,TYPES); }
-  @Override String opStr(){ return "Reduce";}
-  @Override ASTOp make() {return this;} 
-  @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
-}
-
-// Variable length; instances will be created of required length
-class ASTCat extends ASTOp {
-  @Override String opStr() { return "c"; }
-  ASTCat( ) { super(new String[]{"cat","dbls"},
-                    new Type[]{Type.ARY,Type.varargs(Type.DBL)}); }
-  @Override ASTOp make() {return this;} 
-  @Override void apply(Env env, int argcnt) {
-    AppendableVec av = new AppendableVec(Vec.newKey());
-    NewChunk nc = new NewChunk(av,0);
-    for( int i=0; i<argcnt-1; i++ )
-      nc.addNum(env.dbl(-argcnt+1+i));
-    nc.close(0,null);
-    Vec v = av.close(null);
-    env.pop(argcnt);
-    env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
-  }
-}
-
-// Selective return
-class ASTIfElse extends ASTOp {
-  static final String VARS[] = new String[]{"ifelse","tst","true","false"};
-  static Type[] newsig() {
-    Type t1 = Type.unbound(0);
-    return new Type[]{t1,Type.DBL,t1,t1};
-  }
-  ASTIfElse( ) { super(VARS, newsig()); }
-  @Override ASTOp make() {return new ASTIfElse();} 
-  @Override String opStr() { return "ifelse"; }
-  // Parse an infix trinary ?: operator
-  static AST parse(Exec2 E, AST tst) {
-    if( !E.peek('?') ) return null;
-    int x=E._x;
-    AST tru=E.xpeek(':',E._x,parseCXExpr(E));
-    if( tru == null ) E.throwErr("Missing expression in trinary",x);
-    x = E._x;
-    AST fal=parseCXExpr(E);
-    if( fal == null ) E.throwErr("Missing expression in trinary",x);
-    return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
-  }
-  @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
-}
-
-// --------------------------------------------------------------------------
-// R's Apply.  Function is limited to taking a single column and returning
-// a single column.  Double is limited to 1 or 2, statically determined.
-class ASTRApply extends ASTOp {
-  static final String VARS[] = new String[]{ "", "ary", "dbl1.2", "fun"};
-  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(0,new Type[]{Type.ARY,Type.ARY}) };
-  ASTRApply( ) { super(VARS,TYPES); }
-  @Override String opStr(){ return "apply";}
-  @Override ASTOp make() {return this;} 
-  @Override void apply(Env env, int argcnt) {
-    ASTOp op = (ASTOp)env.popFun();    // ary->ary but better be ary[,1]->ary[,1]
-    double d = env.popDbl();
-    Frame fr = env.popFrame();  // The Frame to work on
-    if( d==2 || d== -1 ) {      // Work on columns
-
-      throw H2O.unimpl();
-    } else if( d==1 || d == -2 ) { // Work on rows
-      throw H2O.unimpl();
-    } else throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
-  }
-}
-
-// --------------------------------------------------------------------------
-class ASTFunc extends ASTOp {
-  final AST _body;
-  final int _tmps;
-  Env _env;                     // Captured environment at each apply point
-  ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) { super(vars,vtypes); _body = body; _tmps=tmps; }
-  @Override String opStr() { return "fun"; }
-  @Override ASTOp make() { throw H2O.fail();} 
-  static ASTOp parseFcn(Exec2 E ) {
-    int x = E._x;
-    String var = E.isID();
-    if( var == null ) return null;
-    if( !"function".equals(var) ) { E._x = x; return null; }
-    E.xpeek('(',E._x,null);
-    ArrayList<ASTId> vars = new ArrayList<ASTId>();
-    if( !E.peek(')') ) {
-      while( true ) {
-        x = E._x;
-        var = E.isID();
-        if( var == null ) E.throwErr("Invalid var",x);
-        for( ASTId id : vars ) if( var.equals(id._id) ) E.throwErr("Repeated argument",x);
-        // Add unknown-type variable to new vars list
-        vars.add(new ASTId(Type.unbound(x),var,0,vars.size()));
-        if( E.peek(')') ) break;
-        E.xpeek(',',E._x,null);
-      }
-    }
-    int argcnt = vars.size();   // Record current size, as body may extend
-    // Parse the body
-    E.xpeek('{',(x=E._x),null);
-    E._env.push(vars);
-    AST body = E.xpeek('}',E._x,ASTStatement.parse(E));
-    if( body == null ) E.throwErr("Missing function body",x);
-    E._env.pop();
-
-    // The body should force the types.  Build a type signature.
-    String xvars[] = new String[argcnt+1];
-    Type   types[] = new Type  [argcnt+1];
-    xvars[0] = "fun";
-    types[0] = body._t;         // Return type of body
-    for( int i=0; i<argcnt; i++ ) {
-      ASTId id = vars.get(i);
-      xvars[i+1] = id._id;
-      types[i+1] = id._t;
-    }
-    return new ASTFunc(xvars,types,body,vars.size()-argcnt);
-  }  
-  
-  @Override void exec(Env env) { 
-    // We need to push a Closure: the ASTFunc plus captured environment.
-    // Make a shallow copy (the body remains shared across all ASTFuncs).
-    // Then fill in the current environment.
-    ASTFunc fun = (ASTFunc)clone();
-    fun._env = env.capture();
-    env.push(fun);
-  }
-  @Override void apply(Env env, int argcnt) { 
-    int res_idx = env.pushScope(argcnt-1);
-    env.push(_tmps);
-    _body.exec(env);
-    env.tos_into_slot(1,res_idx-1);
-    env.popScope();
-  }
-  @Override public StringBuilder toString( StringBuilder sb, int d ) {
-    indent(sb,d).append(this).append(") {\n");
-    _body.toString(sb,d+1).append("\n");
-    return indent(sb,d).append("}");
-  }
 }
