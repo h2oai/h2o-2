@@ -67,7 +67,7 @@ public class Env extends Iced {
   }
   void push( Frame fr ) { push(1); _fr [_sp-1] = addRef(fr) ; assert check_refcnt(fr.anyVec()); }
   void push( double d ) { push(1); _d  [_sp-1] = d  ; }
-  void push( ASTOp fun) { push(1); _fun[_sp-1] = fun; }
+  void push( ASTOp fun) { push(1); _fun[_sp-1] = addRef(fun); }
 
   // Copy from display offset d, nth slot
   void push_slot( int d, int n ) {
@@ -137,13 +137,7 @@ public class Env extends Iced {
   public void poppush(double d) { pop(); push(d); }
 
   // Capture the current environment & return it (for some closure's future execution).
-  Env capture( ) { 
-    // Bump ref counts of everything captured
-    for( int i=0; i<_sp; i++ )
-      if( _fr[i] != null )
-        addRef(_fr[i]);
-    return new Env(this); 
-  }
+  Env capture( ) { return new Env(this); }
   private Env( Env e ) {
     _sp = e._sp;
     _fr = Arrays.copyOf(e._fr ,_sp);
