@@ -25,10 +25,25 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
 
   /** The Vectors to work on. */
   public Frame _fr;
-  public Frame _outputFrame;
   private AppendableVec [] _appendables; // appendables are treated separately (roll-ups computed in map/reduce style, can not be passed via K/V store).
   private int _vid;
   private int _noutputs;
+
+  public Frame outputFrame(String [] names, String [][] domains){
+    Futures fs = new Futures();
+    Frame res = outputFrame(names, domains, fs);
+    fs.blockForPending();
+    return res;
+  }
+  public Frame outputFrame(String [] names, String [][] domains, Futures fs){
+    if(_noutputs == 0)return null;
+    Vec [] vecs = new Vec[_noutputs];
+    for(int i = 0; i < _noutputs; ++i){
+      _appendables[i]._domain = domains[i];
+      vecs[i] = _appendables[i].close(fs);
+    }
+    return new Frame(names,vecs);
+  }
 
   /** Override with your map implementation.  This overload is given a single
    *  <strong>local</strong> input Chunk.  It is meant for map/reduce jobs that use a
@@ -390,7 +405,6 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         for(int i = 0; i < _noutputs; ++i)
           vecs[i] = _appendables[i].close(fs);
         fs.blockForPending();
-        _outputFrame = new Frame(vecs);
       }
       postGlobal();
     }

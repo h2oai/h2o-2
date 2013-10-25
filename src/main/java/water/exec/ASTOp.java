@@ -92,19 +92,19 @@ abstract class ASTUniOp extends ASTOp {
               n.addNum(uni.op(c.at0(r)));
           }
         }
-      }.doAll(fr.numCols(),fr)._outputFrame;
+      }.doAll(fr.numCols(),fr).outputFrame(fr._names, fr.domains());
     env.subRef(fr);
     env.pop();                  // Pop self
-    env.push(fr.copyHeaders(fr2,null));
+    env.push(fr2);
   }
 }
 
 class ASTIsNA extends ASTUniOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
 class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ; } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}
-class ASTNrow extends ASTUniOp { 
+class ASTNrow extends ASTUniOp {
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
-  @Override String opStr() { return "nrow"; }  
-  @Override ASTOp make() {return this;} 
+  @Override String opStr() { return "nrow"; }
+  @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.popFrame();
     double d = fr.numRows();
@@ -112,10 +112,10 @@ class ASTNrow extends ASTUniOp {
     env.poppush(d);
   }
 }
-class ASTNcol extends ASTUniOp { 
+class ASTNcol extends ASTUniOp {
   ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
-  @Override String opStr() { return "ncol"; }  
-  @Override ASTOp make() {return this;} 
+  @Override String opStr() { return "ncol"; }
+  @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.popFrame();
     double d = fr.numCols();
@@ -152,7 +152,7 @@ abstract class ASTBinOp extends ASTOp {
       ncols = fr0.numCols();
       if( fr1 != null ) {
         if( fr0.numCols() != fr1.numCols() ||
-            fr0.numRows() != fr1.numRows() ) 
+            fr0.numRows() != fr1.numRows() )
           throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
         fr = new Frame(fr0).add(fr1);
       } else {
@@ -176,11 +176,11 @@ abstract class ASTBinOp extends ASTOp {
               n.addNum(bin.op(lf ? c0.at0(r) : fd0, rf ? c1.at0(r) : fd1));
           }
         }
-      }.doAll(ncols,fr)._outputFrame;
+      }.doAll(ncols,fr).outputFrame(fr._names,fr.domains());
     if( fr0 != null ) env.subRef(fr0);
     if( fr1 != null ) env.subRef(fr1);
     env.pop();
-    env.push(fr.copyHeaders(fr2,null));
+    env.push(fr2);
   }
 }
 class ASTPlus extends ASTBinOp { String opStr(){ return "+"  ;} ASTOp make() {return new ASTPlus();} double op(double d0, double d1) { return d0+d1;}}
@@ -194,7 +194,7 @@ class ASTReduce extends ASTOp {
   static final Type   TYPES[]= new Type  []{ Type.ARY, Type.fcn(0,new Type[]{Type.DBL,Type.DBL,Type.DBL}), Type.ARY };
   ASTReduce( ) { super(VARS,TYPES); }
   @Override String opStr(){ return "Reduce";}
-  @Override ASTOp make() {return this;} 
+  @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
 }
 
@@ -203,7 +203,7 @@ class ASTCat extends ASTOp {
   @Override String opStr() { return "c"; }
   ASTCat( ) { super(new String[]{"cat","dbls"},
                     new Type[]{Type.ARY,Type.varargs(Type.DBL)}); }
-  @Override ASTOp make() {return this;} 
+  @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
     AppendableVec av = new AppendableVec(Vec.newKey());
     NewChunk nc = new NewChunk(av,0);
@@ -224,7 +224,7 @@ class ASTIfElse extends ASTOp {
     return new Type[]{t1,Type.DBL,t1,t1};
   }
   ASTIfElse( ) { super(VARS, newsig()); }
-  @Override ASTOp make() {return new ASTIfElse();} 
+  @Override ASTOp make() {return new ASTIfElse();}
   @Override String opStr() { return "ifelse"; }
   // Parse an infix trinary ?: operator
   static AST parse(Exec2 E, AST tst) {
@@ -248,7 +248,7 @@ class ASTRApply extends ASTOp {
   static final Type   TYPES[]= new Type  []{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(0,new Type[]{Type.ARY,Type.ARY}) };
   ASTRApply( ) { super(VARS,TYPES); }
   @Override String opStr(){ return "apply";}
-  @Override ASTOp make() {return this;} 
+  @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
     ASTOp op = (ASTOp)env.popFun();    // ary->ary but better be ary[,1]->ary[,1]
     double d = env.popDbl();

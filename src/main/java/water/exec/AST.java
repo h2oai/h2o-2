@@ -2,10 +2,12 @@ package water.exec;
 
 import java.text.NumberFormat;
 import java.text.ParsePosition;
-import java.util.*;
-import water.H2O;
-import water.Iced;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import water.*;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -38,8 +40,8 @@ abstract public class AST extends Iced {
   }
   abstract void exec(Env env);
   boolean isPosConstant() { return false; }
-  protected StringBuilder indent( StringBuilder sb, int d ) { 
-    for( int i=0; i<d; i++ ) sb.append("  "); 
+  protected StringBuilder indent( StringBuilder sb, int d ) {
+    for( int i=0; i<d; i++ ) sb.append("  ");
     return sb.append(_t).append(' ');
   }
   public StringBuilder toString( StringBuilder sb, int d ) { return indent(sb,d).append(this); }
@@ -61,11 +63,11 @@ class ASTStatement extends AST {
     if( asts.size()==0 ) return null;
     return new ASTStatement(asts.toArray(new AST[asts.size()]));
   }
-  void exec(Env env) { 
+  void exec(Env env) {
     for( int i=0; i<_asts.length-1; i++ ) {
       _asts[i].exec(env);       // Exec all statements
       env.pop();                // Pop all intermediate results
-    } 
+    }
     _asts[_asts.length-1].exec(env); // Return final statement as result
   }
   @Override public String toString() { return ";;;"; }
@@ -106,7 +108,7 @@ class ASTApply extends AST {
   }
 
   // Parse a prefix operator
-  static AST parsePrefix(Exec2 E) { 
+  static AST parsePrefix(Exec2 E) {
     AST pre = parseVal(E);
     if( pre == null ) return null;
     while( true ) {
@@ -163,8 +165,8 @@ class ASTApply extends AST {
 // --------------------------------------------------------------------------
 class ASTSlice extends AST {
   final AST _ast, _cols, _rows; // 2-D slice of an expression
-  ASTSlice( Type t, AST ast, AST cols, AST rows ) { 
-    super(t); _ast = ast; _cols = cols; _rows = rows; 
+  ASTSlice( Type t, AST ast, AST cols, AST rows ) {
+    super(t); _ast = ast; _cols = cols; _rows = rows;
   }
   static AST parse(Exec2 E ) {
     int x = E._x;
@@ -178,7 +180,7 @@ class ASTSlice extends AST {
     AST cols=E.xpeek(']',(x=E._x),parseCXExpr(E));
     if( cols != null && !cols._t.union(Type.dblary()) ) E.throwErr("Must be scalar or array",x);
     Type t =                    // Provable scalars will type as a scalar
-      rows != null && rows.isPosConstant() && 
+      rows != null && rows.isPosConstant() &&
       cols != null && cols.isPosConstant() ? Type.DBL : Type.ARY;
     return new ASTSlice(t,ast,cols,rows);
   }
@@ -215,7 +217,7 @@ class ASTSlice extends AST {
   // ordered.  numbers.  1-based numbering; 0 is ignored & removed.
   static long[] select( long len, AST ast, Env env ) {
     if( ast == null ) return null; // Trivial "all"
-    ast.exec(env);  
+    ast.exec(env);
     long cols[];
     if( !env.isFrame() ) {
       int col = (int)env.popDbl(); // Silent truncation
@@ -229,7 +231,14 @@ class ASTSlice extends AST {
     Frame fr = env.popFrame();
     try {
       if( fr.numCols() > 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
-      throw H2O.unimpl();
+      if(fr.numRows() > 10000) throw H2O.unimpl();
+      cols = MemoryManager.malloc8((int)fr.numRows());
+      Vec v = fr.anyVec();
+      for(int i = 0; i < cols.length; ++i){
+        if(v.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
+        cols[i] = v.at8(i);
+      }
+      return cols;
     } finally { env.subRef(fr); }
   }
 
@@ -252,7 +261,7 @@ class ASTId extends AST {
   final int _num;               // Number/slot in the lexical scope
   ASTId( Type t, String id, int d, int n ) { super(t); _id=id; _depth=d; _num=n; }
   // Parse a valid ID, or return null;
-  static ASTId parse(Exec2 E) { 
+  static ASTId parse(Exec2 E) {
     int x = E._x;
     String var = E.isID();
     if( var == null ) return null;
@@ -260,7 +269,7 @@ class ASTId extends AST {
     if( ASTOp.OPS.containsKey(var) ) { E._x=x; return null; }
     // See if pre-existing
     for( int d=E.lexical_depth(); d >=0; d-- )
-      for( ASTId id : E._env.get(d) ) 
+      for( ASTId id : E._env.get(d) )
         if( var.equals(id._id) )
           // Return an ID with a relative lexical depth and same slot#
           return new ASTId(id._t,id._id,E.lexical_depth()-d,id._num);
@@ -269,7 +278,7 @@ class ASTId extends AST {
     return null;
   }
   // Parse a NEW valid ID, or return null;
-  static String parseNew(Exec2 E) { 
+  static String parseNew(Exec2 E) {
     int x = E._x;
     String id = E.isID();
     if( id == null ) return null;
@@ -277,7 +286,7 @@ class ASTId extends AST {
     if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
     return id;
   }
-  @Override void exec(Env env) { 
+  @Override void exec(Env env) {
     // Local scope?  Grab from the stack.
     if( _depth ==0 ) {
       env.push_slot(_depth,_num);
@@ -296,7 +305,7 @@ class ASTAssign extends AST {
   final AST _eval;
   ASTAssign( AST lhs, AST eval ) { super(lhs._t); _lhs=lhs; _eval=eval; }
   // Parse a valid LHS= or return null
-  static ASTAssign parse(Exec2 E, AST ast) { 
+  static ASTAssign parse(Exec2 E, AST ast) {
     int x = E._x;
     if( !E.peek('=') ) return null;
     AST ast2=ast;
@@ -316,7 +325,7 @@ class ASTAssign extends AST {
     return new ASTAssign(ast,eval);
   }
   // Parse a valid LHS= or return null - for a new variable
-  static ASTAssign parseNew(Exec2 E) { 
+  static ASTAssign parseNew(Exec2 E) {
     int x = E._x;
     String var = ASTId.parseNew(E);
     if( var == null ) return null;
@@ -358,10 +367,10 @@ class ASTAssign extends AST {
     }
 
     // Slice assignment
-    throw H2O.unimpl(); 
+    throw H2O.unimpl();
   }
   @Override public String toString() { return "="; }
-  @Override public StringBuilder toString( StringBuilder sb, int d ) { 
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append('\n');
     _lhs.toString(sb,d+1).append('\n');
     _eval.toString(sb,d+1);
@@ -376,7 +385,7 @@ class ASTNum extends AST {
   final double _d;
   ASTNum(double d) { super(Type.DBL); _d=d; }
   // Parse a number, or throw a parse error
-  static ASTNum parse(Exec2 E) { 
+  static ASTNum parse(Exec2 E) {
     ParsePosition pp = new ParsePosition(E._x);
     Number N = NF.parse(E._str,pp);
     if( pp.getIndex()==E._x ) return null;

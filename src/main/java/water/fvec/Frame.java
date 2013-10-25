@@ -214,6 +214,22 @@ public class Frame extends Iced {
     return ds;
   }
 
+  private String[][] domains(int [] cols){
+    Vec [] vecs = vecs();
+    String [][] res = new String[cols.length][];
+    for(int i = 0; i < cols.length; ++i)
+      res[i] = vecs[cols[i]]._domain;
+    return res;
+  }
+
+  private String [] names(int [] cols){
+    if(_names == null)return null;
+    String [] res = new String[cols.length];
+    for(int i = 0; i < cols.length; ++i)
+      res[i] = _names[cols[i]];
+    return res;
+  }
+
   /** Returns the first readable vector. */
   public Vec anyVec() {
     if( _col0 != null ) return _col0;
@@ -433,22 +449,23 @@ public class Frame extends Iced {
     }
   }
 
+
   // Copy over column headers & enum domains from self into fr2
-  public Frame copyHeaders( Frame fr2, int cols[] ) {
-    Futures fs = new Futures();
-    Vec[] vec2 = fr2.vecs();
-    String domains[][] = domains();
-    int len = cols==null ? vec2.length : cols.length;
-    String ns[]  = new String[len];
-    for( int i=0; i<len; i++ ) {
-      ns[i] = _names [cols==null?i:cols[i]];
-      vec2[i]._domain = domains[cols==null?i:cols[i]];
-      DKV.put(vec2[i]._key,vec2[i],fs);
-    }
-    fr2._names = ns;
-    fs.blockForPending();
-    return fr2;
-  }
+//  public Frame copyHeaders( Frame fr2, int cols[] ) {
+//    Futures fs = new Futures();
+//    Vec[] vec2 = fr2.vecs();
+//    String domains[][] = domains();
+//    int len = cols==null ? vec2.length : cols.length;
+//    String ns[]  = new String[len];
+//    for( int i=0; i<len; i++ ) {
+//      ns[i] = _names [cols==null?i:cols[i]];
+//      vec2[i]._domain = domains[cols==null?i:cols[i]];
+//      DKV.put(vec2[i]._key,vec2[i],fs);
+//    }
+//    fr2._names = ns;
+//    fs.blockForPending();
+//    return fr2;
+//  }
 
   // --------------------------------------------------------------------------
   // In support of R, a generic Deep Copy & Slice.
@@ -478,12 +495,8 @@ public class Frame extends Iced {
         else j++;
       }
     }
-
     // Do Da Slice
-    Frame fr2 = new DeepSlice(rows,c2).doAll(c2.length,this)._outputFrame;
-
-    // Copy over column headers & enum domains
-    return copyHeaders(fr2,c2);
+    return new DeepSlice(rows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
   }
 
   // Bulk (expensive) copy from 2nd cols into 1st cols.
