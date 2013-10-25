@@ -204,7 +204,7 @@ myR runit_libR_airlines 120
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!
-../testdir_single_jvm/n0.doit test_shutdown.py
+../testdir_single_jvm/n0.doit shutdown/test_shutdown.py
 
 #***********************************************************************
 # End of list of tests
