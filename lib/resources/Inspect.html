@@ -6,11 +6,6 @@
     <meta name="copyright" content="Swing Development Europe" />  
     <meta name="Author" content="Tomasz Kopczuk, Marcin Mincer" />
     <title>Inspect data - H2O</title>
-    <style type="text/css">
-        body {
-            display:none;
-        }
-    </style>
 
     <script type="text/javascript" src="js/vendor/URI.v1.11.2.min.js"></script>
 
@@ -23,6 +18,7 @@
     <script type="text/javascript" src="js/vendor/jquery-ui-rangedrag.js"></script>
     <script type="text/javascript" src="js/vendor/jquery.tooltipster.swing.js"></script>
     <script type="text/javascript" src="js/vendor/moment.min.js"></script>
+    <script type="text/javascript" src="js/vendor/typeahead.min.js"></script>
 
     <script type="text/javascript" src="js/plugins/arrayExtensions.js"></script>
     <script type="text/javascript" src="js/plugins/jquery.isOnScreen.js"></script>
@@ -55,15 +51,15 @@
     <link rel="stylesheet" type="text/css" href="css/inspect.css">
 </head>
 
-<body ng-controller="InspectAppController">
+<body ng-controller="InspectAppController" ng-cloak>
     <div class="header ensure-min-width">
         <div class="menu yellow" ng-class='{"open":MenuService.isOpen("h2oMenu")}'><a class="logo" ng-click="MenuService.toggleOpen('h2oMenu')">H<sub>2</sub>O&nbsp;<i style="line-height: 15px; margin-left: -5px; color: #000;" class="arrow-down icon-angle-down"></i></a></div>
         <div class="menu data-key">{{ InspectDataService.meta.key }} <i class="arrow-down icon-angle-down"></i>
             <div class="data-key-info">
                 <ul>
-                    <li><a href="SetColumnNames.query?target=allyears2k_headers 21.hex">Set Column Names</a></li>
-                    <li><a href="SummaryPage.html?key=allyears2k_headers 21.hex">View Summary</a></li>
-                    <li><a href="2/DownloadDataset?src_key=allyears2k_headers 21.hex">Download as CSV</a></li>
+                    <li><a href="SetColumnNames.query?target={{ InspectDataService.meta.key }}">Set Column Names</a></li>
+                    <li><a href="SummaryPage.html?key={{ InspectDataService.meta.key }}">View Summary</a></li>
+                    <li><a href="/2/DownloadDataset?src_key={{ InspectDataService.meta.key }}">Download as CSV</a></li>
                     <li>&nbsp;</li>
                     <li>
                         {{ InspectDataService.numRows }} <ng-pluralize count="InspectDataService.numRows" when="{'0': 'rows', 'one': 'row', 'other': 'rows'}"></ng-pluralize>
@@ -163,24 +159,57 @@
         <ul class="main-menu">
             <li ng-class='{"open":MenuService.isOpen("modelsMenu.data")}' ng-click="MenuService.toggleOpen('modelsMenu.data')">Score Data</li>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("modelsMenu.data")}'>
-                <li><a href="/RFScore.html">Random Forest</a></li>
-                <li><a href="/GLMScore.html">GLM</a></li>
+                <li><a href="RFScore.query?data_key={{ InspectDataService.meta.key }}">Random Forest</a></li>
+                <li><a href="GLMScore.query?key={{ InspectDataService.meta.key }}&amp;thresholds=0.0">GLM</a></li>
             </ul>
             <li ng-class='{"open":MenuService.isOpen("modelsMenu.model")}' ng-click="MenuService.toggleOpen('modelsMenu.model')">Build Models</li>
             <ul class="dropdown-menu" ng-class='{"open":MenuService.isOpen("modelsMenu.model")}'>
-                <li><a href="/RF.html">Random Forest</a></li>
-                <li><a href="/GLM.html">GLM</a></li>
-                <li><a href="/GLMGrid.html">GLM Grid Search</a></li>
-                <li><a href="/KMeans.html">KMeans</a></li>
-                <li><a href="/2/NeuralNet.html">Neural Network (Beta)</a></li>
+                <li><a href="/2/PCA.query?source={{ InspectDataService.meta.key }}">PCA</a></li>
+                <li><a href="RF.query?data_key={{ InspectDataService.meta.key }}">Random Forest</a></li>
+                <li><a href="GLM.query?key={{ InspectDataService.meta.key }}">GLM</a></li>
+                <li><a href="GLMGrid.query?key={{ InspectDataService.meta.key }}">GLM Grid Search</a></li>
+                <li><a href="KMeans.query?source_key={{ InspectDataService.meta.key }}">KMeans</a></li>
+                <li><a href="/2/NeuralNet.query?source={{ InspectDataService.meta.key }}">Neural Network (Beta)</a></li>
             </ul>
     </div>
 
-	<div class="content" ng-controller="InspectTableController">
-		<dataservicespinner></dataservicespinner>
-		
-		<table inspect-table show-header-on-hover class="big-table" dataset="tableData" headers="tableHeaders" summaries="[['min','MIN'], ['max','MAX'],['mean','AVG'],['variance','ST.DEV.'],['num_missing_values','N/A']]" header-classmap="{'row':'drag-boundary no-drag'}" reorderable="reorder"></table>
-	</div>
+    <div class="content" ng-controller="InspectTableController" ng-show="isKeySetInURI()">
+        <dataservicespinner></dataservicespinner>
+        
+        <table inspect-table show-header-on-hover class="big-table" dataset="tableData" headers="tableHeaders" summaries="[['min','MIN'], ['max','MAX'],['mean','AVG'],['variance','ST.DEV.'],['num_missing_values','N/A']]" header-classmap="{'row':'drag-boundary no-drag'}" reorderable="reorder"></table>
+    </div>
+
+    <div class="key-choice-overlay" ng-hide="isKeySetInURI()">
+        <div class="key-choice-content">
+            <p>Please choose a key to inspect:</p>
+            <form>
+                <input type="text" name="key" id="key" placeholder="An existing H2O key"> 
+                <script type="text/javascript">
+                    $('.key-choice-content input#key').typeahead({
+                        name: 'keys',
+                        remote: {
+                            url: '/TypeaheadKeysRequest?filter=%QUERY&limit=1024',
+                            filter: function(response) {
+                                var items = $(response.items);
+                                return items.map(function (item) { 
+                                    return {
+                                        value: this,
+                                        tokens: [this]
+                                    }; 
+                                });
+                            }
+                        }
+                    });
+                    $('.key-choice-content input#key').keydown(function(event){
+                        if(event.keyCode == 13) {
+                            $('.key-choice-content form').submit();
+                        }
+                    });
+                </script>
+            </form>
+        </div>
+    </div>
+
 	<div class="footer ensure-min-width">
 		<div class="pagination-box" ng-controller="InspectPaginationController">
             <div class="slider-box">

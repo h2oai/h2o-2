@@ -169,6 +169,50 @@ button, label {
   margin-top: 45px;
   margin-bottom: 66px; }
 
+.key-choice-overlay {
+  position: fixed;
+  left: 50%;
+  top: 50%; }
+  .key-choice-overlay .key-choice-content {
+    position: relative;
+    left: -230px;
+    top: -100px;
+    width: 460px;
+    height: 100px; }
+    .key-choice-overlay .key-choice-content input {
+      width: 396px;
+      height: 30px;
+      padding: 8px 12px;
+      font-size: 24px;
+      line-height: 30px;
+      border: 2px solid #ccc;
+      -webkit-border-radius: 8px;
+      -moz-border-radius: 8px;
+      border-radius: 8px;
+      outline: none; }
+    .key-choice-overlay .key-choice-content .tt-dropdown-menu {
+      width: 422px;
+      margin-top: 12px;
+      padding: 8px 0;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      -webkit-border-radius: 8px;
+      -moz-border-radius: 8px;
+      border-radius: 8px;
+      -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+      -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2); }
+    .key-choice-overlay .key-choice-content .tt-suggestion {
+      padding: 3px 20px;
+      font-size: 18px;
+      line-height: 24px; }
+    .key-choice-overlay .key-choice-content .tt-suggestion.tt-is-under-cursor {
+      color: #fff;
+      background-color: #0097cf; }
+    .key-choice-overlay .key-choice-content .tt-suggestion p {
+      margin: 0; }
+
 .footer {
   position: fixed;
   width: 100%;
