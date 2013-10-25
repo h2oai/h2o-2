@@ -998,6 +998,9 @@ class H2O(object):
                 raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
 
         else:
+            if 'response' not in response:
+                raise Exception("'response' not in response. Maybe h2o.beta_features=True is needed?")
+
             url = self.__url(response['response']['redirect_request'])
             params = response['response']['redirect_request_args']
 
@@ -1806,7 +1809,7 @@ class H2O(object):
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
         start = time.time()
-        a = self.__do_json_request('NeuralNet.json',timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/NeuralNet.json',timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
             a['python_elapsed'] = time.time() - start

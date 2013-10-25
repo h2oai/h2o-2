@@ -45,7 +45,9 @@ class Basic(unittest.TestCase):
 
         timeoutSecs = 600
         start = time.time()
+        h2o.beta_features = True
         nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+        h2o.beta_features = False
         print "Hack: neural net apparently doesn't support the right polling response yet?"
         h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
 
