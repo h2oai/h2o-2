@@ -14,6 +14,7 @@ public class Env extends Iced {
   // execution state.  The 3 types we support are Frames (2-d tables of data),
   // doubles (which are an optimized form of a 1x1 Frame), and ASTs (which are
   // 1st class functions).
+  String _key[] = new String[4]; // For top-level globals only, record a frame Key
   Frame  _fr [] = new Frame [4]; // Frame (or null if not a frame)
   double _d  [] = new double[4]; // Double (only if frame & func are null)
   ASTOp  _fun[] = new ASTOp [4]; // Functions (or null if not a function)
@@ -28,12 +29,12 @@ public class Env extends Iced {
   // Ref Counts for each vector
   transient final HashMap<Vec,Integer> _refcnt;
 
-
   transient boolean _allow_tmp;           // Deep-copy allowed to tmp
   transient boolean _busy_tmp;            // Assert temp is available for use
   transient Frame  _tmp;                  // The One Big Active Tmp
 
   Env() {
+    _key = new String[4]; // Key for Frame
     _fr  = new Frame [4]; // Frame (or null if not a frame)
     _d   = new double[4]; // Double (only if frame & func are null)
     _fun = new ASTOp [4]; // Functions (or null if not a function)
@@ -60,6 +61,7 @@ public class Env extends Iced {
     int len = _d.length;
     _sp += slots;
     while( _sp > len ) {
+      _key= Arrays.copyOf(_key,len<<1);
       _fr = Arrays.copyOf(_fr ,len<<1);
       _d  = Arrays.copyOf(_d  ,len<<1);
       _fun= Arrays.copyOf(_fun,len<<=1);
@@ -68,6 +70,7 @@ public class Env extends Iced {
   void push( Frame fr ) { push(1); _fr [_sp-1] = addRef(fr) ; assert check_refcnt(fr.anyVec()); }
   void push( double d ) { push(1); _d  [_sp-1] = d  ; }
   void push( ASTOp fun) { push(1); _fun[_sp-1] = addRef(fun); }
+  void push( Frame fr, String key ) { push(fr); _key[_sp-1]=key; }
 
   // Copy from display offset d, nth slot
   void push_slot( int d, int n ) {
@@ -90,14 +93,16 @@ public class Env extends Iced {
     assert global.check_refcnt(global._fr[0].anyVec()); 
   }
   // Copy from TOS into a slot.  Does NOT pop results.
-  void tos_into_slot( int d, int n ) {
-    assert d==0 || (d==1 && _display[_tod]==n+1);   // In a copy-on-modify language, only update the local scope, or return val
+  void tos_into_slot( int d, int n, String id ) {
+    // In a copy-on-modify language, only update the local scope, or return val
+    assert d==0 || (d==1 && _display[_tod]==n+1); 
     int idx = _display[_tod-d]+n;
     subRef(_fr [idx]);
     subRef(_fun[idx]);
     _fr [idx] = addRef(_fr [_sp-1]);
     _d  [idx] =       _d   [_sp-1] ;
     _fun[idx] = addRef(_fun[_sp-1]);
+    if( d==0 ) _key[idx] = id;
     assert check_refcnt(_fr[0].anyVec()); 
   }
 
@@ -219,8 +224,28 @@ public class Env extends Iced {
      
 
   // Remove everything
-  public void remove(Env global) { while( _sp > 0 ) pop(global); }
-  public void remove() { remove(this); }
+  public void remove() { 
+    // Remove all shallow scopes
+    while( _tod > 1 ) popScope();
+    // Push changes at the outer scope into the K/V store
+    while( _sp > 0 ) {
+      if( isFrame() && _key[_sp-1] != null ) { // Has a K/V mapping?
+        Frame fr = popFrame();  // Pop w/out lower refcnt & delete
+        int refcnt = _refcnt.get(fr.anyVec());
+        for( Vec v : fr.vecs() )
+          if( _refcnt.get(v) != refcnt )
+            throw H2O.unimpl();
+        assert refcnt > 0;
+        Frame fr2=fr;
+        if( refcnt > 1 ) {       // Need a deep-copy now
+          fr2 = fr.deepSlice(null,null);
+          subRef(fr);            // Now lower refcnt for good assertions
+        }                        // But not down to zero (do not delete items in global scope)
+        UKV.put(Key.make(_key[_sp]),fr2);
+      } else
+        pop();
+    }
+  }
 
   // Done writing into all things.  Allow rollups.
   public void postWrite() {
@@ -230,20 +255,11 @@ public class Env extends Iced {
 
   // Count references the "hard way" - used to check refcnting math.
   int compute_refcnt( Vec vec ) {
-    int cnt = compute_refcnt0(vec);
-    // For Vecs in the global state, we added 1 to prevent deletion
-    for( int i=0; _fr[i] != null; i++ )
-      if( _fr[i].find(vec) != -1 )
-        cnt++;
-    return cnt;
-  }
-  // Compute refcnt recursively
-  int compute_refcnt0( Vec vec ) {
     int cnt=0;
     for( int i=0; i<_sp; i++ )
       if( _fr[i] != null && _fr[i].find(vec) != -1 ) cnt++;
       else if( _fun[i] != null && (_fun[i] instanceof ASTFunc) )
-        cnt += ((ASTFunc)_fun[i])._env.compute_refcnt0(vec);
+        cnt += ((ASTFunc)_fun[i])._env.compute_refcnt(vec);
     return cnt;
   }
   boolean check_refcnt( Vec vec ) {

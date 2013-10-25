@@ -350,7 +350,7 @@ class ASTAssign extends AST {
     _eval.exec(env);            // RHS before LHS (R eval order)
     if( _lhs instanceof ASTId ) {
       ASTId id = (ASTId)_lhs;
-      env.tos_into_slot(id._depth,id._num);
+      env.tos_into_slot(id._depth,id._num,id._id);
       return;
     }
     // Peel apart a slice assignment

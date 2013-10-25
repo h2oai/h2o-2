@@ -45,6 +45,7 @@ public class Expr2Test extends TestUtil {
       checkStr("2+x");
       checkStr("x=1");
       checkStr("x=1;x=h.hex");
+      checkStr("a=h.hex");      // Top-level assignment back to H2O.STORE
       checkStr("x=+");
       checkStr("(h.hex+1)=2");
       checkStr("h.hex[nrow(h.hex=1),]");

@@ -59,9 +59,7 @@ public class Exec2 {
     for( Value v : H2O.values() )
       if( v.type()==TypeMap.FRAME ) { // Add to parser's namespace
         global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
-        Frame fr = (Frame)v.get();
-        env.addRef(fr);         // Do not delete global scope items
-        env.push(fr);
+        env.push((Frame)v.get(),v._key.toString());
       }
 
     // Some global constants
