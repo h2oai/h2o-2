@@ -122,7 +122,7 @@ public abstract class Request extends RequestBuilders {
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String response) {
-    RString html = new RString(_htmlTemplate);
+    RString html = new RString(htmlTemplate());
     html.replace("CONTENTS", response);
     return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_HTML, html.toString());
   }
@@ -140,6 +140,7 @@ public abstract class Request extends RequestBuilders {
   // html template and navbar handling -----------------------------------------
 
   private static String _htmlTemplate;
+  protected String htmlTemplate() { return _htmlTemplate; }
 
   static {
     InputStream resource = Boot._init.getResource2("/page.html");
@@ -179,7 +180,8 @@ public abstract class Request extends RequestBuilders {
   private static HashMap<String, ArrayList<MenuItem>> _navbar = new HashMap();
   private static ArrayList<String> _navbarOrdering = new ArrayList();
 
-  public static void initializeNavBar() {
+  public static void initializeNavBar() { _htmlTemplate = initializeNavBar(_htmlTemplate); }
+  public static String initializeNavBar(String template) {
     StringBuilder sb = new StringBuilder();
     for( String s : _navbarOrdering ) {
       ArrayList<MenuItem> arl = _navbar.get(s);
@@ -197,10 +199,10 @@ public abstract class Request extends RequestBuilders {
         sb.append("</ul></li>");
       }
     }
-    RString str = new RString(_htmlTemplate);
+    RString str = new RString(template);
     str.replace("NAVBAR", sb.toString());
     str.replace("CONTENTS", "%CONTENTS");
-    _htmlTemplate = str.toString();
+    return str.toString();
   }
 
   public static Request addToNavbar(Request r, String name) {
