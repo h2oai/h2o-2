@@ -116,7 +116,7 @@ public class Env extends Iced {
     _sp--;
     _fun[_sp]=global.subRef(_fun[_sp]);
     _fr [_sp]=global.subRef(_fr [_sp]);
-    assert _sp==0 || check_refcnt(_fr[0].anyVec()); 
+    assert _sp==0 || _fr[0]==null || check_refcnt(_fr[0].anyVec()); 
   }
   void pop( ) { pop(this); }
   void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
@@ -168,7 +168,6 @@ public class Env extends Iced {
       if( cnt > 0 ) _refcnt.put(vec,cnt);
       else {
         if( fs == null ) fs = new Futures();
-        System.out.println("Removing "+vec._key+" "+vec);
         UKV.remove(vec._key,fs);
         _refcnt.remove(vec);
       }

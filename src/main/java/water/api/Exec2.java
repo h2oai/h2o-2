@@ -15,10 +15,13 @@ public class Exec2 extends Request2 {
 
   @API(help="Parsing error, if any") String error;
   @API(help="Result key"           ) Key key;
-  @API(help="Rows in result"       ) long num_rows;
-  @API(help="Columns in result"    ) int  num_cols;
+  @API(help="Rows in Frame result" ) long num_rows;
+  @API(help="Columns in Frame result" ) int  num_cols;
   @API(help="Scalar result"        ) double scalar;
   @API(help="Function result"      ) String funstr;
+  // Pretty-print of result.  For Frames, first 10 rows.  For scalars, just the
+  // value.  For functions, the pretty-printed AST.
+  @API(help="String result"        ) String result;
  
   @API(help="Array of Column Summaries.") Inspect2.ColSummary cols[];
 
@@ -28,24 +31,30 @@ public class Exec2 extends Request2 {
     try {
       Env env = water.exec.Exec2.exec(str);
       if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
-      //key = Key.make(".Last.value");
-      //UKV.remove(key);
       if( env.sp() == 0 ) {      // Empty stack
       } else if( env.isFrame() ) { 
         Frame fr = env.popFrame();
-        //UKV.put(key,fr);
         num_rows = fr.numRows();
         num_cols = fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];
         for( int i=0; i<num_cols; i++ )
           cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
+        // Now the first few rows.
+        StringBuilder sb = new StringBuilder();
+        String[] fs = fr.toStringHdr(sb);
+        for( int i=0; i<Math.min(10,fr.numRows()); i++ )
+          fr.toString(sb,fs,i);
+        result=sb.toString();
+        // Nuke the result
         env.subRef(fr);
       } else if( env.isFun() ) {
         ASTOp op = env.popFun();
         funstr = op.toString();
+        result = op.toString(true); // Verbose function
         env.subRef(op);
       } else {
         scalar = env.popDbl();
+        result = Double.toString(scalar);
       }
       env.remove();
       return new Response(Response.Status.done, this, -1, -1, null);

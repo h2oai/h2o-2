@@ -262,21 +262,22 @@ public class NewChunk extends Chunk {
     if( _ds != null ) {
       int i=0;
       for( ; i<_len; i++ ) // Attempt to inject all doubles into ints
-        if( (double)(long)_ds[i] != _ds[i] ) break;
+        if( !Double.isNaN(_ds[i]) && (double)(long)_ds[i] != _ds[i] ) break;
       if( i<_len ) return chunkD();
       _ls = new long[_ds.length]; // Else flip to longs
       _xs = new int [_ds.length];
       for( i=0; i<_len; i++ )   // Inject all doubles into longs
-        _ls[i] = (long)_ds[i];
+        if( Double.isNaN(_ds[i]) ) setInvalid(i);
+        else _ls[i] = (long)_ds[i];
     }
 
-    // Look at the min & max & scaling.  See if we can sanely normalize the
     // data in some fixed-point format.
     boolean first = true;
     boolean hasNA = false;
+    _naCnt=0;
 
     for( int i=0; i<_len; i++ ) {
-      if( isNA(i) ) { hasNA = true; continue;}
+      if( isNA(i) ) { hasNA = true; _naCnt++; continue;}
       long l = _ls[i];
       int  x = _xs[i];
       // Compute per-chunk min/sum/max

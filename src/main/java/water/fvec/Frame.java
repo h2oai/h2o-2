@@ -3,6 +3,7 @@ package water.fvec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.IllegalFormatException;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -345,8 +346,14 @@ public class Frame extends Iced {
           Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
           int len = C.pformat_len0();  // Printable width
           for( int i=0; i<len; i++ ) sb.append('-');
-        } else
-          sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+        } else {
+          try {
+            sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+          } catch( IllegalFormatException ife ) {
+            System.out.println("Format: "+fs[c]+" col="+c+" not for ints");
+            ife.printStackTrace();
+          }
+        }
       } else {
         sb.append(String.format(fs[c],_vecs[c].at (idx)));
         if( _vecs[c].isNA(idx) ) sb.append(' ');
