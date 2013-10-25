@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html ng-app="h2o.inspectApp">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="copyright" content="Swing Development Poland" />  
+    <meta name="Author" content="Tomasz Kopczuk, Marcin Mincer" />
+    <title>Inspect data - H20</title>
+    <script type="text/javascript" src="js/vendor/URI.v1.11.2.min.js"></script>
+
+    <script type="text/javascript" src="js/vendor/jquery-1.9.1.js"></script>
+
+    <script type="text/javascript" src="js/vendor/bootstrap.js"></script>
+    <script type="text/javascript" src="js/vendor/plugins.js"></script>
+
+    <script type="text/javascript" src="js/vendor/angular.js"></script>
+    <script type="text/javascript" src="js/vendor/d3.v3.min.js"></script>
+    <script type="text/javascript" src="js/vendor/humanize.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery-ui-1.10.3.custom.min.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery.dragtable.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery-ui-rangedrag.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery.tooltipster.min.js"></script>
+    <script type="text/javascript" src="js/vendor/moment.min.js"></script>
+
+    <script type="text/javascript" src="js/plugins.js"></script>
+    <script type="text/javascript" src="js/config.js"></script>
+    <script type="text/javascript" src="js/app.js"></script>
+    <script type="text/javascript" src="js/datasource.js"></script>
+    <script type="text/javascript" src="js/table.js"></script>
+    <script type="text/javascript" src="js/utilities.js"></script>
+    <script type="text/javascript" src="js/widgets.js"></script>
+
+    <script type="text/javascript" src="js/inspect.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="css/vendor/font-awesome.min.css">
+
+    <link rel="stylesheet" type="text/css" href="css/slider.css">
+    <link rel="stylesheet" type="text/css" href="css/tooltipster.css">
+    <link rel="stylesheet" type="text/css" href="css/spinner.css">
+    <link rel="stylesheet" type="text/css" href="css/inspect.css">
+</head>
+
+<body ng-controller="InspectAppController">
+    <div class="header ensure-min-width">
+        <div class="menu yellow" ng-class='{"open":H2OMenuService.isOpen("h2oMenu")}'><a class="logo" ng-click="H2OMenuService.toggleOpen('h2oMenu')">H<sub>2</sub>O</a></div>
+        <div class="menu">{{ InspectDataService.meta.key }}</div>
+        <div class="menu lighter right" ng-click="H2OMenuService.toggleOpen('inspect.modelMenu')">Models</div>
+        <div class="menu light right" ng-click="H2OMenuService.toggleOpen('inspect.columnMenu')">Columns</div>
+    </div>
+
+    <div id="h2o-menu-container" class="slided-in-menu left" ng-class='{"open":H2OMenuService.isOpen("h2oMenu")}'>
+        <ul>
+            <li>Data</li>
+            <li>Model</li>
+            <li>Score</li>
+            <li>Admin</li>
+            <li>Help</li>
+        </ul>
+    </div>
+
+    <div id="column-menu-container" class="slided-in-menu right" ng-class='{"open":H2OMenuService.isOpen("inspect.columnMenu")}' ng-controller="InspectColumnController">
+        <div class="table-filters" ng-repeat="column in InspectColumnService.filterableTableHeaders">
+            <label><input type="checkbox" ng-model="InspectColumnService.shownTableHeaders[column.name]" ng-change="InspectColumnService.refilter()"/><span class="real-label">{{column.visual}}</span></label>
+        </div>
+
+    </div>
+
+    <div id="model-menu-container" class="slided-in-menu right" ng-class='{"open":H2OMenuService.isOpen("inspect.modelMenu")}'>
+    </div>
+
+	<div class="content" ng-controller="InspectTableController">
+		<datasourcespinner></datasourcespinner>
+		
+		<table d3table show-header-on-hover class="big-table" dataset="tableData" headers="tableHeaders" summaries="[['min','MIN'], ['max','MAX'],['mean','AVG'],['variance','ST.DEV.'],['num_missing_values','N/A']]" header-classmap="{'row':'drag-boundary no-drag'}" reorderable="reorder"></table>
+	</div>
+	<div class="footer ensure-min-width">
+		<div class="pagination-box" ng-controller="InspectPaginationController">
+            <div class="slider-box">
+                <button class="gray left" ng-disabled="!canGoToPrevPage" ng-click="prevPage()"></button>
+                <div class="divider-slider light-gray"></div>
+                <div class="slider-wrapper gray">
+                    <slider disabled="isLoading" from="firstPage" to="lastPage" offset="pageOffset" rs-change="fetch" tooltip-value="pageSliderTooltipValue"></slider>
+                </div>
+                <div class="divider-slider light-gray"></div>
+                <button class="gray right" ng-disabled="!canGoToNextPage" ng-click="nextPage()"></button>
+            </div>
+		</div>
+	</div>
+	<div class="spacer40"></div>
+	<script type="text/javascript">
+		$('.toggle-popover').popover();
+
+        function hideAllModelGroups() {$('.models-list').hide();}
+        function showSelectedModelGroup() {
+            var g = $('#ul-model-groups .active').data('model-group');
+            $('#'+g).show();
+        }
+        function clickModelGroup(eventObject) {
+            $('#ul-model-groups li').removeClass('active');
+            $(this).addClass('active');
+            hideAllModelGroups();
+            showSelectedModelGroup();
+        }
+
+        function setTableHeight(initialPopoverWidth) {
+        	var h = window.innerHeight - 280;
+        	var popoverH = window.innerHeight - 280;
+        	$('#table-wrapper').css('height', h + 'px');
+        	$('.popover').css('max-height', popoverH + 'px');
+        	var innerPopover = popoverH - 20;
+        	var popoverWidth = initialPopoverWidth + 30
+        	$('.popover-content').css('max-height', innerPopover + 'px');
+        	$('.popover').css('width', popoverWidth + 'px');
+        }
+        
+        var initialPopoverWidth = $('.popover').width();
+        setTableHeight(initialPopoverWidth);
+        hideAllModelGroups();
+        showSelectedModelGroup();
+        $('#columns-popover').hide();
+        $('#sorting-popover').hide();
+        $('#ul-model-groups li').click(clickModelGroup);
+        $('#columns-button').click(function() {$('#columns-popover').toggle(); $('#columns-popover').toggleClass('in');});
+        $('#sort-button').click(function() {$('#sorting-popover').toggle(); $('#sorting-popover').toggleClass('in');});
+        $(window).resize(setTableHeight);
+    </script>
+</body>
+</html>
