@@ -60,6 +60,10 @@ public class Expr2Test extends TestUtil {
       checkStr("function(x){}(2)");
       checkStr("function(x){y=x*2; y+1}(2)");
       checkStr("function(x){y=1+2}(2)");
+      checkStr("sum(1,2,3)");
+      checkStr("sum(c(1,3,5))");
+      checkStr("sum(4,c(1,3,5),2,6)");
+      checkStr("sum(1,h.hex,3)");
       checkStr("apply(h.hex,2,sum)");
       checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})");

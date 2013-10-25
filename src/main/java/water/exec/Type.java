@@ -86,16 +86,27 @@ public class Type {
       if( ta._ts.length>tb._ts.length ) { t0=tb; t1=ta; }
       // Walk the shorter list, checking types
       boolean ok=true;
-      for( int i=0; i<t0._ts.length; i++ )
+      int len=t0._ts.length;
+      Type varargs=null;
+      // Extra args in T1 can only be matched with a varargs repeat from T0
+      if( len < t1._ts.length ) {
+        varargs = t0._ts[len-1].find();
+        if( (varargs._t&VARARGS)!=0 )
+          len--;                // Dont match the varargs arg in 1st loop
+        else varargs=null;      // Else not a varargs
+
+      }
+      for( int i=0; i<len; i++ ) // Match all args
         if( !t0._ts[i].union(t1._ts[i]) )
           ok = false;           // Subtypes are unequal
-      if( t0._ts.length == t1._ts.length ) return ok;
-      // Extra args in T1 can only be matched with a varargs repeat from T0
-      Type varargs = t0._ts[t0._ts.length-1];
-      if( (varargs._t&VARARGS)==0 ) return false;
-      for( int i=t0._ts.length; i<t1._ts.length; i++ )
-        if( !varargs.union(t1._ts[i]) )
+      if( len == t1._ts.length ) return ok;
+      if( varargs==null ) return false;
+      // Must be varargs: 
+      for( int i=len; i<t1._ts.length; i++ ) {
+        Type var = (varargs._t&(VARARGS-1))==DBLARY0 ? dblary() : varargs; // Use a new unbound type
+        if( !var.union(t1._ts[i]) )
           ok = false;         // Subtypes are unequal
+      }
       return ok;
     } 
     else if( tta==UNBOUND || (tta==DBLARY0 && tb.isDblAry()) ) { ta._t=BOUND; ta._ts[0]= tb; }
