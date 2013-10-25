@@ -514,6 +514,11 @@ public class Vec extends Iced {
       UKV.remove(chunkKey(i),fs);
   }
 
+  @Override public boolean equals( Object o ) {
+    if( !(o instanceof Vec) ) return false;
+    return ((Vec)o)._key.equals(_key);
+  }
+  @Override public int hashCode() { return _key.hashCode(); }
 
   /**
    * Class representing the group of vectors.

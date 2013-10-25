@@ -68,9 +68,6 @@ public class Expr2Test extends TestUtil {
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
       // Higher-order function typing: fun is typed in the body of function(x)
       checkStr("function(fun){function(x){fun(x)*fun(x)}}(sgn)(-2)");
-      checkStr("ifelse(0,+,*)(1,2)");
-      checkStr("(0?+:*)(1,2)");
-      checkStr("(1? h.hex : (h.hex+1))[1,2]");
       // Slice assignment & map
       checkStr("map()");
       checkStr("map(1)");
@@ -85,6 +82,9 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[c(1,3,5),]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
+      checkStr("ifelse(0,+,*)(1,2)");
+      checkStr("(0?+:*)(1,2)");
+      checkStr("(1? h.hex : (h.hex+1))[1,2]");
 
       // Needed examples: 
       // (0) Whole column subset selection

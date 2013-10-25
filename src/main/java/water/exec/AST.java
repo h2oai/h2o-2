@@ -271,7 +271,16 @@ class ASTId extends AST {
     if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
     return id;
   }
-  @Override void exec(Env env) { env.push_slot(_depth,_num);  }
+  @Override void exec(Env env) { 
+    // Local scope?  Grab from the stack.
+    if( _depth ==0 ) {
+      env.push_slot(_depth,_num);
+      return;
+    }
+    // Nested scope?  need to grab from the nested-scope closure
+    ASTFunc fun = env.funScope(_depth);
+    fun._env.push_slot(_depth-1,_num,env);
+  }
   @Override public String toString() { return _id; }
 }
 
@@ -425,9 +434,7 @@ abstract class ASTOp extends AST {
     return ASTFunc.parseFcn(E);
   }
 
-  @Override void exec(Env env) { 
-    env.push(this); 
-  }
+  @Override void exec(Env env) { env.push(this); }
   abstract void apply(Env env, int argcnt);
 }
 
@@ -467,13 +474,23 @@ class ASTNrow extends ASTUniOp {
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }  
   @Override ASTOp make() {return this;} 
-  @Override void apply(Env env, int argcnt) { env.poppush(env.popFrame().numRows());  }
+  @Override void apply(Env env, int argcnt) {
+    Frame fr = env.popFrame();
+    double d = fr.numRows();
+    env.subRef(fr);
+    env.poppush(d);
+  }
 }
 class ASTNcol extends ASTUniOp { 
   ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }  
   @Override ASTOp make() {return this;} 
-  @Override void apply(Env env, int argcnt) { env.poppush(env.popFrame().numCols());  }
+  @Override void apply(Env env, int argcnt) {
+    Frame fr = env.popFrame();
+    double d = fr.numCols();
+    env.subRef(fr);
+    env.poppush(d);
+  }
 }
 
 abstract class ASTBinOp extends ASTOp {
@@ -616,6 +633,7 @@ class ASTRApply extends ASTOp {
 class ASTFunc extends ASTOp {
   final AST _body;
   final int _tmps;
+  Env _env;                     // Captured environment at each apply point
   ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) { super(vars,vtypes); _body = body; _tmps=tmps; }
   @Override String opStr() { return "fun"; }
   @Override ASTOp make() { throw H2O.fail();} 
@@ -658,6 +676,15 @@ class ASTFunc extends ASTOp {
     }
     return new ASTFunc(xvars,types,body,vars.size()-argcnt);
   }  
+  
+  @Override void exec(Env env) { 
+    // We need to push a Closure: the ASTFunc plus captured environment.
+    // Make a shallow copy (the body remains shared across all ASTFuncs).
+    // Then fill in the current environment.
+    ASTFunc fun = (ASTFunc)clone();
+    fun._env = env.capture();
+    env.push(fun);
+  }
   @Override void apply(Env env, int argcnt) { 
     int res_idx = env.pushScope(argcnt-1);
     env.push(_tmps);

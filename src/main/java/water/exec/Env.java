@@ -9,7 +9,7 @@ import water.fvec.*;
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
  */
-public class Env {
+public class Env extends Iced {
   // An environment is a classic stack of values, passed into AST's as the
   // execution state.  The 3 types we support are Frames (2-d tables of data),
   // doubles (which are an optimized form of a 1x1 Frame), and ASTs (which are
@@ -26,11 +26,20 @@ public class Env {
   int _tod;
 
   // Ref Counts for each vector
-  HashMap<Vec,Integer> _refcnt = new HashMap<Vec,Integer>();
+  transient final HashMap<Vec,Integer> _refcnt;
 
-  boolean _allow_tmp;           // Deep-copy allowed to tmp
-  boolean _busy_tmp;            // Assert temp is available for use
-  Frame  _tmp;                  // The One Big Active Tmp
+
+  transient boolean _allow_tmp;           // Deep-copy allowed to tmp
+  transient boolean _busy_tmp;            // Assert temp is available for use
+  transient Frame  _tmp;                  // The One Big Active Tmp
+
+  Env() {
+    _fr  = new Frame [4]; // Frame (or null if not a frame)
+    _d   = new double[4]; // Double (only if frame & func are null)
+    _fun = new ASTOp [4]; // Functions (or null if not a function)
+    _display= new int[4];
+    _refcnt = new HashMap<Vec,Integer>();
+  }
 
   public int sp() { return _sp; }
   public boolean isFrame() { return _fr [_sp-1] != null; }
@@ -62,30 +71,50 @@ public class Env {
 
   // Copy from display offset d, nth slot
   void push_slot( int d, int n ) {
+    assert d==0;                // Should use a fcn's closure for d>1
     int idx = _display[_tod-d]+n;
     push(1);
-    _fr [_sp-1] = addRef(_fr[idx]);
-    _d  [_sp-1] = _d  [idx];
-    _fun[_sp-1] = _fun[idx];
+    _fr [_sp-1] = addRef(_fr [idx]);
+    _d  [_sp-1] =        _d  [idx];
+    _fun[_sp-1] = addRef(_fun[idx]);
+  }
+  void push_slot( int d, int n, Env global ) {
+    assert _refcnt==null;       // Should use a fcn's closure for d>1
+    int idx = _display[_tod-d]+n;
+    int gidx = global._sp;
+    global.push(1);
+    global._fr [gidx] = global.addRef(_fr [idx]);
+    global._d  [gidx] =               _d  [idx] ;
+    global._fun[gidx] = global.addRef(_fun[idx]);
   }
   // Copy from TOS into a slot.  Does NOT pop results.
   void tos_into_slot( int d, int n ) {
+    assert d==0 || (d==1 && _display[_tod]==n+1);   // In a copy-on-modify language, only update the local scope, or return val
     int idx = _display[_tod-d]+n;
-    _fr [idx] = addRef(_fr[_sp-1]);
-    _d  [idx] = _d  [_sp-1];
-    _fun[idx] = _fun[_sp-1];
+    subRef(_fr [idx]);
+    subRef(_fun[idx]);
+    _fr [idx] = addRef(_fr [_sp-1]);
+    _d  [idx] =       _d   [_sp-1] ;
+    _fun[idx] = addRef(_fun[_sp-1]);
   }
 
   // Push a scope, leaving room for passed args
-  int pushScope(int args) { return _display[++_tod] = _sp-args; }
+  int pushScope(int args) { 
+    assert fun(-args-1) instanceof ASTFunc; // Expect a function under the args
+    return _display[++_tod] = _sp-args; 
+  }
+  // Grab the function for nested scope d
+  ASTFunc funScope( int d ) { return (ASTFunc)_fun[_display[_tod]-1]; }
 
   // Pop a slot.  Lowers refcnts on vectors.  Always leaves stack null behind
   // (to avoid dangling pointers stretching lifetimes).
-  void pop( ) {
+  void pop( Env global ) {
     assert _sp > _display[_tod]; // Do not over-pop current scope
-    _fun[--_sp]=null;
-    _fr [  _sp]=subRef(_fr[_sp]);
+    _sp--;
+    _fun[_sp]=global.subRef(_fun[_sp]);
+    _fr [_sp]=global.subRef(_fr [_sp]);
   }
+  void pop( ) { pop(this); }
   void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
 
   void popScope() {
@@ -101,12 +130,27 @@ public class Env {
   // Caller is responsible for tracking lifetime.
   public Frame  popFrame() { assert isFrame(); Frame fr = _fr[--_sp]; _fr[_sp]=null; assert allAlive(fr); return fr; }
   // Replace a function invocation with it's result
-  public void poppush(double d) {
-    assert isFun();
-    _fun[_sp-1] = null;
-    _d  [_sp-1] = d;
-    assert isDbl();
+  public void poppush(double d) { pop(); push(d); }
+
+  // Capture the current environment & return it (for some closure's future execution).
+  Env capture( ) { 
+    // Bump ref counts of everything captured
+    for( int i=0; i<_sp; i++ )
+      if( _fr[i] != null )
+        addRef(_fr[i]);
+    return new Env(this); 
   }
+  private Env( Env e ) {
+    _sp = e._sp;
+    _fr = Arrays.copyOf(e._fr ,_sp);
+    _d  = Arrays.copyOf(e._d  ,_sp);
+    _fun= Arrays.copyOf(e._fun,_sp);
+    _tod= e._tod;
+    _display = Arrays.copyOf(e._display,_tod+1);
+    // All other fields are ignored/zero
+    _refcnt = null;
+  }
+
 
   // Nice assert
   boolean allAlive(Frame fr) {
@@ -126,12 +170,22 @@ public class Env {
       if( cnt > 0 ) _refcnt.put(vec,cnt);
       else {
         if( fs == null ) fs = new Futures();
+        System.out.println("Removing "+vec);
         UKV.remove(vec._key,fs);
         _refcnt.remove(vec);
       }
     }
     if( fs != null )
       fs.blockForPending();
+    return null;
+  }
+  // Lower refcounts on all vecs captured in the inner environment
+  ASTOp subRef( ASTOp op ) {
+    if( op == null ) return null;
+    if( !(op instanceof ASTFunc) ) return null;
+    ASTFunc fun = (ASTFunc)op;
+    if( fun._env != null ) fun._env.subRef(this);
+    else System.out.println("Popping fcn object, never executed no environ capture");
     return null;
   }
 
@@ -145,9 +199,31 @@ public class Env {
     }
     return fr;
   }
+  ASTOp addRef( ASTOp op ) {
+    if( op == null ) return null;
+    if( !(op instanceof ASTFunc) ) return op;
+    ASTFunc fun = (ASTFunc)op;
+    if( fun._env != null ) fun._env.addRef(this);
+    else System.out.println("Pushing fcn object, never executed no environ capture");
+    return op;
+  }
+  private void addRef(Env global) {
+    for( int i=0; i<_sp; i++ ) {
+      if( _fr [i] != null ) global.addRef(_fr [i]);
+      if( _fun[i] != null ) global.addRef(_fun[i]);
+    }
+  }
+  private void subRef(Env global) {
+    for( int i=0; i<_sp; i++ ) {
+      if( _fr [i] != null ) global.subRef(_fr [i]);
+      if( _fun[i] != null ) global.subRef(_fun[i]);
+    }
+  }
+     
 
-  // Remove all embedded frames, but not things in the global scope.
-  public void remove() {  while( _tod > 0 ) popScope();  }
+  // Remove everything
+  public void remove(Env global) { while( _sp > 0 ) pop(global); }
+  public void remove() { remove(this); }
 
   // Done writing into all things.  Allow rollups.
   public void postWrite() {
