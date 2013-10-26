@@ -301,12 +301,15 @@ class ASTSum extends ASTOp {
   }
 }
 
-// Selective return
+// Selective return.  If the selector is a double, just eval both args and
+// return the selected one.  If the selector is an array, then it must be
+// compatible with argument arrays (if any), and the selection is done
+// element-by-element.
 class ASTIfElse extends ASTOp {
   static final String VARS[] = new String[]{"ifelse","tst","true","false"};
   static Type[] newsig() {
-    Type t1 = Type.unbound(0);
-    return new Type[]{t1,Type.DBL,t1,t1};
+    Type t1 = Type.dblary(), t2 = Type.dblary(), t3 = Type.dblary();
+    return new Type[]{Type.anyary(new Type[]{t1,t2,t3}),t1,t2,t3};
   }
   ASTIfElse( ) { super(VARS, newsig()); }
   @Override ASTOp make() {return new ASTIfElse();}
@@ -322,7 +325,68 @@ class ASTIfElse extends ASTOp {
     if( fal == null ) E.throwErr("Missing expression in trinary",x);
     return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
   }
-  @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
+  @Override void apply(Env env, int argcnt) { 
+    Frame  frtst=null, frtru= null, frfal= null;
+    double  dtst=  0 ,  dtru=   0 ,  dfal=   0 ;
+    if( env.isFrame() ) frfal= env.popFrame(); else dfal = env.popDbl();
+    if( env.isFrame() ) frtru= env.popFrame(); else dtru = env.popDbl();
+    if( env.isFrame() ) frtst= env.popFrame(); else dtst = env.popDbl();
+
+    // Single selection?
+    if( frtst==null ) {
+      if( frtru == null && frfal != null ||
+          frtru != null && frfal == null ) throw H2O.unimpl();
+      if( frtru == null ) env.push(dtst==0?dfal:dtru); // Just push doubles
+      else {                    // Push which frame
+        Frame fr = dtst==0 ? frfal : frtru ;
+        env.subRef(dtst==0 ? frtru : frfal);
+        env.push(1);  env._fr[env._sp-1]=fr; // Set without bumping refcnt
+      }
+      return;
+    }
+    
+    // Multi-selection
+    // Build a doAll frame
+    Frame fr  = new Frame(frtst); // Do-All frame
+    final int  ncols = frtst.numCols(); // Result column count
+    final long nrows = frtst.numRows(); // Result row count
+    if( frtru !=null ) {          // True is a Frame?
+      if( frtru.numCols() != ncols ||  frtru.numRows() != nrows )
+        throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frtru);
+      fr.add(frtru);
+    }
+    if( frfal !=null ) {          // False is a Frame?
+      if( frfal.numCols() != ncols ||  frfal.numRows() != nrows )
+        throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frfal);
+      fr.add(frfal);
+    }
+    final boolean t = frtru != null;
+    final boolean f = frfal != null;
+    final double fdtru = dtru;
+    final double fdfal = dfal;
+
+    // Run a selection picking true/false across the frame
+    Frame fr2 = new MRTask2() {
+        @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+          for( int i=0; i<nchks.length; i++ ) {
+            NewChunk n =nchks[i];
+            int off=i;
+            Chunk ctst=     chks[off];
+            Chunk ctru= t ? chks[off+=ncols] : null;
+            Chunk cfal= f ? chks[off+=ncols] : null;
+            int rlen = ctst._len;
+            for( int r=0; r<rlen; r++ )
+              if( ctst.isNA0(r) ) n.addNA();
+              else n.addNum(ctst.at0(r)!=0 ? (t ? ctru.at0(r) : fdtru) : (f ? cfal.at0(r) : fdfal));
+          }
+        }
+      }.doAll(ncols,fr).outputFrame(fr._names,fr.domains());
+    env.subRef(frtst);
+    if( frtru != null ) env.subRef(frtru);
+    if( frfal != null ) env.subRef(frfal);
+    env.pop();
+    env.push(fr2);
+  }
 }
 
 // --------------------------------------------------------------------------

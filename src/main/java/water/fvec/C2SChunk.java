@@ -58,6 +58,9 @@ public class C2SChunk extends Chunk {
     double dx = Math.log10(_scale);
     assert DParseTask.fitsIntoInt(dx);
     int x = (int)dx;
+    nc._ds = null;
+    nc._ls = MemoryManager.malloc8 (_len);
+    nc._xs = MemoryManager.malloc4 (_len);
     for( int i=0; i<_len; i++ ) {
       long res = UDP.get2(_mem,(i<<1)+OFF);
       if( res == _NA ) nc.setInvalid(i);

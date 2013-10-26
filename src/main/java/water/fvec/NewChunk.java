@@ -451,7 +451,7 @@ public class NewChunk extends Chunk {
     if( _ls != null ) {
       _ds = MemoryManager.malloc8d(_len);
       for( int j = 0; j<_len; j++ )
-        _ds[j] = _ls[i]*Math.pow(10,_xs[i]);
+        _ds[j] = _ls[j]*Math.pow(10,_xs[j]);
       _ls = null;  _xs = null;
     }
     _ds[i]=d;
