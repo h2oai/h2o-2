@@ -36,6 +36,7 @@ public abstract class ASTOp extends AST {
     // Misc
     put(new ASTCat ());
     put(new ASTSum ());
+    put(new ASTTable ());
     put(new ASTReduce());
     put(new ASTIfElse());
     put(new ASTRApply());
@@ -267,6 +268,50 @@ class ASTRunif extends ASTOp {
     env.subRef(fr);
     env.pop();
     env.push(new Frame(new String[]{"rnd"},new Vec[]{randVec}));
+  }
+}
+
+class ASTTable extends ASTOp {
+  ASTTable() { super(new String[]{"table", "ary"}, new Type[]{Type.ARY,Type.ARY}); }
+  @Override String opStr() { return "table"; }
+  @Override ASTOp make() { return new ASTTable(); }
+  @Override void apply(Env env, int argcnt) {
+    Frame fr = env.popFrame();
+    if (fr.vecs().length > 1)
+      throw new IllegalArgumentException("table does not apply to multiple cols.");
+    if (! fr.vecs()[0].isInt())
+      throw new IllegalArgumentException("table only applies to integer vector.");
+    int[]  domain = new Vec.CollectDomain(fr.vecs()[0]).doAll(fr).domain();
+    long[] counts = new Tabularize(domain).doAll(fr)._counts;
+    // Build output vecs
+    AppendableVec v0 = new AppendableVec(Vec.newKey());
+    NewChunk c0 = new NewChunk(v0,0);
+    for( int i=0; i<domain.length; i++ ) c0.addNum((double) domain[i]);
+    c0.close(0,null);
+    AppendableVec v1 = new AppendableVec(Vec.newKey());
+    NewChunk c1 = new NewChunk(v1,0);
+    for( int i=0; i<domain.length; i++ ) c1.addNum((double) counts[i]);
+    c1.close(0,null);
+    env.subRef(fr);
+    env.pop();
+    env.push(new Frame(new String[]{"factor","count"}, new Vec[]{v0.close(null), v1.close(null)}));
+  }
+  private static class Tabularize extends MRTask2<Tabularize> {
+    public final int[]  _domain;
+    public long[] _counts;
+
+    public Tabularize(int[] dom) { super(); _domain=dom; _counts=new long[dom.length];}
+    @Override public void map(Chunk chk) {
+      for (int i = 0; i < chk._len; i++)
+        if (! chk.isNA0(i)) {
+          int cls = Arrays.binarySearch(_domain,(int)chk.at80(i));
+          assert 0 <= cls && cls < _domain.length;
+          _counts[cls] ++;
+        }
+    }
+    @Override public void reduce(Tabularize other) {
+      for (int i = 0; i < _counts.length; i++) _counts[i] += other._counts[i];
+    }
   }
 }
 // Variable length; instances will be created of required length
