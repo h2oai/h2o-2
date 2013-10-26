@@ -5,6 +5,9 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_gbm
 import h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_jobs as h2j
 
+
+DO_PLOT_IF_KEVIN = False
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -74,11 +77,11 @@ class Basic(unittest.TestCase):
 
             # GBM(train iterate)****************************************
             h2o.beta_features = True
-            ntrees = 100
-            for max_depth in [5,10,15,20]:
+            ntrees = 2
+            for max_depth in [5,10,20]:
                 params = {
-                    'learn_rate': .2,
-                    'nbins': 1024,
+                    'learn_rate': .1,
+                    'nbins': 10,
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
@@ -123,7 +126,7 @@ class Basic(unittest.TestCase):
 
         h2o.beta_features = False
         # just plot the last one
-        if 1==1:
+        if DO_PLOT_IF_KEVIN:
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'

@@ -1,5 +1,6 @@
 package hex.pca;
 
+import hex.gram.Gram.GramTask;
 import water.Key;
 import water.Model;
 import water.api.*;
@@ -10,6 +11,9 @@ import water.fvec.Frame;
 public class PCAModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+  @API(help = "Column names expanded to accommodate categoricals")
+  final String[] namesExp;
 
   @API(help = "Standard deviation of each principal component")
   final double[] sdev;
@@ -23,6 +27,9 @@ public class PCAModel extends Model {
   @API(help = "Principal components (eigenvector) matrix")
   final double[][] eigVec;
 
+  @API(help="Offsets of categorical columns into the sdev vector. The last value is the offset of the first numerical column.")
+  final int[] catOffsets;
+
   @API(help = "Rank of eigenvector matrix")
   final int rank;
 
@@ -32,13 +39,15 @@ public class PCAModel extends Model {
   @API(help = "PCA parameters")
   final PCAParams params;
 
-  public PCAModel(Key selfKey, Key dataKey, Frame fr, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
+  public PCAModel(Key selfKey, Key dataKey, Frame fr, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
     super(selfKey, dataKey, fr);
     this.sdev = sdev;
     this.propVar = propVar;
     this.cumVar = cumVar;
     this.eigVec = eigVec;
     this.params = params;
+    this.catOffsets = gramt.catOffsets();
+    this.namesExp = namesExp();
     this.rank = rank;
     this.num_pc = num_pc;
   }
@@ -55,6 +64,21 @@ public class PCAModel extends Model {
   @Override public String toString(){
     StringBuilder sb = new StringBuilder("PCA Model (key=" + _selfKey + " , trained on " + _dataKey + "):\n");
     return sb.toString();
+  }
+
+  public String[] namesExp(){
+    final int cats = catOffsets.length-1;
+    int k = 0;
+    String [] res = new String[sdev.length];
+    for(int i = 0; i < cats; ++i) {
+      for(int j = 1; j < _domains[i].length; ++j)
+        res[k++] = _names[i] + "." + _domains[i][j];
+    }
+    final int nums = sdev.length-k;
+    for(int i = 0; i < nums; ++i)
+      res[k+i] = _names[cats+i];
+    assert k + nums == res.length;
+    return res;
   }
 
   public void generateHTML(String title, StringBuilder sb) {
@@ -99,7 +123,7 @@ public class PCAModel extends Model {
     // Each row is component of eigenvector
     for(int r = 0; r < eigVec.length; r++) {
       sb.append("<tr>");
-      sb.append("<th>").append(_names[r]).append("</th>");
+      sb.append("<th>").append(namesExp[r]).append("</th>");
       for( int c = 0; c < num_pc; c++ ) {
         double e = eigVec[r][c];
         sb.append("<td>").append(ElementBuilder.format(e)).append("</td>");

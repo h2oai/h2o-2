@@ -88,26 +88,26 @@ public class Summary2 extends Iced {
       double val = chk.at0(i);
       if (val == 0.) zeros++;
       // update min/max
-      if (val < mins[maxmin]) {
-        mins[maxmin] = val;
-        for (int k = 0; k < mins.length; k++)
-          if (mins[k] > mins[maxmin])
-            maxmin = k;
+      if (val < mins[mins.length-1]) {
+        int index = Arrays.binarySearch(mins, val);
+        if (index < 0) {
+          index = -(index + 1);
+          for (int j = mins.length-1; j > index; j--) mins[j] = mins[j-1];
+          mins[index] = val;
+        }
       }
-      if (val > maxs[minmax]) {
-        maxs[minmax] = val;
-        for (int k = 0; k < maxs.length; k++)
-          if (maxs[k] < maxs[minmax])
-            minmax = k;
+      if (val > maxs[0]) {
+        int index = Arrays.binarySearch(maxs, val);
+        if (index < 0) {
+          index = -(index + 1);
+          for (int j = 0; j < index-1; j++) maxs[j] = maxs[j+1];
+          maxs[index-1] = val;
+        }
       }
       // update histogram
       long binIdx = Math.round((val-start)*1000000.0/binsz)/1000000;
       ++bins[(int)binIdx];
     }
-
-    /* sort min and max */
-    Arrays.sort(mins);
-    Arrays.sort(maxs);
   }
 
   public Summary2 add(Summary2 other) {

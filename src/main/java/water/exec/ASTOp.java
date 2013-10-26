@@ -232,6 +232,7 @@ class ASTCat extends ASTOp {
     env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
   }
 }
+
 class ASTRunif extends ASTOp {
   @Override String opStr() { return "runif"; }
   ASTRunif() { super(new String[]{"runif","dbls"},
@@ -292,7 +293,7 @@ class ASTSum extends ASTOp {
       for( int i=0; i<chks.length; i++ ) {
         Chunk C = chks[i];
         for( int r=0; r<C._len; r++ )
-          _d += C.at(r);
+          _d += C.at0(r);
         if( Double.isNaN(_d) ) break;
       }
     }

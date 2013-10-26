@@ -72,15 +72,19 @@ public class Expr2Test extends TestUtil {
       checkStr("sum(c(1,3,5))");
       checkStr("sum(4,c(1,3,5),2,6)");
       checkStr("sum(1,h.hex,3)");
-      checkStr("apply(h.hex,2,sum)");
-      checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
-      checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
       // Higher-order function typing: fun is typed in the body of function(x)
       checkStr("function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)");
+      
+      checkStr("h.hex[h.hex[,2]>4,]");
+      checkStr("h.hex[h.hex[,2]>4,]=-99");
+
       // Slice assignment & map
+      checkStr("apply(h.hex,2,sum)");
+      checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
+      checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("map()");
       checkStr("map(1)");
       checkStr("map(+,h.hex,1)");

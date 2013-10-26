@@ -12,12 +12,13 @@ summary(prostate.hex)
 prostate.km = h2o.kmeans(prostate.hex, centers = 10, cols = c("AGE","RACE","GLEASON","CAPSULE","DCAPS"))
 print(prostate.km)
 
+prostate.data = as.data.frame(prostate.hex)
+prostate.clus = as.data.frame(prostate.km@model$cluster)
 # Plot categorized data
 # if(!"fpc" %in% rownames(installed.packages())) install.packages("fpc")
 if("fpc" %in% rownames(installed.packages())) {
   library(fpc)
-  prostate.data = as.data.frame(prostate.hex)
-  prostate.clus = as.data.frame(prostate.km@model$cluster)
+  
   par(mfrow=c(1,1))
   plotcluster(prostate.data, prostate.clus$response)
   title("K-Means Classification for k = 10")

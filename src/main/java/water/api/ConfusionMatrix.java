@@ -1,5 +1,7 @@
 package water.api;
 
+import java.util.Arrays;
+
 import water.*;
 import water.fvec.*;
 import water.util.*;
@@ -26,6 +28,10 @@ public class ConfusionMatrix extends Request2 {
   public Vec vpredict;
   class predictVecSelect extends VecClassSelect { predictVecSelect() { super("predict"); } }
 
+  @API(help="domain of the actual response")
+  String [] response_domain;
+  @API(help="domain of the predicted response")
+  String [] predicted_domain;
   @API(help="Confusion Matrix (or co-occurrence matrix)")
   public long cm[][];
 
@@ -37,14 +43,20 @@ public class ConfusionMatrix extends Request2 {
   //}
 
   @Override public Response serve() {
-    Vec va = null, vp = null;
+    Vec va = null,vp = null;
+    // Input handling
+    if( vactual==null || vpredict==null )
+      return Response.error("Missing actual or predict?");
+    if ( !vactual.isInt() || !vpredict.isInt())
+      return Response.error("Cannot provide confusion matrix for float vectors.");
+
     try {
-      if( vactual==null || vpredict==null )
-        throw new IllegalArgumentException("Missing actual or predict?");
       // Create a new vectors - it is cheap since vector are only adaptation vectors
       va = vactual .toEnum();
+      response_domain = va._domain;
       vp = vpredict.toEnum();
-      cm = new CM(va.domain().length, vp.domain().length).doAll(vactual,vpredict)._cm;
+      predicted_domain = vp._domain;
+      cm = new CM(va.domain().length, vp.domain().length).doAll(va,vp)._cm;
       return new Response(Response.Status.done,this,-1,-1,null);
     } catch (Throwable t) {
       Log.err(t);
@@ -101,8 +113,8 @@ public class ConfusionMatrix extends Request2 {
       acts[a] = sum;
     }
 
-    String adomain[] = show(acts ,vactual .domain());
-    String pdomain[] = show(preds,vpredict.domain());
+    String adomain[] = show(acts ,response_domain);
+    String pdomain[] = show(preds,predicted_domain);
 
     DocGen.HTML.arrayHead(sb);
     // Top row of CM

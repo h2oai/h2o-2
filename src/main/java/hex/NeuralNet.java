@@ -118,7 +118,7 @@ public class NeuralNet extends ValidatedJob {
           System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
           validResp = _validResponse;
         }
-        while( running() ) {
+        while( !cancelled() ) {
           long[][] cm = null;
           if( classification ) {
             int classes = ls[ls.length - 1]._units;

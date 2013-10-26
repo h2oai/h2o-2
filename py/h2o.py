@@ -998,6 +998,9 @@ class H2O(object):
                 raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
 
         else:
+            if 'response' not in response:
+                raise Exception("'response' not in response. Maybe h2o.beta_features=True is needed?")
+
             url = self.__url(response['response']['redirect_request'])
             params = response['response']['redirect_request_args']
 
@@ -1131,6 +1134,27 @@ class H2O(object):
         if (browseAlso | browse_json):
             print "Redoing the KMeansScore through the browser, no results saved though"
             h2b.browseJsonHistoryAsUrlLastMatch('KMeansScore')
+            time.sleep(5)
+        return a
+
+    # this is only for 2 (fvec)
+    def kmeans_model_view(self, model, timeoutSecs=30, **kwargs):
+        # defaults
+        params_dict = {
+            'model': model,
+            }
+        browseAlso = kwargs.get('browseAlso', False)
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans_model_view', print_params=True)
+        print "\nKMeans2ModelView params list:", params_dict
+        a = self.__do_json_request('2/KMeans2ModelView.json', timeout=timeoutSecs, params=params_dict)
+
+        # kmeans_score doesn't need polling?
+        verboseprint("\nKMeans2Model View result:", dump_json(a))
+
+        if (browseAlso | browse_json):
+            print "Redoing the KMeans2ModelView through the browser, no results saved though"
+            h2b.browseJsonHistoryAsUrlLastMatch('KMeans2ModelView')
             time.sleep(5)
         return a
 
@@ -1641,9 +1665,9 @@ class H2O(object):
     def predict_confusion_matrix(self, timeoutSecs=300, print_params=True, **kwargs):
         params_dict = {
             'actual': None,
-            'vactual': None,
+            'vactual': 'predict',
             'predict': None,
-            'vpredict': None,
+            'vpredict': 'predict',
         }
         # everyone should move to using this, and a full list in params_dict
         # only lets these params thru
@@ -1689,6 +1713,7 @@ class H2O(object):
             'cols'                 : None,
             'nbins'                : None,
             'classification'       : None,
+            'grid_parallelism'       : None,
         }
 
         # only lets these params thru
@@ -1784,7 +1809,7 @@ class H2O(object):
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
         start = time.time()
-        a = self.__do_json_request('NeuralNet.json',timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/NeuralNet.json',timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
             a['python_elapsed'] = time.time() - start

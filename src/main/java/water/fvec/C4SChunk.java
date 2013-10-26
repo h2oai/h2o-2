@@ -11,7 +11,7 @@ public class C4SChunk extends Chunk {
   static final int OFF=8+4;
   public double _scale;
   int _bias;
-  C4SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = (_mem.length-OFF)>>1;
+  C4SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = (_mem.length-OFF)>>2;
     _bias = bias; _scale = scale;
     UDP.set8d(_mem,0,scale);
     UDP.set4 (_mem,8,bias );
