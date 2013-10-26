@@ -20,8 +20,6 @@ public class Env extends Iced {
   double _d  [] = new double[4]; // Double (only if frame & func are null)
   ASTOp  _fun[] = new ASTOp [4]; // Functions (or null if not a function)
   int    _sp;                    // Stack pointer
-  VectorGroup _vg;
-  Frame _currentMasterFrame;
   // Also a Pascal-style display, one display entry per lexical scope.  Slot
   // zero is the start of the global scope (which contains all global vars like
   // hex Keys) and always starts at offset 0.
@@ -200,26 +198,6 @@ public class Env extends Iced {
       Integer I = _refcnt.get(vec);
       assert I==null || I>0;
       _refcnt.put(vec,I==null?1:I+1);
-    }
-    // (Temporary) Heuristic for picking up current master frame/group.
-    // When we're creating new vecs (e.g. runif(10000)) we want to have them compatible with current dataset.
-    // To be able to guess the right dataset in cases when the operation does not involve the dataset directly,
-    // we set the master frame as the latest referenced dataset frame(not tmp-frame!). I identify dataset frames by checking they're
-    // vector group's key (typically based on the underlying filename) for some common patterns such as nfs:/, hdfs:/ commonly found
-    // in filesystem paths.
-    //
-    // TODO If we keep this longer, we should at least ensure that all Frame's have vector group's based on some dataset and skip the
-    // dataset test.
-    VectorGroup vg = fr.anyVec().group();
-    String strKey = vg.vecKey(0).toString(); // ugly heuristic to recognize dataset's frame
-    if(strKey.contains(".csv") || strKey.contains(".data")
-        || strKey.contains("nfs:/")
-        || strKey.contains("hdfs:/")
-        || strKey.contains("s3n:/")
-        || strKey.contains("s3:/")
-        || strKey.contains("autoframe")){
-       _vg = vg;
-      _currentMasterFrame = fr;
     }
     return fr;
   }

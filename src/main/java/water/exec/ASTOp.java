@@ -235,15 +235,12 @@ class ASTCat extends ASTOp {
 class ASTRunif extends ASTOp {
   @Override String opStr() { return "runif"; }
   ASTRunif() { super(new String[]{"runif","dbls"},
-      new Type[]{Type.ARY,Type.DBL}); }
+      new Type[]{Type.ARY,Type.ARY}); }
   @Override ASTOp make() {return new ASTRunif();}
   @Override void apply(Env env, int argcnt) {
-    double n = env.popDbl();
-    if(env._currentMasterFrame == null)throw H2O.unimpl();
-    System.out.println("current master frame = " + env._currentMasterFrame);
-    Vec v = env._currentMasterFrame.anyVec();
-    long [] espc = v.espc();
-    long rem = (long)n;
+    Frame fr = env.popFrame();
+    long [] espc = fr.anyVec().espc();
+    long rem = fr.numRows();
     if(rem > espc[espc.length-1])throw H2O.unimpl();
     for(int i = 0; i < espc.length; ++i){
       if(rem <= espc[i]){
@@ -252,7 +249,7 @@ class ASTRunif extends ASTOp {
       }
     }
     espc[espc.length-1] = rem;
-    Vec randVec = new Vec(env._vg.addVecs(1)[0],espc);
+    Vec randVec = new Vec(fr.anyVec().group().addVecs(1)[0],espc);
     Futures fs = new Futures();
     DKV.put(randVec._key,randVec, fs);
     for(int i = 0; i < espc.length-1; ++i)
@@ -266,6 +263,7 @@ class ASTRunif extends ASTOp {
           c.set0(i, (float)rng.nextDouble());
       }
     }.doAll(randVec);
+    env.subRef(fr);
     env.pop();
     env.push(new Frame(new String[]{"rnd"},new Vec[]{randVec}));
   }
