@@ -2,8 +2,7 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.IllegalFormatException;
+import java.util.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -82,7 +81,7 @@ public class Frame extends Iced {
 
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
-    assert anyVec().group().equals(vec.group());
+    assert _vecs.length == 0 || anyVec().group().equals(vec.group());
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
@@ -329,6 +328,7 @@ public class Frame extends Iced {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
       String n = _names[c];
+      if( numRows()==0 ) { sb.append(n).append(' '); continue; }
       Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
       String f = fs[c] = C.pformat();  // Printable width
       int w=0;
@@ -458,7 +458,11 @@ public class Frame extends Iced {
   //   a sorted list of negative numbers (no dups) - all BUT these
   //   an unordered list of positive - just these, allowing dups
   // The numbering is 1-based; zero's are not allowed in the lists, nor are out-of-range.
-  public Frame deepSlice( long rows[], long cols[] ) {
+  public Frame deepSlice( Object orows, Object ocols ) {
+    // ocols is either a long[] or a Frame-of-1-Vec
+    if( ocols != null && !(ocols instanceof long[]) ) throw H2O.unimpl();
+    long[] cols = (long[])ocols;
+
     // Since cols is probably short convert to a positive list.
     int c2[] = null;
     if( cols==null ) {
@@ -478,8 +482,24 @@ public class Frame extends Iced {
         else j++;
       }
     }
+
     // Do Da Slice
-    return new DeepSlice(rows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    // orows is either a long[] or a Vec
+    if( orows == null || orows instanceof long[] )  
+      return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    Frame frows = (Frame)orows;
+    Vec vrows = frows.anyVec();
+    // It's a compatible Vec; use it as boolean selector.
+    // Build column names for the result.
+    Vec [] vecs = new Vec[c2.length+1];
+    String [] names = new String[c2.length+1];
+    for(int i = 0; i < c2.length; ++i){
+      vecs[i] = _vecs[c2[i]];
+      names[i] = _names[c2[i]];
+    }
+    vecs[c2.length] = vrows;
+    names[c2.length] = "predicate";
+    return new DeepSelect().doAll(c2.length,new Frame(names,vecs)).outputFrame(names(c2),domains(c2));
   }
 
   // Bulk (expensive) copy from 2nd cols into 1st cols.
@@ -524,6 +544,17 @@ public class Frame extends Iced {
           }
         }
         rlo=rhi;
+      }
+    }
+  }
+
+  private static class DeepSelect extends MRTask2<DeepSelect> {
+    @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+      Chunk pred = chks[chks.length-1];
+      for(int i = 0; i < pred._len; ++i){
+        if(pred.at0(i) != 0) 
+          for(int j = 0; j < chks.length-1; ++j)
+            nchks[j].addNum(chks[j].at0(i));
       }
     }
   }

@@ -47,8 +47,12 @@ public class Env extends Iced {
   public boolean isFun  () { return _fun[_sp-1] != null; }
   public boolean isDbl  () { return !isFrame() && !isFun(); }
   public boolean isFun  (int i) { return _fun[_sp+i] != null; }
+  // Peek operators
+  public Frame  fr (int i) { Frame fr = _fr [_sp+i]; assert fr != null; return fr; }
   public ASTOp  fun(int i) { ASTOp op = _fun[_sp+i]; assert op != null; return op; }
   public double dbl(int i) { double d = _d  [_sp+i]; return d; }
+
+  // Load the nth Id/variable from the named lexical scope, typed as a Frame
   public Frame frId(int d, int n) {
     int idx = _display[_tod-d]+n;
     assert _fr[idx]!=null;
@@ -133,11 +137,12 @@ public class Env extends Iced {
     _tod--;
   }
 
-  public double  popDbl  () { assert isDbl(); return _d  [--_sp]; }
-  public ASTOp   popFun  () { assert isFun(); ASTOp  op = _fun[--_sp]; _fun[_sp]=null; return op; }
-  // Pop & return a Frame; ref-cnt of all things remains unchanged.
+  // Pop & return a Frame or Fun; ref-cnt of all things remains unchanged.
   // Caller is responsible for tracking lifetime.
+  public double  popDbl () { assert isDbl  (); return _d  [--_sp]; }
+  public ASTOp   popFun () { assert isFun  (); ASTOp op = _fun[--_sp]; _fun[_sp]=null; return op; }
   public Frame  popFrame() { assert isFrame(); Frame fr = _fr [--_sp]; _fr [_sp]=null; assert allAlive(fr); return fr; }
+
   // Replace a function invocation with it's result
   public void poppush(double d) { pop(); push(d); }
 
@@ -191,14 +196,16 @@ public class Env extends Iced {
     return null;
   }
 
+  Vec addRef( Vec vec ) {
+    Integer I = _refcnt.get(vec);
+    assert I==null || I>0;
+    _refcnt.put(vec,I==null?1:I+1);
+    return vec;
+  }
   // Add a refcnt to all vecs in this frame
   Frame addRef( Frame fr ) {
     if( fr == null ) return null;
-    for( Vec vec : fr.vecs() ) {
-      Integer I = _refcnt.get(vec);
-      assert I==null || I>0;
-      _refcnt.put(vec,I==null?1:I+1);
-    }
+    for( Vec vec : fr.vecs() ) addRef(vec);
     return fr;
   }
   ASTOp addRef( ASTOp op ) {

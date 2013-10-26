@@ -203,11 +203,14 @@ class ASTSlice extends AST {
       // disallowing unless an active-temp is available, etc.
       // Eval cols before rows (R's eval order).
       Frame fr=env._fr[env._sp-1];  // Get without popping
-      long cols[] = select(fr.numCols(),_cols,env);
-      long rows[] = select(fr.numRows(),_rows,env);
+      Object cols = select(fr.numCols(),_cols,env);
+      Object rows = select(fr.numRows(),_rows,env);
       Frame fr2 = fr.deepSlice(rows,cols);
+      // After slicing, pop all expressions (cannot lower refcnt till after all uses)
+      if( cols!= null ) env.pop();
+      if( rows!= null ) env.pop();
       if( fr2 == null ) fr2 = new Frame(); // Replace the null frame with the zero-column frame
-      env.pop();                // Pop frame, lower ref
+      env.pop();                // Pop sliced frame, lower ref
       env.push(fr2);
     }
   }
@@ -216,12 +219,12 @@ class ASTSlice extends AST {
   // Error to mix negatives & positive.  Negative list is sorted, with dups
   // removed.  Positive list can have dups (which replicates cols) and is
   // ordered.  numbers.  1-based numbering; 0 is ignored & removed.
-  static long[] select( long len, AST ast, Env env ) {
+  static Object select( long len, AST ast, Env env ) {
     if( ast == null ) return null; // Trivial "all"
     ast.exec(env);
     long cols[];
     if( !env.isFrame() ) {
-      int col = (int)env.popDbl(); // Silent truncation
+      int col = (int)env._d[env._sp-1]; // Peek double; Silent truncation (R semantics)
       if( col > 0 && col >  len ) throw new IllegalArgumentException("Trying to select column "+col+" but only "+len+" present.");
       if( col < 0 && col < -len ) col=0; // Ignore a non-existent column
       if( col == 0 ) return new long[0];
@@ -229,18 +232,20 @@ class ASTSlice extends AST {
     }
     // Got a frame/list of results.
     // Decide if we're a toss-out or toss-in list
-    Frame fr = env.popFrame();
-    try {
-      if( fr.numCols() > 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
-      if(fr.numRows() > 10000) throw H2O.unimpl();
-      cols = MemoryManager.malloc8((int)fr.numRows());
-      Vec v = fr.anyVec();
-      for(int i = 0; i < cols.length; ++i){
-        if(v.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
-        cols[i] = v.at8(i);
-      }
-      return cols;
-    } finally { env.subRef(fr); }
+    Frame fr = env._fr[env._sp-1];  // Peek-frame
+    if( fr.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
+    Vec vec = fr.anyVec();
+    // Check for a matching column of bools.
+    if( fr.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
+      return fr;        // Boolean vector selection.
+    // Convert single vector to a list of longs selecting rows
+    if(fr.numRows() > 100000) throw H2O.unimpl();
+    cols = MemoryManager.malloc8((int)fr.numRows());
+    for(int i = 0; i < cols.length; ++i){
+      if(vec.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
+      cols[i] = vec.at8(i);
+    }
+    return cols;
   }
 
   @Override public String toString() { return "[,]"; }
@@ -308,7 +313,10 @@ class ASTAssign extends AST {
   // Parse a valid LHS= or return null
   static ASTAssign parse(Exec2 E, AST ast) {
     int x = E._x;
-    if( !E.peek('=') ) return null;
+    // Allow '=' and '<-' assignment
+    if( !E.peek('=') ) {
+      if( !(E.peek('<') && E.peek('-')) ) { E._x=x; return null; }
+    }
     AST ast2=ast;
     if( (ast instanceof ASTSlice) ) // Peek thru slice op
       ast2 = ((ASTSlice)ast)._ast;
@@ -332,8 +340,10 @@ class ASTAssign extends AST {
     String var = ASTId.parseNew(E);
     if( var == null ) return null;
     if( !E.peek('=') ) {        // Not an assignment
-      if( Exec2.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
-      E._x=x; return null;      // Let higher parse levels sort it out
+      if( !(E.peek('<') && E.peek('-')) ) { // The other assignment operator
+        if( Exec2.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
+        E._x=x; return null;      // Let higher parse levels sort it out
+      }
     }
     x = E._x;
     AST eval = parseCXExpr(E);
@@ -363,6 +373,7 @@ class ASTAssign extends AST {
       double d = env.popDbl();   // Only allows double into a double
       long row = (long)((ASTNum)slice._rows)._d;
       int  col = (int )((ASTNum)slice._cols)._d;
+      assert id._depth==0;      // Can only modify in the local scope.
       env.frId(id._depth,id._num).vecs()[col].set(row,d);
       env.push(d);
       return;

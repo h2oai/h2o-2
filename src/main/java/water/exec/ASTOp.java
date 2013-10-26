@@ -346,12 +346,15 @@ class ASTSum extends ASTOp {
   }
 }
 
-// Selective return
+// Selective return.  If the selector is a double, just eval both args and
+// return the selected one.  If the selector is an array, then it must be
+// compatible with argument arrays (if any), and the selection is done
+// element-by-element.
 class ASTIfElse extends ASTOp {
   static final String VARS[] = new String[]{"ifelse","tst","true","false"};
   static Type[] newsig() {
-    Type t1 = Type.unbound(0);
-    return new Type[]{t1,Type.DBL,t1,t1};
+    Type t1 = Type.dblary(), t2 = Type.dblary(), t3 = Type.dblary();
+    return new Type[]{Type.anyary(new Type[]{t1,t2,t3}),t1,t2,t3};
   }
   ASTIfElse( ) { super(VARS, newsig()); }
   @Override ASTOp make() {return new ASTIfElse();}
@@ -367,7 +370,68 @@ class ASTIfElse extends ASTOp {
     if( fal == null ) E.throwErr("Missing expression in trinary",x);
     return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
   }
-  @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
+  @Override void apply(Env env, int argcnt) { 
+    Frame  frtst=null, frtru= null, frfal= null;
+    double  dtst=  0 ,  dtru=   0 ,  dfal=   0 ;
+    if( env.isFrame() ) frfal= env.popFrame(); else dfal = env.popDbl();
+    if( env.isFrame() ) frtru= env.popFrame(); else dtru = env.popDbl();
+    if( env.isFrame() ) frtst= env.popFrame(); else dtst = env.popDbl();
+
+    // Single selection?
+    if( frtst==null ) {
+      if( frtru == null && frfal != null ||
+          frtru != null && frfal == null ) throw H2O.unimpl();
+      if( frtru == null ) env.push(dtst==0?dfal:dtru); // Just push doubles
+      else {                    // Push which frame
+        Frame fr = dtst==0 ? frfal : frtru ;
+        env.subRef(dtst==0 ? frtru : frfal);
+        env.push(1);  env._fr[env._sp-1]=fr; // Set without bumping refcnt
+      }
+      return;
+    }
+    
+    // Multi-selection
+    // Build a doAll frame
+    Frame fr  = new Frame(frtst); // Do-All frame
+    final int  ncols = frtst.numCols(); // Result column count
+    final long nrows = frtst.numRows(); // Result row count
+    if( frtru !=null ) {          // True is a Frame?
+      if( frtru.numCols() != ncols ||  frtru.numRows() != nrows )
+        throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frtru);
+      fr.add(frtru);
+    }
+    if( frfal !=null ) {          // False is a Frame?
+      if( frfal.numCols() != ncols ||  frfal.numRows() != nrows )
+        throw new IllegalArgumentException("Arrays must be same size: "+frtst+" vs "+frfal);
+      fr.add(frfal);
+    }
+    final boolean t = frtru != null;
+    final boolean f = frfal != null;
+    final double fdtru = dtru;
+    final double fdfal = dfal;
+
+    // Run a selection picking true/false across the frame
+    Frame fr2 = new MRTask2() {
+        @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+          for( int i=0; i<nchks.length; i++ ) {
+            NewChunk n =nchks[i];
+            int off=i;
+            Chunk ctst=     chks[off];
+            Chunk ctru= t ? chks[off+=ncols] : null;
+            Chunk cfal= f ? chks[off+=ncols] : null;
+            int rlen = ctst._len;
+            for( int r=0; r<rlen; r++ )
+              if( ctst.isNA0(r) ) n.addNA();
+              else n.addNum(ctst.at0(r)!=0 ? (t ? ctru.at0(r) : fdtru) : (f ? cfal.at0(r) : fdfal));
+          }
+        }
+      }.doAll(ncols,fr).outputFrame(fr._names,fr.domains());
+    env.subRef(frtst);
+    if( frtru != null ) env.subRef(frtru);
+    if( frfal != null ) env.subRef(frfal);
+    env.pop();
+    env.push(fr2);
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -375,20 +439,57 @@ class ASTIfElse extends ASTOp {
 // a single column.  Double is limited to 1 or 2, statically determined.
 class ASTRApply extends ASTOp {
   static final String VARS[] = new String[]{ "", "ary", "dbl1.2", "fun"};
-  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(0,new Type[]{Type.ARY,Type.ARY}) };
-  ASTRApply( ) { super(VARS,TYPES); }
+  ASTRApply( ) { super(VARS,new Type[]{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(0,new Type[]{Type.dblary(),Type.ARY}) }); }
   @Override String opStr(){ return "apply";}
-  @Override ASTOp make() {return this;}
+  @Override ASTOp make() {return new ASTRApply();}
   @Override void apply(Env env, int argcnt) {
-    ASTOp op = env.popFun();    // ary->ary but better be ary[,1]->ary[,1]
-    double d = env.popDbl();
-    Frame fr = env.popFrame();  // The Frame to work on
-    if( d==2 || d== -1 ) {      // Work on columns
+    int oldsp = env._sp;
+    // Peek everything from the stack
+    ASTOp op = env.fun(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
+    double d = env.dbl(-2);    // MARGIN: ROW=1, COLUMN=2 selector
+    Frame fr = env.fr (-3);    // The Frame to work on
+    if( d==2 || d== -1 ) {     // Work on columns?
+      int ncols = fr.numCols();
 
+      // If results are doubles, make vectors-of-length-1 for them all
+      Key keys[] = null;
+      if( op._t.ret().isDbl() ) {
+        keys = Vec.VectorGroup.VG_LEN1.addVecs(ncols);
+      } else assert op._t.ret().isAry();
+
+      // Apply the function across columns
+      Frame fr2 = new Frame(new String[0],new Vec[0]);
+      Vec vecs[] = fr.vecs();
+      for( int i=0; i<ncols; i++ ) {
+        env.push(op);
+        env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
+        env.fun(-2).apply(env,2);
+        Vec v;
+        if( keys != null ) {    // Doubles or Frame results?
+          // Jam the double into a Vec of its own
+          AppendableVec av = new AppendableVec(keys[i]);
+          NewChunk nc = new NewChunk(av,0);
+          nc.addNum(env.popDbl());
+          nc.close(0,null);
+          env.addRef(v = av.close(null));
+        } else {                      // Frame results
+          Frame res = env.popFrame(); // Remove without lowering refcnt
+          if( res.numCols() != 1 ) throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
+          v = res.anyVec();
+        }
+        fr2.add(fr._names[i],v); // Add, with refcnt already +1
+      }
+      // At this point, fr2 has refcnt++ already, and the stack is still full.
+      env.pop(4);
+      env.push(1);
+      env._fr[env._sp-1] = fr2;
+      assert env.isFrame();
+      assert env._sp == oldsp-4+1;
+      return;
+    } 
+    if( d==1 || d == -2 )       // Work on rows
       throw H2O.unimpl();
-    } else if( d==1 || d == -2 ) { // Work on rows
-      throw H2O.unimpl();
-    } else throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
+    throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
   }
 }
 

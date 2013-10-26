@@ -11,7 +11,8 @@ public class Expr2Test extends TestUtil {
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
-      File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
+      //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
+      File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
@@ -50,15 +51,17 @@ public class Expr2Test extends TestUtil {
       checkStr("x+2");
       checkStr("2+x");
       checkStr("x=1");
+      checkStr("x<-1");
       checkStr("x=1;x=h.hex");  // Allowed to change types via shadowing at REPL level
       checkStr("a=h.hex");      // Top-level assignment back to H2O.STORE
-      checkStr("x=+");
-      checkStr("(h.hex+1)=2");
+      checkStr("x<-+");
+      checkStr("(h.hex+1)<-2");
       checkStr("h.hex[nrow(h.hex=1),]");
-      checkStr("h.hex[2,3]=4;");
+      checkStr("h.hex[2,3]<-4;");
       checkStr("c(1,3,5)");
       checkStr("function(=){x+1}(2)");
       checkStr("function(x,=){x+1}(2)");
+      checkStr("function(x,<-){x+1}(2)");
       checkStr("function(x,x){x+1}(2)");
       checkStr("function(x,y,z){x[]}(h.hex,1,2)");
       checkStr("function(x){x[]}(2)");
@@ -72,19 +75,38 @@ public class Expr2Test extends TestUtil {
       checkStr("sum(c(1,3,5))");
       checkStr("sum(4,c(1,3,5),2,6)");
       checkStr("sum(1,h.hex,3)");
+      checkStr("h.hex[,c(1,3,5)]");
+      checkStr("h.hex[c(1,3,5),]");
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
       // Higher-order function typing: fun is typed in the body of function(x)
       checkStr("function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)");
-      
+      // Filter/selection
       checkStr("h.hex[h.hex[,2]>4,]");
-      checkStr("h.hex[h.hex[,2]>4,]=-99");
-
-      // Slice assignment & map
+      checkStr("a=c(1,2,3);a[a[,1]>10,1]");
       checkStr("apply(h.hex,2,sum)");
       checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
+      checkStr("apply(h.hex,2,function(x){h.hex})");
+      checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
+
+      checkStr("ifelse(0,1,2)");
+      checkStr("ifelse(0,h.hex+1,h.hex+2)");
+      checkStr("ifelse(h.hex>3,99,h.hex)");
+      // Impute the mean
+      checkStr("apply(h.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})");
+
+      checkStr("ifelse(0,+,*)(1,2)");
+      checkStr("(0?+:*)(1,2)");
+      checkStr("(1? h.hex : (h.hex+1))[1,2]");
+
+      // Slice assignment & map
+      checkStr("h.hex[h.hex[,2]>4,]=-99");
+      checkStr("h.hex[2,]=h.hex[7,]");
+      checkStr("h.hex[,2]=h.hex[,7]+1");
+      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
+      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
       checkStr("map()");
       checkStr("map(1)");
       checkStr("map(+,h.hex,1)");
@@ -92,15 +114,6 @@ public class Expr2Test extends TestUtil {
       checkStr("map(function(x){x[];1},h.hex)");
       checkStr("map(function(a,b,d){a+b+d},h.hex,h.hex,1)");
       checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
-      checkStr("h.hex[2,]=h.hex[7,]");
-      checkStr("h.hex[,2]=h.hex[,7]+1");
-      checkStr("h.hex[,c(1,3,5)]");
-      checkStr("h.hex[c(1,3,5),]");
-      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
-      checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
-      checkStr("ifelse(0,+,*)(1,2)");
-      checkStr("(0?+:*)(1,2)");
-      checkStr("(1? h.hex : (h.hex+1))[1,2]");
 
       // Needed examples: 
       // (0) DONE Whole column subset selection
