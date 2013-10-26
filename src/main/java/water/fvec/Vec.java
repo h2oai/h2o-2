@@ -549,7 +549,9 @@ public class Vec extends Iced {
    * @author tomasnykodym
    *
    */
-  public static class VectorGroup extends Iced{
+  public static class VectorGroup extends Iced {
+    // The common shared vector group for length==1 vectors
+    public static VectorGroup VG_LEN1 = new VectorGroup();
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}

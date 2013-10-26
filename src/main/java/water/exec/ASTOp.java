@@ -330,20 +330,57 @@ class ASTIfElse extends ASTOp {
 // a single column.  Double is limited to 1 or 2, statically determined.
 class ASTRApply extends ASTOp {
   static final String VARS[] = new String[]{ "", "ary", "dbl1.2", "fun"};
-  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(0,new Type[]{Type.ARY,Type.ARY}) };
-  ASTRApply( ) { super(VARS,TYPES); }
+  ASTRApply( ) { super(VARS,new Type[]{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(0,new Type[]{Type.dblary(),Type.ARY}) }); }
   @Override String opStr(){ return "apply";}
-  @Override ASTOp make() {return this;}
+  @Override ASTOp make() {return new ASTRApply();}
   @Override void apply(Env env, int argcnt) {
-    ASTOp op = env.popFun();    // ary->ary but better be ary[,1]->ary[,1]
-    double d = env.popDbl();
-    Frame fr = env.popFrame();  // The Frame to work on
-    if( d==2 || d== -1 ) {      // Work on columns
+    int oldsp = env._sp;
+    // Peek everything from the stack
+    ASTOp op = env.fun(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
+    double d = env.dbl(-2);    // MARGIN: ROW=1, COLUMN=2 selector
+    Frame fr = env.fr (-3);    // The Frame to work on
+    if( d==2 || d== -1 ) {     // Work on columns?
+      int ncols = fr.numCols();
 
+      // If results are doubles, make vectors-of-length-1 for them all
+      Key keys[] = null;
+      if( op._t.ret().isDbl() ) {
+        keys = Vec.VectorGroup.VG_LEN1.addVecs(ncols);
+      } else assert op._t.ret().isAry();
+
+      // Apply the function across columns
+      Frame fr2 = new Frame(new String[0],new Vec[0]);
+      Vec vecs[] = fr.vecs();
+      for( int i=0; i<ncols; i++ ) {
+        env.push(op);
+        env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
+        env.fun(-2).apply(env,2);
+        Vec v;
+        if( keys != null ) {    // Doubles or Frame results?
+          // Jam the double into a Vec of its own
+          AppendableVec av = new AppendableVec(keys[i]);
+          NewChunk nc = new NewChunk(av,0);
+          nc.addNum(env.popDbl());
+          nc.close(0,null);
+          env.addRef(v = av.close(null));
+        } else {                      // Frame results
+          Frame res = env.popFrame(); // Remove without lowering refcnt
+          if( res.numCols() != 1 ) throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
+          v = res.anyVec();
+        }
+        fr2.add(fr._names[i],v); // Add, with refcnt already +1
+      }
+      // At this point, fr2 has refcnt++ already, and the stack is still full.
+      env.pop(4);
+      env.push(1);
+      env._fr[env._sp-1] = fr2;
+      assert env.isFrame();
+      assert env._sp == oldsp-4+1;
+      return;
+    } 
+    if( d==1 || d == -2 )       // Work on rows
       throw H2O.unimpl();
-    } else if( d==1 || d == -2 ) { // Work on rows
-      throw H2O.unimpl();
-    } else throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
+    throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
   }
 }
 

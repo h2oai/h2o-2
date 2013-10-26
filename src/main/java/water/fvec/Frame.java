@@ -81,7 +81,7 @@ public class Frame extends Iced {
 
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
-    assert anyVec().group().equals(vec.group());
+    assert _vecs.length == 0 || anyVec().group().equals(vec.group());
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);

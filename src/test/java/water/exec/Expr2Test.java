@@ -72,6 +72,8 @@ public class Expr2Test extends TestUtil {
       checkStr("sum(c(1,3,5))");
       checkStr("sum(4,c(1,3,5),2,6)");
       checkStr("sum(1,h.hex,3)");
+      checkStr("h.hex[,c(1,3,5)]");
+      checkStr("h.hex[c(1,3,5),]");
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
@@ -80,13 +82,15 @@ public class Expr2Test extends TestUtil {
       // Filter/selection
       checkStr("h.hex[h.hex[,2]>4,]");
       checkStr("a=c(1,2,3);a[a[,1]>10,1]");
+      checkStr("apply(h.hex,2,sum)");
+      checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
+      checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
+      checkStr("apply(h.hex,2,function(x){h.hex})");
+      checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
 
       checkStr("h.hex[h.hex[,2]>4,]=-99");
 
       // Slice assignment & map
-      checkStr("apply(h.hex,2,sum)");
-      checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
-      checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("map()");
       checkStr("map(1)");
       checkStr("map(+,h.hex,1)");
@@ -96,8 +100,6 @@ public class Expr2Test extends TestUtil {
       checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
       checkStr("h.hex[2,]=h.hex[7,]");
       checkStr("h.hex[,2]=h.hex[,7]+1");
-      checkStr("h.hex[,c(1,3,5)]");
-      checkStr("h.hex[c(1,3,5),]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
       checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
       checkStr("ifelse(0,+,*)(1,2)");

@@ -368,6 +368,7 @@ class ASTAssign extends AST {
       double d = env.popDbl();   // Only allows double into a double
       long row = (long)((ASTNum)slice._rows)._d;
       int  col = (int )((ASTNum)slice._cols)._d;
+      assert id._depth==0;      // Can only modify in the local scope.
       env.frId(id._depth,id._num).vecs()[col].set(row,d);
       env.push(d);
       return;
