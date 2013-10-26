@@ -1,4 +1,4 @@
-package water;
+package samples;
 
 import hex.*;
 import hex.Layer.Tanh;
@@ -11,6 +11,8 @@ import java.io.*;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 
+import water.H2O;
+import water.TestUtil;
 import water.fvec.*;
 import water.util.Utils;
 

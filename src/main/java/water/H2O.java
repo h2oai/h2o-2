@@ -154,7 +154,7 @@ public final class H2O {
   }
 
   // Static list of acceptable Cloud members
-  static HashSet<H2ONode> STATIC_H2OS = null;
+  public static HashSet<H2ONode> STATIC_H2OS = null;
 
   // Reverse cloud index to a cloud; limit of 256 old clouds.
   static private final H2O[] CLOUDS = new H2O[256];

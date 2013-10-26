@@ -1,69 +1,66 @@
-package water;
+package samples;
 
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.Random;
 
+import water.*;
 import water.fvec.*;
 import water.util.Utils;
 
 /**
  * Simplified version of H2O k-means algorithm for better readability.
  */
-public class Sample06_KMeansNewAPI {
+public class MinimalKMeans extends Job {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserCode.class, args);
+    CloudLocal1.launch(MinimalKMeans.class);
   }
 
-  public static class UserCode {
-    public static void userMain(String[] args) throws Exception {
-      H2O.main(args);
+  @Override protected void exec() {
+    // Load and parse a file. Data is distributed to other nodes in a round-robin way
+    Key file = NFSFileVec.make(new File("lib/resources/datasets/gaussian.csv"));
+    Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
 
-      // Load and parse a file. Data is distributed to other nodes in a round-robin way
-      Key file = NFSFileVec.make(new File("lib/resources/datasets/gaussian.csv"));
-      Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
+    // Optionally create a frame with less columns, e.g. skip first
+    frame = new Frame(Utils.remove(frame._names, 0), Utils.remove(frame.vecs(), 0));
 
-      // Optionally create a frame with less columns, e.g. skip first
-      frame = new Frame(Utils.remove(frame._names, 0), Utils.remove(frame.vecs(), 0));
+    // Create k clusters as arrays of doubles
+    int k = 7;
+    double[][] clusters = new double[k][frame.vecs().length];
 
-      // Create k clusters as arrays of doubles
-      int k = 7;
-      double[][] clusters = new double[k][frame.vecs().length];
-
-      // Initialize first cluster to random row
-      Random rand = new Random();
-      for( int cluster = 0; cluster < clusters.length; cluster++ ) {
-        long row = Math.max(0, (long) (rand.nextDouble() * frame.vecs().length) - 1);
-        for( int i = 0; i < frame.vecs().length; i++ ) {
-          Vec v = frame.vecs()[i];
-          clusters[cluster][i] = v.at(row);
-        }
+    // Initialize first cluster to random row
+    Random rand = new Random();
+    for( int cluster = 0; cluster < clusters.length; cluster++ ) {
+      long row = Math.max(0, (long) (rand.nextDouble() * frame.vecs().length) - 1);
+      for( int i = 0; i < frame.vecs().length; i++ ) {
+        Vec v = frame.vecs()[i];
+        clusters[cluster][i] = v.at(row);
       }
+    }
 
-      // Iterate over the dataset and show error for each step
-      for( int i = 0; i < 10; i++ ) {
-        KMeans task = new KMeans();
-        task._clusters = clusters;
-        task.doAll(frame);
+    // Iterate over the dataset and show error for each step
+    for( int i = 0; i < 10; i++ ) {
+      KMeans task = new KMeans();
+      task._clusters = clusters;
+      task.doAll(frame);
 
-        for( int c = 0; c < clusters.length; c++ ) {
-          if( task._counts[c] > 0 ) {
-            for( int v = 0; v < frame.vecs().length; v++ ) {
-              double value = task._sums[c][v] / task._counts[c];
-              clusters[c][v] = value;
-            }
+      for( int c = 0; c < clusters.length; c++ ) {
+        if( task._counts[c] > 0 ) {
+          for( int v = 0; v < frame.vecs().length; v++ ) {
+            double value = task._sums[c][v] / task._counts[c];
+            clusters[c][v] = value;
           }
         }
-        System.out.println("Error is " + task._error);
       }
+      System.out.println("Error is " + task._error);
+    }
 
-      System.out.println("Clusters:");
-      DecimalFormat df = new DecimalFormat("#.00");
-      for( int c = 0; c < clusters.length; c++ ) {
-        for( int v = 0; v < frame.vecs().length; v++ )
-          System.out.print(df.format(clusters[c][v]) + ", ");
-        System.out.println("");
-      }
+    System.out.println("Clusters:");
+    DecimalFormat df = new DecimalFormat("#.00");
+    for( int c = 0; c < clusters.length; c++ ) {
+      for( int v = 0; v < frame.vecs().length; v++ )
+        System.out.print(df.format(clusters[c][v]) + ", ");
+      System.out.println("");
     }
   }
 
