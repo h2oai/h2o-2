@@ -47,8 +47,9 @@ class Basic(unittest.TestCase):
             ]
         else:
             csvFilenameAll = [
-                ("covtype20x.data", "cA", 50, 20),
+                ("covtype.data", "cA", 50, 1),
                 ("covtype20x.data", "cB", 50, 20),
+                ("covtype20x.data", "cC", 50, 20),
             ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
@@ -86,7 +87,7 @@ class Basic(unittest.TestCase):
                 # create the expected answer...i.e. N * first
                 compare = [float(x)/resultMult for x in colResultList] 
                 for i,(g,c) in enumerate(zip(good, compare)):
-                    self.assertEqual(g, c, 'i: %s compare: %s is not equal to good: %s (first try * resultMult). resultMult %s' % (i, c, g, resultMult))
+                    self.assertEqual(g, c, 'i: %s compare: %s is not equal to good: %s . resultMult %s' % (i, c, g, resultMult))
 
 if __name__ == '__main__':
     h2o.unit_main()
