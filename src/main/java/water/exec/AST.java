@@ -206,8 +206,11 @@ class ASTSlice extends AST {
       Object cols = select(fr.numCols(),_cols,env);
       Object rows = select(fr.numRows(),_rows,env);
       Frame fr2 = fr.deepSlice(rows,cols);
+      // After slicing, pop all expressions (cannot lower refcnt till after all uses)
+      if( cols!= null ) env.pop();
+      if( rows!= null ) env.pop();
       if( fr2 == null ) fr2 = new Frame(); // Replace the null frame with the zero-column frame
-      env.pop();                // Pop frame, lower ref
+      env.pop();                // Pop sliced frame, lower ref
       env.push(fr2);
     }
   }
@@ -221,7 +224,7 @@ class ASTSlice extends AST {
     ast.exec(env);
     long cols[];
     if( !env.isFrame() ) {
-      int col = (int)env.popDbl(); // Silent truncation
+      int col = (int)env._d[env._sp-1]; // Peek double; Silent truncation (R semantics)
       if( col > 0 && col >  len ) throw new IllegalArgumentException("Trying to select column "+col+" but only "+len+" present.");
       if( col < 0 && col < -len ) col=0; // Ignore a non-existent column
       if( col == 0 ) return new long[0];
@@ -229,23 +232,20 @@ class ASTSlice extends AST {
     }
     // Got a frame/list of results.
     // Decide if we're a toss-out or toss-in list
-    Frame fr = env.popFrame();
-    try {
-      if( fr.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
-      Vec vec = fr.anyVec();
-      // Check for a matching column of bools.
-      if( fr.numRows() == len && vec.min()==0 && vec.max()==1 && vec.isInt() ){
-        fr = null;
-        return vec;        // Boolean vector selection.
-      }
-      if(fr.numRows() > 10000) throw H2O.unimpl();
-      cols = MemoryManager.malloc8((int)fr.numRows());
-      for(int i = 0; i < cols.length; ++i){
-        if(vec.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
-        cols[i] = vec.at8(i);
-      }
-      return cols;
-    } finally { env.subRef(fr); }
+    Frame fr = env._fr[env._sp-1];  // Peek-frame
+    if( fr.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
+    Vec vec = fr.anyVec();
+    // Check for a matching column of bools.
+    if( fr.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
+      return fr;        // Boolean vector selection.
+    // Convert single vector to a list of longs selecting rows
+    if(fr.numRows() > 100000) throw H2O.unimpl();
+    cols = MemoryManager.malloc8((int)fr.numRows());
+    for(int i = 0; i < cols.length; ++i){
+      if(vec.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
+      cols[i] = vec.at8(i);
+    }
+    return cols;
   }
 
   @Override public String toString() { return "[,]"; }

@@ -77,8 +77,10 @@ public class Expr2Test extends TestUtil {
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
       // Higher-order function typing: fun is typed in the body of function(x)
       checkStr("function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)");
-      
+      // Filter/selection
       checkStr("h.hex[h.hex[,2]>4,]");
+      checkStr("a=c(1,2,3);a[a[,1]>10,1]");
+
       checkStr("h.hex[h.hex[,2]>4,]=-99");
 
       // Slice assignment & map

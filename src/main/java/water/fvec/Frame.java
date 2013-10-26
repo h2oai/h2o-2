@@ -328,6 +328,7 @@ public class Frame extends Iced {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
       String n = _names[c];
+      if( numRows()==0 ) { sb.append(n).append(' '); continue; }
       Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
       String f = fs[c] = C.pformat();  // Printable width
       int w=0;
@@ -458,8 +459,10 @@ public class Frame extends Iced {
   //   an unordered list of positive - just these, allowing dups
   // The numbering is 1-based; zero's are not allowed in the lists, nor are out-of-range.
   public Frame deepSlice( Object orows, Object ocols ) {
+    // ocols is either a long[] or a Frame-of-1-Vec
     if( ocols != null && !(ocols instanceof long[]) ) throw H2O.unimpl();
     long[] cols = (long[])ocols;
+
     // Since cols is probably short convert to a positive list.
     int c2[] = null;
     if( cols==null ) {
@@ -479,12 +482,15 @@ public class Frame extends Iced {
         else j++;
       }
     }
-    if( orows == null || orows instanceof long[] ) {
-      long rows[] = (long[]) orows;
-      // Do Da Slice
-      return new DeepSlice(rows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
-    }
-    Vec vrows = (Vec)orows;
+
+    // Do Da Slice
+    // orows is either a long[] or a Vec
+    if( orows == null || orows instanceof long[] )  
+      return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    Frame frows = (Frame)orows;
+    Vec vrows = frows.anyVec();
+    // It's a compatible Vec; use it as boolean selector.
+    // Build column names for the result.
     Vec [] vecs = new Vec[c2.length+1];
     String [] names = new String[c2.length+1];
     for(int i = 0; i < c2.length; ++i){
@@ -546,7 +552,8 @@ public class Frame extends Iced {
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       Chunk pred = chks[chks.length-1];
       for(int i = 0; i < pred._len; ++i){
-        if(pred.at0(i) == 1) for(int j = 0; j < chks.length-1; ++j)
+        if(pred.at0(i) != 0) 
+          for(int j = 0; j < chks.length-1; ++j)
             nchks[j].addNum(chks[j].at0(i));
       }
     }
