@@ -1,6 +1,7 @@
 setGeneric("h2o.checkClient", function(object) { standardGeneric("h2o.checkClient") })
 setGeneric("h2o.ls", function(object, pattern) { standardGeneric("h2o.ls") })
 setGeneric("h2o.rm", function(object, keys) { standardGeneric("h2o.rm") })
+setGeneric("h2o.assign", function(data, key) { standardGeneric("h2o.assign") })
 # setGeneric("h2o.importFile", function(object, path, key = "", header, parse = TRUE) { standardGeneric("h2o.importFile") })
 setGeneric("h2o.importFile", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFile") })
 setGeneric("h2o.importFolder", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFolder") })
@@ -78,6 +79,14 @@ setMethod("h2o.rm", signature(object="H2OClient", keys="character"), function(ob
   # myKeys = h2o.ls(object)$Key
   # if(length(grep("Result_[[:digit:]]+.hex", myKeys)) == 0)
   #  RESULT_COUNT = 0
+})
+
+setMethod("h2o.assign", signature(data="H2OParsedData2", key="character"), function(data, key) {
+  if(length(key) == 0) stop("Key cannot be an empty string!")
+  if(key == data@key) stop(paste("Destination key must differ from data key", data@key))
+  res = h2o.__exec2_dest_key(data@h2o, data@key, key)
+  data@key = key
+  data
 })
 
 # Data import operations
