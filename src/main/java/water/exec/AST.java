@@ -203,8 +203,8 @@ class ASTSlice extends AST {
       // disallowing unless an active-temp is available, etc.
       // Eval cols before rows (R's eval order).
       Frame fr=env._fr[env._sp-1];  // Get without popping
-      long cols[] = select(fr.numCols(),_cols,env);
-      long rows[] = select(fr.numRows(),_rows,env);
+      Object cols = select(fr.numCols(),_cols,env);
+      Object rows = select(fr.numRows(),_rows,env);
       Frame fr2 = fr.deepSlice(rows,cols);
       if( fr2 == null ) fr2 = new Frame(); // Replace the null frame with the zero-column frame
       env.pop();                // Pop frame, lower ref
@@ -216,7 +216,7 @@ class ASTSlice extends AST {
   // Error to mix negatives & positive.  Negative list is sorted, with dups
   // removed.  Positive list can have dups (which replicates cols) and is
   // ordered.  numbers.  1-based numbering; 0 is ignored & removed.
-  static long[] select( long len, AST ast, Env env ) {
+  static Object select( long len, AST ast, Env env ) {
     if( ast == null ) return null; // Trivial "all"
     ast.exec(env);
     long cols[];
@@ -231,13 +231,16 @@ class ASTSlice extends AST {
     // Decide if we're a toss-out or toss-in list
     Frame fr = env.popFrame();
     try {
-      if( fr.numCols() > 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
+      if( fr.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
+      Vec vec = fr.anyVec();
+      // Check for a matching column of bools.
+      if( fr.numRows() == len && vec.min()==0 && vec.max()==1 && vec.isInt() )
+        return vec;        // Boolean vector selection.
       if(fr.numRows() > 10000) throw H2O.unimpl();
       cols = MemoryManager.malloc8((int)fr.numRows());
-      Vec v = fr.anyVec();
       for(int i = 0; i < cols.length; ++i){
-        if(v.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
-        cols[i] = v.at8(i);
+        if(vec.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
+        cols[i] = vec.at8(i);
       }
       return cols;
     } finally { env.subRef(fr); }

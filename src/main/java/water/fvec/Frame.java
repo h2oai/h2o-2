@@ -458,7 +458,9 @@ public class Frame extends Iced {
   //   a sorted list of negative numbers (no dups) - all BUT these
   //   an unordered list of positive - just these, allowing dups
   // The numbering is 1-based; zero's are not allowed in the lists, nor are out-of-range.
-  public Frame deepSlice( long rows[], long cols[] ) {
+  public Frame deepSlice( Object orows, Object ocols ) {
+    if( ocols != null && !(ocols instanceof long[]) ) throw H2O.unimpl();
+    long[] cols = (long[])ocols;
     // Since cols is probably short convert to a positive list.
     int c2[] = null;
     if( cols==null ) {
@@ -478,8 +480,15 @@ public class Frame extends Iced {
         else j++;
       }
     }
-    // Do Da Slice
-    return new DeepSlice(rows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    if( orows == null || orows instanceof long[] ) {
+      long rows[] = (long[]) orows;
+      // Do Da Slice
+      return new DeepSlice(rows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    }
+    Vec vrows = (Vec)orows;
+    Frame fr2 = new Frame(this);
+    fr2.add("predicate",vrows);
+    return new DeepSelect(c2).doAll(c2.length,fr2).outputFrame(names(c2),domains(c2));
   }
 
   // Bulk (expensive) copy from 2nd cols into 1st cols.
@@ -527,4 +536,32 @@ public class Frame extends Iced {
       }
     }
   }
+
+  // Bulk (expensive) copy from 2nd cols into 1st cols.
+  // Sliced by the given cols & boolean select rows
+  private static class DeepSelect extends MRTask2<DeepSelect> {
+    final int  _cols[];
+    DeepSelect( int cols[] ) { _cols=cols; }
+    @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+      // Process this next set of rows
+      // For all cols in the new set
+      Chunk pred = chks[0];
+      for( int i=0; i<_cols.length; i++ ) {
+        Chunk    oc =  chks[_cols[i]];
+        NewChunk nc = nchks[      i ];
+        int len = oc._len;
+        if( oc._vec.isInt() ) { // Slice on integer columns
+          for( int j=0; j<len; j++ )
+            if( !pred.isNA0(j) && pred.at80(j) == 1 )
+              if( oc.isNA0(j) ) nc.addNA();
+              else              nc.addNum(oc.at80(j),0);
+        } else {                // Slice on double columns
+          for( int j=0; j<len; j++ )
+            if( !pred.isNA0(j) && pred.at80(j) == 1 )
+              nc.addNum(oc.at0(j));
+        }
+      }
+    }
+  }
+
 }
