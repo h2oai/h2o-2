@@ -399,8 +399,8 @@ setMethod("show", "H2OParsedData2", function(object) {
 
 # TODO: Error checking for when index/indices are out of bounds
 setMethod("[", "H2OParsedData2", function(x, i, j, ..., drop = TRUE) {
-  if(!missing(j) && length(j) > 1) stop("Currently, can only select one column at a time")
-  if(!missing(i) && length(i) > 1) stop("Currently, can only select one row at a time")
+  # if(!missing(j) && length(j) > 1) stop("Currently, can only select one column at a time")
+  # if(!missing(i) && length(i) > 1) stop("Currently, can only select one row at a time")
   if(missing(i) && missing(j)) return(x)
   if(missing(i) && !missing(j)) {
     if(is.character(j)) return(do.call("$", c(x, j)))
@@ -429,7 +429,7 @@ setMethod("[", "H2OParsedData2", function(x, i, j, ..., drop = TRUE) {
     expr = paste(x@key, "[", rind, ",", cind, "]", sep="")
   }
   res = h2o.__exec2(x@h2o, expr)
-  new("H2OParsedData2", h2o=x@h2o, key=res)
+  new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
 })
 
 setMethod("$", "H2OParsedData2", function(x, name) {
@@ -438,7 +438,7 @@ setMethod("$", "H2OParsedData2", function(x, name) {
   cind = which(name == myNames)
   expr = paste(x@key, "[,", cind, "]", sep="")
   res = h2o.__exec2(x@h2o, expr)
-  new("H2OParsedData2", h2o=x@h2o, key=res)
+  new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
 })
 
 setMethod("+", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("+", e1, e2) })
@@ -490,6 +490,41 @@ setMethod("nrow", "H2OParsedData2", function(x) {
 setMethod("ncol", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numCols })
 
+setMethod("sign", "H2OParsedData2", function(x) {
+  expr = paste("sgn(", x@key, ")")
+  res = h2o.__exec2(x@h2o, expr)
+  new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
+})
+
+setMethod("min", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  min(sapply(res$cols, function(x) { x$min }))
+})
+
+setMethod("max", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  max(sapply(res$cols, function(x) { x$max }))
+})
+
+setMethod("range", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  temp = sapply(res$cols, function(x) { c(x$min, x$max) })
+  c(min(temp[1,]), max(temp[2,]))
+})
+
+setMethod("sum", "H2OParsedData2", function(x) {
+  expr = paste("sum(", x@key, ")", sep="")
+  res = h2o.__exec2(x@h2o, expr)
+  res$scalar
+})
+
+setMethod("colMeans", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  temp = sapply(res$cols, function(x) { x$mean })
+  names(temp) = sapply(res$cols, function(x) { x$name })
+  temp
+})
+
 setMethod("as.data.frame", "H2OParsedData2", function(x) {
   as.data.frame(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
@@ -505,7 +540,13 @@ setMethod("tail", "H2OParsedData2", function(x, n = 6L, ...) {
 setMethod("is.na", "H2OParsedData2", function(x) {
   expr = paste("is.na(", x@key, ")")
   res = h2o.__exec2(x@h2o, expr)
-  new("H2OLogicalData2", h2o=x@h2o, key=res)
+  new("H2OLogicalData2", h2o=x@h2o, key=res$dest_key)
+})
+
+setMethod("is.factor", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
+  temp = sapply(res$summaries, function(x) { is.null(x$domains) })
+  return(!any(temp))
 })
 
 histograms <- function(object) { UseMethod("histograms", object) }

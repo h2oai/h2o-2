@@ -243,11 +243,19 @@ h2o.__getFamily <- function(family, link, tweedie.var.p = 0, tweedie.link.p = 1-
 
 #------------------------------------ FluidVecs -----------------------------------------#
 h2o.__exec2 <- function(client, expr) {
+  destKey = paste("Result_", pkg.env$result_count, ".hex", sep="")
+  pkg.env$result_count = (pkg.env$result_count + 1) %% RESULT_MAX
+  h2o.__exec2_dest_key(client, expr, destKey)
+}
+
+h2o.__exec2_dest_key <- function(client, expr, destKey) {
   type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
   if (type != "character")
     expr = deparse(substitute(expr))
+  expr = paste(destKey, "=", expr)
   res = h2o.__remoteSend(client, h2o.__PAGE_EXEC2, str=expr)
-  res$key
+  res$dest_key = destKey
+  return(res)
 }
 
 h2o.__operator2 <- function(op, x, y) {
