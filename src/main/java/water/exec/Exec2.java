@@ -123,7 +123,7 @@ public class Exec2 {
 
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
-  static boolean isReserved(char c) { return c=='(' || c==')' || c=='=' || c=='[' || c==']' || c==',' || c==':'; }
+  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
     if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
@@ -152,10 +152,14 @@ public class Exec2 {
       return _str.substring(x,_x);
     }
 
-    // If first char is special, accept 1 or 2 special chars
+    // If first char is special, accept 1 or 2 special chars.
+    // i.e. allow ++ != >= == <= but not = alone
     if( _x>=_buf.length ) return _str.substring(_x-1,_x);
     char c2=_buf[_x];
-    if( isDigit(c2) || isLetter(c2) || isWS(c2) || isReserved(c2) ) return _str.substring(_x-1,_x);
+    if( isDigit(c2) || isLetter(c2) || isWS(c2) || isReserved(c2) ) {
+      if( c=='=' ) { _x--; return null; } // Equals alone is not an ID
+      return _str.substring(_x-1,_x);
+    }
     _x++;
     return _str.substring(_x-2,_x);
   }

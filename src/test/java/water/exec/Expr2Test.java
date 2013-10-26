@@ -20,6 +20,12 @@ public class Expr2Test extends TestUtil {
       checkStr(" 1.23 + 2.34"); // 3.57
       checkStr(" 1.23 + 2.34 * 3"); // 10.71, L2R eval order
       checkStr(" 1.23 2.34");   // Syntax error
+      checkStr("1.23 < 2.34");  // 1
+      checkStr("1.23 <=2.34");  // 1
+      checkStr("1.23 > 2.34");  // 0
+      checkStr("1.23 >=2.34");  // 0
+      checkStr("1.23 ==2.34");  // 0
+      checkStr("1.23 !=2.34");  // 1
       checkStr("h.hex");        // Simple ref
       checkStr("+(1.23,2.34)"); // prefix 3.57
       checkStr("+(1.23)");      // Syntax error, not enuf args
