@@ -287,6 +287,24 @@ public class Utils {
     }
   }
 
+  public static void readFile(File file, OutputStream out) {
+    BufferedInputStream in = null;
+    try {
+      in = new BufferedInputStream(new FileInputStream(file));
+      byte[] buffer = new byte[1024];
+      while( true ) {
+        int count = in.read(buffer);
+        if( count == -1 )
+          break;
+        out.write(buffer, 0, count);
+      }
+    } catch(IOException e) {
+      throw Log.errRTExcept(e);
+    } finally {
+      close(in);
+    }
+  }
+
   public static String join(char sep, Object[] array) {
     return join(sep, Arrays.asList(array));
   }
@@ -435,11 +453,12 @@ public class Utils {
         ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bs));
         ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
         // There is at least one entry in zip file and it is not a directory.
-        if( ze != null && !ze.isDirectory() )
+        if( ze != null && !ze.isDirectory() ) {
           is = zis;
-        else
-          zis.close();
-        break;
+          break;
+        }
+        zis.close();
+        return bs; // Don't crash, ignore file if cannot unzip
       }
       case GZIP:
         is = new GZIPInputStream(new ByteArrayInputStream(bs));
@@ -757,5 +776,9 @@ public class Utils {
     int[] res = new int[len];
     for(int i=start; i<stop;i++) res[i-start] = i;
     return res;
+  }
+
+  public static String className(String path) {
+    return path.replace('\\', '/').replace('/', '.').substring(0, path.length() - 6);
   }
 }

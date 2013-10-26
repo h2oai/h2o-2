@@ -159,11 +159,11 @@ public class Boot extends ClassLoader {
       H2O.exit (0);
     }
 
-    if( fromJar() ) {
-      _systemLoader = (URLClassLoader)getSystemClassLoader();
-      _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-      _addUrl.setAccessible(true);
+    _systemLoader = (URLClassLoader) getSystemClassLoader();
+    _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+    _addUrl.setAccessible(true);
 
+    if( fromJar() ) {
       // Calculate directory name of where to unpack JAR file stuff.
       String tmproottmpdir;
       {
@@ -318,16 +318,19 @@ public class Boot extends ClassLoader {
       return _systemLoader.getResourceAsStream("resources"+uri);
     } else {
       try {
-        return new FileInputStream(new File("lib/resources"+uri));
-        // The following code is busted on windows with spaces in user-names,
-        // and I've no idea where it comes from - GIT claims it came from
-        // cliffc-fvec2 merge into master, but there's no indication of this
-        // code in cliffc-fvec2 and cliffc didn't write this code (and it's
-        // instantly busted for the windows user name "Cliff Click").
-        //// IDE mode assumes classes are in target/classes. Not using current path
-        //// to allow running from other locations.
-        //String classes = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
-        //return new FileInputStream(new File(classes + "/../../lib/resources"+uri));
+        File resources  = new File("lib/resources");
+        if(!resources.exists()) {
+          // The following code is busted on windows with spaces in user-names,
+          // and I've no idea where it comes from - GIT claims it came from
+          // cliffc-fvec2 merge into master, but there's no indication of this
+          // code in cliffc-fvec2 and cliffc didn't write this code (and it's
+          // instantly busted for the windows user name "Cliff Click").
+          //// IDE mode assumes classes are in target/classes. Not using current path
+          //// to allow running from other locations.
+          String h2oClasses = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+          resources = new File(h2oClasses + "/../../lib/resources");
+        }
+        return new FileInputStream(new File(resources, uri));
       } catch (FileNotFoundException e) {
         Log.err(e);
         return null;
@@ -388,7 +391,7 @@ public class Boot extends ClassLoader {
 
     for( int i = 0; i < names.size(); i++ ) {
       String n = names.get(i);
-      names.set(i, n.replace('\\', '/').replace('/', '.').substring(0, n.length() - 6));
+      names.set(i, Utils.className(n));
     }
     return names;
   }
