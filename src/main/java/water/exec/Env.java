@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import water.*;
 import water.fvec.*;
+import water.fvec.Vec.VectorGroup;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -19,7 +20,8 @@ public class Env extends Iced {
   double _d  [] = new double[4]; // Double (only if frame & func are null)
   ASTOp  _fun[] = new ASTOp [4]; // Functions (or null if not a function)
   int    _sp;                    // Stack pointer
-
+  VectorGroup _vg;
+  Frame _currentMasterFrame;
   // Also a Pascal-style display, one display entry per lexical scope.  Slot
   // zero is the start of the global scope (which contains all global vars like
   // hex Keys) and always starts at offset 0.
@@ -80,7 +82,7 @@ public class Env extends Iced {
     _fr [_sp-1] = addRef(_fr [idx]);
     _d  [_sp-1] =        _d  [idx];
     _fun[_sp-1] = addRef(_fun[idx]);
-    assert check_refcnt(_fr[0].anyVec()); 
+    assert check_refcnt(_fr[0].anyVec());
   }
   void push_slot( int d, int n, Env global ) {
     assert _refcnt==null;       // Should use a fcn's closure for d>1
@@ -90,12 +92,12 @@ public class Env extends Iced {
     global._fr [gidx] = global.addRef(_fr [idx]);
     global._d  [gidx] =               _d  [idx] ;
     global._fun[gidx] = global.addRef(_fun[idx]);
-    assert global.check_refcnt(global._fr[0].anyVec()); 
+    assert global.check_refcnt(global._fr[0].anyVec());
   }
   // Copy from TOS into a slot.  Does NOT pop results.
   void tos_into_slot( int d, int n, String id ) {
     // In a copy-on-modify language, only update the local scope, or return val
-    assert d==0 || (d==1 && _display[_tod]==n+1); 
+    assert d==0 || (d==1 && _display[_tod]==n+1);
     int idx = _display[_tod-d]+n;
     subRef(_fr [idx]);
     subRef(_fun[idx]);
@@ -103,13 +105,13 @@ public class Env extends Iced {
     _d  [idx] =       _d   [_sp-1] ;
     _fun[idx] = addRef(_fun[_sp-1]);
     if( d==0 ) _key[idx] = id;
-    assert _fr[0]== null || check_refcnt(_fr[0].anyVec()); 
+    assert _fr[0]== null || check_refcnt(_fr[0].anyVec());
   }
 
   // Push a scope, leaving room for passed args
-  int pushScope(int args) { 
+  int pushScope(int args) {
     assert fun(-args-1) instanceof ASTFunc; // Expect a function under the args
-    return _display[++_tod] = _sp-args; 
+    return _display[++_tod] = _sp-args;
   }
   // Grab the function for nested scope d
   ASTFunc funScope( int d ) { return (ASTFunc)_fun[_display[_tod]-1]; }
@@ -121,7 +123,7 @@ public class Env extends Iced {
     _sp--;
     _fun[_sp]=global.subRef(_fun[_sp]);
     _fr [_sp]=global.subRef(_fr [_sp]);
-    assert _sp==0 || _fr[0]==null || check_refcnt(_fr[0].anyVec()); 
+    assert _sp==0 || _fr[0]==null || check_refcnt(_fr[0].anyVec());
   }
   void pop( ) { pop(this); }
   void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
@@ -135,7 +137,7 @@ public class Env extends Iced {
 
   public double  popDbl  () { assert isDbl(); return _d  [--_sp]; }
   public ASTOp   popFun  () { assert isFun(); ASTOp  op = _fun[--_sp]; _fun[_sp]=null; return op; }
-  // Pop & return a Frame; ref-cnt of all things remains unchanged.  
+  // Pop & return a Frame; ref-cnt of all things remains unchanged.
   // Caller is responsible for tracking lifetime.
   public Frame  popFrame() { assert isFrame(); Frame fr = _fr [--_sp]; _fr [_sp]=null; assert allAlive(fr); return fr; }
   // Replace a function invocation with it's result
@@ -157,7 +159,7 @@ public class Env extends Iced {
 
   // Nice assert
   boolean allAlive(Frame fr) {
-    for( Vec vec : fr.vecs() ) 
+    for( Vec vec : fr.vecs() )
       assert _refcnt.get(vec) > 0;
     return true;
   }
@@ -199,6 +201,17 @@ public class Env extends Iced {
       assert I==null || I>0;
       _refcnt.put(vec,I==null?1:I+1);
     }
+    VectorGroup vg = fr.anyVec().group();
+    String strKey = vg.vecKey(0).toString(); // ugly heuristic to recognize dataset's frame
+    if(strKey.contains(".csv") || strKey.contains(".data")
+        || strKey.contains("nfs:/")
+        || strKey.contains("hdfs:/")
+        || strKey.contains("s3n:/")
+        || strKey.contains("s3:/")
+        || strKey.contains("autoframe")){
+       _vg = vg;
+      _currentMasterFrame = fr;
+    }
     return fr;
   }
   ASTOp addRef( ASTOp op ) {
@@ -221,10 +234,10 @@ public class Env extends Iced {
       if( _fun[i] != null ) global.subRef(_fun[i]);
     }
   }
-     
+
 
   // Remove everything
-  public void remove() { 
+  public void remove() {
     // Remove all shallow scopes
     while( _tod > 1 ) popScope();
     // Push changes at the outer scope into the K/V store

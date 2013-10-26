@@ -58,6 +58,7 @@ public class Vec extends Iced {
    *  dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
    *  such as file-backed Vecs. */
   final private long _espc[];
+  public long [] espc(){return _espc;}
   /** Enum/factor/categorical names. */
   public String [] _domain;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
@@ -75,7 +76,7 @@ public class Vec extends Iced {
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
-  Vec( Key key, long espc[] ) {
+  public Vec( Key key, long espc[] ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;

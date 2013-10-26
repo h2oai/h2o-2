@@ -1,8 +1,8 @@
 package water.exec;
 
 import java.util.*;
-import water.H2O;
-import water.MRTask2;
+
+import water.*;
 import water.fvec.*;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -39,6 +39,7 @@ public abstract class ASTOp extends AST {
     put(new ASTReduce());
     put(new ASTIfElse());
     put(new ASTRApply());
+    put(new ASTRunif());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -231,13 +232,50 @@ class ASTCat extends ASTOp {
     env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
   }
 }
-
+class ASTRunif extends ASTOp {
+  @Override String opStr() { return "runif"; }
+  ASTRunif() { super(new String[]{"runif","dbls"},
+      new Type[]{Type.ARY,Type.DBL}); }
+  @Override ASTOp make() {return new ASTRunif();}
+  @Override void apply(Env env, int argcnt) {
+    double n = env.popDbl();
+    if(env._currentMasterFrame == null)throw H2O.unimpl();
+    System.out.println("current master frame = " + env._currentMasterFrame);
+    Vec v = env._currentMasterFrame.anyVec();
+    long [] espc = v.espc();
+    long rem = (long)n;
+    if(rem > espc[espc.length-1])throw H2O.unimpl();
+    for(int i = 0; i < espc.length; ++i){
+      if(rem <= espc[i]){
+        espc = Arrays.copyOf(espc, i+1);
+        break;
+      }
+    }
+    espc[espc.length-1] = rem;
+    Vec randVec = new Vec(env._vg.addVecs(1)[0],espc);
+    Futures fs = new Futures();
+    DKV.put(randVec._key,randVec, fs);
+    for(int i = 0; i < espc.length-1; ++i)
+      DKV.put(randVec.chunkKey(i),new C0DChunk(0,(int)(espc[i+1]-espc[i])),fs);
+    fs.blockForPending();
+    final long seed = System.currentTimeMillis();
+    new MRTask2() {
+      @Override public void map(Chunk c){
+        Random rng = new Random(seed*c.cidx());
+        for(int i = 0; i < c._len; ++i)
+          c.set0(i, (float)rng.nextDouble());
+      }
+    }.doAll(randVec);
+    env.pop();
+    env.push(new Frame(new String[]{"rnd"},new Vec[]{randVec}));
+  }
+}
 // Variable length; instances will be created of required length
 class ASTSum extends ASTOp {
   @Override String opStr() { return "sum"; }
   ASTSum( ) { super(new String[]{"sum","dbls"},
                     new Type[]{Type.DBL,Type.varargs(Type.dblary())}); }
-  @Override ASTOp make() {return new ASTSum();} 
+  @Override ASTOp make() {return new ASTSum();}
   @Override void apply(Env env, int argcnt) {
     double sum=0;
     for( int i=0; i<argcnt-1; i++ )
