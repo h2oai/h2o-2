@@ -50,15 +50,17 @@ public class Expr2Test extends TestUtil {
       checkStr("x+2");
       checkStr("2+x");
       checkStr("x=1");
+      checkStr("x<-1");
       checkStr("x=1;x=h.hex");  // Allowed to change types via shadowing at REPL level
       checkStr("a=h.hex");      // Top-level assignment back to H2O.STORE
-      checkStr("x=+");
-      checkStr("(h.hex+1)=2");
+      checkStr("x<-+");
+      checkStr("(h.hex+1)<-2");
       checkStr("h.hex[nrow(h.hex=1),]");
-      checkStr("h.hex[2,3]=4;");
+      checkStr("h.hex[2,3]<-4;");
       checkStr("c(1,3,5)");
       checkStr("function(=){x+1}(2)");
       checkStr("function(x,=){x+1}(2)");
+      checkStr("function(x,<-){x+1}(2)");
       checkStr("function(x,x){x+1}(2)");
       checkStr("function(x,y,z){x[]}(h.hex,1,2)");
       checkStr("function(x){x[]}(2)");

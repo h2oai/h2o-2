@@ -313,7 +313,10 @@ class ASTAssign extends AST {
   // Parse a valid LHS= or return null
   static ASTAssign parse(Exec2 E, AST ast) {
     int x = E._x;
-    if( !E.peek('=') ) return null;
+    // Allow '=' and '<-' assignment
+    if( !E.peek('=') ) {
+      if( !(E.peek('<') && E.peek('-')) ) { E._x=x; return null; }
+    }
     AST ast2=ast;
     if( (ast instanceof ASTSlice) ) // Peek thru slice op
       ast2 = ((ASTSlice)ast)._ast;
@@ -337,8 +340,10 @@ class ASTAssign extends AST {
     String var = ASTId.parseNew(E);
     if( var == null ) return null;
     if( !E.peek('=') ) {        // Not an assignment
-      if( Exec2.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
-      E._x=x; return null;      // Let higher parse levels sort it out
+      if( !(E.peek('<') && E.peek('-')) ) { // The other assignment operator
+        if( Exec2.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
+        E._x=x; return null;      // Let higher parse levels sort it out
+      }
     }
     x = E._x;
     AST eval = parseCXExpr(E);

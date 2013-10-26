@@ -160,7 +160,8 @@ public class Exec2 {
       if( c=='=' ) { _x--; return null; } // Equals alone is not an ID
       return _str.substring(_x-1,_x);
     }
-    _x++;
+    if( c=='<' && c2=='-' ) { _x--; return null; } // The other assignment operator
+    _x++;                       // Else accept e.g. <= >= ++ != == etc...
     return _str.substring(_x-2,_x);
   }
 
