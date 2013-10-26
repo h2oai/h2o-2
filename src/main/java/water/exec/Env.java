@@ -201,6 +201,15 @@ public class Env extends Iced {
       assert I==null || I>0;
       _refcnt.put(vec,I==null?1:I+1);
     }
+    // (Temporary) Heuristic for picking up current master frame/group.
+    // When we're creating new vecs (e.g. runif(10000)) we want to have them compatible with current dataset.
+    // To be able to guess the right dataset in cases when the operation does not involve the dataset directly,
+    // we set the master frame as the latest referenced dataset frame(not tmp-frame!). I identify dataset frames by checking they're
+    // vector group's key (typically based on the underlying filename) for some common patterns such as nfs:/, hdfs:/ commonly found
+    // in filesystem paths.
+    //
+    // TODO If we keep this longer, we should at least ensure that all Frame's have vector group's based on some dataset and skip the
+    // dataset test.
     VectorGroup vg = fr.anyVec().group();
     String strKey = vg.vecKey(0).toString(); // ugly heuristic to recognize dataset's frame
     if(strKey.contains(".csv") || strKey.contains(".data")
