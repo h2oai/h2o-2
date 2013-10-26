@@ -2,8 +2,7 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.IllegalFormatException;
+import java.util.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -486,9 +485,15 @@ public class Frame extends Iced {
       return new DeepSlice(rows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
     }
     Vec vrows = (Vec)orows;
-    Frame fr2 = new Frame(this);
-    fr2.add("predicate",vrows);
-    return new DeepSelect(c2).doAll(c2.length,fr2).outputFrame(names(c2),domains(c2));
+    Vec [] vecs = new Vec[c2.length+1];
+    String [] names = new String[c2.length+1];
+    for(int i = 0; i < c2.length; ++i){
+      vecs[i] = _vecs[c2[i]];
+      names[i] = _names[c2[i]];
+    }
+    vecs[c2.length] = vrows;
+    names[c2.length] = "predicate";
+    return new DeepSelect().doAll(c2.length,new Frame(names,vecs)).outputFrame(names(c2),domains(c2));
   }
 
   // Bulk (expensive) copy from 2nd cols into 1st cols.
@@ -537,31 +542,13 @@ public class Frame extends Iced {
     }
   }
 
-  // Bulk (expensive) copy from 2nd cols into 1st cols.
-  // Sliced by the given cols & boolean select rows
   private static class DeepSelect extends MRTask2<DeepSelect> {
-    final int  _cols[];
-    DeepSelect( int cols[] ) { _cols=cols; }
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
-      // Process this next set of rows
-      // For all cols in the new set
-      Chunk pred = chks[0];
-      for( int i=0; i<_cols.length; i++ ) {
-        Chunk    oc =  chks[_cols[i]];
-        NewChunk nc = nchks[      i ];
-        int len = oc._len;
-        if( oc._vec.isInt() ) { // Slice on integer columns
-          for( int j=0; j<len; j++ )
-            if( !pred.isNA0(j) && pred.at80(j) == 1 )
-              if( oc.isNA0(j) ) nc.addNA();
-              else              nc.addNum(oc.at80(j),0);
-        } else {                // Slice on double columns
-          for( int j=0; j<len; j++ )
-            if( !pred.isNA0(j) && pred.at80(j) == 1 )
-              nc.addNum(oc.at0(j));
-        }
+      Chunk pred = chks[chks.length-1];
+      for(int i = 0; i < pred._len; ++i){
+        if(pred.at0(i) == 1) for(int j = 0; j < chks.length-1; ++j)
+            nchks[j].addNum(chks[j].at0(i));
       }
     }
   }
-
 }

@@ -234,8 +234,10 @@ class ASTSlice extends AST {
       if( fr.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
       Vec vec = fr.anyVec();
       // Check for a matching column of bools.
-      if( fr.numRows() == len && vec.min()==0 && vec.max()==1 && vec.isInt() )
+      if( fr.numRows() == len && vec.min()==0 && vec.max()==1 && vec.isInt() ){
+        fr = null;
         return vec;        // Boolean vector selection.
+      }
       if(fr.numRows() > 10000) throw H2O.unimpl();
       cols = MemoryManager.malloc8((int)fr.numRows());
       for(int i = 0; i < cols.length; ++i){
