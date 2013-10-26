@@ -284,7 +284,7 @@ class ASTRApply extends ASTOp {
   @Override String opStr(){ return "apply";}
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
-    ASTOp op = (ASTOp)env.popFun();    // ary->ary but better be ary[,1]->ary[,1]
+    ASTOp op = env.popFun();    // ary->ary but better be ary[,1]->ary[,1]
     double d = env.popDbl();
     Frame fr = env.popFrame();  // The Frame to work on
     if( d==2 || d== -1 ) {      // Work on columns

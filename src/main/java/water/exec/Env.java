@@ -103,7 +103,7 @@ public class Env extends Iced {
     _d  [idx] =       _d   [_sp-1] ;
     _fun[idx] = addRef(_fun[_sp-1]);
     if( d==0 ) _key[idx] = id;
-    assert check_refcnt(_fr[0].anyVec()); 
+    assert _fr[0]== null || check_refcnt(_fr[0].anyVec()); 
   }
 
   // Push a scope, leaving room for passed args
