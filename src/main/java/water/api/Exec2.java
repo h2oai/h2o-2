@@ -5,6 +5,8 @@ import water.*;
 import water.exec.*;
 import water.fvec.*;
 
+import java.util.Properties;
+
 public class Exec2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -62,5 +64,8 @@ public class Exec2 extends Request2 {
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's
     catch( Exception e2 ) { Log.err(e=e2); }
     return Response.error(e.getMessage());
+  }
+  @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
+    return superServeGrid(server, parms, type);
   }
 }

@@ -20,8 +20,6 @@ public class Env extends Iced {
   double _d  [] = new double[4]; // Double (only if frame & func are null)
   ASTOp  _fun[] = new ASTOp [4]; // Functions (or null if not a function)
   int    _sp;                    // Stack pointer
-  VectorGroup _vg;
-  Frame _currentMasterFrame;
   // Also a Pascal-style display, one display entry per lexical scope.  Slot
   // zero is the start of the global scope (which contains all global vars like
   // hex Keys) and always starts at offset 0.
@@ -200,17 +198,6 @@ public class Env extends Iced {
       Integer I = _refcnt.get(vec);
       assert I==null || I>0;
       _refcnt.put(vec,I==null?1:I+1);
-    }
-    VectorGroup vg = fr.anyVec().group();
-    String strKey = vg.vecKey(0).toString(); // ugly heuristic to recognize dataset's frame
-    if(strKey.contains(".csv") || strKey.contains(".data")
-        || strKey.contains("nfs:/")
-        || strKey.contains("hdfs:/")
-        || strKey.contains("s3n:/")
-        || strKey.contains("s3:/")
-        || strKey.contains("autoframe")){
-       _vg = vg;
-      _currentMasterFrame = fr;
     }
     return fr;
   }
