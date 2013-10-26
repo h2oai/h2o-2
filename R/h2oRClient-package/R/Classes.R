@@ -575,6 +575,18 @@ setMethod("is.factor", "H2OParsedData2", function(x) {
   return(!any(temp))
 })
 
+setMethod("quantile", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
+  temp = sapply(res$summaries, function(x) { x$percentileValues })
+  filt = !sapply(temp, is.null)
+  temp = temp[filt]
+  if(length(temp) == 0) return(NULL)
+  
+  myFeat = res$names[filt]
+  myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
+  matrix(unlist(temp), ncol = length(temp[[1]]), dimnames = list(myFeat, paste(myQuantiles, "%", sep="")))
+})
+
 histograms <- function(object) { UseMethod("histograms", object) }
 setMethod("histograms", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
