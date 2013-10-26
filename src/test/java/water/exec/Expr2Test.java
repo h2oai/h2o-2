@@ -99,7 +99,7 @@ public class Expr2Test extends TestUtil {
       checkStr("(1? h.hex : (h.hex+1))[1,2]");
 
       // Needed examples: 
-      // (0) Whole column subset selection
+      // (0) DONE Whole column subset selection
       // (1) Replace NAs with imputed mean
       // (2) Drop 95% outliers (top & bot 2.5% outliers)
       // (3) Table command? (co-occurance matrix)
