@@ -63,6 +63,6 @@ public class C1SChunk extends Chunk {
     }
     return nc;
   }
-  public int pformat_len0() { return pformat_len0(_scale,3); }
-  public String pformat0() { return "% 8.2e"; }
+  public int pformat_len0() { return hasFloat() ? pformat_len0(_scale,3) : super.pformat_len0(); }
+  public String  pformat0() { return hasFloat() ? "% 8.2e" : super.pformat0(); }
 }

@@ -345,7 +345,7 @@ public class Frame extends Iced {
       } else if( w==2 ) {       // First 2 chars only
         sb.append(n.charAt(0)).append(n.charAt(1));
       } else {                  // First char dot lastchars; e.g. Compress "Interval" to "I.val"
-        sb.append(n.charAt(0)).append(' ');
+        sb.append(n.charAt(0)).append('.');
         for( int i=n.length()-(w-2); i<n.length(); i++ )
           sb.append(n.charAt(i));
       }
@@ -450,23 +450,6 @@ public class Frame extends Iced {
   }
 
 
-  // Copy over column headers & enum domains from self into fr2
-//  public Frame copyHeaders( Frame fr2, int cols[] ) {
-//    Futures fs = new Futures();
-//    Vec[] vec2 = fr2.vecs();
-//    String domains[][] = domains();
-//    int len = cols==null ? vec2.length : cols.length;
-//    String ns[]  = new String[len];
-//    for( int i=0; i<len; i++ ) {
-//      ns[i] = _names [cols==null?i:cols[i]];
-//      vec2[i]._domain = domains[cols==null?i:cols[i]];
-//      DKV.put(vec2[i]._key,vec2[i],fs);
-//    }
-//    fr2._names = ns;
-//    fs.blockForPending();
-//    return fr2;
-//  }
-
   // --------------------------------------------------------------------------
   // In support of R, a generic Deep Copy & Slice.
   // Semantics are a little odd, to match R's.
@@ -486,7 +469,7 @@ public class Frame extends Iced {
     } else if( cols[0] > 0 ) {
       c2 = new int[cols.length];
       for( int i=0; i<cols.length; i++ )
-        c2[i] = (int)cols[i]-1;
+        c2[i] = (int)cols[i]-1; // Convert 1-based cols to zero-based
     } else {
       c2 = new int[numCols()-cols.length];
       int j=0;
@@ -514,14 +497,14 @@ public class Frame extends Iced {
       while( rlo < rlen ) {     // Still got rows to include?
         if( _rows != null ) {   // Got a row selector?
           if( rx >= _rows.length ) break; // All done with row selections
-          long r = _rows[rx++]; // Next row selector
-          if( r < 0 ) {         // Row exclusion?
+          long r = _rows[rx++]-1;// Next row selector
+          if( r < 0 ) {          // Row exclusion?
             throw H2O.unimpl();
           } else {              // Positive row list?
             if( r < rstart ) continue;
             rlo = (int)(r-rstart);
             rhi = rlo+1;        // Stop at the next row
-            while( rx < _rows.length && (_rows[rx]-rstart)==rhi && rhi < rlen ) {
+            while( rx < _rows.length && (_rows[rx]-1-rstart)==rhi && rhi < rlen ) {
               rx++; rhi++;      // Grab sequential rows
             }
           }

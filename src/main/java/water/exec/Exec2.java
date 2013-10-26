@@ -59,17 +59,15 @@ public class Exec2 {
     for( Value v : H2O.values() )
       if( v.type()==TypeMap.FRAME ) { // Add to parser's namespace
         global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
-        Frame fr = (Frame)v.get();
-        env.addRef(fr);         // Do not delete global scope items
-        env.push(fr);
+        env.push((Frame)v.get(),v._key.toString());
       }
 
     // Some global constants
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
     global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
-    int argcnt = global.size();
 
     // Parse.  Type-errors get caught here and throw IAE
+    int argcnt = global.size();
     AST ast = new Exec2(str,global).parse();
 
     try {

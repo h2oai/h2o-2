@@ -44,7 +44,8 @@ public class Expr2Test extends TestUtil {
       checkStr("x+2");
       checkStr("2+x");
       checkStr("x=1");
-      checkStr("x=1;x=h.hex");
+      checkStr("x=1;x=h.hex");  // Allowed to change types via shadowing at REPL level
+      checkStr("a=h.hex");      // Top-level assignment back to H2O.STORE
       checkStr("x=+");
       checkStr("(h.hex+1)=2");
       checkStr("h.hex[nrow(h.hex=1),]");
@@ -60,6 +61,7 @@ public class Expr2Test extends TestUtil {
       checkStr("function(x){}(2)");
       checkStr("function(x){y=x*2; y+1}(2)");
       checkStr("function(x){y=1+2}(2)");
+      checkStr("function(x){y=1+2;y=c(1,2)}"); // Not allowed to change types in inner scopes
       checkStr("sum(1,2,3)");
       checkStr("sum(c(1,3,5))");
       checkStr("sum(4,c(1,3,5),2,6)");

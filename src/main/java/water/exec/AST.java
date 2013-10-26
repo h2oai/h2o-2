@@ -206,6 +206,7 @@ class ASTSlice extends AST {
       long cols[] = select(fr.numCols(),_cols,env);
       long rows[] = select(fr.numRows(),_rows,env);
       Frame fr2 = fr.deepSlice(rows,cols);
+      if( fr2 == null ) fr2 = new Frame(); // Replace the null frame with the zero-column frame
       env.pop();                // Pop frame, lower ref
       env.push(fr2);
     }
@@ -316,11 +317,12 @@ class ASTAssign extends AST {
     AST eval = parseCXExpr(E);
     if( eval == null ) E.throwErr("Missing RHS",x);
     ASTId id = (ASTId)ast2;
-    if( id._depth > 0 ) {       // Shadowing an outer scope?
+    if( id._depth > 0 ||        // Shadowing an outer scope?
+        (E.lexical_depth() == 0 && !ast._t.union(eval._t) )  ) {
       id = extend_local(E,eval._t,id._id);
       if( ast2 != ast ) throw H2O.unimpl(); // Must copy whole array locally, before updating the local copy
       else ast = id;
-    } else if( !ast._t.union(eval._t) ) // Disallow type changes in local scope
+    } else if( !ast._t.union(eval._t) ) // Disallow type changes in local scope in functions.
       E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
     return new ASTAssign(ast,eval);
   }
@@ -350,7 +352,7 @@ class ASTAssign extends AST {
     _eval.exec(env);            // RHS before LHS (R eval order)
     if( _lhs instanceof ASTId ) {
       ASTId id = (ASTId)_lhs;
-      env.tos_into_slot(id._depth,id._num);
+      env.tos_into_slot(id._depth,id._num,id._id);
       return;
     }
     // Peel apart a slice assignment
