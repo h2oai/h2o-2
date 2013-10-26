@@ -25,6 +25,13 @@ public abstract class ASTOp extends AST {
     put(new ASTMul ());
     put(new ASTDiv ());
     put(new ASTMin ());
+    put(new ASTMax ());
+    put(new ASTLT  ());
+    put(new ASTLE  ());
+    put(new ASTGT  ());
+    put(new ASTGE  ());
+    put(new ASTEQ  ());
+    put(new ASTNE  ());
 
     // Misc
     put(new ASTCat ());
@@ -191,6 +198,13 @@ class ASTSub  extends ASTBinOp { String opStr(){ return "-"  ;} ASTOp make() {re
 class ASTMul  extends ASTBinOp { String opStr(){ return "*"  ;} ASTOp make() {return new ASTMul ();} double op(double d0, double d1) { return d0*d1;}}
 class ASTDiv  extends ASTBinOp { String opStr(){ return "/"  ;} ASTOp make() {return new ASTDiv ();} double op(double d0, double d1) { return d0/d1;}}
 class ASTMin  extends ASTBinOp { String opStr(){ return "min";} ASTOp make() {return new ASTMin ();} double op(double d0, double d1) { return Math.min(d0,d1);}}
+class ASTMax  extends ASTBinOp { String opStr(){ return "max";} ASTOp make() {return new ASTMax ();} double op(double d0, double d1) { return Math.max(d0,d1);}}
+class ASTLT   extends ASTBinOp { String opStr(){ return "<"  ;} ASTOp make() {return new ASTLT  ();} double op(double d0, double d1) { return d0< d1?1:0;}}
+class ASTLE   extends ASTBinOp { String opStr(){ return "<=" ;} ASTOp make() {return new ASTLE  ();} double op(double d0, double d1) { return d0<=d1?1:0;}}
+class ASTGT   extends ASTBinOp { String opStr(){ return ">"  ;} ASTOp make() {return new ASTGT  ();} double op(double d0, double d1) { return d0> d1?1:0;}}
+class ASTGE   extends ASTBinOp { String opStr(){ return ">=" ;} ASTOp make() {return new ASTGE  ();} double op(double d0, double d1) { return d0>=d1?1:0;}}
+class ASTEQ   extends ASTBinOp { String opStr(){ return "==" ;} ASTOp make() {return new ASTEQ  ();} double op(double d0, double d1) { return d0==d1?1:0;}}
+class ASTNE   extends ASTBinOp { String opStr(){ return "!=" ;} ASTOp make() {return new ASTNE  ();} double op(double d0, double d1) { return d0!=d1?1:0;}}
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
