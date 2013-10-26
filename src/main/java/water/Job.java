@@ -1,6 +1,7 @@
 package water;
 
-import hex.glm.GLM2;
+import static water.util.Utils.difference;
+import static water.util.Utils.isEmpty;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -18,8 +19,6 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
 import water.util.Utils.ExpectedExceptionForDebug;
-import static water.util.Utils.isEmpty;
-import static water.util.Utils.difference;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -56,6 +55,10 @@ public class Job extends Request2 {
 
   protected void logStart() {
     Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
+  }
+
+  public int gridParallelism() {
+    return 1;
   }
 
   public static abstract class FrameJob extends Job {
@@ -383,12 +386,9 @@ public class Job extends Request2 {
   protected void onCancelled() {
   }
 
-  public boolean cancelled() {
-    return !running() && end_time == Job.CANCELLED_END_TIME;
-  }
-  public boolean running() { return running(job_key); }
-  public static boolean running(Key self) {
-    return DKV.get(self) != null;
+  public boolean cancelled() { return cancelled(job_key); }
+  public static boolean cancelled(Key key) {
+    return DKV.get(key) == null;
   }
 
   public void remove() {
@@ -513,6 +513,7 @@ public class Job extends Request2 {
 
   public void invoke() {
     init();
+    start(new H2OEmptyCompleter());
     exec();
     done();
   }

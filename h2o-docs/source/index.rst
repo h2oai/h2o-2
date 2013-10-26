@@ -17,11 +17,11 @@ This section is for new users, and provides information about how to install and
    :maxdepth: 1
 
    newuser/quickstart_jar
-   newuser/quickstart_installer
    deployment/hadoop
    deployment/multinode
    Ruser/R_studio
    Ruser/Rh2opackage
+   newuser/ec2
 
 .. toctree::
    :maxdepth: 2

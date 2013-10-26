@@ -60,7 +60,6 @@ public class Sample07_NeuralNet_Mnist {
 
     // Labels are on last column for this dataset
     Vec trainLabels = _train[_train.length - 1];
-    trainLabels.asEnum();
     _train = Utils.remove(_train, _train.length - 1);
     Vec testLabels = _test[_test.length - 1];
     _test = Utils.remove(_test, _test.length - 1);

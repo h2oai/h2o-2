@@ -24,7 +24,6 @@ public class PCAScore extends FrameJob {
 
   @API(help = "PCA model to use for scoring", required = true, filter = Default.class)
   PCAModel model;
-  // hex.DPCA.PCAModel model;
 
   @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 10000)
   int num_pc = 1;
@@ -32,17 +31,6 @@ public class PCAScore extends FrameJob {
   // Note: Source data MUST contain all features (matched by name) used to build PCA model!
   // If additional columns exist in source, they are automatically ignored in scoring
   @Override protected void exec() {
-    /*String[] fnames = new String[model._va._cols.length];
-    for(int i = 0; i < fnames.length; i++)
-      fnames[i] = model._va._cols[i]._name;
-
-    Frame fr = subset(source, fnames);
-    int nfeat = model._eigVec.length;
-    Vec[] vecs = Arrays.copyOf(fr.vecs(), nfeat + num_pc);
-    for(int i = 0; i < num_pc; i++)
-      vecs[nfeat+i] = vecs[0].makeZero();
-    PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model._eigVec, model._pcaParams._standardized); */
-
     Frame fr = subset(source, model._names);
     int nfeat = model._names.length;
     Vec[] vecs = Arrays.copyOf(fr.vecs(), nfeat + num_pc);

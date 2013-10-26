@@ -24,7 +24,7 @@ class GLM_twovalues(unittest.TestCase):
             h2o.build_cloud(1)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
@@ -91,10 +91,11 @@ class GLM_twovalues(unittest.TestCase):
 
             start = time.time()
             hex_key = csvFilename + "_" + str(trial)
-            kwargs = {'case': case, 'y': 10, 'family': 'binomial', 'alpha': 0, 'beta_epsilon': 0.0002}
+            kwargs = {'case': case, 'y': 12, 'family': 'binomial', 'alpha': 0, 'beta_epsilon': 0.0002}
 
             # default takes 39 iterations? play with alpha/beta
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
+            print "using outputTrue: %s outputFalse: %s" % (outputTrue, outputFalse)
             glm = h2o_cmd.runGLM(parseResult=parseResult, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, 0, **kwargs)
 
@@ -104,7 +105,7 @@ class GLM_twovalues(unittest.TestCase):
                 raise Exception("Should be " + coeffNum + " coefficients in result. %s" % coeffNum)
 
             print "trial #", trial, "glm end on ", csvFilename, 'took', time.time() - start, 'seconds'
-            h2b.browseJsonHistoryAsUrlLastMatch("GLM")
+            # h2b.browseJsonHistoryAsUrlLastMatch("GLM")
             h2o.check_sandbox_for_errors()
             trial += 1
 
