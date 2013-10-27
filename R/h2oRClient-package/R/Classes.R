@@ -467,36 +467,46 @@ setMethod("[", "H2OParsedData2", function(x, i, j, ..., drop = TRUE) {
   # if(!missing(j) && length(j) > 1) stop("Currently, can only select one column at a time")
   # if(!missing(i) && length(i) > 1) stop("Currently, can only select one row at a time")
   numRows = nrow(x); numCols = ncol(x)
-  if((!missing(i) && any(abs(i) < 1 || abs(i) > numRows)) || (!missing(j) && any(abs(j) < 1 || abs(j) > numCols)))
+  if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
+     (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
     stop("Array index out of bounds!")
   
   if(missing(i) && missing(j)) return(x)
   if(missing(i) && !missing(j)) {
     if(is.character(j)) return(do.call("$", c(x, j)))
     if(is.logical(j)) j = -which(!j)
-    # if(class(j) == "H2OLogicalData2")
-    # expr = paste(x@key, "[", j@key, ",]", sep="")
-    if(length(j) == 1)
-      expr = paste(x@key, "[,", j, "]", sep="")
-    else
-      expr = paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
+    if(class(j) == "H2OLogicalData2")
+      expr = paste(x@key, "[", j@key, ",]", sep="")
+    else if(is.numeric(j)) {
+      if(length(j) == 1)
+        expr = paste(x@key, "[,", j, "]", sep="")
+      else
+        expr = paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
+    } else stop(paste("Column index of type", class(j), "unsupported!"))
   } else if(!missing(i) && missing(j)) {
-    if(is.logical(i)) i = -which(!i)
-    if(!is.numeric(i)) stop("Row index must be numeric")
-    # if(class(i) == "H2OLogicalData2")
-    # expr = paste(x@key, "[", i@key, ",]", sep="")
-    if(length(i) == 1)
-      expr = paste(x@key, "[", i, ",]", sep="")
-    else
-      expr = paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
+    # if(is.logical(i)) i = -which(!i)
+    if(is.logical(i)) i = which(i)
+    # if(!is.numeric(i)) stop("Row index must be numeric")
+    if(class(i) == "H2OLogicalData2")
+      expr = paste(x@key, "[", i@key, ",]", sep="")
+    else if(is.numeric(i)) {
+      if(length(i) == 1)
+        expr = paste(x@key, "[", i, ",]", sep="")
+      else
+        expr = paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
+    } else stop(paste("Row index of type", class(i), "unsupported!"))
   } else {
-    if(is.logical(i)) i = -which(!i)
-    if(!is.numeric(i)) stop("Row index must be numeric")
-    # if(class(i) == "H2OLogicalData2") rind = i@key
+    # if(is.logical(i)) i = -which(!i)
+    if(is.logical(i)) i = which(i)
+    # if(!is.numeric(i)) stop("Row index must be numeric")
+    else if(class(i) == "H2OLogicalData2") rind = i@key
+    else if(!is.numeric(i)) stop(paste("Row index of type", class(i), "unsupported!"))
     rind = ifelse(length(i) == 1, i, paste("c(", paste(i, collapse=","), ")", sep=""))
     
-    # if(class(j) == "H2OLogicalData2") cind = j@key
-    if(is.logical(j)) j = -which(!j)
+    if(class(j) == "H2OLogicalData2") cind = j@key
+    else if(is.logical(j)) j = -which(!j)
+    else if(!is.numeric(j) && !is.character(j)) stop(paste("Column index of type", class(j), "unsupported!"))
+    
     if(is.numeric(j))
       cind = ifelse(length(j) == 1, j, paste("c(", paste(j, collapse=","), ")", sep=""))
     else if(is.character(j)) {
@@ -504,8 +514,7 @@ setMethod("[", "H2OParsedData2", function(x, i, j, ..., drop = TRUE) {
       if(any(!(j %in% myCol))) stop(paste(paste(j[which(!(j %in% myCol))], collapse=','), 'is not a valid column name'))
       j_num = match(j, myCol)
       cind = ifelse(length(j) == 1, j_num, paste("c(", paste(j_num, collapse=","), ")", sep=""))
-    } else
-      stop("Column index must be numeric or character!")
+    }
     expr = paste(x@key, "[", rind, ",", cind, "]", sep="")
   }
   res = h2o.__exec2(x@h2o, expr)
@@ -648,9 +657,9 @@ setMethod("quantile", "H2OParsedData2", function(x) {
   temp = temp[filt]
   if(length(temp) == 0) return(NULL)
   
-  myFeat = res$names[filt]
+  myFeat = res$names[filt[1:length(res$names)]]
   myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
-  matrix(unlist(temp), ncol = length(temp[[1]]), dimnames = list(myFeat, paste(myQuantiles, "%", sep="")))
+  matrix(unlist(temp), ncol = length(res$names), dimnames = list(paste(myQuantiles, "%", sep=""), myFeat))
 })
 
 histograms <- function(object) { UseMethod("histograms", object) }

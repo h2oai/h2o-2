@@ -93,6 +93,11 @@ setMethod("h2o.gbm", signature(x="ANY", y="numeric", distribution='ANY', data="H
       h2o.gbm(x, colnames(data)[y], distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
     })
 
+setMethod("h2o.gbm", signature(x="ANY", y="ANY", distribution='ANY', data="H2OParsedData2", n.trees="ANY", interaction.depth="ANY", n.minobsinnode="ANY", shrinkage="ANY"),
+    function(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+      h2o.gbm(x, y, distribution, new("H2OParsedData", h2o=data@h2o, key=data@key), n.trees, interaction.depth, n.minobsinnode, shrinkage)
+    })
+
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
 # Internally called GLM to allow games with method dispatch
 h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
@@ -519,6 +524,13 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 setMethod("h2o.predict", signature(object="H2OModel", newdata="missing"), 
     function(object) { h2o.predict(object, object@data) })
 
+setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData2"), 
+    function(object, newdata) {
+      if(class(object) != "H2OGBMModel" && class(object) != "H2OPCAModel")
+        stop(paste("Prediction in FluidVecs has not yet been implemented for", class(object)))
+      h2o.predict(object, new("H2OParsedData", h2o=newdata@h2o, key=newdata@key))
+    })
+
 #------------------------------- FluidVecs -------------------------------------#
 setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
     function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, NA)) {
@@ -530,17 +542,23 @@ setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedD
       rand_glm_key = paste("__GLM2Model_", UUIDgenerate(), sep="")
       
       if(family != "tweedie")
-        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
       else
-        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
       
       res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=rand_glm_key)
       resModel = res$glm_model
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMValidView, '_valKey'=resModel$validations)
-      modelOrig = h2o.__getGLM2Results(resModel, y, res$glm_val)
+      # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMValidView, '_valKey'=resModel$validations)
+      # modelOrig = h2o.__getGLM2Results(resModel, y, res$glm_val)
+      modelOrig = h2o.__getGLM2Results(resModel, y, list())
       new("H2OGLMModel", key=resModel$'_selfKey', data=data, model=modelOrig, xval=list())
   })
+
+setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedData2", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+  function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, NA)) {
+    h2o.glm.FV(x, y, new("H2OParsedData", h2o=data@h2o, key=data@key), family, nfolds, alpha, lambda, tweedie.p)
+  })          
 
 # Pretty formatting of H2O GLM results
 h2o.__getGLM2Results <- function(model, y, valid) {
