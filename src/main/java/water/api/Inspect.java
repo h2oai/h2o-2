@@ -325,7 +325,7 @@ public class Inspect extends Request {
         sb.append("<div class='alert alert-success'>"
         		+ "<b>Produced in ").append(PrettyPrint.msecs(job.runTimeMs(),true)).append(".</b></div>");
     }
-    sb.append("<div class='alert alert-info'>").append(Inspect4UX.link(key, "NEW Inspect 4 UX guys!")).append("</div>");
+    sb.append("<div class='alert alert-info'>").append(Inspect4UX.link(key, "NEW Inspect!")).append("</div>");
     sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + PCA.link(key, "PCA") + ", "
           + RF.link(key, "Random Forest") + ", "
