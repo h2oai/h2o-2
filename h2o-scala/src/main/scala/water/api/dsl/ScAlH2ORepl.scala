@@ -51,6 +51,7 @@ object ScAlH2ORepl {
     // implicitly import H2ODsl
     addThunk(intp.beQuietDuring {
       intp.addImports("water.api.dsl.H2ODsl._")
+      intp.addImports("water.api.dsl._")
     })
     
     override def printWelcome() {

@@ -33,13 +33,11 @@ object A {
 
 /** The object carry global environment and provides basic global methods such as head, tail, nrows, ... */
 object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[HexKey, DFrame] {
-
+ 
   // Dummy tester and H2O launcher - should launch H2O with REPL
   def main(args: Array[String]): Unit = {
-    println("Launching H2O...muheheh from Scala")
-    //H2O.main(Array.empty[String]);
-    water.Boot.main(Array("-mainClass", "water.api.dsl.A"));
-    //water.Boot.main(Array.empty[String]);
+    println("Launching H2O...muhehehe from Scala")
+    water.Boot.main(Array("-mainClass", "water.api.dsl.ScAlH2ORepl"));
   }
   
   // An object to represent an empty range selector 
@@ -80,7 +78,7 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   }
 }
 
-class DFrame(private val _frame:Frame = new Frame) extends TFrame with T_MR[DFrame] {
+class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFrame] {
   import water.api.dsl.Utils._;
   
   def frame() = _frame

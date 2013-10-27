@@ -16,21 +16,21 @@ import water.fvec.ParseDataset2
 trait TRef {}
 
 /** Trait holding basic Frame' operations. */
-trait TFrame {
+trait T_Frame {
   // Selector for columns
-  def apply(cols: Seq[Int]):TFrame
+  def apply(cols: Seq[Int]):T_Frame
   // Selector for view defined by rows X cols
   //def apply[TR, TC](rows: Selector[TR], cols: Selector[TC]):TFrame
-  def apply(rows: Seq[Int], cols: Seq[Int]):TFrame
+  def apply(rows: Seq[Int], cols: Seq[Int]):T_Frame
   /** Returns a new frame containing specified vectors. */
   //def \[T](ve: CSelect): TFrame = null; // Can be seq of Strings or Ints 
   //def ##[T](ve: CSelect) = \(ve::Nil)
   
   /** Basic arithmetic ops with scalar. */
-  def +(rhs: Number): TFrame;
-  def -(rhs: Number): TFrame;
-  def *(rhs: Number): TFrame;
-  def /(rhs: Number): TFrame;
+  def +(rhs: Number): T_Frame;
+  def -(rhs: Number): T_Frame;
+  def *(rhs: Number): T_Frame;
+  def /(rhs: Number): T_Frame;
   
   /** Basic arithmetic ops with another frame */
 //  def +(rhs: TFrame): TFrame;
@@ -114,12 +114,14 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def get(k: K): Frame      = UKV.get(k.key)
   def put[V<:VT](k: K, v:V) = UKV.put(k.key, v.frame())
   // We need shutdown for sure ! :-)
-  def shutdown() = H2O.exit(0) // FIXME this is not distributed shutdown
+  def shutdown() = H2O.CLOUD.shutdown()
+
 }
 
 /** Trait representing provided global environment in R-like style.
+ *  Working with first level entities: Frame
  */
-trait T_R_Env[T<:TFrame] {
+trait T_R_Env[T<:T_Frame] {
    // Global methods to support R-style of programming 
   def ncol(d: T): Int  = d.ncol()
   def nrow(d: T): Long = d.nrow()
@@ -127,9 +129,8 @@ trait T_R_Env[T<:TFrame] {
   def head (d: T, rows:Int = NHEAD) = println(d)
   def tail (d: T, rows:Int = NTAIL) = println(d)
   def length(d: T) = if (ncol(d) > 1) ncol(d) else nrow(d)
-  // Dummy functions
-  def helpme() = help()
-  def help() = println("""
+  def helpme = help
+  def help = println("""
 *** Welcome into world of SkAlH2O ***
       
 Available R commands:
@@ -138,17 +139,20 @@ Available R commands:
       nrow <frame>
       head <frame>
       tail <frame>
+      f(2)           - returns 2. column
       f(*,2)         - returns 2. column
       f(*, 2 to 5)   - returns 2., 3., 4., 5. columns
-      f(*,2)+2       - scalar operation
-      f-1            - scalar operation
-      
+      f(*,2)+2       - scalar operation - 2.column + 2
+      f(2)*3         - scalar operation - 2.column * 3
+      f-1            - scalar operation - all columns - 1
+
 Available H2O commands:
+      keys              - shows all available keys i KV store
       parse("iris.csv") - parse given file and return a frame
       put("a.hex", f)   - put a frame into KV store
       get("b.hex")      - return a frame from KV store
       shutdown          - shutdown H2O cloud
-      
+
 M/R commands
       NA
       
@@ -156,7 +160,7 @@ Example:
       val f = parse("iris.csv")
       println(ncol f)
       val v2 = f(*, 2 to (ncol f))
-""")
+""") 
   
   // Predefined constants
   def NHEAD = 10
