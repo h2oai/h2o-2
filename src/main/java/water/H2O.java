@@ -7,6 +7,7 @@ import java.nio.channels.DatagramChannel;
 import java.util.*;
 
 import jsr166y.*;
+import water.api.dsl.ScAlH2ORepl;
 import water.exec.Function;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.ParseDataset;
@@ -124,6 +125,11 @@ public final class H2O {
 
     // Should never reach here.
     System.exit(222);
+  }
+
+  public void shutdown() {
+    UDPRebooted.T.shutdown.send(H2O.SELF);
+    H2O.exit(0);
   }
 
   // --------------------------------------------------------------------------
@@ -636,6 +642,7 @@ public final class H2O {
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
+    public boolean scala_repl = false; // enable Scala REPL by specifying option -scala_repl
     public String h = null;
     public String help = null;
     public String version = null;
@@ -820,6 +827,8 @@ public final class H2O {
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
+
+    initializeScalaRepl();
   }
 
   private static void initializeExpressionEvaluation() {
@@ -1627,5 +1636,10 @@ public final class H2O {
         if (gracefulShutdownInitiated) { break; }
       }
     }
+  }
+
+  private static void initializeScalaRepl() {
+    if (!OPT_ARGS.scala_repl) return;
+    ScAlH2ORepl.launchRepl();
   }
 }

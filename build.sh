@@ -31,7 +31,7 @@ JAR_ROOT=lib
 
 # additional dependencies, relative to this file, but all dependencies should be
 # inside the JAR_ROOT tree so that they are packed to the jar file properly
-DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*${SEP}${JAR_ROOT}/log4j/*${SEP}${JAR_ROOT}/mockito/*${SEP}${JAR_ROOT}/jogamp/*"
+DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*${SEP}${JAR_ROOT}/log4j/*${SEP}${JAR_ROOT}/mockito/*${SEP}${JAR_ROOT}/jogamp/*${SEP}${JAR_ROOT}/h2o-scala/*"
 
 DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
@@ -114,7 +114,7 @@ function build_classes() {
 }
 
 function build_initializer() {
-    echo "building initializer..."
+echo "building initializer...$(pwd) "
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
     pushd lib
     "$JAR" xf javassist.jar
@@ -126,7 +126,17 @@ function build_jar() {
     echo "creating jar file... ${JAR_FILE}"
     # include all libraries
     cd ${JAR_ROOT}
-    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v mapr`
+    ( 
+      cd h2o-scala; mkdir tmp; cd tmp
+      "$JAR" xf ../h2o-scala.jar
+      "$JAR" xf ../scala-compiler-2.10.3.jar
+      "$JAR" xf ../scala-library-2.10.3.jar
+      "$JAR" xf ../scala-reflect-2.10.3.jar
+      rm -rf META-INF
+    )
+    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v mapr | grep -v 'h2o-scala'`
+    "$JAR" uf ../${JAR_FILE} -C "h2o-scala/tmp/" .
+    rm -rf h2o-scala/tmp
     cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
