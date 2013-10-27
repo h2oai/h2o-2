@@ -21,7 +21,8 @@ class Basic(unittest.TestCase):
     def test_NN_covtype_1(self):
         csvFilename = 'covtype.data'
         csvPathname = 'UCI/UCI-large/covtype/' + csvFilename
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', timeoutSecs=10)
+        hex_key = 'covtype.hex'
+        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    num_rows:", "{:,}".format(inspect['num_rows']), \
@@ -41,6 +42,7 @@ class Basic(unittest.TestCase):
             'l2': 1.0E-4,
             'epochs': 100,
             'destination_key': 'a.hex',
+            'validation': hex_key,
         }
 
         timeoutSecs = 600
@@ -51,6 +53,7 @@ class Basic(unittest.TestCase):
         print "Hack: neural net apparently doesn't support the right polling response yet?"
         h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
 
+        print "FIX! need to add something that looks at the neural net result here?"
         print "neural net end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
 if __name__ == '__main__':

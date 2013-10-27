@@ -1702,7 +1702,7 @@ class H2O(object):
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key'      : None,
-            'validation'           : data_key, # what is this..default it to match the source..is it holdout data
+            'validation'           : None,
             'response'             : None,
             'source'               : data_key,
             'learn_rate'           : None,
@@ -1718,6 +1718,8 @@ class H2O(object):
 
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm', print_params)
+        if 'validation' not in kwargs:
+            kwargs['validation'] = data_key
 
         start = time.time()
         a = self.__do_json_request('2/GBM.json',timeout=timeoutSecs,params=params_dict)
@@ -1799,6 +1801,7 @@ class H2O(object):
             'cols': None,
             'ignored_cols': None,
             'validation': None,
+            'classification': None,
             'response': None,
             'activation': None,
             'hidden': None,
@@ -1808,6 +1811,9 @@ class H2O(object):
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
+        if 'validation' not in kwargs:
+            kwargs['validation'] = data_key
+
         start = time.time()
         a = self.__do_json_request('2/NeuralNet.json',timeout=timeoutSecs, params=params_dict)
 
