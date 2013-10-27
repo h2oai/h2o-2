@@ -37,13 +37,13 @@ class Basic(unittest.TestCase):
             # fails
             # h2o.build_cloud(1,java_heap_MB=100, enable_benchmark_log=True)
             # 400 fails
-            h2o.build_cloud(1,java_heap_MB=1600, enable_benchmark_log=True)
+            jea = '-Xloggc:log.txt'
+            h2o.build_cloud(1,java_heap_MB=1200, enable_benchmark_log=True, java_extra_args=jea)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
-        ### time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_GBM_many_cols(self):

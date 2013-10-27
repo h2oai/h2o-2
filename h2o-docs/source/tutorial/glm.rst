@@ -30,8 +30,8 @@ variable that can be expressed as 0 or 1, a success or a failure.
 
 Getting Started
 """""""""""""""
-
 This tutorial uses a publicly available data set that can be found at:
+
 http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/ 
 
 The original data are the Abalone data set made available by UCI

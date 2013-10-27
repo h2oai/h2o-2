@@ -44,16 +44,19 @@ public class ConfusionMatrix extends Request2 {
 
   @Override public Response serve() {
     Vec va = null,vp = null;
+    // Input handling
+    if( vactual==null || vpredict==null )
+      return Response.error("Missing actual or predict?");
+    if ( !vactual.isInt() || !vpredict.isInt())
+      return Response.error("Cannot provide confusion matrix for float vectors.");
+
     try {
-      if( vactual==null || vpredict==null )
-        throw new IllegalArgumentException("Missing actual or predict?");
       // Create a new vectors - it is cheap since vector are only adaptation vectors
       va = vactual .toEnum();
       response_domain = va._domain;
       vp = vpredict.toEnum();
       predicted_domain = vp._domain;
-      System.out.println("vp domain = " + Arrays.toString(predicted_domain));
-      cm = new CM(va.domain().length, vp.domain().length).doAll(vactual,vpredict)._cm;
+      cm = new CM(va.domain().length, vp.domain().length).doAll(va,vp)._cm;
       return new Response(Response.Status.done,this,-1,-1,null);
     } catch (Throwable t) {
       Log.err(t);
