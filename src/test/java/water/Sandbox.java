@@ -18,66 +18,14 @@ public class Sandbox {
 
   public static class UserCode {
     public static void userMain(String[] args) throws Exception {
-      localCloud(4, true, args);
+      localCloud(2, false, args);
 
       //new Sample07_NeuralNet_Mnist().run();
 
       // airlines();
       // mnist();
-      ecology();
+      // ecology();
       // va();
-
-      //LaunchJar.jar(new File("/home/cypof/tmp/misc.jar"), new File("/home/cypof/git/cypof/cypof/target/classes"));
-
-//      ClassPool pool = new ClassPool(true);
-//      ArrayList<JarEntry> entries = new ArrayList<JarEntry>();
-//      pool.appendClassPath("/home/cypof/tmp/misc.jar");
-//
-//      JarFile misc = new JarFile("/home/cypof/tmp/misc.jar");
-//      Enumeration e = misc.entries();
-//      while( e.hasMoreElements() ) {
-//        JarEntry entry = (JarEntry) e.nextElement();
-//        entries.add(entry);
-//      }
-//      misc.close();
-//
-//      String uid = UUID.randomUUID().toString().replace("-", "");
-//      ClassMap renames = new ClassMap();
-//      for( JarEntry entry : entries ) {
-//        if( entry.getName().endsWith(".class") ) {
-//          String n = Utils.className(entry.getName());
-//          String u;
-//          int index = n.indexOf("$");
-//          if( index < 0 )
-//            index = n.length();
-//          u = n.substring(0, index) + "_" + uid + n.substring(index);
-//          renames.put(n, u);
-//        }
-//      }
-//      ArrayList<CtClass> updated = new ArrayList();
-//      for( Entry<String, String> entry : ((Map<String, String>) renames).entrySet() ) {
-//        CtClass c = pool.get(entry.getKey().replace('/', '.'));
-//        c.replaceClassName(renames);
-//        updated.add(c);
-//      }
-//      JarOutputStream jar = new JarOutputStream(new FileOutputStream("../tmp/test.jar"));
-//      DataOutputStream bc = new DataOutputStream(jar);
-//      for( CtClass c : updated ) {
-//        jar.putNextEntry(new JarEntry(c.getName().replace('.', '/') + ".class"));
-//        c.toBytecode(bc);
-//        bc.flush();
-//      }
-//      jar.close();
-//
-//      File file = new File("../tmp/test.jar");
-//      Boot._init.addExternalJars(file);
-//      Class c = Boot._init.loadClass("hex.Sample_KMeans_" + uid);
-//      Job job = (Job) c.newInstance();
-//      job.invoke();
-
-//    File jar = new File("../tmp/misc.jar");
-//    LaunchJar.jar(jar, new File("/home/cypof/git/cypof/cypof/target/classes"));
-//    LaunchJar.run("hex.Sample_KMeans", jar);
 
 //      File file = new File("smalldata/covtype/covtype.20k.data");
 //      Key dest = Key.make("train.hex");

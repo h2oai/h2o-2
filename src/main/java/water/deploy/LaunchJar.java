@@ -96,6 +96,17 @@ public class LaunchJar extends Request2 {
       try {
         File file = File.createTempFile("h2o", ".jar");
         Utils.writeFileAndClose(file, new ByteArrayInputStream(_data));
+        JarFile jar = new JarFile(file);
+        Enumeration e = jar.entries();
+        while( e.hasMoreElements() ) {
+          JarEntry entry = (JarEntry) e.nextElement();
+          if( entry.getName().endsWith(".class") ) {
+            String n = Utils.className(entry.getName());
+            String pack = n.substring(0, n.lastIndexOf('.'));
+            Boot.weavePackage(pack);
+          }
+        }
+        jar.close();
         Boot._init.addExternalJars(file);
         tryComplete();
       } catch( Exception ex ) {

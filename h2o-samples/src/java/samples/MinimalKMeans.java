@@ -18,7 +18,7 @@ public class MinimalKMeans extends Job {
 
   @Override protected void exec() {
     // Load and parse a file. Data is distributed to other nodes in a round-robin way
-    Key file = NFSFileVec.make(new File("lib/resources/datasets/gaussian.csv"));
+    Key file = NFSFileVec.make(new File("../lib/resources/datasets/gaussian.csv"));
     Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
 
     // Optionally create a frame with less columns, e.g. skip first

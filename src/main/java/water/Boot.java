@@ -93,11 +93,17 @@ public class Boot extends ClassLoader {
 
   public static void main(String[] args) throws Exception {  _init.boot(args); }
   public static void main(Class main, String[] args) throws Exception {
-    Weaver.registerPackage(main.getPackage().getName());
+    weavePackage(main.getPackage().getName());
     ArrayList<String> l = new ArrayList<String>(Arrays.asList(args));
     l.add(0, "-mainClass");
     l.add(1, main.getName());
     _init.boot2(l.toArray(new String[0]));
+  }
+  public static void weavePackage(String name) {
+    Weaver.registerPackage(name);
+  }
+  public static String[] wovenPackages() {
+    return Weaver._packages;
   }
 
   private URLClassLoader _systemLoader;
@@ -354,7 +360,7 @@ public class Boot extends ClassLoader {
   // methods to classes that inherit from DTask & Iced.  Notice that this
   // changes the default search order: existing classes first, then my class
   // search, THEN the System or parent loader.
-  public synchronized Class loadClass( String name, boolean resolve ) throws ClassNotFoundException {
+  @Override public synchronized Class loadClass( String name, boolean resolve ) throws ClassNotFoundException {
     assert !name.equals(Weaver.class.getName());
     Class z = loadClass2(name);      // Do all the work in here
     if( resolve ) resolveClass(z);   // Resolve here instead in the work method

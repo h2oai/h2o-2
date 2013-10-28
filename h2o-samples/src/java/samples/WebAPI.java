@@ -17,12 +17,12 @@ public class WebAPI {
     int status = client.executeMethod(get);
     if( status != 200 )
       throw new Exception(get.getStatusText());
-
     Gson gson = new Gson();
     JobsRes res = gson.fromJson(new InputStreamReader(get.getResponseBodyAsStream()), JobsRes.class);
     System.out.println("Running jobs:");
     for( Job job : res.jobs )
       System.out.println(job.description + " " + job.destination_key);
+    get.releaseConnection();
   }
 
   public static class JobsRes {
