@@ -727,3 +727,10 @@ setMethod("summary", "H2OParsedData2", function(object) {
   colnames(result) <- col.names
   result
 })
+
+setMethod("apply", "H2OParsedData2", function(X, MARGIN, FUN, ...) {
+  params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
+  expr = paste("apply(", paste(params, collapse=","), ")", sep="")
+  res = h2o.__exec2(X@h2o, expr)
+  new("H2OParsedData2", h2o=X@h2o, key=res$dest_key)
+})
