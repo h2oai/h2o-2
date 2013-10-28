@@ -59,7 +59,7 @@ h2o.__remoteSend <- function(client, page, ...) {
     # temp = deparse(substitute(list(...)))
   # }
   
-  #TODO (Spencer): Create "commands.log" using: list(...)
+  # TODO (Spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
   url = paste("http://", ip, ":", port, "/", page, sep="")
   # temp = postForm(url, style = "POST", ...)
@@ -244,7 +244,10 @@ h2o.__getFamily <- function(family, link, tweedie.var.p = 0, tweedie.link.p = 1-
 
 #------------------------------------ FluidVecs -----------------------------------------#
 h2o.__exec2 <- function(client, expr) {
-  h2o.__exec2_dest_key(client, expr, TEMP_KEY)
+  destKey = paste(TEMP_KEY, ".", pkg.env$temp_count, sep="")
+  pkg.env$temp_count = (pkg.env$temp_count + 1) %% RESULT_MAX
+  h2o.__exec2_dest_key(client, expr, destKey)
+  # h2o.__exec2_dest_key(client, expr, TEMP_KEY)
 }
 
 h2o.__exec2_dest_key <- function(client, expr, destKey) {
