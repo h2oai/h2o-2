@@ -109,7 +109,7 @@ Validation Measures: A Data- distribution Perspective." Systems, Man,
 and Cybernetics, Part B: Cybernetics, IEEE Transactions on 39.2 (2009): 318-331.
 
 K-Means Algorithm
-------------------
+""""""""""""""""""
 
 The number of clusters :math:`K` is user defined and determined a priori. 
 
@@ -183,6 +183,18 @@ Repeat until :math:`K` centers have been chosen.
 
 
  
+References
+""""""""""
+
+
+Hastie, Trevor, Robert Tibshirani, and J Jerome H Friedman. The
+Elements of Statistical Learning.
+Vol.1. N.p., Springer New York, 2001. 
+http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
+
+Xiong, Hui, Junjie Wu, and Jian Chen. "K-means Clustering Versus
+Validation Measures: A Data- distribution Perspective." Systems, Man,
+and Cybernetics, Part B: Cybernetics, IEEE Transactions on 39.2 (2009): 318-331.
 
 
 

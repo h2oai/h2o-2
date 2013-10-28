@@ -19,8 +19,9 @@ with Big Data Science.
 
 High-level presentations describing H\ :sub:`2`\ O:
 
-* `H\ :sub:`2`\ O and Big Data Science <http://www.slideshare.net/0xdata/0xdata-h2-obigdatascience5282013>`_
-* `H\ :sub:`2`\ O and R <http://www.slideshare.net/0xdata/big-datascienceh2oandr>`_
+* H\ :sub:`2`\ O `and Big Data Science <http://www.slideshare.net/0xdata/0xdata-h2-obigdatascience5282013>`_
+
+* H\ :sub:`2`\ O `and R <http://www.slideshare.net/0xdata/big-datascienceh2oandr>`_
 
 The Algorithms Roadmap for H\ :sub:`2`\ O:
 
@@ -28,5 +29,5 @@ The Algorithms Roadmap for H\ :sub:`2`\ O:
 
 H\ :sub:`2`\ O's Hadoop & R integration is rapidly growing and growing stronger:
 
-* `H2O on Hadoop <http://docs.0xdata.com/bits/hadoop/H2O_on_Hadoop_0xdata.pdf>`_
-* `H2O R Package <http://docs.0xdata.com/bits/h2oRjoin.pdf>`_
+* H\ :sub:`2`\ O `on Hadoop <http://docs.0xdata.com/bits/hadoop/H2O_on_Hadoop_0xdata.pdf>`_
+* H\ :sub:`2`\ O `R Package <http://docs.0xdata.com/bits/h2oRjoin.pdf>`_

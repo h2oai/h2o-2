@@ -30,7 +30,7 @@ class Basic(unittest.TestCase):
         for (csvDirname, timeoutSecs) in csvDirlist:
 
             csvPathname = csvDirname + "/file_[2][0-9][0-9].dat.gz"
-            (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-datasets', path=csvPathname, schema='s3n', timeoutSecs)
+            (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-datasets', path=csvPathname, schema='s3n', timeoutSecs=timeoutSecs)
             s3nFullList = importHDFSResult['succeeded']
             self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 
