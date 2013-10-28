@@ -1,5 +1,10 @@
 package water;
 
+import static water.util.Utils.difference;
+import static water.util.Utils.isEmpty;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -14,8 +19,6 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
 import water.util.Utils.ExpectedExceptionForDebug;
-import static water.util.Utils.isEmpty;
-import static water.util.Utils.difference;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -52,6 +55,10 @@ public class Job extends Request2 {
 
   protected void logStart() {
     Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
+  }
+
+  public int gridParallelism() {
+    return 1;
   }
 
   public static abstract class FrameJob extends Job {
@@ -141,6 +148,16 @@ public class Job extends Request2 {
       for( int i = 0; i < cols.length; i++ )
         vecs[i] = frame.vecs()[cols[i]];
       return vecs;
+    }
+
+    protected final Frame selectFrame(Frame frame) {
+      Vec[] vecs = new Vec[cols.length];
+      String[] names = new String[cols.length];
+      for( int i = 0; i < cols.length; i++ ) {
+        vecs[i] = frame.vecs()[cols[i]];
+        names[i] = frame.names()[cols[i]];
+      }
+      return new Frame(names, vecs);
     }
   }
 
@@ -329,6 +346,13 @@ public class Job extends Request2 {
   }
 
   public void cancel() { cancel("cancelled by user"); }
+  public void cancel(Throwable ex){
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    ex.printStackTrace(pw);
+    String stackTrace = sw.toString();
+    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
+  }
   public void cancel(String msg) { cancel(job_key,msg); }
   public static void cancel(final Key self, final String exception) {
     DKV.remove(self);
@@ -362,12 +386,9 @@ public class Job extends Request2 {
   protected void onCancelled() {
   }
 
-  public boolean cancelled() {
-    return !running() && end_time == Job.CANCELLED_END_TIME;
-  }
-  public boolean running() { return running(job_key); }
-  public static boolean running(Key self) {
-    return DKV.get(self) != null;
+  public boolean cancelled() { return cancelled(job_key); }
+  public static boolean cancelled(Key key) {
+    return DKV.get(key) == null;
   }
 
   public void remove() {
@@ -492,6 +513,7 @@ public class Job extends Request2 {
 
   public void invoke() {
     init();
+    start(new H2OEmptyCompleter());
     exec();
     done();
   }

@@ -50,6 +50,8 @@ def pp_cm(jcm, header=None):
     c = 0
     for line in jcm:
         lineSum  = sum(line)
+        if c < 0 or c >= len(line):
+            raise Exception("Error in h2o_gbm.pp_cm. c: %s line: %s len(line): %s jcm: %s" % (c, line, len(line), h2o.dump_json(jcm)))
         errorSum = lineSum - line[c]
         if (lineSum>0):
             err = float(errorSum) / lineSum

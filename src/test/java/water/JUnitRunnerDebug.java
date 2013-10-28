@@ -1,7 +1,5 @@
 package water;
 
-import hex.KMeans2Test;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,13 +31,14 @@ public class JUnitRunnerDebug {
       if( multi ) {
         new NodeCL(("-ip 127.0.0.1 -port 54323 -flatfile " + flat).split(" ")).start();
         new NodeCL(("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
+        TestUtil.stall_till_cloudsize(3);
       }
 
       List<Class> tests = new ArrayList<Class>();
 
       // Classes to test:
-      //tests = JUnitRunner.all();
-      tests.add(KMeans2Test.class);
+      tests = JUnitRunner.all();
+      //tests.add(hex.PCATest.class);
 
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());

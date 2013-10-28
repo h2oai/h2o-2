@@ -185,9 +185,13 @@ public class RF extends Request {
 
     @Override public String queryComment() {
       TreeSet<String> ignoredCols = _constantColumns.get();
+      StringBuilder sb = new StringBuilder();
       if(_badColumns.get() != null && _badColumns.get() > 0)
-        return "<div class='alert'><b> There are " + _badColumns.get() + " columns with more than " + _maxNAsRatio*100 + "% of NAs.<br/>\nIgnoring " + _constantColumns.get().size() + " constant columns</b>: " + ignoredCols.toString() +"</div>";
-      return super.queryComment();
+        sb.append("<b> There are ").append(_badColumns.get()).append(" columns with more than ").append(_maxNAsRatio*100).append("% of NAs.<br/>");
+      if (ignoredCols!=null && !ignoredCols.isEmpty())
+        sb.append("Ignoring ").append(_constantColumns.get().size()).append(" constant columns</b>: ").append(ignoredCols.toString());
+      if (sb.length()>0) sb.insert(0, "<div class='alert'>").append("</div>");
+      return sb.toString();
     }
   }
 }

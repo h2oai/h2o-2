@@ -5,7 +5,8 @@ import getpass
 #****************************************************************************************
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
 # so only walk around for local
-def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=False):
+# using this standalone, we probably want 'put' decision making by default (can always pass schema='local')
+def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath=False):
     checkPath = True
     # strip the common mistake of leading "/" in path, if bucket is specified too
     giveUpAndSearchLocally = False
@@ -33,14 +34,17 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
         else:
             if os.environ.get('H2O_REMOTE_BUCKETS_ROOT'):
                 rootPath = os.environ.get('H2O_REMOTE_BUCKETS_ROOT')
+                print "Found H2O_REMOTE_BUCKETS_ROOT:", rootPath
             else:
                 rootPath = h2o.nodes[0].h2o_remote_buckets_root
+                print "Found h2o_nodes[0].h2o_remote_buckets_root:", rootPath
 
             bucketPath = os.path.join(rootPath, bucket)
             checkPath = False
 
     # does it work to use bucket "." to get current directory
-    elif (not h2o.nodes[0].remoteH2O or schema=='put') and os.environ.get('H2O_BUCKETS_ROOT'):
+    # this covers reote with put too
+    elif os.environ.get('H2O_BUCKETS_ROOT'):
         rootPath = os.environ.get('H2O_BUCKETS_ROOT')
         print "Using H2O_BUCKETS_ROOT environment variable:", rootPath
 
@@ -157,7 +161,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema=None, returnFullPath=
 # path should point to a file or regex of files. (maybe folder works? but unnecessary
 def import_only(node=None, schema='local', bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    benchmarkLogging=None, noPoll=False, doSummary=True, src_key='python_src_key', **kwargs):
+    benchmarkLogging=None, noPoll=False, doSummary=True, src_key=None, noPrint=False, **kwargs):
 
     # no bucket is sometimes legal (fixed path)
     if not node: node = h2o.nodes[0]
@@ -188,9 +192,12 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         (folderPath, filename) = find_folder_and_filename(bucket, path, schema)
         filePath = os.path.join(folderPath, filename)
         h2o.verboseprint("put filename:", filename, "folderPath:", folderPath, "filePath:", filePath)
-        h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/%s" % filePath) 
-        h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
-        h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
+
+        if not noPrint:
+            h2p.green_print("\nimport_only:", h2o.python_test_name, "uses put:/%s" % filePath) 
+            h2p.green_print("Local path to file that will be uploaded: %s" % filePath)
+            h2p.blue_print("That path resolves as:", os.path.realpath(filePath))
+
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
@@ -352,7 +359,7 @@ def find_key(pattern=None):
 # supposed to be the same? In any case
 # pattern can't be regex to h2o?
 # None should be same as no pattern
-def delete_keys(node=None, pattern=None, timeoutSecs=30):
+def delete_keys(node=None, pattern=None, timeoutSecs=90):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
     deletedCnt = 0
@@ -368,7 +375,7 @@ def delete_keys(node=None, pattern=None, timeoutSecs=30):
         # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return deletedCnt
 
-def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
+def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=90):
     if not node: node = h2o.nodes[0]
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff
@@ -386,7 +393,7 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
     return totalDeletedCnt
 
 
-def count_keys(node=None, pattern=None, timeoutSecs=30):
+def count_keys(node=None, pattern=None, timeoutSecs=90):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
     nodeCnt = 0
@@ -406,7 +413,7 @@ def count_keys(node=None, pattern=None, timeoutSecs=30):
     print nodeCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return nodeCnt
 
-def count_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=30):
+def count_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=90):
     if not node: node = h2o.nodes[0]
     totalCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff

@@ -102,7 +102,8 @@ class Basic(unittest.TestCase):
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 'case_mode': '=', 'case': 0}
+            kwargs = {'y': y, 'max_iter': 1, 'family': 'binomial',
+                'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 'case_mode': '=', 'case': 0}
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'

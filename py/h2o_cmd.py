@@ -60,11 +60,11 @@ def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noP
     return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, noPoll=noPoll, **kwargs)
 
 def runGLM(node=None, parseResult=None, 
-        timeoutSecs=20, retryDelaySecs=2, noise=None, **kwargs):
+        timeoutSecs=20, retryDelaySecs=2, noise=None, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLM')
     if not node: node = h2o.nodes[0]
     return node.GLM(parseResult['destination_key'], 
-        timeoutSecs, retryDelaySecs, noise=noise, **kwargs)
+        timeoutSecs, retryDelaySecs, noise=noise, noPoll=noPoll,**kwargs)
 
 def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
@@ -77,23 +77,23 @@ def runGLMGrid(node=None, parseResult=None,
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
-def runPCA(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, returnFast=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for PCA')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
+    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, returnFast=returnFast, **kwargs)
 
-def runNNet(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for NN')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
+    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
 
-def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
+def runGBM(node=None, parseResult=None, timeoutSecs=500, noPoll=True, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs,**kwargs) 
+    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs) 
 
 def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwargs):
     if not data_key: raise Exception('No data_key for run Predict')
@@ -119,6 +119,13 @@ def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noP
         raise Exception("\nNo model_key was supplied to the gbm view!")
     gbmView = node.gbm_view(model_key,timeoutSecs=timeoutSecs)
     return gbmView
+
+def runPCAView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+    if not node: node = h2o.nodes[0]
+    if not modelKey:
+        raise Exception("\nNo modelKey was supplied to the pca view!")
+    pcaView = node.pca_view(modelKey, timeoutSecs=timeoutSecs)
+    return pcaView
 
 def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
     if not node: node = h2o.nodes[0]
@@ -280,89 +287,128 @@ def infoFromInspect(inspect, csvPathname):
     # need more info about this dataset for debug
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
+    if h2o.beta_features:
+        naString = 'naCnt'
+    else:
+        naString = 'num_missing_values'
     missingValuesList = []
     for i, colDict in enumerate(cols):
-        num_missing_values = colDict['num_missing_values']
+        num_missing_values = colDict[naString]
         if num_missing_values != 0:
-            print "%s: col: %d, num_missing_values: %d" % (csvPathname, i, num_missing_values)
+            print "%s: col: %d, %s: %d" % (csvPathname, i, naString, num_missing_values)
             missingValuesList.append(num_missing_values)
 
-    num_cols = inspect['num_cols']
-    num_rows = inspect['num_rows']
-    row_size = inspect['row_size']
-    ptype = inspect['type']
-    value_size_bytes = inspect['value_size_bytes']
-    response = inspect['response']
-    ptime = response['time']
+    if h2o.beta_features:
+        # no type per col in inspect2
+        numCols = inspect['numCols']
+        numRows = inspect['numRows']
+        byteSize = inspect['byteSize']
 
-    print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, value_size_bytes: %s" % \
-           (num_cols, num_rows, row_size, ptype, value_size_bytes)
+        print "\n" + csvPathname, "numCols: %s, numRows: %s, byteSize: %s" % \
+               (numCols, numRows, byteSize)
+
+    else:
+        num_cols = inspect['num_cols']
+        num_rows = inspect['num_rows']
+        row_size = inspect['row_size']
+        ptype = inspect['type']
+        value_size_bytes = inspect['value_size_bytes']
+        response = inspect['response']
+        ptime = response['time']
+
+        print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, value_size_bytes: %s" % \
+               (num_cols, num_rows, row_size, ptype, value_size_bytes)
+
     return missingValuesList
 
 def infoFromSummary(summaryResult, noPrint=False):
-    summary = summaryResult['summary']
-    columnsList = summary['columns']
-    for columns in columnsList:
-        N = columns['N']
-        # self.assertEqual(N, rowCount)
-        name = columns['name']
-        stype = columns['type']
-        histogram = columns['histogram']
-        bin_size = histogram['bin_size']
-        bin_names = histogram['bin_names']
-        # if not noPrint:
-        #     for b in bin_names:
-        #        print "bin_name:", b
+    if h2o.beta_features:
+        names = summaryResult['names']
+        means = summaryResult['means']
+        summaries = summaryResult['summaries']
+        for column in summaries:
+            rows = column['rows']
+            start = column['start']
+            zeros = column['zeros']
+            bins = column['bins']
+            binsz = column['binsz']
+            domains = column['domains']
+            maxs = column['maxs']
+            mins = column['mins']
+            percentileValues = column['percentileValues']
 
-        bins = histogram['bins']
-        nbins = histogram['bins']
         if not noPrint:
             print "\n\n************************"
-            print "N:", N
-            print "name:", name
-            print "type:", stype
-            print "bin_size:", bin_size
-            print "len(bin_names):", len(bin_names), bin_names
-            print "len(bins):", len(bins), bins
-            print "len(nbins):", len(nbins), nbins
+            print "rows:", rows
+            print "start:", start
+            print "zeros:", zeros
+            print "len(names):", len(names)
+            print "len(means):", len(means)
 
-        # not done if enum
-        if stype != "enum":
-            zeros = columns['zeros']
-            na = columns['na']
-            smax = columns['max']
-            smin = columns['min']
-            mean = columns['mean']
-            sigma = columns['sigma']
+    else:
+        summary = summaryResult['summary']
+        columnsList = summary['columns']
+        for columns in columnsList:
+            N = columns['N']
+            # self.assertEqual(N, rowCount)
+            name = columns['name']
+            stype = columns['type']
+            histogram = columns['histogram']
+            bin_size = histogram['bin_size']
+            bin_names = histogram['bin_names']
+            # if not noPrint:
+            #     for b in bin_names:
+            #        print "bin_name:", b
+
+            bins = histogram['bins']
+            nbins = histogram['bins']
             if not noPrint:
-                print "zeros:", zeros
-                print "na:", na
-                print "smax:", smax
-                print "smin:", smin
-                print "mean:", mean
-                print "sigma:", sigma
+                print "\n\n************************"
+                print "N:", N
+                print "name:", name
+                print "type:", stype
+                print "bin_size:", bin_size
+                print "len(bin_names):", len(bin_names), bin_names
+                print "len(bins):", len(bins), bins
+                print "len(nbins):", len(nbins), nbins
 
-            # sometimes we don't get percentiles? (if 0 or 1 bins?)
-            if len(bins) >= 2:
-                percentiles = columns['percentiles']
-                thresholds = percentiles['thresholds']
-                values = percentiles['values']
-
+            # not done if enum
+            if stype != "enum":
+                zeros = columns['zeros']
+                na = columns['na']
+                smax = columns['max']
+                smin = columns['min']
+                mean = columns['mean']
+                sigma = columns['sigma']
                 if not noPrint:
-                    # h2o shows 5 of them, ordered
-                    print "len(max):", len(smax), smax
-                    print "len(min):", len(smin), smin
-                    print "len(thresholds):", len(thresholds), thresholds
-                    print "len(values):", len(values), values
+                    print "zeros:", zeros
+                    print "na:", na
+                    print "smax:", smax
+                    print "smin:", smin
+                    print "mean:", mean
+                    print "sigma:", sigma
 
-                for v in values:
-                    # 0 is the most max or most min
-                   if not v >= smin[0]:
-                        m = "Percentile value %s should all be >= the min dataset value %s" % (v, smin[0])
-                        raise Exception(m)
-                   if not v <= smax[0]:
-                        m = "Percentile value %s should all be <= the max dataset value %s" % (v, smax[0])
-                        raise Exception(m)
+                # sometimes we don't get percentiles? (if 0 or 1 bins?)
+                if len(bins) >= 2:
+                    percentiles = columns['percentiles']
+                    thresholds = percentiles['thresholds']
+                    values = percentiles['values']
+
+                    if not noPrint:
+                        # h2o shows 5 of them, ordered
+                        print "len(max):", len(smax), smax
+                        print "len(min):", len(smin), smin
+                        print "len(thresholds):", len(thresholds), thresholds
+                        print "len(values):", len(values), values
+
+                    for v in values:
+                        # 0 is the most max or most min
+                       if not v >= smin[0]:
+                            m = "Percentile value %s should all be >= the min dataset value %s" % (v, smin[0])
+                            raise Exception(m)
+                       if not v <= smax[0]:
+                            m = "Percentile value %s should all be <= the max dataset value %s" % (v, smax[0])
+                            raise Exception(m)
 
 def dot():
     sys.stdout.write('.')
