@@ -58,7 +58,7 @@ object ScAlH2ORepl {
       echo("""
 === Welcome to the world of ScAlH2O ===
           
-Type `help` to begin...
+Type `help` or `example` to begin...
 """)
     }
     

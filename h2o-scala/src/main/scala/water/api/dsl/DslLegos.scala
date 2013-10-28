@@ -12,6 +12,7 @@ import water.Iced
 import water.fvec.NFSFileVec
 import java.io.File
 import water.fvec.ParseDataset2
+import water.Job
 
 trait TRef {}
 
@@ -19,9 +20,9 @@ trait TRef {}
 trait T_Frame {
   // Selector for columns
   def apply(cols: Seq[Int]):T_Frame
-  // Selector for view defined by rows X cols
-  //def apply[TR, TC](rows: Selector[TR], cols: Selector[TC]):TFrame
+  def apply(cols: String): T_Frame
   def apply(rows: Seq[Int], cols: Seq[Int]):T_Frame
+  def apply(rows: Seq[Int], cols: String):T_Frame
   /** Returns a new frame containing specified vectors. */
   //def \[T](ve: CSelect): TFrame = null; // Can be seq of Strings or Ints 
   //def ##[T](ve: CSelect) = \(ve::Nil)
@@ -31,6 +32,11 @@ trait T_Frame {
   def -(rhs: Number): T_Frame;
   def *(rhs: Number): T_Frame;
   def /(rhs: Number): T_Frame;
+  
+  def <(rhs: Number): T_Frame;
+  def <=(rhs: Number): T_Frame;
+  def >(rhs: Number): T_Frame;
+  def >=(rhs: Number): T_Frame;
   
   /** Basic arithmetic ops with another frame */
 //  def +(rhs: TFrame): TFrame;
@@ -52,22 +58,47 @@ trait T_Frame {
 //}
 
 /** Numeric value transformer. */
-trait T_NV_Transf[T] extends (T => T)
+abstract class T_NV_Transf[T] extends Iced with (T => T) 
 
-case class Add(lhs:Double) extends Iced with T_NV_Transf[Double] {
-  def apply(rhs:Double):Double = lhs+rhs
+case class Add(lhs:scala.Double) extends T_NV_Transf[scala.Double] {
+  def apply(rhs:scala.Double):scala.Double = lhs+rhs
 }
+case class Sub(lhs:scala.Double) extends T_NV_Transf[scala.Double] {
+  def apply(rhs:scala.Double):scala.Double = lhs-rhs
+}
+case class Mul(lhs:scala.Double) extends T_NV_Transf[scala.Double] {
+  def apply(rhs:scala.Double):scala.Double = lhs*rhs
+}
+case class Div(lhs:scala.Double) extends T_NV_Transf[scala.Double] {
+  def apply(rhs:scala.Double):scala.Double = if (rhs!=0) lhs-rhs else scala.Double.NaN;
+}
+
+abstract class T_NF_Transf[T] extends Iced with (T => Boolean)
+case class Less(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
+  def apply(rhs:scala.Double):Boolean = lhs < rhs
+}
+case class LessOrEqual(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
+  def apply(rhs:scala.Double):Boolean = lhs <= rhs
+}
+case class Greater(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
+  def apply(rhs:scala.Double):Boolean = lhs > rhs
+}
+case class GreaterOrEqual(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
+  def apply(rhs:scala.Double):Boolean = lhs >= rhs
+}
+
 
 /** Support for M/R operation for frame - expect that frame contains all vector which we are operating on. */
 // f[,2-3]+1 => f[,2-3].map( { x => x+1 }) => map(Chunks[] ch, NewChunk[] ncs) { }  
-trait T_MR[T <: DFrame] {
+abstract trait T_MR[T <: DFrame] {
+  import water.api.dsl.MRUtils._
   //self:T => def frame():Frame // target type should contain method frame()
   // use all columns in frame and apply a transformation on all of them
   //
   def frame():Frame
   def apply(f:Frame):T
   
-  def map(vt: T_NV_Transf[Double]):T = {
+  def map(vt: T_NV_Transf[scala.Double]):T = {
     val f = frame()
     val mrt = new MRTask2() {
       override def map(in:Array[Chunk], out:Array[NewChunk]) = {
@@ -76,14 +107,35 @@ trait T_MR[T <: DFrame] {
           val ic = in(cnt)
           val rlen = ic._len
           for( row:Int <- 0 until rlen )
-        	  //oc.addNum(vt(ic.at0(row))) // append a new number into output chunk
-              oc.addNum(0f);
+        	  oc.addNum(vt(ic.at0(row))) // append a new number into output chunk
+              //oc.addNum(0f);
         }
       }   
     }
     mrt.doAll(f.numCols(), f)
-
-    apply(mrt._outputFrame)
+    val result = copyHeaders(f, mrt._outputFrame, null)
+    apply(result) // return the DFrame
+  }
+  
+  def map(vf: T_NF_Transf[scala.Double]):T = {
+    val f = frame()
+    
+    val mrt = new MRTask2() {
+      override def map(in:Array[Chunk], out:Array[NewChunk]) = {
+        var cnt = 0
+        for (oc:NewChunk <- out) {
+          val ic = in(cnt)
+          val rlen = ic._len
+          for( row:Int <- 0 until rlen ) {
+        	  val v = ic.at0(row)
+        	  oc.addNum(if (vf(v)) 1 else 0) 
+          }
+        }
+      }   
+    }
+    mrt.doAll(f.numCols(), f)
+    val result = copyHeaders(f, mrt._outputFrame, null)
+    apply(result) // return the DFrame
   }
 }
 
@@ -101,20 +153,33 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     // Wrap the frame
     new DFrame(f)
   }
+  def keys:Unit = keys(false)
   // Simply print a list of keys in KV store
-  def keys() = {
+  def keys(verbose:Boolean = false) = {
     import scala.collection.JavaConversions._ // import implicit inversion for Java collections
     println("*** Available keys *** ")
     if (H2O.keySet().isEmpty()) println("<None>")
-    else H2O.keySet().foreach((k:Key) => if (k.user_allowed()) println(k))
+    else H2O.keySet().foreach((k:Key) => if (k.user_allowed() || verbose) println(k))
     println("-----------------------")
   }
   // Access to DKV store is defined by reference
   // expressed by key and value
   def get(k: K): Frame      = UKV.get(k.key)
   def put[V<:VT](k: K, v:V) = UKV.put(k.key, v.frame())
+  
+  // Shows a list of jobs
+  def jobs() = { 
+    val aj = Job.all()
+    aj foreach { j:Job =>
+      val cancelled = if (j.end_time == 0) j.cancelled() else j.end_time == Job.CANCELLED_END_TIME
+      val progress = if (j.end_time == 0) (if (cancelled) "DONE" else j.progress()) else "DONE" 
+      println(j.description + " | " + (if (cancelled) "CANCELLED" else progress))
+      }
+  }
   // We need shutdown for sure ! :-)
   def shutdown() = H2O.CLOUD.shutdown()
+  
+  // GLM call
 
 }
 
@@ -140,22 +205,28 @@ Available R commands:
       head <frame>
       tail <frame>
       f(2)           - returns 2. column
+      f("year")		 - returns column "year"
       f(*,2)         - returns 2. column
       f(*, 2 to 5)   - returns 2., 3., 4., 5. columns
       f(*,2)+2       - scalar operation - 2.column + 2
       f(2)*3         - scalar operation - 2.column * 3
       f-1            - scalar operation - all columns - 1
+      f < 10         - transform the frame into boolean frame respecting the condition
 
 Available H2O commands:
       keys              - shows all available keys i KV store
       parse("iris.csv") - parse given file and return a frame
       put("a.hex", f)   - put a frame into KV store
       get("b.hex")      - return a frame from KV store
+      jobs              - shows a list of executed jobs
       shutdown          - shutdown H2O cloud
 
 M/R commands
-      NA
-      
+      f map (Add(3))   - call of map function of all columns in frame
+                          - function is (Double=>Double) and has to extend Iced
+      f map (Less(10)) - call of map function on all columns
+		  				  - function is (Double=>Boolean) 
+       
 Example:
       val f = parse("iris.csv")
       println(ncol f)

@@ -12,27 +12,11 @@ import water.fvec.NFSFileVec
 import water.fvec.ParseDataset2
 import java.util.UUID
 
-object A {
-  def main(args: Array[String]) = {
-    H2O.main(args);
-    ScAlH2ORepl.launchRepl()
-    
-    try {
-      import H2ODsl._
-      // Run test code - Whoooo! 
-      H2ODsl.test()
-      shutdown()
-    } catch {
-    	case e: Throwable => e.printStackTrace(); 
-    } finally {
-      // And exit
-      H2O.exit(0);
-    }
-  }
-}
-
 /** The object carry global environment and provides basic global methods such as head, tail, nrows, ... */
 object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[HexKey, DFrame] {
+  
+  type BOp = T_NV_Transf[scala.Double]
+  type FOp = T_NF_Transf[scala.Double]
  
   // Dummy tester and H2O launcher - should launch H2O with REPL
   def main(args: Array[String]): Unit = {
@@ -44,40 +28,47 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   case object * extends Range(0, -1, 1);
   
   def frame(kname:String):DFrame = new DFrame(get(kname))
+  def echo = println
+  
+  def example():DFrame = {
+    println("""
+== Parsing smalldata/cars.csv""")
+    val f = parse("smalldata/cars.csv")
+    println("""
+== Number of cylinders - f("cylinders")""")
+    println(f("cylinders"))
+    println("""
+== Selecting a set of columns and storing a frame reference - val f2 = f(2::3::7::Nil)""")
+    val f2 = f(2::3::7::Nil)
+    println(f2)
+    println("""
+== Using boolean transformation on last column - f("year") > 80 """)
+    val f3 = f("year") > 80
+    println(f3)
+    println("""
+== Launching map function on a select column:
+    f("cylinders") map (new BOp { 
+      var sum:scala.Double = 0
+      def apply(rhs:scala.Double) = { sum += rhs; rhs*rhs / sum; } 
+    })""")
+    val f4 = f("cylinders") map (new BOp { 
+      var sum:scala.Double = 0
+      def apply(rhs:scala.Double) = { sum += rhs; rhs*rhs / sum; } 
+    })  
+    println(f4)
+    f
+  }
 
   def test() = {
-    helpme
-    keys
-    val f = parse("/Users/michal/Devel/projects/h2o/repos/NEW.h2o.github/smalldata/iris/iris_wheader.csv")
-    // one colum
-    println(f(*, 3))
-    // more columns
-    println(f(*, 3 to 4))
-    // out of bound column
-    // FIXME:println(f(*, 6::5::4::Nil))
-    
-    // scalar operation (hidden M/R)
-    println(f(*, 3 to 4)+1)
-    
-    println(f(*,3)-1)
-    println(f(*,3)*100)
-    println(f(*,3)/100)
-    println(f(*,3)/0)
-    // List of all keys in KV store
-    val nf = f(*,1)
-    keys
-    put("aajjaja.hex", nf)
-    println(nf)
-    println(frame("aajjaja.hex"))
-    keys
-    //println(f \ (3 to 5));
-    //println(f \ "col1"::"col2"::"col3"::Nil);
-    //println(f \ "col1"::"col2"::"col3"::Nil);
-    //val x = 1 :: 2 :: Nil
-    //println(f ## "sepal_len")
+    val f = parse("../smalldata/cars.csv")
+    f("cylinders") map (new BOp { 
+      var sum:scala.Double = 0
+      def apply(rhs:scala.Double) = { sum += rhs; rhs*rhs / sum; } 
+    })
   }
 }
 
+/** A wrapper for H2O Frame proving basic operations */
 class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFrame] {
   import water.api.dsl.Utils._;
   
@@ -86,13 +77,20 @@ class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFr
   def ncol() = frame().numCols()
   def nrow() = frame().numRows()
   def apply(cols: Seq[Int]) = new DFrame(ffilterByIdx(frame(), cols))
+  def apply(cols: String) = new DFrame(ffilterByName(frame, cols::Nil))
   def apply(rows: Seq[Int], cols: Seq[Int]) = apply(cols)
+  def apply(rows: Seq[Int], cols: String) = apply(cols)
   def apply(f: Frame) = new DFrame(f)
   
-  def +(rhs: Number) = apply(MRUtils.add(frame(), rhs.doubleValue()))
-  def -(rhs: Number) = apply(MRUtils.sub(frame(), rhs.doubleValue()))
-  def *(rhs: Number) = apply(MRUtils.mul(frame(), rhs.doubleValue()))
+  def +(rhs: Number) = map(Add(rhs.doubleValue()))
+  def -(rhs: Number) = map(Sub(rhs.doubleValue()))
+  def *(rhs: Number) = map(Mul(rhs.doubleValue()))
   def /(rhs: Number) = apply(MRUtils.div(frame(), rhs.doubleValue()))
+
+  def <(rhs: Number)  = map(Greater(rhs.doubleValue()))
+  def >=(rhs: Number) = map(LessOrEqual(rhs.doubleValue()))
+  def >(rhs: Number)  = map(Less(rhs.doubleValue()))
+  def <=(rhs: Number) = map(GreaterOrEqual(rhs.doubleValue()))
   
   override def toString() = frame().toStringHead(10)
 }
