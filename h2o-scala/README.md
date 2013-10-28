@@ -8,6 +8,7 @@ and also a REPL integrated into H2O.
 
 Currently the library supports following expressions abstracting H2O API:
 ```
+R-like commands
       help
       ncol <frame>
       nrow <frame>
@@ -20,9 +21,9 @@ Currently the library supports following expressions abstracting H2O API:
       f(*,2)+2       - scalar operation - 2.column + 2
       f(2)*3         - scalar operation - 2.column * 3
       f-1            - scalar operation - all columns - 1
-      f < 10         - transform the frame into boolean frame respecting the
-condition
+      f < 10         - transform the frame into boolean frame respecting the condition
 
+H2O commands
       keys              - shows all available keys i KV store
       parse("iris.csv") - parse given file and return a frame
       put("a.hex", f)   - put a frame into KV store
