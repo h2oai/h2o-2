@@ -284,17 +284,18 @@ class ASTTable extends ASTOp {
     int[]  domain = new Vec.CollectDomain(fr.vecs()[0]).doAll(fr).domain();
     long[] counts = new Tabularize(domain).doAll(fr)._counts;
     // Build output vecs
-    AppendableVec v0 = new AppendableVec(Vec.newKey());
+    Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(2);
+    AppendableVec v0 = new AppendableVec(keys[0]);
     NewChunk c0 = new NewChunk(v0,0);
     for( int i=0; i<domain.length; i++ ) c0.addNum((double) domain[i]);
     c0.close(0,null);
-    AppendableVec v1 = new AppendableVec(Vec.newKey());
+    AppendableVec v1 = new AppendableVec(keys[1]);
     NewChunk c1 = new NewChunk(v1,0);
     for( int i=0; i<domain.length; i++ ) c1.addNum((double) counts[i]);
     c1.close(0,null);
     env.subRef(fr);
     env.pop();
-    env.push(new Frame(new String[]{"factor","count"}, new Vec[]{v0.close(null), v1.close(null)}));
+    env.push(new Frame(new String[]{fr._names[0],"count"}, new Vec[]{v0.close(null), v1.close(null)}));
   }
   private static class Tabularize extends MRTask2<Tabularize> {
     public final int[]  _domain;

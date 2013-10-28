@@ -374,16 +374,13 @@ public class Vec extends Iced {
    *  compute chunks in an alternative way, such as file-backed Vecs. */
   int elem2ChunkIdx( long i ) {
     assert 0 <= i && i < length() : "0 <= "+i+" < "+length();
-    int x = Arrays.binarySearch(_espc, i);
-    int res = x<0?-x - 2:x;
     int lo=0, hi = nChunks();
     while( lo < hi-1 ) {
       int mid = (hi+lo)>>>1;
       if( i < _espc[mid] ) hi = mid;
       else                 lo = mid;
     }
-    if(res != lo)
-      assert(res == lo):res + " != " + lo + ", i = " + i + ", espc = " + Arrays.toString(_espc);
+    while( _espc[lo+1] == i ) lo++;
     return lo;
   }
 
