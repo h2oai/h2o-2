@@ -1,7 +1,6 @@
 package samples;
 
 import java.io.*;
-import java.net.InetSocketAddress;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
@@ -15,37 +14,39 @@ import water.deploy.LaunchJar;
 import water.util.Utils;
 
 /**
- * Runs a job on an existing cloud by injecting a jar at runtime.
+ * Runs a job on an existing cloud by injecting a jar.
  */
 public class CloudExisting {
   /**
    * Build a jar file from project classes, and launch the job.
    */
-  public static void launch(InetSocketAddress host, Class<? extends Job> job) throws Exception {
+  public static void launch(String host, Class<? extends Job> job) throws Exception {
     File jar = File.createTempFile("h2o", ".jar");
-    jar(jar, new File("target"));
+    jar(jar, new File("target/classes"));
     launch(host, job.getName(), jar);
   }
 
   /**
    * Upload jars to an existing cloud and launches a custom job. Uses the Web API.
    */
-  public static void launch(InetSocketAddress host, String job, File... jars) throws Exception {
+  public static void launch(String host, String job, File... jars) throws Exception {
     HttpClient client = new HttpClient();
     String args = "job_class=" + job + "&jars=";
     for( File f : jars ) {
-      PostMethod post = new PostMethod("http://127.0.0.1:54321/Upload.json?key=" + f.getName());
+      PostMethod post = new PostMethod("http://" + host + "/Upload.json?key=" + f.getName());
       Part[] parts = { new FilePart(f.getName(), f) };
       post.setRequestEntity(new MultipartRequestEntity(parts, post.getParams()));
       if( 200 != client.executeMethod(post) )
         throw new RuntimeException("Request failed: " + post.getStatusLine());
       args += f.getName() + ",";
+      post.releaseConnection();
     }
 
     String href = new LaunchJar().href();
-    GetMethod get = new GetMethod("http://127.0.0.1:54321" + href + ".json?" + args);
+    GetMethod get = new GetMethod("http://" + host + href + ".json?" + args);
     if( 200 != client.executeMethod(get) )
       throw new RuntimeException("Request failed: " + get.getStatusLine());
+    get.releaseConnection();
   }
 
   public static void jar(File jar, File... folders) {

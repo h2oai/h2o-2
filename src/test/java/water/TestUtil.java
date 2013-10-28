@@ -353,6 +353,8 @@ public class TestUtil {
 
   public static Frame parseFrame(String path) {
     File file = new File(path);
+    if(!file.exists())
+      throw new RuntimeException("File not found " + path);
     Key fkey = NFSFileVec.make(file);
     return ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
   }
