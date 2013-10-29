@@ -1,5 +1,5 @@
 #GBM bench
-import os, sys, time, csv
+import os, sys, time, csv, string
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
@@ -12,6 +12,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
              }
 build = ""
 debug = False
+json  = ""
 def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, depth, minrows, nbins, learnRate, response, row):
     debug = False
     bench = "bench"
@@ -101,6 +102,8 @@ def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, dept
         gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
         h2o_jobs.pollWaitJobs(timeoutSecs=16000, pollTimeoutSecs=120, retryDelaySecs=5)
         gbmTime   = time.time() - gbmStart
+        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        os.system(cmd)
         row.update( {'gbmBuildTime'       : gbmTime,
                     })
         gbmTrainView = h2o_cmd.runGBMView(model_key='GBM('+f+')')
@@ -118,6 +121,7 @@ if __name__ == '__main__':
     dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
+    json  = sys.argv[-1].split('/')[-1]
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'

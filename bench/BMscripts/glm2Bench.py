@@ -1,5 +1,5 @@
 #GLM2 bench
-import os, sys, time, csv, re, requests
+import os, sys, time, csv, re, requests, string
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
@@ -12,6 +12,7 @@ files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 
              }
 build = ""
 debug = False
+json  = ""
 def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row, case_mode, case_val):
     debug = False
     bench = "bench"
@@ -96,6 +97,8 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
         glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=1800, noPoll=True, **kwargs)
         h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
         glmTime   = time.time() - glmStart
+        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        os.system(cmd)
         #glm       = h2o.nodes[0].inspect("GLM("+f+")")
         row.update( {'glm2BuildTime'       : glmTime,
                      #'AverageErrorOver10Folds'    : glm['glm_model']['validations'][0]['err'],
@@ -141,6 +144,7 @@ if __name__ == '__main__':
     dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
+    json  = sys.argv[-1].split('/')[-1]
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'

@@ -80,7 +80,7 @@ function deepClean {
         pids2=`echo ps -efww | grep h2o | grep 0xdiag| grep jar|awk '{print $2}' | xargs`
         ssh spencer@$i kill $pids2
         echo "Shredding all logs on machine $i"
-        ssh spencer@$i rm -rf /home/spencer/h2o/bench/BMLogs/starttime /home/spencer/h2o/bench/BMLogs/BigLogger* /home/spencer/h2o/bench/BMLogs/LittleLogger*
+        ssh spencer@$i rm -rf /home/spencer/h2o/bench/BMLogs/starttime /home/spencer/h2o/bench/BMLogs/BigLogger* /home/spencer/h2o/bench/BMLogs/LittleLogger* /home/spencer/h2o/bench/BMLogs/rawLogs
     done
 }
 

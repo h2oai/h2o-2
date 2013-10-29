@@ -1,5 +1,5 @@
 #summary bench
-import os, sys, time, csv
+import os, sys, time, csv, string
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util
@@ -12,6 +12,7 @@ files      = {'Airlines'   : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', '
              }
 build = ""
 debug = False
+json  = ""
 def doSUM(f, folderPath):
     debug = False
     bench = "bench"
@@ -78,7 +79,8 @@ def doSUM(f, folderPath):
                                        timeoutSecs = 7200)
                                      
         sumTime             = time.time() - sumStart
-
+        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        os.system(cmd)
         row.update({'summaryBuildTime' : sumTime})
         csvWrt.writerow(row)
     finally:
@@ -88,6 +90,7 @@ if __name__ == '__main__':
     dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
+    json  = sys.argv[-1].split('/')[-1]
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()
