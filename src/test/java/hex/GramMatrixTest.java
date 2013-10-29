@@ -54,12 +54,12 @@ GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.3
       System.out.println(Utils.pprint(gt._gram.getXX()));
       for(int i = 0; i < exp_result.length; ++i)
         for(int j = 0; j < exp_result.length; ++j)
-          assertEquals(exp_result[i][j],res[i][j],1e-5);
+          assertEquals(exp_result[i][j],gt._nobs*res[i][j],1e-5);
       gt = new GramTask(null, false, false);
       gt.doIt(gt.adaptFrame(fr2));
       for(int i = 0; i < exp_result.length-1; ++i)
         for(int j = 0; j < exp_result.length-1; ++j)
-          assertEquals(exp_result[i][j],res[i][j],1e-5);
+          assertEquals(exp_result[i][j],gt._nobs*res[i][j],1e-5);
     }finally{
       UKV.remove(ikey2);
       UKV.remove(okey2);
@@ -72,10 +72,10 @@ GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.3
    * @throws InterruptedException
    */
   public static void main(String[] args) throws InterruptedException, ExecutionException {
-    startCloud(args, 1);
-    new GramMatrixTest().testProstate();
+    startCloud(args, 3);
+//    new GramMatrixTest().testProstate();
     System.out.println("running glm test...");
-    new GLMTest2().testProstate();
+//    new GLMTest2().testProstate();
     System.out.println("DONE");
   }
 

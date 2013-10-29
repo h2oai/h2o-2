@@ -294,12 +294,13 @@ public final class AutoBuffer {
             // Read the writer-handshake-byte.
             SocketChannel sock = (SocketChannel)_chan;
             int x = sock.socket().getInputStream().read();
+            // either TCP con was dropped or other side closed connection without reading/confirming (e.g. task was cancelled).
+            if(x == -1)throw new TCPIsUnreliableException(new IOException("Other side closed connection unexpectedly."));
             assert x == 0xcd : "Handshake; writer expected a 0xcd from reader but got "+x;
             _h2o.freeTCPSocket(sock); // Recycle writeable TCP channel
           }
         }
         restorePriority();      // And if we raised priority, lower it back
-
       } else {                  // FileChannel
         if( !_read ) sendPartial(); // Finish partial file-system writes
         _chan.close();
@@ -321,11 +322,12 @@ public final class AutoBuffer {
     _chan = _h2o.getTCPSocket();
     raisePriority();
   }
-
+  // Just close the channel here without reading anything. Without the task object at hand we do not know what (how many bytes) should
+  // we read from the channel. And since the other side will try to read confirmation from us in before closing the channel,
+  // we can not read till the end. So we just close the channel and let the other side to deal with it and figure out the task has been cancelled
+  // (still sending ack ack back).
   public void drainClose() {
     try {
-      while( _chan.read(_bb) != -1 )
-        _bb.clear();
       _chan.close();
       restorePriority();        // And if we raised priority, lower it back
       bbFree();
@@ -1263,6 +1265,13 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+
+  public AutoBuffer putJSONZ( String name, boolean value ) {
+    putJSONStr(name).put1(':');
+    putJSONStr("" + value);
+    return this;
+  }
+
   public AutoBuffer putJSON1( byte b ) { return putJSON4(b); }
   public AutoBuffer putJSONA1( byte ary[] ) {
     if( ary == null ) return putNULL();
@@ -1344,7 +1353,7 @@ public final class AutoBuffer {
     return put1(']');
   }
 
-  public AutoBuffer putJSON4f ( float f ) { return putStr2(Float.isNaN(f)?"\"NaN\"":Float .toString(f)); }
+  public AutoBuffer putJSON4f ( float f ) { return f==Float.POSITIVE_INFINITY?putJSONStr(JSON_POS_INF):(f==Float.NEGATIVE_INFINITY?putJSONStr(JSON_NEG_INF):(Float.isNaN(f)?putJSONStr(JSON_NAN):putStr2(Float .toString(f)))); }
   public AutoBuffer putJSON4f ( String name, float f ) { return putJSONStr(name).put1(':').putJSON4f(f); }
   public AutoBuffer putJSONA4f( float[] a ) {
     if( a == null ) return putNULL();
@@ -1370,7 +1379,7 @@ public final class AutoBuffer {
     return put1(']');
   }
 
-  public AutoBuffer putJSON8d( double d ) { return putStr2(Double.isNaN(d)?"\"NaN\"":Double.toString(d)); }
+  public AutoBuffer putJSON8d( double d ) { return d==Double.POSITIVE_INFINITY?putJSONStr(JSON_POS_INF):(d==Double.NEGATIVE_INFINITY?putJSONStr(JSON_NEG_INF):(Double.isNaN(d)?putJSONStr(JSON_NAN):putStr2(Double.toString(d)))); }
   public AutoBuffer putJSON8d( String name, double d ) { return putJSONStr(name).put1(':').putJSON8d(d); }
   public AutoBuffer putJSONA8d( double[] a ) {
     if( a == null ) return putNULL();
@@ -1395,4 +1404,8 @@ public final class AutoBuffer {
     }
     return put1(']');
   }
+
+  static final String JSON_NAN = "NaN";
+  static final String JSON_POS_INF = "Infinity";
+  static final String JSON_NEG_INF = "-Infinity";
 }

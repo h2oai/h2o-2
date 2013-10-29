@@ -2,12 +2,14 @@ package water.fvec;
 
 import java.util.Arrays;
 import java.util.UUID;
+import sun.security.krb5.internal.SeqNumber;
 
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.util.Utils;
+import static water.util.Utils.seq;
 
 /**
  * A single distributed vector column.
@@ -67,6 +69,9 @@ public class Vec extends Iced {
    *  modified!), or -1 if rollups have not been computed since the last
    *  modification.   */
   volatile long _naCnt=-1;
+
+  /** Maximal size of enum domain */
+  public static final int MAX_ENUM_SIZE = 10000;
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
@@ -170,7 +175,13 @@ public class Vec extends Iced {
   public String[] domain() { return _domain; }
 
   /** Convert an integer column to an enum column, with just number strings for
-   *  the factors or levels.  */
+   *  the factors or levels.
+   *
+   *  Deprecated - you should use toEnum ALWAYS returning a new vector which
+   *  provides a correct transformation to enum. The caller of {@link #toEnum()} is ALWAYS responsible
+   *  for its deletion!!!
+   *  */
+  @Deprecated
   public void asEnum() {
     if( _domain!=null ) return;
     if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
@@ -178,6 +189,23 @@ public class Vec extends Iced {
     DKV.put(_key,this);
   }
 
+  /** Transform this vector to enum.
+   * Transformation is done by a {@link TransfVec} which provides a mapping between values.
+   *
+   * The caller is responsible for vector deletion!
+   */
+  public Vec toEnum() {
+    if( _domain!=null ) return this.makeTransf(seq(0,_domain.length), _domain);
+    else {
+      int[] domain;
+      String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
+      int[] domMap = Utils.mapping(domain);
+      if( domain.length > MAX_ENUM_SIZE ) throw H2O.unimpl();
+      return this.makeTransf(domMap, sdomain);
+    }
+  }
+
+  @Deprecated
   public String[] defaultLevels() {
     long min = (long)min(), max = (long)max();
     if( min < 0 || max > 100000L ) throw H2O.unimpl();
@@ -260,7 +288,6 @@ public class Vec extends Iced {
     boolean _isInt=true;
 
     @Override public void postGlobal(){
-      System.out.println("postGLobal!!!");
       final RollupStats rs = this;
       _fr.vecs()[0].setRollupStats(rs);
       // Now do this remotely also
@@ -297,8 +324,11 @@ public class Vec extends Iced {
       _max = Math.max(_max,rs._max);
       _naCnt += rs._naCnt;
       double delta = _mean - rs._mean;
-      _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
-      _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
+      if (_rows == 0) { _mean = rs._mean;  _sigma = rs._sigma; }
+      else if (rs._rows > 0) {
+        _mean = (_mean*_rows + rs._mean*rs._rows)/(_rows + rs._rows);
+        _sigma = _sigma + rs._sigma + delta*delta * _rows*rs._rows / (_rows+rs._rows);
+      }
       _rows += rs._rows;
       _size += rs._size;
       _isInt &= rs._isInt;
@@ -381,11 +411,12 @@ public class Vec extends Iced {
   /** Make a new random Key that fits the requirements for a Vec key. */
   static Key newKey(){return newKey(Key.make());}
 
+  public static final int KEY_PREFIX_LEN = 4+4+1+1;
   /** Make a new Key that fits the requirements for a Vec key, based on the
    *  passed-in key.  Used to make Vecs that back over e.g. disk files. */
   static Key newKey(Key k) {
     byte [] kb = k._kb;
-    byte [] bits = MemoryManager.malloc1(kb.length+4+4+1+1);
+    byte [] bits = MemoryManager.malloc1(kb.length+KEY_PREFIX_LEN);
     bits[0] = Key.VEC;
     bits[1] = -1;         // Not homed
     UDP.set4(bits,2,0);   // new group, so we're the first vector

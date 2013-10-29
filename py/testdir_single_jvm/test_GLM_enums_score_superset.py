@@ -109,7 +109,7 @@ class Basic(unittest.TestCase):
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
+            kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 'family': 'binomial',
                 'case_mode': '=', 'case': 0}
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
             # score with same dataset (will change to recreated dataset with one less enum
             glmScore = h2o_cmd.runGLMScore(key=parseResult['destination_key'],
                 model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-            print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+            print "glmScore end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             ### print h2o.dump_json(glmScore)
             classErr = glmScore['validation']['classErr']
             auc = glmScore['validation']['auc']

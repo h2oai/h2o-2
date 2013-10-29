@@ -47,8 +47,10 @@ public class SummaryPage2 extends Request2 {
   @Override protected Response serve() {
     if( source == null ) return RequestServer._http404.serve();
     // select all columns by default
-    if( cols == null ) cols = new int[Math.min(source.vecs().length,max_ncols)];
-    for(int i = 0; i < cols.length; i++) cols[i] = i;
+    if( cols == null ) {
+      cols = new int[Math.min(source.vecs().length,max_ncols)];
+      for(int i = 0; i < cols.length; i++) cols[i] = i;
+    }
     names = new String[cols.length];
     means = new double[cols.length];
     Vec[] vecs = new Vec[cols.length];
@@ -59,9 +61,11 @@ public class SummaryPage2 extends Request2 {
     }
     Frame fr = new Frame(names, vecs);
     summaries = new SummaryTask2().doAll(fr)._summaries;
-    for( Summary2 s2 : summaries ) {
-      s2.percentileValue(0);
-      s2.computeMajorities();
+    if (summaries != null) {
+      for( Summary2 s2 : summaries ) {
+        s2.percentileValue(0);
+        s2.computeMajorities();
+      }
     }
     return new Response(Response.Status.done, this, -1, -1, null);
   }
@@ -71,7 +75,7 @@ public class SummaryPage2 extends Request2 {
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++) {
-        (_summaries[i]=new Summary2(cs[i]._vec)).add(cs[i]);
+        (_summaries[i]=new Summary2(_fr.vecs()[i])).add(cs[i]);
       }
     }
     @Override public void reduce(SummaryTask2 other) {
@@ -85,21 +89,23 @@ public class SummaryPage2 extends Request2 {
     sb.append("<div class=container-fluid'>");
     sb.append("<div class='row-fluid'>");
     sb.append("<div class='span2' style='overflow-y:scroll;height:100%;left:0;position:fixed;text-align:right;overflow-x:scroll;'><h5>Columns</h5>");
-    if (summaries.length > max_ncols)
+    if (summaries != null && summaries.length > max_ncols)
       sb.append("<div class='alert'>Too many columns were selected. "+max_ncols+" of them are shown!</div>");
 
-    StringBuilder innerPageBdr = new StringBuilder("<div class='span10' style='float:right;height:90%;overflow-y:scroll'>");
-    for( int i = 0; i < Math.min(summaries.length,max_ncols); i++) {
-      String cname = source._names[cols[i]];
-      Summary2 s2 = summaries[i];
-      s2.toHTML(source.vecs()[cols[i]],cname,innerPageBdr);
-      sb.append("<div><a href='#col_" + cname + "'>" + cname + "</a></div>");
+    StringBuilder innerPageBdr = null;
+    if (summaries != null) {
+      innerPageBdr = new StringBuilder("<div class='span10' style='float:right;height:90%;overflow-y:scroll'>");
+      for( int i = 0; i < Math.min(summaries.length,max_ncols); i++) {
+        String cname = source._names[cols[i]];
+        Summary2 s2 = summaries[i];
+        s2.toHTML(source.vecs()[cols[i]],cname,innerPageBdr);
+        sb.append("<div><a href='#col_" + cname + "'>" + cname + "</a></div>");
+      }
+      innerPageBdr.append("</div>");
     }
-    innerPageBdr.append("</div>");
-
     sb.append("</div>");
     sb.append("</div>");
-    sb.append(innerPageBdr);
+    if (summaries != null) sb.append(innerPageBdr);
     sb.append("</div>");
     return true;
   }

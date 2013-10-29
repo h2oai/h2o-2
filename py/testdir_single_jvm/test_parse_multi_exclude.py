@@ -80,12 +80,15 @@ class Basic(unittest.TestCase):
 
         for (rowCount, colCount, hex_key, timeoutSecs, excludePattern) in tryList:
             cnum += 1
-            # DON"T get redirected to S3! (EC2 hack in config, remember!)
-            # use it at the node level directly (because we gen'ed the files.
-            h2i.import_only(path=SYNDATASETS_DIR + '/*')
+            # put them, rather than using import files, so this works if remote h2o is used
+            # and python creates the files locally
+            fileList = os.listdir(SYNDATASETS_DIR)
+            for f in fileList:
+                print f
+                h2i.import_only(path=SYNDATASETS_DIR + "/" + f)
 
             # pattern match all, then use exclude
-            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*', schema='local', 
+            parseResult = h2i.parse_only(pattern="*/syn_*",
                 hex_key=hex_key, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']

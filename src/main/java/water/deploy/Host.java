@@ -79,6 +79,10 @@ public class Host {
   }
 
   public void rsync(Set<String> includes, Set<String> excludes, boolean delete) {
+    rsync(includes, excludes, delete, FOLDER);
+  }
+
+  public void rsync(Set<String> includes, Set<String> excludes, boolean delete, String folder) {
     Process process = null;
     try {
       ArrayList<String> args = new ArrayList<String>();
@@ -97,7 +101,7 @@ public class Host {
       if( delete )
         args.add("--delete");
 
-      args.add(_address + ":" + "/home/" + _user + "/" + FOLDER);
+      args.add(_address + ":" + "/home/" + _user + "/" + folder);
       ProcessBuilder builder = new ProcessBuilder(args);
       process = builder.start();
       String log = "rsync " + H2O.findInetAddressForSelf() + " -> " + _address;

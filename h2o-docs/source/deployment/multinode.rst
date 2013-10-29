@@ -14,7 +14,7 @@ Get an h2o.jar file.
 
 To download H\ :sub:`2`\ O, including the .jar, go to
 `http:0xdata.com/h2o <http://0xdata.com/h2o>`_ and click on the
-"Download H\ :sub:`2`\ O" button. 
+Download H\ :sub:`2`\ O button. 
 
 
 **STEP 2**

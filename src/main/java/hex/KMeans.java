@@ -102,7 +102,7 @@ public class KMeans extends Job {
         sampler._probability = k * 3; // Over-sampling
         sampler._seed = res._randSeed;
         sampler.invoke(va._key);
-        clusters = DRemoteTask.merge(clusters, sampler._clust2);
+        clusters = Utils.append(clusters, sampler._clust2);
 
         if( cancelled() ) {
           remove();
@@ -210,7 +210,7 @@ public class KMeans extends Job {
 
     @Override public void reduce(DRemoteTask rt) {
       Sampler task = (Sampler) rt;
-      _clust2 = _clust2 == null ? task._clust2 : merge(_clust2, task._clust2);
+      _clust2 = _clust2 == null ? task._clust2 : Utils.append(_clust2, task._clust2);
     }
   }
 

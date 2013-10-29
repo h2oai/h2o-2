@@ -15,12 +15,11 @@ def define_gbm_params():
         'min_rows': [None, 1, 2, 100, 10000000],
         'response': [54],
         'ignored_cols_by_name': [None, '0,1,2,3', '0'],
-        'classification': [None, 0, 1],
-        # 'validation': [None]
-        # 'validation': 
+        'classification': [None, 1], # FIX! add regression when we can predict
     }
     return paramsDict
 
+DO_PREDICT_CM = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -40,7 +39,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_covtype_train_test(self):
+    def test_GBM_params_rand2(self):
         h2o.beta_features = False
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
@@ -99,7 +98,13 @@ class Basic(unittest.TestCase):
                 ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
                 # use this to set any defaults you want if the pick doesn't set
-                params = {'response': 54, 'ignored_cols_by_name': '0,1,2,3,4', 'ntrees': 2}
+                params = {
+                    'response': 54, 
+                    'ignored_cols_by_name': 
+                    '0,1,2,3,4', 
+                    'ntrees': 2,
+                    'validation': parseTestResult['destination_key'],
+                }
                 h2o_gbm.pickRandGbmParams(paramsDict, params)
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
@@ -140,33 +145,33 @@ class Basic(unittest.TestCase):
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
-                print "This is crazy!"
-                gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
-                    actual=parseTestResult['destination_key'],
-                    vactual=response,
-                    predict=predictKey,
-                    vpredict='predict', # choices are 7 (now) and 'predict'
-                    )
+                if DO_PREDICT_CM:
+                    gbmPredictCMResult = h2o.nodes[0].predict_confusion_matrix(
+                        actual=parseTestResult['destination_key'],
+                        vactual='predict',
+                        predict=predictKey,
+                        vpredict='predict', # choices are 7 (now) and 'predict'
+                        )
 
-                # errrs from end of list? is that the last tree?
-                # all we get is cm
-                cm = gbmPredictCMResult['cm']
+                    # errrs from end of list? is that the last tree?
+                    # all we get is cm
+                    cm = gbmPredictCMResult['cm']
 
-                # These will move into the h2o_gbm.py
-                pctWrong = h2o_gbm.pp_cm_summary(cm);
-                print "Last line of this cm is really NAs, not CM"
-                print "\nTest\n==========\n"
-                print h2o_gbm.pp_cm(cm)
+                    # These will move into the h2o_gbm.py
+                    pctWrong = h2o_gbm.pp_cm_summary(cm);
+                    print "Last line of this cm is really NAs, not CM"
+                    print "\nTest\n==========\n"
+                    print h2o_gbm.pp_cm(cm)
 
                 # xList.append(ntrees)
                 if 'max_depth' in params and params['max_depth']:
                     xList.append(params['max_depth'])
-                    eList.append(pctWrong)
+                    eList.append(pctWrongTrain)
                     fList.append(trainElapsed)
 
             h2o.beta_features = False
             xLabel = 'max_depth'
-            eLabel = 'pctWrong'
+            eLabel = 'pctWrongTrain'
             fLabel = 'trainElapsed'
             eListTitle = ""
             fListTitle = ""

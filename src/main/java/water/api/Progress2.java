@@ -1,7 +1,6 @@
 package water.api;
 
 import water.*;
-import water.api.Request.Default;
 import water.api.RequestServer.API_VERSION;
 
 public class Progress2 extends Request2 {
@@ -19,7 +18,7 @@ public class Progress2 extends Request2 {
   public Key destination_key;
 
   @API(help="")
-  public String redirect_to;
+  public String redirect_url;
 
   @API(help="")
   public String status ="poll"; // poll | done | redirect | error
@@ -49,7 +48,7 @@ public class Progress2 extends Request2 {
   /** Return {@link Response} for finished job. */
   protected Response jobDone(final Job job, final Key dst) {
     status = "redirect";
-    redirect_to = Inspect2.jsonLink(destination_key);
+    redirect_url = Inspect2.jsonLink(destination_key);
     return Inspect2.redirect(this,dst.toString());
   }
 

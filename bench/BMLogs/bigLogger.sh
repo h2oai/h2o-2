@@ -1,7 +1,7 @@
 #!/bin/bash
 
 OUTDIR='BigLoggerFiles'
-rawLogs=${OUTDIR}/rawLogs
+rawLogs=rawLogs
 
 #last 3 digits of inet addr
 mach=`ifconfig | grep -o "inet addr:192.168.1.[0-9]*" | grep -o 192.168.1.* | awk -F'.' '{print $4}'`
@@ -23,7 +23,7 @@ cpuheader=$cpuheader,`./transpose.sh tmpfile`
 rm tmpfile
 memheader='time(s),MemTotal,MemFree,Cached,Writeback'
 topheader='time(s),PID,USER,RES,%CPU,%MEM,COMMAND'
-netheader='time(s),bytes,packets,errs,drop'
+netheader='time(s),dev,bytes,packets,errs,drop'
 sisoheader='time(s),si,so'
 
 function checkExists {
@@ -44,6 +44,11 @@ function checkDExists {
 function echoLine {
     if [ $4 -eq 0 ]
     then
+        if [ $5 -eq 1 ]
+        then
+            line=`cat $1`
+            echo $(( `date +%s` - $2 )),$6,$line >> $3
+        fi
         line=`cat $1`
         echo $(( `date +%s` - $2 )),$line >> $3
     else
@@ -126,15 +131,22 @@ while :; do
 
     cat /proc/meminfo      | awk -F' ' 'OFS="," {gsub(":","", $1); print $2}' > bmemTMP
     echo $pwd
-    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > brecTMP
-    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > btraTMP
+    devstat=
+    case "$mach" in
+     161) devstat="eth1" ;;
+     162) devstat="eth2" ;;
+     163) devstat="eth3" ;;
+     164) devstat="eth3" ;;
+    esac
+    grep $devstat /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > brecTMP
+    grep $devstat /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > btraTMP
     echoLine bmemTMP $start $memPerfFile         1 1
-    echoLine brecTMP $start $netReceivePerfFile  0 
-    echoLine btraTMP $start $netTransmitPerfFile 0
+    echoLine brecTMP $start $netReceivePerfFile  0 1 $devstat
+    echoLine btraTMP $start $netTransmitPerfFile 0 1 $devstat
     #get top 10 processes from top and then just store them, may/not be interesting...
     ti="$(( `date +%s` - ${start} ))"
     top -b | head -n 17 | tail -n 10 | awk -v t=$ti -F' ' 'OFS="," {print t,$1,$2,$6,$9,$10,$12}' >> $topPerfFile
     vmstat | tail -n 1               | awk -v t=$ti -F' ' 'OFS="," {print t,$7,$8}'               >> $swapPerfFile
     rm b*TMP
-    sleep 30
+    sleep 10
 done

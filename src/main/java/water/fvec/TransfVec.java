@@ -39,7 +39,7 @@ public class TransfVec extends Vec {
     int[] _domMap;
     public TransfChunk(Chunk c, int[] domMap) { _c  = c; _domMap = domMap; _len = _c._len; _start = _c._start; }
     @Override protected long at8_impl(int idx) { return _domMap[(int)_c.at8_impl(idx)]; }
-    @Override protected double atd_impl(int idx) { return at8_impl(idx);  }
+    @Override protected double atd_impl(int idx) { return _c.isNA0(idx) ? Double.NaN : at8_impl(idx);  }
     @Override protected boolean isNA_impl(int idx) {
       if (_c.isNA_impl(idx)) return true;
       return at8_impl(idx) == -1; // this case covers situation when there is no mapping

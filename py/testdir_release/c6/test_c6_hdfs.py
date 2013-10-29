@@ -100,7 +100,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "Loading", csvFilename, 'from hdfs'
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs,
-                doSummary=False, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
+                doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
             print csvFilename, 'parse time:', parseResult['response']['time']

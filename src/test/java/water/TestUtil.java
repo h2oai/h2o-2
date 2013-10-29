@@ -364,7 +364,7 @@ public class TestUtil {
     return fr;
   }
 
-  public static Frame frame(String[] names, double[][] rows) {
+  public static Frame frame(String[] names, double[]... rows) {
     assert names == null || names.length == rows[0].length;
     Vec[] vecs = new Vec[rows[0].length];
     Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);

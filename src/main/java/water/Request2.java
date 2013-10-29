@@ -102,10 +102,10 @@ public abstract class Request2 extends Request {
    */
   public enum MultiVecSelectType {
     /**
-     * Treat a token as a 0-based index if it looks like a positive integer.
-     * Otherwise, treat it as a column name.
+     * Treat a token as a column name.
+     * Otherwise, treat it as a 0-based index if it looks like a positive integer.
      */
-    INDEXES_THEN_NAMES,
+    NAMES_THEN_INDEXES,
 
     /**
      * Treat a token as a column name no matter what (even if it looks like it is an integer).
@@ -120,7 +120,7 @@ public abstract class Request2 extends Request {
     private void init(MultiVecSelectType selectType) {
       _namesOnly = false;
       switch( selectType ) {
-        case INDEXES_THEN_NAMES:
+        case NAMES_THEN_INDEXES:
           _namesOnly = false;
           break;
 
@@ -132,7 +132,7 @@ public abstract class Request2 extends Request {
 
     protected MultiVecSelect(String key) {
       super(key);
-      init(MultiVecSelectType.INDEXES_THEN_NAMES);
+      init(MultiVecSelectType.NAMES_THEN_INDEXES);
     }
 
     protected MultiVecSelect(String key, MultiVecSelectType selectType) {
@@ -389,7 +389,7 @@ public abstract class Request2 extends Request {
       String s, current = "";
       while( (s = getNextToken(st)) != null ) {
         if( ",".equals(s) ) {
-          values = Utils.add(values, current);
+          values = Utils.append(values, current);
           current = "";
         } else if( "'".equals(s) ) {
           while( !("'".equals((s = getNextToken(st)))) ) {
@@ -401,7 +401,7 @@ public abstract class Request2 extends Request {
           current += s;
       }
       if( current.length() > 0 )
-        values = Utils.add(values, current);
+        values = Utils.append(values, current);
     } else
       values = new String[] { value };
     return values;

@@ -53,12 +53,7 @@ Output
    as the sum of the values in the column divided by the number of
    elements in the column. 
 
-.. math::
-
-    Average\hspace{1.5pt}{\mathrm{X_i}}=\frac{\sum_{k=1}^{N} X_{k}}{N}
-
-    Standard\hspace{1.5pt}deviation\hspace{1.5pt}{\mathrm{(X_i)}}=\sqrt{\frac{\sum_{k=1}^{N} (X_{k}-\bar X)^2}{N-1}}
-
+   :math:`Average\:(X_{i})=\frac{\sum_{k=1}^{N}X_{k}}{N}`
 
 
   *Standard Deviation*: Abbreviated **sd**
@@ -66,12 +61,13 @@ Output
    square root of the sum of the deviance of observed values from the
    mean divided by the number of elements in the column less one.
 
-.. math::
+
    
-   Standard\hspace{1.5pt}deviation\hspace{1.5pt}{\mathrm{(X_i)}}=\sqrt{\frac{\sum_{k=1}^{N} (X_{k}-\bar X)^2}{N-1}}
+   :math:`Standard\:deviation\:(X_{i})=\sqrt{\frac{\sum_{k=1}^{N} (X_{k}-\bar X)^2}{N-1}}`
 
   *Zeros*: 
    The number of elements in the column that are 0. 
+
 
   *Min[ ] and Max[ ]* 
    Return a list of the minimum and maximum elements of the
@@ -134,40 +130,6 @@ Output
   with their mouse and scrolling left and right.*
 
 
-Summary
--------
-
-The purpose of the set of summary algorithms is to provide
-descriptive statistics for users. While computationally simple, this information is often critical to carrying out correct analysis and interpretation. The formulas and definitions from which H2O's summary algos are derived are given below. 
-
-.. math::
-
-   
-
-    Average\hspace{1.5pt}{\mathrm{X_i}}=\frac{\sum_{k=1}^{N} X_{k}}{N}
-
-    Standard\hspace{1.5pt}deviation\hspace{1.5pt}{\mathrm{(X_i)}}=\sqrt{\frac{\sum_{k=1}^{N} (X_{k}-\bar X)^2}{N-1}}
-
-
-
-**NAs**
-
-Each of the fields in the column are read once by the H2O parser,
-and the instances of NA are counted. The reported number is the
-total count of entries in the column that are "NA."
-
-**Cardinality**
-
-A count of the unique values taken on by the variable variable.
-
-**Histogram**
-
-A frequency table reporting the number of elements within a bin range.  
-
-
-**Percentile** 
-
-The value of x below which p percent of of the values in that column fall. 
   
 
   

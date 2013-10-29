@@ -8,6 +8,7 @@ import java.util.Properties;
 import water.*;
 import water.Job.ProgressMonitor;
 import water.api.Constants.Extensions;
+import water.fvec.Vec;
 import water.util.Log;
 import water.util.RIStream;
 
@@ -195,7 +196,7 @@ public final class PersistS3 extends Persist {
    */
   public static Key encodeKey(String bucket, String key) {
     Key res = encodeKeyImpl(bucket, key);
-    assert checkBijection(res, bucket, key);
+//    assert checkBijection(res, bucket, key);
     return res;
   }
 
@@ -208,26 +209,26 @@ public final class PersistS3 extends Persist {
    * @return Pair (array) of bucket name and key name.
    */
   public static String[] decodeKey(Key k) {
-    String[] res = decodeKeyImpl(k);
-    assert checkBijection(k, res[0], res[1]);
-    return res;
+    return decodeKeyImpl(k);
+//    assert checkBijection(k, res[0], res[1]);
+//    return res;
   }
 
-  private static boolean checkBijection(Key k, String bucket, String key) {
-    Key en = encodeKeyImpl(bucket, key);
-    String[] de = decodeKeyImpl(k);
-    boolean res = Arrays.equals(k._kb, en._kb) && bucket.equals(de[0]) && key.equals(de[1]);
-    assert res : "Bijection failure:" + "\n\tKey 1:" + k + "\n\tKey 2:" + en + "\n\tBkt 1:" + bucket + "\n\tBkt 2:"
-        + de[0] + "\n\tStr 1:" + key + "\n\tStr 2:" + de[1] + "";
-    return res;
-  }
+//  private static boolean checkBijection(Key k, String bucket, String key) {
+//    Key en = encodeKeyImpl(bucket, key);
+//    String[] de = decodeKeyImpl(k);
+//    boolean res = Arrays.equals(k._kb, en._kb) && bucket.equals(de[0]) && key.equals(de[1]);
+//    assert res : "Bijection failure:" + "\n\tKey 1:" + k + "\n\tKey 2:" + en + "\n\tBkt 1:" + bucket + "\n\tBkt 2:"
+//        + de[0] + "\n\tStr 1:" + key + "\n\tStr 2:" + de[1] + "";
+//    return res;
+//  }
 
   private static Key encodeKeyImpl(String bucket, String key) {
     return Key.make(KEY_PREFIX + bucket + '/' + key);
   }
 
   private static String[] decodeKeyImpl(Key k) {
-    String s = new String(k._kb);
+    String s = new String((k._kb[0] == Key.DVEC)?Arrays.copyOfRange(k._kb, Vec.KEY_PREFIX_LEN, k._kb.length):k._kb);
     assert s.startsWith(KEY_PREFIX) && s.indexOf('/') >= 0 : "Attempting to decode non s3 key: " + k;
     s = s.substring(KEY_PREFIX_LEN);
     int dlm = s.indexOf('/');

@@ -1,8 +1,29 @@
 # Hack to get around Exec.json always dumping to same Result.hex key
 pkg.env = new.env()
 pkg.env$result_count = 0
+pkg.env$IS_LOGGING = FALSE
 RESULT_MAX = 100
 LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=")
+
+# Initialize functions for R logging
+myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
+if(Sys.info()["sysname"] == "Windows")
+  myPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
+h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
+h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
+h2o.__startLogging <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
+h2o.__stopLogging <- function() { assign("IS_LOGGING", FALSE, envir = pkg.env) }
+h2o.__clearLogs <- function() { unlink(h2o.__LOG_COMMAND); unlink(h2o.__LOG_ERROR) }
+h2o.__openCmdLog <- function() {
+  myOS = Sys.info()["sysname"]
+  if(myOS == "Windows") shell.exec(paste("open '", h2o.__LOG_COMMAND, "'", sep="")) 
+  else system(paste("open '", h2o.__LOG_COMMAND, "'", sep=""))
+}
+h2o.__openErrLog <- function() {
+  myOS = Sys.info()["sysname"]
+  if(myOS == "Windows") shell.exec(paste("open '", h2o.__LOG_ERROR, "'", sep="")) 
+  else system(paste("open '", h2o.__LOG_ERROR, "'", sep=""))
+}
 
 # Internal functions & declarations
 h2o.__PAGE_CLOUD = "Cloud.json"
@@ -25,8 +46,8 @@ h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
-h2o.__PAGE_PCA = "PCA.json"
-h2o.__PAGE_PCASCORE = "PCAScore.json"
+h2o.__PAGE_PCA = "2/PCA.json"
+h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"
@@ -40,41 +61,45 @@ h2o.__PAGE_GBM = "2/GBM.json"
 h2o.__PAGE_GBMGrid = "2/GBMGrid.json"
 h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
 
+h2o.__PAGE_GLM2 = "2/GLM2.json"
+h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
+h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
+h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
+h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
+
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
   port = client@port
+  myURL = paste("http://", ip, ":", port, "/", page, sep="")
   
-  # if(IS_LOGGING) {
+  # Log list of parameters sent to H2O
+  if(pkg.env$IS_LOGGING) {
     # print(substitute(list(...)))
-    # temp = deparse(substitute(list(...)))
-  # }
+    temp = deparse(substitute(list(...)))
+    write(paste(myURL, '\t', temp), file = h2o.__LOG_COMMAND, append = TRUE)
+  }
   
-  #TODO (Spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
-  url = paste("http://", ip, ":", port, "/", page, sep="")
-  temp = postForm(url, style = "POST", ...)
-  # after = gsub("NaN", "\"NaN\"", temp[1])
-  after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
-  after = gsub("NaN", "\"NaN\"", after)
-  after = gsub("-Infinity", "\"-Inf\"", after)
-  after = gsub("Infinity", "\"Inf\"", after)
+  # temp = postForm(myURL, style = "POST", ...)
+  if(length(list(...)) == 0)
+    temp = getURLContent(myURL)
+  else
+    temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
+  # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
+  # after = gsub("NaN", "\"NaN\"", after)
+  # after = gsub("-Infinity", "\"-Inf\"", temp[1])
+  # after = gsub("Infinity", "\"Inf\"", after)
+  after = gsub("Infinity", "Inf", temp[1])
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
-    temp = strsplit(as.character(Sys.time()), " ")[[1]]
-    myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
-    errorFolder = "h2o_error_logs"
-    if(!file.exists(errorFolder)) dir.create(errorFolder)
-    h2o.__writeToFile(res, paste(errorFolder, "/", "h2oerror_json_", myDate, "_", myTime, ".log", sep=""))
-    stop(paste(url," returned the following error:\n", h2o.__formatError(res$error)))
+    if(pkg.env$IS_LOGGING) h2o.__writeToFile(res, h2o.__LOG_ERROR)
+    stop(paste(myURL," returned the following error:\n", h2o.__formatError(res$error)))
   }
   res
 }
 
 h2o.__writeToFile <- function(res, fileName) {
-  cat("Writing JSON response to", fileName)
-  fileConn = file(fileName)
-  
   formatVector = function(vec) {
     result = rep(" ", length(vec))
     for(i in 1:length(vec))
@@ -82,9 +107,11 @@ h2o.__writeToFile <- function(res, fileName) {
     paste(result, collapse="\n")
   }
   
-  writeLines(formatVector(unlist(res)), fileConn)
+  cat("Writing JSON response to", fileName)
+  temp = strsplit(as.character(Sys.time()), " ")[[1]]
+  # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
+  write(paste(temp[1], temp[2], '\t', formatVector(unlist(res))), file = fileName, append = TRUE)
   # writeLines(unlist(lapply(res$response, paste, collapse=" ")), fileConn)
-  close(fileConn)
 }
 
 h2o.__formatError <- function(error,prefix="  ") {
@@ -196,13 +223,13 @@ h2o.__func <- function(fname, x, type) {
 }
 
 # Check if key_env$key exists in H2O and remove if it does
-h2o.__finalizer <- function(key_env) {
-  if("h2o" %in% ls(key_env) && "key" %in% ls(key_env) && class(key_env$h2o) == "H2OClient" && class(key_env$key) == "character" && key_env$key != "") {
-    res = h2o.__remoteSend(key_env$h2o, h2o.__PAGE_VIEWALL, filter=key_env$key)
-    if(length(res$keys) != 0)
-      h2o.__remoteSend(key_env$h2o, h2o.__PAGE_REMOVE, key=key_env$key)
-  }
-}
+# h2o.__finalizer <- function(key_env) {
+#   if("h2o" %in% ls(key_env) && "key" %in% ls(key_env) && class(key_env$h2o) == "H2OClient" && class(key_env$key) == "character" && key_env$key != "") {
+#     res = h2o.__remoteSend(key_env$h2o, h2o.__PAGE_VIEWALL, filter=key_env$key)
+#     if(length(res$keys) != 0)
+#       h2o.__remoteSend(key_env$h2o, h2o.__PAGE_REMOVE, key=key_env$key)
+#   }
+# }
 
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)

@@ -95,7 +95,7 @@ GBM Results
 
 GBM output for classification returns a confusion matrix showing the classifications for each group, and the associated error by group and the overall average error. Regression models can be quite complex and difficult to directly interpret. For that reason only a model key is given, for subsequent use in validation and prediction. Both models provide the MSE by tree. For classification models this is based on the classification error within the tree. For regression models MSE is calculated from the squared deviances, as it is in standard regressions. 
 
-.. image:: PCAoutput.png
+.. image:: GBMresults.png
    :width: 70%
 
 
