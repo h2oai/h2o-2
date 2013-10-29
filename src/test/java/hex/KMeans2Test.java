@@ -1,10 +1,10 @@
 package hex;
 
 import hex.KMeans.Initialization;
+
 import hex.KMeans2.KMeans2Model;
 
 import java.util.Random;
-import java.util.Timer;
 
 import org.junit.*;
 

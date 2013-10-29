@@ -4,7 +4,7 @@ sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
-csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nRows','nCols','parseWallTime','kmeansBuildTime')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nRows','nCols','parseWallTime','k','max_iter','init','kmeansBuildTime')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
@@ -70,6 +70,9 @@ def doKMeans(f, folderPath):
                             'nRows'              : inspect['num_rows'],
                             'nCols'              : inspect['num_cols'],
                             'parseWallTime'      : parseWallTime,
+                            'k'                  : 6, 
+                            'max_iter'           : 100,
+                            'init'               : 'Furthest',
                            }
     
         params          =  {'source_key'         : hex_key,
@@ -97,7 +100,7 @@ if __name__ == '__main__':
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
-    h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=False)
+    h2o_hosts.build_cloud_with_hosts()
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
     if dat == 'Air1x'    : fs = files['Airlines']['train'][0]
     if dat == 'Air10x'   : fs = files['Airlines']['train'][1]

@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_GB=4)
+            h2o.build_cloud(4,java_heap_GB=3)
         else:
             h2o_hosts.build_cloud_with_hosts() # uses import Hdfs for s3n instead of import folder
 
@@ -47,13 +47,14 @@ class Basic(unittest.TestCase):
             ]
         else:
             csvFilenameAll = [
-                ("covtype20x.data", "cA", 50, 20),
+                ("covtype.data", "cA", 50, 1),
                 ("covtype20x.data", "cB", 50, 20),
+                ("covtype20x.data", "cC", 50, 20),
             ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
         firstDone = False
@@ -85,9 +86,8 @@ class Basic(unittest.TestCase):
                 print "\n", colResultList0, "\n", colResultList
                 # create the expected answer...i.e. N * first
                 compare = [float(x)/resultMult for x in colResultList] 
-                print "\n", good, "\n", compare
-                self.assertEqual(good, compare, 'compare is not equal to good (first try * resultMult)')
-        
+                for i,(g,c) in enumerate(zip(good, compare)):
+                    self.assertEqual(g, c, 'i: %s compare: %s is not equal to good: %s . resultMult %s' % (i, c, g, resultMult))
 
 if __name__ == '__main__':
     h2o.unit_main()

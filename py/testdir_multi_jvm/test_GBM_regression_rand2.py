@@ -15,11 +15,12 @@ def define_gbm_params():
         'min_rows': [None, 1, 2, 100, 10000000],
         'response': [54],
         'ignored_cols_by_name': [None, '0,1,2,3', '0'],
-        'classification': [None, 1], # FIX! add regression when we can predict
+        # 'classification': [None, 1], # this is forced below
+        # 'validation': [None]
+        # 'validation': 
     }
     return paramsDict
 
-DO_PREDICT_CM = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -98,13 +99,8 @@ class Basic(unittest.TestCase):
                 ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
                 # use this to set any defaults you want if the pick doesn't set
-                params = {
-                    'response': 54, 
-                    'ignored_cols_by_name': 
-                    '0,1,2,3,4', 
-                    'ntrees': 2,
-                    'validation': parseTestResult['destination_key'],
-                }
+                print "Regression!"
+                params = {'response': 54, 'ignored_cols_by_name': '5,6,7,8,9', 'ntrees': 2, 'classification': 0}
                 h2o_gbm.pickRandGbmParams(paramsDict, params)
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
@@ -144,38 +140,9 @@ class Basic(unittest.TestCase):
                     h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
-
-                if DO_PREDICT_CM:
-                    gbmPredictCMResult = h2o.nodes[0].predict_confusion_matrix(
-                        actual=parseTestResult['destination_key'],
-                        vactual='predict',
-                        predict=predictKey,
-                        vpredict='predict', # choices are 7 (now) and 'predict'
-                        )
-
-                    # errrs from end of list? is that the last tree?
-                    # all we get is cm
-                    cm = gbmPredictCMResult['cm']
-
-                    # These will move into the h2o_gbm.py
-                    pctWrong = h2o_gbm.pp_cm_summary(cm);
-                    print "Last line of this cm is really NAs, not CM"
-                    print "\nTest\n==========\n"
-                    print h2o_gbm.pp_cm(cm)
-
-                # xList.append(ntrees)
-                if 'max_depth' in params and params['max_depth']:
-                    xList.append(params['max_depth'])
-                    eList.append(pctWrongTrain)
-                    fList.append(trainElapsed)
+                print "FIX! where do we get the summary info on the test data after predict?"
 
             h2o.beta_features = False
-            xLabel = 'max_depth'
-            eLabel = 'pctWrongTrain'
-            fLabel = 'trainElapsed'
-            eListTitle = ""
-            fListTitle = ""
-            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -28,7 +28,7 @@ import com.jogamp.opencl.CLMemory.Mem;
 
 /**
  * Trains a neural network.
- *
+ * 
  * @author cypof
  */
 public abstract class Trainer {
@@ -344,7 +344,7 @@ public abstract class Trainer {
       final boolean home = _key.home();
       Thread thread = new Thread() {
         @Override public void run() {
-          while( _job == null || Job.running(_job) ) {
+          while( _job == null || !Job.cancelled(_job) ) {
             if( !home )
               _node.sync();
             else {
@@ -398,7 +398,7 @@ public abstract class Trainer {
     int _count;
 
     @Override public void compute2() {
-      if( (_count < 0 || --_count > 0) && (_node._job == null || Job.running(_node._job)) ) {
+      if( (_count < 0 || --_count > 0) && (_node._job == null || !Job.cancelled(_node._job)) ) {
         for( Chunk[] cs : _node._chunks ) {
           DescentChunk task = new DescentChunk();
           task._node = _node;
@@ -418,26 +418,28 @@ public abstract class Trainer {
     Chunk[] _cs;
 
     @Override public void compute2() {
-      Layer[] clones = new Layer[_node._ls.length];
-      ChunksInput input = new ChunksInput(Utils.remove(_cs, _cs.length - 1), (VecsInput) _node._ls[0]);
-      clones[0] = input;
-      for( int y = 1; y < _node._ls.length - 1; y++ )
-        clones[y] = _node._ls[y].clone();
-      Layer output = _node._ls[_node._ls.length - 1];
-      if( output instanceof VecSoftmax )
-        clones[clones.length - 1] = new ChunkSoftmax(_cs[_cs.length - 1], (VecSoftmax) output);
-      else
-        clones[clones.length - 1] = new ChunkLinear(_cs[_cs.length - 1], (VecLinear) output);
-      for( int y = 0; y < clones.length; y++ ) {
-        clones[y].init(clones, y, false, _node._total);
-        clones[y]._w = _node._ws[y];
-        clones[y]._b = _node._bs[y];
+      if( _node._job == null || !Job.cancelled(_node._job) ) {
+        Layer[] clones = new Layer[_node._ls.length];
+        ChunksInput input = new ChunksInput(Utils.remove(_cs, _cs.length - 1), (VecsInput) _node._ls[0]);
+        clones[0] = input;
+        for( int y = 1; y < _node._ls.length - 1; y++ )
+          clones[y] = _node._ls[y].clone();
+        Layer output = _node._ls[_node._ls.length - 1];
+        if( output instanceof VecSoftmax )
+          clones[clones.length - 1] = new ChunkSoftmax(_cs[_cs.length - 1], (VecSoftmax) output);
+        else
+          clones[clones.length - 1] = new ChunkLinear(_cs[_cs.length - 1], (VecLinear) output);
+        for( int y = 0; y < clones.length; y++ ) {
+          clones[y].init(clones, y, false, _node._total);
+          clones[y]._w = _node._ws[y];
+          clones[y]._b = _node._bs[y];
+        }
+        Base base = new Base(clones);
+        for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
+          base.step();
+        int chunk = _cs[0].cidx();
+        _node.stepped(chunk);
       }
-      Base base = new Base(clones);
-      for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
-        base.step();
-      int chunk = _cs[0].cidx();
-      _node.stepped(chunk);
       tryComplete();
     }
   }

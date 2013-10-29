@@ -12,6 +12,7 @@ print "The path resolver in python tests will find it in the home dir of the use
 print "to run h2o..i.e from the config json which builds the cloud and passes that info to the test"
 print "via the cloned cloud mechanism (h2o-nodes.json)"
 
+DO_PREDICT_CM = False
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c10_rel_gbm(self):
@@ -26,7 +27,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         testPathname = importFolderPath + "/" + testFilename
 
         start = time.time()
-        parseTestResult = h2i.import_parse(path=testPathname, schema='local', timeoutSecs=500, doSummary=False)
+        parseTestResult = h2i.import_parse(path=testPathname, schema='local', timeoutSecs=500, doSummary=True)
         print "Parse of", parseTestResult['destination_key'], "took", time.time() - start, "seconds"
 
         # Parse Train***********************************************************
@@ -35,7 +36,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         trainPathname = importFolderPath + "/" + trainFilename
 
         start = time.time()
-        parseTrainResult = h2i.import_parse(path=trainPathname, schema='local', timeoutSecs=500, doSummary=False)
+        parseTrainResult = h2i.import_parse(path=trainPathname, schema='local', timeoutSecs=500, doSummary=True)
         print "Parse of", parseTrainResult['destination_key'], "took", time.time() - start, "seconds"
 
         start = time.time()
@@ -113,23 +114,24 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         elapsed = time.time() - start
         print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
-        print "This is crazy!"
-        gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
-            actual=parseTestResult['destination_key'],
-            vactual=response,
-            predict=predictKey,
-            vpredict='predict', # choices are 7 (now) and 'predict'
-            )
 
-        # errrs from end of list? is that the last tree?
-        # all we get is cm
-        cm = gbmPredictCMResult['cm']
+        if DO_PREDICT_CM:
+            gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
+                actual=parseTestResult['destination_key'],
+                vactual='predict',
+                predict=predictKey,
+                vpredict='predict', # choices are 7 (now) and 'predict'
+                )
 
-        # These will move into the h2o_gbm.py
-        pctWrong = h2o_gbm.pp_cm_summary(cm);
-        print "Last line of this cm is really NAs, not CM"
-        print "\nTest\n==========\n"
-        print h2o_gbm.pp_cm(cm)
+            # errrs from end of list? is that the last tree?
+            # all we get is cm
+            cm = gbmPredictCMResult['cm']
+
+            # These will move into the h2o_gbm.py
+            pctWrong = h2o_gbm.pp_cm_summary(cm);
+            print "Last line of this cm is really NAs, not CM"
+            print "\nTest\n==========\n"
+            print h2o_gbm.pp_cm(cm)
 
 if __name__ == '__main__':
     h2o.unit_main()

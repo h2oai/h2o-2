@@ -68,7 +68,7 @@ Glossary
 
 **HEX format**
   Records made up of hexadecimal numbers that represent machine
-  language code or constant data. In H20, data must be parsed into 
+  language code or constant data. In H\ :sub:`2`\ O, data must be parsed into 
   .hex format before operations can be preformed on it.   
 
 **instance**

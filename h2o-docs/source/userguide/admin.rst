@@ -124,8 +124,8 @@ Log View
 
 Log view provides users with a full log of activities on all nodes. 
 
-**Full logs from any H\ :sub:`2`\ O work session can be automatically downloaded
-by clicking the "Download all logs" button in the upper left hand corner.** When requesting help or reporting an error, please download logs, and contact us at support@0xdata.com with the logs attached.
+Full logs from any H\ :sub:`2`\ O work session can be automatically downloaded
+by clicking the "Download all logs" button in the upper left hand corner. **When requesting help or reporting an error, please download logs, and contact us at support@0xdata.com with the logs attached.**
 
 .. image:: AdminLog.png
    :width: 100%

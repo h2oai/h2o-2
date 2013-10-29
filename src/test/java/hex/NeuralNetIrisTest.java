@@ -57,7 +57,6 @@ public class NeuralNetIrisTest extends TestUtil {
     int epochs = 1000;
     Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
     Vec labels = _train.vecs()[_train.vecs().length - 1];
-    labels.asEnum();
     VecsInput input = new VecsInput(data, null);
     Layer[] ls = new Layer[3];
     ls[0] = input;

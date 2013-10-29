@@ -81,6 +81,12 @@ the proportion of incorrect predictions overall.
   Mean squared error is an indicator of goodness of fit. It measures
   the squared distance between an estimator and the estimated parameter. 
 
+**Cost of Computation**
+
+  The cost of computation in GBM is bounded above in the following way:
+
+  :math:`Cost = bins\times (2^{leaves}) \times columns \times classes`
+
 
 GBM Algorithm
 """"""""""""""
@@ -139,7 +145,7 @@ http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid
 
 Hastie, Trevor, Robert Tibshirani, and J Jerome H Friedman. The
 Elements of Statistical Learning.
-Vol.1. N.p.: Springer New York, 2001. 
+Vol.1. N.p., page 387: Springer New York, 2001. 
 http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 
 

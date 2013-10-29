@@ -160,7 +160,8 @@ class Basic(unittest.TestCase):
                 print
                 print
                 print 
-                print "The number of standard deviations obtained: ", len(sdevs)
+                num_pc = pcaInspect['pca_model']['num_pc']
+                print "The number of standard deviations obtained: ", num_pc
                 print 
                 print
                 print
@@ -171,11 +172,12 @@ class Basic(unittest.TestCase):
                     score_params = {
                         'destination_key': scoreKey,
                         'model': modelKey,
-                        'num_pc': 2,
+                        'num_pc': num_pc,
                         'source':  hex_key,
                     }
                     kwargs = score_params.copy()
                     pcaScoreResult = h2o.nodes[0].pca_score(timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+                    h2j.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=2)
                     print "PCAScore completed in", pcaScoreResult['python_elapsed'], "seconds. On dataset: ", csvPathname
                     print "Elapsed time was ", pcaScoreResult['python_%timeout'], "% of the timeout"
 
