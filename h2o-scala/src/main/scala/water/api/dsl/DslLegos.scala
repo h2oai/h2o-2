@@ -37,6 +37,8 @@ trait T_Frame {
   def <=(rhs: Number): T_Frame;
   def >(rhs: Number): T_Frame;
   def >=(rhs: Number): T_Frame;
+  def ==(rhs: Number): T_Frame;
+  def !=(rhs: Number): T_Frame;
   
   /** Basic arithmetic ops with another frame */
 //  def +(rhs: TFrame): TFrame;
@@ -86,7 +88,12 @@ case class Greater(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
 case class GreaterOrEqual(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
   def apply(rhs:scala.Double):Boolean = lhs >= rhs
 }
-
+case class Equal(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
+  def apply(rhs:scala.Double):Boolean = lhs == rhs
+}
+case class NEqual(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
+  def apply(rhs:scala.Double):Boolean = lhs != rhs
+}
 
 /** Support for M/R operation for frame - expect that frame contains all vector which we are operating on. */
 // f[,2-3]+1 => f[,2-3].map( { x => x+1 }) => map(Chunks[] ch, NewChunk[] ncs) { }  

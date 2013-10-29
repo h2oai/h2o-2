@@ -14,13 +14,14 @@ import java.util.UUID
 
 /** The object carry global environment and provides basic global methods such as head, tail, nrows, ... */
 object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[HexKey, DFrame] {
-  
+  // Binary operator type alias
   type BOp = T_NV_Transf[scala.Double]
+  // Filter operator type alias
   type FOp = T_NF_Transf[scala.Double]
  
   // Dummy tester and H2O launcher - should launch H2O with REPL
   def main(args: Array[String]): Unit = {
-    println("Launching H2O...muhehehe from Scala")
+    println("Launching H2O...")
     water.Boot.main(Array("-mainClass", "water.api.dsl.ScAlH2ORepl"));
   }
   
@@ -59,7 +60,7 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
     f
   }
 
-  def test() = {
+  def test():DFrame = {
     val f = parse("../smalldata/cars.csv")
     f("cylinders") map (new BOp { 
       var sum:scala.Double = 0
@@ -91,6 +92,8 @@ class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFr
   def >=(rhs: Number) = map(LessOrEqual(rhs.doubleValue()))
   def >(rhs: Number)  = map(Less(rhs.doubleValue()))
   def <=(rhs: Number) = map(GreaterOrEqual(rhs.doubleValue()))
+  def ==(rhs: Number) = map(Equal(rhs.doubleValue()))
+  def !=(rhs: Number) = map(NEqual(rhs.doubleValue()))
   
   override def toString() = frame().toStringHead(10)
 }
