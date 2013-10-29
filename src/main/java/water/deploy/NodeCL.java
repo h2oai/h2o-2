@@ -74,7 +74,6 @@ public class NodeCL extends Thread implements Node {
 
     try {
       Class<?> c = _classLoader.loadClass(Context.class.getName());
-      Log.tmp("boot: " + c.hashCode() + ", " + c.getClassLoader());
       Method method = c.getMethod("run", String.class, String[].class);
       method.setAccessible(true);
       method.invoke(null, _main.getName(), _args);

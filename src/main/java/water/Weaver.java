@@ -166,7 +166,6 @@ public class Weaver {
   // forcing a call to the pre-woven TypeMap.
   public Weaver initTypeMap( ClassLoader boot ) {
     _typeMap = weaveAndLoad("water.TypeMap",boot);
-Log.tmp("_typeMap " + _typeMap.hashCode());
     try { _onLoad = _typeMap.getMethod("onLoad",String.class); }
     catch( NoSuchMethodException nsme ) { throw new RuntimeException(nsme); }
     return this;
