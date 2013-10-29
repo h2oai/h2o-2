@@ -4,7 +4,7 @@ sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
-csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','classification','gbmBuildTime','Error')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nTrees','minRows','maxDepth','learnRate','classification','gbmBuildTime','Error')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),         'test' : 'AirlinesTest'},
               'AllBedrooms': {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
@@ -52,18 +52,18 @@ def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, dept
                                        header           = 1,
                                        header_from_file = headerKey,
                                        separator        = 44,
-                                       timeoutSecs      = 7200,
+                                       timeoutSecs      = 16000,
                                        retryDelaySecs   = 5,
-                                       pollTimeoutSecs  = 7200,
+                                       pollTimeoutSecs  = 16000,
                                        noPoll           = True,
                                        doSummary        = False
                                       )
-        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(timeoutSecs=16000, pollTimeoutSecs=16000, retryDelaySecs=5)
         parseWallTime = time.time() - trainParseWallStart
         print "Parsing training file took ", parseWallTime ," seconds." 
         h2o.beta_features = False #make sure false for the inspect as well!
-        inspect_train  = h2o.nodes[0].inspect(hex_key, timeoutSecs=7200)
-        inspect_test   = h2o.nodes[0].inspect(testFilehex, timeoutSecs=7200)
+        inspect_train  = h2o.nodes[0].inspect(hex_key, timeoutSecs=16000)
+        inspect_test   = h2o.nodes[0].inspect(testFilehex, timeoutSecs=16000)
         h2o.beta_features = True #ok, can be true again
         nMachines = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
         row.update( {'h2o_build'          : build,
@@ -75,6 +75,10 @@ def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, dept
                      'nTestRows'          : inspect_test['num_rows'],
                      'nCols'              : inspect_train['num_cols'],
                      'trainParseWallTime' : parseWallTime,
+                     'nTrees'             : ntrees,
+                     'minRows'            : minrows,
+                     'maxDepth'           : depth,
+                     'learnRate'          : learnRate,
                      'classification'     : classification,
                     })
     
@@ -95,7 +99,7 @@ def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, dept
         gbmStart  = time.time()
         #TODO(spencer): Uses jobs to poll for gbm completion
         gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
-        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=120, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(timeoutSecs=16000, pollTimeoutSecs=120, retryDelaySecs=5)
         gbmTime   = time.time() - gbmStart
         row.update( {'gbmBuildTime'       : gbmTime,
                     })
@@ -119,6 +123,7 @@ if __name__ == '__main__':
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
     bench = "bench"
     h2o.beta_features = True
+    debug = False
     if debug:
         bench = "bench/debug"
 
@@ -137,7 +142,7 @@ if __name__ == '__main__':
         h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
         headerKey                   = h2i.find_key(hK)
         testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/Airlines/AirlinesTest.csv', schema='local', hex_key="atest.hex", header=1, header_from_file=headerKey, separator=44, noPoll=True,doSummary=False)
-        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(timeoutSecs=16000, pollTimeoutSecs=16000, retryDelaySecs=5)
         elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
         row = {'testParseWallTime' : elapsedAirlinesTestParse}
         response = 'IsDepDelayed'
@@ -163,7 +168,7 @@ if __name__ == '__main__':
         h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
         headerKey                   = h2i.find_key(hK)
         testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/AllBedrooms/AllBedroomsTest.csv', schema='local', hex_key="allBTest.hex", header=1, header_from_file=headerKey, separator=44,noPoll=True,doSummary=False)
-        h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(timeoutSecs=16000, pollTimeoutSecs=16000, retryDelaySecs=5)
         elapsedAllBedroomsTestParse = time.time() - allBedroomsTestParseStart
         row = {'testParseWallTime' : elapsedAllBedroomsTestParse}
         response = 'medrent'
@@ -188,7 +193,7 @@ if __name__ == '__main__':
     #h2i.import_only(bucket='home-0xdiag-datasets', path=headerPathname)
     #headerKey                   = h2i.find_key(hK)
     #testFile                    = h2i.import_parse(bucket='home-0xdiag-datasets', path=bench+'/CovType/CovTypeTest.csv', schema='local', hex_key="covTtest.hex", header=1, header_from_file=headerKey, separator=44, noPoll=True,doSummary=False)
-    #h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
+    #h2o_jobs.pollWaitJobs(timeoutSecs=16000, pollTimeoutSecs=16000, retryDelaySecs=5)
     #elapsedCovTypeTestParse = time.time() - covTypeTestParseStart
     #row = {'testParseWallTime' : elapsedCovTypeTestParse}
     #response = 'C55'

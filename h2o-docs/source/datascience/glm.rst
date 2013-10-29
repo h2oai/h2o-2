@@ -129,7 +129,23 @@ Defining a GLM Model
       the Y variable can be specified, and the model can be asked to
       predict for observations above, below, or equal to this value. 
       Used in binomial prediction, where the default case is the mean of
-      the Y column.  
+      the Y column. 
+
+**Tweedie Power** 
+      
+      Tweedie power characterizes the distribution of the dependent variable.
+
+    p	        Response distribution
+    0	        Normal
+    1	        Poisson
+    (1, 2)	Compound Poisson, non-negative with mass at zero
+    2	        Gamma
+    3	        Inverse-Gaussian
+    > 2	        Stable, with support on the positive reals
+
+
+
+
 
 Interpreting a Model
 """"""""""""""""""""
@@ -295,7 +311,7 @@ GLM Algorithm
 
 Following the definitive text by P. McCullagh and J.A. Nelder (1989)
 on the generalization of linear models to non-linear distributions of
-the response variable Y, H2O fits GLM models based on the maximum 
+the response variable Y, H\ :sub:`2`\ O fits GLM models based on the maximum 
 likelihood estimation via iteratively reweighed least squares. 
 
 Let :math:`y_{1},…,y_{n}` be n observations of the independent, random

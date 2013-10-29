@@ -5,7 +5,7 @@ H\ :sub:`2`\ O Getting Started from an Installer Package (Beta)
 
 From the website below choose download installer for mac or windows as appropriate, and follow the installation helper to install H\ :sub:`2`\ O. 
 
-  http://h2o-release.s3.amazonaws.com/h2o/master/latest.html
+**http://h2o-release.s3.amazonaws.com/h2o/master/latest.html**
 
 
 An installation helper will guide you through the rest of the installation. 
