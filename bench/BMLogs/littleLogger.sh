@@ -28,7 +28,7 @@ cachePerfFile=${OUTDIR}/$1/$1-`date       +%Y-%m-%d`"-cachePerf_"$mach".csv"
 
 #headers
 cpuheader='time(s)'
-head -n 33 /proc/stat | tail -n 32 | awk -F' ' 'OFS="," {print $1}' > tmpfile
+head -n 33 /proc/stat | awk -F' ' 'OFS="," {print $1}' > tmpfile
 cpuheader=$cpuheader,`./transpose.sh tmpfile`
 
 if [ -a tmpfile ]
@@ -36,7 +36,7 @@ then
     rm tmpfile
 fi
 
-memheader='time(s),MemTotal,MemFree,Cached,Writeback'
+memheader='time(s),MemTotal,MemFree,Cached,Writeback,RSS'
 topheader='time(s),PID,USER,RES,%CPU,%MEM,COMMAND'
 netheader='time(s),dev,bytes,packets,errs,drop'
 sisoheader='time(s),si,so'
@@ -57,14 +57,15 @@ function echoLine {
         then
             line=`cat $1`
             echo $(( `date +%s` - $2 )),$6,$line >> $3
+        else
+            line=`cat $1`
+            echo $(( `date +%s` - $2 )),$line >> $3
         fi
-        line=`cat $1`
-        echo $(( `date +%s` - $2 )),$line >> $3
     else
         if [ $5 -eq 1 ]
         then
             line=`./transpose.sh $1 | awk -F, 'OFS="," {print $1,$2,$4,$17}'`
-            echo $(( `date +%s` - $2 )),$line >> $3
+            echo $(( `date +%s` - $2 )),$line,$6 >> $3
         else
             line=`./transpose.sh $1`
             echo $(( `date +%s` - $2 )),$line >> $3
@@ -82,7 +83,7 @@ checkExists $netTransmitPerfFile $netheader
 checkExists $swapPerfFile        $sisoheader
 checkExists $cachePerfFile       $cacheheader
 
-for i in {0..34}
+for i in {0..35}
 do
     PREVTOTALS[$i]=0
 done
@@ -96,13 +97,13 @@ while :; do
         continue
     fi
     a=1
-    for i in {0..34}
+    for i in {0..35}
     do
       TOTALS[$i]=0
     done
     while read -a CPU
     do a=$(($a+1));
-      if [ $a -eq 34 ]
+      if [ $a -eq 35 ]
       then
           break
       fi
@@ -143,7 +144,7 @@ while :; do
     grep $devstat /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > lrecTMP
     grep $devstat /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > ltraTMP
 
-    echoLine lmemTMP $start $memPerfFile         1 1
+    echoLine lmemTMP $start $memPerfFile         1 1 $RSS
     echoLine lrecTMP $start $netReceivePerfFile  0 1 $devstat
     echoLine ltraTMP $start $netTransmitPerfFile 0 1 $devstat
     #get top 10 processes from top and then just store them, may/not be interesting...
