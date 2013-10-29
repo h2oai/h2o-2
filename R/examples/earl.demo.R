@@ -1,5 +1,10 @@
 # earl's demo file; does a logistic regression and a gbm on airlines plus other random useful things
 
+
+#Config for LAPTOP: ip="localhost"; port=54321
+#Config for 0xservers: launch a cluster on the servers and put an IP and Port for one of them. DO NOT LAUNCH ON STANDARD PORT NUMBER - instead launch on weird port numbers that start with 5...
+#Config for S3: launch on S3
+
 # configuration you may have to set:
 ip = '127.0.0.1'; port = 55555
 
@@ -9,7 +14,12 @@ sessionInfo()
 library( h2o )
 h2o <- h2o.init(ip=ip, port=port, silentUpgrade=T, startH2O=F)
 
-airlines <- h2o.importFile(h2o, path='/Users/earl/shared/20130926_data/airlines.1987.2013.05p.csv.zip')
+
+#PATH TO DATA ON COMPUTER: (USE h2o.importFile):/.../CliffDemo/airlines.1987.2013.05p.csv.zip)
+#PATH TO DATA ON 0XSERVER (USE h2o.importFile): .../home/earl/newairlines/fixed
+#PATH TO DATA ON S3: (USE h2o.importHDFS) s3n://h2o-airlines-unpacked/allyears.csv
+
+airlines <- h2o.import#CHOOSE FROM ABOVE (h2o, path='/Users/earl/shared/20130926_data/airlines.1987.2013.05p.csv.zip')
 
 summary(airlines)
 head(airlines)

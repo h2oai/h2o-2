@@ -47,7 +47,8 @@ The particular tree to retrieve. (Must be an integer between 1 and \code{ntree})
 \examples{
 library(h2o)
 h2o.installDepPkgs()
-localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, 
++ silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 iris.rf = h2o.randomForest(y = 4, data = iris.hex, ntree = 50, depth = 100)

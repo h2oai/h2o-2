@@ -9,7 +9,8 @@ H2O: GBM
 \description{Builds gradient boosed classification trees on a parsed data set.
 }
 \usage{
-h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
+h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 8, 
++ n.minobsinnode = 10, shrinkage = 0.2)
 }
 \arguments{
   \item{x}{
@@ -40,7 +41,8 @@ A learning-rate parameter defining step size reduction.
 \value{
 An object of class \code{\linkS4class{H2OGBM}} with slots key, data, and model, where the last is a list of the following components:
 \item{type }{The type of the tree, which currently must be classification.}
-\item{n.trees }{Number of trees grown.}
+\item{n.trees }{Numbe
+	r of trees grown.}
 \item{oob_err }{Out of bag error rate.}
 \item{forest }{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
 \item{confusion }{Confusion matrix of the prediction.}
@@ -67,11 +69,15 @@ For more information see: http://docs.0xdata.com
 \examples{
 library(h2o)
 h2o.installDepPkgs()
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, 
++ startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 # Run classification GBM on CAPSULE ~ AGE + RACE + PSA + DCAPS
-prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
-h2o.gbm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, n.trees = 100, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
+prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/
++ master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+h2o.gbm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, 
++ n.trees = 100, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
 # Run regression GBM on CAPSULE ~ AGE + RACE + PSA + DCAPS
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
-h2o.gbm(y = "VOL", x = myX, distribution = "gaussian", data = prostate.hex, n.trees = 10, interaction.depth = 5, shrinkage = 0.1)
+h2o.gbm(y = "VOL", x = myX, distribution = "gaussian", data = prostate.hex, 
++ n.trees = 10, interaction.depth = 5, shrinkage = 0.1)
 }
