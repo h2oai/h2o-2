@@ -177,6 +177,7 @@ class Basic(unittest.TestCase):
                     }
                     kwargs = score_params.copy()
                     pcaScoreResult = h2o.nodes[0].pca_score(timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+                    h2j.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=2)
                     print "PCAScore completed in", pcaScoreResult['python_elapsed'], "seconds. On dataset: ", csvPathname
                     print "Elapsed time was ", pcaScoreResult['python_%timeout'], "% of the timeout"
 

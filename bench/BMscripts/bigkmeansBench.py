@@ -4,15 +4,15 @@ sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
-csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nRows','nCols','parseWallTime','kmeansBuildTime')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nRows','nCols','parseWallTime','k','max_iter','init','kmeansBuildTime')
 
 build = ""
 debug = False #TODO(spencer): make a debug mode
 def doKMeans(): 
-    f = ""
+    f = "15sphers"
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     overallWallStart = time.time()
-    kmeansbenchcsv = 'benchmarks/'+build+'/'+date+'/bigkmeansbench.csv'
+    kmeansbenchcsv = 'benchmarks/'+build+'/'+date+'/kmeansbench.csv'
     if not os.path.exists(kmeansbenchcsv):
         output = open(kmeansbenchcsv,'w')
         output.write(','.join(csv_header)+'\n')
@@ -23,12 +23,12 @@ def doKMeans():
     try:
         java_heap_GB = h2o.nodes[0].java_heap_GB
         #Train File Parsing#
-        importFolderPath = "kmeans_big"
+        importFolderPath = "0xdiag/datasets/kmeans_big"
         csvPathname = 'syn_sphere15_2711545732row_6col_180GB_from_7x.csv'
         hex_key = csvPathname + '.hex'
         trainParseWallStart = time.time()
-        parseResult = h2i.import_parse(bucket           = 'home3-0xdiag-datasets', 
-                                       path             = csvPathname, 
+        parseResult = h2i.import_parse(bucket           = '/home3', 
+                                       path             = importFolderPath + '/' + csvPathname, 
                                        schema           = 'local', 
                                        hex_key          = hex_key,  
                                        separator        = 44, 
@@ -51,6 +51,9 @@ def doKMeans():
                      'nRows'              : inspect['num_rows'],
                      'nCols'              : inspect['num_cols'],
                      'parseWallTime'      : parseWallTime,
+                     'k'                  : 15,
+                     'max_iter'           : 100,
+                     'init'               : 'Furthest',
                     }
  
         params   =  {'source_key'         : hex_key,
@@ -72,8 +75,10 @@ def doKMeans():
         output.close()
 
 if __name__ == '__main__':
+    dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
     h2o.parse_our_args()
-    h2o.build_cloud(1, java_heap_GB=240, enable_benchmark_log=False)
+    h2o_hosts.build_cloud_with_hosts()
+    doKMeans()
     h2o.tear_down_cloud()

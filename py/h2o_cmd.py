@@ -327,7 +327,6 @@ def infoFromSummary(summaryResult, noPrint=False):
         means = summaryResult['means']
         summaries = summaryResult['summaries']
         for column in summaries:
-            rows = column['rows']
             start = column['start']
             zeros = column['zeros']
             bins = column['bins']
@@ -339,7 +338,6 @@ def infoFromSummary(summaryResult, noPrint=False):
 
         if not noPrint:
             print "\n\n************************"
-            print "rows:", rows
             print "start:", start
             print "zeros:", zeros
             print "len(names):", len(names)

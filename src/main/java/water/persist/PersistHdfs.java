@@ -3,6 +3,8 @@ package water.persist;
 import java.io.*;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
@@ -13,6 +15,8 @@ import water.*;
 import water.Job.ProgressMonitor;
 import water.api.Constants;
 import water.api.Constants.Extensions;
+import water.fvec.HdfsFileVec;
+import water.fvec.Vec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -24,6 +28,12 @@ import com.google.gson.*;
 public final class PersistHdfs extends Persist {
   public static final Configuration CONF;
   private final Path _iceRoot;
+
+  // Returns String with path for given key.
+  private static String getPathForKey(Key k) {
+    final int off = k._kb[0]==Key.DVEC ? Vec.KEY_PREFIX_LEN : 0;
+    return new String(k._kb,off,k._kb.length-off);
+  }
 
   static {
     Configuration conf = null;
@@ -117,25 +127,18 @@ public final class PersistHdfs extends Persist {
     return res;
   }
 
+
   @Override public byte[] load(final Value v) {
     final byte[] b = MemoryManager.malloc1(v._max);
     long skip = 0;
     Key k = v._key;
-    final Path p;
-    if( _iceRoot != null ) {
-      p = new Path(_iceRoot, getIceName(v));
-    } else {
-      // Convert an arraylet chunk into a long-offset from the base file.
-      if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
-        skip = ValueArray.getChunkOffset(k); // The offset
-        k = ValueArray.getArrayKey(k);       // From the base file key
-        if( k.toString().endsWith(Extensions.HEX) ) { // Hex file?
-          int value_len = DKV.get(k).memOrLoad().length;  // How long is the ValueArray header?
-          skip += value_len;
-        }
-      }
-      p = new Path(k.toString());
+    if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
+      skip = ValueArray.getChunkOffset(k); // The offset
+      k = ValueArray.getArrayKey(k);       // From the base file key
+    } else if(k._kb[0] == Key.DVEC){
+      skip = water.fvec.NFSFileVec.chunkOffset(k); // The offset
     }
+    final Path p = _iceRoot == null?new Path(getPathForKey(k)):new Path(_iceRoot, getIceName(v));
     final long skip_ = skip;
     run(new Callable() {
       @Override public Object call() throws Exception {
@@ -264,6 +267,39 @@ public final class PersistHdfs extends Persist {
   public static void addFolder(Path p, JsonArray succeeded, JsonArray failed) throws IOException {
     FileSystem fs = FileSystem.get(p.toUri(), PersistHdfs.CONF);
     addFolder(fs, p, succeeded, failed);
+  }
+
+  public static void addFolder2(Path p, ArrayList<String> keys,ArrayList<String> failed) throws IOException {
+    FileSystem fs = FileSystem.get(p.toUri(), PersistHdfs.CONF);
+    addFolder2(fs, p, keys, failed);
+  }
+
+  private static void addFolder2(FileSystem fs, Path p, ArrayList<String> keys, ArrayList<String> failed) {
+    try {
+      if( fs == null ) return;
+      Futures futures = new Futures();
+      for( FileStatus file : fs.listStatus(p) ) {
+        Path pfs = file.getPath();
+        if( file.isDir() ) {
+          addFolder2(fs, pfs, keys, failed);
+        } else {
+          long size = file.getLen();
+          Key res;
+          if( pfs.getName().endsWith(Extensions.JSON) ) {
+            throw H2O.unimpl();
+          } else if( pfs.getName().endsWith(Extensions.HEX) ) { // Hex file?
+            throw H2O.unimpl();
+          } else {
+            Key k = null;
+            keys.add((k = HdfsFileVec.make(file, futures)).toString());
+            Log.info("PersistHdfs: DKV.put(" + k + ")");
+          }
+        }
+      }
+    } catch( Exception e ) {
+      Log.err(e);
+      failed.add(p.toString());
+    }
   }
 
   private static void addFolder(FileSystem fs, Path p, JsonArray succeeded, JsonArray failed) {
