@@ -60,8 +60,6 @@ public class Weaver {
   // subclass of water.DTask, and if so - alter the class before returning it.
   public synchronized CtClass javassistLoadClass(String name) {
     try {
-      if( name.equals("water.HeartBeat") )
-        System.out.println("fff");;
       if( name.equals("water.Boot") ) return null;
       CtClass cc = _pool.get(name); // Full Name Lookup
       if( cc == null ) return null; // Oops?  Try the system loader, but expected to work
@@ -168,6 +166,7 @@ public class Weaver {
   // forcing a call to the pre-woven TypeMap.
   public Weaver initTypeMap( ClassLoader boot ) {
     _typeMap = weaveAndLoad("water.TypeMap",boot);
+Log.tmp("_typeMap " + _typeMap.hashCode());
     try { _onLoad = _typeMap.getMethod("onLoad",String.class); }
     catch( NoSuchMethodException nsme ) { throw new RuntimeException(nsme); }
     return this;

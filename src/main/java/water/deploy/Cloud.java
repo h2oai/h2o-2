@@ -38,10 +38,7 @@ public class Cloud {
   public void start(String[] java_args, String[] args) {
     // Take first box as cloud master
     Host master = new Host(publicIPs.get(0));
-    Set<String> incls = Host.defaultIncludes();
-    Set<String> excls = Host.defaultExcludes();
-    incls.addAll(clientRSyncIncludes);
-    excls.addAll(clientRSyncExcludes);
+    Set<String> incls = new HashSet<String>(clientRSyncIncludes);
     if( !new File(jdk + "/jre/bin/java").exists() )
       throw new IllegalArgumentException("Please specify the JDK to rsync and run on");
     incls.add(jdk);
@@ -52,16 +49,14 @@ public class Cloud {
       s += (s.length() == 0 ? "" : '\n') + o.toString() + ":" + PORT;
     flatfile = Utils.writeFile(s);
     incls.add(flatfile.getAbsolutePath());
-    master.rsync(incls, excls, false);
+    master.rsync(incls, clientRSyncExcludes, false);
 
     ArrayList<String> list = new ArrayList<String>();
     list.add("-mainClass");
     list.add(Master.class.getName());
     CloudParams p = new CloudParams();
-    p._incls = Host.defaultIncludes();
-    p._excls = Host.defaultExcludes();
-    p._incls.addAll(fannedRSyncIncludes);
-    p._excls.addAll(fannedRSyncExcludes);
+    p._incls = new HashSet<String>(fannedRSyncIncludes);
+    p._excls = fannedRSyncExcludes;
     p._incls.add(flatfile.getName());
     p._flatfile = flatfile.getName();
     p._incls.add(new File(jdk).getName());

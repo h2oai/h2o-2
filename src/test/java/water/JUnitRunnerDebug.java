@@ -13,26 +13,28 @@ import water.util.Utils;
 
 public class JUnitRunnerDebug {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserCode.class, args);
+    String flat = "";
+    boolean multi = true;
+    flat += "127.0.0.1:54321\n";
+    if( multi ) {
+      flat += "127.0.0.1:54323\n";
+      flat += "127.0.0.1:54325\n";
+    }
+    flat = Utils.writeFile(flat).getAbsolutePath();
+
+    new NodeCL(UserCode.class, ("-ip 127.0.0.1 -port 54321 -flatfile " + flat + " " + multi).split(" ")).start();
+    if( multi ) {
+      new NodeCL(H2O.class, ("-ip 127.0.0.1 -port 54323 -flatfile " + flat).split(" ")).start();
+      new NodeCL(H2O.class, ("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
+    }
   }
 
   public static class UserCode {
     public static void userMain(String[] args) {
-      String flat = "";
-      boolean multi = true;
-      flat += "127.0.0.1:54321\n";
-      if( multi ) {
-        flat += "127.0.0.1:54323\n";
-        flat += "127.0.0.1:54325\n";
-      }
-      flat = Utils.writeFile(flat).getAbsolutePath();
-
-      H2O.main(("  -ip 127.0.0.1 -port 54321 -flatfile " + flat).split(" "));
-      if( multi ) {
-        new NodeCL(("-ip 127.0.0.1 -port 54323 -flatfile " + flat).split(" ")).start();
-        new NodeCL(("-ip 127.0.0.1 -port 54325 -flatfile " + flat).split(" ")).start();
+      H2O.main(args);
+      boolean multi = Boolean.parseBoolean(args[6]);
+      if( multi )
         TestUtil.stall_till_cloudsize(3);
-      }
 
       List<Class> tests = new ArrayList<Class>();
 

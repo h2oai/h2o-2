@@ -13,7 +13,7 @@ import water.util.Utils;
  */
 public class MinimalKMeans extends Job {
   public static void main(String[] args) throws Exception {
-    CloudLocal1.launch(MinimalKMeans.class);
+    CloudProcess.launch(2, MinimalKMeans.class);
   }
 
   @Override protected void exec() {

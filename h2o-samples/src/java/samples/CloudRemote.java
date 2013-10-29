@@ -6,13 +6,19 @@ import water.deploy.EC2;
 import water.util.Log;
 
 /**
- * Builds a remote cluster given IPs or EC2 parameters.
+ * Builds a remote cluster. H2O jar, or classes from current workspace, are deployed through rsync.
+ * <nl>
+ * Note: This technique is intended for debug and experimentation purposes only, please refer to the
+ * documentation to deploy an H2O cluster.
  */
 public class CloudRemote {
   public static void main(String[] args) throws Exception {
     launchEC2(null);
   }
 
+  /**
+   * Starts EC2 machines and builds a cluster.
+   */
   public static void launchEC2(Class<? extends Job> job) throws Exception {
     EC2 ec2 = new EC2();
     ec2.boxes = 4;
@@ -20,18 +26,39 @@ public class CloudRemote {
     launch(c, job);
   }
 
+  /**
+   * The current user is assumed to have ssh access (key-pair, no password) to the remote machines.
+   * H2O will be deployed to '~/h2o_rsync/'.
+   */
   public static void launchIPs(Class<? extends Job> job) throws Exception {
     Cloud cloud = new Cloud();
     cloud.publicIPs.add("192.168.1.161");
     cloud.publicIPs.add("192.168.1.162");
     cloud.publicIPs.add("192.168.1.163");
     cloud.publicIPs.add("192.168.1.164");
+    launch(cloud, job);
   }
 
   public static void launch(Cloud cloud, Class<? extends Job> job) throws Exception {
-    cloud.clientRSyncIncludes.add("../smalldata");
+    if( Boot._init.fromJar() )
+      cloud.clientRSyncIncludes.add("target/h2o.jar");
+    else {
+      cloud.clientRSyncIncludes.add("target");
+      cloud.clientRSyncIncludes.add("lib");
+    }
+    cloud.fannedRSyncIncludes.addAll(cloud.clientRSyncIncludes);
+
     cloud.clientRSyncIncludes.add("h2o-samples/target");
+    cloud.clientRSyncIncludes.add("../smalldata");
     cloud.fannedRSyncIncludes.add("smalldata");
+
+    if( !Boot._init.fromJar() ) {
+      cloud.clientRSyncExcludes.add("target/*.jar");
+      cloud.clientRSyncExcludes.add("target/javadoc/**");
+      cloud.clientRSyncExcludes.add("lib/javassist");
+      cloud.clientRSyncExcludes.add("**/*-sources.jar");
+    }
+
     cloud.jdk = "../libs/jdk";
     String java = "-ea -Xmx120G -Dh2o.debug";
     String node = "-mainClass " + UserCode.class.getName() + " " + (job != null ? job.getName() : null);

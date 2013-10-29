@@ -2,12 +2,12 @@ package water.deploy;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.*;
 import java.util.*;
 
 import water.Boot;
-import water.TestUtil;
 import water.util.Log;
 
 /**
@@ -16,16 +16,16 @@ import water.util.Log;
 public class NodeCL extends Thread implements Node {
   private final URL[] _classpath;
   private final String[] _args;
+  private final Class _main;
   private ClassLoader _initialClassLoader, _classLoader;
 
-  public NodeCL(String[] args) {
+  public NodeCL(Class main, String[] args) {
     super("NodeCL");
     _args = args;
+    _main = main;
     _classpath = getClassPath();
     _initialClassLoader = Thread.currentThread().getContextClassLoader();
     _classLoader = new URLClassLoader(_classpath, null);
-
-    setDaemon(true);
   }
 
   @Override public void inheritIO() {
@@ -69,30 +69,15 @@ public class NodeCL extends Thread implements Node {
   }
 
   @Override public void run() {
-    invoke(Boot.class.getName(), "main", (Object) _args);
-  }
-
-  public void close() {
-    invoke(NodeCL.class.getName(), "close_");
-  }
-
-  public static void close_() {
-    TestUtil.checkLeakedKeys();
-  }
-
-  private Object invoke(String className, String methodName, Object... args) {
     assert Thread.currentThread().getContextClassLoader() == _initialClassLoader;
     Thread.currentThread().setContextClassLoader(_classLoader);
 
-    Class[] types = new Class[args.length];
-    for( int i = 0; i < args.length; i++ )
-      types[i] = args[i].getClass();
-
     try {
-      Class<?> c = _classLoader.loadClass(className);
-      Method method = c.getMethod(methodName, types);
+      Class<?> c = _classLoader.loadClass(Context.class.getName());
+      Log.tmp("boot: " + c.hashCode() + ", " + c.getClassLoader());
+      Method method = c.getMethod("run", String.class, String[].class);
       method.setAccessible(true);
-      return method.invoke(null, args);
+      method.invoke(null, _main.getName(), _args);
     } catch( Exception e ) {
       throw Log.errRTExcept(e);
     } finally {
@@ -118,6 +103,16 @@ public class NodeCL extends Thread implements Node {
       return list;
     } catch( Exception e ) {
       throw Log.errRTExcept(e);
+    }
+  }
+
+  static class Context {
+    public static void run(String main, String[] args) throws Exception {
+      // Boot takes SystemClassLoader as parent, override with ours
+      Field parent = ClassLoader.class.getDeclaredField("parent");
+      parent.setAccessible(true);
+      parent.set(Boot._init, Thread.currentThread().getContextClassLoader());
+      Boot.main(Class.forName(main), args);
     }
   }
 }

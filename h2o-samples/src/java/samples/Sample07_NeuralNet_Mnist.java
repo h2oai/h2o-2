@@ -29,8 +29,8 @@ public class Sample07_NeuralNet_Mnist extends Job {
   protected Vec[] _train, _test;
 
   public void load() {
-    _train = TestUtil.parseFrame(h2o + "/smalldata/mnist/train.csv.gz").vecs();
-    _test = TestUtil.parseFrame(h2o + "/smalldata/mnist/test.csv.gz").vecs();
+    _train = TestUtil.parseFrame(new File(TestUtil.smalldata, "mnist/train.csv.gz")).vecs();
+    _test = TestUtil.parseFrame(new File(TestUtil.smalldata, "mnist/test.csv.gz")).vecs();
     NeuralNet.reChunk(_train);
   }
 

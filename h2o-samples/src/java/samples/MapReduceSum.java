@@ -13,12 +13,12 @@ import water.fvec.*;
 public class MapReduceSum extends Job {
   public static void main(String[] args) throws Exception {
     //CloudLocal1.launch(MapReduceSum.class);
-    CloudLocal4.launch(4, true, MapReduceSum.class);
+    CloudProcess.launch(2, MapReduceSum.class);
   }
 
   @Override protected void exec() {
     // Parse a dataset into a Frame, H2O's distributed table-like data structure
-    File file = new File("../smalldata/iris/iris.csv");
+    File file = new File(TestUtil.smalldata, "/iris/iris.csv");
     Key fkey = NFSFileVec.make(file);
     Frame frame = ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
 
