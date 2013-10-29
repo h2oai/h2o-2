@@ -12,8 +12,10 @@ import water.fvec.*;
  */
 public class MapReduceSum extends Job {
   public static void main(String[] args) throws Exception {
-    //CloudLocal1.launch(MapReduceSum.class);
-    CloudProcess.launch(2, MapReduceSum.class);
+    CloudLocal.launch(1, MapReduceSum.class);
+    // CloudProcess.launch(2, MapReduceSum.class);
+    // CloudConnect.launch("localhost:54321", MapReduceSum.class);
+    // CloudRemote.launchIPs(MapReduceSum.class);
   }
 
   @Override protected void exec() {

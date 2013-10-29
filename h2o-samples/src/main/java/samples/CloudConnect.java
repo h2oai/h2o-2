@@ -16,7 +16,7 @@ import water.util.Utils;
 /**
  * Runs a job on an existing cloud by injecting a jar.
  */
-public class CloudExisting {
+public class CloudConnect {
   /**
    * Build a jar file from project classes, and launch the job.
    */

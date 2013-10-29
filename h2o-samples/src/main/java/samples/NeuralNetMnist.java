@@ -19,10 +19,10 @@ import water.util.Utils;
 /**
  * Runs a neural network on the MNIST dataset.
  */
-public class Sample07_NeuralNet_Mnist extends Job {
+public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
-    // CloudLocal1.launch(Sample07_NeuralNet_Mnist.class);
-    CloudExisting.launch("localhost:54321", Sample07_NeuralNet_Mnist.class);
+    CloudLocal.launch(1, NeuralNetMnist.class);
+    // CloudExisting.launch("localhost:54321", NeuralNetMnist.class);
   }
 
   public static final int PIXELS = 784;
