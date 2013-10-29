@@ -82,7 +82,7 @@ public class TypeaheadFileRequest extends TypeaheadRequest {
   @Override final protected JsonArray serve(String filter, int limit) {
     final String lcaseFilter = filter.toLowerCase();
     if(lcaseFilter.startsWith("hdfs://") || lcaseFilter.startsWith("s3n://"))return serveHdfs(filter, limit);
-    if(lcaseFilter.startsWith("s3://")) return serveS3(filter, limit);
+    if(lcaseFilter.startsWith("s3://")) return serveS3(filter.substring(5), limit);
     return serveFile(filter,limit);
   }
 

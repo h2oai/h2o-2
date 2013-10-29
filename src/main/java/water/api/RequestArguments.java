@@ -1510,6 +1510,7 @@ public class RequestArguments extends RequestStatics {
   }
 
   public class GeneralFile extends TypeaheadInputText<String> {
+    public GeneralFile() {this("");}
     public GeneralFile(String name) {
       super(TypeaheadFileRequest.class, name, true);
     }
