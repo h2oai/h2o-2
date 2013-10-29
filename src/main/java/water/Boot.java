@@ -76,19 +76,47 @@ public class Boot extends ClassLoader {
 
   private Boot() throws IOException {
     final String ownJar = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+    Log.POST(2000, "ownJar is " + ownJar);
     ZipFile jar = null;
-    if( ownJar.endsWith(".jar") ) { // do nothing if not run from jar
+
+    // do nothing if not run from jar
+    if( ownJar.endsWith(".jar") ) {
+      Log.POST(2001, "");
       _jarPath = URLDecoder.decode(ownJar, "UTF-8");
-      InputStream is = new FileInputStream(_jarPath);
-      this._jarHash = getMD5(is);
-      is.close();
-      jar = new ZipFile(_jarPath);
-    } else {
-      this._jarHash = new byte[16];
-      Arrays.fill(this._jarHash, (byte)0xFF);
+    }
+    else if ( ownJar.endsWith(".jar/") ) {
+      Log.POST(2002, "");
+      // Some hadoop versions (like Hortonworks) will unpack the jar
+      // file on their own.
+      String stem = "h2o.jar";
+      File f = new File (ownJar + stem);
+      if (f.exists()) {
+        Log.POST(2003, "");
+	_jarPath = URLDecoder.decode(ownJar + stem, "UTF-8");
+      }
+      else {
+	_jarPath = null;
+      }
+    }
+    else {
       _jarPath = null;
     }
-    _h2oJar = jar;
+
+    if (_jarPath == null) {
+      Log.POST(2004, "");
+      this._jarHash = new byte[16];
+      Arrays.fill(this._jarHash, (byte)0xFF);
+      _h2oJar = null;
+    }
+    else {
+      Log.POST(2005, "");
+      InputStream is = new FileInputStream(_jarPath);
+      _jarHash = getMD5(is);
+      is.close();
+      _h2oJar = new ZipFile(_jarPath);
+    }
+
+    Log.POST(2010, "_h2oJar is null: " + ((_h2oJar == null) ? "true" : "false"));
   }
 
   public static void main(String[] args) throws Exception {  _init.boot(args); }
