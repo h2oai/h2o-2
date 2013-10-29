@@ -75,8 +75,14 @@ h2o.__remoteSend <- function(client, page, ...) {
   # Log list of parameters sent to H2O
   if(pkg.env$IS_LOGGING) {
     # print(substitute(list(...)))
-    temp = deparse(substitute(list(...)))
-    write(paste(myURL, '\t', temp), file = h2o.__LOG_COMMAND, append = TRUE)
+    # temp = deparse(substitute(list(...)))
+    # write(paste(myURL, '\t', temp), file = h2o.__LOG_COMMAND, append = TRUE)
+    temp = list(...); temp = get("temp"); nams = names(temp)
+    str = rep(" ", length(temp))
+    for(i in seq_along(temp))
+      str[i] = paste(nams[i], ": ", temp[[i]], sep="")
+    str = paste(myURL, '\t', paste(str, collapse=", "))
+    write(str, file = h2o.__LOG_COMMAND, append = TRUE)
   }
   
   # Sends the given arguments as URL arguments to the given page on the specified server
@@ -85,7 +91,7 @@ h2o.__remoteSend <- function(client, page, ...) {
     temp = getURLContent(myURL)
   else
     temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
-  # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1])    # TODO: Don't escape NaN in the JSON!
+  # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
   # after = gsub("NaN", "\"NaN\"", after)
   # after = gsub("-Infinity", "\"-Inf\"", temp[1])
   # after = gsub("Infinity", "\"Inf\"", after)
@@ -102,8 +108,9 @@ h2o.__remoteSend <- function(client, page, ...) {
 h2o.__writeToFile <- function(res, fileName) {
   formatVector = function(vec) {
     result = rep(" ", length(vec))
+    nams = names(vec)
     for(i in 1:length(vec))
-      result[i] = paste(names(vec)[i], ": ", vec[i], sep="")
+      result[i] = paste(nams[i], ": ", vec[i], sep="")
     paste(result, collapse="\n")
   }
   
