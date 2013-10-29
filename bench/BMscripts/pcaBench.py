@@ -81,9 +81,12 @@ def doPCA(f, folderPath):
 
         kwargs              = params.copy()
         pcaStart            = time.time()
-        pcaResult = h2o_cmd.runPCA(parseResult = parseResult, 
+        h2o.beta_features   = True
+        pcaResult = h2o_cmd.runPCA(parseResult = parseResult, noPoll = True
                                    timeoutSecs = 7200, 
                                    **kwargs)
+
+        h2j.pollWaitJobs(timeoutSecs=4800, pollTimeoutSecs=4800, retryDelaySecs=2)
         pcaTime   = time.time() - pcaStart
         cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
         #stop all loggers
