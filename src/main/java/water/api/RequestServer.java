@@ -142,6 +142,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GetVector()); // Will be replaced by Exec2
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
+    registerRequest(new RPackage.RDownload());
     registerRequest(new NeuralNetProgress());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
