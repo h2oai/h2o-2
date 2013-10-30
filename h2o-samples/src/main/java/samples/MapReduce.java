@@ -38,7 +38,7 @@ public class MapReduce extends Job {
 
     // At this point, all task instances have been merged by their 'reduce' method. We
     // are back to a state where only one instance exist, and it contains the overall sum.
-    System.out.println("Sum is " + sum._value);
+    System.out.println("Sum is " + sum.value);
   }
 
   static class Sum extends MRTask2<Sum> {
@@ -52,7 +52,7 @@ public class MapReduce extends Job {
      * This field is updated by the task, and needs to be reduced between instances. It can be seen
      * as an output field.
      */
-    double _value;
+    double value;
 
     /**
      * This method is invoked on each chunk of the distributed data structure.
@@ -61,7 +61,7 @@ public class MapReduce extends Job {
       Assert.assertEquals("blah", myInput);
 
       for( int row = 0; row < chunk._len; row++ )
-        _value += chunk.at0(row);
+        value += chunk.at0(row);
 
       // Optionally, setting inputs to null if not needed anymore avoids
       // their serialization back to the initiating node
@@ -72,7 +72,7 @@ public class MapReduce extends Job {
      * This operation will be invoked for each MRTask, to add together sums for each chunk.
      */
     @Override public void reduce(Sum other) {
-      _value += other._value;
+      value += other.value;
     }
   }
 }

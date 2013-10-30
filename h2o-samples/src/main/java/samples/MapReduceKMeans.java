@@ -42,18 +42,18 @@ public class MapReduceKMeans extends Job {
     // Iterate over the dataset and show error for each step
     for( int i = 0; i < 10; i++ ) {
       KMeans task = new KMeans();
-      task._clusters = clusters;
+      task.clusters = clusters;
       task.doAll(frame);
 
       for( int c = 0; c < clusters.length; c++ ) {
-        if( task._counts[c] > 0 ) {
+        if( task.counts[c] > 0 ) {
           for( int v = 0; v < frame.vecs().length; v++ ) {
-            double value = task._sums[c][v] / task._counts[c];
+            double value = task.sums[c][v] / task.counts[c];
             clusters[c][v] = value;
           }
         }
       }
-      System.out.println("Error is " + task._error);
+      System.out.println("Error is " + task.error);
     }
 
     System.out.println("Clusters:");
@@ -71,24 +71,24 @@ public class MapReduceKMeans extends Job {
    * task is done using them, so that they do not get serialized back to the caller.
    */
   public static class KMeans extends MRTask2<KMeans> {
-    double[][] _clusters; // IN:  Centroids/clusters
+    double[][] clusters; // IN:  Centroids/clusters
 
-    double[][] _sums;     // OUT: Sum of features in each cluster
-    int[] _counts;        // OUT: Count of rows in cluster
-    double _error;        // OUT: Total sqr distance
+    double[][] sums;     // OUT: Sum of features in each cluster
+    int[] counts;        // OUT: Count of rows in cluster
+    double error;        // OUT: Total sqr distance
 
     @Override public void map(Chunk[] chunks) {
-      _sums = new double[_clusters.length][chunks.length];
-      _counts = new int[_clusters.length];
+      sums = new double[clusters.length][chunks.length];
+      counts = new int[clusters.length];
 
       // Find nearest cluster for each row
       for( int row = 0; row < chunks[0]._len; row++ ) {
         int nearest = -1;
         double minSqr = Double.MAX_VALUE;
-        for( int cluster = 0; cluster < _clusters.length; cluster++ ) {
+        for( int cluster = 0; cluster < clusters.length; cluster++ ) {
           double sqr = 0;           // Sum of dimensional distances
           for( int column = 0; column < chunks.length; column++ ) {
-            double delta = chunks[column].at0(row) - _clusters[cluster][column];
+            double delta = chunks[column].at0(row) - clusters[cluster][column];
             sqr += delta * delta;
           }
           if( sqr < minSqr ) {
@@ -96,23 +96,23 @@ public class MapReduceKMeans extends Job {
             minSqr = sqr;
           }
         }
-        _error += minSqr;
+        error += minSqr;
 
         // Add values and increment counter for chosen cluster
         for( int column = 0; column < chunks.length; column++ )
-          _sums[nearest][column] += chunks[column].at0(row);
-        _counts[nearest]++;
+          sums[nearest][column] += chunks[column].at0(row);
+        counts[nearest]++;
       }
-      _clusters = null;
+      clusters = null;
     }
 
     @Override public void reduce(KMeans task) {
-      for( int cluster = 0; cluster < _counts.length; cluster++ ) {
-        for( int column = 0; column < _sums[0].length; column++ )
-          _sums[cluster][column] += task._sums[cluster][column];
-        _counts[cluster] += task._counts[cluster];
+      for( int cluster = 0; cluster < counts.length; cluster++ ) {
+        for( int column = 0; column < sums[0].length; column++ )
+          sums[cluster][column] += task.sums[cluster][column];
+        counts[cluster] += task.counts[cluster];
       }
-      _error += task._error;
+      error += task.error;
     }
   }
 }

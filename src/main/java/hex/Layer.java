@@ -15,18 +15,19 @@ import water.fvec.Vec;
  */
 public abstract class Layer extends Iced {
   // Initial parameters
-  public int _units;
-  public float _rate;
-  public float _rateAnnealing;
+  public final int units;
+  public float rate;
+  public float rateAnnealing;
+  public float l2;
 
+  // TODO
   @ParamsSearch.Info(origin = 1)
-  public float _momentum;
-  public float _momentumAnnealing;
+  float _momentum;
+  float _momentumAnnealing;
 
-  public float _perWeight;
-  public float _perWeightAnnealing;
-
-  public float _l2;
+  // TODO
+  float _perWeight;
+  float _perWeightAnnealing;
 
   // Current rate and momentum
   transient float _r, _m;
@@ -47,7 +48,7 @@ public abstract class Layer extends Iced {
   transient float[] _v, _gv;
 
   protected Layer(int units) {
-    _units = units;
+    this.units = units;
   }
 
   public final void init(Layer[] ls, int index) {
@@ -55,19 +56,19 @@ public abstract class Layer extends Iced {
   }
 
   public void init(Layer[] ls, int index, boolean weights, long step) {
-    _a = new float[_units];
-    _e = new float[_units];
+    _a = new float[units];
+    _e = new float[units];
     _in = ls[index - 1];
 
     if( weights ) {
-      _w = new float[_units * _in._units];
-      _b = new float[_units];
+      _w = new float[units * _in.units];
+      _b = new float[units];
 
       // deeplearning.net tutorial (TODO special ones for rectifier & softmax?)
       // TODO only subset of inputs?
       Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      float min = (float) -Math.sqrt(6. / (_in._units + _units));
-      float max = (float) +Math.sqrt(6. / (_in._units + _units));
+      float min = (float) -Math.sqrt(6. / (_in.units + units));
+      float max = (float) +Math.sqrt(6. / (_in.units + units));
       for( int i = 0; i < _w.length; i++ )
         _w[i] = rand(rand, min, max);
     }
@@ -104,8 +105,12 @@ public abstract class Layer extends Iced {
   abstract void bprop();
 
   public final void anneal(long n) {
-    _r = _rate / (1 + _rateAnnealing * n);
+    _r = rate(n);
     _m = _momentum * (n + 1) / ((n + 1) + _momentumAnnealing);
+  }
+
+  public float rate(long n) {
+    return rate / (1 + rateAnnealing * n);
   }
 
   public final void momentum(long n) {
@@ -157,7 +162,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      _a = new float[_units];
+      _a = new float[units];
     }
 
     @Override void bprop() {
@@ -170,28 +175,28 @@ public abstract class Layer extends Iced {
   }
 
   public static class VecsInput extends Input {
-    Vec[] _vecs;
+    public Vec[] vecs;
     int[] _categoricals;
     float[] _subs, _muls;
     transient Chunk[] _chunks;
 
     public VecsInput(Vec[] vecs, VecsInput stats) {
       super(stats != null ? stats._subs.length : expand(vecs));
-      _vecs = vecs;
+      this.vecs = vecs;
       _len = vecs[0].length();
 
       if( stats != null ) {
         assert stats._categoricals.length == vecs.length;
         _categoricals = stats._categoricals;
-        assert stats._subs.length == _units;
+        assert stats._subs.length == units;
         _subs = stats._subs;
         _muls = stats._muls;
       } else {
         _categoricals = new int[vecs.length];
         for( int i = 0; i < vecs.length; i++ )
           _categoricals[i] = categories(vecs[i]);
-        _subs = new float[_units];
-        _muls = new float[_units];
+        _subs = new float[units];
+        _muls = new float[units];
         stats(vecs);
       }
     }
@@ -211,9 +216,9 @@ public abstract class Layer extends Iced {
 
     private void stats(Vec[] vecs) {
       Stats stats = new Stats();
-      stats._units = _units;
+      stats._units = units;
       stats._categoricals = _categoricals;
-      stats.doAll(_vecs);
+      stats.doAll(vecs);
       for( int i = 0; i < vecs.length; i++ ) {
         _subs[i] = (float) stats._means[i];
         double sigma = Math.sqrt(stats._sigms[i] / (stats._rows - 1));
@@ -223,11 +228,11 @@ public abstract class Layer extends Iced {
 
     @Override void fprop() {
       if( _chunks == null )
-        _chunks = new Chunk[_vecs.length];
-      for( int i = 0; i < _vecs.length; i++ ) {
+        _chunks = new Chunk[vecs.length];
+      for( int i = 0; i < vecs.length; i++ ) {
         Chunk c = _chunks[i];
-        if( c == null || c._vec != _vecs[i] || _pos < c._start || _pos >= c._start + c._len )
-          _chunks[i] = _vecs[i].chunk(_pos);
+        if( c == null || c._vec != vecs[i] || _pos < c._start || _pos >= c._start + c._len )
+          _chunks[i] = vecs[i].chunk(_pos);
       }
       ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), _subs, _muls, _categoricals);
     }
@@ -287,7 +292,7 @@ public abstract class Layer extends Iced {
     }
   }
 
-  public static class ChunksInput extends Input {
+  static class ChunksInput extends Input {
     transient Chunk[] _chunks;
     float[] _subs, _muls;
     int[] _categoricals;
@@ -376,7 +381,7 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
           _in._e[i] += g * _w[w];
-          _w[w] += _r * (g - _w[w] * _l2) * _in._a[i];
+          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
         }
         _b[o] += _r * g;
       }
@@ -384,37 +389,37 @@ public abstract class Layer extends Iced {
   }
 
   public static class VecSoftmax extends Softmax {
-    Vec _vec;
+    public Vec vec;
     int _min;
 
     public VecSoftmax(Vec vec, VecSoftmax stats) {
-      super(stats != null ? stats._units : (int) (vec.max() - vec.min() + 1));
-      _vec = vec;
+      super(stats != null ? stats.units : (int) (vec.max() - vec.min() + 1));
+      this.vec = vec;
       _min = stats != null ? stats._min : (int) vec.min();
     }
 
     @Override int label() {
-      return (int) _vec.at8(_input._pos) - _min;
+      return (int) vec.at8(_input._pos) - _min;
     }
   }
 
-  public static class ChunkSoftmax extends Softmax {
+  static class ChunkSoftmax extends Softmax {
     transient Chunk _chunk;
     int _min;
 
     public ChunkSoftmax(Chunk chunk, VecSoftmax stats) {
-      super(stats._units);
+      super(stats.units);
       _chunk = chunk;
       _min = stats._min;
 
       // TODO extract layer info in separate Ice
-      _rate = stats._rate;
-      _rateAnnealing = stats._rateAnnealing;
+      rate = stats.rate;
+      rateAnnealing = stats.rateAnnealing;
       _momentum = stats._momentum;
       _momentumAnnealing = stats._momentumAnnealing;
       _perWeight = stats._perWeight;
       _perWeightAnnealing = stats._perWeightAnnealing;
-      _l2 = stats._l2;
+      l2 = stats.l2;
     }
 
     @Override int label() {
@@ -423,7 +428,7 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Linear extends Output {
-    Linear(int units) {
+    public Linear(int units) {
       super(units);
     }
 
@@ -445,7 +450,7 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
           _in._e[i] += g * _w[w];
-          _w[w] += _r * (g - _w[w] * _l2) * _in._a[i];
+          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
         }
         _b[o] += _r * g;
       }
@@ -456,7 +461,7 @@ public abstract class Layer extends Iced {
     Vec _vec;
 
     public VecLinear(Vec vec, VecLinear stats) {
-      super(stats != null ? stats._units : 1);
+      super(stats != null ? stats.units : 1);
       _vec = vec;
     }
 
@@ -470,17 +475,17 @@ public abstract class Layer extends Iced {
     transient Chunk _chunk;
 
     public ChunkLinear(Chunk chunk, VecLinear stats) {
-      super(stats._units);
+      super(stats.units);
       _chunk = chunk;
 
       // TODO extract layer info in separate Ice
-      _rate = stats._rate;
-      _rateAnnealing = stats._rateAnnealing;
+      rate = stats.rate;
+      rateAnnealing = stats.rateAnnealing;
       _momentum = stats._momentum;
       _momentumAnnealing = stats._momentumAnnealing;
       _perWeight = stats._perWeight;
       _perWeightAnnealing = stats._perWeightAnnealing;
-      _l2 = stats._l2;
+      l2 = stats.l2;
     }
 
     @Override float value() {
@@ -518,7 +523,40 @@ public abstract class Layer extends Iced {
           int w = o * _in._a.length + i;
           if( _in._e != null )
             _in._e[i] += g * _w[w];
-          _w[w] += _r * (g - _w[w] * _l2) * _in._a[i];
+          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+        }
+        _b[o] += _r * g;
+      }
+    }
+  }
+
+  /**
+   * Apply tanh to the weights' transpose. Used for auto-encoders.
+   */
+  public static class TanhPrime extends Layer {
+    public TanhPrime(Tanh layer) {
+      super(layer._in.units);
+    }
+
+    @Override void fprop() {
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        for( int i = 0; i < _in._a.length; i++ )
+          _a[o] += _w[i * _in._a.length + o] * _in._a[i];
+        _a[o] += _b[o];
+        _a[o] = (float) Math.tanh(_a[o]);
+      }
+    }
+
+    @Override void bprop() {
+      for( int o = 0; o < _a.length; o++ ) {
+        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
+        float g = _e[o] * (1 - _a[o] * _a[o]);
+        for( int i = 0; i < _in._a.length; i++ ) {
+          int w = o * _in._a.length + i;
+          if( _in._e != null )
+            _in._e[i] += g * _w[w];
+          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
         }
         _b[o] += _r * g;
       }
@@ -535,12 +573,12 @@ public abstract class Layer extends Iced {
 
       if( weights ) {
         Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-        int count = Math.min(15, _in._units);
+        int count = Math.min(15, _in.units);
         float min = -.1f, max = +.1f;
-        for( int o = 0; o < _units; o++ ) {
+        for( int o = 0; o < units; o++ ) {
           for( int n = 0; n < count; n++ ) {
-            int i = rand.nextInt(_in._units);
-            int w = o * _in._units + i;
+            int i = rand.nextInt(_in.units);
+            int w = o * _in.units + i;
             _w[w] = rand(rand, min, max);
           }
         }
@@ -571,7 +609,7 @@ public abstract class Layer extends Iced {
           int w = o * _in._a.length + i;
           if( _in._e != null )
             _in._e[i] += g * _w[w];
-          _w[w] += _r * (g - _w[w] * _l2) * _in._a[i];
+          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
         }
         _b[o] += _r * g;
       }

@@ -39,8 +39,8 @@ public class JUnitRunnerDebug {
       List<Class> tests = new ArrayList<Class>();
 
       // Classes to test:
-      tests = JUnitRunner.all();
-      //tests.add(hex.PCATest.class);
+      // tests = JUnitRunner.all();
+      tests.add(hex.NeuralNetIrisTest.class);
 
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());
