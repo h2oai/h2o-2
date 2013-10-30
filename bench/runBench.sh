@@ -36,26 +36,26 @@ function doAlgo {
     then
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air1x;    wait; makeDead 2> /dev/null;
         zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air1x sandbox/;             wait; rm -rf sandbox/;
-        bash startloggers.sh ${JSON} clear_; wait;
+        bash startloggers.sh ${JSON} clear_; wait; bash startloggers.sh ${JSON} changePhase $1; 
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air10x;   wait; makeDead 2> /dev/null;
         zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air10x sandbox/;            wait; rm -rf sandbox/;
-        if [ $2 = "gbm" ]
+        if [ $1 = "gbm" ]
         then
             continue
         fi
-        bash startloggers.sh ${JSON} clear_; wait;
+        bash startloggers.sh ${JSON} clear_; wait; bash startloggers.sh ${JSON} changePhase $1; 
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB1x;   wait; makeDead 2> /dev/null;
         zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB1x sandbox/;            wait; rm -rf sandbox/;
-        bash startloggers.sh ${JSON} clear_; wait;
+        bash startloggers.sh ${JSON} clear_; wait; bash startloggers.sh ${JSON} changePhase $1; 
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB10x;  wait; makeDead 2> /dev/null;
         zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB10x sandbox/;           wait; rm -rf sandbox/;
-        bash startloggers.sh ${JSON} clear_; wait;
+        bash startloggers.sh ${JSON} clear_; wait; bash startloggers.sh ${JSON} changePhase $1; 
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False AllB100x; wait; makeDead 2> /dev/null;
         zip -r ${archive}/${h2oBuild}-${DATE}-$1-AllB100x sandbox/;          wait; rm -rf sandbox/;
-        bash startloggers.sh ${JSON} clear_; wait;
+        bash startloggers.sh ${JSON} clear_; wait; bash startloggers.sh ${JSON} changePhase $1; 
         python ${pyScript} -cj BMscripts/${JSON} ${h2oBuild} False Air100x;  wait; makeDead 2> /dev/null;
         zip -r ${archive}/${h2oBuild}-${DATE}-$1-Air100x sandbox/;           wait; rm -rf sandbox/;
-        bash startloggers.sh ${JSON} clear_; wait;
+        bash startloggers.sh ${JSON} clear_; wait; bash startloggers.sh ${JSON} changePhase $1; 
     else
         JSON2=161
         echo "Doing KMeans.. Using ${JSON2} config file..."
