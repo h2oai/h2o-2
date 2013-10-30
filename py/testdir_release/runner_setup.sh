@@ -13,17 +13,23 @@ echo "current PID: $$"
 #**************************************
 # do some bash parameters, just in case we have future expansion
 # -n is no download of the jar
-no_download=0
-while getopts nf: flag
+NO_DOWNLOAD=0
+TEST=
+TESTDIR=
+while getopts nt:d: flag
 do
     case $flag in
         n)
             echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
-            no_download=1
+            NO_DOWNLOAD=1
             ;;
-        f)
-            file=$OPTARG
-            echo "filename is $file (fake)"
+        t)
+            TEST=$OPTARG
+            echo "test is $TEST"
+            ;;
+        d)
+            TESTDIR=$OPTARG
+            echo "testdir is $TESTDIR"
             ;;
         ?)
             exit
@@ -43,7 +49,7 @@ echo remaining parameters to Bash are $*
 # Get the latest jar from s3. Has to execute up in h2o
 
 # a secret way to skip the download (use any arg)
-if [ $no_download -eq 0 ]
+if [ $NO_DOWNLOAD -eq 0 ]
 then
     cd ../..
     ./get_s3_jar.sh

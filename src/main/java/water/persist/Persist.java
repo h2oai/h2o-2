@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 import water.*;
 import water.api.Constants.Schemes;
+import water.fvec.Vec;
 import water.util.Log;
 
 public abstract class Persist {
@@ -84,8 +85,12 @@ public abstract class Persist {
   // It is questionable whether we need this because the only keys we have on
   // ice are likely to be arraylet chunks
 
+  private static Key stripKeyPrefix(Key k){
+    if(k._kb[0] == Key.DVEC)return Key.make(Arrays.copyOfRange(k._kb,Vec.KEY_PREFIX_LEN,k._kb.length));
+    return k;
+  }
   static String getIceName(Value v) {
-    return getIceName(v._key, (byte) (v.isArray() ? 'A' : 'V'));
+    return getIceName(stripKeyPrefix(v._key), (byte) (v.isArray() ? 'A' : 'V'));
   }
 
   static String getIceName(Key k, byte type) {

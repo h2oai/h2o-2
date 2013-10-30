@@ -1,35 +1,35 @@
-#PCA bench
+#summary bench
 import os, sys, time, csv, string
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util
 import h2o_glm, h2o_exec as h2e, h2o_jobs
 
-csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nRows','nCols','parseWallTime','pcaBuildTime')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nRows','nCols','parseWallTime','summaryBuildTime')
 
 files      = {'Airlines'   : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms': {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
              }
 build = ""
 debug = False
-json = ""
-def doPCA(f, folderPath):
+json  = ""
+def doSUM(f, folderPath):
     debug = False
     bench = "bench"
     if debug:
-        print "Doing PCA DEBUG"
+        print "Doing SUM DEBUG"
         bench = "bench/debug"
     date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     retryDelaySecs = 5 #if f == 'AirlinesTrain1x' else 30
     overallWallStart = time.time()
     pre = ""
     if debug: pre    = 'DEBUG'
-    pcabenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'pcabench.csv'
-    if not os.path.exists(pcabenchcsv):
-        output = open(pcabenchcsv,'w')
+    sumbenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'summarybench.csv'
+    if not os.path.exists(sumbenchcsv):
+        output = open(sumbenchcsv,'w')
         output.write(','.join(csv_header)+'\n')
     else:
-        output = open(pcabenchcsv,'a')
+        output = open(sumbenchcsv,'a')
     csvWrt     = csv.DictWriter(output, fieldnames=csv_header, restval=None, 
                     dialect='excel', extrasaction='ignore',delimiter=',')
     try:
@@ -74,24 +74,14 @@ def doPCA(f, folderPath):
                                 'parseWallTime'      : parseWallTime,
                                }
     
-        params              =  {'destination_key'    : "python_PCA_key",
-                                'tolerance'          : 0.0,
-                                'standardize'        : 1,
-                               }
-
-        kwargs              = params.copy()
-        pcaStart            = time.time()
-        h2o.beta_features   = True
-        pcaResult = h2o_cmd.runPCA(parseResult = parseResult, noPoll = True
-                                   timeoutSecs = 7200, 
-                                   **kwargs)
-
-        h2j.pollWaitJobs(timeoutSecs=4800, pollTimeoutSecs=4800, retryDelaySecs=2)
-        pcaTime   = time.time() - pcaStart
+        sumStart            = time.time()
+        sumResult           = h2o_cmd.runSummary(key=hex_key,
+                                       timeoutSecs = 7200)
+                                     
+        sumTime             = time.time() - sumStart
         cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
-        #stop all loggers
         os.system(cmd)
-        row.update({'pcaBuildTime' : pcaTime})
+        row.update({'summaryBuildTime' : sumTime})
         csvWrt.writerow(row)
     finally:
         output.close()
@@ -111,5 +101,5 @@ if __name__ == '__main__':
     if dat == 'AllB10x'  : fs = files['AllBedrooms']['train'][1]
     if dat == 'AllB100x' : fs = files['AllBedrooms']['train'][2]
     
-    doPCA(fs, fp)
+    doSUM(fs, fp)
     h2o.tear_down_cloud()
