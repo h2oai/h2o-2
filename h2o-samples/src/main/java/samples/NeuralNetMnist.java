@@ -22,7 +22,7 @@ import water.util.Utils;
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     CloudLocal.launch(1, NeuralNetMnist.class);
-    // CloudExisting.launch("localhost:54321", NeuralNetMnist.class);
+    // CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
   }
 
   public static final int PIXELS = 784;
@@ -34,7 +34,7 @@ public class NeuralNetMnist extends Job {
     NeuralNet.reChunk(_train);
   }
 
-  public Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
+  Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[3];
     ls[0] = new VecsInput(data, inputStats);
     ls[1] = new Tanh(500);
@@ -50,6 +50,13 @@ public class NeuralNetMnist extends Job {
     return ls;
   }
 
+  Trainer startTraining(Layer[] ls) {
+    Trainer trainer = new Trainer.MapReduce(ls);
+    //Trainer trainer = new Trainer.Direct(ls);
+    trainer.start();
+    return trainer;
+  }
+
   @Override protected void exec() {
     load();
 
@@ -59,11 +66,8 @@ public class NeuralNetMnist extends Job {
     Vec testLabels = _test[_test.length - 1];
     _test = Utils.remove(_test, _test.length - 1);
 
-    // Build net and start training
     Layer[] ls = build(_train, trainLabels, null, null);
-    Trainer trainer = new Trainer.MapReduce(ls);
-    //Trainer trainer = new Trainer.Direct(ls);
-    trainer.start();
+    Trainer trainer = startTraining(ls);
 
     // Monitor training
     long start = System.nanoTime();

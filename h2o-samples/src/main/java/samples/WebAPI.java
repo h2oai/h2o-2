@@ -8,7 +8,7 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import com.google.gson.Gson;
 
 /**
- * Invokes an H2O functionality through the Web API instead of a custom Job.
+ * Invokes an H2O functionality through the Web API.
  */
 public class WebAPI {
   public static void main(String[] args) throws Exception {

@@ -8,11 +8,11 @@ import water.*;
 import water.fvec.*;
 
 /**
- * Runs a map reduce task over a dataset to sum elements of a column.
+ * Demonstration of H2O's map-reduce API. This task sums the elements of a column.
  */
-public class MapReduceSum extends Job {
+public class MapReduce extends Job {
   public static void main(String[] args) throws Exception {
-    CloudLocal.launch(1, MapReduceSum.class);
+    CloudLocal.launch(1, MapReduce.class);
     // CloudProcess.launch(2, MapReduceSum.class);
     // CloudConnect.launch("localhost:54321", MapReduceSum.class);
     // CloudRemote.launchIPs(MapReduceSum.class);

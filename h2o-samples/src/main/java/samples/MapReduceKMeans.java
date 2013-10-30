@@ -9,11 +9,12 @@ import water.fvec.*;
 import water.util.Utils;
 
 /**
- * Simplified version of H2O k-means algorithm for better readability.
+ * Simplified version of H2O's k-means algorithm. Shows how to write your own algorithm.
  */
-public class MinimalKMeans extends Job {
+public class MapReduceKMeans extends Job {
   public static void main(String[] args) throws Exception {
-    CloudProcess.launch(2, MinimalKMeans.class);
+    CloudProcess.launch(2, MapReduceKMeans.class);
+    // CloudLocal.launch(1, MinimalKMeans.class);
   }
 
   @Override protected void exec() {
