@@ -24,13 +24,13 @@ class Basic(unittest.TestCase):
     def test_parse_summary_manyfiles_s3n(self):
         # these will be used as directory imports/parse
         csvDirlist = [
-            ("manyfiles",   600),
+            ("manyfiles-nflx-gz",   600),
         ]
         trial = 0
         for (csvDirname, timeoutSecs) in csvDirlist:
 
-            csvPathname = csvDirname + "/*"
-            (importHDFSResult, importPattern) = h2i.import_only(bucket='h2o-datasets', path=csvPathname, schema='s3n')
+            csvPathname = csvDirname + "/file_[2][0-9][0-9].dat.gz"
+            (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3n', timeoutSecs=timeoutSecs)
             s3nFullList = importHDFSResult['succeeded']
             self.assertGreater(len(s3nFullList),1,"Should see more than 1 files in s3n?")
 
@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
             # PARSE****************************************
             hex_key = csvDirname + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(bucket='h2o-datasets', path=csvPathname, schema='s3n', hex_key=hex_key,
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3n', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=10, pollTimeoutSecs=120)
             elapsed = time.time() - start
             print "parse end on ", parseResult['destination_key'], 'took', elapsed, 'seconds',\

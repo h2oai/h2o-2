@@ -361,6 +361,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     else _fs.add(mrt._fs);
   }
 
+  protected void postGlobal(){}
   // Work done after all the main local work is done.
   // Gather/reduce remote work.
   // Block for other queued pending tasks.
@@ -381,14 +382,17 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       copyOver(_res);             // So copy into self
     }
     closeLocal();
-    if( ns == (1L<<H2O.CLOUD.size())-1 && _noutputs > 0){ // All-done on head of whole MRTask tree?
-      // close the appendables and make the output frame
-      Futures fs = new Futures();
-      Vec [] vecs = new Vec[_noutputs];
-      for(int i = 0; i < _noutputs; ++i)
-        vecs[i] = _appendables[i].close(fs);
-      fs.blockForPending();
-      _outputFrame = new Frame(vecs);
+    if( ns == (1L<<H2O.CLOUD.size())-1){
+      if(_noutputs > 0){ // All-done on head of whole MRTask tree?
+        // close the appendables and make the output frame
+        Futures fs = new Futures();
+        Vec [] vecs = new Vec[_noutputs];
+        for(int i = 0; i < _noutputs; ++i)
+          vecs[i] = _appendables[i].close(fs);
+        fs.blockForPending();
+        _outputFrame = new Frame(vecs);
+      }
+      postGlobal();
     }
   }
 

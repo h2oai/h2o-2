@@ -897,8 +897,8 @@ public abstract class DGLM {
     public final long _nLines;
     final int _response;
 
-    final public double[] _beta;            // The output coefficients!  Main model result.
-    final public double[] _normBeta;        // normalized coefficients
+    public double[] _beta;            // The output coefficients!  Main model result.
+    public double[] _normBeta;        // normalized coefficients
 
     public String[] _warnings;
     public GLMValidation[] _vals;
@@ -1034,9 +1034,17 @@ public abstract class DGLM {
     }
 
     public void store() {
-      UKV.put(_selfKey, this);
+      UKV.put(_selfKey, clone());
     }
 
+    @Override
+    public GLMModel clone(){
+      GLMModel res = (GLMModel)super.clone();
+      res._beta = res._beta.clone();
+      res._normBeta  = res._normBeta.clone();
+      res._vals = res._vals == null?null:res._vals.clone();
+      return res;
+    }
     public void remove() {
       UKV.remove(_selfKey);
       if( _vals != null ) for( GLMValidation val : _vals )
@@ -1747,6 +1755,7 @@ public abstract class DGLM {
       }
 
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+        ex.printStackTrace();
         if( job != null ) job.onException(ex);
         return super.onExceptionalCompletion(ex, caller);
       }

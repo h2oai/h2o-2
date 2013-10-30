@@ -19,7 +19,7 @@ public class GBMModelView extends Request2 {
   }
 
   public static Response redirect(Request req, Key modelKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "GBMModelView", "_modelKey", modelKey);
+    return new Response(Response.Status.redirect, req, -1, -1, "/2/GBMModelView", "_modelKey", modelKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){

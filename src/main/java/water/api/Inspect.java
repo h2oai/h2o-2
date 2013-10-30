@@ -1,7 +1,8 @@
 package water.api;
 
 import hex.DGLM.GLMModel;
-import hex.DPCA.PCAModel;
+import hex.pca.PCA;
+import hex.pca.PCAModelView;
 import hex.*;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
@@ -135,20 +136,20 @@ public class Inspect extends Request {
       JsonObject response = new JsonObject();
       return RFView.redirect(response, rfModel._selfKey, rfModel._dataKey, true);
     }
-    if( f instanceof PCAModel ) {
+    /*if( f instanceof PCAModel ) {
       PCAModel m = (PCAModel)f;
       JsonObject res = new JsonObject();
       res.add(PCAModel.NAME, m.toJson());
       Response r = Response.done(res);
       r.setBuilder(PCAModel.NAME, new PCA.Builder(m));
       return r;
-    }
+    }*/
     if( f instanceof Job.Fail ) {
       UKV.remove(val._key);   // Not sure if this is a good place to do this
       return Response.error(((Job.Fail)f)._message);
     }
     if(f instanceof hex.glm.GLMModel)
-      return GLMModelView.redirect(this, key);
+      return GLMModelView.redirect2(this, key);
     if(f instanceof GBMModel)
       return GBMModelView.redirect(this, key);
     if( f instanceof GLMValidation)
@@ -159,6 +160,8 @@ public class Inspect extends Request {
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
       return ((GridSearch) f).redirect();
+    if(f instanceof hex.pca.PCAModel)
+      return PCAModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
   }
 
@@ -186,7 +189,9 @@ public class Inspect extends Request {
     // The builder Response
     Response r = Response.done(result);
     // Some nice links in the response
-    r.addHeader("<div class='alert'>" + Parse.link(key, "Parse into hex format"));
+    r.addHeader("<div class='alert'>" +
+                Parse.link(key, "Parse into hex format") +
+                "</div>");
     // Set the builder for showing the rows
     r.setBuilder(ROWS, new ArrayBuilder() {
       public String caption(JsonArray array, String name) {
@@ -332,7 +337,7 @@ public class Inspect extends Request {
         + "</div>"
         + "<p><b><font size=+1>"
           + cols + " columns"
-          + (bytesPerRow != 0 ? (", " + bytesPerRow + " bytes-per-row * " + rows + " rows = " + PrettyPrint.bytes(bytes)) : "")
+          + (bytesPerRow != 0 ? (", " + bytesPerRow + " bytes-per-row * " + String.format("%,d",rows) + " rows = " + PrettyPrint.bytes(bytes)) : "")
         + "</font></b></p>");
       // sb.append(
       // " <script>$('#inspect').submit( function() {" +

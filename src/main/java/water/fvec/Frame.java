@@ -48,6 +48,9 @@ public class Frame extends Iced {
       final Key k = _keys[i];
       H2OCountedCompleter t;
       H2O.submitTask(t = new H2OCountedCompleter(){
+        // we need higher priority here as there is a danger of deadlock in case of many calls from MRTask2 at once
+        // (e.g. frame with many vectors invokes rollup tasks for all vectors in paralell), should probably be done in CPS style in the future
+        @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
         @Override public void compute2() {
           vecs[ii] = DKV.get(k).get();
           tryComplete();

@@ -278,24 +278,26 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // When the task completes, ship results back to client
     @Override public void onCompletion( CountedCompleter caller ) {
       // Send results back
-      DTask dt = _dt;           // _dt can go null the instant its send over wire
-      while( true ) {           // Retry loop for broken TCP sends
+      DTask origDt = _dt;
+      DTask dt = _dt;// = _dt;           // _dt can go null the instant its send over wire
+      do {           // Retry loop for broken TCP sends
         AutoBuffer ab = null;
         try {
           ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
-          _dt.write(ab);      // Write the DTask - could be very large write
+          dt.write(ab);      // Write the DTask - could be very large write
           _computed = true;   // After the TCP reply flag set, set computed bit
           boolean t = ab.hasTCP(); // Resends do not need to repeat TCP result
-          _dt._repliedTcp = t;
+          dt._repliedTcp = t;
           ab.close(t,false);  // Then close; send final byte
           break;              // Break out of retry loop
         } catch( AutoBuffer.TCPIsUnreliableException e ) {
-          Log.info("Network congestion: TCPACK "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
+          Log.info("Task cancelled or network congestion: TCPACK "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
           if( ab != null ) ab.close(true,true);
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
         }
-      } // end of while(true)
-      if( (dt instanceof DRemoteTask || dt instanceof MRTask2) && dt.logVerbose() )
+      } while((dt = _dt) != null); // end of while(true)
+      if(dt == null)Log.info("Cancelled remote task#"+_tsknum+" "+origDt.getClass()+" to "+_client + " has been cancelled by remote");
+      else if( (dt instanceof DRemoteTask || dt instanceof MRTask2) && dt.logVerbose() )
         Log.info("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
@@ -455,37 +457,41 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Got a response UDP packet, or completed a large TCP answer-receive.
   // Install it as The Answer packet and wake up anybody waiting on an answer.
   protected int response( AutoBuffer ab ) {
-    assert _tasknum==ab.getTask();
-    if( _done ) return ab.close(false,false); // Ignore duplicate response packet
-    int flag = ab.getFlag();    // Must read flag also, to advance ab
-    if( flag == SERVER_TCP_SEND ) return ab.close(false,false); // Ignore UDP packet for a TCP reply
-    assert flag == SERVER_UDP_SEND;
-    synchronized(this) {        // Install the answer under lock
+    try{
+      assert _tasknum==ab.getTask();
       if( _done ) return ab.close(false,false); // Ignore duplicate response packet
-      UDPTimeOutThread.PENDING.remove(this);
-      _dt.read(ab);             // Read the answer (under lock?)
-      _size_rez = ab.size();    // Record received size
-      ab.close(true,false);     // Also finish the read (under lock?)
-      _dt.onAck();              // One time only execute (before sending ACKACK)
-      _done = true;             // Only read one (of many) response packets
-      ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
-      notifyAll();              // And notify in any case
-      final Exception e = _dt.getDException();
-      // Also notify any and all pending completion-style tasks
-      if( _fjtasks != null )
-        for( final H2OCountedCompleter task : _fjtasks )
-          H2O.submitTask(new H2OCountedCompleter() {
-              @Override public void compute2() {
-                if(e != null) // re-throw exception on this side as if it happened locally
-                  task.completeExceptionally(e);
-                else try {
-                  task.tryComplete();
-                } catch(Throwable e) {
-                  task.completeExceptionally(e);
+      int flag = ab.getFlag();    // Must read flag also, to advance ab
+      if( flag == SERVER_TCP_SEND ) return ab.close(false,false); // Ignore UDP packet for a TCP reply
+      assert flag == SERVER_UDP_SEND;
+      synchronized(this) {        // Install the answer under lock
+        if( _done ) return ab.close(false,false); // Ignore duplicate response packet
+        UDPTimeOutThread.PENDING.remove(this);
+        _dt.read(ab);             // Read the answer (under lock?)
+        _size_rez = ab.size();    // Record received size
+        ab.close(true,false);     // Also finish the read (under lock?)
+        _dt.onAck();              // One time only execute (before sending ACKACK)
+        _done = true;             // Only read one (of many) response packets
+        ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
+        notifyAll();              // And notify in any case
+        final Exception e = _dt.getDException();
+        // Also notify any and all pending completion-style tasks
+        if( _fjtasks != null )
+          for( final H2OCountedCompleter task : _fjtasks )
+            H2O.submitTask(new H2OCountedCompleter() {
+                @Override public void compute2() {
+                  if(e != null) // re-throw exception on this side as if it happened locally
+                    task.completeExceptionally(e);
+                  else try {
+                    task.tryComplete();
+                  } catch(Throwable e) {
+                    task.completeExceptionally(e);
+                  }
                 }
-              }
-              @Override public byte priority() { return task.priority(); }
-            });
+                @Override public byte priority() { return task.priority(); }
+              });
+      }
+    }catch(Throwable t){
+      t.printStackTrace();
     }
     return 0;
   }

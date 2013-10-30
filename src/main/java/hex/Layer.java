@@ -231,55 +231,59 @@ public abstract class Layer extends Iced {
       }
       ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), _subs, _muls, _categoricals);
     }
+  }
 
-    /**
-     * Stats with expanded categoricals.
-     */
-    private static class Stats extends MRTask2<Stats> {
-      int _units;
-      int[] _categoricals;
-      double[] _means, _sigms;
-      long _rows;
-      transient float[] _subs, _muls;
+  /**
+   * Stats with expanded categoricals.
+   */
+  static class Stats extends MRTask2<Stats> {
+    int _units;
+    int[] _categoricals;
+    double[] _means, _sigms;
+    long _rows;
+    transient float[] _subs, _muls;
 
-      @Override protected void setupLocal() {
-        _subs = new float[_units];
-        _muls = new float[_units];
-        for( int i = 0; i < _muls.length; i++ )
-          _muls[i] = 1;
-      }
+    @Override protected void setupLocal() {
+      _subs = new float[_units];
+      _muls = new float[_units];
+      for( int i = 0; i < _muls.length; i++ )
+        _muls[i] = 1;
+    }
 
-      @Override public void map(Chunk[] cs) {
-        _means = new double[_units];
-        _sigms = new double[_units];
-        float[] a = new float[_means.length];
-        for( int r = 0; r < cs[0]._len; r++ ) {
-          ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
-          for( int c = 0; c < a.length; c++ )
-            _means[c] += a[c];
-        }
+    @Override public void map(Chunk[] cs) {
+      _means = new double[_units];
+      _sigms = new double[_units];
+      float[] a = new float[_means.length];
+      for( int r = 0; r < cs[0]._len; r++ ) {
+        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
         for( int c = 0; c < a.length; c++ )
-          _means[c] /= cs[0]._len;
-        for( int r = 0; r < cs[0]._len; r++ ) {
-          ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
-          for( int c = 0; c < a.length; c++ )
-            _sigms[c] += (a[c] - _means[c]) * (a[c] - _means[c]);
-        }
-        _rows += cs[0]._len;
+          _means[c] += a[c];
       }
+      for( int c = 0; c < a.length; c++ )
+        _means[c] /= cs[0]._len;
+      for( int r = 0; r < cs[0]._len; r++ ) {
+        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
+        for( int c = 0; c < a.length; c++ )
+          _sigms[c] += (a[c] - _means[c]) * (a[c] - _means[c]);
+      }
+      _rows += cs[0]._len;
+    }
 
-      @Override public void reduce(Stats rs) {
-        for( int c = 0; c < _means.length; c++ ) {
-          double delta = _means[c] - rs._means[c];
-          _means[c] = (_means[c] * _rows + rs._means[c] * rs._rows) / (_rows + rs._rows);
-          _sigms[c] = _sigms[c] + rs._sigms[c] + delta * delta * _rows * rs._rows / (_rows + rs._rows);
-        }
-        _rows += rs._rows;
-      }
+    @Override public void reduce(Stats rs) {
+      reduce(_means, _sigms, _rows, rs._means, rs._sigms, rs._rows);
+      _rows += rs._rows;
+    }
 
-      @Override public boolean logVerbose() {
-        return !H2O.DEBUG;
+    static void reduce(double[] ma, double[] sa, long ra, double[] mb, double[] sb, long rb) {
+      for( int c = 0; c < ma.length; c++ ) {
+        double delta = ma[c] - mb[c];
+        ma[c] = (ma[c] * ra + mb[c] * rb) / (ra + rb);
+        sa[c] = sa[c] + sb[c] + delta * delta * ra * rb / (ra + rb);
       }
+    }
+
+    @Override public boolean logVerbose() {
+      return !H2O.DEBUG;
     }
   }
 

@@ -2,6 +2,8 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j
 
+DO_PLOT_IF_KEVIN = False
+
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
@@ -9,7 +11,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            ri = r1.randint(0,1)
+            # ri = r1.randint(0,1)
+            # get some reals, to get a bigger file?
+            ri = round(r1.uniform(0,1),2)
             rowData.append(ri)
 
         ri = r1.randint(0,1)
@@ -30,13 +34,16 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10, enable_benchmark_log=True)
+            # fails
+            # h2o.build_cloud(1,java_heap_MB=100, enable_benchmark_log=True)
+            # 400 fails
+            jea = '-Xloggc:log.txt'
+            h2o.build_cloud(1,java_heap_MB=1200, enable_benchmark_log=True, java_extra_args=jea)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
-        ### time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_GBM_many_cols(self):
@@ -44,18 +51,16 @@ class Basic(unittest.TestCase):
 
         if localhost:
             tryList = [
-                (10000, 100, 'cA', 300), 
+                (100000, 400, 'cA', 300), 
                 ]
         else:
             tryList = [
                 # (10000, 10, 'cB', 300), 
                 # (10000, 50, 'cC', 300), 
-                (10000, 100, 'cD', 300), 
-                (10000, 200, 'cE', 300), 
-                (10000, 300, 'cF', 300), 
-                (10000, 400, 'cG', 300), 
-                (10000, 500, 'cH', 300), 
-                (10000, 1000, 'cI', 300), 
+                (100000, 100, 'cD', 300), 
+                (100000, 200, 'cE', 300), 
+                (100000, 500, 'cG', 300), 
+                (100000, 1000, 'cI', 300), 
                 ]
 
         ### h2b.browseTheCloud()
@@ -95,8 +100,10 @@ class Basic(unittest.TestCase):
 
             # Logging to a benchmark file
             algo = "Parse"
-            l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
+            # l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
+                # len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
+            l = '{:d} jvms, {:d}MB heap, {:s} {:s} {:6.2f} secs'.format(
+                len(h2o.nodes), h2o.nodes[0].java_heap_MB, algo, csvFilename, elapsed)
             print l
             h2o.cloudPerfH2O.message(l)
 
@@ -108,15 +115,20 @@ class Basic(unittest.TestCase):
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
+            h2o_cmd.infoFromInspect(inspect, csvPathname)
+
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
             h2o.beta_features = True
-            ntrees = 100
-            for max_depth in [5,10,20,40]:
+            # was failing with 100 trees
+            # ntrees = 100
+            # for max_depth in [5,10,20,40]:
+            ntrees = 10
+            for max_depth in [5]:
                 params = {
                     'learn_rate': .2,
-                    'nbins': 1024,
+                    'nbins': 10, # 1024 fail
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
@@ -139,7 +151,7 @@ class Basic(unittest.TestCase):
                 # Logging to a benchmark file
                 algo = "GBM " + " ntrees=" + str(ntrees) + " max_depth=" + str(max_depth)
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, trainElapsed)
+                    len(h2o.nodes), h2o.nodes[0].java_heap_MB, algo, csvFilename, trainElapsed)
                 print l
                 h2o.cloudPerfH2O.message(l)
 
@@ -161,7 +173,7 @@ class Basic(unittest.TestCase):
 
         h2o.beta_features = False
         # just plot the last one
-        if 1==1:
+        if DO_PLOT_IF_KEVIN:
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'

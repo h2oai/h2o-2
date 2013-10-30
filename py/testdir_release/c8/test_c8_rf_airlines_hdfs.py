@@ -4,8 +4,8 @@ import h2o, h2o_hosts, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_rf
 
 # RF train parameters
 paramsTrainRF = { 
-    'ntree'      : 50, 
-    'depth'      : 30,
+    'ntree'      : 5, 
+    'depth'      : 15,
     'parallel'   : 1, 
     'bin_limit'  : 10000,
     'ignore'     : 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 

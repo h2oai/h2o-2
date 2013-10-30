@@ -20,7 +20,7 @@ public class Parse2 extends Parse {
   public Key destination_key; // Key holding final value after job is removed
 
   @API(help = "redirect to url")
-  public final String redirect_url = "Progress2"; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
+  public String redirect_url; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
 
   @API(help="Should block and wait for result?")
   protected Bool _blocking = new Bool("blocking",false, "");
@@ -41,6 +41,7 @@ public class Parse2 extends Parse {
       // Make a new Setup, with the 'header' flag set according to user wishes.
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
       job_key = ParseDataset2.forkParseDataset(destination_key, keys, setup).job_key;
+      redirect_url = Progress2.jsonUrl(job_key, destination_key);
       // Allow the user to specify whether to block synchronously for a response or not.
       if (_blocking.value())
         Job.waitUntilJobEnded(job_key);

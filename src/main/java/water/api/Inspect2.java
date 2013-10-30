@@ -2,6 +2,7 @@ package water.api;
 
 import water.*;
 import water.fvec.*;
+import water.util.Utils;
 import hex.gbm.DRF;
 import hex.gbm.GBM;
 
@@ -30,12 +31,14 @@ public class Inspect2 extends Request2 {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public ColSummary( String name, Vec vec ) {
       this.name = name;
+      this.type = vec.isEnum()?"Enum":vec.isInt()?"Int":"Real";
       this.min  = vec.min();
       this.max  = vec.max();
       this.mean = vec.mean();
       this.naCnt= vec.naCnt();
     }
     @API(help="Label."           ) final String name;
+    @API(help="type."            ) final String type;
     @API(help="min."             ) final double min;
     @API(help="max."             ) final double max;
     @API(help="mean."            ) final double mean;
@@ -60,14 +63,14 @@ public class Inspect2 extends Request2 {
     for( int i=0; i<numCols; i++ )
       src_key.vecs()[i].rollupStats(fs);
     fs.blockForPending();
-
     byteSize = src_key.byteSize();
     cols = new ColSummary[numCols];
     for( int i=0; i<cols.length; i++ )
       cols[i] = new ColSummary(src_key._names[i],src_key.vecs()[i]);
-
     return new Response(Response.Status.done, this, -1, -1, null);
   }
+
+  public static String jsonLink(Key key){return "2/Inspect2.json?src_key=" + key;}
 
   @Override public boolean toHTML( StringBuilder sb ) {
     Key skey = Key.make(input("src_key"));
@@ -78,7 +81,7 @@ public class Inspect2 extends Request2 {
       naCnt += cols[i].naCnt;
 
     DocGen.HTML.title(sb,skey.toString());
-    DocGen.HTML.section(sb,""+numCols+" columns, "+numRows+" rows, "+
+    DocGen.HTML.section(sb,""+String.format("%,d",numCols)+" columns, "+String.format("%,d",numRows)+" rows, "+
                         PrettyPrint.bytes(byteSize)+" bytes (compressed), "+
                         (naCnt== 0 ? "no":PrettyPrint.bytes(naCnt))+" missing elements");
 
@@ -116,7 +119,13 @@ public class Inspect2 extends Request2 {
     for( int i=0; i<cols.length; i++ )
       sb.append("<td><b>").append(cols[i].name).append("</b></td>");
     sb.append("</tr>");
-
+    
+    sb.append("<tr class='warning'>");
+    sb.append("<td>").append("Type").append("</td>");
+    for( int i=0; i<cols.length; i++ )
+      sb.append("<td><b>").append(cols[i].type).append("</b></td>");
+    sb.append("</tr>");
+    
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )

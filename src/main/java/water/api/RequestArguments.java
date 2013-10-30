@@ -4,7 +4,7 @@ import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.DPCA.PCAModel;
+import hex.pca.PCAModel;
 import hex.*;
 import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
@@ -1509,6 +1509,19 @@ public class RequestArguments extends RequestStatics {
     @Override protected String[] errors() { return new String[] { "File not found" }; }
   }
 
+  public class GeneralFile extends TypeaheadInputText<String> {
+    public GeneralFile() {this("");}
+    public GeneralFile(String name) {
+      super(TypeaheadFileRequest.class, name, true);
+    }
+    @Override protected String parse(String input) throws IllegalArgumentException {
+      return input;
+    }
+    @Override protected String queryDescription() { return "Existing file or directory, can be on nfs,hdfs or S3"; }
+    @Override protected String defaultValue() { return ""; }
+    @Override protected String[] errors() { return new String[] { "File not found" }; }
+  }
+
   // ---------------------------------------------------------------------------
   // H2OKey
   // ---------------------------------------------------------------------------
@@ -1639,11 +1652,11 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
-  public class H2OPCAModelKey extends H2OModelKey<PCAModel, TypeaheadPCAModelKeyRequest> {
+  /*public class H2OPCAModelKey extends H2OModelKey<PCAModel, TypeaheadPCAModelKeyRequest> {
     public H2OPCAModelKey(String name, boolean req) {
       super(new TypeaheadPCAModelKeyRequest(),name, req);
     }
-  }
+  }*/
 
   // ---------------------------------------------------------------------------
   // StringListArgument

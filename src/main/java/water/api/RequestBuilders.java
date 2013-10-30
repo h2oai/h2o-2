@@ -125,9 +125,9 @@ public class RequestBuilders extends RequestQueries {
 
   private static final String _jsonResponseBox =
             "<div class='pull-right'><a href='#' onclick='$(\"#json_box\").toggleClass(\"hide\");' class='btn btn-inverse btn-mini'>JSON</a></div>"
-          + "<div class='hide' id='json_box'><pre>"
+          + "<div class='hide' id='json_box'><pre><code class=\"language-json\">"
           + "%JSON_RESPONSE_BOX"
-          + "</pre></div>";
+          + "</code></pre></div>";
 
   protected String buildJSONResponseBox(Response response) {
     switch (response._status) {
@@ -298,7 +298,7 @@ public class RequestBuilders extends RequestQueries {
     protected final JsonObject _response;
     protected final Request _req;
 
-    protected boolean _strictJsonCompliance = false;
+    protected boolean _strictJsonCompliance = true;
 
     /** Custom builders for JSON elements when converting to HTML automatically.
      */

@@ -20,6 +20,7 @@ public class TypeMap {
     "hex.KMeansModel",
     "hex.rf.DRF$DRFParams",
     "hex.rf.RFModel",
+    "hex.Summary2",
     "water.AutoSerialTest",
     "water.FetchClazz",
     "water.FetchId",

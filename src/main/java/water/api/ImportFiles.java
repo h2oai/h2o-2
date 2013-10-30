@@ -20,7 +20,7 @@ public class ImportFiles extends Request {
 
   // HTTP REQUEST PARAMETERS
   @API(help="File or directory to import.")
-  protected final ExistingFile path = new ExistingFile("path");
+  protected final GeneralFile path = new GeneralFile("path");
 
   // JSON OUTPUT FIELDS
   @API(help="Files imported.  Imported files are merely Keys mapped over the existing files.  No data is loaded until the Key is used (usually in a Parse command).")
@@ -35,8 +35,8 @@ public class ImportFiles extends Request {
   @Override public String[] DocExampleSucc() { return new String[]{"path","smalldata/airlines"}; }
   @Override public String[] DocExampleFail() { return new String[]{}; }
 
-  FileIntegrityChecker load(File path) {
-    return FileIntegrityChecker.check(path,false);
+  FileIntegrityChecker load(String path) {
+    return FileIntegrityChecker.check(new File(path),false);
   }
 
   @Override protected Response serve() {

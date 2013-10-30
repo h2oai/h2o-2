@@ -21,45 +21,45 @@ setClass("H2OGBMModel", contains="H2OModel")
 setClass("H2OGBMGrid", contains="H2OGrid")
 
 # Register finalizers for H2O data and model objects
-setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
-  .Object@h2o = h2o
-  .Object@key = key
-  .Object@env = new.env()
-  
-  assign("h2o", .Object@h2o, envir = .Object@env)
-  assign("key", .Object@key, envir = .Object@env)
-  
-  # Empty keys don't refer to any object in H2O
-  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
-  return(.Object)
-})
-
-setMethod("initialize", "H2OParsedData", function(.Object, h2o = new("H2OClient"), key = "") {
-  .Object@h2o = h2o
-  .Object@key = key
-  .Object@env = new.env()
-  
-  assign("h2o", .Object@h2o, envir = .Object@env)
-  assign("key", .Object@key, envir = .Object@env)
-  
-  # Empty keys don't refer to any object in H2O
-  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
-  return(.Object)
-})
-
-setMethod("initialize", "H2OModel", function(.Object, key = "", data = new("H2OParsedData"), model = list()) {
-  .Object@key = key
-  .Object@data = data
-  .Object@model = model
-  .Object@env = new.env()
-  
-  assign("h2o", .Object@data@h2o, envir = .Object@env)
-  assign("key", .Object@key, envir = .Object@env)
-  
-  # Empty keys don't refer to any object in H2O
-  if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
-  return(.Object)
-})
+# setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
+#   .Object@h2o = h2o
+#   .Object@key = key
+#   .Object@env = new.env()
+#   
+#   assign("h2o", .Object@h2o, envir = .Object@env)
+#   assign("key", .Object@key, envir = .Object@env)
+#   
+#   # Empty keys don't refer to any object in H2O
+#   if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+#   return(.Object)
+# })
+# 
+# setMethod("initialize", "H2OParsedData", function(.Object, h2o = new("H2OClient"), key = "") {
+#   .Object@h2o = h2o
+#   .Object@key = key
+#   .Object@env = new.env()
+#   
+#   assign("h2o", .Object@h2o, envir = .Object@env)
+#   assign("key", .Object@key, envir = .Object@env)
+#   
+#   # Empty keys don't refer to any object in H2O
+#   if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+#   return(.Object)
+# })
+# 
+# setMethod("initialize", "H2OModel", function(.Object, key = "", data = new("H2OParsedData"), model = list()) {
+#   .Object@key = key
+#   .Object@data = data
+#   .Object@model = model
+#   .Object@env = new.env()
+#   
+#   assign("h2o", .Object@data@h2o, envir = .Object@env)
+#   assign("key", .Object@key, envir = .Object@env)
+#   
+#   # Empty keys don't refer to any object in H2O
+#   if(key != "") reg.finalizer(.Object@env, h2o.__finalizer)
+#   return(.Object)
+# })
 
 # Class display functions
 setMethod("show", "H2OClient", function(object) {
@@ -308,10 +308,15 @@ histograms <- function(object) { UseMethod("histograms", object) }
 setMethod("histograms", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
   list.of.bins <- lapply(res$summaries, function(res) {
-    counts <- res$bins
-    breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins) + 1)
-    bins <- list(counts,breaks)
-    names(bins) <- cbind('counts', 'breaks')
+    if (res$rows == 0) {
+      bins <- NULL
+    } else {
+      domains <- res$domains
+      counts <- res$bins
+      breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins) + 1)
+      bins <- list(domains,counts,breaks)
+      names(bins) <- cbind('domains', 'counts', 'breaks')
+    }
     bins
   })
 })
@@ -349,7 +354,7 @@ setMethod("summary", "H2OParsedData2", function(object) {
       counts <- res$bins[res$maxs + 1]
       width <- max(cbind(nchar(domains), nchar(counts)))
       result <- paste(domains,
-                      mapply(function(x, y) { paste(rep(' ',width + 1 - nchar(x) - nchar(y)), collapse='') }, domains, counts),
+                      mapply(function(x, y) { paste(rep(' ', max(width + 1 - nchar(x) - nchar(y),0)), collapse='') }, domains, counts),
                       ":",
                       counts,
                       " ",
@@ -378,7 +383,7 @@ setMethod("summary", "H2OPCAModel", function(object) {
 })
 
 setMethod("as.data.frame", "H2OParsedData", function(x) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/DownloadDataset?src_key=', x@key, sep='')
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
   ttt <- getURL(url)
   read.csv(textConnection(ttt))
 })

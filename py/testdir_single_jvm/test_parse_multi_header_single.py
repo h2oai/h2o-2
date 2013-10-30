@@ -1,4 +1,4 @@
-import unittest, time, sys, random
+import unittest, time, sys, random, os
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 import h2o_browse as h2b
@@ -99,14 +99,19 @@ class Basic(unittest.TestCase):
             # DON"T get redirected to S3! (EC2 hack in config, remember!)
             # use it at the node level directly (because we gen'ed the files.
             # I suppose we could force the redirect state bits in h2o.nodes[0] to False, instead?:w
-            h2i.import_only(path=SYNDATASETS_DIR + '/*')
+            # put them, rather than using import files, so this works if remote h2o is used
+            # and python creates the files locally
+            fileList = os.listdir(SYNDATASETS_DIR)
+            for f in fileList:
+                h2i.import_only(path=SYNDATASETS_DIR + "/" + f, schema='put', noPrint=True)
+
             header = h2i.find_key('syn_header')
 
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             print "Header Key = " + header
             start = time.time()
-            parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*',
-                src_key=src_key, hex_key=hex_key, timeoutSecs=timeoutSecs, header="1", header_from_file=header)
+            parseResult = h2i.parse_only(pattern='*'+rowxcol+'*',
+                hex_key=hex_key, timeoutSecs=timeoutSecs, header="1", header_from_file=header)
 
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']

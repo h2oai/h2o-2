@@ -104,11 +104,16 @@ class Basic(unittest.TestCase):
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # new web page for predict? throw it in here for now
 
-            # FIX! should update this expected classification error
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
-            start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
+            # don't check error if stratified
+            if 'sampling_strategy' in kwargs and kwargs['sampling_strategy'] != 'STRATIFIED_LOCAL':
+                check_err = True
+            else:
+                check_err = False
+
+            if check_err:
+                self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
@@ -119,9 +124,9 @@ class Basic(unittest.TestCase):
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # FIX! should update this expected classification error
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
-            start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
+            # don't check error if stratified
+            if check_err:
+                self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
@@ -132,9 +137,9 @@ class Basic(unittest.TestCase):
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # FIX! should update this expected classification error
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
-            start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
+            # don't check error if stratified
+            if check_err:
+                self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start
@@ -146,9 +151,9 @@ class Basic(unittest.TestCase):
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
             # FIX! should update this expected classification error
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
-            start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
+            # don't check error if stratified
+            if check_err:
+                self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
             elapsed = time.time() - start

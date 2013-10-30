@@ -26,8 +26,18 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
         # don't search the R stdout/stderr
         # this matches the python h2o captured stdout/stderr, and also any downloaded h2o logs
         # not the commands.log
-        if re.search('h2o.*stdout|h2o.*stderr',filename):
+        if re.search('h2o.*stdout|h2o.*stderr',filename) and not re.search('doneToLine',filename):
             sandFile = open(LOG_DIR + "/" + filename, "r")
+
+            # if we've already walked it, there will be a matching file
+            # with the last line number we checked
+            try:
+                with open(LOG_DIR + "/" + "doneToLine." + filename) as f:
+                    doneToLine = int(f.readline().rstrip())
+            except IOError:
+               # no file
+               doneToLine = 0
+
             # just in case error/assert is lower or upper case
             # FIX! aren't we going to get the cloud building info failure messages
             # oh well...if so ..it's a bug! "killing" is temp to detect jar mismatch error
@@ -49,7 +59,13 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
             # single line events? that's better
             printing = 0 # "printing" is per file.
             lines = 0 # count per file! errLines accumulates for multiple files.
+            currentLine = 0
             for line in sandFile:
+                currentLine += 1
+                # don't check if we've already checked
+                if currentLine <= doneToLine:
+                    continue
+
                 # JIT reporting looks like this..don't detect that as an error
                 printSingleWarning = False
                 foundBad = False
@@ -113,6 +129,13 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
                         sys.stdout.write(line)
 
             sandFile.close()
+            # remember what you've checked so far, with a file that matches, plus a suffix
+            # this is for the case of multiple tests sharing the same log files
+            # only want the test that caused the error to report it. (not flat the subsequent ones as fail)
+            # overwrite if exists
+            with open(LOG_DIR + "/" + "doneToLine." + filename, "w") as f:
+                f.write(str(currentLine) + "\n")
+
     sys.stdout.flush()
 
     # already has \n in each line

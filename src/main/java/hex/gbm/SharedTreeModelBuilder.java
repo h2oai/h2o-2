@@ -70,13 +70,10 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     assert (classification && response.isInt()) || // Classify Int or Enums
       (!classification && !response.isEnum());     // Regress  Int or Float
     _nclass = classification ? (char)(response.max()-response.min()+1) : 1;
-    // Make a fake response for
+    // Transform response to enum
     if (response.domain()==null && classification) {
-      int[] domain = new CollectDomain(response).doAll(response).domain();
-      int[] domMap = Utils.mapping(domain);
-      String[] sdomain = Utils.toStringMap(domain);
-      response = response.makeTransf(domMap, sdomain);
-      _nclass = domain.length;
+      response = response.toEnum();
+      _nclass = response.domain().length;
     }
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
@@ -96,7 +93,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // handy names in the Model.  This really should be in the Model code.
     String[] domain = response.domain();
     if( domain == null && _nclass > 1 ) // No names?  Make some up.
-      domains[_ncols] = domain = response.defaultLevels();
+      assert false : "Response domain' names should be always presented in case of classification";
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution

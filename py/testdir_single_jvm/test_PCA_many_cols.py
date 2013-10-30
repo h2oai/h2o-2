@@ -66,6 +66,7 @@ class Basic(unittest.TestCase):
 
         ### h2b.browseTheCloud()
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
+            print (rowCount, colCount, hex_key, timeoutSecs)
             SEEDPERFILE = random.randint(0, sys.maxint)
             # csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -114,7 +115,7 @@ class Basic(unittest.TestCase):
             num_cols = inspect['num_cols']
 
             # PCA(tolerance iterate)****************************************
-            #h2o.beta_features = True
+            h2o.beta_features = True
             for tolerance in [i/10.0 for i in range(11)]:
                 params = {
                     'destination_key': modelKey,
@@ -122,51 +123,68 @@ class Basic(unittest.TestCase):
                     'standardize': 1,
                 }
                 kwargs = params.copy()
-                #h2o.beta_features = True
-                pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
-                print "PCA completed in", pcaResult['python_elapsed'], "seconds. On dataset: ", csvPathname
-                print "Elapsed time was ", pcaResult['python_%timeout'], "% of the timeout"
-                print "Checking PCA results: "
-                h2o_pca.simpleCheckPCA(self,pcaResult)
-                h2o_pca.resultsCheckPCA(self,pcaResult)
+                h2o.beta_features = True
+                PCAResult = {'python_elapsed': 0, 'python_%timeout': 0}
+                start = time.time()
+                h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+                h2j.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=2)
+                elapsed = time.time() - start
+                PCAResult['python_elapsed']  = elapsed
+                PCAResult['python_%timeout'] = 1.0*elapsed / timeoutSecs
+                print "PCA completed in",     PCAResult['python_elapsed'], "seconds.", \
+                      "%f pct. of timeout" % (PCAResult['python_%timeout'])
+                
+                pcaView = h2o_cmd.runPCAView(modelKey=modelKey)
+                h2o_pca.simpleCheckPCA(self,pcaView)
+                h2o_pca.resultsCheckPCA(self,pcaView)
 
                 # Logging to a benchmark file
                 algo = "PCA " + " tolerance=" + str(tolerance)
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, pcaResult['python_elapsed'])
+                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, PCAResult['python_elapsed'])
                 print l
                 h2o.cloudPerfH2O.message(l)
 
                 #h2o.beta_features = True
-                pcaInspect = h2o_cmd.runInspect(key=modelKey)
+                pcaInspect = pcaView
                 # errrs from end of list? is that the last tree?
-                sdevs = pcaInspect["PCAModel"]["stdDev"] 
+                sdevs = pcaInspect["pca_model"]["sdev"] 
                 print "PCA: standard deviations are :", sdevs
                 print
                 print
-                propVars = pcaInspect["PCAModel"]["propVar"]
+                propVars = pcaInspect["pca_model"]["propVar"]
                 print "PCA: Proportions of variance by eigenvector are :", propVars
                 print
                 print
                 #h2o.beta_features=False
+                print
+                print
+                print 
+                num_pc = pcaInspect['pca_model']['num_pc']
+                print "The number of standard deviations obtained: ", num_pc
+                print 
+                print
+                print
+
 
                 if DO_PCA_SCORE:
                     # just score with same data
                     score_params = {
                         'destination_key': scoreKey,
                         'model': modelKey,
-                        'num_pc': 2,
+                        'num_pc': num_pc,
                         'source':  hex_key,
                     }
                     kwargs = score_params.copy()
-                    pcaScoreResult = h2o.nodes[0].pca_score(timeoutSecs=timeoutSecs, **kwargs)
-                    print "PCAScore completed in", pcaResult['python_elapsed'], "seconds. On dataset: ", csvPathname
-                    print "Elapsed time was ", pcaResult['python_%timeout'], "% of the timeout"
+                    pcaScoreResult = h2o.nodes[0].pca_score(timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+                    h2j.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=2)
+                    print "PCAScore completed in", pcaScoreResult['python_elapsed'], "seconds. On dataset: ", csvPathname
+                    print "Elapsed time was ", pcaScoreResult['python_%timeout'], "% of the timeout"
 
                     # Logging to a benchmark file
-                    algo = "PCAScore " + " num_pc=" + str(num_pc)
+                    algo = "PCAScore " + " num_pc=" + str(score_params['num_pc'])
                     l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                        len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, pcaResult['python_elapsed'])
+                        len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, pcaScoreResult['python_elapsed'])
                     print l
                     h2o.cloudPerfH2O.message(l)
 

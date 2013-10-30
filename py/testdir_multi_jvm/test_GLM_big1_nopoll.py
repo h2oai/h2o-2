@@ -47,8 +47,9 @@ class Basic(unittest.TestCase):
         # if we do another poll they should be done now, and better to get it that 
         # way rather than the inspect (to match what simpleCheckGLM is expected
         for glm in glmInitial:
-            print "Checking completed job, with no polling:", glm
-            a = h2o.nodes[0].poll_url(glm['response'], noPoll=True)
+            print "Checking completed job, with no polling using initial response:", h2o.dump_json(glm)
+        
+            a = h2o.nodes[0].poll_url(glm, noPoll=True)
             h2o_glm.simpleCheckGLM(self, a, 57, **kwargs)
 
 if __name__ == '__main__':
