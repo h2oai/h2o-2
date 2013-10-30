@@ -80,6 +80,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    */
   protected void processRow(double [] nums, int ncats, int [] cats, double response){throw new RuntimeException("should've been overriden!");}
   protected void processRow(double [] nums, int ncats, int [] cats){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(double [] nums, int ncats, int [] cats, double response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(double [] nums, int ncats, int [] cats, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
 
   /**
    * Reorder the frame's columns so that numeric columns come first followed by categoricals ordered by cardinality in decreasing order and
@@ -157,11 +159,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * Override this to do post-chunk processing work.
    */
   protected void chunkDone(){}
+
+
+
   /**
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.
    */
-  @Override public final void map(Chunk [] chunks){
+  @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
     if(_job != null && _job.cancelled())throw new RuntimeException("Cancelled");
     chunkInit();
     final int nrows = chunks[0]._len;
@@ -181,8 +186,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       final int n = _hasResponse?chunks.length-1:chunks.length;
       for(;i < n;++i)
         nums[i-_cats] = (chunks[i].at0(r) - _normSub[i-_cats])*_normMul[i-_cats];
-      if(!_hasResponse) processRow(nums, ncats, cats);
-      else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r));
+      if(outputs != null && outputs.length > 0){
+        if(!_hasResponse) processRow(nums, ncats, cats,outputs);
+        else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r),outputs);
+      } else {
+        if(!_hasResponse) processRow(nums, ncats, cats);
+        else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r));
+      }
     }
     chunkDone();
   }
