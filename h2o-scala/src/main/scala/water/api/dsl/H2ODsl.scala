@@ -95,7 +95,7 @@ class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFr
   def ==(rhs: Number) = map(Equal(rhs.doubleValue()))
   def !=(rhs: Number) = map(NEqual(rhs.doubleValue()))
   
-  override def toString() = frame().toStringHead(10)
+  override def toString() = frame().toStringHead(NHEAD)
 }
 
 sealed case class HexKey(key: Key) extends TRef {

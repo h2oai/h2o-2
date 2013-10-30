@@ -18,6 +18,8 @@ trait TRef {}
 
 /** Trait holding basic Frame' operations. */
 trait T_Frame {
+  def NHEAD:Int = 10;
+  
   // Selector for columns
   def apply(cols: Seq[Int]):T_Frame
   def apply(cols: String): T_Frame

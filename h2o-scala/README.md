@@ -40,6 +40,7 @@ M/R commands
 
 Launch REPL
 -----------
+The binary version of H2O with integrated Scala is accessible [here](s3.amazonaws.com/h2o-release/h2o/h2oscala/latest.html)
 H2O offers command `-scala_repl` which launches embedded Scala REPL.
 
 ```bash
