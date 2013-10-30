@@ -18,9 +18,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   public final int nums(){return _nums;}
   protected int _cats = -1;
   public final int cats(){return _cats;}
-  // offsets of categorcial variables
-  // each categorical with n levels is virtually expanded into a binary vector of length n -1.
-  // _catOffsets basically hold a sum of cardinlities of all preceding categorical variables
+  // offsets of categorical variables
+  // each categorical with n levels is virtually expanded into a binary vector of length n-1.
+  // _catOffsets basically hold a sum of cardinalities of all preceding categorical variables
   // to be able to address correct elements in the beta vector (which must be fully expanded).
   protected int [] _catOffsets;
   public final int [] catOffsets(){return _catOffsets;}
@@ -59,7 +59,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
   /**
    * Method to process one row of the data for GLM functions.
-   * Numeric and categorical values are passed separately, as is reponse.
+   * Numeric and categorical values are passed separately, as is response.
    * Categoricals are passed as absolute indexes into the expanded beta vector, 0-levels are skipped
    * (so the number of passed categoricals will not be the same for every row).
    *

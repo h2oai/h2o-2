@@ -61,6 +61,7 @@ public class PCA extends ColumnsJob {
     // TODO: For now, remove non-numeric cols (until PCA score can handle them)
     ArrayList<Integer> removeCols = new ArrayList<Integer>();
     for(int i = 0; i < vecs.length; i++) {
+      // if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)
       if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2 || vecs[i].domain() != null)
         removeCols.add(i);
     }
@@ -112,6 +113,7 @@ public class PCA extends ColumnsJob {
     Key dataKey = input("source") == null ? null : Key.make(input("source"));
     int ncomp = Math.min(getNumPC(sdev, tolerance), max_pc);
     PCAParams params = new PCAParams(max_pc, tolerance, standardize);
+    assert sdev.length == eigVec.length;
     return new PCAModel(destination_key, dataKey, data, tsk, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
   }
 
