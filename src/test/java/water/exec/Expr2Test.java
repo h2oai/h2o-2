@@ -98,7 +98,7 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})");
 
       checkStr("ifelse(0,+,*)(1,2)");
-      checkStr("(0?+:*)(1,2)");
+      checkStr("(0 ? + : *)(1,2)");
       checkStr("(1? h.hex : (h.hex+1))[1,2]");
 
       // Slice assignment & map
