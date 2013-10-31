@@ -102,7 +102,7 @@ def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, dept
         gbm       = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
         h2o_jobs.pollWaitJobs(timeoutSecs=16000, pollTimeoutSecs=120, retryDelaySecs=5)
         gbmTime   = time.time() - gbmStart
-        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
         os.system(cmd)
         row.update( {'gbmBuildTime'       : gbmTime,
                     })

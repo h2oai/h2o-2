@@ -79,7 +79,7 @@ def doSUM(f, folderPath):
                                        timeoutSecs = 7200)
                                      
         sumTime             = time.time() - sumStart
-        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
         os.system(cmd)
         row.update({'summaryBuildTime' : sumTime})
         csvWrt.writerow(row)

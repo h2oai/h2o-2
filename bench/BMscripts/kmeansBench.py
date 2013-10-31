@@ -91,7 +91,7 @@ def doKMeans(f, folderPath):
                                             timeoutSecs=7200,
                                              **kwargs)
         kmeansTime      = time.time() - kmeansStart
-        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
         os.system(cmd)
         row.update({'kmeansBuildTime' : kmeansTime})
         csvWrt.writerow(row)

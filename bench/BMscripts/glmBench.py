@@ -102,7 +102,7 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
                                             model_key   = params['destination_key'],
                                             timeoutSecs = 1800)
         scoreTime     = time.time() - glmScoreStart
-        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
         os.system(cmd)
         if family == "binomial":
             row.update( {'scoreTime'          : scoreTime,
