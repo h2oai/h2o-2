@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import water.*;
 import water.api.Script.RunScript;
 import water.api.Upload.PostFile;
+import water.deploy.LaunchJar;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 import water.util.Utils.ExpectedExceptionForDebug;
@@ -141,6 +142,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GetVector()); // Will be replaced by Exec2
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
+    registerRequest(new RPackage.RDownload());
     registerRequest(new NeuralNetProgress());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
@@ -177,6 +179,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMModelView());
     registerRequest(new GLMValidationView());
     registerRequest(new FrameSplit());
+    registerRequest(new LaunchJar());
     Request.initializeNavBar();
   }
 

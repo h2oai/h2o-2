@@ -1,4 +1,4 @@
-package water;
+package samples;
 
 import hex.*;
 import hex.Layer.Tanh;
@@ -11,35 +11,30 @@ import java.io.*;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 
+import water.Job;
+import water.TestUtil;
 import water.fvec.*;
 import water.util.Utils;
 
 /**
  * Runs a neural network on the MNIST dataset.
  */
-public class Sample07_NeuralNet_Mnist {
-  public static final int PIXELS = 784;
-
+public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserCode.class, "-beta");
+    CloudLocal.launch(1, NeuralNetMnist.class);
+    // CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
   }
 
-  public static class UserCode {
-    public static void userMain(String[] args) throws Exception {
-      H2O.main(args);
-      new Sample07_NeuralNet_Mnist().run();
-    }
-  }
-
+  public static final int PIXELS = 784;
   protected Vec[] _train, _test;
 
   public void load() {
-    _train = TestUtil.parseFrame("smalldata/mnist/train.csv.gz").vecs();
-    _test = TestUtil.parseFrame("smalldata/mnist/test.csv.gz").vecs();
+    _train = TestUtil.parseFrame(new File(TestUtil.smalldata, "mnist/train.csv.gz")).vecs();
+    _test = TestUtil.parseFrame(new File(TestUtil.smalldata, "mnist/test.csv.gz")).vecs();
     NeuralNet.reChunk(_train);
   }
 
-  public Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
+  Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[3];
     ls[0] = new VecsInput(data, inputStats);
     ls[1] = new Tanh(500);
@@ -55,7 +50,14 @@ public class Sample07_NeuralNet_Mnist {
     return ls;
   }
 
-  public void run() {
+  Trainer startTraining(Layer[] ls) {
+    Trainer trainer = new Trainer.MapReduce(ls);
+    //Trainer trainer = new Trainer.Direct(ls);
+    trainer.start();
+    return trainer;
+  }
+
+  @Override protected void exec() {
     load();
 
     // Labels are on last column for this dataset
@@ -64,11 +66,8 @@ public class Sample07_NeuralNet_Mnist {
     Vec testLabels = _test[_test.length - 1];
     _test = Utils.remove(_test, _test.length - 1);
 
-    // Build net and start training
     Layer[] ls = build(_train, trainLabels, null, null);
-    //Trainer trainer = new Trainer.MapReduce(ls);
-    Trainer trainer = new Trainer.Direct(ls);
-    trainer.start();
+    Trainer trainer = startTraining(ls);
 
     // Monitor training
     long start = System.nanoTime();
@@ -102,8 +101,8 @@ public class Sample07_NeuralNet_Mnist {
   // Was used to shuffle & convert to CSV
 
   static void csv() throws Exception {
-    csv("smalldata/mnist/train.csv", "train-images-idx3-ubyte.gz", "train-labels-idx1-ubyte.gz");
-    csv("smalldata/mnist/test.csv", "t10k-images-idx3-ubyte.gz", "t10k-labels-idx1-ubyte.gz");
+    csv("../smalldata/mnist/train.csv", "train-images-idx3-ubyte.gz", "train-labels-idx1-ubyte.gz");
+    csv("../smalldata/mnist/test.csv", "t10k-images-idx3-ubyte.gz", "t10k-labels-idx1-ubyte.gz");
   }
 
   static void csv(String dest, String images, String labels) throws Exception {

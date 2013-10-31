@@ -1,5 +1,7 @@
 package hex.pca;
 
+import hex.FrameTask;
+
 import java.util.Arrays;
 
 import water.Job.*;
@@ -31,7 +33,8 @@ public class PCAScore extends FrameJob {
   // Note: Source data MUST contain all features (matched by name) used to build PCA model!
   // If additional columns exist in source, they are automatically ignored in scoring
   @Override protected void exec() {
-    Frame fr = subset(source, model._names);
+    // Frame fr = subset(source, model._names);
+    Frame fr = model.adapt(source, true, false)[0];
     int nfeat = model._names.length;
     Vec[] vecs = Arrays.copyOf(fr.vecs(), nfeat + num_pc);
     for(int i = 0; i < num_pc; i++)
@@ -84,6 +87,23 @@ public class PCAScore extends FrameJob {
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
+  }
+
+  public static class PCAScoreTask2 extends FrameTask<PCAScoreTask2> {
+    final int _nfeat;
+    final int _ncomp;
+    final double[][] _eigvec;
+
+    public PCAScoreTask2(Job job, int nfeat, int ncomp, double[][] eigvec, boolean standardize) {
+      super(job, standardize, false);
+      _nfeat = nfeat;
+      _ncomp = ncomp;
+      _eigvec = eigvec;
+    }
+
+    @Override protected void processRow(double[] nums, int ncats, int[] cats, NewChunk[] outputs) {
+
+    }
   }
 
   public static class PCAScoreTask extends MRTask2<PCAScoreTask> {

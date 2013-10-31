@@ -19,6 +19,13 @@ import com.google.common.io.Closeables;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
+  public static final File smalldata;
+  static {
+    File f = new File("smalldata");
+    if(!f.exists())
+      f=new File("../smalldata");
+    smalldata = f;
+  }
 
   protected static void startCloud(String [] args, int nnodes){
     for( int i = 1; i < nnodes; i++ ) {
@@ -352,7 +359,12 @@ public class TestUtil {
   // Fluid Vectors
 
   public static Frame parseFrame(String path) {
-    File file = new File(path);
+    return parseFrame(new File(path));
+  }
+
+  public static Frame parseFrame(File file) {
+    if(!file.exists())
+      throw new RuntimeException("File not found " + file);
     Key fkey = NFSFileVec.make(file);
     return ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
   }

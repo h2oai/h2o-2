@@ -3,9 +3,11 @@ package water;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import javassist.*;
 import water.api.Request.API;
-import water.util.Log;
+import water.util.*;
 import water.util.Log.Tag.Sys;
 
 public class Weaver {
@@ -36,9 +38,11 @@ public class Weaver {
   public static void registerPackage(String name) {
     synchronized( Weaver.class ) {
       String[] a = _packages;
-      String[] t = Arrays.copyOf(a, a.length + 1);
-      t[t.length-1] = name;
-      _packages = t;
+      if(ArrayUtils.indexOf(a, name) < 0) {
+        String[] t = Arrays.copyOf(a, a.length + 1);
+        t[t.length-1] = name;
+        _packages = t;
+      }
     }
   }
 
