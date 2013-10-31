@@ -145,6 +145,7 @@ function build_src_jar() {
 
 function build_samples() {
     echo "building samples..."
+    mkdir -p h2o-samples/target/classes
     "$JAVAC" \
     	-cp ${JAR_FILE}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/* \
     	-d h2o-samples/target/classes \

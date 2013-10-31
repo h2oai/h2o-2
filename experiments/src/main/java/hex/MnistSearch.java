@@ -20,9 +20,9 @@ public class MnistSearch extends Sample07_NeuralNet_Mnist {
       _ls = new Layer[3];
       _ls[0] = _train;
       _ls[1] = new Layer.Tanh(_ls[0], 1000);
-      _ls[1]._rate = 0.001f;
+      _ls[1].rate = 0.001f;
       _ls[2] = new Layer.Softmax(_ls[1], 10);
-      _ls[2]._rate = 0.001f;
+      _ls[2].rate = 0.001f;
       for( int i = 0; i < _ls.length; i++ )
         _ls[i].init(false);
 

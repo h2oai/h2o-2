@@ -86,15 +86,15 @@ public class NeuralNet extends ValidatedJob {
         ls[i + 1] = new Layer.Rectifier(hidden[i]);
       else
         ls[i + 1] = new Layer.Tanh(hidden[i]);
-      ls[i + 1]._rate = (float) rate;
-      ls[i + 1]._l2 = (float) l2;
+      ls[i + 1].rate = (float) rate;
+      ls[i + 1].l2 = (float) l2;
     }
     if( classification )
       ls[ls.length - 1] = new VecSoftmax(trainResp, null);
     else
       ls[ls.length - 1] = new VecLinear(trainResp, null);
-    ls[ls.length - 1]._rate = (float) rate;
-    ls[ls.length - 1]._l2 = (float) l2;
+    ls[ls.length - 1].rate = (float) rate;
+    ls[ls.length - 1].l2 = (float) l2;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
 
@@ -121,7 +121,7 @@ public class NeuralNet extends ValidatedJob {
         while( !cancelled() ) {
           long[][] cm = null;
           if( classification ) {
-            int classes = ls[ls.length - 1]._units;
+            int classes = ls[ls.length - 1].units;
             cm = new long[classes][classes];
           }
           Error trainE = eval(ls, train, trainResp, EVAL_ROW_COUNT, valid == null ? cm : null);
@@ -428,7 +428,7 @@ public class NeuralNet extends ValidatedJob {
 
     @Override protected void exec() {
       Frame[] frs = model.adapt(source, false);
-      int classes = model.layers[model.layers.length - 1]._units;
+      int classes = model.layers[model.layers.length - 1].units;
       confusion_matrix = new long[classes][classes];
       Error error = eval(model.layers, frs[0].vecs(), response, max_rows, confusion_matrix);
       classification_error = error.Value;
