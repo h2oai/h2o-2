@@ -44,7 +44,7 @@ public class Exec2 extends Request2 {
         // Now the first few rows.
         StringBuilder sb = new StringBuilder();
         String[] fs = fr.toStringHdr(sb);
-        for( int i=0; i<Math.min(10,fr.numRows()); i++ )
+        for( int i=0; i<Math.min(6,fr.numRows()); i++ )
           fr.toString(sb,fs,i);
         result=sb.toString();
         // Nuke the result
