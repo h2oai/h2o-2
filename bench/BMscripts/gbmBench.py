@@ -19,11 +19,11 @@ def doGBM(f, folderPath, ignored_cols, classification, testFilehex, ntrees, dept
     if debug:
         print "Doing GBM DEBUG"
         bench = "bench/debug"
-    date = '-'.join([str(x) for x in list(time.localtime())][0:3])
+    #date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     overallWallStart = time.time()
     pre = ""
     if debug: pre    = 'DEBUG'
-    gbmbenchcsv = 'benchmarks/'+build+'/'+date+'/'+pre+'gbmbench.csv'
+    gbmbenchcsv = 'benchmarks/'+build+'/'+pre+'gbmbench.csv'
     if not os.path.exists(gbmbenchcsv):
         output = open(gbmbenchcsv,'w')
         output.write(','.join(csv_header)+'\n')

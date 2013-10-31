@@ -19,12 +19,12 @@ def doPCA(f, folderPath):
     if debug:
         print "Doing PCA DEBUG"
         bench = "bench/debug"
-    date = '-'.join([str(x) for x in list(time.localtime())][0:3])
+    #date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     retryDelaySecs = 5 #if f == 'AirlinesTrain1x' else 30
     overallWallStart = time.time()
     pre = ""
     if debug: pre    = 'DEBUG'
-    pcabenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'pcabench.csv'
+    pcabenchcsv      = 'benchmarks/'+build+'/'+pre+'pcabench.csv'
     if not os.path.exists(pcabenchcsv):
         output = open(pcabenchcsv,'w')
         output.write(','.join(csv_header)+'\n')

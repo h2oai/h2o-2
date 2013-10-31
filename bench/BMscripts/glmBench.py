@@ -22,7 +22,7 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
     overallWallStart = time.time()
     pre              = ""
     if debug: pre    = "DEBUG"
-    glmbenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'glmbench.csv'
+    glmbenchcsv      = 'benchmarks/'+build+'/'+pre+'glmbench.csv'
     if not os.path.exists(glmbenchcsv):
         output = open(glmbenchcsv,'w')
         output.write(','.join(csv_header)+'\n')

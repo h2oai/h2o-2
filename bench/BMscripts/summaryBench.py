@@ -19,12 +19,12 @@ def doSUM(f, folderPath):
     if debug:
         print "Doing SUM DEBUG"
         bench = "bench/debug"
-    date = '-'.join([str(x) for x in list(time.localtime())][0:3])
+    #date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     retryDelaySecs = 5 #if f == 'AirlinesTrain1x' else 30
     overallWallStart = time.time()
     pre = ""
     if debug: pre    = 'DEBUG'
-    sumbenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'summarybench.csv'
+    sumbenchcsv      = 'benchmarks/'+build+'/'+pre+'summarybench.csv'
     if not os.path.exists(sumbenchcsv):
         output = open(sumbenchcsv,'w')
         output.write(','.join(csv_header)+'\n')

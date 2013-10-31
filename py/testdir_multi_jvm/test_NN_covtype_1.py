@@ -33,8 +33,7 @@ class Basic(unittest.TestCase):
 
         response = 54
         kwargs = {
-            # this is ignore??
-            'cols': x, # apparently required? 
+            'ignored_cols': None, #not required
             'response': response,
             'activation': 'Tanh',
             'hidden': 500,

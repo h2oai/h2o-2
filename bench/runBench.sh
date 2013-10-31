@@ -177,8 +177,8 @@ then
 fi
 h2oBuild=`cat latest`
 
-if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
-  mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
+if [ ! -d ${benchmarks}/${h2oBuild} ]; then
+  mkdir -p ${benchmarks}/${h2oBuild}
 fi
 
 if [ $DEEP -eq 1 ]

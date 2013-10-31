@@ -3,23 +3,22 @@
 <!--This file belongs in the final build output directory living on S3.-->
 <html>
 <head>
-    <script>
-        function load(id) {
-            //var res = "SUBST_PROJECT_VERSION".split(".");
-            //resource = "./".concat(res[res.length-1]).concat("/").concat(
-            resource = id.concat("/").concat(id).concat(".html");
-            r = new XMLHttpRequest();
-            r.open("HEAD", resource, true);
-            r.send(null);
-            r.onreadystatechange = function () {
-                if(r.readyState === 4) {
-                    var d = document.getElementById(id)
-                    if(r.status === 200) d.style.display = "inline"
-                    return
-                }
-            }
+  <script>
+    function load(id) {
+      //var res = "SUBST_PROJECT_VERSION".split(".");
+      //resource = "./".concat(res[res.length-1]).concat("/").concat(
+      resource = id.concat("/").concat(id).concat(".html");
+      r = new XMLHttpRequest();
+      r.open("HEAD", resource, true);
+      r.send(null);
+      r.onreadystatechange = function () {
+        if(r.readyState === 4) {
+          var d = document.getElementById(id);
+          if(r.status === 200) d.style.display = "inline";
         }
-    </script>
+      }
+    }
+  </script>
 </head>
 
 <body>
@@ -149,9 +148,9 @@ Documentation
 </div>
 
 <script>
-    load("bench")
-    load("test")
+    load("bench");
+    load("test");
 </script>
 
 </body>
-<html>
+</html>
