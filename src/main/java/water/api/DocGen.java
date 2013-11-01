@@ -42,17 +42,14 @@ public abstract class DocGen {
     createFile("KMeans2.rst", new KMeans2().ReSTHelp());
   }
 
+  /** The main method launched in the H2O environment and
+   * generating documentation.
+   */
   public static void main(String[] args) throws Exception {
-    UserCode.userMain(args);
-  }
-
-  public static class UserCode {
-    public static void userMain(String[] args) throws Exception {
-      H2O.main(args);
-      TestUtil.stall_till_cloudsize(1);
-      createReSTFilesInCwd();
-      H2O.exit(0);
-    }
+    // Boot invoke by default mainClass water.H2O and then call runClass
+    H2O.waitForCloudSize(1);
+    createReSTFilesInCwd();
+    H2O.exit(0);
   }
 
   // Class describing meta-info about H2O queries and results.

@@ -92,6 +92,7 @@ public class Boot extends ClassLoader {
   }
 
   public static void main(String[] args) throws Exception {  _init.boot(args); }
+  // NOTE: This method cannot be run from jar
   public static void main(Class main, String[] args) throws Exception {
     weavePackage(main.getPackage().getName());
     ArrayList<String> l = new ArrayList<String>(Arrays.asList(args));
