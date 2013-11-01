@@ -7,6 +7,7 @@ h2oBuild=
 benchmarks="benchmarks"
 DATE=`date +%Y-%m-%d`
 archive="Archive"
+branchName="hilbert"
 
 function all {
     doAlgo summary;   wait;  makeDead 2> /dev/null;
@@ -122,6 +123,7 @@ JSON=
 BUILDN=
 DEBUG=0
 LOG=0
+DEEP=0
 while getopts "ht:j:b:dL" OPTION
 do
   case $OPTION in
@@ -177,8 +179,8 @@ then
 fi
 h2oBuild=`cat latest`
 
-if [ ! -d ${benchmarks}/${h2oBuild}/${DATE} ]; then
-  mkdir -p ${benchmarks}/${h2oBuild}/${DATE}
+if [ ! -d ${benchmarks}/${h2oBuild} ]; then
+  mkdir -p ${benchmarks}/${h2oBuild}
 fi
 
 if [ $DEEP -eq 1 ]
@@ -228,3 +230,11 @@ rm pytest*flatfile*
 if [ -a nohup.out ]; then
     mv nohup.out ${archive}/${h2oBuild}-${DATE}-nohup.out
 fi
+wait
+
+bash createBench.sh ${branchName} ${JSON}
+
+
+
+
+

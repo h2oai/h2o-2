@@ -30,6 +30,7 @@ public class HttpTest extends TestUtil {
     } catch( Exception e ) {
       throw new RuntimeException(e);
     }
+    get.releaseConnection();
     return res;
   }
 

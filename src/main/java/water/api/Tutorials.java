@@ -21,19 +21,19 @@ public class Tutorials extends HTMLOnlyRequest {
 
     + "<div class='span3 col'>"
     + "  <h2 style='margin: 20px 0 0 0'>Random Forest</h2>"
-    +   "<p>Random forest is a classical machine learning algorithm serving for data classification. Learn how to use it with H<sub>2</sub>O.</it></p>"
+    +   "<p>Random Forest is a classical machine learning algorithm serving for data classification. Learn how to use it with H<sub>2</sub>O.</it></p>"
     +   "<a href='/TutorialRFIris.html' class='btn btn-primary btn-large'>Try it!</a>"
     + "</div>"
 
     + "<div class='span3 col'>"
     +   "<h2 style='margin: 20px 0 0 0'>GLM</h2>"
-    +   "<p>Generalized linear model is a generalization of linear regresion. Experience its unique power on the top of H<sub>2</sub>O.</p>"
+    +   "<p>Generalized linear model is a generalization of linear regression. Experience its unique power on the top of H<sub>2</sub>O.</p>"
     +   "<a href='/TutorialGLMProstate.html' class='btn btn-primary btn-large'>Try it!</a>"
     + "</div>"
 
     + "<div class='span3 col'>"
     + "<h2 style='margin: 20px 0 0 0'>K-means</h2>"
-    + "<p>Perform cluster analysis with H<sub>2</sub>O and K-means algorithm. H<sub>2</sub>O implements K-means||, a highly scalable version.</p>"
+    + "<p>Perform cluster analysis with H<sub>2</sub>O and K-means algorithm. H<sub>2</sub>O implements K-means, a highly scalable version.</p>"
     +   "<a href='/TutorialKMeans.html' class='btn btn-primary btn-large'>Try it!</a>"
     + "</div>"
 

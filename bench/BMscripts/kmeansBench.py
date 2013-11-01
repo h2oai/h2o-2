@@ -18,11 +18,11 @@ def doKMeans(f, folderPath):
     if debug:
         print "Debugging KMEANS"
         bench = "bench/debug"
-    date = '-'.join([str(x) for x in list(time.localtime())][0:3])
+    #date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     overallWallStart = time.time()
     pre = ""
     if debug: pre    = "DEBUG"
-    kmeansbenchcsv   = 'benchmarks/'+build+'/'+date+'/'+pre+'kmeansbench.csv'
+    kmeansbenchcsv   = 'benchmarks/'+build+'/'+pre+'kmeansbench.csv'
     if not os.path.exists(kmeansbenchcsv):
         output       = open(kmeansbenchcsv,'w')
         output.write(','.join(csv_header)+'\n')
@@ -91,7 +91,7 @@ def doKMeans(f, folderPath):
                                             timeoutSecs=7200,
                                              **kwargs)
         kmeansTime      = time.time() - kmeansStart
-        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
         os.system(cmd)
         row.update({'kmeansBuildTime' : kmeansTime})
         csvWrt.writerow(row)

@@ -61,9 +61,9 @@ public class NeuralNetIrisTest extends TestUtil {
     Layer[] ls = new Layer[3];
     ls[0] = input;
     ls[1] = new Layer.Tanh(7);
-    ls[1]._rate = rate;
+    ls[1].rate = rate;
     ls[2] = new VecSoftmax(labels, null);
-    ls[2]._rate = rate;
+    ls[2].rate = rate;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
 
@@ -111,9 +111,9 @@ public class NeuralNetIrisTest extends TestUtil {
     NeuralNet.Error train = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
     data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
     labels = _test.vecs()[_test.vecs().length - 1];
-    input._vecs = data;
+    input.vecs = data;
     input._len = data[0].length();
-    ((VecSoftmax) ls[2])._vec = labels;
+    ((VecSoftmax) ls[2]).vec = labels;
     NeuralNet.Error test = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
     Assert.assertEquals(trainAcc, train.Value, epsilon);

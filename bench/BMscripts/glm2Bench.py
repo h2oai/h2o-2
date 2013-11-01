@@ -23,7 +23,7 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
     overallWallStart  = time.time()
     pre               = ""
     if debug: pre     = "DEBUG"
-    glm2benchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'glm2bench.csv'
+    glm2benchcsv      = 'benchmarks/'+build+'/'+pre+'glm2bench.csv'
     if not os.path.exists(glm2benchcsv):
         output = open(glm2benchcsv,'w')
         output.write(','.join(csv_header)+'\n')
@@ -97,7 +97,7 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
         glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=1800, noPoll=True, **kwargs)
         h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
         glmTime   = time.time() - glmStart
-        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
         os.system(cmd)
         #glm       = h2o.nodes[0].inspect("GLM("+f+")")
         row.update( {'glm2BuildTime'       : glmTime,

@@ -49,10 +49,10 @@ public class IrisMisc extends NeuralNetIrisTest {
     ls[0] = new FrameInput(_train);
     ls[1] = new Layer.Tanh();
     ls[2] = new Softmax();
-    ls[1]._rate = 0.99f;
-    ls[2]._rate = 0.99f;
-    ls[1]._l2 = .001f;
-    ls[2]._l2 = .001f;
+    ls[1].rate = 0.99f;
+    ls[2].rate = 0.99f;
+    ls[1].l2 = .001f;
+    ls[2].l2 = .001f;
     ls[0].init(null, 4);
     ls[1].init(ls[0], 7);
     ls[2].init(ls[1], 3);

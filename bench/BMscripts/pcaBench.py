@@ -19,12 +19,12 @@ def doPCA(f, folderPath):
     if debug:
         print "Doing PCA DEBUG"
         bench = "bench/debug"
-    date = '-'.join([str(x) for x in list(time.localtime())][0:3])
+    #date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     retryDelaySecs = 5 #if f == 'AirlinesTrain1x' else 30
     overallWallStart = time.time()
     pre = ""
     if debug: pre    = 'DEBUG'
-    pcabenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'pcabench.csv'
+    pcabenchcsv      = 'benchmarks/'+build+'/'+pre+'pcabench.csv'
     if not os.path.exists(pcabenchcsv):
         output = open(pcabenchcsv,'w')
         output.write(','.join(csv_header)+'\n')
@@ -81,14 +81,14 @@ def doPCA(f, folderPath):
 
         kwargs              = params.copy()
         pcaStart            = time.time()
-        h2o.beta_features   = True
-        pcaResult = h2o_cmd.runPCA(parseResult = parseResult, noPoll = True
+        #h2o.beta_features   = True
+        pcaResult = h2o_cmd.runPCA(parseResult = parseResult, noPoll = True,
                                    timeoutSecs = 7200, 
                                    **kwargs)
 
         h2j.pollWaitJobs(timeoutSecs=4800, pollTimeoutSecs=4800, retryDelaySecs=2)
         pcaTime   = time.time() - pcaStart
-        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
         #stop all loggers
         os.system(cmd)
         row.update({'pcaBuildTime' : pcaTime})

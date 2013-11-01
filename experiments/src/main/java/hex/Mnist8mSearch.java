@@ -23,9 +23,9 @@ public class Mnist8mSearch {
       Layer[] ls = new Layer[3];
       ls[0] = new Train8mInput();
       ls[1] = new Layer.Tanh(ls[0], 1000);
-      ls[1]._rate = 0.001f;
+      ls[1].rate = 0.001f;
       ls[2] = new Layer.Softmax(ls[1], 10);
-      ls[2]._rate = 0.001f;
+      ls[2].rate = 0.001f;
       for( int i = 0; i < ls.length; i++ )
         ls[i].init(false);
 

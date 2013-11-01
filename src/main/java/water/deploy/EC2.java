@@ -17,8 +17,8 @@ import com.amazonaws.services.ec2.model.*;
 /**
  * Manages EC2 instances.
  * <nl>
- * Note: This class is intended for debug purposes only, please refer to the documentation to run
- * H2O on AWS.
+ * Note: This class is intended for debug and experimentation purposes only, please refer to the
+ * documentation to run H2O on AWS.
  */
 public class EC2 {
   private static final String USER = System.getProperty("user.name");
