@@ -33,15 +33,18 @@ class Basic(unittest.TestCase):
 
         response = 54
         kwargs = {
-            'ignored_cols': None, #not required
+            # this is ignore??
             'response': response,
-            'activation': 'Tanh',
-            'hidden': 500,
-            'rate': 0.01,
-            'l2': 1.0E-4,
-            'epochs': 100,
-            'destination_key': 'a.hex',
+            # 'cols': x, # apparently no longer required? 
+            'ignored_cols': None, # this is not consistent with ignored_cols_by_name
+            'classification': 1,
             'validation': hex_key,
+            'activation': 'Tanh', # 'Rectifier'
+            'hidden': 500, # comma separated values, or from:to:step
+            'rate': 0.01,  # learning rate
+            'l2': 1.0E-4, # regularization
+            'epochs': 1, # how many times dataset should be iterated
+            'destination_key': 'a.hex',
         }
 
         timeoutSecs = 600
@@ -54,6 +57,7 @@ class Basic(unittest.TestCase):
 
         print "FIX! need to add something that looks at the neural net result here?"
         print "neural net end on ", csvPathname, 'took', time.time() - start, 'seconds'
+        print "nnResult:", h2o.dump_json(nnResult)
 
 if __name__ == '__main__':
     h2o.unit_main()

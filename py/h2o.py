@@ -1751,7 +1751,7 @@ class H2O(object):
         a = self.__do_json_request('2/GBM.json',timeout=timeoutSecs,params=params_dict)
         if noPoll:
             a['python_elapsed'] = time.time() - start
-            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            a['python_timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
 
