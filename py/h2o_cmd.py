@@ -87,7 +87,7 @@ def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs
     if not parseResult: raise Exception('No parseResult for NN')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=False, **kwargs)
+    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
 
 def runGBM(node=None, parseResult=None, timeoutSecs=500, noPoll=True, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
@@ -327,7 +327,6 @@ def infoFromSummary(summaryResult, noPrint=False):
         means = summaryResult['means']
         summaries = summaryResult['summaries']
         for column in summaries:
-            rows = column['rows']
             start = column['start']
             zeros = column['zeros']
             bins = column['bins']
@@ -339,7 +338,6 @@ def infoFromSummary(summaryResult, noPrint=False):
 
         if not noPrint:
             print "\n\n************************"
-            print "rows:", rows
             print "start:", start
             print "zeros:", zeros
             print "len(names):", len(names)

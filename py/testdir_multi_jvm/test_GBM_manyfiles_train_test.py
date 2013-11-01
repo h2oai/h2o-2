@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (trainKey, trainKey, trainKey)
-            resultExec = h2o_cmd.runExec(expression=execExpr)
+            resultExec = h2o_cmd.runExec(expression=execExpr, timeoutSecs=60)
 
             # Parse (test)****************************************
             if h2o.beta_features:

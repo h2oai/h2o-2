@@ -1,16 +1,17 @@
 #GLM bench
-import os, sys, time, csv, socket
+import os, sys, time, csv, socket, string
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 
-csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','trainParseWallTime','nfolds','family','glmBuildTime','testParseWallTime','scoreTime','AUC','AIC','error')
 
-files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x'),          'test' : 'AirlinesTest'},
+files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
              }
 build = ""
 debug = False
+json  = ""
 def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex, row):
     debug = False
     bench = "bench"
@@ -21,7 +22,7 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
     overallWallStart = time.time()
     pre              = ""
     if debug: pre    = "DEBUG"
-    glmbenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'glmbench.csv'
+    glmbenchcsv      = 'benchmarks/'+build+'/'+pre+'glmbench.csv'
     if not os.path.exists(glmbenchcsv):
         output = open(glmbenchcsv,'w')
         output.write(','.join(csv_header)+'\n')
@@ -71,6 +72,7 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
                      'nCols'              : inspect_train['num_cols'],
                      'trainParseWallTime' : parseWallTime,
                      'nfolds'             : nfolds,
+                     'family'             : family,
                     })
 
         params   =  {'y'                  : y,
@@ -100,6 +102,8 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
                                             model_key   = params['destination_key'],
                                             timeoutSecs = 1800)
         scoreTime     = time.time() - glmScoreStart
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
+        os.system(cmd)
         if family == "binomial":
             row.update( {'scoreTime'          : scoreTime,
                          'AUC'                : glmScore['validation']['auc'],
@@ -120,6 +124,7 @@ if __name__ == '__main__':
     dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
+    json  = sys.argv[-1].split('/')[-1]
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
@@ -130,6 +135,7 @@ if __name__ == '__main__':
     if dat == 'AllB10x'  : fs = files['AllBedrooms']['train'][1]
     if dat == 'AllB100x' : fs = files['AllBedrooms']['train'][2]
     bench = "bench"
+    debug = False
     if debug:
         bench = "bench/debug"
     
@@ -144,8 +150,8 @@ if __name__ == '__main__':
         elapsedAirlinesTestParse    = time.time() - airlinesTestParseStart
         
         row = {'testParseWallTime' : elapsedAirlinesTestParse}
-        x = "Year,Month,DayofMonth,DayofWeek,CRSDepTime,CRSArrTime,UniqueCarrier,CRSElapsedTime,Origin,Dest,Distance"
-        doGLM(f, 'Airlines', 'binomial', 'logit', 1E-5, 0.5, 10, 'IsDepDelayed', x, testFile['destination_key'], row)
+        x = "Year,Month,DayofMonth,DayOfWeek,DepTime,ArrTime,UniqueCarrier,Origin,Dest,Distance"
+        doGLM(fs, 'Airlines', 'binomial', 'logit', 1E-5, 0.5, 10, 'IsDepDelayed', x, testFile['destination_key'], row)
 
     if fp == 'AllBedrooms':
         allBedroomsTestParseStart   = time.time()

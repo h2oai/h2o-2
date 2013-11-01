@@ -1417,29 +1417,53 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, print_params=True, noPoll=False, rfView=True, **kwargs):
 
-        algo = 'DRF2' if beta_features else 'RF'
-        algoView = 'DRFView2' if beta_features else 'RFView'
+        algo = '2/DRF' if beta_features else 'RF'
+        algoView = '2/DRFView' if beta_features else 'RFView'
 
-        params_dict = {
-            'data_key': data_key,
-            'ntree':  trees,
-            'model_key': None,
-            # new default. h2o defaults to 0, better for tracking oobe problems
-            'out_of_bag_error_estimate': 1,
-            'response_variable': None,
-            'sample': None,
-            }
-
-        # new names for these things
         if beta_features:
-            params_dict['class_vec'] = kwargs['response_variable']
-            if kwargs['sample'] is None:
-                params_dict['sample_rate'] = None
-            else:
-                params_dict['sample_rate'] = (kwargs['sample'] + 0.0)/ 100 # has to be modified?
+            params_dict = {
+                'destination_key': None,
+                'source': data_key,
+                # 'model': None,
+                'response': None,
+                'cols': None,
+                'ignored_cols_by_name': None,
+                'classification': None,
+                'validation': None,
+                'ntrees': trees,
+                'max_depth': None,
+                'min_rows': None,
+                'nbins': None,
+                'mtries': None,
+                'sample_rate': None,
+                'seed': None,
+                }
+        else:
+            params_dict = {
+                'data_key': data_key,
+                'ntree':  trees,
+                'model_key': None,
+                # new default. h2o defaults to 0, better for tracking oobe problems
+                'out_of_bag_error_estimate': 1,
+                'use_non_local_data': None,
+                'iterative_cm': None,
+                'response_variable': None,
+                'class_weights': None,
+                'stat_type': None,
+                'depth': None,
+                'bin_limit': None,
+                'parallel': None,
+                'ignore': None,
+                'sample': None,
+                'seed': None,
+                'features': None,
+                'exclusive_split_limit': None,
+                'sampling_strategy': None,
+                'strata_samples': None,
+        }
 
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict.update(kwargs)
+        check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -1449,15 +1473,16 @@ class H2O(object):
             timeout=timeoutSecs, params=params_dict)
         verboseprint("\n%s result:" % algo, dump_json(rf))
         
+        # noPoll and rfView=False are similar?
+        if (noPoll or not rfView) or (beta_features and rfView==False):
+            # just return for now
+            return rf
+
         # FIX! will we always get a redirect?
         if rf['response']['redirect_request'] != algoView:
             print dump_json(rf)
             raise Exception('H2O %s redirect is not %s json response precedes.' % (algo, algoView))
 
-        # noPoll and rfView=False are similar?
-        if (noPoll or not rfView) or (beta_features and rfView==False):
-            # just return for now
-            return rf
 
         # FIX! check all of these somehow?
         # if we model_key was given to rf via **kwargs, remove it, since we're passing 
@@ -1472,7 +1497,8 @@ class H2O(object):
         # Since I may not have passed a model_key or ntree to h2o, I have to learn what h2o used
         # and be sure to pass that to RFView. just update params_dict. If I provided them
         # I'm trusting h2o to have given them back to me correctly. Maybe fix that at some point.
-        params_dict.update({'ntree': ntree, 'model_key': model_key})
+        if not beta_features:
+            params_dict.update({'ntree': ntree, 'model_key': model_key})
 
         # data_key/model_key/ntree are all in **params_dict
         rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs, 
@@ -1702,7 +1728,7 @@ class H2O(object):
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key'      : None,
-            'validation'           : data_key, # what is this..default it to match the source..is it holdout data
+            'validation'           : None,
             'response'             : None,
             'source'               : data_key,
             'learn_rate'           : None,
@@ -1718,6 +1744,8 @@ class H2O(object):
 
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm', print_params)
+        if 'validation' not in kwargs:
+            kwargs['validation'] = data_key
 
         start = time.time()
         a = self.__do_json_request('2/GBM.json',timeout=timeoutSecs,params=params_dict)
@@ -1799,6 +1827,7 @@ class H2O(object):
             'cols': None,
             'ignored_cols': None,
             'validation': None,
+            'classification': None,
             'response': None,
             'activation': None,
             'hidden': None,
@@ -1808,6 +1837,9 @@ class H2O(object):
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
+        if 'validation' not in kwargs:
+            kwargs['validation'] = data_key
+
         start = time.time()
         a = self.__do_json_request('2/NeuralNet.json',timeout=timeoutSecs, params=params_dict)
 

@@ -154,13 +154,14 @@ public final class H2O {
   }
 
   // Static list of acceptable Cloud members
-  static HashSet<H2ONode> STATIC_H2OS = null;
+  public static HashSet<H2ONode> STATIC_H2OS = null;
 
   // Reverse cloud index to a cloud; limit of 256 old clouds.
   static private final H2O[] CLOUDS = new H2O[256];
 
   // Enables debug features like more logging and multiple instances per JVM
-  public static final boolean DEBUG = System.getProperty("h2o.debug") != null;
+  public static final String DEBUG_ARG = "h2o.debug";
+  public static final boolean DEBUG = System.getProperty(DEBUG_ARG) != null;
 
   // Construct a new H2O Cloud from the member list
   public H2O( H2ONode[] h2os, int hash, int idx ) {
@@ -208,7 +209,8 @@ public final class H2O {
         break;
       try { Thread.sleep(100); } catch( InterruptedException ie ) { }
     }
-    assert H2O.CLOUD.size() >= x : "Cloud size of " + x;
+    if( H2O.CLOUD.size() < x )
+      throw new RuntimeException("Cloud size under " + x);
   }
 
   // *Desired* distribution function on keys & replication factor. Replica #0

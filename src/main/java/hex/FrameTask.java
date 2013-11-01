@@ -18,9 +18,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   public final int nums(){return _nums;}
   protected int _cats = -1;
   public final int cats(){return _cats;}
-  // offsets of categorcial variables
-  // each categorical with n levels is virtually expanded into a binary vector of length n -1.
-  // _catOffsets basically hold a sum of cardinlities of all preceding categorical variables
+  // offsets of categorical variables
+  // each categorical with n levels is virtually expanded into a binary vector of length n-1.
+  // _catOffsets basically hold a sum of cardinalities of all preceding categorical variables
   // to be able to address correct elements in the beta vector (which must be fully expanded).
   protected int [] _catOffsets;
   public final int [] catOffsets(){return _catOffsets;}
@@ -59,7 +59,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
   /**
    * Method to process one row of the data for GLM functions.
-   * Numeric and categorical values are passed separately, as is reponse.
+   * Numeric and categorical values are passed separately, as is response.
    * Categoricals are passed as absolute indexes into the expanded beta vector, 0-levels are skipped
    * (so the number of passed categoricals will not be the same for every row).
    *
@@ -80,6 +80,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    */
   protected void processRow(double [] nums, int ncats, int [] cats, double response){throw new RuntimeException("should've been overriden!");}
   protected void processRow(double [] nums, int ncats, int [] cats){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(double [] nums, int ncats, int [] cats, double response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(double [] nums, int ncats, int [] cats, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
 
   /**
    * Reorder the frame's columns so that numeric columns come first followed by categoricals ordered by cardinality in decreasing order and
@@ -157,11 +159,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * Override this to do post-chunk processing work.
    */
   protected void chunkDone(){}
+
+
+
   /**
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.
    */
-  @Override public final void map(Chunk [] chunks){
+  @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
     if(_job != null && _job.cancelled())throw new RuntimeException("Cancelled");
     chunkInit();
     final int nrows = chunks[0]._len;
@@ -181,8 +186,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       final int n = _hasResponse?chunks.length-1:chunks.length;
       for(;i < n;++i)
         nums[i-_cats] = (chunks[i].at0(r) - _normSub[i-_cats])*_normMul[i-_cats];
-      if(!_hasResponse) processRow(nums, ncats, cats);
-      else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r));
+      if(outputs != null && outputs.length > 0){
+        if(!_hasResponse) processRow(nums, ncats, cats,outputs);
+        else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r),outputs);
+      } else {
+        if(!_hasResponse) processRow(nums, ncats, cats);
+        else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r));
+      }
     }
     chunkDone();
   }

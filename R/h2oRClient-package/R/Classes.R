@@ -270,6 +270,11 @@ setMethod("nrow", "H2OParsedData", function(x) {
 setMethod("ncol", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_cols })
 
+setMethod("dim", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
+  c(res$num_rows, res$num_cols)
+})
+
 setMethod("summary", "H2OParsedData", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY, key=object@key)
   res = res$summary$columns
@@ -621,6 +626,11 @@ setMethod("colMeans", "H2OParsedData2", function(x) {
   temp = sapply(res$cols, function(x) { x$mean })
   names(temp) = sapply(res$cols, function(x) { x$name })
   temp
+})
+
+setMethod("dim", "H2OParsedData2", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  c(res$numRows, res$numCols)
 })
 
 setMethod("as.data.frame", "H2OParsedData2", function(x) {

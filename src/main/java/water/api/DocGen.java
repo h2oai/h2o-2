@@ -43,7 +43,7 @@ public abstract class DocGen {
   }
 
   public static void main(String[] args) throws Exception {
-    water.Boot.main(UserCode.class, args);
+    UserCode.userMain(args);
   }
 
   public static class UserCode {

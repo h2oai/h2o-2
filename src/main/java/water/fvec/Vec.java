@@ -412,11 +412,12 @@ public class Vec extends Iced {
   /** Make a new random Key that fits the requirements for a Vec key. */
   static public Key newKey(){return newKey(Key.make());}
 
+  public static final int KEY_PREFIX_LEN = 4+4+1+1;
   /** Make a new Key that fits the requirements for a Vec key, based on the
    *  passed-in key.  Used to make Vecs that back over e.g. disk files. */
   static Key newKey(Key k) {
     byte [] kb = k._kb;
-    byte [] bits = MemoryManager.malloc1(kb.length+4+4+1+1);
+    byte [] bits = MemoryManager.malloc1(kb.length+KEY_PREFIX_LEN);
     bits[0] = Key.VEC;
     bits[1] = -1;         // Not homed
     UDP.set4(bits,2,0);   // new group, so we're the first vector

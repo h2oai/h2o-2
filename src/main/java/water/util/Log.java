@@ -503,7 +503,10 @@ public abstract class Log {
     Event e =  Event.make( t, Kind.INFO, null, objects);
     write(e,false);
   }
-  /** Log a debug message to the log file and the store if the subsystem's flag is set. */
+  /** Temporary log statement. Search for references to make sure they have been removed. */
+  static public void tmp(Object... objects) {
+    info(objects);
+  }
   public static String fixedLength(String s, int length) {
     String r = padRight(s, length);
     if( r.length() > length ) {

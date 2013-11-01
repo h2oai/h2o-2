@@ -125,9 +125,9 @@ public class RequestBuilders extends RequestQueries {
 
   private static final String _jsonResponseBox =
             "<div class='pull-right'><a href='#' onclick='$(\"#json_box\").toggleClass(\"hide\");' class='btn btn-inverse btn-mini'>JSON</a></div>"
-          + "<div class='hide' id='json_box'><pre>"
+          + "<div class='hide' id='json_box'><pre><code class=\"language-json\">"
           + "%JSON_RESPONSE_BOX"
-          + "</pre></div>";
+          + "</code></pre></div>";
 
   protected String buildJSONResponseBox(Response response) {
     switch (response._status) {
@@ -175,7 +175,7 @@ public class RequestBuilders extends RequestQueries {
           result.replace("JSSTUFF", poll.toString());
         } else {
           RString poll = new RString(_pollJs);
-          poll.replace("TIMEOUT", response._pollProgress==0 ? 500 : 2000);
+          poll.replace("TIMEOUT", response._pollProgress==0 ? 1500 : 2000);
           result.replace("JSSTUFF", poll.toString());
         }
         int pct = (int) ((double)response._pollProgress / response._pollProgressElements * 100);

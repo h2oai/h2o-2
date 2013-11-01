@@ -140,23 +140,9 @@ class Basic(unittest.TestCase):
                     h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
-
-
                 print "FIX! where do we get the summary info on the test data after predict?"
 
-                # xList.append(ntrees)
-                if 'max_depth' in params and params['max_depth']:
-                    xList.append(params['max_depth'])
-                    eList.append(pctWrong)
-                    fList.append(trainElapsed)
-
             h2o.beta_features = False
-            xLabel = 'max_depth'
-            eLabel = 'pctWrong'
-            fLabel = 'trainElapsed'
-            eListTitle = ""
-            fListTitle = ""
-            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
 
 if __name__ == '__main__':
     h2o.unit_main()

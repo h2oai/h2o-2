@@ -145,6 +145,10 @@ def simpleCheckGBMScore(self, glmScore, family='gaussian', allowFailWarning=Fals
                     raise Exception(w)
 
     validation = glmScore['validation']
+    validation['err'] = h2o_util.cleanseInfNan(validation['err'])
+    validation['nullDev'] = h2o_util.cleanseInfNan(validation['nullDev'])
+    validation['resDev'] = h2o_util.cleanseInfNan(validation['resDev'])
+
     print "%15s %s" % ("err:\t", validation['err'])
     print "%15s %s" % ("nullDev:\t", validation['nullDev'])
     print "%15s %s" % ("resDev:\t", validation['resDev'])
@@ -230,6 +234,10 @@ def simpleCheckGBM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
                 raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
 
     print "GBMModel/validations"
+    validations['err'] = h2o_util.cleanseInfNan(validations['err'])
+    validations['nullDev'] = h2o_util.cleanseInfNan(validations['nullDev'])
+    validations['resDev'] = h2o_util.cleanseInfNan(validations['resDev'])
+
     print "%15s %s" % ("err:\t", validations['err'])
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])
     print "%15s %s" % ("resDev:\t", validations['resDev'])

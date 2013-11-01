@@ -39,7 +39,7 @@ This returns output similar to the following:
 **STEP 3: R Studio Users** 
 
 R Studio users can find information on running H2O through R studio by going to 
-http://docs.0xdata.com/Ruser/Rwrapper.html and looking for the section for RStudio
+http://docs.0xdata.com/Ruser/R_studio.html and looking for the section for RStudio
 
 
 
