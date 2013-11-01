@@ -22,6 +22,8 @@ import water.util.Utils;
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     CloudLocal.launch(1, NeuralNetMnist.class);
+    // CloudProcess.launch(4, NeuralNetMnist.class);
+    // CloudRemote.launchIPs(NeuralNetMnist.class);
     // CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
   }
 
@@ -50,7 +52,7 @@ public class NeuralNetMnist extends Job {
   }
 
   Trainer startTraining(Layer[] ls) {
-    Trainer trainer = new Trainer.MapReduce(ls);
+    Trainer trainer = new Trainer.MapReduce(ls, 0, self());
     //Trainer trainer = new Trainer.Direct(ls);
     trainer.start();
     return trainer;
@@ -70,7 +72,7 @@ public class NeuralNetMnist extends Job {
 
     // Monitor training
     long start = System.nanoTime();
-    for( ;; ) {
+    while( !cancelled() ) {
       try {
         Thread.sleep(2000);
       } catch( InterruptedException e ) {

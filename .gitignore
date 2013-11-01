@@ -26,6 +26,7 @@ target/
 .idea/*
 h2o.iml
 h2o.eml
+h2o-samples/h2o-samples.iml
 /libpeerconnection.log
 src/main/java/water/BuildVersion.java
 hadoop/build.log

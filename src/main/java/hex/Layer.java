@@ -534,8 +534,8 @@ public abstract class Layer extends Iced {
    * Apply tanh to the weights' transpose. Used for auto-encoders.
    */
   public static class TanhPrime extends Layer {
-    public TanhPrime(Tanh layer) {
-      super(layer._in.units);
+    public TanhPrime(int units) {
+      super(units);
     }
 
     @Override void fprop() {
@@ -552,8 +552,7 @@ public abstract class Layer extends Iced {
       for( int o = 0; o < _a.length; o++ ) {
         assert _in._in.units == units;
         float g = _in._in._a[o] - _a[o];
-        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
-        //float g = _e[o] * (1 - _a[o] * _a[o]);
+        // TODO derivative?
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = i * _in._a.length + o;
           if( _in._e != null )
@@ -624,11 +623,14 @@ public abstract class Layer extends Iced {
     return (Layer) super.clone();
   }
 
+  public static void shareWeights(Layer src, Layer dst) {
+    dst._w = src._w;
+    dst._b = src._b;
+  }
+
   public static void copyWeights(Layer[] src, Layer[] dst) {
-    for( int y = 1; y < src.length; y++ ) {
-      dst[y]._w = src[y]._w;
-      dst[y]._b = src[y]._b;
-    }
+    for( int y = 1; y < src.length; y++ )
+      shareWeights(src[y], dst[y]);
   }
 
   // If layer is a RBM
