@@ -267,14 +267,14 @@ setMethod("colnames", "H2OParsedData", function(x) {
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
 
 setMethod("nrow", "H2OParsedData", function(x) { 
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_rows })
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); as.numeric(res$num_rows) })
 
 setMethod("ncol", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_cols })
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); as.numeric(res$num_cols) })
 
 setMethod("dim", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
-  c(res$num_rows, res$num_cols)
+  as.numeric(c(res$num_rows, res$num_cols))
 })
 
 setMethod("summary", "H2OParsedData", function(object) {
@@ -468,14 +468,14 @@ setMethod("colnames", "H2OParsedData2", function(x) {
 setMethod("names", "H2OParsedData2", function(x) { colnames(x) })
 
 setMethod("nrow", "H2OParsedData2", function(x) { 
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numRows })
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numRows) })
 
 setMethod("ncol", "H2OParsedData2", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numCols })
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numCols) })
 
 setMethod("dim", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
-  c(res$numRows, res$numCols)
+  as.numeric(c(res$numRows, res$numCols))
 })
 
 setMethod("as.data.frame", "H2OParsedData2", function(x) {

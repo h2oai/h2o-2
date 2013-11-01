@@ -95,7 +95,8 @@ h2o.__remoteSend <- function(client, page, ...) {
   # after = gsub("NaN", "\"NaN\"", after)
   # after = gsub("-Infinity", "\"-Inf\"", temp[1])
   # after = gsub("Infinity", "\"Inf\"", after)
-  after = gsub("Infinity", "Inf", temp[1])
+  after = gsub('"Infinity"', '"Inf"', temp[1])
+  after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
@@ -223,7 +224,7 @@ h2o.__func <- function(fname, x, type) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=res)
   
   if(type == "Number")
-    res$rows[[1]]$'0'
+    as.numeric(res$rows[[1]]$'0')
   else if(type == "Vector")
     new("H2OParsedData", h2o=x@h2o, key=res$key)
   else res
