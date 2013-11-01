@@ -132,8 +132,8 @@ public class Expr2Test extends TestUtil {
     try { 
       System.out.println(s);
       env = Exec2.exec(s); 
-      if( env.isFrame() ) {     // Print complete frames for inspection
-        Frame res = env.popFrame();
+      if( env.isAry() ) {       // Print complete frames for inspection
+        Frame res = env.popAry();
         System.out.println(res.toStringAll());
         env.subRef(res);        // But then end lifetime
       } else {

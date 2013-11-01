@@ -87,10 +87,10 @@ class ASTApply extends AST {
   static ASTApply make(AST args[],Exec2 E, int x) {
     // Make a type variable for this application
     Type ts[] = new Type[args.length];
-    ts[0] = Type.unbound(x);
+    ts[0] = Type.unbound();
     for( int i=1; i<ts.length; i++ )
       ts[i] = args[i]._t.find();
-    Type ft1 = Type.fcn(x,ts);
+    Type ft1 = Type.fcn(ts);
     AST fast = args[0];
     Type ft2 = fast._t.find();  // Should be a function type
     if( ft1.union(ft2) )        // Union 'em
@@ -158,7 +158,7 @@ class ASTApply extends AST {
     int sp = env._sp;
     for( AST arg : _args ) arg.exec(env);
     assert sp+_args.length==env._sp;
-    env.fun(-_args.length).apply(env,_args.length);
+    env.fcn(-_args.length).apply(env,_args.length);
   }
 }
 
@@ -194,18 +194,18 @@ class ASTSlice extends AST {
       // Use them directly, throwing a runtime error if OOB.
       long row = (long)((ASTNum)_rows)._d;
       int  col = (int )((ASTNum)_cols)._d;
-      Frame fr=env.popFrame();
-      double d = fr.vecs()[col-1].at(row-1);
-      env.subRef(fr);           // Toss away after loading from it
+      Frame ary=env.popAry();
+      double d = ary.vecs()[col-1].at(row-1);
+      env.subRef(ary);          // Toss away after loading from it
       env.push(d);
     } else {
       // Else It's A Big Copy.  Some Day look at proper memory sharing,
       // disallowing unless an active-temp is available, etc.
       // Eval cols before rows (R's eval order).
-      Frame fr=env._fr[env._sp-1];  // Get without popping
-      Object cols = select(fr.numCols(),_cols,env);
-      Object rows = select(fr.numRows(),_rows,env);
-      Frame fr2 = fr.deepSlice(rows,cols);
+      Frame ary=env._ary[env._sp-1];  // Get without popping
+      Object cols = select(ary.numCols(),_cols,env);
+      Object rows = select(ary.numRows(),_rows,env);
+      Frame fr2 = ary.deepSlice(rows,cols);
       // After slicing, pop all expressions (cannot lower refcnt till after all uses)
       if( cols!= null ) env.pop();
       if( rows!= null ) env.pop();
@@ -223,7 +223,7 @@ class ASTSlice extends AST {
     if( ast == null ) return null; // Trivial "all"
     ast.exec(env);
     long cols[];
-    if( !env.isFrame() ) {
+    if( !env.isAry() ) {
       int col = (int)env._d[env._sp-1]; // Peek double; Silent truncation (R semantics)
       if( col > 0 && col >  len ) throw new IllegalArgumentException("Trying to select column "+col+" but only "+len+" present.");
       if( col < 0 && col < -len ) col=0; // Ignore a non-existent column
@@ -232,15 +232,15 @@ class ASTSlice extends AST {
     }
     // Got a frame/list of results.
     // Decide if we're a toss-out or toss-in list
-    Frame fr = env._fr[env._sp-1];  // Peek-frame
-    if( fr.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+fr);
-    Vec vec = fr.anyVec();
+    Frame ary = env._ary[env._sp-1];  // Peek-frame
+    if( ary.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+ary);
+    Vec vec = ary.anyVec();
     // Check for a matching column of bools.
-    if( fr.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
-      return fr;        // Boolean vector selection.
+    if( ary.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
+      return ary;    // Boolean vector selection.
     // Convert single vector to a list of longs selecting rows
-    if(fr.numRows() > 100000) throw H2O.unimpl();
-    cols = MemoryManager.malloc8((int)fr.numRows());
+    if(ary.numRows() > 100000) throw H2O.unimpl();
+    cols = MemoryManager.malloc8((int)ary.numRows());
     for(int i = 0; i < cols.length; ++i){
       if(vec.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
       cols[i] = vec.at8(i);
@@ -274,11 +274,15 @@ class ASTId extends AST {
     // Built-in ops parse as ops, not vars
     if( ASTOp.OPS.containsKey(var) ) { E._x=x; return null; }
     // See if pre-existing
-    for( int d=E.lexical_depth(); d >=0; d-- )
-      for( ASTId id : E._env.get(d) )
+    for( int d=E.lexical_depth(); d >=0; d-- ) {
+      ArrayList<ASTId> asts = E._env.get(d);
+      for( int i=asts.size()-1; i >=0; i-- ) {
+        ASTId id = asts.get(i);
         if( var.equals(id._id) )
           // Return an ID with a relative lexical depth and same slot#
           return new ASTId(id._t,id._id,E.lexical_depth()-d,id._num);
+      }
+    }
     // Never see-before ID?  Treat as a bad parse
     E._x=x;
     return null;
@@ -299,8 +303,8 @@ class ASTId extends AST {
       return;
     }
     // Nested scope?  need to grab from the nested-scope closure
-    ASTFunc fun = env.funScope(_depth);
-    fun._env.push_slot(_depth-1,_num,env);
+    ASTFunc fcn = env.fcnScope(_depth);
+    fcn._env.push_slot(_depth-1,_num,env);
   }
   @Override public String toString() { return _id; }
 }
@@ -326,10 +330,14 @@ class ASTAssign extends AST {
     if( eval == null ) E.throwErr("Missing RHS",x);
     ASTId id = (ASTId)ast2;
     if( id._depth > 0 ||        // Shadowing an outer scope?
-        (E.lexical_depth() == 0 && !ast._t.union(eval._t) )  ) {
-      id = extend_local(E,eval._t,id._id);
-      if( ast2 != ast ) throw H2O.unimpl(); // Must copy whole array locally, before updating the local copy
-      else ast = id;
+        (E.lexical_depth() == 0 && !ast._t.union(eval._t) )  ) { // Or overwriting global scope
+      if( ast2 != ast ) {       // Slice assignment?
+        if( eval._t.isFcn() ) E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
+        assert eval._t.isDbl(); // Must be broadcast slice assignment
+        if(  E.lexical_depth()> 0 ) throw H2O.unimpl(); // Must copy whole array locally, before updating the local copy
+      } else {                  // Else shadowing prior variable
+        ast = id = extend_local(E,eval._t,id._id);
+      }
     } else if( !ast._t.union(eval._t) ) // Disallow type changes in local scope in functions.
       E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
     return new ASTAssign(ast,eval);

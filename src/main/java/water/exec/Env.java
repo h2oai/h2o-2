@@ -16,9 +16,9 @@ public class Env extends Iced {
   // doubles (which are an optimized form of a 1x1 Frame), and ASTs (which are
   // 1st class functions).
   String _key[] = new String[4]; // For top-level globals only, record a frame Key
-  Frame  _fr [] = new Frame [4]; // Frame (or null if not a frame)
+  Frame  _ary[] = new Frame [4]; // Frame (or null if not a frame)
   double _d  [] = new double[4]; // Double (only if frame & func are null)
-  ASTOp  _fun[] = new ASTOp [4]; // Functions (or null if not a function)
+  ASTOp  _fcn[] = new ASTOp [4]; // Functions (or null if not a function)
   int    _sp;                    // Stack pointer
   // Also a Pascal-style display, one display entry per lexical scope.  Slot
   // zero is the start of the global scope (which contains all global vars like
@@ -35,28 +35,29 @@ public class Env extends Iced {
 
   Env() {
     _key = new String[4]; // Key for Frame
-    _fr  = new Frame [4]; // Frame (or null if not a frame)
+    _ary = new Frame [4]; // Frame (or null if not a frame)
     _d   = new double[4]; // Double (only if frame & func are null)
-    _fun = new ASTOp [4]; // Functions (or null if not a function)
+    _fcn = new ASTOp [4]; // Functions (or null if not a function)
     _display= new int[4];
     _refcnt = new HashMap<Vec,Integer>();
   }
 
   public int sp() { return _sp; }
-  public boolean isFrame() { return _fr [_sp-1] != null; }
-  public boolean isFun  () { return _fun[_sp-1] != null; }
-  public boolean isDbl  () { return !isFrame() && !isFun(); }
-  public boolean isFun  (int i) { return _fun[_sp+i] != null; }
+  public boolean isAry() { return _ary[_sp-1] != null; }
+  public boolean isFcn  () { return _fcn[_sp-1] != null; }
+  public boolean isDbl  () { return !isAry() && !isFcn(); }
+  public boolean isFcn  (int i) { return _fcn[_sp+i] != null; }
+  public boolean isAry(int i) { return _ary[_sp+i] != null; }
   // Peek operators
-  public Frame  fr (int i) { Frame fr = _fr [_sp+i]; assert fr != null; return fr; }
-  public ASTOp  fun(int i) { ASTOp op = _fun[_sp+i]; assert op != null; return op; }
+  public Frame  ary(int i) { Frame fr = _ary[_sp+i]; assert fr != null; return fr; }
+  public ASTOp  fcn(int i) { ASTOp op = _fcn[_sp+i]; assert op != null; return op; }
   public double dbl(int i) { double d = _d  [_sp+i]; return d; }
 
   // Load the nth Id/variable from the named lexical scope, typed as a Frame
   public Frame frId(int d, int n) {
     int idx = _display[_tod-d]+n;
-    assert _fr[idx]!=null;
-    return _fr[idx];
+    assert _ary[idx]!=null;
+    return _ary[idx];
   }
 
   // Push k empty slots
@@ -66,14 +67,14 @@ public class Env extends Iced {
     _sp += slots;
     while( _sp > len ) {
       _key= Arrays.copyOf(_key,len<<1);
-      _fr = Arrays.copyOf(_fr ,len<<1);
+      _ary= Arrays.copyOf(_ary,len<<1);
       _d  = Arrays.copyOf(_d  ,len<<1);
-      _fun= Arrays.copyOf(_fun,len<<=1);
+      _fcn= Arrays.copyOf(_fcn,len<<=1);
     }
   }
-  void push( Frame fr ) { push(1); _fr [_sp-1] = addRef(fr) ; assert check_refcnt(fr.anyVec()); }
+  void push( Frame fr ) { push(1); _ary[_sp-1] = addRef(fr) ; assert check_refcnt(fr.anyVec()); }
   void push( double d ) { push(1); _d  [_sp-1] = d  ; }
-  void push( ASTOp fun) { push(1); _fun[_sp-1] = addRef(fun); }
+  void push( ASTOp fcn) { push(1); _fcn[_sp-1] = addRef(fcn); }
   void push( Frame fr, String key ) { push(fr); _key[_sp-1]=key; }
 
   // Copy from display offset d, nth slot
@@ -81,51 +82,63 @@ public class Env extends Iced {
     assert d==0;                // Should use a fcn's closure for d>1
     int idx = _display[_tod-d]+n;
     push(1);
-    _fr [_sp-1] = addRef(_fr [idx]);
+    _ary[_sp-1] = addRef(_ary[idx]);
     _d  [_sp-1] =        _d  [idx];
-    _fun[_sp-1] = addRef(_fun[idx]);
-    assert check_refcnt(_fr[0].anyVec());
+    _fcn[_sp-1] = addRef(_fcn[idx]);
+    assert check_refcnt(_ary[0].anyVec());
   }
   void push_slot( int d, int n, Env global ) {
     assert _refcnt==null;       // Should use a fcn's closure for d>1
     int idx = _display[_tod-d]+n;
     int gidx = global._sp;
     global.push(1);
-    global._fr [gidx] = global.addRef(_fr [idx]);
+    global._ary[gidx] = global.addRef(_ary[idx]);
     global._d  [gidx] =               _d  [idx] ;
-    global._fun[gidx] = global.addRef(_fun[idx]);
-    assert global.check_refcnt(global._fr[0].anyVec());
+    global._fcn[gidx] = global.addRef(_fcn[idx]);
+    assert global.check_refcnt(global._ary[0].anyVec());
   }
   // Copy from TOS into a slot.  Does NOT pop results.
   void tos_into_slot( int d, int n, String id ) {
     // In a copy-on-modify language, only update the local scope, or return val
     assert d==0 || (d==1 && _display[_tod]==n+1);
     int idx = _display[_tod-d]+n;
-    subRef(_fr [idx]);
-    subRef(_fun[idx]);
-    _fr [idx] = addRef(_fr [_sp-1]);
+    subRef(_ary[idx]);
+    subRef(_fcn[idx]);
+    _ary[idx] = addRef(_ary[_sp-1]);
     _d  [idx] =       _d   [_sp-1] ;
-    _fun[idx] = addRef(_fun[_sp-1]);
+    _fcn[idx] = addRef(_fcn[_sp-1]);
     if( d==0 ) _key[idx] = id;
-    assert _fr[0]== null || check_refcnt(_fr[0].anyVec());
+    assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
+  }
+  // Copy from TOS into stack.  Pop's all intermediate.
+  // Example: pop_into_stk(-4)  BEFORE: A,B,C,D,TOS  AFTER: A,TOS
+  void pop_into_stk( int x ) {
+    assert x < 0;
+    subRef(_ary[_sp+x]);        // Nuke out old stuff
+    subRef(_fcn[_sp+x]);
+    _ary[_sp+x] = _ary[_sp-1];  // Copy without changing ref cnt
+    _fcn[_sp+x] = _fcn[_sp-1];
+    _d  [_sp+x] = _d  [_sp-1];
+    _sp--;  x++;                // Pop without changing ref cnt
+    while( x++ < -1 ) pop();
   }
 
   // Push a scope, leaving room for passed args
   int pushScope(int args) {
-    assert fun(-args-1) instanceof ASTFunc; // Expect a function under the args
+    assert fcn(-args-1) instanceof ASTFunc; // Expect a function under the args
     return _display[++_tod] = _sp-args;
   }
   // Grab the function for nested scope d
-  ASTFunc funScope( int d ) { return (ASTFunc)_fun[_display[_tod]-1]; }
+  ASTFunc fcnScope( int d ) { return (ASTFunc)_fcn[_display[_tod]-1]; }
 
   // Pop a slot.  Lowers refcnts on vectors.  Always leaves stack null behind
   // (to avoid dangling pointers stretching lifetimes).
   void pop( Env global ) {
     assert _sp > _display[_tod]; // Do not over-pop current scope
     _sp--;
-    _fun[_sp]=global.subRef(_fun[_sp]);
-    _fr [_sp]=global.subRef(_fr [_sp]);
-    assert _sp==0 || _fr[0]==null || check_refcnt(_fr[0].anyVec());
+    _fcn[_sp]=global.subRef(_fcn[_sp]);
+    _ary[_sp]=global.subRef(_ary[_sp]);
+    assert _sp==0 || _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
   void pop( ) { pop(this); }
   void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
@@ -137,11 +150,11 @@ public class Env extends Iced {
     _tod--;
   }
 
-  // Pop & return a Frame or Fun; ref-cnt of all things remains unchanged.
+  // Pop & return a Frame or Fcn; ref-cnt of all things remains unchanged.
   // Caller is responsible for tracking lifetime.
-  public double  popDbl () { assert isDbl  (); return _d  [--_sp]; }
-  public ASTOp   popFun () { assert isFun  (); ASTOp op = _fun[--_sp]; _fun[_sp]=null; return op; }
-  public Frame  popFrame() { assert isFrame(); Frame fr = _fr [--_sp]; _fr [_sp]=null; assert allAlive(fr); return fr; }
+  public double popDbl() { assert isDbl(); return _d  [--_sp]; }
+  public ASTOp  popFcn() { assert isFcn(); ASTOp op = _fcn[--_sp]; _fcn[_sp]=null; return op; }
+  public Frame  popAry() { assert isAry(); Frame fr = _ary[--_sp]; _ary[_sp]=null; assert allAlive(fr); return fr; }
 
   // Replace a function invocation with it's result
   public void poppush(double d) { pop(); push(d); }
@@ -150,9 +163,9 @@ public class Env extends Iced {
   Env capture( ) { return new Env(this); }
   private Env( Env e ) {
     _sp = e._sp;
-    _fr = Arrays.copyOf(e._fr ,_sp);
+    _ary= Arrays.copyOf(e._ary,_sp);
     _d  = Arrays.copyOf(e._d  ,_sp);
-    _fun= Arrays.copyOf(e._fun,_sp);
+    _fcn= Arrays.copyOf(e._fcn,_sp);
     _tod= e._tod;
     _display = Arrays.copyOf(e._display,_tod+1);
     // All other fields are ignored/zero
@@ -190,8 +203,8 @@ public class Env extends Iced {
   public ASTOp subRef( ASTOp op ) {
     if( op == null ) return null;
     if( !(op instanceof ASTFunc) ) return null;
-    ASTFunc fun = (ASTFunc)op;
-    if( fun._env != null ) fun._env.subRef(this);
+    ASTFunc fcn = (ASTFunc)op;
+    if( fcn._env != null ) fcn._env.subRef(this);
     else System.out.println("Popping fcn object, never executed no environ capture");
     return null;
   }
@@ -211,21 +224,21 @@ public class Env extends Iced {
   ASTOp addRef( ASTOp op ) {
     if( op == null ) return null;
     if( !(op instanceof ASTFunc) ) return op;
-    ASTFunc fun = (ASTFunc)op;
-    if( fun._env != null ) fun._env.addRef(this);
+    ASTFunc fcn = (ASTFunc)op;
+    if( fcn._env != null ) fcn._env.addRef(this);
     else System.out.println("Pushing fcn object, never executed no environ capture");
     return op;
   }
   private void addRef(Env global) {
     for( int i=0; i<_sp; i++ ) {
-      if( _fr [i] != null ) global.addRef(_fr [i]);
-      if( _fun[i] != null ) global.addRef(_fun[i]);
+      if( _ary[i] != null ) global.addRef(_ary[i]);
+      if( _fcn[i] != null ) global.addRef(_fcn[i]);
     }
   }
   private void subRef(Env global) {
     for( int i=0; i<_sp; i++ ) {
-      if( _fr [i] != null ) global.subRef(_fr [i]);
-      if( _fun[i] != null ) global.subRef(_fun[i]);
+      if( _ary[i] != null ) global.subRef(_ary[i]);
+      if( _fcn[i] != null ) global.subRef(_fcn[i]);
     }
   }
 
@@ -236,8 +249,8 @@ public class Env extends Iced {
     while( _tod > 1 ) popScope();
     // Push changes at the outer scope into the K/V store
     while( _sp > 0 ) {
-      if( isFrame() && _key[_sp-1] != null ) { // Has a K/V mapping?
-        Frame fr = popFrame();  // Pop w/out lower refcnt & delete
+      if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
+        Frame fr = popAry();  // Pop w/out lower refcnt & delete
         int refcnt = _refcnt.get(fr.anyVec());
         for( Vec v : fr.vecs() )
           if( _refcnt.get(v) != refcnt )
@@ -264,9 +277,9 @@ public class Env extends Iced {
   int compute_refcnt( Vec vec ) {
     int cnt=0;
     for( int i=0; i<_sp; i++ )
-      if( _fr[i] != null && _fr[i].find(vec) != -1 ) cnt++;
-      else if( _fun[i] != null && (_fun[i] instanceof ASTFunc) )
-        cnt += ((ASTFunc)_fun[i])._env.compute_refcnt(vec);
+      if( _ary[i] != null && _ary[i].find(vec) != -1 ) cnt++;
+      else if( _fcn[i] != null && (_fcn[i] instanceof ASTFunc) )
+        cnt += ((ASTFunc)_fcn[i])._env.compute_refcnt(vec);
     return cnt;
   }
   boolean check_refcnt( Vec vec ) {
@@ -287,9 +300,9 @@ public class Env extends Iced {
     return s;
   }
 
-  public String toString(int i, boolean verbose_fun) {
-    if( _fr[i] != null ) return _fr[i].numRows()+"x"+_fr[i].numCols();
-    else if( _fun[i] != null ) return _fun[i].toString(verbose_fun);
+  public String toString(int i, boolean verbose_fcn) {
+    if( _ary[i] != null ) return _ary[i].numRows()+"x"+_ary[i].numCols();
+    else if( _fcn[i] != null ) return _fcn[i].toString(verbose_fcn);
     return Double.toString(_d[i]);
   }
   @Override public String toString() {

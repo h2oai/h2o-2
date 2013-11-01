@@ -1,5 +1,7 @@
 package water.exec;
 
+import java.util.Arrays;
+
 /** Typing system for a generic R-like parser.
  *  Supports Hindley-Milner style type inference.
  *  @author cliffc@0xdata.com
@@ -15,10 +17,11 @@ public class Type {
   final static private int ANYARY0= 6; // Type is ARY if any ts[] is an ARY, else DBL
   final static private int VARARGS=32; // OR'd onto last type in a fcn, allows zero or more of this type
   int _t;                       // One of the above #s
-  int _x;                       // Point in program where type is 1st defined.
-  final Type[] _ts; // null==prim, else fcn and _ts[0] is return, _ts[1+...] are arg types
-  Type( int x, int t, Type[] ts ) { assert varargs_clean(t,ts); _x=x; _t=t; _ts=ts; }
-  Type( int x, int t, Type[] ts, float f ) { this(x,t,ts); _t|=VARARGS;}
+  static private int UNIQUE;    // Unique ID handy for debugging
+  final int _x = UNIQUE++;      // Point in program where type is 1st defined.
+  Type[] _ts; // null==prim, else fcn and _ts[0] is return, _ts[1+...] are arg types
+  Type( int t, Type[] ts ) { assert varargs_clean(t,ts); _t=t; _ts=ts; }
+  Type( int t, Type[] ts, float f ) { this(t,ts); _t|=VARARGS;}
 
   // Check no varargs flags, except on the last type of functions
   private boolean varargs_clean( int t, Type ts[] ) {
@@ -31,13 +34,13 @@ public class Type {
   }
 
   // Make some base types
-  static Type DBL = new Type(0,DBL0,null);
-  static Type ARY = new Type(0,ARY0,null);
-  public static Type unbound(int x) { return new Type(x,UNBOUND,new Type[1]); }
-  public static Type fcn(int x, Type[] ts) { return new Type(x,FCN0,ts); }
-  public static Type varargs(Type t) { return new Type(t._x,t._t,t._ts,1f);}
-  public static Type dblary() { return new Type(0,DBLARY0,new Type[1]); }
-  public static Type anyary(Type ts[]) { return new Type(0,ANYARY0,ts); }
+  static Type DBL = new Type(DBL0,null);
+  static Type ARY = new Type(ARY0,null);
+  public static Type unbound() { return new Type(UNBOUND,new Type[1]); }
+  public static Type fcn(Type[] ts) { return new Type(FCN0,ts); }
+  public static Type varargs(Type t) { return new Type(t._t,t._ts,1f);}
+  public static Type dblary() { return new Type(DBLARY0,new Type[1]); }
+  public static Type anyary(Type ts[]) { return new Type(ANYARY0,ts); }
 
   // Tarjan Union-Find
   Type find() {
@@ -46,25 +49,58 @@ public class Type {
     if( t._t!=ANYARY0 ) return t;
     return t.findAnyAry();
   }
-  // Sort out 4 options: 
-  // If any ary, then ary
-  // If exactly 1 unbound, then return that guy
-  // If 2+ unbound, then might be ary someday so return self
-  // If all bound to dbl, then dbl
+
+  // "anyary" was my 1st attempt at a Union-Type.  It's not going to work so
+  // easily.  Need back-ptrs from the component types to the different
+  // union-type flavors.  Then when union'ing a component, I can visit types
+  // constructed from the component & union them also as needed.  For IfElse, I
+  // need the True & False types, the Test type and the Result type.  These
+  // combo's are legal, and all others illegal:
+  // rez  tst  T  F
+  //  D    D   D  D
+  //  A    A   D  A
+  //  A    A   A  D
+  //  A    A   A  A
+  //  A    D   A  A
+  //  F    D   F  F   // and all Fcns are union'd
+  //
+  //  DA   DA  D  DA  // a single Dbl is not constraining
+  //  DA   DA  DA D
+  //  DA   D   DA DA
+  //   A   DA   A  A
+  //   A   DA   A DA  // Any array means the result is ary
+  //   A   DA  DA  A
+  //   A    A  DA DA  // weird: at least one of DA must be an A
+  //   A   DA  DA DA  // 
+  //  DA   DA  DA DA  // no functions
+  //
+  //   U   D    U  U  // could be all Fcns or any other mix
+  //   U   DA   U  U  // Most general allowed type for IfElse
+
+
+  // Drop DBL's, drop dups
+  // If any are ARY, can only be ARY or fail
+  // If FCNs, all must be equal
+  // Return any singular type.
   private Type findAnyAry() {
     int len=0;
+    Type fun=null;
     for( int i=0; i<_ts.length; i++ ) {
       Type t = _ts[i].find();
-      if( t._t == ARY0    ) { _t=BOUND; return (_ts[0] = ARY); } // Any array==> typed as array
-      if( t._t == DBLARY0 ) {   // Nebulous DBLARY must be kept
-        if( !dupType(len,t) )   // But remove dups
+      if( t._t == FCN0 && fun != null ) { 
+        t.union(fun); t=fun=t.find();
+      } else {
+        if( t._t == FCN0 ) fun = t;
+        if( t._t != DBL0 &&     // Keep non-DBL
+            !dupType(len,t) )   // But remove dups
           _ts[len++] = t;
-      } else assert t._t == DBL0; // By construction, only set with DBLARY or DBL or ARY
+      }
     }
-    // No more ARY types?  Defaults to DBL
+    // No more types?  Defaults to DBL
     if( len == 0 ) { _t=BOUND; return (_ts[0] = DBL); }
     // Single variant type?  Defaults to that type
     if( len == 1 ) { _t=BOUND; return  _ts[0]; }
+    if( len < _ts.length ) _ts = Arrays.copyOf(_ts, len);
     return this;
   }
   private boolean dupType( int len, Type t ) {
@@ -114,12 +150,11 @@ public class Type {
     else if( tta==DBLARY0 && ttb==DBLARY0 ) { ta._t=BOUND; ta._ts[0]=tb; }
     else if( tta==ANYARY0 && ttb==DBLARY0 ) throw water.H2O.unimpl(); // ???
     else if( tta==ANYARY0 && ttb==ARY0 )    throw water.H2O.unimpl(); // ?one of many must be an array?
-    else if( tta==ANYARY0 && ttb==DBL0 )    { // Force all to DBL
+    else if( tta==ANYARY0 && ttb==DBL0 ) { // Force all to DBL
       boolean ok=true;
       for( Type t2 : ta._ts ) ok |= !Type.DBL.union(t2);
       return ok;
-    }
-    else if( ttb==ANYARY0 ) throw water.H2O.unimpl();
+    } else if( ttb==ANYARY0 ) throw water.H2O.unimpl();
     else if( tta==ttb ) return true; // Equal after varargs stripping
     else return false;          // Types are unequal
     return true;

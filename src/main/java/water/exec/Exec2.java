@@ -9,7 +9,7 @@ import water.fvec.*;
  */
 public class Exec2 {
   // Parse a string, execute it & return a Frame.
-  // Basic types: Frame, Scalar, Function
+  // Basic types: ary (Frame), dbl (scalar double), fcn (function)
   // Functions are 1st class; every argument typed one of the above.
   // Assignment is always to in-scope variables only.
   // Initial environment has all Frame Keys mapped to Frame-typed variables

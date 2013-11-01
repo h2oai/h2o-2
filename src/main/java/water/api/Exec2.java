@@ -34,8 +34,8 @@ public class Exec2 extends Request2 {
       Env env = water.exec.Exec2.exec(str);
       if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
       if( env.sp() == 0 ) {      // Empty stack
-      } else if( env.isFrame() ) { 
-        Frame fr = env.popFrame();
+      } else if( env.isAry() ) { 
+        Frame fr = env.popAry();
         num_rows = fr.numRows();
         num_cols = fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];
@@ -49,8 +49,8 @@ public class Exec2 extends Request2 {
         result=sb.toString();
         // Nuke the result
         env.subRef(fr);
-      } else if( env.isFun() ) {
-        ASTOp op = env.popFun();
+      } else if( env.isFcn() ) {
+        ASTOp op = env.popFcn();
         funstr = op.toString();
         result = op.toString(true); // Verbose function
         env.subRef(op);

@@ -46,7 +46,7 @@ public abstract class ASTOp extends AST {
 
   // All fields are final, because functions are immutable
   final String _vars[];         // Variable names
-  ASTOp( String vars[], Type ts[] ) { super(Type.fcn(0,ts)); _vars=vars; }
+  ASTOp( String vars[], Type ts[] ) { super(Type.fcn(ts)); _vars=vars; }
 
   abstract String opStr();
   abstract ASTOp make();
@@ -90,8 +90,8 @@ abstract class ASTUniOp extends ASTOp {
   protected ASTUniOp( String[] vars, Type[] types ) { super(vars,types); }
   @Override void apply(Env env, int argcnt) {
     // Expect we can broadcast across all functions as needed.
-    if( !env.isFrame() ) { env.poppush(op(env.popDbl())); return; }
-    Frame fr = env.popFrame();
+    if( !env.isAry() ) { env.poppush(op(env.popDbl())); return; }
+    Frame fr = env.popAry();
     final ASTUniOp uni = this;  // Final 'this' so can use in closure
     Frame fr2 = new MRTask2() {
         @Override public void map( Chunk chks[], NewChunk nchks[] ) {
@@ -117,7 +117,7 @@ class ASTNrow extends ASTUniOp {
   @Override String opStr() { return "nrow"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
-    Frame fr = env.popFrame();
+    Frame fr = env.popAry();
     double d = fr.numRows();
     env.subRef(fr);
     env.poppush(d);
@@ -128,7 +128,7 @@ class ASTNcol extends ASTUniOp {
   @Override String opStr() { return "ncol"; }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
-    Frame fr = env.popFrame();
+    Frame fr = env.popAry();
     double d = fr.numCols();
     env.subRef(fr);
     env.poppush(d);
@@ -147,8 +147,8 @@ abstract class ASTBinOp extends ASTOp {
     // Expect we can broadcast across all functions as needed.
     Frame fr0 = null, fr1 = null;
     double d0=0, d1=0;
-    if( env.isFrame() ) fr1 = env.popFrame(); else d1 = env.popDbl();
-    if( env.isFrame() ) fr0 = env.popFrame(); else d0 = env.popDbl();
+    if( env.isAry() ) fr1 = env.popAry(); else d1 = env.popDbl();
+    if( env.isAry() ) fr0 = env.popAry(); else d0 = env.popDbl();
     if( fr0==null && fr1==null ) {
       env.poppush(op(d0,d1));
       return;
@@ -209,7 +209,7 @@ class ASTNE   extends ASTBinOp { String opStr(){ return "!=" ;} ASTOp make() {re
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
-  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.fcn(0,new Type[]{Type.DBL,Type.DBL,Type.DBL}), Type.ARY };
+  static final Type   TYPES[]= new Type  []{ Type.ARY, Type.fcn(new Type[]{Type.DBL,Type.DBL,Type.DBL}), Type.ARY };
   ASTReduce( ) { super(VARS,TYPES); }
   @Override String opStr(){ return "Reduce";}
   @Override ASTOp make() {return this;}
@@ -240,7 +240,7 @@ class ASTRunif extends ASTOp {
       new Type[]{Type.ARY,Type.ARY}); }
   @Override ASTOp make() {return new ASTRunif();}
   @Override void apply(Env env, int argcnt) {
-    Frame fr = env.popFrame();
+    Frame fr = env.popAry();
     long [] espc = fr.anyVec().espc();
     long rem = fr.numRows();
     if(rem > espc[espc.length-1])throw H2O.unimpl();
@@ -276,7 +276,7 @@ class ASTTable extends ASTOp {
   @Override String opStr() { return "table"; }
   @Override ASTOp make() { return new ASTTable(); }
   @Override void apply(Env env, int argcnt) {
-    Frame fr = env.popFrame();
+    Frame fr = env.popAry();
     if (fr.vecs().length > 1)
       throw new IllegalArgumentException("table does not apply to multiple cols.");
     if (! fr.vecs()[0].isInt())
@@ -326,7 +326,7 @@ class ASTSum extends ASTOp {
     for( int i=0; i<argcnt-1; i++ )
       if( env.isDbl() ) sum += env.popDbl();
       else {
-        Frame fr = env.popFrame();
+        Frame fr = env.popAry();
         sum += new Sum().doAll(fr)._d;
         env.subRef(fr);
       }
@@ -354,7 +354,7 @@ class ASTSum extends ASTOp {
 class ASTIfElse extends ASTOp {
   static final String VARS[] = new String[]{"ifelse","tst","true","false"};
   static Type[] newsig() {
-    Type t1 = Type.dblary(), t2 = Type.dblary(), t3 = Type.dblary();
+    Type t1 = Type.unbound(), t2 = Type.unbound(), t3=Type.unbound();
     return new Type[]{Type.anyary(new Type[]{t1,t2,t3}),t1,t2,t3};
   }
   ASTIfElse( ) { super(VARS, newsig()); }
@@ -371,26 +371,27 @@ class ASTIfElse extends ASTOp {
     if( fal == null ) E.throwErr("Missing expression in trinary",x);
     return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
   }
-  @Override void apply(Env env, int argcnt) { 
-    Frame  frtst=null, frtru= null, frfal= null;
-    double  dtst=  0 ,  dtru=   0 ,  dfal=   0 ;
-    if( env.isFrame() ) frfal= env.popFrame(); else dfal = env.popDbl();
-    if( env.isFrame() ) frtru= env.popFrame(); else dtru = env.popDbl();
-    if( env.isFrame() ) frtst= env.popFrame(); else dtst = env.popDbl();
+  @Override void apply(Env env, int argcnt) {
+    // All or none are functions
+    assert ( env.isFcn(-1) &&  env.isFcn(-2) &&  _t.ret().isFcn())
+      ||   (!env.isFcn(-1) && !env.isFcn(-2) && !_t.ret().isFcn());
+    // If the result is an array, then one of the other of the two must be an
+    // array.  , and this is a broadcast op.
+    assert !_t.isAry() || env.isAry(-1) || env.isAry(-2);
 
-    // Single selection?
-    if( frtst==null ) {
-      if( frtru == null && frfal != null ||
-          frtru != null && frfal == null ) throw H2O.unimpl();
-      if( frtru == null ) env.push(dtst==0?dfal:dtru); // Just push doubles
-      else {                    // Push which frame
-        Frame fr = dtst==0 ? frfal : frtru ;
-        env.subRef(dtst==0 ? frtru : frfal);
-        env.push(1);  env._fr[env._sp-1]=fr; // Set without bumping refcnt
-      }
+    // Single selection?  Then just pick slots
+    if( !env.isAry(-3) ) {
+      if( env.dbl(-3)==0 ) env.pop_into_stk(-4);
+      else {  env.pop();   env.pop_into_stk(-3); }
       return;
     }
-    
+
+    Frame  frtst=null, frtru= null, frfal= null;
+    double  dtst=  0 ,  dtru=   0 ,  dfal=   0 ;
+    if( env.isAry() ) frfal= env.popAry(); else dfal = env.popDbl();
+    if( env.isAry() ) frtru= env.popAry(); else dtru = env.popDbl();
+    if( env.isAry() ) frtst= env.popAry(); else dtst = env.popDbl();
+
     // Multi-selection
     // Build a doAll frame
     Frame fr  = new Frame(frtst); // Do-All frame
@@ -439,16 +440,16 @@ class ASTIfElse extends ASTOp {
 // R's Apply.  Function is limited to taking a single column and returning
 // a single column.  Double is limited to 1 or 2, statically determined.
 class ASTRApply extends ASTOp {
-  static final String VARS[] = new String[]{ "", "ary", "dbl1.2", "fun"};
-  ASTRApply( ) { super(VARS,new Type[]{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(0,new Type[]{Type.dblary(),Type.ARY}) }); }
+  static final String VARS[] = new String[]{ "", "ary", "dbl1.2", "fcn"};
+  ASTRApply( ) { super(VARS,new Type[]{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(new Type[]{Type.dblary(),Type.ARY}) }); }
   @Override String opStr(){ return "apply";}
   @Override ASTOp make() {return new ASTRApply();}
   @Override void apply(Env env, int argcnt) {
     int oldsp = env._sp;
     // Peek everything from the stack
-    ASTOp op = env.fun(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
+    ASTOp op = env.fcn(-1);    // ary->dblary but better be ary[,1]->dblary[,1]
     double d = env.dbl(-2);    // MARGIN: ROW=1, COLUMN=2 selector
-    Frame fr = env.fr (-3);    // The Frame to work on
+    Frame fr = env.ary(-3);    // The Frame to work on
     if( d==2 || d== -1 ) {     // Work on columns?
       int ncols = fr.numCols();
 
@@ -464,7 +465,7 @@ class ASTRApply extends ASTOp {
       for( int i=0; i<ncols; i++ ) {
         env.push(op);
         env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
-        env.fun(-2).apply(env,2);
+        env.fcn(-2).apply(env,2);
         Vec v;
         if( keys != null ) {    // Doubles or Frame results?
           // Jam the double into a Vec of its own
@@ -474,7 +475,7 @@ class ASTRApply extends ASTOp {
           nc.close(0,null);
           env.addRef(v = av.close(null));
         } else {                      // Frame results
-          Frame res = env.popFrame(); // Remove without lowering refcnt
+          Frame res = env.popAry(); // Remove without lowering refcnt
           if( res.numCols() != 1 ) throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
           v = res.anyVec();
         }
@@ -483,8 +484,8 @@ class ASTRApply extends ASTOp {
       // At this point, fr2 has refcnt++ already, and the stack is still full.
       env.pop(4);
       env.push(1);
-      env._fr[env._sp-1] = fr2;
-      assert env.isFrame();
+      env._ary[env._sp-1] = fr2;
+      assert env.isAry();
       assert env._sp == oldsp-4+1;
       return;
     } 

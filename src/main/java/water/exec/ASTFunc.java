@@ -29,7 +29,7 @@ public class ASTFunc extends ASTOp {
         if( var == null ) E.throwErr("Invalid var",x);
         for( ASTId id : vars ) if( var.equals(id._id) ) E.throwErr("Repeated argument",x);
         // Add unknown-type variable to new vars list
-        vars.add(new ASTId(Type.unbound(x),var,0,vars.size()));
+        vars.add(new ASTId(Type.unbound(),var,0,vars.size()));
         if( E.peek(')') ) break;
         E.xpeek(',',E._x,null);
       }
