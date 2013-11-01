@@ -83,6 +83,10 @@ def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, returnFas
     data_key = parseResult['destination_key']
     return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, returnFast=returnFast, **kwargs)
 
+def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, noPoll=False, **kwargs):
+    if not node: node = h2o.nodes[0]
+    return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+
 def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for NN')
     if not node: node = h2o.nodes[0]

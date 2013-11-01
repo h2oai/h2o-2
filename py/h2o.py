@@ -1818,6 +1818,37 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
+    def neural_net_score(self, key, model, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
+        params_dict = {
+            'source': key,
+            'destination_key': None,
+            'model': model,
+            # this is ignore??
+            'cols': None,
+            'ignored_cols': None,
+            'classification': None,
+            'response': None,
+            'max_rows': 0,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
+
+        start = time.time()
+        a = self.__do_json_request('2/NeuralNetScore.json',timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nneural net score result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
     def neural_net(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
         noPoll=False, print_params=True, **kwargs):
         params_dict = {
