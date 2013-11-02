@@ -85,13 +85,10 @@ class Basic(unittest.TestCase):
             start = time.time()
             h2o.beta_features = True
             nnFirstResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-            h2o.beta_features = False
-            print "Hack: neural net apparently doesn't support the right polling response yet?"
-            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
-
-            print "FIX! need to add something that looks at the neural net result here?"
-            print "neural net end on ", trainCsvFilename, 'took', time.time() - start, 'seconds'
             print "nnFirstResult:", h2o.dump_json(nnFirstResult)
+            print "Hack: neural net apparently doesn't support the right polling response yet?"
+            h2o_jobs.pollWaitJobs(pattern=None, errorIfCancelled=True, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+            print "neural net end on ", trainCsvFilename, 'took', time.time() - start, 'seconds'
 
             # hack it!
             job_key = nnFirstResult['job_key']
@@ -115,11 +112,13 @@ class Basic(unittest.TestCase):
                 nnScoreFirstResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
                 h2o.beta_features = False
                 print "Hack: neural net apparently doesn't support the right polling response yet?"
-                h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+                h2o_jobs.pollWaitJobs(pattern=None, errorIfCancelled=True, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
 
 
                 print "neural net score end on ", trainCsvFilename, 'took', time.time() - start, 'seconds'
                 print "nnScoreResult:", h2o.dump_json(nnScoreResult)
+
+            h2o.beta_features = False
 
 if __name__ == '__main__':
     h2o.unit_main()
