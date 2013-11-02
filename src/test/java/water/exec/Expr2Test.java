@@ -11,8 +11,8 @@ public class Expr2Test extends TestUtil {
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
-      //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
-      File file = TestUtil.find_test_file("smalldata/cars.csv");
+      File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
+      //File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
@@ -90,7 +90,7 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("apply(h.hex,2,function(x){h.hex})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
-
+      
       // Conditional selection; 
       checkStr("ifelse(0,1,2)");
       checkStr("ifelse(0,h.hex+1,h.hex+2)");
@@ -119,6 +119,7 @@ public class Expr2Test extends TestUtil {
       // (2) Drop 95% outliers (top & bot 2.5% outliers)
       // (3) DONE Table command? (co-occurance matrix)
       // (4) Cut command?
+      checkStr("a=0;x=0");      // Delete keys from global scope
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key
@@ -132,8 +133,9 @@ public class Expr2Test extends TestUtil {
       env = Exec2.exec(s); 
       if( env.isAry() ) {       // Print complete frames for inspection
         Frame res = env.popAry();
+        String skey = env.key();
         System.out.println(res.toStringAll());
-        env.subRef(res);        // But then end lifetime
+        env.subRef(res,skey);   // But then end lifetime
       } else {
         System.out.println( env.resultString() );
       }

@@ -36,6 +36,7 @@ public class Exec2 extends Request2 {
       if( env.sp() == 0 ) {      // Empty stack
       } else if( env.isAry() ) { 
         Frame fr = env.popAry();
+        String skey = env.key();
         num_rows = fr.numRows();
         num_cols = fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];
@@ -48,7 +49,7 @@ public class Exec2 extends Request2 {
           fr.toString(sb,fs,i);
         result=sb.toString();
         // Nuke the result
-        env.subRef(fr);
+        env.subRef(fr,skey);
       } else if( env.isFcn() ) {
         ASTOp op = env.popFcn();
         funstr = op.toString();

@@ -92,6 +92,7 @@ abstract class ASTUniOp extends ASTOp {
     // Expect we can broadcast across all functions as needed.
     if( !env.isAry() ) { env.poppush(op(env.popDbl())); return; }
     Frame fr = env.popAry();
+    String skey = env.key();
     final ASTUniOp uni = this;  // Final 'this' so can use in closure
     Frame fr2 = new MRTask2() {
         @Override public void map( Chunk chks[], NewChunk nchks[] ) {
@@ -104,7 +105,7 @@ abstract class ASTUniOp extends ASTOp {
           }
         }
       }.doAll(fr.numCols(),fr).outputFrame(fr._names, fr.domains());
-    env.subRef(fr);
+    env.subRef(fr,skey);
     env.pop();                  // Pop self
     env.push(fr2);
   }
@@ -118,8 +119,9 @@ class ASTNrow extends ASTUniOp {
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.popAry();
+    String skey = env.key();
     double d = fr.numRows();
-    env.subRef(fr);
+    env.subRef(fr,skey);
     env.poppush(d);
   }
 }
@@ -129,8 +131,9 @@ class ASTNcol extends ASTUniOp {
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.popAry();
+    String skey = env.key();
     double d = fr.numCols();
-    env.subRef(fr);
+    env.subRef(fr,skey);
     env.poppush(d);
   }
 }
@@ -147,8 +150,8 @@ abstract class ASTBinOp extends ASTOp {
     // Expect we can broadcast across all functions as needed.
     Frame fr0 = null, fr1 = null;
     double d0=0, d1=0;
-    if( env.isAry() ) fr1 = env.popAry(); else d1 = env.popDbl();
-    if( env.isAry() ) fr0 = env.popAry(); else d0 = env.popDbl();
+    if( env.isAry() ) fr1 = env.popAry(); else d1 = env.popDbl();  String k0 = env.key();
+    if( env.isAry() ) fr0 = env.popAry(); else d0 = env.popDbl();  String k1 = env.key();
     if( fr0==null && fr1==null ) {
       env.poppush(op(d0,d1));
       return;
@@ -188,8 +191,8 @@ abstract class ASTBinOp extends ASTOp {
           }
         }
       }.doAll(ncols,fr).outputFrame(fr._names,fr.domains());
-    if( fr0 != null ) env.subRef(fr0);
-    if( fr1 != null ) env.subRef(fr1);
+    if( fr0 != null ) env.subRef(fr0,k0);
+    if( fr1 != null ) env.subRef(fr1,k1);
     env.pop();
     env.push(fr2);
   }
@@ -241,6 +244,7 @@ class ASTRunif extends ASTOp {
   @Override ASTOp make() {return new ASTRunif();}
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.popAry();
+    String skey = env.key();
     long [] espc = fr.anyVec().espc();
     long rem = fr.numRows();
     if(rem > espc[espc.length-1])throw H2O.unimpl();
@@ -265,7 +269,7 @@ class ASTRunif extends ASTOp {
           c.set0(i, (float)rng.nextDouble());
       }
     }.doAll(randVec);
-    env.subRef(fr);
+    env.subRef(fr,skey);
     env.pop();
     env.push(new Frame(new String[]{"rnd"},new Vec[]{randVec}));
   }
@@ -277,6 +281,7 @@ class ASTTable extends ASTOp {
   @Override ASTOp make() { return new ASTTable(); }
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.popAry();
+    String skey = env.key();
     if (fr.vecs().length > 1)
       throw new IllegalArgumentException("table does not apply to multiple cols.");
     if (! fr.vecs()[0].isInt())
@@ -293,7 +298,7 @@ class ASTTable extends ASTOp {
     NewChunk c1 = new NewChunk(v1,0);
     for( int i=0; i<domain.length; i++ ) c1.addNum((double) counts[i]);
     c1.close(0,null);
-    env.subRef(fr);
+    env.subRef(fr,skey);
     env.pop();
     env.push(new Frame(new String[]{fr._names[0],"count"}, new Vec[]{v0.close(null), v1.close(null)}));
   }
@@ -327,8 +332,9 @@ class ASTSum extends ASTOp {
       if( env.isDbl() ) sum += env.popDbl();
       else {
         Frame fr = env.popAry();
+        String skey = env.key();
         sum += new Sum().doAll(fr)._d;
-        env.subRef(fr);
+        env.subRef(fr,skey);
       }
     env.poppush(sum);
   }
@@ -388,9 +394,9 @@ class ASTIfElse extends ASTOp {
 
     Frame  frtst=null, frtru= null, frfal= null;
     double  dtst=  0 ,  dtru=   0 ,  dfal=   0 ;
-    if( env.isAry() ) frfal= env.popAry(); else dfal = env.popDbl();
-    if( env.isAry() ) frtru= env.popAry(); else dtru = env.popDbl();
-    if( env.isAry() ) frtst= env.popAry(); else dtst = env.popDbl();
+    if( env.isAry() ) frfal= env.popAry(); else dfal = env.popDbl(); String kf = env.key();
+    if( env.isAry() ) frtru= env.popAry(); else dtru = env.popDbl(); String kt = env.key();
+    if( env.isAry() ) frtst= env.popAry(); else dtst = env.popDbl(); String kq = env.key();
 
     // Multi-selection
     // Build a doAll frame
@@ -428,9 +434,9 @@ class ASTIfElse extends ASTOp {
           }
         }
       }.doAll(ncols,fr).outputFrame(fr._names,fr.domains());
-    env.subRef(frtst);
-    if( frtru != null ) env.subRef(frtru);
-    if( frfal != null ) env.subRef(frfal);
+    env.subRef(frtst,kq);
+    if( frtru != null ) env.subRef(frtru,kt);
+    if( frfal != null ) env.subRef(frfal,kf);
     env.pop();
     env.push(fr2);
   }
@@ -475,9 +481,9 @@ class ASTRApply extends ASTOp {
           nc.close(0,null);
           env.addRef(v = av.close(null));
         } else {                      // Frame results
-          Frame res = env.popAry(); // Remove without lowering refcnt
-          if( res.numCols() != 1 ) throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
-          v = res.anyVec();
+          if( env.ary(-1).numCols() != 1 ) 
+            throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
+          v = env.popAry().anyVec();// Remove without lowering refcnt
         }
         fr2.add(fr._names[i],v); // Add, with refcnt already +1
       }

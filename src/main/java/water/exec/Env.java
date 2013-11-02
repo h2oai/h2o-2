@@ -102,7 +102,7 @@ public class Env extends Iced {
     // In a copy-on-modify language, only update the local scope, or return val
     assert d==0 || (d==1 && _display[_tod]==n+1);
     int idx = _display[_tod-d]+n;
-    subRef(_ary[idx]);
+    subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
     _ary[idx] = addRef(_ary[_sp-1]);
     _d  [idx] =       _d   [_sp-1] ;
@@ -114,7 +114,7 @@ public class Env extends Iced {
   // Example: pop_into_stk(-4)  BEFORE: A,B,C,D,TOS  AFTER: A,TOS
   void pop_into_stk( int x ) {
     assert x < 0;
-    subRef(_ary[_sp+x]);        // Nuke out old stuff
+    subRef(_ary[_sp+x], _key[_sp+x]);  // Nuke out old stuff
     subRef(_fcn[_sp+x]);
     _ary[_sp+x] = _ary[_sp-1];  // Copy without changing ref cnt
     _fcn[_sp+x] = _fcn[_sp-1];
@@ -137,7 +137,7 @@ public class Env extends Iced {
     assert _sp > _display[_tod]; // Do not over-pop current scope
     _sp--;
     _fcn[_sp]=global.subRef(_fcn[_sp]);
-    _ary[_sp]=global.subRef(_ary[_sp]);
+    _ary[_sp]=global.subRef(_ary[_sp],_key[_sp]);
     assert _sp==0 || _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
   void pop( ) { pop(this); }
@@ -155,6 +155,7 @@ public class Env extends Iced {
   public double popDbl() { assert isDbl(); return _d  [--_sp]; }
   public ASTOp  popFcn() { assert isFcn(); ASTOp op = _fcn[--_sp]; _fcn[_sp]=null; return op; }
   public Frame  popAry() { assert isAry(); Frame fr = _ary[--_sp]; _ary[_sp]=null; assert allAlive(fr); return fr; }
+  public String key()    { return _key[_sp]; } 
 
   // Replace a function invocation with it's result
   public void poppush(double d) { pop(); push(d); }
@@ -163,6 +164,7 @@ public class Env extends Iced {
   Env capture( ) { return new Env(this); }
   private Env( Env e ) {
     _sp = e._sp;
+    _key= Arrays.copyOf(e._key,_sp);
     _ary= Arrays.copyOf(e._ary,_sp);
     _d  = Arrays.copyOf(e._d  ,_sp);
     _fcn= Arrays.copyOf(e._fcn,_sp);
@@ -183,7 +185,7 @@ public class Env extends Iced {
   // Lower the refcnt on all vecs in this frame.
   // Immediately free all vecs with zero count.
   // Always return a null.
-  public Frame subRef( Frame fr ) {
+  public Frame subRef( Frame fr, String key ) {
     if( fr == null ) return null;
     Futures fs = null;
     for( Vec vec : fr.vecs() ) {
@@ -195,6 +197,7 @@ public class Env extends Iced {
         _refcnt.remove(vec);
       }
     }
+    if( key != null && fs != null ) UKV.remove(Key.make(key),fs);
     if( fs != null )
       fs.blockForPending();
     return null;
@@ -237,7 +240,7 @@ public class Env extends Iced {
   }
   private void subRef(Env global) {
     for( int i=0; i<_sp; i++ ) {
-      if( _ary[i] != null ) global.subRef(_ary[i]);
+      if( _ary[i] != null ) global.subRef(_ary[i],_key[i]);
       if( _fcn[i] != null ) global.subRef(_fcn[i]);
     }
   }
@@ -251,6 +254,7 @@ public class Env extends Iced {
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
         Frame fr = popAry();  // Pop w/out lower refcnt & delete
+        String skey = key();
         int refcnt = _refcnt.get(fr.anyVec());
         for( Vec v : fr.vecs() )
           if( _refcnt.get(v) != refcnt )
@@ -259,8 +263,8 @@ public class Env extends Iced {
         Frame fr2=fr;
         if( refcnt > 1 ) {       // Need a deep-copy now
           fr2 = fr.deepSlice(null,null);
-          subRef(fr);            // Now lower refcnt for good assertions
-        }                        // But not down to zero (do not delete items in global scope)
+          subRef(fr,skey);      // Now lower refcnt for good assertions
+        } // But not down to zero (do not delete items in global scope)
         UKV.put(Key.make(_key[_sp]),fr2);
       } else
         pop();

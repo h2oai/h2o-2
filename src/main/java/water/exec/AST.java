@@ -195,8 +195,9 @@ class ASTSlice extends AST {
       long row = (long)((ASTNum)_rows)._d;
       int  col = (int )((ASTNum)_cols)._d;
       Frame ary=env.popAry();
+      String skey = env.key();
       double d = ary.vecs()[col-1].at(row-1);
-      env.subRef(ary);          // Toss away after loading from it
+      env.subRef(ary,skey);     // Toss away after loading from it
       env.push(d);
     } else {
       // Else It's A Big Copy.  Some Day look at proper memory sharing,
@@ -207,8 +208,8 @@ class ASTSlice extends AST {
       Object rows = select(ary.numRows(),_rows,env);
       Frame fr2 = ary.deepSlice(rows,cols);
       // After slicing, pop all expressions (cannot lower refcnt till after all uses)
-      if( cols!= null ) env.pop();
       if( rows!= null ) env.pop();
+      if( cols!= null ) env.pop();
       if( fr2 == null ) fr2 = new Frame(); // Replace the null frame with the zero-column frame
       env.pop();                // Pop sliced frame, lower ref
       env.push(fr2);
@@ -322,24 +323,37 @@ class ASTAssign extends AST {
       if( !(E.peek('<') && E.peek('-')) ) { E._x=x; return null; }
     }
     AST ast2=ast;
+    ASTSlice slice= null;
     if( (ast instanceof ASTSlice) ) // Peek thru slice op
-      ast2 = ((ASTSlice)ast)._ast;
+      ast2 = (slice=(ASTSlice)ast)._ast;
     // Must be a simple in-scope ID
     if( !(ast2 instanceof ASTId) ) E.throwErr("Can only assign to ID (or slice)",x);
     AST eval = parseCXExpr(E);
     if( eval == null ) E.throwErr("Missing RHS",x);
     ASTId id = (ASTId)ast2;
-    if( id._depth > 0 ||        // Shadowing an outer scope?
-        (E.lexical_depth() == 0 && !ast._t.union(eval._t) )  ) { // Or overwriting global scope
-      if( ast2 != ast ) {       // Slice assignment?
-        if( eval._t.isFcn() ) E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
-        assert eval._t.isDbl(); // Must be broadcast slice assignment
-        if(  E.lexical_depth()> 0 ) throw H2O.unimpl(); // Must copy whole array locally, before updating the local copy
-      } else {                  // Else shadowing prior variable
-        ast = id = extend_local(E,eval._t,id._id);
+    boolean partial = slice != null && (slice._cols != null || slice._rows != null);
+    if( partial ) {             // Partial slice assignment?
+      if( eval._t.isFcn() ) E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
+      if(  E.lexical_depth()> 0 ) throw H2O.unimpl(); // Must copy whole array locally, before updating the local copy
+    }
+
+    if( id._depth > 0 ) {       // Shadowing an outer scope?
+      // Inner-scope assignment to a new local
+      ast = id = extend_local(E,eval._t,id._id);
+    } else {                    // Overwriting same scope
+      if( E.lexical_depth()>0 ) { // Inner scope?
+        if( !ast._t.union(eval._t) ) // Disallow type changes in local scope in functions.
+          E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
+      } else {                  // Outer scope; can change type willy-nilly
+        if( !partial && !ast._t.union(eval._t) ) {
+          ArrayList<ASTId> vars = E._env.get(0);
+          ASTId id2 = new ASTId(eval._t,id._id,0,id._num);
+          vars.set(id2._num,id2);
+          ast = id2;
+        }
       }
-    } else if( !ast._t.union(eval._t) ) // Disallow type changes in local scope in functions.
-      E.throwErr("Assigning a "+eval._t+" into '"+id._id+"' which is a "+id._t,x);
+    }
+
     return new ASTAssign(ast,eval);
   }
   // Parse a valid LHS= or return null - for a new variable
