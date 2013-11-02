@@ -13,8 +13,8 @@ import water.util.Utils;
  */
 public class MapReduceKMeans extends Job {
   public static void main(String[] args) throws Exception {
-    CloudProcess.launch(2, MapReduceKMeans.class);
-    // CloudLocal.launch(1, MinimalKMeans.class);
+    samples.launchers.CloudProcess.launch(2, MapReduceKMeans.class);
+    // samples.launchers.CloudLocal.launch(1, MinimalKMeans.class);
   }
 
   @Override protected void exec() {

@@ -21,10 +21,10 @@ import water.util.Utils;
  */
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
-    CloudLocal.launch(1, NeuralNetMnist.class);
-    // CloudProcess.launch(4, NeuralNetMnist.class);
-    // CloudRemote.launchIPs(NeuralNetMnist.class);
-    // CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
+    samples.launchers.CloudLocal.launch(1, NeuralNetMnist.class);
+    // samples.launchers.CloudProcess.launch(4, NeuralNetMnist.class);
+    // samples.launchers.CloudRemote.launchIPs(NeuralNetMnist.class);
+    // samples.launchers.CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
   }
 
   public static final int PIXELS = 784;

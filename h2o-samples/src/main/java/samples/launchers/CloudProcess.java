@@ -1,4 +1,4 @@
-package samples;
+package samples.launchers;
 
 import water.*;
 import water.deploy.Node;

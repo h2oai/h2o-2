@@ -1,10 +1,8 @@
-package samples;
+package samples.launchers;
 
 import water.Job;
-import water.deploy.Cloud;
-import water.deploy.EC2;
+import water.deploy.*;
 import water.util.Log;
-import water.util.Utils;
 
 /**
  * Builds a remote cluster. H2O jar, or classes from current workspace, are deployed through rsync.
@@ -42,11 +40,11 @@ public class CloudRemote {
   }
 
   public static void launch(Cloud cloud, Class<? extends Job> job) throws Exception {
-    String samples = Utils.folder(CloudRemote.class).getPath() + "/../../../";
-    cloud.clientRSyncIncludes.add(samples + "target");
-    cloud.clientRSyncIncludes.add(samples + "../target");
-    cloud.clientRSyncIncludes.add(samples + "../lib");
-    cloud.clientRSyncIncludes.add(samples + "../smalldata");
+    String h2o = VM.h2oFolder().getPath();
+    cloud.clientRSyncIncludes.add(h2o + "/target");
+    cloud.clientRSyncIncludes.add(h2o + "/h2o-samples/target");
+    cloud.clientRSyncIncludes.add(h2o + "/lib");
+    cloud.clientRSyncIncludes.add(h2o + "/smalldata");
 
     // The fanned rsync (between master and slaves) will have the two 'target' merged
     cloud.fannedRSyncIncludes.add("target");

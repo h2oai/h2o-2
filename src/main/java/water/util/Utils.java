@@ -408,15 +408,6 @@ public class Utils {
     }
   }
 
-  public static File folder(Class c) {
-    try {
-      URL url = c.getClassLoader().getResource(c.getName().replace('.', '/') + ".class");
-      return new File(url.toURI()).getParentFile();
-    } catch( Exception e ) {
-      throw new RuntimeException(e);
-    }
-  }
-
   /**
    * Returns the system temporary folder, e.g. /tmp
    */

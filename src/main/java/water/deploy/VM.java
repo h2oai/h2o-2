@@ -10,9 +10,9 @@ import java.util.Arrays;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.StringUtils;
 
+import water.Boot;
 import water.H2O;
 import water.util.Log;
-import water.util.Utils;
 
 /**
  * Executes code in a separate VM.
@@ -199,8 +199,19 @@ public abstract class VM {
     }
   }
 
-  public static File h2o() {
-    return Utils.folder(H2O.class).getParentFile().getParentFile().getParentFile();
+  public static File h2oFolder() {
+    File target;
+    if( Boot._init.fromJar() )
+      target = new File(Boot._init.jarPath());
+    else {
+      try {
+        URL url = Boot._init.getResource(H2O.class.getName().replace('.', '/') + ".class");
+        target = new File(url.toURI()).getParentFile().getParentFile().getParentFile();
+      } catch( URISyntaxException e ) {
+        throw new RuntimeException(e);
+      }
+    }
+    return target.getParentFile();
   }
 
   /**
@@ -252,7 +263,7 @@ public abstract class VM {
     static String command(String[] javaArgs, String[] nodeArgs) {
       String cp = "";
       try {
-        String h2o = h2o().getCanonicalPath();
+        String h2o = h2oFolder().getCanonicalPath();
         for( String s : System.getProperty("java.class.path").split(File.pathSeparator) ) {
           cp += cp.length() != 0 ? ":" : "";
           String path = new File(s).getCanonicalPath();

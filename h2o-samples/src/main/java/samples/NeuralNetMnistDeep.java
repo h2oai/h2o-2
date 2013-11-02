@@ -12,10 +12,10 @@ import water.fvec.Vec;
  */
 public class NeuralNetMnistDeep extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {
-    CloudLocal.launch(1, NeuralNetMnistDeep.class);
-    // CloudProcess.launch(4, NeuralNetMnistDeep.class);
-    // CloudConnect.launch("localhost:54321", NeuralNetMnistDeep.class);
-    // CloudRemote.launchIPs(NeuralNetMnistDeep.class);
+    samples.launchers.CloudLocal.launch(1, NeuralNetMnistDeep.class);
+    // samples.launchers.CloudProcess.launch(4, NeuralNetMnistDeep.class);
+    // samples.launchers.CloudConnect.launch("localhost:54321", NeuralNetMnistDeep.class);
+    // samples.launchers.CloudRemote.launchIPs(NeuralNetMnistDeep.class);
   }
 
   @Override public Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {

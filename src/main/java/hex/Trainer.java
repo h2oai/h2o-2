@@ -106,8 +106,10 @@ public abstract class Trainer {
 
     public void run() {
       Input input = (Input) _ls[0];
-      for( input._pos = 0; samples == 0 || input._pos < samples; input._pos++ )
+      for( long i = 0; samples == 0 || i < samples; i++ ) {
         step();
+        input.move();
+      }
     }
 
     @Override public long items() {

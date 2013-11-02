@@ -19,7 +19,7 @@ import com.google.common.io.Closeables;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
-  public static final File smalldata = new File(VM.h2o(), "smalldata");
+  public static final File smalldata = new File(VM.h2oFolder(), "smalldata");
 
   protected static void startCloud(String[] args, int nnodes) {
     for( int i = 1; i < nnodes; i++ ) {
