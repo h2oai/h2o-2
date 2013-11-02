@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3)
+            h2o.build_cloud(3, java_heap_GB=4)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?  h2o_hosts.build_cloud_with_hosts()
             h2o.build_cloud_with_hosts(3)
@@ -62,6 +62,7 @@ class Basic(unittest.TestCase):
             # up to but not including
             x = ",".join(map(str,range(response)))
 
+            modelKey = 'a.hex'
             kwargs = {
                 # this is ignore??
                 'response': 0, # first column is pixel value
@@ -74,22 +75,29 @@ class Basic(unittest.TestCase):
                 'rate': 0.01,  # learning rate
                 'l2': 1.0E-4, # regularization
                 'epochs': 2, # how many times dataset should be iterated
-                'destination_key': 'a.hex',
+                'destination_key': modelKey,
             }
 
             timeoutSecs = 600
             start = time.time()
             h2o.beta_features = True
-            nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+            nnFirstResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
             h2o.beta_features = False
             print "Hack: neural net apparently doesn't support the right polling response yet?"
             h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
 
             print "FIX! need to add something that looks at the neural net result here?"
             print "neural net end on ", trainCsvFilename, 'took', time.time() - start, 'seconds'
-            print "nnResult:", h2o.dump_json(nnResult)
+            print "nnFirstResult:", h2o.dump_json(nnFirstResult)
+
+            # hack it!
+            job_key = nnFirstResult['job_key']
+            params = {'job_id': job_key, 'destination_key': modelKey}
+            # a = h2o.nodes[0].__do_json_request(jsonRequest='Inspect.json', params=params)
+            # print 'From hack url for neural net result:', h2o.dump_json(a)
 
             if DO_SCORE:
+                time.sleep(3600)
                 kwargs = {
                     'max_rows': 0,
                     'response': 0, # first column is pixel value
@@ -98,12 +106,14 @@ class Basic(unittest.TestCase):
                     'cols': None, # this is not consistent with ignored_cols_by_name
                     'classification': 1,
                     'destination_key': 'b.hex',
-                    'model': 'a.hex'
+                    'model': modelKey,
                 }
-                nnScoreResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+                nnScoreFirstResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
                 h2o.beta_features = False
                 print "Hack: neural net apparently doesn't support the right polling response yet?"
                 h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+
+
                 print "neural net score end on ", trainCsvFilename, 'took', time.time() - start, 'seconds'
                 print "nnScoreResult:", h2o.dump_json(nnScoreResult)
 
