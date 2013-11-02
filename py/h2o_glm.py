@@ -1,23 +1,6 @@
-import h2o_cmd, h2o
+import h2o_cmd, h2o, h2o_util
 import re, random, math
 
-
-def cleanseNanInf(value):
-    # h2o can pass Infinity and NaN strings where there should be a number. 
-    # convert it back to a proper +-Inf or Nan
-
-    translate = {
-        '-Infinity': -float('Inf'), 
-        'Infinity': float('Inf'), 
-        'NaN': float('NaN'), 
-    }
-
-
-    if str(value) in translate:
-        value = translate[str(value)]
-
-    return value
-    
 def pickRandGlmParams(paramDict, params):
     colX = 0
     randomGroupSize = random.randint(1,len(paramDict))
@@ -86,11 +69,6 @@ def simpleCheckGLMScore(self, glmScore, family='gaussian', allowFailWarning=Fals
                     raise Exception(w)
 
     validation = glmScore['validation']
-
-    # Just cleanse the ones we have trouble with? maybe not complete
-    validations['err'] = cleanseNanInf(validations['err'])
-    validations['nullDev'] = cleanseNanInf(validations['nullDev'])
-    validations['resDev'] = cleanseNanInf(validations['resDev'])
     print "%15s %s" % ("err:\t", validation['err'])
     print "%15s %s" % ("nullDev:\t", validation['nullDev'])
     print "%15s %s" % ("resDev:\t", validation['resDev'])
@@ -178,10 +156,6 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
                 raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
 
     print "GLMModel/validations"
-    # Just cleanse the ones we have trouble with? maybe not complete
-    validations['err'] = cleanseNanInf(validations['err'])
-    validations['nullDev'] = cleanseNanInf(validations['nullDev'])
-    validations['resDev'] = cleanseNanInf(validations['resDev'])
     print "%15s %s" % ("err:\t", validations['err'])
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])
     print "%15s %s" % ("resDev:\t", validations['resDev'])

@@ -22,7 +22,7 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
     overallWallStart = time.time()
     pre              = ""
     if debug: pre    = "DEBUG"
-    glmbenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'glmbench.csv'
+    glmbenchcsv      = 'benchmarks/'+build+'/'+pre+'glmbench.csv'
     if not os.path.exists(glmbenchcsv):
         output = open(glmbenchcsv,'w')
         output.write(','.join(csv_header)+'\n')
@@ -102,7 +102,7 @@ def doGLM(f, folderPath, family, link, lambda_, alpha, nfolds, y, x, testFilehex
                                             model_key   = params['destination_key'],
                                             timeoutSecs = 1800)
         scoreTime     = time.time() - glmScoreStart
-        cmd = 'cd ..; bash startloggers.sh ' + json + ' stop_'
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
         os.system(cmd)
         if family == "binomial":
             row.update( {'scoreTime'          : scoreTime,

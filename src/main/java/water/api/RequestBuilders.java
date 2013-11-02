@@ -175,7 +175,7 @@ public class RequestBuilders extends RequestQueries {
           result.replace("JSSTUFF", poll.toString());
         } else {
           RString poll = new RString(_pollJs);
-          poll.replace("TIMEOUT", response._pollProgress==0 ? 500 : 2000);
+          poll.replace("TIMEOUT", response._pollProgress==0 ? 1500 : 2000);
           result.replace("JSSTUFF", poll.toString());
         }
         int pct = (int) ((double)response._pollProgress / response._pollProgressElements * 100);

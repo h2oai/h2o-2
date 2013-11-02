@@ -1,9 +1,24 @@
 <!DOCTYPE html>
 
 <!--This file belongs in the final build output directory living on S3.-->
-
 <html>
 <head>
+  <script>
+    function load(id) {
+      //var res = "SUBST_PROJECT_VERSION".split(".");
+      //resource = "./".concat(res[res.length-1]).concat("/").concat(
+      resource = id.concat("/").concat(id).concat(".html");
+      r = new XMLHttpRequest();
+      r.open("HEAD", resource, true);
+      r.send(null);
+      r.onreadystatechange = function () {
+        if(r.readyState === 4) {
+          var d = document.getElementById(id);
+          if(r.status === 200) d.style.display = "inline";
+        }
+      }
+    }
+  </script>
 </head>
 
 <body>
@@ -89,6 +104,53 @@ Documentation
 </tr>
 </table>
 
-</body>
-<html>
+<br />
+<br />
 
+
+<div id="bench" style="display: none;">
+
+    <h2 align="center">
+        H2O SUBST_PROJECT_VERSION Benchmarks
+    </h2>
+
+    <table border="5" cellpadding="5" align="center">
+        <tr>
+            <th>Content</th>
+            <th>Description</th>
+            <th>URL</th>
+        </tr>
+        <tr>
+            <td align="center">Performance</td>
+            <td>Benchmarks and Profiling</td>
+            <td align="center"><a href="bench/bench.html">Performance Results</a></td>
+        </tr>
+    </table>
+</div>
+
+<div id="test" style="display: none;">
+    <h2 align="center">
+        H2O SUBST_PROJECT_VERSION Test Performance
+    </h2>
+    <table border="5" cellpaddings="5" align="center">
+        <tr>
+            <th>Content</th>
+            <th>Description</th>
+            <th>URL</th>
+        </tr>
+        <tr>
+            <td align="center">Test Results</td>
+            <td>Test results for this build</td>
+            <td align="center"><a href="test/test.html">Test Results</a></td>
+            <!--test.html should redirect to <meta http-equiv="refresh" content="0; url=http://test.0xdata.com/"> -->
+        </tr>
+    </table>
+</div>
+
+<script>
+    load("bench");
+    load("test");
+</script>
+
+</body>
+</html>

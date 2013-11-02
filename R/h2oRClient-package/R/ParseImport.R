@@ -3,10 +3,10 @@ setGeneric("h2o.ls", function(object, pattern) { standardGeneric("h2o.ls") })
 setGeneric("h2o.rm", function(object, keys) { standardGeneric("h2o.rm") })
 # setGeneric("h2o.importFile", function(object, path, key = "", header, parse = TRUE) { standardGeneric("h2o.importFile") })
 setGeneric("h2o.importFile", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFile") })
-setGeneric("h2o.importFolder", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFolder") })
+setGeneric("h2o.importFolder", function(object, path, pattern = "", key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFolder") })
 # setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE, header, sep = "", col.names) { standardGeneric("h2o.importURL") })
 setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importURL") })
-setGeneric("h2o.importHDFS", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importHDFS") })
+setGeneric("h2o.importHDFS", function(object, path, pattern = "", key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importHDFS") })
 setGeneric("h2o.uploadFile", function(object, path, key = "", parse = TRUE, sep = "", silent = TRUE) { standardGeneric("h2o.uploadFile") })
 setGeneric("h2o.parseRaw", function(data, key = "", header, sep = "", col.names) { standardGeneric("h2o.parseRaw") })
 setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.setColNames") })
@@ -97,13 +97,14 @@ setMethod("h2o.importURL", signature(object="H2OClient", path="character", key="
             h2o.importURL(object, path, key, parse, sep)
           })
 
-setMethod("h2o.importFolder", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character"),
-          function(object, path, key, parse, sep) {
+setMethod("h2o.importFolder", signature(object="H2OClient", path="character", pattern="character", key="character", parse="logical", sep="character"),
+          function(object, path, pattern, key, parse, sep) {
             # if(!file.exists(path)) stop("Directory does not exist!")
             # res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=normalizePath(path))
             res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=path)
             if(parse) {
-              srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", path, "*", sep=""))
+              regPath = paste(path, pattern, sep="/")
+              srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
               rawData = new("H2ORawData", h2o=object, key=srcKey)
               h2o.parseRaw(data=rawData, key=key, sep=sep) 
             } else {
@@ -112,15 +113,17 @@ setMethod("h2o.importFolder", signature(object="H2OClient", path="character", ke
             }
         })
 
-setMethod("h2o.importFolder", signature(object="H2OClient", path="character", key="ANY", parse="ANY", sep="ANY"),
-          function(object, path, key, parse, sep) {
+setMethod("h2o.importFolder", signature(object="H2OClient", path="character", pattern="character", key="ANY", parse="ANY", sep="ANY"),
+          function(object, path, pattern, key, parse, sep) {
+            if(!(missing(pattern) || class(pattern) == "character"))
+              stop(paste("pattern cannot be of class", class(pattern)))
             if(!(missing(key) || class(key) == "character"))
               stop(paste("key cannot be of class", class(key)))
             if(!(missing(parse) || class(parse) == "logical"))
               stop(paste("parse cannot be of class", class(parse)))
             if(!(missing(sep) || class(sep) == "character"))
               stop(paste("sep cannot be of class", class(sep)))
-            h2o.importFolder(object, path, key, parse, sep) 
+            h2o.importFolder(object, path, pattern, key, parse, sep) 
           })
 
 setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="missing", parse="ANY", sep="ANY"), 
@@ -136,8 +139,8 @@ setMethod("h2o.importFile", signature(object="H2OClient", path="character", key=
             h2o.importURL(object, paste("file:///", path, sep=""), key, parse, sep)
           })
 
-setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character"),
-          function(object, path, key, parse, sep) {
+setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", pattern="character", key="character", parse="logical", sep="character"),
+          function(object, path, pattern, key, parse, sep) {
             res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTHDFS, path=path)
             if(length(res$failed) > 0) {
               for(i in 1:res$num_failed) 
@@ -147,7 +150,8 @@ setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", key=
             # Return only the files that successfully imported
             if(res$num_succeeded > 0) {
               if(parse) {
-                srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", path, "*", sep=""))
+                regPath = paste(path, pattern, sep="/")
+                srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", regPath, "*", sep=""))
                 rawData = new("H2ORawData", h2o=object, key=srcKey)
                 h2o.parseRaw(data=rawData, key=key, sep=sep) 
               } else {
@@ -157,8 +161,10 @@ setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", key=
             } else stop("All files failed to import!")
         })
 
-setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", key="ANY", parse="ANY", sep="ANY"),
-          function(object, path, key, parse, sep) {
+setMethod("h2o.importHDFS", signature(object="H2OClient", path="character", pattern="character", key="ANY", parse="ANY", sep="ANY"),
+          function(object, path, pattern, key, parse, sep) {
+            if(!(missing(pattern) || class(pattern) == "character"))
+              stop(paste("pattern cannot be of class", class(pattern)))
             if(!(missing(key) || class(key) == "character"))
               stop(paste("key cannot be of class", class(key)))
             if(!(missing(parse) || class(parse) == "logical"))

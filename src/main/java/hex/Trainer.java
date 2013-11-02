@@ -271,7 +271,7 @@ public abstract class Trainer {
       _instances.put(_key, this);
       DKV.put(_key, new Value(_key, new byte[0]));
 
-      Vec[] vecs = ((VecsInput) ls[0])._vecs;
+      Vec[] vecs = ((VecsInput) ls[0]).vecs;
       assert ls[0]._a.length == VecsInput.expand(vecs);
       assert vecs[0].nChunks() >= NeuralNet.cores() : "Not enough chunks, c.f. NeuralNet.reChunk";
       _counts = new AtomicIntegerArray(vecs[0].nChunks());
@@ -282,7 +282,7 @@ public abstract class Trainer {
     }
 
     @Override public long items() {
-      Vec[] vecs = ((VecsInput) _ls[0])._vecs;
+      Vec[] vecs = ((VecsInput) _ls[0]).vecs;
       long n = 0;
       for( int i = 0; i < _counts.length(); i++ )
         n += _counts.get(i) * vecs[0].chunkLen(i);
@@ -305,9 +305,9 @@ public abstract class Trainer {
         _task._ws[y] = _ls[y]._w;
         _task._bs[y] = _ls[y]._b;
       }
-      Vec[] vecs = ((VecsInput) _ls[0])._vecs;
+      Vec[] vecs = ((VecsInput) _ls[0]).vecs;
       Layer out = _ls[_ls.length - 1];
-      Vec response = out instanceof VecSoftmax ? ((VecSoftmax) out)._vec : ((VecLinear) out)._vec;
+      Vec response = out instanceof VecSoftmax ? ((VecSoftmax) out).vec : ((VecLinear) out)._vec;
       _task.dfork(new Frame(null, Utils.append(vecs, response)));
     }
 

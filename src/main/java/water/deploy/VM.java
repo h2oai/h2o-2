@@ -50,6 +50,9 @@ public abstract class VM {
       if( !s.startsWith("-agentlib") )
         if( !s.startsWith("-Xbootclasspath") )
           list.add(s);
+    if( System.getProperty(H2O.DEBUG_ARG) != null )
+      if( list.indexOf("-D" + H2O.DEBUG_ARG) < 0 )
+        list.add("-D" + H2O.DEBUG_ARG);
     list.add(main);
     return list.toArray(new String[list.size()]);
   }

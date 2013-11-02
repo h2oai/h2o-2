@@ -75,9 +75,9 @@ function deepClean {
         echo "Melting ICES on machine $i"
         ssh 0xdiag@$i rm -rf /home/0xdiag/ice.55555* /home/0xdiag/*zip
         echo "Dumping any open instances of h2o..."
-        pids1=`echo ps -efww | grep h2o | grep spencer| grep jar|awk '{print $2}' | xargs`
+        pids1=`ps -efww | grep h2o | grep spencer| grep jar|awk '{print $2}' | xargs`
         ssh spencer@$i kill $pids1
-        pids2=`echo ps -efww | grep h2o | grep 0xdiag| grep jar|awk '{print $2}' | xargs`
+        pids2=`ps -efww | grep h2o | grep 0xdiag| grep jar|awk '{print $2}' | xargs`
         ssh spencer@$i kill $pids2
         echo "Shredding all logs on machine $i"
         ssh spencer@$i rm -rf /home/spencer/h2o/bench/BMLogs/starttime /home/spencer/h2o/bench/BMLogs/BigLogger* /home/spencer/h2o/bench/BMLogs/LittleLogger* /home/spencer/h2o/bench/BMLogs/rawLogs

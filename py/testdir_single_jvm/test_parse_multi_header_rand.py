@@ -13,8 +13,9 @@ paramsDict = {
     # I suppose, libsvm could have strangeness!..but there is no header with libsvm?
     # 'parser_type': [None, 'AUTO'],
     # add the hive 1 separator a choice
-    # 'separator': ['\t', ',', ' ', str(unichr(1))], 
-    'separator': ['\t', ',', ' '],
+    'separator': ['\t', ',', ' ', str(unichr(1))], 
+    'preview': [1],
+    # 'separator': ['\t', ',', ' '],
     'hdr_separator': [' ', ',', 'same'],
     'header': [None, 0,1],
     # we can point to the 'wrong' file!
@@ -87,13 +88,12 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2,java_heap_MB=1300,use_flatfile=True)
+            h2o.build_cloud(3,java_heap_MB=1300,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(3600)
         h2o.tear_down_cloud()
     
     def test_parse_multi_header_rand(self):
@@ -108,15 +108,13 @@ class Basic(unittest.TestCase):
             headerName = ''.join([random.choice(allowedLetters) for _ in range(l)])
             headerChoices.append(headerName)
 
-        # cols must be 9 to match the header above, otherwise a different bug is hit
-        # extra output is added, so it's 10 total
         tryList = [
-            (1, 5, 9, 'cA', 60, 0),
-            (1, 5, 25, 'cA', 60, 0),
+            (3, 5, 9, 'cA', 60, 0),
+            (3, 5, 25, 'cA', 60, 0),
             (10, 100, 500, 'cA', 60, 0),
             ]
 
-        for trial in range(10):
+        for trial in range(20):
             (fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader) = random.choice(tryList)
             print fileNum, rowCount, colCount, hex_key, timeoutSecs, dataRowsWithHeader
             # FIX! should we add a header to them randomly???
@@ -127,7 +125,9 @@ class Basic(unittest.TestCase):
             totalHeaderRows = 0
             # random selection of parse param choices
 
-            HEADER_HAS_HDR_ROW = random.randint(0,1)
+            # HEADER_HAS_HDR_ROW = random.randint(0,1)
+            HEADER_HAS_HDR_ROW = 1
+            
             DATA_HAS_HDR_ROW = random.randint(0,1)
             PARSE_PATTERN_INCLUDES_HEADER = random.randint(0,1)
             # DATA_FIRST_IS_COMMENT = random.randint(0,1)
