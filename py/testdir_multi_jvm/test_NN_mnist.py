@@ -95,8 +95,10 @@ class Basic(unittest.TestCase):
 
             # hack it!
             job_key = nnFirstResult['job_key']
-            params = {'job_id': job_key, 'destination_key': modelKey}
-            # a = h2o.nodes[0].__do_json_request(jsonRequest='Inspect.json', params=params)
+            params = {'job_key': job_key, 'destination_key': modelKey}
+            a = h2o.nodes[0].completion_redirect(jsonRequest="2/NeuralNetProgress.json", params=params)
+            print "NeuralNetProgress:", h2o.dump_json(a)
+
             # print 'From hack url for neural net result:', h2o.dump_json(a)
 
             if DO_SCORE:

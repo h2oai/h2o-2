@@ -911,6 +911,10 @@ class H2O(object):
     def test_poll(self, args):
         return self.__do_json_request('TestPoll.json', params=args)
 
+    #FIX! just here temporarily to get the response at the end of an algo, from job/destination_key
+    def completion_redirect(self, jsonRequest, params):
+        return self.__do_json_request(jsonRequest=jsonRequest, params=params)
+
     def get_cloud(self, noExtraErrorCheck=False, timeoutSecs=10):
         # hardwire it to allow a 60 second timeout
         a = self.__do_json_request('Cloud.json', noExtraErrorCheck=noExtraErrorCheck, timeout=timeoutSecs)
