@@ -8,7 +8,9 @@ import h2o_kmeans, h2o_import as h2i
 
 def define_params(SEED):
     paramDict = {
-        'k': [2, 5], # FIX! comma separated or range from:to:step
+        # always do grid (see default below)..no destination key should be specified if grid?
+        # comma separated or range from:to:step
+        'k': ['c(1,2,3)' 'c(2,4)', '1:3:1'], 
         'initialization': ['None', 'PlusPlus', 'Furthest'],
         # not used in Grid?
         # 'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
@@ -38,7 +40,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_KMeans_params_rand2(self):
+    def test_KMeansGrid_params_rand2(self):
         if localhost:
             csvFilenameList = [
                 # ('covtype.data', 60),
@@ -63,7 +65,7 @@ class Basic(unittest.TestCase):
             h2o.beta_features = True # no grid for VA
             for trial in range(3):
                 # default
-                params = {'k': 'c(1,2,3)' }
+                params = {'k': 'c(1,2,3)'} 
                 # 'destination_key': csvFilename + "_" + str(trial) + '.hex'}
 
                 h2o_kmeans.pickRandKMeansParams(paramDict, params)

@@ -8,7 +8,7 @@ import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h
 paramDict = {
     'response': 'C54',
     'cols': None,
-    'ignored_cols_by_name': '1,2,6,7,8',
+    'ignored_cols_by_name': 'C1,C2,C6,C7,C8',
     'classification': None,
     'validation': None,
     'ntrees': 10,
