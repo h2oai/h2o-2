@@ -10,9 +10,9 @@ import java.util.Arrays;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.StringUtils;
 
-import water.Boot;
 import water.H2O;
 import water.util.Log;
+import water.util.Utils;
 
 /**
  * Executes code in a separate VM.
@@ -199,6 +199,10 @@ public abstract class VM {
     }
   }
 
+  public static File h2o() {
+    return Utils.folder(H2O.class).getParentFile().getParentFile().getParentFile();
+  }
+
   /**
    * A remote JVM, launched over SSH.
    */
@@ -248,18 +252,19 @@ public abstract class VM {
     static String command(String[] javaArgs, String[] nodeArgs) {
       String cp = "";
       try {
-        int shared = new File(".").getCanonicalPath().length() + 1;
+        String h2o = h2o().getCanonicalPath();
         for( String s : System.getProperty("java.class.path").split(File.pathSeparator) ) {
           cp += cp.length() != 0 ? ":" : "";
-          if( Boot._init.fromJar() )
-            cp += new File(s).getName();
-          else
-            cp += new File(s).getCanonicalPath().substring(shared).replace('\\', '/');
+          String path = new File(s).getCanonicalPath();
+          if( path.startsWith(h2o) )
+            path = path.substring(h2o.length() + 1);
+          cp += path.replace('\\', '/');
         }
       } catch( IOException e ) {
         throw Log.errRTExcept(e);
       }
-      String command = "cd " + Host.FOLDER + ";jdk/jre/bin/java -cp " + cp;
+      String java = Cloud.JRE != null ? new File(Cloud.JRE).getName() + "/bin/java" : "java";
+      String command = "cd " + Host.FOLDER + ";" + java + " -cp " + cp;
       for( String s : javaArgs )
         command += " " + s;
       for( String s : nodeArgs )

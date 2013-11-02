@@ -6,6 +6,7 @@ import hex.rng.H2ORandomRNG.RNGType;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.URL;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -404,6 +405,26 @@ public class Utils {
         if (!child.delete())
           throw new RuntimeException("Cannot delete " + child);
       }
+    }
+  }
+
+  public static File folder(Class c) {
+    try {
+      URL url = c.getClassLoader().getResource(c.getName().replace('.', '/') + ".class");
+      return new File(url.toURI()).getParentFile();
+    } catch( Exception e ) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Returns the system temporary folder, e.g. /tmp
+   */
+  public static File tmp() {
+    try {
+      return File.createTempFile("h2o", null).getParentFile();
+    } catch( IOException e ) {
+      throw new RuntimeException(e);
     }
   }
 

@@ -155,7 +155,7 @@ public class Inspect extends Request {
     if( f instanceof GLMValidation)
       return GLMValidationView.redirect(this, key);
     if(f instanceof NeuralNetModel)
-      return ((NeuralNet) f).redirect(this, key);
+      return ((NeuralNetModel) f).redirect(this, key);
     if(f instanceof KMeans2Model)
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
@@ -194,7 +194,7 @@ public class Inspect extends Request {
                 "</div>");
     // Set the builder for showing the rows
     r.setBuilder(ROWS, new ArrayBuilder() {
-      public String caption(JsonArray array, String name) {
+      @Override public String caption(JsonArray array, String name) {
         return "<h4>First few sample rows</h4>";
       }
     });

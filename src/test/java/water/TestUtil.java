@@ -4,13 +4,13 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import water.deploy.Node;
-import water.deploy.NodeVM;
+import water.deploy.*;
 import water.fvec.*;
 import water.parser.ParseDataset;
 import water.util.Log;
@@ -19,15 +19,9 @@ import com.google.common.io.Closeables;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
-  public static final File smalldata;
-  static {
-    File f = new File("smalldata");
-    if(!f.exists())
-      f=new File("../smalldata");
-    smalldata = f;
-  }
+  public static final File smalldata = new File(VM.h2o(), "smalldata");
 
-  protected static void startCloud(String [] args, int nnodes){
+  protected static void startCloud(String[] args, int nnodes) {
     for( int i = 1; i < nnodes; i++ ) {
       Node n = new NodeVM(args);
       n.inheritIO();
@@ -35,26 +29,17 @@ public class TestUtil {
     }
     H2O.waitForCloudSize(nnodes);
   }
-  @BeforeClass
-  public static void setupCloud() {
+
+  @BeforeClass public static void setupCloud() {
     H2O.main(new String[] {});
     _initial_keycnt = H2O.store_size();
     assert Job.all().length == 0;      // No outstanding jobs
   }
 
-  @AfterClass
-  public static void checkLeakedKeys() {
+  @AfterClass public static void checkLeakedKeys() {
     Job[] jobs = Job.all();
-    boolean allDone = true;
-//    for(Job job : jobs)
-//      if(job.end_time != 0)allDone = false;
-//    if(!allDone){
-//      try {Thread.sleep(100);
-//      } catch( InterruptedException e ) {}
-//      jobs = Job.all();
-      for(Job job : jobs)
-        assert job.end_time != 0:("UNFINSIHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time);  // No pending job
-//    }
+    for( Job job : jobs )
+      assert job.end_time != 0 : ("UNFINSIHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time);  // No pending job
     DKV.remove(Job.LIST);         // Remove all keys
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
@@ -64,11 +49,13 @@ public class TestUtil {
         Value value = DKV.get(k);
         Object o = value.type() != TypeMap.PRIM_B ? value.get() : "byte[]";
         // Ok to leak VectorGroups
-        if( o instanceof Vec.VectorGroup ) leaked_keys--;
-        else System.err.println("Leaked key: " + k + " = " + o);
+        if( o instanceof Vec.VectorGroup )
+          leaked_keys--;
+        else
+          System.err.println("Leaked key: " + k + " = " + o);
       }
     }
-    assertTrue("No keys leaked", leaked_keys<=0);
+    assertTrue("No keys leaked", leaked_keys <= 0);
     _initial_keycnt = H2O.store_size();
   }
 
@@ -97,25 +84,26 @@ public class TestUtil {
     return file;
   }
 
-
-  public static Key [] load_test_folder(String fname) {
+  public static Key[] load_test_folder(String fname) {
     return load_test_folder(find_test_file(fname));
   }
-  public static Key [] load_test_folder(File folder) {
+
+  public static Key[] load_test_folder(File folder) {
     assert folder.isDirectory();
     ArrayList<Key> keys = new ArrayList<Key>();
-    for(File f:folder.listFiles()){
-      if(f.isFile())
+    for( File f : folder.listFiles() ) {
+      if( f.isFile() )
         keys.add(load_test_file(f));
     }
-    Key [] res = new Key[keys.size()];
+    Key[] res = new Key[keys.size()];
     keys.toArray(res);
     return res;
   }
 
   public static Key load_test_file(String fname, String key) {
-    return load_test_file(find_test_file(fname),key);
+    return load_test_file(find_test_file(fname), key);
   }
+
   public static Key load_test_file(String fname) {
     return load_test_file(find_test_file(fname));
   }
@@ -141,24 +129,25 @@ public class TestUtil {
   public static Key loadAndParseFile(String keyName, String path) {
     Key fkey = load_test_file(path);
     Key okey = Key.make(keyName);
-    if(DKV.get(okey) != null)
+    if( DKV.get(okey) != null )
       DKV.remove(okey);
-    ParseDataset.parse(okey, new Key[]{fkey});
+    ParseDataset.parse(okey, new Key[] { fkey });
     UKV.remove(fkey);
     return okey;
   }
 
   public static Key loadAndParseFolder(String keyName, String path) {
-    Key [] keys = load_test_folder(path);
+    Key[] keys = load_test_folder(path);
     Arrays.sort(keys);
     Key okey = Key.make(keyName);
     ParseDataset.parse(okey, keys);
-    for(Key k:keys)UKV.remove(k);
+    for( Key k : keys )
+      UKV.remove(k);
     return okey;
   }
 
   public static ValueArray parse_test_key(Key fileKey, Key parsedKey) {
-    ParseDataset.parse(parsedKey, new Key[]{fileKey});
+    ParseDataset.parse(parsedKey, new Key[] { fileKey });
     return DKV.get(parsedKey).get();
   }
 
@@ -249,19 +238,19 @@ public class TestUtil {
           case -4: ab.put4f(f = ((float [])arys[j])[row]);  d = f;  break;
           case -8: ab.put8d(d = ((double[])arys[j])[row]);          break;
           // @formatter:on
-          case 2: // Categoricals or enums
-            String s = ((String[]) arys[j])[row];
-            String[] dom = col._domain;
-            int k = index(dom, s);
-            if( k == dom.length ) {
-              col._domain = dom = Arrays.copyOf(dom, k + 1);
-              dom[k] = s;
-            }
-            ab.put2((short) k);
-            d = k;
-            break;
-          default:
-            throw H2O.unimpl();
+            case 2: // Categoricals or enums
+              String s = ((String[]) arys[j])[row];
+              String[] dom = col._domain;
+              int k = index(dom, s);
+              if( k == dom.length ) {
+                col._domain = dom = Arrays.copyOf(dom, k + 1);
+                dom[k] = s;
+              }
+              ab.put2((short) k);
+              d = k;
+              break;
+            default:
+              throw H2O.unimpl();
           }
           if( d > col._max )
             col._max = d;
@@ -322,8 +311,7 @@ public class TestUtil {
     public abstract double expr(byte[] cols);
   }
 
-  @SuppressWarnings("cast")
-  public ValueArray va_maker(Key key, int M, int N, DataExpr expr) {
+  @SuppressWarnings("cast") public ValueArray va_maker(Key key, int M, int N, DataExpr expr) {
     if( N <= 0 || N > 127 || M <= 0 )
       throw H2O.unimpl();
     long Q = 1;
@@ -363,14 +351,17 @@ public class TestUtil {
   }
 
   public static Frame parseFrame(File file) {
-    if(!file.exists())
-      throw new RuntimeException("File not found " + file);
-    Key fkey = NFSFileVec.make(file);
-    return ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
+    return parseFrame(Key.make(file.getName()), file);
   }
 
   public static Frame parseFrame(Key okey, String path) {
-    Key fkey = NFSFileVec.make(new File(path));
+    return parseFrame(okey, new File(path));
+  }
+
+  public static Frame parseFrame(Key okey, File file) {
+    if( !file.exists() )
+      throw new RuntimeException("File not found " + file);
+    Key fkey = NFSFileVec.make(file);
     Frame fr = ParseDataset2.parse(okey, new Key[] { fkey });
     UKV.remove(fkey);
     return fr;

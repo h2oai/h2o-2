@@ -123,6 +123,8 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
      }
 
     // internal handlers

@@ -22,7 +22,7 @@ public class CloudConnect {
    */
   public static void launch(String host, Class<? extends Job> job) throws Exception {
     File jar = File.createTempFile("h2o", ".jar");
-    jar(jar, new File("target/classes"));
+    jar(jar, Utils.folder(CloudConnect.class).getParentFile());
     launch(host, job.getName(), jar);
   }
 

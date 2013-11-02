@@ -22,6 +22,8 @@ import water.util.Utils;
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     CloudLocal.launch(1, NeuralNetMnist.class);
+    // CloudProcess.launch(4, NeuralNetMnist.class);
+    // CloudRemote.launchIPs(NeuralNetMnist.class);
     // CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
   }
 
@@ -43,14 +45,14 @@ public class NeuralNetMnist extends Job {
     ls[2].rate = .02f;
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].l2 = .0001f;
-      ls[i].rateAnnealing = 1 / 2e6f;
+      ls[i].rate_annealing = 1 / 2e6f;
       ls[i].init(ls, i);
     }
     return ls;
   }
 
   Trainer startTraining(Layer[] ls) {
-    Trainer trainer = new Trainer.MapReduce(ls);
+    Trainer trainer = new Trainer.MapReduce(ls, 0, self());
     //Trainer trainer = new Trainer.Direct(ls);
     trainer.start();
     return trainer;
@@ -70,7 +72,7 @@ public class NeuralNetMnist extends Job {
 
     // Monitor training
     long start = System.nanoTime();
-    for( ;; ) {
+    while( !cancelled() ) {
       try {
         Thread.sleep(2000);
       } catch( InterruptedException e ) {
@@ -84,12 +86,12 @@ public class NeuralNetMnist extends Job {
 
       // Build separate nets for scoring purposes, use same normalization stats as for training
       Layer[] temp = build(train, trainLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
-      Layer.copyWeights(ls, temp);
+      Layer.shareWeights(ls, temp);
       Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
       text += "train: " + error;
 
       temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
-      Layer.copyWeights(ls, temp);
+      Layer.shareWeights(ls, temp);
       error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
       text += ", test: " + error;
       text += ", rates: ";

@@ -108,13 +108,13 @@ public abstract class Model extends Iced {
         float preds[] = new float[nclasses()];
         Chunk p = chks[_names.length-1];
         for( int i=0; i<p._len; i++ ) {
-          score0(chks,i,tmp,preds);
+          float[] out = score0(chks,i,tmp,preds);
           if( nclasses() > 1 ) {
-            p.set0(i,Utils.maxIndex(preds));
+            p.set0(i,Utils.maxIndex(out));
             for( int c=0; c<nclasses(); c++ )
-              chks[_names.length+c].set0(i,preds[c]);
+              chks[_names.length+c].set0(i,out[c]);
           } else {
-            p.set0(i,preds[0]);
+            p.set0(i,out[0]);
           }
         }
       }
