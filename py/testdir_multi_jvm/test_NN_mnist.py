@@ -22,8 +22,11 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_mnist(self):
+    def test_NN_mnist(self):
         csvFilelist = [
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
+            ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
             ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
         ]
 
@@ -97,7 +100,6 @@ class Basic(unittest.TestCase):
             # print 'From hack url for neural net result:', h2o.dump_json(a)
 
             if DO_SCORE:
-                time.sleep(3600)
                 kwargs = {
                     'max_rows': 0,
                     'response': 0, # first column is pixel value
