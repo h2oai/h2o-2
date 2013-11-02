@@ -12,10 +12,10 @@ import water.fvec.Vec;
  */
 public class NeuralNetMnistDeep extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {
-    // CloudLocal.launch(1, NeuralNetMnistDeep.class);
+    CloudLocal.launch(1, NeuralNetMnistDeep.class);
     // CloudProcess.launch(4, NeuralNetMnistDeep.class);
     // CloudConnect.launch("localhost:54321", NeuralNetMnistDeep.class);
-    CloudRemote.launchIPs(NeuralNetMnistDeep.class);
+    // CloudRemote.launchIPs(NeuralNetMnistDeep.class);
   }
 
   @Override public Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
@@ -29,7 +29,7 @@ public class NeuralNetMnistDeep extends NeuralNetMnist {
     ls[ls.length - 1].rate = .02f;
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].l2 = .0001f;
-      ls[i].rateAnnealing = 1 / 1e5f;
+      ls[i].rate_annealing = 1 / 1e5f;
       ls[i].init(ls, i);
     }
     return ls;

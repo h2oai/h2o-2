@@ -14,7 +14,8 @@ import water.util.Utils;
  */
 public class CloudRemote {
   public static void main(String[] args) throws Exception {
-    launchEC2(null);
+    // launchEC2(null);
+    launchIPs(null);
   }
 
   /**

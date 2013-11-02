@@ -351,14 +351,17 @@ public class TestUtil {
   }
 
   public static Frame parseFrame(File file) {
-    if( !file.exists() )
-      throw new RuntimeException("File not found " + file);
-    Key fkey = NFSFileVec.make(file);
-    return ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
+    return parseFrame(Key.make(file.getName()), file);
   }
 
   public static Frame parseFrame(Key okey, String path) {
-    Key fkey = NFSFileVec.make(new File(path));
+    return parseFrame(okey, new File(path));
+  }
+
+  public static Frame parseFrame(Key okey, File file) {
+    if( !file.exists() )
+      throw new RuntimeException("File not found " + file);
+    Key fkey = NFSFileVec.make(file);
     Frame fr = ParseDataset2.parse(okey, new Key[] { fkey });
     UKV.remove(fkey);
     return fr;

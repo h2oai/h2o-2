@@ -417,6 +417,17 @@ public class Utils {
     }
   }
 
+  /**
+   * Returns the system temporary folder, e.g. /tmp
+   */
+  public static File tmp() {
+    try {
+      return File.createTempFile("h2o", null).getParentFile();
+    } catch( IOException e ) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public static ValueArray loadAndParseKey(String path) {
     return loadAndParseKey(Key.make(), path);
   }

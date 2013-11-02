@@ -51,13 +51,7 @@ public class Cloud {
     String s = "";
     for( Object o : ips )
       s += (s.length() == 0 ? "" : '\n') + o.toString() + ":" + PORT;
-    File tmp;
-    try {
-      tmp = File.createTempFile("h2o", null).getParentFile();
-    } catch( IOException e ) {
-      throw new RuntimeException(e);
-    }
-    File flatfile = Utils.writeFile(new File(tmp, FLATFILE), s);
+    File flatfile = Utils.writeFile(new File(Utils.tmp(), FLATFILE), s);
     incls.add(flatfile.getAbsolutePath());
     master.rsync(incls, clientRSyncExcludes, false);
 
