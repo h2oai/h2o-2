@@ -1,7 +1,8 @@
-package hex.gbm;
+package hex.drf;
 
 import hex.gbm.DTree.*;
 import hex.rng.MersenneTwisterRNG;
+import hex.gbm.*;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -100,28 +101,34 @@ public class DRF extends SharedTreeModelBuilder {
     System.err.println("Class distribution: " + Arrays.toString(_distribution));
 
     // The RNG used to pick split columns
-    Random rand = new MersenneTwisterRNG((int)(seed>>32L),(int)seed);
+    Random rand = new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
 
     // Set a single 1.0 in the response for that class
     new Set1Task().doAll(fr);
 
+    int tid = 0;
+    DTree[] ktrees = null;
     // Build trees until we hit the limit
-    for( int tid=0; tid<ntrees; tid++) {
+    for( tid=0; tid<ntrees; tid++) {
       // At each iteration build K trees (K = nclass = response column domain size)
       // TODO: parallelize ? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
       Timer t_kTrees = new Timer();
-      DTree[] ktrees = buildNextKTrees(fr,cmtries,cnodesize,sample_rate,rand);
+      ktrees = buildNextKTrees(fr,cmtries,cnodesize,sample_rate,rand);
       Log.info(Sys.DRF__, "Tree "+(tid+1)+"x"+_nclass+" produced in "+t_kTrees);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
       // Print Frame:
       //System.err.println(fr.toStringAll());
 
       // Do validation or OOBEE scoring only if trees are produced fast enough.
-      Score sc = new Score().doIt(model, fr, validation, _validResponse).report(Sys.DRF__,tid+1,ktrees);
-      model = new DRFModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
+      Score sc = new Score().doIt(model, fr, validation, _validResponse).report(Sys.DRF__,tid,ktrees);
+      model = new DRFModel(model, ktrees, (float)sc.sum()/_nrows, sc.cm());
       DKV.put(outputKey, model);
     }
+    // Do final scoring with all the trees.
+    Score sc = new Score().doIt(model, fr, validation, _validResponse).report(Sys.DRF__,tid,ktrees);
+    model = new DRFModel(model, null, (float)sc.sum()/_nrows, sc.cm());
+    DKV.put(outputKey, model);
 
     cleanUp(fr,t_build); // Shared cleanup
   }
@@ -185,7 +192,7 @@ public class DRF extends SharedTreeModelBuilder {
       for( int k=0; k<_nclass; k++ ) {
         DTree tree = ktrees[k]; // Tree for class K
         if( tree == null ) continue;
-        int tmax = tree._len;   // Number of total splits in tree K
+        int tmax = tree.len();   // Number of total splits in tree K
         for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
           UndecidedNode udn = tree.undecided(leaf);
           udn._hs = sbh.getFinalHisto(k,leaf);
@@ -193,7 +200,7 @@ public class DRF extends SharedTreeModelBuilder {
           // Replace the Undecided with the Split decision
           DRFDecidedNode dn = new DRFDecidedNode((DRFUndecidedNode)udn);
           //System.out.println("  --> Decided node: " + dn);
-          if( dn._split._col == -1 ) udn.do_not_split();
+          if( dn._split.col() == -1 ) udn.do_not_split();
           else did_split = true;
         }
         leafs[k]=tmax;          // Setup leafs for next tree level
@@ -208,7 +215,7 @@ public class DRF extends SharedTreeModelBuilder {
     for( int k=0; k<_nclass; k++ ) {
       DTree tree = ktrees[k];
       if( tree == null ) continue;
-      int leaf = leafs[k] = tree._len;
+      int leaf = leafs[k] = tree.len();
       for( int nid=0; nid<leaf; nid++ ) {
         if( tree.node(nid) instanceof DecidedNode ) {
           DecidedNode dn = tree.decided(nid);
@@ -217,13 +224,13 @@ public class DRF extends SharedTreeModelBuilder {
             if( cnid == -1 || // Bottomed out (predictors or responses known constant)
                 tree.node(cnid) instanceof UndecidedNode || // Or chopped off for depth
                 (tree.node(cnid) instanceof DecidedNode &&  // Or not possible to split
-                 ((DecidedNode)tree.node(cnid))._split._col==-1) ) {
+                 ((DecidedNode)tree.node(cnid))._split.col()==-1) ) {
               DRFLeafNode nleaf = new DRFLeafNode(tree,nid);
-              dn._nids[i] = nleaf._nid; // Mark a leaf here
+              dn._nids[i] = nleaf.nid(); // Mark a leaf here
             }
           }
           // Handle the trivial non-splitting tree
-          if( nid==0 && dn._split._col == -1 )
+          if( nid==0 && dn._split.col() == -1 )
             new DRFLeafNode(tree,-1,0);
         }
       }
@@ -235,9 +242,9 @@ public class DRF extends SharedTreeModelBuilder {
     for( int k=0; k<_nclass; k++ ) {
       final DTree tree = ktrees[k];
       if( tree == null ) continue;
-      for( int i=0; i<tree._len-leafs[k]; i++ ) {
+      for( int i=0; i<tree.len()-leafs[k]; i++ ) {
         // setup prediction for k-tree's i-th leaf
-        ((LeafNode)tree.node(leafs[k]+i))._pred = gp._votes[k][i];;
+        ((LeafNode)tree.node(leafs[k]+i)).pred( gp._votes[k][i] );
       }
     }
 
@@ -260,7 +267,7 @@ public class DRF extends SharedTreeModelBuilder {
             if (isOOBRow(nid)) {
               //if (isDecidedRow(nid)) continue;
               nid = oob2Nid(nid);
-              ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
+              ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid)).pred() ));
             }
             nids.set0(row,0);
           }
@@ -305,7 +312,7 @@ public class DRF extends SharedTreeModelBuilder {
         final int   leaf = _leafs[k];
         if( tree == null ) continue; // Empty class is ignored
         // A leaf-biased array of all active Tree leaves.
-        final double vs[] = _votes[k] = new double[tree._len-leaf];
+        final double vs[] = _votes[k] = new double[tree.len()-leaf];
         final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
         final Chunk vss = chk_work(chks,k); // Residuals for this tree/class
         // If we have all constant responses, then we do not split even the
@@ -316,12 +323,12 @@ public class DRF extends SharedTreeModelBuilder {
           boolean oobrow = false;
           if (isOOBRow(nid)) { oobrow = true; nid = oob2Nid(nid); }
           if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
-            nid = tree.node(nid)._pid;                  // Then take parent's decision
+            nid = tree.node(nid).pid();                 // Then take parent's decision
           DecidedNode dn = tree.decided(nid);           // Must have a decision point
-          if( dn._split._col == -1 )     // Unable to decide?
-            dn = tree.decided(nid = tree.node(nid)._pid); // Then take parent's decision
+          if( dn._split.col() == -1 )     // Unable to decide?
+            dn = tree.decided(nid = tree.node(nid).pid()); // Then take parent's decision
           int leafnid = dn.ns(chks,row); // Decide down to a leafnode
-          assert leaf <= leafnid && leafnid < tree._len;
+          assert leaf <= leafnid && leafnid < tree.len();
           assert tree.node(leafnid) instanceof LeafNode;
           nids.set0(row,(oobrow ? nid2Oob(leafnid) : leafnid));
           // Note: I can which leaf/region I end up in, but I do not care for
@@ -353,7 +360,7 @@ public class DRF extends SharedTreeModelBuilder {
       super(fr._names, ncols, nbins, nclass, min_rows);
       _mtrys = mtrys;
       _seed = seed;                  // Save for any replay scenarios
-      _rand = new MersenneTwisterRNG((int)(seed>>32),(int)seed);
+      _rand = new MersenneTwisterRNG(new int[] { (int)(seed>>32),(int)seed });
       _seeds = new long[fr.vecs()[0].nChunks()];
       for( int i=0; i<_seeds.length; i++ )
         _seeds[i] = _rand.nextLong();
@@ -361,7 +368,7 @@ public class DRF extends SharedTreeModelBuilder {
     // Return a deterministic chunk-local RNG.  Can be kinda expensive.
     @Override public Random rngForChunk( int cidx ) {
       long seed = _seeds[cidx];
-      return new MersenneTwisterRNG((int)(seed>>32),(int)seed);
+      return new MersenneTwisterRNG(new int[] { (int)(seed>>32),(int)seed });
     }
   }
 
@@ -370,12 +377,12 @@ public class DRF extends SharedTreeModelBuilder {
   // DRF algo: find the lowest error amongst a random mtry columns.
   static class DRFDecidedNode extends DecidedNode<DRFUndecidedNode> {
     DRFDecidedNode( DRFUndecidedNode n ) { super(n); }
-    @Override DRFUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
+    @Override public DRFUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
       return new DRFUndecidedNode(_tree,_nid,nhists);
     }
 
     // Find the column with the best split (lowest score).
-    @Override DTree.Split bestCol( DRFUndecidedNode u ) {
+    @Override public DTree.Split bestCol( DRFUndecidedNode u ) {
       DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
       if( u._hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
@@ -396,7 +403,7 @@ public class DRF extends SharedTreeModelBuilder {
     DRFUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
 
     // Randomly select mtry columns to 'score' in following pass over the data.
-    @Override int[] scoreCols( DHistogram[] hs ) {
+    @Override public int[] scoreCols( DHistogram[] hs ) {
       DRFTree tree = (DRFTree)_tree;
       int[] cols = new int[hs.length];
       int len=0;
@@ -405,7 +412,7 @@ public class DRF extends SharedTreeModelBuilder {
       // histogramed bin min==max (means the predictors are constant).
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null ) continue; // Ignore not-tracked cols
-        if( hs[i]._min == hs[i]._max ) continue; // predictor min==max, does not distinguish
+        if( hs[i].min() == hs[i].max() ) continue; // predictor min==max, does not distinguish
         if( hs[i].nbins() <= 1 ) continue; // cols with 1 bin (will not split)
         cols[len++] = i;        // Gather active column
       }
@@ -414,9 +421,9 @@ public class DRF extends SharedTreeModelBuilder {
         for( int i=0; i<hs.length; i++ ) {
           String s;
           if( hs[i]==null ) s="null";
-          else if( hs[i]._min == hs[i]._max ) s=hs[i]._name+"=min==max=="+hs[i]._min;
-          else if( hs[i].nbins() <= 1 )       s=hs[i]._name+"=nbins="    +hs[i].nbins();
-          else                                s=hs[i]._name+"=unk";
+          else if( hs[i].min() == hs[i].max() ) s=hs[i].name()+"=min==max=="+hs[i].min();
+          else if( hs[i].nbins() <= 1 )       s=hs[i].name()+"=nbins="    +hs[i].nbins();
+          else                                s=hs[i].name()+"=unk";
           System.out.println("No choices, hists="+s);
         }
         System.out.println(this);
@@ -442,7 +449,7 @@ public class DRF extends SharedTreeModelBuilder {
     DRFLeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
     // Insert just the predictions: a single byte/short if we are predicting a
     // single class, or else the full distribution.
-    @Override protected AutoBuffer compress(AutoBuffer ab) { assert !Double.isNaN(_pred); return ab.put4f((float)_pred); }
+    @Override protected AutoBuffer compress(AutoBuffer ab) { assert !Double.isNaN(pred()); return ab.put4f((float)pred()); }
     @Override protected int size() { return 4; }
   }
 

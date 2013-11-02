@@ -93,19 +93,19 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   }
   float binAt( int b ) { return _bmin+b/_step; }
 
-  @Override int  nbins(     ) { return _nbins  ; }
-  @Override long  bins(int b) { return _bins[b]; }
-  @Override float mins(int b) { return _mins[b]; }
-  @Override float maxs(int b) { return _maxs[b]; }
-  double mean(int b) { return _MSs[b*2+0]; }
+  @Override public int  nbins(     ) { return _nbins  ; }
+  @Override public long  bins(int b) { return _bins[b]; }
+  @Override public float mins(int b) { return _mins[b]; }
+  @Override public float maxs(int b) { return _maxs[b]; }
+  @Override public double mean(int b) { return _MSs[b*2+0]; }
   double seco(int b) { return _MSs[b*2+1]; }
-  double var (int b) { return _bins[b] > 1 ? seco(b)/(_bins[b]-1) : 0; }
+  @Override public double var (int b) { return _bins[b] > 1 ? seco(b)/(_bins[b]-1) : 0; }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // Score is the sum of the MSEs when the data is split at a single point.
   // mses[1] == MSE for splitting between bins  0  and 1.
   // mses[n] == MSE for splitting between bins n-1 and n.
-  DTree.Split scoreMSE( int col ) {
+  @Override public DTree.Split scoreMSE( int col ) {
     assert _nbins > 1;
 
     // Compute mean/var for cumulative bins from 0 to nbins inclusive.

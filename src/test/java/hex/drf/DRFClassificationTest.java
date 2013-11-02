@@ -1,6 +1,9 @@
-package hex.gbm;
+package hex.drf;
+
+import hex.drf.DRF.DRFModel;
 
 import java.io.File;
+import java.util.Arrays;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -8,28 +11,39 @@ import org.junit.Test;
 import water.*;
 import water.fvec.*;
 
-public class DRFTest extends TestUtil {
+public class DRFClassificationTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   private abstract class PrepData { abstract int prep(Frame fr); }
 
-  @Test public void testBasicDRF() {
+  static final int[]   a(int ...arr) { return arr; }
+  static final int[][] a(int[] ...arr) { return arr; }
+
+  @Test public void testBasicDRF() throws Throwable {
     // Disabled Regression tests
     //basicDRF("./smalldata/cars.csv","cars.hex",
     //         new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.remove("economy (mpg)"); }
     //         });
 
     // Classification tests
-    basicDRF(
-             //"./smalldata/iris/iris_train.csv","iris_train.hex",
-             //"./smalldata/iris/iris_test.csv" ,"iris_test.hex",
-             //"./smalldata/test/classifier/chess_train.csv","chess_train.hex",
-             //"./smalldata/test/classifier/chess_test.csv","chess_test.hex",
-             "./smalldata/test/test_tree.csv","tree.hex",
-             new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; }
-             });
+    basicDRFTestOOBE(
+             "./smalldata/iris/iris_train.csv","iris_train.hex",
+             new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
+             50,
+             a( a(35, 1,  0),
+                a(0, 27,  4),
+                a(0,  5, 28)));
 
+    /*
+    basicDRFTestOOBE(
+        "./smalldata/cars.csv","cars.hex",
+        new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
+        1,
+        a( a(35, 1,  0),
+           a(0, 27,  4),
+           a(0,  5, 28)));
+  */
     //basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
     //         new PrepData() {
     //           int prep(Frame fr) {
@@ -89,8 +103,8 @@ public class DRFTest extends TestUtil {
     return drf.response;
   }
 
-  public void basicDRF(String fnametrain, String hexnametrain, PrepData prep) { basicDRF(fnametrain, hexnametrain, null, null, prep); }
-  public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep) {
+  public void basicDRFTestOOBE(String fnametrain, String hexnametrain, PrepData prep, int ntree, int[][] expCM) throws Throwable { basicDRF(fnametrain, hexnametrain, null, null, prep, ntree, expCM); }
+  public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep, int ntree, int[][] expCM) throws Throwable {
     DRF drf = null;
     Frame frTrain = null, frTest = null;
     Key destTrain = Key.make(hexnametrain);
@@ -98,23 +112,27 @@ public class DRFTest extends TestUtil {
     Frame pred = null;
     try {
       drf = new DRF();
-      drf.classification = true;
       frTrain = drf.source = parseDs(fnametrain, destTrain);
       unifyFrame(drf, frTrain, prep);
       // Configure DRF
-      drf.ntrees = 1;
+      drf.classification = true;
+      drf.ntrees = ntree;
       drf.max_depth = 50;
       drf.min_rows = 1;
-      drf.nbins = 100;
+      drf.nbins = 1024;
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // Simulated sampling with replacement
       drf.seed = (1L<<32)|2;
       drf.invoke();
+      DRFModel model = UKV.get(drf.dest());
+      for (int i=0; i<model.cm.length; i++)
+        System.err.println(Arrays.toString(model.cm[i]));
 
       frTest = fnametest!=null ? parseDs(fnametest, destTest) : null;
       pred = drf.score(frTest!=null?frTest:drf.source);
     } catch (Throwable t) {
       t.printStackTrace();
+      throw t;
     } finally {
       frTrain.remove();
       UKV.remove(destTrain);

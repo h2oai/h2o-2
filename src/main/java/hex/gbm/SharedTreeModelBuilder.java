@@ -42,9 +42,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   protected long _distribution[];
 
   /** Marker for already decided row. */
-  static final int DECIDED_ROW = -1;
+  static public final int DECIDED_ROW = -1;
   /** Marker for sampled out rows */
-  static final int OUT_OF_BAG = -2;
+  static public final int OUT_OF_BAG = -2;
 
   @Override public float progress(){
     Value value = DKV.get(dest());
@@ -139,13 +139,13 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     assert chks.length == _ncols+1/*response*/+_nclass/*prob dist so far*/+_nclass/*tmp*/+_nclass/*NIDs, one tree per class*/;
     return chks;
   }
-  Chunk chk_resp( Chunk chks[]        ) { return chks[_ncols]; }
-  Chunk chk_tree( Chunk chks[], int c ) { return chks[_ncols+1+c]; }
-  Chunk chk_work( Chunk chks[], int c ) { return chks[_ncols+1+_nclass+c]; }
-  Chunk chk_nids( Chunk chks[], int t ) { return chks[_ncols+1+_nclass+_nclass+t]; }
+  protected Chunk chk_resp( Chunk chks[]        ) { return chks[_ncols]; }
+  protected Chunk chk_tree( Chunk chks[], int c ) { return chks[_ncols+1+c]; }
+  protected Chunk chk_work( Chunk chks[], int c ) { return chks[_ncols+1+_nclass+c]; }
+  protected Chunk chk_nids( Chunk chks[], int t ) { return chks[_ncols+1+_nclass+_nclass+t]; }
 
-  final Vec vec_work( Frame fr, int c) { return fr.vecs()[_ncols+1+_nclass+c]; }
-  final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
+  protected final Vec vec_work( Frame fr, int c) { return fr.vecs()[_ncols+1+_nclass+c]; }
+  protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
 
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
@@ -167,12 +167,12 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   //
   // The other result is a prediction "score" for the whole dataset, based on
   // the previous passes' DHistograms.
-  class ScoreBuildHistogram extends MRTask2<ScoreBuildHistogram> {
+  public class ScoreBuildHistogram extends MRTask2<ScoreBuildHistogram> {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
     // Histograms for every tree, split & active column
     DHistogram _hcs[/*tree/klass*/][/*tree-relative node-id*/][/*column*/];
-    ScoreBuildHistogram(DTree trees[], int leafs[]) {
+    public ScoreBuildHistogram(DTree trees[], int leafs[]) {
       assert trees.length==_nclass; // One tree per-class
       assert leafs.length==_nclass; // One count of leaves per-class
       _trees=trees;
@@ -332,12 +332,14 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   protected abstract double score0( Chunk chks[], double ds[/*nclass*/], int row );
 
   // Score the *tree* columns, and produce a confusion matrix
-  protected class Score extends MRTask2<Score> {
+  public class Score extends MRTask2<Score> {
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
 
+    public double   sum() { return _sum; }
+    public long[][] cm () { return _cm;  }
     // Compute CM & MSE on either the training or testing dataset
-    Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) {
+    public Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) {
       // No validation, so do on training data
       if( validation == null ) return doAll(fr);
 
@@ -426,8 +428,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 
-  static final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
-  static final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }
-  static final int     oob2Nid(int oobNid)   { return -oobNid + OUT_OF_BAG; }
-  static final int     nid2Oob(int nid)      { return -nid + OUT_OF_BAG; }
+  static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
+  static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }
+  static public final int     oob2Nid(int oobNid)   { return -oobNid + OUT_OF_BAG; }
+  static public final int     nid2Oob(int nid)      { return -nid + OUT_OF_BAG; }
 }

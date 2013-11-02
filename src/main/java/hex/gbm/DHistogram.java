@@ -64,22 +64,26 @@ public class DHistogram<T extends DHistogram> extends Iced {
   }
 
   // Number of active bins
-  int nbins() { return 1; }
+  public int nbins() { return 1; }
   // Number of rows in this bin.
-  long bins(int i) { return 0; }
+  public long bins(int i) { return 0; }
   // Smallest value in bin i
-  float mins(int i) { return _min; }
+  public float mins(int i) { return _min; }
   // Largest value in bin i
-  float maxs(int i) { return _max; }
-  DTree.Split scoreMSE( int col ) { return null; }
+  public float maxs(int i) { return _max; }
+  public DTree.Split scoreMSE( int col ) { return null; }
   // Do not ask for 'mean' from a non-scoring histogram
-  double mean( int bin ) { return Double.NaN; }
+  public double mean( int bin ) { return Double.NaN; }
   // Do not ask for 'var' from a non-scoring histogram
-  double var( int bin ) { return Double.NaN; }
+  public double var( int bin ) { return Double.NaN; }
 
   // Nothing to tighten
   public void tightenMinMax() { }
   public void fini() { }
+  // Getters
+  public final double min() { return _min; }
+  public final double max() { return _max; }
+  public final String name() { return _name; }
 
   protected static int byteSize(byte  []bs) { return bs==null ? 0 : 20+bs.length<<0; }
   protected static int byteSize(short []ss) { return ss==null ? 0 : 20+ss.length<<1; }

@@ -1,8 +1,7 @@
 package water.api;
 
-import hex.gbm.DRF.DRFModel;
+import hex.drf.DRF.DRFModel;
 import water.*;
-import water.api.RequestBuilders.Response;
 
 public class DRFModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
