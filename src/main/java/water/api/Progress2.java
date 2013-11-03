@@ -38,11 +38,18 @@ public class Progress2 extends Request2 {
       status = "error";
       return Response.error(jjob.exception);
     }
-    if(jjob == null || jjob.end_time > 0 || jjob.cancelled()) {
+    if (jjob == null)
+      return jobNotFound(job_key, destination_key);
+
+    if(jjob.end_time > 0 || jjob.cancelled()) {
       return jobDone(jjob, destination_key);
     }
     status = "poll";
     return jobInProgress(jjob, destination_key);
+  }
+
+  protected Response jobNotFound(Key job_key, Key dst) {
+    return Response.error("Job " + job_key.toString() + " not found!");
   }
 
   /** Return {@link Response} for finished job. */

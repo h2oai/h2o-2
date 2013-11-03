@@ -8,7 +8,6 @@ import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.fvec.Vec.CollectDomain;
 
 public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -335,14 +334,19 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   public class Score extends MRTask2<Score> {
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
+    long _snrows;
+    /* @IN */ boolean _oob;
 
     public double   sum() { return _sum; }
     public long[][] cm () { return _cm;  }
+
     // Compute CM & MSE on either the training or testing dataset
-    public Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) {
+    public Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) { return doIt(model,fr,validation,vresponse,false); }
+    public Score doIt(Model model, Frame fr, Frame validation, Vec vresponse, boolean oob) {
+      assert !oob || validation==null ; // oob => validation==null
+      _oob = oob;
       // No validation, so do on training data
       if( validation == null ) return doAll(fr);
-
       // Validation: need to score the set, getting a probability distribution for each class
       // Frame has nclass vectors (nclass, or 1 for regression)
       Frame res = model.score(validation,true);
@@ -378,9 +382,10 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         double sum = score0(chks,ds,row);
         double err;  int ycls=0;
         if( _nclass > 1 ) {    // Classification
-          if( sum == 0 )       // This tree does not predict this row *at all*?
+          if( sum == 0 ) {       // This tree does not predict this row *at all*?
             err = 1.0f-1.0f/_nclass; // Then take ycls=0, uniform predictive power
-          else {
+            if (_oob) continue; // it is in-bag row (no vote by any tree)
+          } else {
             ycls = (int)ys.at80(row); // Response class from 0 to nclass-1
             if (ycls >= _nclass) continue;
             assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row);
@@ -388,7 +393,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
               ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
               : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
           }
-          assert !Double.isNaN(err) : ds[ycls] + " " + sum;
+          assert !Double.isNaN(err) : "ds[cls]="+ds[ycls] + ", sum=" + sum;
         } else {                // Regression
           err = ys.at0(row) - sum;
         }
@@ -398,20 +403,21 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         for( int c=1; c<_nclass; c++ )
           if( ds[best] < ds[c] ) best=c;
         _cm[ycls][best]++;      // Bump Confusion Matrix also
+        _snrows++;
       }
     }
-    @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); }
+    @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); _snrows += t._snrows; }
 
     public Score report( Sys tag, int ntree, DTree[] trees ) {
       assert !Double.isNaN(_sum);
       int lcnt=0;
       for( DTree t : trees ) if( t != null ) lcnt += t._len;
-      long err=_nrows;
+      long err=_snrows;
       for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");
-      Log.info(tag,"Mean Squared Error is "+(_sum/_nrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
+      Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
       if( _nclass > 1 )
-        Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, CM= "+Arrays.deepToString(_cm));
+        Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
       return this;
     }
   }

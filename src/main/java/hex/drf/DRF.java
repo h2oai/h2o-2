@@ -31,24 +31,22 @@ public class DRF extends SharedTreeModelBuilder {
   @API(help = "Stop criterium for tree grow.", filter = Default.class, lmin=-1, lmax=1000 )
   int nodesize = -1; // nodesize = 1 for classification, else = 5
 
+  /** DRF model holding serialized tree and implementing logic for scoring a row */
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) { super(key,dataKey,testKey,names,domains,ntrees); }
     public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
     @Override protected float[] score0(double data[], float preds[]) {
-      Arrays.fill(preds,0);
       float[] p = super.score0(data, preds);
       float sum=0;
       for( float f : preds ) sum += f;
       // We have an (near)integer sum of votes - one per voting tree.
       int votes = Math.round(sum);
       // After adding all trees, divide by tree-count to get a distribution
-      for( int i=0; i<preds.length; i++ )
-        preds[i] /= votes;
-      //DTree.correctDistro(preds);
-      //assert DTree.checkDistro(preds) : "Funny distro";
-      //MMSystem.err.println("data=" + Arrays.toString(data) + ", prediction = "+Arrays.toString(p));
+      if (votes>0)
+        for( int i=0; i<preds.length; i++ )
+          preds[i] /= votes;
       return p;
     }
   }
@@ -97,8 +95,6 @@ public class DRF extends SharedTreeModelBuilder {
     assert 0.0 < sample_rate && sample_rate <= 1.0;
     DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees);
     DKV.put(outputKey, model);
-    // --
-    System.err.println("Class distribution: " + Arrays.toString(_distribution));
 
     // The RNG used to pick split columns
     Random rand = new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
@@ -117,20 +113,21 @@ public class DRF extends SharedTreeModelBuilder {
       ktrees = buildNextKTrees(fr,cmtries,cnodesize,sample_rate,rand);
       Log.info(Sys.DRF__, "Tree "+(tid+1)+"x"+_nclass+" produced in "+t_kTrees);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
-      // Print Frame:
-      //System.err.println(fr.toStringAll());
 
-      // Do validation or OOBEE scoring only if trees are produced fast enough.
-      Score sc = new Score().doIt(model, fr, validation, _validResponse).report(Sys.DRF__,tid,ktrees);
-      model = new DRFModel(model, ktrees, (float)sc.sum()/_nrows, sc.cm());
-      DKV.put(outputKey, model);
+      // TODO: Do validation or OOBEE scoring only if trees are produced fast enough.
+      model = doScoring(model, outputKey, fr, ktrees, tid);
     }
     // Do final scoring with all the trees.
-    Score sc = new Score().doIt(model, fr, validation, _validResponse).report(Sys.DRF__,tid,ktrees);
-    model = new DRFModel(model, null, (float)sc.sum()/_nrows, sc.cm());
-    DKV.put(outputKey, model);
+    doScoring(model, outputKey, fr, ktrees, tid);
 
     cleanUp(fr,t_build); // Shared cleanup
+  }
+
+  private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid ) {
+    Score sc = new Score().doIt(model, fr, validation, _validResponse, validation==null).report(Sys.DRF__,tid,ktrees);
+    model = new DRFModel(model, ktrees, (float)sc.sum()/_nrows, sc.cm());
+    DKV.put(outputKey, model);
+    return model;
   }
 
   private class Set1Task extends MRTask2<Set1Task> {
@@ -150,20 +147,20 @@ public class DRF extends SharedTreeModelBuilder {
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
     final DTree[] ktrees = new DTree[_nclass];
+    // Use for all k-trees the same seed. NOTE: this is only to make a fair view for all k-trees
+    long rseed = rand.nextLong();
     for( int k=0; k<_nclass; k++ ) {
       // Initially setup as-if an empty-split had just happened
       if( _distribution[k] != 0 ) {
-        ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rand.nextLong());
+        ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
         new DRFUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
       }
     }
-    // Sample
+    // Sample - mark the lines by putting 'OUT_OF_BAG' into nid(<klass>) vector
     for( int k=0; k<_nclass; k++) {
       if (ktrees[k] != null) new Sample(((DRFTree)ktrees[k]), sample_rate).doAll(vec_nids(fr,k));
     }
-    int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
-
-    //System.err.println("----> " + fr.toStringAll());
+    int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from leafs[i] to tree._len for each tree i
 
     // ----
     // One Big Loop till the ktrees are of proper depth.
@@ -249,8 +246,6 @@ public class DRF extends SharedTreeModelBuilder {
     }
 
     // ----
-    // ESL2, page 387.  Step 2b iv.  Cache the sum of all the trees, plus the
-    // new tree, in the 'tree' columns.  Also, zap the NIDs for next pass.
     // Tree <== f(Tree)
     // Nids <== 0
     new MRTask2() {
@@ -265,22 +260,25 @@ public class DRF extends SharedTreeModelBuilder {
             int nid = (int)nids.at80(row);
             // Track only prediction for oob rows
             if (isOOBRow(nid)) {
-              //if (isDecidedRow(nid)) continue;
+              //System.err.println("k="+k + " row="+row + " is oob");
               nid = oob2Nid(nid);
+              // Setup Tree(i) - on the fly prediction of i-tree for row-th row
               ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid)).pred() ));
             }
+            // reset help column
             nids.set0(row,0);
           }
         }
       }
     }.doAll(fr);
 
-    // Print the generated K trees
-    printGenerateTrees(ktrees);
+    // DEBUG: Print the generated K trees
+    // printGenerateTrees(ktrees);
 
     return ktrees;
   }
 
+  @SuppressWarnings("unused") // helper for debugging
   private void printGenerateTrees(DTree[] trees) {
     for( int k=0; k<_nclass; k++ )
       if( trees[k] != null )
@@ -314,21 +312,21 @@ public class DRF extends SharedTreeModelBuilder {
         // A leaf-biased array of all active Tree leaves.
         final double vs[] = _votes[k] = new double[tree.len()-leaf];
         final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
-        final Chunk vss = chk_work(chks,k); // Residuals for this tree/class
+        final Chunk vss = chk_work(chks,k); // Votes for this tree/class
         // If we have all constant responses, then we do not split even the
         // root and the residuals should be zero.
         if( tree.root() instanceof LeafNode ) continue;
         for( int row=0; row<nids._len; row++ ) { // For all rows
           int nid = (int)nids.at80(row);         // Get Node to decide from
           boolean oobrow = false;
-          if (isOOBRow(nid)) { oobrow = true; nid = oob2Nid(nid); }
+          if (isOOBRow(nid)) { oobrow = true; nid = oob2Nid(nid); } // This is out-of-bag row - but we would like to track on-the-fly prediction for the row
           if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
             nid = tree.node(nid).pid();                 // Then take parent's decision
           DecidedNode dn = tree.decided(nid);           // Must have a decision point
           if( dn._split.col() == -1 )     // Unable to decide?
             dn = tree.decided(nid = tree.node(nid).pid()); // Then take parent's decision
           int leafnid = dn.ns(chks,row); // Decide down to a leafnode
-          assert leaf <= leafnid && leafnid < tree.len();
+          assert leaf <= leafnid && leafnid < tree.len(); // we cannot obtain unknown leaf
           assert tree.node(leafnid) instanceof LeafNode;
           nids.set0(row,(oobrow ? nid2Oob(leafnid) : leafnid));
           // Note: I can which leaf/region I end up in, but I do not care for
@@ -424,9 +422,7 @@ public class DRF extends SharedTreeModelBuilder {
           else if( hs[i].min() == hs[i].max() ) s=hs[i].name()+"=min==max=="+hs[i].min();
           else if( hs[i].nbins() <= 1 )       s=hs[i].name()+"=nbins="    +hs[i].nbins();
           else                                s=hs[i].name()+"=unk";
-          System.out.println("No choices, hists="+s);
         }
-        System.out.println(this);
       }
       assert choices > 0;
 
@@ -460,9 +456,9 @@ public class DRF extends SharedTreeModelBuilder {
     Sample( DRFTree tree, float rate ) { _tree = tree; _rate = rate; }
     @Override public void map( Chunk nids ) {
       Random rand = _tree.rngForChunk(nids.cidx());
-      for( int i=0; i<nids._len; i++ )
+      for( int row=0; row<nids._len; row++ )
         if( rand.nextFloat() >= _rate )
-          nids.set0(i, OUT_OF_BAG);     // Flag row as being ignored by sampling
+          nids.set0(row, OUT_OF_BAG);     // Flag row as being ignored by sampling
     }
   }
 }
