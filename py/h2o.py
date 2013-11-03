@@ -1836,7 +1836,7 @@ class H2O(object):
             'max_rows': 0,
         }
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'neural_net', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'neural_net_score', print_params)
 
         start = time.time()
         a = self.__do_json_request('2/NeuralNetScore.json',timeout=timeoutSecs, params=params_dict)
