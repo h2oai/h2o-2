@@ -2,8 +2,8 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
+import java.util.Map.Entry;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
@@ -350,6 +350,9 @@ public final class ParseDataset2 extends Job {
         Vec v = getVec(keys[i]);
         len += v.nChunks();
       }
+      for(Entry e:_fileChunkOffsets.entrySet())
+        System.out.println(e.getKey() + " -> " + e.getValue());
+      System.out.println(_fileChunkOffsets);
       _chunk2Enum = MemoryManager.malloc4(len);
       Arrays.fill(_chunk2Enum, -1);
       return super.dfork(keys);
@@ -394,8 +397,10 @@ public final class ParseDataset2 extends Job {
               }
             });
             dp.dfork(new Frame(vec));
-            for(int i = chunkStartIdx; i < vec.nChunks(); ++i)
-              _chunk2Enum[i] = vec.chunkKey(i-chunkStartIdx).home_node().index();
+            System.out.println(key + " chunkStartIdx = " + chunkStartIdx);
+            for(int i = 0; i < vec.nChunks(); ++i)
+              _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
+            System.out.println(key + " chunk2Enum = " + Arrays.toString(_chunk2Enum));
           }else {
             ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
             _dout = streamParse(vec.openStream(pmon), localSetup, _vecIdStart, chunkStartIdx,pmon);
