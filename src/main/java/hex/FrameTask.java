@@ -1,5 +1,7 @@
 package hex;
 
+import hex.glm.GLMParams.CaseMode;
+
 import java.util.Arrays;
 
 import water.*;
@@ -160,8 +162,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    */
   protected void chunkDone(){}
 
+  protected CaseMode _caseMode;
+  protected double _caseVal;
 
-
+  private double response(double d){
+    if(_caseMode == CaseMode.none)return d;
+    return _caseMode.isCase(d, _caseVal)?1:0;
+  }
   /**
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.
@@ -188,10 +195,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         nums[i-_cats] = (chunks[i].at0(r) - _normSub[i-_cats])*_normMul[i-_cats];
       if(outputs != null && outputs.length > 0){
         if(!_hasResponse) processRow(nums, ncats, cats,outputs);
-        else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r),outputs);
+        else processRow(nums, ncats, cats,response(chunks[chunks.length-1].at0(r)),outputs);
       } else {
         if(!_hasResponse) processRow(nums, ncats, cats);
-        else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r));
+        else processRow(nums, ncats, cats,response(chunks[chunks.length-1].at0(r)));
       }
     }
     chunkDone();

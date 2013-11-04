@@ -2,7 +2,7 @@ package water.api;
 
 import com.google.gson.JsonObject;
 
-import hex.gbm.DRF.DRFModel;
+import hex.drf.DRF.DRFModel;
 import water.*;
 import water.api.RequestBuilders.Response;
 
