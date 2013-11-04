@@ -8,6 +8,7 @@ import water.*;
 import water.api.RequestArguments.Argument;
 import water.util.Log;
 
+import hex.drf.DRF;
 import hex.gbm.*;
 import hex.glm.*;
 import hex.KMeans2;

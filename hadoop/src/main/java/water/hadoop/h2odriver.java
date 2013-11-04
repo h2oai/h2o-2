@@ -46,6 +46,7 @@ public class h2odriver extends Configured implements Tool {
   static boolean disown = false;
   static String clusterReadyFileName = null;
   static int cloudFormationTimeoutSeconds = DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
+  static int nthreads = -1;
   static boolean beta = false;
 
   // Runtime state that might be touched by different threads.
@@ -365,6 +366,7 @@ public class h2odriver extends Configured implements Tool {
                     "          -mapperXmx <per mapper Java Xmx heap size>\n" +
                     "          [-extramempercent <0 to 20>]\n" +
                     "          -n | -nodes <number of H2O nodes (i.e. mappers) to create>\n" +
+                    "          [-nthreads <maximum typical worker threads, i.e. cpus to use>]\n" +
                     "          -o | -output <hdfs output dir>\n" +
                     "\n" +
                     "Notes:\n" +
@@ -488,6 +490,10 @@ public class h2odriver extends Configured implements Tool {
         i++; if (i >= args.length) { usage(); }
         clusterReadyFileName = args[i];
       }
+      else if (s.equals("-nthreads")) {
+        i++; if (i >= args.length) { usage(); }
+        nthreads = Integer.parseInt(args[i]);
+      }
       else if (s.equals("-beta")) {
         beta = true;
       }
@@ -562,6 +568,10 @@ public class h2odriver extends Configured implements Tool {
 
     if (network == null) {
       error("Internal error, network should not be null at this point");
+    }
+
+    if ((nthreads >= 0) && (nthreads < 4)) {
+      error("nthreads invalid (must be >= 4): " + nthreads);
     }
   }
 
@@ -731,6 +741,9 @@ public class h2odriver extends Configured implements Tool {
     conf.set(h2omapper.H2O_DRIVER_IP_KEY, driverCallbackIp);
     conf.set(h2omapper.H2O_DRIVER_PORT_KEY, Integer.toString(actualDriverCallbackPort));
     conf.set(h2omapper.H2O_NETWORK_KEY, network);
+    if (nthreads >= 0) {
+        conf.set(h2omapper.H2O_NTHREADS_KEY, Integer.toString(nthreads));
+    }
     if (beta) {
         conf.set(h2omapper.H2O_BETA_KEY, "-beta");
     }
