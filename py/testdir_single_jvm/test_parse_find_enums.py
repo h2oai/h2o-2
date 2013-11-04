@@ -7,7 +7,7 @@ ENUM_SIZE = random.randint(2,7)
 ### ENUM_SIZE = 4
 # just randomly pick the row and col cases.
 COL_SEP_HIVE = random.randint(0,1) == 1
-## COL_SEP_HIVE = False # comma
+COL_SEP_HIVE = False # comma
 
 # details:
 # Apparently we don't have any new EOL separators for hive?, just new column separator
@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
     def test_find_numbers(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        n = 13
+        n = 7 
         tryList = [
             (n, 1, 'cD', 300), 
             (n, 2, 'cE', 300), 
@@ -116,11 +116,11 @@ class Basic(unittest.TestCase):
             # using the comma is nice to ensure no craziness
             if COL_SEP_HIVE:
                 colSepHexString = '01'
-                singleQuotes = None
+                singleQuotes = 1 # allow single quotes to be delimiter
                 quoteChars = ",\'\"" # more choices for the unquoted string
             else:
                 colSepHexString = '2c' # comma
-                singleQuotes = 1 #  allow single quotes
+                singleQuotes = 0 #  single quotes are not delimiters
                 quoteChars = "'"
 
             colSepChar = colSepHexString.decode('hex')
