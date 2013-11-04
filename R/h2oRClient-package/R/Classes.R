@@ -14,6 +14,7 @@ setClass("H2OGrid", representation(key="character", data="H2OParsedData", model=
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
+setClass("H2ONNModel", contains="H2OModel")
 setClass("H2ORForestModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel")
@@ -131,6 +132,20 @@ setMethod("show", "H2OKMeansModel", function(object) {
   cat("\nClustering vector:\n"); print(model$cluster)  # summary(model$cluster) currently broken
   cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
   cat("\nAvailable components:\n\n"); print(names(model))
+})
+
+
+setMethod("show", "H2ONNModel", function(object) {
+  print(object@data)
+  cat("NN Model Key:", object@key)
+  
+  model = object@model
+  cat("\n\nTraining classification error:\n"); print(model$train_class_error)
+  cat("\nTraining square error:\n"); print(model$train_sqr_error)
+  cat("\n\nValidation classification error:\n"); print(model$valid_class_error)
+  cat("\nValidation square error:\n"); print(model$valid_sqr_error)
+  cat("\n\nConfusion matrix:\n"); print(model$confusion)
+ 
 })
 
 setMethod("show", "H2ORForestModel", function(object) {
