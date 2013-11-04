@@ -1,7 +1,8 @@
-package samples;
+package samples.launchers;
 
 import water.*;
-import water.deploy.*;
+import water.deploy.Node;
+import water.deploy.NodeCL;
 import water.util.Utils;
 
 public class CloudProcess {
@@ -48,9 +49,7 @@ public class CloudProcess {
       System.out.println("Go to http://127.0.0.1:54321");
 
       if( !job.equals("null") ) {
-        String pack = job.substring(0, job.lastIndexOf('.'));
-        LaunchJar.weavePackages(pack);
-        Class<Job> c = (Class) Class.forName(job);
+        Class<Job> c = CloudLocal.weaveClass(job);
         c.newInstance().fork();
       }
     }

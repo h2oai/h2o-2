@@ -1,8 +1,7 @@
-package samples;
+package samples.launchers;
 
-import water.*;
-import water.deploy.Cloud;
-import water.deploy.EC2;
+import water.Job;
+import water.deploy.*;
 import water.util.Log;
 
 /**
@@ -13,7 +12,8 @@ import water.util.Log;
  */
 public class CloudRemote {
   public static void main(String[] args) throws Exception {
-    launchEC2(null);
+    // launchEC2(null);
+    launchIPs(null);
   }
 
   /**
@@ -40,43 +40,36 @@ public class CloudRemote {
   }
 
   public static void launch(Cloud cloud, Class<? extends Job> job) throws Exception {
-    if( Boot._init.fromJar() )
-      cloud.clientRSyncIncludes.add("target/h2o.jar");
-    else {
-      cloud.clientRSyncIncludes.add("target");
-      cloud.clientRSyncIncludes.add("lib");
-    }
-    cloud.fannedRSyncIncludes.addAll(cloud.clientRSyncIncludes);
+    String h2o = VM.h2oFolder().getPath();
+    cloud.clientRSyncIncludes.add(h2o + "/target");
+    cloud.clientRSyncIncludes.add(h2o + "/h2o-samples/target");
+    cloud.clientRSyncIncludes.add(h2o + "/lib");
+    cloud.clientRSyncIncludes.add(h2o + "/smalldata");
 
-    cloud.clientRSyncIncludes.add("h2o-samples/target");
-    cloud.clientRSyncIncludes.add("../smalldata");
+    // The fanned rsync (between master and slaves) will have the two 'target' merged
+    cloud.fannedRSyncIncludes.add("target");
+    cloud.fannedRSyncIncludes.add("lib");
     cloud.fannedRSyncIncludes.add("smalldata");
 
-    if( !Boot._init.fromJar() ) {
-      cloud.clientRSyncExcludes.add("target/*.jar");
-      cloud.clientRSyncExcludes.add("target/javadoc/**");
-      cloud.clientRSyncExcludes.add("lib/javassist");
-      cloud.clientRSyncExcludes.add("**/*-sources.jar");
-    }
+    cloud.clientRSyncExcludes.add("**/h2o.jar");
+    cloud.clientRSyncExcludes.add("**/javadoc");
+    cloud.clientRSyncExcludes.add("lib/javassist");
+    cloud.clientRSyncExcludes.add("**/*-sources.jar");
 
-    cloud.jdk = "../libs/jdk";
-    String java = "-ea -Xmx120G -Dh2o.debug";
+    String java = "-ea -Xmx8G -Dh2o.debug";
     String node = "-mainClass " + UserCode.class.getName() + " " + (job != null ? job.getName() : null);
     cloud.start(java.split(" "), node.split(" "));
   }
 
   public static class UserCode {
     public static void userMain(String[] args) throws Exception {
-      H2O.main(args);
-      Log.info("java: " + System.getProperty("java.home"));
-      TestUtil.stall_till_cloudsize(H2O.STATIC_H2OS.size());
+      Log.info("Java location: " + System.getProperty("java.home"));
 
-      System.out.println("Cloud is up, local port 54321 forwarded");
-      System.out.println("Go to http://127.0.0.1:54321");
-
-      Class<Job> job = args[2].equals("null") ? null : (Class) Class.forName(args[2]);
-      if( job != null )
-        job.newInstance().fork();
+      String job = args[0].equals("null") ? null : args[0];
+      if( job != null ) {
+        Class<Job> c = CloudLocal.weaveClass(job);
+        c.newInstance().fork();
+      }
     }
   }
 }

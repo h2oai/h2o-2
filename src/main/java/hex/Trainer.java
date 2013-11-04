@@ -28,7 +28,7 @@ import com.jogamp.opencl.CLMemory.Mem;
 
 /**
  * Trains a neural network.
- * 
+ *
  * @author cypof
  */
 public abstract class Trainer {
@@ -93,9 +93,7 @@ public abstract class Trainer {
    * Trains NN on current thread.
    */
   public static class Direct extends Base {
-    int _batch = 20;
-    int _batches;
-    int _current;
+    public int samples;
     Thread _thread;
 
     public Direct(Layer[] ls) {
@@ -108,17 +106,15 @@ public abstract class Trainer {
 
     public void run() {
       Input input = (Input) _ls[0];
-      for( _current = 0; _batches == 0 || _current < _batches; _current++ ) {
-        for( int s = 0; s < _batch; s++ ) {
-          step();
-          input.move();
-        }
-        adjust(_current * _batch);
+      for( long i = 0; samples == 0 || i < samples; i++ ) {
+        step();
+        input.move();
       }
     }
 
     @Override public long items() {
-      return _batch * (long) _current;
+      Input input = (Input) _ls[0];
+      return input._pos;
     }
 
     @Override public void start() {
@@ -257,10 +253,6 @@ public abstract class Trainer {
     AtomicIntegerArray _counts;
     transient Key _key;
     transient Descent _task;
-
-    public MapReduce(Layer[] ls) {
-      this(ls, 0, null);
-    }
 
     public MapReduce(Layer[] ls, int epochs, Key job) {
       _ls = ls;

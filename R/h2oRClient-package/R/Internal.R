@@ -2,6 +2,7 @@
 pkg.env = new.env()
 pkg.env$result_count = 0
 pkg.env$IS_LOGGING = FALSE
+TEMP_KEY = "Last.value"
 RESULT_MAX = 100
 LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=")
 
@@ -31,11 +32,13 @@ h2o.__PAGE_EXEC = "Exec.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
+h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
 h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
 h2o.__PAGE_INSPECT = "Inspect.json"
 h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
+h2o.__PAGE_PARSE2 = "2/Parse2.json"
 h2o.__PAGE_PUT = "PutVector.json"
 h2o.__PAGE_REMOVE = "Remove.json"
 h2o.__PAGE_VIEWALL = "StoreView.json"
@@ -65,7 +68,11 @@ h2o.__PAGE_GLM2 = "2/GLM2.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
 h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
+h2o.__PAGE_EXEC2 = "2/Exec2.json"
 h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
+h2o.__PAGE_NN = "2/NeuralNet.json"
+h2o.__PAGE_NNModelView = "2/ExportModel.json"
+
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
@@ -85,6 +92,7 @@ h2o.__remoteSend <- function(client, page, ...) {
     write(str, file = h2o.__LOG_COMMAND, append = TRUE)
   }
   
+  # TODO (Spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
   # temp = postForm(myURL, style = "POST", ...)
   if(length(list(...)) == 0)
@@ -95,7 +103,8 @@ h2o.__remoteSend <- function(client, page, ...) {
   # after = gsub("NaN", "\"NaN\"", after)
   # after = gsub("-Infinity", "\"-Inf\"", temp[1])
   # after = gsub("Infinity", "\"Inf\"", after)
-  after = gsub("Infinity", "Inf", temp[1])
+  after = gsub('"Infinity"', '"Inf"', temp[1])
+  after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
@@ -223,7 +232,7 @@ h2o.__func <- function(fname, x, type) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=res)
   
   if(type == "Number")
-    res$rows[[1]]$'0'
+    as.numeric(res$rows[[1]]$'0')
   else if(type == "Vector")
     new("H2OParsedData", h2o=x@h2o, key=res$key)
   else res
@@ -260,4 +269,41 @@ h2o.__getFamily <- function(family, link, tweedie.var.p = 0, tweedie.link.p = 1-
            poisson = poisson(link),
            gamma = gamma(link))
   }
+}
+
+#------------------------------------ FluidVecs -----------------------------------------#
+h2o.__exec2 <- function(client, expr) {
+  destKey = paste(TEMP_KEY, ".", pkg.env$temp_count, sep="")
+  pkg.env$temp_count = (pkg.env$temp_count + 1) %% RESULT_MAX
+  h2o.__exec2_dest_key(client, expr, destKey)
+  # h2o.__exec2_dest_key(client, expr, TEMP_KEY)
+}
+
+h2o.__exec2_dest_key <- function(client, expr, destKey) {
+  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
+  if (type != "character")
+    expr = deparse(substitute(expr))
+  expr = paste(destKey, "=", expr)
+  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC2, str=expr)
+  if(!is.null(res$response$status) && res$response$status == "error") stop("H2O returned an error!")
+  res$dest_key = destKey
+  return(res)
+}
+
+h2o.__operator2 <- function(op, x, y) {
+  # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
+  #  stop("Can only operate on single column vectors")
+  LHS = ifelse(class(x) == "H2OParsedData2", x@key, x)
+  RHS = ifelse(class(y) == "H2OParsedData2", y@key, y)
+  expr = paste(LHS, op, RHS)
+  if(class(x) == "H2OParsedData2") myClient = x@h2o
+  else myClient = y@h2o
+  res = h2o.__exec2(myClient, expr)
+
+  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
+    return(res$scalar)
+  if(op %in% LOGICAL_OPERATORS)
+    new("H2OLogicalData2", h2o=myClient, key=res$dest_key)
+  else
+    new("H2OParsedData2", h2o=myClient, key=res$dest_key)
 }

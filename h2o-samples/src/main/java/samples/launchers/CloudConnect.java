@@ -1,4 +1,4 @@
-package samples;
+package samples.launchers;
 
 import java.io.*;
 import java.util.jar.JarEntry;
@@ -11,6 +11,7 @@ import org.apache.commons.httpclient.methods.multipart.*;
 
 import water.Job;
 import water.deploy.LaunchJar;
+import water.deploy.VM;
 import water.util.Utils;
 
 /**
@@ -22,7 +23,7 @@ public class CloudConnect {
    */
   public static void launch(String host, Class<? extends Job> job) throws Exception {
     File jar = File.createTempFile("h2o", ".jar");
-    jar(jar, new File("target/classes"));
+    jar(jar, new File(VM.h2oFolder(), "h2o-samples/target/classes"));
     launch(host, job.getName(), jar);
   }
 

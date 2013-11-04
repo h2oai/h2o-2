@@ -911,6 +911,10 @@ class H2O(object):
     def test_poll(self, args):
         return self.__do_json_request('TestPoll.json', params=args)
 
+    #FIX! just here temporarily to get the response at the end of an algo, from job/destination_key
+    def completion_redirect(self, jsonRequest, params):
+        return self.__do_json_request(jsonRequest=jsonRequest, params=params)
+
     def get_cloud(self, noExtraErrorCheck=False, timeoutSecs=10):
         # hardwire it to allow a 60 second timeout
         a = self.__do_json_request('Cloud.json', noExtraErrorCheck=noExtraErrorCheck, timeout=timeoutSecs)
@@ -1751,7 +1755,7 @@ class H2O(object):
         a = self.__do_json_request('2/GBM.json',timeout=timeoutSecs,params=params_dict)
         if noPoll:
             a['python_elapsed'] = time.time() - start
-            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            a['python_timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
 
@@ -1814,6 +1818,37 @@ class H2O(object):
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nPCAScore result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+        return a
+
+    def neural_net_score(self, key, model, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30, 
+        noPoll=False, print_params=True, **kwargs):
+        params_dict = {
+            'source': key,
+            'destination_key': None,
+            'model': model,
+            # this is ignore??
+            'cols': None,
+            'ignored_cols': None,
+            'classification': None,
+            'response': None,
+            'max_rows': 0,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'neural_net_score', print_params)
+
+        start = time.time()
+        a = self.__do_json_request('2/NeuralNetScore.json',timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            a['python_elapsed'] = time.time() - start
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nneural net score result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
@@ -1943,11 +1978,13 @@ class H2O(object):
                 'source': key,
                 'destination_key': None,
                 'response': None,
+                # what about cols? doesn't exist?
+                # what about ignored_cols_by_name
                 'ignored_cols': None,
                 'max_iter': None,
                 'standardize': None,
                 'family': None,
-                'link': None,
+                # 'link': None, # apparently we don't get this for GLM2
                 'alpha': None,
                 'lambda': None,
                 'beta_epsilon': None, # GLMGrid doesn't use this name

@@ -199,6 +199,21 @@ public abstract class VM {
     }
   }
 
+  public static File h2oFolder() {
+    File target;
+    if( Boot._init.fromJar() )
+      target = new File(Boot._init.jarPath());
+    else {
+      try {
+        URL url = Boot._init.getResource(H2O.class.getName().replace('.', '/') + ".class");
+        target = new File(url.toURI()).getParentFile().getParentFile().getParentFile();
+      } catch( URISyntaxException e ) {
+        throw new RuntimeException(e);
+      }
+    }
+    return target.getParentFile();
+  }
+
   /**
    * A remote JVM, launched over SSH.
    */
@@ -248,18 +263,19 @@ public abstract class VM {
     static String command(String[] javaArgs, String[] nodeArgs) {
       String cp = "";
       try {
-        int shared = new File(".").getCanonicalPath().length() + 1;
+        String h2o = h2oFolder().getCanonicalPath();
         for( String s : System.getProperty("java.class.path").split(File.pathSeparator) ) {
           cp += cp.length() != 0 ? ":" : "";
-          if( Boot._init.fromJar() )
-            cp += new File(s).getName();
-          else
-            cp += new File(s).getCanonicalPath().substring(shared).replace('\\', '/');
+          String path = new File(s).getCanonicalPath();
+          if( path.startsWith(h2o) )
+            path = path.substring(h2o.length() + 1);
+          cp += path.replace('\\', '/');
         }
       } catch( IOException e ) {
         throw Log.errRTExcept(e);
       }
-      String command = "cd " + Host.FOLDER + ";jdk/jre/bin/java -cp " + cp;
+      String java = Cloud.JRE != null ? new File(Cloud.JRE).getName() + "/bin/java" : "java";
+      String command = "cd " + Host.FOLDER + ";" + java + " -cp " + cp;
       for( String s : javaArgs )
         command += " " + s;
       for( String s : nodeArgs )

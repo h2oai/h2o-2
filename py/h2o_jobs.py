@@ -10,7 +10,7 @@ import h2o, h2o_browse as h2b
 # 'key' 'description' 'destination_key' could all be interesting things you want to pattern match agains?
 # what the heck, just look for a match in any of the 3 (no regex)
 # if pattern is not None, only stall on jobs that match the pattern (in any of those 3)
-def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=None):
+def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=None):
     wait = True
     waitTime = 0
     ignoredJobs = set()
@@ -20,6 +20,11 @@ def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySec
         jobs = a['jobs']
         busy = 0
         for j in jobs:
+            if errorIfCancelled and j['cancelled']:
+                h2o.check_sandbox_for_errors()
+                print ("ERROR: not stopping, but: pollWaitJobs found a cancelled job when it shouldn't have:\n %s" % h2o.dump_json(j))
+                print ("Continuing so maybe a json response will give more info")
+                
             ### h2o.verboseprint(j)
             if j['end_time'] == '':
                 if not pattern: 

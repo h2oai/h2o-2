@@ -77,7 +77,7 @@ public class NeuralNet extends ValidatedJob {
     reChunk(vecs);
     final Vec[] train = new Vec[vecs.length - 1];
     System.arraycopy(vecs, 0, train, 0, train.length);
-    final Vec trainResp = vecs[vecs.length - 1];
+    final Vec trainResp = classification ? vecs[vecs.length - 1].toEnum() : vecs[vecs.length - 1];
 
     final Layer[] ls = new Layer[hidden.length + 2];
     ls[0] = new VecsInput(train, null);
@@ -181,7 +181,7 @@ public class NeuralNet extends ValidatedJob {
     clones[clones.length - 1] = output;
     for( int y = 0; y < clones.length; y++ )
       clones[y].init(clones, y, false, 0);
-    Layer.copyWeights(ls, clones);
+    Layer.shareWeights(ls, clones);
     return eval(clones, n, cm);
   }
 
@@ -248,11 +248,6 @@ public class NeuralNet extends ValidatedJob {
         "destination_key", destination_key);
   }
 
-  public Response redirect(Request req, Key key) {
-    String n = new NeuralNetProgress().href();
-    return new Response(Response.Status.redirect, req, -1, -1, n, "job", Key.make(), "dst_key", key);
-  }
-
   public static String link(Key k, String content) {
     NeuralNet req = new NeuralNet();
     RString rs = new RString("<a href='" + req.href() + ".query?%key_param=%$key'>%content</a>");
@@ -284,11 +279,14 @@ public class NeuralNet extends ValidatedJob {
   }
 
   public static class NeuralNetModel extends Model {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
     @API(help = "Layers")
     public Layer[] layers;
 
     @API(help = "Layer weights")
-    public float[][] ws, bs;
+    public float[][] weights, biases;
 
     @API(help = "How many items have been processed")
     public long items;
@@ -311,34 +309,34 @@ public class NeuralNet extends ValidatedJob {
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls) {
       super(selfKey, dataKey, fr);
 
-      layers = new Layer[ls.length];
-      for( int y = 0; y < ls.length; y++ )
-        layers[y] = ls[y].clone();
-
-      ws = new float[ls.length][];
-      bs = new float[ls.length][];
+      layers = ls;
+      weights = new float[ls.length][];
+      biases = new float[ls.length][];
       for( int y = 1; y < layers.length; y++ ) {
-        ws[y] = layers[y]._w;
-        bs[y] = layers[y]._b;
+        weights[y] = layers[y]._w;
+        biases[y] = layers[y]._b;
       }
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
-      layers[0] = new ChunksInput(Utils.remove(chunks, chunks.length - 1), (VecsInput) layers[0]);
+      Layer[] clones = new Layer[layers.length];
+      clones[0] = new ChunksInput(Utils.remove(chunks, chunks.length - 1), (VecsInput) layers[0]);
+      for( int y = 1; y < layers.length - 1; y++ )
+        clones[y] = layers[y].clone();
       Layer output = layers[layers.length - 1];
       if( output instanceof VecSoftmax )
-        layers[layers.length - 1] = new ChunkSoftmax(chunks[chunks.length - 1], (VecSoftmax) output);
+        clones[clones.length - 1] = new ChunkSoftmax(chunks[chunks.length - 1], (VecSoftmax) output);
       else
-        layers[layers.length - 1] = new ChunkLinear(chunks[chunks.length - 1], (VecLinear) output);
-      for( int y = 0; y < layers.length; y++ ) {
-        layers[y]._w = ws[y];
-        layers[y]._b = bs[y];
-        layers[y].init(layers, y, false, 0);
+        clones[clones.length - 1] = new ChunkLinear(chunks[chunks.length - 1], (VecLinear) output);
+      for( int y = 0; y < clones.length; y++ ) {
+        clones[y]._w = weights[y];
+        clones[y]._b = biases[y];
+        clones[y].init(clones, y, false, 0);
       }
-      ((Input) layers[0])._pos = rowInChunk;
-      for( int i = 0; i < layers.length; i++ )
-        layers[i].fprop();
-      float[] out = layers[layers.length - 1]._a;
+      ((Input) clones[0])._pos = rowInChunk;
+      for( int i = 0; i < clones.length; i++ )
+        clones[i].fprop();
+      float[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
       return out;
     }
@@ -352,6 +350,11 @@ public class NeuralNet extends ValidatedJob {
       if( cm != null )
         return new ConfusionMatrix(cm);
       return null;
+    }
+
+    public Response redirect(Request req, Key key) {
+      String n = new NeuralNetProgress().href();
+      return new Response(Response.Status.redirect, req, -1, -1, n, "job_key", Key.make(), "destination_key", key);
     }
   }
 
@@ -384,7 +387,7 @@ public class NeuralNet extends ValidatedJob {
         if( nn != null )
           DocGen.HTML.section(sb, "Items per second: " + (model.items * 1000 / nn.runTimeMs()));
 
-        if( model.confusion_matrix != null ) {
+        if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
           String[] classes = model.classNames();
           NeuralNetScore.confusion(sb, cmTitle, classes, model.confusion_matrix);
         }
@@ -398,7 +401,7 @@ public class NeuralNet extends ValidatedJob {
 
     public static String link(Key job, Key model, String content) {
       NeuralNetProgress req = new NeuralNetProgress();
-      return "<a href='" + req.href() + ".html?job=" + job + "&dst_key=" + model + "'>" + content + "</a>";
+      return "<a href='" + req.href() + ".html?job_key=" + job + "&destination_key=" + model + "'>" + content + "</a>";
     }
   }
 
@@ -426,15 +429,23 @@ public class NeuralNet extends ValidatedJob {
       description = DOC_GET;
     }
 
-    @Override protected void exec() {
+    @Override protected Response serve() {
+      init();
       Frame[] frs = model.adapt(source, false);
       int classes = model.layers[model.layers.length - 1].units;
       confusion_matrix = new long[classes][classes];
-      Error error = eval(model.layers, frs[0].vecs(), response, max_rows, confusion_matrix);
+      Layer[] clones = new Layer[model.layers.length];
+      for( int y = 0; y < model.layers.length; y++ ) {
+        clones[y] = model.layers[y].clone();
+        clones[y]._w = model.weights[y];
+        clones[y]._b = model.biases[y];
+      }
+      Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix);
       classification_error = error.Value;
       sqr_error = error.SqrDist;
       if( frs[1] != null )
         frs[1].remove();
+      return new Response(Response.Status.done, this, 0, 0, null);
     }
 
     @Override public boolean toHTML(StringBuilder sb) {

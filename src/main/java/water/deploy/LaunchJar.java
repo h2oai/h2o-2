@@ -8,7 +8,6 @@ import java.util.jar.*;
 import javassist.*;
 import water.*;
 import water.api.DocGen;
-import water.util.Log;
 import water.util.Utils;
 
 public class LaunchJar extends Request2 {

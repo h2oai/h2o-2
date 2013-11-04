@@ -1,4 +1,4 @@
-package samples;
+package samples.launchers;
 
 import water.*;
 import water.deploy.*;
@@ -41,16 +41,22 @@ public class CloudLocal {
       }
       H2O.main(args(ip, port, flatfile));
       TestUtil.stall_till_cloudsize(nodes);
+      System.out.println("");
       System.out.println("Cloud is up");
       System.out.println("Go to http://127.0.0.1:54321");
+      System.out.println("");
 
       if( !args[1].equals("null") ) {
-        String pack = args[1].substring(0, args[1].lastIndexOf('.'));
-        LaunchJar.weavePackages(pack);
-        Class<Job> job = (Class) Class.forName(args[1]);
+        Class<Job> job = weaveClass(args[1]);
         job.newInstance().fork();
       }
     }
+  }
+
+  static Class weaveClass(String name) throws Exception {
+    String pack = name.substring(0, name.lastIndexOf('.'));
+    LaunchJar.weavePackages(pack);
+    return Class.forName(name);
   }
 
   static String[] args(String ip, int port, String flatfile) {
