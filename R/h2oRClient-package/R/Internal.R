@@ -70,6 +70,9 @@ h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
 h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
 h2o.__PAGE_EXEC2 = "2/Exec2.json"
 h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
+h2o.__PAGE_NN = "2/NeuralNet.json"
+h2o.__PAGE_NNModelView = "2/ExportModel.json"
+
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
