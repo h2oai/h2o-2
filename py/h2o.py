@@ -1978,11 +1978,13 @@ class H2O(object):
                 'source': key,
                 'destination_key': None,
                 'response': None,
+                # what about cols? doesn't exist?
+                # what about ignored_cols_by_name
                 'ignored_cols': None,
                 'max_iter': None,
                 'standardize': None,
                 'family': None,
-                'link': None,
+                # 'link': None, # apparently we don't get this for GLM2
                 'alpha': None,
                 'lambda': None,
                 'beta_epsilon': None, # GLMGrid doesn't use this name
