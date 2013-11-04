@@ -10,7 +10,7 @@ import org.junit.*;
 import water.*;
 import water.fvec.*;
 
-public class DRFClassificationTest extends TestUtil {
+public class DRFTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
