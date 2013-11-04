@@ -214,7 +214,9 @@ public class GLM2 extends ModelJob {
     callback.addToPendingCount(n_folds-1);
     callback.setCompleter(cmp);
     _subjobs = new GLM2[n_folds];
-    for(int i = 0; i < n_folds; ++i)
-      (_subjobs[i] =  new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, response, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta)).run(callback);
+    for(int i = 0; i < n_folds; ++i) // make the jobs objects, we don't want to start jobs before _subjobs is populated
+      _subjobs[i] =  new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, response, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta);
+    // now start them
+    for(GLM2 g:_subjobs)g.run(callback);
   }
 }

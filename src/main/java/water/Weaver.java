@@ -137,7 +137,7 @@ public class Weaver {
         // Eclipse apparently stores this in a different place.
         field = cc.getField("ENUM$VALUES");
       }
-      String body = "static "+cc.getName()+" raw_enum(int i) { return i==255?null:"+field.getName()+"[i]; } ";
+      String body = "public static "+cc.getName()+" raw_enum(int i) { return i==255?null:"+field.getName()+"[i]; } ";
       try {
         cc.addMethod(CtNewMethod.make(body,cc));
       } catch( CannotCompileException ce ) {
@@ -310,7 +310,7 @@ public class Weaver {
       if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but 'since' < 1 or 'since' > 1000000");
       if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
         throw new CannotCompileException("Found field '"+name+"' but 'until' < "+min+" or 'until' > 1000000");
-  
+
       if( first ) first = false;
       else sb.append(",");
       boolean input = isInput(ctf.getType(), api);
