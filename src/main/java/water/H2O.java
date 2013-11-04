@@ -527,8 +527,9 @@ public final class H2O {
   static class FJWThrFact implements ForkJoinPool.ForkJoinWorkerThreadFactory {
     private final int _cap;
     FJWThrFact( int cap ) { _cap = cap; }
-    public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
-      return pool.getPoolSize() <= _cap ? new FJWThr(pool) : null;
+    @Override public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
+      int cap = _cap==-1 ? OPT_ARGS.nthreads : _cap;
+      return pool.getPoolSize() <= cap ? new FJWThr(pool) : null;
     }
   }
 
@@ -540,7 +541,7 @@ public final class H2O {
   }
 
   // Normal-priority work is generally directly-requested user ops.
-  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,99);
+  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,-1);
   // Hi-priority work, sorted into individual queues per-priority.
   // Capped at a small number of threads per pool.
   private static final ForkJoinPool2 FJPS[] = new ForkJoinPool2[MAX_PRIORITY+1];
@@ -638,6 +639,7 @@ public final class H2O {
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
+    public int    nthreads=99; // Max number of F/J threads in the low-priority batch queue
     public String h = null;
     public String help = null;
     public String version = null;
@@ -682,6 +684,10 @@ public final class H2O {
     "    -ice_root <fileSystemPath>\n" +
     "          The directory where H2O spills temporary data to disk.\n" +
     "          (The default is '" + DEFAULT_ICE_ROOT() + "'.)\n" +
+    "\n" +
+    "    -nthreads <#threads>\n" +
+    "          Maximum number of threads in the low priority batch-work queue.\n" +
+    "          (The default is 99.)\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
