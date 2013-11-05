@@ -7,7 +7,7 @@ def define_params(SEED):
     paramDict = {
         # always do grid (see default below)..no destination key should be specified if grid?
         # comma separated or range from:to:step
-        'k': ['c(2,3,4)', 'c(2,4)', '2:4:1'], 
+        'k': ['c(2,3,4)', 'c(2,4)'],
         'initialization': ['None', 'PlusPlus', 'Furthest'],
         # not used in Grid?
         # 'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
@@ -62,7 +62,8 @@ class Basic(unittest.TestCase):
             h2o.beta_features = True # no grid for VA
             for trial in range(3):
                 # default
-                params = {'k': 'c(2,3)', 'destination_key': csvFilename + "_" + str(trial) + '.hex'}
+                destinationKey = csvFilename + "_" + str(trial) + '.hex'
+                params = {'k': 'c(2,3)', 'destination_key': destinationKey}
 
                 h2o_kmeans.pickRandKMeansParams(paramDict, params)
                 kwargs = params.copy()
@@ -74,13 +75,15 @@ class Basic(unittest.TestCase):
 
                 elapsed = time.time() - start
                 print "FIX! how do we get results..need redirect_url"
+                print "Have to inspect different models? (grid)"
                 print "kmeans grid end on ", csvPathname, 'took', elapsed, 'seconds.', \
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
                 # h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
                 ### print h2o.dump_json(kmeans)
-                inspect = h2o_cmd.runInspect(None,key=kmeans['destination_key'])
-                print h2o.dump_json(inspect)
+                # destination_key is ignored by kmeans...what are the keys for the results
+                # inspect = h2o_cmd.runInspect(None,key=destinationKey)
+                # print h2o.dump_json(inspect)
 
                 print "Trial #", trial, "completed\n"
 
