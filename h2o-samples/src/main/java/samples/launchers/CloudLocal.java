@@ -60,6 +60,6 @@ public class CloudLocal {
   }
 
   static String[] args(String ip, int port, String flatfile) {
-    return new String[] { "-ip", ip, "-port", "" + port, "-flatfile", flatfile };
+    return new String[] { "-ip", ip, "-port", "" + port, "-flatfile", flatfile, "-beta" };
   }
 }

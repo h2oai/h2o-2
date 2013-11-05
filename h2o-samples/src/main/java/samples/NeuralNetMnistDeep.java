@@ -18,7 +18,7 @@ public class NeuralNetMnistDeep extends NeuralNetMnist {
     // samples.launchers.CloudRemote.launchIPs(NeuralNetMnistDeep.class);
   }
 
-  @Override public Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
+  @Override protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[5];
     ls[0] = new VecsInput(data, inputStats);
     for( int i = 1; i < ls.length - 1; i++ ) {
@@ -35,21 +35,24 @@ public class NeuralNetMnistDeep extends NeuralNetMnist {
     return ls;
   }
 
-  @Override Trainer startTraining(Layer[] ls) {
-    for( int i = 1; i < ls.length - 1; i++ ) {
-      System.out.println("Pre-training level " + i);
-      long time = System.nanoTime();
-      preTrain(ls, i);
-      System.out.println((int) ((System.nanoTime() - time) / 1e6) + " ms");
-    }
-
+  @Override protected Trainer startTraining(Layer[] ls) {
+    preTrain(ls);
     Trainer trainer = new Trainer.MapReduce(ls, 0, self());
     //Trainer trainer = new Trainer.Direct(ls);
     trainer.start();
     return trainer;
   }
 
-  void preTrain(Layer[] ls, int index) {
+  protected void preTrain(Layer[] ls) {
+    for( int i = 1; i < ls.length - 1; i++ ) {
+      System.out.println("Pre-training level " + i);
+      long time = System.nanoTime();
+      preTrain(ls, i);
+      System.out.println((int) ((System.nanoTime() - time) / 1e6) + " ms");
+    }
+  }
+
+  protected void preTrain(Layer[] ls, int index) {
     // Build a network with same layers below 'index', and an auto-encoder at the top
     Layer[] pre = new Layer[index + 2];
     VecsInput input = (VecsInput) ls[0];

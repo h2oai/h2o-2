@@ -155,7 +155,7 @@ public class Inspect extends Request {
     if( f instanceof GLMValidation)
       return GLMValidationView.redirect(this, key);
     if(f instanceof NeuralNetModel)
-      return ((NeuralNetModel) f).redirect(this, key);
+      return ((NeuralNetModel) f).redirect(this);
     if(f instanceof KMeans2Model)
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)

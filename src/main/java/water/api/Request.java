@@ -1,8 +1,8 @@
 package water.api;
 
-import hex.pca.PCAModel;
 import hex.KMeansModel;
 import hex.glm.GLMModel;
+import hex.pca.PCAModel;
 import hex.rf.RFModel;
 
 import java.io.InputStream;
@@ -29,7 +29,8 @@ public abstract class Request extends RequestBuilders {
     int until() default Integer.MAX_VALUE;
     Class<? extends Filter> filter() default Filter.class;
     Class<? extends Filter>[] filters() default {};
-    boolean json() default false; // Forces an input field to also appear in JSON
+    /** Forces an input field to also appear in JSON. */
+    boolean json() default false;
     long   lmin() default Long  .MIN_VALUE;
     long   lmax() default Long  .MAX_VALUE;
     double dmin() default Double.NEGATIVE_INFINITY;
@@ -114,6 +115,18 @@ public abstract class Request extends RequestBuilders {
     long time = System.currentTimeMillis();
     Response response = serve();
     response.setTimeStart(time);
+//    if(this instanceof Request2) {
+//      Response2 r = new Response2();
+//      r.status = response._status;
+//      r.h2o = H2O.NAME;
+//      r.node = H2O.SELF.toString();
+//      r.time = response._time;
+//      r.progress = response._pollProgress;
+//      r.progress_total = response._pollProgressElements;
+//      r.redirect_request = response._redirectName;
+//      r.redirect_request_args = response._redirArgs;
+//      ((Request2) this).response = r;
+//    }
     if( type == RequestType.json )
       return response._req == null ? //
             wrap(server, response.toJson()) : //

@@ -109,41 +109,50 @@ public class NeuralNet extends ValidatedJob {
     // Use a separate thread for monitoring (blocked most of the time)
     Thread thread = new Thread() {
       @Override public void run() {
-        Frame[] adapted = null;
-        Vec[] valid = null;
-        Vec validResp = null;
-        if( validation != null ) {
-          adapted = model.adapt(validation, false);
-          valid = new Vec[adapted[0].vecs().length];
-          System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
-          validResp = _validResponse;
-        }
-        while( !cancelled() ) {
-          long[][] cm = null;
-          if( classification ) {
-            int classes = ls[ls.length - 1].units;
-            cm = new long[classes][classes];
+        try {
+          Frame[] adapted = null;
+          Vec[] valid = null;
+          Vec validResp = null;
+          if( validation != null ) {
+            adapted = model.adapt(validation, false);
+            valid = new Vec[adapted[0].vecs().length];
+            System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
+            validResp = _validResponse;
           }
-          Error trainE = eval(ls, train, trainResp, EVAL_ROW_COUNT, valid == null ? cm : null);
-          Error validE = null;
-          if( valid != null )
-            validE = eval(ls, valid, validResp, EVAL_ROW_COUNT, cm);
+          while( !cancelled() ) {
+            eval(valid, validResp);
+            try {
+              Thread.sleep(2000);
+            } catch( InterruptedException e ) {
+              throw new RuntimeException(e);
+            }
+          }
+          eval(valid, validResp);
+          if( adapted != null && adapted[1] != null )
+            adapted[1].remove();
+        } catch( Exception ex ) {
+          cancel(ex);
+        }
+      }
 
-          model.items = trainer.items();
-          model.train_classification_error = trainE.Value;
-          model.train_sqr_error = trainE.SqrDist;
-          model.validation_classification_error = validE != null ? validE.Value : Double.NaN;
-          model.validation_sqr_error = validE != null ? validE.SqrDist : Double.NaN;
-          model.confusion_matrix = cm;
-          UKV.put(model._selfKey, model);
-          try {
-            Thread.sleep(2000);
-          } catch( InterruptedException e ) {
-            throw new RuntimeException(e);
-          }
+      private void eval(Vec[] valid, Vec validResp) {
+        long[][] cm = null;
+        if( classification ) {
+          int classes = ls[ls.length - 1].units;
+          cm = new long[classes][classes];
         }
-        if( adapted != null && adapted[1] != null )
-          adapted[1].remove();
+        Error trainE = NeuralNet.eval(ls, train, trainResp, EVAL_ROW_COUNT, valid == null ? cm : null);
+        Error validE = null;
+        if( valid != null )
+          validE = NeuralNet.eval(ls, valid, validResp, EVAL_ROW_COUNT, cm);
+
+        model.processed_samples = trainer.samples();
+        model.train_classification_error = trainE.Value;
+        model.train_sqr_error = trainE.SqrDist;
+        model.validation_classification_error = validE != null ? validE.Value : Double.NaN;
+        model.validation_sqr_error = validE != null ? validE.SqrDist : Double.NaN;
+        model.confusion_matrix = cm;
+        UKV.put(model._selfKey, model);
       }
     };
     trainer.start();
@@ -153,7 +162,7 @@ public class NeuralNet extends ValidatedJob {
   @Override public float progress() {
     NeuralNetModel model = UKV.get(destination_key);
     if( model != null && source != null && epochs > 0 )
-      return 0.1f + Math.min(1, model.items / (float) (epochs * source.numRows()));
+      return 0.1f + Math.min(1, model.processed_samples / (float) (epochs * source.numRows()));
     return 0;
   }
 
@@ -264,7 +273,7 @@ public class NeuralNet extends ValidatedJob {
   @Override public long speedValue() {
     Value value = DKV.get(dest());
     NeuralNetModel m = value != null ? (NeuralNetModel) value.get() : null;
-    double epochsSoFar = m == null ? 0 : m.items / (double) source.numRows();
+    double epochsSoFar = m == null ? 0 : m.processed_samples / (double) source.numRows();
     long sv = (epochsSoFar <= 0) ? 0 : (long) (runTimeMs() / epochsSoFar);
     return sv;
   }
@@ -288,9 +297,6 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Layer weights")
     public float[][] weights, biases;
 
-    @API(help = "How many items have been processed")
-    public long items;
-
     @API(help = "Classification error on the training set (Estimation)")
     public double train_classification_error = 1;
 
@@ -305,6 +311,9 @@ public class NeuralNet extends ValidatedJob {
 
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
+
+    @API(help = "How many rows have been processed")
+    public long processed_samples;
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls) {
       super(selfKey, dataKey, fr);
@@ -352,9 +361,9 @@ public class NeuralNet extends ValidatedJob {
       return null;
     }
 
-    public Response redirect(Request req, Key key) {
+    public Response redirect(Request req) {
       String n = new NeuralNetProgress().href();
-      return new Response(Response.Status.redirect, req, -1, -1, n, "job_key", Key.make(), "destination_key", key);
+      return new Response(Response.Status.redirect, req, -1, -1, n, "destination_key", _selfKey);
     }
   }
 
@@ -367,7 +376,7 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
-      Job nn = Job.findJob(job_key);
+      Job nn = job_key == null ? null : Job.findJob(job_key);
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
         String cmTitle = "Confusion Matrix";
@@ -383,9 +392,10 @@ public class NeuralNet extends ValidatedJob {
         DocGen.HTML.section(sb, "Training square error: " + trainS);
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
         DocGen.HTML.section(sb, "Validation square error: " + validS);
-        DocGen.HTML.section(sb, "Items: " + model.items);
+        String ps = "";
         if( nn != null )
-          DocGen.HTML.section(sb, "Items per second: " + (model.items * 1000 / nn.runTimeMs()));
+          ps = " (" + (model.processed_samples * 1000 / nn.runTimeMs()) + "/s)";
+        DocGen.HTML.section(sb, "Processed samples: " + model.processed_samples + ps);
 
         if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
           String[] classes = model.classNames();
