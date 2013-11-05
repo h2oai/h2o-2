@@ -7,7 +7,7 @@ ENUM_SIZE = random.randint(2,7)
 ### ENUM_SIZE = 4
 # just randomly pick the row and col cases.
 COL_SEP_HIVE = random.randint(0,1) == 1
-## COL_SEP_HIVE = False # comma
+COL_SEP_HIVE = False # comma
 
 # details:
 # Apparently we don't have any new EOL separators for hive?, just new column separator
@@ -17,7 +17,9 @@ COL_SEP_HIVE = random.randint(0,1) == 1
 # python has some things we can use
 # string.ascii_uppercase string.printable string.letters string.digits string.punctuation string.whitespace
 # restricting the choices makes it easier to find the bad cases
-def random_enum(enumSize, randChars="abeE01" + "$%+-.;|\t ", quoteChars="\'\""):
+
+DO_SIMPLE_CHARS_ONLY = False
+def random_enum(enumSize, randChars="abeE01" + "" if DO_SIMPLE_CHARS_ONLY else "$%+-.;|\t ", quoteChars="\'\""):
     choiceStr = randChars + quoteChars
     mightBeNumberOrWhite = True
     while mightBeNumberOrWhite:
@@ -87,7 +89,7 @@ class Basic(unittest.TestCase):
     def test_find_numbers(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        n = 3
+        n = 7 
         tryList = [
             (n, 1, 'cD', 300), 
             (n, 2, 'cE', 300), 
@@ -114,10 +116,12 @@ class Basic(unittest.TestCase):
             # using the comma is nice to ensure no craziness
             if COL_SEP_HIVE:
                 colSepHexString = '01'
+                singleQuotes = 1 # allow single quotes to be delimiter
                 quoteChars = ",\'\"" # more choices for the unquoted string
             else:
                 colSepHexString = '2c' # comma
-                quoteChars = ""
+                singleQuotes = 0 #  single quotes are not delimiters
+                quoteChars = "'"
 
             colSepChar = colSepHexString.decode('hex')
             colSepInt = int(colSepHexString, base=16)
@@ -144,7 +148,7 @@ class Basic(unittest.TestCase):
 
             # FIX! does 'separator=' take ints or ?? hex format
             # looks like it takes the hex string (two chars)
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, single_quotes=singleQuotes,
                 timeoutSecs=30, separator=colSepInt)
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']

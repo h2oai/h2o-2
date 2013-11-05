@@ -31,12 +31,12 @@ public class NeuralNetMnist extends Job {
   protected Vec[] train, test;
 
   public void load() {
-    train = TestUtil.parseFrame(new File(TestUtil.smalldata, "mnist/train.csv.gz")).vecs();
-    test = TestUtil.parseFrame(new File(TestUtil.smalldata, "mnist/test.csv.gz")).vecs();
+    train = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz").vecs();
+    test = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz").vecs();
     NeuralNet.reChunk(train);
   }
 
-  Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
+  protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[3];
     ls[0] = new VecsInput(data, inputStats);
     ls[1] = new Tanh(500);
@@ -51,7 +51,7 @@ public class NeuralNetMnist extends Job {
     return ls;
   }
 
-  Trainer startTraining(Layer[] ls) {
+  protected Trainer startTraining(Layer[] ls) {
     Trainer trainer = new Trainer.MapReduce(ls, 0, self());
     //Trainer trainer = new Trainer.Direct(ls);
     trainer.start();
@@ -80,7 +80,7 @@ public class NeuralNetMnist extends Job {
       }
 
       double time = (System.nanoTime() - start) / 1e9;
-      long samples = trainer.items();
+      long samples = trainer.samples();
       int ps = (int) (samples / time);
       String text = (int) time + "s, " + samples + " samples (" + (ps) + "/s) ";
 

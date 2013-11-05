@@ -5,6 +5,7 @@ import java.io.File;
 import org.junit.Assert;
 
 import water.*;
+import water.deploy.VM;
 import water.fvec.*;
 
 /**
@@ -20,7 +21,7 @@ public class MapReduce extends Job {
 
   @Override protected void exec() {
     // Parse a dataset into a Frame, H2O's distributed table-like data structure
-    File file = new File(TestUtil.smalldata, "/iris/iris.csv");
+    File file = new File(VM.h2oFolder(), "smalldata/iris/iris.csv");
     Key fkey = NFSFileVec.make(file);
     Frame frame = ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
 

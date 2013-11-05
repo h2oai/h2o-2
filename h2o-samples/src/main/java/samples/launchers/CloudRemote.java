@@ -57,7 +57,7 @@ public class CloudRemote {
     cloud.clientRSyncExcludes.add("**/*-sources.jar");
 
     String java = "-ea -Xmx8G -Dh2o.debug";
-    String node = "-mainClass " + UserCode.class.getName() + " " + (job != null ? job.getName() : null);
+    String node = "-mainClass " + UserCode.class.getName() + " " + (job != null ? job.getName() : null) + " -beta";
     cloud.start(java.split(" "), node.split(" "));
   }
 

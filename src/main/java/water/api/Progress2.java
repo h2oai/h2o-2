@@ -11,7 +11,7 @@ public class Progress2 extends Request2 {
   // for GET.
   static final String DOC_GET = "Track progress of an ongoing Job";
 
-  @API(help = "The Job id being tracked.", json = true, required = true, filter = Default.class)
+  @API(help = "The Job id being tracked.", json = true, filter = Default.class)
   public Key job_key;
 
   @API(help = "The destination key being produced.", json = true, required = true, filter = Default.class)
@@ -35,24 +35,19 @@ public class Progress2 extends Request2 {
   }
 
   @Override protected Response serve() {
-    Job jjob = Job.findJob(job_key);
+    Job jjob = null;
+    if(job_key != null)
+      jjob = Job.findJob(job_key);
     if( jjob != null && jjob.exception != null ) {
       status = "error";
       return Response.error(jjob.exception);
     }
 
-    if (jjob == null)
-      return jobNotFound(job_key, destination_key);
-
-    if(jjob.end_time > 0 || jjob.cancelled()) {
+    if(jjob == null || jjob.end_time > 0 || jjob.cancelled())
       return jobDone(jjob, destination_key);
-    }
+
     status = "poll";
     return jobInProgress(jjob, destination_key);
-  }
-
-  protected Response jobNotFound(Key job_key, Key dst) {
-    return Response.error("Job " + job_key.toString() + " not found!");
   }
 
   /** Return {@link Response} for finished job. */

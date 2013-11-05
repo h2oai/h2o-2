@@ -1,5 +1,8 @@
 package hex;
 
+import hex.Histogram;
+import hex.Layer;
+
 import java.util.ArrayList;
 import java.util.concurrent.*;
 
