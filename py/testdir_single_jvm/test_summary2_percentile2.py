@@ -72,12 +72,12 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary(self):
+    def test_summary2_percentile2(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (500000, 1, 'cD', 300, 0, 9), # expectedMin/Max must cause 10 values
-            (500000, 2, 'cE', 300, 1, 10), # expectedMin/Max must cause 10 values
-            (500000, 2, 'cF', 300, 2, 11), # expectedMin/Max must cause 10 values
+            (50000, 2, 'cD', 300, 0, 9), # expectedMin/Max must cause 10 values
+            # (50000, 2, 'cE', 300, 1, 10), # expectedMin/Max must cause 10 values
+            # (50000, 2, 'cF', 300, 2, 11), # expectedMin/Max must cause 10 values
         ]
 
         timeoutSecs = 10
@@ -107,15 +107,17 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
+            h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key, cols=0, max_ncols=1)
             if h2o.verbose:
-                print "summaryResult", h2o.dump_json(summaryResult)
+                print "summaryResult:", h2o.dump_json(summaryResult)
 
-            h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
+            # h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
-            summary = summaryResult['summary']
-            columnsList = summary['columns']
+            means = summaryResult['means']
+            summaries = summaryResult['summaries']
+            columnsList = summaries
             for columns in columnsList:
                 N = columns['N']
                 self.assertEqual(N, rowCount)
