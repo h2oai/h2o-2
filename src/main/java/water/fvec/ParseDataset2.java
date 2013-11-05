@@ -350,9 +350,6 @@ public final class ParseDataset2 extends Job {
         Vec v = getVec(keys[i]);
         len += v.nChunks();
       }
-      for(Entry e:_fileChunkOffsets.entrySet())
-        System.out.println(e.getKey() + " -> " + e.getValue());
-      System.out.println(_fileChunkOffsets);
       _chunk2Enum = MemoryManager.malloc4(len);
       Arrays.fill(_chunk2Enum, -1);
       return super.dfork(keys);
@@ -397,10 +394,8 @@ public final class ParseDataset2 extends Job {
               }
             });
             dp.dfork(new Frame(vec));
-            System.out.println(key + " chunkStartIdx = " + chunkStartIdx);
             for(int i = 0; i < vec.nChunks(); ++i)
               _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
-            System.out.println(key + " chunk2Enum = " + Arrays.toString(_chunk2Enum));
           }else {
             ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
             _dout = streamParse(vec.openStream(pmon), localSetup, _vecIdStart, chunkStartIdx,pmon);
