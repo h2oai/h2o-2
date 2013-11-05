@@ -143,14 +143,18 @@ public abstract class Request extends RequestBuilders {
   protected String htmlTemplate() { return _htmlTemplate; }
 
   static {
-    InputStream resource = Boot._init.getResource2("/page.html");
+    _htmlTemplate = loadTemplate("/page.html");
+  }
+
+  static final String loadTemplate(String name) {
+    InputStream resource = Boot._init.getResource2(name);
     try {
       if( H2O.NAME != null )
-        _htmlTemplate = new String(ByteStreams.toByteArray(resource)).replace("%cloud_name", H2O.NAME);
+        return new String(ByteStreams.toByteArray(resource)).replace("%cloud_name", H2O.NAME);
     } catch( NullPointerException e ) {
       if( !Log._dontDie ) {
         Log.err(e);
-        Log.die("page.html not found in resources.");
+        Log.die(name+" not found in resources.");
       }
     } catch( Exception e ) {
       Log.err(e);
@@ -158,6 +162,7 @@ public abstract class Request extends RequestBuilders {
     } finally {
       Closeables.closeQuietly(resource);
     }
+    return null;
   }
 
   private static class MenuItem {
