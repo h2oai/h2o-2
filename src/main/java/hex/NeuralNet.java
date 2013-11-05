@@ -147,10 +147,10 @@ public class NeuralNet extends ValidatedJob {
           validE = NeuralNet.eval(ls, valid, validResp, EVAL_ROW_COUNT, cm);
 
         model.processed_samples = trainer.samples();
-        model.train_classification_error = trainE.Value;
-        model.train_sqr_error = trainE.SqrDist;
-        model.validation_classification_error = validE != null ? validE.Value : Double.NaN;
-        model.validation_sqr_error = validE != null ? validE.SqrDist : Double.NaN;
+        model.train_classification_error = trainE.classification;
+        model.train_mse = trainE.mse;
+        model.validation_classification_error = validE != null ? validE.classification : Double.NaN;
+        model.validation_mse = validE != null ? validE.mse : Double.NaN;
         model.confusion_matrix = cm;
         UKV.put(model._selfKey, model);
       }
@@ -205,11 +205,13 @@ public class NeuralNet extends ValidatedJob {
       for( input._pos = 0; input._pos < len; input._pos++ )
         if( correct(ls, error, cm) )
           correct++;
-      error.Value = (len - (double) correct) / len;
+      error.classification = (len - (double) correct) / len;
+      error.mse /= len;
     } else {
       for( input._pos = 0; input._pos < len; input._pos++ )
         error(ls, error);
-      error.Value = Double.NaN;
+      error.classification = Double.NaN;
+      error.mse /= len;
     }
     return error;
   }
@@ -222,7 +224,7 @@ public class NeuralNet extends ValidatedJob {
     for( int i = 0; i < out.length; i++ ) {
       float t = i == output.label() ? 1 : 0;
       float d = t - out[i];
-      error.SqrDist += d * d;
+      error.mse += d * d;
     }
     float max = Float.MIN_VALUE;
     int idx = -1;
@@ -246,7 +248,7 @@ public class NeuralNet extends ValidatedJob {
     for( int i = 0; i < out.length; i++ ) {
       float t = linear.value();
       float d = t - out[i];
-      error.SqrDist += d * d;
+      error.mse += d * d;
     }
   }
 
@@ -279,11 +281,11 @@ public class NeuralNet extends ValidatedJob {
   }
 
   public static class Error {
-    double Value;
-    double SqrDist;
+    double classification;
+    double mse;
 
     @Override public String toString() {
-      return String.format("%.2f", (100 * Value)) + "% (d²:" + String.format("%.2e", SqrDist) + ")";
+      return String.format("%.2f", (100 * classification)) + "% (MSE:" + String.format("%.2e", mse) + ")";
     }
   }
 
@@ -301,13 +303,13 @@ public class NeuralNet extends ValidatedJob {
     public double train_classification_error = 1;
 
     @API(help = "Square distance error on the training set (Estimation)")
-    public double train_sqr_error;
+    public double train_mse;
 
     @API(help = "Classification error on the validation set (Estimation)")
     public double validation_classification_error = 1;
 
     @API(help = "Square distance error on the validation set (Estimation)")
-    public double validation_sqr_error;
+    public double validation_mse;
 
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
@@ -380,18 +382,18 @@ public class NeuralNet extends ValidatedJob {
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
         String cmTitle = "Confusion Matrix";
-        String trainC = String.format("%5.2f %%", 100 * model.train_classification_error);
-        String trainS = "" + model.train_sqr_error;
-        String validC = String.format("%5.2f %%", 100 * model.validation_classification_error);
-        String validS = "" + model.validation_sqr_error;
-        if( Double.isNaN(model.validation_classification_error) ) {
-          validC = validS = "N/A";
+        String trainC = format(model.train_classification_error);
+        String trainS = "" + model.train_mse;
+        String validC = format(model.train_classification_error);
+        String validS = "" + model.validation_mse;
+        if( Double.isNaN(model.validation_mse) ) {
+          validS = "N/A";
           cmTitle += " (Training Data)";
         }
         DocGen.HTML.section(sb, "Training classification error: " + trainC);
-        DocGen.HTML.section(sb, "Training square error: " + trainS);
+        DocGen.HTML.section(sb, "Training mean square error: " + trainS);
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
-        DocGen.HTML.section(sb, "Validation square error: " + validS);
+        DocGen.HTML.section(sb, "Validation mean square error: " + validS);
         String ps = "";
         if( nn != null )
           ps = " (" + (model.processed_samples * 1000 / nn.runTimeMs()) + "/s)";
@@ -403,6 +405,13 @@ public class NeuralNet extends ValidatedJob {
         }
       }
       return true;
+    }
+
+    private static String format(double classification) {
+      String s = "N/A";
+      if( !Double.isNaN(classification) )
+        s = String.format("%5.2f %%", 100 * classification);
+      return s;
     }
 
     @Override protected Response jobDone(Job job, Key dst) {
@@ -429,8 +438,8 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Classification error")
     public double classification_error;
 
-    @API(help = "Square distance error")
-    public double sqr_error;
+    @API(help = "Mean square error")
+    public double mse;
 
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
@@ -451,8 +460,8 @@ public class NeuralNet extends ValidatedJob {
         clones[y]._b = model.biases[y];
       }
       Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix);
-      classification_error = error.Value;
-      sqr_error = error.SqrDist;
+      classification_error = error.classification;
+      mse = error.mse;
       if( frs[1] != null )
         frs[1].remove();
       return new Response(Response.Status.done, this, 0, 0, null);
@@ -460,7 +469,7 @@ public class NeuralNet extends ValidatedJob {
 
     @Override public boolean toHTML(StringBuilder sb) {
       DocGen.HTML.section(sb, "Classification error: " + String.format("%5.2f %%", 100 * classification_error));
-      DocGen.HTML.section(sb, "Square error: " + sqr_error);
+      DocGen.HTML.section(sb, "Mean square error: " + mse);
       confusion(sb, "Confusion Matrix", response.domain(), confusion_matrix);
       return true;
     }
