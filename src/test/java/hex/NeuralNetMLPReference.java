@@ -343,7 +343,7 @@ public class NeuralNetMLPReference {
       return result;
     }
 
-    public String toString() // yikes
+    @Override public String toString() // yikes
     {
       String s = "";
       s += "===============================\n";

@@ -48,8 +48,11 @@ public class C1SChunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
+    assert DParseTask.fitsIntoInt(dx);
     int x = (int)dx;
-    if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
+    nc._ds = null;
+    nc._ls = MemoryManager.malloc8 (_len);
+    nc._xs = MemoryManager.malloc4 (_len);
     for( int i=0; i<_len; i++ ) {
       long res = 0xFF&_mem[i+OFF];
       if( res == C1Chunk._NA ) nc.setInvalid(i);
@@ -60,6 +63,6 @@ public class C1SChunk extends Chunk {
     }
     return nc;
   }
-  public int pformat_len0() { return pformat_len0(_scale,3); }
-  public String pformat0() { return "% 8.2e"; }
+  public int pformat_len0() { return hasFloat() ? pformat_len0(_scale,3) : super.pformat_len0(); }
+  public String  pformat0() { return hasFloat() ? "% 8.2e" : super.pformat0(); }
 }

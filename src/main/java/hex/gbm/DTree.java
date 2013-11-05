@@ -30,7 +30,7 @@ import water.util.RString;
 
    @author Cliff Click
 */
-class DTree extends Iced {
+public class DTree extends Iced {
   final String[] _names; // Column names
   final int _ncols;      // Active training columns
   final char _nbins;     // Max number of bins to split over
@@ -38,7 +38,7 @@ class DTree extends Iced {
   final int _min_rows;   // Fewest allowed rows in any split
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
-  DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) {
+  public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) {
     _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
 
   public final Node root() { return _ns[0]; }
@@ -62,13 +62,15 @@ class DTree extends Iced {
   // Override this in, e.g. Random Forest algos, to get a per-chunk RNG
   public Random rngForChunk( int cidx ) { throw H2O.fail(); }
 
+  public final int len() { return _len; }
+  public final void len(int len) { _len = len; }
 
   // --------------------------------------------------------------------------
   // Abstract node flavor
-  static abstract class Node extends Iced {
-    transient DTree _tree;    // Make transient, lest we clone the whole tree
-    final int _pid;           // Parent node id, root has no parent and uses -1
-    final int _nid;           // My node-ID, 0 is root
+  public static abstract class Node extends Iced {
+    transient protected DTree _tree;    // Make transient, lest we clone the whole tree
+    final protected int _pid;           // Parent node id, root has no parent and uses -1
+    final protected int _nid;           // My node-ID, 0 is root
     Node( DTree tree, int pid, int nid ) {
       _tree = tree;
       _pid=pid;
@@ -83,24 +85,29 @@ class DTree extends Iced {
       parent.printLine(sb).append(" to ");
       return parent.printChild(sb,_nid);
     }
-    abstract protected StringBuilder toString2(StringBuilder sb, int depth);
+    abstract public StringBuilder toString2(StringBuilder sb, int depth);
     abstract protected AutoBuffer compress(AutoBuffer ab);
     abstract protected int size();
+
+    public final int nid() { return _nid; }
+    public final int pid() { return _pid; }
   }
 
   // --------------------------------------------------------------------------
   // Records a column, a bin to split at within the column, and the MSE.
-  static class Split extends Iced {
+  public static class Split extends Iced {
     final int _col, _bin;       // Column to split, bin where being split
     final boolean _equal;       // Split is < or == ?
     final double _se0, _se1;    // Squared error of each subsplit
     final long _n0, _n1;        // Rows in each final split
 
-    Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1 ) {
+    public Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1 ) {
       _col = col;  _bin = bin;  _equal = equal;
       _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
     }
     public final double se() { return _se0+_se1; }
+    public final int   col() { return _col; }
+    public final int   bin() { return _bin; }
 
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
@@ -191,10 +198,10 @@ class DTree extends Iced {
   // An UndecidedNode: Has a DHistogram which is filled in (in parallel with other
   // histograms) in a single pass over the data.  Does not contain any
   // split-decision.
-  static abstract class UndecidedNode extends Node {
-    DHistogram _hs[];      // DHistograms per column
-    int _scoreCols[];      // A list of columns to score; could be null for all
-    UndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) {
+  public static abstract class UndecidedNode extends Node {
+    public DHistogram _hs[];      // DHistograms per column
+    public int _scoreCols[];      // A list of columns to score; could be null for all
+    public UndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) {
       super(tree,pid,tree.newIdx());
       _hs=hs;
       assert hs.length==tree._ncols;
@@ -203,12 +210,12 @@ class DTree extends Iced {
 
     // Pick a random selection of columns to compute best score.
     // Can return null for 'all columns'.
-    abstract int[] scoreCols( DHistogram[] hs );
+    abstract public int[] scoreCols( DHistogram[] hs );
 
     // Make the parent of this Node use a -1 NID to prevent the split that this
     // node otherwise induces.  Happens if we find out too-late that we have a
     // perfect prediction here, and we want to turn into a leaf.
-    void do_not_split( ) {
+    public void do_not_split( ) {
       if( _pid == -1 ) return;
       DecidedNode dn = _tree.decided(_pid);
       for( int i=0; i<dn._nids.length; i++ )
@@ -216,6 +223,9 @@ class DTree extends Iced {
           { dn._nids[i] = -1; return; }
       throw H2O.fail();
     }
+
+    public final DHistogram[] hs() { return _hs; }
+    public final int[] scoreCols() { return _scoreCols; }
 
     @Override public String toString() {
       final int nclass = _tree._nclass;
@@ -296,25 +306,25 @@ class DTree extends Iced {
   // Internal tree nodes which split into several children over a single
   // column.  Includes a split-decision: which child does this Row belong to?
   // Does not contain a histogram describing how the decision was made.
-  static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
-    final Split _split;         // Split: col, equal/notequal/less/greater, nrows, MSE
-    final float _splat;         // Split At point: lower bin-edge of split
+  public static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
+    public final Split _split;         // Split: col, equal/notequal/less/greater, nrows, MSE
+    public final float _splat;         // Split At point: lower bin-edge of split
     // _equals\_nids[] \   0   1
     // ----------------+----------
     //       F         |   <   >=
     //       T         |  !=   ==
-    final int _nids[];          // Children NIDS for the split
+    public final int _nids[];          // Children NIDS for the split
 
     transient byte _nodeType; // Complex encoding: see the compressed struct comments
     transient int _size = 0;  // Compressed byte size of this subtree
 
     // Make a correctly flavored Undecided
-    abstract UDN makeUndecidedNode(DBinHistogram[] nhists );
+    public abstract UDN makeUndecidedNode(DBinHistogram[] nhists );
 
     // Pick the best column from the given histograms
-    abstract Split bestCol( UDN udn );
+    public abstract Split bestCol( UDN udn );
 
-    DecidedNode( UDN n ) {
+    public DecidedNode( UDN n ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
       _nids = new int[2];           // Split into 2 subsets
       _split = bestCol(n);          // Best split-point for this tree
@@ -444,16 +454,19 @@ class DTree extends Iced {
     }
   }
 
-  static abstract class LeafNode extends Node {
+  public static abstract class LeafNode extends Node {
     double _pred;
-    LeafNode( DTree tree, int pid ) { super(tree,pid); }
-    LeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
+    public LeafNode( DTree tree, int pid ) { super(tree,pid); }
+    public LeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
     @Override public String toString() { return "Leaf#"+_nid+" = "+_pred; }
     @Override public final StringBuilder toString2(StringBuilder sb, int depth) {
       for( int d=0; d<depth; d++ ) sb.append("  ");
       sb.append(_nid).append(" ");
       return sb.append("pred=").append(_pred).append("\n");
     }
+
+    public final double pred() { return _pred; }
+    public final void pred(double pred) { _pred = pred; }
   }
 
   // --------------------------------------------------------------------------
@@ -514,7 +527,7 @@ class DTree extends Iced {
         sb.insert(sb.indexOf("</pre>") +"</pre></div>".length(),
         "<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
         "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
-        "<pre style=\"overflow-y:scroll;\">"+DocGen.HTML.escape2(toJava())+"</pre></div>");
+        "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">"+DocGen.HTML.escape2(toJava())+"</code></pre></div>");
       }
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 

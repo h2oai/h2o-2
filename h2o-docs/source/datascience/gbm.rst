@@ -145,7 +145,7 @@ http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid
 
 Hastie, Trevor, Robert Tibshirani, and J Jerome H Friedman. The
 Elements of Statistical Learning.
-Vol.1. N.p., page 387: Springer New York, 2001. 
+Vol.1. N.p., page 339: Springer New York, 2001. 
 http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 
 

@@ -145,7 +145,8 @@ public abstract class Request extends RequestBuilders {
   static {
     InputStream resource = Boot._init.getResource2("/page.html");
     try {
-      _htmlTemplate = new String(ByteStreams.toByteArray(resource)).replace("%cloud_name", H2O.NAME);
+      if( H2O.NAME != null )
+        _htmlTemplate = new String(ByteStreams.toByteArray(resource)).replace("%cloud_name", H2O.NAME);
     } catch( NullPointerException e ) {
       if( !Log._dontDie ) {
         Log.err(e);

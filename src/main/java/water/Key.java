@@ -168,10 +168,9 @@ public final class Key extends Iced implements Comparable {
     int chk = 0; // Chunk number, for chunks beyond 64Meg
     if( kb.length >= 10 && kb[0] == ARRAYLET_CHUNK && kb[1] == 0 ) {
       long off = UDP.get8(kb,2);
-      if( (off >> 20) >= 64 ) { // Is offset >= 64Meg?
-        i += 2+8; // Skip the length bytes; they are now not part of hash
-        chk = (int)(off >>> (6+20)); // Divide by 64Meg; comes up with a "block number"
-      }
+      i += 2+8; // Skip the length bytes; they are now not part of hash
+      boolean big = (off>>20) >= 64; // Is offset >= 64Meg?
+      chk = (int)(off >>> ((big?6:2)+20)); // Divide by 64Meg or 4Meg; comes up with a "block number"
     }
     int hash = hash(kb, i, kb.length);
     _hash = hash+chk; // Add sequential block numbering

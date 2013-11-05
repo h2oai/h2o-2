@@ -372,13 +372,13 @@ public class GBM extends SharedTreeModelBuilder {
   // columns.  GBM algo: find the lowest error amongst *all* columns.
   static class GBMDecidedNode extends DecidedNode<GBMUndecidedNode> {
     GBMDecidedNode( GBMUndecidedNode n ) { super(n); }
-    @Override GBMUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
+    @Override public GBMUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
       return new GBMUndecidedNode(_tree,_nid,nhists);
     }
 
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
-    @Override DTree.Split bestCol( GBMUndecidedNode u ) {
+    @Override public DTree.Split bestCol( GBMUndecidedNode u ) {
       DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
       DHistogram hs[] = u._hs;
       if( hs == null ) return best;
@@ -401,7 +401,7 @@ public class GBM extends SharedTreeModelBuilder {
     GBMUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
     // Randomly select mtry columns to 'score' in following pass over the data.
     // In GBM, we use all columns (as opposed to RF, which uses a random subset).
-    @Override int[] scoreCols( DHistogram[] hs ) { return null; }
+    @Override public int[] scoreCols( DHistogram[] hs ) { return null; }
   }
 
   // ---

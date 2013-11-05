@@ -2,7 +2,7 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
+import java.util.*;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -74,14 +74,14 @@ public class Frame extends Iced {
 
   public int find( Vec vec ) {
     for( int i=0; i<_vecs.length; i++ )
-      if( vec==_vecs[i] )
+      if( vec.equals(_vecs[i]) )
         return i;
     return -1;
   }
 
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
-    assert anyVec().group().equals(vec.group());
+    assert _vecs.length == 0 || anyVec().group().equals(vec.group());
     final int len = _names.length;
     _names = Arrays.copyOf(_names,len+1);
     _vecs  = Arrays.copyOf(_vecs ,len+1);
@@ -89,6 +89,21 @@ public class Frame extends Iced {
     _names[len] = name;
     _vecs [len] = vec ;
     _keys [len] = vec._key;
+  }
+
+  /** Appends an entire Frame */
+  public Frame add( Frame fr ) {
+    assert anyVec().group().equals(fr.anyVec().group());
+    final int len0=    _names.length;
+    final int len1= fr._names.length;
+    final int len = len0+len1;
+    _names = Arrays.copyOf(_names,len);
+    _vecs  = Arrays.copyOf(_vecs ,len);
+    _keys  = Arrays.copyOf(_keys ,len);
+    System.arraycopy(fr._names,0,_names,len0,len1);
+    System.arraycopy(fr._vecs ,0,_vecs ,len0,len1);
+    System.arraycopy(fr._keys ,0,_keys ,len0,len1);
+    return this;
   }
 
   /** Removes the first column with a matching name.  */
@@ -198,6 +213,22 @@ public class Frame extends Iced {
     return ds;
   }
 
+  private String[][] domains(int [] cols){
+    Vec [] vecs = vecs();
+    String [][] res = new String[cols.length][];
+    for(int i = 0; i < cols.length; ++i)
+      res[i] = vecs[cols[i]]._domain;
+    return res;
+  }
+
+  private String [] names(int [] cols){
+    if(_names == null)return null;
+    String [] res = new String[cols.length];
+    for(int i = 0; i < cols.length; ++i)
+      res[i] = _names[cols[i]];
+    return res;
+  }
+
   /** Returns the first readable vector. */
   public Vec anyVec() {
     if( _col0 != null ) return _col0;
@@ -246,10 +277,8 @@ public class Frame extends Iced {
   /** Actually remove/delete all Vecs from memory, not just from the Frame. */
   public void remove(Futures fs){
     if(vecs().length > 0){
-      VectorGroup vg = _vecs[0].group();
       for( Vec v : _vecs )
         UKV.remove(v._key,fs);
-      DKV.remove(vg._key);
     }
     _names = new String[0];
     _vecs = new Vec[0];
@@ -299,6 +328,7 @@ public class Frame extends Iced {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
       String n = _names[c];
+      if( numRows()==0 ) { sb.append(n).append(' '); continue; }
       Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
       String f = fs[c] = C.pformat();  // Printable width
       int w=0;
@@ -315,7 +345,7 @@ public class Frame extends Iced {
       } else if( w==2 ) {       // First 2 chars only
         sb.append(n.charAt(0)).append(n.charAt(1));
       } else {                  // First char dot lastchars; e.g. Compress "Interval" to "I.val"
-        sb.append(n.charAt(0)).append(' ');
+        sb.append(n.charAt(0)).append('.');
         for( int i=n.length()-(w-2); i<n.length(); i++ )
           sb.append(n.charAt(i));
       }
@@ -332,8 +362,14 @@ public class Frame extends Iced {
           Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
           int len = C.pformat_len0();  // Printable width
           for( int i=0; i<len; i++ ) sb.append('-');
-        } else
-          sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+        } else {
+          try {
+            sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+          } catch( IllegalFormatException ife ) {
+            System.out.println("Format: "+fs[c]+" col="+c+" not for ints");
+            ife.printStackTrace();
+          }
+        }
       } else {
         sb.append(String.format(fs[c],_vecs[c].at (idx)));
         if( _vecs[c].isNA(idx) ) sb.append(' ');
@@ -410,6 +446,116 @@ public class Frame extends Iced {
         _position += n;
       }
       return n;
+    }
+  }
+
+
+  // --------------------------------------------------------------------------
+  // In support of R, a generic Deep Copy & Slice.
+  // Semantics are a little odd, to match R's.
+  // Each dimension spec can be:
+  //   null - all of them
+  //   a sorted list of negative numbers (no dups) - all BUT these
+  //   an unordered list of positive - just these, allowing dups
+  // The numbering is 1-based; zero's are not allowed in the lists, nor are out-of-range.
+  public Frame deepSlice( Object orows, Object ocols ) {
+    // ocols is either a long[] or a Frame-of-1-Vec
+    if( ocols != null && !(ocols instanceof long[]) ) throw H2O.unimpl();
+    long[] cols = (long[])ocols;
+
+    // Since cols is probably short convert to a positive list.
+    int c2[] = null;
+    if( cols==null ) {
+      c2 = new int[numCols()];
+      for( int i=0; i<c2.length; i++ ) c2[i]=i;
+    } else if( cols.length==0 ) {
+      c2 = new int[0];
+    } else if( cols[0] > 0 ) {
+      c2 = new int[cols.length];
+      for( int i=0; i<cols.length; i++ )
+        c2[i] = (int)cols[i]-1; // Convert 1-based cols to zero-based
+    } else {
+      c2 = new int[numCols()-cols.length];
+      int j=0;
+      for( int i=0; i<numCols(); i++ ) {
+        if( j >= cols.length || i < (-cols[j]-1) ) c2[i-j] = i;
+        else j++;
+      }
+    }
+
+    // Do Da Slice
+    // orows is either a long[] or a Vec
+    if( orows == null || orows instanceof long[] )  
+      return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    Frame frows = (Frame)orows;
+    Vec vrows = frows.anyVec();
+    // It's a compatible Vec; use it as boolean selector.
+    // Build column names for the result.
+    Vec [] vecs = new Vec[c2.length+1];
+    String [] names = new String[c2.length+1];
+    for(int i = 0; i < c2.length; ++i){
+      vecs[i] = _vecs[c2[i]];
+      names[i] = _names[c2[i]];
+    }
+    vecs[c2.length] = vrows;
+    names[c2.length] = "predicate";
+    return new DeepSelect().doAll(c2.length,new Frame(names,vecs)).outputFrame(names(c2),domains(c2));
+  }
+
+  // Bulk (expensive) copy from 2nd cols into 1st cols.
+  // Sliced by the given cols & rows
+  private static class DeepSlice extends MRTask2<DeepSlice> {
+    final int  _cols[];
+    final long _rows[];
+    DeepSlice( long rows[], int cols[] ) { _cols=cols; _rows=rows; }
+    @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+      long rstart = chks[0]._start;
+      int rlen = chks[0]._len;  // Total row count
+      int rx = 0;               // Which row to in/ex-clude
+      int rlo = 0;              // Lo/Hi for this block of rows
+      int rhi = rlen;
+      while( rlo < rlen ) {     // Still got rows to include?
+        if( _rows != null ) {   // Got a row selector?
+          if( rx >= _rows.length ) break; // All done with row selections
+          long r = _rows[rx++]-1;// Next row selector
+          if( r < 0 ) {          // Row exclusion?
+            throw H2O.unimpl();
+          } else {              // Positive row list?
+            if( r < rstart ) continue;
+            rlo = (int)(r-rstart);
+            rhi = rlo+1;        // Stop at the next row
+            while( rx < _rows.length && (_rows[rx]-1-rstart)==rhi && rhi < rlen ) {
+              rx++; rhi++;      // Grab sequential rows
+            }
+          }
+        }
+        // Process this next set of rows
+        // For all cols in the new set
+        for( int i=0; i<_cols.length; i++ ) {
+          Chunk    oc =  chks[_cols[i]];
+          NewChunk nc = nchks[      i ];
+          if( oc._vec.isInt() ) { // Slice on integer columns
+            for( int j=rlo; j<rhi; j++ )
+              if( oc.isNA0(j) ) nc.addNA();
+              else              nc.addNum(oc.at80(j),0);
+          } else {                // Slice on double columns
+            for( int j=rlo; j<rhi; j++ )
+              nc.addNum(oc.at0(j));
+          }
+        }
+        rlo=rhi;
+      }
+    }
+  }
+
+  private static class DeepSelect extends MRTask2<DeepSelect> {
+    @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+      Chunk pred = chks[chks.length-1];
+      for(int i = 0; i < pred._len; ++i){
+        if(pred.at0(i) != 0) 
+          for(int j = 0; j < chks.length-1; ++j)
+            nchks[j].addNum(chks[j].at0(i));
+      }
     }
   }
 }

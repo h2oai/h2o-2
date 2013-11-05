@@ -6,21 +6,19 @@ import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h
 # only classes 1-7 in the 55th col
 # rng DETERMINISTIC is default
 paramDict = {
-    # FIX! if there's a header, can you specify column number or column header
-    'response_variable': 54,
-    'class_weights': None,
-    'ntree': 10,
-    'model_key': 'model_keyA',
-    'out_of_bag_error_estimate': 1,
-    'stat_type': 'ENTROPY',
-    'depth': 2147483647, 
-    'bin_limit': 10000,
-    'parallel': 1,
-    'ignore': "1,2,6,7,8",
-    'sample': 66,
-    ## 'seed': 3,
-    ## 'features': 30,
-    'exclusive_split_limit': 0,
+    'response': 'C54',
+    'cols': None,
+    'ignored_cols_by_name': 'C1,C2,C6,C7,C8',
+    'classification': None,
+    'validation': None,
+    'ntrees': 10,
+    'max_depth': None,
+    'min_rows': None,
+    'nbins': 10000,
+    'mtries': None,
+    'sample_rate': 0.66,
+    'seed': None,
+
     }
 
 class Basic(unittest.TestCase):
@@ -56,14 +54,11 @@ class Basic(unittest.TestCase):
         for jobDispatch in range(1):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
+            paramDict['destination_key'] = 'RFModel_' + str('jobDispatch')
             kwargs = paramDict.copy()
-            timeoutSecs = 30 + kwargs['ntree'] * 20
+            timeoutSecs = 30 + kwargs['ntrees'] * 20
+
             start = time.time()
-            # do oobe
-            kwargs['out_of_bag_error_estimate'] = 1
-            kwargs['model_key'] = "model_" + str(jobDispatch)
-            
-            # don't poll for fvec 
             rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
             elapsed = time.time() - start
             print "RF dispatch end on ", csvPathname, 'took', elapsed, 'seconds.', \
@@ -73,8 +68,8 @@ class Basic(unittest.TestCase):
             # FIX! are these already in there?
             rfView = {}
             rfView['data_key'] = hex_key
-            rfView['model_key'] = kwargs['model_key']
-            rfView['ntree'] = kwargs['ntree']
+            rfView['model_key'] = kwargs['destination_key']
+            rfView['ntrees'] = kwargs['ntrees']
             rfViewInitial.append(rfView)
 
             print "rf job dispatch end on ", csvPathname, 'took', time.time() - start, 'seconds'
@@ -92,13 +87,13 @@ class Basic(unittest.TestCase):
             print "rfView", h2o.dump_json(rfView)
             data_key = rfView['data_key']
             model_key = rfView['model_key']
-            ntree = rfView['ntree']
-            # allow it to poll to complete
-            rfView = rfViewResult = h2o_cmd.runRFView(None, data_key, 
-                model_key, ntree=ntree, timeoutSecs=60, noPoll=False)
+            ntrees = rfView['ntrees']
+            rfView = rfViewResult = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=True)
+            h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
+
 
             # FIX! should update this expected classification error
-            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntrees)
             self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=data_key)
 

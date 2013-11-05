@@ -21,7 +21,7 @@ Quick Step-by-step
 ::
 
   cd h2o-1.7.0.520  #change working directory to the downloaded file
-  java -Xmx1g -jar h2o.jar -name mystats-cloud 
+  java -Xmx1g -jar h2o.jar 
 
 5. Wait a few moments and the following output will appear in your terminal window:
 
