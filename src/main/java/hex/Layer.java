@@ -508,43 +508,88 @@ public abstract class Layer extends Iced {
   }
 
   public static class Tanh extends Layer {
-    Tanh() {
-    }
-
-    public Tanh(int units) {
-      this.units = units;
-    }
-
-    @Override void fprop() {
-      for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = 0;
-        for( int i = 0; i < _in._a.length; i++ )
-          _a[o] += _w[o * _in._a.length + i] * _in._a[i];
-        _a[o] += _b[o];
-
-        // tanh approx, slightly faster, untested
-        // float a = Math.abs(_a[o]);
-        // float b = 12 + a * (6 + a * (3 + a));
-        // _a[o] = (_a[o] * b) / (a * b + 24);
-
-        _a[o] = (float) Math.tanh(_a[o]);
-      }
-    }
-
-    @Override void bprop() {
-      for( int o = 0; o < _a.length; o++ ) {
-        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
-        float g = _e[o] * (1 - _a[o] * _a[o]);
-        for( int i = 0; i < _in._a.length; i++ ) {
-          int w = o * _in._a.length + i;
-          if( _in._e != null )
-            _in._e[i] += g * _w[w];
-          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+        Tanh() {
         }
-        _b[o] += _r * g;
-      }
+
+        public Tanh(int units) {
+            this.units = units;
+        }
+
+        @Override void fprop() {
+            for( int o = 0; o < _a.length; o++ ) {
+                _a[o] = 0;
+                for( int i = 0; i < _in._a.length; i++ )
+                    _a[o] += _w[o * _in._a.length + i] * _in._a[i];
+                _a[o] += _b[o];
+
+                // tanh approx, slightly faster, untested
+                // float a = Math.abs(_a[o]);
+                // float b = 12 + a * (6 + a * (3 + a));
+                // _a[o] = (_a[o] * b) / (a * b + 24);
+
+                _a[o] = (float) Math.tanh(_a[o]);
+            }
+        }
+
+        @Override void bprop() {
+            for( int o = 0; o < _a.length; o++ ) {
+                // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
+                float g = _e[o] * (1 - _a[o] * _a[o]);
+                for( int i = 0; i < _in._a.length; i++ ) {
+                    int w = o * _in._a.length + i;
+                    if( _in._e != null )
+                        _in._e[i] += g * _w[w];
+                    _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+                }
+                _b[o] += _r * g;
+            }
+        }
     }
-  }
+
+    public static class MaxoutDropout extends Layer {
+        MaxoutDropout() {
+        }
+
+        private float prob;
+        private Random rand;
+        private float scale;
+
+        public MaxoutDropout(int units, float prob) {
+            this.units = units;
+            assert prob <= 1;
+            assert prob > 0 ;
+            this.prob = prob;
+            this.scale = 1/prob;
+            this.rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        }
+
+        @Override void fprop() {
+            for( int o = 0; o < _a.length; o++ ) {
+                _a[o] = Float.MIN_VALUE;
+                float cur = 0;
+                for( int i = 0; i < _in._a.length; i++ )
+                    cur = _w[o * _in._a.length + i] * _in._a[i] * (rand.nextFloat() < prob ? 1 : 0) * scale;
+                    _a[o] = java.lang.Math.max(cur, _a[o]);
+                _a[o] += _b[o];
+            }
+        }
+
+        @Override void bprop() {
+            for( int o = 0; o < _a.length; o++ ) {
+                float g = _e[o];
+//                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
+//                    g = 0;
+                for( int i = 0; i < _in._a.length; i++ ) {
+                    int w = o * _in._a.length + i;
+                    if( _in._e != null )
+                        _in._e[i] += g * _w[w];
+                    _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+                }
+                _b[o] += _r * g;
+            }
+        }
+    }
+
 
   /**
    * Apply tanh to the weights' transpose. Used for auto-encoders.
