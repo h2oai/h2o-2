@@ -1640,7 +1640,7 @@ class H2O(object):
         verboseprint("\npca_view_result:", dump_json(a))
         return a
 
-    def glm_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+    def glm_view(self, modelKey=None, timeoutSecs=300, print_params=False, **kwargs):
         #this function is only for glm2, may remove it in future.
         params_dict = {
             '_modelKey' : modelKey,
