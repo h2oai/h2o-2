@@ -158,6 +158,7 @@ beta_features = False
 sleep_at_tear_down = False
 abort_after_import = False
 clone_cloud_json = None
+disable_time_stamp = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 python_cmd_ip = get_ip_address()
@@ -182,11 +183,13 @@ def parse_our_args():
     parser.add_argument('-slp', '--sleep_at_tear_down', help='open browser and time.sleep(3600) at tear_down_cloud() (typical test end/fail)', action='store_true')
     parser.add_argument('-aai', '--abort_after_import', help='abort the test after printing the full path to the first dataset used by import_parse/import_only', action='store_true')
     parser.add_argument('-ccj', '--clone_cloud_json', type=str, help='a h2o-nodes.json file can be passed (see build_cloud(create_json=True). This will create a cloned set of node objects, so any test that builds a cloud, can also be run on an existing cloud without changing the test')
+    parser.add_argument('-dts', '--disable_time_stamp', help='Disable the timestamp on all stdout. Useful when trying to capture some stdout (like json prints) for use elsewhere', action='store_true')
+
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -200,6 +203,7 @@ def parse_our_args():
     sleep_at_tear_down = args.sleep_at_tear_down
     abort_after_import = args.abort_after_import
     clone_cloud_json = args.clone_cloud_json
+    disable_time_stamp = args.disable_time_stamp
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -525,7 +529,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # (both come thru here)
     # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
-    sys.stdout = OutWrapper(sys.stdout)
+    if not disable_time_stamp:
+        sys.stdout = OutWrapper(sys.stdout)
     if clone_cloud_json or clone_cloud:
         nodeList = build_cloud_with_json(
             h2o_nodes_json=clone_cloud_json if clone_cloud_json else clone_cloud)
@@ -1635,7 +1640,7 @@ class H2O(object):
         verboseprint("\npca_view_result:", dump_json(a))
         return a
 
-    def glm_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+    def glm_view(self, modelKey=None, timeoutSecs=300, print_params=False, **kwargs):
         #this function is only for glm2, may remove it in future.
         params_dict = {
             '_modelKey' : modelKey,
@@ -1755,7 +1760,7 @@ class H2O(object):
         a = self.__do_json_request('2/GBM.json',timeout=timeoutSecs,params=params_dict)
         if noPoll:
             a['python_elapsed'] = time.time() - start
-            a['python_timeout'] = a['python_elapsed']*100 / timeoutSecs
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
 
@@ -1890,18 +1895,18 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
+    def summary_page(self, key, timeoutSecs=60, noPrint=True, **kwargs):
         if beta_features:
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': max_column_display,
+                'max_ncols': 1000,
                 }
         else:
             params_dict = {
                 'key': key,
                 'x': None,
-                'max_column_display': max_column_display,
+                'max_column_display': 1000,
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)

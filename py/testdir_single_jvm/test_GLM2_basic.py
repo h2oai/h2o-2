@@ -60,12 +60,9 @@ class Basic(unittest.TestCase):
                  }
 
 
-        BUG1 = True
-
         timeoutSecs = 60
-        
         start = time.time()
-        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=0.25, pollTimeoutSecs=180, noPoll=BUG1, **kwargs)
+        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=0.25, pollTimeoutSecs=180, noPoll=True, **kwargs)
 
         h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
         print "FIX! how do we get the GLM result"
@@ -76,6 +73,9 @@ class Basic(unittest.TestCase):
         params = {'job_key': job_key, 'destination_key': modelKey}
         a = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMProgressPage2.json", params=params)
         print "GLM result from completion_redirect:", h2o.dump_json(a)
+
+        a = h2o.nodes[0].glm_view(_modelKey=modelKey)
+        print "GLM result from glm_view:", h2o.dump_json(a)
 
         # how do we get to the model view?
         # http://192.168.0.37:54321/2/GLMModelView.html?_modelKey=GLM2_59af6ba2-3321-4a6a-84ed-16b44a087707
