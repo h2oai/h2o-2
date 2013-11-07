@@ -257,7 +257,8 @@ class Basic(unittest.TestCase):
                 pattern = '*syn_*'+str(trial)+"_"+rowxcol+'*'
             else:
                 pattern = '*syn_data_*'+str(trial)+"_"+rowxcol+'*'
-            parseResult = h2o.nodes[0].parse(pattern, hex_key=hex_key, timeoutSecs=timeoutSecs, **kwargs)
+            parseResult = h2i.parse_only(pattern=pattern, hex_key=hex_key, timeoutSecs=timeoutSecs, **kwargs)
+
 
             print "parseResult['destination_key']: " + parseResult['destination_key']
             print 'parse time:', parseResult['response']['time']

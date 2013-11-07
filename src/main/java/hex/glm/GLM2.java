@@ -62,12 +62,9 @@ public class GLM2 extends ModelJob {
 
   public GLM2() {_step = 1; _offset = 0; _complement = false;}
   public GLM2(String desc, Key dest, Frame src,Vec response,  boolean standardize, Family family, Link link, double alpha, double lambda){
-    this(desc, dest, src, response, standardize, family, link, alpha, lambda, 1,0,false,null);
+    this(desc, dest, src, response, standardize, family, link, alpha, lambda, 1,0,false,null,0,CaseMode.none,0);
   }
-  public GLM2(String desc, Key dest, Frame src,Vec response, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int skip, boolean complement, double [] beta) {
-    this(desc, dest, src,response, standardize, family, link, alpha, lambda,step,skip,complement,beta,0);
-  }
-  public GLM2(String desc, Key dest, Frame src,Vec response, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int offset, boolean complement, double [] beta,int nfold) {
+  public GLM2(String desc, Key dest, Frame src,Vec response, boolean standardize, Family family, Link link, double alpha, double lambda, int step, int offset, boolean complement, double [] beta,int nfold, CaseMode caseMode, double caseVal) {
     description = desc;
     destination_key = dest;
     source = src;
@@ -82,6 +79,8 @@ public class GLM2 extends ModelJob {
     _beta = beta;
     this.n_folds = nfold;
     this.response = response;
+    this.case_mode = caseMode;
+    this.case_val = caseVal;
   }
 
   @Override public void cancel(String msg){
@@ -207,6 +206,7 @@ public class GLM2 extends ModelJob {
         GLM2.this.remove();
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+        ex.printStackTrace();
         GLM2.this.cancel(ex);
         return true;
       }
@@ -214,7 +214,9 @@ public class GLM2 extends ModelJob {
     callback.addToPendingCount(n_folds-1);
     callback.setCompleter(cmp);
     _subjobs = new GLM2[n_folds];
-    for(int i = 0; i < n_folds; ++i)
-      (_subjobs[i] =  new GLM2(this.description + "xval " + i, keys[i] = Key.make(), source, response, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta)).run(callback);
+    for(int i = 0; i < n_folds; ++i) // make the jobs objects, we don't want to start jobs before _subjobs is populated
+      _subjobs[i] =  new GLM2(this.description + "_xval " + i, keys[i] = Key.make(), source, response, standardize, family, link,alpha,lambda, n_folds, i,false,model.norm_beta,0,case_mode,case_val);
+    // now start them
+    for(GLM2 g:_subjobs)g.run(callback);
   }
 }

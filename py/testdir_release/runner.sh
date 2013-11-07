@@ -80,12 +80,13 @@ myPy() {
 }
 
 
+echo $TESTDIR
+echo $TEST
 # avoid for now
 # myPy c5 test_c5_KMeans_sphere15_180GB.py
-myPy c10  test_c10_rel_gbm.py
-
-if [[ $USER == "jenkins" ]]
-then 
+if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
+then
+    myPy c10  test_c10_rel_gbm.py
     myPy c1 test_c1_rel.py
     myPy c2 test_c2_rel.py
     myPy c3 test_c3_rel.py
@@ -94,6 +95,8 @@ then
     myPy c7 test_c7_rel.py
     myPy c8 test_c8_rf_airlines_hdfs.py
     myPy c9 test_c9_GBM_airlines_hdfs.py
+else
+    myPy $TESTDIR $TEST
 fi
 
 # If this one fails, fail this script so the bash dies 

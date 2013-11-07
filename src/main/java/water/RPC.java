@@ -169,7 +169,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       _retry += (_retry < 5000 ) ? _retry : 5000;
       // Put self on the "TBD" list of tasks awaiting Timeout.
       // So: dont really 'forget' but remember me in a little bit.
-      assert !UDPTimeOutThread.PENDING.contains(this);
+//      assert !UDPTimeOutThread.PENDING.contains(this);
       UDPTimeOutThread.PENDING.add(this);
       return this;
     } catch(Error t) {

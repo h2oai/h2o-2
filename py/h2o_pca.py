@@ -46,7 +46,7 @@ def simpleCheckPCA(self, pca, **kwargs):
                 raise Exception("Component %s has NaN: %s eigenvector %s", (i, e, s))
     print " Good!"
 
-    print "How many components did we get? (after enum col dropping): %s", len(pcs)
+    print "How many components did we get? (after enum col dropping): %s" % len(pcs)
     
     # now print the top ten. Sorting by the value...getting key,value tuples (so we can see the column)
     # it should match the column numbering..even if it skips cols due to enums
@@ -54,13 +54,13 @@ def simpleCheckPCA(self, pca, **kwargs):
     print "Just look at the sort for the first row in pca eigVec"
     i = 0
     s = pcs[i]
-    sorted_s = sorted(enumerate(s), key=lambda t: abs(t[1]))
-    num = min(10, len(s))
-    print "\n%s First (smallest) %d. sorted_pcs[0:9]: %s\n" % (i, num, sorted_s[0:num-1])
-    print "The first entry from the eigenvector, should have the largest std dev, because it's sorted"
+    # print "s:", s
+    unsorted_s = [(i,j) for i,j in enumerate(s)]
+    sorted_s = sorted(unsorted_s, key=lambda t: abs(t[1]), reverse=True)
+    print "\n%s First (larger). sorted_s: %s\n" % (i, sorted_s)
+    print "The last entry from the eigenvector, should have the largest std dev, because it's sorted"
     print "Rule of thumb is we can then look at the sorted values, and guess it's related to column importance"
     print "The sort should be on the abs(), since the signs can be + or -"
-    print "\n%s Last %d (largest) sorted_s[-10:]: %s\n" % (i, num, sorted_s[-num:])
 
     # shouldn't have any errors
     h2o.check_sandbox_for_errors()

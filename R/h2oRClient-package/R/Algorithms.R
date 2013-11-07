@@ -4,6 +4,7 @@ setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lam
 setGeneric("h2o.glm.FV", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm.FV") })
 setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
 setGeneric("h2o.kmeans.FV", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans.FV") })
+setGeneric("h2o.nn", function(x, y, data, classification= 1, activation= "Tanh", layers= 500, rate= 0.01, regularization= 1.0e-4, epoch=100,validation) { standardGeneric("h2o.nn") })
 setGeneric("h2o.prcomp", function(data, tol = 0, standardize = TRUE, retx = FALSE) { standardGeneric("h2o.prcomp") })
 setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
 setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
@@ -91,6 +92,11 @@ setMethod("h2o.gbm", signature(x="ANY", y="numeric", distribution='ANY', data="H
     function(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
       if( y < 1 || y > ncol( data ) ) stop(paste(y, 'is not a valid column index'))
       h2o.gbm(x, colnames(data)[y], distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+    })
+
+setMethod("h2o.gbm", signature(x="ANY", y="ANY", distribution='ANY', data="H2OParsedData2", n.trees="ANY", interaction.depth="ANY", n.minobsinnode="ANY", shrinkage="ANY"),
+    function(x, y, distribution, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+      h2o.gbm(x, y, distribution, new("H2OParsedData", h2o=data@h2o, key=data@key), n.trees, interaction.depth, n.minobsinnode, shrinkage)
     })
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
@@ -286,6 +292,82 @@ setMethod("h2o.kmeans", signature(data="H2OParsedData", centers="numeric", cols=
       else if(!(missing(iter.max) || class(iter.max) == "numeric"))
         stop(paste("iter.max cannot be of class", class(iter.max)))
       h2o.kmeans(data, centers, as.character(cols), iter.max) 
+    })
+
+#------------------------------- Neural Network ----------------------------------#
+setMethod("h2o.nn", signature(x="numeric", y="numeric", data="H2OParsedData", classification="numeric", activation="character", layers="numeric", rate="numeric", regularization="numeric", epoch="numeric", validation="H2OParsedData"),
+   function(x, y,  data, classification, activation, layers, rate, regularization, epoch, validation) {
+      if (length(x) < 1) stop("Neural Net requires at least one explanatory variable")
+      if(any( x < 1 | x > ncol(data))) stop(paste('Out of range explanatory variable', paste(x[which(x < 1 || x > ncol(data))], collapse=',')))
+      if( y < 1 || y > ncol(data) ) stop(paste('Response variable index', y, 'is out of range'))
+      if( y %in% x ) stop(paste(colnames(data)[y], 'is both an explanatory and dependent variable'))
+      x <- x - 1
+      cols=paste(x,collapse=',')
+
+      if( !(activation %in% c('Tanh', 'Rectifier')) )
+        stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier] are supported"))
+      if( !(classification %in% c( 0, 1)) )
+        stop(paste(classification, "is not a valid classification index; only [ 0, 1] are supported"))
+       
+      destKey = paste("__NNModel_", UUIDgenerate(), sep="")
+      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=colnames(data)[y], cols=paste(cols, sep="", collapse=","), classification=as.numeric(classification), activation=activation, rate=rate, hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=data@key)
+      while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+      res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, model=destKey)
+    
+      result=list()
+      
+      categories=length(res2$model$confusion_matrix)
+      cf_matrix = t(matrix(unlist(res2$model$confusion_matrix), nrow=categories))
+      cf_names <- res2$model[['_domains']]
+      cf_names <- cf_names[[ length(cf_names) ]]
+      dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
+      
+      result$confusion = cf_matrix
+      result$items = res2$model$items
+      result$train_class_error = res2$model$train_classification_error
+      result$train_sqr_error = res2$model$train_mse
+      result$valid_class_error = res2$model$validation_classification_error
+      result$valid_sqr_error = res2$model$validation_mse
+      new("H2ONNModel", key=destKey, data=data, model=result)
+	})
+
+setMethod("h2o.nn", signature(x="numeric", y="character", data="H2OParsedData", classification="numeric", activation="ANY", layers="numeric", rate="numeric", regularization="numeric", epoch="numeric", validation="H2OParsedData"),
+   function(x, y,  data, classification, activation, layers, rate, regularization, epoch, validation) {
+      cc <- colnames( data )
+      if( !(y %in% cc) ) stop(paste(y, 'is not a valid column name'))
+      y_i <- which(y==cc)
+      h2o.nn(x, y_i, data, classification, activation, layers, rate, regularization, epoch, validation)
+    })
+
+setMethod("h2o.nn", signature(x="character", y="character", data="H2OParsedData", classification="numeric", activation="ANY", layers="numeric", rate="numeric", regularization="numeric", epoch="numeric", validation="H2OParsedData"),
+   function(x, y,  data, classification, activation, layers, rate, regularization, epoch, validation) {
+      cc <- colnames( data )
+      if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
+      if(any(!(x %in% cc))) stop(paste(paste(x[which(!(x %in% cc))], collapse=','), 'is not a valid column name'))
+      x_i = match(x, cc)
+      h2o.nn(x_i, y, data, classification, activation, layers, rate, regularization, epoch, validation)
+    })
+
+setMethod("h2o.nn", signature(x="ANY", y="character", data="H2OParsedData", classification="ANY", activation="ANY", layers="ANY", rate="ANY", regularization="ANY", epoch="ANY", validation="H2OParsedData"),
+   function(x, y,  data, classification, activation, layers, rate, regularization, epoch, validation) {
+      if(!(missing(x) || class(x) == "numeric" || class(x) == "character"))
+      stop(paste("x cannot be of class", class(x)))
+      if(missing(x)) x = setdiff(colnames(data), y)
+     if(!(missing(epoch) || class(epoch) == "numeric"))
+       stop(paste("epoch cannot be of class", class(epoch)))
+        if(!(missing(regularization) || class(regularization) == "numeric"))
+        stop(paste("regularization cannot be of class", class(regularization)))
+        if(!(missing(rate) || class(tol) == "numeric"))
+        stop(paste("rate cannot be of class", class(rate)))
+        if(!(missing(layers) || class(layers) == "numeric"))
+        stop(paste("layers cannot be of class", class(layers)))
+      h2o.nn(x, y, data, classification, activation, layers, rate, regularization, epoch, validation)
+    })
+
+setMethod("h2o.nn", signature(x="ANY", y="numeric", data="H2OParsedData", classification="ANY", activation="ANY", layers="ANY", rate="ANY", regularization="ANY", epoch="ANY", validation="H2OParsedData"),
+   function(x, y,  data, classification, activation, layers, rate, regularization, epoch, validation) {
+     if( y < 1 || y > ncol( data ) ) stop(paste(y, 'is not a valid column index'))
+     h2o.nn(x, colnames(data)[y], data, classification, activation, layers, rate, regularization, epoch, validation)
     })
 
 #------------------------------- Principal Components Analysis ----------------------------------#
@@ -519,6 +601,13 @@ setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 setMethod("h2o.predict", signature(object="H2OModel", newdata="missing"), 
     function(object) { h2o.predict(object, object@data) })
 
+setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData2"), 
+    function(object, newdata) {
+      if(class(object) != "H2OGBMModel" && class(object) != "H2OPCAModel")
+        stop(paste("Prediction in FluidVecs has not yet been implemented for", class(object)))
+      h2o.predict(object, new("H2OParsedData", h2o=newdata@h2o, key=newdata@key))
+    })
+
 #------------------------------- FluidVecs -------------------------------------#
 setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
     function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, NA)) {
@@ -530,17 +619,23 @@ setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedD
       rand_glm_key = paste("__GLM2Model_", UUIDgenerate(), sep="")
       
       if(family != "tweedie")
-        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
       else
-        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, vresponse = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
+        res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, tweedie_variance_power = tweedie.p, standardize = as.numeric(FALSE))
       while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
       
       res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=rand_glm_key)
       resModel = res$glm_model
-      res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMValidView, '_valKey'=resModel$validations)
-      modelOrig = h2o.__getGLM2Results(resModel, y, res$glm_val)
+      # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMValidView, '_valKey'=resModel$validations)
+      # modelOrig = h2o.__getGLM2Results(resModel, y, res$glm_val)
+      modelOrig = h2o.__getGLM2Results(resModel, y, list())
       new("H2OGLMModel", key=resModel$'_selfKey', data=data, model=modelOrig, xval=list())
   })
+
+setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedData2", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+  function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, NA)) {
+    h2o.glm.FV(x, y, new("H2OParsedData", h2o=data@h2o, key=data@key), family, nfolds, alpha, lambda, tweedie.p)
+  })          
 
 # Pretty formatting of H2O GLM results
 h2o.__getGLM2Results <- function(model, y, valid) {

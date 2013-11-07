@@ -222,8 +222,8 @@ public abstract class CustomParser extends Iced {
 
   public static class StreamData implements CustomParser.DataIn {
     final transient InputStream _is;
-    private byte[] _bits0 = new byte[32*1024];
-    private byte[] _bits1 = new byte[32*1024];
+    private byte[] _bits0 = new byte[64*1024];
+    private byte[] _bits1 = new byte[64*1024];
     private int _cidx0=-1, _cidx1=-1; // Chunk #s
     public StreamData(InputStream is){_is = is;}
     @Override public byte[] getChunkData(int cidx) {

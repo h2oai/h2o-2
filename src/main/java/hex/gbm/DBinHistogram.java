@@ -93,19 +93,19 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
   }
   float binAt( int b ) { return _bmin+b/_step; }
 
-  @Override int  nbins(     ) { return _nbins  ; }
-  @Override long  bins(int b) { return _bins[b]; }
-  @Override float mins(int b) { return _mins[b]; }
-  @Override float maxs(int b) { return _maxs[b]; }
-  double mean(int b) { return _MSs[b*2+0]; }
+  @Override public int  nbins(     ) { return _nbins  ; }
+  @Override public long  bins(int b) { return _bins[b]; }
+  @Override public float mins(int b) { return _mins[b]; }
+  @Override public float maxs(int b) { return _maxs[b]; }
+  @Override public double mean(int b) { return _MSs[b*2+0]; }
   double seco(int b) { return _MSs[b*2+1]; }
-  double var (int b) { return _bins[b] > 1 ? seco(b)/(_bins[b]-1) : 0; }
+  @Override public double var (int b) { return _bins[b] > 1 ? seco(b)/(_bins[b]-1) : 0; }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // Score is the sum of the MSEs when the data is split at a single point.
   // mses[1] == MSE for splitting between bins  0  and 1.
   // mses[n] == MSE for splitting between bins n-1 and n.
-  DTree.Split scoreMSE( int col ) {
+  @Override public DTree.Split scoreMSE( int col ) {
     assert _nbins > 1;
 
     // Compute mean/var for cumulative bins from 0 to nbins inclusive.
@@ -125,7 +125,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
     }
     // If we see zero variance, we must have a constant response in this
     // column.  Normally this situation is cut out before we even try to split, but we might
-    // have NA's in THIS column... 
+    // have NA's in THIS column...
     if( MS0[2*_nbins+1] == 0 ) { assert isConstantResponse(); return null; }
     //assert Math.abs(MS0[2*_nbins+1]) > 1e-8 : "No variance, why split? "+Arrays.toString(MS0)+" col "+_name+" "+this;
 
@@ -168,7 +168,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       if( (se < best_se0+best_se1) || // Strictly less error?
           // Or tied MSE, then pick split towards middle bins
           se == (best_se0+best_se1) && best < (_nbins>>1) ) {
-        best_se0 = MS0[2*b+1];   best_se1 = MS1[2*b+1]; 
+        best_se0 = MS0[2*b+1];   best_se1 = MS1[2*b+1];
         best = b;
       }
     }
@@ -216,7 +216,7 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
 
 
   // One-time after compute sum & sum^2, convert to mean & var*N
-  public void fini() {
+  @Override public void fini() {
     for( int b=0; b<_nbins; b++ ) {
       long N = _bins[b];
       if( N>0 ) {
@@ -278,8 +278,8 @@ public class DBinHistogram extends DHistogram<DBinHistogram> {
       if( _bins[b] == 0 ) continue;
       double mean = mean(b);
       if( var(b) > 1e-16 ) return false;
-      if( mean != m ) 
-        if( Double.isNaN(m) ) m=mean; 
+      if( mean != m )
+        if( Double.isNaN(m) ) m=mean;
         else return false;
     }
     return true;

@@ -34,7 +34,14 @@ public class C2SChunk extends Chunk {
     UDP.set2(_mem,(idx<<1)+OFF,(short)res);
     return true;
   }
-  @Override boolean set_impl(int i, double d) { throw H2O.unimpl(); }
+  @Override boolean set_impl(int i, double d) {
+    short s = (short)((d/_scale)-_bias);
+    if( s == _NA ) return false;
+    double d2 = (s+_bias)*_scale;
+    if( d!=d2 ) return false;
+    UDP.set2(_mem,(i<<1)+OFF,s);
+    return true;
+  }
   @Override boolean set_impl(int i, float f ) { return false; }
   @Override boolean setNA_impl(int idx) { UDP.set2(_mem,(idx<<1)+OFF,(short)_NA); return true; }
   @Override boolean hasFloat() { return _scale < 1.0; }
@@ -49,8 +56,11 @@ public class C2SChunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
+    assert DParseTask.fitsIntoInt(dx);
     int x = (int)dx;
-    if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
+    nc._ds = null;
+    nc._ls = MemoryManager.malloc8 (_len);
+    nc._xs = MemoryManager.malloc4 (_len);
     for( int i=0; i<_len; i++ ) {
       long res = UDP.get2(_mem,(i<<1)+OFF);
       if( res == _NA ) nc.setInvalid(i);
@@ -61,6 +71,6 @@ public class C2SChunk extends Chunk {
     }
     return nc;
   }
-  public int pformat_len0() { return pformat_len0(_scale,5); }
-  public String pformat0() { return "% 10.4e"; }
+  public int pformat_len0() { return hasFloat() ? pformat_len0(_scale,5) : super.pformat_len0(); }
+  public String  pformat0() { return hasFloat() ? "% 10.4e" : super.pformat0(); }
 }

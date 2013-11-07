@@ -2,8 +2,8 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
+import java.util.Map.Entry;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
@@ -394,8 +394,8 @@ public final class ParseDataset2 extends Job {
               }
             });
             dp.dfork(new Frame(vec));
-            for(int i = chunkStartIdx; i < vec.nChunks(); ++i)
-              _chunk2Enum[i] = vec.chunkKey(i-chunkStartIdx).home_node().index();
+            for(int i = 0; i < vec.nChunks(); ++i)
+              _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
           }else {
             ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
             _dout = streamParse(vec.openStream(pmon), localSetup, _vecIdStart, chunkStartIdx,pmon);

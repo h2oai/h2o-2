@@ -1,12 +1,12 @@
 package hex.pca;
 
 import hex.gram.Gram.GramTask;
-import water.Key;
-import water.Model;
+import water.*;
 import water.api.*;
 import water.api.Request.API;
 import water.api.RequestBuilders.ElementBuilder;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 public class PCAModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -67,18 +67,39 @@ public class PCAModel extends Model {
   }
 
   public String[] namesExp(){
-    final int cats = catOffsets.length-1;
-    int k = 0;
-    String [] res = new String[sdev.length];
-    for(int i = 0; i < cats; ++i) {
-      for(int j = 1; j < _domains[i].length; ++j)
-        res[k++] = _names[i] + "." + _domains[i][j];
+    final int n = _names.length;
+    int[] nums = MemoryManager.malloc4(n);
+    int[] cats = MemoryManager.malloc4(n);
+
+    // Store indices of numeric and categorical cols
+    int nnums = 0, ncats = 0;
+    for(int i = 0; i < n; ++i){
+      if(_domains[i] != null)
+        cats[ncats++] = i;
+      else
+        nums[nnums++] = i;
     }
-    final int nums = sdev.length-k;
-    for(int i = 0; i < nums; ++i)
-      res[k+i] = _names[cats+i];
-    assert k + nums == res.length;
-    return res;
+
+    // Sort the categoricals in decreasing order according to size
+    for(int i = 0; i < ncats; ++i)
+      for(int j = i+1; j < ncats; ++j)
+        if(_domains[cats[i]].length < _domains[cats[j]].length) {
+          int x = cats[i];
+          cats[i] = cats[j];
+          cats[j] = x;
+        }
+
+    // Construct expanded col names, with categoricals first followed by numerics
+    int k = 0;
+    String[] names = new String[sdev.length];
+    for(int i = 0; i < ncats; ++i){
+      for(int j = 1; j < _domains[cats[i]].length; ++j)
+        names[k++] = _names[cats[i]] + "." + _domains[cats[i]][j];
+    }
+    for(int i = 0; i < nnums; ++i) {
+      names[k++] = _names[nums[i]];
+    }
+    return names;
   }
 
   public void generateHTML(String title, StringBuilder sb) {

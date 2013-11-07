@@ -1,7 +1,7 @@
 #!/bin/bash
 
 OUTDIR='BigLoggerFiles'
-rawLogs=${OUTDIR}/rawLogs
+rawLogs=rawLogs
 
 #last 3 digits of inet addr
 mach=`ifconfig | grep -o "inet addr:192.168.1.[0-9]*" | grep -o 192.168.1.* | awk -F'.' '{print $4}'`
@@ -18,12 +18,12 @@ swapPerfFile=${OUTDIR}/`date        +%Y-%m-%d`"-sisoPerf_"$mach".csv"
 
 #headers
 cpuheader='time(s)'
-head -n 33 /proc/stat | tail -n 32 | awk -F' ' 'OFS="," {print $1}' > tmpfile
+head -n 33 /proc/stat | awk -F' ' 'OFS="," {print $1}' > tmpfile
 cpuheader=$cpuheader,`./transpose.sh tmpfile`
 rm tmpfile
-memheader='time(s),MemTotal,MemFree,Cached,Writeback'
+memheader='time(s),MemTotal,MemFree,Cached,Writeback,RSS'
 topheader='time(s),PID,USER,RES,%CPU,%MEM,COMMAND'
-netheader='time(s),bytes,packets,errs,drop'
+netheader='time(s),dev,bytes,packets,errs,drop'
 sisoheader='time(s),si,so'
 
 function checkExists {
@@ -44,13 +44,19 @@ function checkDExists {
 function echoLine {
     if [ $4 -eq 0 ]
     then
-        line=`cat $1`
-        echo $(( `date +%s` - $2 )),$line >> $3
+        if [ $5 -eq 1 ]
+        then
+            line=`cat $1`
+            echo $(( `date +%s` - $2 )),$6,$line >> $3
+        else
+            line=`cat $1`
+            echo $(( `date +%s` - $2 )),$line >> $3
+        fi
     else
         if [ $5 ]
         then
             line=`./transpose.sh $1 | awk -F, 'OFS="," {print $1,$2,$4,$17}'`
-            echo $(( `date +%s` - $2 )),$line >> $3
+            echo $(( `date +%s` - $2 )),$line,$6 >> $3
         else
             line=`./transpose.sh $1`
             echo $(( `date +%s` - $2 )),$line >> $3
@@ -81,6 +87,12 @@ done
 
 start=`cat starttime`
 while :; do
+    h2oPID=`ps -efww | grep h2o | grep 0xdiag| grep jar|awk '{print $2}' | xargs`
+    if [ -z $h2oPID ]
+    then
+        continue
+    fi
+    
     #dump raw logs first
     ts=`date +"%Y-%m-%d-%H-%M-%S"`
     cat /proc/stat    >> ${rawLogs}/procstat/${ts}_procstat_${mach}
@@ -89,13 +101,13 @@ while :; do
     vmstat            >> ${rawLogs}/vmstat/${ts}_vmstat_${mach}
     top -b -n 1       >> ${rawLogs}/top/${ts}_top_${mach}
     a=1
-    for i in {0..34}
+    for i in {0..35}
     do
       TOTALS[$i]=0
     done
     while read -a CPU
     do a=$(($a+1));
-      if [ $a -eq 34 ]
+      if [ $a -eq 35 ]
       then
           break
       fi
@@ -123,18 +135,25 @@ while :; do
     echo $(( `date +%s` - $start )),$linecpu    >> $cpuPerfFile
     echo $(( `date +%s` - $start )),$lineidle   >> $idlePerfFile
     echo $(( `date +%s` - $start )),$lineiowait >> $iowaitPerfFile
-
+    RSS=`ps v  $h2oPID | awk -F' ' 'OFS="," {print $8}' | tail -n 1`
     cat /proc/meminfo      | awk -F' ' 'OFS="," {gsub(":","", $1); print $2}' > bmemTMP
     echo $pwd
-    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > brecTMP
-    grep lo /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > btraTMP
-    echoLine bmemTMP $start $memPerfFile         1 1
-    echoLine brecTMP $start $netReceivePerfFile  0 
-    echoLine btraTMP $start $netTransmitPerfFile 0
+    devstat=
+    case "$mach" in
+     161) devstat="eth1" ;;
+     162) devstat="eth2" ;;
+     163) devstat="eth3" ;;
+     164) devstat="eth3" ;;
+    esac
+    grep $devstat /proc/net/dev  | awk -F' ' 'OFS="," {print $2,$3,$4,$5}'          > brecTMP
+    grep $devstat /proc/net/dev  | awk -F' ' 'OFS="," {print $10,$11,$12,$13}'      > btraTMP
+    echoLine bmemTMP $start $memPerfFile         1 1 $RSS
+    echoLine brecTMP $start $netReceivePerfFile  0 1 $devstat
+    echoLine btraTMP $start $netTransmitPerfFile 0 1 $devstat
     #get top 10 processes from top and then just store them, may/not be interesting...
     ti="$(( `date +%s` - ${start} ))"
     top -b | head -n 17 | tail -n 10 | awk -v t=$ti -F' ' 'OFS="," {print t,$1,$2,$6,$9,$10,$12}' >> $topPerfFile
     vmstat | tail -n 1               | awk -v t=$ti -F' ' 'OFS="," {print t,$7,$8}'               >> $swapPerfFile
+    perf stat -x, -e instructions,cycles,cache-references,cache-misses,faults -a -o bTMP -p $h2oPID sleep 10
     rm b*TMP
-    sleep 10
 done

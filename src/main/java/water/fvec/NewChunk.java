@@ -257,17 +257,27 @@ public class NewChunk extends Chunk {
         } else throw H2O.unimpl();
       }
     }
-    // If the data was set8 as doubles, we (weanily) give up on compression and
-    // just store it as a pile-o-doubles.
-    if( _ds != null )return chunkF();
+    // If the data was set8 as doubles, we do a quick check to see if it's
+    // plain longs.  If not, we give up and use doubles.
+    if( _ds != null ) {
+      int i=0;
+      for( ; i<_len; i++ ) // Attempt to inject all doubles into ints
+        if( !Double.isNaN(_ds[i]) && (double)(long)_ds[i] != _ds[i] ) break;
+      if( i<_len ) return chunkD();
+      _ls = new long[_ds.length]; // Else flip to longs
+      _xs = new int [_ds.length];
+      for( i=0; i<_len; i++ )   // Inject all doubles into longs
+        if( Double.isNaN(_ds[i]) ) setInvalid(i);
+        else _ls[i] = (long)_ds[i];
+    }
 
-    // Look at the min & max & scaling.  See if we can sanely normalize the
     // data in some fixed-point format.
     boolean first = true;
     boolean hasNA = false;
+    _naCnt=0;
 
     for( int i=0; i<_len; i++ ) {
-      if( isNA(i) ) { hasNA = true; continue;}
+      if( isNA(i) ) { hasNA = true; _naCnt++; continue;}
       long l = _ls[i];
       int  x = _xs[i];
       // Compute per-chunk min/sum/max
@@ -326,7 +336,7 @@ public class NewChunk extends Chunk {
     // and if that fits in a byte/short - then it's worth compressing.  Other
     // wise we just flip to a float or double representation.
     if(overflow || fpoint && floatOverflow || -35 > xmin || xmin > 35)
-      return chunkF();
+      return chunkD();
     if( fpoint ) {
       if(lemax-lemin < 255 ) // Fits in scaled biased byte?
         return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
@@ -336,7 +346,7 @@ public class NewChunk extends Chunk {
       }
       if(lemax - lemin < Integer.MAX_VALUE)
         return new C4SChunk(bufX(lemin, xmin,C4SChunk.OFF,2),(int)lemin,DParseTask.pow10(xmin));
-      return chunkF();
+      return chunkD();
     } // else an integer column
     // Compress column into a byte
     if(xmin == 0 &&  0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
@@ -390,8 +400,8 @@ public class NewChunk extends Chunk {
     return bs;
   }
 
-  // Compute a compressed float buffer
-  private Chunk chunkF() {
+  // Compute a compressed double buffer
+  private Chunk chunkD() {
     final byte [] bs = MemoryManager.malloc1(_len*8);
     for(int i = 0; i < _len; ++i)
       UDP.set8d(bs, 8*i, _ds != null?_ds[i]:isNA0(i)?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]));
@@ -440,11 +450,8 @@ public class NewChunk extends Chunk {
   @Override boolean set_impl(int i, double d) {
     if( _ls != null ) {
       _ds = MemoryManager.malloc8d(_len);
-      for( int j = 0; j<_len; j++ ) {
-        long l = at8_impl(j);
-        _ds[j] = l;
-        if( _ds[j] != l )  throw H2O.unimpl();
-      }
+      for( int j = 0; j<_len; j++ )
+        _ds[j] = _ls[j]*Math.pow(10,_xs[j]);
       _ls = null;  _xs = null;
     }
     _ds[i]=d;

@@ -27,10 +27,6 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T>{
   protected final double [] _beta; // beta vector from previous computation or null if this is the first iteration
 
   final GLMParams _glm;
-  // CaseMode used to turn non-binary response into a binary one (0,1), used only by binomial family
-  protected final CaseMode _caseMode;
-  // CaseVaue to be used together with the Case predicate to turn the response into binary variable
-  protected final double _caseVal;
 
   // size of the top-left strictly diagonal region of the gram matrix, currently just the size of the largest categorical
   final protected int diagN(){return largestCat() > 1?largestCat():0;}

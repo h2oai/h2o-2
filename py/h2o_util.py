@@ -3,6 +3,17 @@ import gzip, shutil, random, time, re
 import os, zipfile, simplejson as json
 import h2o
 
+def cleanseInfNan(value):
+    # change the strings returned in h2o json to the IEEE number values
+    translate = {
+        'NaN': float('NaN'),
+        'Infinity': float('Inf'),
+        '-Infinity': -float('Inf'),
+    }
+    if str(value) in translate:
+        value = translate[str(value)]
+    return value
+
 # x = choice_with_probability( [('one',0.25), ('two',0.25), ('three',0.5)] )
 # need to sum to 1 or less. check error case if you go negative
 def choice_with_probability(tupleList):

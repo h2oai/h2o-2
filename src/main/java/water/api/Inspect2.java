@@ -2,8 +2,7 @@ package water.api;
 
 import water.*;
 import water.fvec.*;
-import water.util.Utils;
-import hex.gbm.DRF;
+import hex.drf.DRF;
 import hex.gbm.GBM;
 
 public class Inspect2 extends Request2 {
@@ -119,13 +118,13 @@ public class Inspect2 extends Request2 {
     for( int i=0; i<cols.length; i++ )
       sb.append("<td><b>").append(cols[i].name).append("</b></td>");
     sb.append("</tr>");
-    
+
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Type").append("</td>");
     for( int i=0; i<cols.length; i++ )
       sb.append("<td><b>").append(cols[i].type).append("</b></td>");
     sb.append("</tr>");
-    
+
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )

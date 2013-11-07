@@ -58,6 +58,7 @@ public class Vec extends Iced {
    *  dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
    *  such as file-backed Vecs. */
   final private long _espc[];
+  public long [] espc(){return _espc;}
   /** Enum/factor/categorical names. */
   public String [] _domain;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
@@ -75,11 +76,13 @@ public class Vec extends Iced {
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
-  Vec( Key key, long espc[] ) {
+  public Vec( Key key, long espc[] ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
   }
+
+  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; assert group()==v.group(); }
 
   // A 1-element Vec
   public Vec( Key key, double d ) {
@@ -356,8 +359,9 @@ public class Vec extends Iced {
 
   /** Stop writing into this Vec.  Rollup stats will again (lazily) be computed. */
   public void postWrite() {
-    if( _naCnt==-2 ) {
-      _naCnt=-1;
+    Vec vthis = DKV.get(_key).get();
+    if( vthis._naCnt==-2 ) {
+      _naCnt = vthis._naCnt=-1;
       new TAtomic<Vec>() {
         @Override public Vec atomic(Vec v) { if( v!=null && v._naCnt==-2 ) v._naCnt=-1; return v; }
       }.invoke(_key);
@@ -370,16 +374,13 @@ public class Vec extends Iced {
    *  compute chunks in an alternative way, such as file-backed Vecs. */
   int elem2ChunkIdx( long i ) {
     assert 0 <= i && i < length() : "0 <= "+i+" < "+length();
-    int x = Arrays.binarySearch(_espc, i);
-    int res = x<0?-x - 2:x;
     int lo=0, hi = nChunks();
     while( lo < hi-1 ) {
       int mid = (hi+lo)>>>1;
       if( i < _espc[mid] ) hi = mid;
       else                 lo = mid;
     }
-    if(res != lo)
-      assert(res == lo):res + " != " + lo + ", i = " + i + ", espc = " + Arrays.toString(_espc);
+    while( _espc[lo+1] == i ) lo++;
     return lo;
   }
 
@@ -409,13 +410,14 @@ public class Vec extends Iced {
   }
 
   /** Make a new random Key that fits the requirements for a Vec key. */
-  static Key newKey(){return newKey(Key.make());}
+  static public Key newKey(){return newKey(Key.make());}
 
+  public static final int KEY_PREFIX_LEN = 4+4+1+1;
   /** Make a new Key that fits the requirements for a Vec key, based on the
    *  passed-in key.  Used to make Vecs that back over e.g. disk files. */
   static Key newKey(Key k) {
     byte [] kb = k._kb;
-    byte [] bits = MemoryManager.malloc1(kb.length+4+4+1+1);
+    byte [] bits = MemoryManager.malloc1(kb.length+KEY_PREFIX_LEN);
     bits[0] = Key.VEC;
     bits[1] = -1;         // Not homed
     UDP.set4(bits,2,0);   // new group, so we're the first vector
@@ -511,6 +513,11 @@ public class Vec extends Iced {
       UKV.remove(chunkKey(i),fs);
   }
 
+  @Override public boolean equals( Object o ) {
+    if( !(o instanceof Vec) ) return false;
+    return ((Vec)o)._key.equals(_key);
+  }
+  @Override public int hashCode() { return _key.hashCode(); }
 
   /**
    * Class representing the group of vectors.
@@ -540,7 +547,9 @@ public class Vec extends Iced {
    * @author tomasnykodym
    *
    */
-  public static class VectorGroup extends Iced{
+  public static class VectorGroup extends Iced {
+    // The common shared vector group for length==1 vectors
+    public static VectorGroup VG_LEN1 = new VectorGroup();
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}
