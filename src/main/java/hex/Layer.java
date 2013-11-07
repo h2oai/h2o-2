@@ -72,13 +72,25 @@ public abstract class Layer extends Iced {
       _w = new float[units * _in.units];
       _b = new float[units];
 
-      // deeplearning.net tutorial (TODO special ones for rectifier & softmax?)
-      // TODO only subset of inputs?
+//      // deeplearning.net tutorial (TODO special ones for rectifier & softmax?)
+//      // TODO only subset of inputs?
+//      Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+//      float min = (float) -Math.sqrt(6. / (_in.units + units));
+//      float max = (float) +Math.sqrt(6. / (_in.units + units));
+//      for( int i = 0; i < _w.length; i++ )
+//        _w[i] = rand(rand, min, max);
+
       Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      float min = (float) -Math.sqrt(6. / (_in.units + units));
-      float max = (float) +Math.sqrt(6. / (_in.units + units));
-      for( int i = 0; i < _w.length; i++ )
-        _w[i] = rand(rand, min, max);
+      int count = Math.min(15, _in.units);
+      //float min = -.1f, max = +.1f;
+      float min = -1f, max = +1f;
+      for( int o = 0; o < units; o++ ) {
+        for( int n = 0; n < count; n++ ) {
+          int i = rand.nextInt(_in.units);
+          int w = o * _in.units + i;
+          _w[w] = rand(rand, min, max);
+        }
+      }
     }
 
     if( _momentum != 0 ) {
@@ -393,8 +405,9 @@ public abstract class Layer extends Iced {
       for( int o = 0; o < _a.length; o++ ) {
         float t = o == label ? 1 : 0;
         float e = t - _a[o];
-        // Gradient is error * derivative of Softmax: (1 - x) * x
-        float g = e * (1 - _a[o]) * _a[o];
+        float g = e;
+        // Uncomment to backpropagate square error instead of cross entropy
+        // g *= (1 - _a[o]) * _a[o];
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
           _in._e[i] += g * _w[w];
