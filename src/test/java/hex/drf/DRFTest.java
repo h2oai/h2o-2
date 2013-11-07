@@ -19,17 +19,22 @@ public class DRFTest extends TestUtil {
   static final long[]   a(long ...arr)   { return arr; }
   static final long[][] a(long[] ...arr) { return arr; }
 
-  @Test public void testBasicDRFClassification() throws Throwable {
+//  @Ignore
+  @Test public void testClassIris1() throws Throwable {
 
     // iris ntree=1
     // the DRF should  use only subset of rows since it is using oob validation
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
-          1,
+          5,
           a( a(6, 0,  0),
              a(0, 7,  0),
              a(0, 2, 11)));
+  }
+
+  @Ignore
+  @Test public void testClassIris50() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
@@ -38,7 +43,10 @@ public class DRFTest extends TestUtil {
           a( a(30, 0,  0),
              a(0, 31,  3),
              a(0,  3, 33)));
+  }
 
+  @Ignore
+  @Test public void testClassCars1() throws Throwable {
     // cars ntree=1
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
@@ -49,7 +57,10 @@ public class DRFTest extends TestUtil {
            a(0,  0, 0, 0, 0),
            a(0,  0, 0,15, 1),
            a(0,  0, 0, 0,34)));
+  }
 
+  @Ignore
+  @Test public void testClassCars50() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
@@ -59,6 +70,7 @@ public class DRFTest extends TestUtil {
            a(0,   2, 0,  1,   0),
            a(0,   9, 0, 72,   3),
            a(0,   0, 0,  0, 108)));
+  }
 
     //basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
     //         new PrepData() {
@@ -80,7 +92,6 @@ public class DRFTest extends TestUtil {
     //             return fr.remove(fr.numCols()-1);
     //           }
     //         });
-  }
 
   // Parse given file and returns a frame representing the file.
   // The caller is responsible for frame remove.
