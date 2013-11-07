@@ -60,21 +60,24 @@ public class NeuralNetMnistDeep extends NeuralNetMnist {
     for( int i = 1; i < index; i++ ) {
       pre[i] = new Tanh(ls[i].units);
       pre[i].rate = 0;
+      pre[i].l2 = .0001f;
       Layer.shareWeights(ls[i], pre[i]);
     }
     // Auto-encoder is a tanh and a reverse tanh on top
     pre[index] = new Tanh(ls[index].units);
     pre[index].rate = .01f;
-    pre[index + 1] = new TanhPrime(ls[index].units);
-    pre[index + 1].rate = .01f;
+    pre[index].l2 = .0001f;
+    pre[index + 1] = new TanhPrime(ls[index - 1].units);
+    pre[index + 1].rate = .001f;
+    pre[index + 1].l2 = .0001f;
     Layer.shareWeights(ls[index], pre[index]);
     Layer.shareWeights(ls[index], pre[index + 1]);
 
     for( int i = 0; i < pre.length; i++ )
       pre[i].init(pre, i, false, 0);
 
-    Trainer.Direct trainer = new Trainer.Direct(pre);
-    trainer.samples = 1000;
+    Trainer.Direct trainer = new Trainer.Direct(pre, this);
+    trainer.samples = 10000;
     trainer.run();
   }
 }
