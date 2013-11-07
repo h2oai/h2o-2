@@ -27,7 +27,6 @@ public class NeuralNetMnist extends Job {
     // samples.launchers.CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
   }
 
-  public static final int PIXELS = 784;
   protected Vec[] train, test;
 
   public void load() {
@@ -60,6 +59,7 @@ public class NeuralNetMnist extends Job {
 
   @Override protected void exec() {
     load();
+    System.out.println("Loaded data");
 
     // Labels are on last column for this dataset
     Vec trainLabels = train[train.length - 1];
@@ -102,7 +102,9 @@ public class NeuralNetMnist extends Job {
     }
   }
 
-  // Was used to shuffle & convert to CSV
+  // Remaining code was used to shuffle & convert to CSV
+
+  public static final int PIXELS = 784;
 
   static void csv() throws Exception {
     csv("../smalldata/mnist/train.csv", "train-images-idx3-ubyte.gz", "train-labels-idx1-ubyte.gz");

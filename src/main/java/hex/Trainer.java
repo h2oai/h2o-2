@@ -95,9 +95,11 @@ public abstract class Trainer {
   public static class Direct extends Base {
     public int samples;
     Thread _thread;
+    Job _job;
 
-    public Direct(Layer[] ls) {
+    public Direct(Layer[] ls, Job job) {
       super(ls);
+      _job = job;
     }
 
     @Override public Layer[] layers() {
@@ -109,6 +111,8 @@ public abstract class Trainer {
       for( long i = 0; samples == 0 || i < samples; i++ ) {
         step();
         input.move();
+        if( _job != null && _job.cancelled() )
+          break;
       }
     }
 
@@ -367,10 +371,6 @@ public abstract class Trainer {
 
     @Override public void map(Chunk[] cs) {
       _node._chunks.add(cs);
-    }
-
-    @Override public boolean logVerbose() {
-      return false;
     }
   }
 
