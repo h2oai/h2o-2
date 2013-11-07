@@ -79,6 +79,13 @@ H\ :sub:`2`\ O Options
   (Example network specification: '10.1.2.0/24' allows 256 legal
   possibilities.)
 
+**-nthreads <number>**
+
+  Maximum number of typical worker threads.  Think of this as the 
+  maximum number of CPUs H\ :sub:`2`\ O will use.  This value is
+  per java instance.  Specifying too small a value may result in
+  deadlocks.  Never specify fewer than 4.  The default value is 99.
+
 **-port <port>**
 
   Port number for this node (note: port+1 is also used).
