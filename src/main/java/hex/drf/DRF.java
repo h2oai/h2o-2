@@ -1,8 +1,10 @@
 package hex.drf;
 
-import hex.gbm.DTree.*;
-import hex.rng.MersenneTwisterRNG;
+import hex.ShuffleTask;
 import hex.gbm.*;
+import hex.gbm.DTree.DecidedNode;
+import hex.gbm.DTree.LeafNode;
+import hex.gbm.DTree.UndecidedNode;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -13,6 +15,7 @@ import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+import static water.util.Utils.avg;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder {
@@ -37,6 +40,7 @@ public class DRF extends SharedTreeModelBuilder {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) { super(key,dataKey,testKey,names,domains,ntrees); }
     public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
+    public DRFModel(DRFModel prior, float[] varimp) { super(prior, varimp); }
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);
       float sum=0;
@@ -97,7 +101,7 @@ public class DRF extends SharedTreeModelBuilder {
     DKV.put(outputKey, model);
 
     // The RNG used to pick split columns
-    Random rand = new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
+    Random rand = createRNG(seed);
 
     // Set a single 1.0 in the response for that class
     new Set1Task().doAll(fr);
@@ -119,15 +123,69 @@ public class DRF extends SharedTreeModelBuilder {
     }
     // Do final scoring with all the trees.
     doScoring(model, outputKey, fr, ktrees, tid);
+    if (classification) {
+      float varimp[] = doVarImp(model, fr);
+      System.err.println(Arrays.toString(varimp));
+      // Update the model
+      model = new DRFModel(model, varimp);
+    }
 
     cleanUp(fr,t_build); // Shared cleanup
   }
 
   private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid ) {
     Score sc = new Score().doIt(model, fr, validation, _validResponse, validation==null).report(Sys.DRF__,tid,ktrees);
-    model = new DRFModel(model, ktrees, (float)sc.sum()/_nrows, sc.cm());
+    model = new DRFModel(model, ktrees, (float)sc.sum()/sc.nrows(), sc.cm());
     DKV.put(outputKey, model);
     return model;
+  }
+
+  /* From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp
+   * In every tree grown in the forest, put down the oob cases and count the number of votes cast for the correct class.
+   * Now randomly permute the values of variable m in the oob cases and put these cases down the tree.
+   * Subtract the number of votes for the correct class in the variable-m-permuted oob data from the number of votes
+   * for the correct class in the untouched oob data.
+   * The average of this number over all trees in the forest is the raw importance score for variable m.
+   * */
+  private float[] doVarImp(DRFModel model, Frame f) {
+    // frame has _ncols column with features and response column and working columns
+    float[] varimp = new float[_ncols];
+    int ntrees = model.numTrees();
+    // Score a dataset as usual but collects properties per tree.
+    TreeModelCM cx = TreeModelCM.varimp(model, f, sample_rate);
+    // non-permuted number of votes
+    double[] origAcc = cx.accuracy();
+    System.err.println("Tree: " + Arrays.toString(origAcc));
+    System.err.println("Tree: " + Arrays.toString(cx.treeCVotes()));
+    assert origAcc.length == ntrees;
+    // Copy the frame
+    Frame wf = new Frame(f);
+    for (int var=0; var<_ncols; var++) {
+      Vec varv = wf.vecs()[var]; // vector which we use to measure variable importance
+      Vec sv = ShuffleTask.shuffle(varv); // create a shuffled vector
+      wf.replace(var, sv);
+      // Compute oobee with shuffled data
+      TreeModelCM cd = TreeModelCM.varimp(model, wf, sample_rate);
+      double[] accdiff = cd.accuracy();
+      System.err.println("Var. " + model._names[var] + ": " + Arrays.toString(accdiff));
+      System.err.println("Var. " + model._names[var] + ": " + Arrays.toString(cd.treeCVotes()));
+      assert accdiff.length == origAcc.length;
+      // compute decrease of accuracy
+      long[] tmp = cd.treeCVotes();
+      for (int t=0; t<ntrees;t++ ) {
+        accdiff[t] = origAcc[t] - accdiff[t];
+        tmp[t] = cx.treeCVotes()[t] - tmp[t];
+      }
+      System.err.println(Arrays.toString(tmp));
+      varimp[var] = (float) avg(accdiff);
+      // ---
+
+      // Reconstruct the original frame
+      wf.replace(var, varv);
+      // Remove shuffled vector
+      UKV.remove(sv._key);
+    }
+    return varimp;
   }
 
   private class Set1Task extends MRTask2<Set1Task> {
@@ -351,14 +409,12 @@ public class DRF extends SharedTreeModelBuilder {
   // e.g. compute OOBEE.
   static class DRFTree extends DTree {
     final int _mtrys;           // Number of columns to choose amongst in splits
-    final long _seed;           // RNG seed; drives sampling seeds
     final long _seeds[];        // One seed for each chunk, for sampling
     final transient Random _rand; // RNG for split decisions & sampling
     DRFTree( Frame fr, int ncols, char nbins, char nclass, int min_rows, int mtrys, long seed ) {
-      super(fr._names, ncols, nbins, nclass, min_rows);
+      super(fr._names, ncols, nbins, nclass, min_rows, seed);
       _mtrys = mtrys;
-      _seed = seed;                  // Save for any replay scenarios
-      _rand = new MersenneTwisterRNG(new int[] { (int)(seed>>32),(int)seed });
+      _rand = createRNG(seed);
       _seeds = new long[fr.vecs()[0].nChunks()];
       for( int i=0; i<_seeds.length; i++ )
         _seeds[i] = _rand.nextLong();
@@ -366,7 +422,7 @@ public class DRF extends SharedTreeModelBuilder {
     // Return a deterministic chunk-local RNG.  Can be kinda expensive.
     @Override public Random rngForChunk( int cidx ) {
       long seed = _seeds[cidx];
-      return new MersenneTwisterRNG(new int[] { (int)(seed>>32),(int)seed });
+      return createRNG(seed);
     }
   }
 
@@ -427,7 +483,6 @@ public class DRF extends SharedTreeModelBuilder {
       assert choices > 0;
 
       // Draw up to mtry columns at random without replacement.
-      double bs = Double.MAX_VALUE; // Best score
       for( int i=0; i<tree._mtrys; i++ ) {
         if( len == 0 ) break;   // Out of choices!
         int idx2 = tree._rand.nextInt(len);
