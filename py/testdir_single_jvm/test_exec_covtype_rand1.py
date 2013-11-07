@@ -18,7 +18,8 @@ exprList = [
         'Result<n> = max(c.hex[<col1>]) + Result.hex[0]',
         'Result<n> = mean(c.hex[<col1>]) + Result.hex[0]',
         'Result<n> = sum(c.hex[<col1>]) + Result.hex[0]',
-        'Result<n> = log(c.hex[<col1>]) + Result.hex[0]',
+        # have to figure out how to avoid infinity results
+        # 'Result<n> = log(c.hex[<col1>]) + Result.hex[0]',
         ]
 
 class Basic(unittest.TestCase):
