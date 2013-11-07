@@ -141,10 +141,10 @@ public class NeuralNet extends ValidatedJob {
           int classes = ls[ls.length - 1].units;
           cm = new long[classes][classes];
         }
-        Error trainE = NeuralNet.eval(ls, train, trainResp, EVAL_ROW_COUNT, valid == null ? cm : null);
+        Error trainE = NeuralNet.eval(ls, train, trainResp, EVAL_ROW_COUNT, valid == null ? cm : null, false);
         Error validE = null;
         if( valid != null )
-          validE = NeuralNet.eval(ls, valid, validResp, EVAL_ROW_COUNT, cm);
+          validE = NeuralNet.eval(ls, valid, validResp, EVAL_ROW_COUNT, cm, false);
 
         model.processed_samples = trainer.samples();
         model.train_classification_error = trainE.classification;
@@ -166,23 +166,23 @@ public class NeuralNet extends ValidatedJob {
     return 0;
   }
 
-  public static Error eval(Layer[] ls, Frame frame, long n, long[][] cm) {
+  public static Error eval(Layer[] ls, Frame frame, long n, long[][] cm, boolean dropout) {
     Vec[] vecs = frame.vecs();
     vecs = Utils.remove(vecs, vecs.length - 1);
     Vec resp = frame.vecs()[frame.vecs().length - 1];
-    return eval(ls, vecs, resp, n, cm);
+    return eval(ls, vecs, resp, n, cm, dropout);
   }
 
-  public static Error eval(Layer[] ls, Vec[] vecs, Vec resp, long n, long[][] cm) {
+  public static Error eval(Layer[] ls, Vec[] vecs, Vec resp, long n, long[][] cm, boolean dropout) {
     Output output = (Output) ls[ls.length - 1];
     if( output instanceof VecSoftmax )
       output = new VecSoftmax(resp, (VecSoftmax) output);
     else
       output = new VecLinear(resp, (VecLinear) output);
-    return eval(ls, new VecsInput(vecs, (VecsInput) ls[0]), output, n, cm);
+    return eval(ls, new VecsInput(vecs, (VecsInput) ls[0]), output, n, cm, dropout);
   }
 
-  public static Error eval(Layer[] ls, Input input, Output output, long n, long[][] cm) {
+  public static Error eval(Layer[] ls, Input input, Output output, long n, long[][] cm, boolean dropout) {
     Layer[] clones = new Layer[ls.length];
     clones[0] = input;
     for( int y = 1; y < clones.length - 1; y++ )
@@ -191,10 +191,10 @@ public class NeuralNet extends ValidatedJob {
     for( int y = 0; y < clones.length; y++ )
       clones[y].init(clones, y, false, 0);
     Layer.shareWeights(ls, clones);
-    return eval(clones, n, cm);
+    return eval(clones, n, cm, dropout);
   }
 
-  public static Error eval(Layer[] ls, long n, long[][] cm) {
+  public static Error eval(Layer[] ls, long n, long[][] cm, boolean dropout) {
     Error error = new Error();
     Input input = (Input) ls[0];
     long len = input._len;
@@ -203,7 +203,7 @@ public class NeuralNet extends ValidatedJob {
     if( ls[ls.length - 1] instanceof Softmax ) {
       int correct = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if( correct(ls, error, cm) )
+        if( correct(ls, error, cm, dropout) )
           correct++;
       error.classification = (len - (double) correct) / len;
       error.mse /= len;
@@ -216,10 +216,15 @@ public class NeuralNet extends ValidatedJob {
     return error;
   }
 
-  private static boolean correct(Layer[] ls, Error error, long[][] confusion) {
+  private static boolean correct(Layer[] ls, Error error, long[][] confusion, boolean dropout) {
     Softmax output = (Softmax) ls[ls.length - 1];
-    for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop();
+    if(dropout)
+      for( int i = 0; i < ls.length; i++ )
+        ls[i].dropout_fprop();
+    else
+      for( int i = 0; i < ls.length; i++ )
+        ls[i].fprop();
+
     float[] out = ls[ls.length - 1]._a;
     for( int i = 0; i < out.length; i++ ) {
       float t = i == output.label() ? 1 : 0;
@@ -458,7 +463,7 @@ public class NeuralNet extends ValidatedJob {
         clones[y]._w = model.weights[y];
         clones[y]._b = model.biases[y];
       }
-      Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix);
+      Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix, false);
       classification_error = error.classification;
       mse = error.mse;
       if( frs[1] != null )

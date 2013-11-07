@@ -15,6 +15,9 @@ cdh4_yarn_JARS=$(cdh4_yarn_JAR_DIR)/common/hadoop-common-2.0.0-cdh4.3.0.jar${SEP
 mapr2.1.3_JAR_DIR=../lib/hadoop/mapr2.1.3
 mapr2.1.3_JARS=$(mapr2.1.3_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 
+horton2_yarn_JAR_DIR=../lib/hadoop/horton2_yarn
+horton2_yarn_JARS=$(horton2_yarn_JAR_DIR)/common/hadoop-common-2.1.0.2.0.5.0-67.jar${SEP}${horton2_yarn_JAR_DIR}/common/lib/hadoop-annotations-2.1.0.2.0.5.0-67.jar${SEP}$(horton2_yarn_JAR_DIR)/mapreduce2/hadoop-mapreduce-client-core-2.1.0.2.0.5.0-67.jar
+
 # ------------------------------
 
 # Figure out classpath separator for Unix vs. Windows
@@ -63,6 +66,7 @@ build: clean
 	$(MAKE) build_inner HADOOP_VERSION=cdh3      YARN=false
 	$(MAKE) build_inner HADOOP_VERSION=cdh4      YARN=false
 	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn YARN=true
+	$(MAKE) build_inner HADOOP_VERSION=horton2_yarn YARN=true
 	rm -rf ../target/hadoop
 	mkdir ../target/hadoop
 	cp README.txt ../target/hadoop
