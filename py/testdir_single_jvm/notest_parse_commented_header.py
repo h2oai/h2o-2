@@ -52,11 +52,11 @@ class Basic(unittest.TestCase):
         # extra output is added, so it's 10 total
         # try different header prefixes to see if it's okay..only white space is space?
         tryList = [
-            (2, 300, 9, 'cA', 60, "#"),
-            (2, 300, 9, 'cA', 60, "# "),
-            (2, 300, 9, 'cA', 60, " #"),
-            (2, 300, 9, 'cA', 60, " # "),
-            (2, 300, 9, 'cA', 60, "#  "),
+            (2, 3, 9, 'cA', 60, "#"),
+            (2, 3, 9, 'cA', 60, "# "),
+            (2, 3, 9, 'cA', 60, " #"),
+            (2, 3, 9, 'cA', 60, " # "),
+            (2, 3, 9, 'cA', 60, "#  "),
             ]
 
         trial = 0

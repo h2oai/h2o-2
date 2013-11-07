@@ -17,7 +17,7 @@ import water.api.*;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.*;
+import water.util.Log;
 import water.util.Utils.ExpectedExceptionForDebug;
 
 public class Job extends Request2 {
@@ -491,24 +491,12 @@ public class Job extends Request2 {
           tryComplete();
         }
         if(t != null)
-          update(Job.this, Utils.getStackAsString(t));
+          Job.this.cancel(t);
       }
     };
     start(task);
     H2O.submitTask(task);
     return this;
-  }
-
-  private static void update(final Job job, final String exception) {
-    new TAtomic<List>() {
-      @Override public List atomic(List old) {
-        if( old != null && old._jobs != null )
-          for(Job current : old._jobs)
-            if(current == job)
-              job.exception = exception;
-        return old;
-      }
-    }.invoke(LIST);
   }
 
   public void invoke() {

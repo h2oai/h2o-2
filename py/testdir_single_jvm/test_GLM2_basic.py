@@ -75,7 +75,26 @@ class Basic(unittest.TestCase):
         print "GLM result from completion_redirect:", h2o.dump_json(a)
 
         a = h2o.nodes[0].glm_view(_modelKey=modelKey)
-        print "GLM result from glm_view:", h2o.dump_json(a)
+        ### print "GLM result from glm_view:", h2o.dump_json(a)
+
+        glm_model = a['glm_model']
+        _names = glm_model['_names']
+        beta = glm_model['beta']
+        norm_beta = glm_model['norm_beta']
+        iteration = glm_model['iteration']
+
+        validation = glm_model['validation']
+        avg_err = validation['avg_err']
+        auc = validation['auc']
+        aic = validation['aic']
+        null_deviance = validation['null_deviance']
+        residual_deviance = validation['residual_deviance']
+
+        print '_names', _names
+        print 'beta', beta
+        print 'iteration', iteration
+        print 'avg_err', avg_err
+        print 'auc', auc
 
         # how do we get to the model view?
         # http://192.168.0.37:54321/2/GLMModelView.html?_modelKey=GLM2_59af6ba2-3321-4a6a-84ed-16b44a087707

@@ -84,7 +84,7 @@ public class NeuralNetIrisTest extends TestUtil {
     ref.train(epochs, rate);
 
     // H2O
-    Trainer.Direct trainer = new Trainer.Direct(ls);
+    Trainer.Direct trainer = new Trainer.Direct(ls, null);
     trainer.samples = epochs * (int) _train.numRows();
     trainer.run();
 
