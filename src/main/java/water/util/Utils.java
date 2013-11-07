@@ -793,4 +793,15 @@ public class Utils {
   public static String className(String path) {
     return path.replace('\\', '/').replace('/', '.').substring(0, path.length() - 6);
   }
+
+  public static double avg(double[] nums) {
+    double sum = 0;
+    for(double n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static double avg(long[] nums) {
+    long sum = 0;
+    for(long n: nums) sum+=n;
+    return sum/nums.length;
+  }
 }
