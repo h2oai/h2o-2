@@ -109,6 +109,10 @@ public abstract class Layer extends Iced {
 
   abstract void fprop();
 
+  void dropout_fprop() {
+      this.fprop();
+  }
+
   abstract void bprop();
 
   public final void anneal(long n) {
@@ -546,15 +550,15 @@ public abstract class Layer extends Iced {
         }
     }
 
-    public static class MaxoutDropout extends Layer {
-        MaxoutDropout() {
+    public static class Maxout extends Layer {
+        Maxout() {
         }
 
         private float prob;
         private Random rand;
         private float scale;
 
-        public MaxoutDropout(int units, float prob) {
+        public Maxout(int units, float prob) {
             this.units = units;
             assert prob <= 1;
             assert prob > 0 ;
@@ -566,8 +570,20 @@ public abstract class Layer extends Iced {
         @Override void fprop() {
             for( int o = 0; o < _a.length; o++ ) {
                 _a[o] = Float.MIN_VALUE;
-                float cur = 0;
+                float cur = 0.0f;
                 for( int i = 0; i < _in._a.length; i++ )
+                    cur = _w[o * _in._a.length + i] * _in._a[i];
+                    _a[o] = java.lang.Math.max(cur, _a[o]);
+                _a[o] += _b[o];
+            }
+        }
+
+        @Override void dropout_fprop() {
+            for( int o = 0; o < _a.length; o++ ) {
+                _a[o] = Float.MIN_VALUE;
+                float cur = 0.0f;
+                for( int i = 0; i < _in._a.length; i++ )
+                    // is it better to pre-fill the mask with rands?
                     cur = _w[o * _in._a.length + i] * _in._a[i] * (rand.nextFloat() < prob ? 1 : 0) * scale;
                     _a[o] = java.lang.Math.max(cur, _a[o]);
                 _a[o] += _b[o];
