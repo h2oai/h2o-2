@@ -51,11 +51,11 @@ public abstract class DKV {
     // TEMPORARY DURING VALUEARRAY TO FLUIDVEC TRANSITION.
     // When ValueArray object writes occur to DKV, whack any possible associated
     // auto-converted Frame object.
-//    if (! isConvertedFrameKeyString(key.toString())) {
-//      String frameKeyString = calcConvertedFrameKeyString(key.toString());
-//      Key k = Key.make(frameKeyString);
-//      remove(k);
-//    }
+    if (! isConvertedFrameKeyString(key.toString())) {
+      String frameKeyString = calcConvertedFrameKeyString(key.toString());
+      Key k = Key.make(frameKeyString);
+      remove(k);
+    }
 
     // First: I must block repeated remote PUTs to the same Key until all prior
     // ones complete - the home node needs to see these PUTs in order.
