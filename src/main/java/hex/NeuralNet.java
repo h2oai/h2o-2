@@ -38,7 +38,7 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Activation function", filter = Default.class)
   public Activation activation = Activation.Tanh;
 
-  @API(help = "Hidden layer sizes", filter = Default.class)
+  @API(help = "Hidden layer sizes, e.g. (1000, 1000)", filter = Default.class)
   public int[] hidden = new int[] { 500 };
 
   @API(help = "Learning rate", filter = Default.class)
@@ -226,7 +226,7 @@ public class NeuralNet extends ValidatedJob {
       float d = t - out[i];
       error.mse += d * d;
     }
-    float max = Float.MIN_VALUE;
+    float max = Float.NEGATIVE_INFINITY;
     int idx = -1;
     for( int i = 0; i < out.length; i++ ) {
       if( out[i] > max ) {
@@ -384,7 +384,7 @@ public class NeuralNet extends ValidatedJob {
         String cmTitle = "Confusion Matrix";
         String trainC = format(model.train_classification_error);
         String trainS = "" + model.train_mse;
-        String validC = format(model.train_classification_error);
+        String validC = format(model.validation_classification_error);
         String validS = "" + model.validation_mse;
         if( Double.isNaN(model.validation_mse) ) {
           validS = "N/A";
@@ -394,11 +394,10 @@ public class NeuralNet extends ValidatedJob {
         DocGen.HTML.section(sb, "Training mean square error: " + trainS);
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
         DocGen.HTML.section(sb, "Validation mean square error: " + validS);
-        String ps = "";
-        if( nn != null )
-          ps = " (" + (model.processed_samples * 1000 / nn.runTimeMs()) + "/s)";
-        DocGen.HTML.section(sb, "Processed samples: " + model.processed_samples + ps);
-
+        if( nn != null ) {
+          long ps = model.processed_samples * 1000 / nn.runTimeMs();
+          DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
+        }
         if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
           String[] classes = model.classNames();
           NeuralNetScore.confusion(sb, cmTitle, classes, model.confusion_matrix);

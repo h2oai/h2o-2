@@ -22,8 +22,12 @@ public class CloudConnect {
    * Build a jar file from project classes, and launch the job.
    */
   public static void launch(String host, Class<? extends Job> job) throws Exception {
+    launch(host, job, new File(VM.h2oFolder(), "h2o-samples/target/classes"));
+  }
+
+  public static void launch(String host, Class<? extends Job> job, File classes) throws Exception {
     File jar = File.createTempFile("h2o", ".jar");
-    jar(jar, new File(VM.h2oFolder(), "h2o-samples/target/classes"));
+    jar(jar, classes);
     launch(host, job.getName(), jar);
   }
 

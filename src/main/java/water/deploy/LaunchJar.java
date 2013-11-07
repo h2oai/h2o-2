@@ -74,7 +74,10 @@ public class LaunchJar extends Request2 {
         jar.putNextEntry(new JarEntry(c.getName().replace('.', '/') + ".class"));
         c.toBytecode(bc);
         bc.flush();
-        packages.add(c.getPackageName());
+        String p = c.getPackageName();
+        if( p == null )
+          throw new IllegalArgumentException("Package is null for class " + c);
+        packages.add(p);
       }
       jar.close();
       weavePackages(packages.toArray(new String[0]));

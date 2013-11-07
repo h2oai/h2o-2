@@ -44,6 +44,7 @@ public abstract class Layer extends Iced {
   transient float _r, _m;
 
   // Weights, biases, activity, error
+  // TODO hold transients only for current two layers
   transient float[] _w, _b, _a, _e;
 
   // Last weights & per-weight rate data
@@ -183,8 +184,11 @@ public abstract class Layer extends Iced {
 
     public Vec[] vecs;
 
-    @API(help = "Categoricals identified on the training set")
-    int[] categoricals;
+    @API(help = "Categorical classes identified on the training set")
+    int[] categoricals_lens;
+
+    @API(help = "Categorical minimums identified on the training set")
+    int[] categoricals_mins;
 
     @API(help = "Normalisation stats used during training")
     float[] subs, muls;
@@ -194,21 +198,25 @@ public abstract class Layer extends Iced {
     VecsInput() {
     }
 
-    public VecsInput(Vec[] vecs, VecsInput stats) {
-      units = stats != null ? stats.subs.length : expand(vecs);
+    public VecsInput(Vec[] vecs, VecsInput train) {
+      units = train != null ? train.subs.length : expand(vecs);
       this.vecs = vecs;
       _len = vecs[0].length();
 
-      if( stats != null ) {
-        assert stats.categoricals.length == vecs.length;
-        categoricals = stats.categoricals;
-        assert stats.subs.length == units;
-        subs = stats.subs;
-        muls = stats.muls;
+      if( train != null ) {
+        assert train.categoricals_lens.length == vecs.length;
+        categoricals_lens = train.categoricals_lens;
+        categoricals_mins = train.categoricals_mins;
+        assert train.subs.length == units;
+        subs = train.subs;
+        muls = train.muls;
       } else {
-        categoricals = new int[vecs.length];
-        for( int i = 0; i < vecs.length; i++ )
-          categoricals[i] = categories(vecs[i]);
+        categoricals_lens = new int[vecs.length];
+        categoricals_mins = new int[vecs.length];
+        for( int i = 0; i < vecs.length; i++ ) {
+          categoricals_lens[i] = categories(vecs[i]);
+          categoricals_mins[i] = (int) vecs[i].min();
+        }
         subs = new float[units];
         muls = new float[units];
         stats(vecs);
@@ -231,7 +239,8 @@ public abstract class Layer extends Iced {
     private void stats(Vec[] vecs) {
       Stats stats = new Stats();
       stats._units = units;
-      stats._categoricals = categoricals;
+      stats._categoricals_lens = categoricals_lens;
+      stats._categoricals_mins = categoricals_mins;
       stats.doAll(vecs);
       for( int i = 0; i < vecs.length; i++ ) {
         subs[i] = (float) stats._means[i];
@@ -248,7 +257,7 @@ public abstract class Layer extends Iced {
         if( c == null || c._vec != vecs[i] || _pos < c._start || _pos >= c._start + c._len )
           _chunks[i] = vecs[i].chunk(_pos);
       }
-      ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), subs, muls, categoricals);
+      ChunksInput.set(_chunks, _a, (int) (_pos - _chunks[0]._start), subs, muls, categoricals_lens, categoricals_mins);
     }
   }
 
@@ -257,7 +266,7 @@ public abstract class Layer extends Iced {
    */
   static class Stats extends MRTask2<Stats> {
     int _units;
-    int[] _categoricals;
+    int[] _categoricals_lens, _categoricals_mins;
     double[] _means, _sigms;
     long _rows;
     transient float[] _subs, _muls;
@@ -274,14 +283,14 @@ public abstract class Layer extends Iced {
       _sigms = new double[_units];
       float[] a = new float[_means.length];
       for( int r = 0; r < cs[0]._len; r++ ) {
-        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
+        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals_lens, _categoricals_mins);
         for( int c = 0; c < a.length; c++ )
           _means[c] += a[c];
       }
       for( int c = 0; c < a.length; c++ )
         _means[c] /= cs[0]._len;
       for( int r = 0; r < cs[0]._len; r++ ) {
-        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals);
+        ChunksInput.set(cs, a, r, _subs, _muls, _categoricals_lens, _categoricals_mins);
         for( int c = 0; c < a.length; c++ )
           _sigms[c] += (a[c] - _means[c]) * (a[c] - _means[c]);
       }
@@ -309,34 +318,36 @@ public abstract class Layer extends Iced {
   static class ChunksInput extends Input {
     transient Chunk[] _chunks;
     float[] _subs, _muls;
-    int[] _categoricals;
+    int[] _categoricals_lens;
+    int[] _categoricals_mins;
 
     public ChunksInput(Chunk[] chunks, VecsInput stats) {
       units = stats.subs.length;
       _chunks = chunks;
       _subs = stats.subs;
       _muls = stats.muls;
-      _categoricals = stats.categoricals;
+      _categoricals_lens = stats.categoricals_lens;
+      _categoricals_mins = stats.categoricals_mins;
     }
 
     @Override void fprop() {
-      set(_chunks, _a, (int) _pos, _subs, _muls, _categoricals);
+      set(_chunks, _a, (int) _pos, _subs, _muls, _categoricals_lens, _categoricals_mins);
     }
 
-    static void set(Chunk[] chunks, float[] a, int row, float[] subs, float[] muls, int[] categoricals) {
+    static void set(Chunk[] chunks, float[] a, int row, float[] subs, float[] muls, int[] catLens, int[] catMins) {
       int n = 0;
-      for( int i = 0; i < categoricals.length; i++ ) {
+      for( int i = 0; i < catLens.length; i++ ) {
         double d = chunks[i].at0(row);
         d = Double.isNaN(d) ? 0 : d;
-        if( categoricals[i] == 1 ) {
+        if( catLens[i] == 1 ) {
           d -= subs[n];
           d *= muls[n];
           a[n++] = (float) d;
         } else {
-          int cat = categoricals[i];
+          int cat = catLens[i];
           for( int c = 0; c < cat; c++ )
             a[n + c] = -subs[n + c];
-          int c = (int) d - (int) chunks[i]._vec.min() - 1;
+          int c = (int) d - catMins[i] - 1;
           if( c >= 0 )
             a[n + c] = (1 - subs[n + c]) * muls[n + c];
           n += cat;
@@ -555,6 +566,12 @@ public abstract class Layer extends Iced {
 
     public TanhPrime(int units) {
       this.units = units;
+    }
+
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
+      // Auto encoder has it's own bias vector
+      _b = new float[units];
     }
 
     @Override void fprop() {
