@@ -107,7 +107,10 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            summaryResult = h2o_cmd.runSummary(key=hex_key)
+            summaryResult = h2o_cmd.runSummary(key=hex_key, cols=0, max_ncols=1)
+            if h2o.verbose:
+                print "summaryResult", h2o.dump_json(summaryResult)
+
             h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
@@ -197,3 +200,72 @@ class Basic(unittest.TestCase):
 if __name__ == '__main__':
     h2o.unit_main()
 
+# summary_page parameters: {'source': 'c.hex', 'cols': 378, 'max_ncols': 1}
+# {
+#   "Request2": 0, 
+#   "means": [
+#     3634.03515
+#   ], 
+#   "names": [
+#     "C378"
+#   ], 
+#   "summaries": [
+#     {
+#       "bins": [
+#         18716, 
+#         18482, 
+#         3685, 
+#         3242, 
+#         3776, 
+#         3273, 
+#         3729, 
+#         3290, 
+#         3598, 
+#         3394, 
+#         3256, 
+#         3833, 
+#         3341, 
+#         3647, 
+#         3294, 
+#         3622, 
+#         3244, 
+#         3529, 
+#         3304, 
+#         3745
+#       ], 
+#       "binsz": 500.0, 
+#       "domains": null, 
+#       "maxs": [
+#         9987.0, 
+#         9987.0, 
+#         9987.0, 
+#         9987.0, 
+#         9987.0
+#       ], 
+#       "mins": [
+#         12.0, 
+#         12.0, 
+#         12.0, 
+#         12.0, 
+#         12.0
+#       ], 
+#       "percentileValues": [
+#         262.0, 
+#         262.0, 
+#         262.0, 
+#         762.0, 
+#         762.0, 
+#         2762.0, 
+#         5262.0, 
+#         6262.0, 
+#         8762.0, 
+#         9262.0, 
+#         9762.0
+#       ], 
+#       "rows": 100000, 
+#       "start": 0.0, 
+#       "zeros": 0
+#     }
+#   ]
+# }
+# 

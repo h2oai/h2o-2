@@ -1,10 +1,9 @@
-import unittest, time, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs
-import time, random
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs, h2o_gbm
 
 DELETE_KEYS = True
-EXEC_FVEC = False
+DO_CLASSIFICATION = True
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -33,7 +32,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 500
         csvFilenameAll = [
             # have to use col name for response?
-            ("manyfiles-nflx-gz", "file_1.dat.gz", 'C378'),
+            ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
             # ("manyfiles-nflx-gz", "file_[1-9].dat.gz", 378),
             # ("standard", "covtype.data", 54),
             # ("standard", "covtype20x.data", 54),
@@ -77,14 +76,22 @@ class Basic(unittest.TestCase):
             # Exception: rjson error in gbm: Argument 'response' error: Only integer or enum/factor columns can be classified
 
             if importFolderPath=='manyfiles-nflx-gz':
-                if EXEC_FVEC:
-                    execExpr = 'c.hex=colSwap(c.hex,378,(c.hex[378]>15 ? 1 : 0))'
+                if DO_CLASSIFICATION:
+                    execExpr = 'c.hex=colSwap(c.hex,%s,(c.hex[%s]>15 ? 1 : 0))' % response
                     resultExec = h2o_cmd.runExec(expression=execExpr)
-                x = range(542) # don't include the output column
+
+                # lets look at the response column now
+                s = h2o_cmd.runSummary(key="c.hex", cols=response, max_ncols=1)
+                print h2o.dump_json(s)
+                
+                x = range(542)
                 # remove the output too! (378)
                 xIgnore = []
                 # BUG if you add unsorted 378 to end. remove for now
-                for i in [4, 3, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, 378]:
+                for i in [3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 424, 425, 426, 540, 541, response]:
+                    if i not in x:
+                        print "x:", x
+                        print 'missing?', i
                     x.remove(i)
                     xIgnore.append(i)
 
@@ -95,30 +102,42 @@ class Basic(unittest.TestCase):
                 # leave one col ignored, just to see?
                 xIgnore = 0
 
+            modelKey = "GBMKEY"
             params = {
-                'destination_key': "GBMKEY",
+                'destination_key': modelKey,
                 'ignored_cols_by_name': xIgnore,
                 'learn_rate': .1,
                 'ntrees': 2,
                 'max_depth': 8,
                 'min_rows': 1,
-                'response': response,
-                'classification': 0,
+                'response': "C" + str(response),
+                'classification': 1 if DO_CLASSIFICATION else 0,
                 }
 
             kwargs = params.copy()
             h2o.beta_features = True
             timeoutSecs = 1800
             start = time.time()
-            GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=False,**kwargs)
-            # wait for it to show up in jobs?
-            time.sleep(2)
+            GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+            print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
             # no pattern waits for all
             h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
             elapsed = time.time() - start
-            print "GBM training completed in", elapsed, "seconds.", "%f pct. of timeout" % (GBMResult['python_%timeout'])
-            print "\nGBMResult:", GBMResult
-            # print "\nGBMResult:", h2o.dump_json(GBMResult)
+            print "GBM training completed in", elapsed, "seconds."
+
+            gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
+            # errrs from end of list? is that the last tree?
+            errsLast = gbmTrainView['gbm_model']['errs'][-1]
+
+            print "GBM 'errsLast'", errsLast
+            if DO_CLASSIFICATION:
+                cm = gbmTrainView['gbm_model']['cm']
+                pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
+                print "Last line of this cm might be NAs, not CM"
+                print "\nTrain\n==========\n"
+                print h2o_gbm.pp_cm(cm)
+            else:
+                print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
 
             h2o.check_sandbox_for_errors()
 

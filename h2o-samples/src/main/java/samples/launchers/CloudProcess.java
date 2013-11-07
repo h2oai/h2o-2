@@ -42,8 +42,8 @@ public class CloudProcess {
   public static class UserCode {
     public static void userMain(String[] args) throws Exception {
       H2O.main(args);
-      int nodes = Integer.parseInt(args[6]);
-      String job = args[7];
+      int nodes = Integer.parseInt(args[7]);
+      String job = args[8];
       TestUtil.stall_till_cloudsize(nodes);
       System.out.println("Cloud is up");
       System.out.println("Go to http://127.0.0.1:54321");

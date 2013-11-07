@@ -19,7 +19,6 @@ import com.google.common.io.Closeables;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
-  public static final File smalldata = new File(VM.h2oFolder(), "smalldata");
 
   protected static void startCloud(String[] args, int nnodes) {
     for( int i = 1; i < nnodes; i++ ) {
@@ -346,8 +345,9 @@ public class TestUtil {
 
   // Fluid Vectors
 
-  public static Frame parseFrame(String path) {
-    return parseFrame(new File(path));
+  public static Frame parseFromH2OFolder(String path) {
+    File file = new File(VM.h2oFolder(), path);
+    return parseFrame(Key.make(file.getName()), file);
   }
 
   public static Frame parseFrame(File file) {
