@@ -106,8 +106,8 @@ public class DRF extends SharedTreeModelBuilder {
     // The RNG used to pick split columns
     Random rand = createRNG(seed);
 
-    // Set a single 1.0 in the response for that class
-    new Set1Task().doAll(fr);
+    // Prepare working columns
+    new SetWrkTask().doAll(fr);
 
     int tid = 0;
     DTree[] ktrees = null;
@@ -131,6 +131,7 @@ public class DRF extends SharedTreeModelBuilder {
       System.err.println(Arrays.toString(varimp));
       // Update the model
       model = new DRFModel(model, varimp);
+      DKV.put(outputKey, model);
     }
 
     cleanUp(fr,t_build); // Shared cleanup
@@ -191,13 +192,22 @@ public class DRF extends SharedTreeModelBuilder {
     return varimp;
   }
 
-  private class Set1Task extends MRTask2<Set1Task> {
+  /** Fill work columns:
+   *   - classification: set 1 in the corresponding wrk col according to row response
+   *   - regression:     copy response into work column (there is only 1 work column) */
+
+  private class SetWrkTask extends MRTask2<SetWrkTask> {
     @Override public void map( Chunk chks[] ) {
       Chunk cy = chk_resp(chks);
       for( int i=0; i<cy._len; i++ ) {
         if( cy.isNA0(i) ) continue;
-        int cls = (int)cy.at80(i);
-        chk_work(chks,cls).set0(i,1.0f);
+        if (classification) {
+          int cls = (int)cy.at80(i);
+          chk_work(chks,cls).set0(i,1.0f);
+        } else {
+          float pred = (float) cy.at0(i);
+          chk_work(chks,0).set0(i,pred);
+        }
       }
     }
   }
