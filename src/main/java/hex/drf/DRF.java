@@ -16,6 +16,8 @@ import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 import static water.util.Utils.avg;
+import static water.util.Utils.div;
+import static water.util.Utils.sum;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder {
@@ -43,14 +45,12 @@ public class DRF extends SharedTreeModelBuilder {
     public DRFModel(DRFModel prior, float[] varimp) { super(prior, varimp); }
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);
-      float sum=0;
-      for( float f : preds ) sum += f;
-      // We have an (near)integer sum of votes - one per voting tree.
-      int votes = Math.round(sum);
-      // After adding all trees, divide by tree-count to get a distribution
-      if (votes>0)
-        for( int i=0; i<preds.length; i++ )
-          preds[i] /= votes;
+      int ntrees = numTrees();
+      if (p.length==1) { if (ntrees>0) div(p, ntrees); } // regression - compute avg over all trees
+      else {
+        float s = sum(p);
+        div(p, s); // unify over all classes
+      }
       return p;
     }
   }
