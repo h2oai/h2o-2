@@ -128,7 +128,7 @@ public class DRF extends SharedTreeModelBuilder {
     doScoring(model, outputKey, fr, ktrees, tid);
     if (classification) {
       float varimp[] = doVarImp(model, fr);
-      System.err.println(Arrays.toString(varimp));
+      Log.info(Sys.DRF__,"Var importance: "+Arrays.toString(varimp));
       // Update the model
       model = new DRFModel(model, varimp);
       DKV.put(outputKey, model);

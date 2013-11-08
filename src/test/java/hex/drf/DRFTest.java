@@ -27,13 +27,13 @@ public class DRFTest extends TestUtil {
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
           new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
-          5,
+          1,
           a( a(6, 0,  0),
              a(0, 7,  0),
              a(0, 2, 11)));
   }
 
-  @Ignore
+//  @Ignore
   @Test public void testClassIris50() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
@@ -42,10 +42,10 @@ public class DRFTest extends TestUtil {
           50,
           a( a(30, 0,  0),
              a(0, 31,  3),
-             a(0,  3, 33)));
+             a(0,  2, 34)));
   }
 
-  @Ignore
+//  @Ignore
   @Test public void testClassCars1() throws Throwable {
     // cars ntree=1
     basicDRFTestOOBE(
@@ -53,22 +53,22 @@ public class DRFTest extends TestUtil {
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
         a( a(0,  1, 0, 0, 0),
-           a(0, 55, 0, 4, 0),
+           a(1, 55, 0, 3, 0),
            a(0,  0, 0, 0, 0),
-           a(0,  0, 0,15, 1),
+           a(0,  0, 0,16, 0),
            a(0,  0, 0, 0,34)));
   }
 
-  @Ignore
+//  @Ignore
   @Test public void testClassCars50() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         50,
-        a( a(0,   4, 0,  0,   0),
-           a(0, 203, 0,  4,   0),
+        a( a(2,   2, 0,  0,   0),
+           a(1, 205, 0,  1,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   9, 0, 72,   3),
+           a(0,   4, 0, 79,   1),
            a(0,   0, 0,  0, 108)));
   }
 
