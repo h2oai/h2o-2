@@ -21,6 +21,7 @@ import water.Job.ModelJob;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Utils;
+import water.util.Log;
 
 public class GLM2 extends ModelJob {
   private GLM2 [] _subjobs;
@@ -125,6 +126,7 @@ public class GLM2 extends ModelJob {
     @Override public void callback(GLMIterationTask glmt) {
       if(!cancelled()){
         double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
+        Log.info("STARTS SOLVING USING " + solver.getClass().getName());
         solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
         boolean done = false;
         if(Utils.hasNaNsOrInfs(newBeta)){
