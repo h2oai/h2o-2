@@ -11,7 +11,7 @@ paramDict = {
     'ignored_cols_by_name': 'C1,C2,C6,C7,C8',
     'classification': None,
     'validation': None,
-    'ntrees': 1,
+    'ntrees': 2,
     'max_depth': None,
     'min_rows': None,
     'nbins': 10000,
@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
 
     def test_rf_covtype_fvec(self):
         importFolderPath = "standard"
-        csvFilename = 'covtype.data'
+        csvFilename = 'covtype.shuffled.10pct.data'
         csvPathname = importFolderPath + "/" + csvFilename
         hex_key = csvFilename + ".hex"
 
@@ -88,7 +88,7 @@ class Basic(unittest.TestCase):
 
             rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
             h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
-            rfView = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
+            # rfView = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
             print "rfView:", h2o.dump_json(rfView)
 
             # "N":1,
