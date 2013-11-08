@@ -27,12 +27,11 @@ public class Summary2Test extends TestUtil {
     for (int i = 1; i < vec.nChunks(); i++) {
       Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1);
     }
-    s.toString();
-
-    assertEquals(1, s.bins.length);
-    assertEquals(528, s.bins[0]);
-    assertEquals(0.1, s.start, 0.00001);
-    for (double pv : s.percentileValues)
+    s.finishUp();
+    assertEquals(1, s.bin_cnts.length);
+    assertEquals(528, s.bin_cnts[0]);
+    assertEquals(0.1, s.bin_cnts[0], 0.00001);
+    for (double pv : s._percentiles)
       assertEquals(0.1, pv, 0.00001);
 
     UKV.remove(key);
@@ -48,7 +47,7 @@ public class Summary2Test extends TestUtil {
       { Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1); }
     s.toString();
 
-    assertEquals(306, s.bins.length);
+    assertEquals(306, s.bin_cnts.length);
     UKV.remove(key);
   }
 
@@ -62,9 +61,9 @@ public class Summary2Test extends TestUtil {
       { Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1); }
     s.toString();
 
-    assertEquals(0, s.bins[4]); // no 7 cylinder cars
-    assertEquals(4, (int)s.percentileValues[0]);
-    assertEquals(8, (int)s.percentileValues[s.percentileValues.length - 1]);
+    assertEquals(0, s.bin_cnts[4]); // no 7 cylinder cars
+    assertEquals(4, (int)s._percentiles[0]);
+    assertEquals(8, (int)s._percentiles[s._percentiles.length - 1]);
     UKV.remove(key);
   }
 }
