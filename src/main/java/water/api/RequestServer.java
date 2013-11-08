@@ -68,7 +68,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Get()),         "Download",                   "Data");
     Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Data");
 
-    Request.addToNavbar(registerRequest(new RF()),          "Random Forest",              "Model");
+    Request.addToNavbar(registerRequest(new RF()),          "DRF1",                       "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
@@ -76,7 +76,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
-    Request.addToNavbar(registerRequest(new DRF()),         "DRF2 (Beta)",                "Model");
+    Request.addToNavbar(registerRequest(new DRF()),         "Random Forest (Beta)",       "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
