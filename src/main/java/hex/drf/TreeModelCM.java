@@ -57,7 +57,7 @@ public class TreeModelCM extends MRTask2<TreeModelCM> {
           _tmodel.score0(data, preds, tidx);
           // - derive a prediction
           int pred = Utils.maxIndex(preds);
-          assert preds[pred] > 0 : "There should be a vote for at least one class.";
+          // assert preds[pred] > 0 : "There should be a vote for at least one class.";
           // - collect only correct votes
           if (pred==cresp.at80(row)) _treeCVotes[tidx]++;
           // - collect rows which were used for voting
@@ -77,7 +77,7 @@ public class TreeModelCM extends MRTask2<TreeModelCM> {
     return new TreeModelCM(tmodel, rate).doAll(f);
   }
 
-  public static final class DummyRandom extends Random {
-    @Override public float nextFloat() { return 1.0f; }
+  private static final class DummyRandom extends Random {
+    @Override public final float nextFloat() { return 1.0f; }
   }
 }

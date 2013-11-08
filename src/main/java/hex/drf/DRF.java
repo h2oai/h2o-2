@@ -159,8 +159,6 @@ public class DRF extends SharedTreeModelBuilder {
     TreeModelCM cx = TreeModelCM.varimp(model, f, sample_rate);
     // non-permuted number of votes
     double[] origAcc = cx.accuracy();
-    System.err.println("Tree: " + Arrays.toString(origAcc));
-    System.err.println("Tree: " + Arrays.toString(cx.treeCVotes()));
     assert origAcc.length == ntrees;
     // Copy the frame
     Frame wf = new Frame(f);
@@ -171,16 +169,11 @@ public class DRF extends SharedTreeModelBuilder {
       // Compute oobee with shuffled data
       TreeModelCM cd = TreeModelCM.varimp(model, wf, sample_rate);
       double[] accdiff = cd.accuracy();
-      System.err.println("Var. " + model._names[var] + ": " + Arrays.toString(accdiff));
-      System.err.println("Var. " + model._names[var] + ": " + Arrays.toString(cd.treeCVotes()));
       assert accdiff.length == origAcc.length;
       // compute decrease of accuracy
-      long[] tmp = cd.treeCVotes();
       for (int t=0; t<ntrees;t++ ) {
         accdiff[t] = origAcc[t] - accdiff[t];
-        tmp[t] = cx.treeCVotes()[t] - tmp[t];
       }
-      System.err.println(Arrays.toString(tmp));
       varimp[var] = (float) avg(accdiff);
       // ---
 
