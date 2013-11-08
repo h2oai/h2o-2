@@ -325,12 +325,14 @@ public abstract class Log {
         String logPathFileName = getLogPathFileName();
         java.util.Properties p = new java.util.Properties();
 
-        p.setProperty("log4j.rootLogger", "debug, R");
+        p.setProperty("log4j.rootLogger", "DEBUG, R");
         p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
         p.setProperty("log4j.appender.R.File", logPathFileName);
         p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
         p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
         p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
+        p.setProperty("log4j.logger.org.apache.http", "INFO");
+        p.setProperty("log4j.logger.com.amazonaws", "INFO");
 
         // See the following document for information about the pattern layout.
         // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
