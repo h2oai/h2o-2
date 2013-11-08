@@ -222,7 +222,8 @@ public class DRF extends SharedTreeModelBuilder {
     long rseed = rand.nextLong();
     for( int k=0; k<_nclass; k++ ) {
       // Initially setup as-if an empty-split had just happened
-      if( _distribution[k] != 0 ) {
+      assert (_distribution!=null && classification) || (_distribution==null && !classification);
+      if( _distribution == null || _distribution[k] != 0 ) {
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
         new DRFUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
       }
@@ -312,7 +313,7 @@ public class DRF extends SharedTreeModelBuilder {
       if( tree == null ) continue;
       for( int i=0; i<tree.len()-leafs[k]; i++ ) {
         // setup prediction for k-tree's i-th leaf
-        ((LeafNode)tree.node(leafs[k]+i)).pred( gp._votes[k][i] );
+        ((LeafNode)tree.node(leafs[k]+i)).pred( gp._voters[k][i] > 0 ? gp._votes[k][i] / gp._voters[k][i] : 0);
       }
     }
 
@@ -372,18 +373,21 @@ public class DRF extends SharedTreeModelBuilder {
     final int   _leafs[]; // Number of active leaves (per tree)
     // Per leaf: sum(votes);
     double _votes[/*tree/klass*/][/*tree-relative node-id*/];
+    long   _voters[/*tree/klass*/][/*tree-relative node-id*/];
     CollectPreds(DTree trees[], int leafs[]) { _leafs=leafs; _trees=trees; }
     @Override public void map( Chunk[] chks ) {
-      _votes = new double[_nclass][];
+      _votes  = new double[_nclass][];
+      _voters = new long  [_nclass][];
       // For all tree/klasses
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
         final int   leaf = _leafs[k];
         if( tree == null ) continue; // Empty class is ignored
         // A leaf-biased array of all active Tree leaves.
-        final double vs[] = _votes[k] = new double[tree.len()-leaf];
+        final double votes [] = _votes[k]  = new double[tree.len()-leaf];
+        final long   voters[] = _voters[k] = new long[tree.len()-leaf];
         final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
-        final Chunk vss = chk_work(chks,k); // Votes for this tree/class
+        final Chunk vss  = chk_work(chks,k); // Votes for this tree/class
         // If we have all constant responses, then we do not split even the
         // root and the residuals should be zero.
         if( tree.root() instanceof LeafNode ) continue;
@@ -407,13 +411,15 @@ public class DRF extends SharedTreeModelBuilder {
           if (!oobrow) {
             double v = vss.at0(row);
             // How many rows in this leaf has predicted k-class.
-            vs[leafnid-leaf] += v;
+            votes [leafnid-leaf] += v; // v=1 for classification if class == k else 0 (classification), regression v=response(Y)
+            voters[leafnid-leaf] ++; // compute all rows in this leaf (perhaps we do not treat voters per k-tree since we sample inside k-trees with same sampling rate)
           }
         }
       }
     }
     @Override public void reduce( CollectPreds gp ) {
       Utils.add(_votes,gp._votes);
+      Utils.add(_voters,gp._voters);
     }
   }
 
