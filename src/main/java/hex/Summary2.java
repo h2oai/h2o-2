@@ -29,9 +29,17 @@ public class Summary2 extends Iced {
   final transient boolean _isInt;
   final transient double  _min;
   final transient double  _max;
-  final transient String  _colname;
+  final transient String  colname;
 
   // OUTPUTS
+  // Basic info
+  @API(help="name"        ) final String   colname;
+  @API(help="type"        ) final String   type;
+  // Basic stats
+  @API(help="average"     ) final double   avg;
+  @API(help="standard deviation") final double sd;
+  @API(help="NAs"         ) final double   naCnt;
+  
   @API(help="categories"  ) final String[] domains;
   @API(help="bins start"  ) final double   start;
   @API(help="bin step"    ) final double   binsz;
@@ -43,12 +51,16 @@ public class Summary2 extends Iced {
   @API(help="percentiles" ) double []      percentileValues;
 
   public Summary2(Vec vec, String colname) {
-    _colname = colname;
+    colname = colname;
     _enum = vec.isEnum();
     _isInt = vec.isInt();
+    type = _enum?"Enum":_isInt?"Int":"Real";
+    avg = vec.mean();
+    sd = vec.sigma();
+    naCnt = vec.naCnt();
     if (_enum) domains = vec.domain(); else domains = null;
     long len = vec.length();
-    rows = len - vec.naCnt();
+    rows = len - naCnt;
     if (_enum) {
       mins = MemoryManager.malloc8d(Math.min(domains.length, NMAX));
       maxs = MemoryManager.malloc8d(Math.min(domains.length, NMAX));
@@ -67,7 +79,7 @@ public class Summary2 extends Iced {
       bins = new long[(int)span];
     } else {
       // guard against improper parse (date type) or zero c._sigma
-      double sigma = vec.sigma();
+      double sigma = sd;
       if (Double.isNaN(sigma)) sigma = 0; 
       double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(len));
       double d = Math.pow(10, Math.floor(Math.log10(b)));
@@ -92,8 +104,8 @@ public class Summary2 extends Iced {
     for (int i = 0; i < chk._len; i++) {
       if( chk.isNA0(i) ) continue;
       double val = chk.at0(i);
-      assert val >= _min : "ERROR: ON COLUMN " + _colname + "   VALUE " + val + " < VEC.MIN " + _min;
-      assert val <= _max : "ERROR: ON COLUMN " + _colname + "   VALUE " + val + " > VEC.MAX " + _max;
+      assert val >= _min : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " < VEC.MIN " + _min;
+      assert val <= _max : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " > VEC.MAX " + _max;
       if (val == 0.) zeros++;
       // update min/max
       if (val < mins[mins.length-1]) {
@@ -200,7 +212,7 @@ public class Summary2 extends Iced {
 
   public void toHTML( Vec vec, String cname, StringBuilder sb ) {
     sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;border-top-style:solid;'>" +
-    "<div class='alert-success'><h4>Column: " + cname + "</h4></div>\n");
+    "<div class='alert-success'><h4>Column: " + cname + " (type: " + type + ")</h4></div>\n");
     if ( rows == 0 ) {
       sb.append("<div class='alert'>Empty column, no summary!</div></div>\n");
       return;
@@ -210,9 +222,9 @@ public class Summary2 extends Iced {
       sb.append("<div style='width:100%;'><table class='table-bordered'>");
       sb.append("<tr><th colspan='"+20+"' style='text-align:center;'>Base Stats</th></tr>");
       sb.append("<tr>");
-      sb.append("<th>avg</th><td>" + Utils.p2d(vec.mean())+"</td>");
-      sb.append("<th>sd</th><td>" + Utils.p2d(vec.sigma()) + "</td>");
-      sb.append("<th>NAs</th>  <td>" + vec.naCnt() + "</td>");
+      sb.append("<th>avg</th><td>" + Utils.p2d(avg)+"</td>");
+      sb.append("<th>sd</th><td>" + Utils.p2d(sd) + "</td>");
+      sb.append("<th>NAs</th>  <td>" + naCnt + "</td>");
       sb.append("<th>zeros</th><td>" + zeros + "</td>");
       sb.append("<th>min[" + mins.length + "]</th>");
       for( double min : mins ) {
@@ -230,7 +242,7 @@ public class Summary2 extends Iced {
     } else {                    // Enums
       sb.append("<div style='width:100%'><table class='table-bordered'>");
       sb.append("<tr><th colspan='" + 4 + "' style='text-align:center;'>Base Stats</th></tr>");
-      sb.append("<tr><th>NAs</th>  <td>" + vec.naCnt() + "</td>");
+      sb.append("<tr><th>NAs</th>  <td>" + naCnt + "</td>");
       sb.append("<th>cardinality</th>  <td>" + vec.domain().length + "</td></tr>");
       sb.append("</table></div>");
     }
