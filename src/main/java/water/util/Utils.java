@@ -804,4 +804,8 @@ public class Utils {
     for(long n: nums) sum+=n;
     return sum/nums.length;
   }
+  public static float[] div(float[] nums, int n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
 }
