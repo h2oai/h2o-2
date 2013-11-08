@@ -1526,22 +1526,29 @@ class H2O(object):
         if beta_features:
             print "random_forest_view not supported in H2O fvec yet. hacking done response"
             r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
-            return r
+            # return r
 
-        algo = '2/DRFView2' if beta_features else 'RFView'
+        # algo = '2/DRFView2' if beta_features else 'RFView'
+        algo = '2/DRFModelView' if beta_features else 'RFView'
         algoScore = '2/DRFScore2' if beta_features else 'RFScore'
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
-        params_dict = {
-            'data_key': data_key,
-            'model_key': model_key,
-            'out_of_bag_error_estimate': 1,
-            'iterative_cm': 0,
-            # is ntree not expected here?
-            'ntree': None,
-            'class_weights': None,
-            'response_variable': None,
-            }
+
+        if beta_features:
+            params_dict = {
+                '_modelKey': model_key,
+                }
+        else:
+            params_dict = {
+                'data_key': data_key,
+                'model_key': model_key,
+                'out_of_bag_error_estimate': 1,
+                'iterative_cm': 0,
+                # is ntree not expected here?
+                'ntree': None,
+                'class_weights': None,
+                'response_variable': None,
+                }
         browseAlso = kwargs.pop('browseAlso',False)
 
         # only update params_dict..don't add
@@ -1550,10 +1557,14 @@ class H2O(object):
             if k in params_dict:
                 params_dict[k] = kwargs[k]
 
-        if params_dict['ntree'] is None:
-            raise Exception('%s got no ntree: %s . Why? h2o needs?' % (algo, params_dict['ntree']))
+        if beta_features:
+            ntree = 0 # not used?
+
+        else:
+            if params_dict['ntree'] is None:
+                raise Exception('%s got no %s param: %s . Why? h2o needs?' % (algo, 'ntree', params_dict['ntree']))
         # well assume we got the gold standard from the initial rf request
-        ntree = params_dict['ntree']
+            ntree = params_dict['ntree']
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -1566,6 +1577,7 @@ class H2O(object):
 
         a = self.__do_json_request(whichUsed + ".json",
             timeout=timeoutSecs, params=params_dict)
+
         verboseprint("\n%s result:" % whichUsed, dump_json(a))
 
         if noPoll:
@@ -1573,26 +1585,34 @@ class H2O(object):
 
         # add a fake redirect_request and redirect_request_args
         # to the RF response, to make it look like everyone else
-        fake_a = {}
-        fake_a['response'] = a['response']
-        fake_a['response']['redirect_request'] = whichUsed + ".json"
-        fake_a['response']['redirect_request_args'] = params_dict
 
-        # no redirect_response in rfView? so need to pass params here
-        # FIX! do we have to do a 2nd if it's done in the first?
-        rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            noise=noise, benchmarkLogging=benchmarkLogging)
+        if beta_features:
+            rfView = a
+        else:
+            fake_a = {}
+            fake_a['response'] = a['response']
+            fake_a['response']['redirect_request'] = whichUsed + ".json"
+            fake_a['response']['redirect_request_args'] = params_dict
 
-        # above we get this from what we're told from rf and passed to rfView
-        ## ntree = rfView['ntree']
-        verboseprint("%s done:" % whichUsed, dump_json(rfView))
-        status = rfView['response']['status']
-        if status != 'done': raise Exception('Unexpected status: ' + status)
+            # no redirect_response in rfView? so need to pass params here
+            # FIX! do we have to do a 2nd if it's done in the first?
+            rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging)
 
-        numberBuilt = rfView['trees']['number_built']
-        if numberBuilt!=ntree:
-            raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
+            # above we get this from what we're told from rf and passed to rfView
+            ## ntree = rfView['ntree']
+            verboseprint("%s done:" % whichUsed, dump_json(rfView))
+            status = rfView['response']['status']
+            if status != 'done': raise Exception('Unexpected status: ' + status)
+
+        if beta_features:
+            drf_model = rfView['drf_model']
+            numberBuilt = drf_model['N']
+        else:
+            numberBuilt = rfView['trees']['number_built']
+            if numberBuilt!=ntree:
+                raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
 
         # can't check this? These are returned in the middle but not at the end
         ## progress = rfView['response']['progress']
@@ -1601,9 +1621,9 @@ class H2O(object):
 
         # want to double check all this because it's new
         # and we had problems with races/doneness before
-        errorInResponse = \
-            numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
-            ntree!=rfView['ntree']
+        errorInResponse = False
+            # numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
+            # ntree!=rfView['ntree']
 
         if errorInResponse:
             raise Exception("\nBad values in %s.json\n" % whichUsed +

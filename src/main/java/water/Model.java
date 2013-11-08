@@ -1,6 +1,8 @@
 package water;
 
 import hex.ConfusionMatrix;
+import hex.VariableImportance;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import javassist.*;
@@ -76,9 +78,10 @@ public abstract class Model extends Iced {
   }
 
   /** For classifiers, confusion matrix on validation set. */
-  public ConfusionMatrix cm() {
-    return null;
-  }
+  public ConfusionMatrix cm() { return null; }
+
+  /** Variable importance of individual variables measured by this model. */
+  public VariableImportance varimp() { return null; }
 
   /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the
    *  predicted class, the remaining Vecs are the probability distributions.

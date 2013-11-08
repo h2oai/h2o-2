@@ -12,10 +12,20 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         rowData = []
         for j in range(colCount):
             ri = r1.randint(0,1)
+            # put every column in twice, to create dependent cols!
+            # the extra cols will have 0 for pca component values
+            # add a little noise to them, to see if PCA sees it's mostly the same
+            rowData.append(ri)
+            # duplicate, but flip it 1 out of 10
+            rj = r1.randint(0,10)
+            if rj==0:
+                # flip it (0/1)
+                ri = 0 if ri else 1
             rowData.append(ri)
 
-        ri = r1.randint(0,1)
-        rowData.append(ri)
+        # PCA doesn't use/need an output
+        # ri = r1.randint(0,1)
+        # rowData.append(ri)
 
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")

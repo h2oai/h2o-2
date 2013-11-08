@@ -184,6 +184,17 @@ public class Frame extends Iced {
     return vec;
   }
 
+  public Vec replace(int col, Vec nv) {
+    assert col < _names.length;
+    Vec rv = vecs()[col];
+    assert rv.group().equals(nv.group());
+    _vecs[col] = nv;
+    _keys[col] = nv._key;
+    if( DKV.get(nv._key)==null )    // If not already in KV, put it there
+      DKV.put(nv._key, nv);
+    return rv;
+  }
+
   public Frame extractFrame(int startIdx, int endIdx) {
     Frame f = subframe(startIdx, endIdx);
     remove(startIdx, endIdx);
@@ -485,7 +496,7 @@ public class Frame extends Iced {
 
     // Do Da Slice
     // orows is either a long[] or a Vec
-    if( orows == null || orows instanceof long[] )  
+    if( orows == null || orows instanceof long[] )
       return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
     Frame frows = (Frame)orows;
     Vec vrows = frows.anyVec();
@@ -552,7 +563,7 @@ public class Frame extends Iced {
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       Chunk pred = chks[chks.length-1];
       for(int i = 0; i < pred._len; ++i){
-        if(pred.at0(i) != 0) 
+        if(pred.at0(i) != 0)
           for(int j = 0; j < chks.length-1; ++j)
             nchks[j].addNum(chks[j].at0(i));
       }
