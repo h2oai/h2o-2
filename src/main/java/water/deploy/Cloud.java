@@ -1,6 +1,7 @@
 package water.deploy;
 
-import java.io.*;
+import java.io.File;
+import java.io.Serializable;
 import java.util.*;
 
 import water.*;
@@ -30,6 +31,7 @@ public class Cloud {
 
   /** Port for all remote machines. */
   public static final int PORT = 54321;
+  public static final int FORWARDED_LOCAL_PORT = 54321;
   /**
    * To avoid configuring remote machines, a JVM can be sent through rsync with H2O. By default,
    * decompress the Oracle Linux x64 JDK to a local folder and point this path to it.
@@ -100,7 +102,7 @@ public class Cloud {
       Host host = new Host(p._host[0], p._host[1], p._host[2]);
       String key = host.key() != null ? host.key() : "";
       String s = "ssh-agent sh -c \"ssh-add " + key + "; ssh -l " + host.user() + " -A" + Host.SSH_OPTS;
-      s += " -L " + PORT + ":127.0.0.1:" + PORT; // Port forwarding
+      s += " -L " + FORWARDED_LOCAL_PORT + ":127.0.0.1:" + PORT; // Port forwarding
       s += " " + host.address() + " '" + SSH.command(p._java, p._node) + "'\"";
       s = s.replace("\\", "\\\\").replace("$", "\\$");
       ArrayList<String> list = new ArrayList<String>();

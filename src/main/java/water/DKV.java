@@ -51,7 +51,7 @@ public abstract class DKV {
     // TEMPORARY DURING VALUEARRAY TO FLUIDVEC TRANSITION.
     // When ValueArray object writes occur to DKV, whack any possible associated
     // auto-converted Frame object.
-    if (! isConvertedFrameKeyString(key.toString())) {
+    if (! isConvertedFrameKeyString(key.toString()) && old != null && old.isArray()) {
       String frameKeyString = calcConvertedFrameKeyString(key.toString());
       Key k = Key.make(frameKeyString);
       remove(k);

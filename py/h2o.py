@@ -158,6 +158,7 @@ beta_features = False
 sleep_at_tear_down = False
 abort_after_import = False
 clone_cloud_json = None
+disable_time_stamp = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 python_cmd_ip = get_ip_address()
@@ -182,11 +183,13 @@ def parse_our_args():
     parser.add_argument('-slp', '--sleep_at_tear_down', help='open browser and time.sleep(3600) at tear_down_cloud() (typical test end/fail)', action='store_true')
     parser.add_argument('-aai', '--abort_after_import', help='abort the test after printing the full path to the first dataset used by import_parse/import_only', action='store_true')
     parser.add_argument('-ccj', '--clone_cloud_json', type=str, help='a h2o-nodes.json file can be passed (see build_cloud(create_json=True). This will create a cloned set of node objects, so any test that builds a cloud, can also be run on an existing cloud without changing the test')
+    parser.add_argument('-dts', '--disable_time_stamp', help='Disable the timestamp on all stdout. Useful when trying to capture some stdout (like json prints) for use elsewhere', action='store_true')
+
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -200,6 +203,7 @@ def parse_our_args():
     sleep_at_tear_down = args.sleep_at_tear_down
     abort_after_import = args.abort_after_import
     clone_cloud_json = args.clone_cloud_json
+    disable_time_stamp = args.disable_time_stamp
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -525,7 +529,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
     # (both come thru here)
     # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
-    sys.stdout = OutWrapper(sys.stdout)
+    if not disable_time_stamp:
+        sys.stdout = OutWrapper(sys.stdout)
     if clone_cloud_json or clone_cloud:
         nodeList = build_cloud_with_json(
             h2o_nodes_json=clone_cloud_json if clone_cloud_json else clone_cloud)
@@ -1521,22 +1526,29 @@ class H2O(object):
         if beta_features:
             print "random_forest_view not supported in H2O fvec yet. hacking done response"
             r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
-            return r
+            # return r
 
-        algo = '2/DRFView2' if beta_features else 'RFView'
+        # algo = '2/DRFView2' if beta_features else 'RFView'
+        algo = '2/DRFModelView' if beta_features else 'RFView'
         algoScore = '2/DRFScore2' if beta_features else 'RFScore'
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
-        params_dict = {
-            'data_key': data_key,
-            'model_key': model_key,
-            'out_of_bag_error_estimate': 1,
-            'iterative_cm': 0,
-            # is ntree not expected here?
-            'ntree': None,
-            'class_weights': None,
-            'response_variable': None,
-            }
+
+        if beta_features:
+            params_dict = {
+                '_modelKey': model_key,
+                }
+        else:
+            params_dict = {
+                'data_key': data_key,
+                'model_key': model_key,
+                'out_of_bag_error_estimate': 1,
+                'iterative_cm': 0,
+                # is ntree not expected here?
+                'ntree': None,
+                'class_weights': None,
+                'response_variable': None,
+                }
         browseAlso = kwargs.pop('browseAlso',False)
 
         # only update params_dict..don't add
@@ -1545,10 +1557,14 @@ class H2O(object):
             if k in params_dict:
                 params_dict[k] = kwargs[k]
 
-        if params_dict['ntree'] is None:
-            raise Exception('%s got no ntree: %s . Why? h2o needs?' % (algo, params_dict['ntree']))
+        if beta_features:
+            ntree = 0 # not used?
+
+        else:
+            if params_dict['ntree'] is None:
+                raise Exception('%s got no %s param: %s . Why? h2o needs?' % (algo, 'ntree', params_dict['ntree']))
         # well assume we got the gold standard from the initial rf request
-        ntree = params_dict['ntree']
+            ntree = params_dict['ntree']
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -1561,6 +1577,7 @@ class H2O(object):
 
         a = self.__do_json_request(whichUsed + ".json",
             timeout=timeoutSecs, params=params_dict)
+
         verboseprint("\n%s result:" % whichUsed, dump_json(a))
 
         if noPoll:
@@ -1568,26 +1585,34 @@ class H2O(object):
 
         # add a fake redirect_request and redirect_request_args
         # to the RF response, to make it look like everyone else
-        fake_a = {}
-        fake_a['response'] = a['response']
-        fake_a['response']['redirect_request'] = whichUsed + ".json"
-        fake_a['response']['redirect_request_args'] = params_dict
 
-        # no redirect_response in rfView? so need to pass params here
-        # FIX! do we have to do a 2nd if it's done in the first?
-        rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            noise=noise, benchmarkLogging=benchmarkLogging)
+        if beta_features:
+            rfView = a
+        else:
+            fake_a = {}
+            fake_a['response'] = a['response']
+            fake_a['response']['redirect_request'] = whichUsed + ".json"
+            fake_a['response']['redirect_request_args'] = params_dict
 
-        # above we get this from what we're told from rf and passed to rfView
-        ## ntree = rfView['ntree']
-        verboseprint("%s done:" % whichUsed, dump_json(rfView))
-        status = rfView['response']['status']
-        if status != 'done': raise Exception('Unexpected status: ' + status)
+            # no redirect_response in rfView? so need to pass params here
+            # FIX! do we have to do a 2nd if it's done in the first?
+            rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging)
 
-        numberBuilt = rfView['trees']['number_built']
-        if numberBuilt!=ntree:
-            raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
+            # above we get this from what we're told from rf and passed to rfView
+            ## ntree = rfView['ntree']
+            verboseprint("%s done:" % whichUsed, dump_json(rfView))
+            status = rfView['response']['status']
+            if status != 'done': raise Exception('Unexpected status: ' + status)
+
+        if beta_features:
+            drf_model = rfView['drf_model']
+            numberBuilt = drf_model['N']
+        else:
+            numberBuilt = rfView['trees']['number_built']
+            if numberBuilt!=ntree:
+                raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
 
         # can't check this? These are returned in the middle but not at the end
         ## progress = rfView['response']['progress']
@@ -1596,9 +1621,9 @@ class H2O(object):
 
         # want to double check all this because it's new
         # and we had problems with races/doneness before
-        errorInResponse = \
-            numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
-            ntree!=rfView['ntree']
+        errorInResponse = False
+            # numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
+            # ntree!=rfView['ntree']
 
         if errorInResponse:
             raise Exception("\nBad values in %s.json\n" % whichUsed +
@@ -1635,7 +1660,7 @@ class H2O(object):
         verboseprint("\npca_view_result:", dump_json(a))
         return a
 
-    def glm_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+    def glm_view(self, modelKey=None, timeoutSecs=300, print_params=False, **kwargs):
         #this function is only for glm2, may remove it in future.
         params_dict = {
             '_modelKey' : modelKey,
@@ -1755,7 +1780,7 @@ class H2O(object):
         a = self.__do_json_request('2/GBM.json',timeout=timeoutSecs,params=params_dict)
         if noPoll:
             a['python_elapsed'] = time.time() - start
-            a['python_timeout'] = a['python_elapsed']*100 / timeoutSecs
+            a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
 
@@ -1890,18 +1915,18 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a
 
-    def summary_page(self, key, max_column_display=1000, timeoutSecs=60, noPrint=True, **kwargs):
+    def summary_page(self, key, timeoutSecs=60, noPrint=True, **kwargs):
         if beta_features:
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': max_column_display,
+                'max_ncols': 1000,
                 }
         else:
             params_dict = {
                 'key': key,
                 'x': None,
-                'max_column_display': max_column_display,
+                'max_column_display': 1000,
                 }
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)

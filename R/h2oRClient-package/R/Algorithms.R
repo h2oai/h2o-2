@@ -325,9 +325,9 @@ setMethod("h2o.nn", signature(x="numeric", y="numeric", data="H2OParsedData", cl
       result$confusion = cf_matrix
       result$items = res2$model$items
       result$train_class_error = res2$model$train_classification_error
-      result$train_sqr_error = res2$model$train_sqr_error
+      result$train_sqr_error = res2$model$train_mse
       result$valid_class_error = res2$model$validation_classification_error
-      result$valid_sqr_error = res2$model$validation_sqr_error
+      result$valid_sqr_error = res2$model$validation_mse
       new("H2ONNModel", key=destKey, data=data, model=result)
 	})
 

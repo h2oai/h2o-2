@@ -84,7 +84,7 @@ public class NeuralNetIrisTest extends TestUtil {
     ref.train(epochs, rate);
 
     // H2O
-    Trainer.Direct trainer = new Trainer.Direct(ls);
+    Trainer.Direct trainer = new Trainer.Direct(ls, null);
     trainer.samples = epochs * (int) _train.numRows();
     trainer.run();
 
@@ -115,9 +115,9 @@ public class NeuralNetIrisTest extends TestUtil {
     ((VecSoftmax) ls[2]).vec = labels;
     NeuralNet.Error test = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
-    Assert.assertEquals(trainAcc, train.Value, epsilon);
+    Assert.assertEquals(trainAcc, train.classification, epsilon);
     float testAcc = ref._nn.Accuracy(ref._testData);
-    Assert.assertEquals(testAcc, test.Value, epsilon);
+    Assert.assertEquals(testAcc, test.classification, epsilon);
 
     Log.info("H2O and Reference equal, train: " + train + ", test: " + test);
 

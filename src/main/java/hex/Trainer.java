@@ -41,7 +41,7 @@ public abstract class Trainer {
 
   public abstract void join();
 
-  public long items() {
+  public long samples() {
     throw new UnsupportedOperationException();
   }
 
@@ -95,9 +95,11 @@ public abstract class Trainer {
   public static class Direct extends Base {
     public int samples;
     Thread _thread;
+    Job _job;
 
-    public Direct(Layer[] ls) {
+    public Direct(Layer[] ls, Job job) {
       super(ls);
+      _job = job;
     }
 
     @Override public Layer[] layers() {
@@ -109,10 +111,12 @@ public abstract class Trainer {
       for( long i = 0; samples == 0 || i < samples; i++ ) {
         step();
         input.move();
+        if( _job != null && _job.cancelled() )
+          break;
       }
     }
 
-    @Override public long items() {
+    @Override public long samples() {
       Input input = (Input) _ls[0];
       return input._pos;
     }
@@ -146,7 +150,7 @@ public abstract class Trainer {
     static final CyclicBarrier DONE = new CyclicBarrier(1);
     volatile CyclicBarrier _suspend;
     final CyclicBarrier _resume;
-    final AtomicLong _items = new AtomicLong();
+    final AtomicLong _samples = new AtomicLong();
 
     public Threaded(Layer[] ls) {
       this(ls, 0, Runtime.getRuntime().availableProcessors());
@@ -185,7 +189,7 @@ public abstract class Trainer {
               }
               trainer.step();
               input.move();
-              _items.incrementAndGet();
+              _samples.incrementAndGet();
             }
           }
         };
@@ -197,8 +201,8 @@ public abstract class Trainer {
       return _trainers[0].layers();
     }
 
-    @Override public long items() {
-      return _items.get();
+    @Override public long samples() {
+      return _samples.get();
     }
 
     @Override public void start() {
@@ -273,7 +277,7 @@ public abstract class Trainer {
       return _ls;
     }
 
-    @Override public long items() {
+    @Override public long samples() {
       Vec[] vecs = ((VecsInput) _ls[0]).vecs;
       long n = 0;
       for( int i = 0; i < _counts.length(); i++ )
@@ -340,7 +344,7 @@ public abstract class Trainer {
             if( !home )
               _node.sync();
             else {
-              _node._total = _node._trainer.items();
+              _node._total = _node._trainer.samples();
               try {
                 Thread.sleep(1);
               } catch( InterruptedException ex ) {
@@ -367,10 +371,6 @@ public abstract class Trainer {
 
     @Override public void map(Chunk[] cs) {
       _node._chunks.add(cs);
-    }
-
-    @Override public boolean logVerbose() {
-      return false;
     }
   }
 
@@ -559,7 +559,7 @@ public abstract class Trainer {
           for( int i = 0; i < _counts.length; i += 2 )
             trainer._counts.addAndGet(_counts[i], _counts[i + 1]);
           _counts = null;
-          _total = trainer.items();
+          _total = trainer.samples();
         }
         return null;
       }

@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary_percentile(self):
+    def test_summary_percentile2(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100000, 1, 'cD', 300),
@@ -74,6 +74,10 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
 
             summaryResult = h2o_cmd.runSummary(key=hex_key)
+            if h2o.verbose:
+                print "summaryResult:", h2o.dump_json(summaryResult)
+
+
             # remove bin_names because it's too big (256?) and bins
             # just touch all the stuff returned
             h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
