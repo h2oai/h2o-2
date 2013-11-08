@@ -41,21 +41,24 @@ public class Frame extends Iced {
 
   public final Vec[] vecs() {
     if( _vecs != null ) return _vecs;
+    // Load all Vec headers; load them all in parallel by spawning F/J tasks.
     final Vec [] vecs = new Vec[_keys.length];
     Futures fs = new Futures();
-    for( int i=0; i<_keys.length; i++ ){
+    for( int i=0; i<_keys.length; i++ ) {
       final int ii = i;
       final Key k = _keys[i];
-      H2OCountedCompleter t;
-      H2O.submitTask(t = new H2OCountedCompleter(){
-        // we need higher priority here as there is a danger of deadlock in case of many calls from MRTask2 at once
-        // (e.g. frame with many vectors invokes rollup tasks for all vectors in paralell), should probably be done in CPS style in the future
-        @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
-        @Override public void compute2() {
-          vecs[ii] = DKV.get(k).get();
-          tryComplete();
-        }
-      });
+      H2OCountedCompleter t = new H2OCountedCompleter() {
+          // We need higher priority here as there is a danger of deadlock in
+          // case of many calls from MRTask2 at once (e.g. frame with many
+          // vectors invokes rollup tasks for all vectors in parallel).  Should
+          // probably be done in CPS style in the future
+          @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
+          @Override public void compute2() {
+            vecs[ii] = DKV.get(k).get();
+            tryComplete();
+          }
+        };
+      H2O.submitTask(t);
       fs.add(t);
     }
     fs.blockForPending();
@@ -338,7 +341,7 @@ public class Frame extends Iced {
   public String[] toStringHdr( StringBuilder sb ) {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
-      String n = _names[c];
+      String n = (c < _names.length) ? _names[c] : ("C"+c);
       if( numRows()==0 ) { sb.append(n).append(' '); continue; }
       Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
       String f = fs[c] = C.pformat();  // Printable width
