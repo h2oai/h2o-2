@@ -1,18 +1,16 @@
 package water.fvec;
 
-import water.AutoBuffer;
-import water.H2O;
-import water.UDP;
+import water.*;
 
 /** SPARSE boolean; no NAs.  A list of rows that are non-zero. */
 public class CX0Chunk extends Chunk {
-  static final int OFF = 2;
+  static final int OFF = 4;
   public CX0Chunk(long[] ls, int nzcnt) { 
-    _mem = compress(ls,nzcnt); _start = -1; _len = UDP.get2(_mem,0)&0xFFFF;
+    _mem = compress(ls,nzcnt); _start = -1; _len = UDP.get4(_mem,0);
   }
   @Override protected long at8_impl(int idx) {
     int lo=0, hi = (_mem.length-OFF)>>>1;
-    while( lo+1 != hi ) {        // Binary search the row
+    while( hi-lo > 1 ) {        // Binary search the row
       int mid = (hi+lo)>>>1;
       int x = UDP.get2(_mem,(mid<<1)+OFF)&0xFFFF;
       if( idx < x ) hi = mid;
@@ -32,11 +30,16 @@ public class CX0Chunk extends Chunk {
   @Override public Chunk read(AutoBuffer bb) {
     _mem   = bb.bufClose();
     _start = -1;
-    _len = UDP.get2(_mem,0)&0xFFFF;
+    _len = UDP.get4(_mem,0);
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    throw H2O.unimpl();
+    nc._ds = null;
+    nc._ls = MemoryManager.malloc8 (_len);
+    nc._xs = MemoryManager.malloc4 (_len);
+    for( int i=OFF; i<_mem.length; i+=2 )
+      nc._ls[UDP.get2(_mem,i)&0xFFFF] = 1;
+    return nc;
   }
 
   // Compress a NewChunk long array
@@ -46,7 +49,7 @@ public class CX0Chunk extends Chunk {
       throw H2O.unimpl();
     }
     byte[] buf = new byte[nzcnt*2+OFF];
-    UDP.set2(buf,0,(short)ls.length);
+    UDP.set4(buf,0,ls.length);
     int j = OFF;
     for( int i=0; i<ls.length; i++ )
       if( ls[i] != 0 ) j += UDP.set2(buf,j,(short)i);
