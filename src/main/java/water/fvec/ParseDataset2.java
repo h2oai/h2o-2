@@ -283,7 +283,7 @@ public final class ParseDataset2 extends Job {
       for(int i:ecols)ds[j++] =  uzpt._dout._vecs[i]._domain = enums[i].computeColumnDomain();
       eut = new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols);
     }
-    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(setup._ncols),uzpt._dout.closeVecs());
+    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());
     // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
     SVFTask t = new SVFTask(fr);
     t.invokeOnAllNodes();
@@ -385,14 +385,17 @@ public final class ParseDataset2 extends Job {
         switch( cpr ) {
         case NONE:
           if(localSetup._pType.parallelParseSupported){
-            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx);
+            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
             addToPendingCount(1);
-            dp.setCompleter(new H2OCallback<DParse>() {
-              @Override public void callback(DParse d){
-                _dout = d._dout;
-                MultiFileParseTask.this.tryComplete();
-              }
-            });
+            dp.setCompleter(this);
+            //dp.setCompleter(new H2OCallback<DParse>() {
+            //  @Override public void callback(DParse d){
+            //    _dout = d._dout;
+            //    MultiFileParseTask.this.tryComplete();
+            //  }
+            //  @Override public final boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
+            //  }
+            //});
             dp.dfork(new Frame(vec));
             for(int i = 0; i < vec.nChunks(); ++i)
               _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
@@ -483,12 +486,14 @@ public final class ParseDataset2 extends Job {
       final int _startChunkIdx; // for multifile parse, offset of the first chunk in the final dataset
       final VectorGroup _vg;
       FVecDataOut _dout;
+      transient final MultiFileParseTask _outerMFPT;
 
-      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx) {
+      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
         _vg = vg;
         _setup = setup;
         _vecIdStart = vecIdstart;
         _startChunkIdx = startChunkIdx;
+        _outerMFPT = mfpt;
       }
       @Override public void map( Chunk in ) {
         Enum [] enums = enums();
@@ -516,6 +521,10 @@ public final class ParseDataset2 extends Job {
       @Override public void reduce(DParse dp){
         if(_dout == null)_dout = dp._dout;
         else _dout.reduce(dp._dout);
+      }
+      @Override public void postGlobal() {
+        super.postGlobal();
+        _outerMFPT._dout = _dout;
       }
     }
   }
