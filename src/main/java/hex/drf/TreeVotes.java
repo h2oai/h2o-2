@@ -15,7 +15,7 @@ import water.util.Utils;
  * This is different from Model.score() function since the MR task
  * uses inverse loop: first over all trees and over all rows in chunk.
  */
-public class TreeModelCM extends MRTask2<TreeModelCM> {
+public class TreeVotes extends MRTask2<TreeVotes> {
   final private boolean   _oob;
   final private float     _rate;
   final private TreeModel _tmodel;
@@ -35,7 +35,7 @@ public class TreeModelCM extends MRTask2<TreeModelCM> {
     return r;
   }
 
-  TreeModelCM(TreeModel tmodel, float rate) { _tmodel = tmodel; _rate = rate; _oob = true; }
+  TreeVotes(TreeModel tmodel, float rate) { _tmodel = tmodel; _rate = rate; _oob = true; }
 
   @Override public void map(Chunk[] chks) {
     int ntrees = _tmodel.numTrees();
@@ -66,15 +66,15 @@ public class TreeModelCM extends MRTask2<TreeModelCM> {
       }
     }
   }
-  @Override public void reduce( TreeModelCM t ) { Utils.add(_treeCVotes,t._treeCVotes); Utils.add(_nrows, t._nrows); }
+  @Override public void reduce( TreeVotes t ) { Utils.add(_treeCVotes,t._treeCVotes); Utils.add(_nrows, t._nrows); }
 
   private Chunk chk_resp( Chunk chks[] ) { return chks[chks.length-1]; }
   private Random rngForTree(CompressedTree[] ts, int cidx) {
     return _oob ? ts[0].rngForChunk(cidx) : new DummyRandom();
   }
 
-  public static TreeModelCM varimp(TreeModel tmodel, Frame f, float rate) {
-    return new TreeModelCM(tmodel, rate).doAll(f);
+  public static TreeVotes varimp(TreeModel tmodel, Frame f, float rate) {
+    return new TreeVotes(tmodel, rate).doAll(f);
   }
 
   private static final class DummyRandom extends Random {

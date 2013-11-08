@@ -156,7 +156,7 @@ public class DRF extends SharedTreeModelBuilder {
     float[] varimp = new float[_ncols];
     int ntrees = model.numTrees();
     // Score a dataset as usual but collects properties per tree.
-    TreeModelCM cx = TreeModelCM.varimp(model, f, sample_rate);
+    TreeVotes cx = TreeVotes.varimp(model, f, sample_rate);
     // non-permuted number of votes
     double[] origAcc = cx.accuracy();
     assert origAcc.length == ntrees;
@@ -167,7 +167,7 @@ public class DRF extends SharedTreeModelBuilder {
       Vec sv = ShuffleTask.shuffle(varv); // create a shuffled vector
       wf.replace(var, sv);
       // Compute oobee with shuffled data
-      TreeModelCM cd = TreeModelCM.varimp(model, wf, sample_rate);
+      TreeVotes cd = TreeVotes.varimp(model, wf, sample_rate);
       double[] accdiff = cd.accuracy();
       assert accdiff.length == origAcc.length;
       // compute decrease of accuracy
