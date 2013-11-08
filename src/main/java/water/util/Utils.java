@@ -85,6 +85,11 @@ public class Utils {
     for (int d: from) result += d;
     return result;
   }
+  public static float sum(float[] from) {
+    float result = 0;
+    for (float d: from) result += d;
+    return result;
+  }
 
   public static String sampleToString(int[] val, int max) {
     if (val == null || val.length < max) return Arrays.toString(val);
@@ -805,6 +810,10 @@ public class Utils {
     return sum/nums.length;
   }
   public static float[] div(float[] nums, int n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  public static float[] div(float[] nums, float n) {
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }
