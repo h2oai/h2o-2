@@ -275,6 +275,7 @@ public class NewChunk extends Chunk {
     boolean first = true;
     boolean hasNA = false;
     _naCnt=0;
+    int nzCnt=0;                // Non-zero count
 
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) { hasNA = true; _naCnt++; continue;}
@@ -296,6 +297,8 @@ public class NewChunk extends Chunk {
       }
       // Remove any trailing zeros / powers-of-10
       if(overflow || (overflow = (Math.abs(xmin-x)) >=10))continue;
+      if( l==0 ) continue;
+      else nzCnt++;
       // Track largest/smallest values at xmin scale.  Note overflow.
       if( x < xmin ) {
         lemin *= DParseTask.pow10i(xmin-x);
@@ -317,11 +320,17 @@ public class NewChunk extends Chunk {
 
     // Boolean column?
     if (_max == 1 && _min == 0 && xmin == 0) {
+      if( nzCnt*32 < _len && _naCnt==0 )       // Very sparse?
+        return new CX0Chunk(_ls,nzCnt);        // Sparse boolean chunk
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
     }
 
+    // Highly sparse but not a bitvector or constant?
+    if( nzCnt*8 < _len &&
+        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE )// Only handling unbiased shorts here
+      return new CX2Chunk(_ls,_xs,nzCnt); // Sparse byte chunk
 
     final boolean fpoint = xmin < 0 || _min < Long.MIN_VALUE || _max > Long.MAX_VALUE;
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
