@@ -492,7 +492,7 @@ public class DTree extends Iced {
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey;  this.cm = null;
       treeBits = new CompressedTree[0][];
-      varimp = new float[0];
+      varimp = null;
     }
     public TreeModel(TreeModel prior, float[] varimp) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
@@ -515,7 +515,7 @@ public class DTree extends Iced {
           if( trees[c] != null )
               ts[c] = trees[c].compress();
       }
-      varimp = new float[0];
+      varimp = null;
     }
 
     // Number of trees actually in the model (instead of expected/planned)
@@ -618,11 +618,11 @@ public class DTree extends Iced {
         DocGen.HTML.section(sb,"Variable Importance");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Variable</th>");
-        for( int i=errs.length-1; i>=0; i-- )
+        for( int i=varimp.length-1; i>=0; i-- )
           sb.append("<td>").append(_names[i]).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>Mean Decrease Acurracy</th>");
-        for( int i=errs.length-1; i>=0; i-- )
+        for( int i=0; i<varimp.length; i++ )
           sb.append(String.format("<td>%5.3f</td>",varimp[i]));
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
