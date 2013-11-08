@@ -27,9 +27,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   protected int [] _catOffsets;
   public final int [] catOffsets(){return _catOffsets;}
   // data-regularization params
-  double [] _normSub; // means to be subtracted
+  protected double [] _normSub; // means to be subtracted
   public final double [] normSub(){return _normSub;}
-  double [] _normMul; // 1/sigma to multiply each numeric param with
+  protected double [] _normMul; // 1/sigma to multiply each numeric param with
   public final double [] normMul(){return _normMul;}
   double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
