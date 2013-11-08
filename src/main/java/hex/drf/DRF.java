@@ -79,7 +79,10 @@ public class DRF extends SharedTreeModelBuilder {
   @Override protected void logStart() {
     Log.info("Starting DRF model build...");
     super.logStart();
-    Log.info("sample_rate: " + sample_rate);
+    Log.info("    mtry: " + mtries);
+    Log.info("    sample_rate: " + sample_rate);
+    Log.info("    nodesize: " + nodesize);
+    Log.info("    seed: " + seed);
   }
 
   @Override protected void exec() {
