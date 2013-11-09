@@ -284,10 +284,13 @@ public class GLMValidation extends Iced {
       }
       sb.append(", ["+String.valueOf(fprs[c])+",").append(String.valueOf(tprs[c])).append("]");
     }
-    sb.append("];");
+    for(int c = 0; c < 2*_cms.length; c++) {
+        sb.append(", ["+String.valueOf(c/(2.0*_cms.length))+",").append(String.valueOf(c/(2.0*_cms.length))).append("]");
+    }
+    sb.append("];\n");
 
     sb.append(
-            "//Create scale functions\n"+
+            "//Create scale functions\n"+  
                     "var xScale = d3.scale.linear()\n"+
                     ".domain([0, d3.max(dataset, function(d) { return d[0]; })])\n"+
                     ".range([padding, w - padding * 2]);\n"+
@@ -329,10 +332,21 @@ public class GLMValidation extends Iced {
                     ".attr(\"cy\", function(d) {\n"+
                     "return yScale(d[1]);\n"+
                     "})\n"+
+                    ".attr(\"fill\", function(d) {\n"+
+                    "  if (d[0] == d[1]) {\n"+
+                    "    return \"red\"\n"+
+                    "  } else {\n"+
+                    "  return \"blue\"\n"+
+                    "  }\n"+
+                    "})\n"+
                     ".attr(\"r\", function(d) {\n"+
-                    "return 2;\n"+//rScale(d[1]);\n"+
+                    "  if (d[0] == d[1]) {\n"+
+                    "    return 1\n"+
+                    "  } else {\n"+
+                    "  return 2\n"+
+                    "  }\n"+
                     "});\n"+
-
+                    
                     "/*"+
                     "//Create labels\n"+
                     "svg.selectAll(\"text\")"+
