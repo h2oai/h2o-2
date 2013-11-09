@@ -135,6 +135,7 @@ public class DRFTest extends TestUtil {
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // Simulated sampling with replacement
       drf.seed = (1L<<32)|2;
+      drf.nodesize = -1;
       // Invoke DRF and block till the end
       drf.invoke();
       // Get the model

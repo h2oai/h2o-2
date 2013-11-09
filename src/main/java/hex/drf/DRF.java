@@ -123,6 +123,8 @@ public class DRF extends SharedTreeModelBuilder {
 
       // TODO: Do validation or OOBEE scoring only if trees are produced fast enough.
       model = doScoring(model, outputKey, fr, ktrees, tid);
+      // debug
+      for(int j=0;j<ktrees.length;j++) System.err.println("DTree size: " + ktrees.length);
     }
     // Do final scoring with all the trees.
     doScoring(model, outputKey, fr, ktrees, tid);
@@ -261,8 +263,10 @@ public class DRF extends SharedTreeModelBuilder {
           //System.out.println("Class "+(domain!=null?domain[k]:k)+",\n  Undecided node:"+udn);
           // Replace the Undecided with the Split decision
           DRFDecidedNode dn = new DRFDecidedNode((DRFUndecidedNode)udn);
-          //System.out.println("  --> Decided node: " + dn);
+          //System.out.println("--> Decided node: " + dn);
+          //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
           if( dn._split.col() == -1 ) udn.do_not_split();
+          else if (dn._split.rowsLeft()+dn._split.rowsRight() < nodesize) { System.err.println("Do not split: "+ dn);udn.do_not_split(); }// do not split if we have enough rows in the node
           else did_split = true;
         }
         leafs[k]=tmax;          // Setup leafs for next tree level
@@ -325,7 +329,6 @@ public class DRF extends SharedTreeModelBuilder {
             int nid = (int)nids.at80(row);
             // Track only prediction for oob rows
             if (isOOBRow(nid)) {
-              //System.err.println("k="+k + " row="+row + " is oob");
               nid = oob2Nid(nid);
               // Setup Tree(i) - on the fly prediction of i-tree for row-th row
               ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid)).pred() ));
@@ -338,7 +341,7 @@ public class DRF extends SharedTreeModelBuilder {
     }.doAll(fr);
 
     // DEBUG: Print the generated K trees
-    // printGenerateTrees(ktrees);
+    //printGenerateTrees(ktrees);
 
     return ktrees;
   }

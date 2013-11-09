@@ -111,6 +111,8 @@ public class DTree extends Iced {
     public final double se() { return _se0+_se1; }
     public final int   col() { return _col; }
     public final int   bin() { return _bin; }
+    public final long  rowsLeft () { return _n0; }
+    public final long  rowsRight() { return _n1; }
 
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
@@ -618,7 +620,7 @@ public class DTree extends Iced {
         DocGen.HTML.section(sb,"Variable Importance");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Variable</th>");
-        for( int i=varimp.length-1; i>=0; i-- )
+        for( int i=0; i<varimp.length; i++ )
           sb.append("<td>").append(_names[i]).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>Mean Decrease Acurracy</th>");
