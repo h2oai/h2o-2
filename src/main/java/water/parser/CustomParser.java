@@ -187,7 +187,7 @@ public abstract class CustomParser extends Iced {
   }
 
   protected static final boolean isEOL(byte c) {
-    return (c >= CHAR_LF) && ( c<= CHAR_CR);
+    return ((c == CHAR_LF) || (c == CHAR_CR));
   }
   public interface DataIn {
     // Get another chunk of byte data
