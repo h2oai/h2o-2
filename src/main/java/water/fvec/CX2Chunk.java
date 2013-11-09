@@ -6,8 +6,8 @@ import water.parser.DParseTask;
 /** SPARSE shorts.  A list of rows that are non-zero, and the value. */
 public class CX2Chunk extends Chunk {
   static final int OFF = 4;     // _len in 1st 2 bytes
-  public CX2Chunk(long[] ls, int xs[], int nzcnt, int nacnt) { 
-    _mem = compress(ls,xs,nzcnt,nacnt); _start = -1; _len = UDP.get4(_mem,0);
+  public CX2Chunk(long[] ls, int xs[], int len, int nzcnt, int nacnt) {
+    _mem = compress(ls,xs,len,nzcnt,nacnt); _start = -1; _len = len;
   }
   private int at_impl(int idx) {
     int lo=0, hi = (_mem.length-OFF)>>>2;
@@ -57,17 +57,17 @@ public class CX2Chunk extends Chunk {
   }
 
   // Compress a NewChunk long array
-  static byte[] compress( long ls[], int xs[], int nzcnt, int nacnt ) {
-    if( ls.length > 65536 ) {
-      System.out.println("len="+ls.length+" nz="+nzcnt);
+  static byte[] compress( long ls[], int xs[], int len, int nzcnt, int nacnt ) {
+    if( len > 65536 ) {
+      System.out.println("len="+len+" nz="+nzcnt);
       throw H2O.unimpl();
     }
     byte[] buf = new byte[(nzcnt+nacnt)*(2+2)+OFF]; // 2 bytes row, 2 bytes val
-    UDP.set4(buf,0,ls.length);
+    UDP.set4(buf,0,len);
     int j = OFF;
-    for( int i=0; i<ls.length; i++ )
-      if( ls[i] != 0 || xs[i] != 0 ) 
-        j += 
+    for( int i=0; i<len; i++ )
+      if( ls[i] != 0 || xs[i] != 0 )
+        j +=
           UDP.set2(buf,j  ,(short)i) +
           UDP.set2(buf,j+2,(short)(ls[i]==0 ? C2Chunk._NA : ls[i]*DParseTask.pow10(xs[i])));
     assert j==buf.length;

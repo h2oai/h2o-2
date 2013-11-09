@@ -5,8 +5,8 @@ import water.*;
 /** SPARSE boolean; no NAs.  A list of rows that are non-zero. */
 public class CX0Chunk extends Chunk {
   static final int OFF = 4;
-  public CX0Chunk(long[] ls, int nzcnt) { 
-    _mem = compress(ls,nzcnt); _start = -1; _len = UDP.get4(_mem,0);
+  public CX0Chunk(long[] ls, int len, int nzcnt) {
+    _mem = compress(ls,len,nzcnt); _start = -1; _len = len;
   }
   @Override protected long at8_impl(int idx) {
     int lo=0, hi = (_mem.length-OFF)>>>1;
@@ -43,15 +43,15 @@ public class CX0Chunk extends Chunk {
   }
 
   // Compress a NewChunk long array
-  static byte[] compress( long ls[], int nzcnt ) {
-    if( ls.length > 65536 ) {
-      System.out.println("len="+ls.length+" nz="+nzcnt);
+  static byte[] compress( long ls[], int len, int nzcnt ) {
+    if( len > 65536 ) {
+      System.out.println("len="+len+" nz="+nzcnt);
       throw H2O.unimpl();
     }
     byte[] buf = new byte[nzcnt*2+OFF];
-    UDP.set4(buf,0,ls.length);
+    UDP.set4(buf,0,len);
     int j = OFF;
-    for( int i=0; i<ls.length; i++ )
+    for( int i=0; i<len; i++ )
       if( ls[i] != 0 ) j += UDP.set2(buf,j,(short)i);
     return buf;
   }

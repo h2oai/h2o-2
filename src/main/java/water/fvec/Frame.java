@@ -219,6 +219,15 @@ public class Frame extends Iced {
   public int  numCols() { return vecs().length; }
   public long numRows(){ return anyVec().length();}
 
+  // Number of columns when categoricals expanded.
+  // Note: One level is dropped in each categorical col.
+  public int numExpCols() {
+    int ncols = 0;
+    for(int i = 0; i < vecs().length; i++)
+      ncols += vecs()[i].domain() == null ? 1 : (vecs()[i].domain().length - 1);
+    return ncols;
+  }
+
   /** All the domains for enum columns; null for non-enum columns.  */
   public String[][] domains() {
     String ds[][] = new String[vecs().length][];
