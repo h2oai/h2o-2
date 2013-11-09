@@ -388,14 +388,6 @@ public final class ParseDataset2 extends Job {
             DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
             addToPendingCount(1);
             dp.setCompleter(this);
-            //dp.setCompleter(new H2OCallback<DParse>() {
-            //  @Override public void callback(DParse d){
-            //    _dout = d._dout;
-            //    MultiFileParseTask.this.tryComplete();
-            //  }
-            //  @Override public final boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
-            //  }
-            //});
             dp.dfork(new Frame(vec));
             for(int i = 0; i < vec.nChunks(); ++i)
               _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
