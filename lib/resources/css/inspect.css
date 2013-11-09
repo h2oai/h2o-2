@@ -26,7 +26,7 @@ a.logo {
   cursor: pointer;
   font-family: "futura-pt", "Helvetica Neue", Helvetica, Arial, sans-serif; }
 
-button, label {
+button, label, input {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
 
 .header {
@@ -279,6 +279,42 @@ button, label {
     margin-left: 20px;
     font-size: 15px;
     color: #5B5B5B; }
+
+.column-filter {
+  text-align: center;
+  margin-bottom: 10px; }
+  .column-filter input {
+    border: 1px solid #D8D8D8;
+    width: 75%;
+    font-size: 15px;
+    color: #5B5B5B;
+    padding: 5px 10px 5px 10px;
+    font-weight: normal;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px; }
+
+.more-nas-float {
+  opacity: 0;
+  position: absolute;
+  top: 195px;
+  width: 84px;
+  height: 32px;
+  transition-property: opacity;
+  transition-duration: 0.2s; }
+
+#more-nas-to-left {
+  left: 0;
+  background: url("../img/more-nas-left.png") top left;
+  background-repeat: no-repeat; }
+
+#more-nas-to-right {
+  right: 0;
+  background: url("../img/more-nas-right.png") top right;
+  background-repeat: no-repeat; }
+
+.more-nas-float.show {
+  opacity: 1; }
 
 .big-table {
   border-collapse: collapse; }
