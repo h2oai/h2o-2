@@ -127,7 +127,7 @@ public class DRF extends SharedTreeModelBuilder {
       for(int j=0;j<ktrees.length;j++) System.err.println("DTree size: " + ktrees.length);
     }
     // Do final scoring with all the trees.
-    doScoring(model, outputKey, fr, ktrees, tid);
+    model = doScoring(model, outputKey, fr, ktrees, tid);
     if (classification) {
       float varimp[] = doVarImp(model, fr);
       Log.info(Sys.DRF__,"Var importance: "+Arrays.toString(varimp));
@@ -266,7 +266,7 @@ public class DRF extends SharedTreeModelBuilder {
           //System.out.println("--> Decided node: " + dn);
           //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
           if( dn._split.col() == -1 ) udn.do_not_split();
-          else if (dn._split.rowsLeft()+dn._split.rowsRight() < nodesize) { System.err.println("Do not split: "+ dn);udn.do_not_split(); }// do not split if we have enough rows in the node
+          else if (dn._split.rowsLeft()+dn._split.rowsRight() < nodesize) udn.do_not_split(); // do not split if we have enough rows in the node
           else did_split = true;
         }
         leafs[k]=tmax;          // Setup leafs for next tree level
