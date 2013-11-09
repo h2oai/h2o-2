@@ -80,7 +80,7 @@ public abstract class Trainer {
 
     final void fprop() {
       for( int i = 0; i < _ls.length; i++ )
-        _ls[i].fprop();
+        _ls[i].fprop(true);
     }
 
     final void bprop() {
@@ -624,7 +624,7 @@ public abstract class Trainer {
         int group = device.getMaxWorkGroupSize();
         Input input = (Input) _ls[0];
         for( ;; ) {
-          input.fprop();
+          input.fprop(true);
           for( int i = 0; i < input._a.length; i++ )
             a[0].getBuffer().put(i, input._a[i]);
           queue.putWriteBuffer(a[0], false);

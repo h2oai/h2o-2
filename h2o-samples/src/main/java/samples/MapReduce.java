@@ -16,7 +16,7 @@ public class MapReduce extends Job {
     samples.launchers.CloudLocal.launch(1, MapReduce.class);
     // samples.launchers.CloudProcess.launch(2, MapReduce.class);
     // samples.launchers.CloudConnect.launch("localhost:54321", MapReduce.class);
-    // samples.launchers.CloudRemote.launchIPs(MapReduce.class);
+    // samples.launchers.CloudRemote.launchDefaultIPs(MapReduce.class);
   }
 
   @Override protected void exec() {

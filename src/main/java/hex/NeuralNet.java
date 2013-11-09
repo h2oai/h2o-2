@@ -42,10 +42,13 @@ public class NeuralNet extends ValidatedJob {
   public int[] hidden = new int[] { 500 };
 
   @API(help = "Learning rate", filter = Default.class)
-  public double rate = .01;
+  public double rate = .005;
+
+  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class)
+  public double rate_annealing = 1 / 1e6;
 
   @API(help = "L2 regularization", filter = Default.class)
-  public double l2 = .0001;
+  public double l2 = .001;
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class)
   public int epochs = 100;
@@ -87,6 +90,7 @@ public class NeuralNet extends ValidatedJob {
       else
         ls[i + 1] = new Layer.Tanh(hidden[i]);
       ls[i + 1].rate = (float) rate;
+      ls[i + 1].rate_annealing = (float) rate_annealing;
       ls[i + 1].l2 = (float) l2;
     }
     if( classification )
@@ -141,10 +145,10 @@ public class NeuralNet extends ValidatedJob {
           int classes = ls[ls.length - 1].units;
           cm = new long[classes][classes];
         }
-        Error trainE = NeuralNet.eval(ls, train, trainResp, EVAL_ROW_COUNT, valid == null ? cm : null, false);
+        Error trainE = NeuralNet.eval(ls, train, trainResp, EVAL_ROW_COUNT, valid == null ? cm : null);
         Error validE = null;
         if( valid != null )
-          validE = NeuralNet.eval(ls, valid, validResp, EVAL_ROW_COUNT, cm, false);
+          validE = NeuralNet.eval(ls, valid, validResp, EVAL_ROW_COUNT, cm);
 
         model.processed_samples = trainer.samples();
         model.train_classification_error = trainE.classification;
@@ -166,23 +170,23 @@ public class NeuralNet extends ValidatedJob {
     return 0;
   }
 
-  public static Error eval(Layer[] ls, Frame frame, long n, long[][] cm, boolean dropout) {
+  public static Error eval(Layer[] ls, Frame frame, long n, long[][] cm) {
     Vec[] vecs = frame.vecs();
     vecs = Utils.remove(vecs, vecs.length - 1);
     Vec resp = frame.vecs()[frame.vecs().length - 1];
-    return eval(ls, vecs, resp, n, cm, dropout);
+    return eval(ls, vecs, resp, n, cm);
   }
 
-  public static Error eval(Layer[] ls, Vec[] vecs, Vec resp, long n, long[][] cm, boolean dropout) {
+  public static Error eval(Layer[] ls, Vec[] vecs, Vec resp, long n, long[][] cm) {
     Output output = (Output) ls[ls.length - 1];
     if( output instanceof VecSoftmax )
       output = new VecSoftmax(resp, (VecSoftmax) output);
     else
       output = new VecLinear(resp, (VecLinear) output);
-    return eval(ls, new VecsInput(vecs, (VecsInput) ls[0]), output, n, cm, dropout);
+    return eval(ls, new VecsInput(vecs, (VecsInput) ls[0]), output, n, cm);
   }
 
-  public static Error eval(Layer[] ls, Input input, Output output, long n, long[][] cm, boolean dropout) {
+  public static Error eval(Layer[] ls, Input input, Output output, long n, long[][] cm) {
     Layer[] clones = new Layer[ls.length];
     clones[0] = input;
     for( int y = 1; y < clones.length - 1; y++ )
@@ -191,10 +195,10 @@ public class NeuralNet extends ValidatedJob {
     for( int y = 0; y < clones.length; y++ )
       clones[y].init(clones, y, false, 0);
     Layer.shareWeights(ls, clones);
-    return eval(clones, n, cm, dropout);
+    return eval(clones, n, cm);
   }
 
-  public static Error eval(Layer[] ls, long n, long[][] cm, boolean dropout) {
+  public static Error eval(Layer[] ls, long n, long[][] cm) {
     Error error = new Error();
     Input input = (Input) ls[0];
     long len = input._len;
@@ -203,7 +207,7 @@ public class NeuralNet extends ValidatedJob {
     if( ls[ls.length - 1] instanceof Softmax ) {
       int correct = 0;
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if( correct(ls, error, cm, dropout) )
+        if( correct(ls, error, cm) )
           correct++;
       error.classification = (len - (double) correct) / len;
       error.mse /= len;
@@ -216,43 +220,38 @@ public class NeuralNet extends ValidatedJob {
     return error;
   }
 
-  private static boolean correct(Layer[] ls, Error error, long[][] confusion, boolean dropout) {
+  private static boolean correct(Layer[] ls, Error error, long[][] confusion) {
     Softmax output = (Softmax) ls[ls.length - 1];
-    if(dropout)
-      for( int i = 0; i < ls.length; i++ )
-        ls[i].dropout_fprop();
-    else
-      for( int i = 0; i < ls.length; i++ )
-        ls[i].fprop();
-
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].fprop(false);
     float[] out = ls[ls.length - 1]._a;
-    for( int i = 0; i < out.length; i++ ) {
-      float t = i == output.label() ? 1 : 0;
-      float d = t - out[i];
+    for( int o = 0; o < out.length; o++ ) {
+      float t = o == output.target() ? 1 : 0;
+      float d = t - out[o];
       error.mse += d * d;
     }
     float max = Float.NEGATIVE_INFINITY;
     int idx = -1;
-    for( int i = 0; i < out.length; i++ ) {
-      if( out[i] > max ) {
-        max = out[i];
-        idx = i;
+    for( int o = 0; o < out.length; o++ ) {
+      if( out[o] > max ) {
+        max = out[o];
+        idx = o;
       }
     }
     if( confusion != null )
-      confusion[output.label()][idx]++;
-    return idx == output.label();
+      confusion[output.target()][idx]++;
+    return idx == output.target();
   }
 
   // TODO extract to layer
   private static void error(Layer[] ls, Error error) {
     Linear linear = (Linear) ls[ls.length - 1];
     for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop();
-    float[] out = ls[ls.length - 1]._a;
-    for( int i = 0; i < out.length; i++ ) {
-      float t = linear.value();
-      float d = t - out[i];
+      ls[i].fprop(false);
+    float[] output = ls[ls.length - 1]._a;
+    float[] target = linear.target();
+    for( int o = 0; o < output.length; o++ ) {
+      float d = target[o] - output[o];
       error.mse += d * d;
     }
   }
@@ -351,7 +350,7 @@ public class NeuralNet extends ValidatedJob {
       }
       ((Input) clones[0])._pos = rowInChunk;
       for( int i = 0; i < clones.length; i++ )
-        clones[i].fprop();
+        clones[i].fprop(false);
       float[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
       return out;
@@ -463,7 +462,7 @@ public class NeuralNet extends ValidatedJob {
         clones[y]._w = model.weights[y];
         clones[y]._b = model.biases[y];
       }
-      Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix, false);
+      Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix);
       classification_error = error.classification;
       mse = error.mse;
       if( frs[1] != null )
