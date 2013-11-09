@@ -58,10 +58,6 @@ public class CX2Chunk extends Chunk {
 
   // Compress a NewChunk long array
   static byte[] compress( long ls[], int xs[], int len, int nzcnt, int nacnt ) {
-    if( len > 65536 ) {
-      System.out.println("len="+len+" nz="+nzcnt);
-      throw H2O.unimpl();
-    }
     byte[] buf = new byte[(nzcnt+nacnt)*(2+2)+OFF]; // 2 bytes row, 2 bytes val
     UDP.set4(buf,0,len);
     int j = OFF;
