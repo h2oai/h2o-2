@@ -47,9 +47,9 @@ public class DRF extends SharedTreeModelBuilder {
       float[] p = super.score0(data, preds);
       int ntrees = numTrees();
       if (p.length==1) { if (ntrees>0) div(p, ntrees); } // regression - compute avg over all trees
-      else {
+      else { // classification
         float s = sum(p);
-        div(p, s); // unify over all classes
+        if (s>0) div(p, s); // unify over all classes
       }
       return p;
     }
