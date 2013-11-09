@@ -21,7 +21,7 @@ public class ShuffleTask extends MRTask2<ShuffleTask> {
     Random rng = Utils.getRNG(0xe031e74f321f7e29L + (ic.cidx() << 32L));
     oc.set0(0,ic.at0(0));
     for (int row=1; row<ic._len; row++) {
-      int j = rng.nextInt(row+1); // inclusive upper bound
+      int j = rng.nextInt(row+1); // inclusive upper bound <0,row>
       // Arghhh: expand the vector into double
       if (j!=row) oc.set0(row, oc.at0(j));
       oc.set0(j, ic.at0(row));

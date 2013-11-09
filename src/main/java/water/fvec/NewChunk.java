@@ -321,7 +321,7 @@ public class NewChunk extends Chunk {
     // Boolean column?
     if (_max == 1 && _min == 0 && xmin == 0) {
       if( nzCnt*32 < _len && _naCnt==0 )       // Very sparse?
-        return new CX0Chunk(_ls,nzCnt);        // Sparse boolean chunk
+        return new CX0Chunk(_ls,_len,nzCnt);        // Sparse boolean chunk
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
@@ -330,7 +330,7 @@ public class NewChunk extends Chunk {
     // Highly sparse but not a bitvector or constant?
     if( !fpoint && (nzCnt+_naCnt)*8 < _len &&
         lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE )// Only handling unbiased shorts here
-      return new CX2Chunk(_ls,_xs,nzCnt,_naCnt); // Sparse byte chunk
+      return new CX2Chunk(_ls,_xs,_len,nzCnt,_naCnt); // Sparse byte chunk
 
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like
