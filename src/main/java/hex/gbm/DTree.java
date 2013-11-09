@@ -616,8 +616,9 @@ public class DTree extends Iced {
         DocGen.HTML.arrayTail(sb);
       }
 
+      // Show variable importance
       if (varimp != null) {
-        DocGen.HTML.section(sb,"Variable Importance");
+        DocGen.HTML.section(sb,"Unscaled Variable Importance");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Variable</th>");
         for( int i=0; i<varimp.length; i++ )
