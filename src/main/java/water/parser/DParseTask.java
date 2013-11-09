@@ -656,17 +656,24 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   };
 
   static public long [] powers10i = new long[]{
-    1,
-    10,
-    100,
-    1000,
-    10000,
-    100000,
-    1000000,
-    10000000,
-    100000000,
-    1000000000,
-    10000000000l
+    1l,
+    10l,
+    100l,
+    1000l,
+    10000l,
+    100000l,
+    1000000l,
+    10000000l,
+    100000000l,
+    1000000000l,
+    10000000000l,
+    100000000000l,
+    1000000000000l,
+    10000000000000l,
+    100000000000000l,
+    1000000000000000l,
+    10000000000000000l,
+    100000000000000000l,
   };
 
   public static double pow10(int exp){
@@ -674,7 +681,6 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
   }
 
   public static long pow10i(int exp){
-    assert 10 >= exp && exp >= 0:"unexpected exponent " + exp;
     return powers10i[exp];
   }
 
