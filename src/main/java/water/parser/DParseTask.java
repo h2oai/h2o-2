@@ -138,6 +138,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       Value v = DKV.get(key);
       return v == null ? null : v.memOrLoad();
     }
+    @Override public int  getChunkDataStart(int cidx) { return -1; }
+    @Override public void setChunkDataStart(int cidx, int offset) { }
   }
 
   /** Manages the chunk parts of the result hex varray.

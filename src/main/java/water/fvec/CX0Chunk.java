@@ -5,18 +5,26 @@ import water.*;
 /** SPARSE boolean; no NAs.  A list of rows that are non-zero. */
 public class CX0Chunk extends Chunk {
   static final int OFF = 4;
+  transient int _last;          // 1-entry cache of last accessed row
   public CX0Chunk(long[] ls, int len, int nzcnt) {
-    _mem = compress(ls,len,nzcnt); _start = -1; _len = len;
+    _mem = compress(ls,len,nzcnt); _start = -1; _len = len; _last=OFF;
   }
   @Override protected long at8_impl(int idx) {
+    int y = _last;              // Read once; racy 1-entry cache
+    int x = UDP.get2(_mem,y)&0xFFFF;
+    if( idx == x ) return 1;
+    if( idx > x && y < _mem.length && idx < UDP.get2(_mem,y+2) ) return 0;
+
     int lo=0, hi = (_mem.length-OFF)>>>1;
     while( hi-lo > 1 ) {        // Binary search the row
       int mid = (hi+lo)>>>1;
-      int x = UDP.get2(_mem,(mid<<1)+OFF)&0xFFFF;
+      x = UDP.get2(_mem,(mid<<1)+OFF)&0xFFFF;
       if( idx < x ) hi = mid;
       else          lo = mid;
     }
-    int x = UDP.get2(_mem,(lo<<1)+OFF)&0xFFFF;
+    y = (lo<<1)+OFF;
+    _last = y;                  // Write once; racy 1-entry cache
+    x = UDP.get2(_mem,y)&0xFFFF;
     return idx==x ? 1 : 0;
   }
   @Override protected double atd_impl(int idx) { return at8_impl(idx); }

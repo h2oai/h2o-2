@@ -6,20 +6,28 @@ import water.parser.DParseTask;
 /** SPARSE shorts.  A list of rows that are non-zero, and the value. */
 public class CX2Chunk extends Chunk {
   static final int OFF = 4;     // _len in 1st 2 bytes
+  transient int _last;          // 1-entry cache of last accessed row
   public CX2Chunk(long[] ls, int xs[], int len, int nzcnt, int nacnt) {
     _mem = compress(ls,xs,len,nzcnt,nacnt); _start = -1; _len = len;
   }
   private int at_impl(int idx) {
+    int y = _last;              // Read once; racy 1-entry cache
+    int x = UDP.get2(_mem,y+0)&0xFFFF;
+    if( idx == x ) return UDP.get2(_mem,y+2)&0xFFFF;
+    if( idx > x && y < _mem.length && idx < UDP.get2(_mem,y+4) ) return 0;
+
     int lo=0, hi = (_mem.length-OFF)>>>2;
     int cnt=0;
     while( lo+1 != hi ) {
       int mid = (hi+lo)>>>1;
-      int x = UDP.get2(_mem,(mid<<2)+OFF+0)&0xFFFF;
+      x = UDP.get2(_mem,(mid<<2)+OFF+0)&0xFFFF;
       if( idx < x ) hi = mid;
       else          lo = mid;
     }
-    int x =           UDP.get2(_mem,(lo<<2)+OFF+0)&0xFFFF;
-    return idx == x ? UDP.get2(_mem,(lo<<2)+OFF+2) : 0;
+    y = (lo<<2)+OFF+0;
+    _last = y;                  // Write once; racy 1-entry cache
+    x =               UDP.get2(_mem,y+0)&0xFFFF;
+    return idx == x ? UDP.get2(_mem,y+2) : 0;
   }
   @Override protected long at8_impl(int idx) {
     int v = at_impl(idx);

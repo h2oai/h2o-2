@@ -540,10 +540,10 @@ public final class ParseDataset2 extends Job {
     boolean _closedVecs = false;
     private final VectorGroup _vg;
 
-    final private byte UCOL = 0;
-    final private byte NCOL = 1;
-    final private byte ECOL = 2;
-    final private byte TCOL = 3;
+    static final private byte UCOL = 0;
+    static final private byte NCOL = 1;
+    static final private byte ECOL = 2;
+    static final private byte TCOL = 3;
 
     public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
       _vecs = new AppendableVec[ncols];
@@ -690,6 +690,8 @@ public final class ParseDataset2 extends Job {
         _chk = cidx < _vec.nChunks()?_vec.elem2BV(_idx=cidx):null;
       return (_chk == null)?null:_chk._mem;
     }
+    @Override public int  getChunkDataStart(int cidx) { return -1; }
+    @Override public void setChunkDataStart(int cidx, int offset) { }
   }
   public static class ParseException extends RuntimeException {
     public ParseException(String msg) { super(msg); }

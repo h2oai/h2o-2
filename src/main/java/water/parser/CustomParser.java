@@ -192,6 +192,8 @@ public abstract class CustomParser extends Iced {
   public interface DataIn {
     // Get another chunk of byte data
     public abstract byte[] getChunkData( int cidx );
+    public abstract int  getChunkDataStart( int cidx );
+    public abstract void setChunkDataStart( int cidx, int offset );
   }
   public interface DataOut extends Freezable {
     public void setColumnNames(String [] names);
@@ -225,14 +227,15 @@ public abstract class CustomParser extends Iced {
     private byte[] _bits0 = new byte[64*1024];
     private byte[] _bits1 = new byte[64*1024];
     private int _cidx0=-1, _cidx1=-1; // Chunk #s
+    private int _coff0=-1, _coff1=-1; // Last used byte in a chunk
     public StreamData(InputStream is){_is = is;}
     @Override public byte[] getChunkData(int cidx) {
       if(cidx == _cidx0)return _bits0;
       if(cidx == _cidx1)return _bits1;
       assert cidx==_cidx0+1 || cidx==_cidx1+1;
       byte[] bits = _cidx0<_cidx1 ? _bits0 : _bits1;
-      if( _cidx0<_cidx1 ) _cidx0 = cidx;
-      else                _cidx1 = cidx;
+      if( _cidx0<_cidx1 ) { _cidx0 = cidx; _coff0 = -1; }
+      else                { _cidx1 = cidx; _coff1 = -1; }
       // Read as much as the buffer will hold
       int off=0;
       try {
@@ -243,7 +246,6 @@ public abstract class CustomParser extends Iced {
         }
         assert off == bits.length || _is.available() <= 0;
       } catch( IOException ioe ) {
-        //_parserr = ioe.toString(); }
         throw new RuntimeException(ioe);
       }
       if( off == bits.length ) return bits;
@@ -252,6 +254,15 @@ public abstract class CustomParser extends Iced {
       if( _cidx0==cidx ) _bits0 = bits2;
       else               _bits1 = bits2;
       return bits2;
+    }
+    @Override public int  getChunkDataStart(int cidx) {
+      if( _cidx0 == cidx ) return _coff0;
+      if( _cidx1 == cidx ) return _coff1;
+      return 0; 
+    }
+    @Override public void setChunkDataStart(int cidx, int offset) { 
+      if( _cidx0 == cidx ) _coff0 = offset;
+      if( _cidx1 == cidx ) _coff1 = offset;
     }
   }
   public abstract CustomParser clone();
