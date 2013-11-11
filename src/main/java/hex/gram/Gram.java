@@ -300,21 +300,23 @@ public final class Gram extends Iced {
     }
     Futures fs = new Futures();
     // compute the outer product of diagonal*dense
+    final int chk = Math.max(denseN/10, 1); 
+    Log.info("SPARSEN = " + sparseN + "    DENSEN = " + denseN);
+
     for( int i = 0; i < denseN; ++i ) {
       final int fi = i;
       fs.add(new RecursiveAction() {
-        @Override protected void compute() {
-          for( int j = 0; j <= fi; ++j ) {
-            double s = 0;
-            for( int k = 0; k < sparseN; ++k )
-              s += fchol._xx[fi][k] * fchol._xx[j][k];
-            fchol._xx[fi][j + sparseN] = _xx[fi][j + sparseN] - s;
+          @Override protected void compute() {
+            for( int j = 0; j <= fi; ++j ) {
+              double s = 0;
+              for( int k = 0; k < sparseN; ++k )
+                s += fchol._xx[fi][k] * fchol._xx[j][k];
+                 fchol._xx[fi][j + sparseN] = _xx[fi][j + sparseN] - s;
+            }
           }
-        }
-      }.fork());
+        }.fork());
     }
     fs.blockForPending();
-        
     // compute the cholesky of dense*dense-outer_product(diagonal*dense)
     // TODO we still use Jama, which requires (among other things) copy and expansion of the matrix. Do it here without copy and faster.
     double[][] arr = new double[denseN][];
