@@ -1,6 +1,9 @@
 package hex.gbm;
 
+import hex.rng.MersenneTwisterRNG;
+
 import java.util.Arrays;
+import java.util.Random;
 
 import water.*;
 import water.Job.ValidatedJob;
@@ -337,8 +340,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     long _snrows;
     /* @IN */ boolean _oob;
 
-    public double   sum() { return _sum; }
-    public long[][] cm () { return _cm;  }
+    public double   sum()   { return _sum; }
+    public long[][] cm ()   { return _cm;  }
+    public long     nrows() { return _snrows; }
 
     // Compute CM & MSE on either the training or testing dataset
     public Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) { return doIt(model,fr,validation,vresponse,false); }
@@ -438,4 +442,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }
   static public final int     oob2Nid(int oobNid)   { return -oobNid + OUT_OF_BAG; }
   static public final int     nid2Oob(int nid)      { return -nid + OUT_OF_BAG; }
+
+  // Helper to unify use of M-T RNG
+  public static Random createRNG(long seed) {
+    return new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
+  }
 }

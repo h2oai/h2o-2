@@ -1,6 +1,3 @@
-/**
- *
- */
 package water.fvec;
 
 import water.AutoBuffer;

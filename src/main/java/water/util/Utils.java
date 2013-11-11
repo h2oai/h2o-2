@@ -85,6 +85,11 @@ public class Utils {
     for (int d: from) result += d;
     return result;
   }
+  public static float sum(float[] from) {
+    float result = 0;
+    for (float d: from) result += d;
+    return result;
+  }
 
   public static String sampleToString(int[] val, int max) {
     if (val == null || val.length < max) return Arrays.toString(val);
@@ -792,5 +797,24 @@ public class Utils {
 
   public static String className(String path) {
     return path.replace('\\', '/').replace('/', '.').substring(0, path.length() - 6);
+  }
+
+  public static double avg(double[] nums) {
+    double sum = 0;
+    for(double n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static double avg(long[] nums) {
+    long sum = 0;
+    for(long n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static float[] div(float[] nums, int n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  public static float[] div(float[] nums, float n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
   }
 }

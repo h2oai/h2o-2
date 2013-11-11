@@ -20,6 +20,91 @@ def pickRandRfParams(paramDict, params):
         # test ask for 100
     return colX
 
+
+# For DRF2
+def simpleCheckRF2View(node=None, rfv=None, noPrint=False, **kwargs):
+    if not node:
+        node = h2o.nodes[0]
+
+    if 'warnings' in rfv:
+        warnings = rfv['warnings']
+        # catch the 'Failed to converge" for now
+        for w in warnings:
+            if not noPrint: print "\nwarning:", w
+            if ('Failed' in w) or ('failed' in w):
+                raise Exception(w)
+
+    # the simple assigns will at least check the key exists
+    cm = rfv['confusion_matrix']
+    header = cm['header'] # list
+    classification_error = cm['classification_error']
+    rows_skipped = cm['rows_skipped']
+    cm_type = cm['type']
+    if not noPrint: 
+        print "classification_error * 100 (pct):", classification_error * 100
+        print "rows_skipped:", rows_skipped
+        print "type:", cm_type
+
+    used_trees = cm['used_trees']
+    if (used_trees <= 0):
+        raise Exception("used_trees should be >0. used_trees:", used_trees)
+
+    # if we got the ntree for comparison. Not always there in kwargs though!
+    ntree = kwargs.get('ntree',None)
+    if (ntree is not None and used_trees != ntree):
+        raise Exception("used_trees should == ntree. used_trees:", used_trees)
+
+    scoresList = cm['scores'] # list
+    totalScores = 0
+    totalRight = 0
+    # individual scores can be all 0 if nothing for that output class
+    # due to sampling
+    classErrorPctList = []
+    predictedClassDict = {} # may be missing some? so need a dict?
+    for classIndex,s in enumerate(scoresList):
+        classSum = sum(s)
+        if classSum == 0 :
+            # why would the number of scores for a class be 0? does RF CM have entries for non-existent classes
+            # in a range??..in any case, tolerate. (it shows up in test.py on poker100)
+            if not noPrint: print "class:", classIndex, "classSum", classSum, "<- why 0?"
+        else:
+            # H2O should really give me this since it's in the browser, but it doesn't
+            classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
+            totalRight += s[classIndex]
+            classErrorPct = 100 - classRightPct
+            classErrorPctList.append(classErrorPct)
+            ### print "s:", s, "classIndex:", classIndex
+            if not noPrint: print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
+
+            # gather info for prediction summary
+            for pIndex,p in enumerate(s):
+                if pIndex not in predictedClassDict:
+                    predictedClassDict[pIndex] = p
+                else:
+                    predictedClassDict[pIndex] += p
+
+        totalScores += classSum
+
+    if not noPrint: 
+        print "Predicted summary:"
+        # FIX! Not sure why we weren't working with a list..hack with dict for now
+        for predictedClass,p in predictedClassDict.items():
+            print str(predictedClass)+":", p
+
+        # this should equal the num rows in the dataset if full scoring? (minus any NAs)
+        print "totalScores:", totalScores
+        print "totalRight:", totalRight
+        if totalScores != 0:  pctRight = 100.0 * totalRight/totalScores
+        else: pctRight = 0.0
+        print "pctRight:", "%5.2f" % pctRight
+        print "pctWrong:", "%5.2f" % (100 - pctRight)
+
+    if (totalScores<=0 or totalScores>5e9):
+        raise Exception("scores in RFView seems wrong. scores:", scoresList)
+
+    h2o.check_sandbox_for_errors()
+    return (classification_error, classErrorPctList, totalScores)
+
 def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
     if not node:
         node = h2o.nodes[0]

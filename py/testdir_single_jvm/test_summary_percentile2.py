@@ -1,4 +1,4 @@
-import unittest, time, sys, random, math
+import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
@@ -107,7 +107,8 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            summaryResult = h2o_cmd.runSummary(key=hex_key, cols=0, max_ncols=1)
+            summaryResult = h2o_cmd.runSummary(key=hex_key, x=0, max_column_display=1000)
+
             if h2o.verbose:
                 print "summaryResult", h2o.dump_json(summaryResult)
 
@@ -194,7 +195,7 @@ class Basic(unittest.TestCase):
 
             trial += 1
 
-            if (1==0): 
+            if getpass.getuser() == 'kevin':
                 generate_scipy_comparison(csvPathname)
 
 if __name__ == '__main__':

@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype_1(self):
+    def test_GLM2_covtype_1(self):
         h2o.beta_features = True
 
         csvFilename = 'covtype.data'
@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
             # 'link': 'logit', # 2 doesn't support
             'n_folds': 2,
             'case_mode': '>',
-            'case_val': 0, # 2
+            'case_val': 1, # 2
             'max_iter': max_iter,
             'beta_epsilon': 1e-3,
             'destination_key': modelKey
