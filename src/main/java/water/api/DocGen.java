@@ -309,6 +309,24 @@ public abstract class DocGen {
       for( String s : ss ) sb.append("<tr><td>").append(s).append("</td></tr>");
       return arrayTail(sb);
     }
+    public StringBuilder toJSArray(StringBuilder sb, float[] nums) {
+      sb.append('[');
+      for (int i=0; i<nums.length; i++) {
+        if (i>0) sb.append(',');
+        sb.append(nums[i]);
+      }
+      sb.append(']');
+      return sb;
+    }
+    public StringBuilder toJSArray(StringBuilder sb, String[] ss) {
+      sb.append('[');
+      for (int i=0; i<ss.length; i++) {
+        if (i>0) sb.append(',');
+        sb.append('"').append(ss[i]).append('"');
+      }
+      sb.append(']');
+      return sb;
+    }
   }
 
   // --------------------------------------------------------------------------
