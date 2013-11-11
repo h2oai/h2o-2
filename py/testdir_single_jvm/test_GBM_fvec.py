@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_from_import_fvec(self):
+    def test_GBM_fvec(self):
 
         print "Sets h2o.beta_features like -bf at command line"
         print "this will redirect import and parse to the 2 variants"
@@ -77,7 +77,7 @@ class Basic(unittest.TestCase):
 
             if importFolderPath=='manyfiles-nflx-gz':
                 if DO_CLASSIFICATION:
-                    execExpr = 'c.hex=colSwap(c.hex,%s,(c.hex[%s]>15 ? 1 : 0))' % response
+                    execExpr = 'c.hex=colSwap(c.hex,%s,(c.hex[%s]>15 ? 1 : 0))' % (response,response)
                     resultExec = h2o_cmd.runExec(expression=execExpr)
 
                 # lets look at the response column now

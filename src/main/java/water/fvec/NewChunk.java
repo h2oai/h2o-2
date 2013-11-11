@@ -275,11 +275,13 @@ public class NewChunk extends Chunk {
     boolean first = true;
     boolean hasNA = false;
     _naCnt=0;
+    int nzCnt=0;                // Non-zero count
 
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) { hasNA = true; _naCnt++; continue;}
       long l = _ls[i];
       int  x = _xs[i];
+      if( l!=0 ) nzCnt++;
       // Compute per-chunk min/sum/max
       double d = l*DParseTask.pow10(x);
       if( d < _min ) _min = d;
@@ -307,6 +309,7 @@ public class NewChunk extends Chunk {
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
+    final boolean fpoint = xmin < 0 || _min < Long.MIN_VALUE || _max > Long.MAX_VALUE;
 
     // Constant column?
     if(!hasNA && _min==_max ) {
@@ -317,13 +320,18 @@ public class NewChunk extends Chunk {
 
     // Boolean column?
     if (_max == 1 && _min == 0 && xmin == 0) {
+      if( nzCnt*32 < _len && _naCnt==0 )       // Very sparse?
+        return new CX0Chunk(_ls,_len,nzCnt);        // Sparse boolean chunk
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
     }
 
+    // Highly sparse but not a bitvector or constant?
+    if( !fpoint && (nzCnt+_naCnt)*8 < _len &&
+        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE )// Only handling unbiased shorts here
+      return new CX2Chunk(_ls,_xs,_len,nzCnt,_naCnt); // Sparse byte chunk
 
-    final boolean fpoint = xmin < 0 || _min < Long.MIN_VALUE || _max > Long.MAX_VALUE;
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like
     // {1.2,23,0.34} then is normalized to always be represented with 2 digits

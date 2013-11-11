@@ -1171,7 +1171,11 @@ public final class AutoBuffer {
   // Put a String as bytes (not chars!)
   public AutoBuffer putStr( String s ) {
     if( s==null ) return putInt(-1);
-    return putA1(s.getBytes());
+    // Use the explicit getBytes instead of the default no-arg one, to avoid
+    // the overhead of going in an out of a charset decoder.
+    byte[] buf = MemoryManager.malloc1(s.length());
+    s.getBytes(0,buf.length,buf,0);
+    return putA1(buf);
   }
 
   public AutoBuffer putEnum( Enum x ) {

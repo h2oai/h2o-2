@@ -53,13 +53,16 @@ public class CsvParser extends CustomParser {
     ValueString _str = new ValueString();
     byte[] bits = din.getChunkData(cidx);
     if( bits == null ) return dout;
+    int offset  = din.getChunkDataStart(cidx); // General cursor into the giant array of bytes
     final byte[] bits0 = bits;  // Bits for chunk0
     boolean firstChunk = true;  // Have not rolled into the 2nd chunk
     byte[] bits1 = null;        // Bits for chunk1, loaded lazily.
-    int offset = 0;             // General cursor into the giant array of bytes
     // Starting state.  Are we skipping the first (partial) line, or not?  Skip
     // a header line, or a partial line if we're in the 2nd and later chunks.
     int state = (_setup._header || cidx > 0) ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
+    // If handed a skipping offset, then it points just past the prior partial line.
+    if( offset >= 0 ) state = WHITESPACE_BEFORE_TOKEN;
+    else offset = 0; // Else start skipping at the start
     int quotes = 0;
     long number = 0;
     int exp = 0;
@@ -440,6 +443,9 @@ NEXT_CHAR:
     } // end MAIN_LOOP
     if (colIdx == 0)
       dout.rollbackLine();
+    // If offset is still validly within the buffer, save it so the next pass
+    // can start from there.
+    if( offset+1 < bits.length ) din.setChunkDataStart(cidx+1, offset+1 );
     return dout;
   }
 
