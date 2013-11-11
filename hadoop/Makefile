@@ -55,6 +55,7 @@ build_inner:
 
 clean:
 	rm -fr classes target
+	rm -f src/main/java/water/hadoop/h2odriver_config.java
 
 build: clean
 	mkdir classes

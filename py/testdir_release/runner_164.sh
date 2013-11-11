@@ -8,7 +8,7 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
-source ./runner_setup.sh
+source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]

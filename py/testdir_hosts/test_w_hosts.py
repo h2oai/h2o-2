@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             # more rows!
             y = 10000 * x
             # Have to split the string out to list for pipe
-            shCmdString = "perl " + h2o.find_file("syn_scripts/parity.pl") + " 128 4 "+ str(y) + " quad"
+            shCmdString = "perl " + h2o.find_file("syn_scripts/parity.pl") + " 128 4 "+ str(y) + " quad " + SYNDATASETS_DIR
             # FIX! as long as we're doing a couple, you'd think we wouldn't have to 
             # wait for the last one to be gen'ed here before we start the first below.
             # large row counts. need more time
