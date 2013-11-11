@@ -311,7 +311,9 @@ def log(cmd, comment=None):
     os.chmod(filename, permissions)
 
 def make_syn_dir():
-    SYNDATASETS_DIR = './syn_datasets'
+    # move under sandbox
+    # the LOG_DIR must have been created for commands.log before any datasets would be created
+    SYNDATASETS_DIR = LOG_DIR + '/syn_datasets'
     if os.path.exists(SYNDATASETS_DIR):
         shutil.rmtree(SYNDATASETS_DIR)
     os.mkdir(SYNDATASETS_DIR)
@@ -1445,6 +1447,7 @@ class H2O(object):
                 'nbins': None,
                 'mtries': None,
                 'sample_rate': None,
+                'nodesize': None,
                 'seed': None,
                 }
         else:

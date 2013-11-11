@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         # always match the run below!
         for x in xrange (50,200,10):
             # Have to split the string out to list for pipe
-            shCmdString = "perl " + h2o.find_file("syn_scripts/parity.pl") + " 128 4 "+ str(x) + " quad"
+            shCmdString = "perl " + h2o.find_file("syn_scripts/parity.pl") + " 128 4 "+ str(x) + " quad " + SYNDATASETS_DIR
             # FIX! as long as we're doing a couple, you'd think we wouldn't have to 
             # wait for the last one to be gen'ed here before we start the first below.
             h2o.spawn_cmd_and_wait('parity.pl', shCmdString.split(), timeout=3)
