@@ -1,18 +1,17 @@
 package hex.drf;
 
+import static water.util.Utils.*;
 import hex.ShuffleTask;
 import hex.gbm.*;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
-import hex.gbm.DTree.UndecidedNode;
 import hex.gbm.DTree.TreeModel.TreeStats;
+import hex.gbm.DTree.UndecidedNode;
 
 import java.util.Arrays;
 import java.util.Random;
 
-import jsr166y.ForkJoinPool;
 import jsr166y.ForkJoinTask;
-
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
@@ -20,9 +19,6 @@ import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-import static water.util.Utils.avg;
-import static water.util.Utils.div;
-import static water.util.Utils.sum;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder {
@@ -166,7 +162,7 @@ public class DRF extends SharedTreeModelBuilder {
     final int ntrees = model.numTrees();
     final float[] varimp = new float[_ncols]; // output variable importance
     assert origAcc.length == ntrees; // make sure that numbers of trees correspond
-    // Copy the frame
+    // For each variable launch one FJ-task to compute variable importance.
     H2OCountedCompleter[] computers = new H2OCountedCompleter[_ncols];
     for (int var=0; var<_ncols; var++) {
       final int variable = var;
