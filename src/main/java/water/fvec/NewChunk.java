@@ -8,38 +8,31 @@ import water.parser.ValueString;
 import water.*;
 import water.parser.DParseTask;
 
-// An uncompressed chunk of data, support an append operation
+// An uncompressed chunk of data, supporting an append operation
 public class NewChunk extends Chunk {
   final int _cidx;
-  transient long _ls[];         // Mantissa
-  transient int _xs[];          // Exponent
+  // We can record the following (mixed) data types:
+  // 1- doubles, in _ds including NaN for NA & 0; _ls==_xs==null
+  // 2- scaled decimals from parsing, in _ls & _xs; _ds==null
+  // 3- zero: requires _ls==0 && _xs==0
+  // 4- NA: either _ls==0 && _xs==Integer.MIN_VALUE, OR _ds=NaN
+  // 5- Enum: _ls==0 && _xs>0 && _ds==null
+  // Chunk._len is the count of elements appended
+  // Sparse: if _row !=null, then _ls/_xs/_ds are compressed to non-zero's
+  // only, and _row is the row number.  Still Chunk._len is count of elements
+  // including zeros.
+  transient long   _ls[];       // Mantissa
+  transient int    _xs[];       // Exponent, or if _ls==0, NA or Enum
   transient double _ds[];       // Doubles, for inflating via doubles
-  transient double _min, _max;
-  int _naCnt;
-  int _strCnt;
+  int _naCnt;                   // Count of NA's   appended
+  int _strCnt;                  // Count of Enum's appended
 
-  public NewChunk( Vec vec, int cidx ) {
-    _vec = vec;
-    _cidx = cidx;               // This chunk#
-    _ls = new long[4];          // A little room for data
-    _xs = new int [4];
-    _min =  Double.MAX_VALUE;
-    _max = -Double.MAX_VALUE;
-  }
+  public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 
-  // Constructor used when inflating a Chunk
+  // Constructor used when inflating a Chunk.
   public NewChunk( Chunk C ) {
-    _vec = C._vec;
-    _cidx = _vec.elem2ChunkIdx(C._start); // This chunk#
+    this(C._vec,C._vec.elem2ChunkIdx(C._start));
     _len = C._len;
-    if( C.hasFloat() || C instanceof C0DChunk ) {
-      _ds = MemoryManager.malloc8d(_len);
-    } else {
-      _ls = MemoryManager.malloc8 (_len);
-      _xs = MemoryManager.malloc4 (_len);
-    }
-    _min =  Double.MAX_VALUE;
-    _max = -Double.MAX_VALUE;
   }
 
   public byte type(){
@@ -50,52 +43,41 @@ public class NewChunk extends Chunk {
     return AppendableVec.NUMBER;
   }
   protected final boolean isNA(int idx) {
-    return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] != 0) : Double.isNaN(_ds[idx]);
+    return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE) : Double.isNaN(_ds[idx]);
   }
 
-  public void addNA(){
-    append2(0,Integer.MIN_VALUE); ++_naCnt;
-  }
-  private boolean _hasFloat;
+  public void addEnum(int e) { append2(0,      e          ); ++_strCnt;}
+  public void addNA  (     ) { append2(0,Integer.MIN_VALUE); ++_naCnt ;}
   public void addNum(long val, int exp) {
-    if(val == 0)exp = 0;
-    _hasFloat |= (exp < 0);
+    if(val == 0)exp = 0;        // Canonicalize zero
     append2(val,exp);
   }
-  public void addEnum(int e) {
-    append2(0,e); ++_strCnt;
-  }
+  // Fast-path append double data
   public void addNum(double d) {
-    if(_ds == null) {
-      assert _len == 0;
-      _ds = new double[1];
-    }
-    if( _len >= _ds.length ) {
-      if( _len > Vec.CHUNK_SZ )
-        throw new ArrayIndexOutOfBoundsException(_len);
-      _ds = Arrays.copyOf(_ds,_len<<1);
-    }
-    _ds[_len] = d;
-    _len++;
-    _hasFloat = true;
+    if( _ls==null||_len >= _ls.length ) append2slowd();
+    _ds[_len++] = d;
   }
-
   // Fast-path append long data
   void append2( long l, int x ) {
-    if( _len >= _ls.length ) append2slow();
-    _ls[_len] = l;
-    _xs[_len] = x;
-    _len++;
+    if( _ls==null||_len >= _ls.length ) append2slow();
+    _ls[_len  ] = l;
+    _xs[_len++] = x;
+  }
+  // Slow-path append data
+  void append2slowd( ) {
+    if( _len > Vec.CHUNK_SZ )
+      throw new ArrayIndexOutOfBoundsException(_len);
+    assert _ls==null;
+    _ds = _ds==null ? MemoryManager.malloc8d(4) : MemoryManager.arrayCopyOf(_ds,_len<<1);
   }
   // Slow-path append data
   void append2slow( ) {
     if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
-    _ls = MemoryManager.arrayCopyOf(_ls,_len<<1);
-    _xs = MemoryManager.arrayCopyOf(_xs,_len<<1);
+    assert _ds==null;
+    _xs = _ls==null ? MemoryManager.malloc4(4) : MemoryManager.arrayCopyOf(_xs,_len<<1);
+    _ls = _ls==null ? MemoryManager.malloc8(4) : MemoryManager.arrayCopyOf(_ls,_len<<1);
   }
-  void invalid() { append2(0,Integer.MIN_VALUE); }
-  void setInvalid(int idx) { _ls[idx]=0; _xs[idx] = Integer.MIN_VALUE; }
 
   /*
    *
@@ -267,8 +249,8 @@ public class NewChunk extends Chunk {
       _ls = new long[_ds.length]; // Else flip to longs
       _xs = new int [_ds.length];
       for( i=0; i<_len; i++ )   // Inject all doubles into longs
-        if( Double.isNaN(_ds[i]) ) setInvalid(i);
-        else _ls[i] = (long)_ds[i];
+        if( Double.isNaN(_ds[i]) ) _xs[i] = Integer.MIN_VALUE;
+        else                       _ls[i] = (long)_ds[i];
     }
 
     // data in some fixed-point format.
@@ -276,6 +258,8 @@ public class NewChunk extends Chunk {
     boolean hasNA = false;
     _naCnt=0;
     int nzCnt=0;                // Non-zero count
+    double min =  Double.MAX_VALUE;
+    double max = -Double.MAX_VALUE;
 
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) { hasNA = true; _naCnt++; continue;}
@@ -284,8 +268,8 @@ public class NewChunk extends Chunk {
       if( l!=0 ) nzCnt++;
       // Compute per-chunk min/sum/max
       double d = l*DParseTask.pow10(x);
-      if( d < _min ) _min = d;
-      if( d > _max ) _max = d;
+      if( d < min ) min = d;
+      if( d > max ) max = d;
       if( l==0 ) x=0;           // Canonicalize zero exponent
       long t;
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
@@ -309,17 +293,17 @@ public class NewChunk extends Chunk {
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
-    final boolean fpoint = xmin < 0 || _min < Long.MIN_VALUE || _max > Long.MAX_VALUE;
+    final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
 
     // Constant column?
-    if(!hasNA && _min==_max ) {
-      return ((long)_min  == _min)
-          ?new C0LChunk((long)_min,_len)
-          :new C0DChunk(_min, _len);
+    if( !hasNA && min==max ) {
+      return ((long)min  == min)
+          ? new C0LChunk((long)min,_len)
+          : new C0DChunk(      min,_len);
     }
 
     // Boolean column?
-    if (_max == 1 && _min == 0 && xmin == 0) {
+    if (max == 1 && min == 0 && xmin == 0) {
       if( nzCnt*32 < _len && _naCnt==0 )       // Very sparse?
         return new CX0Chunk(_ls,_len,nzCnt);        // Sparse boolean chunk
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
@@ -360,7 +344,7 @@ public class NewChunk extends Chunk {
     if(xmin == 0 &&  0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
       return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
-      if(0 <= _min && _max < 255 ) // Span fits in an unbiased byte?
+      if(0 <= min && max < 255 )      // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
       return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10i(xmin));
     }
@@ -373,7 +357,7 @@ public class NewChunk extends Chunk {
       return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),bias,DParseTask.pow10i(xmin));
     }
     // Compress column into ints
-    if(Integer.MIN_VALUE < _min && _max <= Integer.MAX_VALUE )
+    if( Integer.MIN_VALUE < min && max <= Integer.MAX_VALUE )
       return new C4Chunk( bufX(0,0,0,2));
     return new C8Chunk( bufX(0,0,0,3));
   }

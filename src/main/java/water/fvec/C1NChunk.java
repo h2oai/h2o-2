@@ -15,11 +15,6 @@ public class C1NChunk extends Chunk {
   @Override boolean set_impl(int i, double d) { return false; }
   @Override boolean set_impl(int i, float f ) { return false; }
   @Override boolean setNA_impl(int idx) { return false; }
-  @Override NewChunk inflate_impl(NewChunk nc) {
-    for( int i=0; i<_len; i++ )
-      nc._ls[i] = at8_impl(i);
-    return nc;
-  }
   @Override boolean hasFloat() { return false; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C1NChunk read(AutoBuffer bb) {
@@ -27,5 +22,12 @@ public class C1NChunk extends Chunk {
     _start = -1;
     _len = _mem.length;
     return this;
+  }
+  @Override NewChunk inflate_impl(NewChunk nc) {
+    nc._xs = MemoryManager.malloc4(_len);
+    nc._ls = MemoryManager.malloc8(_len);
+    for( int i=0; i<_len; i++ )
+      nc._ls[i] = 0xFF&_mem[i+OFF];
+    return nc;
   }
 }
