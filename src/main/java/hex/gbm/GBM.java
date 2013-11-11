@@ -235,6 +235,7 @@ public class GBM extends SharedTreeModelBuilder {
           if( dn._split._col == -1 ) udn.do_not_split();
           else did_split = true;
         }
+        tree.depth++;
         leafs[k]=tmax;          // Setup leafs for next tree level
       }
 
@@ -308,10 +309,10 @@ public class GBM extends SharedTreeModelBuilder {
       }
     }.doAll(fr);
 
-    // Print the generated K trees
-    //for( int k=0; k<_nclass; k++ )
-    //  if( ktrees[k] != null )
-    //    System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
+    // Collect leaves stats
+    for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
+    // DEBUG: Print the generated K trees
+    //printGenerateTrees(ktrees);
 
     return ktrees;
   }
