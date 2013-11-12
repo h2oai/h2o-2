@@ -447,4 +447,11 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   public static Random createRNG(long seed) {
     return new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
   }
+
+  // helper for debugging
+  static protected void printGenerateTrees(DTree[] trees) {
+    for( int k=0; k<trees.length; k++ )
+      if( trees[k] != null )
+        System.out.println(trees[k].root().toString2(new StringBuilder(),0));
+  }
 }
