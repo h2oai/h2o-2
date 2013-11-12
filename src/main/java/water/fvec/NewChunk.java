@@ -231,8 +231,15 @@ public class NewChunk extends Chunk {
     boolean floatOverflow = false;
     assert checkCnt();
 
-    if(_naCnt == _len) // ALL NAs, nothing to do
+    byte mode = type();
+    if( mode==AppendableVec.NA ) // ALL NAs, nothing to do
       return new C0DChunk(Double.NaN,_len);
+    for( int i=0; i<_len; i++ )
+      if( mode==AppendableVec.ENUM   && !isEnum(i) ||
+          mode==AppendableVec.NUMBER &&  isEnum(i) )
+        setNA_impl(i);
+    if( mode==AppendableVec.NUMBER ) _strCnt=0;
+    assert checkCnt();
 
     // If the data was set8 as doubles, we do a quick check to see if it's
     // plain longs.  If not, we give up and use doubles.
