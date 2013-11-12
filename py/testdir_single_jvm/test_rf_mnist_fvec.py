@@ -113,5 +113,39 @@ class Basic(unittest.TestCase):
 
             # FIX! need to add the rfview and predict stuff
 
+            # we saved the initial response?
+            # if we do another poll they should be done now, and better to get it that 
+            # way rather than the inspect (to match what simpleCheckGLM is expected
+            print "rfViewInitial", rfViewInitial
+            for rfView in rfViewInitial:
+                print "Checking completed job:", rfView
+                print "rfView", h2o.dump_json(rfView)
+                data_key = rfView['data_key']
+                model_key = rfView['model_key']
+                ntrees = rfView['ntrees']
+
+                rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
+                h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
+                # rfView = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
+                print "rfView:", h2o.dump_json(rfView)
+
+                # "N":1,
+                # "errs":[0.25,0.1682814508676529],
+                # "testKey":"syn_binary_10000x10.hex",
+                # "cm":[[3621,1399],[1515,3465]]}}
+
+                rf_model = rfView['drf_model']
+                cm = rf_model['cm']
+                ntrees = rf_model['N']
+                errs = rf_model['errs']
+                N = rf_model['N']
+
+
+                # FIX! should update this expected classification error
+                ## (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntrees)
+                ## self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+                predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=data_key)
+
+
 if __name__ == '__main__':
     h2o.unit_main()

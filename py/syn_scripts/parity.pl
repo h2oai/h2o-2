@@ -19,8 +19,8 @@ use constant EXTRAFEATURES => 0;
 # HMM..what happens if we start with different seeds...should still work (think of the boolean
 # logic change)
 
-if (scalar(@ARGV) != 4) {
-    die( "Four arguments are required: inumLimit onumLimit maxrows inputBase\n" );
+if (scalar(@ARGV) != 5) {
+    die( "Four arguments are required: inumLimit onumLimit maxrows inputBase datasetDir\n" );
 }
 
 # globals
@@ -29,13 +29,14 @@ my $onumLimit    = int($ARGV[1]);
 my $maxrows      = int($ARGV[2]);
 # "quad" or "bin"
 my $inputBase    = $ARGV[3];
+my $datasetDir   = $ARGV[4];
 
 # print info at the top. no fields!
 my $features;
 checkIO();
 
 # header to created output file name
-my $file = "./syn_datasets/parity_" . $inumLimit . "_" . $onumLimit . "_" . $maxrows . "_" . $inputBase . ".data";
+my $file = $datasetDir . "/parity_" . $inumLimit . "_" . $onumLimit . "_" . $maxrows . "_" . $inputBase . ".data";
 
 print "output file is: $file\n";
 open my $fh,'>', $file or die "Can't open the output file: $!";

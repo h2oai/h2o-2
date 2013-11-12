@@ -15,15 +15,23 @@ public abstract class ASTOp extends AST {
   static {
     // Unary ops
     put(new ASTIsNA());
-    put(new ASTSgn ());
     put(new ASTNrow());
     put(new ASTNcol());
+    put(new ASTAbs());
+    put(new ASTSgn ());
+    put(new ASTSqrt());
+    put(new ASTCeil());
+    put(new ASTFlr());
+    put(new ASTLog());
+    put(new ASTExp());
 
     // Binary ops
     put(new ASTPlus());
     put(new ASTSub ());
     put(new ASTMul ());
     put(new ASTDiv ());
+    put(new ASTPow ());
+    put(new ASTMod ());
     put(new ASTMin ());
     put(new ASTMax ());
     put(new ASTLT  ());
@@ -32,6 +40,8 @@ public abstract class ASTOp extends AST {
     put(new ASTGE  ());
     put(new ASTEQ  ());
     put(new ASTNE  ());
+    put(new ASTLA  ());
+    put(new ASTLO  ());
 
     // Misc
     put(new ASTCat ());
@@ -111,8 +121,14 @@ abstract class ASTUniOp extends ASTOp {
   }
 }
 
+class ASTAbs  extends ASTUniOp { String opStr(){ return "abs";   } ASTOp make() {return new ASTAbs ();} double op(double d) { return Math.abs(d);}}
+class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ;  } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}
+class ASTSqrt extends ASTUniOp { String opStr(){ return "sqrt";  } ASTOp make() {return new ASTSqrt();} double op(double d) { return Math.sqrt(d);}}
+class ASTCeil extends ASTUniOp { String opStr(){ return "ceil";  } ASTOp make() {return new ASTCeil();} double op(double d) { return Math.ceil(d);}}
+class ASTFlr  extends ASTUniOp { String opStr(){ return "floor"; } ASTOp make() {return new ASTFlr(); } double op(double d) { return Math.floor(d);}}
+class ASTLog  extends ASTUniOp { String opStr(){ return "log";   } ASTOp make() {return new ASTLog ();} double op(double d) { return Math.log(d);}}
+class ASTExp  extends ASTUniOp { String opStr(){ return "exp";   } ASTOp make() {return new ASTExp ();} double op(double d) { return Math.exp(d);}}
 class ASTIsNA extends ASTUniOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
-class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ; } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}
 class ASTNrow extends ASTUniOp {
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }
@@ -201,6 +217,8 @@ class ASTPlus extends ASTBinOp { String opStr(){ return "+"  ;} ASTOp make() {re
 class ASTSub  extends ASTBinOp { String opStr(){ return "-"  ;} ASTOp make() {return new ASTSub ();} double op(double d0, double d1) { return d0-d1;}}
 class ASTMul  extends ASTBinOp { String opStr(){ return "*"  ;} ASTOp make() {return new ASTMul ();} double op(double d0, double d1) { return d0*d1;}}
 class ASTDiv  extends ASTBinOp { String opStr(){ return "/"  ;} ASTOp make() {return new ASTDiv ();} double op(double d0, double d1) { return d0/d1;}}
+class ASTPow  extends ASTBinOp { String opStr(){ return "^"  ;} ASTOp make() {return new ASTPow ();} double op(double d0, double d1) { return Math.pow(d0,d1);}}
+class ASTMod  extends ASTBinOp { String opStr(){ return "%"  ;} ASTOp make() {return new ASTMod ();} double op(double d0, double d1) { return d0%d1;}}
 class ASTMin  extends ASTBinOp { String opStr(){ return "min";} ASTOp make() {return new ASTMin ();} double op(double d0, double d1) { return Math.min(d0,d1);}}
 class ASTMax  extends ASTBinOp { String opStr(){ return "max";} ASTOp make() {return new ASTMax ();} double op(double d0, double d1) { return Math.max(d0,d1);}}
 class ASTLT   extends ASTBinOp { String opStr(){ return "<"  ;} ASTOp make() {return new ASTLT  ();} double op(double d0, double d1) { return d0< d1?1:0;}}
@@ -209,6 +227,8 @@ class ASTGT   extends ASTBinOp { String opStr(){ return ">"  ;} ASTOp make() {re
 class ASTGE   extends ASTBinOp { String opStr(){ return ">=" ;} ASTOp make() {return new ASTGE  ();} double op(double d0, double d1) { return d0>=d1?1:0;}}
 class ASTEQ   extends ASTBinOp { String opStr(){ return "==" ;} ASTOp make() {return new ASTEQ  ();} double op(double d0, double d1) { return d0==d1?1:0;}}
 class ASTNE   extends ASTBinOp { String opStr(){ return "!=" ;} ASTOp make() {return new ASTNE  ();} double op(double d0, double d1) { return d0!=d1?1:0;}}
+class ASTLA   extends ASTBinOp { String opStr(){ return "&"  ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0&&d1!=0)?1:0;}}
+class ASTLO   extends ASTBinOp { String opStr(){ return "|"  ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0!=0||d1!=0)?1:0;}}
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
@@ -481,7 +501,7 @@ class ASTRApply extends ASTOp {
           nc.close(0,null);
           env.addRef(v = av.close(null));
         } else {                      // Frame results
-          if( env.ary(-1).numCols() != 1 ) 
+          if( env.ary(-1).numCols() != 1 )
             throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
           v = env.popAry().anyVec();// Remove without lowering refcnt
         }
@@ -494,7 +514,7 @@ class ASTRApply extends ASTOp {
       assert env.isAry();
       assert env._sp == oldsp-4+1;
       return;
-    } 
+    }
     if( d==1 || d == -2 )       // Work on rows
       throw H2O.unimpl();
     throw new IllegalArgumentException("MARGIN limited to 1 (rows) or 2 (cols)");
