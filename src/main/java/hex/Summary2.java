@@ -37,13 +37,20 @@ public class Summary2 extends Iced {
   final transient double   _binsz;
         transient double[] _percentiles;
 
-  static abstract class Stats extends Iced {}
+  static abstract class Stats extends Iced {
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
+
+    @API(help="stats type"   ) public String type;
+    Stats(String type) { this.type = type; }
+  }
   // An internal JSON-output-only class
   @SuppressWarnings("unused")
   static class EnumStats extends Stats {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     public EnumStats( Vec vec ) {
+      super("Enum");
       this.cardinality = vec.domain().length;
     }
     @API(help="cardinality"  ) public final int     cardinality;
@@ -53,6 +60,7 @@ public class Summary2 extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     public NumStats( Vec vec, long zeros, double[] mins, double[] maxs, double[] percentiles) {
+      super("Numeric");
       this.mean = vec.mean();
       this.sd   = vec.sigma();
       this.zeros = zeros;
@@ -78,8 +86,8 @@ public class Summary2 extends Iced {
   @API(help="NAs"         ) public long      naCnt;
   @API(help="Base Stats"  ) public Stats     stats;
 
-  @API(help="bin headers" ) public String[]  bin_hdrs;
-  @API(help="bin counts"  ) public long[]    bin_cnts;
+  @API(help="bin headers" ) public String[]  hbrk;
+  @API(help="bin counts"  ) public long[]    hcnt;
 
   public void finishUp() {
     this.type = _vec.isEnum()?"Enum":_vec.isInt()?"Int":"Real";
@@ -90,11 +98,11 @@ public class Summary2 extends Iced {
       double t = _maxs[i]; _maxs[i] = _maxs[_maxs.length-1-i]; _maxs[_maxs.length-1-i] = t;
     }
     this.stats = _vec.isEnum()?new EnumStats(_vec):new NumStats(_vec,_zeros,_mins,_maxs,_percentiles);
-    if (_vec.isEnum()) bin_hdrs = _domains;
+    if (_vec.isEnum()) hbrk = _domains;
     else {
-      bin_hdrs = new String[bin_cnts.length];
-      for (int i = 0; i < bin_hdrs.length; i++)
-        bin_hdrs[i] = Utils.p2d(binValue(i));
+      hbrk = new String[hcnt.length];
+      for (int i = 0; i < hbrk.length; i++)
+        hbrk[i] = Utils.p2d(binValue(i));
     }
   }
 
@@ -118,7 +126,7 @@ public class Summary2 extends Iced {
     if( vec.isEnum() && span < MAX_HIST_SZ ) {
       _start = vec.min();
       _binsz = 1;
-      bin_cnts = new long[(int)span];
+      hcnt = new long[(int)span];
     } else {
       // guard against improper parse (date type) or zero c._sigma
       double sigma = vec.sigma();
@@ -136,7 +144,7 @@ public class Summary2 extends Iced {
       _start = _binsz * Math.floor(vec.min()/_binsz);
       int nbin = (int)Math.floor((vec.max() + (_vec.isInt()?.5:0) - _start)/_binsz) + 1;
       assert nbin > 0;
-      bin_cnts = new long[nbin];
+      hcnt = new long[nbin];
     }
   }
 
@@ -168,13 +176,13 @@ public class Summary2 extends Iced {
       }
       // update histogram
       long binIdx = Math.round((val-_start)*1000000.0/_binsz)/1000000;
-      ++bin_cnts[(int)binIdx];
+      ++hcnt[(int)binIdx];
     }
   }
 
   public Summary2 add(Summary2 other) {
     _zeros += other._zeros;
-    Utils.add(bin_cnts, other.bin_cnts);
+    Utils.add(hcnt, other.hcnt);
     if (_vec.isEnum()) return this;
 
     double[] ds = MemoryManager.malloc8d(_mins.length);
@@ -195,13 +203,13 @@ public class Summary2 extends Iced {
 
   private void computePercentiles(){
     _percentiles = new double [DEFAULT_PERCENTILES.length];
-    if( bin_cnts.length == 0 ) return;
+    if( hcnt.length == 0 ) return;
     int k = 0;
     long s = 0;
     for(int j = 0; j < DEFAULT_PERCENTILES.length; ++j) {
       final double s1 = DEFAULT_PERCENTILES[j]*nrow;
       long bc = 0;
-      while(s1 > s+(bc = bin_cnts[k])){
+      while(s1 > s+(bc = hcnt[k])){
         s  += bc;
         k++;
       }
@@ -215,26 +223,26 @@ public class Summary2 extends Iced {
     for (int i = 0; i < _mins.length; i++) _mins[i] = i;
     for (int i = 0; i < _maxs.length; i++) _maxs[i] = i;
     int mini = 0, maxi = 0;
-    for( int i = 0; i < bin_cnts.length; i++ ) {
-      if (bin_cnts[i] < bin_cnts[(int)_mins[mini]]) {
+    for( int i = 0; i < hcnt.length; i++ ) {
+      if (hcnt[i] < hcnt[(int)_mins[mini]]) {
         _mins[mini] = i;
         for (int j = 0; j < _mins.length; j++)
-          if (bin_cnts[(int)_mins[j]] > bin_cnts[(int)_mins[mini]]) mini = j;
+          if (hcnt[(int)_mins[j]] > hcnt[(int)_mins[mini]]) mini = j;
       }
-      if (bin_cnts[i] > bin_cnts[(int)_maxs[maxi]]) {
+      if (hcnt[i] > hcnt[(int)_maxs[maxi]]) {
         _maxs[maxi] = i;
         for (int j = 0; j < _maxs.length; j++)
-          if (bin_cnts[(int)_maxs[j]] < bin_cnts[(int)_maxs[maxi]]) maxi = j;
+          if (hcnt[(int)_maxs[j]] < hcnt[(int)_maxs[maxi]]) maxi = j;
       }
     }
     for (int i = 0; i < _mins.length - 1; i++)
       for (int j = 0; j < i; j++)
-        if (bin_cnts[(int)_mins[j]] > bin_cnts[(int)_mins[j+1]]) {
+        if (hcnt[(int)_mins[j]] > hcnt[(int)_mins[j+1]]) {
           double t = _mins[j]; _mins[j] = _mins[j+1]; _mins[j+1] = t;
         }
     for (int i = 0; i < _maxs.length - 1; i++)
       for (int j = 0; j < i; j++)
-        if (bin_cnts[(int)_maxs[j]] < bin_cnts[(int)_maxs[j+1]]) {
+        if (hcnt[(int)_maxs[j]] < hcnt[(int)_maxs[j+1]]) {
           double t = _maxs[j]; _maxs[j] = _maxs[j+1]; _maxs[j+1] = t;
         }
   }
@@ -283,7 +291,7 @@ public class Summary2 extends Iced {
     }
     // Histogram
     final int MAX_HISTO_BINS_DISPLAYED = 1000;
-    int len = Math.min(bin_cnts.length,MAX_HISTO_BINS_DISPLAYED);
+    int len = Math.min(hcnt.length,MAX_HISTO_BINS_DISPLAYED);
     sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
     sb.append("<tr> <th colspan="+len+" style='text-align:center'>Histogram</th></tr>");
     sb.append("<tr>");
@@ -293,13 +301,13 @@ public class Summary2 extends Iced {
        for( int i=0; i<len; i++ ) sb.append("<th>" + Utils.p2d(binValue(i)) + "</th>");
     sb.append("</tr>");
     sb.append("<tr>");
-    for( int i=0; i<len; i++ ) sb.append("<td>" + bin_cnts[i] + "</td>");
+    for( int i=0; i<len; i++ ) sb.append("<td>" + hcnt[i] + "</td>");
     sb.append("</tr>");
     sb.append("<tr>");
     for( int i=0; i<len; i++ )
-      sb.append(String.format("<td>%.1f%%</td>",(100.0*bin_cnts[i]/nrow)));
+      sb.append(String.format("<td>%.1f%%</td>",(100.0*hcnt[i]/nrow)));
     sb.append("</tr>");
-    if( bin_cnts.length >= MAX_HISTO_BINS_DISPLAYED )
+    if( hcnt.length >= MAX_HISTO_BINS_DISPLAYED )
       sb.append("<div class='alert'>Histogram for this column was too big and was truncated to 1000 values!</div>");
     sb.append("</table></div>");
 

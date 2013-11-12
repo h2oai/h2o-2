@@ -28,9 +28,9 @@ public class Summary2Test extends TestUtil {
       Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1);
     }
     s.finishUp();
-    assertEquals(1, s.bin_cnts.length);
-    assertEquals(528, s.bin_cnts[0]);
-    assertEquals(0.1, s.bin_cnts[0], 0.00001);
+    assertEquals(1, s.hcnt.length);
+    assertEquals(528, s.hcnt[0]);
+    assertEquals(0.1, s.hcnt[0], 0.00001);
     for (double pv : s._percentiles)
       assertEquals(0.1, pv, 0.00001);
 
@@ -47,7 +47,7 @@ public class Summary2Test extends TestUtil {
       { Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1); }
     s.toString();
 
-    assertEquals(306, s.bin_cnts.length);
+    assertEquals(306, s.hcnt.length);
     UKV.remove(key);
   }
 
@@ -61,7 +61,7 @@ public class Summary2Test extends TestUtil {
       { Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1); }
     s.toString();
 
-    assertEquals(0, s.bin_cnts[4]); // no 7 cylinder cars
+    assertEquals(0, s.hcnt[4]); // no 7 cylinder cars
     assertEquals(4, (int)s._percentiles[0]);
     assertEquals(8, (int)s._percentiles[s._percentiles.length - 1]);
     UKV.remove(key);

@@ -2,6 +2,7 @@ package water.api;
 
 import hex.Summary2;
 import water.*;
+import water.util.Log;
 import water.util.RString;
 import water.fvec.*;
 import water.util.Utils;
