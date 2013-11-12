@@ -108,7 +108,8 @@ function build_classes() {
         $SRC/water/*/*java \
         $SRC/jsr166y/*java \
         $TESTSRC/*/*java \
-        $TESTSRC/*/*/*java
+        $TESTSRC/*/*/*java \
+        $SRC/hex/*java
 }
 
 function build_initializer() {
