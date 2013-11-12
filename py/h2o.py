@@ -1448,13 +1448,13 @@ class H2O(object):
                 'ignored_cols_by_name': None,
                 'classification': None,
                 'validation': None,
+                'importance': None, # enable variable importance
                 'ntrees': trees,
                 'max_depth': None,
-                'min_rows': None,
+                'min_rows': None, # how many rows in leaves for stopping condition
                 'nbins': None,
                 'mtries': None,
                 'sample_rate': None,
-                'nodesize': None,
                 'seed': None,
                 }
         else:
