@@ -2,6 +2,7 @@ package hex;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import water.H2O;
 import water.Key;
 import water.TestUtil;
 import water.UKV;
@@ -31,7 +32,7 @@ public class Summary2Test extends TestUtil {
     assertEquals(1, s.hcnt.length);
     assertEquals(528, s.hcnt[0]);
     assertEquals(0.1, s.hcnt[0], 0.00001);
-    for (double pv : s._percentiles)
+    for (double pv : s._pctile)
       assertEquals(0.1, pv, 0.00001);
 
     UKV.remove(key);
@@ -62,9 +63,24 @@ public class Summary2Test extends TestUtil {
     s.toString();
 
     assertEquals(0, s.hcnt[4]); // no 7 cylinder cars
-    assertEquals(4, (int)s._percentiles[0]);
-    assertEquals(8, (int)s._percentiles[s._percentiles.length - 1]);
+    assertEquals(4, (int)s._pctile[0]);
+    assertEquals(8, (int)s._pctile[s._pctile.length - 1]);
     UKV.remove(key);
+  }
+
+  public static void main(String[] args) throws Exception {
+    water.Boot.main(UserCode.class, args);
+  }
+
+  public static class UserCode {
+    public static void userMain(String[] args) throws Exception {
+      H2O.main(args);
+      //      Summary2Test test = new Summary2Test();
+      //      test.testConstColumn();
+      //      test.testEnumColumn();
+      //      test.testIntColumn();
+      System.exit(0);
+    }
   }
 }
 

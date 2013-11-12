@@ -35,7 +35,7 @@ public class Summary2 extends Iced {
   final transient String[] _domains;
   final transient double   _start;
   final transient double   _binsz;
-        transient double[] _percentiles;
+        transient double[] _pctile;
 
   static abstract class Stats extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -59,23 +59,23 @@ public class Summary2 extends Iced {
   static class NumStats extends Stats {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-    public NumStats( Vec vec, long zeros, double[] mins, double[] maxs, double[] percentiles) {
+    public NumStats( Vec vec, long zeros, double[] mins, double[] maxs, double[] pctile) {
       super("Numeric");
-      this.mean = vec.mean();
-      this.sd   = vec.sigma();
+      this.mean  = vec.mean();
+      this.sd    = vec.sigma();
       this.zeros = zeros;
       this.mins  = mins;
       this.maxs  = maxs;
-      this.percentiles = percentiles;
-      this.percentile_thresholds = DEFAULT_PERCENTILES;
+      this.pctile = pctile;
+      this.pct   = DEFAULT_PERCENTILES;
     }
     @API(help="mean"        ) public final double   mean;
     @API(help="sd"          ) public final double   sd;
     @API(help="#zeros"      ) public final long     zeros;
     @API(help="min elements") public final double[] mins; // min N elements
     @API(help="max elements") public final double[] maxs; // max N elements
-    @API(help="percentile thresholds" ) public final double[] percentile_thresholds;
-    @API(help="percentiles" ) public final double[] percentiles;
+    @API(help="percentile thresholds" ) public final double[] pct;
+    @API(help="percentiles" ) public final double[] pctile;
   }
   // OUTPUTS
   // Basic info
@@ -97,7 +97,7 @@ public class Summary2 extends Iced {
     for (int i = 0; i < _maxs.length>>>1; i++) {
       double t = _maxs[i]; _maxs[i] = _maxs[_maxs.length-1-i]; _maxs[_maxs.length-1-i] = t;
     }
-    this.stats = _vec.isEnum()?new EnumStats(_vec):new NumStats(_vec,_zeros,_mins,_maxs,_percentiles);
+    this.stats = _vec.isEnum()?new EnumStats(_vec):new NumStats(_vec,_zeros,_mins,_maxs,_pctile);
     if (_vec.isEnum()) hbrk = _domains;
     else {
       hbrk = new String[hcnt.length];
@@ -202,7 +202,7 @@ public class Summary2 extends Iced {
   public double binValue(int b) { return _start + b*_binsz; }
 
   private void computePercentiles(){
-    _percentiles = new double [DEFAULT_PERCENTILES.length];
+    _pctile = new double [DEFAULT_PERCENTILES.length];
     if( hcnt.length == 0 ) return;
     int k = 0;
     long s = 0;
@@ -213,7 +213,7 @@ public class Summary2 extends Iced {
         s  += bc;
         k++;
       }
-      _percentiles[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
+      _pctile[j] = _mins[0] + k*_binsz + ((_binsz > 1)?0.5*_binsz:0);
     }
   }
   
@@ -249,7 +249,7 @@ public class Summary2 extends Iced {
 
   public double percentileValue(int idx) {
     if( _vec.isEnum() ) return Double.NaN;
-     return _percentiles[idx];
+     return _pctile[idx];
   }
 
   public void toHTML( Vec vec, String cname, StringBuilder sb ) {
@@ -315,15 +315,15 @@ public class Summary2 extends Iced {
       NumStats stats = (NumStats)this.stats;
       // Percentiles
       sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
-      sb.append("<tr> <th colspan='" + stats.percentile_thresholds.length + "' " +
+      sb.append("<tr> <th colspan='" + stats.pct.length + "' " +
               "style='text-align:center' " +
               ">Percentiles</th></tr>");
       sb.append("<tr><th>Threshold(%)</th>");
-      for (double pc : stats.percentile_thresholds)
+      for (double pc : stats.pct)
         sb.append("<td>" + (int) Math.round(pc * 100) + "</td>");
       sb.append("</tr>");
       sb.append("<tr><th>Value</th>");
-      for (double pv : stats.percentiles)
+      for (double pv : stats.pctile)
         sb.append("<td>" + Utils.p2d(pv) + "</td>");
       sb.append("</tr>");
       sb.append("</table>");
