@@ -652,15 +652,15 @@ setMethod("summary", "H2OParsedData2", function(object) {
     if(res$type != 'Enum') { # numeric column
       if(is.null(res$stats$mins) || length(res$stats$mins) == 0) res$stats$mins = NaN
       if(is.null(res$stats$maxs) || length(res$stats$maxs) == 0) res$stats$maxs = NaN
-      if(is.null(res$stats$percentiles))
+      if(is.null(res$stats$pctile))
         params = format(rep(round(as.numeric(col.means[[i]]), 3), 6), nsmall = 3)
       else
         params = format(round(as.numeric(c(
           res$stats$mins[1],
-          res$percentiles[4],
-          res$percentiles[6],
+          res$stats$pctile[4],
+          res$stats$pctile[6],
           res$mean,
-          res$percentiles[8],
+          res$stats$pctile[8],
           res$stats$maxs[1])), 3), nsmall = 3)
       result = c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
                  paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
@@ -678,6 +678,7 @@ setMethod("summary", "H2OParsedData2", function(object) {
                       counts,
                       " ",
                       sep='')
+      result[is.na(top.ix)] <- NA
       result
     }
   })
