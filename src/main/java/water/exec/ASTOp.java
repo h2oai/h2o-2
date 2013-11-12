@@ -24,6 +24,7 @@ public abstract class ASTOp extends AST {
     put(new ASTFlr());
     put(new ASTLog());
     put(new ASTExp());
+    put(new ASTNot());
 
     // Binary ops
     put(new ASTPlus());
@@ -51,6 +52,7 @@ public abstract class ASTOp extends AST {
     put(new ASTIfElse());
     put(new ASTRApply());
     put(new ASTRunif());
+    put(new ASTCut());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -129,6 +131,7 @@ class ASTFlr  extends ASTUniOp { String opStr(){ return "floor"; } ASTOp make() 
 class ASTLog  extends ASTUniOp { String opStr(){ return "log";   } ASTOp make() {return new ASTLog ();} double op(double d) { return Math.log(d);}}
 class ASTExp  extends ASTUniOp { String opStr(){ return "exp";   } ASTOp make() {return new ASTExp ();} double op(double d) { return Math.exp(d);}}
 class ASTIsNA extends ASTUniOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
+class ASTNot  extends ASTUniOp { String opStr(){ return "!";     } ASTOp make() {return new ASTNot(); } double op(double d) { return d==0?1:0; }}
 class ASTNrow extends ASTUniOp {
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }
@@ -227,8 +230,8 @@ class ASTGT   extends ASTBinOp { String opStr(){ return ">"  ;} ASTOp make() {re
 class ASTGE   extends ASTBinOp { String opStr(){ return ">=" ;} ASTOp make() {return new ASTGE  ();} double op(double d0, double d1) { return d0>=d1?1:0;}}
 class ASTEQ   extends ASTBinOp { String opStr(){ return "==" ;} ASTOp make() {return new ASTEQ  ();} double op(double d0, double d1) { return d0==d1?1:0;}}
 class ASTNE   extends ASTBinOp { String opStr(){ return "!=" ;} ASTOp make() {return new ASTNE  ();} double op(double d0, double d1) { return d0!=d1?1:0;}}
-class ASTLA   extends ASTBinOp { String opStr(){ return "&"  ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0&&d1!=0)?1:0;}}
-class ASTLO   extends ASTBinOp { String opStr(){ return "|"  ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0!=0||d1!=0)?1:0;}}
+class ASTLA   extends ASTBinOp { String opStr(){ return "&&" ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0)?1:0;}}
+class ASTLO   extends ASTBinOp { String opStr(){ return "||" ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0)?0:1;}}
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
@@ -521,3 +524,44 @@ class ASTRApply extends ASTOp {
   }
 }
 
+class ASTCut extends ASTOp {
+  ASTCut() { super(new String[]{"cut", "ary", "dbls"}, new Type[]{Type.ARY, Type.ARY, Type.dblary()}); }
+  @Override String opStr() { return "cut"; }
+  @Override ASTOp make() {return new ASTCut();}
+  @Override void apply(Env env, int argcnt) {
+    if(env.isDbl()) {
+      int nbins = (int) Math.floor(env.popDbl());
+      if(nbins < 2)
+        throw new IllegalArgumentException("Number of intervals must be at least 2");
+
+      Frame fr = env.popAry();
+      String skey = env.key();
+      if(fr.vecs().length != 1 || fr.domains()[0] != null)
+        throw new IllegalArgumentException("First argument must be a numeric vector");
+
+      final double fmax = fr.vecs()[0].max();
+      final double fmin = fr.vecs()[0].min();
+      final double width = (fmax - fmin)/nbins;
+      // TODO: Check what R does when width = 0, I think it perturbs constant vecs automatically
+
+      /* String[][] domains = new String[1][nbins];
+      for(int i = 0; i < nbins; i++)
+        domains[0][i] = "(" + fmin + i*width + "," + fmin + (i+1)*width + "]"; */
+
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chk, NewChunk nchk) {
+          for(int r = 0; r < chk._len; r++) {
+            double x = chk.at0(r);
+            nchk.addNum(Math.floor((x - fmin)/width));
+            // TODO: Add all unique bins as domains (lower_bound, upper_bound]
+          }
+        }
+      }.doAll(1,fr).outputFrame(fr._names, fr.domains());
+      // }.doAll(1,fr).outputFrame(fr._names, domains);
+      env.subRef(fr, skey);
+      env.pop();
+      env.push(fr2);
+    } else
+      throw H2O.unimpl();
+  }
+}

@@ -1,10 +1,12 @@
 # Hack to get around Exec.json always dumping to same Result.hex key
+# TODO: Need better way to manage temporary/intermediate values in calculations! Right now, overwriting may occur silently
 pkg.env = new.env()
 pkg.env$result_count = 0
+pkg.env$temp_count = 0
 pkg.env$IS_LOGGING = FALSE
 TEMP_KEY = "Last.value"
-RESULT_MAX = 100
-LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|")
+RESULT_MAX = 200
+LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!")
 
 # Initialize functions for R logging
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
@@ -296,9 +298,9 @@ h2o.__unop2 <- function(op, x) {
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData2", h2o=myClient, key=res$dest_key)
+    new("H2OLogicalData2", h2o=x@h2o, key=res$dest_key)
   else
-    new("H2OParsedData2", h2o=myClient, key=res$dest_key)
+    new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
 }
 
 h2o.__binop2 <- function(op, x, y) {
