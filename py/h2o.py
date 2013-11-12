@@ -895,7 +895,8 @@ class H2O(object):
             raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
 
         for e in ['error', 'Error', 'errors', 'Errors']:
-            if e in rjson:
+            # error can be null (python None). This happens in exec2
+            if e in rjson and rjson[e]:
                 verboseprint(dump_json(rjson))
                 emsg = 'rjson %s in %s: %s' % (e, inspect.stack()[1][3], rjson[e])
                 if ignoreH2oError:
@@ -905,7 +906,8 @@ class H2O(object):
                     raise Exception(emsg)
 
         for w in ['warning', 'Warning', 'warnings', 'Warnings']:
-            if w in rjson:
+            # warning can be null (python None).
+            if w in rjson and rjson[w]:
                 verboseprint(dump_json(rjson))
                 print 'rjson %s in %s: %s' % (w, inspect.stack()[1][3], rjson[w])
 
@@ -1388,15 +1390,20 @@ class H2O(object):
 
     # 'destination_key', 'escape_nan' 'expression'
     def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
-        params_dict = {
-            'expression': None,
-            ## 'escape_nan': 0,
-            ## 'destination_key': "Result.hex", # curious as to whether specifying destination key messes anything up.
-            }
+        if beta_features:
+            params_dict = {
+                'str': None,
+                }
+        else:
+            params_dict = {
+                'expression': None,
+                ## 'escape_nan': 0,
+                }
+
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict.update(kwargs)
+        check_params_update_kwargs(params_dict, kwargs, 'exec_query', print_params=True)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request('Exec.json',
+        a = self.__do_json_request('2/Exec2.json' if beta_features else 'Exec.json',
             timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a

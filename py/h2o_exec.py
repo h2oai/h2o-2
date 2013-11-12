@@ -32,30 +32,48 @@ def checkScalarResult(resultInspect, resultKey):
     # weird..it's a tuple, not a list? when the extra level of hier is there
     # this works:
     if type(resultInspect) is not dict:
-        ### print "Trimming resultInspect hier."
         resultInspect0 = resultInspect[0]
     else:
         resultInspect0 = resultInspect
 
     emsg = None
     while(True):
-        if 'type' not in resultInspect0:
-            emsg = "'type' missing. Look at the json just printed"
-            break 
-        t = resultInspect0["type"]
-        if t != 'parsed':
-            emsg = resultKey + " 'type' is not 'parsed'. Look at the json just printed"
-            break 
 
-        if 'rows' not in resultInspect0:
-            emsg = "Inspect response: 'rows' missing. Look at the json just printed"
-            break 
-        rows = resultInspect0["rows"]
+        if h2o.beta_features:
+            if 'num_rows' not in resultInspect0:
+                emsg = "Inspect response: 'num_rows' missing. Look at the json just printed"
+                break 
+            rows = resultInspect0["num_rows"]
 
-        if 'cols' not in resultInspect0:
-            emsg = "Inspect response: 'cols' missing. Look at the json just printed"
-            break 
-        cols = resultInspect0["cols"]
+            if 'cols' not in resultInspect0:
+                emsg = "Inspect response: 'num_cols' missing. Look at the json just printed"
+                break 
+            cols = resultInspect0["cols"]
+
+            print "cols:", h2o.dump_json(cols)
+
+            num_cols = resultInspect0["num_cols"]
+
+        else:
+
+            if 'type' not in resultInspect0:
+                emsg = "'type' missing. Look at the json just printed"
+                break 
+            t = resultInspect0["type"]
+
+            if t != 'parsed':
+                emsg = resultKey + " 'type' is not 'parsed'. Look at the json just printed"
+                break 
+
+            if 'rows' not in resultInspect0:
+                emsg = "Inspect response: 'rows' missing. Look at the json just printed"
+                break 
+            rows = resultInspect0["rows"]
+
+            if 'cols' not in resultInspect0:
+                emsg = "Inspect response: 'cols' missing. Look at the json just printed"
+                break 
+            cols = resultInspect0["cols"]
 
         break
 
@@ -69,7 +87,10 @@ def checkScalarResult(resultInspect, resultKey):
     # FIX! the key for the value can be 0 or 1 or ?? (apparently col?) Should change H2O here
     metaDict = cols[0]
     for key,value in metaDict.items():
-        h2o.verboseprint("Inspect metadata:", key, value)
+        if h2o.beta_features:
+            print "Inspect metaDict:", key, value
+        else:
+            h2o.verboseprint("Inspect metaDict:", key, value)
             
     min_value = metaDict['min']
     checkForBadFP(min_value)
@@ -104,22 +125,61 @@ def exec_expr(node=None, execExpr=None, resultKey="Result.hex", timeoutSecs=10, 
     start = time.time()
     # FIX! Exec has 'escape_nan' arg now. should we test?
     # 5/14/13 removed escape_nan=0
-    resultExec = h2o_cmd.runExec(node, expression=execExpr, 
-        timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError)
+
+    if h2o.beta_features:
+        kwargs = {'str': execExpr} 
+        resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
+    else:
+        kwargs = {'expression': execExpr} 
+        resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
+
     h2o.verboseprint(resultExec)
     h2o.verboseprint('exec took', time.time() - start, 'seconds')
     ### print 'exec took', time.time() - start, 'seconds'
 
     h2o.verboseprint("\nfirst look at the default Result key")
     # new offset=-1 to get the metadata?
-    defaultInspectM1 = h2o_cmd.runInspect(None, "Result.hex", offset=-1)
-    checkScalarResult(defaultInspectM1, "Result.hex")
+    if h2o.beta_features: # default assign not present in v2?
+        # constants don't create keys.
+        # so the only way to see the results is to do another exec?
+        kwargs = {'str': resultKey} 
+        resultExec2 = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
+        print "resultExec2:", h2o.dump_json(resultExec2)
 
-    h2o.verboseprint("\nNow look at the assigned " + resultKey + " key")
-    resultInspectM1 = h2o_cmd.runInspect(None, resultKey, offset=-1)
-    min_value = checkScalarResult(resultInspectM1, resultKey)
+        # maybe return 'scalar' in some cases?
+        return resultExec2, resultExec2['cols'][0]['min']
+        # exec_query parameters: {'str': 'Result0 = c(0)'}
+        # exec_query parameters: {'str': 'Result0'}
+        # resultExec2: {
+        #   "Request2": 0, 
+        #   "cols": [
+        #     {
+        #       "max": 0.0, 
+        #       "mean": 0.0, 
+        #       "min": 0.0, 
+        #       "naCnt": 0, 
+        #       "name": "c", 
+        #       "type": "Int"
+        #     }
+        #   ], 
+        #   "error": null, 
+        #   "funstr": null, 
+        #   "key": null, 
+        #   "num_cols": 1, 
+        #   "num_rows": 1, 
+        #   "result": "c \n0 \n", 
+        #   "scalar": 0.0
+        # }
 
-    return resultInspectM1, min_value
+    else:
+        defaultInspectM1 = h2o_cmd.runInspect(None, "Result.hex", offset=-1)
+        checkScalarResult(defaultInspectM1, "Result.hex")
+
+        h2o.verboseprint("\nNow look at the assigned " + resultKey + " key")
+        resultInspectM1 = h2o_cmd.runInspect(None, resultKey, offset=-1)
+        min_value = checkScalarResult(resultInspectM1, resultKey)
+
+        return resultInspectM1, min_value
 
 
 def exec_zero_list(zeroList):
