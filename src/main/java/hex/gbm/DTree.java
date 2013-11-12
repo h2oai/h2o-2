@@ -660,16 +660,10 @@ public class DTree extends Iced {
       sb.append("</tr>");
       DocGen.HTML.arrayTail(sb);
       // Generate a graph - horrible code
-      sb.append("<style scoped>@import url('/h2o/css/graphs.css')</style>");
-      sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
-      sb.append("<script src='/h2o/js/graphs.js'></script>");
-      sb.append("<div id='graphvarimp'>")
-        .append("  <script>")
-        .append("    g_varimp(").append("\"#graphvarimp\", ");
-      DocGen.HTML.toJSArray(sb, Arrays.copyOf(_names, _names.length-1)).append(',');
-      DocGen.HTML.toJSArray(sb, varimp).append(");");
-      sb.append("  </script>")
-        .append("</div>");
+      DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
+          DocGen.HTML.toJSArray(new StringBuilder(), Arrays.copyOf(_names, _names.length-1)),
+          DocGen.HTML.toJSArray(new StringBuilder(), varimp)
+          );
     }
 
     public static class TreeStats extends Iced {
