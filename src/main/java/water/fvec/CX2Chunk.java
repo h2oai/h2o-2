@@ -53,7 +53,6 @@ public class CX2Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    nc._ds = null;
     nc._ls = MemoryManager.malloc8 (_len);
     nc._xs = MemoryManager.malloc4 (_len);
     for( int i=OFF; i<_mem.length; i+=4 ) {

@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
         print "\nAssuming two row dataset is illegal. avoiding"
 
         for x in xrange (10,100,10):
-            shCmdString = "perl " + parityPl + " 128 4 "+ str(x) + " quad"
+            shCmdString = "perl " + parityPl + " 128 4 "+ str(x) + " quad " + SYNDATASETS_DIR
             h2o.spawn_cmd_and_wait('parity.pl', shCmdString.split())
             # algorithm for creating the path and filename is hardwired in parity.pl.
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  

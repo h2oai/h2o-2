@@ -1,10 +1,12 @@
 # Hack to get around Exec.json always dumping to same Result.hex key
+# TODO: Need better way to manage temporary/intermediate values in calculations! Right now, overwriting may occur silently
 pkg.env = new.env()
 pkg.env$result_count = 0
+pkg.env$temp_count = 0
 pkg.env$IS_LOGGING = FALSE
 TEMP_KEY = "Last.value"
-RESULT_MAX = 100
-LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=")
+RESULT_MAX = 200
+LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!")
 
 # Initialize functions for R logging
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
@@ -290,13 +292,24 @@ h2o.__exec2_dest_key <- function(client, expr, destKey) {
   return(res)
 }
 
-h2o.__operator2 <- function(op, x, y) {
+h2o.__unop2 <- function(op, x) {
+  expr = paste(op, "(", x@key, ")")
+  res = h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
+    return(res$scalar)
+  if(op %in% LOGICAL_OPERATORS)
+    new("H2OLogicalData2", h2o=x@h2o, key=res$dest_key)
+  else
+    new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
+}
+
+h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData2", x@key, x)
-  RHS = ifelse(class(y) == "H2OParsedData2", y@key, y)
+  LHS = ifelse(class(x) == "H2OParsedData2" || class(x) == "H2OLogicalData2", x@key, x)
+  RHS = ifelse(class(y) == "H2OParsedData2" || class(y) == "H2OLogicalData2", y@key, y)
   expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData2") myClient = x@h2o
+  if(class(x) == "H2OParsedData2" || class(x) == "H2OLogicalData2") myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 

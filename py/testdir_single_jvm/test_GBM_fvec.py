@@ -115,7 +115,6 @@ class Basic(unittest.TestCase):
                 }
 
             kwargs = params.copy()
-            h2o.beta_features = True
             timeoutSecs = 1800
             start = time.time()
             GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)

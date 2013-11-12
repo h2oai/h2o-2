@@ -19,7 +19,7 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 rm -f test.*xml
 
 # This gets the h2o.jar
-source ./runner_setup.sh
+source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]

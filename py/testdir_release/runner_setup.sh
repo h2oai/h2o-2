@@ -14,18 +14,18 @@ echo "current PID: $$"
 # do some bash parameters, just in case we have future expansion
 # -n is no download of the jar
 NO_DOWNLOAD=0
-TEST=
+BRANCH=master
 TESTDIR=
-while getopts nt:d: flag
+while getopts nb:d: flag
 do
     case $flag in
         n)
             echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
             NO_DOWNLOAD=1
             ;;
-        t)
-            TEST=$OPTARG
-            echo "test is $TEST"
+        b)
+            BRANCH=$OPTARG
+            echo "test is $BRANCH"
             ;;
         d)
             TESTDIR=$OPTARG
@@ -33,11 +33,14 @@ do
             ;;
         ?)
             exit
+            echo "Something wrong with the args to runner_setup.sh"
             ;;
     esac
 done
 shift $(( OPTIND - 1 ))  # shift past the last flag or argument
-echo remaining parameters to Bash are $*
+# echo remaining parameters to Bash are $*
+
+echo "using branch: $BRANCH"
 
 #**************************************
 
@@ -52,7 +55,7 @@ echo remaining parameters to Bash are $*
 if [ $NO_DOWNLOAD -eq 0 ]
 then
     cd ../..
-    ./get_s3_jar.sh
+    ./get_s3_jar.sh -b $BRANCH
     # I'm back!
     cd -
 fi

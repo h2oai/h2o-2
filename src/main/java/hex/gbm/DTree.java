@@ -68,6 +68,10 @@ public class DTree extends Iced {
   public final int len() { return _len; }
   public final void len(int len) { _len = len; }
 
+  // Public stats about tree
+  public int leaves;
+  public int depth;
+
   // --------------------------------------------------------------------------
   // Abstract node flavor
   public static abstract class Node extends Iced {
@@ -111,6 +115,8 @@ public class DTree extends Iced {
     public final double se() { return _se0+_se1; }
     public final int   col() { return _col; }
     public final int   bin() { return _bin; }
+    public final long  rowsLeft () { return _n0; }
+    public final long  rowsRight() { return _n1; }
 
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
@@ -485,7 +491,8 @@ public class DTree extends Iced {
     // model (for now - really should be seperate).
     @API(help="Testing key for cm and errs") public final Key testKey;
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
-    @API(help="Variable importance of individual input variables") public final float[] varimp;
+    @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
+    @API(help="Tree statistics") public final TreeStats treeStats;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) {
       super(key,dataKey,names,domains);
@@ -493,6 +500,7 @@ public class DTree extends Iced {
       this.testKey = testKey;  this.cm = null;
       treeBits = new CompressedTree[0][];
       varimp = null;
+      treeStats = null;
     }
     public TreeModel(TreeModel prior, float[] varimp) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
@@ -500,8 +508,9 @@ public class DTree extends Iced {
       this.errs = prior.errs;
       this.treeBits = prior.treeBits;
       this.varimp = varimp;
+      this.treeStats = prior.treeStats;
     }
-    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm) {
+    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey; this.cm = cm;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
@@ -516,6 +525,7 @@ public class DTree extends Iced {
               ts[c] = trees[c].compress();
       }
       varimp = null;
+      treeStats = tstats;
     }
 
     // Number of trees actually in the model (instead of expected/planned)
@@ -614,18 +624,75 @@ public class DTree extends Iced {
         DocGen.HTML.arrayTail(sb);
       }
 
-      if (varimp != null) {
-        DocGen.HTML.section(sb,"Variable Importance");
-        DocGen.HTML.arrayHead(sb);
-        sb.append("<tr><th>Variable</th>");
-        for( int i=varimp.length-1; i>=0; i-- )
-          sb.append("<td>").append(_names[i]).append("</td>");
-        sb.append("</tr>");
-        sb.append("<tr><th class='warning'>Mean Decrease Acurracy</th>");
-        for( int i=0; i<varimp.length; i++ )
-          sb.append(String.format("<td>%5.3f</td>",varimp[i]));
-        sb.append("</tr>");
-        DocGen.HTML.arrayTail(sb);
+      // Show tree stats
+      if (treeStats != null) generateHTMLTreeStats(sb);
+
+      // Show variable importance
+      if (varimp != null) generateHTMLVarImp(sb);
+
+    }
+
+    protected void generateHTMLTreeStats(StringBuilder sb) {
+      DocGen.HTML.section(sb,"Tree stats");
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr><th>&nbsp;</th>").append("<th>Min</th><th>Mean</th><th>Max</th></tr>");
+      sb.append("<tr><th>Depth</th>")
+            .append("<td>").append(treeStats.minDepth).append("</td>")
+            .append("<td>").append(treeStats.meanDepth).append("</td>")
+            .append("<td>").append(treeStats.maxDepth).append("</td></tr>");
+      sb.append("<th>Leaves</th>")
+            .append("<td>").append(treeStats.minLeaves).append("</td>")
+            .append("<td>").append(treeStats.meanLeaves).append("</td>")
+            .append("<td>").append(treeStats.maxLeaves).append("</td></tr>");
+      DocGen.HTML.arrayTail(sb);
+    }
+
+    protected void generateHTMLVarImp(StringBuilder sb) {
+      DocGen.HTML.section(sb,"Unscaled Variable Importance");
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr><th>Variable</th>");
+      for( int i=0; i<varimp.length; i++ )
+        sb.append("<td>").append(_names[i]).append("</td>");
+      sb.append("</tr>");
+      sb.append("<tr><th class='warning'>Mean Decrease Acurracy</th>");
+      for( int i=0; i<varimp.length; i++ )
+        sb.append(String.format("<td>%5.3f</td>",varimp[i]));
+      sb.append("</tr>");
+      DocGen.HTML.arrayTail(sb);
+      // Generate a graph - horrible code
+      DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
+          DocGen.HTML.toJSArray(new StringBuilder(), Arrays.copyOf(_names, _names.length-1)),
+          DocGen.HTML.toJSArray(new StringBuilder(), varimp)
+          );
+    }
+
+    public static class TreeStats extends Iced {
+      static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+      static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+      @API(help="Minimal tree depth.") int minDepth = Integer.MAX_VALUE;
+      @API(help="Maximum tree depth.") int maxDepth = Integer.MIN_VALUE;
+      @API(help="Average tree depth.") int meanDepth;
+      @API(help="Minimal num. of leaves.") int minLeaves = Integer.MAX_VALUE;
+      @API(help="Maximum num. of leaves.") int maxLeaves = Integer.MIN_VALUE;
+      @API(help="Average num. of leaves.") int meanLeaves;
+
+      transient long sumDepth  = 0;
+      transient long sumLeaves = 0;
+      transient int  numTrees = 0;
+      public void updateBy(DTree[] ktrees) {
+        if (ktrees==null) return;
+        for (int i=0; i<ktrees.length; i++) {
+          DTree tree = ktrees[i];
+          if (minDepth > tree.depth) minDepth = tree.depth;
+          if (maxDepth < tree.depth) maxDepth = tree.depth;
+          if (minLeaves > tree.leaves) minLeaves = tree.leaves;
+          if (maxLeaves < tree.leaves) maxLeaves = tree.leaves;
+          sumDepth += tree.depth;
+          sumLeaves += tree.leaves;
+          numTrees++;
+          meanDepth = (int) (sumDepth / numTrees);
+          meanLeaves = (int) (sumLeaves / numTrees);
+        }
       }
     }
 
