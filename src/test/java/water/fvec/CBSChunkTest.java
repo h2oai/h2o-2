@@ -31,7 +31,7 @@ public class CBSChunkTest extends TestUtil {
     nc._ls = ls;
     nc._xs = xs;
     nc._len = ls.length;
-    for (int i=0;i<ls.length; i++) nc._naCnt += nc.isNA(i) ? 1 : 0; // Compute number of NAs
+    nc.type();                  // Compute rollups, including NA
     assertEquals(expNA, nc._naCnt);
     // Compress chunk
     Chunk cc = nc.compress();

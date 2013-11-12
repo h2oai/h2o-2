@@ -24,8 +24,9 @@ public class NewChunk extends Chunk {
   transient long   _ls[];       // Mantissa
   transient int    _xs[];       // Exponent, or if _ls==0, NA or Enum
   transient double _ds[];       // Doubles, for inflating via doubles
-  int _naCnt;                   // Count of NA's   appended
+  int _naCnt=-1;                // Count of NA's   appended
   int _strCnt;                  // Count of Enum's appended
+  int _nzCnt;                   // Count of non-zero's appended
 
   public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 
@@ -35,24 +36,26 @@ public class NewChunk extends Chunk {
     _len = C._len;
   }
 
-  // Assert rollup counts are correct
-  private boolean checkCnt() {
-    int nas=0, ss=0;
-    if( _ds != null ) {
-      assert _ls==null && _xs==null;
-      for( double d : _ds ) if( Double.isNaN(d) ) nas++;
-    } else {
-      assert _ds==null;
-      if( _ls != null )
-        for( int i=0; i<_ls.length; i++ )
-          if( _ls[i]==0 && _xs[i]==Integer.MIN_VALUE ) nas++;
-          else if( _xs[i]==Integer.MIN_VALUE+1 ) ss++;
-    }
-    assert nas==_naCnt && ss==_strCnt : "na="+nas+" vs "+_naCnt+", str="+ss+" vs "+_strCnt;
-    return true;
-  }
+  // Heuristic to decide the basic type of a column
   public byte type() {
-    assert checkCnt();
+    if( _naCnt == -1 ) {        // No rollups yet?
+      int nas=0, ss=0, nzs=0;
+      if( _ds != null ) {
+        assert _ls==null && _xs==null;
+        for( double d : _ds ) if( Double.isNaN(d) ) nas++; else if( d!=0 ) nzs++;
+      } else {
+        assert _ds==null;
+        if( _ls != null )
+          for( int i=0; i<_ls.length; i++ )
+            if( isNA(i) ) nas++;
+            else { 
+              if( isEnum(i)   ) ss++;
+              if( _ls[i] != 0 ) nzs++;
+            }
+      }
+      _nzCnt=nzs;  _strCnt=ss;  _naCnt=nas;
+    }
+    // Now run heuristic for type
     if(_naCnt == _len)
       return AppendableVec.NA;
     if(_strCnt > 0 && _strCnt + _naCnt == _len)
@@ -66,10 +69,10 @@ public class NewChunk extends Chunk {
     return _ls!=null && _xs[idx]==Integer.MIN_VALUE+1;
   }
 
-  public void addEnum(int e) { append2(e,Integer.MIN_VALUE+1); ++_strCnt;}
-  public void addNA  (     ) { append2(0,Integer.MIN_VALUE  ); ++_naCnt ;}
+  public void addEnum(int e) { append2(e,Integer.MIN_VALUE+1); }
+  public void addNA  (     ) { append2(0,Integer.MIN_VALUE  ); }
   public void addNum(long val, int exp) {
-    if(val == 0)exp = 0;        // Canonicalize zero
+    if( val == 0 ) exp = 0;// Canonicalize zero
     append2(val,exp);
   }
   // Fast-path append double data
@@ -84,131 +87,20 @@ public class NewChunk extends Chunk {
     _xs[_len++] = x;
   }
   // Slow-path append data
-  void append2slowd( ) {
+  private void append2slowd( ) {
     if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
     assert _ls==null;
     _ds = _ds==null ? MemoryManager.malloc8d(4) : MemoryManager.arrayCopyOf(_ds,_len<<1);
   }
   // Slow-path append data
-  void append2slow( ) {
+  private void append2slow( ) {
     if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
     assert _ds==null;
     _xs = _ls==null ? MemoryManager.malloc4(4) : MemoryManager.arrayCopyOf(_xs,_len<<1);
     _ls = _ls==null ? MemoryManager.malloc8(4) : MemoryManager.arrayCopyOf(_ls,_len<<1);
   }
-
-  /*
-   *
-   *
-   *
-   * private long attemptTimeParse( ValueString str ) {
-    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
-    if( t0 != Long.MIN_VALUE ) return t0;
-    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
-    if( t1 != Long.MIN_VALUE ) return t1;
-    return Long.MIN_VALUE;
-  }
-  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
-  private long attemptTimeParse_0( ValueString str ) {
-    final byte[] buf = str._buf;
-    int i=str._off;
-    final int end = i+str._length;
-    while( i < end && buf[i] == ' ' ) i++;
-    if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 19 ) return Long.MIN_VALUE;
-    int yy=0, MM=0, dd=0, HH=0, mm=0, ss=0, SS=0;
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    if( yy < 1970 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    MM = digit(MM,buf[i++]);
-    MM = digit(MM,buf[i++]);
-    if( MM < 1 || MM > 12 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    dd = digit(dd,buf[i++]);
-    dd = digit(dd,buf[i++]);
-    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
-    if( buf[i++] != ' ' ) return Long.MIN_VALUE;
-    HH = digit(HH,buf[i++]);
-    HH = digit(HH,buf[i++]);
-    if( HH < 0 || HH > 23 ) return Long.MIN_VALUE;
-    if( buf[i++] != ':' ) return Long.MIN_VALUE;
-    mm = digit(mm,buf[i++]);
-    mm = digit(mm,buf[i++]);
-    if( mm < 0 || mm > 59 ) return Long.MIN_VALUE;
-    if( buf[i++] != ':' ) return Long.MIN_VALUE;
-    ss = digit(ss,buf[i++]);
-    ss = digit(ss,buf[i++]);
-    if( ss < 0 || ss > 59 ) return Long.MIN_VALUE;
-    if( i<end && buf[i] == '.' ) {
-      i++;
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( SS < 0 || SS > 999 ) return Long.MIN_VALUE;
-    }
-    if( i<end && buf[i] == '"' ) i++;
-    if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
-  }
-
-  // So I just brutally parse "dd-MMM-yy".
-  public static final byte MMS[][][] = new byte[][][] {
-    {"jan".getBytes(),null},
-    {"feb".getBytes(),null},
-    {"mar".getBytes(),null},
-    {"apr".getBytes(),null},
-    {"may".getBytes(),null},
-    {"jun".getBytes(),"june".getBytes()},
-    {"jul".getBytes(),"july".getBytes()},
-    {"aug".getBytes(),null},
-    {"sep".getBytes(),"sept".getBytes()},
-    {"oct".getBytes(),null},
-    {"nov".getBytes(),null},
-    {"dec".getBytes(),null}
-  };
-  private long attemptTimeParse_1( ValueString str ) {
-    final byte[] buf = str._buf;
-    int i=str._off;
-    final int end = i+str._length;
-    while( i < end && buf[i] == ' ' ) i++;
-    if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 8 ) return Long.MIN_VALUE;
-    int yy=0, MM=0, dd=0;
-    dd = digit(dd,buf[i++]);
-    if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
-    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    byte[]mm=null;
-    OUTER: for( ; MM<MMS.length; MM++ ) {
-      byte[][] mms = MMS[MM];
-      INNER: for( int k=0; k<mms.length; k++ ) {
-        mm = mms[k];
-        if( mm == null ) continue;
-        for( int j=0; j<mm.length; j++ )
-          if( mm[j] != Character.toLowerCase(buf[i+j]) )
-            continue INNER;
-        break OUTER;
-      }
-    }
-    if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
-    i += mm.length;             // Skip month bytes
-    MM++;                       // 1-based month
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy += 2000;                 // Y2K bug
-    if( i<end && buf[i] == '"' ) i++;
-    if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
-  }
-
-   */
-
 
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
@@ -229,7 +121,6 @@ public class NewChunk extends Chunk {
     long lemin= 0, lemax=lemin; // min/max at xmin fixed-point
     boolean overflow=false;
     boolean floatOverflow = false;
-    assert checkCnt();
 
     byte mode = type();
     if( mode==AppendableVec.NA ) // ALL NAs, nothing to do
@@ -238,8 +129,8 @@ public class NewChunk extends Chunk {
       if( mode==AppendableVec.ENUM   && !isEnum(i) ||
           mode==AppendableVec.NUMBER &&  isEnum(i) )
         setNA_impl(i);
-    if( mode==AppendableVec.NUMBER ) _strCnt=0;
-    assert checkCnt();
+    _naCnt = -1;  type();    // Re-run rollups after dropping all numbers/enums
+
 
     // If the data was set8 as doubles, we do a quick check to see if it's
     // plain longs.  If not, we give up and use doubles.
@@ -258,7 +149,6 @@ public class NewChunk extends Chunk {
 
     // Data in some fixed-point format, not doubles
     boolean first = true;
-    int nzCnt=0;                // Non-zero count
     double min =  Double.MAX_VALUE;
     double max = -Double.MAX_VALUE;
 
@@ -267,7 +157,6 @@ public class NewChunk extends Chunk {
       long l = _ls[i];
       int  x = _xs[i];
       if( x==Integer.MIN_VALUE+1 ) x=0; // Replace enum flag with no scaling
-      if( l!=0 ) nzCnt++;
       assert l!=0 || x==0;      // Exponent of zero is always zero
       // Compute per-chunk min/max
       double d = l*DParseTask.pow10(x);
@@ -305,9 +194,9 @@ public class NewChunk extends Chunk {
 
     // Boolean column?
     if (max == 1 && min == 0 && xmin == 0) {
-      if( nzCnt*32 < _len && _naCnt==0 )     // Very sparse?
-        return new CX0Chunk(_ls,_len,nzCnt); // Sparse boolean chunk
-      int bpv = _strCnt+_naCnt > 0 ? 2 : 1;  // Bit-vector
+      if( _nzCnt*32 < _len && _naCnt==0 )     // Very sparse?
+        return new CX0Chunk(_ls,_len,_nzCnt); // Sparse boolean chunk
+      int bpv = _strCnt+_naCnt > 0 ? 2 : 1;   // Bit-vector
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
     }
@@ -315,9 +204,9 @@ public class NewChunk extends Chunk {
     // Result column must hold floats?
     final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
     // Highly sparse but not a bitvector or constant?
-    if( !fpoint && (nzCnt+_naCnt)*8 < _len &&
-        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE )// Only handling unbiased shorts here
-      return new CX2Chunk(_ls,_xs,_len,nzCnt,_naCnt); // Sparse byte chunk
+    if( !fpoint && (_nzCnt+_naCnt)*8 < _len &&
+        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE ) // Only handling unbiased shorts here
+      return new CX2Chunk(_ls,_xs,_len,_nzCnt,_naCnt); // Sparse byte chunk
 
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like
@@ -426,10 +315,6 @@ public class NewChunk extends Chunk {
     bs[1] = (byte) bpv;
     // Flush last byte
     if (boff>0) bs[idx++] = b;
-    /*for (int i=0; i<idx; i++) {
-      if (i==0 || i==1) System.err.println(bs[i]);
-      else System.err.println(bs[i] + " = " + Integer.toBinaryString(bs[i]));
-    }*/
     return bs;
   }
 
@@ -439,7 +324,6 @@ public class NewChunk extends Chunk {
   // in-range and refer to the inflated values of the original Chunk.
   @Override boolean set_impl(int i, long l) {
     if( _ds != null ) throw H2O.unimpl();
-    if( _xs[i]==Integer.MIN_VALUE+1 ) _naCnt--;
     _ls[i]=l; _xs[i]=0;
     return true;
   }
@@ -450,9 +334,7 @@ public class NewChunk extends Chunk {
         ds[j] = (isNA(j) || isEnum(j)) ? Double.NaN : _ls[j]*Math.pow(10,_xs[j]);
       _ds = ds;  _ls = null;  _xs = null;
     }
-    if( Double.isNaN(_ds[i]) ) _naCnt--;
     _ds[i]=d;
-    if( Double.isNaN( d    ) ) _naCnt++;
     return true;
   }
   @Override boolean set_impl(int i, float f) {  return set_impl(i,(double)f); }
@@ -460,7 +342,6 @@ public class NewChunk extends Chunk {
     if( isNA(i) ) return true;
     if( _ls != null ) { _ls[i] = 0; _xs[i] = Integer.MIN_VALUE; }
     if( _ds != null ) { _ds[i] = Double.NaN; }
-    _naCnt++;
     return true;
   }
   @Override public long   at8_impl( int i ) {
