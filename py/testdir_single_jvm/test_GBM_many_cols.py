@@ -2,7 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j
 
-DO_PLOT_IF_KEVIN = False
+DO_PLOT: = False
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -173,7 +173,7 @@ class Basic(unittest.TestCase):
 
         h2o.beta_features = False
         # just plot the last one
-        if DO_PLOT_IF_KEVIN:
+        if DO_PLOT:
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'
