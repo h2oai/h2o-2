@@ -3,10 +3,12 @@ package water.fvec;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-
 import water.Futures;
+import water.TestUtil;
+import water.UKV;
 
 /** Test for CBSChunk implementation.
  *
@@ -17,7 +19,8 @@ import water.Futures;
  * expected results. In this case expectation is little bit missused
  * since it is used to avoid DKV call.
  * */
-public class CBSChunkTest {
+public class CBSChunkTest extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   void testImpl(long[] ls, int[] xs, int expBpv, int expGap, int expClen, int expNA) {
     AppendableVec av = new AppendableVec(Vec.newKey());
@@ -28,7 +31,7 @@ public class CBSChunkTest {
     nc._ls = ls;
     nc._xs = xs;
     nc._len = ls.length;
-    for (int i=0;i<ls.length; i++) nc._naCnt += nc.isNA(i) ? 1 : 0; // Compute number of NAs
+    nc.type();                  // Compute rollups, including NA
     assertEquals(expNA, nc._naCnt);
     // Compress chunk
     Chunk cc = nc.compress();
@@ -43,6 +46,7 @@ public class CBSChunkTest {
     for( int i=0; i<ls.length; i++ )
       if(xs[i]==0)assertEquals(ls[i], cc.at80(i));
       else assertTrue(cc.isNA0(i));
+    UKV.remove(vv._key);
   }
 
   // Test one bit per value compression which is used
@@ -66,20 +70,20 @@ public class CBSChunkTest {
   // used for data containing NAs
   @Test public void test2BPV() {
    // Simple case only compressing 2*3bits into 1byte including 1 NA
-   testImpl(new long[] {0,0,1},
-            new int [] {0,1,0},
+   testImpl(new long[] {0,0,                  1},
+            new int [] {0,Integer.MIN_VALUE,0},
             2, 2, 1, 1);
    // Filling whole byte, one NA
-   testImpl(new long[] {1,0,0,1},
-            new int [] {0,1,0,0},
+   testImpl(new long[] {1,0                ,0,1},
+            new int [] {0,Integer.MIN_VALUE,0,0},
             2, 0, 1, 1);
    // crossing the border of two bytes by 4bits, one NA
-   testImpl(new long[] {1,0,0,1, 0,0},
-            new int [] {0,0,1,0, 0,0},
+   testImpl(new long[] {1,0,0,                1, 0,0},
+            new int [] {0,0,Integer.MIN_VALUE,0, 0,0},
             2, 4, 2, 1);
    // Two full bytes, 5 NAs
    testImpl(new long[] {0,0,0,1, 0,0,1,0},
-            new int [] {1,1,1,0, 0,1,0,1},
+            new int [] {Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,0, 0,Integer.MIN_VALUE,0,Integer.MIN_VALUE},
             2, 0, 2, 5);
   }
 }

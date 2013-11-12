@@ -8,41 +8,54 @@ import water.parser.ValueString;
 import water.*;
 import water.parser.DParseTask;
 
-// An uncompressed chunk of data, support an append operation
+// An uncompressed chunk of data, supporting an append operation
 public class NewChunk extends Chunk {
   final int _cidx;
-  transient long _ls[];         // Mantissa
-  transient int _xs[];          // Exponent
+  // We can record the following (mixed) data types:
+  // 1- doubles, in _ds including NaN for NA & 0; _ls==_xs==null
+  // 2- scaled decimals from parsing, in _ls & _xs; _ds==null
+  // 3- zero: requires _ls==0 && _xs==0
+  // 4- NA: either _ls==0 && _xs==Integer.MIN_VALUE, OR _ds=NaN
+  // 5- Enum: _xs==(Integer.MIN_VALUE+1) && _ds==null
+  // Chunk._len is the count of elements appended
+  // Sparse: if _row !=null, then _ls/_xs/_ds are compressed to non-zero's
+  // only, and _row is the row number.  Still Chunk._len is count of elements
+  // including zeros.
+  transient long   _ls[];       // Mantissa
+  transient int    _xs[];       // Exponent, or if _ls==0, NA or Enum
   transient double _ds[];       // Doubles, for inflating via doubles
-  transient double _min, _max;
-  int _naCnt;
-  int _strCnt;
+  int _naCnt=-1;                // Count of NA's   appended
+  int _strCnt;                  // Count of Enum's appended
+  int _nzCnt;                   // Count of non-zero's appended
 
-  public NewChunk( Vec vec, int cidx ) {
-    _vec = vec;
-    _cidx = cidx;               // This chunk#
-    _ls = new long[4];          // A little room for data
-    _xs = new int [4];
-    _min =  Double.MAX_VALUE;
-    _max = -Double.MAX_VALUE;
-  }
+  public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 
-  // Constructor used when inflating a Chunk
+  // Constructor used when inflating a Chunk.
   public NewChunk( Chunk C ) {
-    _vec = C._vec;
-    _cidx = _vec.elem2ChunkIdx(C._start); // This chunk#
+    this(C._vec,C._vec.elem2ChunkIdx(C._start));
     _len = C._len;
-    if( C.hasFloat() || C instanceof C0DChunk ) {
-      _ds = MemoryManager.malloc8d(_len);
-    } else {
-      _ls = MemoryManager.malloc8 (_len);
-      _xs = MemoryManager.malloc4 (_len);
-    }
-    _min =  Double.MAX_VALUE;
-    _max = -Double.MAX_VALUE;
   }
 
-  public byte type(){
+  // Heuristic to decide the basic type of a column
+  public byte type() {
+    if( _naCnt == -1 ) {        // No rollups yet?
+      int nas=0, ss=0, nzs=0;
+      if( _ds != null ) {
+        assert _ls==null && _xs==null;
+        for( double d : _ds ) if( Double.isNaN(d) ) nas++; else if( d!=0 ) nzs++;
+      } else {
+        assert _ds==null;
+        if( _ls != null )
+          for( int i=0; i<_ls.length; i++ )
+            if( isNA(i) ) nas++;
+            else { 
+              if( isEnum(i)   ) ss++;
+              if( _ls[i] != 0 ) nzs++;
+            }
+      }
+      _nzCnt=nzs;  _strCnt=ss;  _naCnt=nas;
+    }
+    // Now run heuristic for type
     if(_naCnt == _len)
       return AppendableVec.NA;
     if(_strCnt > 0 && _strCnt + _naCnt == _len)
@@ -50,163 +63,44 @@ public class NewChunk extends Chunk {
     return AppendableVec.NUMBER;
   }
   protected final boolean isNA(int idx) {
-    return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] != 0) : Double.isNaN(_ds[idx]);
+    return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE) : Double.isNaN(_ds[idx]);
+  }
+  protected final boolean isEnum(int idx) {
+    return _ls!=null && _xs[idx]==Integer.MIN_VALUE+1;
   }
 
-  public void addNA(){
-    append2(0,Integer.MIN_VALUE); ++_naCnt;
-  }
-  private boolean _hasFloat;
+  public void addEnum(int e) { append2(e,Integer.MIN_VALUE+1); }
+  public void addNA  (     ) { append2(0,Integer.MIN_VALUE  ); }
   public void addNum(long val, int exp) {
-    if(val == 0)exp = 0;
-    _hasFloat |= (exp < 0);
+    if( val == 0 ) exp = 0;// Canonicalize zero
     append2(val,exp);
   }
-  public void addEnum(int e) {
-    append2(0,e); ++_strCnt;
-  }
+  // Fast-path append double data
   public void addNum(double d) {
-    if(_ds == null) {
-      assert _len == 0;
-      _ds = new double[1];
-    }
-    if( _len >= _ds.length ) {
-      if( _len > Vec.CHUNK_SZ )
-        throw new ArrayIndexOutOfBoundsException(_len);
-      _ds = Arrays.copyOf(_ds,_len<<1);
-    }
-    _ds[_len] = d;
-    _len++;
-    _hasFloat = true;
+    if( _ds==null||_len >= _ds.length ) append2slowd();
+    _ds[_len++] = d;
   }
-
   // Fast-path append long data
   void append2( long l, int x ) {
-    if( _len >= _ls.length ) append2slow();
-    _ls[_len] = l;
-    _xs[_len] = x;
-    _len++;
+    if( _ls==null||_len >= _ls.length ) append2slow();
+    _ls[_len  ] = l;
+    _xs[_len++] = x;
   }
   // Slow-path append data
-  void append2slow( ) {
+  private void append2slowd( ) {
     if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
-    _ls = MemoryManager.arrayCopyOf(_ls,_len<<1);
-    _xs = MemoryManager.arrayCopyOf(_xs,_len<<1);
+    assert _ls==null;
+    _ds = _ds==null ? MemoryManager.malloc8d(4) : MemoryManager.arrayCopyOf(_ds,_len<<1);
   }
-  void invalid() { append2(0,Integer.MIN_VALUE); }
-  void setInvalid(int idx) { _ls[idx]=0; _xs[idx] = Integer.MIN_VALUE; }
-
-  /*
-   *
-   *
-   *
-   * private long attemptTimeParse( ValueString str ) {
-    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
-    if( t0 != Long.MIN_VALUE ) return t0;
-    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
-    if( t1 != Long.MIN_VALUE ) return t1;
-    return Long.MIN_VALUE;
+  // Slow-path append data
+  private void append2slow( ) {
+    if( _len > Vec.CHUNK_SZ )
+      throw new ArrayIndexOutOfBoundsException(_len);
+    assert _ds==null;
+    _xs = _ls==null ? MemoryManager.malloc4(4) : MemoryManager.arrayCopyOf(_xs,_len<<1);
+    _ls = _ls==null ? MemoryManager.malloc8(4) : MemoryManager.arrayCopyOf(_ls,_len<<1);
   }
-  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
-  private long attemptTimeParse_0( ValueString str ) {
-    final byte[] buf = str._buf;
-    int i=str._off;
-    final int end = i+str._length;
-    while( i < end && buf[i] == ' ' ) i++;
-    if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 19 ) return Long.MIN_VALUE;
-    int yy=0, MM=0, dd=0, HH=0, mm=0, ss=0, SS=0;
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    if( yy < 1970 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    MM = digit(MM,buf[i++]);
-    MM = digit(MM,buf[i++]);
-    if( MM < 1 || MM > 12 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    dd = digit(dd,buf[i++]);
-    dd = digit(dd,buf[i++]);
-    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
-    if( buf[i++] != ' ' ) return Long.MIN_VALUE;
-    HH = digit(HH,buf[i++]);
-    HH = digit(HH,buf[i++]);
-    if( HH < 0 || HH > 23 ) return Long.MIN_VALUE;
-    if( buf[i++] != ':' ) return Long.MIN_VALUE;
-    mm = digit(mm,buf[i++]);
-    mm = digit(mm,buf[i++]);
-    if( mm < 0 || mm > 59 ) return Long.MIN_VALUE;
-    if( buf[i++] != ':' ) return Long.MIN_VALUE;
-    ss = digit(ss,buf[i++]);
-    ss = digit(ss,buf[i++]);
-    if( ss < 0 || ss > 59 ) return Long.MIN_VALUE;
-    if( i<end && buf[i] == '.' ) {
-      i++;
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( SS < 0 || SS > 999 ) return Long.MIN_VALUE;
-    }
-    if( i<end && buf[i] == '"' ) i++;
-    if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
-  }
-
-  // So I just brutally parse "dd-MMM-yy".
-  public static final byte MMS[][][] = new byte[][][] {
-    {"jan".getBytes(),null},
-    {"feb".getBytes(),null},
-    {"mar".getBytes(),null},
-    {"apr".getBytes(),null},
-    {"may".getBytes(),null},
-    {"jun".getBytes(),"june".getBytes()},
-    {"jul".getBytes(),"july".getBytes()},
-    {"aug".getBytes(),null},
-    {"sep".getBytes(),"sept".getBytes()},
-    {"oct".getBytes(),null},
-    {"nov".getBytes(),null},
-    {"dec".getBytes(),null}
-  };
-  private long attemptTimeParse_1( ValueString str ) {
-    final byte[] buf = str._buf;
-    int i=str._off;
-    final int end = i+str._length;
-    while( i < end && buf[i] == ' ' ) i++;
-    if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 8 ) return Long.MIN_VALUE;
-    int yy=0, MM=0, dd=0;
-    dd = digit(dd,buf[i++]);
-    if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
-    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    byte[]mm=null;
-    OUTER: for( ; MM<MMS.length; MM++ ) {
-      byte[][] mms = MMS[MM];
-      INNER: for( int k=0; k<mms.length; k++ ) {
-        mm = mms[k];
-        if( mm == null ) continue;
-        for( int j=0; j<mm.length; j++ )
-          if( mm[j] != Character.toLowerCase(buf[i+j]) )
-            continue INNER;
-        break OUTER;
-      }
-    }
-    if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
-    i += mm.length;             // Skip month bytes
-    MM++;                       // 1-based month
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy += 2000;                 // Y2K bug
-    if( i<end && buf[i] == '"' ) i++;
-    if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
-  }
-
-   */
-
 
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
@@ -228,66 +122,47 @@ public class NewChunk extends Chunk {
     boolean overflow=false;
     boolean floatOverflow = false;
 
-    if(_naCnt == _len) // ALL NAs, nothing to do
+    byte mode = type();
+    if( mode==AppendableVec.NA ) // ALL NAs, nothing to do
       return new C0DChunk(Double.NaN,_len);
-    // Enum?  We assume that columns with ALL strings (and NAs) are enums if
-    // there were less than 65k unique vals.  If there were some numbers, we
-    // assume it is a numcol with strings being NAs.
-    if( type() == AppendableVec.ENUM) {
-      // find their max val
-      int sz = Integer.MIN_VALUE;
-      for(int x:_xs) if(x > sz)sz = x;
-      if( sz < Enum.MAX_ENUM_SIZE ) {
-        if(sz < 255){ // we can fit into 1Byte
-          byte [] bs = MemoryManager.malloc1(_len);
-          for(int i = 0; i < _len; ++i) bs[i] = (byte)(_xs[i] >= 0 ? (0xFF&_xs[i]) : C1Chunk._NA);
-          return new C1Chunk(bs);
-        } else if( sz <= 65535 ) { // 2 bytes
-          int bias = 0, off = 0;
-          if(sz >= 32767){
-            bias = 32767;
-            off = C2SChunk.OFF;
-          }
-          byte [] bs = MemoryManager.malloc1((_len << 1) + off);
-          for(int i = 0; i < _len; ++i){
-            if(_xs[i] >= 0) assert (short)(_xs[i]-bias) == (_xs[i]-bias);
-            UDP.set2(bs, off + (i << 1), (short)((_xs[i] > 0)? _xs[i]-bias : C2Chunk._NA));
-          }
-          return bias == 0 ? new C2Chunk(bs) : new C2SChunk(bs,bias,1);
-        } else throw H2O.unimpl();
-      }
-    }
+    for( int i=0; i<_len; i++ )
+      if( mode==AppendableVec.ENUM   && !isEnum(i) ||
+          mode==AppendableVec.NUMBER &&  isEnum(i) )
+        setNA_impl(i);
+    _naCnt = -1;  type();    // Re-run rollups after dropping all numbers/enums
+
+
     // If the data was set8 as doubles, we do a quick check to see if it's
     // plain longs.  If not, we give up and use doubles.
     if( _ds != null ) {
       int i=0;
-      for( ; i<_len; i++ ) // Attempt to inject all doubles into ints
+      for( ; i<_len; i++ ) // Attempt to inject all doubles into longs
         if( !Double.isNaN(_ds[i]) && (double)(long)_ds[i] != _ds[i] ) break;
       if( i<_len ) return chunkD();
       _ls = new long[_ds.length]; // Else flip to longs
       _xs = new int [_ds.length];
       for( i=0; i<_len; i++ )   // Inject all doubles into longs
-        if( Double.isNaN(_ds[i]) ) setInvalid(i);
-        else _ls[i] = (long)_ds[i];
+        if( Double.isNaN(_ds[i]) ) _xs[i] = Integer.MIN_VALUE;
+        else                       _ls[i] = (long)_ds[i];
+      _ds = null;
     }
 
-    // data in some fixed-point format.
+    // Data in some fixed-point format, not doubles
     boolean first = true;
-    boolean hasNA = false;
-    _naCnt=0;
-    int nzCnt=0;                // Non-zero count
+    double min =  Double.MAX_VALUE;
+    double max = -Double.MAX_VALUE;
 
     for( int i=0; i<_len; i++ ) {
-      if( isNA(i) ) { hasNA = true; _naCnt++; continue;}
+      if( isNA(i) ) continue;
       long l = _ls[i];
       int  x = _xs[i];
-      if( l!=0 ) nzCnt++;
-      // Compute per-chunk min/sum/max
+      if( x==Integer.MIN_VALUE+1 ) x=0; // Replace enum flag with no scaling
+      assert l!=0 || x==0;      // Exponent of zero is always zero
+      // Compute per-chunk min/max
       double d = l*DParseTask.pow10(x);
-      if( d < _min ) _min = d;
-      if( d > _max ) _max = d;
-      if( l==0 ) x=0;           // Canonicalize zero exponent
-      long t;
+      if( d < min ) min = d;
+      if( d > max ) max = d;
+      long t;                   // Remove extra scaling
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
       floatOverflow = Math.abs(l) > MAX_FLOAT_MANTISSA;
       if( first ) {
@@ -309,28 +184,29 @@ public class NewChunk extends Chunk {
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
-    final boolean fpoint = xmin < 0 || _min < Long.MIN_VALUE || _max > Long.MAX_VALUE;
 
     // Constant column?
-    if(!hasNA && _min==_max ) {
-      return ((long)_min  == _min)
-          ?new C0LChunk((long)_min,_len)
-          :new C0DChunk(_min, _len);
+    if( _naCnt==0 && min==max ) {
+      return ((long)min  == min)
+          ? new C0LChunk((long)min,_len)
+          : new C0DChunk(      min,_len);
     }
 
     // Boolean column?
-    if (_max == 1 && _min == 0 && xmin == 0) {
-      if( nzCnt*32 < _len && _naCnt==0 )       // Very sparse?
-        return new CX0Chunk(_ls,_len,nzCnt);        // Sparse boolean chunk
-      int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
+    if (max == 1 && min == 0 && xmin == 0) {
+      if( _nzCnt*32 < _len && _naCnt==0 )     // Very sparse?
+        return new CX0Chunk(_ls,_len,_nzCnt); // Sparse boolean chunk
+      int bpv = _strCnt+_naCnt > 0 ? 2 : 1;   // Bit-vector
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
     }
 
+    // Result column must hold floats?
+    final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
     // Highly sparse but not a bitvector or constant?
-    if( !fpoint && (nzCnt+_naCnt)*8 < _len &&
-        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE )// Only handling unbiased shorts here
-      return new CX2Chunk(_ls,_xs,_len,nzCnt,_naCnt); // Sparse byte chunk
+    if( !fpoint && (_nzCnt+_naCnt)*8 < _len &&
+        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE ) // Only handling unbiased shorts here
+      return new CX2Chunk(_ls,_xs,_len,_nzCnt,_naCnt); // Sparse byte chunk
 
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like
@@ -360,7 +236,7 @@ public class NewChunk extends Chunk {
     if(xmin == 0 &&  0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
       return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
-      if(0 <= _min && _max < 255 ) // Span fits in an unbiased byte?
+      if(0 <= min && max < 255 )      // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
       return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10i(xmin));
     }
@@ -373,7 +249,7 @@ public class NewChunk extends Chunk {
       return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),bias,DParseTask.pow10i(xmin));
     }
     // Compress column into ints
-    if(Integer.MIN_VALUE < _min && _max <= Integer.MAX_VALUE )
+    if( Integer.MIN_VALUE < min && max <= Integer.MAX_VALUE )
       return new C4Chunk( bufX(0,0,0,2));
     return new C8Chunk( bufX(0,0,0,3));
   }
@@ -391,7 +267,7 @@ public class NewChunk extends Chunk {
           default: H2O.fail();
         }
       } else {
-        int x = _xs[i]-scale;
+        int x = (_xs[i]==Integer.MIN_VALUE+1 ? 0 : _xs[i])-scale;
         long le = x >= 0
             ? _ls[i]*DParseTask.pow10i( x)
             : _ls[i]/DParseTask.pow10i(-x);
@@ -412,7 +288,7 @@ public class NewChunk extends Chunk {
   private Chunk chunkD() {
     final byte [] bs = MemoryManager.malloc1(_len*8);
     for(int i = 0; i < _len; ++i)
-      UDP.set8d(bs, 8*i, _ds != null?_ds[i]:isNA0(i)?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]));
+      UDP.set8d(bs, 8*i, _ds != null?_ds[i]:(isNA(i)||isEnum(i))?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]));
     return new C8DChunk(bs);
   }
 
@@ -439,10 +315,6 @@ public class NewChunk extends Chunk {
     bs[1] = (byte) bpv;
     // Flush last byte
     if (boff>0) bs[idx++] = b;
-    /*for (int i=0; i<idx; i++) {
-      if (i==0 || i==1) System.err.println(bs[i]);
-      else System.err.println(bs[i] + " = " + Integer.toBinaryString(bs[i]));
-    }*/
     return bs;
   }
 
@@ -456,11 +328,11 @@ public class NewChunk extends Chunk {
     return true;
   }
   @Override boolean set_impl(int i, double d) {
-    if( _ls != null ) {
-      _ds = MemoryManager.malloc8d(_len);
+    if( _ls != null ) {         // Flip to using doubles
+      double ds[] = MemoryManager.malloc8d(_len);
       for( int j = 0; j<_len; j++ )
-        _ds[j] = _ls[j]*Math.pow(10,_xs[j]);
-      _ls = null;  _xs = null;
+        ds[j] = (isNA(j) || isEnum(j)) ? Double.NaN : _ls[j]*Math.pow(10,_xs[j]);
+      _ds = ds;  _ls = null;  _xs = null;
     }
     _ds[i]=d;
     return true;
@@ -470,7 +342,6 @@ public class NewChunk extends Chunk {
     if( isNA(i) ) return true;
     if( _ls != null ) { _ls[i] = 0; _xs[i] = Integer.MIN_VALUE; }
     if( _ds != null ) { _ds[i] = Double.NaN; }
-    _naCnt++;
     return true;
   }
   @Override public long   at8_impl( int i ) {

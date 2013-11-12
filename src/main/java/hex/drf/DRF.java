@@ -126,8 +126,6 @@ public class DRF extends SharedTreeModelBuilder {
       tstats.updateBy(ktrees);
       model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
     }
-    // finalize stats
-    tstats.close();
     // Do final scoring with all the trees.
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
     if (classification && importance) {
@@ -345,18 +343,12 @@ public class DRF extends SharedTreeModelBuilder {
       }
     }.doAll(fr);
 
+    // Collect leaves stats
+    for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
     //printGenerateTrees(ktrees);
-    for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
 
     return ktrees;
-  }
-
-  @SuppressWarnings("unused") // helper for debugging
-  private void printGenerateTrees(DTree[] trees) {
-    for( int k=0; k<_nclass; k++ )
-      if( trees[k] != null )
-        System.out.println(trees[k].root().toString2(new StringBuilder(),0));
   }
 
   // Read the 'tree' columns, do model-specific math and put the results in the

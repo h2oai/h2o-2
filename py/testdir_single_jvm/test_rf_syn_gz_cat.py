@@ -2,7 +2,7 @@ import unittest, random, sys, time, math
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e, h2o_util
 
-print "Create csv with lots of same data (95% 0?), so gz will have high compression ratio"
+print "Create csv with lots of same data (98% 0?), so gz will have high compression ratio"
 print "Cat a bunch of them together, to get an effective large blow up inside h2o"
 print "Can also copy the files to test multi-file gz parse...that will behave differently"
 print "Behavior may be different depending on whether small ints are used, reals or used, or enums are used"
@@ -22,16 +22,21 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         rowSum = 0
         for j in range(colCount):
             if BASE==2:
-                # we're just doing 50/50 for now, unlike the print says above
-                r = h2o_util.choice_with_probability([(0, .5), (1, .5)])
+                # 50/50
+                # r = h2o_util.choice_with_probability([(0, .5), (1, .5)])
+                # 98/2
+                r = h2o_util.choice_with_probability([(0, .98), (1, .2)])
             else:
                 raise Exception("Unsupported BASE: " + BASE)
 
             rowSum += r
+
+
             rowData.append(r)
 
         responseVar = rowSum % BASE
-        rowData.append(responseVar)
+        # make r a many-digit real, so gzip compresses even more better!
+        rowData.append('%#034.32e' % responseVar)
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
 

@@ -406,7 +406,7 @@ setMethod("h2o.factor", signature(data="H2OParsedData", col="character"),
       h2o.factor(data, ind-1)
 })
 
-#--------------------------------- FluidVecs --------------------------------------#
+#------------------------------------ FluidVecs ----------------------------------------#
 setMethod("show", "H2ORawData2", function(object) {
   print(object@h2o)
   cat("Raw Data Key:", object@key, "\n")
@@ -415,6 +415,7 @@ setMethod("show", "H2ORawData2", function(object) {
 setMethod("show", "H2OParsedData2", function(object) {
   print(object@h2o)
   cat("Parsed Data Key:", object@key, "\n")
+  if(ncol(object) <= 1000) print(head(object))
 })
 
 setMethod("[", "H2OParsedData2", function(x, i, j, ..., drop = TRUE) {
@@ -490,41 +491,61 @@ setMethod("$", "H2OParsedData2", function(x, name) {
     new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
 })
 
-setMethod("+", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("+", e1, e2) })
-setMethod("-", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("-", e1, e2) })
-setMethod("*", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("*", e1, e2) })
-setMethod("/", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("/", e1, e2) })
-# setMethod("%%", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("%", e1, e2) })
-setMethod("==", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("==", e1, e2) })
-setMethod(">", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2(">", e1, e2) })
-setMethod("<", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("<", e1, e2) })
-setMethod("!=", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("!=", e1, e2) })
-setMethod(">=", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2(">=", e1, e2) })
-setMethod("<=", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("<=", e1, e2) })
+setMethod("+", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
+setMethod("-", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("-", e1, e2) })
+setMethod("*", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("*", e1, e2) })
+setMethod("/", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("/", e1, e2) })
+setMethod("%%", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("%", e1, e2) })
+setMethod("==", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("==", e1, e2) })
+setMethod(">", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2(">", e1, e2) })
+setMethod("<", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("<", e1, e2) })
+setMethod("!=", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
+setMethod(">=", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
+setMethod("<=", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
+setMethod("&", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
 
-setMethod("+", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("+", e1, e2) })
-setMethod("-", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("-", e1, e2) })
-setMethod("*", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("*", e1, e2) })
-setMethod("/", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("/", e1, e2) })
-# setMethod("%%", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("%", e1, e2) })
-setMethod("==", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("==", e1, e2) })
-setMethod(">", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2(">", e1, e2) })
-setMethod("<", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("<", e1, e2) })
-setMethod("!=", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("!=", e1, e2) })
-setMethod(">=", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2(">=", e1, e2) })
-setMethod("<=", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__operator2("<=", e1, e2) })
+setMethod("+", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
+setMethod("-", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("-", e1, e2) })
+setMethod("*", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("*", e1, e2) })
+setMethod("/", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("/", e1, e2) })
+setMethod("%%", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("%", e1, e2) })
+setMethod("==", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("==", e1, e2) })
+setMethod(">", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2(">", e1, e2) })
+setMethod("<", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("<", e1, e2) })
+setMethod("!=", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
+setMethod(">=", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
+setMethod("<=", c("numeric", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
+setMethod("&", c("numeric", "H2OParsedData2"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("numeric", "H2OParsedData2"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
 
-setMethod("+", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("+", e1, e2) })
-setMethod("-", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("-", e1, e2) })
-setMethod("*", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("*", e1, e2) })
-setMethod("/", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("/", e1, e2) })
-# setMethod("%%", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("%", e1, e2) })
-setMethod("==", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("==", e1, e2) })
-setMethod(">", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2(">", e1, e2) })
-setMethod("<", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("<", e1, e2) })
-setMethod("!=", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("!=", e1, e2) })
-setMethod(">=", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2(">=", e1, e2) })
-setMethod("<=", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__operator2("<=", e1, e2) })
+setMethod("+", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
+setMethod("-", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("-", e1, e2) })
+setMethod("*", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("*", e1, e2) })
+setMethod("/", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("/", e1, e2) })
+setMethod("%%", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("%", e1, e2) })
+setMethod("==", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("==", e1, e2) })
+setMethod(">", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2(">", e1, e2) })
+setMethod("<", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("<", e1, e2) })
+setMethod("!=", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
+setMethod(">=", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
+setMethod("<=", c("H2OParsedData2", "numeric"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
+setMethod("&", c("H2OParsedData2", "numeric"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("H2OParsedData2", "numeric"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
+
+setMethod("!", "H2OParsedData2", function(x) { h2o.__unop2("!", x) })
+setMethod("abs", "H2OParsedData2", function(x) { h2o.__unop2("abs", x) })
+setMethod("sign", "H2OParsedData2", function(x) { h2o.__unop2("sgn", x) })
+setMethod("sqrt", "H2OParsedData2", function(x) { h2o.__unop2("sqrt", x) })
+setMethod("ceiling", "H2OParsedData2", function(x) { h2o.__unop2("ceil", x) })
+setMethod("floor", "H2OParsedData2", function(x) { h2o.__unop2("floor", x) })
+setMethod("log", "H2OParsedData2", function(x) { h2o.__unop2("log", x) })
+setMethod("exp", "H2OParsedData2", function(x) { h2o.__unop2("exp", x) })
+setMethod("sum", "H2OParsedData2", function(x) { h2o.__unop2("sum", x) })
+setMethod("is.na", "H2OParsedData2", function(x) { h2o.__unop2("is.na", x) })
+
+table <- function(object) { UseMethod("table", object) }
+setMethod("table", "H2OParsedData2", function(object) { h2o.__unop2("table", object) })
 
 setMethod("colnames", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
@@ -538,15 +559,6 @@ setMethod("nrow", "H2OParsedData2", function(x) {
 
 setMethod("ncol", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numCols) })
-
-setMethod("sign", "H2OParsedData2", function(x) {
-  expr = paste("sgn(", x@key, ")")
-  res = h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    res$scalar
-  else
-    new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
-})
 
 setMethod("min", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
@@ -562,12 +574,6 @@ setMethod("range", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   temp = sapply(res$cols, function(x) { c(x$min, x$max) })
   c(min(temp[1,]), max(temp[2,]))
-})
-
-setMethod("sum", "H2OParsedData2", function(x) {
-  expr = paste("sum(", x@key, ")", sep="")
-  res = h2o.__exec2(x@h2o, expr)
-  res$scalar
 })
 
 setMethod("colMeans", "H2OParsedData2", function(x) {
@@ -592,15 +598,6 @@ setMethod("head", "H2OParsedData2", function(x, n = 6L, ...) {
 
 setMethod("tail", "H2OParsedData2", function(x, n = 6L, ...) {
   tail(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
-})
-
-setMethod("is.na", "H2OParsedData2", function(x) {
-  expr = paste("is.na(", x@key, ")")
-  res = h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    res$scalar
-  else
-    new("H2OLogicalData2", h2o=x@h2o, key=res$dest_key)
 })
 
 setMethod("is.factor", "H2OParsedData2", function(x) {

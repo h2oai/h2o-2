@@ -12,10 +12,7 @@ public class C8DChunk extends Chunk {
     if( Double.isNaN(res) ) throw new IllegalArgumentException("at8 but value is missing");
     return (long)res;
   }
-  @Override protected final double atd_impl( int i ) {
-    double res = UDP.get8d(_mem,i<<3);
-    return res;
-  }
+  @Override protected final double   atd_impl( int i ) { return              UDP.get8d(_mem,i<<3) ; }
   @Override protected final boolean isNA_impl( int i ) { return Double.isNaN(UDP.get8d(_mem,i<<3)); }
   @Override boolean set_impl(int idx, long l) { return false; }
   @Override boolean set_impl(int i, double d) {
