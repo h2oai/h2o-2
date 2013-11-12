@@ -24,6 +24,27 @@ public class C1SChunk extends Chunk {
     long res = 0xFF&_mem[i+OFF];
     return (res == C1Chunk._NA)?Double.NaN:(res+_bias)*_scale;
   }
+
+  @Override public String atStr0(int i){
+    long mantissa = 0xFF&_mem[i+OFF] + _bias;
+    int ndigits = (int)Math.log10(mantissa) + 1;
+    int dec = -(int)Math.log10(_scale);
+    StringBuilder sb = new StringBuilder();
+    if(mantissa < 0){
+      sb.append("-");
+      mantissa = -mantissa;
+    }
+    long rem = mantissa;
+    long div = (long)Math.pow(10, ndigits-1);
+    for(int j = 0; j < ndigits; ++j){
+      if(j == (ndigits - dec))sb.append(".");
+      sb.append(rem / div);
+      rem = rem % div;
+      div /= 10;
+    }
+    return sb.toString();
+  }
+
   @Override protected final boolean isNA_impl( int i ) { return (0xFF&_mem[i+OFF]) == C1Chunk._NA; }
   @Override boolean set_impl(int i, long l) {
     long res = (long)(l/_scale)-_bias; // Compressed value

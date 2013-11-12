@@ -441,7 +441,7 @@ public class Frame extends Iced {
           if(!_vecs[i].isNA(_row)) {
             if(_vecs[i].isEnum()) sb.append('"' + _vecs[i]._domain[(int) _vecs[i].at8(_row)] + '"');
             else if(_vecs[i].isInt()) sb.append(_vecs[i].at8(_row));
-            else sb.append(_vecs[i].at(_row));
+            else sb.append(_vecs[i].atStr(_row));
           }
         }
         sb.append('\n');
