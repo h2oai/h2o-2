@@ -16,7 +16,7 @@ public class NewChunk extends Chunk {
   // 2- scaled decimals from parsing, in _ls & _xs; _ds==null
   // 3- zero: requires _ls==0 && _xs==0
   // 4- NA: either _ls==0 && _xs==Integer.MIN_VALUE, OR _ds=NaN
-  // 5- Enum: _ls==0 && _xs>0 && _ds==null
+  // 5- Enum: _xs==(Integer.MIN_VALUE+1) && _ds==null
   // Chunk._len is the count of elements appended
   // Sparse: if _row !=null, then _ls/_xs/_ds are compressed to non-zero's
   // only, and _row is the row number.  Still Chunk._len is count of elements
@@ -35,7 +35,24 @@ public class NewChunk extends Chunk {
     _len = C._len;
   }
 
-  public byte type(){
+  // Assert rollup counts are correct
+  private boolean checkCnt() {
+    int nas=0, ss=0;
+    if( _ds != null ) {
+      assert _ls==null && _xs==null;
+      for( double d : _ds ) if( Double.isNaN(d) ) nas++;
+    } else {
+      assert _ds==null;
+      if( _ls != null )
+        for( int i=0; i<_ls.length; i++ )
+          if( _ls[i]==0 && _xs[i]==Integer.MIN_VALUE ) nas++;
+          else if( _xs[i]==Integer.MIN_VALUE+1 ) ss++;
+    }
+    assert nas==_naCnt && ss==_strCnt : "na="+nas+" vs "+_naCnt+", str="+ss+" vs "+_strCnt;
+    return true;
+  }
+  public byte type() {
+    assert checkCnt();
     if(_naCnt == _len)
       return AppendableVec.NA;
     if(_strCnt > 0 && _strCnt + _naCnt == _len)
@@ -45,16 +62,19 @@ public class NewChunk extends Chunk {
   protected final boolean isNA(int idx) {
     return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE) : Double.isNaN(_ds[idx]);
   }
+  protected final boolean isEnum(int idx) {
+    return _ls!=null && _xs[idx]==Integer.MIN_VALUE+1;
+  }
 
-  public void addEnum(int e) { append2(0,      e          ); ++_strCnt;}
-  public void addNA  (     ) { append2(0,Integer.MIN_VALUE); ++_naCnt ;}
+  public void addEnum(int e) { append2(e,Integer.MIN_VALUE+1); ++_strCnt;}
+  public void addNA  (     ) { append2(0,Integer.MIN_VALUE  ); ++_naCnt ;}
   public void addNum(long val, int exp) {
     if(val == 0)exp = 0;        // Canonicalize zero
     append2(val,exp);
   }
   // Fast-path append double data
   public void addNum(double d) {
-    if( _ls==null||_len >= _ls.length ) append2slowd();
+    if( _ds==null||_len >= _ds.length ) append2slowd();
     _ds[_len++] = d;
   }
   // Fast-path append long data
@@ -209,41 +229,16 @@ public class NewChunk extends Chunk {
     long lemin= 0, lemax=lemin; // min/max at xmin fixed-point
     boolean overflow=false;
     boolean floatOverflow = false;
+    assert checkCnt();
 
     if(_naCnt == _len) // ALL NAs, nothing to do
       return new C0DChunk(Double.NaN,_len);
-    // Enum?  We assume that columns with ALL strings (and NAs) are enums if
-    // there were less than 65k unique vals.  If there were some numbers, we
-    // assume it is a numcol with strings being NAs.
-    if( type() == AppendableVec.ENUM) {
-      // find their max val
-      int sz = Integer.MIN_VALUE;
-      for(int x:_xs) if(x > sz)sz = x;
-      if( sz < Enum.MAX_ENUM_SIZE ) {
-        if(sz < 255){ // we can fit into 1Byte
-          byte [] bs = MemoryManager.malloc1(_len);
-          for(int i = 0; i < _len; ++i) bs[i] = (byte)(_xs[i] >= 0 ? (0xFF&_xs[i]) : C1Chunk._NA);
-          return new C1Chunk(bs);
-        } else if( sz <= 65535 ) { // 2 bytes
-          int bias = 0, off = 0;
-          if(sz >= 32767){
-            bias = 32767;
-            off = C2SChunk.OFF;
-          }
-          byte [] bs = MemoryManager.malloc1((_len << 1) + off);
-          for(int i = 0; i < _len; ++i){
-            if(_xs[i] >= 0) assert (short)(_xs[i]-bias) == (_xs[i]-bias);
-            UDP.set2(bs, off + (i << 1), (short)((_xs[i] > 0)? _xs[i]-bias : C2Chunk._NA));
-          }
-          return bias == 0 ? new C2Chunk(bs) : new C2SChunk(bs,bias,1);
-        } else throw H2O.unimpl();
-      }
-    }
+
     // If the data was set8 as doubles, we do a quick check to see if it's
     // plain longs.  If not, we give up and use doubles.
     if( _ds != null ) {
       int i=0;
-      for( ; i<_len; i++ ) // Attempt to inject all doubles into ints
+      for( ; i<_len; i++ ) // Attempt to inject all doubles into longs
         if( !Double.isNaN(_ds[i]) && (double)(long)_ds[i] != _ds[i] ) break;
       if( i<_len ) return chunkD();
       _ls = new long[_ds.length]; // Else flip to longs
@@ -251,27 +246,27 @@ public class NewChunk extends Chunk {
       for( i=0; i<_len; i++ )   // Inject all doubles into longs
         if( Double.isNaN(_ds[i]) ) _xs[i] = Integer.MIN_VALUE;
         else                       _ls[i] = (long)_ds[i];
+      _ds = null;
     }
 
-    // data in some fixed-point format.
+    // Data in some fixed-point format, not doubles
     boolean first = true;
-    boolean hasNA = false;
-    _naCnt=0;
     int nzCnt=0;                // Non-zero count
     double min =  Double.MAX_VALUE;
     double max = -Double.MAX_VALUE;
 
     for( int i=0; i<_len; i++ ) {
-      if( isNA(i) ) { hasNA = true; _naCnt++; continue;}
+      if( isNA(i) ) continue;
       long l = _ls[i];
       int  x = _xs[i];
+      if( x==Integer.MIN_VALUE+1 ) x=0; // Replace enum flag with no scaling
       if( l!=0 ) nzCnt++;
-      // Compute per-chunk min/sum/max
+      assert l!=0 || x==0;      // Exponent of zero is always zero
+      // Compute per-chunk min/max
       double d = l*DParseTask.pow10(x);
       if( d < min ) min = d;
       if( d > max ) max = d;
-      if( l==0 ) x=0;           // Canonicalize zero exponent
-      long t;
+      long t;                   // Remove extra scaling
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
       floatOverflow = Math.abs(l) > MAX_FLOAT_MANTISSA;
       if( first ) {
@@ -293,10 +288,9 @@ public class NewChunk extends Chunk {
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
-    final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
 
     // Constant column?
-    if( !hasNA && min==max ) {
+    if( _naCnt==0 && min==max ) {
       return ((long)min  == min)
           ? new C0LChunk((long)min,_len)
           : new C0DChunk(      min,_len);
@@ -304,13 +298,15 @@ public class NewChunk extends Chunk {
 
     // Boolean column?
     if (max == 1 && min == 0 && xmin == 0) {
-      if( nzCnt*32 < _len && _naCnt==0 )       // Very sparse?
-        return new CX0Chunk(_ls,_len,nzCnt);        // Sparse boolean chunk
-      int bpv = _strCnt+_naCnt > 0 ? 2 : 1;
+      if( nzCnt*32 < _len && _naCnt==0 )     // Very sparse?
+        return new CX0Chunk(_ls,_len,nzCnt); // Sparse boolean chunk
+      int bpv = _strCnt+_naCnt > 0 ? 2 : 1;  // Bit-vector
       byte[] cbuf = bufB(CBSChunk.OFF, bpv);
       return new CBSChunk(cbuf, cbuf[0], cbuf[1]);
     }
 
+    // Result column must hold floats?
+    final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
     // Highly sparse but not a bitvector or constant?
     if( !fpoint && (nzCnt+_naCnt)*8 < _len &&
         lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE )// Only handling unbiased shorts here
@@ -375,7 +371,7 @@ public class NewChunk extends Chunk {
           default: H2O.fail();
         }
       } else {
-        int x = _xs[i]-scale;
+        int x = (_xs[i]==Integer.MIN_VALUE+1 ? 0 : _xs[i])-scale;
         long le = x >= 0
             ? _ls[i]*DParseTask.pow10i( x)
             : _ls[i]/DParseTask.pow10i(-x);
@@ -396,7 +392,7 @@ public class NewChunk extends Chunk {
   private Chunk chunkD() {
     final byte [] bs = MemoryManager.malloc1(_len*8);
     for(int i = 0; i < _len; ++i)
-      UDP.set8d(bs, 8*i, _ds != null?_ds[i]:isNA0(i)?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]));
+      UDP.set8d(bs, 8*i, _ds != null?_ds[i]:(isNA(i)||isEnum(i))?Double.NaN:_ls[i]*DParseTask.pow10(_xs[i]));
     return new C8DChunk(bs);
   }
 
@@ -436,17 +432,20 @@ public class NewChunk extends Chunk {
   // in-range and refer to the inflated values of the original Chunk.
   @Override boolean set_impl(int i, long l) {
     if( _ds != null ) throw H2O.unimpl();
+    if( _xs[i]==Integer.MIN_VALUE+1 ) _naCnt--;
     _ls[i]=l; _xs[i]=0;
     return true;
   }
   @Override boolean set_impl(int i, double d) {
-    if( _ls != null ) {
-      _ds = MemoryManager.malloc8d(_len);
+    if( _ls != null ) {         // Flip to using doubles
+      double ds[] = MemoryManager.malloc8d(_len);
       for( int j = 0; j<_len; j++ )
-        _ds[j] = _ls[j]*Math.pow(10,_xs[j]);
-      _ls = null;  _xs = null;
+        ds[j] = (isNA(j) || isEnum(j)) ? Double.NaN : _ls[j]*Math.pow(10,_xs[j]);
+      _ds = ds;  _ls = null;  _xs = null;
     }
+    if( Double.isNaN(_ds[i]) ) _naCnt--;
     _ds[i]=d;
+    if( Double.isNaN( d    ) ) _naCnt++;
     return true;
   }
   @Override boolean set_impl(int i, float f) {  return set_impl(i,(double)f); }
