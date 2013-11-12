@@ -98,7 +98,6 @@ public class GBM extends SharedTreeModelBuilder {
       model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
     }
     // Final scoring
-    tstats.close();
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
     cleanUp(fr,t_build); // Shared cleanup
   }

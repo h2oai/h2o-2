@@ -690,11 +690,9 @@ public class DTree extends Iced {
           sumDepth += tree.depth;
           sumLeaves += tree.leaves;
           numTrees++;
+          meanDepth = (int) (sumDepth / numTrees);
+          meanLeaves = (int) (sumLeaves / numTrees);
         }
-      }
-      public void close() {
-        meanDepth = (int) (sumDepth / numTrees);
-        meanLeaves = (int) (sumLeaves / numTrees);
       }
     }
 

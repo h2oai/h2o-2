@@ -126,8 +126,6 @@ public class DRF extends SharedTreeModelBuilder {
       tstats.updateBy(ktrees);
       model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
     }
-    // finalize stats
-    tstats.close();
     // Do final scoring with all the trees.
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
     if (classification && importance) {
