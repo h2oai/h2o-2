@@ -6,9 +6,28 @@ import water.*;
 public class CX0Chunk extends Chunk {
   static final int OFF = 4;
   transient int _last;          // 1-entry cache of last accessed row
-  public CX0Chunk(long[] ls, int len, int nzcnt) {
-    _mem = compress(ls,len,nzcnt); _start = -1; _len = len; _last=OFF;
+  // Dense constructor
+  public CX0Chunk(long[] ls, int len2, int nzcnt) {
+    _start = -1; _len = len2; _last=OFF;
+    byte[] buf = new byte[nzcnt*2+OFF];
+    UDP.set4(buf,0,len2);
+    int j = OFF;
+    if( len2 > 65535 ) throw H2O.unimpl();
+    for( int i=0; i<len2; i++ )
+      if( ls[i] != 0 ) j += UDP.set2(buf,j,(short)i);
+    _mem = buf;
   }
+  // Sparse constructor
+  public CX0Chunk(int[] xs, int len2, int len) {
+    _start = -1; _len = len2; _last=OFF;
+    byte[] buf = new byte[len*2+OFF];
+    UDP.set4(buf,0,len2);
+    if( len2 > 65535 ) throw H2O.unimpl();
+    for( int i=0; i<len; i++ )
+      UDP.set2(buf,(i<<1)+OFF,(short)xs[i]);
+    _mem = buf;
+  }
+
   @Override protected long at8_impl(int idx) {
     int y = _last;              // Read once; racy 1-entry cache
     int x = UDP.get2(_mem,y)&0xFFFF;
@@ -47,15 +66,5 @@ public class CX0Chunk extends Chunk {
     for( int i=OFF; i<_mem.length; i+=2 )
       nc._ls[UDP.get2(_mem,i)&0xFFFF] = 1;
     return nc;
-  }
-
-  // Compress a NewChunk long array
-  static byte[] compress( long ls[], int len, int nzcnt ) {
-    byte[] buf = new byte[nzcnt*2+OFF];
-    UDP.set4(buf,0,len);
-    int j = OFF;
-    for( int i=0; i<len; i++ )
-      if( ls[i] != 0 ) j += UDP.set2(buf,j,(short)i);
-    return buf;
   }
 }
