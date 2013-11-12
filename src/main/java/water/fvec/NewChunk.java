@@ -86,10 +86,17 @@ public class NewChunk extends Chunk {
   // Fast-path append long data
   void append2( long l, int x ) {
     if( _ls==null||_len >= _ls.length ) append2slow();
-    if( _len2 != _len ) {             // Sparse?
-      if( x!=0 ) throw H2O.unimpl();  // No sparse specials
-      if( l==0 ) { _len2++; return; } // Just One More Zero
-      x = _len2;                      // NZ: set the row
+    if( _len2 != _len ) {       // Sparse?
+      if( x!=0 ) {              // NA?  Give it up!
+        long ls[] = MemoryManager.malloc8(_len2+1);
+        for( int i=0; i<_len; i++ ) // Inflate ls to hold values
+          ls[_xs[i]] = _ls[i];
+        _ls = ls;
+        _xs = MemoryManager.malloc4(_len2+1);
+        _len = _len2;           // Not compressed now!
+      } else if( l==0 ) {       // Just One More Zero
+        _len2++; return; 
+      } else x = _len2;         // NZ: set the row over the xs field
     }
     _ls[_len  ] = l;
     _xs[_len++] = x;  _len2++;

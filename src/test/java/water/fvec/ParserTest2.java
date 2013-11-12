@@ -484,9 +484,9 @@ public class ParserTest2 extends TestUtil {
       ParseDataset2.parse(r1, new Key[]{k});
       exp = new double[101][2];
       exp[ 50][0] = 2;
-      exp[ 50][1] = 2;
+      exp[ 50][1] = 3;
       exp[100][0] = 0;          // Truncated final line
-      exp[101][0] = Double.NaN;
+      exp[100][1] = Double.NaN;
       testParsed(r1,exp,k);
     }
   }
