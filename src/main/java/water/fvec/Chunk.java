@@ -36,6 +36,15 @@ public abstract class Chunk extends Iced implements Cloneable {
     throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
   }
 
+
+ public final StringBuilder  atStr(long i,StringBuilder sb) {
+   long x = i-_start;
+   if( 0 <= x && x < _len ) return atStr0((int)x, sb);
+   else throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
+ }
+
+
+
   /** Load a double value.  Returns Double.NaN if value is missing.
    *  <p>
    * Loads from the 1-entry chunk cache, or misses-out.  This version uses
@@ -65,6 +74,8 @@ public abstract class Chunk extends Iced implements Cloneable {
   public final double  at0  ( int i ) { return _chk. atd_impl(i); }
   public final long    at80 ( int i ) { return _chk. at8_impl(i); }
   public final boolean isNA0( int i ) { return _chk.isNA_impl(i); }
+  public final StringBuilder  atStr0(int i,StringBuilder sb) {return _chk.atStr_impl(i,sb);}
+
 
 
   /** Slightly slower than 'at0' inside a chunk; goes (very) slow outside the
@@ -156,6 +167,14 @@ public abstract class Chunk extends Iced implements Cloneable {
   abstract protected double   atd_impl(int idx);
   abstract protected long     at8_impl(int idx);
   abstract protected boolean isNA_impl(int idx);
+  protected StringBuilder atStr_impl(int idx,StringBuilder sb){
+    if(!isNA_impl(idx)){
+      if(_vec.isEnum()) sb.append(_vec._domain[(int)at8_impl(idx)]);
+      else if(hasFloat()) sb.append(atd_impl(idx));
+      else sb.append(at8_impl(idx));
+    }
+    return sb;
+  }
 
   /** Chunk-specific writer.  Returns false if the value does not fit in the
    *  current compression scheme.  */

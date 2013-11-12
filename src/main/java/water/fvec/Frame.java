@@ -438,11 +438,7 @@ public class Frame extends Iced {
         StringBuilder sb = new StringBuilder();
         for( int i = 0; i < _vecs.length; i++ ) {
           if(i > 0) sb.append(',');
-          if(!_vecs[i].isNA(_row)) {
-            if(_vecs[i].isEnum()) sb.append('"' + _vecs[i]._domain[(int) _vecs[i].at8(_row)] + '"');
-            else if(_vecs[i].isInt()) sb.append(_vecs[i].at8(_row));
-            else sb.append(_vecs[i].atStr(_row));
-          }
+          _vecs[i].atStr(_row, sb);
         }
         sb.append('\n');
         _line = sb.toString().getBytes();

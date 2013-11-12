@@ -478,10 +478,9 @@ public class Vec extends Iced {
   /** Fetch element the slow way, as a double.  Missing values are
    *  returned as Double.NaN instead of throwing. */
   public final double at( long i ) { return chunk(i).at (i); }
-  public final String atStr( long i ) { return chunk(i).atStr0((int)i); }
   /** Fetch the missing-status the slow way. */
   public final boolean isNA(long row){ return chunk(row).isNA(row); }
-
+  public final StringBuilder atStr(long i,StringBuilder sb){return chunk(i).atStr(i, sb);}
   /** Write element the slow way, as a long.  There is no way to write a
    *  missing value with this call.  Under rare circumstances this can throw:
    *  if the long does not fit in a double (value is larger magnitude than

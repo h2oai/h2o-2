@@ -185,7 +185,7 @@ public class Inspect2 extends Request2 {
         sb.append("<tr id='row_"+String.valueOf(offset+j)+"'>");      // Row header
         sb.append("<td>").append(offset+j).append("</td>");
         for( int i=0; i<cols.length; i++ ) // Columns w/in row
-          sb.append("<td>").append(x0(src_key.vecs()[i],offset+j)).append("</td>");
+          src_key.vecs()[i].atStr(offset+j, sb.append("<td>")).append("</td>");
         sb.append("</tr>");
       }
     }
@@ -197,7 +197,7 @@ public class Inspect2 extends Request2 {
 
   // ---
   // Return a well-formated string for this kind of Vec
-  public static String x0( Vec v, long row ) { return x1(v,row,v.at(row)); }
+//  public static String x0( Vec v, long row ) { return x1(v,row,v.at(row)); }
 
   // Format a row, OR the min/max
   public static String x1( Vec v, long row, double d ) {

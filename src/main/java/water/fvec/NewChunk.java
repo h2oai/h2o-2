@@ -347,13 +347,13 @@ public class NewChunk extends Chunk {
       return chunkD();
     if( fpoint ) {
       if(lemax-lemin < 255 ) // Fits in scaled biased byte?
-        return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
+        return new CNSChunk( bufX(lemin,xmin,CNSChunk.OFF,0),1,(int)lemin,DParseTask.pow10(xmin));
       if(lemax-lemin < 65535 ) { // we use signed 2B short, add -32k to the bias!
         long bias = 32767 + lemin;
-        return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
+        return new CNSChunk( bufX(bias,xmin,CNSChunk.OFF,1),2,(int)bias,DParseTask.pow10(xmin));
       }
       if(lemax - lemin < Integer.MAX_VALUE)
-        return new C4SChunk(bufX(lemin, xmin,C4SChunk.OFF,2),(int)lemin,DParseTask.pow10(xmin));
+        return new CNSChunk(bufX(lemin, xmin,CNSChunk.OFF,2),4,(int)lemin,DParseTask.pow10(xmin));
       return chunkD();
     } // else an integer column
     // Compress column into a byte
@@ -362,7 +362,7 @@ public class NewChunk extends Chunk {
     if( lemax-lemin < 255 ) {         // Span fits in a byte?
       if(0 <= _min && _max < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
-      return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10i(xmin));
+      return new CNSChunk( bufX(lemin,xmin,CNSChunk.OFF,0),1,(int)lemin,DParseTask.pow10i(xmin));
     }
 
     // Compress column into a short
@@ -370,7 +370,7 @@ public class NewChunk extends Chunk {
       if( xmin == 0 && Short.MIN_VALUE < lemin && lemax <= Short.MAX_VALUE ) // Span fits in an unbiased short?
         return new C2Chunk( bufX(0,0,C2Chunk.OFF,1));
       int bias = (int)(lemin-(Short.MIN_VALUE+1));
-      return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),bias,DParseTask.pow10i(xmin));
+      return new CNSChunk( bufX(bias,xmin,CNSChunk.OFF,1),2,bias,DParseTask.pow10i(xmin));
     }
     // Compress column into ints
     if(Integer.MIN_VALUE < _min && _max <= Integer.MAX_VALUE )
