@@ -2,6 +2,7 @@ package water.api;
 
 import hex.Summary2;
 import water.*;
+import water.util.Log;
 import water.util.RString;
 import water.fvec.*;
 import water.util.Utils;
@@ -32,12 +33,6 @@ public class SummaryPage2 extends Request2 {
   @API(help = "Column summaries.")
   Summary2[] summaries;
 
-  @API(help = "Column means.")
-  double[]   means;
-
-  @API(help = "Column names.")
-  String[]   names;
-
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='SummaryPage2.query?source=%$key'>"+content+"</a>");
     rs.replace("key", k.toString());
@@ -51,22 +46,17 @@ public class SummaryPage2 extends Request2 {
       cols = new int[Math.min(source.vecs().length,max_ncols)];
       for(int i = 0; i < cols.length; i++) cols[i] = i;
     }
-    names = new String[cols.length];
-    means = new double[cols.length];
     Vec[] vecs = new Vec[cols.length];
+    String[] names = new String[cols.length];
     for (int i = 0; i < cols.length; i++) {
       vecs[i] = source.vecs()[cols[i]];
       names[i] = source._names[cols[i]];
-      means[i] = vecs[i].mean();
     }
     Frame fr = new Frame(names, vecs);
     summaries = new SummaryTask2().doAll(fr)._summaries;
-    if (summaries != null) {
-      for( Summary2 s2 : summaries ) {
-        s2.percentileValue(0);
-        s2.computeMajorities();
-      }
-    }
+    if (summaries != null)
+      for( Summary2 s2 : summaries ) s2.finishUp();
+
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 
@@ -75,7 +65,7 @@ public class SummaryPage2 extends Request2 {
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++) {
-        (_summaries[i]=new Summary2(_fr.vecs()[i])).add(cs[i]);
+        (_summaries[i]=new Summary2(_fr.vecs()[i], _fr.names()[i])).add(cs[i]);
       }
     }
     @Override public void reduce(SummaryTask2 other) {

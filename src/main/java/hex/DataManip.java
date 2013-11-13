@@ -2,8 +2,6 @@ package hex;
 
 import java.util.*;
 
-import org.apache.commons.lang.ArrayUtils;
-
 import com.google.gson.JsonObject;
 
 import water.*;
@@ -11,6 +9,7 @@ import water.Job.FrameJob;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Utils;
 
 public class DataManip extends FrameJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -55,8 +54,8 @@ public class DataManip extends FrameJob {
       if(source.vecs()[0].length() != vadd[0].length())
         throw new IllegalArgumentException("Data frames must have same number of rows!");
 
-      String[] names = (String[]) ArrayUtils.addAll(source.names(), nadd);
-      Vec[] vecs = (Vec[]) ArrayUtils.addAll(source.vecs(), vadd);
+      String[] names = Utils.append(source.names(), nadd);
+      Vec[] vecs = Utils.append(source.vecs(), vadd);
       Frame fr = new Frame(names, vecs);
       DKV.put(dest(), fr);
     } else if(operation == Operation.rbind) {

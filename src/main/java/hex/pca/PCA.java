@@ -4,8 +4,6 @@ import hex.gram.Gram.GramTask;
 
 import java.util.*;
 
-import org.apache.commons.lang.ArrayUtils;
-
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
 import water.*;
@@ -97,6 +95,7 @@ public class PCA extends ColumnsJob {
     // Note: Singular values ordered in weakly descending order by algorithm
     double[] Sval = mySVD.getSingularValues();
     double[][] eigVec = mySVD.getV().getArray();  // rows = features, cols = principal components
+    assert Sval.length == eigVec.length;
     // DKV.put(EigenvectorMatrix.makeKey(input("source"), destination_key), new EigenvectorMatrix(eigVec));
 
     // Compute standard deviation
@@ -120,21 +119,16 @@ public class PCA extends ColumnsJob {
     Key dataKey = input("source") == null ? null : Key.make(input("source"));
     int ncomp = Math.min(getNumPC(sdev, tolerance), max_pc);
     PCAParams params = new PCAParams(max_pc, tolerance, standardize);
-    assert sdev.length == eigVec.length;
     return new PCAModel(destination_key, dataKey, data, tsk, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
   }
-
-  static class reverseDouble implements Comparator<Double> {
-    @Override public int compare(Double a, Double b) {
-        return b.compareTo(a);
-      }
-    }
 
   public static int getNumPC(double[] sdev, double tol) {
     if(sdev == null) return 0;
     double cutoff = tol*sdev[0];
-    int ind = Arrays.binarySearch(ArrayUtils.toObject(sdev), cutoff, new reverseDouble());
-    return Math.abs(ind+1);
+    for( int i=0; i<sdev.length; i++ )
+      if( sdev[i] < cutoff )
+        return i;
+    return sdev.length;
   }
 
   public static String link(Key src_key, String content) {
@@ -144,9 +138,4 @@ public class PCA extends ColumnsJob {
       rs.replace("content", content);
       return rs.toString();
   }
-
-  /*@Override public float progress() {
-    ChunkProgress progress = UKV.get(progressKey());
-    return (progress != null ? progress.progress() : 0);
-  }*/
 }
