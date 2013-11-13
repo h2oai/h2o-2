@@ -544,6 +544,16 @@ setMethod("exp", "H2OParsedData2", function(x) { h2o.__unop2("exp", x) })
 setMethod("sum", "H2OParsedData2", function(x) { h2o.__unop2("sum", x) })
 setMethod("is.na", "H2OParsedData2", function(x) { h2o.__unop2("is.na", x) })
 
+cut <- function(x, breaks) { UseMethod("cut", x, breaks) }
+setMethod("cut", signature(x="H2OParsedData2", breaks="numeric"), function(x, breaks) {
+  nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
+  expr = paste("cut(", x@key, ",", nums, ")", sep="")
+  res = h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
+    return(res$scalar)
+  new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
+})
+
 table <- function(object) { UseMethod("table", object) }
 setMethod("table", "H2OParsedData2", function(object) { h2o.__unop2("table", object) })
 

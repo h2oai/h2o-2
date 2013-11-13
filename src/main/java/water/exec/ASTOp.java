@@ -2,6 +2,8 @@ package water.exec;
 
 import java.util.*;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import water.*;
 import water.fvec.*;
 
@@ -530,38 +532,82 @@ class ASTCut extends ASTOp {
   @Override ASTOp make() {return new ASTCut();}
   @Override void apply(Env env, int argcnt) {
     if(env.isDbl()) {
-      int nbins = (int) Math.floor(env.popDbl());
+      final int nbins = (int) Math.floor(env.popDbl());
       if(nbins < 2)
         throw new IllegalArgumentException("Number of intervals must be at least 2");
 
       Frame fr = env.popAry();
       String skey = env.key();
-      if(fr.vecs().length != 1 || fr.domains()[0] != null)
-        throw new IllegalArgumentException("First argument must be a numeric vector");
+      if(fr.vecs().length != 1 || fr.vecs()[0].isEnum())
+        throw new IllegalArgumentException("First argument must be a numeric column vector");
 
       final double fmax = fr.vecs()[0].max();
       final double fmin = fr.vecs()[0].min();
       final double width = (fmax - fmin)/nbins;
-      // TODO: Check what R does when width = 0, I think it perturbs constant vecs automatically
+      if(width == 0) throw new IllegalArgumentException("Data vector is constant!");
+      // Note: I think R perturbs constant vecs slightly so it can still bin values
 
-      /* String[][] domains = new String[1][nbins];
-      for(int i = 0; i < nbins; i++)
-        domains[0][i] = "(" + fmin + i*width + "," + fmin + (i+1)*width + "]"; */
+      // Construct domain names from bins intervals
+      String[][] domains = new String[1][nbins];
+      domains[0][0] = "(" + String.valueOf(fmin - 0.001*(fmax-fmin)) + "," + String.valueOf(fmin + width) + "]";
+      for(int i = 1; i < nbins; i++)
+        domains[0][i] = "(" + String.valueOf(fmin + i*width) + "," + String.valueOf(fmin + (i+1)*width) + "]";
 
       Frame fr2 = new MRTask2() {
         @Override public void map(Chunk chk, NewChunk nchk) {
           for(int r = 0; r < chk._len; r++) {
             double x = chk.at0(r);
-            nchk.addNum(Math.floor((x - fmin)/width));
-            // TODO: Add all unique bins as domains (lower_bound, upper_bound]
+            double n = x == fmax ? nbins-1 : Math.floor((x - fmin)/width);
+            nchk.addNum(n);
           }
         }
-      }.doAll(1,fr).outputFrame(fr._names, fr.domains());
-      // }.doAll(1,fr).outputFrame(fr._names, domains);
+      }.doAll(1,fr).outputFrame(fr._names, domains);
       env.subRef(fr, skey);
       env.pop();
       env.push(fr2);
-    } else
-      throw H2O.unimpl();
+    } else if(env.isAry()) {
+      Frame ary = env.popAry();
+      if(ary.vecs().length != 1 || ary.vecs()[0].isEnum())
+        throw new IllegalArgumentException("Second argument must be a numeric column vector");
+      Vec brks = ary.vecs()[0];
+      // TODO: Check that num rows below some cutoff, else this will likely crash
+
+      // Remove duplicates and sort vector of breaks in ascending order
+      SortedSet<Double> temp = new TreeSet<Double>();
+      for(int i = 0; i < brks.length(); i++) temp.add(brks.at(i));
+      int cnt = 0; final double[] cutoffs = new double[temp.size()];
+      for(Double x : temp) { cutoffs[cnt] = x; cnt++; }
+
+      if(cutoffs.length < 2)
+        throw new IllegalArgumentException("Vector of breaks must have at least 2 unique values");
+      Frame fr = env.popAry();
+      String skey = env.key();
+      if(fr.vecs().length != 1 || fr.vecs()[0].isEnum())
+        throw new IllegalArgumentException("First argument must be a numeric column vector");
+
+      // Construct domain names from bin intervals
+      final int nbins = cutoffs.length-1;
+      String[][] domains = new String[1][nbins];
+      for(int i = 0; i < nbins; i++)
+        domains[0][i] = "(" + cutoffs[i] + "," + cutoffs[i+1] + "]";
+
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chk, NewChunk nchk) {
+          for(int r = 0; r < chk._len; r++) {
+            double x = chk.at0(r);
+            if(x <= cutoffs[0] || x > cutoffs[cutoffs.length-1])
+              nchk.addNum(Double.NaN);
+            else {
+              for(int i = 1; i < cutoffs.length; i++) {
+                if(x <= cutoffs[i]) { nchk.addNum(i-1); break; }
+              }
+            }
+          }
+        }
+      }.doAll(1,fr).outputFrame(fr._names, domains);
+      env.subRef(fr, skey);
+      env.pop();
+      env.push(fr2);
+    } else throw H2O.unimpl();
   }
 }
