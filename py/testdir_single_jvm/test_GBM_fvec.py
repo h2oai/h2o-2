@@ -3,7 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs, h2o_gbm
 
 DELETE_KEYS = True
-DO_CLASSIFICATION = True
+# FIX need to get exec workin
+DO_CLASSIFICATION = False
 
 class Basic(unittest.TestCase):
     def tearDown(self):

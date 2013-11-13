@@ -7,9 +7,35 @@ import water.parser.DParseTask;
 public class CX2Chunk extends Chunk {
   static final int OFF = 4;     // _len in 1st 2 bytes
   transient int _last;          // 1-entry cache of last accessed row
-  public CX2Chunk(long[] ls, int xs[], int len, int nzcnt, int nacnt) {
-    _mem = compress(ls,xs,len,nzcnt,nacnt); _start = -1; _len = len;
+  // Dense constructor
+  public CX2Chunk(long[] ls, int xs[], int len2, int nzcnt, int nacnt) {
+    _start = -1; _len = len2;
+    byte[] buf = new byte[(nzcnt+nacnt)*(2+2)+OFF]; // 2 bytes row, 2 bytes val
+    UDP.set4(buf,0,len2);
+    int j = OFF;
+    for( int i=0; i<len2; i++ )
+      if( ls[i] != 0 || xs[i] != 0 )
+        j +=
+          UDP.set2(buf,j  ,(short)i) +
+          UDP.set2(buf,j+2,(short)(ls[i]==0 ? C2Chunk._NA : ls[i]*DParseTask.pow10(xs[i])));
+    assert j==buf.length;
+    _mem = buf;
   }
+  // Sparse constructor
+  public CX2Chunk(long[] ls, int xs[], int len2, int len) {
+    _start = -1; _len = len2;
+    byte[] buf = new byte[len*4+OFF];
+    UDP.set4(buf,0,len2);
+    if( len2 > 65535 ) throw H2O.unimpl();
+    for( int i=0; i<len; i++ ) {
+      if( !(Short.MIN_VALUE <= ls[i] && ls[i] < Short.MAX_VALUE) )
+        throw H2O.unimpl();
+      UDP.set2(buf,(i<<2)+OFF+0,(short)xs[i]);
+      UDP.set2(buf,(i<<2)+OFF+2,(short)ls[i]);
+    }
+    _mem = buf;
+  }
+
   private int at_impl(int idx) {
     int y = _last;              // Read once; racy 1-entry cache
     int x = UDP.get2(_mem,y+0)&0xFFFF;
@@ -61,19 +87,5 @@ public class CX2Chunk extends Chunk {
       if( x==C2Chunk._NA ) nc._xs[row] = Integer.MIN_VALUE; else nc._ls[row] = x;
     }
     return nc;
-  }
-
-  // Compress a NewChunk long array
-  static byte[] compress( long ls[], int xs[], int len, int nzcnt, int nacnt ) {
-    byte[] buf = new byte[(nzcnt+nacnt)*(2+2)+OFF]; // 2 bytes row, 2 bytes val
-    UDP.set4(buf,0,len);
-    int j = OFF;
-    for( int i=0; i<len; i++ )
-      if( ls[i] != 0 || xs[i] != 0 )
-        j +=
-          UDP.set2(buf,j  ,(short)i) +
-          UDP.set2(buf,j+2,(short)(ls[i]==0 ? C2Chunk._NA : ls[i]*DParseTask.pow10(xs[i])));
-    assert j==buf.length;
-    return buf;
   }
 }

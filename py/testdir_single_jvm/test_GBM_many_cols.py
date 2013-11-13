@@ -2,7 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j
 
-DO_PLOT: = False
+DO_PLOT = False
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -14,7 +14,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             # ri = r1.randint(0,1)
             # get some reals, to get a bigger file?
             ri = round(r1.uniform(0,1),2)
-            rowData.append(ri)
+            rowData.append("%0.2f" % ri)
 
         ri = r1.randint(0,1)
         rowData.append(ri)
@@ -37,8 +37,9 @@ class Basic(unittest.TestCase):
             # fails
             # h2o.build_cloud(1,java_heap_MB=100, enable_benchmark_log=True)
             # 400 fails
-            jea = '-Xloggc:log.txt'
-            h2o.build_cloud(1,java_heap_MB=1200, enable_benchmark_log=True, java_extra_args=jea)
+            # jea = '-Xloggc:log.txt'
+            # h2o.build_cloud(1,java_heap_GB=12, enable_benchmark_log=True, java_extra_args=jea)
+            h2o.build_cloud(1,java_heap_GB=12, enable_benchmark_log=True)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
@@ -51,16 +52,18 @@ class Basic(unittest.TestCase):
 
         if localhost:
             tryList = [
-                (100000, 400, 'cA', 300), 
+                # (100000, 400, 'cA', 300), 
+                (100000, 4000, 'cI', 1500), 
                 ]
         else:
             tryList = [
                 # (10000, 10, 'cB', 300), 
                 # (10000, 50, 'cC', 300), 
-                (100000, 100, 'cD', 300), 
-                (100000, 200, 'cE', 300), 
-                (100000, 500, 'cG', 300), 
-                (100000, 1000, 'cI', 300), 
+                (100000, 4000, 'cI', 1500), 
+                # (100000, 1000, 'cI', 300), 
+                # (100000, 500, 'cG', 300), 
+                # (100000, 200, 'cE', 300), 
+                # (100000, 100, 'cD', 300), 
                 ]
 
         ### h2b.browseTheCloud()
@@ -128,7 +131,7 @@ class Basic(unittest.TestCase):
             for max_depth in [5]:
                 params = {
                     'learn_rate': .2,
-                    'nbins': 10, # 1024 fail
+                    'nbins': 100, # 1024 fail
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,

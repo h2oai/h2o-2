@@ -11,9 +11,6 @@ import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.zip.*;
-
-import org.apache.commons.lang.ArrayUtils;
-
 import water.*;
 import water.api.DocGen.FieldDoc;
 import water.parser.ParseDataset;
@@ -386,15 +383,25 @@ public class Utils {
   }
 
   public static <T> T[] append(T[] a, T... b) {
-    return (T[]) ArrayUtils.addAll(a, b);
+    if( a==null ) return b;
+    T[] tmp = Arrays.copyOf(a,a.length+b.length);
+    System.arraycopy(b,0,tmp,a.length,b.length);
+    return tmp;
   }
 
   public static <T> T[] remove(T[] a, int i) {
-    return (T[]) ArrayUtils.remove(a, i);
+    T[] tmp = Arrays.copyOf(a,a.length-1);
+    System.arraycopy(a,i+1,tmp,i,tmp.length-i);
+    return tmp;
+  }
+  public static int[] remove(int[] a, int i) {
+    int[] tmp = Arrays.copyOf(a,a.length-1);
+    System.arraycopy(a,i+1,tmp,i,tmp.length-i);
+    return tmp;
   }
 
   public static <T> T[] subarray(T[] a, int off, int len) {
-    return (T[]) ArrayUtils.subarray(a, off, off + len);
+    return Arrays.copyOfRange(a,off,off+len);
   }
 
   public static void clearFolder(String folder) {
