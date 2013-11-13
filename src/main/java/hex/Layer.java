@@ -12,7 +12,7 @@ import water.fvec.Vec;
 
 /**
  * Neural network layer.
- * 
+ *
  * @author cypof
  */
 public abstract class Layer extends Iced {
@@ -360,6 +360,12 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Softmax extends Output {
+    enum Loss {
+      MeanSquare, CrossEntropy
+    };
+
+    Loss _loss = Loss.CrossEntropy;
+
     abstract int target();
 
     @Override void fprop(boolean training) {
@@ -386,8 +392,9 @@ public abstract class Layer extends Iced {
       for( int o = 0; o < _a.length; o++ ) {
         float t = o == label ? 1 : 0;
         float e = t - _a[o];
-        float g = e; // Cross entropy
-        // float g = e * (1 - _a[o]) * _a[o]; // Square error
+        float g = e;
+        if( _loss == Loss.MeanSquare )
+          g *= (1 - _a[o]) * _a[o];
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
           _in._e[i] += g * _w[w];
@@ -576,7 +583,7 @@ public abstract class Layer extends Iced {
           int w = o * _in._a.length + i;
           if( _in._e != null )
             _in._e[i] += g * _w[w];
-            _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
         }
         _b[o] += _r * g;
       }
@@ -657,6 +664,9 @@ public abstract class Layer extends Iced {
     }
   }
 
+  /**
+   * Pulled from Chris Severs TODO finish merge
+   */
   public static class Maxout extends Layer {
     transient Random _rand;
 

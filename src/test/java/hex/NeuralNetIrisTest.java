@@ -1,5 +1,6 @@
 package hex;
 
+import hex.Layer.Softmax.Loss;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.rng.MersenneTwisterRNG;
@@ -58,11 +59,13 @@ public class NeuralNetIrisTest extends TestUtil {
     Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
     Vec labels = _train.vecs()[_train.vecs().length - 1];
     VecsInput input = new VecsInput(data, null);
+    VecSoftmax output = new VecSoftmax(labels, null);
+    output._loss = Loss.MeanSquare;
     Layer[] ls = new Layer[3];
     ls[0] = input;
     ls[1] = new Layer.Tanh(7);
     ls[1].rate = rate;
-    ls[2] = new VecSoftmax(labels, null);
+    ls[2] = output;
     ls[2].rate = rate;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);

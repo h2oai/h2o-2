@@ -21,11 +21,11 @@ import water.util.Utils;
  */
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
-    // samples.launchers.CloudLocal.launch(1, NeuralNetMnist.class);
+    samples.launchers.CloudLocal.launch(1, NeuralNetMnist.class);
     // samples.launchers.CloudProcess.launch(4, NeuralNetMnist.class);
     // samples.launchers.CloudRemote.launchDefaultIPs(NeuralNetMnist.class);
     // samples.launchers.CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
-    samples.launchers.CloudRemote.launchEC2(NeuralNetMnist.class);
+    // samples.launchers.CloudRemote.launchEC2(NeuralNetMnist.class);
   }
 
   protected Vec[] train, test;
