@@ -17,7 +17,7 @@ public class NewVectorTest extends TestUtil {
     NewChunk nv = new NewChunk(av,0);
     nv._ls = ls;
     nv._xs = xs;
-    nv._len= ls.length;
+    nv._len= nv._len2 = ls.length;
     Chunk bv = nv.compress();
     bv._vec = av.close(new Futures());
     // Compression returns the expected compressed-type:
@@ -87,7 +87,7 @@ public class NewVectorTest extends TestUtil {
     NewChunk nv = new NewChunk(av,0);
     nv._ls = new long[]{0,0,0,0}; // A 4-row chunk
     nv._xs = new int []{0,0,0,0};
-    nv._len= nv._ls.length;
+    nv._len= nv._len2 = nv._ls.length;
     nv.close(0,null);
     Vec vec = av.close(new Futures());
     assertEquals( nv._ls.length, vec.length() );

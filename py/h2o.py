@@ -1448,13 +1448,13 @@ class H2O(object):
                 'ignored_cols_by_name': None,
                 'classification': None,
                 'validation': None,
+                'importance': None, # enable variable importance
                 'ntrees': trees,
                 'max_depth': None,
-                'min_rows': None,
+                'min_rows': None, # how many rows in leaves for stopping condition
                 'nbins': None,
                 'mtries': None,
                 'sample_rate': None,
-                'nodesize': None,
                 'seed': None,
                 }
         else:
@@ -1488,44 +1488,48 @@ class H2O(object):
             print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
-        rf = self.__do_json_request(algo + '.json',
-            timeout=timeoutSecs, params=params_dict)
-        verboseprint("\n%s result:" % algo, dump_json(rf))
+        rf = self.__do_json_request(algo + '.json', timeout=timeoutSecs, params=params_dict)
+        print "\n%s result:" % algo, dump_json(rf)
         
         # noPoll and rfView=False are similar?
         if (noPoll or not rfView) or (beta_features and rfView==False):
             # just return for now
             return rf
 
-        # FIX! will we always get a redirect?
-        if rf['response']['redirect_request'] != algoView:
-            print dump_json(rf)
-            raise Exception('H2O %s redirect is not %s json response precedes.' % (algo, algoView))
+        if beta_features:
+            rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging)
+            return rfViewResult
+
+        else:
+            if rf['response']['redirect_request'] != algoView:
+                print dump_json(rf)
+                raise Exception('H2O %s redirect is not %s json response precedes.' % (algo, algoView))
 
 
-        # FIX! check all of these somehow?
-        # if we model_key was given to rf via **kwargs, remove it, since we're passing 
-        # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
-        data_key  = rf['data_key']
-        model_key = rf['model_key']
-        rfCloud = rf['response']['h2o']
-        # this is important. it's the only accurate value for how many trees RF was asked for.
-        ntree    = rf['ntree']
-        response_variable = rf['response_variable']
+            # FIX! check all of these somehow?
+            # if we model_key was given to rf via **kwargs, remove it, since we're passing 
+            # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
+            data_key  = rf['data_key']
+            model_key = rf['model_key']
+            rfCloud = rf['response']['h2o']
+            # this is important. it's the only accurate value for how many trees RF was asked for.
+            ntree    = rf['ntree']
+            response_variable = rf['response_variable']
 
-        # Since I may not have passed a model_key or ntree to h2o, I have to learn what h2o used
-        # and be sure to pass that to RFView. just update params_dict. If I provided them
-        # I'm trusting h2o to have given them back to me correctly. Maybe fix that at some point.
-        if not beta_features:
+            # Since I may not have passed a model_key or ntree to h2o, I have to learn what h2o used
+            # and be sure to pass that to RFView. just update params_dict. If I provided them
+            # I'm trusting h2o to have given them back to me correctly. Maybe fix that at some point.
             params_dict.update({'ntree': ntree, 'model_key': model_key})
 
-        # data_key/model_key/ntree are all in **params_dict
-        rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs, 
-            retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            noise=noise, benchmarkLogging=benchmarkLogging, print_params=print_params, noPoll=noPoll, 
-            useRFScore=False, **params_dict) 
+            # data_key/model_key/ntree are all in **params_dict
+            rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs, 
+                retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging, print_params=print_params, noPoll=noPoll, 
+                useRFScore=False, **params_dict) 
 
-        return rfViewResult
+            return rfViewResult
 
     def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300, 
             retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,

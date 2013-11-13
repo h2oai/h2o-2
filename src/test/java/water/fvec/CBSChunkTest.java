@@ -30,7 +30,7 @@ public class CBSChunkTest extends TestUtil {
     NewChunk nc = new NewChunk(av,0);
     nc._ls = ls;
     nc._xs = xs;
-    nc._len = ls.length;
+    nc._len = nc._len2 = ls.length;
     nc.type();                  // Compute rollups, including NA
     assertEquals(expNA, nc._naCnt);
     // Compress chunk

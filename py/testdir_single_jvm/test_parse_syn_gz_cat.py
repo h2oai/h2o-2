@@ -17,7 +17,8 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         rowData = []
         for j in range(colCount):
             # r = h2o_util.choice_with_probability([(1.1, .02), (0.1, .98)])
-            r = h2o_util.choice_with_probability([(1, .001), (0, .999)])
+            ones = .00001
+            r = h2o_util.choice_with_probability([(1, ones), (0, 1-ones)])
             # make r a many-digit real, so gzip compresses even more better!
             # rowData.append('%#034.32e' % r)
             rowData.append('%.1f' % r)
@@ -103,8 +104,8 @@ class Basic(unittest.TestCase):
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
             value_size_bytes = inspect['value_size_bytes']
-            h2o_cmd.infoFromInspect(inspect, csvPathname)
-            print "\n" + csvPathname, \
+            h2o_cmd.infoFromInspect(inspect, csvPathnameReplgz)
+            print "\n" + csvPathnameReplgz, \
                 "\n    num_rows:", "{:,}".format(num_rows), \
                 "\n    num_cols:", "{:,}".format(num_cols), \
                 "\n    value_size_bytes:", "{:,}".format(value_size_bytes)

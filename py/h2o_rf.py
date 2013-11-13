@@ -35,33 +35,31 @@ def simpleCheckRF2View(node=None, rfv=None, noPrint=False, **kwargs):
                 raise Exception(w)
 
     # the simple assigns will at least check the key exists
-    cm = rfv['confusion_matrix']
-    header = cm['header'] # list
-    classification_error = cm['classification_error']
-    rows_skipped = cm['rows_skipped']
-    cm_type = cm['type']
-    if not noPrint: 
-        print "classification_error * 100 (pct):", classification_error * 100
-        print "rows_skipped:", rows_skipped
-        print "type:", cm_type
+    rf_model = rfv['drf_model']
+    cm = rf_model['cm']
+    ntrees = rf_model['N']
+    errs = rf_model['errs']
+    N = rf_model['N']
+    varimp = rf_model['varimp']
+    treeStats = rf_model['treeStats']
 
-    used_trees = cm['used_trees']
-    if (used_trees <= 0):
-        raise Exception("used_trees should be >0. used_trees:", used_trees)
+    print "maxDepth:", treeStats['maxDepth']
+    print "maxLeaves:", treeStats['maxLeaves']
+    print "minDepth:", treeStats['minDepth']
+    print "minLeaves:", treeStats['minLeaves']
+    print "meanLeaves:", treeStats['meanLeaves']
+    print "meanDepth:", treeStats['meanDepth']
+    print "errs[0]:", errs[0]
+    print "errs[-1]:", errs[-1]
+    print "errs:", errs
 
-    # if we got the ntree for comparison. Not always there in kwargs though!
-    ntree = kwargs.get('ntree',None)
-    if (ntree is not None and used_trees != ntree):
-        raise Exception("used_trees should == ntree. used_trees:", used_trees)
-
-    scoresList = cm['scores'] # list
     totalScores = 0
     totalRight = 0
     # individual scores can be all 0 if nothing for that output class
     # due to sampling
     classErrorPctList = []
     predictedClassDict = {} # may be missing some? so need a dict?
-    for classIndex,s in enumerate(scoresList):
+    for classIndex,s in enumerate(cm):
         classSum = sum(s)
         if classSum == 0 :
             # why would the number of scores for a class be 0? does RF CM have entries for non-existent classes
@@ -103,7 +101,7 @@ def simpleCheckRF2View(node=None, rfv=None, noPrint=False, **kwargs):
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
 
     h2o.check_sandbox_for_errors()
-    return (classification_error, classErrorPctList, totalScores)
+    return (errs[-1], classErrorPctList, totalScores)
 
 def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
     if not node:

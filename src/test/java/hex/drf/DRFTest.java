@@ -93,16 +93,6 @@ public class DRFTest extends TestUtil {
     //           }
     //         });
 
-  // Parse given file and returns a frame representing the file.
-  // The caller is responsible for frame remove.
-  static Frame parseDs(String fname, Key destKey) {
-    File file = TestUtil.find_test_file(fname);
-    Key fkey = NFSFileVec.make(file);
-    Frame fr = ParseDataset2.parse(destKey,new Key[]{fkey});
-    UKV.remove(fkey);
-    return fr;
-  }
-
   // Put response as the last vector in the frame and return it.
   // Also fill DRF.
   static Vec unifyFrame(DRF drf, Frame fr, PrepData prep) {
@@ -124,7 +114,7 @@ public class DRFTest extends TestUtil {
     Frame pred = null;
     try {
       drf = new DRF();
-      frTrain = drf.source = parseDs(fnametrain, destTrain);
+      frTrain = drf.source = parseFrame(destTrain, fnametrain);
       unifyFrame(drf, frTrain, prep);
       // Configure DRF
       drf.classification = true;
@@ -142,7 +132,7 @@ public class DRFTest extends TestUtil {
       // And compare CMs
       assertCM(expCM, model.cm);
 
-      frTest = fnametest!=null ? parseDs(fnametest, destTest) : null;
+      frTest = fnametest!=null ? parseFrame(destTest, fnametest) : null;
       pred = drf.score(frTest!=null?frTest:drf.source);
     } catch (Throwable t) {
       t.printStackTrace();
