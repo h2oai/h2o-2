@@ -33,12 +33,6 @@ public class SummaryPage2 extends Request2 {
   @API(help = "Column summaries.")
   Summary2[] summaries;
 
-  @API(help = "Column means.")
-  double[]   means;
-
-  @API(help = "Column names.")
-  String[]   names;
-
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='SummaryPage2.query?source=%$key'>"+content+"</a>");
     rs.replace("key", k.toString());
@@ -52,13 +46,11 @@ public class SummaryPage2 extends Request2 {
       cols = new int[Math.min(source.vecs().length,max_ncols)];
       for(int i = 0; i < cols.length; i++) cols[i] = i;
     }
-    names = new String[cols.length];
-    means = new double[cols.length];
     Vec[] vecs = new Vec[cols.length];
+    String[] names = new String[cols.length];
     for (int i = 0; i < cols.length; i++) {
       vecs[i] = source.vecs()[cols[i]];
       names[i] = source._names[cols[i]];
-      means[i] = vecs[i].mean();
     }
     Frame fr = new Frame(names, vecs);
     summaries = new SummaryTask2().doAll(fr)._summaries;
