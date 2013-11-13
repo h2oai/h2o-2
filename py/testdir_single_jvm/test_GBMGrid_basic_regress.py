@@ -104,6 +104,7 @@ class Basic(unittest.TestCase):
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
 
+        # FIX! after gbm grid, have to get the model keys from the json?
         gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
         # errrs from end of list? is that the last tree?
         errsLast = gbmTrainView['gbm_model']['errs'][-1]

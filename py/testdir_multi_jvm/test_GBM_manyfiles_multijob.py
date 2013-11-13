@@ -145,8 +145,9 @@ class Basic(unittest.TestCase):
 
                 # GBM train****************************************
                 trainStart = time.time()
+                # can take 4 times as long with 4 jobs?
                 gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
-                    noPoll=True, timeoutSecs=timeoutSecs, destination_key=modelKey + "_" + str(trial), **kwargs)
+                    noPoll=True, timeoutSecs=timeoutSecs * 4, destination_key=modelKey + "_" + str(trial), **kwargs)
                 trainElapsed = time.time() - trainStart
                 print "GBM dispatch completed in", trainElapsed, "seconds. On dataset: ", trainFilename
 
