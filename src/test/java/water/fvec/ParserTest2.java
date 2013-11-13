@@ -502,6 +502,18 @@ public class ParserTest2 extends TestUtil {
       r1 = Key.make("r1");
       ParseDataset2.parse(r1, new Key[]{k});
       testParsed(r1,exp,k);
+
+      // Build 100 zero's, then 100 mix of -1001 & 1001's (to force a
+      // sparse-short, that finally inflates to a full dense-short).
+      sb = new StringBuilder();
+      for( int i=0; i<100; i++ ) sb.append("0\n");
+      for( int i=0; i<100; i+=2 ) sb.append("-1001\n1001\n");
+      exp = new double[200][1];
+      for( int i=0; i<100; i+=2 ) { exp[i+100][0]=-1001; exp[i+101][0]= 1001; }
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      testParsed(r1,exp,k);
     }
   }
 

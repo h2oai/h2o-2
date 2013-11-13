@@ -86,21 +86,24 @@ public class NewChunk extends Chunk {
   // Fast-path append long data
   void append2( long l, int x ) {
     if( _ls==null||_len >= _ls.length ) append2slow();
-    if( _len2 != _len ) {       // Sparse?
-      if( x!=0 ) {              // NA?  Give it up!
-        long ls[] = MemoryManager.malloc8(_len2+1);
-        for( int i=0; i<_len; i++ ) // Inflate ls to hold values
-          ls[_xs[i]] = _ls[i];
-        _ls = ls;
-        _xs = MemoryManager.malloc4(_len2+1);
-        _len = _len2;           // Not compressed now!
-      } else if( l==0 ) {       // Just One More Zero
-        _len2++; return; 
-      } else x = _len2;         // NZ: set the row over the xs field
+    if( _len2 != _len ) {         // Sparse?
+      if( x!=0 ) cancel_sparse(); // NA?  Give it up!
+      else if( l==0 ) { _len2++; return; } // Just One More Zero
+      else x = _len2;             // NZ: set the row over the xs field
     }
     _ls[_len  ] = l;
     _xs[_len++] = x;  _len2++;
   }
+
+  private void cancel_sparse() {
+    long ls[] = MemoryManager.malloc8(_len2+1);
+    for( int i=0; i<_len; i++ ) // Inflate ls to hold values
+      ls[_xs[i]] = _ls[i];
+    _ls = ls;
+    _xs = MemoryManager.malloc4(_len2+1);
+    _len = _len2;           // Not compressed now!
+  }
+
   // Slow-path append data
   private void append2slowd( ) {
     if( _len > Vec.CHUNK_SZ )
@@ -297,8 +300,8 @@ public class NewChunk extends Chunk {
 
   // Compute a compressed integer buffer
   private byte[] bufX( long bias, int scale, int off, int log ) {
-    if( _len2 != _len ) throw H2O.unimpl();
-    byte[] bs = new byte[(_len<<log)+off];
+    if( _len2 != _len ) cancel_sparse();
+    byte[] bs = new byte[(_len2<<log)+off];
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) {
         switch( log ) {
