@@ -126,7 +126,7 @@ function build_jar() {
     echo "creating jar file... ${JAR_FILE}"
     # include all libraries
     cd ${JAR_ROOT}
-    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v mapr`
+    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v 'hadoop/mapr' | grep -v 'hadoop/hdp'`
     cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
