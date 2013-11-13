@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j, h2o_import
 
 
 print "This will also test set_column_names into GBM, with changing col names per test"
@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
-            ntrees = 100
+            ntrees = 3 
             prefixList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
             # for max_depth in [5,10,20,40]:
             for max_depth in [5,10]:
@@ -140,7 +140,7 @@ class Basic(unittest.TestCase):
 
                 h2o.beta_features = False # can't put with fvec yet
                 hdr_hex_key = prefix + "_hdr.hex"
-                parseTrainResult = h2i.import_parse(bucket=None, path=hdrPathname, schema='put',
+                parseHdrResult = h2i.import_parse(bucket=None, path=hdrPathname, schema='put',
                     header=1, # REQUIRED! otherwise will interpret as enums
                     hex_key=hdr_hex_key, 
                     timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
@@ -193,6 +193,9 @@ class Basic(unittest.TestCase):
                 xList.append(max_depth)
                 eList.append(pctWrongTrain)
                 fList.append(trainElapsed)
+
+                # works if you delete the autoframe
+                ### h2o_import.delete_keys_at_all_nodes(pattern='autoframe')
 
         h2o.beta_features = False
         # just plot the last one
