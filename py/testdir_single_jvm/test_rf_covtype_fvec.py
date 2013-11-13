@@ -123,7 +123,7 @@ class Basic(unittest.TestCase):
             model_key = rfView['model_key']
             ntrees = rfView['ntrees']
 
-            rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
+            rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, noPoll=False, doSimpleCheck=False)
             h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
             # rfView = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
             ## print "rfView:", h2o.dump_json(rfView)

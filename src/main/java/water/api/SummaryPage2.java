@@ -2,6 +2,7 @@ package water.api;
 
 import hex.Summary2;
 import water.*;
+import water.util.Log;
 import water.util.RString;
 import water.fvec.*;
 import water.util.Utils;
@@ -61,12 +62,9 @@ public class SummaryPage2 extends Request2 {
     }
     Frame fr = new Frame(names, vecs);
     summaries = new SummaryTask2().doAll(fr)._summaries;
-    if (summaries != null) {
-      for( Summary2 s2 : summaries ) {
-        s2.percentileValue(0);
-        s2.computeMajorities();
-      }
-    }
+    if (summaries != null)
+      for( Summary2 s2 : summaries ) s2.finishUp();
+
     return new Response(Response.Status.done, this, -1, -1, null);
   }
 
@@ -75,7 +73,7 @@ public class SummaryPage2 extends Request2 {
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++) {
-        (_summaries[i]=new Summary2(_fr.vecs()[i])).add(cs[i]);
+        (_summaries[i]=new Summary2(_fr.vecs()[i], _fr.names()[i])).add(cs[i]);
       }
     }
     @Override public void reduce(SummaryTask2 other) {
