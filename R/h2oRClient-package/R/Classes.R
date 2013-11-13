@@ -626,8 +626,7 @@ setMethod("histograms", "H2OParsedData2", function(object) {
       bins <- NULL
     } else {
       counts <- res$hcnt
-      breaks <- res$hbrk
-#      breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins) + 1)
+      breaks <- seq(res$hstart, by=res$hstep, length.out=length(res$hcnt) + 1)
       bins <- list(counts,breaks)
       names(bins) <- cbind('counts', 'breaks')
     }

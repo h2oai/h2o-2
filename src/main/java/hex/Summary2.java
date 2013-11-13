@@ -86,8 +86,10 @@ public class Summary2 extends Iced {
   @API(help="NAs"         ) public long      nacnt;
   @API(help="Base Stats"  ) public Stats     stats;
 
-  @API(help="bin headers" ) public String[]  hbrk;
-  @API(help="bin counts"  ) public long[]    hcnt;
+  @API(help="histogram start")    public double    hstart;
+  @API(help="histogram bin step") public double    hstep;
+  @API(help="histogram headers" ) public String[]  hbrk;
+  @API(help="histogram bin values") public long[]  hcnt;
 
   public void finishUp() {
     this.type = _vec.isEnum()?"Enum":_vec.isInt()?"Int":"Real";
@@ -98,9 +100,14 @@ public class Summary2 extends Iced {
       double t = _maxs[i]; _maxs[i] = _maxs[_maxs.length-1-i]; _maxs[_maxs.length-1-i] = t;
     }
     this.stats = _vec.isEnum()?new EnumStats(_vec):new NumStats(_vec,_zeros,_mins,_maxs,_pctile);
-    if (_vec.isEnum()) hbrk = _domains;
-    else {
-      hbrk = new String[hcnt.length];
+    if (_vec.isEnum()) {
+      this.hstart = _vec.min();
+      this.hstep = 1;
+      this.hbrk = _domains;
+    } else {
+      this.hstart = _start;
+      this.hstep  = _binsz;
+      this.hbrk = new String[hcnt.length];
       for (int i = 0; i < hbrk.length; i++)
         hbrk[i] = Utils.p2d(binValue(i));
     }
