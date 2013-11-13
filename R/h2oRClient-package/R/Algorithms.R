@@ -15,14 +15,14 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   if( shrinkage < 0 ) stop('shrinkage must be >= 0')
 
   # NB: externally, 1 based indexing; internally, 0 based
-  cols <- paste(args$x_i ,collapse=',')
+  cols <- paste(args$x_i - 1,collapse=',')
 
   if( !(distribution %in% c('multinomial', 'gaussian')) )
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
   classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
 
   destKey = paste("__GBMModel_", UUIDgenerate(), sep="")
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=colnames(data)[y], cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
 
@@ -134,7 +134,6 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
 }
 
 
-#setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1e-5, standardize = TRUE, tweedie.p = ifelse(family=='tweedie', 1.5, as.numeric(NA))) { standardGeneric("h2o.glm") })
 h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsilon=1e-5, standardize=T, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA))) {
   args <- verify_dataxy(data, x, y)
   if( nfolds < 0 ) stop('nfolds must be >= 0')
@@ -146,16 +145,12 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
   if( class(standardize) != 'logical' ) stop('standardize must be T or F')
   if( class(tweedie.p) != 'numeric' ) stop('tweedie.p must be numeric')
 
-
   # NB: externally, 1 based indexing; internally, 0 based
-  cols <- paste(args$x_i - 1, collapse=',')
-  y <- args$y
-
   if((missing(lambda) || length(lambda) == 1) && (missing(alpha) || length(alpha) == 1))
-    h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize)
+    h2o.glm.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize)
   else {
     if(!missing(tweedie.p)) print('Tweedie variance power not available in GLM grid search')
-    h2o.glmgrid.internal(x, y, data, family, nfolds, alpha, lambda)
+    h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda)
   }
 }
 
@@ -167,13 +162,21 @@ h2o.kmeans <- function(data, centers, cols='', iter.max=10){
   if( missing(data) ) stop('must specify data')
   if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
 
-  if(!( class(cols) %in% c('character', 'numeric') )) stop('cols must be character or numeric')
+  if(!( class(cols) %in% c('character', 'numeric', 'integer') )) stop('cols must be character or numeric')
   if( class(iter.max) != 'numeric') stop('iter.max must be numeric')
   if( iter.max < 1 ) stop('iter.max must be >= 1')
   if( missing( centers ) ) stop('must provide centers')
 
   if( class(centers) != 'numeric' || length(centers) > 1 || is.na(centers) || centers < 1 )
     stop('centers must be the number of clusters to create')
+
+  cc <- colnames( data )
+  if( class(cols) == 'character' ){
+    if(any(!(cols %in% cc))) stop(paste(paste(cols[!(cols %in% cc)], collapse=','), 'is not a valid column name'))
+  } else {
+    if(any( cols < 1 | cols > length(cc) )) stop(paste('Out of range explanatory variable', paste(cols[cols < 1 | cols > length(cc)], collapse=',')))
+    cols <- cols - 1
+  }
 
   # Build K-means model
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS, source_key=data@key, k=centers, max_iter=iter.max, cols=paste(cols, sep="", collapse=","))
@@ -345,11 +348,10 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=2147483647, classwt=as.
 
   if( class(ntree) != 'numeric' ) stop('ntree must be a number')
   if( ntree < 1 ) stop('ntree must be >= 1')
-
   if( class(depth) != 'numeric' ) stop('depth must be a number')
   if( depth < 1 ) stop('depth must be >= 1')
-
   if( class(classwt) != 'numeric' ) stop('classwt must be numeric')
+  if( any(!is.na(classwt) & classwt < 0) ) stop('classwt must be >= 0')
 
   # Set randomized model_key
   rand_model_key = paste("__RF_Model__", UUIDgenerate(), sep="")
@@ -359,20 +361,20 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=2147483647, classwt=as.
     myWeights <- rep(NA, length(classwt))
     for(i in 1:length(classwt))
       myWeights[i] = paste(names(classwt)[i], classwt[i], sep="=")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=paste(args$x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","), model_key = rand_model_key)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=paste(args$x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","), model_key = rand_model_key)
   } else {
     myWeights = ""
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=paste(args$x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights="", model_key = rand_model_key)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=paste(args$x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights="", model_key = rand_model_key)
   }
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   destKey = res$destination_key
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=destKey, data_key=data@key, response_variable=y, ntree=ntree, class_weights=paste(myWeights, collapse=","), out_of_bag_error_estimate=1)
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=destKey, data_key=data@key, response_variable=args$y, ntree=ntree, class_weights=paste(myWeights, collapse=","), out_of_bag_error_estimate=1)
 
   result = list()
   result$type = "Classification"
   result$ntree = ntree
   result$oob_err = res$confusion_matrix$classification_error
-  result$x = paste(x, collapse = ", ")
+  result$x = paste(args$x, collapse = ", ")
 
   rf_matrix = cbind(matrix(unlist(res$trees$depth), nrow=3), matrix(unlist(res$trees$leaves), nrow=3))
   rownames(rf_matrix) = c("Min.", "Mean.", "Max.")
