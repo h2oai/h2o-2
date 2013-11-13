@@ -1,5 +1,7 @@
 package samples.launchers;
 
+import java.util.Arrays;
+
 import water.Job;
 import water.deploy.*;
 import water.util.Log;
@@ -12,8 +14,8 @@ import water.util.Log;
  */
 public class CloudRemote {
   public static void main(String[] args) throws Exception {
-    // launchEC2(null);
-    launchIPs(null);
+    launchEC2(null);
+    // launchDefaultIPs(null);
   }
 
   /**
@@ -26,16 +28,21 @@ public class CloudRemote {
     launch(c, job);
   }
 
+  public static void launchDefaultIPs(Class<? extends Job> job) throws Exception {
+    launchIPs(job, //
+        "192.168.1.161", //
+        "192.168.1.162", //
+        "192.168.1.163", //
+        "192.168.1.164");
+  }
+
   /**
    * The current user is assumed to have ssh access (key-pair, no password) to the remote machines.
    * H2O will be deployed to '~/h2o_rsync/'.
    */
-  public static void launchIPs(Class<? extends Job> job) throws Exception {
+  public static void launchIPs(Class<? extends Job> job, String... ips) throws Exception {
     Cloud cloud = new Cloud();
-    cloud.publicIPs.add("192.168.1.161");
-    cloud.publicIPs.add("192.168.1.162");
-    cloud.publicIPs.add("192.168.1.163");
-    cloud.publicIPs.add("192.168.1.164");
+    cloud.publicIPs.addAll(Arrays.asList(ips));
     launch(cloud, job);
   }
 

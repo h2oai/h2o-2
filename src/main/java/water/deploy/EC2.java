@@ -26,10 +26,12 @@ public class EC2 {
 
   public int boxes;
   public String region = "us-east-1";
-  public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
-//  public String image = "ami-3565305c"; // Amazon Linux, x64, Instance-Store, US East N. Virginia
-  public String type = "m1.xlarge";
-  public String securityGroup = "default";
+  //public String image = "ami-3565305c"; // Amazon Linux, x64, Instance-Store, US East N. Virginia
+  //public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
+  public String image = "ami-13b6357a"; // Ubuntu Raring 13.04 amd64 hvm
+  //public String type = "m1.xlarge";
+  public String type = "cc2.8xlarge"; // HPC
+  public String securityGroup = "ssh"; // "default";
   public boolean confirm = true;
 
 //@formatter:off
