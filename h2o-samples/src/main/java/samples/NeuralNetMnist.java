@@ -21,10 +21,11 @@ import water.util.Utils;
  */
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
-    samples.launchers.CloudLocal.launch(1, NeuralNetMnist.class);
+    // samples.launchers.CloudLocal.launch(1, NeuralNetMnist.class);
     // samples.launchers.CloudProcess.launch(4, NeuralNetMnist.class);
-    // samples.launchers.CloudRemote.launchIPs(NeuralNetMnist.class);
+    // samples.launchers.CloudRemote.launchDefaultIPs(NeuralNetMnist.class);
     // samples.launchers.CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
+    samples.launchers.CloudRemote.launchEC2(NeuralNetMnist.class);
   }
 
   protected Vec[] train, test;
@@ -40,11 +41,10 @@ public class NeuralNetMnist extends Job {
     ls[0] = new VecsInput(data, inputStats);
     ls[1] = new Tanh(500);
     ls[2] = new VecSoftmax(labels, outputStats);
-    ls[1].rate = .05f;
-    ls[2].rate = .02f;
     for( int i = 0; i < ls.length; i++ ) {
-      ls[i].l2 = .0001f;
-      ls[i].rate_annealing = 1 / 2e6f;
+      ls[i].rate = .005f;
+      ls[i].rate_annealing = 1 / 1e6f;
+      ls[i].l2 = .001f;
       ls[i].init(ls, i);
     }
     return ls;
@@ -52,7 +52,7 @@ public class NeuralNetMnist extends Job {
 
   protected Trainer startTraining(Layer[] ls) {
     Trainer trainer = new Trainer.MapReduce(ls, 0, self());
-    //Trainer trainer = new Trainer.Direct(ls);
+    // Trainer trainer = new Trainer.Direct(ls, self());
     trainer.start();
     return trainer;
   }

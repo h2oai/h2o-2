@@ -10,6 +10,9 @@ import hex.Layer.Softmax;
 import hex.Layer.VecLinear;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
+
+import java.util.Random;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -42,13 +45,19 @@ public class NeuralNet extends ValidatedJob {
   public int[] hidden = new int[] { 500 };
 
   @API(help = "Learning rate", filter = Default.class)
-  public double rate = .01;
+  public double rate = .005;
+
+  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class)
+  public double rate_annealing = 1 / 1e6;
 
   @API(help = "L2 regularization", filter = Default.class)
-  public double l2 = .0001;
+  public double l2 = .001;
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class)
   public int epochs = 100;
+
+  @API(help = "Seed for the random number generator", filter = Default.class)
+  public long seed = new Random().nextLong();
 
   public NeuralNet() {
     description = DOC_GET;
@@ -87,6 +96,7 @@ public class NeuralNet extends ValidatedJob {
       else
         ls[i + 1] = new Layer.Tanh(hidden[i]);
       ls[i + 1].rate = (float) rate;
+      ls[i + 1].rate_annealing = (float) rate_annealing;
       ls[i + 1].l2 = (float) l2;
     }
     if( classification )
@@ -94,6 +104,7 @@ public class NeuralNet extends ValidatedJob {
     else
       ls[ls.length - 1] = new VecLinear(trainResp, null);
     ls[ls.length - 1].rate = (float) rate;
+    ls[ls.length - 1].rate_annealing = (float) rate_annealing;
     ls[ls.length - 1].l2 = (float) l2;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
@@ -101,20 +112,26 @@ public class NeuralNet extends ValidatedJob {
     final Key sourceKey = Key.make(input("source"));
     final Frame frame = new Frame(_names, train);
     frame.add(_responseName, trainResp);
-    final NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+    final Error[] trainErrors0 = new Error[] { new Error() };
+    final Error[] validErrors0 = validation == null ? null : new Error[] { new Error() };
+
+    NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+    model.training_errors = trainErrors0;
+    model.validation_errors = validErrors0;
     UKV.put(destination_key, model);
 
+    final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
 
     // Use a separate thread for monitoring (blocked most of the time)
     Thread thread = new Thread() {
+      Error[] trainErrors = trainErrors0, validErrors = validErrors0;
+
       @Override public void run() {
         try {
-          Frame[] adapted = null;
           Vec[] valid = null;
           Vec validResp = null;
           if( validation != null ) {
-            adapted = model.adapt(validation, false);
             valid = new Vec[adapted[0].vecs().length];
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
             validResp = _validResponse;
@@ -141,18 +158,25 @@ public class NeuralNet extends ValidatedJob {
           int classes = ls[ls.length - 1].units;
           cm = new long[classes][classes];
         }
-        Error trainE = NeuralNet.eval(ls, train, trainResp, EVAL_ROW_COUNT, valid == null ? cm : null);
-        Error validE = null;
-        if( valid != null )
-          validE = NeuralNet.eval(ls, valid, validResp, EVAL_ROW_COUNT, cm);
-
-        model.processed_samples = trainer.samples();
-        model.train_classification_error = trainE.classification;
-        model.train_mse = trainE.mse;
-        model.validation_classification_error = validE != null ? validE.classification : Double.NaN;
-        model.validation_mse = validE != null ? validE.mse : Double.NaN;
+        Error e = eval(train, trainResp, valid == null ? cm : null);
+        trainErrors = Utils.append(trainErrors, e);
+        if( valid != null ) {
+          e = eval(valid, validResp, cm);
+          validErrors = Utils.append(validErrors, e);
+        }
+        NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
+        model.training_errors = trainErrors;
+        model.validation_errors = validErrors;
         model.confusion_matrix = cm;
         UKV.put(model._selfKey, model);
+      }
+
+      private Error eval(Vec[] vecs, Vec resp, long[][] cm) {
+        Error e = NeuralNet.eval(ls, vecs, resp, EVAL_ROW_COUNT, cm);
+        e.training_samples = trainer.samples();
+        e.evaluation_samples = EVAL_ROW_COUNT;
+        e.training_time_ms = runTimeMs();
+        return e;
       }
     };
     trainer.start();
@@ -161,8 +185,10 @@ public class NeuralNet extends ValidatedJob {
 
   @Override public float progress() {
     NeuralNetModel model = UKV.get(destination_key);
-    if( model != null && source != null && epochs > 0 )
-      return 0.1f + Math.min(1, model.processed_samples / (float) (epochs * source.numRows()));
+    if( model != null && source != null && epochs > 0 ) {
+      Error e = model.training_errors[model.training_errors.length - 1];
+      return 0.1f + Math.min(1, e.evaluation_samples / (float) (epochs * source.numRows()));
+    }
     return 0;
   }
 
@@ -206,12 +232,12 @@ public class NeuralNet extends ValidatedJob {
         if( correct(ls, error, cm) )
           correct++;
       error.classification = (len - (double) correct) / len;
-      error.mse /= len;
+      error.mean_square /= len;
     } else {
       for( input._pos = 0; input._pos < len; input._pos++ )
         error(ls, error);
       error.classification = Double.NaN;
-      error.mse /= len;
+      error.mean_square /= len;
     }
     return error;
   }
@@ -219,36 +245,36 @@ public class NeuralNet extends ValidatedJob {
   private static boolean correct(Layer[] ls, Error error, long[][] confusion) {
     Softmax output = (Softmax) ls[ls.length - 1];
     for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop();
+      ls[i].fprop(false);
     float[] out = ls[ls.length - 1]._a;
-    for( int i = 0; i < out.length; i++ ) {
-      float t = i == output.label() ? 1 : 0;
-      float d = t - out[i];
-      error.mse += d * d;
+    for( int o = 0; o < out.length; o++ ) {
+      float t = o == output.target() ? 1 : 0;
+      float d = t - out[o];
+      error.mean_square += d * d;
     }
     float max = Float.NEGATIVE_INFINITY;
     int idx = -1;
-    for( int i = 0; i < out.length; i++ ) {
-      if( out[i] > max ) {
-        max = out[i];
-        idx = i;
+    for( int o = 0; o < out.length; o++ ) {
+      if( out[o] > max ) {
+        max = out[o];
+        idx = o;
       }
     }
     if( confusion != null )
-      confusion[output.label()][idx]++;
-    return idx == output.label();
+      confusion[output.target()][idx]++;
+    return idx == output.target();
   }
 
   // TODO extract to layer
   private static void error(Layer[] ls, Error error) {
     Linear linear = (Linear) ls[ls.length - 1];
     for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop();
-    float[] out = ls[ls.length - 1]._a;
-    for( int i = 0; i < out.length; i++ ) {
-      float t = linear.value();
-      float d = t - out[i];
-      error.mse += d * d;
+      ls[i].fprop(false);
+    float[] output = ls[ls.length - 1]._a;
+    float[] target = linear.target();
+    for( int o = 0; o < output.length; o++ ) {
+      float d = target[o] - output[o];
+      error.mean_square += d * d;
     }
   }
 
@@ -275,17 +301,40 @@ public class NeuralNet extends ValidatedJob {
   @Override public long speedValue() {
     Value value = DKV.get(dest());
     NeuralNetModel m = value != null ? (NeuralNetModel) value.get() : null;
-    double epochsSoFar = m == null ? 0 : m.processed_samples / (double) source.numRows();
-    long sv = (epochsSoFar <= 0) ? 0 : (long) (runTimeMs() / epochsSoFar);
+    long sv = 0;
+    if( m != null ) {
+      Error[] e = m.training_errors;
+      double epochsSoFar = e[e.length - 1].training_samples / (double) source.numRows();
+      sv = (epochsSoFar <= 0) ? 0 : (long) (e[e.length - 1].training_time_ms / epochsSoFar);
+    }
     return sv;
   }
 
-  public static class Error {
-    double classification;
-    double mse;
+  public static class Error extends Iced {
+    @API(help = "How many rows the algorithm has processed")
+    public long training_samples;
+
+    @API(help = "How long the algorithm ran in ms")
+    public long training_time_ms;
+
+    @API(help = "How many rows were used to evaluate this error")
+    public long evaluation_samples;
+
+    @API(help = "Classification error")
+    public double classification = 1;
+
+    @API(help = "MSE")
+    public double mean_square;
+
+    // TODO
+    //@API(help = "Cross entropy")
+    //public double cross_entropy;
+
+    @API(help = "Layer learning rates")
+    public double[] rates;
 
     @Override public String toString() {
-      return String.format("%.2f", (100 * classification)) + "% (MSE:" + String.format("%.2e", mse) + ")";
+      return String.format("%.2f", (100 * classification)) + "% (MSE:" + String.format("%.2e", mean_square) + ")";
     }
   }
 
@@ -299,23 +348,14 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Layer weights")
     public float[][] weights, biases;
 
-    @API(help = "Classification error on the training set (Estimation)")
-    public double train_classification_error = 1;
+    @API(help = "Errors on the training set")
+    public Error[] training_errors;
 
-    @API(help = "Square distance error on the training set (Estimation)")
-    public double train_mse;
-
-    @API(help = "Classification error on the validation set (Estimation)")
-    public double validation_classification_error = 1;
-
-    @API(help = "Square distance error on the validation set (Estimation)")
-    public double validation_mse;
+    @API(help = "Errors on the validation set")
+    public Error[] validation_errors;
 
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
-
-    @API(help = "How many rows have been processed")
-    public long processed_samples;
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls) {
       super(selfKey, dataKey, fr);
@@ -346,7 +386,7 @@ public class NeuralNet extends ValidatedJob {
       }
       ((Input) clones[0])._pos = rowInChunk;
       for( int i = 0; i < clones.length; i++ )
-        clones[i].fprop();
+        clones[i].fprop(false);
       float[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
       return out;
@@ -373,6 +413,9 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "Model")
+    public NeuralNetModel model;
+
     @Override protected String name() {
       return DOC_GET;
     }
@@ -381,27 +424,50 @@ public class NeuralNet extends ValidatedJob {
       Job nn = job_key == null ? null : Job.findJob(job_key);
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
-        String cmTitle = "Confusion Matrix";
-        String trainC = format(model.train_classification_error);
-        String trainS = "" + model.train_mse;
-        String validC = format(model.validation_classification_error);
-        String validS = "" + model.validation_mse;
-        if( Double.isNaN(model.validation_mse) ) {
-          validS = "N/A";
+        String cmTitle = "Confusion Matrix", trainC, trainS, validC = "", validS = "";
+        Error train = model.training_errors[model.training_errors.length - 1];
+        trainC = format(train.classification);
+        trainS = "" + train.mean_square;
+        if( model.validation_errors != null ) {
+          Error valid = model.validation_errors[model.validation_errors.length - 1];
+          validC = format(valid.classification);
+          validS = "" + valid.mean_square;
+        } else
           cmTitle += " (Training Data)";
-        }
         DocGen.HTML.section(sb, "Training classification error: " + trainC);
         DocGen.HTML.section(sb, "Training mean square error: " + trainS);
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
         DocGen.HTML.section(sb, "Validation mean square error: " + validS);
         if( nn != null ) {
-          long ps = model.processed_samples * 1000 / nn.runTimeMs();
+          long ps = train.training_samples * 1000 / nn.runTimeMs();
           DocGen.HTML.section(sb, "Training speed: " + ps + " samples/s");
         }
         if( model.confusion_matrix != null && model.confusion_matrix.length < 100 ) {
           String[] classes = model.classNames();
           NeuralNetScore.confusion(sb, cmTitle, classes, model.confusion_matrix);
         }
+        DocGen.HTML.section(sb, "Progress");
+        sb.append("<table class='table table-striped table-bordered table-condensed'>");
+        sb.append("<tr>");
+        sb.append("<th>Training Time</th>");
+        sb.append("<th>Training Samples</th>");
+        sb.append("<th>Training MSE</th>");
+        sb.append("<th>Training Classification</th>");
+        sb.append("<th>Validation MSE</th>");
+        sb.append("<th>Validation Classification</th>");
+        sb.append("</tr>");
+        Error[] trains = model.training_errors;
+        for( int i = 0; i < trains.length; ++i ) {
+          sb.append("<tr>");
+          sb.append("<td>" + PrettyPrint.msecs(trains[i].training_time_ms, true) + "</td>");
+          sb.append("<td>" + trains[i].training_samples + "</td>");
+          sb.append("<td>" + trains[i].mean_square + "</td>");
+          sb.append("<td>" + format(trains[i].classification) + "</td>");
+          sb.append("<td>" + model.validation_errors[i].mean_square + "</td>");
+          sb.append("<td>" + format(model.validation_errors[i].classification) + "</td>");
+          sb.append("</tr>");
+        }
+        sb.append("</table>");
       }
       return true;
     }
@@ -438,7 +504,7 @@ public class NeuralNet extends ValidatedJob {
     public double classification_error;
 
     @API(help = "Mean square error")
-    public double mse;
+    public double mean_square_error;
 
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
@@ -460,7 +526,7 @@ public class NeuralNet extends ValidatedJob {
       }
       Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix);
       classification_error = error.classification;
-      mse = error.mse;
+      mean_square_error = error.mean_square;
       if( frs[1] != null )
         frs[1].remove();
       return new Response(Response.Status.done, this, 0, 0, null);
@@ -468,7 +534,7 @@ public class NeuralNet extends ValidatedJob {
 
     @Override public boolean toHTML(StringBuilder sb) {
       DocGen.HTML.section(sb, "Classification error: " + String.format("%5.2f %%", 100 * classification_error));
-      DocGen.HTML.section(sb, "Mean square error: " + mse);
+      DocGen.HTML.section(sb, "Mean square error: " + mean_square_error);
       confusion(sb, "Confusion Matrix", response.domain(), confusion_matrix);
       return true;
     }
