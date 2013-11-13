@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
         kwargs = params.copy()
         timeoutSecs = 1800
         start = time.time()
-        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
         print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
         # no pattern waits for all
         h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
@@ -97,7 +97,7 @@ class Basic(unittest.TestCase):
         kwargs = params.copy()
         timeoutSecs = 1800
         start = time.time()
-        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
         print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
         # no pattern waits for all
         h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
