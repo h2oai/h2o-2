@@ -1,5 +1,5 @@
 # Hack to get around Exec.json always dumping to same Result.hex key
-# TODO: Need better way to manage temporary/intermediate values in calculations! Right now, overwriting may occur silently
+# TODO: Need better way to manage temporary/intermediate values in calculations! Right now, overwriting occurs silently
 pkg.env = new.env()
 pkg.env$result_count = 0
 pkg.env$temp_count = 0
