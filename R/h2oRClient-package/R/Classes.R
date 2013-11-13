@@ -622,7 +622,7 @@ histograms <- function(object) { UseMethod("histograms", object) }
 setMethod("histograms", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
   list.of.bins <- lapply(res$summaries, function(res) {
-    if (res$nrow == 0) {
+    if (res$type == 'Enum') {
       bins <- NULL
     } else {
       counts <- res$hcnt
@@ -637,37 +637,28 @@ setMethod("histograms", "H2OParsedData2", function(object) {
 
 setMethod("summary", "H2OParsedData2", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
-  col.summaries = res$summaries
-  col.names     = res$names
-  col.means     = res$means
-  col.results   = mapply(c, res$summaries, res$names, res$means, SIMPLIFY=FALSE)
-  for (i in 1:length(col.results))
-    names(col.results[[i]])[(length(col.results[[i]]) - 1) : length(col.results[[i]])] <- c('name', 'mean')
-  result = NULL
-  
-  result <- sapply(col.results, function(res) {
-    if(res$type != 'Enum') { # numeric column
-      if(is.null(res$stats$mins) || length(res$stats$mins) == 0) res$stats$mins = NaN
-      if(is.null(res$stats$maxs) || length(res$stats$maxs) == 0) res$stats$maxs = NaN
-      if(is.null(res$stats$pctile))
-        params = format(rep(round(as.numeric(col.means[[i]]), 3), 6), nsmall = 3)
+  cols <- sapply(res$summaries, function(col) {
+    if(col$type != 'Enum') { # numeric column
+      if(is.null(col$stats$mins) || length(col$stats$mins) == 0) col$stats$mins = NaN
+      if(is.null(col$stats$maxs) || length(col$stats$maxs) == 0) col$stats$maxs = NaN
+      if(is.null(col$stats$pctile))
+        params = format(rep(round(as.numeric(col$stats$mean), 3), 6), nsmall = 3)
       else
         params = format(round(as.numeric(c(
-          res$stats$mins[1],
-          res$stats$pctile[4],
-          res$stats$pctile[6],
-          res$mean,
-          res$stats$pctile[8],
-          res$stats$maxs[1])), 3), nsmall = 3)
+          col$stats$mins[1],
+          col$stats$pctile[4],
+          col$stats$pctile[6],
+          col$stats$mean,
+          col$stats$pctile[8],
+          col$stats$maxs[1])), 3), nsmall = 3)
       result = c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
                  paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
                  paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")) 
     }
     else {
-      top.ix <- sort.int(res$hcnt, decreasing=T, index.return=T)$ix[1:6]
-      domains <- res$hbrk[top.ix]
-      counts <- res$hcnt[top.ix]
-      
+      top.ix <- sort.int(col$hcnt, decreasing=T, index.return=T)$ix[1:6]
+      domains <- col$hbrk[top.ix]
+      counts <- col$hcnt[top.ix]
       width <- max(cbind(nchar(domains), nchar(counts)))
       result <- paste(domains,
                       mapply(function(x, y) { paste(rep(' ',max(width + 1 - nchar(x) - nchar(y),0)), collapse='') }, domains, counts),
@@ -680,9 +671,9 @@ setMethod("summary", "H2OParsedData2", function(object) {
     }
   })
   
-  result = as.table(result)
+  result = as.table(cols)
   rownames(result) <- rep("", 6)
-  colnames(result) <- col.names
+  colnames(result) <- sapply(res$summaries, function(col) col$colname)
   result
 })
 

@@ -27,6 +27,7 @@ public class Summary2 extends Iced {
   public static final int NMAX = 5;
   // INPUTS
   final transient Vec      _vec;
+  final transient long     _nrow;
   final transient double   _min;
   final transient double   _max;
   final transient double[] _mins;
@@ -82,8 +83,7 @@ public class Summary2 extends Iced {
   @API(help="name"        ) public String    colname;
   @API(help="type"        ) public String    type;
   // Basic stats
-  @API(help="#rows"       ) public long      nrow;
-  @API(help="NAs"         ) public long      naCnt;
+  @API(help="NAs"         ) public long      nacnt;
   @API(help="Base Stats"  ) public Stats     stats;
 
   @API(help="bin headers" ) public String[]  hbrk;
@@ -91,7 +91,7 @@ public class Summary2 extends Iced {
 
   public void finishUp() {
     this.type = _vec.isEnum()?"Enum":_vec.isInt()?"Int":"Real";
-    this.naCnt = _vec.naCnt();
+    this.nacnt = _vec.naCnt();
     computePercentiles();
     computeMajorities();
     for (int i = 0; i < _maxs.length>>>1; i++) {
@@ -110,7 +110,7 @@ public class Summary2 extends Iced {
     this.colname = name;
     this._vec    = vec;
     this._domains = _vec.isEnum() ? vec.domain() : null;
-    this.nrow = vec.length() - vec.naCnt();
+    this._nrow = vec.length() - vec.naCnt();
     if ( !_vec.isEnum() ) {
       this._mins = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
       this._maxs = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
@@ -131,7 +131,7 @@ public class Summary2 extends Iced {
       // guard against improper parse (date type) or zero c._sigma
       double sigma = vec.sigma();
       if (Double.isNaN(sigma)) sigma = 0; 
-      double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(nrow));
+      double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(_nrow));
       double d = Math.pow(10, Math.floor(Math.log10(b)));
       if (b > 20*d/3)
         d *= 10;
@@ -207,7 +207,7 @@ public class Summary2 extends Iced {
     int k = 0;
     long s = 0;
     for(int j = 0; j < DEFAULT_PERCENTILES.length; ++j) {
-      final double s1 = DEFAULT_PERCENTILES[j]*nrow;
+      final double s1 = DEFAULT_PERCENTILES[j]*_nrow;
       long bc = 0;
       while(s1 > s+(bc = hcnt[k])){
         s  += bc;
@@ -255,7 +255,7 @@ public class Summary2 extends Iced {
   public void toHTML( Vec vec, String cname, StringBuilder sb ) {
     sb.append("<div class='table' id='col_" + cname + "' style='width:90%;heigth:90%;border-top-style:solid;'>" +
     "<div class='alert-success'><h4>Column: " + cname + " (type: " + type + ")</h4></div>\n");
-    if ( nrow == 0 ) {
+    if ( _nrow == 0 ) {
       sb.append("<div class='alert'>Empty column, no summary!</div></div>\n");
       return;
     }
@@ -265,9 +265,9 @@ public class Summary2 extends Iced {
       sb.append("<div style='width:100%;'><table class='table-bordered'>");
       sb.append("<tr><th colspan='"+20+"' style='text-align:center;'>Base Stats</th></tr>");
       sb.append("<tr>");
+      sb.append("<th>NAs</th>  <td>" + nacnt + "</td>");
       sb.append("<th>mean</th><td>" + Utils.p2d(stats.mean)+"</td>");
       sb.append("<th>sd</th><td>" + Utils.p2d(stats.sd) + "</td>");
-      sb.append("<th>NAs</th>  <td>" + naCnt + "</td>");
       sb.append("<th>zeros</th><td>" + stats.zeros + "</td>");
       sb.append("<th>min[" + stats.mins.length + "]</th>");
       for( double min : stats.mins ) {
@@ -285,7 +285,7 @@ public class Summary2 extends Iced {
     } else {                    // Enums
       sb.append("<div style='width:100%'><table class='table-bordered'>");
       sb.append("<tr><th colspan='" + 4 + "' style='text-align:center;'>Base Stats</th></tr>");
-      sb.append("<tr><th>NAs</th>  <td>" + naCnt + "</td>");
+      sb.append("<tr><th>NAs</th>  <td>" + nacnt + "</td>");
       sb.append("<th>cardinality</th>  <td>" + vec.domain().length + "</td></tr>");
       sb.append("</table></div>");
     }
@@ -305,7 +305,7 @@ public class Summary2 extends Iced {
     sb.append("</tr>");
     sb.append("<tr>");
     for( int i=0; i<len; i++ )
-      sb.append(String.format("<td>%.1f%%</td>",(100.0*hcnt[i]/nrow)));
+      sb.append(String.format("<td>%.1f%%</td>",(100.0*hcnt[i]/_nrow)));
     sb.append("</tr>");
     if( hcnt.length >= MAX_HISTO_BINS_DISPLAYED )
       sb.append("<div class='alert'>Histogram for this column was too big and was truncated to 1000 values!</div>");
