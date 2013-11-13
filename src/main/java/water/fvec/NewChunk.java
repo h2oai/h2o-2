@@ -233,7 +233,7 @@ public class NewChunk extends Chunk {
 
     // Boolean column?
     if (max == 1 && min == 0 && xmin == 0) {
-      if( _nzCnt*32 < _len2 && _naCnt==0 )    // Very sparse?
+      if( _nzCnt*32 < _len2 && _naCnt==0 && _len2 < 65535 ) // Very sparse? (and not too big?)
         if( _len2 == _len ) return new CX0Chunk(_ls,_len2,_nzCnt); // Dense  constructor
         else                return new CX0Chunk(_xs,_len2,_len  ); // Sparse constructor
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;   // Bit-vector

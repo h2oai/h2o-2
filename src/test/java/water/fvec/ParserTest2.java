@@ -488,6 +488,20 @@ public class ParserTest2 extends TestUtil {
       exp[100][0] = 0;          // Truncated final line
       exp[100][1] = Double.NaN;
       testParsed(r1,exp,k);
+
+      // Build 100000 zero's and some one's
+      sb = new StringBuilder();
+      exp = new double[100100][1];
+      for( int i=0; i<100; i++ ) {
+        for( int j=0; j<1000; j++ )
+          sb.append("0\n");
+        sb.append("1\n");
+        exp[i*1001+1000][0]=1;
+      }
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      testParsed(r1,exp,k);
     }
   }
 
