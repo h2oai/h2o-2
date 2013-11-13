@@ -338,7 +338,8 @@ public class NewChunk extends Chunk {
   // Compute compressed boolean buffer
   private byte[] bufB(int bpv) {
     assert bpv == 1 || bpv == 2 : "Only bit vectors with/without NA are supported";
-    int clen  = CBSChunk.OFF + CBSChunk.clen(_len2, bpv);
+    final int off = CBSChunk.OFF;
+    int clen  = off + CBSChunk.clen(_len2, bpv);
     byte bs[] = new byte[clen];
     // Save the gap = number of unfilled bits and bpv value
     bs[0] = (byte) (((_len2*bpv)&7)==0 ? 0 : (8-((_len2*bpv)&7)));
@@ -348,7 +349,7 @@ public class NewChunk extends Chunk {
       assert bpv==1;            // No NAs
       for (int i=0; i<_len; i++) {
         int row = _xs[i];
-        CBSChunk.write1b(bs[row>>3],(byte)1,row&7);
+        bs[(row>>3)+off] = CBSChunk.write1b(bs[(row>>3)+off],(byte)1,row&7);
       }
       return bs;
     }
