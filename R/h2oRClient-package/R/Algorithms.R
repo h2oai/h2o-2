@@ -3,8 +3,7 @@
 #----------------------- Generalized Boosting Machines (GBM) -----------------------#
 #TODO: dont support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02) {
-  if( missing(data) ) stop('must specify data')
-  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+  args <- verify_dataxy(data, x, y)
 
   if( class(n.trees) != "numeric" ) stop('n.trees must be numeric')
   if( n.trees < 1 ) stop('n.trees must be >=1')
@@ -16,24 +15,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   if( shrinkage < 0 ) stop('shrinkage must be >= 0')
 
   # NB: externally, 1 based indexing; internally, 0 based
-  if( missing(x) | missing(y) ) stop('must specify x and y')
-  if(!( class(x) %in% c('numeric', 'character', 'integer') )) stop('x must be column names or indices')
-  if(!( class(y) %in% c('numeric', 'character') )) stop('y must be a column name or index')
-  cc <- colnames( data )
-  if( class(x) == 'character' ){
-    if(any(!(x %in% cc))) stop(paste(paste(x[!(x %in% cc)], collapse=','), 'is not a valid column name'))
-    x <- match(x, cc)
-  }
-  if(any( x < 1 | x > ncol(data))) stop(paste('Out of range explanatory variable', paste(x[x < 1 | x > ncol(data)], collapse=',')))
-
-  if( class(y) == 'character' ){
-    if(!( y %in% cc )) stop(paste(y, 'is not a column name'))
-    y <- which(y == cc)
-  }
-  if( y < 1 || y > length(cc) ) stop(paste('Response variable index', y, 'is out of range'))
-  if( y %in% x ) stop(paste(colnames(data)[y], 'is both an explanatory and dependent variable'))
-  x <- x - 1
-  cols=paste(x,collapse=',')
+  cols <- paste(args$x_i ,collapse=',')
 
   if( !(distribution %in% c('multinomial', 'gaussian')) )
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
@@ -59,6 +41,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
 # Internally called GLM to allow games with method dispatch
+# x should be TODO; y should be TODO
 h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
   if(family == 'tweedie' && (tweedie.p < 1 || tweedie.p > 2 )) stop('tweedie.p must be in (1,2)')
   if(family != "tweedie" && !(missing(tweedie.p) || is.na(tweedie.p) ) ) stop('tweedie.p may only be set for family tweedie')
@@ -153,12 +136,7 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
 
 #setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1e-5, standardize = TRUE, tweedie.p = ifelse(family=='tweedie', 1.5, as.numeric(NA))) { standardGeneric("h2o.glm") })
 h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsilon=1e-5, standardize=T, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA))) {
-  if( missing(x) | missing(y) ) stop('must specify x and y')
-  if(!( class(x) %in% c('numeric', 'character', 'integer') )) stop('x must be column names or indices')
-  if(!( class(y) %in% c('numeric', 'character') )) stop('y must be a column name or index')
-  if( missing(data) ) stop('must specify data')
-  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
-
+  args <- verify_dataxy(data, x, y)
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if( alpha < 0 ) stop('alpha must be >= 0')
   if( lambda < 0 ) stop('lambda must be >= 0')
@@ -168,24 +146,10 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
   if( class(standardize) != 'logical' ) stop('standardize must be T or F')
   if( class(tweedie.p) != 'numeric' ) stop('tweedie.p must be numeric')
 
-  cc <- colnames(data)
-  if( class(x) == 'character' ){
-    if(any(!(x %in% cc))) stop(paste(paste(x[!(x %in% cc)], collapse=','), 'is not a valid column name'))
-    x <- match(x, cc)
-  }
-  if(any( x < 1 | x > length(cc))) stop(paste('Out of range explanatory variable', paste(x[x < 1 | x > length(cc)], collapse=',')))
-
-  if( class(y) == 'numeric' ){
-    if( y < 1 | y > ncol(data) ) stop('y is out of range')
-    y <- which(cc==y)
-  }
-  if(!y %in% cc) stop(paste(y, 'is not a valid column name'))
-  if(y %in% x) stop(paste(y, 'is both an explanatory and dependent variable'))
-
 
   # NB: externally, 1 based indexing; internally, 0 based
-  x <- x - 1
-  cols=paste(x,collapse=',')
+  cols <- paste(args$x_i - 1, collapse=',')
+  y <- args$y
 
   if((missing(lambda) || length(lambda) == 1) && (missing(alpha) || length(alpha) == 1))
     h2o.glm.internal(x, y, data, family, nfolds, alpha, lambda, 1, epsilon, standardize)
@@ -253,11 +217,7 @@ h2o.kmeans <- function(data, centers, cols='', iter.max=10){
 
 #------------------------------- Neural Network ----------------------------------#
 h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500, rate=0.01, regularization=1e-4, epoch=100, validation) {
-  if( missing(x) | missing(y) ) stop('must specify x and y')
-  if(!( class(x) %in% c('numeric', 'character') )) stop('x must be column names or indices')
-  if(!( class(y) %in% c('numeric', 'character') )) stop('y must be a column name or index')
-  if( missing(data) ) stop('must specify data')
-  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+  args <- verify_dataxy(data, x, y)
 
   if( class(classification) != 'logical' ) stop('classification must be true or false')
   if( class(activation) != 'character') stop('activation must be [Tanh, Rectifier]')
@@ -271,15 +231,8 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
   if( class(epoch) != 'numeric') stop('epoch must be numeric')
   if( epoch < 0 ) stop('epoch must be >= 1')
 
-  if(missing(x)) x = setdiff(colnames(data), y)
-  #ELH TODO
-
-  if (length(x) < 1) stop("Neural Net requires at least one explanatory variable")
-  if(any( x < 1 | x > ncol(data))) stop(paste('Out of range explanatory variable', paste(x[x < 1 | x > ncol(data)], collapse=',')))
-  if( y < 1 || y > ncol(data) ) stop(paste('Response variable index', y, 'is out of range'))
-  if( y %in% x ) stop(paste(colnames(data)[y], 'is both an explanatory and dependent variable'))
-  x <- x - 1
-  cols=paste(x,collapse=',')
+  cols <- paste(args$x_i - 1, collapse=',')
+  y <- args$y
 
   if( !(activation %in% c('Tanh', 'Rectifier')) )
     stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier] are supported"))
@@ -359,12 +312,7 @@ h2o.prcomp <- function(data, tol=0, standardize=T, retx=F) {
 
 #setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
 h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5, tweedie.p=ifelse(family=="tweedie", 0, NA)) {
-  if( missing(x) ) stop('must specify x')
-  if(!( class(x) %in% c('numeric', 'character') )) stop('x must be a vector of column names or indices')
-  if( missing(y) ) stop('must specify y')
-  if(!( class(y) %in% c('numeric', 'character') )) stop('y must be a column name or index')
-  if( missing(data) ) stop('must specify data')
-  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+  args <- verify_dataxy(data, x, y)
 
   if( class(nfolds) != 'numeric' ) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
@@ -375,29 +323,16 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
   if( class(epsilon) != 'numeric' ) stop('epsilon must be numeric')
   if( epsilon < 0 ) stop('epsilon must be >= 0')
 
-  cc <- colnames(data)
-  if( class(y) == 'numeric' ){
-    if( y < 1 || y > length(cc) ) stop ('y is out of range of the columns')
-    y <- cc[y]
-  }
-  if(!y %in% cc) stop(paste(y, "is not a valid column name"))
-  if(y %in% x) stop(paste(y, "is both an explanatory and dependent variable"))
-
-  if( class(x) == 'numeric' ){
-    if( any( x < 1 | x > length(cc) ) ) stop( paste(x[ x < 1 | x > length(cc)], sep=','), 'is out of range of the columns' )
-    x <- cc[ x ]
-  }
-  if( any(!x %in% cc) ) stop("Invalid column names: ", paste(x[which(!x %in% cc)], collapse=", "))
+  y <- args$y
   if( ncomp < 1 || ncomp > length(cc) ) stop("Number of components must be between 1 and ", ncol(data))
 
-  x_ignore <- which(!cc %in% x)-1
-  if(length(x_ignore) == 0) x_ignore <- ""
+  x_ignore <- args$x_ignore
+  x_ignore <- ifelse( x_ignore=='', y, c(x_ignore,y) )
   myModel <- h2o.prcomp.internal(data=data, x_ignore=x_ignore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
   myScore <- h2o.predict(myModel)
 
-  myYCol <- which(myCol == y)-1
   rand_cbind_key = paste("__PCABind_", UUIDgenerate(), sep="")
-  res <- h2o.__remoteSend(data@h2o, h2o.__PAGE_FVEXEC, source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=myYCol, destination_key=rand_cbind_key, operation="cbind")
+  res <- h2o.__remoteSend(data@h2o, h2o.__PAGE_FVEXEC, source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=args$y_i - 1, destination_key=rand_cbind_key, operation="cbind")
   myGLMData <- new("H2OParsedData", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
   h2o.glm.FV(paste("PC", 0:(ncomp-1), sep=""), y, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
 }
@@ -406,12 +341,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
 #setGeneric("h2o.randomForest", function(x, y, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA)) { standardGeneric("h2o.randomForest") })
 # x,y <- character for this one
 h2o.randomForest <- function(x, y, data, ntree=50, depth=2147483647, classwt=as.numeric(NA)) {
-  if( missing(data) ) stop('must specify data')
-  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
-  if( missing(x) ) stop('must specify x')
-  if(!( class(x) %in% c('numeric', 'character', 'integer') )) stop('x must be a vector of column names or indices')
-  if( missing(y) ) stop('must specify y')
-  if(!( class(y) %in% c('numeric', 'character') )) stop('y must be a column name or index')
+  args <- verify_dataxy(data, x, y)
 
   if( class(ntree) != 'numeric' ) stop('ntree must be a number')
   if( ntree < 1 ) stop('ntree must be >= 1')
@@ -419,37 +349,20 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=2147483647, classwt=as.
   if( class(depth) != 'numeric' ) stop('depth must be a number')
   if( depth < 1 ) stop('depth must be >= 1')
 
-  cc <- colnames(data)
-  if( class(y) == 'numeric' ){
-    if( y < 1 || y > length(cc) ) stop ('y is out of range of the columns')
-    y <- cc[y]
-  }
-  if(!y %in% cc) stop(paste(y, "is not a valid column name"))
-  if(y %in% x) stop(paste(y, "is both an explanatory and dependent variable"))
-
-  if( class(x) == 'numeric' ){
-    if( any( x < 1 | x > length(cc) ) ) stop( paste(x[ x < 1 | x > length(cc)], sep=','), 'is out of range of the columns' )
-    x <- cc[ x ]
-  }
-  if( any(!x %in% cc) ) stop("Invalid column names: ", paste(x[which(!x %in% cc)], collapse=", "))
-
   if( class(classwt) != 'numeric' ) stop('classwt must be numeric')
 
   # Set randomized model_key
   rand_model_key = paste("__RF_Model__", UUIDgenerate(), sep="")
-
-  x_ignore <- setdiff( x, cc )
-  if(length(x_ignore) == 0) x_ignore <- ""
 
   # If no class weights, then default to all 1.0
   if( !any(is.na(classwt)) ){
     myWeights <- rep(NA, length(classwt))
     for(i in 1:length(classwt))
       myWeights[i] = paste(names(classwt)[i], classwt[i], sep="=")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=paste(x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","), model_key = rand_model_key)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=paste(args$x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights=paste(myWeights, collapse=","), model_key = rand_model_key)
   } else {
     myWeights = ""
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=paste(x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights="", model_key = rand_model_key)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=y, ignore=paste(args$x_ignore, collapse=","), ntree=ntree, depth=depth, class_weights="", model_key = rand_model_key)
   }
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   destKey = res$destination_key
@@ -659,4 +572,40 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10) {
   dimnames(result$centers) = list(seq(1,centers), feat)
   result$withinss = res$cluster_variances    # TODO: Not sure if this is within or between SS?
   new("H2OKMeansModel", key=res$'_selfKey', data=data, model=result)
+}
+
+
+# used to verify data, x, y and turn into the appropriate things
+verify_dataxy <- function(data, x, y){
+  if( missing(data) ) stop('must specify data')
+  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+
+  if( missing(x) ) stop('must specify x')
+  if( missing(y) ) stop('must specify y')
+  if(!( class(x) %in% c('numeric', 'character', 'integer') )) stop('x must be column names or indices')
+  if(!( class(y) %in% c('numeric', 'character', 'integer') )) stop('y must be a column name or index')
+
+  cc <- colnames( data )
+  if( class(x) == 'character' ){
+    if(any(!(x %in% cc))) stop(paste(paste(x[!(x %in% cc)], collapse=','), 'is not a valid column name'))
+    x_i <- match(x, cc)
+  } else {
+    if(any( x < 1 | x > length(cc) )) stop(paste('Out of range explanatory variable', paste(x[x < 1 | x > length(cc)], collapse=',')))
+    x_i <- x
+    x <- cc[ x_i ]
+  }
+
+  if( class(y) == 'character' ){
+    if(!( y %in% cc )) stop(paste(y, 'is not a column name'))
+    y_i <- which(y == cc)
+  } else {
+    if( y < 1 || y > length(cc) ) stop(paste('Response variable index', y, 'is out of range'))
+    y_i <- y
+    y <- cc[ y ]
+  }
+  if( y %in% x ) stop(paste(colnames(data)[y], 'is both an explanatory and dependent variable'))
+
+  x_ignore <- setdiff(setdiff( cc, x ), y)
+  if( length(x_ignore) == 0 ) x_ignore <- ''
+  list(x=x, y=y, x_i=x_i, x_ignore=x_ignore, y_i=y_i)
 }
