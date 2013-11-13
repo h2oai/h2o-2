@@ -463,8 +463,11 @@ public class NeuralNet extends ValidatedJob {
           sb.append("<td>" + trains[i].training_samples + "</td>");
           sb.append("<td>" + trains[i].mean_square + "</td>");
           sb.append("<td>" + format(trains[i].classification) + "</td>");
-          sb.append("<td>" + model.validation_errors[i].mean_square + "</td>");
-          sb.append("<td>" + format(model.validation_errors[i].classification) + "</td>");
+          if( model.validation_errors != null ) {
+            sb.append("<td>" + model.validation_errors[i].mean_square + "</td>");
+            sb.append("<td>" + format(model.validation_errors[i].classification) + "</td>");
+          } else
+            sb.append("<td></td><td></td>");
           sb.append("</tr>");
         }
         sb.append("</table>");

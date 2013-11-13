@@ -1654,6 +1654,17 @@ class H2O(object):
         rfView = random_forest_view(useRFScore=True, *args, **kwargs)
         return rfView
 
+    def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'source': None,
+            'target': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'set_column_names', print_params)
+        a = self.__do_json_request('SetColumnNames.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nset_column_names result:", dump_json(a))
+        return a
+
     def gbm_view(self,model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             '_modelKey': model_key
