@@ -2,8 +2,6 @@ package water.exec;
 
 import java.util.*;
 
-import org.apache.commons.lang.ArrayUtils;
-
 import water.*;
 import water.fvec.*;
 
