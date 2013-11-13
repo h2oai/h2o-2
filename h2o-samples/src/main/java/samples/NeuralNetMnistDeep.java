@@ -17,7 +17,8 @@ public class NeuralNetMnistDeep extends NeuralNetMnist {
     // samples.launchers.CloudConnect.launch("localhost:54321", NeuralNetMnistDeep.class);
     //samples.launchers.CloudRemote.launchIPs(NeuralNetMnistDeep.class, "192.168.1.163");
     //samples.launchers.CloudRemote.launchIPs(NeuralNetMnistDeep.class, "192.168.1.162");
-    samples.launchers.CloudRemote.launchDefaultIPs(NeuralNetMnistDeep.class);
+    //samples.launchers.CloudRemote.launchDefaultIPs(NeuralNetMnistDeep.class);
+    samples.launchers.CloudRemote.launchEC2(NeuralNetMnistDeep.class);
   }
 
   @Override protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
@@ -79,7 +80,7 @@ public class NeuralNetMnistDeep extends NeuralNetMnist {
     for( int i = 0; i < pre.length; i++ )
       pre[i].init(pre, i, false, 0);
 
-    Trainer.Direct trainer = new Trainer.Direct(pre, this);
+    Trainer.Direct trainer = new Trainer.Direct(pre, self());
     trainer.samples = 1000;
     trainer.run();
   }

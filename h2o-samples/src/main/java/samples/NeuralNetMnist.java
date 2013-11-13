@@ -51,7 +51,7 @@ public class NeuralNetMnist extends Job {
 
   protected Trainer startTraining(Layer[] ls) {
     Trainer trainer = new Trainer.MapReduce(ls, 0, self());
-    //Trainer trainer = new Trainer.Direct(ls);
+    // Trainer trainer = new Trainer.Direct(ls, self());
     trainer.start();
     return trainer;
   }

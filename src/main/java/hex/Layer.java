@@ -532,8 +532,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step) {
       super.init(ls, index, weights, step);
       if( weights ) {
-        // deeplearning.net tutorial (TODO special ones for rectifier & softmax?)
-        // TODO only subset of inputs?
+        // C.f. deeplearning.net tutorial
         Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
         float min = (float) -Math.sqrt(6. / (_in.units + units));
         float max = (float) +Math.sqrt(6. / (_in.units + units));
@@ -577,7 +576,7 @@ public abstract class Layer extends Iced {
           int w = o * _in._a.length + i;
           if( _in._e != null )
             _in._e[i] += g * _w[w];
-          _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
+            _w[w] += _r * (g * _in._a[i] - _w[w] * l2);
         }
         _b[o] += _r * g;
       }
@@ -585,7 +584,7 @@ public abstract class Layer extends Iced {
   }
 
   public static class TanhDropout extends Tanh {
-    transient Random rand;
+    transient Random _rand;
 
     TanhDropout() {
     }
@@ -597,13 +596,13 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step) {
       super.init(ls, index, weights, step);
       //rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      rand = new Random();
+      _rand = new Random();
     }
 
     @Override void fprop(boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        if( !training || rand.nextFloat() > dropout ) {
+        if( !training || _rand.nextFloat() > dropout ) {
           for( int i = 0; i < _in._a.length; i++ )
             _a[o] += _w[o * _in._a.length + i] * _in._a[i];
           _a[o] += _b[o];
@@ -659,28 +658,27 @@ public abstract class Layer extends Iced {
   }
 
   public static class Maxout extends Layer {
+    transient Random _rand;
+
     Maxout() {
     }
 
-    private float prob;
-    private Random rand;
-    private float scale;
-
-    public Maxout(int units, float prob) {
+    public Maxout(int units) {
       this.units = units;
-      assert prob <= 1;
-      assert prob > 0;
-      this.prob = prob;
-      this.scale = 1 / prob;
-      this.rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
     }
 
     @Override void fprop(boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = Float.NEGATIVE_INFINITY;
-        for( int i = 0; i < _in._a.length; i++ )
-          _a[o] = Math.max(_a[o], _w[o * _in._a.length + i] * _in._a[i]);
-        _a[o] += _b[o];
+        _a[o] = 0;
+        if( !training || _rand.nextFloat() > dropout ) {
+          _a[o] = Float.NEGATIVE_INFINITY;
+          for( int i = 0; i < _in._a.length; i++ )
+            _a[o] = Math.max(_a[o], _w[o * _in._a.length + i] * _in._a[i]);
+          _a[o] += _b[o];
+          if( !training )
+            _a[o] *= 1 - _in.dropout;
+        }
       }
     }
 
