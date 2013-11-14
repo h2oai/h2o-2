@@ -826,7 +826,9 @@ class H2O(object):
     def __url(self, loc, port=None):
         # always use the new api port
         if port is None: port = self.port
-        u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
+        if loc.startswith('/'): delim = ''
+        else: delim = '/'
+        u = 'http://%s:%d%s%s' % (self.http_addr, port, delim, loc)
         return u
 
     def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, returnFast=False,
