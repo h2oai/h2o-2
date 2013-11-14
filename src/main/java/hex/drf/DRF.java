@@ -366,11 +366,11 @@ public class DRF extends SharedTreeModelBuilder {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
     // Per leaf: sum(votes);
-    double _votes[/*tree/klass*/][/*tree-relative node-id*/];
+    float _votes[/*tree/klass*/][/*tree-relative node-id*/];
     long   _voters[/*tree/klass*/][/*tree-relative node-id*/];
     CollectPreds(DTree trees[], int leafs[]) { _leafs=leafs; _trees=trees; }
     @Override public void map( Chunk[] chks ) {
-      _votes  = new double[_nclass][];
+      _votes  = new float[_nclass][];
       _voters = new long  [_nclass][];
       // For all tree/klasses
       for( int k=0; k<_nclass; k++ ) {
@@ -378,10 +378,10 @@ public class DRF extends SharedTreeModelBuilder {
         final int   leaf = _leafs[k];
         if( tree == null ) continue; // Empty class is ignored
         // A leaf-biased array of all active Tree leaves.
-        final double votes [] = _votes[k]  = new double[tree.len()-leaf];
-        final long   voters[] = _voters[k] = new long[tree.len()-leaf];
+        final float  votes [] = _votes [k] = new float[tree.len()-leaf];
+        final long   voters[] = _voters[k] = new long [tree.len()-leaf];
         final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
-        final Chunk vss  = chk_work(chks,k); // Votes for this tree/class
+        final Chunk vss  = chk_work(chks,k); // Votes for this tree/class (saved as float by SetWrkTask!)
         // If we have all constant responses, then we do not split even the
         // root and the residuals should be zero.
         if( tree.root() instanceof LeafNode ) continue;
@@ -403,7 +403,7 @@ public class DRF extends SharedTreeModelBuilder {
           // sum-of-residuals (and sum/abs/mult residuals) for all rows in the
           // leaf, and get our prediction from that.
           if (!oobrow) {
-            double v = vss.at0(row);
+            float v = (float) vss.at0(row); // !!! SetWrkTask put info wrk columns only floats => so use them only here
             // How many rows in this leaf has predicted k-class.
             votes [leafnid-leaf] += v; // v=1 for classification if class == k else 0 (classification), regression v=response(Y)
             voters[leafnid-leaf] ++; // compute all rows in this leaf (perhaps we do not treat voters per k-tree since we sample inside k-trees with same sampling rate)
