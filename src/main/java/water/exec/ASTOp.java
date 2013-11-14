@@ -46,6 +46,7 @@ public abstract class ASTOp extends AST {
 
     // Misc
     put(new ASTCat ());
+    put(new ASTCbind());
     put(new ASTSum ());
     put(new ASTTable ());
     put(new ASTReduce());
@@ -240,6 +241,65 @@ class ASTReduce extends ASTOp {
   @Override String opStr(){ return "Reduce";}
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
+}
+
+class ASTCbind extends ASTOp {
+  @Override String opStr() { return "cbind"; }
+  ASTCbind( ) { super(new String[]{"cbind","ary"},
+                    new Type[]{Type.ARY,Type.varargs(Type.dblary())}); }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt) {
+    /* Frame fr = null;
+    if(env.isAry())
+     fr = new Frame(env.ary(-argcnt+1));
+    else if(env.isDbl()) {
+      Vec v = new Vec(Key.make(), env.dbl(-argcnt+1));
+      fr = new Frame(new String[] {"c"}, new Vec[] {v});   // TODO: Pad shorter col to match rows
+    }
+
+    for(int i=1; i<argcnt-1; i++) {
+      if(env.isAry())
+        fr.add(env.ary(-argcnt+1+i));
+      else if(env.isDbl()) {
+        double d = env.dbl(-argcnt+1+i);
+        Vec v = fr.vecs()[0].makeCon(d);
+        fr.add("c" + String.valueOf(i), v);
+      }
+    }
+    env._ary[env._sp-argcnt] = fr;
+    env._sp -= argcnt-1;
+    assert env.check_refcnt(fr.anyVec()); */
+    Frame fr = null;
+    Frame[] arys = new Frame[argcnt-1];
+    String[] skeys = new String[argcnt-1];
+    int num_ary = 0;
+
+    if(env.isAry()) {
+      arys[0] = env.popAry();
+      skeys[0] = env.key();
+      fr = new Frame(arys[0]);
+      num_ary++;
+    } else {
+      Vec v = new Vec(Key.make(), env.popDbl());
+      fr = new Frame(new String[] {"c0"}, new Vec[] {v});   // TODO: Pad shorter col to match rows
+    }
+
+    for(int i = 1; i < argcnt-1; i++) {
+      if(env.isAry()) {
+        arys[num_ary] = env.popAry();
+        skeys[num_ary] = env.key();
+        fr.add(arys[num_ary]);
+        num_ary++;
+      } else {
+        Vec v = fr.vecs()[0].makeCon(env.popDbl());
+        fr.add("c" + String.valueOf(i), v);   // TODO: Pad shorter col to match rows
+      }
+    }
+    env.push(1); env._ary[env._sp-1] = env.addRef(fr);
+    for(int i = 0; i < num_ary; i++)
+      env.subRef(arys[i], skeys[i]);
+    assert env.check_refcnt(fr.anyVec());
+  }
 }
 
 // Variable length; instances will be created of required length

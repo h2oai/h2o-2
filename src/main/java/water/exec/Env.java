@@ -155,7 +155,7 @@ public class Env extends Iced {
   public double popDbl() { assert isDbl(); return _d  [--_sp]; }
   public ASTOp  popFcn() { assert isFcn(); ASTOp op = _fcn[--_sp]; _fcn[_sp]=null; return op; }
   public Frame  popAry() { assert isAry(); Frame fr = _ary[--_sp]; _ary[_sp]=null; assert allAlive(fr); return fr; }
-  public String key()    { return _key[_sp]; } 
+  public String key()    { return _key[_sp]; }
 
   // Replace a function invocation with it's result
   public void poppush(double d) { pop(); push(d); }
@@ -215,6 +215,7 @@ public class Env extends Iced {
   Vec addRef( Vec vec ) {
     Integer I = _refcnt.get(vec);
     assert I==null || I>0;
+    assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0);
     _refcnt.put(vec,I==null?1:I+1);
     return vec;
   }

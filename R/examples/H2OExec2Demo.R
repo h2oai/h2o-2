@@ -11,7 +11,7 @@ prostate.hex = h2o.importFile.FV(localH2O, path = prosPath, key = "prostate.hex"
 summary(prostate.hex)
 head(prostate.hex)
 tail(prostate.hex)
-table(prostate.hex$RACE)    # Note: Currently only works on a single integer/factor column
+h2o.table(prostate.hex$RACE)    # Note: Currently only works on a single integer/factor column
 
 # Get quantiles and examine outliers
 prostate.qs = quantile(prostate.hex$PSA)
