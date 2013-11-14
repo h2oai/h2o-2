@@ -139,6 +139,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             raise Exception("Convergence issue? GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
 
     # pop the first validation from the list
+    if 'validations' not in GLMModel:
+        raise Exception("Should be a 'validations' key in GLMModel: %s" % h2o.dump_json(GLMModel))
+
     validationsList = GLMModel['validations']
     # don't want to modify validationsList in case someone else looks at it
     validations = validationsList[0]
