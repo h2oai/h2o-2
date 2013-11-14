@@ -234,16 +234,15 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
   if( class(epoch) != 'numeric') stop('epoch must be numeric')
   if( epoch < 0 ) stop('epoch must be >= 1')
 
-  cols <- paste(args$x_i - 1, collapse=',')
-  y <- args$y
-
   if( !(activation %in% c('Tanh', 'Rectifier')) )
     stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier] are supported"))
   if( !(classification %in% c( 0, 1)) )
     stop(paste(classification, "is not a valid classification index; only [0, 1] are supported"))
 
   destKey = paste("__NNModel_", UUIDgenerate(), sep="")
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=colnames(data)[y], cols=paste(cols, sep="", collapse=","), classification=as.numeric(classification), activation=activation, rate=rate, hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=data@key)
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
+      classification=as.numeric(classification), activation=activation, rate=rate,
+      hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=data@key)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, model=destKey)
 

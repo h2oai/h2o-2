@@ -17,7 +17,7 @@ public class GLMProgressPage2 extends Progress2 {
     return GLMModelView.redirect(this, job.dest());
   }
   public static Response redirect(Request req, Key jobkey, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "GLMProgressPage2", JOB_KEY, jobkey, DEST_KEY, dest );
+    return new Response(Response.Status.redirect, req, -1, -1, "/2/GLMProgressPage2", JOB_KEY, jobkey, DEST_KEY, dest );
   }
   @Override public boolean toHTML( StringBuilder sb ) {
     Job jjob = Job.findJob(job_key);

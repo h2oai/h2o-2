@@ -18,10 +18,10 @@ import com.google.gson.JsonObject;
  * @author peta
  */
 public class RequestStatics extends Constants {
-  public String requestName() {
+  /** Each request name is derived from name of class serving the request. */
+  public final String requestName() {
     return getClass().getSimpleName();
   }
-
 
   /** Request type.
    *

@@ -115,18 +115,9 @@ public abstract class Request extends RequestBuilders {
     long time = System.currentTimeMillis();
     Response response = serve();
     response.setTimeStart(time);
-//    if(this instanceof Request2) {
-//      Response2 r = new Response2();
-//      r.status = response._status;
-//      r.h2o = H2O.NAME;
-//      r.node = H2O.SELF.toString();
-//      r.time = response._time;
-//      r.progress = response._pollProgress;
-//      r.progress_total = response._pollProgressElements;
-//      r.redirect_request = response._redirectName;
-//      r.redirect_request_args = response._redirArgs;
-//      ((Request2) this).response = r;
-//    }
+    // Argh - referencing subclass, sorry for that, but it is temporary hack
+    // for transition between v1 and v2 API
+    if (this instanceof Request2) ((Request2) this).fillResponseInfo(response);
     if( type == RequestType.json )
       return response._req == null ? //
             wrap(server, response.toJson()) : //
