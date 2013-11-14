@@ -58,6 +58,10 @@ class Basic(unittest.TestCase):
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
 
+        job_key = GBMFirstResult['job_id']
+        gbmGridView = h2o.nodes[0].grid_search_progress(job_key=job_key, destination_key=modelKey)
+
+        # FIX! get model?
         gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
         # errrs from end of list? is that the last tree?
         errsLast = gbmTrainView['gbm_model']['errs'][-1]
