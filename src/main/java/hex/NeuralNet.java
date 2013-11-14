@@ -311,6 +311,9 @@ public class NeuralNet extends ValidatedJob {
   }
 
   public static class Error extends Iced {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
     @API(help = "How many rows the algorithm has processed")
     public long training_samples;
 
