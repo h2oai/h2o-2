@@ -70,12 +70,13 @@ public class CloudRemote {
     cloud.clientRSyncExcludes.add("lib/javassist");
     cloud.clientRSyncExcludes.add("**/*-sources.jar");
 
-    String java = "-ea -Xmx8G -Dh2o.debug";
+    String java = "-ea -Xmx60G -Dh2o.debug";
     String node = "-mainClass " + UserCode.class.getName() + " " + (job != null ? job.getName() : null) + " -beta";
     cloud.start(java.split(" "), node.split(" "));
   }
 
   public static class UserCode {
+    @SuppressWarnings("unchecked")
     public static void userMain(String[] args) throws Exception {
       Log.info("Java location: " + System.getProperty("java.home"));
 
