@@ -249,27 +249,30 @@ class ASTCbind extends ASTOp {
                     new Type[]{Type.ARY,Type.varargs(Type.dblary())}); }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
-    /* Frame fr = null;
-    if(env.isAry())
-     fr = new Frame(env.ary(-argcnt+1));
-    else if(env.isDbl()) {
+    Frame fr = null;
+    if(env.isAry(-argcnt+1))
+      fr = new Frame(env.ary(-argcnt+1));
+    else {
       Vec v = new Vec(Key.make(), env.dbl(-argcnt+1));
-      fr = new Frame(new String[] {"c"}, new Vec[] {v});   // TODO: Pad shorter col to match rows
+      fr = new Frame(new String[] {"c0"}, new Vec[] {v});   // TODO: Pad shorter col to match rows
+      env.addRef(v);
     }
 
     for(int i=1; i<argcnt-1; i++) {
-      if(env.isAry())
+      if(env.isAry(-argcnt+1+i))
         fr.add(env.ary(-argcnt+1+i));
-      else if(env.isDbl()) {
+      else {
         double d = env.dbl(-argcnt+1+i);
         Vec v = fr.vecs()[0].makeCon(d);
         fr.add("c" + String.valueOf(i), v);
+        env.addRef(v);
       }
     }
     env._ary[env._sp-argcnt] = fr;
     env._sp -= argcnt-1;
-    assert env.check_refcnt(fr.anyVec()); */
-    Frame fr = null;
+    assert env.check_refcnt(fr.anyVec());
+
+    /* Frame fr = null;
     Frame[] arys = new Frame[argcnt-1];
     String[] skeys = new String[argcnt-1];
     int num_ary = 0;
@@ -281,7 +284,7 @@ class ASTCbind extends ASTOp {
       num_ary++;
     } else {
       Vec v = new Vec(Key.make(), env.popDbl());
-      fr = new Frame(new String[] {"c0"}, new Vec[] {v});   // TODO: Pad shorter col to match rows
+      fr = new Frame(new String[] {"c0"}, new Vec[] {v}); // TODO: Pad shorter col to match rows
     }
 
     for(int i = 1; i < argcnt-1; i++) {
@@ -292,13 +295,13 @@ class ASTCbind extends ASTOp {
         num_ary++;
       } else {
         Vec v = fr.vecs()[0].makeCon(env.popDbl());
-        fr.add("c" + String.valueOf(i), v);   // TODO: Pad shorter col to match rows
+        fr.add("c" + String.valueOf(i), v);
       }
     }
     env.push(1); env._ary[env._sp-1] = env.addRef(fr);
     for(int i = 0; i < num_ary; i++)
       env.subRef(arys[i], skeys[i]);
-    assert env.check_refcnt(fr.anyVec());
+    assert env.check_refcnt(fr.anyVec()); */
   }
 }
 
@@ -625,6 +628,7 @@ class ASTCut extends ASTOp {
       env.push(fr2);
     } else if(env.isAry()) {
       Frame ary = env.popAry();
+      String skey1 = env.key();
       if(ary.vecs().length != 1 || ary.vecs()[0].isEnum())
         throw new IllegalArgumentException("Second argument must be a numeric column vector");
       Vec brks = ary.vecs()[0];
@@ -639,7 +643,7 @@ class ASTCut extends ASTOp {
       if(cutoffs.length < 2)
         throw new IllegalArgumentException("Vector of breaks must have at least 2 unique values");
       Frame fr = env.popAry();
-      String skey = env.key();
+      String skey2 = env.key();
       if(fr.vecs().length != 1 || fr.vecs()[0].isEnum())
         throw new IllegalArgumentException("First argument must be a numeric column vector");
 
@@ -663,7 +667,8 @@ class ASTCut extends ASTOp {
           }
         }
       }.doAll(1,fr).outputFrame(fr._names, domains);
-      env.subRef(fr, skey);
+      env.subRef(ary, skey1);
+      env.subRef(fr, skey2);
       env.pop();
       env.push(fr2);
     } else throw H2O.unimpl();
