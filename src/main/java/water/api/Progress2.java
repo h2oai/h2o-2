@@ -18,9 +18,6 @@ public class Progress2 extends Request2 {
   public Key destination_key;
 
   @API(help = "")
-  public String status = "poll"; // poll | done | redirect | error
-
-  @API(help = "")
   public float progress = 0.0f;
 
   public static String jsonUrl(Key jobKey, Key destKey) {
@@ -36,26 +33,22 @@ public class Progress2 extends Request2 {
     if(job_key != null)
       jjob = Job.findJob(job_key);
     if( jjob != null && jjob.exception != null ) {
-      status = "error";
       return Response.error(jjob.exception);
     }
 
     if(jjob == null || jjob.end_time > 0 || jjob.cancelled())
       return jobDone(jjob, destination_key);
 
-    status = "poll";
     return jobInProgress(jjob, destination_key);
   }
 
   /** Return {@link Response} for finished job. */
   protected Response jobDone(final Job job, final Key dst) {
-    status = "redirect";
     return Inspect2.redirect(this, dst.toString());
   }
 
   /** Return default progress {@link Response}. */
   protected Response jobInProgress(final Job job, final Key dst) {
-    status = "poll";
     progress = job.progress();
     return new Response(Response.Status.poll, this, (int) (100 * job.progress()), 100, null);
   }

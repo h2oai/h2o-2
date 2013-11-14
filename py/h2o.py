@@ -1080,7 +1080,7 @@ class H2O(object):
                 status = 'poll'
             else:
                 if beta_features:
-                    status = r['status']
+                    status = r['response_info']['status']
                 else:
                     status = r['response']['status']
 
