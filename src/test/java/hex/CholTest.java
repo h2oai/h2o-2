@@ -31,7 +31,7 @@ public class CholTest extends TestUtil{
       DataSetup data = new DataSetup(sz, 12345);
       long start = System.currentTimeMillis();
       CholeskyDecomposition jamaChol = new Matrix(data.xx).chol();
-      Log.err("JAMA CHOLESKY [N = " + sz + "] TAKES " + (System.currentTimeMillis() - start) + " MILLISECONDS.");
+      Log.info("JAMA CHOLESKY [N = " + sz + "] TAKES " + (System.currentTimeMillis() - start) + " MILLISECONDS.");
       if (!jamaChol.isSPD()) continue;
       ForkJoinPool fjp = new ForkJoinPool(32);
       for (int t = 2; t <= 32; t += 2) {
@@ -77,7 +77,7 @@ public class CholTest extends TestUtil{
     public void compute() {
       long start = System.currentTimeMillis();
       double[][] chol = InPlaceCholesky.decompose_2(data.xx, step, p).getL();
-      Log.err("H2O CHOLESKY [N = "+data.xx.length+"  P = "+p+"  STEP = "+step+"] TAKES " + (System.currentTimeMillis() - start) + " MILLISECONDS.");
+      Log.info("H2O CHOLESKY [N = "+data.xx.length+"  P = "+p+"  STEP = "+step+"] TAKES " + (System.currentTimeMillis() - start) + " MILLISECONDS.");
       assertEquals(jama.length, chol.length);
       for (int i = 0; i < chol.length; i++)
         for( int j = 0; j <= i; j++)

@@ -21,13 +21,12 @@ public final class Gram extends Iced {
   final int _diagN;
   final int _denseN;
   final int _fullN;
-  final int STEP;
   final static int MIN_TSKSZ=10000;
 //  double[] _xy;
 //  double _yy;
 //  long _nobs;
 
-  public Gram() {_diagN = _denseN = _fullN = 0; _hasIntercept = false; STEP=10;}
+  public Gram() {_diagN = _denseN = _fullN = 0; _hasIntercept = false; }
 
   public Gram(int N, int diag, int dense, int sparse, boolean hasIntercept) {
     _hasIntercept = hasIntercept;
@@ -35,18 +34,6 @@ public final class Gram extends Iced {
     _xx = new double[_fullN - diag][];
     _diag = MemoryManager.malloc8d(_diagN = diag);
     _denseN = dense;
-    STEP = 10;
-    for( int i = 0; i < (_fullN - _diagN); ++i )
-      _xx[i] = MemoryManager.malloc8d(diag + i + 1);
-  }
-
-  public Gram(int N, int diag, int dense, int sparse, int blk, boolean hasIntercept) {
-    _hasIntercept = hasIntercept;
-    _fullN = N + (_hasIntercept?1:0);
-    _xx = new double[_fullN - diag][];
-    _diag = MemoryManager.malloc8d(_diagN = diag);
-    _denseN = dense;
-    STEP = blk;
     for( int i = 0; i < (_fullN - _diagN); ++i )
       _xx[i] = MemoryManager.malloc8d(diag + i + 1);
   }
@@ -58,164 +45,30 @@ public final class Gram extends Iced {
       _xx[i][_xx[i].length - 1] += d;
   }
 
-  private class StripTask extends CountedCompleter {
-    final double[][] _xx;
-    final int _i0, _i1, _j0, _j1;
-    public StripTask(StripTask cc, double xx[][], int ifr, int ito, int jfr, int jto) {
-      super(cc);
-      _xx = xx;
-      _i0 = ifr; _i1 = ito; _j0 = jfr; _j1 = jto;
-    }
-    @Override public void compute() {
-      final int sparseN = _diag.length;
-      if ((_i1 - _i0)*(_j1 - _j0) > Gram.MIN_TSKSZ) {
-        int mid = (_i0 + _i1)>>>1;
-        setPendingCount(1);
-        new StripTask(this, _xx, mid, _i1, _j0, _j1).fork();
-        new StripTask(this, _xx, _i0, mid, _j0, _j1).compute();
-      } else {
-        for (int j = _j0; j < _j1; j++) {
-          int k = j - sparseN;
-          for (int i = _i0; i < _i1; i++)
-            for (int s = _j0; s < j; s++) _xx[i][j] -= _xx[k][s]*_xx[i][s];
-        }
-        tryComplete();
-      }      
-    }    
-  }
-
-  static private class StripTask2 extends CountedCompleter {
-    final double[][] _xx;
-    final int _i0, _i1, _j0, _j1;
-    public StripTask2(CountedCompleter cc, double xx[][], int ifr, int ito, int jfr, int jto) {
-      super(cc);
-      _xx = xx;
-      _i0 = ifr; _i1 = ito; _j0 = jfr; _j1 = jto;
-    }
-    @Override public void compute() {
-      if ((_i1 - _i0)*(_j1 - _j0) > Gram.MIN_TSKSZ) {
-        int mid = (_i0 + _i1)>>>1;
-        setPendingCount(0);
-        new StripTask2(this, _xx, mid, _i1, _j0, _j1).compute();
-        new StripTask2(this, _xx, _i0, mid, _j0, _j1).compute();
-      } else {
-        for (int j = _j0; j < _j1; j++) {
-          double d = 1.0/_xx[j][j];
-          for (int i = _i0; i < _i1; i++) {
-            double s = 0.0;
-            for (int k = _j0; k < j; k++) s += _xx[j][k]*_xx[i][k];
-            _xx[i][j] = (_xx[i][j]-s) / d;
-          }
-        }
-        tryComplete();
-      }      
-    }    
-  }
-
-  static private class BlockTask extends RecursiveAction {
-    final double[][] _xx;
-    final int _i0, _i1, _j0, _j1;
-    public BlockTask(double xx[][], int ifr, int ito, int jfr, int jto) {
-      _xx = xx;
-      _i0 = ifr; _i1 = ito; _j0 = jfr; _j1 = jto;
-    }
-    @Override public void compute() {
-      //Log.info("TASK THREAD ID -- " + Thread.currentThread().getName());
-      //Log.info("  BLOCK SIZE " + (_i1 - _i0));
-      for (int i=_i0; i < _i1; i++) {
-        double rowi[] = _xx[i];
-        for (int k=_j0; k < _j1; k++) {
-          double rowk[] = _xx[k];
-          double s = 0.0;
-          for (int jj = 0; jj < k; jj++) s += rowk[jj]*rowi[jj];
-          rowi[k] = (rowi[k] - s) / rowk[k];
-        }
-      }
-    }
-  }
-
-  private class TriangleTask extends CountedCompleter {
-    final double[][] _xx;
-    final int _s0,_s1;          // the column range of the strip whose outer product is to be subtracted from the triangle.
-    final int _j0,_j1;          // the column range in the lower right triangle covered by this task
-    public TriangleTask(TriangleTask cc, double[][] xx, int s0, int s1, int j0, int j1) {
-      super(cc);
-      _xx = xx; _s0 = s0; _s1 = s1; _j0 = j0; _j1 = j1;
-    }
-    @Override public void compute() {
-      final int sparseN = _diag.length;
-      if ((_j1 - _j0)*(_fullN<<2 - _j0 - _j1)>>>2 > Gram.MIN_TSKSZ) {
-        int mid = (_j0 + _j1) >>>1;
-        setPendingCount(1);
-        new TriangleTask(this,_xx,_s0,_s1,mid,_j1).fork();
-        new TriangleTask(this,_xx,_s0,_s1,_j0,mid).compute();
-      } else {
-        for (int j = _j0; j < _j1; j++) {
-          int k = j-sparseN;
-          for (int i = k; i < _denseN; i++)
-            for (int s = _s0; s < _s1; s++) _xx[i][j] -= _xx[k][s]*_xx[i][s];
-        }
-        tryComplete();
-      }
-    }
-  }
-
-  static private class TriangleTask2 extends CountedCompleter {
-    final double[][] _xx;
-    final int _s0,_s1;          // the column range of the strip whose outer product is to be subtracted from the triangle.
-    final int _j0,_j1;          // the column range in the lower right triangle covered by this task
-    public TriangleTask2(CountedCompleter cc, double[][] xx, int s0, int s1, int j0, int j1) {
-      super(cc);
-      _xx = xx; _s0 = s0; _s1 = s1; _j0 = j0; _j1 = j1;
-    }
-    @Override public void compute() {
-//       Log.err("CHOL TO UPDATE LOWER RIGHT TRIANGLE J[" + _j0 + ":" + _j1 + "]");
-      int N = _xx.length;
-      if (_j1 > (_j0 + 1) && ((_j1 - _j0)*(N - (_j0 + _j1)>>>1) > Gram.MIN_TSKSZ)) {
-        int mid = (_j0 + _j1) >>>1;
-        setPendingCount(0);
-        new TriangleTask2(this,_xx,_s0,_s1,mid,_j1).compute();
-        new TriangleTask2(this,_xx,_s0,_s1,_j0,mid).compute();
-      } else {
-        for (int j = _j0; j < _j1; j++) {
-          for (int i = j; i < N; i++)
-            for (int s = _s0; s < _s1; s++) _xx[i][j] -= _xx[j][s]*_xx[i][s];
-        }
-        tryComplete();
-      }
-    }
-  }
-
   static public class InPlaceCholesky {
     final double _xx[][];             // Lower triagle of the symmetric matrix. 
     private boolean _isSPD;
     private InPlaceCholesky(double xx[][], boolean isspd) { _xx = xx; _isSPD = isspd; }
-    public static InPlaceCholesky decompose_1(double xx[][], int STEP) {
-      boolean isspd = true;
-      final int N = xx.length;
-      for (int j=0; j < N; j+=STEP) {
-        // update the upper left triangle.
-        int tjR = Math.min(j+STEP, N);
-        for (int tj=j; tj < tjR; tj++) {
-          if (xx[tj][tj] <= 0) { xx[tj][tj] = 0.0; isspd = false; }
-          xx[tj][tj] = Math.sqrt(xx[tj][tj]);
-          double d=1.0/xx[tj][tj];
-          // update column of tj
-          for (int ti = tj+1; ti < tjR; ti++) {
-            xx[ti][tj] *= d;
-          }
-          // subtract outerproduct of column tj from its right part
-          for (int ui = tj+1; ui < tjR; ui++)
-            for (int uj = tj+1; uj <= ui; uj++)
-              xx[ui][uj] -= xx[ui][tj]*xx[uj][tj];
-        }
-        if (tjR == N) break;
-        // update the lower left strip
-        new StripTask2(null,xx,j+STEP,N,j,j+STEP).invoke();
-        // update the lower right triangle
-        new TriangleTask2(null,xx,j,j+STEP,j+STEP,N).invoke();
+    static private class BlockTask extends RecursiveAction {
+      final double[][] _xx;
+      final int _i0, _i1, _j0, _j1;
+      public BlockTask(double xx[][], int ifr, int ito, int jfr, int jto) {
+        _xx = xx;
+        _i0 = ifr; _i1 = ito; _j0 = jfr; _j1 = jto;
       }
-      return new InPlaceCholesky(xx, isspd);
+      @Override public void compute() {
+        //Log.info("TASK THREAD ID -- " + Thread.currentThread().getName());
+        //Log.info("  BLOCK SIZE " + (_i1 - _i0));
+        for (int i=_i0; i < _i1; i++) {
+          double rowi[] = _xx[i];
+          for (int k=_j0; k < _j1; k++) {
+            double rowk[] = _xx[k];
+            double s = 0.0;
+            for (int jj = 0; jj < k; jj++) s += rowk[jj]*rowi[jj];
+            rowi[k] = (rowi[k] - s) / rowk[k];
+          }
+        }
+      }
     }
     public static InPlaceCholesky decompose_2(double xx[][], int STEP, int P) {
       boolean isspd = true;
@@ -331,7 +184,7 @@ public final class Gram extends Iced {
       InPlaceCholesky d = InPlaceCholesky.decompose_2(arr, 10, p);
       fchol.setSPD(d.isSPD());
       arr = d.getL();
-      Log.info ("H2O CHOLESKY DECOMPOSE TAKES: " + (System.currentTimeMillis()-start));
+      Log.info ("H2O CHOLESKY DECOMPOSE ON DENSEN*DENSEN TAKES: " + (System.currentTimeMillis()-start));
     } else {
       // make it symmetric
       for( int i = 0; i < arr.length; ++i )
