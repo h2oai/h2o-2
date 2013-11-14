@@ -50,7 +50,7 @@ public class Progress2 extends Request2 {
   /** Return default progress {@link Response}. */
   protected Response jobInProgress(final Job job, final Key dst) {
     progress = job.progress();
-    return new Response(Response.Status.poll, this, (int) (100 * job.progress()), 100, null);
+    return new Response(Response.Status.poll, this, (int) (100 * job.progress()), 100, "job_key", job_key.toString(), "destination_key", destination_key.toString());
   }
 
   @Override public boolean toHTML(StringBuilder sb) {

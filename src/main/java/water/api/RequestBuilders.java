@@ -520,7 +520,7 @@ public class RequestBuilders extends RequestQueries {
     public ResponseInfo extractInfo() {
       String redirectUrl = null;
       if (_status == Status.redirect) redirectUrl = _redirectName+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
-      if (_status == Status.poll)     redirectUrl = _req.getClass().getSimpleName()+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
+      if (_status == Status.poll)     redirectUrl = _req.href()+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
       return new ResponseInfo(redirectUrl, _time, _status);
     }
   }
