@@ -1,25 +1,29 @@
-{
-    "type": "object",
-    "properties": {
-        "Request2": { "type": "number" },
-        "means": { "type": "array", "items": { "type": "number" } },
-        "names": { "type": "array", "items": { "type": "string" } },
-        "summaries": {
-            "type": "array",
-            "items": { "type": "object",
-                "properties": {
-                    "bins": { "type": "array", "items": { "type": "number" } },
-                    "binsz": { "type": "number" },
-                    "domains": { "type": "string" },
-                    "maxs": { "type": "array", "items": { "type": "number" } },
-                    "mins": { "type": "array", "items": { "type": "number" } },
-                    "percentileValues": { "type": "array", "items": { "type": "number" } },
-                    "rows": { "type": "number" },
-                    "start": { "type": "number" },
-                    "zeros": { "type": "number" }
-                }
-            }
+"Request2": { "type": "number" },
+"summaries": {
+    "type": "array",
+    "items": { "type": "object",
+        "properties": {
+            "colname": { "type": "string" },
+            "type": {"type": "string"}
+            "nacnt": { "type": "number" },
+            "stats": {"type": "array",
+                         "items": {"type":"object",
+                          "properties": {
+                             "type":{"type":"string"},
+                             "mean": {"type":"number"},
+                             "sd":{"type":"number"},
+                             "zeros":{"type":"number"},
+                             "mins": { "type": "array", "items": { "type": "number" } },
+                             "maxs": { "type": "array", "items": { "type": "number" } },
+                             "pct": { "type": "array", "items": { "type": "number" } },
+                             "pctile": { "type": "array", "items": { "type": "number" } },
+                           }
+                          },
+            "hstart":{"type":"number"},
+            "hstep":{"type":"number"},
+            "hbrk": { "type": "array", "items": { "type": "string" } },
+            "hcnt": { "type": "array", "items": { "type": "number" } }
         }
     }
-}
+} 
 

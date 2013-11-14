@@ -145,23 +145,23 @@ class Basic(unittest.TestCase):
                 mins = column['mins']
                 percentileValues = column['percentileValues']
                 print "percentilevalues", percentileValues
-                rows = column['rows']
+                ### rows = column['rows']
                 start = column['start']
                 zeros = column['zeros']
 
                 print "maxs:", maxs
                 self.assertEqual(maxs[0], expectedMax)
-                self.assertEqual(maxs[1], expectedMax-1)
-                self.assertEqual(maxs[2], expectedMax-2)
-                self.assertEqual(maxs[3], expectedMax-3)
-                self.assertEqual(maxs[4], expectedMax-4)
+                # self.assertEqual(maxs[1], expectedMax-1)
+                # self.assertEqual(maxs[2], expectedMax-2)
+                # self.assertEqual(maxs[3], expectedMax-3)
+                # self.assertEqual(maxs[4], expectedMax-4)
                 
                 print "mins:", mins
                 self.assertEqual(mins[0], expectedMin)
-                self.assertEqual(mins[1], expectedMin+1)
-                self.assertEqual(mins[2], expectedMin+2)
-                self.assertEqual(mins[3], expectedMin+3)
-                self.assertEqual(mins[4], expectedMin+4)
+                # self.assertEqual(mins[1], expectedMin+1)
+                # self.assertEqual(mins[2], expectedMin+2)
+                # self.assertEqual(mins[3], expectedMin+3)
+                # self.assertEqual(mins[4], expectedMin+4)
 
                 # apparently our 'percentile estimate" uses interpolation, so this check is not met by h2o
                 for v in percentileValues:

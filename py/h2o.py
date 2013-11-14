@@ -999,16 +999,18 @@ class H2O(object):
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
 
-
         if beta_features:
-            if 'redirect_url' in response:
-                # url = self.__url(response['redirect_url'] + ".json")
-                # this is the full url now, with params?
-                url = self.__url(response['redirect_url'])
-                # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
-                params = None
-            else:
+            if 'response_info' not in response:
+                raise Exception("The response during polling should have 'response_info'. Don't see it: \n%s" % dump_json(response))
+
+            if 'redirect_url' not in response['response_info']:
                 raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
+
+            # url = self.__url(response['redirect_url'] + ".json")
+            # this is the full url now, with params?
+            url = self.__url(response['response_info']['redirect_url'])
+            # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+            params = None
 
         else:
             if 'response' not in response:
@@ -1653,6 +1655,17 @@ class H2O(object):
         **kwargs):
         rfView = random_forest_view(useRFScore=True, *args, **kwargs)
         return rfView
+
+    def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'source': None,
+            'target': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'set_column_names', print_params)
+        a = self.__do_json_request('SetColumnNames.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nset_column_names result:", dump_json(a))
+        return a
 
     def gbm_view(self,model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {

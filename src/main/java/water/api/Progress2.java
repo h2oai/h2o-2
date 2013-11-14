@@ -18,9 +18,6 @@ public class Progress2 extends Request2 {
   public Key destination_key;
 
   @API(help = "")
-  public String redirect_url;
-
-  @API(help = "")
   public String status = "poll"; // poll | done | redirect | error
 
   @API(help = "")
@@ -31,7 +28,7 @@ public class Progress2 extends Request2 {
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "Progress2", "job_key", jobkey, "destination_key", dest);
+    return new Response(Response.Status.redirect, req, -1, -1, "/2/Progress2", "job_key", jobkey, "destination_key", dest);
   }
 
   @Override protected Response serve() {
@@ -53,7 +50,6 @@ public class Progress2 extends Request2 {
   /** Return {@link Response} for finished job. */
   protected Response jobDone(final Job job, final Key dst) {
     status = "redirect";
-    redirect_url = Inspect2.jsonLink(destination_key);
     return Inspect2.redirect(this, dst.toString());
   }
 

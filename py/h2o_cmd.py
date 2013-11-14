@@ -52,7 +52,11 @@ def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
 def runExec(node=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     # no such thing as GLMView..don't use retryDelaySecs
-    return node.exec_query(timeoutSecs, **kwargs)
+    a = node.exec_query(timeoutSecs, **kwargs)
+    # temporary?
+    if h2o.beta_features:
+        h2o.check_sandbox_for_errors()
+    return a
 
 def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for KMeans')
@@ -327,7 +331,7 @@ def infoFromInspect(inspect, csvPathname):
 
 def infoFromSummary(summaryResult, noPrint=False):
     if h2o.beta_features:
-        names = summaryResult['names']
+        # names = summaryResult['names']
         means = summaryResult['means']
         summaries = summaryResult['summaries']
         for column in summaries:
@@ -344,7 +348,7 @@ def infoFromSummary(summaryResult, noPrint=False):
             print "\n\n************************"
             print "start:", start
             print "zeros:", zeros
-            print "len(names):", len(names)
+            # print "len(names):", len(names)
             print "len(means):", len(means)
 
     else:

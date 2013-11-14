@@ -544,8 +544,8 @@ setMethod("exp", "H2OParsedData2", function(x) { h2o.__unop2("exp", x) })
 setMethod("sum", "H2OParsedData2", function(x) { h2o.__unop2("sum", x) })
 setMethod("is.na", "H2OParsedData2", function(x) { h2o.__unop2("is.na", x) })
 
-cut <- function(x, breaks) { UseMethod("cut", x, breaks) }
-setMethod("cut", signature(x="H2OParsedData2", breaks="numeric"), function(x, breaks) {
+setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
+setMethod("h2o.cut", signature(x="H2OParsedData2", breaks="numeric"), function(x, breaks) {
   nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
   expr = paste("cut(", x@key, ",", nums, ")", sep="")
   res = h2o.__exec2(x@h2o, expr)
@@ -554,8 +554,8 @@ setMethod("cut", signature(x="H2OParsedData2", breaks="numeric"), function(x, br
   new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
 })
 
-table <- function(object) { UseMethod("table", object) }
-setMethod("table", "H2OParsedData2", function(object) { h2o.__unop2("table", object) })
+setGeneric("h2o.table", function(x) { standardGeneric("h2o.table") })
+setMethod("h2o.table", signature(x="H2OParsedData2"), function(x) { h2o.__unop2("table", x) })
 
 setMethod("colnames", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
