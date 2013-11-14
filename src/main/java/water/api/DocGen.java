@@ -2,6 +2,7 @@ package water.api;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.Properties;
 
 import water.*;
@@ -308,6 +309,38 @@ public abstract class DocGen {
       arrayHead(sb);
       for( String s : ss ) sb.append("<tr><td>").append(s).append("</td></tr>");
       return arrayTail(sb);
+    }
+    public StringBuilder toJSArray(StringBuilder sb, float[] nums) {
+      sb.append('[');
+      for (int i=0; i<nums.length; i++) {
+        if (i>0) sb.append(',');
+        sb.append(nums[i]);
+      }
+      sb.append(']');
+      return sb;
+    }
+    public StringBuilder toJSArray(StringBuilder sb, String[] ss) {
+      sb.append('[');
+      for (int i=0; i<ss.length; i++) {
+        if (i>0) sb.append(',');
+        sb.append('"').append(ss[i]).append('"');
+      }
+      sb.append(']');
+      return sb;
+    }
+
+    public StringBuilder graph(StringBuilder sb, String gid, String gname, StringBuilder ...gparams) {
+      sb.append("<style scoped>@import url('/h2o/css/graphs.css')</style>");
+      sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
+      sb.append("<script src='/h2o/js/graphs.js'></script>");
+      sb.append("<div id='").append(gid).append("'>")
+        .append("  <script>")
+        .append(gname).append("('").append(gid).append("'");
+      for (int i=0; i<gparams.length; i++) sb.append(", ").append(gparams[i]);
+      sb.append(");");
+      sb.append("  </script>")
+        .append("</div>");
+      return sb;
     }
   }
 

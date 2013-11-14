@@ -369,6 +369,7 @@ public class TestUtil {
 
   public static Frame frame(String[] names, double[]... rows) {
     assert names == null || names.length == rows[0].length;
+    Futures fs = new Futures();
     Vec[] vecs = new Vec[rows[0].length];
     Key keys[] = new Vec.VectorGroup().addVecs(vecs.length);
     for( int c = 0; c < vecs.length; c++ ) {
@@ -376,9 +377,10 @@ public class TestUtil {
       NewChunk chunk = new NewChunk(vec, 0);
       for( int r = 0; r < rows.length; r++ )
         chunk.addNum(rows[r][c]);
-      chunk.close(0, null);
-      vecs[c] = vec.close(null);
+      chunk.close(0, fs);
+      vecs[c] = vec.close(fs);
     }
+    fs.blockForPending();
     return new Frame(names, vecs);
   }
 }

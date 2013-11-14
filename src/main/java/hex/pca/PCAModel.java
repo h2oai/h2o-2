@@ -27,7 +27,13 @@ public class PCAModel extends Model {
   @API(help = "Principal components (eigenvector) matrix")
   final double[][] eigVec;
 
-  @API(help="Offsets of categorical columns into the sdev vector. The last value is the offset of the first numerical column.")
+  @API(help = "If standardized, mean of each numeric data column")
+  final double[] normSub;
+
+  @API(help = "If standardized, one over standard deviation of each numeric data column")
+  final double[] normMul;
+
+  @API(help = "Offsets of categorical columns into the sdev vector. The last value is the offset of the first numerical column.")
   final int[] catOffsets;
 
   @API(help = "Rank of eigenvector matrix")
@@ -50,6 +56,10 @@ public class PCAModel extends Model {
     this.namesExp = namesExp();
     this.rank = rank;
     this.num_pc = num_pc;
+
+    // TODO: Need to ensure this maps correctly to scored data cols
+    this.normSub = gramt.normSub();
+    this.normMul = gramt.normMul();
   }
 
   public double[] sdev() { return sdev; }
@@ -106,7 +116,7 @@ public class PCAModel extends Model {
     if(title != null && !title.isEmpty()) DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _selfKey);
 
-    sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.js'></script>");
+    sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
     sb.append("<div class='alert'>Actions: " + PCAScore.link(_selfKey, "Score on dataset") + ", "
         + PCA.link(_dataKey, "Compute new model") + "</div>");
     screevarString(sb);

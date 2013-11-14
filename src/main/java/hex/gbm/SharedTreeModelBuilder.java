@@ -1,6 +1,9 @@
 package hex.gbm;
 
+import hex.rng.MersenneTwisterRNG;
+
 import java.util.Arrays;
+import java.util.Random;
 
 import water.*;
 import water.Job.ValidatedJob;
@@ -19,7 +22,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @API(help = "Maximum tree depth", filter = Default.class, lmin=0, lmax=10000)
   public int max_depth = 5;
 
-  @API(help = "Fewest allowed observations in a leaf", filter = Default.class, lmin=1)
+  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1)
   public int min_rows = 10;
 
   @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
@@ -337,8 +340,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     long _snrows;
     /* @IN */ boolean _oob;
 
-    public double   sum() { return _sum; }
-    public long[][] cm () { return _cm;  }
+    public double   sum()   { return _sum; }
+    public long[][] cm ()   { return _cm;  }
+    public long     nrows() { return _snrows; }
 
     // Compute CM & MSE on either the training or testing dataset
     public Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) { return doIt(model,fr,validation,vresponse,false); }
@@ -411,13 +415,17 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     public Score report( Sys tag, int ntree, DTree[] trees ) {
       assert !Double.isNaN(_sum);
       int lcnt=0;
-      for( DTree t : trees ) if( t != null ) lcnt += t._len;
-      long err=_snrows;
-      for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");
-      Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
-      if( _nclass > 1 )
-        Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
+      if (trees==null) {
+        Log.info("No trees...");
+      } else {
+        for( DTree t : trees ) if( t != null ) lcnt += t._len;
+        long err=_snrows;
+        for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
+        Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
+        if( _nclass > 1 )
+          Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
+      }
       return this;
     }
   }
@@ -438,4 +446,16 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }
   static public final int     oob2Nid(int oobNid)   { return -oobNid + OUT_OF_BAG; }
   static public final int     nid2Oob(int nid)      { return -nid + OUT_OF_BAG; }
+
+  // Helper to unify use of M-T RNG
+  public static Random createRNG(long seed) {
+    return new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
+  }
+
+  // helper for debugging
+  static protected void printGenerateTrees(DTree[] trees) {
+    for( int k=0; k<trees.length; k++ )
+      if( trees[k] != null )
+        System.out.println(trees[k].root().toString2(new StringBuilder(),0));
+  }
 }

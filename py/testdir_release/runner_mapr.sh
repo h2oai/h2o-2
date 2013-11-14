@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/bin/bash 
 echo you can use -n argument to skip the s3 download if you did it once 
 echo files are unzipped to ../../h2o-downloaded
 # This is critical:
@@ -10,7 +9,7 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
-source ./runner_setup.sh
+source ./runner_setup.sh "$@"
 echo "Do we have to clean out old ice_root dirs somewhere?"
 
 echo "Setting up sandbox, since no cloud build here will clear it out! (unlike other runners)"

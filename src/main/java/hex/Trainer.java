@@ -80,7 +80,7 @@ public abstract class Trainer {
 
     final void fprop() {
       for( int i = 0; i < _ls.length; i++ )
-        _ls[i].fprop();
+        _ls[i].fprop(true);
     }
 
     final void bprop() {
@@ -95,9 +95,11 @@ public abstract class Trainer {
   public static class Direct extends Base {
     public int samples;
     Thread _thread;
+    Key _job;
 
-    public Direct(Layer[] ls) {
+    public Direct(Layer[] ls, Key job) {
       super(ls);
+      _job = job;
     }
 
     @Override public Layer[] layers() {
@@ -109,6 +111,8 @@ public abstract class Trainer {
       for( long i = 0; samples == 0 || i < samples; i++ ) {
         step();
         input.move();
+        if( _job != null && Job.cancelled(_job) )
+          break;
       }
     }
 
@@ -368,10 +372,6 @@ public abstract class Trainer {
     @Override public void map(Chunk[] cs) {
       _node._chunks.add(cs);
     }
-
-    @Override public boolean logVerbose() {
-      return false;
-    }
   }
 
   private static abstract class NodeTask extends H2OCountedCompleter {
@@ -390,7 +390,7 @@ public abstract class Trainer {
     int _count;
 
     @Override public void compute2() {
-      if( (_count < 0 || --_count > 0) && (_node._job == null || !Job.cancelled(_node._job)) ) {
+      if( (_count < 0 || --_count >= 0) && (_node._job == null || !Job.cancelled(_node._job)) ) {
         for( Chunk[] cs : _node._chunks ) {
           DescentChunk task = new DescentChunk();
           task._node = _node;
@@ -624,7 +624,7 @@ public abstract class Trainer {
         int group = device.getMaxWorkGroupSize();
         Input input = (Input) _ls[0];
         for( ;; ) {
-          input.fprop();
+          input.fprop(true);
           for( int i = 0; i < input._a.length; i++ )
             a[0].getBuffer().put(i, input._a[i]);
           queue.putWriteBuffer(a[0], false);

@@ -11,25 +11,23 @@ prostate.hex = h2o.importFile.FV(localH2O, path = prosPath, key = "prostate.hex"
 summary(prostate.hex)
 head(prostate.hex)
 tail(prostate.hex)
+h2o.table(prostate.hex$RACE)    # Note: Currently only works on a single integer/factor column
 
 # Get quantiles and examine outliers
 prostate.qs = quantile(prostate.hex$PSA)
-prostate.qs
+print(prostate.qs)
 
 # Note: Right now, assignment must be done manually with h2o.assign!
-outliers.low = prostate.hex[prostate.hex$PSA <= prostate.qs[2],]
-outliers.low = h2o.assign(outliers.low, "PSA.low")
-outliers.high = prostate.hex[prostate.hex$PSA >= prostate.qs[10],]
-outliers.high = h2o.assign(outliers.high, "PSA.high")
-
-nrow(outliers.low) + nrow(outliers.high)
-head(outliers.low); tail(outliers.low)
-head(outliers.high); tail(outliers.high)
+# PSA.outliers = prostate.hex[prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PSA >= prostate.qs[10],]
+PSA.outliers.ind = prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PSA >= prostate.qs[10]
+PSA.outliers = prostate.hex[PSA.outliers.ind,]
+PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
+nrow(PSA.outliers)
+head(PSA.outliers); tail(PSA.outliers)
 
 # Drop outliers from data
-prostate.trim = prostate.hex[prostate.hex$PSA > prostate.qs[2],]
-prostate.trim = h2o.assign(prostate.trim, "prostate.trim")
-prostate.trim = prostate.trim[prostate.trim$PSA < prostate.qs[10],]
+# prostate.trim = prostate.hex[prostate.hex$PSA > prostate.qs[2] && prostate.hex$PSA < prostate.qs[10],]
+prostate.trim = prostate.hex[!PSA.outliers.ind,]
 prostate.trim = h2o.assign(prostate.trim, "prostate.trim")
 nrow(prostate.trim)
 
@@ -44,7 +42,7 @@ nrow(prostate.train) + nrow(prostate.test)
 # Run GBM on training set and predict on test set
 myY = "CAPSULE"; myX = setdiff(colnames(prostate.train), c(myY, "ID"))
 prostate.gbm = h2o.gbm(x = myX, y = myY, distribution = "multinomial", data = prostate.train)
-prostate.gbm
+print(prostate.gbm)
 prostate.pred = h2o.predict(prostate.gbm, prostate.test)
 summary(prostate.pred)
 head(prostate.pred)

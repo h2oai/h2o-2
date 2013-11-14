@@ -26,14 +26,17 @@ public class EC2 {
 
   public int boxes;
   public String region = "us-east-1";
-  public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
-//  public String image = "ami-3565305c"; // Amazon Linux, x64, Instance-Store, US East N. Virginia
-  public String type = "m1.xlarge";
-  public String securityGroup = "default";
+  //public String image = "ami-3565305c"; // Amazon Linux, x64, Instance-Store, US East N. Virginia
+  //public String image = "ami-dfbfe4b6"; // Amazon Linux, x64, HVM, Instance-Store, US East N. Virginia
+  //public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
+  public String image = "ami-09614460";   // Ubuntu Raring 13.04 amd64 HVM
+  //public String type = "m1.xlarge";
+  public String type = "cc2.8xlarge"; // HPC
+  public String securityGroup = "ssh"; // "default";
   public boolean confirm = true;
 
 //@formatter:off
-  static String cloudConfig = "" +
+  static String cloudConfig = "" + // TODO try Amazon AMI "Enhanced Networking"
       l("#cloud-config") +
       l("users:") +
       l("  - name: " + USER) +
@@ -92,7 +95,7 @@ public class EC2 {
 
     if( instances.size() > boxes ) {
       for( int i = 0; i < instances.size() - boxes; i++ ) {
-        // TODO terminate
+        // TODO terminate?
       }
     } else if( instances.size() < boxes ) {
       int launchCount = boxes - instances.size();
@@ -104,16 +107,29 @@ public class EC2 {
           throw new Exception("Aborted");
       }
 
-      RunInstancesRequest request = new RunInstancesRequest();
-      request.withInstanceType(type);
-      request.withImageId(image);
-      request.withMinCount(launchCount).withMaxCount(launchCount);
-      request.withSecurityGroupIds(securityGroup);
-      request.withUserData(new String(Base64.encodeBase64(cloudConfig.getBytes())));
+      CreatePlacementGroupRequest group = new CreatePlacementGroupRequest();
+      group.withGroupName(USER);
+      group.withStrategy(PlacementStrategy.Cluster);
+      try {
+        ec2.createPlacementGroup(group);
+      } catch( AmazonServiceException ex ) {
+        if( !"InvalidPlacementGroup.Duplicate".equals(ex.getErrorCode()) )
+          throw ex;
+      }
 
-      RunInstancesResult runInstances = ec2.runInstances(request);
+      RunInstancesRequest run = new RunInstancesRequest();
+      run.withInstanceType(type);
+      run.withImageId(image);
+      run.withMinCount(launchCount).withMaxCount(launchCount);
+      run.withSecurityGroupIds(securityGroup);
+      Placement placement = new Placement();
+      placement.setGroupName(USER);
+      run.withPlacement(placement);
+      run.withUserData(new String(Base64.encodeBase64(cloudConfig.getBytes())));
+
+      RunInstancesResult runRes = ec2.runInstances(run);
       ArrayList<String> ids = new ArrayList<String>();
-      for( Instance instance : runInstances.getReservation().getInstances() )
+      for( Instance instance : runRes.getReservation().getInstances() )
         ids.add(instance.getInstanceId());
 
       List<Instance> created = wait(ec2, ids);
@@ -121,9 +137,9 @@ public class EC2 {
       instances.addAll(created);
     }
 
-    String[] pub = new String[instances.size()];
-    String[] prv = new String[instances.size()];
-    for( int i = 0; i < instances.size(); i++ ) {
+    String[] pub = new String[boxes];
+    String[] prv = new String[boxes];
+    for( int i = 0; i < boxes; i++ ) {
       pub[i] = instances.get(i).getPublicIpAddress();
       prv[i] = instances.get(i).getPrivateIpAddress();
     }

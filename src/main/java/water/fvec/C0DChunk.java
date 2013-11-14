@@ -2,6 +2,7 @@ package water.fvec;
 
 import java.util.Arrays;
 import water.AutoBuffer;
+import water.MemoryManager;
 import water.UDP;
 
 /**
@@ -24,7 +25,7 @@ public class C0DChunk extends Chunk {
   @Override boolean set_impl(int idx, long l) { return l==_con; }
   @Override boolean set_impl(int i, double d) { return d==_con; }
   @Override boolean set_impl(int i, float f ) { return f==_con; }
-  @Override boolean setNA_impl(int i) { return _con==Double.NaN; }
+  @Override boolean setNA_impl(int i) { return Double.isNaN(_con); }
   @Override boolean hasFloat() { return (long)_con!=_con; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C0DChunk read(AutoBuffer bb) {
@@ -35,7 +36,7 @@ public class C0DChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    Arrays.fill(nc._ds,_con);
+    Arrays.fill(nc._ds = MemoryManager.malloc8d(_len),_con);
     return nc;
   }
   // 3.3333333e33

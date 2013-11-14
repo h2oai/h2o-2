@@ -1,6 +1,8 @@
 package hex.gbm;
 
+import static hex.gbm.SharedTreeModelBuilder.createRNG;
 import hex.ConfusionMatrix;
+import hex.VariableImportance;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -9,7 +11,6 @@ import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
-import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
 
@@ -36,10 +37,12 @@ public class DTree extends Iced {
   final char _nbins;     // Max number of bins to split over
   final char _nclass;    // #classes, or 1 for regression trees
   final int _min_rows;   // Fewest allowed rows in any split
+  final long _seed;      // RNG seed; drives sampling seeds if necessary
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
-  public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) {
-    _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
+  public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) { this(names,ncols,nbins,nclass,min_rows,-1); }
+  public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows, long seed ) {
+    _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; _seed = seed; }
 
   public final Node root() { return _ns[0]; }
   // One-time local init after wire transfer
@@ -64,6 +67,10 @@ public class DTree extends Iced {
 
   public final int len() { return _len; }
   public final void len(int len) { _len = len; }
+
+  // Public stats about tree
+  public int leaves;
+  public int depth;
 
   // --------------------------------------------------------------------------
   // Abstract node flavor
@@ -108,6 +115,8 @@ public class DTree extends Iced {
     public final double se() { return _se0+_se1; }
     public final int   col() { return _col; }
     public final int   bin() { return _bin; }
+    public final long  rowsLeft () { return _n0; }
+    public final long  rowsRight() { return _n1; }
 
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
@@ -482,14 +491,26 @@ public class DTree extends Iced {
     // model (for now - really should be seperate).
     @API(help="Testing key for cm and errs") public final Key testKey;
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
+    @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
+    @API(help="Tree statistics") public final TreeStats treeStats;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey;  this.cm = null;
       treeBits = new CompressedTree[0][];
+      varimp = null;
+      treeStats = null;
     }
-    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm) {
+    public TreeModel(TreeModel prior, float[] varimp) {
+      super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
+      this.N = prior.N; this.testKey = prior.testKey; this.cm = prior.cm;
+      this.errs = prior.errs;
+      this.treeBits = prior.treeBits;
+      this.varimp = varimp;
+      this.treeStats = prior.treeStats;
+    }
+    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey; this.cm = cm;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
@@ -503,20 +524,28 @@ public class DTree extends Iced {
           if( trees[c] != null )
               ts[c] = trees[c].compress();
       }
+      varimp = null;
+      treeStats = tstats;
     }
 
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
 
     @Override public ConfusionMatrix cm() { return cm == null ? null : new ConfusionMatrix(cm); }
+    @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
 
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
-      for( CompressedTree ts[] : treeBits )
-        for( int c=0; c<ts.length; c++ )
-          if( ts[c] != null )
-            preds[c] += ts[c].score(data);
+      for( int tidx=0; tidx<treeBits.length; tidx++ )
+        score0(data, preds, tidx);
       return preds;
+    }
+    // Score per line per tree
+    public void score0(double data[], float preds[], int treeIdx) {
+      CompressedTree ts[] = treeBits[treeIdx];
+      for( int c=0; c<ts.length; c++ )
+        if( ts[c] != null )
+          preds[c] += ts[c].score(data);
     }
 
     public void generateHTML(String title, StringBuilder sb) {
@@ -594,6 +623,77 @@ public class DTree extends Iced {
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
       }
+
+      // Show tree stats
+      if (treeStats != null) generateHTMLTreeStats(sb);
+
+      // Show variable importance
+      if (varimp != null) generateHTMLVarImp(sb);
+
+    }
+
+    protected void generateHTMLTreeStats(StringBuilder sb) {
+      DocGen.HTML.section(sb,"Tree stats");
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr><th>&nbsp;</th>").append("<th>Min</th><th>Mean</th><th>Max</th></tr>");
+      sb.append("<tr><th>Depth</th>")
+            .append("<td>").append(treeStats.minDepth).append("</td>")
+            .append("<td>").append(treeStats.meanDepth).append("</td>")
+            .append("<td>").append(treeStats.maxDepth).append("</td></tr>");
+      sb.append("<th>Leaves</th>")
+            .append("<td>").append(treeStats.minLeaves).append("</td>")
+            .append("<td>").append(treeStats.meanLeaves).append("</td>")
+            .append("<td>").append(treeStats.maxLeaves).append("</td></tr>");
+      DocGen.HTML.arrayTail(sb);
+    }
+
+    protected void generateHTMLVarImp(StringBuilder sb) {
+      DocGen.HTML.section(sb,"Unscaled Variable Importance");
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr><th>Variable</th>");
+      for( int i=0; i<varimp.length; i++ )
+        sb.append("<td>").append(_names[i]).append("</td>");
+      sb.append("</tr>");
+      sb.append("<tr><th class='warning'>Mean Decrease Acurracy</th>");
+      for( int i=0; i<varimp.length; i++ )
+        sb.append(String.format("<td>%5.3f</td>",varimp[i]));
+      sb.append("</tr>");
+      DocGen.HTML.arrayTail(sb);
+      // Generate a graph - horrible code
+      DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
+          DocGen.HTML.toJSArray(new StringBuilder(), Arrays.copyOf(_names, _names.length-1)),
+          DocGen.HTML.toJSArray(new StringBuilder(), varimp)
+          );
+    }
+
+    public static class TreeStats extends Iced {
+      static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+      static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+      @API(help="Minimal tree depth.") int minDepth = Integer.MAX_VALUE;
+      @API(help="Maximum tree depth.") int maxDepth = Integer.MIN_VALUE;
+      @API(help="Average tree depth.") int meanDepth;
+      @API(help="Minimal num. of leaves.") int minLeaves = Integer.MAX_VALUE;
+      @API(help="Maximum num. of leaves.") int maxLeaves = Integer.MIN_VALUE;
+      @API(help="Average num. of leaves.") int meanLeaves;
+
+      transient long sumDepth  = 0;
+      transient long sumLeaves = 0;
+      transient int  numTrees = 0;
+      public void updateBy(DTree[] ktrees) {
+        if (ktrees==null) return;
+        for (int i=0; i<ktrees.length; i++) {
+          DTree tree = ktrees[i];
+          if (minDepth > tree.depth) minDepth = tree.depth;
+          if (maxDepth < tree.depth) maxDepth = tree.depth;
+          if (minLeaves > tree.leaves) minLeaves = tree.leaves;
+          if (maxLeaves < tree.leaves) maxLeaves = tree.leaves;
+          sumDepth += tree.depth;
+          sumLeaves += tree.leaves;
+          numTrees++;
+          meanDepth = (int) (sumDepth / numTrees);
+          meanLeaves = (int) (sumLeaves / numTrees);
+        }
+      }
     }
 
     // --------------------------------------------------------------------------
@@ -611,7 +711,8 @@ public class DTree extends Iced {
     public static class CompressedTree extends Iced {
       final byte [] _bits;
       final int _nclass;
-      public CompressedTree( byte [] bits, int nclass ) { _bits = bits; _nclass = nclass; }
+      final long _seed;
+      public CompressedTree( byte [] bits, int nclass, long seed ) { _bits = bits; _nclass = nclass; _seed = seed; }
       float score( final double row[] ) {
         AutoBuffer ab = new AutoBuffer(_bits);
         while(true) {
@@ -645,6 +746,13 @@ public class DTree extends Iced {
       }
 
       private float scoreLeaf( AutoBuffer ab ) { return ab.get4f(); }
+      public Random rngForChunk( int cidx ) {
+        Random rand = createRNG(_seed);
+        // Argh - needs polishment
+        for( int i=0; i<cidx; i++ ) rand.nextLong();
+        long seed = rand.nextLong();
+        return createRNG(seed);
+      }
     }
 
     /** Abstract visitor class for serialized trees.*/
@@ -773,6 +881,6 @@ public class DTree extends Iced {
       ab.put1(0).put2((char)65535); // Flag it special so the decompress doesn't look for top-level decision
     root().compress(ab);      // Compress whole tree
     assert ab.position() == sz;
-    return new TreeModel.CompressedTree(ab.buf(),_nclass);
+    return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
   }
 }

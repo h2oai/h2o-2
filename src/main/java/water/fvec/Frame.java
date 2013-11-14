@@ -41,21 +41,24 @@ public class Frame extends Iced {
 
   public final Vec[] vecs() {
     if( _vecs != null ) return _vecs;
+    // Load all Vec headers; load them all in parallel by spawning F/J tasks.
     final Vec [] vecs = new Vec[_keys.length];
     Futures fs = new Futures();
-    for( int i=0; i<_keys.length; i++ ){
+    for( int i=0; i<_keys.length; i++ ) {
       final int ii = i;
       final Key k = _keys[i];
-      H2OCountedCompleter t;
-      H2O.submitTask(t = new H2OCountedCompleter(){
-        // we need higher priority here as there is a danger of deadlock in case of many calls from MRTask2 at once
-        // (e.g. frame with many vectors invokes rollup tasks for all vectors in paralell), should probably be done in CPS style in the future
-        @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
-        @Override public void compute2() {
-          vecs[ii] = DKV.get(k).get();
-          tryComplete();
-        }
-      });
+      H2OCountedCompleter t = new H2OCountedCompleter() {
+          // We need higher priority here as there is a danger of deadlock in
+          // case of many calls from MRTask2 at once (e.g. frame with many
+          // vectors invokes rollup tasks for all vectors in parallel).  Should
+          // probably be done in CPS style in the future
+          @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
+          @Override public void compute2() {
+            vecs[ii] = DKV.get(k).get();
+            tryComplete();
+          }
+        };
+      H2O.submitTask(t);
       fs.add(t);
     }
     fs.blockForPending();
@@ -184,6 +187,17 @@ public class Frame extends Iced {
     return vec;
   }
 
+  public Vec replace(int col, Vec nv) {
+    assert col < _names.length;
+    Vec rv = vecs()[col];
+    assert rv.group().equals(nv.group());
+    _vecs[col] = nv;
+    _keys[col] = nv._key;
+    if( DKV.get(nv._key)==null )    // If not already in KV, put it there
+      DKV.put(nv._key, nv);
+    return rv;
+  }
+
   public Frame extractFrame(int startIdx, int endIdx) {
     Frame f = subframe(startIdx, endIdx);
     remove(startIdx, endIdx);
@@ -204,6 +218,15 @@ public class Frame extends Iced {
   public final String[] names() { return _names; }
   public int  numCols() { return vecs().length; }
   public long numRows(){ return anyVec().length();}
+
+  // Number of columns when categoricals expanded.
+  // Note: One level is dropped in each categorical col.
+  public int numExpCols() {
+    int ncols = 0;
+    for(int i = 0; i < vecs().length; i++)
+      ncols += vecs()[i].domain() == null ? 1 : (vecs()[i].domain().length - 1);
+    return ncols;
+  }
 
   /** All the domains for enum columns; null for non-enum columns.  */
   public String[][] domains() {
@@ -327,7 +350,7 @@ public class Frame extends Iced {
   public String[] toStringHdr( StringBuilder sb ) {
     String[] fs = new String[numCols()];
     for( int c=0; c<fs.length; c++ ) {
-      String n = _names[c];
+      String n = (c < _names.length) ? _names[c] : ("C"+c);
       if( numRows()==0 ) { sb.append(n).append(' '); continue; }
       Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
       String f = fs[c] = C.pformat();  // Printable width
@@ -485,7 +508,7 @@ public class Frame extends Iced {
 
     // Do Da Slice
     // orows is either a long[] or a Vec
-    if( orows == null || orows instanceof long[] )  
+    if( orows == null || orows instanceof long[] )
       return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
     Frame frows = (Frame)orows;
     Vec vrows = frows.anyVec();
@@ -552,7 +575,7 @@ public class Frame extends Iced {
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       Chunk pred = chks[chks.length-1];
       for(int i = 0; i < pred._len; ++i){
-        if(pred.at0(i) != 0) 
+        if(pred.at0(i) != 0)
           for(int j = 0; j < chks.length-1; ++j)
             nchks[j].addNum(chks[j].at0(i));
       }

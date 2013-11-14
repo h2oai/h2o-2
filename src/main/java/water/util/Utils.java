@@ -11,9 +11,6 @@ import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.zip.*;
-
-import org.apache.commons.lang.ArrayUtils;
-
 import water.*;
 import water.api.DocGen.FieldDoc;
 import water.parser.ParseDataset;
@@ -83,6 +80,11 @@ public class Utils {
   public static int sum(int[] from) {
     int result = 0;
     for (int d: from) result += d;
+    return result;
+  }
+  public static float sum(float[] from) {
+    float result = 0;
+    for (float d: from) result += d;
     return result;
   }
 
@@ -381,15 +383,25 @@ public class Utils {
   }
 
   public static <T> T[] append(T[] a, T... b) {
-    return (T[]) ArrayUtils.addAll(a, b);
+    if( a==null ) return b;
+    T[] tmp = Arrays.copyOf(a,a.length+b.length);
+    System.arraycopy(b,0,tmp,a.length,b.length);
+    return tmp;
   }
 
   public static <T> T[] remove(T[] a, int i) {
-    return (T[]) ArrayUtils.remove(a, i);
+    T[] tmp = Arrays.copyOf(a,a.length-1);
+    System.arraycopy(a,i+1,tmp,i,tmp.length-i);
+    return tmp;
+  }
+  public static int[] remove(int[] a, int i) {
+    int[] tmp = Arrays.copyOf(a,a.length-1);
+    System.arraycopy(a,i+1,tmp,i,tmp.length-i);
+    return tmp;
   }
 
   public static <T> T[] subarray(T[] a, int off, int len) {
-    return (T[]) ArrayUtils.subarray(a, off, off + len);
+    return Arrays.copyOfRange(a,off,off+len);
   }
 
   public static void clearFolder(String folder) {
@@ -792,5 +804,24 @@ public class Utils {
 
   public static String className(String path) {
     return path.replace('\\', '/').replace('/', '.').substring(0, path.length() - 6);
+  }
+
+  public static double avg(double[] nums) {
+    double sum = 0;
+    for(double n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static double avg(long[] nums) {
+    long sum = 0;
+    for(long n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static float[] div(float[] nums, int n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  public static float[] div(float[] nums, float n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
   }
 }

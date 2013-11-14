@@ -3,7 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs, h2o_gbm
 
 DELETE_KEYS = True
-DO_CLASSIFICATION = True
+# FIX need to get exec workin
+DO_CLASSIFICATION = False
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -22,7 +23,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_from_import_fvec(self):
+    def test_GBM_fvec(self):
 
         print "Sets h2o.beta_features like -bf at command line"
         print "this will redirect import and parse to the 2 variants"
@@ -77,7 +78,7 @@ class Basic(unittest.TestCase):
 
             if importFolderPath=='manyfiles-nflx-gz':
                 if DO_CLASSIFICATION:
-                    execExpr = 'c.hex=colSwap(c.hex,%s,(c.hex[%s]>15 ? 1 : 0))' % response
+                    execExpr = 'c.hex=colSwap(c.hex,%s,(c.hex[%s]>15 ? 1 : 0))' % (response,response)
                     resultExec = h2o_cmd.runExec(expression=execExpr)
 
                 # lets look at the response column now
@@ -115,7 +116,6 @@ class Basic(unittest.TestCase):
                 }
 
             kwargs = params.copy()
-            h2o.beta_features = True
             timeoutSecs = 1800
             start = time.time()
             GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)

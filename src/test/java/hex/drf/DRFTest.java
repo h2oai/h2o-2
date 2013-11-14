@@ -19,7 +19,8 @@ public class DRFTest extends TestUtil {
   static final long[]   a(long ...arr)   { return arr; }
   static final long[][] a(long[] ...arr) { return arr; }
 
-  @Test public void testBasicDRFClassification() throws Throwable {
+//  @Ignore
+  @Test public void testClassIris1() throws Throwable {
 
     // iris ntree=1
     // the DRF should  use only subset of rows since it is using oob validation
@@ -30,6 +31,10 @@ public class DRFTest extends TestUtil {
           a( a(6, 0,  0),
              a(0, 7,  0),
              a(0, 2, 11)));
+  }
+
+//  @Ignore
+  @Test public void testClassIris50() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
@@ -37,28 +42,35 @@ public class DRFTest extends TestUtil {
           50,
           a( a(30, 0,  0),
              a(0, 31,  3),
-             a(0,  3, 33)));
+             a(0,  2, 34)));
+  }
 
+//  @Ignore
+  @Test public void testClassCars1() throws Throwable {
     // cars ntree=1
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
         a( a(0,  1, 0, 0, 0),
-           a(0, 55, 0, 4, 0),
+           a(1, 55, 0, 3, 0),
            a(0,  0, 0, 0, 0),
-           a(0,  0, 0,15, 1),
+           a(0,  0, 0,16, 0),
            a(0,  0, 0, 0,34)));
+  }
 
+//  @Ignore
+  @Test public void testClassCars50() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         50,
-        a( a(0,   4, 0,  0,   0),
-           a(0, 203, 0,  4,   0),
+        a( a(2,   2, 0,  0,   0),
+           a(1, 205, 0,  1,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   9, 0, 72,   3),
+           a(0,   4, 0, 79,   1),
            a(0,   0, 0,  0, 108)));
+  }
 
     //basicDRF("./smalldata/logreg/prostate.csv","prostate.hex",
     //         new PrepData() {
@@ -80,17 +92,6 @@ public class DRFTest extends TestUtil {
     //             return fr.remove(fr.numCols()-1);
     //           }
     //         });
-  }
-
-  // Parse given file and returns a frame representing the file.
-  // The caller is responsible for frame remove.
-  static Frame parseDs(String fname, Key destKey) {
-    File file = TestUtil.find_test_file(fname);
-    Key fkey = NFSFileVec.make(file);
-    Frame fr = ParseDataset2.parse(destKey,new Key[]{fkey});
-    UKV.remove(fkey);
-    return fr;
-  }
 
   // Put response as the last vector in the frame and return it.
   // Also fill DRF.
@@ -113,13 +114,13 @@ public class DRFTest extends TestUtil {
     Frame pred = null;
     try {
       drf = new DRF();
-      frTrain = drf.source = parseDs(fnametrain, destTrain);
+      frTrain = drf.source = parseFrame(destTrain, fnametrain);
       unifyFrame(drf, frTrain, prep);
       // Configure DRF
       drf.classification = true;
       drf.ntrees = ntree;
       drf.max_depth = 50;
-      drf.min_rows = 1;
+      drf.min_rows = 1; // = nodesize
       drf.nbins = 1024;
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // Simulated sampling with replacement
@@ -131,7 +132,7 @@ public class DRFTest extends TestUtil {
       // And compare CMs
       assertCM(expCM, model.cm);
 
-      frTest = fnametest!=null ? parseDs(fnametest, destTest) : null;
+      frTest = fnametest!=null ? parseFrame(destTest, fnametest) : null;
       pred = drf.score(frTest!=null?frTest:drf.source);
     } catch (Throwable t) {
       t.printStackTrace();

@@ -311,7 +311,9 @@ def log(cmd, comment=None):
     os.chmod(filename, permissions)
 
 def make_syn_dir():
-    SYNDATASETS_DIR = './syn_datasets'
+    # move under sandbox
+    # the LOG_DIR must have been created for commands.log before any datasets would be created
+    SYNDATASETS_DIR = LOG_DIR + '/syn_datasets'
     if os.path.exists(SYNDATASETS_DIR):
         shutil.rmtree(SYNDATASETS_DIR)
     os.mkdir(SYNDATASETS_DIR)
@@ -893,7 +895,8 @@ class H2O(object):
             raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
 
         for e in ['error', 'Error', 'errors', 'Errors']:
-            if e in rjson:
+            # error can be null (python None). This happens in exec2
+            if e in rjson and rjson[e]:
                 verboseprint(dump_json(rjson))
                 emsg = 'rjson %s in %s: %s' % (e, inspect.stack()[1][3], rjson[e])
                 if ignoreH2oError:
@@ -903,7 +906,8 @@ class H2O(object):
                     raise Exception(emsg)
 
         for w in ['warning', 'Warning', 'warnings', 'Warnings']:
-            if w in rjson:
+            # warning can be null (python None).
+            if w in rjson and rjson[w]:
                 verboseprint(dump_json(rjson))
                 print 'rjson %s in %s: %s' % (w, inspect.stack()[1][3], rjson[w])
 
@@ -997,10 +1001,10 @@ class H2O(object):
 
 
         if beta_features:
-            if 'redirect_url' in response:
+            if 'redirect_url' in response['response_info']:
                 # url = self.__url(response['redirect_url'] + ".json")
                 # this is the full url now, with params?
-                url = self.__url(response['redirect_url'])
+                url = self.__url(response['response_info']['redirect_url'])
                 # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
                 params = None
             else:
@@ -1386,15 +1390,20 @@ class H2O(object):
 
     # 'destination_key', 'escape_nan' 'expression'
     def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
-        params_dict = {
-            'expression': None,
-            ## 'escape_nan': 0,
-            ## 'destination_key': "Result.hex", # curious as to whether specifying destination key messes anything up.
-            }
+        if beta_features:
+            params_dict = {
+                'str': None,
+                }
+        else:
+            params_dict = {
+                'expression': None,
+                ## 'escape_nan': 0,
+                }
+
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict.update(kwargs)
+        check_params_update_kwargs(params_dict, kwargs, 'exec_query', print_params=True)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request('Exec.json',
+        a = self.__do_json_request('2/Exec2.json' if beta_features else 'Exec.json',
             timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a
@@ -1439,9 +1448,10 @@ class H2O(object):
                 'ignored_cols_by_name': None,
                 'classification': None,
                 'validation': None,
+                'importance': None, # enable variable importance
                 'ntrees': trees,
                 'max_depth': None,
-                'min_rows': None,
+                'min_rows': None, # how many rows in leaves for stopping condition
                 'nbins': None,
                 'mtries': None,
                 'sample_rate': None,
@@ -1478,44 +1488,48 @@ class H2O(object):
             print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
-        rf = self.__do_json_request(algo + '.json',
-            timeout=timeoutSecs, params=params_dict)
-        verboseprint("\n%s result:" % algo, dump_json(rf))
+        rf = self.__do_json_request(algo + '.json', timeout=timeoutSecs, params=params_dict)
+        print "\n%s result:" % algo, dump_json(rf)
         
         # noPoll and rfView=False are similar?
         if (noPoll or not rfView) or (beta_features and rfView==False):
             # just return for now
             return rf
 
-        # FIX! will we always get a redirect?
-        if rf['response']['redirect_request'] != algoView:
-            print dump_json(rf)
-            raise Exception('H2O %s redirect is not %s json response precedes.' % (algo, algoView))
+        if beta_features:
+            rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging)
+            return rfViewResult
+
+        else:
+            if rf['response']['redirect_request'] != algoView:
+                print dump_json(rf)
+                raise Exception('H2O %s redirect is not %s json response precedes.' % (algo, algoView))
 
 
-        # FIX! check all of these somehow?
-        # if we model_key was given to rf via **kwargs, remove it, since we're passing 
-        # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
-        data_key  = rf['data_key']
-        model_key = rf['model_key']
-        rfCloud = rf['response']['h2o']
-        # this is important. it's the only accurate value for how many trees RF was asked for.
-        ntree    = rf['ntree']
-        response_variable = rf['response_variable']
+            # FIX! check all of these somehow?
+            # if we model_key was given to rf via **kwargs, remove it, since we're passing 
+            # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
+            data_key  = rf['data_key']
+            model_key = rf['model_key']
+            rfCloud = rf['response']['h2o']
+            # this is important. it's the only accurate value for how many trees RF was asked for.
+            ntree    = rf['ntree']
+            response_variable = rf['response_variable']
 
-        # Since I may not have passed a model_key or ntree to h2o, I have to learn what h2o used
-        # and be sure to pass that to RFView. just update params_dict. If I provided them
-        # I'm trusting h2o to have given them back to me correctly. Maybe fix that at some point.
-        if not beta_features:
+            # Since I may not have passed a model_key or ntree to h2o, I have to learn what h2o used
+            # and be sure to pass that to RFView. just update params_dict. If I provided them
+            # I'm trusting h2o to have given them back to me correctly. Maybe fix that at some point.
             params_dict.update({'ntree': ntree, 'model_key': model_key})
 
-        # data_key/model_key/ntree are all in **params_dict
-        rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs, 
-            retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            noise=noise, benchmarkLogging=benchmarkLogging, print_params=print_params, noPoll=noPoll, 
-            useRFScore=False, **params_dict) 
+            # data_key/model_key/ntree are all in **params_dict
+            rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs, 
+                retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging, print_params=print_params, noPoll=noPoll, 
+                useRFScore=False, **params_dict) 
 
-        return rfViewResult
+            return rfViewResult
 
     def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300, 
             retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
@@ -1526,22 +1540,29 @@ class H2O(object):
         if beta_features:
             print "random_forest_view not supported in H2O fvec yet. hacking done response"
             r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
-            return r
+            # return r
 
-        algo = '2/DRFView2' if beta_features else 'RFView'
+        # algo = '2/DRFView2' if beta_features else 'RFView'
+        algo = '2/DRFModelView' if beta_features else 'RFView'
         algoScore = '2/DRFScore2' if beta_features else 'RFScore'
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
-        params_dict = {
-            'data_key': data_key,
-            'model_key': model_key,
-            'out_of_bag_error_estimate': 1,
-            'iterative_cm': 0,
-            # is ntree not expected here?
-            'ntree': None,
-            'class_weights': None,
-            'response_variable': None,
-            }
+
+        if beta_features:
+            params_dict = {
+                '_modelKey': model_key,
+                }
+        else:
+            params_dict = {
+                'data_key': data_key,
+                'model_key': model_key,
+                'out_of_bag_error_estimate': 1,
+                'iterative_cm': 0,
+                # is ntree not expected here?
+                'ntree': None,
+                'class_weights': None,
+                'response_variable': None,
+                }
         browseAlso = kwargs.pop('browseAlso',False)
 
         # only update params_dict..don't add
@@ -1550,10 +1571,14 @@ class H2O(object):
             if k in params_dict:
                 params_dict[k] = kwargs[k]
 
-        if params_dict['ntree'] is None:
-            raise Exception('%s got no ntree: %s . Why? h2o needs?' % (algo, params_dict['ntree']))
+        if beta_features:
+            ntree = 0 # not used?
+
+        else:
+            if params_dict['ntree'] is None:
+                raise Exception('%s got no %s param: %s . Why? h2o needs?' % (algo, 'ntree', params_dict['ntree']))
         # well assume we got the gold standard from the initial rf request
-        ntree = params_dict['ntree']
+            ntree = params_dict['ntree']
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -1566,6 +1591,7 @@ class H2O(object):
 
         a = self.__do_json_request(whichUsed + ".json",
             timeout=timeoutSecs, params=params_dict)
+
         verboseprint("\n%s result:" % whichUsed, dump_json(a))
 
         if noPoll:
@@ -1573,26 +1599,34 @@ class H2O(object):
 
         # add a fake redirect_request and redirect_request_args
         # to the RF response, to make it look like everyone else
-        fake_a = {}
-        fake_a['response'] = a['response']
-        fake_a['response']['redirect_request'] = whichUsed + ".json"
-        fake_a['response']['redirect_request_args'] = params_dict
 
-        # no redirect_response in rfView? so need to pass params here
-        # FIX! do we have to do a 2nd if it's done in the first?
-        rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            noise=noise, benchmarkLogging=benchmarkLogging)
+        if beta_features:
+            rfView = a
+        else:
+            fake_a = {}
+            fake_a['response'] = a['response']
+            fake_a['response']['redirect_request'] = whichUsed + ".json"
+            fake_a['response']['redirect_request_args'] = params_dict
 
-        # above we get this from what we're told from rf and passed to rfView
-        ## ntree = rfView['ntree']
-        verboseprint("%s done:" % whichUsed, dump_json(rfView))
-        status = rfView['response']['status']
-        if status != 'done': raise Exception('Unexpected status: ' + status)
+            # no redirect_response in rfView? so need to pass params here
+            # FIX! do we have to do a 2nd if it's done in the first?
+            rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging)
 
-        numberBuilt = rfView['trees']['number_built']
-        if numberBuilt!=ntree:
-            raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
+            # above we get this from what we're told from rf and passed to rfView
+            ## ntree = rfView['ntree']
+            verboseprint("%s done:" % whichUsed, dump_json(rfView))
+            status = rfView['response']['status']
+            if status != 'done': raise Exception('Unexpected status: ' + status)
+
+        if beta_features:
+            drf_model = rfView['drf_model']
+            numberBuilt = drf_model['N']
+        else:
+            numberBuilt = rfView['trees']['number_built']
+            if numberBuilt!=ntree:
+                raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
 
         # can't check this? These are returned in the middle but not at the end
         ## progress = rfView['response']['progress']
@@ -1601,9 +1635,9 @@ class H2O(object):
 
         # want to double check all this because it's new
         # and we had problems with races/doneness before
-        errorInResponse = \
-            numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
-            ntree!=rfView['ntree']
+        errorInResponse = False
+            # numberBuilt<0 or ntree<0 or numberBuilt>ntree or \
+            # ntree!=rfView['ntree']
 
         if errorInResponse:
             raise Exception("\nBad values in %s.json\n" % whichUsed +
@@ -1619,6 +1653,17 @@ class H2O(object):
         **kwargs):
         rfView = random_forest_view(useRFScore=True, *args, **kwargs)
         return rfView
+
+    def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'source': None,
+            'target': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'set_column_names', print_params)
+        a = self.__do_json_request('SetColumnNames.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nset_column_names result:", dump_json(a))
+        return a
 
     def gbm_view(self,model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {

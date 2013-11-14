@@ -8,7 +8,7 @@ echo "Gets the latest h2o.jar (only + version file) from s3, using curl"
 # -n is no download of the jar
 NO_DOWNLOAD=0
 # default to hilbert
-BRANCH=hilbert
+BRANCH=master
 while getopts nb: flag
 do
     case $flag in
@@ -28,8 +28,6 @@ done
 shift $(( OPTIND - 1 ))  # shift past the last flag or argument
 echo remaining parameters to Bash are $*
 
-## branch=${BRANCH_NAME:-master}
-## branch=tomk-bond
 echo "using branch: $BRANCH"
 
 #**************************************

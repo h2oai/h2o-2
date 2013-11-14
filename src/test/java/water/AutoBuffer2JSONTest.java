@@ -5,17 +5,14 @@ import org.junit.*;
 import com.google.gson.JsonObject;
 
 import water.api.DocGen;
+import water.api.Request.API;
 import water.util.JsonUtil;
 
 public class AutoBuffer2JSONTest extends TestUtil {
 
   @BeforeClass public static void stall() { TestUtil.stall_till_cloudsize(1); }
 
-  public static abstract class A extends Request2 {
-    @Override protected Response serve() { return null; }
-  }
-
-  static class A1 extends A {
+  static class A1 extends Iced {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     @API(help="double field with NaN")       double d1 = Double.NaN;
@@ -25,10 +22,10 @@ public class AutoBuffer2JSONTest extends TestUtil {
   }
 
   @Test public void testDouble() {
-    assertEqual(new A1(), "{\"Request2\":0,\"d1\":\"NaN\",\"d2\":\"Infinity\",\"d3\":\"-Infinity\",\"d4\":-3.141527}");
+    assertEqual(new A1(), "{\"d1\":\"NaN\",\"d2\":\"Infinity\",\"d3\":\"-Infinity\",\"d4\":-3.141527}");
   }
 
-  static class A2 extends A {
+  static class A2 extends Iced {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
     @API(help="float field with NaN")       float f1 = Float.NaN;
@@ -38,7 +35,7 @@ public class AutoBuffer2JSONTest extends TestUtil {
   }
 
   @Test public void testFloat() {
-    assertEqual(new A2(), "{\"Request2\":0,\"f1\":\"NaN\",\"f2\":\"Infinity\",\"f3\":\"-Infinity\",\"f4\":-3.141527}");
+    assertEqual(new A2(), "{\"f1\":\"NaN\",\"f2\":\"Infinity\",\"f3\":\"-Infinity\",\"f4\":-3.141527}");
   }
 
   // ---- Only Request1 tests for correct JSON
@@ -62,7 +59,7 @@ public class AutoBuffer2JSONTest extends TestUtil {
     Assert.assertEquals("{\"f1\":\"NaN\",\"f2\":\"Infinity\",\"f3\":\"-Infinity\",\"f4\":3.141527}", o.toString());
    }
 
-  private void assertEqual(A test, String expJson) {
+  private void assertEqual(Iced test, String expJson) {
     AutoBuffer ab = new AutoBuffer();
     String json = new String(test.writeJSON(ab).buf());
     Assert.assertEquals(expJson, json);

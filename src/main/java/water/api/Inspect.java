@@ -7,6 +7,7 @@ import hex.*;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
+import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.*;
 import hex.rf.RFModel;
@@ -162,6 +163,8 @@ public class Inspect extends Request {
       return ((GridSearch) f).redirect();
     if(f instanceof hex.pca.PCAModel)
       return PCAModelView.redirect(this, key);
+    if (f instanceof DRFModel)
+      return DRFModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
   }
 

@@ -7,13 +7,12 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 
-import water.AutoBuffer;
-import water.H2O;
-import water.PrettyPrint;
+import water.*;
+import water.api.Request.API;
+import water.api.RequestBuilders.Response.Status;
 import water.util.*;
 
 import com.google.gson.*;
-import com.google.gson.stream.JsonReader;
 
 /** Builders & response object.
  *
@@ -171,7 +170,7 @@ public class RequestBuilders extends RequestQueries {
       case poll:
         if (response._redirectArgs != null) {
           RString poll = new RString(_redirectJs);
-          poll.replace("REDIRECT_URL",getClass().getSimpleName()+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
+          poll.replace("REDIRECT_URL",requestName()+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
           result.replace("JSSTUFF", poll.toString());
         } else {
           RString poll = new RString(_pollJs);
@@ -518,6 +517,33 @@ public class RequestBuilders extends RequestQueries {
       _strictJsonCompliance = true;
     }
 
+    public ResponseInfo extractInfo() {
+      String redirectUrl = null;
+      if (_status == Status.redirect) redirectUrl = _redirectName+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
+      if (_status == Status.poll)     redirectUrl = _req.getClass().getSimpleName()+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
+      return new ResponseInfo(redirectUrl, _time, _status);
+    }
+  }
+
+  /** Class holding technical information about request/response. It will be served as a part of Request2's
+   * response.
+   */
+  public static class ResponseInfo extends Iced {
+    static final int API_WEAVER=1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    final @API(help="H2O cloud name.") String h2o;
+    final @API(help="Node serving the response.") String node;
+    final @API(help="Request processing time.") long time;
+    final @API(help="Response status") Response.Status status;
+    final @API(help="Redirect name.") String redirect_url;
+    public ResponseInfo(String redirect_url, long time, Status status) {
+      this.h2o = H2O.NAME;
+      this.node = H2O.SELF.toString();
+      this.redirect_url = redirect_url;
+      this.time = time;
+      this.status = status;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1061,4 +1087,5 @@ public class RequestBuilders extends RequestQueries {
       return "<strong>"+trunc(obj,HEADER,10)+"</strong>"+trunc(obj,MIN,6)+trunc(obj,MEAN,6)+trunc(obj,MAX,6);
     }
   }
+
 }

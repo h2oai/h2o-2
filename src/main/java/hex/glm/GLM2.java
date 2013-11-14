@@ -172,7 +172,6 @@ public class GLM2 extends ModelJob {
     _oldModel = new GLMModel(dest(),source,new GLMParams(family,tweedie_variance_power,link,1-tweedie_variance_power),beta_epsilon,alpha,lambda,System.currentTimeMillis()-_startTime,GLM2.this.case_mode,GLM2.this.case_val);
     tweedie_link_power = 1 - tweedie_variance_power; // TODO
     Frame fr = new Frame(source._names.clone(),source.vecs().clone());
-    System.out.println("Frame = " + Arrays.toString(fr._names));
     fr.remove(ignored_cols);
     final Vec [] vecs =  fr.vecs();
     ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
