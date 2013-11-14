@@ -164,6 +164,9 @@ public class DRF extends SharedTreeModelBuilder {
     H2OCountedCompleter[] computers = new H2OCountedCompleter[_ncols];
     for (int var=0; var<_ncols; var++) {
       final int variable = var;
+      // WARNING: The code is shuffling all rows not only OOB rows.
+      // Hence, after shuffling an OOB row can contain in shuffled column value from non-OOB row
+      // The question is if it affects significatly var imp
       computers[var] = new H2OCountedCompleter() {
         @Override public void compute2() {
           Frame wf = new Frame(f); // create a copy of frame
