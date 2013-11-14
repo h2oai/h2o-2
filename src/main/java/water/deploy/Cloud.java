@@ -36,7 +36,7 @@ public class Cloud {
    * To avoid configuring remote machines, a JVM can be sent through rsync with H2O. By default,
    * decompress the Oracle Linux x64 JDK to a local folder and point this path to it.
    */
-  static final String JRE = null; // "../../libs/jdk/jre";
+  static final String JRE = null; //System.getProperty("user.home") + "/libs/jdk/jre";
   /** Watch dogs are additional JVMs that shutdown the cluster when the client is killed */
   static final boolean WATCHDOGS = true;
   static final String FLATFILE = "flatfile";
@@ -144,8 +144,8 @@ public class Cloud {
       H2O.main(Utils.append(workerArgs, args));
       TestUtil.stall_till_cloudsize(1 + workers.size());
       Log.unwrap(System.out, "");
-      Log.unwrap(System.out, "Cloud is up, local port " + Cloud.PORT + " forwarded");
-      Log.unwrap(System.out, "Go to http://127.0.0.1:" + Cloud.PORT);
+      Log.unwrap(System.out, "Cloud is up, local port " + FORWARDED_LOCAL_PORT + " forwarded");
+      Log.unwrap(System.out, "Go to http://127.0.0.1:" + FORWARDED_LOCAL_PORT);
       Log.unwrap(System.out, "");
       int index = Arrays.asList(args).indexOf("-mainClass");
       if( index >= 0 ) {
