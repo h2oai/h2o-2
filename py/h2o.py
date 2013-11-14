@@ -1001,10 +1001,10 @@ class H2O(object):
 
 
         if beta_features:
-            if 'redirect_url' in response:
+            if 'redirect_url' in response['response_info']:
                 # url = self.__url(response['redirect_url'] + ".json")
                 # this is the full url now, with params?
-                url = self.__url(response['redirect_url'])
+                url = self.__url(response['response_info']['redirect_url'])
                 # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
                 params = None
             else:
