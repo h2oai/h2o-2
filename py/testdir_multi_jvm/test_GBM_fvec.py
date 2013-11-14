@@ -4,7 +4,7 @@ import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, 
 
 DELETE_KEYS = True
 # FIX need to get exec workin
-DO_CLASSIFICATION = False
+DO_CLASSIFICATION = True
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -15,9 +15,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10)
+            h2o.build_cloud(3,java_heap_GB=4)
         else:
-            h2o_hosts.build_cloud_with_hosts(1,java_heap_GB=10)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -78,13 +78,12 @@ class Basic(unittest.TestCase):
 
             if importFolderPath=='manyfiles-nflx-gz':
                 if DO_CLASSIFICATION:
-                    execExpr = 'c.hex=colSwap(c.hex,%s,(c.hex[%s]>15 ? 1 : 0))' % (response,response)
-                    resultExec = h2o_cmd.runExec(expression=execExpr)
+                    execExpr = 'c.hex[,%s]=c.hex[,%s]>15' % (response,response)
+                    kwargs = { 'str': execExpr }
+                    resultExec = h2o_cmd.runExec(**kwargs)
 
                 # lets look at the response column now
                 s = h2o_cmd.runSummary(key="c.hex", cols=response, max_ncols=1)
-                print h2o.dump_json(s)
-                
                 x = range(542)
                 # remove the output too! (378)
                 xIgnore = []
@@ -103,7 +102,7 @@ class Basic(unittest.TestCase):
                 # leave one col ignored, just to see?
                 xIgnore = 0
 
-            modelKey = "GBMKEY"
+            modelKey = "GBMGood"
             params = {
                 'destination_key': modelKey,
                 'ignored_cols_by_name': xIgnore,
@@ -121,7 +120,33 @@ class Basic(unittest.TestCase):
             GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
             print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
             # no pattern waits for all
-            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+
+            for i in range(10):
+                # now issue a couple background GBM jobs that we'll kill
+                kwargs['destination_key'] = 'GBMBad1'
+                GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+                jobid1 = GBMFirstResult['job_key']
+
+                kwargs['destination_key'] = 'GBMBad2'
+                GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+                jobid2 = GBMFirstResult['job_key']
+
+                kwargs['destination_key'] = 'GBMBad3'
+                GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+                jobid3 = GBMFirstResult['job_key']
+
+                kwargs['destination_key'] = 'GBMBad4'
+                GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+                jobid4 = GBMFirstResult['job_key']
+
+                # have to pass the job id
+                h2o.nodes[0].jobs_cancel(key=jobid1)
+                h2o.nodes[0].jobs_cancel(key=jobid2)
+                h2o.nodes[0].jobs_cancel(key=jobid3)
+                h2o.nodes[0].jobs_cancel(key=jobid4)
+
+
+            h2o_jobs.pollWaitJobs(pattern='GBMGood', timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
             elapsed = time.time() - start
             print "GBM training completed in", elapsed, "seconds."
 
@@ -143,9 +168,6 @@ class Basic(unittest.TestCase):
 
             if DELETE_KEYS:
                 h2i.delete_keys_from_import_result(pattern=csvFilename, importResult=importResult)
-
-            sys.stdout.write('.')
-            sys.stdout.flush() 
 
 if __name__ == '__main__':
     h2o.unit_main()
