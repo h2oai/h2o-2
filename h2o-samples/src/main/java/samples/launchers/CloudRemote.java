@@ -53,6 +53,13 @@ public class CloudRemote {
     cloud.clientRSyncIncludes.add(h2o + "/lib");
     cloud.clientRSyncIncludes.add(h2o + "/smalldata");
 
+    // If run from other project
+    cloud.clientRSyncIncludes.add("target");
+
+    // Needed if using AWS API, e.g. importing from S3
+    cloud.clientRSyncIncludes.add(h2o + "/AwsCredentials.properties");
+    cloud.fannedRSyncIncludes.add("AwsCredentials.properties");
+
     // The fanned rsync (between master and slaves) will have the two 'target' merged
     cloud.fannedRSyncIncludes.add("target");
     cloud.fannedRSyncIncludes.add("lib");
