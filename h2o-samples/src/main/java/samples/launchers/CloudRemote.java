@@ -14,16 +14,16 @@ import water.util.Log;
  */
 public class CloudRemote {
   public static void main(String[] args) throws Exception {
-    launchEC2(null);
+    launchEC2(null, 4);
     // launchDefaultIPs(null);
   }
 
   /**
    * Starts EC2 machines and builds a cluster.
    */
-  public static void launchEC2(Class<? extends Job> job) throws Exception {
+  public static void launchEC2(Class<? extends Job> job, int boxes) throws Exception {
     EC2 ec2 = new EC2();
-    ec2.boxes = 4;
+    ec2.boxes = boxes;
     Cloud c = ec2.resize();
     launch(c, job);
   }
