@@ -120,35 +120,40 @@ class Basic(unittest.TestCase):
             if h2o.verbose:
                 print "summaryResult:", h2o.dump_json(summaryResult)
 
-            # h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
-            # remove bin_names because it's too big (256?) and bins
-            # just touch all the stuff returned
-            means = summaryResult['means']
-            names = summaryResult['names']
+            # pct: [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
+            # pctile: [1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 6.0, 7.0]
+            # hstart: 1.0
+            # hstep: 1.0
+            # hbrk: [u'1', u'2', u'3', u'4', u'5', u'6', u'7']
+            # hcnt: [4236800, 5666020, 715080, 54940, 189860, 347340, 410200]
+
             summaries = summaryResult['summaries']
             for column in summaries:
-                bins = column['bins']
-                binsz = column['binsz']
-                self.assertEqual(binsz, 1)
-                domains = column['domains']
+                colname = column['colname']
+                coltype = column['type']
+                nacnt = column['nacnt']
 
-                for b in bins:
+                stats = column['stats']
+                stattype= stats['type']
+                mean = stats['mean']
+                sd = stats['sd']
+                zeros = stats['zeros']
+                mins = stats['mins']
+                maxs = stats['maxs']
+                pct = stats['pct']
+                pctile = stats['pctile']
+
+                hstart = column['hstart']
+                hstep = column['hstep']
+                hbrk = column['hbrk']
+                hcnt = column['hcnt']
+
+                for b in hcnt:
                     e = .1 * rowCount
                     self.assertAlmostEqual(b, .1 * rowCount, delta=.01*rowCount, 
                         msg="Bins not right. b: %s e: %s" % (b, e))
 
-                print "FIX! reversing maxs list to match expected"
-                maxs = column['maxs']
-                if DO_TEMP_HACK:
-                    maxs.sort(reverse=True)
-
-                mins = column['mins']
-                percentileValues = column['percentileValues']
-                print "percentilevalues", percentileValues
-                ### rows = column['rows']
-                start = column['start']
-                zeros = column['zeros']
-
+                print "pctile:", pctile
                 print "maxs:", maxs
                 self.assertEqual(maxs[0], expectedMax)
                 # self.assertEqual(maxs[1], expectedMax-1)
@@ -164,7 +169,7 @@ class Basic(unittest.TestCase):
                 # self.assertEqual(mins[4], expectedMin+4)
 
                 # apparently our 'percentile estimate" uses interpolation, so this check is not met by h2o
-                for v in percentileValues:
+                for v in pctile:
                     ##    self.assertIn(v,legalValues,"Value in percentile 'percentileValues' is not present in the dataset") 
                     # but: you would think it should be within the min-max range?
                     self.assertTrue(v >= expectedMin, 
@@ -192,8 +197,8 @@ class Basic(unittest.TestCase):
                     raise Exception("Test doesn't have the expected percentileValues for expectedMin: %s" % expectedMin)
 
                 if 1==0:
-                    for t,v,e in zip(thresholds, percentileValues, eV):
-                        m = "Percentile threshold: %s with value %s should ~= %s" % (t, v, e)
+                    for v,e in zip(pctile, eV):
+                        m = "Percentile: value %s should ~= %s" % (v, e)
                         self.assertAlmostEqual(v, e, delta=0.5, msg=m)
 
             trial += 1

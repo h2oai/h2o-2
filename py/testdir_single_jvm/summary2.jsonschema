@@ -7,18 +7,18 @@
             "type": {"type": "string"}
             "nacnt": { "type": "number" },
             "stats": {"type": "array",
-                         "items": {"type":"object",
-                          "properties": {
-                             "type":{"type":"string"},
-                             "mean": {"type":"number"},
-                             "sd":{"type":"number"},
-                             "zeros":{"type":"number"},
-                             "mins": { "type": "array", "items": { "type": "number" } },
-                             "maxs": { "type": "array", "items": { "type": "number" } },
-                             "pct": { "type": "array", "items": { "type": "number" } },
-                             "pctile": { "type": "array", "items": { "type": "number" } },
-                           }
-                          },
+                 "items": {"type":"object",
+                  "properties": {
+                     "type":{"type":"string"},
+                     "mean": {"type":"number"},
+                     "sd":{"type":"number"},
+                     "zeros":{"type":"number"},
+                     "mins": { "type": "array", "items": { "type": "number" } },
+                     "maxs": { "type": "array", "items": { "type": "number" } },
+                     "pct": { "type": "array", "items": { "type": "number" } },
+                     "pctile": { "type": "array", "items": { "type": "number" } },
+                   }
+                  },
             "hstart":{"type":"number"},
             "hstep":{"type":"number"},
             "hbrk": { "type": "array", "items": { "type": "string" } },

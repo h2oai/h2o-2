@@ -332,24 +332,49 @@ def infoFromInspect(inspect, csvPathname):
 def infoFromSummary(summaryResult, noPrint=False):
     if h2o.beta_features:
         # names = summaryResult['names']
-        means = summaryResult['means']
+        # means = summaryResult['means']
         summaries = summaryResult['summaries']
-        for column in summaries:
-            start = column['start']
-            zeros = column['zeros']
-            bins = column['bins']
-            binsz = column['binsz']
-            domains = column['domains']
-            maxs = column['maxs']
-            mins = column['mins']
-            percentileValues = column['percentileValues']
 
-        if not noPrint:
-            print "\n\n************************"
-            print "start:", start
-            print "zeros:", zeros
-            # print "len(names):", len(names)
-            print "len(means):", len(means)
+        for column in summaries:
+            colname = column['colname']
+            coltype = column['type']
+            nacnt = column['nacnt']
+
+            stats = column['stats']
+            stattype= stats['type']
+            mean = stats['mean']
+            sd = stats['sd']
+            zeros = stats['zeros']
+            mins = stats['mins']
+            maxs = stats['maxs']
+            pct = stats['pct']
+            pctile = stats['pctile']
+
+            hstart = column['hstart']
+            hstep = column['hstep']
+            hbrk = column['hbrk']
+            hcnt = column['hcnt']
+
+            if not noPrint:
+                print "\n\n************************"
+                print "colname:", colname
+                print "coltype:", coltype
+                print "nacnt:", nacnt
+
+                print "stattype:", stattype
+                print "mean:", mean
+                print "sd:", sd
+                print "zeros:", zeros
+                print "mins:", mins
+                print "maxs:", maxs
+                print "pct:", pct
+                print "pctile:", pctile
+
+                # histogram stuff
+                print "hstart:", hstart
+                print "hstep:", hstep
+                print "hbrk:", hbrk
+                print "hcnt:", hcnt
 
     else:
         summary = summaryResult['summary']
