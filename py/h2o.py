@@ -826,7 +826,9 @@ class H2O(object):
     def __url(self, loc, port=None):
         # always use the new api port
         if port is None: port = self.port
-        u = 'http://%s:%d/%s' % (self.http_addr, port, loc)
+        if loc.startswith('/'): delim = ''
+        else: delim = '/'
+        u = 'http://%s:%d%s%s' % (self.http_addr, port, delim, loc)
         return u
 
     def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, returnFast=False,
@@ -999,16 +1001,18 @@ class H2O(object):
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
 
-
         if beta_features:
-            if 'redirect_url' in response['response_info']:
-                # url = self.__url(response['redirect_url'] + ".json")
-                # this is the full url now, with params?
-                url = self.__url(response['response_info']['redirect_url'])
-                # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
-                params = None
-            else:
+            if 'response_info' not in response:
+                raise Exception("The response during polling should have 'response_info'. Don't see it: \n%s" % dump_json(response))
+
+            if 'redirect_url' not in response['response_info']:
                 raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
+
+            # url = self.__url(response['redirect_url'] + ".json")
+            # this is the full url now, with params?
+            url = self.__url(response['response_info']['redirect_url'])
+            # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+            params = None
 
         else:
             if 'response' not in response:

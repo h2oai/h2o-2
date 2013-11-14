@@ -118,6 +118,7 @@ public abstract class Request extends RequestBuilders {
     // Argh - referencing subclass, sorry for that, but it is temporary hack
     // for transition between v1 and v2 API
     if (this instanceof Request2) ((Request2) this).fillResponseInfo(response);
+    if (this instanceof Parse2) ((Parse2) this).fillResponseInfo(response); // FIXME: Parser2 should inherit from Request2
     if( type == RequestType.json )
       return response._req == null ? //
             wrap(server, response.toJson()) : //

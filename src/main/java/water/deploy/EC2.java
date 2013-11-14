@@ -27,15 +27,16 @@ public class EC2 {
   public int boxes;
   public String region = "us-east-1";
   //public String image = "ami-3565305c"; // Amazon Linux, x64, Instance-Store, US East N. Virginia
+  //public String image = "ami-dfbfe4b6"; // Amazon Linux, x64, HVM, Instance-Store, US East N. Virginia
   //public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
-  public String image = "ami-13b6357a"; // Ubuntu Raring 13.04 amd64 hvm
+  public String image = "ami-09614460";   // Ubuntu Raring 13.04 amd64 HVM
   //public String type = "m1.xlarge";
   public String type = "cc2.8xlarge"; // HPC
   public String securityGroup = "ssh"; // "default";
   public boolean confirm = true;
 
 //@formatter:off
-  static String cloudConfig = "" +
+  static String cloudConfig = "" + // TODO try Amazon AMI "Enhanced Networking"
       l("#cloud-config") +
       l("users:") +
       l("  - name: " + USER) +

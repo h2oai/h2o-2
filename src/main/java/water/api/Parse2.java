@@ -11,6 +11,8 @@ public class Parse2 extends Parse {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+  @API(help="Response stats and info.") ResponseInfo response_info; // FIXME Parse2 should inherit from Request2
+
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
 
@@ -48,4 +50,8 @@ public class Parse2 extends Parse {
   }
 
   @Override public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
+
+  public void fillResponseInfo(Response response) {
+    this.response_info = response.extractInfo();
+  }
 }
