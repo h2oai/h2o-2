@@ -1002,7 +1002,7 @@ class H2O(object):
         # look for 'response'..if not there, assume the rev 2
 
         def get_redirect_url(response, beta_features):
-            if beta_features:
+            if beta_features or 'response_info' in response: # trigger v2 for GBM always?
                 # "response_info": {
                 #     "h2o": "pytest-kevin-10389", 
                 #     "node": "/192.168.1.80:54321", 
@@ -1092,7 +1092,7 @@ class H2O(object):
                 status = 'poll'
             else:
                 if beta_features:
-                    status = r['status']
+                    status = r['response_info']['status']
                 else:
                     status = r['response']['status']
 
@@ -1686,9 +1686,9 @@ class H2O(object):
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
-    def gbm_view(self,model_key, timeoutSecs=300, print_params=False, **kwargs):
+    def gbm_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
-            '_modelKey': model_key
+            '_modelKey': model_key,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
@@ -1696,7 +1696,7 @@ class H2O(object):
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
-    def gbm_grid_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
+    def gbm_grid_view(self, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
             'job_key': None,
             'destination_key': None,
@@ -1704,7 +1704,7 @@ class H2O(object):
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
         a = self.__do_json_request('2/GridSearchProgress.json',timeout=timeoutSecs,params=params_dict)
-        verboseprint("\ngbm_search_progress result:", dump_json(a))
+        print "\ngbm_search_progress result:", dump_json(a)
         return a
 
     def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):

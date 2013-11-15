@@ -20,7 +20,7 @@ public class GBMModelView extends Request2 {
   }
 
   public static Response redirect(Request req, Key modelKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "/2/GBMModelView", "_modelKey", modelKey);
+    return Response.redirect(req, "/2/GBMModelView", "_modelKey", modelKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){
@@ -31,6 +31,6 @@ public class GBMModelView extends Request2 {
   @Override protected Response serve() {
     gbm_model = UKV.get(_modelKey);
     if (gbm_model == null) return Response.error("Model '" + _modelKey + "' not found!");
-    else return new Response(Response.Status.done,this,-1,-1,null);
+    else return Response.done(this);
   }
 }

@@ -57,7 +57,7 @@ public class ConfusionMatrix extends Request2 {
       vp = vpredict.toEnum();
       predicted_domain = vp._domain;
       cm = new CM(va.domain().length, vp.domain().length).doAll(va,vp)._cm;
-      return new Response(Response.Status.done,this,-1,-1,null);
+      return Response.done(this);
     } catch (Throwable t) {
       Log.err(t);
       return Response.error(t.getMessage());

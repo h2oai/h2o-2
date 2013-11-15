@@ -10,6 +10,7 @@ import java.util.*;
 
 import water.*;
 import water.api.*;
+import water.api.RequestBuilders.Response;
 import water.util.Utils;
 
 public class GridSearch extends Job {
@@ -45,8 +46,8 @@ public class GridSearch extends Job {
   }
 
   @Override public Response redirect() {
-    String n = GridSearchProgress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, "job_key", job_key, "destination_key", destination_key);
+    String redirectName = new GridSearchProgress().href();
+    return Response.redirect(this, redirectName, "job_key", job_key, "destination_key", destination_key);
   }
 
   public static class GridSearchProgress extends Progress2 {
@@ -155,7 +156,7 @@ public class GridSearch extends Job {
     }
 
     @Override protected Response jobDone(final Job job, final Key dst) {
-      return new Response(Response.Status.done, this, 0, 0, null);
+      return Response.done(this);
     }
   }
 }

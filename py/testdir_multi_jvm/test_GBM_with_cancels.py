@@ -121,29 +121,17 @@ class Basic(unittest.TestCase):
             print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
             # no pattern waits for all
 
-            for i in range(10):
+            for i in range(20):
                 # now issue a couple background GBM jobs that we'll kill
-                kwargs['destination_key'] = 'GBMBad1'
-                GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-                jobid1 = GBMFirstResult['job_key']
-
-                kwargs['destination_key'] = 'GBMBad2'
-                GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-                jobid2 = GBMFirstResult['job_key']
-
-                kwargs['destination_key'] = 'GBMBad3'
-                GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-                jobid3 = GBMFirstResult['job_key']
-
-                kwargs['destination_key'] = 'GBMBad4'
-                GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-                jobid4 = GBMFirstResult['job_key']
+                jobids = []     
+                for j in range(5):
+                    kwargs['destination_key'] = 'GBMBad' + str(j)
+                    GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
+                    jobids[j] = GBMFirstResult['job_key']
 
                 # have to pass the job id
-                h2o.nodes[0].jobs_cancel(key=jobid1)
-                h2o.nodes[0].jobs_cancel(key=jobid2)
-                h2o.nodes[0].jobs_cancel(key=jobid3)
-                h2o.nodes[0].jobs_cancel(key=jobid4)
+                for j in jobids:
+                    h2o.nodes[0].jobs_cancel(key=j)
 
 
             h2o_jobs.pollWaitJobs(pattern='GBMGood', timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)

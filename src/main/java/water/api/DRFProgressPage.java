@@ -15,7 +15,7 @@ public class DRFProgressPage extends Progress2 {
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "/2/DRFProgressPage", JOB_KEY, jobkey, DEST_KEY, dest );
+    return Response.redirect(req, "/2/DRFProgressPage", JOB_KEY, jobkey, DEST_KEY, dest );
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {

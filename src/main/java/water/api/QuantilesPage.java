@@ -55,7 +55,7 @@ public class QuantilesPage extends Request2 {
 
     //passes
 
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 
   /** Return the HTML query link to this page */

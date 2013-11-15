@@ -729,7 +729,7 @@ public class DTree extends Iced {
           switch(lmask) {
           case 1:  skip = ab.get1();  break;
           case 2:  skip = ab.get2();  break;
-          case 3:  skip = ab.get3();  break;
+          case 3:  skip = ab.get3();  break; // skip 3bytes value ~ 16MB for left subtree ~ we support 32MB trees now
           case 8:  skip = _nclass < 256?1:2;  break; // Small leaf
           case 24: skip = 4;          break; // skip the prediction
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
