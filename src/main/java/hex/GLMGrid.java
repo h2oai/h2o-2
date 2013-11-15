@@ -94,10 +94,6 @@ public class GLMGrid extends Job {
         }
         fs.blockForPending();
       }catch(JobCancelledException e){/* do not need to do anything here but stop the execution*/}
-    }
-
-    @Override public void dinvoke(H2ONode client){
-      compute2();
       // don't send input data back!
       _job = null;
       _aryKey = null;
@@ -130,7 +126,8 @@ public class GLMGrid extends Job {
                 throw  Log.errRTExcept(e);
               }
             }
-            active[all++%_parallelism] = t.fork();
+            H2O.submitTask(t);
+            active[all++%_parallelism] = t;
           }
         } else {
           for( int a = 0; a < _alphas.length; a++ ) {
@@ -139,8 +136,10 @@ public class GLMGrid extends Job {
           }
           remove();
         }
+        tryComplete();
       }
     };
+
     super.start(fjtask);
     H2O.submitTask(fjtask);
   }
