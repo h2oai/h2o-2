@@ -94,10 +94,6 @@ public class GLMGrid extends Job {
         }
         fs.blockForPending();
       }catch(JobCancelledException e){/* do not need to do anything here but stop the execution*/}
-    }
-
-    @Override public void dinvoke(H2ONode client){
-      compute2();
       // don't send input data back!
       _job = null;
       _aryKey = null;
@@ -112,16 +108,11 @@ public class GLMGrid extends Job {
         if(_parallelFlag) {
           final int cloudsize = H2O.CLOUD._memary.length;
           int myId = H2O.SELF.index();
-          int all = 0, done = 0;
+          int submitted = 0, done = 0;
           Future[] active = new GridTask[_parallelism];
           for (int job = 0; job < _alphas.length; job++) {
             GridTask t = new GridTask(GLMGrid.this, job, true);
-            int nodeId = (myId+job)%cloudsize;
-            if (nodeId != myId) {
-              RPC.call(H2O.CLOUD._memary[nodeId],t);
-              continue;
-            }
-            if (all - done >= _parallelism) {
+            if (submitted - done >= _parallelism) {
               try {
                 active[done++%_parallelism].get();
               } catch( InterruptedException e ) {
@@ -130,7 +121,12 @@ public class GLMGrid extends Job {
                 throw  Log.errRTExcept(e);
               }
             }
-            active[all++%_parallelism] = t.fork();
+            int nodeId = (myId+job)%cloudsize;
+            if (nodeId != myId)
+              RPC.call(H2O.CLOUD._memary[nodeId],t);
+            else
+              H2O.submitTask(t);
+            active[submitted++%_parallelism] = t;
           }
         } else {
           for( int a = 0; a < _alphas.length; a++ ) {
@@ -139,8 +135,10 @@ public class GLMGrid extends Job {
           }
           remove();
         }
+        tryComplete();
       }
     };
+
     super.start(fjtask);
     H2O.submitTask(fjtask);
   }
