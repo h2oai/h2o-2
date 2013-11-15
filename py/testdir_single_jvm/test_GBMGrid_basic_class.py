@@ -58,19 +58,22 @@ class Basic(unittest.TestCase):
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
 
-        gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
-        # errrs from end of list? is that the last tree?
-        errsLast = gbmTrainView['gbm_model']['errs'][-1]
+        gbmGridView = h2o.nodes[0].gbm_grid_view(job_key=GBMFirstResult['job_key'], destination_key=modelKey)
+        print h2o.dump_json(gbmGridView)
 
-        print "GBM 'errsLast'", errsLast
-        if DO_CLASSIFICATION:
-            cm = gbmTrainView['gbm_model']['cm']
-            pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-            print "Last line of this cm might be NAs, not CM"
-            print "\nTrain\n==========\n"
-            print h2o_gbm.pp_cm(cm)
-        else:
-            print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
+        if 1==0:
+            gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
+            # errrs from end of list? is that the last tree?
+            errsLast = gbmTrainView['gbm_model']['errs'][-1]
+
+            print "GBM 'errsLast'", errsLast
+            if DO_CLASSIFICATION:
+                cm = gbmTrainView['gbm_model']['cm']
+                pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
+                print "\nTrain\n==========\n"
+                print h2o_gbm.pp_cm(cm)
+            else:
+                print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
 
 
     def test_GBMGrid_basic_prostate(self):
@@ -104,19 +107,22 @@ class Basic(unittest.TestCase):
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
 
-        gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
-        # errrs from end of list? is that the last tree?
-        errsLast = gbmTrainView['gbm_model']['errs'][-1]
+        gbmGridView = h2o.nodes[0].gbm_grid_view(job_key=GBMFirstResult['job_key'], destination_key=modelKey)
+        print h2o.dump_json(gbmGridView)
 
-        print "GBM 'errsLast'", errsLast
-        if DO_CLASSIFICATION:
-            cm = gbmTrainView['gbm_model']['cm']
-            pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-            print "Last line of this cm might be NAs, not CM"
-            print "\nTrain\n==========\n"
-            print h2o_gbm.pp_cm(cm)
-        else:
-            print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
+        if 1==0:
+            gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
+            # errrs from end of list? is that the last tree?
+            errsLast = gbmTrainView['gbm_model']['errs'][-1]
+
+            print "GBM 'errsLast'", errsLast
+            if DO_CLASSIFICATION:
+                cm = gbmTrainView['gbm_model']['cm']
+                pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
+                print "\nTrain\n==========\n"
+                print h2o_gbm.pp_cm(cm)
+            else:
+                print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs 
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 DO_CLASSIFICATION = True
 
@@ -31,7 +31,6 @@ class Basic(unittest.TestCase):
         # no member id in this one
         
         # fails with n_folds
-        print "Not doing n_folds with benign. Fails with 'unable to solve?'"
         # check the first in the models list. It should be the best
         colNames = [ 'STR','OBS','AGMT','FNDX','HIGD','DEG','CHK', 'AGP1','AGMN','NLV','LIV','WT','AGLP','MST' ]
         modelKey = 'GBMGrid_benign'
@@ -39,10 +38,11 @@ class Basic(unittest.TestCase):
         # 'cols', 'ignored_cols_by_name', and 'ignored_cols' have to be exclusive
         params = {
             'destination_key': modelKey,
+            'validation': parseResult['destination_key'],
             'ignored_cols_by_name': 'STR',
             'learn_rate': .1,
-            'ntrees': 2,
-            'max_depth': 8,
+            'ntrees': 10,
+            'max_depth': 20,
             'min_rows': 1,
             'response': 'FNDX',
             'classification': 1 if DO_CLASSIFICATION else 0,
@@ -66,7 +66,6 @@ class Basic(unittest.TestCase):
         if DO_CLASSIFICATION:
             cm = gbmTrainView['gbm_model']['cm']
             pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-            print "Last line of this cm might be NAs, not CM"
             print "\nTrain\n==========\n"
             print h2o_gbm.pp_cm(cm)
         else:
@@ -85,10 +84,11 @@ class Basic(unittest.TestCase):
         # 'cols', 'ignored_cols_by_name', and 'ignored_cols' have to be exclusive
         params = {
             'destination_key': modelKey,
+            'validation': parseResult['destination_key'],
             'ignored_cols_by_name': 'ID',
             'learn_rate': .1,
-            'ntrees': 2,
-            'max_depth': 8,
+            'ntrees': 10,
+            'max_depth': 20,
             'min_rows': 1,
             'response': 'CAPSULE',
             'classification': 1 if DO_CLASSIFICATION else 0,
@@ -105,14 +105,12 @@ class Basic(unittest.TestCase):
         print "GBM training completed in", elapsed, "seconds."
 
         gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
-        # errrs from end of list? is that the last tree?
         errsLast = gbmTrainView['gbm_model']['errs'][-1]
 
         print "GBM 'errsLast'", errsLast
         if DO_CLASSIFICATION:
             cm = gbmTrainView['gbm_model']['cm']
             pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-            print "Last line of this cm might be NAs, not CM"
             print "\nTrain\n==========\n"
             print h2o_gbm.pp_cm(cm)
         else:
