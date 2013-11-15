@@ -1013,21 +1013,39 @@ class H2O(object):
                 if 'response_info' not in response:
                     raise Exception("The response during polling should have 'response_info'. Don't see it: \n%s" % dump_json(response))
 
-                if 'redirect_url' not in response['response_info']:
+                response_info = response['response_info']
+                if 'redirect_url' not in response_info:
                     raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
 
-                # url = self.__url(response['redirect_url'] + ".json")
-                # this is the full url now, with params?
-                url = self.__url(response['response_info']['redirect_url'])
-                # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
-                params = None
+                # if status is 'done', it's okay for 'redirect_url' to be null.
+                redirect_url = response_info['redirect_url']
+                print "redirect_url:", redirect_url
+                if redirect_url:
+                    # url = self.__url(response['redirect_url'] + ".json")
+                    # this is the full url now, with params?
+                    url = self.__url(redirect_url)
+                    # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+                    params = None
+                else:
+                    if response_info['status'] != 'done':
+                        raise Exception("'redirect_url' during polling is null but status!='done': \n%s" % dump_json(response))
+                    else:
+                        url = None
+                        params = None
 
             else:
                 if 'response' not in response:
                     raise Exception("'response' not in response. Maybe h2o.beta_features=True is needed?")
 
-                url = self.__url(response['response']['redirect_request'])
-                params = response['response']['redirect_request_args']
+                if 'redirect_url':
+                    url = self.__url(response['response']['redirect_request'])
+                    params = response['response']['redirect_request_args']
+                else:
+                    if response['status'] != 'done':
+                        raise Exception("'redirect_url' during polling is null but status!='done': \n%s" % dump_json(response))
+                    else:
+                        url = None
+                        params = None
 
             return (url, params)
 
@@ -1060,7 +1078,12 @@ class H2O(object):
             time.sleep(initialDelaySecs)
 
         # can end with status = 'redirect' or 'done'
-        while status == 'poll':
+        # Update: on DRF2, the first RF redirects to progress. So we should follow that, and follow any redirect to view?
+        # so for v2, we'll always follow redirects?
+
+        # Don't follow the Parse redirect to Inspect, because we want parseResult['destination_key'] to be the end.
+        # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
+        while status == 'poll' or (beta_features and status == 'redirect' and 'Inspect' not in url):
             # UPDATE: 1/24/13 change to always wait before the first poll..
             time.sleep(retryDelaySecs)
             # every other one?
@@ -1078,7 +1101,8 @@ class H2O(object):
 
             r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
-            if ((count%5)==0):
+            # if ((count%5)==0):
+            if 1==1:
                 verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
@@ -1098,8 +1122,7 @@ class H2O(object):
 
             # get the redirect url
             # currently a bug...the url isn't right on poll
-            if 1==0:
-                (url, params) = get_redirect_url(r, beta_features)
+            (url, params) = get_redirect_url(r, beta_features)
 
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with
@@ -1114,6 +1137,8 @@ class H2O(object):
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
+        if 1==1:
+            verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
         return r
 
     def kmeans_apply(self, data_key, model_key, destination_key,
@@ -1518,10 +1543,15 @@ class H2O(object):
             return rf
 
         if beta_features:
-            rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise, benchmarkLogging=benchmarkLogging)
-            return rfViewResult
+            # since we don't know the model key from the rf response, we just let rf redirect us to completion
+            # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
+
+            # rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs, 
+            #    retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            #    noise=noise, benchmarkLogging=benchmarkLogging, print_params=print_params, noPoll=noPoll, 
+            #    useRFScore=False,
+            #    model_key = rf['model_key'],
+            return rf
 
         else:
             if rf['response']['redirect_request'] != algoView:
@@ -1610,9 +1640,7 @@ class H2O(object):
         else:
             whichUsed = algo
 
-        a = self.__do_json_request(whichUsed + ".json",
-            timeout=timeoutSecs, params=params_dict)
-
+        a = self.__do_json_request(whichUsed + ".json", timeout=timeoutSecs, params=params_dict)
         verboseprint("\n%s result:" % whichUsed, dump_json(a))
 
         if noPoll:
