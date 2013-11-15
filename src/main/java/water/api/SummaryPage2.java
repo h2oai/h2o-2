@@ -57,7 +57,7 @@ public class SummaryPage2 extends Request2 {
     if (summaries != null)
       for( Summary2 s2 : summaries ) s2.finishUp();
 
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 
   private static class SummaryTask2 extends MRTask2<SummaryTask2> {

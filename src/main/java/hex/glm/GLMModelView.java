@@ -3,6 +3,7 @@ package hex.glm;
 import water.*;
 import water.api.DocGen;
 import water.api.Request;
+import water.api.RequestBuilders.Response;
 
 public class GLMModelView extends Request2 {
 
@@ -21,11 +22,11 @@ public class GLMModelView extends Request2 {
   }
 
   public static Response redirect(Request req, Key modelKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "GLMModelView", "_modelKey", modelKey);
+    return Response.redirect(req, "GLMModelView", "_modelKey", modelKey);
   }
 
   public static Response redirect2(Request req, Key modelKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "2/GLMModelView", "_modelKey", modelKey);
+    return Response.redirect(req, "/2/GLMModelView", "_modelKey", modelKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){
@@ -35,7 +36,7 @@ public class GLMModelView extends Request2 {
 
   @Override protected Response serve() {
     glm_model = DKV.get(_modelKey).get();
-    return new Response(Response.Status.done,this,-1,-1,null);
+    return Response.done(this);
   }
 }
 

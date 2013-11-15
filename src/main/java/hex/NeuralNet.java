@@ -19,6 +19,7 @@ import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.Job.ValidatedJob;
 import water.api.*;
+import water.api.RequestBuilders.Response;
 import water.fvec.*;
 import water.util.RString;
 import water.util.Utils;
@@ -279,8 +280,8 @@ public class NeuralNet extends ValidatedJob {
   }
 
   @Override protected Response redirect() {
-    String n = NeuralNetProgress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, //
+    String redirectName = NeuralNetProgress.class.getSimpleName();
+    return Response.redirect(this, redirectName, //
         "job_key", job_key, //
         "destination_key", destination_key);
   }
@@ -407,8 +408,8 @@ public class NeuralNet extends ValidatedJob {
     }
 
     public Response redirect(Request req) {
-      String n = new NeuralNetProgress().href();
-      return new Response(Response.Status.redirect, req, -1, -1, n, "destination_key", _selfKey);
+      String redirectName = new NeuralNetProgress().href();
+      return Response.redirect(req, redirectName, "destination_key", _selfKey);
     }
   }
 
@@ -486,7 +487,7 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override protected Response jobDone(Job job, Key dst) {
-      return new Response(Response.Status.done, this, 0, 0, null);
+      return Response.done(this);
     }
 
     public static String link(Key job, Key model, String content) {
@@ -535,7 +536,7 @@ public class NeuralNet extends ValidatedJob {
       mean_square_error = error.mean_square;
       if( frs[1] != null )
         frs[1].remove();
-      return new Response(Response.Status.done, this, 0, 0, null);
+      return Response.done(this);
     }
 
     @Override public boolean toHTML(StringBuilder sb) {

@@ -17,6 +17,7 @@ import java.util.HashMap;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
+import water.api.RequestBuilders.Response;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.parser.CustomParser.PSetupGuess;
@@ -71,7 +72,7 @@ public class Inspect extends Request {
   }
 
   public static Response redirect(Request req, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "Inspect", KEY, dest );
+    return Response.redirect(req, "Inspect", KEY, dest );
   }
 
   public static String link(String txt, Key key) {

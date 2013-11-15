@@ -1,6 +1,7 @@
 package water.api;
 
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.api.RequestServer.API_VERSION;
 
 public class Progress2 extends Request2 {
@@ -25,7 +26,7 @@ public class Progress2 extends Request2 {
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "/2/Progress2", "job_key", jobkey, "destination_key", dest);
+    return Response.redirect(req, "/2/Progress2", "job_key", jobkey, "destination_key", dest);
   }
 
   @Override protected Response serve() {
@@ -50,7 +51,7 @@ public class Progress2 extends Request2 {
   /** Return default progress {@link Response}. */
   protected Response jobInProgress(final Job job, final Key dst) {
     progress = job.progress();
-    return new Response(Response.Status.poll, this, (int) (100 * job.progress()), 100, "job_key", job_key.toString(), "destination_key", destination_key.toString());
+    return Response.poll(this, (int) (100 * job.progress()), 100, "job_key", job_key.toString(), "destination_key", destination_key.toString());
   }
 
   @Override public boolean toHTML(StringBuilder sb) {
