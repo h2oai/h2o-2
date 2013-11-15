@@ -2,6 +2,7 @@ package water.api;
 
 import hex.gbm.GBM.GBMModel;
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.api.RequestServer.API_VERSION;
 
 import com.google.gson.JsonObject;
@@ -15,7 +16,7 @@ public class GBMProgressPage extends Progress2 {
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "GBMProgressPage", JOB_KEY, jobkey, DEST_KEY, dest);
+    return Response.redirect(req, "GBMProgressPage", JOB_KEY, jobkey, DEST_KEY, dest);
   }
 
   @Override public boolean toHTML(StringBuilder sb) {

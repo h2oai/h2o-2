@@ -52,6 +52,6 @@ public class ImportModel extends Request2 {
     else
       throw new UnsupportedOperationException("Import of " + type + " is not yet supported.");
     UKV.put(destination_key, model);
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 }

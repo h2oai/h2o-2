@@ -3,6 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j, h2o_import
 
 
+DO_PLOT = True
 print "This will also test set_column_names into GBM, with changing col names per test"
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
@@ -126,10 +127,10 @@ class Basic(unittest.TestCase):
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
-            ntrees = 3 
+            ntrees = 5 
             prefixList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
             # for max_depth in [5,10,20,40]:
-            for max_depth in [5,10]:
+            for max_depth in [5, 10, 20]:
 
                 # PARSE a new header****************************************
                 print "Creating new header", hdrPathname
@@ -185,7 +186,6 @@ class Basic(unittest.TestCase):
 
                 cm = gbmTrainView['gbm_model']['cm']
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-                print "Last line of this cm might be NAs, not CM"
                 print "\nTrain\n==========\n"
                 print h2o_gbm.pp_cm(cm)
 
@@ -199,7 +199,7 @@ class Basic(unittest.TestCase):
 
         h2o.beta_features = False
         # just plot the last one
-        if 1==1:
+        if DO_PLOT:
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'

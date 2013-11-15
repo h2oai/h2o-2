@@ -3,6 +3,7 @@ package hex.glm;
 import water.*;
 import water.api.DocGen;
 import water.api.Request;
+import water.api.RequestBuilders.Response;
 
 public class GLMValidationView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -20,7 +21,7 @@ public class GLMValidationView extends Request2 {
   }
 
   public static Response redirect(Request req, Key valKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "GLMValidationView", "_valKey", valKey);
+    return Response.redirect(req, "GLMValidationView", "_valKey", valKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){
@@ -30,7 +31,7 @@ public class GLMValidationView extends Request2 {
 
   @Override protected Response serve() {
     glm_val = DKV.get(_valKey).get();
-    return new Response(Response.Status.done,this,-1,-1,null);
+    return Response.done(this);
   }
 
 }

@@ -24,7 +24,7 @@ public class Exec2 extends Request2 {
   // Pretty-print of result.  For Frames, first 10 rows.  For scalars, just the
   // value.  For functions, the pretty-printed AST.
   @API(help="String result"        ) String result;
- 
+
   @API(help="Array of Column Summaries.") Inspect2.ColSummary cols[];
 
   @Override protected Response serve() {
@@ -34,7 +34,7 @@ public class Exec2 extends Request2 {
       Env env = water.exec.Exec2.exec(str);
       if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
       if( env.sp() == 0 ) {      // Empty stack
-      } else if( env.isAry() ) { 
+      } else if( env.isAry() ) {
         Frame fr = env.popAry();
         String skey = env.key();
         num_rows = fr.numRows();
@@ -60,8 +60,8 @@ public class Exec2 extends Request2 {
         result = Double.toString(scalar);
       }
       env.remove();
-      return new Response(Response.Status.done, this, -1, -1, null);
-    } 
+      return Response.done(this);
+    }
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's
     catch( Exception e2 ) { Log.err(e=e2); }
     return Response.error(e.getMessage());

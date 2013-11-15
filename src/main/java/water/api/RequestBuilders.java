@@ -348,7 +348,20 @@ public class RequestBuilders extends RequestQueries {
       _req = null;
     }
 
-    public Response(Status status, Request req, int progress, int total, String redirTo, Object... args) {
+    private Response(Status status, Request req, int progress, int total, Object...pollArgs) {
+      assert (status == Status.poll);
+      _status = status;
+      _response = null;
+      _redirectName = null;
+      _redirectArgs = null;
+      _redirArgs = pollArgs;
+      _pollProgress = progress;
+      _pollProgressElements = total;
+      _req = req;
+    }
+
+    /** Response v2 constructor */
+    private Response(Status status, Request req, int progress, int total, String redirTo, Object... args) {
       _status = status;
       _response = null;
       _redirectName = redirTo;
@@ -377,6 +390,11 @@ public class RequestBuilders extends RequestQueries {
       return new Response(Status.done, response);
     }
 
+    /** Response done v2. */
+    public static Response done(Request req) {
+      return new Response(Response.Status.done,req,-1,-1,(String) null);
+    }
+
     /** A unique empty response which carries an empty JSON object */
     public static final Response EMPTY_RESPONSE = Response.done(new JsonObject());
 
@@ -398,6 +416,11 @@ public class RequestBuilders extends RequestQueries {
           req.getSimpleName(), args);
     }
 
+    /** Redirect for v2 API */
+    public static Response redirect(Request req, String redirectName, Object...redirectArgs) {
+      return new Response(Response.Status.redirect, req, -1, -1, redirectName, redirectArgs);
+    }
+
     /** Returns the poll response object.
      */
     public static Response poll(JsonObject response, int progress, int total) {
@@ -416,7 +439,12 @@ public class RequestBuilders extends RequestQueries {
      */
     public static Response poll(JsonObject response, int progress, int total, JsonObject pollArgs) {
       return new Response(Status.poll,response, progress, total, pollArgs);
+    }
 
+    /** Returns the poll response object.
+     */
+    public static Response poll(Request req, int progress, int total, Object...pollArgs) {
+      return new Response(Status.poll,req, progress, total, pollArgs);
     }
 
     /** Sets the time of the response as a difference between the given time and
@@ -520,7 +548,7 @@ public class RequestBuilders extends RequestQueries {
     public ResponseInfo extractInfo() {
       String redirectUrl = null;
       if (_status == Status.redirect) redirectUrl = _redirectName+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
-      if (_status == Status.poll)     redirectUrl = _req.getClass().getSimpleName()+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
+      if (_status == Status.poll)     redirectUrl = _req.href()+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
       return new ResponseInfo(redirectUrl, _time, _status);
     }
   }

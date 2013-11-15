@@ -1001,25 +1001,37 @@ class H2O(object):
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
 
-        if beta_features:
-            if 'response_info' not in response:
-                raise Exception("The response during polling should have 'response_info'. Don't see it: \n%s" % dump_json(response))
+        def get_redirect_url(response, beta_features):
+            if beta_features or 'response_info' in response: # trigger v2 for GBM always?
+                # "response_info": {
+                #     "h2o": "pytest-kevin-10389", 
+                #     "node": "/192.168.1.80:54321", 
+                #     "redirect_url": "GBMProgressPage.json?job_key=%...&destination_key=GBMKEY", 
+                #     "status": "redirect", 
+                #     "time": 2
+                # }, 
+                if 'response_info' not in response:
+                    raise Exception("The response during polling should have 'response_info'. Don't see it: \n%s" % dump_json(response))
 
-            if 'redirect_url' not in response['response_info']:
-                raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
+                if 'redirect_url' not in response['response_info']:
+                    raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
 
-            # url = self.__url(response['redirect_url'] + ".json")
-            # this is the full url now, with params?
-            url = self.__url(response['response_info']['redirect_url'])
-            # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
-            params = None
+                # url = self.__url(response['redirect_url'] + ".json")
+                # this is the full url now, with params?
+                url = self.__url(response['response_info']['redirect_url'])
+                # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+                params = None
 
-        else:
-            if 'response' not in response:
-                raise Exception("'response' not in response. Maybe h2o.beta_features=True is needed?")
+            else:
+                if 'response' not in response:
+                    raise Exception("'response' not in response. Maybe h2o.beta_features=True is needed?")
 
-            url = self.__url(response['response']['redirect_request'])
-            params = response['response']['redirect_request_args']
+                url = self.__url(response['response']['redirect_request'])
+                params = response['response']['redirect_request_args']
+
+            return (url, params)
+
+        (url, params) = get_redirect_url(response, beta_features)
 
         # no need to recreate the string for messaging, in the loop..
         if params:
@@ -1080,9 +1092,14 @@ class H2O(object):
                 status = 'poll'
             else:
                 if beta_features:
-                    status = r['status']
+                    status = r['response_info']['status']
                 else:
                     status = r['response']['status']
+
+            # get the redirect url
+            # currently a bug...the url isn't right on poll
+            if 1==0:
+                (url, params) = get_redirect_url(r, beta_features)
 
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with
@@ -1347,7 +1364,6 @@ class H2O(object):
         a = self.__do_json_request('StoreView.json',
             params=params_dict,
             timeout=timeoutSecs)
-        # print dump_json(a)
         return a
 
     # There is also a RemoveAck in the browser, that asks for confirmation from
@@ -1425,13 +1441,14 @@ class H2O(object):
 
     def jobs_cancel(self, timeoutSecs=20, **kwargs):
         params_dict = {
-            # 'expression': None,
+            'key': None,
             }
         browseAlso = kwargs.pop('browseAlso',False)
-        params_dict.update(kwargs)
-        verboseprint("\nexec_query:", params_dict)
+        check_params_update_kwargs(params_dict, kwargs, 'jobs_cancel', print_params=True)
         a = self.__do_json_request('Cancel.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\njobs_cancel result:", dump_json(a))
+        print "Cancelled job:", params_dict['key']
+    
         return a
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
@@ -1669,14 +1686,25 @@ class H2O(object):
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
-    def gbm_view(self,model_key, timeoutSecs=300, print_params=False, **kwargs):
+    def gbm_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
-            '_modelKey': model_key
+            '_modelKey': model_key,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
         a = self.__do_json_request('2/GBMModelView.json',timeout=timeoutSecs,params=params_dict)
         verboseprint("\ngbm_view result:", dump_json(a))
+        return a
+
+    def gbm_grid_view(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'job_key': None,
+            'destination_key': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
+        a = self.__do_json_request('2/GridSearchProgress.json',timeout=timeoutSecs,params=params_dict)
+        print "\ngbm_search_progress result:", dump_json(a)
         return a
 
     def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
@@ -1811,7 +1839,6 @@ class H2O(object):
             a['python_elapsed'] = time.time() - start
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
-
 
         verboseprint("\nGBM first result:", dump_json(a))
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,

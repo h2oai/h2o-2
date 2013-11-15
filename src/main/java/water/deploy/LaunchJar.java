@@ -92,7 +92,7 @@ public class LaunchJar extends Request2 {
     } catch( Exception ex ) {
       throw new RuntimeException(ex);
     }
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 
   public static void weavePackages(String... names) {

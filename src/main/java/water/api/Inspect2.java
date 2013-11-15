@@ -1,6 +1,7 @@
 package water.api;
 
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.fvec.*;
 import hex.drf.DRF;
 import hex.gbm.GBM;
@@ -50,7 +51,7 @@ public class Inspect2 extends Request2 {
 
   // Called from some other page, to redirect that other page to this page.
   public static Response redirect(Request req, String src_key) {
-    return new Response(Response.Status.redirect, req, -1, -1, "/2/Inspect2", "src_key", src_key );
+    return Response.redirect(req, "/2/Inspect2", "src_key", src_key );
   }
 
   // Just validate the frame, and fill in the summary bits
@@ -66,7 +67,7 @@ public class Inspect2 extends Request2 {
     cols = new ColSummary[numCols];
     for( int i=0; i<cols.length; i++ )
       cols[i] = new ColSummary(src_key._names[i],src_key.vecs()[i]);
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 
   public static String jsonLink(Key key){return "2/Inspect2.json?src_key=" + key;}

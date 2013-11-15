@@ -44,17 +44,17 @@ public class EC2 {
       l("    ssh-authorized-keys:") +
       l("      - " + pubKey()) +
       l("    shell: /bin/bash") +
-//      l("") +
-//      l("runcmd:") +
-//      l("  - iptables -I INPUT -p tcp --dport 22 -j DROP") +
+      l("") +
+      l("runcmd:") +
+      l("  - iptables -I INPUT -p tcp --dport 22 -j DROP") +
 //      l("  - echo 'fs.file-max = 524288' > /etc/sysctl.d/increase-max-fd.conf") +
 //      l("  - sysctl -w fs.file-max=524288") +
 //      l("  - echo '* soft nofile 524288' > /etc/security/limits.d/increase-max-fd-soft.conf") +
 //      l("  - echo '* hard nofile 524288' > /etc/security/limits.d/increase-max-fd-hard.conf") +
 //      l("  - apt-get update") +
-//      l("  - apt-get -y install openjdk-7-jdk") +
+      l("  - apt-get -y install openjdk-7-jdk") +
 //      l("  - apt-get -y install openvpn") +
-//      l("  - iptables -D INPUT 1") +
+      l("  - iptables -D INPUT 1") +
       l("");
   static String l(String line) { return line + "\n"; }
   //@formatter:on
@@ -125,6 +125,10 @@ public class EC2 {
       Placement placement = new Placement();
       placement.setGroupName(USER);
       run.withPlacement(placement);
+      BlockDeviceMapping map = new BlockDeviceMapping();
+      map.setDeviceName("/dev/sdb");
+      map.setVirtualName("ephemeral0");
+      run.withBlockDeviceMappings(map);
       run.withUserData(new String(Base64.encodeBase64(cloudConfig.getBytes())));
 
       RunInstancesResult runRes = ec2.runInstances(run);

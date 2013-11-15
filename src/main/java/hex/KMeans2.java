@@ -7,6 +7,7 @@ import java.util.*;
 import water.*;
 import water.Job.ColumnsJob;
 import water.api.*;
+import water.api.RequestBuilders.Response;
 import water.fvec.Chunk;
 import water.fvec.Vec;
 import water.util.Utils;
@@ -135,10 +136,8 @@ public class KMeans2 extends ColumnsJob {
   }
 
   @Override protected Response redirect() {
-    String n = KMeans2Progress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, //
-        "job_key", job_key, //
-        "destination_key", destination_key);
+    String redirectName = KMeans2Progress.class.getSimpleName();
+    return Response.redirect(this, redirectName, "job_key", job_key, "destination_key", destination_key);
   }
 
   public static class KMeans2Progress extends Progress2 {
@@ -146,7 +145,7 @@ public class KMeans2 extends ColumnsJob {
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @Override protected Response jobDone(Job job, Key dst) {
-      return new Response(Response.Status.redirect, this, 0, 0, new KMeans2ModelView().href(), "destination_key", destination_key);
+      return Response.redirect(this, new KMeans2ModelView().href(), "destination_key", destination_key);
     }
   }
 
@@ -162,11 +161,11 @@ public class KMeans2 extends ColumnsJob {
     }
 
     public static Response redirect(Request req, Key model) {
-      return new Response(Response.Status.redirect, req, -1, -1, new KMeans2ModelView().href(), "model", model);
+      return Response.redirect(req, new KMeans2ModelView().href(), "model", model);
     }
 
     @Override protected Response serve() {
-      return new Response(Response.Status.done, this, -1, -1, null);
+      return Response.done(this);
     }
 
     @Override public boolean toHTML(StringBuilder sb) {

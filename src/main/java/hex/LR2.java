@@ -69,7 +69,7 @@ public class LR2 extends Request2 {
     sse = lr3._rss;
     ssr = lr3._ssr;
 
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 
   public static class CalcSumsTask extends MRTask2<CalcSumsTask> {

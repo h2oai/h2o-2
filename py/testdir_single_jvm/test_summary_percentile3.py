@@ -5,7 +5,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 print "Synthetic dataset with small/close reals and known mean and std dev"
 print "Use small numbers"
 
-DO_SCIPY_COMPARE = True
+DO_SCIPY_COMPARE = False
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     from numpy import loadtxt, genfromtxt, savetxt

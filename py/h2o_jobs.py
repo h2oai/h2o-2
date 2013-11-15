@@ -16,7 +16,7 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
     ignoredJobs = set()
     while (wait):
         a = h2o.nodes[0].jobs_admin(timeoutSecs=pollTimeoutSecs)
-        ## print "jobs_admin():", h2o.dump_json(a)
+        h2o.verboseprint("jobs_admin():", h2o.dump_json(a))
         jobs = a['jobs']
         busy = 0
         for j in jobs:
@@ -28,27 +28,22 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
             ### h2o.verboseprint(j)
             if j['end_time'] == '':
                 if not pattern: 
-                    print "description:", j['description'], "end_time:", j['end_time']
+                    h2o.verboseprint("description:", j['description'], "end_time:", j['end_time'])
                     busy +=1
                     h2o.verboseprint("pollWaitJobs: found a busy job, now: %s" % busy)
                 else:
                     if (pattern in j['key']) or (pattern in j['destination_key']) or (pattern in j['description']):
-                        print "description:", j['description'], "end_time:", j['end_time']
+                        ## print "description:", j['description'], "end_time:", j['end_time']
                         busy += 1
                         h2o.verboseprint("pollWaitJobs: found a pattern-matched busy job, now %s" % busy)
+                        # always print progress if pattern is used and matches
+                        print "time:", time.strftime("%I:%M:%S"), "progress:",  j['progress'], j['destination_key'], 
                     # we only want to print the warning message once
                     elif j['key'] not in ignoredJobs:
                         jobMsg = "%s %s %s" % (j['key'], j['description'], j['destination_key'])
-                        print " %s job in progress but we're ignoring it. Doesn't match pattern." % jobMsg
+                        h2o.verboseprint(" %s job in progress but we're ignoring it. Doesn't match pattern." % jobMsg)
                         # I guess "key" is supposed to be unique over all time for a job id?
                         ignoredJobs.add(j['key'])
-
-            elif waitTime: # we've been waiting
-                h2o.verboseprint("waiting", waitTime, "secs, still not done - ",\
-                "destination_key:", j['destination_key'], \
-                "progress:",  j['progress'], \
-                "cancelled:", j['cancelled'],\
-                "end_time:",  j['end_time'])
 
         if stallForNJobs:
             waitFor = stallForNJobs
