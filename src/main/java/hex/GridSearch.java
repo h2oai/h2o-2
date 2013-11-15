@@ -46,7 +46,7 @@ public class GridSearch extends Job {
   }
 
   @Override public Response redirect() {
-    String redirectName = GridSearchProgress.class.getSimpleName();
+    String redirectName = new GridSearchProgress().href();
     return Response.redirect(this, redirectName, "job_key", job_key, "destination_key", destination_key);
   }
 
