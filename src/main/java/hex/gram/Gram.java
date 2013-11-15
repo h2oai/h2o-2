@@ -154,7 +154,7 @@ public final class Gram extends Iced {
     Futures fs = new Futures();
     // compute the outer product of diagonal*dense
     final int chk = Math.max(denseN/10, 1); 
-    Log.info("SPARSEN = " + sparseN + "    DENSEN = " + denseN);
+    //Log.info("SPARSEN = " + sparseN + "    DENSEN = " + denseN);
 
     for( int i = 0; i < denseN; ++i ) {
       final int fi = i;
@@ -176,7 +176,7 @@ public final class Gram extends Iced {
     for( int i = 0; i < arr.length; ++i )
       arr[i] = Arrays.copyOfRange(fchol._xx[i], sparseN, sparseN + denseN);
 
-    Log.info ("CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis()-start));
+    //Log.info ("CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis()-start));
     start = System.currentTimeMillis();
     // parallelize cholesky
     if (parallelize == 1) {
@@ -184,7 +184,7 @@ public final class Gram extends Iced {
       InPlaceCholesky d = InPlaceCholesky.decompose_2(arr, 10, p);
       fchol.setSPD(d.isSPD());
       arr = d.getL();
-      Log.info ("H2O CHOLESKY DECOMPOSE ON DENSEN*DENSEN TAKES: " + (System.currentTimeMillis()-start));
+      //Log.info ("H2O CHOLESKY DECOMPOSE ON DENSEN*DENSEN TAKES: " + (System.currentTimeMillis()-start));
     } else {
       // make it symmetric
       for( int i = 0; i < arr.length; ++i )
@@ -193,7 +193,7 @@ public final class Gram extends Iced {
       CholeskyDecomposition c = new Matrix(arr).chol();
       fchol.setSPD(c.isSPD());
       arr = c.getL().getArray();
-      Log.info ("JAMA CHOLESKY DECOMPOSE TAKES: " + (System.currentTimeMillis()-start));
+      //Log.info ("JAMA CHOLESKY DECOMPOSE TAKES: " + (System.currentTimeMillis()-start));
     }
     for( int i = 0; i < arr.length; ++i )
       System.arraycopy(arr[i], 0, fchol._xx[i], sparseN, i + 1);
