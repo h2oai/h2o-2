@@ -1,5 +1,7 @@
 package water.exec;
 
+import hex.pca.PCAScore.PCAScoreTask;
+
 import java.util.*;
 
 import water.*;
@@ -25,6 +27,7 @@ public abstract class ASTOp extends AST {
     put(new ASTLog());
     put(new ASTExp());
     put(new ASTNot());
+    put(new ASTScale());
 
     // Binary ops
     put(new ASTPlus());
@@ -158,6 +161,72 @@ class ASTNcol extends ASTUniOp {
   }
 }
 
+class ASTScale extends ASTUniOp {
+  ASTScale() { super(VARS,new Type[]{Type.ARY,Type.ARY}); }
+  @Override String opStr() { return "scale"; }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt) {
+    if(!env.isAry()) { env.poppush(Double.NaN); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    Frame fr2 = new Scale().doIt(fr.numCols(), fr).outputFrame(fr._names, fr.domains());
+    env.subRef(fr,skey);
+    env.pop();                  // Pop self
+    env.push(fr2);
+  }
+
+  private static class Scale extends MRTask2<Scale> {
+    protected int _nums = 0;
+    protected int[] _ind;    // Saves indices of numeric cols first, followed by enums
+    protected double[] _normSub;
+    protected double[] _normMul;
+
+    @Override public void map(Chunk chks[], NewChunk nchks[]) {
+      // Normalize numeric cols only
+      for(int k = 0; k < _nums; k++) {
+        int i = _ind[k];
+        NewChunk n = nchks[i];
+        Chunk c = chks[i];
+        int rlen = c._len;
+        for(int r = 0; r < rlen; r++)
+          n.addNum((c.at0(r)-_normSub[i])*_normMul[i]);
+      }
+
+      for(int k = _nums; k < chks.length; k++) {
+        int i = _ind[k];
+        NewChunk n = nchks[i];
+        Chunk c = chks[i];
+        int rlen = c._len;
+        for(int r = 0; r < rlen; r++)
+          n.addNum(c.at0(r));
+      }
+    }
+
+    public Scale doIt(int outputs, Frame fr) { return dfork2(outputs, fr).getResult(); }
+    public Scale dfork2(int outputs, Frame fr) {
+      final Vec [] vecs = fr.vecs();
+      for(int i = 0; i < vecs.length; i++) {
+        if(!vecs[i].isEnum()) _nums++;
+      }
+      if(_normSub == null) _normSub = MemoryManager.malloc8d(_nums);
+      if(_normMul == null) { _normMul = MemoryManager.malloc8d(_nums); Arrays.fill(_normMul,1); }
+      if(_ind == null) _ind = MemoryManager.malloc4(vecs.length);
+
+      int ncnt = 0; int ccnt = 0;
+      for(int i = 0; i < vecs.length; i++){
+        if(!vecs[i].isEnum()) {
+          _normSub[ncnt] = vecs[i].mean();
+          _normMul[ncnt] = 1.0/vecs[i].sigma();
+          _ind[ncnt++] = i;
+        } else
+          _ind[_nums+(ccnt++)] = i;
+      }
+      assert ncnt == _nums && (ncnt + ccnt == vecs.length);
+      return dfork(outputs, fr);
+    }
+  }
+}
+
 abstract class ASTBinOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x","y"};
   static Type[] newsig() {
@@ -243,27 +312,42 @@ class ASTReduce extends ASTOp {
   @Override void apply(Env env, int argcnt) { throw H2O.unimpl(); }
 }
 
+// TODO: Check refcnt mismatch issue: tmp = cbind(h.hex,3.5) results in different refcnts per col
 class ASTCbind extends ASTOp {
   @Override String opStr() { return "cbind"; }
   ASTCbind( ) { super(new String[]{"cbind","ary"},
                     new Type[]{Type.ARY,Type.varargs(Type.dblary())}); }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
+    Vec vmax = null;
+    for(int i = 0; i < argcnt-1; i++) {
+      if(env.isAry(-argcnt+1+i)) {
+        Frame tmp = env.ary(-argcnt+1+i);
+        if(vmax == null) vmax = tmp.vecs()[0];
+        else if(tmp.numRows() != vmax.length())
+          // R pads shorter cols to match max rows by cycling/repeating, but we won't support that
+          throw new IllegalArgumentException("Row mismatch! Expected " + String.valueOf(vmax.length()) + " but frame has " + String.valueOf(tmp.numRows()));
+      }
+    }
+
     Frame fr = null;
     if(env.isAry(-argcnt+1))
       fr = new Frame(env.ary(-argcnt+1));
     else {
-      Vec v = new Vec(Key.make(), env.dbl(-argcnt+1));
-      fr = new Frame(new String[] {"c0"}, new Vec[] {v});   // TODO: Pad shorter col to match rows
+      // Vec v = new Vec(Key.make(), env.dbl(-argcnt+1));
+      double d = env.dbl(-argcnt+1);
+      Vec v = vmax == null ? new Vec(Key.make(), d) : vmax.makeCon(d);
+      fr = new Frame(new String[] {"c0"}, new Vec[] {v});
       env.addRef(v);
     }
 
-    for(int i=1; i<argcnt-1; i++) {
+    for(int i = 1; i < argcnt-1; i++) {
       if(env.isAry(-argcnt+1+i))
         fr.add(env.ary(-argcnt+1+i));
       else {
         double d = env.dbl(-argcnt+1+i);
-        Vec v = fr.vecs()[0].makeCon(d);
+        // Vec v = fr.vecs()[0].makeCon(d);
+        Vec v = vmax == null ? new Vec(Key.make(), d) : vmax.makeCon(d);
         fr.add("c" + String.valueOf(i), v);
         env.addRef(v);
       }
@@ -271,37 +355,6 @@ class ASTCbind extends ASTOp {
     env._ary[env._sp-argcnt] = fr;
     env._sp -= argcnt-1;
     assert env.check_refcnt(fr.anyVec());
-
-    /* Frame fr = null;
-    Frame[] arys = new Frame[argcnt-1];
-    String[] skeys = new String[argcnt-1];
-    int num_ary = 0;
-
-    if(env.isAry()) {
-      arys[0] = env.popAry();
-      skeys[0] = env.key();
-      fr = new Frame(arys[0]);
-      num_ary++;
-    } else {
-      Vec v = new Vec(Key.make(), env.popDbl());
-      fr = new Frame(new String[] {"c0"}, new Vec[] {v}); // TODO: Pad shorter col to match rows
-    }
-
-    for(int i = 1; i < argcnt-1; i++) {
-      if(env.isAry()) {
-        arys[num_ary] = env.popAry();
-        skeys[num_ary] = env.key();
-        fr.add(arys[num_ary]);
-        num_ary++;
-      } else {
-        Vec v = fr.vecs()[0].makeCon(env.popDbl());
-        fr.add("c" + String.valueOf(i), v);
-      }
-    }
-    env.push(1); env._ary[env._sp-1] = env.addRef(fr);
-    for(int i = 0; i < num_ary; i++)
-      env.subRef(arys[i], skeys[i]);
-    assert env.check_refcnt(fr.anyVec()); */
   }
 }
 
