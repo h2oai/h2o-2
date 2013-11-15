@@ -28,6 +28,8 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
             ### h2o.verboseprint(j)
             if j['end_time'] == '':
                 if not pattern: 
+                    # always print progress if busy job (no pattern used
+                    print "time:", time.strftime("%I:%M:%S"), "progress:",  j['progress'], j['destination_key'], 
                     h2o.verboseprint("description:", j['description'], "end_time:", j['end_time'])
                     busy +=1
                     h2o.verboseprint("pollWaitJobs: found a busy job, now: %s" % busy)
