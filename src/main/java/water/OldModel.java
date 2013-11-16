@@ -325,8 +325,9 @@ public abstract class OldModel extends Iced {
       ds[ds.length-1] = new String[]{"F","T"};
     }
     Model m = new Model(null,null,_va.colNames(),ds) {
+        @Override
         protected float[] score0(double data[/*ncols*/], float preds[/*nclasses*/]) {
-          float s = (float)score0(data);
+          float s = (float)OldModel.this.score0(data);
           if( preds.length==1 ) preds[0] = s;
           else {
             assert preds.length==2;
