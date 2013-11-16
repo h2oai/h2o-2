@@ -247,8 +247,8 @@ public class NewChunk extends Chunk {
     // Result column must hold floats?
     final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
     // Highly sparse but not a bitvector or constant?
-    if( !fpoint && (_nzCnt+_naCnt)*8 < _len2 &&
-        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE ) // Only handling unbiased shorts here
+    if( !fpoint && (_nzCnt+_naCnt)*8 < _len2 && _len2 < 65535 && // (and not too big?)
+        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE )    // Only handling unbiased shorts here
       if( _len2==_len ) return new CX2Chunk(_ls,_xs,_len2,_nzCnt,_naCnt);  // Sparse byte chunk
       else              return new CX2Chunk(_ls,_xs,_len2,_len);
 
