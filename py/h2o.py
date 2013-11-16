@@ -1532,24 +1532,23 @@ class H2O(object):
             print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
+        # always follow thru to rfview?
         rf = self.__do_json_request(algo + '.json', timeout=timeoutSecs, params=params_dict)
         print "\n%s result:" % algo, dump_json(rf)
         
         # noPoll and rfView=False are similar?
         if (noPoll or not rfView) or (beta_features and rfView==False):
             # just return for now
+            print "HELLO rfView:", rfView, "noPoll", noPoll
             return rf
 
         if beta_features:
             # since we don't know the model key from the rf response, we just let rf redirect us to completion
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
-
-            # rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs, 
-            #    retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            #    noise=noise, benchmarkLogging=benchmarkLogging, print_params=print_params, noPoll=noPoll, 
-            #    useRFScore=False,
-            #    model_key = rf['model_key'],
-            return rf
+            rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging)
+            return rfView
 
         else:
             if rf['response']['redirect_request'] != algoView:
