@@ -6,6 +6,7 @@ import water.ValueArray.Column;
 import water.api.Constants;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.fvec.Frame;
 
 /**
  * A Model models reality (hopefully).
@@ -313,5 +314,28 @@ public abstract class OldModel extends Iced {
   public void fromJson(JsonObject json) {
     // TODO
   }
+  public double getThreshold() { return Double.NaN; }
 
+  // Bridge from new Model scoring to old Model scoring
+  public Frame score( Frame data, boolean exact ) {
+    final double threshold = getThreshold();
+    String[][] ds = _va.domains();
+    if( ds[ds.length-1] == null && !Double.isNaN(threshold) ) {
+      // This is a binomial classifier
+      ds[ds.length-1] = new String[]{"F","T"};
+    }
+    Model m = new Model(null,null,_va.colNames(),ds) {
+        protected float[] score0(double data[/*ncols*/], float preds[/*nclasses*/]) {
+          float s = (float)score0(data);
+          if( preds.length==1 ) preds[0] = s;
+          else {
+            assert preds.length==2;
+            preds[0] = 1-s;
+            preds[1] = s;
+          }
+          return preds;
+        }
+      };
+    return m.score(data,exact);
+  }
 }
