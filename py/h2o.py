@@ -832,7 +832,7 @@ class H2O(object):
         return u
 
     def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, returnFast=False,
-        cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorCheck=False, **kwargs):
+        cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorCheck=False, **kwargs): 
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
             url = fullUrl
@@ -994,7 +994,7 @@ class H2O(object):
     # no noise if None
     def poll_url(self, response,
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False):
+        noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
 
@@ -1002,6 +1002,8 @@ class H2O(object):
         # look for 'response'..if not there, assume the rev 2
 
         def get_redirect_url(response, beta_features):
+            url = None
+            params = None
             if beta_features or 'response_info' in response: # trigger v2 for GBM always?
                 # "response_info": {
                 #     "h2o": "pytest-kevin-10389", 
@@ -1029,23 +1031,18 @@ class H2O(object):
                 else:
                     if response_info['status'] != 'done':
                         raise Exception("'redirect_url' during polling is null but status!='done': \n%s" % dump_json(response))
-                    else:
-                        url = None
-                        params = None
-
             else:
                 if 'response' not in response:
-                    raise Exception("'response' not in response. Maybe h2o.beta_features=True is needed?")
+                    raise Exception("'response' not in response.\n%s" % dump_json(response))
 
-                if 'redirect_url':
+                if response['response']['status'] == 'done':
+                    pass # keep the last url value? h2o doesn't give the redirect_request and redirect_args
+                else:
+                    if 'redirect_request' not in response['response']:
+                        raise Exception("'redirect_request' not in response. \n%s" % dump_json(response))
+
                     url = self.__url(response['response']['redirect_request'])
                     params = response['response']['redirect_request_args']
-                else:
-                    if response['status'] != 'done':
-                        raise Exception("'redirect_url' during polling is null but status!='done': \n%s" % dump_json(response))
-                    else:
-                        url = None
-                        params = None
 
             return (url, params)
 
@@ -1122,7 +1119,9 @@ class H2O(object):
 
             # get the redirect url
             # currently a bug...the url isn't right on poll
-            (url, params) = get_redirect_url(r, beta_features)
+            print "beta_features:", beta_features
+            if not reuseFirstPollUrl: # hack for v1 RfView which doesn't give it during polling
+                (url, params) = get_redirect_url(r, beta_features)
 
             if ((time.time()-start)>timeoutSecs):
                 # show what we're polling with
@@ -1661,7 +1660,7 @@ class H2O(object):
             # FIX! do we have to do a 2nd if it's done in the first?
             rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise, benchmarkLogging=benchmarkLogging)
+                noise=noise, benchmarkLogging=benchmarkLogging, reuseFirstPollUrl=True)
 
             # above we get this from what we're told from rf and passed to rfView
             ## ntree = rfView['ntree']
