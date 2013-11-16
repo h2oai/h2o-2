@@ -1119,7 +1119,6 @@ class H2O(object):
 
             # get the redirect url
             # currently a bug...the url isn't right on poll
-            print "beta_features:", beta_features
             if not reuseFirstPollUrl: # hack for v1 RfView which doesn't give it during polling
                 (url, params) = get_redirect_url(r, beta_features)
 
