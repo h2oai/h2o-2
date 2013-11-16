@@ -141,6 +141,12 @@ public class ValueArray extends Iced implements Cloneable {
       _cols[i]._name = names[i];
   }
 
+  public String[][] domains() {
+    String domains[][] = new String[_cols.length][];
+    for( int i=0; i<_cols.length; i++ )
+      domains[i] = _cols[i]._domain;
+    return domains;
+  }
 
   /**Returns the width of a row.*/
   public int rowSize() { return _rowsize; }

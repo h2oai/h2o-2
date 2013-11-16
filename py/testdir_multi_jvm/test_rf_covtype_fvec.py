@@ -13,7 +13,7 @@ paramDict = {
     'ignored_cols_by_name': None,
     'classification': 1, # regression
     'validation': None,
-    'ntrees': 5,
+    'ntrees': 1,
     'max_depth': 30,
     'min_rows': 2, # normally 1 for classification, 5 for regression
     'nbins': 100,
@@ -26,7 +26,7 @@ paramDict = {
 
 
 DO_OOBE = False
-DO_PLOT = False
+DO_PLOT = True
 TRY = 'ntrees'    
 
 class Basic(unittest.TestCase):
@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, java_heap_GB=10)
+            h2o.build_cloud(node_count=3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=10)
         h2o.beta_features = True # fvec
@@ -107,7 +107,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + kwargs['ntrees'] * 200
 
             start = time.time()
-            rfFirstResult = h2o_cmd.runRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
+            rfFirstResult = h2o_cmd.runRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, noPoll=False, rfView=False, **kwargs)
             # print h2o.dump_json(rfFirstResult)
             # FIX! are these already in there?
             rfView = {}
@@ -188,11 +188,12 @@ class Basic(unittest.TestCase):
                     raise Exception("huh? %s" % TRY)
                 xList.append(paramDict[xLabel])
 
-        eLabel = 'class 4 pctWrong'
-        fLabel = 'trainElapsed'
-        eListTitle = ""
-        fListTitle = ""
-        h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
+        if DO_PLOT:
+            eLabel = 'class 4 pctWrong'
+            fLabel = 'trainElapsed'
+            eListTitle = ""
+            fListTitle = ""
+            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
 
 if __name__ == '__main__':
     h2o.unit_main()
