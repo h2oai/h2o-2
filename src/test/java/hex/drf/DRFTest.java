@@ -77,7 +77,8 @@ public class DRFTest extends TestUtil {
         s("3", "4", "5", "6", "8"));
   }
 
-  @Test public void testCreditSample1() throws Throwable {
+  //@Test
+  public void testCreditSample1() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/kaggle/creditsample-training.csv.gz","credit.hex",
         new PrepData() { @Override int prep(Frame fr) {
@@ -90,8 +91,9 @@ public class DRFTest extends TestUtil {
 
   }
 
-  @Ignore("We need to have proper regression test.")
-  @Test public void testCreditProstate1() throws Throwable {
+  //@Ignore("We need to have proper regression test.")
+  //@Test
+  public void testCreditProstate1() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/logreg/prostate.csv","prostate.hex",
         new PrepData() { @Override int prep(Frame fr) {
