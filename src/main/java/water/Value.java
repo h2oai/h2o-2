@@ -260,9 +260,16 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // For plain Values, just the length in bytes.
   // For ValueArrays, the length of all chunks.
+  // For Frames, the compressed size of all vecs within the frame.
   public long length() {
-    if(!isArray()) return _max;
-    return ((ValueArray)get()).length();
+    if (isArray()) {
+      return ((ValueArray)get()).length();
+    }
+    else if (isFrame()) {
+      return ((Frame)get()).byteSize();
+    }
+
+    return _max;
   }
 
   public InputStream openStream() throws IOException {

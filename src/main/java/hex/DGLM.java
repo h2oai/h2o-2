@@ -1196,8 +1196,13 @@ public abstract class DGLM {
       }
       p += _beta[_beta.length - 1]; // And the intercept as the last beta
       double pp = _glmParams._link.linkInv(p);
-      if( _glmParams._family._family == Family.binomial ) return pp >= _vals[0].bestThreshold() ? 1.0 : 0.0;
+      //if( _glmParams._family._family == Family.binomial ) return pp >= _vals[0].bestThreshold() ? 1.0 : 0.0;
       return pp;
+    }
+    @Override public double getThreshold() {
+      if( _glmParams._family._family == Family.binomial ) 
+        return _vals[0].bestThreshold();
+      return Float.NaN;
     }
 
     /** Single row scoring, on a compatible ValueArray (when pushed throw the mapping) */

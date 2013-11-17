@@ -2,6 +2,8 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs
+
+POLL = True
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -96,7 +98,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + kwargs['ntrees'] * 20
 
             start = time.time()
-            rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, rfView=False, **kwargs)
+            rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=not POLL, rfView=POLL, **kwargs)
             elapsed = time.time() - start
 
             print h2o.dump_json(rfResult)
@@ -109,7 +111,8 @@ class Basic(unittest.TestCase):
             rfView['ntrees'] = kwargs['ntrees']
             rfViewInitial.append(rfView)
 
-            h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=5)
+            if not POLL:
+                h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=5)
 
             # FIX! need to add the rfview and predict stuff
 
@@ -124,8 +127,10 @@ class Basic(unittest.TestCase):
                 model_key = rfView['model_key']
                 ntrees = rfView['ntrees']
 
-                rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
-                h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
+                rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, noPoll=not POLL, doSimpleCheck=False)
+
+                if not POLL:
+                    h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
                 # rfView = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
                 print "rfView:", h2o.dump_json(rfView)
 
@@ -133,13 +138,11 @@ class Basic(unittest.TestCase):
                 # "errs":[0.25,0.1682814508676529],
                 # "testKey":"syn_binary_10000x10.hex",
                 # "cm":[[3621,1399],[1515,3465]]}}
-
                 rf_model = rfView['drf_model']
                 cm = rf_model['cm']
                 ntrees = rf_model['N']
                 errs = rf_model['errs']
                 N = rf_model['N']
-
 
                 # FIX! should update this expected classification error
                 ## (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntrees)

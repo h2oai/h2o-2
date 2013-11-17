@@ -39,7 +39,7 @@ public class CX2Chunk extends Chunk {
   private int at_impl(int idx) {
     int y = _last;              // Read once; racy 1-entry cache
     int x = UDP.get2(_mem,y+0)&0xFFFF;
-    if( idx == x ) return UDP.get2(_mem,y+2)&0xFFFF;
+    if( idx == x ) return UDP.get2(_mem,y+2);
     if( idx > x && y < _mem.length && idx < UDP.get2(_mem,y+4) ) return 0;
 
     int lo=0, hi = (_mem.length-OFF)>>>2;

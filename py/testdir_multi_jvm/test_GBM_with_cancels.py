@@ -23,7 +23,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_fvec(self):
+    def test_GBM_with_cancels(self):
 
         print "Sets h2o.beta_features like -bf at command line"
         print "this will redirect import and parse to the 2 variants"

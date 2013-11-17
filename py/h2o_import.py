@@ -1,6 +1,6 @@
 import h2o, h2o_cmd, re, os
 import h2o_print as h2p
-import getpass
+import getpass, time
 
 #****************************************************************************************
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)

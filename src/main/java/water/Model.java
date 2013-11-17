@@ -113,7 +113,8 @@ public abstract class Model extends Iced {
         for( int i=0; i<p._len; i++ ) {
           float[] out = score0(chks,i,tmp,preds);
           if( nclasses() > 1 ) {
-            p.set0(i,Utils.maxIndex(out));
+            if( Float.isNaN(out[0]) ) p.setNA0(i);
+            else p.set0(i, Utils.maxIndex(out));
             for( int c=0; c<nclasses(); c++ )
               chks[_names.length+c].set0(i,out[c]);
           } else {

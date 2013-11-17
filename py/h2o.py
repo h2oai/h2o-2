@@ -832,7 +832,7 @@ class H2O(object):
         return u
 
     def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, returnFast=False,
-        cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorCheck=False, **kwargs):
+        cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorCheck=False, **kwargs): 
         # if url param is used, use it as full url. otherwise crate from the jsonRequest
         if fullUrl:
             url = fullUrl
@@ -994,7 +994,7 @@ class H2O(object):
     # no noise if None
     def poll_url(self, response,
         timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False):
+        noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
 
@@ -1002,6 +1002,8 @@ class H2O(object):
         # look for 'response'..if not there, assume the rev 2
 
         def get_redirect_url(response, beta_features):
+            url = None
+            params = None
             if beta_features or 'response_info' in response: # trigger v2 for GBM always?
                 # "response_info": {
                 #     "h2o": "pytest-kevin-10389", 
@@ -1013,21 +1015,34 @@ class H2O(object):
                 if 'response_info' not in response:
                     raise Exception("The response during polling should have 'response_info'. Don't see it: \n%s" % dump_json(response))
 
-                if 'redirect_url' not in response['response_info']:
+                response_info = response['response_info']
+                if 'redirect_url' not in response_info:
                     raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
 
-                # url = self.__url(response['redirect_url'] + ".json")
-                # this is the full url now, with params?
-                url = self.__url(response['response_info']['redirect_url'])
-                # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
-                params = None
-
+                # if status is 'done', it's okay for 'redirect_url' to be null.
+                redirect_url = response_info['redirect_url']
+                print "redirect_url:", redirect_url
+                if redirect_url:
+                    # url = self.__url(response['redirect_url'] + ".json")
+                    # this is the full url now, with params?
+                    url = self.__url(redirect_url)
+                    # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
+                    params = None
+                else:
+                    if response_info['status'] != 'done':
+                        raise Exception("'redirect_url' during polling is null but status!='done': \n%s" % dump_json(response))
             else:
                 if 'response' not in response:
-                    raise Exception("'response' not in response. Maybe h2o.beta_features=True is needed?")
+                    raise Exception("'response' not in response.\n%s" % dump_json(response))
 
-                url = self.__url(response['response']['redirect_request'])
-                params = response['response']['redirect_request_args']
+                if response['response']['status'] == 'done':
+                    pass # keep the last url value? h2o doesn't give the redirect_request and redirect_args
+                else:
+                    if 'redirect_request' not in response['response']:
+                        raise Exception("'redirect_request' not in response. \n%s" % dump_json(response))
+
+                    url = self.__url(response['response']['redirect_request'])
+                    params = response['response']['redirect_request_args']
 
             return (url, params)
 
@@ -1060,7 +1075,12 @@ class H2O(object):
             time.sleep(initialDelaySecs)
 
         # can end with status = 'redirect' or 'done'
-        while status == 'poll':
+        # Update: on DRF2, the first RF redirects to progress. So we should follow that, and follow any redirect to view?
+        # so for v2, we'll always follow redirects?
+
+        # Don't follow the Parse redirect to Inspect, because we want parseResult['destination_key'] to be the end.
+        # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
+        while status == 'poll' or (beta_features and status == 'redirect' and 'Inspect' not in url):
             # UPDATE: 1/24/13 change to always wait before the first poll..
             time.sleep(retryDelaySecs)
             # every other one?
@@ -1078,7 +1098,8 @@ class H2O(object):
 
             r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
-            if ((count%5)==0):
+            # if ((count%5)==0):
+            if 1==1:
                 verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
@@ -1098,7 +1119,7 @@ class H2O(object):
 
             # get the redirect url
             # currently a bug...the url isn't right on poll
-            if 1==0:
+            if not reuseFirstPollUrl: # hack for v1 RfView which doesn't give it during polling
                 (url, params) = get_redirect_url(r, beta_features)
 
             if ((time.time()-start)>timeoutSecs):
@@ -1114,6 +1135,8 @@ class H2O(object):
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
+        if 1==1:
+            verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
         return r
 
     def kmeans_apply(self, data_key, model_key, destination_key,
@@ -1509,19 +1532,23 @@ class H2O(object):
             print "\n%s parameters:" % algo, params_dict
             sys.stdout.flush()
 
+        # always follow thru to rfview?
         rf = self.__do_json_request(algo + '.json', timeout=timeoutSecs, params=params_dict)
         print "\n%s result:" % algo, dump_json(rf)
         
         # noPoll and rfView=False are similar?
         if (noPoll or not rfView) or (beta_features and rfView==False):
             # just return for now
+            print "HELLO rfView:", rfView, "noPoll", noPoll
             return rf
 
         if beta_features:
+            # since we don't know the model key from the rf response, we just let rf redirect us to completion
+            # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                 noise=noise, benchmarkLogging=benchmarkLogging)
-            return rfViewResult
+            return rfView
 
         else:
             if rf['response']['redirect_request'] != algoView:
@@ -1610,9 +1637,7 @@ class H2O(object):
         else:
             whichUsed = algo
 
-        a = self.__do_json_request(whichUsed + ".json",
-            timeout=timeoutSecs, params=params_dict)
-
+        a = self.__do_json_request(whichUsed + ".json", timeout=timeoutSecs, params=params_dict)
         verboseprint("\n%s result:" % whichUsed, dump_json(a))
 
         if noPoll:
@@ -1633,7 +1658,7 @@ class H2O(object):
             # FIX! do we have to do a 2nd if it's done in the first?
             rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise, benchmarkLogging=benchmarkLogging)
+                noise=noise, benchmarkLogging=benchmarkLogging, reuseFirstPollUrl=True)
 
             # above we get this from what we're told from rf and passed to rfView
             ## ntree = rfView['ntree']

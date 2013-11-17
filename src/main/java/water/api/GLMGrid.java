@@ -63,7 +63,7 @@ public class GLMGrid extends Request {
   protected final RSeq _thresholds = new RSeq(Constants.DTHRESHOLDS, false, new NumberSequence("0:1:0.01",false,0.1),false);
 
   protected final Bool _parallel = new Bool(PARALLEL, true, "Build models in parallel");
-  protected final Int _parallelism = new Int(JSON_PARALLELISM, 1, 256);
+  protected final Int _parallelism = new Int(JSON_PARALLELISM, 1, 1, 256);
 
   public GLMGrid(){
     _requestHelp = "Perform grid search over GLM parameters. Calls glm with all parameter combination from user-defined parameter range. Results are ordered according to AUC. For more details see <a href='GLM.help'>GLM help</a>.";
