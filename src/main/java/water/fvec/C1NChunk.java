@@ -4,6 +4,7 @@ import water.*;
 
 /**
  * The empty-compression function, if all elements fit directly on UNSIGNED bytes.
+ * [In particular, this is the compression style for data read in from files.]
  */
 public class C1NChunk extends Chunk {
   static final int OFF=0;
