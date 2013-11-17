@@ -602,36 +602,31 @@ public class Frame extends Iced {
     Log.info("Reading byte InputStream into Frame:");
     Log.info("    frameKey:    " + key.toString());
     Key newVecKey = Vec.newKey();
-    long totalBytes = 0;
 
     try {
       UKV.remove(key);
 
-      AppendableVec av = new AppendableVec(newVecKey);
-      assert av.writable();
-      int chunkIdx = 0;
+      UploadFileVec uv = new UploadFileVec(newVecKey);
+      assert uv.writable();
 
-      byte bytebuf[] = new byte[(int)Vec.CHUNK_SZ];
+      byte bytebuf[] = new byte[uv.getChunkSz()];
       int bytesInChunkSoFar = 0;
       while (true) {
         int rv;
-        rv = is.read(bytebuf, bytesInChunkSoFar, (int)Vec.CHUNK_SZ - bytesInChunkSoFar);
+        rv = is.read(bytebuf, bytesInChunkSoFar, uv.getChunkSz() - bytesInChunkSoFar);
         if (rv < 0) {
           // Write last chunk if there is anything to write.
-          // It may be smaller than Vec.CHUNK_SZ.
+          // It may be smaller than ChunkSz.
           if (bytesInChunkSoFar == 0) {
             break;
           }
 
-          NewBytesChunk c = new NewBytesChunk(av, chunkIdx);
+          byte finalbytebuf[] = new byte[bytesInChunkSoFar];
           for (int i = 0; i < bytesInChunkSoFar; i++) {
-            byte b = bytebuf[i];
-            c.addByte(b);
+            finalbytebuf[i] = bytebuf[i];
           }
-          c.close(chunkIdx, fs);
-          chunkIdx++;
-          totalBytes += bytesInChunkSoFar;
-          bytesInChunkSoFar = 0;
+          C1NChunk c = new C1NChunk(finalbytebuf);
+          uv.addAndCloseChunk(c, fs);
           break;
         }
         else if (bytesInChunkSoFar < Vec.CHUNK_SZ) {
@@ -640,30 +635,25 @@ public class Frame extends Iced {
         }
 
         // Write full chunk of size Vec.CHUNK_SZ.
-        NewBytesChunk c = new NewBytesChunk(av, chunkIdx);
-        for (int i = 0; i < bytesInChunkSoFar; i++) {
-          byte b = bytebuf[i];
-          c.addByte(b);
-        }
-        c.close(chunkIdx, fs);
-        chunkIdx++;
-        totalBytes += bytesInChunkSoFar;
+        C1NChunk c = new C1NChunk(bytebuf);
+        uv.addAndCloseChunk(c, fs);
+        bytebuf = new byte[uv.getChunkSz()];
         bytesInChunkSoFar = 0;
       }
 
-      int totalChunks = chunkIdx;
+      uv.close();
+
       Log.info("    totalFrames: " + 1);
       Log.info("    totalVecs:   " + 1);
-      Log.info("    totalChunks: " + totalChunks);
-      Log.info("    totalBytes:  " + totalBytes);
-      Vec v = av.close(fs);
+      Log.info("    totalChunks: " + uv.nChunks());
+      Log.info("    totalBytes:  " + uv.length());
 
+      DKV.put(newVecKey, uv, fs);
       String[] sarr = {"bytes"};
-      Vec[] varr = {v};
+      Vec[] varr = {uv};
       Frame f = new Frame(sarr, varr);
-
-      DKV.put(newVecKey, v, fs);
       UKV.put(key, f, fs);
+
       Log.info("    Success.");
     }
     catch (Exception e) {
