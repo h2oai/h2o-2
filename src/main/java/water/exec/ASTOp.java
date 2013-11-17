@@ -384,7 +384,7 @@ class ASTRunif extends ASTOp {
   @Override void apply(Env env, int argcnt) {
     Frame fr = env.popAry();
     String skey = env.key();
-    long [] espc = fr.anyVec().espc();
+    long [] espc = fr.anyVec()._espc;
     long rem = fr.numRows();
     if(rem > espc[espc.length-1])throw H2O.unimpl();
     for(int i = 0; i < espc.length; ++i){

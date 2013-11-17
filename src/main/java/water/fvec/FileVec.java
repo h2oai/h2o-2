@@ -3,10 +3,10 @@ package water.fvec;
 import water.*;
 
 public abstract class FileVec extends ByteVec {
-  final long _len;              // File length
+  long _len;                    // File length
   final byte _be;
   public static final int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
-  public static final long CHUNK_SZ = 1L << LOG_CHK;
+  public static final int CHUNK_SZ = 1 << LOG_CHK;
   
 
   protected FileVec(Key key, long len, byte be) {

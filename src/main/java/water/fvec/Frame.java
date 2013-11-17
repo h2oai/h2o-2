@@ -609,35 +609,28 @@ public class Frame extends Iced {
       UploadFileVec uv = new UploadFileVec(newVecKey);
       assert uv.writable();
 
-      byte bytebuf[] = new byte[uv.getChunkSz()];
+      byte bytebuf[] = new byte[FileVec.CHUNK_SZ];
       int bytesInChunkSoFar = 0;
       while (true) {
-        int rv;
-        rv = is.read(bytebuf, bytesInChunkSoFar, uv.getChunkSz() - bytesInChunkSoFar);
+        int rv = is.read(bytebuf, bytesInChunkSoFar, FileVec.CHUNK_SZ - bytesInChunkSoFar);
         if (rv < 0) {
           // Write last chunk if there is anything to write.
-          // It may be smaller than ChunkSz.
-          if (bytesInChunkSoFar == 0) {
-            break;
+          // It may be smaller than CHUNK_SZ.
+          if (bytesInChunkSoFar != 0) {
+            byte finalbytebuf[] = Arrays.copyOf(bytebuf,bytesInChunkSoFar);
+            C1NChunk c = new C1NChunk(finalbytebuf);
+            uv.addAndCloseChunk(c, fs);
           }
-
-          byte finalbytebuf[] = new byte[bytesInChunkSoFar];
-          for (int i = 0; i < bytesInChunkSoFar; i++) {
-            finalbytebuf[i] = bytebuf[i];
-          }
-          C1NChunk c = new C1NChunk(finalbytebuf);
-          uv.addAndCloseChunk(c, fs);
           break;
         }
-        else if (bytesInChunkSoFar < Vec.CHUNK_SZ) {
-          bytesInChunkSoFar += rv;
+        bytesInChunkSoFar += rv;
+        if (bytesInChunkSoFar < FileVec.CHUNK_SZ)
           continue;
-        }
 
-        // Write full chunk of size Vec.CHUNK_SZ.
+        // Write full chunk of size FileVec.CHUNK_SZ.
         C1NChunk c = new C1NChunk(bytebuf);
         uv.addAndCloseChunk(c, fs);
-        bytebuf = new byte[uv.getChunkSz()];
+        bytebuf = new byte[FileVec.CHUNK_SZ];
         bytesInChunkSoFar = 0;
       }
 
