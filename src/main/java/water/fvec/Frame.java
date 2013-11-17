@@ -633,7 +633,11 @@ public class Frame extends Iced {
       Log.info("    totalVecs:   " + 1);
       Log.info("    totalChunks: " + totalChunks);
       Log.info("    totalBytes:  " + totalBytes);
+<<<<<<< HEAD
       c.close(chunkIdx, fs);
+=======
+      c.close(chunkIdx,fs);
+>>>>>>> Rename NewChunk.new_close
       Vec v = av.close(fs);
 
       String[] sarr = {"bytes"};

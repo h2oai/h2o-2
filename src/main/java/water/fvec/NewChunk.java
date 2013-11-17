@@ -139,7 +139,7 @@ public class NewChunk extends Chunk {
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
   // (does not live on inside the K/V store).
-  public Chunk close(Futures fs) {
+  public Chunk new_close(Futures fs) {
     Chunk chk = compress();
     if(_vec instanceof AppendableVec)
       ((AppendableVec)_vec).closeChunk(this);
