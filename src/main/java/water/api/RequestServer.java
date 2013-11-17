@@ -152,6 +152,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PCAProgressPage());
     registerRequest(new PCAModelView());
     registerRequest(new PostFile());
+    registerRequest(new water.api.Upload2.PostFile());
     registerRequest(new Progress());
     registerRequest(new Progress2());
     registerRequest(new PutValue());

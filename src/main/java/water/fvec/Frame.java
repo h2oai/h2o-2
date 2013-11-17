@@ -3,10 +3,12 @@ package water.fvec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
+import water.util.Log;
 
 /**
  * A collection of named Vecs.  Essentially an R-like data-frame.  Multiple
@@ -580,5 +582,78 @@ public class Frame extends Iced {
             nchks[j].addNum(chks[j].at0(i));
       }
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Store a file (byte by byte) into a frame.
+  // This file will generally come from a POST through the REST interface.
+  // ---------------------------------------------------------------------------
+
+  static public Key readPut(String keyname, InputStream is) throws Exception {
+    return readPut(Key.make(keyname), is);
+  }
+
+  static public Key readPut(Key k, InputStream is) throws Exception {
+    readPut(k,is,new Futures()).blockForPending();
+    return k;
+  }
+
+  static private Futures readPut(Key key, InputStream is, final Futures fs) throws Exception {
+    Log.info("Reading byte InputStream into Frame:");
+    Log.info("    frameKey:    " + key.toString());
+    Key newVecKey = Vec.newKey();
+    long totalBytes = 0;
+    long totalChunks = 0;
+
+    try {
+      UKV.remove(key);
+
+      AppendableVec av = new AppendableVec(newVecKey);
+      assert av.writable();
+      int chunkIdx = 0;
+      NewBytesChunk c = new NewBytesChunk(av, chunkIdx);
+      totalChunks++;
+
+      byte bytebuf[] = new byte[1024 * 1024];
+      int rv = 0;
+      while (rv >= 0) {
+        rv = is.read(bytebuf);
+        if (rv < 0) {
+          break;
+        }
+        for (int i = 0; i < rv; i++) {
+          byte b = bytebuf[i];
+          c.addByte(b);
+        }
+
+        totalBytes += rv;
+      }
+
+      Log.info("    totalFrames: " + 1);
+      Log.info("    totalVecs:   " + 1);
+      Log.info("    totalChunks: " + totalChunks);
+      Log.info("    totalBytes:  " + totalBytes);
+      c.close(fs);
+      Vec v = av.close(fs);
+
+      String[] sarr = {"bytes"};
+      Vec[] varr = {v};
+      Frame f = new Frame(sarr, varr);
+
+      DKV.put(newVecKey, v, fs);
+      UKV.put(key, f, fs);
+      Log.info("    Success.");
+    }
+    catch (Exception e) {
+      // Clean up and do not leak keys.
+      Log.err("Exception caught in Frame::readPut; attempting to clean up the new frame and vector");
+      Log.err(e);
+      UKV.remove(key);
+      DKV.remove(newVecKey);
+      Log.err("Frame::readPut cleaned up new frame and vector successfully");
+      throw e;
+    }
+
+    return fs;
   }
 }
