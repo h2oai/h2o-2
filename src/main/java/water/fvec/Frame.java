@@ -615,8 +615,8 @@ public class Frame extends Iced {
       totalChunks++;
 
       byte bytebuf[] = new byte[1024 * 1024];
-      int rv = 0;
-      while (rv >= 0) {
+      while (true) {
+        int rv = 0;
         rv = is.read(bytebuf);
         if (rv < 0) {
           break;
@@ -633,7 +633,7 @@ public class Frame extends Iced {
       Log.info("    totalVecs:   " + 1);
       Log.info("    totalChunks: " + totalChunks);
       Log.info("    totalBytes:  " + totalBytes);
-      c.close(fs);
+      c.close(chunkIdx, fs);
       Vec v = av.close(fs);
 
       String[] sarr = {"bytes"};
