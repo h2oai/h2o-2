@@ -611,33 +611,53 @@ public class Frame extends Iced {
       AppendableVec av = new AppendableVec(newVecKey);
       assert av.writable();
       int chunkIdx = 0;
-      NewBytesChunk c = new NewBytesChunk(av, chunkIdx);
-      totalChunks++;
 
-      byte bytebuf[] = new byte[1024 * 1024];
+      byte bytebuf[] = new byte[(int)Vec.CHUNK_SZ];
+      int bytesInChunkSoFar = 0;
       while (true) {
-        int rv = 0;
-        rv = is.read(bytebuf);
+        int rv;
+        rv = is.read(bytebuf, bytesInChunkSoFar, (int)Vec.CHUNK_SZ - bytesInChunkSoFar);
         if (rv < 0) {
+          // Write last chunk if there is anything to write.
+          // It may be smaller than Vec.CHUNK_SZ.
+          if (bytesInChunkSoFar == 0) {
+            break;
+          }
+
+          NewBytesChunk c = new NewBytesChunk(av, chunkIdx);
+          for (int i = 0; i < bytesInChunkSoFar; i++) {
+            byte b = bytebuf[i];
+            c.addByte(b);
+          }
+          c.close(chunkIdx, fs);
+          chunkIdx++;
+          totalBytes += bytesInChunkSoFar;
+          bytesInChunkSoFar = 0;
           break;
         }
-        for (int i = 0; i < rv; i++) {
+        else if (bytesInChunkSoFar < Vec.CHUNK_SZ) {
+          bytesInChunkSoFar += rv;
+          continue;
+        }
+
+        // Write full chunk of size Vec.CHUNK_SZ.
+        NewBytesChunk c = new NewBytesChunk(av, chunkIdx);
+        for (int i = 0; i < bytesInChunkSoFar; i++) {
           byte b = bytebuf[i];
           c.addByte(b);
         }
-
-        totalBytes += rv;
+        c.close(chunkIdx, fs);
+        chunkIdx++;
+        totalBytes += bytesInChunkSoFar;
+        bytesInChunkSoFar = 0;
       }
+
+      totalChunks = chunkIdx;
 
       Log.info("    totalFrames: " + 1);
       Log.info("    totalVecs:   " + 1);
       Log.info("    totalChunks: " + totalChunks);
       Log.info("    totalBytes:  " + totalBytes);
-<<<<<<< HEAD
-      c.close(chunkIdx, fs);
-=======
-      c.close(chunkIdx,fs);
->>>>>>> Rename NewChunk.new_close
       Vec v = av.close(fs);
 
       String[] sarr = {"bytes"};
