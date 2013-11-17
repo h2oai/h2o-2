@@ -101,9 +101,9 @@ public class Vec extends Iced {
    *  initialized to a constant. */
   public Vec makeCon( final long l ) {
     Futures fs = new Futures();
-    if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
+    if( espc() == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
+    Vec v0 = new Vec(group().addVecs(1)[0],espc());
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
@@ -116,9 +116,9 @@ public class Vec extends Iced {
   }
   public Vec makeCon( final double d ) {
     Futures fs = new Futures();
-    if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
+    if( espc() == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     int nchunks = nChunks();
-    Vec v0 = new Vec(group().addVecs(1)[0],_espc);
+    Vec v0 = new Vec(group().addVecs(1)[0],espc());
     long row=0;                 // Start row
     for( int i=0; i<nchunks; i++ ) {
       long nrow = chunk2StartElem(i+1); // Next row
@@ -134,8 +134,8 @@ public class Vec extends Iced {
   public Vec makeTransf(final int[] domMap) { return makeTransf(domMap, null); }
   public Vec makeTransf(final int[] domMap, final String[] domain) {
     Futures fs = new Futures();
-    if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, domMap, domain, group().addVecs(1)[0],_espc);
+    if( espc() == null ) throw H2O.unimpl();
+    Vec v0 = new TransfVec(this._key, domMap, domain, group().addVecs(1)[0],espc());
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
@@ -377,20 +377,20 @@ public class Vec extends Iced {
     int lo=0, hi = nChunks();
     while( lo < hi-1 ) {
       int mid = (hi+lo)>>>1;
-      if( i < _espc[mid] ) hi = mid;
+      if( i < espc()[mid] ) hi = mid;
       else                 lo = mid;
     }
-    while( _espc[lo+1] == i ) lo++;
+    while( espc()[lo+1] == i ) lo++;
     return lo;
   }
 
   /** Convert a chunk-index into a starting row #.  For constant-sized chunks
    *  this is a little shift-and-add math.  For variable-sized chunks this is a
    *  table lookup. */
-  public long chunk2StartElem( int cidx ) { return _espc[cidx]; }
+  public long chunk2StartElem( int cidx ) { return espc()[cidx]; }
 
   /** Number of rows in chunk. Does not fetch chunk content. */
-  public int chunkLen( int cidx ) { return (int) (_espc[cidx + 1] - _espc[cidx]); }
+  public int chunkLen( int cidx ) { return (int) (espc()[cidx + 1] - espc()[cidx]); }
 
   /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
   public Key chunkKey(int cidx ) {
@@ -404,8 +404,12 @@ public class Vec extends Iced {
    *  using this call on every Chunk index on the same node will
    *  probably trigger an OOM!  */
   public Value chunkIdx( int cidx ) {
-    Value val = DKV.get(chunkKey(cidx));
-    assert val != null : "Missing chunk "+cidx+" for "+_key;
+    Key k = chunkKey(cidx);
+    Value val = DKV.get(k);
+    if (val == null) {
+      // This is a great spot to add a breakpoint in the debugger.
+      assert val != null : "Missing chunk "+cidx+" for "+_key;
+    }
     return val;
   }
 
