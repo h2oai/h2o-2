@@ -60,7 +60,8 @@ public class UploadFileVec extends ByteVec {
       _espc2[i] = _runningEspc.get(i).longValue();
     }
 
-    // Lock out this vec.
+    // Lock out this vec and clean out transient stuff.
+    _runningEspc = null;
     _closed = true;
   }
 }
