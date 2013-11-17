@@ -603,7 +603,6 @@ public class Frame extends Iced {
     Log.info("    frameKey:    " + key.toString());
     Key newVecKey = Vec.newKey();
     long totalBytes = 0;
-    long totalChunks = 0;
 
     try {
       UKV.remove(key);
@@ -652,8 +651,7 @@ public class Frame extends Iced {
         bytesInChunkSoFar = 0;
       }
 
-      totalChunks = chunkIdx;
-
+      int totalChunks = chunkIdx;
       Log.info("    totalFrames: " + 1);
       Log.info("    totalVecs:   " + 1);
       Log.info("    totalChunks: " + totalChunks);
