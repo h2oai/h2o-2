@@ -316,6 +316,8 @@ public class DRF extends SharedTreeModelBuilder {
       if( tree == null ) continue;
       for( int i=0; i<tree.len()-leafs[k]; i++ ) {
         // setup prediction for k-tree's i-th leaf
+        // for classification it is a weight of votes for the i-th class
+        // for regression it is mean of rows' predictions in the leaf
         ((LeafNode)tree.node(leafs[k]+i)).pred( gp._voters[k][i] > 0 ? gp._votes[k][i] / gp._voters[k][i] : 0);
       }
     }
