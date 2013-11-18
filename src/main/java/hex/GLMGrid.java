@@ -122,11 +122,11 @@ public class GLMGrid extends Job {
               }
             }
             int nodeId = (myId+job)%cloudsize;
-            if (nodeId != myId)
-              RPC.call(H2O.CLOUD._memary[nodeId],t);
-            else
-              H2O.submitTask(t);
             active[submitted++%_parallelism] = t;
+            if (nodeId==myId)
+              t.fork();
+            else 
+              new RPC(H2O.CLOUD._memary[nodeId],t).addCompleter(t).call();
           }
         } else {
           for( int a = 0; a < _alphas.length; a++ ) {

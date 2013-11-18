@@ -2,7 +2,6 @@ package water.fvec;
 
 import java.util.Arrays;
 import java.util.UUID;
-import sun.security.krb5.internal.SeqNumber;
 
 import water.*;
 import water.H2O.H2OCallback;
@@ -49,7 +48,7 @@ public class Vec extends Iced {
   public static final int LOG_CHK = ValueArray.LOG_CHK; // Same as VA to help conversions
   /** Chunk size.  Bigger increases batch sizes, lowers overhead costs, lower
    * increases fine-grained parallelism. */
-  static final long CHUNK_SZ = 1L << LOG_CHK;
+  static final int CHUNK_SZ = 1 << LOG_CHK;
 
   /** Key mapping a Value which holds this Vec.  */
   final public Key _key;        // Top-level key
@@ -57,8 +56,8 @@ public class Vec extends Iced {
    *  chunks, so the last entry is the total number of rows.  This field is
    *  dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
    *  such as file-backed Vecs. */
-  final private long _espc[];
-  public long [] espc(){return _espc;}
+  final public long _espc[];
+
   /** Enum/factor/categorical names. */
   public String [] _domain;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
@@ -405,9 +404,16 @@ public class Vec extends Iced {
    *  probably trigger an OOM!  */
   public Value chunkIdx( int cidx ) {
     Value val = DKV.get(chunkKey(cidx));
-    assert val != null : "Missing chunk "+cidx+" for "+_key;
+    assert checkMissing(cidx,val);
     return val;
   }
+
+  protected boolean checkMissing(int cidx, Value val) {
+    if( val != null ) return true;
+    assert val != null : "Missing chunk "+cidx+" for "+_key;
+    return false;
+  }
+
 
   /** Make a new random Key that fits the requirements for a Vec key. */
   static public Key newKey(){return newKey(Key.make());}

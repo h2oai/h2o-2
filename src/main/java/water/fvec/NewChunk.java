@@ -120,7 +120,7 @@ public class NewChunk extends Chunk {
       int nzcnt=0;
       for( int i=0; i<_len; i++ ) {
         if( _ls[i]!=0 ) nzcnt++;
-        if( _xs[i]!=0 ) { nzcnt = (int)Vec.CHUNK_SZ; break; } // Only non-specials sparse
+        if( _xs[i]!=0 ) { nzcnt = Vec.CHUNK_SZ; break; } // Only non-specials sparse
       }
       if( _len >= 32 && nzcnt*8 <= _len ) { // Heuristic for sparseness
         _len=0;
@@ -139,7 +139,7 @@ public class NewChunk extends Chunk {
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
   // (does not live on inside the K/V store).
-  public Chunk close(Futures fs) {
+  public Chunk new_close(Futures fs) {
     Chunk chk = compress();
     if(_vec instanceof AppendableVec)
       ((AppendableVec)_vec).closeChunk(this);
