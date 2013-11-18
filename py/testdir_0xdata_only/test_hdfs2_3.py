@@ -19,6 +19,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_B_hdfs_files(self):
+        h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
