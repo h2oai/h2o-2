@@ -30,9 +30,9 @@ public class Summary2 extends Iced {
   final transient long     _nrow;
   final transient double   _min;
   final transient double   _max;
-  final transient double[] _mins;
-  final transient double[] _maxs;
-        transient long     _zeros;
+  final           double[] _mins;
+  final           double[] _maxs;
+                  long     _zeros;
   final transient String[] _domains;
   final transient double   _start;
   final transient double   _binsz;
