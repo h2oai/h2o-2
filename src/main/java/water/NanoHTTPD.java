@@ -4,7 +4,7 @@ import java.net.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import water.fvec.Frame;
+import water.fvec.UploadFileVec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -548,7 +548,7 @@ public class NanoHTTPD
             ValueArray.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
           }
           else {
-            Frame.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
+            UploadFileVec.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
           }
         }
       }
