@@ -10,8 +10,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3, 
-                use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
+            h2o.build_cloud(3, use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -67,7 +66,6 @@ class Basic(unittest.TestCase):
 
         timeoutSecs = 200
         # save the first, for all comparisions, to avoid slow drift with each iteration
-        firstglm = {}
         importFolderPath = "datasets"
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 

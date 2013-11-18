@@ -1119,10 +1119,11 @@ class H2O(object):
 
             # get the redirect url
             # currently a bug...the url isn't right on poll
-            if not reuseFirstPollUrl: # hack for v1 RfView which doesn't give it during polling
+            # if not reuseFirstPollUrl: # hack for v1 RfView which doesn't give it during polling
+            if reuseFirstPollUrl or not beta_features: # reuse url for all v1 stuff
                 (url, params) = get_redirect_url(r, beta_features)
 
-            if ((time.time()-start)>timeoutSecs):
+            if ((time.time()-start) > timeoutSecs):
                 # show what we're polling with
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
                        "status: %s, url: %s?%s" % (status, urlUsed, paramsUsedStr)
@@ -1422,12 +1423,14 @@ class H2O(object):
         return a
 
     def import_s3(self, bucket, timeoutSecs=180):
-        a = self.__do_json_request('ImportS3.json', timeout=timeoutSecs, params={"bucket": bucket})
+        a = self.__do_json_request('2/ImportS3.json' if beta_features else 'ImportS3.json', 
+            timeout=timeoutSecs, params={"bucket": bucket})
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
     def import_hdfs(self, path, timeoutSecs=180):
-        a = self.__do_json_request('ImportHdfs.json', timeout=timeoutSecs, params={"path": path})
+        a = self.__do_json_request('2/ImportHdfs.json' if beta_features else 'ImportHdfs.json', 
+            timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_hdfs result:", dump_json(a))
         return a
 
