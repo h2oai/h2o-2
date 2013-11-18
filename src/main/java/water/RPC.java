@@ -497,7 +497,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   }
 
   // ---
-  synchronized RPC<V> addCompleter( H2OCountedCompleter task ) {
+  public synchronized RPC<V> addCompleter( H2OCountedCompleter task ) {
     if( _fjtasks == null ) _fjtasks = new ArrayList();
     _fjtasks.add(task);
     return this;
