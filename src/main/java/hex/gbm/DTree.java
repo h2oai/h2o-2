@@ -776,16 +776,15 @@ public class DTree extends Iced {
 
       // Call either the single-class leaf or the full-prediction leaf
       private final void leaf2( int mask ) throws T {
-        assert (mask& 8)== 8 : "Unknown mask: " + mask;   // Is a leaf
-        assert (mask&16)==16 : "Unknown mask: " + mask;   // No longer do small leaf
+        assert (mask==0 || ( (mask&8)== 8 && (mask&16)==16) ) : "Unknown mask: " + mask;   // Is a leaf or a special leaf on the top of tree
         leaf(_ts.get4f());
       }
 
       public final void visit() throws T {
         int nodeType = _ts.get1();
         int col = _ts.get2();
-        float fcmp = _ts.get4f();
         if( col==65535 ) { leaf2(nodeType); return; }
+        float fcmp = _ts.get4f();
         boolean equal = ((nodeType&4)==4);
         // Compute the amount to skip.
         int lmask =  nodeType & 0x1B;
@@ -853,8 +852,10 @@ public class DTree extends Iced {
               _bits[_depth]=1;
             }
             @Override protected void leaf( float pred  ) {
-              assert _bits[_depth-1] > 0 : Arrays.toString(_bits);
-              if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+              assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
+              if( _depth==0) { // it is de-generated tree
+                sb.p(pred);
+              } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
                 _bits[_depth-1]=2; _fs[_depth-1]=pred;
               } else {          // Else==2 (prior leaf) or 3 (prior tree)
                 if( _bits[_depth-1] == 2 ) sb.p(" ? ").p(_fs[_depth-1]).p(" ");
