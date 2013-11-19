@@ -12,6 +12,7 @@ import water.util.Log;
 import hex.drf.DRF;
 import hex.gbm.*;
 import hex.glm.*;
+import hex.glm.GLMParams.Family;
 import hex.KMeans2;
 
 /**
@@ -294,6 +295,26 @@ public abstract class DocGen {
     @Override public String bold( String s ) { return "<b>"+s+"</b>"; }
 
     public StringBuilder arrayHead( StringBuilder sb ) { return arrayHead(sb,null); }
+
+    public StringBuilder progress(float value, StringBuilder sb){
+      int    pct  = (int) (value * 100);
+      String type = "progress-stripped active";
+      if (pct==-100) { // task is done
+        pct = 100;
+        type = "progress-success";
+      } else if (pct==-200) {
+        pct = 100;
+        type = "progress-warning";
+      }
+      // @formatter:off
+      sb.append
+          ("<div style='margin-bottom:0px;padding-bottom:0xp;margin-top:8px;height:5px;width:180px' class='progress "+type+"'>").append //
+          ("<div class='bar' style='width:" + pct + "%;'>").append //
+          ("</div>").append //
+          ("</div>");
+      // @formatter:on
+      return sb;
+    }
     public StringBuilder arrayHead( StringBuilder sb, String[] headers ) {
       sb.append("<span style='display: inline-block;'>");
       sb.append("<table class='table table-striped table-bordered'>\n");

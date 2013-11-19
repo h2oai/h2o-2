@@ -55,8 +55,8 @@ public class SummaryPage2 extends Request2 {
     Frame fr = new Frame(names, vecs);
     summaries = new SummaryTask2().doAll(fr)._summaries;
     if (summaries != null)
-      for( Summary2 s2 : summaries ) s2.finishUp();
-
+      for (int i = 0; i < cols.length; i++) 
+        summaries[i].finishUp(vecs[i]);
     return Response.done(this);
   }
 

@@ -8,6 +8,7 @@ import java.util.*;
 
 import water.*;
 import water.Job.ChunkProgressJob;
+import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -22,9 +23,6 @@ public class NewRowVecTask<T extends Iced> extends MRTask {
   final Job _job;
   //-----------------------------------------------------
   T _result; // result of the computation is stored here
-
-  public static class JobCancelledException extends Exception {}
-
 
   public static abstract class RowFunc<T extends Iced> extends Iced  {
     protected boolean _expandCats = true;

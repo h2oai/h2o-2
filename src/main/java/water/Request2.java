@@ -12,11 +12,7 @@ import water.fvec.Frame;
 import water.util.Utils;
 
 public abstract class Request2 extends Request {
-  static final int API_WEAVER=1;
-  static public DocGen.FieldDoc[] DOC_FIELDS;
-
-  transient Properties _parms;
-
+  protected transient Properties _parms;
   protected @API(help="Response stats and info.") ResponseInfo response_info;
 
   public String input(String fieldName) {
@@ -185,8 +181,9 @@ public abstract class Request2 extends Request {
           Argument arg = null;
 
           // Simplest case, filter is an Argument
-          if( Argument.class.isAssignableFrom(api.filter()) )
+          if( Argument.class.isAssignableFrom(api.filter()) ){
             arg = (Argument) newInstance(api);
+          }
 
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
@@ -336,6 +333,24 @@ public abstract class Request2 extends Request {
     }
     return request;
   }
+//Create an instance per call instead of ThreadLocals
+ protected Request create2(Properties parms) {
+   Request2 request;
+   try {
+     request = getClass().newInstance();
+     request._arguments = _arguments;
+     request._parms = parms;
+     for(int i = 0; i < _arguments.size();++i){
+       Argument arg = _arguments.get(i);
+       arg.reset();
+       if(parms.containsKey(arg._name))
+         arg.check(request, parms.getProperty(arg._name));
+     }
+   } catch( Exception e ) {
+     throw new RuntimeException(e);
+   }
+   return request;
+ }
 
   // Expand grid search related argument sets
   @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {

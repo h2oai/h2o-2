@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import static water.util.Utils.div;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.TreeStats;
@@ -30,6 +31,19 @@ public class GBM extends SharedTreeModelBuilder {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) { super(key,dataKey,testKey,names,domains,ntrees); }
     public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { super(prior, trees, err, cm, tstats); }
+
+    @Override protected float[] score0(double[] data, float[] preds) {
+      float sum = 0;
+      float[] p = super.score0(data, preds);
+      if (nclasses()>1) { // classification
+        for(int k=0; k<p.length;k++)
+          sum+=(p[k]=(float)Math.exp(p[k]));
+        div(p,sum);
+      } else { // regression
+        // do nothing for regression
+      }
+      return p;
+    }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
 
@@ -129,9 +143,7 @@ public class GBM extends SharedTreeModelBuilder {
             for( int k=0; k<_nclass; k++ ) // Save as a probability distribution
               chk_work(chks,k).set0(row,(float)(ds[k]/sum));
         }
-
       } else {                  // Regression
-
         Chunk tr = chk_tree(chks,0); // Prior tree sums
         Chunk wk = chk_work(chks,0); // Predictions
         for( int row=0; row<ys._len; row++ )

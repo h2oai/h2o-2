@@ -1,5 +1,7 @@
 package water;
 
+import water.H2O.H2OCountedCompleter;
+
 /**
  * A typed atomic update.
  */
@@ -10,6 +12,8 @@ public abstract class TAtomic<T extends Iced> extends Atomic<TAtomic<T>> {
    */
   public abstract T atomic(T old);
 
+  public TAtomic(){}
+  public TAtomic(H2OCountedCompleter completer){super(completer);}
   @Override public Value atomic(Value val) {
     T old = val == null ? null : (T)(val.get().clone());
     T nnn = atomic(old);

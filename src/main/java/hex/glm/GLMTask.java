@@ -1,57 +1,32 @@
 package hex.glm;
 
 import hex.FrameTask;
-import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
-
-import java.util.Arrays;
-
-import water.*;
-import water.fvec.*;
+import water.Job;
+import water.MemoryManager;
+import water.H2O.H2OCountedCompleter;
 import water.util.Utils;
 
 /**
- * Base class for all GLM-related MRTask(2)s.
- *
- * Filters rows with NA(s), handles data-regularization of numeric columns on the fly, and performs on-the fly expansion of categoricals.
- * Users should override processRow method and potentially reduce.
+ * Contains all GLM related tasks.
  *
  * @author tomasnykodym
  *
  */
-public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T>{
-  // data-regularization params
-  double    _ymu = Double.NaN; // mean of the response
 
-  protected final double [] _beta; // beta vector from previous computation or null if this is the first iteration
+public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
+  final protected GLMParams _glm;
+  public GLMTask(Job job, DataInfo dinfo, GLMParams glm){this(job,dinfo,glm,null);}
+  public GLMTask(Job job, DataInfo dinfo, GLMParams glm,H2OCountedCompleter cmp){super(job,dinfo,cmp);_glm = glm;}
 
-  final GLMParams _glm;
-
-  // size of the top-left strictly diagonal region of the gram matrix, currently just the size of the largest categorical
-  final protected int diagN(){return largestCat() > 1?largestCat():0;}
-
-  public GLMTask(Job job, GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv) {this(job,glm, beta, standardize, cm, cv, 1,0,false);}
-  public GLMTask(Job job, GLMParams glm, double [] beta, boolean standardize, CaseMode cm, double cv, int step, int offset, boolean complement) {
-    super(job, standardize,true, step, offset, complement);
-    _caseMode = cm; _caseVal = cv; _beta = beta;
-    _glm = glm;
-  }
-  protected GLMTask(GLMTask gt, double [] beta){
-    super(gt);
-    _glm = gt._glm;
-    _caseMode = gt._caseMode;
-    _caseVal = gt._caseVal;
-    _beta = beta;
-  }
-
-  // inner helper function to compute eta - i.e. beta * row
-  protected final double computeEta(int ncats, int [] cats, double [] nums){
+  //helper function to compute eta - i.e. beta * row
+  protected final double computeEta(final int ncats, final int [] cats, final double [] nums, final double [] beta){
     double res = 0;
-    for(int i = 0; i < ncats; ++i)res += _beta[cats[i]];
-    final int numStart = _catOffsets[_cats];
-    for(int i = 0; i < nums.length; ++i)res += nums[i]*_beta[numStart+i];
-    res += _beta[_beta.length-1]; // intercept
+    for(int i = 0; i < ncats; ++i)res += beta[cats[i]];
+    final int numStart = _dinfo.numStart();
+    for(int i = 0; i < nums.length; ++i)res += nums[i]*beta[numStart+i];
+    res += beta[beta.length-1]; // intercept
     return res;
   }
   /**
@@ -61,59 +36,63 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T>{
    * @author tomasnykodym
    *
    */
-  //TODO do this for all columns
-  static class YMUTask extends GLMTask<YMUTask>{
+  static class YMUTask extends FrameTask<YMUTask>{
     private long   _nobs;
-    private double _ymu;
-    private final double _reg;
-    public YMUTask(Job job, GLMParams glm, boolean standardize, CaseMode cm, double cv, long nobs) {
-      super(job,glm,null,standardize, cm, cv);
-      _reg = 1.0/nobs;
+    protected double _ymu;
+
+    public YMUTask(Job job, DataInfo dinfo) {this(job,dinfo,null);}
+    public YMUTask(Job job, DataInfo dinfo, H2OCountedCompleter cmp) {
+      super(job,dinfo,cmp);
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
       _ymu += response;
       ++_nobs;
     }
     @Override public void reduce(YMUTask t){
-      _ymu += t._ymu;
+      _ymu = _ymu*((double)_nobs/(_nobs+t._nobs)) + t._ymu*t._nobs/(_nobs+t._nobs);
       _nobs += t._nobs;
     }
-    @Override protected void chunkDone(){_ymu *= _reg;}
-
-    public double ymu(){return _ymu /(_reg*_nobs);}
+    @Override protected void chunkDone(){_ymu /= _nobs;}
+    public double ymu(){return _ymu;}
     public long nobs(){return _nobs;}
   }
   /**
    * Task to compute Lambda Max for the given dataset.
    * @author tomasnykodym
-   *
    */
   static class LMAXTask extends GLMTask<LMAXTask> {
-    private final double[] _z;
+    private double[] _z;
     private final double _ymu;
     private final double _gPrimeMu;
     private long _nobs;
+    private final int _n;
+    private final double _alpha;
 
-    public LMAXTask(Job job, GLMParams glm, boolean standardize, CaseMode cm, double cv, double ymu, int P) {
-      super(job,glm,null,standardize, cm, cv);
-      _z = MemoryManager.malloc8d(P);
+
+    public LMAXTask(Job job, DataInfo dinfo, GLMParams glm, double ymu, double alpha, H2OCountedCompleter cmp) {
+      super(job,dinfo,glm,cmp);
       _ymu = ymu;
       _gPrimeMu = glm.linkDeriv(ymu);
+      _n = dinfo.fullN();
+      _alpha = alpha;
+    }
+    @Override public void chunkInit(){
+      _z = MemoryManager.malloc8d(_n);
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
       double w = (response - _ymu) * _gPrimeMu;
       for( int i = 0; i < ncats; ++i ) _z[cats[i]] += w;
-      final int off = _catOffsets[_cats];
+      final int numStart = _dinfo.numStart();
       ++_nobs;
       for(int i = 0; i < nums.length; ++i)
-        _z[i+off] += w*nums[i];
+        _z[i+numStart] += w*nums[i];
     }
     @Override public void reduce(LMAXTask l){Utils.add(_z, l._z); _nobs += l._nobs;}
     public double lmax(){
       double res = Math.abs(_z[0]);
       for( int i = 1; i < _z.length; ++i )
         res = Math.max(res, Math.abs(_z[i]));
-      return _glm.variance(_ymu) * res / _nobs;
+      return _glm.variance(_ymu) * res / (_nobs*_alpha);
     }
   }
 
@@ -124,23 +103,21 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T>{
    *
    */
   public static class GLMIterationTask extends GLMTask<GLMIterationTask> {
-    final double _reg;
-    final int _iter;
+    int _iter;
+    final double [] _beta;
     Gram      _gram;
     double [] _xy;
     double    _yy;
     GLMValidation _val; // validation of previous model
+    final double _ymu;
+    protected final double _reg;
 
-    public GLMIterationTask(Job job, GLMParams glm, double [] beta, boolean standardize, double reg, CaseMode caseMode, double caseVal, int step, int offset, boolean complement) {
-      super(job, glm, beta, standardize, caseMode, caseVal, step, offset, complement);
-      _iter = 0;
+    public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, double [] beta, int iter, double ymu, double reg) {
+      super(job, dinfo,glm);
+      _iter = iter;
+      _beta = beta;
+      _ymu = ymu;
       _reg = reg;
-    }
-
-    public GLMIterationTask(GLMIterationTask git, double [] beta) {
-      super(git,beta);
-      _iter = git._iter+1;
-      _reg = git._reg;
     }
 
     @Override public final void processRow(final double [] nums, final int ncats, final int [] cats, final double y){
@@ -155,7 +132,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T>{
           mu = _glm.mustart(y, _ymu);
           eta = _glm.link(mu);
         } else {
-          eta = computeEta(ncats, cats,nums);
+          eta = computeEta(ncats, cats,nums,_beta);
           mu = _glm.linkInv(eta);
         }
         _val.add(y, mu);
@@ -168,14 +145,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T>{
       _yy += 0.5 * w * z * z;
       double wz = w * z;
       for(int i = 0; i < ncats; ++i)_xy[cats[i]] += wz;
-      final int numStart = _catOffsets[_cats];
+      final int numStart = _dinfo.numStart();
       for(int i = 0; i < nums.length; ++i)_xy[numStart+i] += wz*nums[i];
-      _xy[numStart + _nums] += wz;
+      _xy[numStart + _dinfo._nums] += wz;
       _gram.addRow(nums, ncats, cats, w);
     }
     @Override protected void chunkInit(){
-      _gram = new Gram(fullN(), diagN(), _nums, _cats,true);
-      _xy = MemoryManager.malloc8d(fullN()+1); // + 1 is for intercept
+      _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
+      _xy = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
       _val = new GLMValidation(null,_ymu, _glm,rank);
@@ -189,10 +166,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T>{
     @Override
     public void reduce(GLMIterationTask git){
       Utils.add(_xy, git._xy);
+      _gram.add(git._gram);
       _yy += git._yy;
       _val.add(git._val);
       super.reduce(git);
     }
   }
-
 }

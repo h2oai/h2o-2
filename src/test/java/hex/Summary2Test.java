@@ -28,7 +28,7 @@ public class Summary2Test extends TestUtil {
     for (int i = 1; i < vec.nChunks(); i++) {
       Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1);
     }
-    s.finishUp();
+    s.finishUp(vec);
     assertEquals(1, s.hcnt.length);
     assertEquals(528, s.hcnt[0]);
     for (double pv : s._pctile)
@@ -45,7 +45,7 @@ public class Summary2Test extends TestUtil {
     s.add(vec.chunk(0));
     for( int i = 1; i < vec.nChunks(); i++ )
       { Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1); }
-    s.finishUp();
+    s.finishUp(vec);
 
     assertEquals(306, s.hcnt.length);
     UKV.remove(key);
@@ -59,7 +59,7 @@ public class Summary2Test extends TestUtil {
     s.add(vec.chunk(0));
     for( int i = 1; i < vec.nChunks(); i++ )
       { Summary2 s1 = new Summary2(vec, ""); s1.add(vec.chunk(i)); s.add(s1); }
-    s.finishUp();
+    s.finishUp(vec);
 
     assertEquals(0, s.hcnt[4]); // no 7 cylinder cars
     assertEquals(4, (int)s._pctile[0]);
