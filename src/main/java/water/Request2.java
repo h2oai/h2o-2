@@ -12,12 +12,13 @@ import water.fvec.Frame;
 import water.util.Utils;
 
 public abstract class Request2 extends Request {
-  static final int API_WEAVER=1;
+  static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
 
   transient Properties _parms;
 
-  protected @API(help="Response stats and info.") ResponseInfo response_info;
+  protected @API(help = "Response stats and info.")
+  ResponseInfo response_info;
 
   public String input(String fieldName) {
     return _parms == null ? null : _parms.getProperty(fieldName);
@@ -107,14 +108,14 @@ public abstract class Request2 extends Request {
    */
   public enum MultiVecSelectType {
     /**
-     * Treat a token as a column name.
-     * Otherwise, treat it as a 0-based index if it looks like a positive integer.
+     * Treat a token as a column name. Otherwise, treat it as a 0-based index if it looks like a
+     * positive integer.
      */
     NAMES_THEN_INDEXES,
 
     /**
-     * Treat a token as a column name no matter what (even if it looks like it is an integer).
-     * This is used by the Web UI, which blindly specifies column names.
+     * Treat a token as a column name no matter what (even if it looks like it is an integer). This
+     * is used by the Web UI, which blindly specifies column names.
      */
     NAMES_ONLY
   }
@@ -147,7 +148,9 @@ public abstract class Request2 extends Request {
   }
 
   public class DoClassBoolean extends Dependent {
-    protected DoClassBoolean(String key) { super(key); }
+    protected DoClassBoolean(String key) {
+      super(key);
+    }
   }
 
   /**
@@ -242,13 +245,13 @@ public abstract class Request2 extends Request {
               for( int i = 0; i < ds.length; i++ )
                 ds[i] = val[i];
             }
-            arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null), false);
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null, true), false, api.help());
           }
 
           // RSeq
           else if( f.getType() == double[].class ) {
             double[] val = (double[]) defaultValue;
-            arg = new RSeq(f.getName(), api.required(), new NumberSequence(val, null), false);
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(val, null, false), false, api.help());
           }
 
           // Bool
@@ -342,11 +345,17 @@ public abstract class Request2 extends Request {
     String[][] values = new String[_arguments.size()][];
     boolean gridSearch = false;
     for( int i = 0; i < _arguments.size(); i++ ) {
-      String value = _parms.getProperty(_arguments.get(i)._name);
+      Argument arg = _arguments.get(i);
+      String value = _parms.getProperty(arg._name);
       if( value != null ) {
-        values[i] = split(value);
-        if( values[i].length > 1 )
-          gridSearch = true;
+        // Skips grid if argument is an array, except if imbricated expression
+        // Little hackish, waiting for real language
+        boolean imbricated = value.contains("(");
+        if( !arg._field.getType().isArray() || imbricated ) {
+          values[i] = split(value);
+          if( values[i] != null && values[i].length > 1 )
+            gridSearch = true;
+        }
       }
     }
     if( !gridSearch )
@@ -383,32 +392,38 @@ public abstract class Request2 extends Request {
     return grid.superServeGrid(server, parms, type);
   }
 
-  // Splits imbricated expressions like c(4, 5, '2,3', 7)
-  // TODO: switch to real parser for unified imbricated argument sets, expressions etc?
+  // Splits one-level imbricated expressions like 4, 5, (2, 3), 7
+  // TODO: switch to real parser for unified imbricated argument sets, expressions etc.
   public static String[] split(String value) {
     String[] values = null;
     value = value.trim();
-    if( value.startsWith("c(") && value.endsWith(")") ) {
-      value = value.substring(2, value.length() - 1);
-      StringTokenizer st = new StringTokenizer(value, ",'", true);
-      String s, current = "";
-      while( (s = getNextToken(st)) != null ) {
-        if( ",".equals(s) ) {
-          values = Utils.append(values, current);
-          current = "";
-        } else if( "'".equals(s) ) {
-          while( !("'".equals((s = getNextToken(st)))) ) {
-            if( s == null )
-              throw new IllegalArgumentException("Missing closing quote");
-            current += s;
-          }
-        } else
+    StringTokenizer st = new StringTokenizer(value, ",()", true);
+    String s, current = "";
+    while( (s = getNextToken(st)) != null ) {
+      if( ",".equals(s) ) {
+        values = addSplit(values, current);
+        current = "";
+      } else if( "(".equals(s) ) {
+        while( !(")".equals((s = getNextToken(st)))) ) {
+          if( s == null )
+            throw new IllegalArgumentException("Missing closing parenthesis");
           current += s;
-      }
-      if( current.length() > 0 )
-        values = Utils.append(values, current);
+        }
+      } else
+        current += s;
+    }
+    if( current.length() > 0 )
+      values = addSplit(values, current);
+    return values;
+  }
+
+  private static String[] addSplit(String[] values, String value) {
+    if( value.contains(":") ) {
+      double[] gen = NumberSequence.parseGenerator(value, false, 1);
+      for( double d : gen )
+        values = Utils.append(values, "" + d);
     } else
-      values = new String[] { value };
+      values = Utils.append(values, value);
     return values;
   }
 
@@ -479,7 +494,9 @@ public abstract class Request2 extends Request {
     }
   }
 
-  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
+  @Override public API_VERSION[] supportedVersions() {
+    return SUPPORTS_ONLY_V2;
+  }
 
   public void fillResponseInfo(Response response) {
     this.response_info = response.extractInfo();

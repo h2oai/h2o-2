@@ -12,7 +12,7 @@ import water.fvec.Vec;
 
 /**
  * Neural network layer.
- *
+ * 
  * @author cypof
  */
 public abstract class Layer extends Iced {
@@ -406,36 +406,29 @@ public abstract class Layer extends Iced {
   }
 
   public static class VecSoftmax extends Softmax {
-    static final int API_WEAVER = 1;
-    public static DocGen.FieldDoc[] DOC_FIELDS;
-
     public Vec vec;
-
-    @API(help = "Min response value on the training set")
-    int min;
 
     VecSoftmax() {
     }
 
     public VecSoftmax(Vec vec, VecSoftmax stats) {
-      this.units = stats != null ? stats.units : (int) (vec.max() - vec.min() + 1);
+      if( vec.domain() == null )
+        vec = vec.toEnum();
+      this.units = stats != null ? stats.units : vec.domain().length;
       this.vec = vec;
-      this.min = stats != null ? stats.min : (int) vec.min();
     }
 
     @Override int target() {
-      return (int) vec.at8(_input._pos) - min;
+      return (int) vec.at8(_input._pos);
     }
   }
 
   static class ChunkSoftmax extends Softmax {
     transient Chunk _chunk;
-    int _min;
 
     public ChunkSoftmax(Chunk chunk, VecSoftmax stats) {
       units = stats.units;
       _chunk = chunk;
-      _min = stats.min;
 
       // TODO extract layer info in separate Ice
       rate = stats.rate;
@@ -448,7 +441,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override int target() {
-      return (int) _chunk.at80((int) _input._pos) - _min;
+      return (int) _chunk.at80((int) _input._pos);
     }
   }
 
