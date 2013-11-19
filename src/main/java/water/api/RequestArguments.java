@@ -1022,46 +1022,27 @@ public class RequestArguments extends RequestStatics {
   public static class NumberSequence {
     public final double [] _arr;
     final String _str;
+    final boolean _ints;
 
-    public NumberSequence(double [] val, String str){
+    public NumberSequence(double [] val, String str, boolean ints) {
       _arr = val;
       _str = str;
+      _ints = ints;
     }
 
-    public NumberSequence(String str, boolean mul, double defaultStep){
-      this(parseArray(str,mul,defaultStep),str);
+    public NumberSequence(String str, boolean mul, double defaultStep) {
+      this(parseArray(str,mul,defaultStep),str, false);
     }
 
-    private static double [] parseArray(String input, boolean mul, double defaultStep){
+    static double [] parseArray(String input, boolean mul, double defaultStep) {
       String str = input.trim().toLowerCase();
       if(str.startsWith("c(") && str.endsWith(")"))
         str = str.substring(2,str.length()-1);
       if( str.startsWith("seq") ) {
         throw new RuntimeException("unimplemented");
-      } if( str.contains(":") ) {
-        String [] parts = str.split(":");
-        if(parts.length != 2 &&  parts.length != 3 )throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
-        double step = defaultStep;
-
-        if( parts.length == 3 ){
-          step = Double.parseDouble(parts[2]);
-        }
-        double from = Double.parseDouble(parts[0]);
-        double to = Double.parseDouble(parts[1]);
-        if(to == from) return new double[]{from};
-        if(to < from)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
-        if(step == 0)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
-        // make sure we have format from < to
-
-        double [] res = new double[1024];
-        int i = 0;
-        while(from <= to){
-          res[i++] = from;
-          if(i == res.length)res = Arrays.copyOf(res, res.length + Math.max(1, res.length >> 1));
-          if( mul) from *= step; else from += step;
-        }
-        return Arrays.copyOf(res,i);
-      } else if( str.contains(",") ) {
+      } if( str.contains(":") )
+        return parseGenerator(input, mul, defaultStep);
+      else if( str.contains(",") ) {
         String [] parts = str.split(",");
         double [] res = new double[parts.length];
         for(int i = 0; i < parts.length; ++i)
@@ -1070,19 +1051,44 @@ public class RequestArguments extends RequestStatics {
       } else {
         return new double [] {Double.parseDouble(str)};
       }
+    }
+    public static double[] parseGenerator(String input, boolean mul, double defaultStep) {
+      String str = input.trim().toLowerCase();
+      String [] parts = str.split(":");
+      if(parts.length != 2 &&  parts.length != 3 )throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      double step = defaultStep;
 
+      if( parts.length == 3 ){
+        step = Double.parseDouble(parts[2]);
+      }
+      double from = Double.parseDouble(parts[0]);
+      double to = Double.parseDouble(parts[1]);
+      if(to == from) return new double[]{from};
+      if(to < from)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      if(step == 0)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      // make sure we have format from < to
+
+      double [] res = new double[1024];
+      int i = 0;
+      while(from <= to){
+        res[i++] = from;
+        if(i == res.length)res = Arrays.copyOf(res, res.length + Math.max(1, res.length >> 1));
+        if( mul) from *= step; else from += step;
+      }
+      return Arrays.copyOf(res,i);
     }
-    static NumberSequence parse(String input, boolean mul, double defaultStep){
-      return new NumberSequence(parseArray(input, mul, defaultStep),null);
+    static NumberSequence parse(String input, boolean mul, double defaultStep) {
+      return new NumberSequence(parseArray(input, mul, defaultStep),null, false);
     }
-    public String toString(){
+    @Override public String toString() {
       if(_str != null)return _str;
       if(_arr == null || _arr.length == 0)return"";
 
       StringBuilder res = new StringBuilder();
-      res.append(_arr[0]);
-      for(int i = 1; i < _arr.length; ++i)
-        res.append("," + _arr[i]);
+      for(int i = 0; i < _arr.length; ++i) {
+        if(i > 0) res.append(",");
+        res.append(_ints ? "" + (int) _arr[i] : _arr[i]);
+      }
       return res.toString();
     }
   }
@@ -1091,10 +1097,13 @@ public class RequestArguments extends RequestStatics {
     boolean _multiplicative;
     transient NumberSequence _dVal;
     double _defaultStep;
+    String _comment;
 
     @Override
-    public String queryComment(){
-      return disabled()?"":"Comma separated list of values. Or range specified as from:to:step" + (_multiplicative?"(*).":"(+).");
+    public String queryComment() {
+      if( disabled() ) return "";
+      if( _comment != null ) return _comment;
+      return "Comma separated list of values. Or range specified as from:to:step" + (_multiplicative?"(*).":"(+).");
     }
 
     public RSeq(String name, boolean req, boolean mul){
@@ -1104,10 +1113,14 @@ public class RequestArguments extends RequestStatics {
       this("", false, new NumberSequence(seq, mul, 0), mul);
     }
     public RSeq(String name, boolean req, NumberSequence dVal, boolean mul){
+      this(name, req, dVal, mul, null);
+    }
+    public RSeq(String name, boolean req, NumberSequence dVal, boolean mul, String comment){
       super(name,req);
       _dVal = dVal;
       _multiplicative = mul;
       _defaultStep = mul?10:1;
+      _comment = comment;
     }
 
     @Override protected NumberSequence parse(String input) throws IllegalArgumentException {
@@ -1127,7 +1140,6 @@ public class RequestArguments extends RequestStatics {
     protected String queryDescription() {
       return "Number sequence. Comma separated list of values. Or range specified as from:to:step.";
     }
-
   }
 
 

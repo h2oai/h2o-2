@@ -6,7 +6,6 @@ import static water.util.Utils.isEmpty;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
-import java.util.UUID;
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
@@ -294,11 +293,11 @@ public class Job extends Request2 {
 
   protected Key defaultJobKey() {
     // Pinned to self, because it should be almost always updated locally
-    return Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB, H2O.SELF);
+    return Key.make((byte) 0, Key.JOB, H2O.SELF);
   }
 
   protected Key defaultDestKey() {
-    return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
+    return Key.make(getClass().getSimpleName() + Key.rand());
   }
 
   public Job start(final H2OCountedCompleter fjtask) {
