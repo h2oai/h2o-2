@@ -182,21 +182,24 @@ public class Env extends Iced {
     return true;
   }
 
+  public Futures subRef( Vec vec, Futures fs ) {
+    int cnt = _refcnt.get(vec)-1;
+    if( cnt > 0 ) _refcnt.put(vec,cnt);
+    else {
+      if( fs == null ) fs = new Futures();
+      UKV.remove(vec._key,fs);
+      _refcnt.remove(vec);
+    }
+    return fs;
+  }
+
   // Lower the refcnt on all vecs in this frame.
   // Immediately free all vecs with zero count.
   // Always return a null.
   public Frame subRef( Frame fr, String key ) {
     if( fr == null ) return null;
     Futures fs = null;
-    for( Vec vec : fr.vecs() ) {
-      int cnt = _refcnt.get(vec)-1;
-      if( cnt > 0 ) _refcnt.put(vec,cnt);
-      else {
-        if( fs == null ) fs = new Futures();
-        UKV.remove(vec._key,fs);
-        _refcnt.remove(vec);
-      }
-    }
+    for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
     if( key != null && fs != null ) UKV.remove(Key.make(key),fs);
     if( fs != null )
       fs.blockForPending();
