@@ -27,20 +27,20 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs
-  public static Frame parse(Key okey, Key [] keys) {return parse(okey,keys,new ParserSetup());}
+  public static Frame parse(Key okey, Key [] keys) {return parse(okey,keys,new ParserSetup(),true);}
 
-  public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup) {
+  public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
     Key k = keys[0];
     ByteVec v = (ByteVec)getVec(k);
     byte [] bits = v.elem2BV(0).getBytes();
     Compression cpr = Utils.guessCompressionMethod(bits);
     globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
-    return forkParseDataset(okey, keys, globalSetup).get();
+    return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
   // Same parse, as a backgroundable Job
-  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
+  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
     ParseDataset2 job = new ParseDataset2(dest, keys);
-    ParserFJTask fjt = new ParserFJTask(job, keys, setup);
+    ParserFJTask fjt = new ParserFJTask(job, keys, setup, delete_on_done);
     job.start(fjt);
     H2O.submitTask(fjt);
     return job;
@@ -58,14 +58,16 @@ public final class ParseDataset2 extends Job {
     final ParseDataset2 _job;
     Key [] _keys;
     CustomParser.ParserSetup _setup;
+    boolean _delete_on_done;
 
-    public ParserFJTask( ParseDataset2 job, Key [] keys, CustomParser.ParserSetup setup) {
+    public ParserFJTask( ParseDataset2 job, Key [] keys, CustomParser.ParserSetup setup, boolean delete_on_done) {
       _job = job;
       _keys = keys;
       _setup = setup;
+      _delete_on_done = delete_on_done;
     }
     @Override public void compute2() {
-      parse_impl(_job, _keys, _setup);
+      parse_impl(_job, _keys, _setup, _delete_on_done);
       tryComplete();
     }
 
@@ -256,7 +258,7 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Top-level parser driver
-  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CustomParser.ParserSetup setup) {
+  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CustomParser.ParserSetup setup, boolean delete_on_done) {
     assert setup._ncols > 0;
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
@@ -293,7 +295,11 @@ public final class ParseDataset2 extends Job {
       eut.doAll(evecs);
     }
     // Jam the frame of columns into the K/V store
-    UKV.put(job.dest(),fr);
+    Futures fs = new Futures();
+    UKV.put(job.dest(),fr,fs);
+    // Remove CSV files from H2O memory
+    if( delete_on_done ) for( Key k : fkeys ) UKV.remove(k,fs);
+    fs.blockForPending();
     job.remove();
   }
 
