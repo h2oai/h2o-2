@@ -19,6 +19,9 @@ public class Parse2 extends Parse {
   @API(help = "Destination key")
   public Key destination_key; // Key holding final value after job is removed
 
+  @API(help="Drop source text from H2O memory after parsing")
+  public Bool delete_on_done = new Bool("delete_on_done",true, "");
+
   @API(help="Should block and wait for result?")
   protected Bool _blocking = new Bool("blocking",false, "");
 
@@ -37,7 +40,7 @@ public class Parse2 extends Parse {
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      job_key = ParseDataset2.forkParseDataset(destination_key, keys, setup).job_key;
+      job_key = ParseDataset2.forkParseDataset(destination_key, keys, setup, delete_on_done.value()).job_key;
       // Allow the user to specify whether to block synchronously for a response or not.
       if (_blocking.value())
         Job.waitUntilJobEnded(job_key);

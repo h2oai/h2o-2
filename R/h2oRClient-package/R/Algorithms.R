@@ -21,7 +21,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
   classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
 
-  destKey = paste("__GBMModel_", UUIDgenerate(), sep="")
+  destKey = h2o.__uniqID("GBMModel")
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
@@ -239,7 +239,7 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
   if( !(classification %in% c( 0, 1)) )
     stop(paste(classification, "is not a valid classification index; only [0, 1] are supported"))
 
-  destKey = paste("__NNModel_", UUIDgenerate(), sep="")
+  destKey = h2o.__uniqID("NNModel")
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
       classification=as.numeric(classification), activation=activation, rate=rate,
       hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=data@key)
@@ -293,7 +293,7 @@ h2o.prcomp <- function(data, tol=0, standardize=T, retx=F) {
   if( class( standardize ) != 'logical' ) stop('standardize must be TRUE or FALSE')
   if( class( retx ) != 'logical' ) stop('retx must be TRUE or FALSE')
 
-  destKey = paste("__PCA_Model__", UUIDgenerate(), sep="")
+  destKey = h2o.__uniqID("PCAModel")
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, destination_key=destKey, tolerance=tol, standardize=as.numeric(standardize))
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
@@ -333,7 +333,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
   myModel <- h2o.prcomp.internal(data=data, x_ignore=x_ignore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
   myScore <- h2o.predict(myModel)
 
-  rand_cbind_key = paste("__PCABind_", UUIDgenerate(), sep="")
+  rand_cbind_key = h2o.__uniqID("PCABind")
   res <- h2o.__remoteSend(data@h2o, h2o.__PAGE_FVEXEC, source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=args$y_i - 1, destination_key=rand_cbind_key, operation="cbind")
   myGLMData <- new("H2OParsedData", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
   h2o.glm.FV(paste("PC", 0:(ncomp-1), sep=""), y, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
@@ -353,7 +353,7 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=2147483647, classwt=as.
   if( any(!is.na(classwt) & classwt < 0) ) stop('classwt must be >= 0')
 
   # Set randomized model_key
-  rand_model_key = paste("__RF_Model__", UUIDgenerate(), sep="")
+  rand_model_key = h2o.__uniqID("RFModel")
 
   # If no class weights, then default to all 1.0
   if( !any(is.na(classwt)) ){
@@ -419,12 +419,12 @@ h2o.getTree <- function(forest, k, plot=FALSE) {
 #setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 h2o.predict <- function(object, newdata) {
   if( missing(object) ) stop('must specify object')
-  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ORForestModel') )) stop('object must be an H2OModel')
+  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ORForestModel', 'H2ODRFModel') )) stop('object must be an H2OModel')
   if( missing(newdata) ) newdata <- object@data
   if(!( class(newdata) %in% c('H2OParsedData', 'H2OParsedData2') )) stop('newdata must be h2o data')
 
   # fv require certain models
-  if( class(object) %in% c('H2OGBMModel', 'H2OPCAModel') ){
+  if( class(object) %in% c('H2OGBMModel', 'H2OPCAModel', 'H2ODRFModel') ){
     if( class(newdata) != 'H2OParsedData2' ) stop(paste('Prediction in FluidVecs has not yet been implemented for', class(object)))
     newdata <- new('H2OParsedData', h2o=newdata@h2o, key=newdata@key)
   }
@@ -438,15 +438,16 @@ h2o.predict <- function(object, newdata) {
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_KMAPPLY, model_key=object@key, data_key=newdata@key)
     while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
     new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-  } else if(class(object) == "H2OGBMModel") {
+  } else if(class(object) == "H2OGBMModel" || class(object) == "H2ODRFModel") {
     # Set randomized prediction key
-    rand_pred_key = paste("__GBM_Predict_", UUIDgenerate(), sep="")
+    key_prefix = ifelse(class(object) == "H2OGBMModel", "GBMPredict", "DRFPredict")
+    rand_pred_key = h2o.__uniqID(key_prefix)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
     new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
   } else if(class(object) == "H2OPCAModel") {
     # Set randomized prediction key
-    rand_pred_key = paste("__PCA_Predict_", UUIDgenerate(), sep="")
+    rand_pred_key = h2o.__uniqID("PCAPredict")
     numMatch = colnames(newdata) %in% rownames(object@model$rotation)
     numPC = min(length(numMatch[numMatch == TRUE]), length(object@model$sdev))
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
@@ -461,7 +462,7 @@ h2o.predict <- function(object, newdata) {
 #------------------------------- FluidVecs -------------------------------------#
 #setGeneric("h2o.glm.FV", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm.FV") })
 #setMethod("h2o.glm.FV", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
-h2o.glmFV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, NA)) {
+h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, NA)) {
   if( missing(data) ) stop('must specify data')
   if(!( class(data) %in% c('H2OParsedData','H2OParsedData2') )) stop('data must be an h2o dataset')
   if( missing(x) ) stop('must specify x')
@@ -495,7 +496,7 @@ h2o.glmFV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0
   if( any( x < 1 | x > length(cc) ) ) stop( paste(x[ x < 1 | x > length(cc)], sep=','), 'is out of range of the columns' )
   x_ignore <- setdiff(x, 1:length(cc)) - 1
   if(length(x_ignore) == 0) x_ignore <- ''
-  rand_glm_key = paste("__GLM2Model_", UUIDgenerate(), sep="")
+  rand_glm_key = h2o.__uniqID("GLM2Model")
 
   if(family != "tweedie")
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
@@ -557,13 +558,13 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10) {
 
   myIgnore <- ifelse(cols == '', '', paste(setdiff(cols, cc), sep=','))
 
-  rand_kmeans_key = paste("__KMeans2Model_", UUIDgenerate(), sep="")
+  rand_kmeans_key = h2o.__uniqID("KMeans2Model")
   res = h2o.__remoteSend(data@h2o, "2/KMeans2.json", source=data@key, destination_key=rand_kmeans_key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res = h2o.__remoteSend(data@h2o, "2/KMeans2ModelView.json", model=rand_kmeans_key)
   res = res$model
 
-  rand_pred_key = paste("__KMeans2Clusters_", UUIDgenerate(), sep="")
+  rand_pred_key = h2o.__uniqID("KMeans2Clusters")
   h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
 
   result = list()
@@ -575,11 +576,49 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10) {
   new("H2OKMeansModel", key=res$'_selfKey', data=data, model=result)
 }
 
+h2o.randomForest.FV <- function(x, y, data, n.trees=50, interaction.depth=50, nodesize=1, sample.rate=2/3) {
+  args <- verify_dataxy(data, x, y)
+  
+  if( class(n.trees) != 'numeric' ) stop('n.trees must be a number')
+  if( n.trees < 1 ) stop('n.trees must be >= 1')
+  if( class(interaction.depth) != 'numeric' ) stop('interaction.depth must be a number')
+  if( interaction.depth < 1 ) stop('interaction.depth must be >= 1')
+  if( class(nodesize) != 'numeric' ) stop('nodesize must be a number')
+  if( nodesize < 1 ) stop('nodesize must be >= 1')
+  if( class(sample.rate) != 'numeric' ) stop('sample.rate must be a number')
+  if( sample.rate < 0 || sample.rate > 1 ) stop('sample.rate must be between 0 and 1')
+  
+  # NB: externally, 1 based indexing; internally, 0 based
+  cols <- paste(args$x_i - 1,collapse=',')
+  
+  destKey = h2o.__uniqID("DRFModel")
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, min_rows=nodesize, sample_rate=sample.rate)
+  while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRFModelView, '_modelKey'=destKey)
+  
+  result=list()
+  categories=length(res2$drf_model$cm)
+  cf_matrix = t(matrix(unlist(res2$drf_model$cm), nrow=categories))
+  cf_names <- res2$drf_model[['_domains']]
+  cf_names <- cf_names[[ length(cf_names) ]]
+  dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
+  result$confusion = cf_matrix
+  
+  treeStats = unlist(res2$drf_model$treeStats)
+  rf_matrix = rbind(treeStats[1:3], treeStats[4:6])
+  colnames(rf_matrix) = c("Min.", "Max.", "Mean.")
+  rownames(rf_matrix) = c("Depth", "Leaves")
+  result$forest = rf_matrix
+  
+  result$mse = res2$drf_model$errs
+  result$ntree = n.trees
+  new("H2ODRFModel", key=destKey, data=data, model=result)
+}
 
 # used to verify data, x, y and turn into the appropriate things
 verify_dataxy <- function(data, x, y){
   if( missing(data) ) stop('must specify data')
-  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+  if(!( class(data) %in% c('H2OParsedData', 'H2OParsedData2') )) stop('data must be an h2o dataset')
 
   if( missing(x) ) stop('must specify x')
   if( missing(y) ) stop('must specify y')

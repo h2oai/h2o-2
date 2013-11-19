@@ -7,7 +7,6 @@ exportMethods(
   "h2o.importFolder",
   "h2o.importURL",
   "h2o.parseRaw",
-  "h2o.setColNames",
   "show",
   "summary",
   "histograms",

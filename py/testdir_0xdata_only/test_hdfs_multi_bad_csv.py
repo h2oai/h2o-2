@@ -29,15 +29,7 @@ class Basic(unittest.TestCase):
 
 # One .gz in with non .gz seems to cause a stack trace..so don't match to all (*airlines*).
 # no..maybe it's just the zero length gz file?. No it doesn't show up in the list of keys?
-# drwxr-xr-x   - earl   supergroup            0 2013-07-24 17:55 /datasets/airline.gz
-# -rw-r--r--   3 hduser supergroup  12155501626 2013-02-22 17:13 /datasets/airline_116M.csv
-# -rw-r--r--   3 hduser supergroup  11349125129 2013-05-03 15:45 /datasets/airlines_1988_2008.csv
-# -rw-r--r--   3 hduser supergroup  11349125429 2013-05-01 12:52 /datasets/airlines_1988_2008_shuffled.csv
-# -rw-r--r--   3 hduser supergroup         9936 2013-05-01 11:49 /datasets/airlines_88_08_100lines.csv
-# -rw-r--r--   3 hduser supergroup  12155501626 2013-02-23 15:59 /datasets/airlines_all.csv
-# -rw-r--r--   3 hduser supergroup 133710514626 2013-02-23 15:21 /datasets/airlines_all_11x.csv
-
-        parseResult = h2i.import_parse(path='datasets/airline_116M.csv', hex_key='random_csv.hex', timeoutSecs=600)
+        parseResult = h2i.import_parse(path='datasets/airline_all.csv', hex_key='airlines_all.hex', timeoutSecs=600)
         print "*csv* regex to hdfs /datasets", 'parse time:', parseResult['response']['time']
         print "parse result:", parseResult['destination_key']
         sys.stdout.flush() 

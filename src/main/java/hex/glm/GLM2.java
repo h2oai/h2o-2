@@ -27,6 +27,7 @@ import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Utils;
+import water.util.RString;
 
 public class GLM2 extends ModelJob {
 //  private transient GLM2 [] _subjobs;
@@ -61,7 +62,7 @@ public class GLM2 extends ModelJob {
   double [] alpha = new double[]{0.5};
 //  @API(help = "lambda", filter = RSeq2.class)
   @API(help = "lambda", filter = Default.class)
-  double [] lambda;
+  double [] lambda = new double[]{1e-5};
   public static final double DEFAULT_BETA_EPS = 1e-4;
   @API(help = "beta_eps", filter = Default.class)
   double beta_epsilon = DEFAULT_BETA_EPS;
@@ -96,6 +97,14 @@ public class GLM2 extends ModelJob {
     _beta = beta;
     this.alpha= new double[]{alpha};
     this.n_folds = nfolds;
+  }
+
+  /** Return the query link to this page */
+  public static String link(Key k, String content) {
+    RString rs = new RString("<a href='GLM2.query?source=%$key'>%content</a>");
+    rs.replace("key", k.toString());
+    rs.replace("content", content);
+    return rs.toString();
   }
 
   public static Job gridSearch(Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds){
