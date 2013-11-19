@@ -869,6 +869,10 @@ public class DTree extends Iced {
           sb.p(";\n");
         }
       }
+      sb.indent(2).p("// Compute Probabilities\n");
+      sb.indent(2).p("float sum = 0;\n");
+      sb.indent(2).p("for(int i=1;i<preds.length; i++) sum += Math.exp(preds[i]);\n");
+      sb.indent(2).p("for(int i=1; i<preds.length; i++) preds[i] = (float)Math.exp(preds[i]) / sum;\n");
     }
   }
 
