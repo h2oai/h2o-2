@@ -1,6 +1,7 @@
 package water;
 
 import jsr166y.CountedCompleter;
+import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
 
@@ -25,6 +26,8 @@ import water.fvec.Vec.VectorGroup;
  * produce an output frame with newly created Vecs.
  */
 public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable {
+  public MRTask2(){}
+  public MRTask2(H2OCountedCompleter completer){super(completer);}
 
   /** The Vectors to work on. */
   public Frame _fr;
@@ -142,7 +145,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       }
       if( size_rez !=0 )        // Record i/o result size
         if( _size_rez0 == 0 ) {      _size_rez0=size_rez; }
-        else { assert _size_rez1==0; _size_rez1=size_rez; }
+        else { /*assert _size_rez1==0;*/ _size_rez1=size_rez; }
       assert _last._onCdone >= _done1st;
     }
 
@@ -202,7 +205,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  asynchronous.  It returns 'this', on which getResult() can be invoked
    *  later to wait on the computation.  */
   public final T dfork( Vec...vecs ) {return dfork(0,vecs);}
-  public final T dfork( Frame fr ) {return dfork(0,fr);}
+  public T dfork( Frame fr ) {return dfork(0,fr);}
   public final T dfork( int outputs, Vec... vecs) {
     return dfork(outputs,new Frame(vecs));
   }

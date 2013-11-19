@@ -1,15 +1,12 @@
 package hex.gram;
 
-import hex.DLSM.ADMMSolver.NonSPDMatrixException;
 import hex.FrameTask;
-import java.lang.Thread;
-import java.text.DecimalFormat;
-import java.util.Arrays;
-import jsr166y.RecursiveAction;
-import jsr166y.CountedCompleter;
-import water.*;
+import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 
-import water.util.Log;
+import java.util.Arrays;
+
+import jsr166y.RecursiveAction;
+import water.*;
 import water.util.Utils;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
@@ -22,9 +19,6 @@ public final class Gram extends Iced {
   final int _denseN;
   final int _fullN;
   final static int MIN_TSKSZ=10000;
-//  double[] _xy;
-//  double _yy;
-//  long _nobs;
 
   public Gram() {_diagN = _denseN = _fullN = 0; _hasIntercept = false; }
 
@@ -38,15 +32,17 @@ public final class Gram extends Iced {
       _xx[i] = MemoryManager.malloc8d(diag + i + 1);
   }
 
-  public void addDiag(double d) {
+  public void addDiag(double d) {addDiag(d,false);}
+  public void addDiag(double d, boolean add2Intercept) {
     for( int i = 0; i < _diag.length; ++i )
       _diag[i] += d;
-    for( int i = 0; i < _xx.length - 1; ++i )
+    int ii = (_hasIntercept && add2Intercept)?1:0;
+    for( int i = 0; i < _xx.length - ii; ++i )
       _xx[i][_xx[i].length - 1] += d;
   }
 
   static public class InPlaceCholesky {
-    final double _xx[][];             // Lower triagle of the symmetric matrix. 
+    final double _xx[][];             // Lower triagle of the symmetric matrix.
     private boolean _isSPD;
     private InPlaceCholesky(double xx[][], boolean isspd) { _xx = xx; _isSPD = isspd; }
     static private class BlockTask extends RecursiveAction {
@@ -97,7 +93,7 @@ public final class Gram extends Iced {
         int i = tjR;
         Futures fs = new Futures();
         int rpb = 0;                // rows per block
-        int p = P;                  // concurrency 
+        int p = P;                  // concurrency
         while ( tjR*(rpb=(N - tjR)/p)<Gram.MIN_TSKSZ && p>1) --p;
         while (p-- > 1) {
           fs.add(new BlockTask(xx,i,i+rpb,j,tjR).fork());
@@ -153,7 +149,7 @@ public final class Gram extends Iced {
     }
     Futures fs = new Futures();
     // compute the outer product of diagonal*dense
-    final int chk = Math.max(denseN/10, 1); 
+    final int chk = Math.max(denseN/10, 1);
     //Log.info("SPARSEN = " + sparseN + "    DENSEN = " + denseN);
 
     for( int i = 0; i < denseN; ++i ) {
@@ -342,16 +338,16 @@ public final class Gram extends Iced {
    * @author tomasnykodym
    */
   public static class GramTask extends FrameTask<GramTask> {
-    final boolean _hasIntercept;
     public Gram _gram;
     public long _nobs;
+    public final boolean _hasIntercept;
 
-    public GramTask(Job job, boolean standardize, boolean hasIntercept){
-      super(job,standardize,false);
+    public GramTask(Job job, DataInfo dinfo, boolean hasIntercept){
+      super(job,dinfo);
       _hasIntercept = hasIntercept;
     }
     @Override protected void chunkInit(){
-      _gram = new Gram(fullN(), largestCat(), _nums, _cats,_hasIntercept);
+      _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,_hasIntercept);
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats) {
       _gram.addRow(nums, ncats, cats, 1.0);

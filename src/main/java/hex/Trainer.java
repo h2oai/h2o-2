@@ -383,7 +383,7 @@ public abstract class Trainer {
       String error = Utils.getStackAsString(ex);
       Log.info(error);
       if( _node._job != null )
-        Job.cancel(_node._job, error);
+        Job.findJob(_node._job).cancel(error);
       return super.onExceptionalCompletion(ex, caller);
     }
   }

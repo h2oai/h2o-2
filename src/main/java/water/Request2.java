@@ -15,10 +15,10 @@ public abstract class Request2 extends Request {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
 
-  transient Properties _parms;
+  protected transient Properties _parms;
 
-  protected @API(help = "Response stats and info.")
-  ResponseInfo response_info;
+  @API(help = "Response stats and info.")
+  public ResponseInfo response_info;
 
   public String input(String fieldName) {
     return _parms == null ? null : _parms.getProperty(fieldName);
@@ -188,8 +188,9 @@ public abstract class Request2 extends Request {
           Argument arg = null;
 
           // Simplest case, filter is an Argument
-          if( Argument.class.isAssignableFrom(api.filter()) )
+          if( Argument.class.isAssignableFrom(api.filter()) ) {
             arg = (Argument) newInstance(api);
+          }
 
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {

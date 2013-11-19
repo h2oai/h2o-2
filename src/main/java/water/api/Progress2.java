@@ -30,16 +30,12 @@ public class Progress2 extends Request2 {
   }
 
   @Override protected Response serve() {
-    Job jjob = null;
-    if(job_key != null)
-      jjob = Job.findJob(job_key);
-    if( jjob != null && jjob.exception != null ) {
-      return Response.error(jjob.exception);
+    Job jjob = Job.findJob(job_key);
+    if(jjob != null && jjob.exception != null){
+      return Response.error(jjob.exception == null?"cancelled":jjob.exception);
     }
-
     if(jjob == null || jjob.end_time > 0 || jjob.cancelled())
       return jobDone(jjob, destination_key);
-
     return jobInProgress(jjob, destination_key);
   }
 

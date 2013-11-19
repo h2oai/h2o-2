@@ -10,7 +10,7 @@ setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE, sep =
 setGeneric("h2o.importHDFS", function(object, path, pattern = "", key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importHDFS") })
 setGeneric("h2o.uploadFile", function(object, path, key = "", parse = TRUE, sep = "", silent = TRUE) { standardGeneric("h2o.uploadFile") })
 setGeneric("h2o.parseRaw", function(data, key = "", header, sep = "", col.names) { standardGeneric("h2o.parseRaw") })
-setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.setColNames") })
+# setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.setColNames") })
 
 setGeneric("h2o.importFile.FV", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFile.FV") })
 setGeneric("h2o.importFolder.FV", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFolder.FV") })
@@ -256,8 +256,14 @@ setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="ANY", 
               h2o.parseRaw(data, key, header, sep)
           })
       
-setMethod("h2o.setColNames", signature(data="H2OParsedData", col.names="H2OParsedData"),
-          function(data, col.names) { res = h2o.__remoteSend(data@h2o, h2o.__PAGE_COLNAMES, target=data@key, source=col.names@key) })
+setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"), 
+          function(x, value) { h2o.__remoteSend(x@h2o, h2o.__PAGE_COLNAMES, target=x@key, source=value@key); return(x) })
+
+setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
+          function(x, value) { 
+            if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
+            stop("Currently unimplemented!"); return(x)
+          })
 
 #------------------------------------ FluidVecs -----------------------------------------#
 setMethod("h2o.importFolder.FV", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character"),

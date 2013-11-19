@@ -46,7 +46,7 @@ public class Expr2Test extends TestUtil {
       checkStr("min(h.hex,1+2)");
       checkStr("is.na(h.hex)");
       checkStr("nrow(h.hex)*3");
-      checkStr("h.hex[ncol(h.hex),nrow(h.hex)]");
+      checkStr("h.hex[nrow(h.hex)-1,ncol(h.hex)-1]");
       checkStr("1=2");
       checkStr("x");
       checkStr("x+2");
@@ -107,7 +107,8 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[,2]+1");
       checkStr("h.hex[,3]=3.3;h.hex");   // Replace a col with a constant
       checkStr("h.hex[,3]=h.hex[,2]+1"); // Replace a col
-      //checkStr("h.hex[,6]=h.hex[,7]+1");  // Extend with a new col
+      checkStr("h.hex[,ncol(h.hex)+1]=4"); // Extend a col
+      checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");

@@ -321,7 +321,7 @@ public abstract class Model extends Iced {
   public String toJava() {
     SB sb = new SB();
     sb.p("\n");
-    sb.p("class ").p(_selfKey.toString()).p(" {\n");
+    sb.p("class ").p(toJavaId(_selfKey.toString())).p(" {\n");
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
     toJavaInit(sb);  sb.p("\n");
@@ -335,7 +335,7 @@ public abstract class Model extends Iced {
   }
   // Same thing as toJava, but as a Javassist CtClass
   private CtClass makeCtClass() throws CannotCompileException {
-    CtClass clz = ClassPool.getDefault().makeClass(_selfKey.toString());
+    CtClass clz = ClassPool.getDefault().makeClass(toJavaId(_selfKey.toString()));
     clz.addField(CtField.make(toJavaNAMES   (new SB()).toString(),clz));
     clz.addField(CtField.make(toJavaNCLASSES(new SB()).toString(),clz));
     toJavaInit(clz);            // Model-specific top-level goodness
@@ -349,7 +349,7 @@ public abstract class Model extends Iced {
 
 
   private SB toJavaNAMES( SB sb ) {
-    return sb.p("  public static final String []NAMES = new String[] ").p(_names).p(";\n");
+    return sb.p("  public static final String[] NAMES = new String[] ").p(_names).p(";\n");
   }
   private SB toJavaNCLASSES( SB sb ) {
     return sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
@@ -432,5 +432,10 @@ public abstract class Model extends Iced {
     catch( CannotCompileException cce ) { throw new Error(cce); }
     catch( InstantiationException cce ) { throw new Error(cce); }
     catch( IllegalAccessException cce ) { throw new Error(cce); }
+  }
+
+  // Transform given string to legal java Identifier (see Java grammar http://docs.oracle.com/javase/specs/jls/se7/html/jls-3.html#jls-3.8)
+  private String toJavaId(String s) {
+    return s.replace('-', '_');
   }
 }

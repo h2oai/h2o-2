@@ -1,7 +1,5 @@
 package water.exec;
 
-import hex.pca.PCAScore.PCAScoreTask;
-
 import java.util.*;
 
 import water.*;
@@ -28,6 +26,16 @@ public abstract class ASTOp extends AST {
     put(new ASTExp());
     put(new ASTNot());
     put(new ASTScale());
+
+    put(new ASTCos());  // Trigonometric functions
+    put(new ASTSin());
+    put(new ASTTan());
+    put(new ASTACos());
+    put(new ASTASin());
+    put(new ASTATan());
+    put(new ASTCosh());
+    put(new ASTSinh());
+    put(new ASTTanh());
 
     // Binary ops
     put(new ASTPlus());
@@ -127,11 +135,21 @@ abstract class ASTUniOp extends ASTOp {
   }
 }
 
+class ASTCos  extends ASTUniOp { String opStr(){ return "cos";   } ASTOp make() {return new ASTCos ();} double op(double d) { return Math.cos(d);}}
+class ASTSin  extends ASTUniOp { String opStr(){ return "sin";   } ASTOp make() {return new ASTSin ();} double op(double d) { return Math.sin(d);}}
+class ASTTan  extends ASTUniOp { String opStr(){ return "tan";   } ASTOp make() {return new ASTTan ();} double op(double d) { return Math.tan(d);}}
+class ASTACos extends ASTUniOp { String opStr(){ return "acos";  } ASTOp make() {return new ASTACos();} double op(double d) { return Math.acos(d);}}
+class ASTASin extends ASTUniOp { String opStr(){ return "asin";  } ASTOp make() {return new ASTASin();} double op(double d) { return Math.asin(d);}}
+class ASTATan extends ASTUniOp { String opStr(){ return "atan";  } ASTOp make() {return new ASTATan();} double op(double d) { return Math.atan(d);}}
+class ASTCosh  extends ASTUniOp { String opStr(){ return "cosh";   } ASTOp make() {return new ASTCosh ();} double op(double d) { return Math.cosh(d);}}
+class ASTSinh  extends ASTUniOp { String opStr(){ return "sinh";   } ASTOp make() {return new ASTSinh ();} double op(double d) { return Math.sinh(d);}}
+class ASTTanh  extends ASTUniOp { String opStr(){ return "tanh";   } ASTOp make() {return new ASTTanh ();} double op(double d) { return Math.tanh(d);}}
+
 class ASTAbs  extends ASTUniOp { String opStr(){ return "abs";   } ASTOp make() {return new ASTAbs ();} double op(double d) { return Math.abs(d);}}
 class ASTSgn  extends ASTUniOp { String opStr(){ return "sgn" ;  } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}
 class ASTSqrt extends ASTUniOp { String opStr(){ return "sqrt";  } ASTOp make() {return new ASTSqrt();} double op(double d) { return Math.sqrt(d);}}
 class ASTCeil extends ASTUniOp { String opStr(){ return "ceil";  } ASTOp make() {return new ASTCeil();} double op(double d) { return Math.ceil(d);}}
-class ASTFlr  extends ASTUniOp { String opStr(){ return "floor"; } ASTOp make() {return new ASTFlr(); } double op(double d) { return Math.floor(d);}}
+class ASTFlr  extends ASTUniOp { String opStr(){ return "floor"; } ASTOp make() {return new ASTFlr ();} double op(double d) { return Math.floor(d);}}
 class ASTLog  extends ASTUniOp { String opStr(){ return "log";   } ASTOp make() {return new ASTLog ();} double op(double d) { return Math.log(d);}}
 class ASTExp  extends ASTUniOp { String opStr(){ return "exp";   } ASTOp make() {return new ASTExp ();} double op(double d) { return Math.exp(d);}}
 class ASTIsNA extends ASTUniOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}

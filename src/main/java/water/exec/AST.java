@@ -226,7 +226,6 @@ class ASTSlice extends AST {
     long cols[];
     if( !env.isAry() ) {
       int col = (int)env._d[env._sp-1]; // Peek double; Silent truncation (R semantics)
-      if( col > 0 && col >  len ) throw new IllegalArgumentException("Trying to select column "+col+" but only "+len+" present.");
       if( col < 0 && col < -len ) col=0; // Ignore a non-existent column
       if( col == 0 ) return new long[0];
       return new long[]{col};
@@ -434,7 +433,8 @@ class ASTAssign extends AST {
     for( long i : cs ) {
       int cidx = (int)i-1;      // Convert 1-based to 0-based
       Vec rv = env.addRef(rvecs[rvecs.length==1?0:cidx]);
-      fs = env.subRef(ary.replace(cidx,rv),fs);
+      if( cidx == ary.numCols() ) ary.add("C"+cidx,rv);
+      else fs = env.subRef(ary.replace(cidx,rv),fs);
     }
     if( fs != null )  fs.blockForPending();
 

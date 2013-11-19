@@ -5,7 +5,6 @@ import hex.DGLM.GLMModel.Status;
 import hex.DLSM.ADMMSolver.NonSPDMatrixException;
 import hex.DLSM.LSMSolver;
 import hex.NewRowVecTask.DataFrame;
-import hex.NewRowVecTask.JobCancelledException;
 import hex.NewRowVecTask.RowFunc;
 import hex.RowVecTask.Sampling;
 
@@ -17,6 +16,7 @@ import jsr166y.RecursiveAction;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ChunkProgressJob;
+import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.api.Constants;
 import water.util.Log;
@@ -1200,7 +1200,7 @@ public abstract class DGLM {
       return pp;
     }
     @Override public double getThreshold() {
-      if( _glmParams._family._family == Family.binomial ) 
+      if( _glmParams._family._family == Family.binomial )
         return _vals[0].bestThreshold();
       return Float.NaN;
     }

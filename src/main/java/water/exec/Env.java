@@ -258,17 +258,19 @@ public class Env extends Iced {
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
         Frame fr = popAry();  // Pop w/out lower refcnt & delete
-        String skey = key();
-        int refcnt = _refcnt.get(fr.anyVec());
-        for( Vec v : fr.vecs() )
-          if( _refcnt.get(v) != refcnt )
-            throw H2O.unimpl();
-        assert refcnt > 0;
         Frame fr2=fr;
-        if( refcnt > 1 ) {       // Need a deep-copy now
-          fr2 = fr.deepSlice(null,null);
-          subRef(fr,skey);      // Now lower refcnt for good assertions
-        } // But not down to zero (do not delete items in global scope)
+        String skey = key();
+        for( int i=0; i<fr.numCols(); i++ ) {
+          Vec v = fr.vecs()[i];
+          int refcnt = _refcnt.get(v);
+          assert refcnt > 0;
+          if( refcnt > 1 ) {    // Need a deep-copy now
+            if( fr2==fr ) fr2 = new Frame(fr);
+            Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
+            fr2.replace(i,v2);  // Replace with private deep-copy
+            subRef(v,null);     // Now lower refcnt for good assertions
+          } // But not down to zero (do not delete items in global scope)
+        }
         UKV.put(Key.make(_key[_sp]),fr2);
       } else
         pop();

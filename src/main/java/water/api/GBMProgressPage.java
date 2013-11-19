@@ -23,7 +23,7 @@ public class GBMProgressPage extends Progress2 {
     Job jjob = Job.findJob(job_key);
     Value value = DKV.get(jjob.dest());
     if( value == null ) DocGen.HTML.paragraph(sb, "Pending...");
-    else ((GBMModel)value.get()).generateHTML("GBM Model", sb);
+    else ((GBMModel)value.get()).generateHTML("GBM Model", sb, false);
     return true;
   }
   @Override public API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }

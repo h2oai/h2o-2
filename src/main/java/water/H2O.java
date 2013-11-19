@@ -5,8 +5,10 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import jsr166y.*;
+import water.Job.JobCancelledException;
 import water.exec.Function;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.ParseDataset;
@@ -636,7 +638,10 @@ public final class H2O {
   // entire node for lack of some small piece of data).  So each attempt to do
   // lower-priority F/J work starts with an attempt to work & drain the
   // higher-priority queues.
-  public static abstract class H2OCountedCompleter extends CountedCompleter {
+  public static abstract class H2OCountedCompleter extends CountedCompleter implements Cloneable {
+    public H2OCountedCompleter(){}
+    public H2OCountedCompleter(H2OCountedCompleter completer){super(completer);}
+
     // Once per F/J task, drain the high priority queue before doing any low
     // priority work.
     @Override public final void compute() {
@@ -665,17 +670,42 @@ public final class H2O {
     }
     // Do the actually intended work
     public abstract void compute2();
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      if(!(ex instanceof JobCancelledException) && this.getCompleter() == null)
+        ex.printStackTrace();
+      return true;
+    }
     // In order to prevent deadlock, threads that block waiting for a reply
     // from a remote node, need the remote task to run at a higher priority
     // than themselves.  This field tracks the required priority.
     public byte priority() { return MIN_PRIORITY; }
-
+    public H2OCountedCompleter clone(){
+      try { return (H2OCountedCompleter)super.clone(); }
+      catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
+    }
   }
+
+
   public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
+    public H2OCallback(){this(null);}
+    public H2OCallback(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
     @Override public void onCompletion(CountedCompleter caller){callback((T)caller);}
     public abstract void callback(T t);
   }
+
+  public static class JobCompleter extends H2OCountedCompleter{
+    final Job _job;
+    public JobCompleter(Job j){this(j,null);}
+    public JobCompleter(Job j,H2OCountedCompleter cmp){super(cmp); _job = j;}
+    @Override public void compute2(){throw new UnsupportedOperationException();}
+    @Override public void onCompletion(CountedCompleter caller){_job.done();}
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter c){
+      if(!(ex instanceof JobCancelledException))_job.cancel(ex);
+      return true;
+    }
+  }
+
   public static class H2OEmptyCompleter extends H2OCountedCompleter{
     @Override public void compute2(){throw new UnsupportedOperationException();}
   }

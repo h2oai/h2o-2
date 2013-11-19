@@ -1036,6 +1036,8 @@ public class RequestArguments extends RequestStatics {
 
     static double [] parseArray(String input, boolean mul, double defaultStep) {
       String str = input.trim().toLowerCase();
+      if(str.startsWith("c(") && str.endsWith(")"))
+        str = str.substring(2,str.length()-1);
       if( str.startsWith("seq") ) {
         throw new RuntimeException("unimplemented");
       } if( str.contains(":") )
