@@ -413,8 +413,8 @@ class ASTAssign extends AST {
     }
 
     // Execute the slice LHS selection operators
-    Object cols = slice.select(ary.numCols(),slice._cols,env);
-    Object rows = slice.select(ary.numRows(),slice._rows,env);
+    Object cols = ASTSlice.select(ary.numCols(),slice._cols,env);
+    Object rows = ASTSlice.select(ary.numRows(),slice._rows,env);
 
     // Partial row assignment?
     if( rows != null ) throw H2O.unimpl();
