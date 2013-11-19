@@ -970,7 +970,7 @@ class H2O(object):
             ### print "putfile specifying this key:", key
 
         resp = self.__do_json_request(
-                'PostFile.json',
+                '2/PostFile.json' if beta_features else 'PostFile.json',
                 cmd='post',
                 timeout=timeoutSecs,
                 params={"key": key},
@@ -1119,10 +1119,11 @@ class H2O(object):
 
             # get the redirect url
             # currently a bug...the url isn't right on poll
-            if not reuseFirstPollUrl: # hack for v1 RfView which doesn't give it during polling
+            # if not reuseFirstPollUrl: # hack for v1 RfView which doesn't give it during polling
+            if beta_features and not reuseFirstPollUrl: # reuse url for all v1 stuff
                 (url, params) = get_redirect_url(r, beta_features)
 
-            if ((time.time()-start)>timeoutSecs):
+            if ((time.time()-start) > timeoutSecs):
                 # show what we're polling with
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
                        "status: %s, url: %s?%s" % (status, urlUsed, paramsUsedStr)
@@ -1298,6 +1299,7 @@ class H2O(object):
         # header
         # exclude
         params_dict = {
+            'blocking': None, # debug only
             'source_key': key, # can be a regex
             'destination_key': key2,
             'parser_type': None,
@@ -1422,12 +1424,14 @@ class H2O(object):
         return a
 
     def import_s3(self, bucket, timeoutSecs=180):
-        a = self.__do_json_request('ImportS3.json', timeout=timeoutSecs, params={"bucket": bucket})
+        a = self.__do_json_request('2/ImportFiles2.json' if beta_features else 'ImportS3.json', 
+            timeout=timeoutSecs, params={"bucket": bucket})
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
     def import_hdfs(self, path, timeoutSecs=180):
-        a = self.__do_json_request('ImportHdfs.json', timeout=timeoutSecs, params={"path": path})
+        a = self.__do_json_request('2/ImportFiles2.json' if beta_features else 'ImportHdfs.json', 
+            timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_hdfs result:", dump_json(a))
         return a
 
@@ -1501,6 +1505,10 @@ class H2O(object):
                 'sample_rate': None,
                 'seed': None,
                 }
+            if 'model_key' in kwargs:
+                kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
+
+
         else:
             params_dict = {
                 'data_key': data_key,
@@ -1527,6 +1535,12 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
+
+        if beta_features and not params_dict['response']:
+            # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
+            inspect = h2o_cmd.runInspect(key=data_key)
+            # response only takes names. can't use col index..have to look it up
+            params_dict['response'] = str(inspect['cols'][-1]['name'])
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
