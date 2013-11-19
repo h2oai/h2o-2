@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_loop_random_param_poker1000(self):
+    def test_rf_params_rand1(self):
         csvPathname = 'poker/poker1000'
         for trial in range(10):
             # params is mutable. This is default.
