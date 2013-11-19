@@ -1,7 +1,6 @@
 package water;
 
 import java.util.ArrayList;
-import java.util.UUID;
 import java.util.concurrent.*;
 
 import jsr166y.CountedCompleter;
@@ -43,7 +42,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public T invokeOnAllNodes() {
     H2O cloud = H2O.CLOUD;
     Key[] args = new Key[cloud.size()];
-    String skey = "RunOnAll__"+UUID.randomUUID().toString();
+    String skey = "RunOnAll"+Key.rand();
     for( int i = 0; i < args.length; ++i )
       args[i] = Key.make(skey,(byte)0,Key.DFJ_INTERNAL_USER,cloud._memary[i]);
     invoke(args);
