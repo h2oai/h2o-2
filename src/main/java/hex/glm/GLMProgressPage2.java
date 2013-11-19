@@ -36,7 +36,7 @@ public class GLMProgressPage2 extends Progress2 {
     API_VERSION _v;
     boolean _isDone;
     public static Response redirect(Request req, Key jobkey, Key dest,API_VERSION v) {
-      return new Response(Response.Status.redirect, req, -1, -1, href2(v), JOB_KEY, jobkey, DEST_KEY, dest );
+      return Response.redirect(req, href2(v), JOB_KEY, jobkey, DEST_KEY, dest);
     }
 
     private static String href2(API_VERSION v) {
@@ -56,7 +56,7 @@ public class GLMProgressPage2 extends Progress2 {
     }
     @Override protected Response jobDone(final Job job, final Key dst) {
       _isDone = true;
-      return new Response(Response.Status.done, this, 0, 0);
+      return Response.done(this);
     }
   }
 }

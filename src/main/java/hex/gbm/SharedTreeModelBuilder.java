@@ -19,7 +19,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
   public int ntrees = 100;
 
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=0, lmax=10000)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
   public int max_depth = 5;
 
   @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1)
