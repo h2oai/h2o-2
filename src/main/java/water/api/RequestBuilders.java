@@ -348,7 +348,7 @@ public class RequestBuilders extends RequestQueries {
       _req = null;
     }
 
-    public Response(Status status, Request req, int progress, int total, Object...pollArgs) {
+    private Response(Status status, Request req, int progress, int total, Object...pollArgs) {
       assert (status == Status.poll);
       _status = status;
       _response = null;
