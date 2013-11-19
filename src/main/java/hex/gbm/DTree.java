@@ -558,11 +558,6 @@ public class DTree extends Iced {
         "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
         "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">"+DocGen.HTML.escape2(toJava())+"</code></pre></div>");
       }
-      File file = new File("/home/spencer/GBMScore.java");
-      FileWriter fw = new FileWriter(file.getAbsoluteFile());
-      BufferedWriter bw = new BufferedWriter(fw);
-      bw.write(toJava());
-      bw.close();
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM
