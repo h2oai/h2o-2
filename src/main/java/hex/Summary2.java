@@ -25,15 +25,19 @@ public class Summary2 extends Iced {
   public static final int MAX_HIST_SZ = water.parser.Enum.MAX_ENUM_SIZE;
   public static final double [] DEFAULT_PERCENTILES = {0.01,0.05,0.10,0.25,0.33,0.50,0.66,0.75,0.90,0.95,0.99};
   public static final int NMAX = 5;
+  private static final int T_REAL = 0;
+  private static final int T_INT  = 1;
+  private static final int T_ENUM = 2;
+  
   // INPUTS
-  final transient Vec      _vec;
-  final transient long     _nrow;
-  final transient double   _min;
-  final transient double   _max;
+  final           long     _nrow;
+  final           int      _type; // 0 - real; 1 - int; 2 - enum
   final           double[] _mins;
   final           double[] _maxs;
                   long     _zeros;
-  final transient String[] _domains;
+  final transient double   _min;
+  final transient double   _max;
+  final transient String[] _domain;
   final transient double   _start;
   final transient double   _binsz;
         transient double[] _pctile;
@@ -50,20 +54,20 @@ public class Summary2 extends Iced {
   static class EnumStats extends Stats {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-    public EnumStats( Vec vec ) {
+    public EnumStats( int card ) {
       super("Enum");
-      this.cardinality = vec.domain().length;
+      this.cardinality = card;
     }
     @API(help="cardinality"  ) public final int     cardinality;
-   }
+  }
 
   static class NumStats extends Stats {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
-    public NumStats( Vec vec, long zeros, double[] mins, double[] maxs, double[] pctile) {
+    public NumStats( double mean, double sigma, long zeros, double[] mins, double[] maxs, double[] pctile) {
       super("Numeric");
-      this.mean  = vec.mean();
-      this.sd    = vec.sigma();
+      this.mean  = mean;
+      this.sd    = sigma;
       this.zeros = zeros;
       this.mins  = mins;
       this.maxs  = maxs;
@@ -91,19 +95,17 @@ public class Summary2 extends Iced {
   @API(help="histogram headers" ) public String[]  hbrk;
   @API(help="histogram bin values") public long[]  hcnt;
 
-  public void finishUp() {
-    this.type = _vec.isEnum()?"Enum":_vec.isInt()?"Int":"Real";
-    this.nacnt = _vec.naCnt();
+  public void finishUp(Vec vec) {
     computePercentiles();
     computeMajorities();
     for (int i = 0; i < _maxs.length>>>1; i++) {
       double t = _maxs[i]; _maxs[i] = _maxs[_maxs.length-1-i]; _maxs[_maxs.length-1-i] = t;
     }
-    this.stats = _vec.isEnum()?new EnumStats(_vec):new NumStats(_vec,_zeros,_mins,_maxs,_pctile);
-    if (_vec.isEnum()) {
-      this.hstart = _vec.min();
+    this.stats = _type==T_ENUM?new EnumStats(vec.domain().length):new NumStats(vec.mean(),vec.sigma(),_zeros,_mins,_maxs,_pctile);
+    if (_type == T_ENUM) {
+      this.hstart = 0;
       this.hstep = 1;
-      this.hbrk = _domains;
+      this.hbrk = _domain;
     } else {
       this.hstart = _start;
       this.hstep  = _binsz;
@@ -115,17 +117,19 @@ public class Summary2 extends Iced {
 
   public Summary2(Vec vec, String name) {
     this.colname = name;
-    this._vec    = vec;
-    this._domains = _vec.isEnum() ? vec.domain() : null;
+    this._type = vec.isEnum()?2:vec.isInt()?1:0;
+    this.nacnt = vec.naCnt();
+    this._domain = vec.isEnum() ? vec.domain() : null;
     this._nrow = vec.length() - vec.naCnt();
-    if ( !_vec.isEnum() ) {
+    double sigma = Double.isNaN(vec.sigma()) ? 0 : vec.sigma(); 
+    if ( _type != T_ENUM ) {
       this._mins = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
       this._maxs = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
       Arrays.fill(_mins, Double.POSITIVE_INFINITY);
       Arrays.fill(_maxs, Double.NEGATIVE_INFINITY);
     } else {
-      _mins = MemoryManager.malloc8d(Math.min(_domains.length,NMAX));
-      _maxs = MemoryManager.malloc8d(Math.min(_domains.length,NMAX));
+      _mins = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
+      _maxs = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
     }
 
     _min = vec.min();_max = vec.max();
@@ -136,8 +140,6 @@ public class Summary2 extends Iced {
       hcnt = new long[(int)span];
     } else {
       // guard against improper parse (date type) or zero c._sigma
-      double sigma = vec.sigma();
-      if (Double.isNaN(sigma)) sigma = 0; 
       double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(_nrow));
       double d = Math.pow(10, Math.floor(Math.log10(b)));
       if (b > 20*d/3)
@@ -146,10 +148,10 @@ public class Summary2 extends Iced {
         d *= 5;
 
       // tweak for integers
-      if (d < 1. && _vec.isInt()) d = 1.;
+      if (d < 1. && vec.isInt()) d = 1.;
       _binsz = d;
       _start = _binsz * Math.floor(vec.min()/_binsz);
-      int nbin = (int)Math.floor((vec.max() + (_vec.isInt()?.5:0) - _start)/_binsz) + 1;
+      int nbin = (int)Math.floor((vec.max() + (vec.isInt()?.5:0) - _start)/_binsz) + 1;
       assert nbin > 0;
       hcnt = new long[nbin];
     }
@@ -161,7 +163,7 @@ public class Summary2 extends Iced {
       double val = chk.at0(i);
       assert val >= _min : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " < VEC.MIN " + _min;
       assert val <= _max : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " > VEC.MAX " + _max;
-      if ( !_vec.isEnum() ) {
+      if ( _type != T_ENUM ) {
         if (val == 0.) _zeros++;
         // update min/max
         if (val < _mins[_mins.length-1]) {
@@ -190,7 +192,7 @@ public class Summary2 extends Iced {
   public Summary2 add(Summary2 other) {
     _zeros += other._zeros;
     Utils.add(hcnt, other.hcnt);
-    if (_vec.isEnum()) return this;
+    if (_type == T_ENUM) return this;
 
     double[] ds = MemoryManager.malloc8d(_mins.length);
     int i = 0, j = 0;
@@ -226,7 +228,7 @@ public class Summary2 extends Iced {
   
   // Compute majority categories for enums only
   public void computeMajorities() {
-    if (!_vec.isEnum()) return;
+    if ( _type != T_ENUM ) return;
     for (int i = 0; i < _mins.length; i++) _mins[i] = i;
     for (int i = 0; i < _maxs.length; i++) _maxs[i] = i;
     int mini = 0, maxi = 0;
@@ -255,7 +257,7 @@ public class Summary2 extends Iced {
   }
 
   public double percentileValue(int idx) {
-    if( _vec.isEnum() ) return Double.NaN;
+    if( _type == T_ENUM ) return Double.NaN;
      return _pctile[idx];
   }
 
@@ -267,7 +269,7 @@ public class Summary2 extends Iced {
       return;
     }
     // Base stats
-    if( !vec.isEnum() ) {
+    if( _type != T_ENUM ) {
       NumStats stats = (NumStats)this.stats;
       sb.append("<div style='width:100%;'><table class='table-bordered'>");
       sb.append("<tr><th colspan='"+20+"' style='text-align:center;'>Base Stats</th></tr>");
@@ -302,7 +304,7 @@ public class Summary2 extends Iced {
     sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
     sb.append("<tr> <th colspan="+len+" style='text-align:center'>Histogram</th></tr>");
     sb.append("<tr>");
-    if (_vec.isEnum())
+    if ( _type == T_ENUM )
        for( int i=0; i<len; i++ ) sb.append("<th>" + vec.domain(i) + "</th>");
     else
        for( int i=0; i<len; i++ ) sb.append("<th>" + Utils.p2d(binValue(i)) + "</th>");
@@ -318,7 +320,7 @@ public class Summary2 extends Iced {
       sb.append("<div class='alert'>Histogram for this column was too big and was truncated to 1000 values!</div>");
     sb.append("</table></div>");
 
-    if (!vec.isEnum()) {
+    if (_type != T_ENUM) {
       NumStats stats = (NumStats)this.stats;
       // Percentiles
       sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
