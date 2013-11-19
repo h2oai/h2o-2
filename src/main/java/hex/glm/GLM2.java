@@ -255,7 +255,6 @@ public class GLM2 extends ModelJob {
               int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
               if(i > 0)lambda = i == lambda.length?new double[]{lmax}:Arrays.copyOfRange(lambda, i, lambda.length);
             }
-            System.out.println("nobs = " + ymut.nobs());
             GLMIterationTask firstIter = new GLMIterationTask(GLM2.this,_dinfo,_glm,_beta,0,ymut.ymu(),1.0/ymut.nobs());
             final LSMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
             GLMModel model = new GLMModel(dest(),_dinfo._adaptedFrame, _dinfo._catOffsets, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);

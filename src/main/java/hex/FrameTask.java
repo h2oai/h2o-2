@@ -27,6 +27,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     _dinfo = ft._dinfo;
     _job = ft._job;
   }
+  public double [] normMul(){return _dinfo._normMul;}
+  public double [] normSub(){return _dinfo._normSub;}
 
   /**
    * Method to process one row of the data for GLM functions.
@@ -78,6 +80,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _normSub = dinfo._normSub;
       _foldId = foldId;
       _nfolds = nfolds;
+    }
+    public DataInfo(Frame fr, boolean hasResponse, double [] normSub, double [] normMul){
+      this(fr,hasResponse,normSub != null && normMul != null);
+      assert (normSub == null) == (normMul == null);
+      if(normSub != null && normMul != null){
+        System.arraycopy(normSub, 0, _normSub, 0, normSub.length);
+        System.arraycopy(normMul, 0, _normMul, 0, normMul.length);
+      }
     }
     public DataInfo(Frame fr, boolean hasResponse, boolean standardize){
       _nfolds = _foldId = 0;
