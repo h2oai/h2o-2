@@ -284,6 +284,7 @@ public abstract class Request2 extends Request {
             arg._required = api.required();
             arg._field = f;
             arg._hideInQuery = api.hide();
+            arg._gridable = api.gridable();
           }
         }
       }
@@ -347,15 +348,17 @@ public abstract class Request2 extends Request {
     boolean gridSearch = false;
     for( int i = 0; i < _arguments.size(); i++ ) {
       Argument arg = _arguments.get(i);
-      String value = _parms.getProperty(arg._name);
-      if( value != null ) {
-        // Skips grid if argument is an array, except if imbricated expression
-        // Little hackish, waiting for real language
-        boolean imbricated = value.contains("(");
-        if( !arg._field.getType().isArray() || imbricated ) {
-          values[i] = split(value);
-          if( values[i] != null && values[i].length > 1 )
-            gridSearch = true;
+      if( arg._gridable ) {
+        String value = _parms.getProperty(arg._name);
+        if( value != null ) {
+          // Skips grid if argument is an array, except if imbricated expression
+          // Little hackish, waiting for real language
+          boolean imbricated = value.contains("(");
+          if( !arg._field.getType().isArray() || imbricated ) {
+            values[i] = split(value);
+            if( values[i] != null && values[i].length > 1 )
+              gridSearch = true;
+          }
         }
       }
     }
@@ -410,11 +413,12 @@ public abstract class Request2 extends Request {
             throw new IllegalArgumentException("Missing closing parenthesis");
           current += s;
         }
+        values = addSplit(values, current);
+        current = "";
       } else
         current += s;
     }
-    if( current.length() > 0 )
-      values = addSplit(values, current);
+    values = addSplit(values, current);
     return values;
   }
 
@@ -423,7 +427,7 @@ public abstract class Request2 extends Request {
       double[] gen = NumberSequence.parseGenerator(value, false, 1);
       for( double d : gen )
         values = Utils.append(values, "" + d);
-    } else
+    } else if( value.length() > 0 )
       values = Utils.append(values, value);
     return values;
   }
