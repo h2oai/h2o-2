@@ -1,5 +1,7 @@
 package hex;
 
+import hex.Layer;
+
 import java.util.ArrayList;
 import java.util.concurrent.*;
 
@@ -55,26 +57,11 @@ public class Histogram extends LineChart {
         VBox v = new VBox();
         for( int i = ls.length - 1; i > 0; i-- ) {
           HBox h = new HBox();
-          h.getChildren().add(new Histogram("Layer " + i + " A", ls[i]._a));
-          h.getChildren().add(new Histogram("E", ls[i]._e));
-          v.getChildren().add(h);
-
-          h = new HBox();
           h.getChildren().add(new Histogram("Layer " + i + " W", ls[i]._w));
           h.getChildren().add(new Histogram("B", ls[i]._b));
+          h.getChildren().add(new Histogram("A", ls[i]._a));
+          h.getChildren().add(new Histogram("E", ls[i]._e));
           v.getChildren().add(h);
-
-          h = new HBox();
-          h.getChildren().add(new Histogram("Layer " + i + " W S", ls[i]._wSpeed));
-          h.getChildren().add(new Histogram("W B", ls[i]._bSpeed));
-          v.getChildren().add(h);
-
-          if( ls[i]._v != null ) {
-            h = new HBox();
-            h.getChildren().add(new Histogram("Layer " + i + " V", ls[i]._v));
-            h.getChildren().add(new Histogram("Gradient " + i + " V", ls[i]._gv));
-            v.getChildren().add(h);
-          }
         }
         Stage stage = new Stage();
         BorderPane root = new BorderPane();
@@ -102,8 +89,8 @@ public class Histogram extends LineChart {
         root.setCenter(scroll);
         Scene scene = new Scene(root);
         stage.setScene(scene);
-        stage.setWidth(1500);
-        stage.setHeight(1100);
+        stage.setWidth(2450);
+        stage.setHeight(1500);
         stage.show();
 
         scene.getWindow().onCloseRequestProperty().addListener(new ChangeListener() {

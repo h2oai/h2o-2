@@ -445,6 +445,78 @@ public class ParserTest2 extends TestUtil {
     testParsed(r1,exp,k);
   }
 
+  // Test very sparse data
+  @Test public void testSparse() {
+    for (char separator : SEPARATORS) {
+
+      // Build 100 zero's and 1 one.
+      StringBuilder sb = new StringBuilder();
+      for( int i=0; i<50; i++ ) sb.append("0.0\n");
+      sb.append("1.0\n");
+      for( int i=0; i<50; i++ ) sb.append("0.0\n");
+      Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      Key r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      double[][] exp = new double[101][1];
+      exp[50][0] = 1;
+      testParsed(r1,exp,k);
+
+      // Build 100 zero's and 1 non-zero.
+      sb = new StringBuilder();
+      for( int i=0; i<50; i++ ) sb.append("0\n");
+      sb.append("2\n");
+      for( int i=0; i<50; i++ ) sb.append("0\n");
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      exp = new double[101][1];
+      exp[50][0] = 2;
+      testParsed(r1,exp,k);
+
+      // Build 100 zero's and some non-zeros.  Last line is truncated.
+      sb = new StringBuilder();
+      for( int i=0; i<50; i++ ) sb.append("0,0\n");
+      sb.append("2,3\n");
+      for( int i=0; i<49; i++ ) sb.append("0,0\n");
+      sb.append("0");           // Truncated final line
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      exp = new double[101][2];
+      exp[ 50][0] = 2;
+      exp[ 50][1] = 3;
+      exp[100][0] = 0;          // Truncated final line
+      exp[100][1] = Double.NaN;
+      testParsed(r1,exp,k);
+
+      // Build 100000 zero's and some one's
+      sb = new StringBuilder();
+      exp = new double[100100][1];
+      for( int i=0; i<100; i++ ) {
+        for( int j=0; j<1000; j++ )
+          sb.append("0\n");
+        sb.append("1\n");
+        exp[i*1001+1000][0]=1;
+      }
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      testParsed(r1,exp,k);
+
+      // Build 100 zero's, then 100 mix of -1001 & 1001's (to force a
+      // sparse-short, that finally inflates to a full dense-short).
+      sb = new StringBuilder();
+      for( int i=0; i<100; i++ ) sb.append("0\n");
+      for( int i=0; i<100; i+=2 ) sb.append("-1001\n1001\n");
+      exp = new double[200][1];
+      for( int i=0; i<100; i+=2 ) { exp[i+100][0]=-1001; exp[i+101][0]= 1001; }
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      r1 = Key.make("r1");
+      ParseDataset2.parse(r1, new Key[]{k});
+      testParsed(r1,exp,k);
+    }
+  }
+
   void runTests(){
     System.out.println("testBasic");
     testBasic();

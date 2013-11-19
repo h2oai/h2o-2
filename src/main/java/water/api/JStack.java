@@ -16,7 +16,7 @@ public class JStack extends Request {
 
   @API(help="This node's name")
   public String node_name;
-  
+
   @API(help="The cloud's name")
   public String cloud_name;
 
@@ -41,7 +41,7 @@ public class JStack extends Request {
     node_name = H2O.SELF.toString();
     cloud_name = H2O.NAME;
     time = DateFormat.getInstance().format(new Date());
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {

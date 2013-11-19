@@ -1,7 +1,6 @@
 package water.api;
 
-import water.Key;
-import water.ValueArray;
+import water.*;
 
 import com.google.gson.JsonObject;
 
@@ -24,6 +23,11 @@ public class SetColumnNames extends Request {
   @Override protected Response serve() {
     ValueArray tgt = _tgtKey.value();
     tgt.setColumnNames(_srcKey.value().colNames());
+    // Must write in the new header.  Must use DKV instead of UKV, because do
+    // not want to delete the underlying data.
+    Futures fs = new Futures();
+    DKV.put(tgt._key,tgt,fs);
+    fs.blockForPending();
     return Inspect.redirect(new JsonObject(), tgt._key);
   }
   public static String link(Key k, String s){

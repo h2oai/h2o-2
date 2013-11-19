@@ -1,7 +1,7 @@
 package hex.gram;
 
-import hex.DLSM.ADMMSolver.NonSPDMatrixException;
 import hex.FrameTask;
+import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 
 import java.util.Arrays;
 
@@ -12,19 +12,15 @@ import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 
 public final class Gram extends Iced {
-
-
   final boolean _hasIntercept;
   double[][] _xx;
   double[] _diag;
   final int _diagN;
   final int _denseN;
   final int _fullN;
-//  double[] _xy;
-//  double _yy;
-//  long _nobs;
+  final static int MIN_TSKSZ=10000;
 
-  public Gram() {_diagN = _denseN = _fullN = 0; _hasIntercept = false;}
+  public Gram() {_diagN = _denseN = _fullN = 0; _hasIntercept = false; }
 
   public Gram(int N, int diag, int dense, int sparse, boolean hasIntercept) {
     _hasIntercept = hasIntercept;
@@ -45,6 +41,76 @@ public final class Gram extends Iced {
       _xx[i][_xx[i].length - 1] += d;
   }
 
+  static public class InPlaceCholesky {
+    final double _xx[][];             // Lower triagle of the symmetric matrix.
+    private boolean _isSPD;
+    private InPlaceCholesky(double xx[][], boolean isspd) { _xx = xx; _isSPD = isspd; }
+    static private class BlockTask extends RecursiveAction {
+      final double[][] _xx;
+      final int _i0, _i1, _j0, _j1;
+      public BlockTask(double xx[][], int ifr, int ito, int jfr, int jto) {
+        _xx = xx;
+        _i0 = ifr; _i1 = ito; _j0 = jfr; _j1 = jto;
+      }
+      @Override public void compute() {
+        //Log.info("TASK THREAD ID -- " + Thread.currentThread().getName());
+        //Log.info("  BLOCK SIZE " + (_i1 - _i0));
+        for (int i=_i0; i < _i1; i++) {
+          double rowi[] = _xx[i];
+          for (int k=_j0; k < _j1; k++) {
+            double rowk[] = _xx[k];
+            double s = 0.0;
+            for (int jj = 0; jj < k; jj++) s += rowk[jj]*rowi[jj];
+            rowi[k] = (rowi[k] - s) / rowk[k];
+          }
+        }
+      }
+    }
+    public static InPlaceCholesky decompose_2(double xx[][], int STEP, int P) {
+      boolean isspd = true;
+      final int N = xx.length;
+      P = Math.max(1, P);
+      for (int j=0; j < N; j+=STEP) {
+        // update the upper left triangle.
+        final int tjR = Math.min(j+STEP, N);
+        for (int i=j; i < tjR; i++) {
+          double rowi[] = xx[i];
+          double d = 0.0;
+          for (int k=j; k < i; k++) {
+            double rowk[] = xx[k];
+            double s = 0.0;
+            for (int jj = 0; jj < k; jj++) s += rowk[jj]*rowi[jj];
+            rowi[k] = s = (rowi[k] - s) / rowk[k];
+            d += s*s;
+          }
+          for (int jj = 0; jj < j; jj++) { double s = rowi[jj]; d += s*s; }
+          d = rowi[i] - d;
+          isspd = isspd && (d > 0.0);
+          rowi[i] = Math.sqrt(Math.max(0.0, d));
+        }
+        if (tjR == N) break;
+        // update the lower strip
+        int i = tjR;
+        Futures fs = new Futures();
+        int rpb = 0;                // rows per block
+        int p = P;                  // concurrency
+        while ( tjR*(rpb=(N - tjR)/p)<Gram.MIN_TSKSZ && p>1) --p;
+        while (p-- > 1) {
+          fs.add(new BlockTask(xx,i,i+rpb,j,tjR).fork());
+          i += rpb;
+        }
+        new BlockTask(xx,i,N,j,tjR).compute();
+        fs.blockForPending();
+      }
+      return new InPlaceCholesky(xx, isspd);
+    }
+    public double[][] getL() { return _xx; }
+    public boolean isSPD() { return _isSPD; }
+  }
+
+  public Cholesky cholesky(Cholesky chol) {
+    return cholesky(chol,1);
+  }
   /**
    * Compute the cholesky decomposition.
    *
@@ -63,7 +129,8 @@ public final class Gram extends Iced {
    * @param chol
    * @return
    */
-  public Cholesky cholesky(Cholesky chol) {
+  public Cholesky cholesky(Cholesky chol, int parallelize) {
+    long start = System.currentTimeMillis();
     if( chol == null ) {
       double[][] xx = _xx.clone();
       for( int i = 0; i < xx.length; ++i )
@@ -73,6 +140,7 @@ public final class Gram extends Iced {
     final Cholesky fchol = chol;
     final int sparseN = _diag.length;
     final int denseN = _fullN - sparseN;
+    boolean spd=true;
     // compute the cholesky of the diagonal and diagonal*dense parts
     if( _diag != null ) for( int i = 0; i < sparseN; ++i ) {
       double d = 1.0 / (chol._diag[i] = Math.sqrt(_diag[i]));
@@ -81,18 +149,21 @@ public final class Gram extends Iced {
     }
     Futures fs = new Futures();
     // compute the outer product of diagonal*dense
+    final int chk = Math.max(denseN/10, 1);
+    //Log.info("SPARSEN = " + sparseN + "    DENSEN = " + denseN);
+
     for( int i = 0; i < denseN; ++i ) {
       final int fi = i;
       fs.add(new RecursiveAction() {
-        @Override protected void compute() {
-          for( int j = 0; j <= fi; ++j ) {
-            double s = 0;
-            for( int k = 0; k < sparseN; ++k )
-              s += fchol._xx[fi][k] * fchol._xx[j][k];
-            fchol._xx[fi][j + sparseN] = _xx[fi][j + sparseN] - s;
+          @Override protected void compute() {
+            for( int j = 0; j <= fi; ++j ) {
+              double s = 0;
+              for( int k = 0; k < sparseN; ++k )
+                s += fchol._xx[fi][k] * fchol._xx[j][k];
+                 fchol._xx[fi][j + sparseN] = _xx[fi][j + sparseN] - s;
+            }
           }
-        }
-      }.fork());
+        }.fork());
     }
     fs.blockForPending();
     // compute the cholesky of dense*dense-outer_product(diagonal*dense)
@@ -100,13 +171,26 @@ public final class Gram extends Iced {
     double[][] arr = new double[denseN][];
     for( int i = 0; i < arr.length; ++i )
       arr[i] = Arrays.copyOfRange(fchol._xx[i], sparseN, sparseN + denseN);
-    // make it symmetric
-    for( int i = 0; i < arr.length; ++i )
-      for( int j = 0; j < i; ++j )
-        arr[j][i] = arr[i][j];
-    CholeskyDecomposition c = new Matrix(arr).chol();
-    fchol.setSPD(c.isSPD());
-    arr = c.getL().getArray();
+
+    //Log.info ("CHOLESKY PRECOMPUTE TIME " + (System.currentTimeMillis()-start));
+    start = System.currentTimeMillis();
+    // parallelize cholesky
+    if (parallelize == 1) {
+      int p = Runtime.getRuntime().availableProcessors();
+      InPlaceCholesky d = InPlaceCholesky.decompose_2(arr, 10, p);
+      fchol.setSPD(d.isSPD());
+      arr = d.getL();
+      //Log.info ("H2O CHOLESKY DECOMPOSE ON DENSEN*DENSEN TAKES: " + (System.currentTimeMillis()-start));
+    } else {
+      // make it symmetric
+      for( int i = 0; i < arr.length; ++i )
+        for( int j = 0; j < i; ++j )
+          arr[j][i] = arr[i][j];
+      CholeskyDecomposition c = new Matrix(arr).chol();
+      fchol.setSPD(c.isSPD());
+      arr = c.getL().getArray();
+      //Log.info ("JAMA CHOLESKY DECOMPOSE TAKES: " + (System.currentTimeMillis()-start));
+    }
     for( int i = 0; i < arr.length; ++i )
       System.arraycopy(arr[i], 0, fchol._xx[i], sparseN, i + 1);
     return chol;

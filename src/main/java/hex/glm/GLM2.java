@@ -70,7 +70,6 @@ public class GLM2 extends ModelJob {
   public GLM2() {}
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda){
     this(desc,jobKey,dest,dinfo,glm,lambda,0.5,0);
-
   }
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha){
     this(desc,jobKey,dest,dinfo,glm,lambda,alpha,0);
@@ -98,16 +97,6 @@ public class GLM2 extends ModelJob {
     this.alpha= new double[]{alpha};
     this.n_folds = nfolds;
   }
-
-//  @Override public void cancel(String msg){
-//    if(!cancelled()){
-//      super.cancel(msg);
-//      if(_parentjob != null)
-//        Job.findJob(_parentjob).cancel(msg);
-//      if(_subjobs != null)
-//        for(GLM2 g:_subjobs)g.cancel("Parent job cancelled with msg: " + msg);
-//    }
-//  }
 
   public static Job gridSearch(Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds){
     return gridSearch(destinationKey, dinfo, glm, lambda, alpha,nfolds,DEFAULT_BETA_EPS);
@@ -176,9 +165,8 @@ public class GLM2 extends ModelJob {
       _dinfo = dinfo;
       _fjt = fjt;
     }
+
     @Override public Iteration clone(){return new Iteration(_model,_solver,_dinfo,_fjt);}
-
-
     @Override public void callback(final GLMIterationTask glmt) {
       try {
 //        System.out.println(Utils.pprint(glmt._gram.getXX()));
@@ -257,7 +245,6 @@ public class GLM2 extends ModelJob {
   public void run(final H2OCountedCompleter completer){
     assert alpha.length == 1;
     UKV.remove(dest());
-
     new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
       @Override public void callback(final YMUTask ymut){
         new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
@@ -308,11 +295,8 @@ public class GLM2 extends ModelJob {
       }
     };
     callback.addToPendingCount(n_folds-1);
-//    GLM2 [] subjobs = new GLM2[n_folds];
     for(int i = 0; i < n_folds; ++i)
       new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).run(callback);
-//    _subjobs = subjobs;
-//    for(int i = 0; i < n_folds; ++i)_subjobs[i].run(callback);
   }
 
   // Expand grid search related argument sets
@@ -424,12 +408,6 @@ public class GLM2 extends ModelJob {
       for(GLM2 g:_jobs)sum += g.progress();
       return sum/_jobs.length;
     }
-
-//    @Override public void cancel(String msg){
-//      if(_jobs != null)for(GLM2 g:_jobs)g.cancel("Parent job cancelled with msg: " + msg);
-//      super.cancel(msg);
-//    }
-
     @Override
     public Job fork(){
       DKV.put(destination_key, new GLMGrid(_jobs));

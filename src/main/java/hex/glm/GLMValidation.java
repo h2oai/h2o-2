@@ -8,6 +8,7 @@ import java.text.DecimalFormat;
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.api.RequestBuilders;
 
 /**
  * Class for GLMValidation.
@@ -48,6 +49,7 @@ public class GLMValidation extends Iced {
   final GLMParams _glm;
   @API(help="")
   final private int _rank;
+
 
   private static final DecimalFormat DFORMAT = new DecimalFormat("##.##");
 
@@ -162,8 +164,12 @@ public class GLMValidation extends Iced {
    *
    * @return estimate of the area under ROC curve of this classifier.
    */
+  static double[] tprs;
+  static double[] fprs;
   protected void computeAUC() {
     if( _cms == null ) return;
+    tprs = new double[_cms.length];
+    fprs = new double[_cms.length];
     double auc = 0;           // Area-under-ROC
     double TPR_pre = 1;
     double FPR_pre = 1;
@@ -173,6 +179,8 @@ public class GLMValidation extends Iced {
       auc += trapeziod_area(FPR_pre, FPR, TPR_pre, TPR);
       TPR_pre = TPR;
       FPR_pre = FPR;
+      tprs[t] = TPR;
+      fprs[t] = FPR;
     }
     auc += trapeziod_area(FPR_pre, 0, TPR_pre, 0);
     this.auc = Math.round(1000*auc)*0.001;
@@ -205,6 +213,8 @@ public class GLMValidation extends Iced {
     sb.append("</table>");
 
     if(_glm.family == Family.binomial){
+      sb.append("<span><b>ROC curve</b></span>");
+      ROCc(sb);
       int best = (int)(100*best_threshold);
       sb.append("<span><b>Confusion Matrix at decision threshold:</b></span><span>" + DEFAULT_THRESHOLDS[best] + "</span>");
       confusionHTML(_cms[best], sb);
@@ -241,6 +251,163 @@ public class GLMValidation extends Iced {
     0.49, 0.50, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.60, 0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67,
     0.68, 0.69, 0.70, 0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79, 0.80, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86,
     0.87, 0.88, 0.89, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.00 };
+
+  public void ROCc(StringBuilder sb) {
+    sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
+    sb.append("<div id=\"ROC\">");
+    sb.append("<style type=\"text/css\">");
+    sb.append(".axis path," +
+            ".axis line {\n" +
+            "fill: none;\n" +
+            "stroke: black;\n" +
+            "shape-rendering: crispEdges;\n" +
+            "}\n" +
+
+            ".axis text {\n" +
+            "font-family: sans-serif;\n" +
+            "font-size: 11px;\n" +
+            "}\n");
+
+    sb.append("</style>");
+    sb.append("<div id=\"rocCurve\" style=\"display:inline;\">");
+    sb.append("<script type=\"text/javascript\">");
+
+    sb.append("//Width and height\n");
+    sb.append("var w = 500;\n"+
+            "var h = 300;\n"+
+            "var padding = 40;\n"
+    );
+    sb.append("var dataset = [");
+
+    for(int c = 0; c < _cms.length; c++) {
+      if (c == 0) {
+        sb.append("["+String.valueOf(fprs[c])+",").append(String.valueOf(tprs[c])).append("]");
+      }
+      sb.append(", ["+String.valueOf(fprs[c])+",").append(String.valueOf(tprs[c])).append("]");
+    }
+    for(int c = 0; c < 2*_cms.length; c++) {
+        sb.append(", ["+String.valueOf(c/(2.0*_cms.length))+",").append(String.valueOf(c/(2.0*_cms.length))).append("]");
+    }
+    sb.append("];\n");
+
+    sb.append(
+            "//Create scale functions\n"+  
+                    "var xScale = d3.scale.linear()\n"+
+                    ".domain([0, d3.max(dataset, function(d) { return d[0]; })])\n"+
+                    ".range([padding, w - padding * 2]);\n"+
+
+                    "var yScale = d3.scale.linear()"+
+                    ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
+                    ".range([h - padding, padding]);\n"+
+
+                    "var rScale = d3.scale.linear()"+
+                    ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
+                    ".range([2, 5]);\n"+
+
+                    "//Define X axis\n"+
+                    "var xAxis = d3.svg.axis()\n"+
+                    ".scale(xScale)\n"+
+                    ".orient(\"bottom\")\n"+
+                    ".ticks(5);\n"+
+
+                    "//Define Y axis\n"+
+                    "var yAxis = d3.svg.axis()\n"+
+                    ".scale(yScale)\n"+
+                    ".orient(\"left\")\n"+
+                    ".ticks(5);\n"+
+
+                    "//Create SVG element\n"+
+                    "var svg = d3.select(\"#rocCurve\")\n"+
+                    ".append(\"svg\")\n"+
+                    ".attr(\"width\", w)\n"+
+                    ".attr(\"height\", h);\n"+
+
+                    "//Create circles\n"+
+                    "svg.selectAll(\"circle\")\n"+
+                    ".data(dataset)\n"+
+                    ".enter()\n"+
+                    ".append(\"circle\")\n"+
+                    ".attr(\"cx\", function(d) {\n"+
+                    "return xScale(d[0]);\n"+
+                    "})\n"+
+                    ".attr(\"cy\", function(d) {\n"+
+                    "return yScale(d[1]);\n"+
+                    "})\n"+
+                    ".attr(\"fill\", function(d) {\n"+
+                    "  if (d[0] == d[1]) {\n"+
+                    "    return \"red\"\n"+
+                    "  } else {\n"+
+                    "  return \"blue\"\n"+
+                    "  }\n"+
+                    "})\n"+
+                    ".attr(\"r\", function(d) {\n"+
+                    "  if (d[0] == d[1]) {\n"+
+                    "    return 1\n"+
+                    "  } else {\n"+
+                    "  return 2\n"+
+                    "  }\n"+
+                    "});\n"+
+                    
+                    "/*"+
+                    "//Create labels\n"+
+                    "svg.selectAll(\"text\")"+
+                    ".data(dataset)"+
+                    ".enter()"+
+                    ".append(\"text\")"+
+                    ".text(function(d) {"+
+                    "return d[0] + \",\" + d[1];"+
+                    "})"+
+                    ".attr(\"x\", function(d) {"+
+                    "return xScale(d[0]);"+
+                    "})"+
+                    ".attr(\"y\", function(d) {"+
+                    "return yScale(d[1]);"+
+                    "})"+
+                    ".attr(\"font-family\", \"sans-serif\")"+
+                    ".attr(\"font-size\", \"11px\")"+
+                    ".attr(\"fill\", \"red\");"+
+                    "*/\n"+
+
+                    "//Create X axis\n"+
+                    "svg.append(\"g\")"+
+                    ".attr(\"class\", \"axis\")"+
+                    ".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
+                    ".call(xAxis);\n"+
+
+                    "//X axis label\n"+
+                    "d3.select('#rocCurve svg')"+
+                    ".append(\"text\")"+
+                    ".attr(\"x\",w/2)"+
+                    ".attr(\"y\",h - 5)"+
+                    ".attr(\"text-anchor\", \"middle\")"+
+                    ".text(\"False Positive Rate\");\n"+
+
+                    "//Create Y axis\n"+
+                    "svg.append(\"g\")"+
+                    ".attr(\"class\", \"axis\")"+
+                    ".attr(\"transform\", \"translate(\" + padding + \",0)\")"+
+                    ".call(yAxis);\n"+
+
+                    "//Y axis label\n"+
+                    "d3.select('#rocCurve svg')"+
+                    ".append(\"text\")"+
+                    ".attr(\"x\",150)"+
+                    ".attr(\"y\",-5)"+
+                    ".attr(\"transform\", \"rotate(90)\")"+
+                    //".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
+                    ".attr(\"text-anchor\", \"middle\")"+
+                    ".text(\"True Positive Rate\");\n"+
+
+                    "//Title\n"+
+                    "d3.select('#rocCurve svg')"+
+                    ".append(\"text\")"+
+                    ".attr(\"x\",w/2)"+
+                    ".attr(\"y\",padding - 20)"+
+                    ".attr(\"text-anchor\", \"middle\")"+
+                    ".text(\"ROC\");\n");
+
+    sb.append("</script>");
+    sb.append("</div>");
+
+  }
 }
-
-

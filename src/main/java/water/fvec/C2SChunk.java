@@ -1,5 +1,6 @@
 package water.fvec;
 
+import java.util.Arrays;
 import water.*;
 import water.parser.DParseTask;
 
@@ -7,7 +8,6 @@ import water.parser.DParseTask;
  * The scale/bias function, where data is in SIGNED bytes before scaling.
  */
 public class C2SChunk extends Chunk {
-  static private final long _NA = Short.MIN_VALUE;
   static final int OFF=8+4;
   public double _scale;
   int _bias;
@@ -18,14 +18,14 @@ public class C2SChunk extends Chunk {
   }
   @Override protected final long at8_impl( int i ) {
     long res = UDP.get2(_mem,(i<<1)+OFF);
-    if( res == _NA ) throw new IllegalArgumentException("at8 but value is missing");
+    if( res == C2Chunk._NA ) throw new IllegalArgumentException("at8 but value is missing");
     return (long)((res + _bias)*_scale);
   }
   @Override protected final double atd_impl( int i ) {
     long res = UDP.get2(_mem,(i<<1)+OFF);
-    return (res == _NA)?Double.NaN:(res + _bias)*_scale;
+    return (res == C2Chunk._NA)?Double.NaN:(res + _bias)*_scale;
   }
-  @Override protected final boolean isNA_impl( int i ) { return UDP.get2(_mem,(i<<1)+OFF) == _NA; }
+  @Override protected final boolean isNA_impl( int i ) { return UDP.get2(_mem,(i<<1)+OFF) == C2Chunk._NA; }
   @Override boolean set_impl(int idx, long l) {
     long res = (long)(l/_scale)-_bias; // Compressed value
     double d = (res+_bias)*_scale;     // Reverse it
@@ -34,9 +34,16 @@ public class C2SChunk extends Chunk {
     UDP.set2(_mem,(idx<<1)+OFF,(short)res);
     return true;
   }
-  @Override boolean set_impl(int i, double d) { throw H2O.unimpl(); }
+  @Override boolean set_impl(int i, double d) {
+    short s = (short)((d/_scale)-_bias);
+    if( s == C2Chunk._NA ) return false;
+    double d2 = (s+_bias)*_scale;
+    if( d!=d2 ) return false;
+    UDP.set2(_mem,(i<<1)+OFF,s);
+    return true;
+  }
   @Override boolean set_impl(int i, float f ) { return false; }
-  @Override boolean setNA_impl(int idx) { UDP.set2(_mem,(idx<<1)+OFF,(short)_NA); return true; }
+  @Override boolean setNA_impl(int idx) { UDP.set2(_mem,(idx<<1)+OFF,(short)C2Chunk._NA); return true; }
   @Override boolean hasFloat() { return _scale < 1.0; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C2SChunk read(AutoBuffer bb) {
@@ -49,18 +56,16 @@ public class C2SChunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
-    int x = (int)dx;
-    if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
+    assert DParseTask.fitsIntoInt(dx);
+    Arrays.fill(nc._xs = MemoryManager.malloc4(_len), (int)dx);
+    nc._ls = MemoryManager.malloc8(_len);
     for( int i=0; i<_len; i++ ) {
-      long res = UDP.get2(_mem,(i<<1)+OFF);
-      if( res == _NA ) nc.setInvalid(i);
-      else {
-        nc._ls[i] = res+_bias;
-        nc._xs[i] = x;
-      }
+      int res = UDP.get2(_mem,(i<<1)+OFF);
+      if( res == C2Chunk._NA ) nc._xs[i] = Integer.MIN_VALUE;
+      else                     nc._ls[i] = res+_bias;
     }
     return nc;
   }
-  public int pformat_len0() { return pformat_len0(_scale,5); }
-  public String pformat0() { return "% 10.4e"; }
+  public int pformat_len0() { return hasFloat() ? pformat_len0(_scale,5) : super.pformat_len0(); }
+  public String  pformat0() { return hasFloat() ? "% 10.4e" : super.pformat0(); }
 }

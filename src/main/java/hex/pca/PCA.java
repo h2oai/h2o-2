@@ -3,18 +3,20 @@ package hex.pca;
 import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 
-import java.util.*;
-
-import org.apache.commons.lang.ArrayUtils;
+import java.util.ArrayList;
 
 import water.Job.ColumnsJob;
 import water.*;
-import water.api.DocGen;
+import water.api.*;
+import water.api.Request.API;
+import water.api.Request.Default;
+import water.api.RequestBuilders.Response;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.RString;
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
+
 
 /**
  * Principal Components Analysis
@@ -27,6 +29,8 @@ public class PCA extends ColumnsJob {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "pca";
+
+  static final int MAX_COL = 10000;
 
   @API(help = "The PCA Model")
   public PCAModel pca_model;
@@ -60,10 +64,10 @@ public class PCA extends ColumnsJob {
     Vec[] vecs = fr.vecs();
 
     // Remove constant cols and cols with too many NAs
-    // TODO: For now, remove non-numeric cols (until PCA score can handle them)
     ArrayList<Integer> removeCols = new ArrayList<Integer>();
     for(int i = 0; i < vecs.length; i++) {
-      if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2 || vecs[i].domain() != null)
+      if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2)
+      // if(vecs[i].min() == vecs[i].max() || vecs[i].naCnt() > vecs[i].length()*0.2 || vecs[i].domain() != null)
         removeCols.add(i);
     }
     if(!removeCols.isEmpty()) {
@@ -78,6 +82,13 @@ public class PCA extends ColumnsJob {
     UKV.put(destination_key, myModel);
   }
 
+  @Override protected void init() {
+    super.init();
+    // if(source.vecs().length > MAX_COL)
+    if(source.numExpCols() > MAX_COL)
+      throw new IllegalArgumentException("Cannot process more than " + MAX_COL + " columns, taking into account expanded categoricals");
+  }
+
   @Override protected Response redirect() {
     return PCAProgressPage.redirect(this, self(), dest());
   }
@@ -90,6 +101,7 @@ public class PCA extends ColumnsJob {
     // Note: Singular values ordered in weakly descending order by algorithm
     double[] Sval = mySVD.getSingularValues();
     double[][] eigVec = mySVD.getV().getArray();  // rows = features, cols = principal components
+    assert Sval.length == eigVec.length;
     // DKV.put(EigenvectorMatrix.makeKey(input("source"), destination_key), new EigenvectorMatrix(eigVec));
 
     // Compute standard deviation
@@ -110,24 +122,19 @@ public class PCA extends ColumnsJob {
       cumVar[i] = i == 0 ? propVar[0] : cumVar[i-1] + propVar[i];
     }
 
-    // Key dataKey = Key.make(input("source"));
     Key dataKey = input("source") == null ? null : Key.make(input("source"));
     int ncomp = Math.min(getNumPC(sdev, tolerance), max_pc);
     PCAParams params = new PCAParams(max_pc, tolerance, standardize);
     return new PCAModel(destination_key, dataKey, dinfo, tsk, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
   }
 
-  static class reverseDouble implements Comparator<Double> {
-    @Override public int compare(Double a, Double b) {
-        return b.compareTo(a);
-      }
-    }
-
   public static int getNumPC(double[] sdev, double tol) {
     if(sdev == null) return 0;
     double cutoff = tol*sdev[0];
-    int ind = Arrays.binarySearch(ArrayUtils.toObject(sdev), cutoff, new reverseDouble());
-    return Math.abs(ind+1);
+    for( int i=0; i<sdev.length; i++ )
+      if( sdev[i] < cutoff )
+        return i;
+    return sdev.length;
   }
 
   public static String link(Key src_key, String content) {
@@ -137,9 +144,4 @@ public class PCA extends ColumnsJob {
       rs.replace("content", content);
       return rs.toString();
   }
-
-  /*@Override public float progress() {
-    ChunkProgress progress = UKV.get(progressKey());
-    return (progress != null ? progress.progress() : 0);
-  }*/
 }

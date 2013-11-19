@@ -10,40 +10,42 @@ import h2o, h2o_browse as h2b
 # 'key' 'description' 'destination_key' could all be interesting things you want to pattern match agains?
 # what the heck, just look for a match in any of the 3 (no regex)
 # if pattern is not None, only stall on jobs that match the pattern (in any of those 3)
-def pollWaitJobs(pattern=None, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=None):
+def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=None):
     wait = True
     waitTime = 0
     ignoredJobs = set()
     while (wait):
         a = h2o.nodes[0].jobs_admin(timeoutSecs=pollTimeoutSecs)
-        ## print "jobs_admin():", h2o.dump_json(a)
+        h2o.verboseprint("jobs_admin():", h2o.dump_json(a))
         jobs = a['jobs']
         busy = 0
         for j in jobs:
+            if errorIfCancelled and j['cancelled']:
+                h2o.check_sandbox_for_errors()
+                print ("ERROR: not stopping, but: pollWaitJobs found a cancelled job when it shouldn't have:\n %s" % h2o.dump_json(j))
+                print ("Continuing so maybe a json response will give more info")
+                
             ### h2o.verboseprint(j)
             if j['end_time'] == '':
                 if not pattern: 
-                    print "description:", j['description'], "end_time:", j['end_time']
+                    # always print progress if busy job (no pattern used
+                    print "time:", time.strftime("%I:%M:%S"), "progress:",  j['progress'], j['destination_key'], 
+                    h2o.verboseprint("description:", j['description'], "end_time:", j['end_time'])
                     busy +=1
                     h2o.verboseprint("pollWaitJobs: found a busy job, now: %s" % busy)
                 else:
                     if (pattern in j['key']) or (pattern in j['destination_key']) or (pattern in j['description']):
-                        print "description:", j['description'], "end_time:", j['end_time']
+                        ## print "description:", j['description'], "end_time:", j['end_time']
                         busy += 1
                         h2o.verboseprint("pollWaitJobs: found a pattern-matched busy job, now %s" % busy)
+                        # always print progress if pattern is used and matches
+                        print "time:", time.strftime("%I:%M:%S"), "progress:",  j['progress'], j['destination_key'], 
                     # we only want to print the warning message once
                     elif j['key'] not in ignoredJobs:
                         jobMsg = "%s %s %s" % (j['key'], j['description'], j['destination_key'])
-                        print " %s job in progress but we're ignoring it. Doesn't match pattern." % jobMsg
+                        h2o.verboseprint(" %s job in progress but we're ignoring it. Doesn't match pattern." % jobMsg)
                         # I guess "key" is supposed to be unique over all time for a job id?
                         ignoredJobs.add(j['key'])
-
-            elif waitTime: # we've been waiting
-                h2o.verboseprint("waiting", waitTime, "secs, still not done - ",\
-                "destination_key:", j['destination_key'], \
-                "progress:",  j['progress'], \
-                "cancelled:", j['cancelled'],\
-                "end_time:",  j['end_time'])
 
         if stallForNJobs:
             waitFor = stallForNJobs

@@ -65,7 +65,7 @@ public class ImportFiles2 extends Request2 {
         else if(p2.startsWith("s3://")) serveS3();
         else serveLocalDisk();
       }
-      return new Response(Response.Status.done, this, -1, -1, null);
+      return Response.done(this);
     } catch( IOException e ) {
       StringBuilder sb = new StringBuilder();
       PrintWriter pw = new PrintWriter(Streams.writerForAppendable(sb));

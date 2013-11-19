@@ -30,8 +30,7 @@ public class AppendableVec extends Vec {
   }
 
   public AppendableVec( Key key) {
-    super(key, null);
-    assert key != null;
+    super(key, (long[])null);
     _espc = new long[4];
     _chunkTypes = new byte[4];
   }
@@ -46,11 +45,11 @@ public class AppendableVec extends Vec {
       _espc   = Arrays.copyOf(_espc,_espc.length<<1);
       _chunkTypes = Arrays.copyOf(_chunkTypes,_chunkTypes.length<<1);
     }
-    _espc[cidx] = chk._len;
+    _espc[cidx] = chk._len2;
     _chunkTypes[cidx] = chk.type();
     _missingCnt += chk._naCnt;
     _strCnt += chk._strCnt;
-    _totalCnt += chk._len;
+    _totalCnt += chk._len2;
   }
 
   // What kind of data did we find?  NA's?  Strings-only?  Floats or Ints?

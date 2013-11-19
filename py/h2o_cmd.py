@@ -52,7 +52,11 @@ def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
 def runExec(node=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     # no such thing as GLMView..don't use retryDelaySecs
-    return node.exec_query(timeoutSecs, **kwargs)
+    a = node.exec_query(timeoutSecs, **kwargs)
+    # temporary?
+    if h2o.beta_features:
+        h2o.check_sandbox_for_errors()
+    return a
 
 def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for KMeans')
@@ -82,6 +86,10 @@ def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, returnFas
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
     return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, returnFast=returnFast, **kwargs)
+
+def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, noPoll=False, **kwargs):
+    if not node: node = h2o.nodes[0]
+    return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
 
 def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for NN')
@@ -323,25 +331,50 @@ def infoFromInspect(inspect, csvPathname):
 
 def infoFromSummary(summaryResult, noPrint=False):
     if h2o.beta_features:
-        names = summaryResult['names']
-        means = summaryResult['means']
+        # names = summaryResult['names']
+        # means = summaryResult['means']
         summaries = summaryResult['summaries']
-        for column in summaries:
-            start = column['start']
-            zeros = column['zeros']
-            bins = column['bins']
-            binsz = column['binsz']
-            domains = column['domains']
-            maxs = column['maxs']
-            mins = column['mins']
-            percentileValues = column['percentileValues']
 
-        if not noPrint:
-            print "\n\n************************"
-            print "start:", start
-            print "zeros:", zeros
-            print "len(names):", len(names)
-            print "len(means):", len(means)
+        for column in summaries:
+            colname = column['colname']
+            coltype = column['type']
+            nacnt = column['nacnt']
+
+            stats = column['stats']
+            stattype= stats['type']
+            mean = stats['mean']
+            sd = stats['sd']
+            zeros = stats['zeros']
+            mins = stats['mins']
+            maxs = stats['maxs']
+            pct = stats['pct']
+            pctile = stats['pctile']
+
+            hstart = column['hstart']
+            hstep = column['hstep']
+            hbrk = column['hbrk']
+            hcnt = column['hcnt']
+
+            if not noPrint:
+                print "\n\n************************"
+                print "colname:", colname
+                print "coltype:", coltype
+                print "nacnt:", nacnt
+
+                print "stattype:", stattype
+                print "mean:", mean
+                print "sd:", sd
+                print "zeros:", zeros
+                print "mins:", mins
+                print "maxs:", maxs
+                print "pct:", pct
+                print "pctile:", pctile
+
+                # histogram stuff
+                print "hstart:", hstart
+                print "hstep:", hstep
+                print "hbrk:", hbrk
+                print "hcnt:", hcnt
 
     else:
         summary = summaryResult['summary']

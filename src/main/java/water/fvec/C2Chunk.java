@@ -41,11 +41,12 @@ public class C2Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    if (nc == null) { System.err.println("DEBUG: Bad Chunk ns"); System.err.flush();} // DEBUG
-
+    nc._xs = MemoryManager.malloc4(_len);
+    nc._ls = MemoryManager.malloc8(_len);
     for( int i=0; i<_len; i++ ) {
-      if( isNA_impl(i) ) nc.setInvalid(i);
-      else nc._ls[i] = at8_impl(i);
+      int res = UDP.get2(_mem,(i<<1)+OFF);
+      if( res == C2Chunk._NA ) nc._xs[i] = Integer.MIN_VALUE;
+      else                     nc._ls[i] = res;
     }
     return nc;
   }

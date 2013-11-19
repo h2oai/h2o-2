@@ -2,7 +2,6 @@ package water.fvec;
 
 import java.util.Arrays;
 import java.util.UUID;
-import sun.security.krb5.internal.SeqNumber;
 
 import water.*;
 import water.H2O.H2OCallback;
@@ -49,7 +48,7 @@ public class Vec extends Iced {
   public static final int LOG_CHK = ValueArray.LOG_CHK; // Same as VA to help conversions
   /** Chunk size.  Bigger increases batch sizes, lowers overhead costs, lower
    * increases fine-grained parallelism. */
-  static final long CHUNK_SZ = 1L << LOG_CHK;
+  static final int CHUNK_SZ = 1 << LOG_CHK;
 
   /** Key mapping a Value which holds this Vec.  */
   final public Key _key;        // Top-level key
@@ -57,7 +56,8 @@ public class Vec extends Iced {
    *  chunks, so the last entry is the total number of rows.  This field is
    *  dead/ignored in subclasses that are guaranteed to have fixed-sized chunks
    *  such as file-backed Vecs. */
-  final private long _espc[];
+  final public long _espc[];
+
   /** Enum/factor/categorical names. */
   public String [] _domain;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
@@ -75,11 +75,13 @@ public class Vec extends Iced {
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
-  Vec( Key key, long espc[] ) {
+  public Vec( Key key, long espc[] ) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
   }
+
+  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; assert group()==v.group(); }
 
   // A 1-element Vec
   public Vec( Key key, double d ) {
@@ -356,8 +358,9 @@ public class Vec extends Iced {
 
   /** Stop writing into this Vec.  Rollup stats will again (lazily) be computed. */
   public void postWrite() {
-    if( _naCnt==-2 ) {
-      _naCnt=-1;
+    Vec vthis = DKV.get(_key).get();
+    if( vthis._naCnt==-2 ) {
+      _naCnt = vthis._naCnt=-1;
       new TAtomic<Vec>() {
         @Override public Vec atomic(Vec v) { if( v!=null && v._naCnt==-2 ) v._naCnt=-1; return v; }
       }.invoke(_key);
@@ -370,16 +373,13 @@ public class Vec extends Iced {
    *  compute chunks in an alternative way, such as file-backed Vecs. */
   int elem2ChunkIdx( long i ) {
     assert 0 <= i && i < length() : "0 <= "+i+" < "+length();
-    int x = Arrays.binarySearch(_espc, i);
-    int res = x<0?-x - 2:x;
     int lo=0, hi = nChunks();
     while( lo < hi-1 ) {
       int mid = (hi+lo)>>>1;
       if( i < _espc[mid] ) hi = mid;
       else                 lo = mid;
     }
-    if(res != lo)
-      assert(res == lo):res + " != " + lo + ", i = " + i + ", espc = " + Arrays.toString(_espc);
+    while( _espc[lo+1] == i ) lo++;
     return lo;
   }
 
@@ -404,12 +404,19 @@ public class Vec extends Iced {
    *  probably trigger an OOM!  */
   public Value chunkIdx( int cidx ) {
     Value val = DKV.get(chunkKey(cidx));
-    assert val != null : "Missing chunk "+cidx+" for "+_key;
+    assert checkMissing(cidx,val);
     return val;
   }
 
+  protected boolean checkMissing(int cidx, Value val) {
+    if( val != null ) return true;
+    assert val != null : "Missing chunk "+cidx+" for "+_key;
+    return false;
+  }
+
+
   /** Make a new random Key that fits the requirements for a Vec key. */
-  static Key newKey(){return newKey(Key.make());}
+  static public Key newKey(){return newKey(Key.make());}
 
   public static final int KEY_PREFIX_LEN = 4+4+1+1;
   /** Make a new Key that fits the requirements for a Vec key, based on the
@@ -512,6 +519,11 @@ public class Vec extends Iced {
       UKV.remove(chunkKey(i),fs);
   }
 
+  @Override public boolean equals( Object o ) {
+    if( !(o instanceof Vec) ) return false;
+    return ((Vec)o)._key.equals(_key);
+  }
+  @Override public int hashCode() { return _key.hashCode(); }
 
   /**
    * Class representing the group of vectors.
@@ -541,7 +553,9 @@ public class Vec extends Iced {
    * @author tomasnykodym
    *
    */
-  public static class VectorGroup extends Iced{
+  public static class VectorGroup extends Iced {
+    // The common shared vector group for length==1 vectors
+    public static VectorGroup VG_LEN1 = new VectorGroup();
     final int _len;
     final Key _key;
     private VectorGroup(Key key, int len){_key = key;_len = len;}

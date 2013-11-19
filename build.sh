@@ -24,7 +24,6 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 # This is where the source files (java) and resources are relative to the path of this file
       SRC=src/main/java
   TESTSRC=src/test/java
-SAMPLESRC=src/samples/java
 RESOURCES=src/main/resources
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
@@ -108,7 +107,6 @@ function build_classes() {
         $SRC/water/*java \
         $SRC/water/*/*java \
         $SRC/jsr166y/*java \
-        $SAMPLESRC/water/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
 }
@@ -126,7 +124,7 @@ function build_jar() {
     echo "creating jar file... ${JAR_FILE}"
     # include all libraries
     cd ${JAR_ROOT}
-    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v mapr`
+    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v 'hadoop/mapr' | grep -v 'hadoop/hdp'`
     cd ..
     # include H2O classes
     "$JAR" uf ${JAR_FILE} -C "${CLASSES}"   .
@@ -143,6 +141,16 @@ function build_src_jar() {
     # include H2O source files
     "$JAR" cf ${SRC_JAR_FILE} -C "${SRC}" .
     "$JAR" uf ${SRC_JAR_FILE} -C "${TESTSRC}" .
+}
+
+function build_samples() {
+    echo "building samples..."
+    mkdir -p h2o-samples/target/classes
+    "$JAVAC" \
+    	-cp ${JAR_FILE}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/* \
+    	-d h2o-samples/target/classes \
+    	-sourcepath h2o-samples/src/main/java \
+    	h2o-samples/src/main/java/*/*java
 }
 
 function build_javadoc() {
@@ -172,6 +180,7 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
 build_src_jar
+build_samples
 if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi

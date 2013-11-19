@@ -174,7 +174,6 @@ class Basic(unittest.TestCase):
 
                 cm = gbmTrainView['gbm_model']['cm']
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-                print "Last line of this cm might be NAs, not CM"
                 print "\nTrain\n==========\n"
                 print h2o_gbm.pp_cm(cm)
 

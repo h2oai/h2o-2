@@ -2,7 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_util
 
-print "Create csv with lots of same data (95% 0?), so gz will have high compression ratio"
+print "Create csv with lots of same data (98% 0?), so gz will have high compression ratio"
 print "Cat a bunch of them together, to get an effective large blow up inside h2o"
 print "Can also copy the files to test multi-file gz parse...that will behave differently"
 print "Behavior may be different depending on whether small ints are used, reals or used, or enums are used"
@@ -16,8 +16,12 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            r = h2o_util.choice_with_probability([(1.1, .05), (0.1, .95)])
-            rowData.append(r)
+            # r = h2o_util.choice_with_probability([(1.1, .02), (0.1, .98)])
+            ones = .00001
+            r = h2o_util.choice_with_probability([(1, ones), (0, 1-ones)])
+            # make r a many-digit real, so gzip compresses even more better!
+            # rowData.append('%#034.32e' % r)
+            rowData.append('%.1f' % r)
 
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
@@ -34,7 +38,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=14)
+            h2o.build_cloud(3,java_heap_GB=1)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -46,9 +50,11 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # summary fails with 100000 cols
-            (10, 5000, 'cE', 600),
-            (10, 10000, 'cF', 600),
-            (10, 50000, 'cF', 600),
+            # overwrite the key each time to save space?
+            (100, 40000, 'cF', 600),
+            (100, 20000, 'cF', 600),
+            (100, 10000, 'cF', 600),
+            (100, 5000, 'cF', 600),
             ]
 
         FILEREPL = 200
@@ -95,10 +101,14 @@ class Basic(unittest.TestCase):
             start = time.time()
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
-            h2o_cmd.infoFromInspect(inspect, csvPathname)
-            print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+            num_rows = inspect['num_rows']
+            num_cols = inspect['num_cols']
+            value_size_bytes = inspect['value_size_bytes']
+            h2o_cmd.infoFromInspect(inspect, csvPathnameReplgz)
+            print "\n" + csvPathnameReplgz, \
+                "\n    num_rows:", "{:,}".format(num_rows), \
+                "\n    num_cols:", "{:,}".format(num_cols), \
+                "\n    value_size_bytes:", "{:,}".format(value_size_bytes)
 
             # should match # of cols in header or ??
             self.assertEqual(inspect['num_cols'], colCount,

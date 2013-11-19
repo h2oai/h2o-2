@@ -1,9 +1,9 @@
 package water.api;
 
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.fvec.*;
-import water.util.Utils;
-import hex.gbm.DRF;
+import hex.drf.DRF;
 import hex.gbm.GBM;
 
 public class Inspect2 extends Request2 {
@@ -51,7 +51,7 @@ public class Inspect2 extends Request2 {
 
   // Called from some other page, to redirect that other page to this page.
   public static Response redirect(Request req, String src_key) {
-    return new Response(Response.Status.redirect, req, -1, -1, "Inspect2", "src_key", src_key );
+    return Response.redirect(req, "/2/Inspect2", "src_key", src_key );
   }
 
   // Just validate the frame, and fill in the summary bits
@@ -67,7 +67,7 @@ public class Inspect2 extends Request2 {
     cols = new ColSummary[numCols];
     for( int i=0; i<cols.length; i++ )
       cols[i] = new ColSummary(src_key._names[i],src_key.vecs()[i]);
-    return new Response(Response.Status.done, this, -1, -1, null);
+    return Response.done(this);
   }
 
   public static String jsonLink(Key key){return "2/Inspect2.json?src_key=" + key;}
@@ -119,13 +119,13 @@ public class Inspect2 extends Request2 {
     for( int i=0; i<cols.length; i++ )
       sb.append("<td><b>").append(cols[i].name).append("</b></td>");
     sb.append("</tr>");
-    
+
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Type").append("</td>");
     for( int i=0; i<cols.length; i++ )
       sb.append("<td><b>").append(cols[i].type).append("</b></td>");
     sb.append("</tr>");
-    
+
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Min").append("</td>");
     for( int i=0; i<cols.length; i++ )

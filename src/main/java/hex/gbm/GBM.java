@@ -2,6 +2,7 @@ package hex.gbm;
 
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
+import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
 import water.*;
 import water.api.DocGen;
@@ -28,7 +29,7 @@ public class GBM extends SharedTreeModelBuilder {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) { super(key,dataKey,testKey,names,domains,ntrees); }
-    public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm) { super(prior, trees, err, cm); }
+    public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { super(prior, trees, err, cm, tstats); }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
 
@@ -75,7 +76,8 @@ public class GBM extends SharedTreeModelBuilder {
     DKV.put(outputKey, model);
     // Build trees until we hit the limit
     int tid;
-    DTree[] ktrees = null;
+    DTree[] ktrees = null;              // Trees
+    TreeStats tstats = new TreeStats(); // Tree stats
     for( tid=0; tid<ntrees; tid++) {
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
@@ -92,14 +94,19 @@ public class GBM extends SharedTreeModelBuilder {
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
-      Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid,ktrees);
-      model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm);
-      DKV.put(outputKey, model);
+      tstats.updateBy(ktrees);
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
     }
-    Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid,ktrees);
-    model = new GBMModel(model, null, (float)sc._sum/_nrows, sc._cm);
-    DKV.put(outputKey, model);
+    // Final scoring
+    model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
     cleanUp(fr,t_build); // Shared cleanup
+  }
+
+  private GBMModel doScoring(GBMModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats ) {
+    Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid,ktrees);
+    model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm, tstats);
+    DKV.put(outputKey, model);
+    return model;
   }
 
   // --------------------------------------------------------------------------
@@ -227,6 +234,7 @@ public class GBM extends SharedTreeModelBuilder {
           if( dn._split._col == -1 ) udn.do_not_split();
           else did_split = true;
         }
+        tree.depth++;
         leafs[k]=tmax;          // Setup leafs for next tree level
       }
 
@@ -300,10 +308,10 @@ public class GBM extends SharedTreeModelBuilder {
       }
     }.doAll(fr);
 
-    // Print the generated K trees
-    //for( int k=0; k<_nclass; k++ )
-    //  if( ktrees[k] != null )
-    //    System.out.println(ktrees[k].root().toString2(new StringBuilder(),0));
+    // Collect leaves stats
+    for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
+    // DEBUG: Print the generated K trees
+    //printGenerateTrees(ktrees);
 
     return ktrees;
   }
@@ -372,13 +380,13 @@ public class GBM extends SharedTreeModelBuilder {
   // columns.  GBM algo: find the lowest error amongst *all* columns.
   static class GBMDecidedNode extends DecidedNode<GBMUndecidedNode> {
     GBMDecidedNode( GBMUndecidedNode n ) { super(n); }
-    @Override GBMUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
+    @Override public GBMUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
       return new GBMUndecidedNode(_tree,_nid,nhists);
     }
 
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
-    @Override DTree.Split bestCol( GBMUndecidedNode u ) {
+    @Override public DTree.Split bestCol( GBMUndecidedNode u ) {
       DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
       DHistogram hs[] = u._hs;
       if( hs == null ) return best;
@@ -401,7 +409,7 @@ public class GBM extends SharedTreeModelBuilder {
     GBMUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
     // Randomly select mtry columns to 'score' in following pass over the data.
     // In GBM, we use all columns (as opposed to RF, which uses a random subset).
-    @Override int[] scoreCols( DHistogram[] hs ) { return null; }
+    @Override public int[] scoreCols( DHistogram[] hs ) { return null; }
   }
 
   // ---

@@ -14,6 +14,7 @@ import water.util.Utils;
  * @author tomasnykodym
  *
  */
+
 public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
   final protected GLMParams _glm;
   public GLMTask(Job job, DataInfo dinfo, GLMParams glm){this(job,dinfo,glm,null);}

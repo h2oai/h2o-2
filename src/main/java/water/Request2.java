@@ -13,6 +13,7 @@ import water.util.Utils;
 
 public abstract class Request2 extends Request {
   protected transient Properties _parms;
+  protected @API(help="Response stats and info.") ResponseInfo response_info;
 
   public String input(String fieldName) {
     return _parms == null ? null : _parms.getProperty(fieldName);
@@ -494,4 +495,8 @@ public abstract class Request2 extends Request {
   }
 
   @Override public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
+
+  public void fillResponseInfo(Response response) {
+    this.response_info = response.extractInfo();
+  }
 }

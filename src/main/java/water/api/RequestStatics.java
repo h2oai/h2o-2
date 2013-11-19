@@ -18,10 +18,10 @@ import com.google.gson.JsonObject;
  * @author peta
  */
 public class RequestStatics extends Constants {
-  public String requestName() {
+  /** Each request name is derived from name of class serving the request. */
+  public final String requestName() {
     return getClass().getSimpleName();
   }
-
 
   /** Request type.
    *
@@ -124,7 +124,7 @@ public class RequestStatics extends Constants {
     if( args == null && args2 == null ) return "";
     if( args2 != null ) {
       StringBuilder sb = new StringBuilder();
-      assert (args2.length &1)==0; // Must be field-name / value pairs
+      assert (args2.length &1)==0 : "Number of arguments shoud be power of 2."; // Must be field-name / value pairs
       for( int i=0; i<args2.length; i+=2 ) {
         sb.append(i==0?'?':'&').append(args2[i]).append('=');
         try {

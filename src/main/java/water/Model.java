@@ -1,6 +1,8 @@
 package water;
 
 import hex.ConfusionMatrix;
+import hex.VariableImportance;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import javassist.*;
@@ -76,9 +78,10 @@ public abstract class Model extends Iced {
   }
 
   /** For classifiers, confusion matrix on validation set. */
-  public ConfusionMatrix cm() {
-    return null;
-  }
+  public ConfusionMatrix cm() { return null; }
+
+  /** Variable importance of individual variables measured by this model. */
+  public VariableImportance varimp() { return null; }
 
   /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the
    *  predicted class, the remaining Vecs are the probability distributions.
@@ -108,13 +111,14 @@ public abstract class Model extends Iced {
         float preds[] = new float[nclasses()];
         Chunk p = chks[_names.length-1];
         for( int i=0; i<p._len; i++ ) {
-          score0(chks,i,tmp,preds);
+          float[] out = score0(chks,i,tmp,preds);
           if( nclasses() > 1 ) {
-            p.set0(i,Utils.maxIndex(preds));
+            if( Float.isNaN(out[0]) ) p.setNA0(i);
+            else p.set0(i, Utils.maxIndex(out));
             for( int c=0; c<nclasses(); c++ )
-              chks[_names.length+c].set0(i,preds[c]);
+              chks[_names.length+c].set0(i,out[c]);
           } else {
-            p.set0(i,preds[0]);
+            p.set0(i,out[0]);
           }
         }
       }
@@ -173,14 +177,15 @@ public abstract class Model extends Iced {
    *    any enums returned by the model that the data does not have a mapping for.
    *  If 'exact' is false, these situations will use or return NA's instead.
    */
-  private int[][] adapt( String names[], String domains[][], boolean exact ) {
-    int map[][] = new int[_names.length][];
+  private int[][] adapt( String names[], String domains[][], boolean exact, boolean dropResponse ) {
+    int maplen = dropResponse ? _names.length : _names.length+1;
+    int map[][] = new int[maplen][];
 
     // Build the column mapping: cmap[model_col] == user_col, or -1 if missing.
-    int cmap[] = map[_names.length-1] = new int[_names.length-1];
+    int cmap[] = map[maplen-1] = new int[maplen-1];
     HashMap<String,Integer> m = new HashMap<String, Integer>();
     for( int d = 0; d <  names.length  ; ++d) m.put(names[d], d);
-    for( int c = 0; c < _names.length-1; ++c) {
+    for( int c = 0; c < maplen-1; ++c) {
       Integer I = m.get(_names[c]);
       cmap[c] = I==null ? -1 : I; // Check for data missing model column
     }
@@ -212,6 +217,10 @@ public abstract class Model extends Iced {
     return map;
   }
 
+  private int[][] adapt( String names[], String domains[][], boolean exact ) {
+    return adapt(names, domains, exact, true);
+  }
+
   /** Build an adapted Frame from the given Frame. Useful for efficient bulk
    *  scoring of a new dataset to an existing model.  Same adaption as above,
    *  but expressed as a Frame instead of as an int[][]. The returned Frame
@@ -220,12 +229,12 @@ public abstract class Model extends Iced {
    *  frame which contains only vectors which where adapted (the purpose of the
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
-  public Frame[] adapt( Frame fr, boolean exact ) {
+  public Frame[] adapt( Frame fr, boolean exact, boolean dropResponse ) {
     String frnames[] = fr.names();
     Vec frvecs[] = fr.vecs();
-    int map[][] = adapt(frnames,fr.domains(),exact);
-    int cmap[] =     map[_names.length-1];
-    Vec vecs[] = new Vec[_names.length-1];
+    int map[][] = adapt(frnames,fr.domains(),exact,dropResponse);
+    int cmap[] = dropResponse ? map[_names.length-1] : map[_names.length];
+    Vec vecs[] = dropResponse ? new Vec[_names.length-1] : new Vec[_names.length];
     int avCnt = 0;
     for( int c=0; c<cmap.length; c++ ) if (map[c] != null) avCnt++;
     Vec[]    avecs = new Vec[avCnt]; // list of adapted vectors
@@ -243,7 +252,13 @@ public abstract class Model extends Iced {
         avCnt++;
       }
     }
-    return new Frame[] { new Frame(Arrays.copyOf(_names,_names.length-1),vecs), new Frame(anames, avecs) };
+
+    String[] vnames = dropResponse ? Arrays.copyOf(_names,_names.length-1) : _names.clone();
+    return new Frame[] { new Frame(vnames,vecs), new Frame(anames, avecs) };
+  }
+
+  public Frame[] adapt( Frame fr, boolean exact) {
+    return adapt(fr, exact, true);
   }
 
   /** Returns a mapping between values domains for a given column.  */

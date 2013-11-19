@@ -1,5 +1,7 @@
 package hex;
 
+import hex.glm.GLMParams.CaseMode;
+
 import java.util.Arrays;
 
 import water.*;
@@ -28,7 +30,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
   /**
    * Method to process one row of the data for GLM functions.
-   * Numeric and categorical values are passed separately, as is reponse.
+   * Numeric and categorical values are passed separately, as is response.
    * Categoricals are passed as absolute indexes into the expanded beta vector, 0-levels are skipped
    * (so the number of passed categoricals will not be the same for every row).
    *
@@ -150,8 +152,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    */
   protected void chunkDone(){}
 
+  protected CaseMode _caseMode;
+  protected double _caseVal;
 
-
+  private double response(double d){
+    if(_caseMode == CaseMode.none)return d;
+    return _caseMode.isCase(d, _caseVal)?1:0;
+  }
   /**
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.

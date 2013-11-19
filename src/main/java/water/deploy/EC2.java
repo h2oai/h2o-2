@@ -17,8 +17,8 @@ import com.amazonaws.services.ec2.model.*;
 /**
  * Manages EC2 instances.
  * <nl>
- * Note: This class is intended for debug purposes only, please refer to the documentation to run
- * H2O on AWS.
+ * Note: This class is intended for debug and experimentation purposes only, please refer to the
+ * documentation to run H2O on AWS.
  */
 public class EC2 {
   private static final String USER = System.getProperty("user.name");
@@ -26,14 +26,17 @@ public class EC2 {
 
   public int boxes;
   public String region = "us-east-1";
-  public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
-//  public String image = "ami-3565305c"; // Amazon Linux, x64, Instance-Store, US East N. Virginia
-  public String type = "m1.xlarge";
-  public String securityGroup = "default";
+  //public String image = "ami-3565305c"; // Amazon Linux, x64, Instance-Store, US East N. Virginia
+  //public String image = "ami-dfbfe4b6"; // Amazon Linux, x64, HVM, Instance-Store, US East N. Virginia
+  //public String image = "ami-e1357b88"; // Ubuntu Raring 13.04 amd64
+  public String image = "ami-09614460";   // Ubuntu Raring 13.04 amd64 HVM
+  //public String type = "m1.xlarge";
+  public String type = "cc2.8xlarge"; // HPC
+  public String securityGroup = "ssh"; // "default";
   public boolean confirm = true;
 
 //@formatter:off
-  static String cloudConfig = "" +
+  static String cloudConfig = "" + // TODO try Amazon AMI "Enhanced Networking"
       l("#cloud-config") +
       l("users:") +
       l("  - name: " + USER) +
@@ -41,17 +44,17 @@ public class EC2 {
       l("    ssh-authorized-keys:") +
       l("      - " + pubKey()) +
       l("    shell: /bin/bash") +
-//      l("") +
-//      l("runcmd:") +
-//      l("  - iptables -I INPUT -p tcp --dport 22 -j DROP") +
+      l("") +
+      l("runcmd:") +
+      l("  - iptables -I INPUT -p tcp --dport 22 -j DROP") +
 //      l("  - echo 'fs.file-max = 524288' > /etc/sysctl.d/increase-max-fd.conf") +
 //      l("  - sysctl -w fs.file-max=524288") +
 //      l("  - echo '* soft nofile 524288' > /etc/security/limits.d/increase-max-fd-soft.conf") +
 //      l("  - echo '* hard nofile 524288' > /etc/security/limits.d/increase-max-fd-hard.conf") +
 //      l("  - apt-get update") +
-//      l("  - apt-get -y install openjdk-7-jdk") +
+      l("  - apt-get -y install openjdk-7-jdk") +
 //      l("  - apt-get -y install openvpn") +
-//      l("  - iptables -D INPUT 1") +
+      l("  - iptables -D INPUT 1") +
       l("");
   static String l(String line) { return line + "\n"; }
   //@formatter:on
@@ -92,7 +95,7 @@ public class EC2 {
 
     if( instances.size() > boxes ) {
       for( int i = 0; i < instances.size() - boxes; i++ ) {
-        // TODO terminate
+        // TODO terminate?
       }
     } else if( instances.size() < boxes ) {
       int launchCount = boxes - instances.size();
@@ -104,16 +107,33 @@ public class EC2 {
           throw new Exception("Aborted");
       }
 
-      RunInstancesRequest request = new RunInstancesRequest();
-      request.withInstanceType(type);
-      request.withImageId(image);
-      request.withMinCount(launchCount).withMaxCount(launchCount);
-      request.withSecurityGroupIds(securityGroup);
-      request.withUserData(new String(Base64.encodeBase64(cloudConfig.getBytes())));
+      CreatePlacementGroupRequest group = new CreatePlacementGroupRequest();
+      group.withGroupName(USER);
+      group.withStrategy(PlacementStrategy.Cluster);
+      try {
+        ec2.createPlacementGroup(group);
+      } catch( AmazonServiceException ex ) {
+        if( !"InvalidPlacementGroup.Duplicate".equals(ex.getErrorCode()) )
+          throw ex;
+      }
 
-      RunInstancesResult runInstances = ec2.runInstances(request);
+      RunInstancesRequest run = new RunInstancesRequest();
+      run.withInstanceType(type);
+      run.withImageId(image);
+      run.withMinCount(launchCount).withMaxCount(launchCount);
+      run.withSecurityGroupIds(securityGroup);
+      Placement placement = new Placement();
+      placement.setGroupName(USER);
+      run.withPlacement(placement);
+      BlockDeviceMapping map = new BlockDeviceMapping();
+      map.setDeviceName("/dev/sdb");
+      map.setVirtualName("ephemeral0");
+      run.withBlockDeviceMappings(map);
+      run.withUserData(new String(Base64.encodeBase64(cloudConfig.getBytes())));
+
+      RunInstancesResult runRes = ec2.runInstances(run);
       ArrayList<String> ids = new ArrayList<String>();
-      for( Instance instance : runInstances.getReservation().getInstances() )
+      for( Instance instance : runRes.getReservation().getInstances() )
         ids.add(instance.getInstanceId());
 
       List<Instance> created = wait(ec2, ids);
@@ -121,9 +141,9 @@ public class EC2 {
       instances.addAll(created);
     }
 
-    String[] pub = new String[instances.size()];
-    String[] prv = new String[instances.size()];
-    for( int i = 0; i < instances.size(); i++ ) {
+    String[] pub = new String[boxes];
+    String[] prv = new String[boxes];
+    for( int i = 0; i < boxes; i++ ) {
       pub[i] = instances.get(i).getPublicIpAddress();
       prv[i] = instances.get(i).getPrivateIpAddress();
     }

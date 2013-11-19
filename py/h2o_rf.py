@@ -20,6 +20,89 @@ def pickRandRfParams(paramDict, params):
         # test ask for 100
     return colX
 
+
+# For DRF2
+def simpleCheckRF2View(node=None, rfv=None, noPrint=False, **kwargs):
+    if not node:
+        node = h2o.nodes[0]
+
+    if 'warnings' in rfv:
+        warnings = rfv['warnings']
+        # catch the 'Failed to converge" for now
+        for w in warnings:
+            if not noPrint: print "\nwarning:", w
+            if ('Failed' in w) or ('failed' in w):
+                raise Exception(w)
+
+    # the simple assigns will at least check the key exists
+    rf_model = rfv['drf_model']
+    cm = rf_model['cm']
+    ntrees = rf_model['N']
+    errs = rf_model['errs']
+    N = rf_model['N']
+    varimp = rf_model['varimp']
+    treeStats = rf_model['treeStats']
+
+    print "maxDepth:", treeStats['maxDepth']
+    print "maxLeaves:", treeStats['maxLeaves']
+    print "minDepth:", treeStats['minDepth']
+    print "minLeaves:", treeStats['minLeaves']
+    print "meanLeaves:", treeStats['meanLeaves']
+    print "meanDepth:", treeStats['meanDepth']
+    print "errs[0]:", errs[0]
+    print "errs[-1]:", errs[-1]
+    print "errs:", errs
+
+    totalScores = 0
+    totalRight = 0
+    # individual scores can be all 0 if nothing for that output class
+    # due to sampling
+    classErrorPctList = []
+    predictedClassDict = {} # may be missing some? so need a dict?
+    for classIndex,s in enumerate(cm):
+        classSum = sum(s)
+        if classSum == 0 :
+            # why would the number of scores for a class be 0? does RF CM have entries for non-existent classes
+            # in a range??..in any case, tolerate. (it shows up in test.py on poker100)
+            if not noPrint: print "class:", classIndex, "classSum", classSum, "<- why 0?"
+        else:
+            # H2O should really give me this since it's in the browser, but it doesn't
+            classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
+            totalRight += s[classIndex]
+            classErrorPct = 100 - classRightPct
+            classErrorPctList.append(classErrorPct)
+            ### print "s:", s, "classIndex:", classIndex
+            if not noPrint: print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
+
+            # gather info for prediction summary
+            for pIndex,p in enumerate(s):
+                if pIndex not in predictedClassDict:
+                    predictedClassDict[pIndex] = p
+                else:
+                    predictedClassDict[pIndex] += p
+
+        totalScores += classSum
+
+    if not noPrint: 
+        print "Predicted summary:"
+        # FIX! Not sure why we weren't working with a list..hack with dict for now
+        for predictedClass,p in predictedClassDict.items():
+            print str(predictedClass)+":", p
+
+        # this should equal the num rows in the dataset if full scoring? (minus any NAs)
+        print "totalScores:", totalScores
+        print "totalRight:", totalRight
+        if totalScores != 0:  pctRight = 100.0 * totalRight/totalScores
+        else: pctRight = 0.0
+        print "pctRight:", "%5.2f" % pctRight
+        print "pctWrong:", "%5.2f" % (100 - pctRight)
+
+    if (totalScores<=0 or totalScores>5e9):
+        raise Exception("scores in RFView seems wrong. scores:", scoresList)
+
+    h2o.check_sandbox_for_errors()
+    return (errs[-1], classErrorPctList, totalScores)
+
 def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
     if not node:
         node = h2o.nodes[0]

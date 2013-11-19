@@ -2,8 +2,8 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
+import java.util.Map.Entry;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
@@ -283,7 +283,7 @@ public final class ParseDataset2 extends Job {
       for(int i:ecols)ds[j++] =  uzpt._dout._vecs[i]._domain = enums[i].computeColumnDomain();
       eut = new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols);
     }
-    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(setup._ncols),uzpt._dout.closeVecs());
+    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());
     // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
     SVFTask t = new SVFTask(fr);
     t.invokeOnAllNodes();
@@ -385,17 +385,12 @@ public final class ParseDataset2 extends Job {
         switch( cpr ) {
         case NONE:
           if(localSetup._pType.parallelParseSupported){
-            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx);
+            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
             addToPendingCount(1);
-            dp.setCompleter(new H2OCallback<DParse>() {
-              @Override public void callback(DParse d){
-                _dout = d._dout;
-                MultiFileParseTask.this.tryComplete();
-              }
-            });
+            dp.setCompleter(this);
             dp.dfork(new Frame(vec));
-            for(int i = chunkStartIdx; i < vec.nChunks(); ++i)
-              _chunk2Enum[i] = vec.chunkKey(i-chunkStartIdx).home_node().index();
+            for(int i = 0; i < vec.nChunks(); ++i)
+              _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
           }else {
             ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
             _dout = streamParse(vec.openStream(pmon), localSetup, _vecIdStart, chunkStartIdx,pmon);
@@ -483,12 +478,14 @@ public final class ParseDataset2 extends Job {
       final int _startChunkIdx; // for multifile parse, offset of the first chunk in the final dataset
       final VectorGroup _vg;
       FVecDataOut _dout;
+      transient final MultiFileParseTask _outerMFPT;
 
-      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx) {
+      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
         _vg = vg;
         _setup = setup;
         _vecIdStart = vecIdstart;
         _startChunkIdx = startChunkIdx;
+        _outerMFPT = mfpt;
       }
       @Override public void map( Chunk in ) {
         Enum [] enums = enums();
@@ -517,6 +514,10 @@ public final class ParseDataset2 extends Job {
         if(_dout == null)_dout = dp._dout;
         else _dout.reduce(dp._dout);
       }
+      @Override public void postGlobal() {
+        super.postGlobal();
+        _outerMFPT._dout = _dout;
+      }
     }
   }
 
@@ -539,10 +540,10 @@ public final class ParseDataset2 extends Job {
     boolean _closedVecs = false;
     private final VectorGroup _vg;
 
-    final private byte UCOL = 0;
-    final private byte NCOL = 1;
-    final private byte ECOL = 2;
-    final private byte TCOL = 3;
+    static final private byte UCOL = 0;
+    static final private byte NCOL = 1;
+    static final private byte ECOL = 2;
+    static final private byte TCOL = 3;
 
     public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
       _vecs = new AppendableVec[ncols];
@@ -689,6 +690,8 @@ public final class ParseDataset2 extends Job {
         _chk = cidx < _vec.nChunks()?_vec.elem2BV(_idx=cidx):null;
       return (_chk == null)?null:_chk._mem;
     }
+    @Override public int  getChunkDataStart(int cidx) { return -1; }
+    @Override public void setChunkDataStart(int cidx, int offset) { }
   }
   public static class ParseException extends RuntimeException {
     public ParseException(String msg) { super(msg); }

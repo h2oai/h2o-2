@@ -1,5 +1,7 @@
 package hex.pca;
 
+import hex.FrameTask;
+
 import java.util.Arrays;
 
 import water.Job.*;
@@ -28,23 +30,22 @@ public class PCAScore extends FrameJob {
   @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 10000)
   int num_pc = 1;
 
-  // Note: Source data MUST contain all features (matched by name) used to build PCA model!
-  // If additional columns exist in source, they are automatically ignored in scoring
   @Override protected void exec() {
-    Frame fr = subset(source, model._names);
+    // Note: Source data MUST contain all features (matched by name) used to build PCA model!
+    // If additional columns exist in source, they are automatically ignored in scoring
+    Frame fr = model.adapt(source, true, false)[0];
     int nfeat = model._names.length;
-    Vec[] vecs = Arrays.copyOf(fr.vecs(), nfeat + num_pc);
-    for(int i = 0; i < num_pc; i++)
-      vecs[nfeat+i] = vecs[0].makeZero();
-    // PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model.eigVec, model.params.standardize);
-    boolean temp = model.params.standardize == 1 ? true : false;
-    PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model.eigVec, temp);
-    tsk.doIt(new Frame(vecs));
-    Vec[] outputVecs = Arrays.copyOfRange(tsk._fr.vecs(), nfeat, nfeat + num_pc);
-    String [] names = new String[num_pc];
-    for(int i = 0; i < num_pc; i++) names[i] = "PC" + i;
-    Frame f = new Frame(names, outputVecs);
-    DKV.put(destination_key, f);
+    boolean isStd = model.params.standardize == 1 ? true : false;
+
+    PCAScoreTask tsk = new PCAScoreTask(this, nfeat, num_pc, model.eigVec, isStd, model.normMul, model.normSub);
+    tsk.doIt(num_pc, fr);
+    String[] names = new String[num_pc];
+    String[][] domains = new String[num_pc][];
+    for(int i = 0; i < num_pc; i++) {
+      names[i] = "PC" + i;
+      domains[i] = null;
+    }
+    DKV.put(destination_key, tsk.outputFrame(names, domains));
   }
 
   @Override protected void init() {
@@ -58,22 +59,6 @@ public class PCAScore extends FrameJob {
     return (progress != null ? progress.progress() : 0);
   } */
 
-  public final Frame subset(Frame data, String[] feat) {
-    Vec[] dvecs = new Vec[feat.length];
-    String[] dnames = new String[feat.length];
-
-    Vec[] vecs = data.vecs();
-    String[] names = data.names();
-    for(int i = 0; i < feat.length; i++) {
-      int idx = data.find(feat[i]);
-      if(idx == -1)
-        throw new IllegalArgumentException("Incompatible dataset: Column " + feat[i] + " does not exist in source!");
-      dvecs[i] = vecs[idx];
-      dnames[i] = names[idx];
-    }
-    return new Frame(dnames, dvecs);
-  }
-
   public static String link(Key modelKey, String content) {
     return link("model", modelKey, content);
   }
@@ -86,61 +71,66 @@ public class PCAScore extends FrameJob {
     return rs.toString();
   }
 
-  public static class PCAScoreTask extends MRTask2<PCAScoreTask> {
-    final Job _job;
-    double[] _normSub;
-    double[] _normMul;
-    final boolean _standardize;
-    final int _nfeat;           // number of features
-    final int _ncomp;           // number of principal components (<= nfeat)
-    final double[][] _eigvec;   // eigenvector matrix
+  // Matrix multiplication A * B, where A is a skinny matrix (# rows >> # cols) and B is a
+  // small matrix that fits on a single node. For PCA scoring, the cols of A (rows of B) are
+  // the features of the input dataset, while the cols of B are the principal components.
+  public static class PCAScoreTask extends FrameTask<PCAScoreTask> {
+    final int _nfeat;         // number of features
+    final int _ncomp;         // number of principal components (<= nfeat)
+    final double[][] _eigvec; // eigenvector matrix
 
     public PCAScoreTask(Job job, int nfeat, int ncomp, double[][] eigvec, boolean standardize) {
-      _job = job;
-      _normSub = null;
-      _normMul = null;
-      _standardize = standardize;
+      super(job, standardize, false);
       _nfeat = nfeat;
       _ncomp = ncomp;
       _eigvec = eigvec;
     }
 
-    // Matrix multiplication A * B, where A is a skinny matrix (# rows >> # cols) and B is a
-    // small matrix that fits on a single node. For PCA scoring, the cols of A (rows of B) are
-    // the features of the input dataset, while the cols of B are the principal components.
-    @Override public void map(Chunk [] chunks) {
-      int rows = chunks[0]._len;
-      ROW_LOOP:
-      for(int r = 0; r < rows; r++) {
-        for(int c = 0; c < _ncomp; c++) {
-         double x = 0;
-         for(int d = 0; d < _nfeat; d++) {
-           if(chunks[d].isNA0(r)) {
-             for(int i = 0; i < _ncomp; i++)
-               chunks[_nfeat+i].setNA0(r);
-               continue ROW_LOOP;
-           }
-           x += (chunks[d].at0(r) - _normSub[d])*_normMul[d]*_eigvec[d][c];
-         }
-         chunks[_nfeat+c].set0(r,x);
-        }
-      }
-      // if(_job != null) _job.updateProgress(1);
+    public PCAScoreTask(Job job, int nfeat, int ncomp, double[][] eigvec, boolean standardize, double[] normMul, double[] normSub) {
+      super(job, standardize, false);
+      _nfeat = nfeat;
+      _ncomp = ncomp;
+      _eigvec = eigvec;
+      _normSub = normSub;
+      _normMul = normMul;
     }
 
-    public PCAScoreTask doIt(Frame fr) {
-        final Vec[] vecs = fr.vecs();
-        _normSub = MemoryManager.malloc8d(_nfeat);
-        _normMul = MemoryManager.malloc8d(_nfeat); Arrays.fill(_normMul, 1);
+    // Note: Rows with NAs (missing values) are automatically skipped!
+    @Override protected void processRow(double[] nums, int ncats, int[] cats, NewChunk[] outputs) {
+      for(int c = 0; c < _ncomp; c++) {
+        double x = 0;
+        for(int d = 0; d < ncats; d++)
+          x += _eigvec[cats[d]][c];
 
-        if(_standardize) {
-          for(int i = 0; i < _nfeat; ++i) {
-          _normSub[i] = vecs[i].mean();
-          _normMul[i] = 1.0/vecs[i].sigma();
-          }
-        }
-      dfork(fr);
-      return getResult();
+        int k = _catOffsets[_cats];
+        for(int d = 0; d < nums.length; d++)
+          x += nums[d]*_eigvec[k++][c];
+        assert k == _eigvec.length;
+        outputs[c].addNum(x);
+      }
+    }
+
+    public PCAScoreTask doIt(int outputs, Frame fr) { return dfork2(outputs, fr).getResult(); }
+    public PCAScoreTask dfork2(int outputs, Frame fr) {
+      if(_cats == -1 && _nums == -1 ) {
+        fr = adaptFrame(fr);
+        int i = 0;
+        final Vec [] vecs = fr.vecs();
+        final int n = vecs.length;
+        while(i < n && vecs[i].isEnum())++i;
+        _cats = i;
+        while(i < n && !vecs[i].isEnum())++i;
+        _nums = i-_cats;
+        if(i != n)
+          throw new RuntimeException("Incorrect format of the input frame. Frame is assumed to be ordered so that categorical columns come before numerics.");
+        if(_normSub == null) _normSub = MemoryManager.malloc8d(_nums);
+        if(_normMul == null) { _normMul = MemoryManager.malloc8d(_nums); Arrays.fill(_normMul, 1); }
+        _catOffsets = MemoryManager.malloc4(_cats+1);
+        int len = _catOffsets[0] = 0;
+        for(i = 0; i < _cats; ++i)
+          _catOffsets[i+1] = (len += vecs[i].domain().length - 1);
+      }
+      return dfork(outputs, fr);
     }
   }
 }

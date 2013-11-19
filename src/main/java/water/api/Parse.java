@@ -3,6 +3,7 @@ package water.api;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import java.io.File;
 
 import water.*;
 import water.parser.*;
@@ -175,6 +176,8 @@ public class Parse extends Request {
       PSetup setup = _source.value();
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
+      int sep = n.lastIndexOf(File.separatorChar);
+      if( sep > 0 ) n = n.substring(sep+1);
       int dot = n.lastIndexOf('.');
       if( dot > 0 ) n = n.substring(0, dot);
       int i = 0;

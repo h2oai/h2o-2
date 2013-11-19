@@ -1,34 +1,56 @@
 #!/bin/bash
 
 set -e
-
 echo "Gets the latest h2o.jar (only + version file) from s3, using curl"
 
-# this can be master or a specific branch
-branch=${BRANCH_NAME:-master}
-branch=hilbert
-echo "using branch: $branch"
+#**************************************
+# do some bash parameters, just in case we have future expansion
+# -n is no download of the jar
+NO_DOWNLOAD=0
+# default to hilbert
+BRANCH=master
+while getopts nb: flag
+do
+    case $flag in
+        n)
+            echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
+            NO_DOWNLOAD=1
+            ;;
+        b)
+            BRANCH=$OPTARG
+            echo "branch is $BRANCH"
+            ;;
+        ?)
+            exit
+            ;;
+    esac
+done
+shift $(( OPTIND - 1 ))  # shift past the last flag or argument
+echo remaining parameters to Bash are $*
 
+echo "using branch: $BRANCH"
+
+#**************************************
 d=`dirname $0`
 cd $d
 
 rm -f ./latest_h2o_jar_version
 
-curl --silent -o latest_h2o_jar_version https://h2o-release.s3.amazonaws.com/h2o/${branch}/latest
+curl --silent -o latest_h2o_jar_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/latest
 
 version=$(<latest_h2o_jar_version)
 echo "latest h2o jar version is: $version"
 
-curl --silent -o latest_h2o_project_version https://h2o-release.s3.amazonaws.com/h2o/${branch}/${version}/project_version
+curl --silent -o latest_h2o_project_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/${version}/project_version
 project_version=$(<latest_h2o_project_version)
 
 # a secret way to skip the download (use any arg)
-if [ $# -eq 0 ]
+if [ $NO_DOWNLOAD -eq 0 ]
 then
     # echo "getting JUST $version/h2o.jar"
     rm -f ./h2o*$version.jar
     rm -f ./h2o*$version.zip
-    zipurl=https://s3.amazonaws.com/h2o-release/h2o/${branch}/${version}/h2o-${project_version}.zip
+    zipurl=https://s3.amazonaws.com/h2o-release/h2o/${BRANCH}/${version}/h2o-${project_version}.zip
     echo Downloading ${zipurl} ...
     curl -o h2o-${project_version}.zip ${zipurl}
     mv h2o-*$version.zip h2o_$version.zip

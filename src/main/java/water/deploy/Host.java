@@ -1,9 +1,9 @@
 package water.deploy;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Set;
 
-import water.Boot;
 import water.H2O;
 import water.util.Log;
 import water.util.Utils;
@@ -49,35 +49,6 @@ public class Host {
     return _key;
   }
 
-  public static Set<String> defaultIncludes() {
-    Set<String> set = new HashSet<String>();
-    if( Boot._init.fromJar() ) {
-      if( new File("target/h2o.jar").exists() )
-        set.add("target/h2o.jar");
-      else
-        set.add("h2o.jar");
-    } else {
-      set.add("target");
-      set.add("lib");
-    }
-    return set;
-  }
-
-  public static Set<String> defaultExcludes() {
-    Set<String> set = new HashSet<String>();
-    if( !Boot._init.fromJar() ) {
-      set.add("target/*.jar");
-      set.add("target/javadoc/**");
-      set.add("lib/javassist");
-      set.add("**/*-sources.jar");
-    }
-    return set;
-  }
-
-  public void rsync() {
-    rsync(defaultIncludes(), defaultExcludes(), false);
-  }
-
   public void rsync(Set<String> includes, Set<String> excludes, boolean delete) {
     rsync(includes, excludes, delete, FOLDER);
   }
@@ -118,10 +89,6 @@ public class Host {
         }
       }
     }
-  }
-
-  public static void rsync(final Host... hosts) {
-    rsync(hosts, defaultIncludes(), defaultExcludes(), false);
   }
 
   public static void rsync(final Host[] hosts, final Set<String> includes, final Set<String> excludes,

@@ -1,8 +1,10 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j, h2o_import
 
-DO_PLOT_IF_KEVIN = False
+
+DO_PLOT = True
+print "This will also test set_column_names into GBM, with changing col names per test"
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -11,9 +13,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            # ri = r1.randint(0,1)
-            # get some reals, to get a bigger file?
-            ri = round(r1.uniform(0,1),2)
+            ri = r1.randint(0,1)
             rowData.append(ri)
 
         ri = r1.randint(0,1)
@@ -22,6 +22,14 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
 
+    dsf.close()
+
+def write_syn_header(hdrPathname, rowCount, colCount, prefix):
+    dsf = open(hdrPathname, "w+")
+    rowData = [prefix + "_" + str(j) for j in range(colCount)]
+    # add 1 for the output
+    rowData.append(prefix + '_response')
+    dsf.write(",".join(rowData) + "\n")
     dsf.close()
 
 class Basic(unittest.TestCase):
@@ -34,16 +42,13 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            # fails
-            # h2o.build_cloud(1,java_heap_MB=100, enable_benchmark_log=True)
-            # 400 fails
-            jea = '-Xloggc:log.txt'
-            h2o.build_cloud(1,java_heap_MB=1200, enable_benchmark_log=True, java_extra_args=jea)
+            h2o.build_cloud(1,java_heap_GB=10, enable_benchmark_log=True)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
+        ### time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_GBM_many_cols(self):
@@ -51,16 +56,18 @@ class Basic(unittest.TestCase):
 
         if localhost:
             tryList = [
-                (100000, 400, 'cA', 300), 
+                (10000, 100, 'cA', 300), 
                 ]
         else:
             tryList = [
                 # (10000, 10, 'cB', 300), 
                 # (10000, 50, 'cC', 300), 
-                (100000, 100, 'cD', 300), 
-                (100000, 200, 'cE', 300), 
-                (100000, 500, 'cG', 300), 
-                (100000, 1000, 'cI', 300), 
+                (10000, 100, 'cD', 300), 
+                (10000, 200, 'cE', 300), 
+                (10000, 300, 'cF', 300), 
+                (10000, 400, 'cG', 300), 
+                (10000, 500, 'cH', 300), 
+                (10000, 1000, 'cI', 300), 
                 ]
 
         ### h2b.browseTheCloud()
@@ -68,9 +75,13 @@ class Basic(unittest.TestCase):
             SEEDPERFILE = random.randint(0, sys.maxint)
             # csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
+            hdrFilename = 'hdr_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
+
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+            hdrPathname = SYNDATASETS_DIR + '/' + hdrFilename
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
+
 
             # PARSE train****************************************
             h2o.beta_features = False #turn off beta_features
@@ -79,7 +90,6 @@ class Basic(unittest.TestCase):
             eList = []
             fList = []
 
-            h2o.beta_features = False
             modelKey = 'GBMModelKey'
 
             # Parse (train)****************************************
@@ -98,12 +108,11 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             print "train parse result:", parseTrainResult['destination_key']
 
+
             # Logging to a benchmark file
             algo = "Parse"
-            # l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                # len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
-            l = '{:d} jvms, {:d}MB heap, {:s} {:s} {:6.2f} secs'.format(
-                len(h2o.nodes), h2o.nodes[0].java_heap_MB, algo, csvFilename, elapsed)
+            l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
             print l
             h2o.cloudPerfH2O.message(l)
 
@@ -115,24 +124,39 @@ class Basic(unittest.TestCase):
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']
-            h2o_cmd.infoFromInspect(inspect, csvPathname)
-
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
-            h2o.beta_features = True
-            # was failing with 100 trees
-            # ntrees = 100
+            ntrees = 5 
+            prefixList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
             # for max_depth in [5,10,20,40]:
-            ntrees = 10
-            for max_depth in [5]:
+            for max_depth in [5, 10, 20]:
+
+                # PARSE a new header****************************************
+                print "Creating new header", hdrPathname
+                prefix = prefixList.pop(0)
+                write_syn_header(hdrPathname, rowCount, colCount, prefix)
+
+                # upload and parse the header to a hex
+
+                h2o.beta_features = False # can't put with fvec yet
+                hdr_hex_key = prefix + "_hdr.hex"
+                parseHdrResult = h2i.import_parse(bucket=None, path=hdrPathname, schema='put',
+                    header=1, # REQUIRED! otherwise will interpret as enums
+                    hex_key=hdr_hex_key, 
+                    timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
+                # Set Column Names (before autoframe is created)
+                h2o.nodes[0].set_column_names(target=hex_key, source=hdr_hex_key)
+
+                # GBM
+                print "The response col name is changing each iteration, since we're parsing a new header"
                 params = {
                     'learn_rate': .2,
-                    'nbins': 10, # 1024 fail
+                    'nbins': 1024,
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
-                    'response': num_cols-1,
+                    'response': prefix + "_response",
                     'ignored_cols_by_name': None,
                 }
                 print "Using these parameters for GBM: ", params
@@ -151,7 +175,7 @@ class Basic(unittest.TestCase):
                 # Logging to a benchmark file
                 algo = "GBM " + " ntrees=" + str(ntrees) + " max_depth=" + str(max_depth)
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
-                    len(h2o.nodes), h2o.nodes[0].java_heap_MB, algo, csvFilename, trainElapsed)
+                    len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, trainElapsed)
                 print l
                 h2o.cloudPerfH2O.message(l)
 
@@ -162,7 +186,6 @@ class Basic(unittest.TestCase):
 
                 cm = gbmTrainView['gbm_model']['cm']
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-                print "Last line of this cm might be NAs, not CM"
                 print "\nTrain\n==========\n"
                 print h2o_gbm.pp_cm(cm)
 
@@ -171,9 +194,12 @@ class Basic(unittest.TestCase):
                 eList.append(pctWrongTrain)
                 fList.append(trainElapsed)
 
+                # works if you delete the autoframe
+                ### h2o_import.delete_keys_at_all_nodes(pattern='autoframe')
+
         h2o.beta_features = False
         # just plot the last one
-        if DO_PLOT_IF_KEVIN:
+        if DO_PLOT:
             xLabel = 'max_depth'
             eLabel = 'pctWrong'
             fLabel = 'trainElapsed'
