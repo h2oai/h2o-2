@@ -10,7 +10,6 @@ import java.util.*;
 
 import water.*;
 import water.api.*;
-import water.api.RequestBuilders.Response;
 import water.util.Utils;
 
 public class GridSearch extends Job {
@@ -20,7 +19,7 @@ public class GridSearch extends Job {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
-    while( head < jobs.length ) {
+    while( head < jobs.length && !cancelled() ) {
       if( tail - head < max && tail < jobs.length )
         jobs[tail++].fork();
       else {

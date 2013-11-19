@@ -70,7 +70,9 @@ public class NeuralNet extends ValidatedJob {
       }
 
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        Job.findJob(job_key).cancel(Utils.getStackAsString(ex));
+        Job job = Job.findJob(job_key);
+        if( job != null )
+          job.cancel(Utils.getStackAsString(ex));
         return super.onExceptionalCompletion(ex, caller);
       }
     };
