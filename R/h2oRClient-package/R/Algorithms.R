@@ -21,7 +21,7 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
   classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
 
-  destKey = paste("__GBMModel_", UUIDgenerate(), sep="")
+  destKey = h2o.__uniqID("GBMModel")
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
@@ -239,7 +239,7 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
   if( !(classification %in% c( 0, 1)) )
     stop(paste(classification, "is not a valid classification index; only [0, 1] are supported"))
 
-  destKey = paste("__NNModel_", UUIDgenerate(), sep="")
+  destKey = h2o.__uniqID("NNModel")
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
       classification=as.numeric(classification), activation=activation, rate=rate,
       hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=data@key)
@@ -293,7 +293,7 @@ h2o.prcomp <- function(data, tol=0, standardize=T, retx=F) {
   if( class( standardize ) != 'logical' ) stop('standardize must be TRUE or FALSE')
   if( class( retx ) != 'logical' ) stop('retx must be TRUE or FALSE')
 
-  destKey = paste("__PCA_Model__", UUIDgenerate(), sep="")
+  destKey = h2o.__uniqID("PCAModel")
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, destination_key=destKey, tolerance=tol, standardize=as.numeric(standardize))
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
@@ -333,7 +333,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
   myModel <- h2o.prcomp.internal(data=data, x_ignore=x_ignore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
   myScore <- h2o.predict(myModel)
 
-  rand_cbind_key = paste("__PCABind_", UUIDgenerate(), sep="")
+  rand_cbind_key = h2o.__uniqID("PCABind")
   res <- h2o.__remoteSend(data@h2o, h2o.__PAGE_FVEXEC, source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=args$y_i - 1, destination_key=rand_cbind_key, operation="cbind")
   myGLMData <- new("H2OParsedData", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
   h2o.glm.FV(paste("PC", 0:(ncomp-1), sep=""), y, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
@@ -353,7 +353,7 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=2147483647, classwt=as.
   if( any(!is.na(classwt) & classwt < 0) ) stop('classwt must be >= 0')
 
   # Set randomized model_key
-  rand_model_key = paste("__RF_Model__", UUIDgenerate(), sep="")
+  rand_model_key = h2o.__uniqID("RFModel")
 
   # If no class weights, then default to all 1.0
   if( !any(is.na(classwt)) ){
@@ -440,14 +440,14 @@ h2o.predict <- function(object, newdata) {
     new("H2OParsedData", h2o=object@data@h2o, key=res$key)
   } else if(class(object) == "H2OGBMModel" || class(object) == "H2ODRFModel") {
     # Set randomized prediction key
-    key_prefix = ifelse(class(object) == "H2OGBMModel", "__GBM_Predict_", "__DRF_Predict_")
-    rand_pred_key = paste(key_prefix, UUIDgenerate(), sep="")
+    key_prefix = ifelse(class(object) == "H2OGBMModel", "GBMPredict", "DRFPredict")
+    rand_pred_key = h2o.__uniqID(key_prefix)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
     new("H2OParsedData2", h2o=object@data@h2o, key=rand_pred_key)
   } else if(class(object) == "H2OPCAModel") {
     # Set randomized prediction key
-    rand_pred_key = paste("__PCA_Predict_", UUIDgenerate(), sep="")
+    rand_pred_key = h2o.__uniqID("PCAPredict")
     numMatch = colnames(newdata) %in% rownames(object@model$rotation)
     numPC = min(length(numMatch[numMatch == TRUE]), length(object@model$sdev))
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
@@ -496,7 +496,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   if( any( x < 1 | x > length(cc) ) ) stop( paste(x[ x < 1 | x > length(cc)], sep=','), 'is out of range of the columns' )
   x_ignore <- setdiff(x, 1:length(cc)) - 1
   if(length(x_ignore) == 0) x_ignore <- ''
-  rand_glm_key = paste("__GLM2Model_", UUIDgenerate(), sep="")
+  rand_glm_key = h2o.__uniqID("GLM2Model")
 
   if(family != "tweedie")
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, standardize = as.numeric(FALSE))
@@ -558,13 +558,13 @@ h2o.kmeans.FV <- function(data, centers, cols='', iter.max=10) {
 
   myIgnore <- ifelse(cols == '', '', paste(setdiff(cols, cc), sep=','))
 
-  rand_kmeans_key = paste("__KMeans2Model_", UUIDgenerate(), sep="")
+  rand_kmeans_key = h2o.__uniqID("KMeans2Model")
   res = h2o.__remoteSend(data@h2o, "2/KMeans2.json", source=data@key, destination_key=rand_kmeans_key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res = h2o.__remoteSend(data@h2o, "2/KMeans2ModelView.json", model=rand_kmeans_key)
   res = res$model
 
-  rand_pred_key = paste("__KMeans2Clusters_", UUIDgenerate(), sep="")
+  rand_pred_key = h2o.__uniqID("KMeans2Clusters")
   h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
 
   result = list()
@@ -591,7 +591,7 @@ h2o.randomForest.FV <- function(x, y, data, n.trees=50, interaction.depth=50, no
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1,collapse=',')
   
-  destKey = paste("__DRFModel_", UUIDgenerate(), sep="")
+  destKey = h2o.__uniqID("DRFModel")
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, min_rows=nodesize, sample_rate=sample.rate)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRFModelView, '_modelKey'=destKey)

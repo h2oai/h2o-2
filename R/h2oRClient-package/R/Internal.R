@@ -229,6 +229,23 @@ h2o.__escape <- function(key) {
   paste("|", key_esc, "|", sep="")
 }
 
+h2o.__uniqID <- function(prefix = "") {
+  if("uuid" %in% installed.packages())
+    temp = UUIDgenerate()
+  else {
+    hex_digits <- c(as.character(0:9), letters[1:6])
+    y_digits <- hex_digits[9:12]
+    temp = paste(
+      paste(sample(hex_digits, 8, replace=TRUE), collapse='', sep=''),
+      paste(sample(hex_digits, 4, replace=TRUE), collapse='', sep=''),
+      paste('4', paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep=''),
+      paste(sample(y_digits,1), paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse=''),
+      paste(sample(hex_digits, 12, replace=TRUE), collapse='', sep=''), sep='-')
+  }
+  temp = gsub("-", "", temp)
+  paste(prefix, temp, sep="_")
+}
+
 h2o.__func <- function(fname, x, type) {
   if(ncol(x) != 1) stop("Can only operate on single column vectors")
   expr = paste(fname, "(", h2o.__escape(x@key), ")", sep="")
