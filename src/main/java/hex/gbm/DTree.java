@@ -3,7 +3,6 @@ package hex.gbm;
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
-import hex.drf.DRF.DRFModel;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -567,7 +566,7 @@ public class DTree extends Iced {
         assert cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey.equals(_dataKey) ) {
-          sb.append("<div class=\"alert\">Reported on ").append(this instanceof DRFModel ? "out-of-bag" : "training").append(" data</div>");
+          sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
         } else {
           RString rs = new RString("Reported on <a href='Inspect2.html?src_key=%$key'>%key</a>");
           rs.replace("key", testKey);
