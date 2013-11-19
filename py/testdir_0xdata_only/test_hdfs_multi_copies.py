@@ -22,11 +22,10 @@ class Basic(unittest.TestCase):
 
     def test_hdfs_multi_copies(self):
         print "\nUse the new regex capabilities for selecting hdfs: try *copies* at /datasets"
-        print "This should match to a folder with about twenty covtype10x?"
         # pop open a browser on the cloud
         # h2b.browseTheCloud()
         # defaults to /datasets
-        parseResult = h2i.import_parse(csvPathname='datasets/*covtype10x_copies*', schema='hdfs', hex_key='copies.hex', 
+        parseResult = h2i.import_parse(csvPathname='datasets/manyfiles-nflx-gz/*', schema='hdfs', hex_key='manyfiles.hex', 
             exclude=None, header=None, timeoutSecs=600)
         print "*copies* regex to hdfs /datasets", 'parse time:', parseResult['response']['time']
         print "parse result:", parseResult['destination_key']

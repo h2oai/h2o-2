@@ -37,6 +37,7 @@ public abstract class Request extends RequestBuilders {
     double dmax() default Double.POSITIVE_INFINITY;
     boolean hide() default false;
     String displayName() default "";
+    boolean gridable() default true;
   }
 
   public interface Filter {

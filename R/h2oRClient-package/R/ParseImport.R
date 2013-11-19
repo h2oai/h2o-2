@@ -10,7 +10,6 @@ setGeneric("h2o.importURL", function(object, path, key = "", parse = TRUE, sep =
 setGeneric("h2o.importHDFS", function(object, path, pattern = "", key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importHDFS") })
 setGeneric("h2o.uploadFile", function(object, path, key = "", parse = TRUE, sep = "", silent = TRUE) { standardGeneric("h2o.uploadFile") })
 setGeneric("h2o.parseRaw", function(data, key = "", header, sep = "", col.names) { standardGeneric("h2o.parseRaw") })
-# setGeneric("h2o.setColNames", function(data, col.names) { standardGeneric("h2o.setColNames") })
 
 setGeneric("h2o.importFile.FV", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFile.FV") })
 setGeneric("h2o.importFolder.FV", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFolder.FV") })

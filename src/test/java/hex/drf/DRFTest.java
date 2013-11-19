@@ -106,6 +106,36 @@ public class DRFTest extends TestUtil {
 
   }
 
+
+  /*@Test*/ public void testAirlines() throws Throwable {
+    basicDRFTestOOBE(
+        "./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
+        new PrepData() { 
+          @Override int prep(Frame fr) { 
+            UKV.remove(fr.remove("DepTime")._key); 
+            UKV.remove(fr.remove("ArrTime")._key); 
+            UKV.remove(fr.remove("ActualElapsedTime")._key); 
+            UKV.remove(fr.remove("AirTime")._key); 
+            UKV.remove(fr.remove("ArrDelay")._key); 
+            UKV.remove(fr.remove("DepDelay")._key); 
+            UKV.remove(fr.remove("Cancelled")._key); 
+            UKV.remove(fr.remove("CancellationCode")._key); 
+            UKV.remove(fr.remove("CarrierDelay")._key); 
+            UKV.remove(fr.remove("WeatherDelay")._key); 
+            UKV.remove(fr.remove("NASDelay")._key); 
+            UKV.remove(fr.remove("SecurityDelay")._key); 
+            UKV.remove(fr.remove("LateAircraftDelay")._key); 
+            UKV.remove(fr.remove("IsArrDelayed")._key); 
+            return fr.find("IsDepDelayed"); } 
+        },
+        50,
+        a( a(14890, 5997),
+           a( 6705,16386)),
+        s("NO", "YES"));
+  }
+
+
+
   // Put response as the last vector in the frame and return it.
   // Also fill DRF.
   static Vec unifyFrame(DRF drf, Frame fr, PrepData prep) {

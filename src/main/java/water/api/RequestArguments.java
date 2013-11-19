@@ -4,7 +4,6 @@ import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.Link;
-import hex.pca.PCAModel;
 import hex.*;
 import hex.rf.ConfusionTask;
 import hex.rf.RFModel;
@@ -242,6 +241,11 @@ public class RequestArguments extends RequestStatics {
      * True if the argument should be only read-only.
      */
     public boolean _readOnly = false;
+
+    /**
+     * Can be a grid search parameter.
+     */
+    public boolean _gridable;
 
     /** Override this method to provide parsing of the input string to the Java
      * expected value. The input is guaranteed to be non-empty when this method

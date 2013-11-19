@@ -38,7 +38,7 @@ public class ImportFiles2 extends Request2 {
   @Override
   public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
 
-  @API(help="Path to file/folder on either local disk/hdfs/s3",required=true,filter=GeneralFile.class)
+  @API(help="Path to file/folder on either local disk/hdfs/s3",required=true,filter=GeneralFile.class,gridable=false)
   String path;
 
 
