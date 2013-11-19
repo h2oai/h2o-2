@@ -2112,8 +2112,8 @@ class H2O(object):
                 'n_folds': None,
                 'case_mode': None,
                 'case_val': None, 
-                'weight': None,
-                'thresholds': None,
+                # 'weight': None,
+                # 'thresholds': None,
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallel': None,
                 'beta_eps': None,
