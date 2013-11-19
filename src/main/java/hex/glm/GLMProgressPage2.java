@@ -56,7 +56,7 @@ public class GLMProgressPage2 extends Progress2 {
     }
     @Override protected Response jobDone(final Job job, final Key dst) {
       _isDone = true;
-      return new Response(Response.Status.done, this, 0, 0, null);
+      return new Response(Response.Status.done, this, 0, 0, null, null);
     }
   }
 }
