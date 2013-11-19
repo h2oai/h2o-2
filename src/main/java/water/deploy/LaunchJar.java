@@ -45,7 +45,7 @@ public class LaunchJar extends Request2 {
       }
 
       // Append UID to class names so allow multiple invocations
-      String uid = UUID.randomUUID().toString().replace("-", "");
+      String uid = Key.rand();
       ClassMap renames = new ClassMap();
       for( JarEntry entry : entries ) {
         if( entry.getName().endsWith(".class") ) {
@@ -54,7 +54,7 @@ public class LaunchJar extends Request2 {
           int index = n.indexOf("$");
           if( index < 0 )
             index = n.length();
-          u = n.substring(0, index) + "_" + uid + n.substring(index);
+          u = n.substring(0, index) + uid + n.substring(index);
           renames.put(n, u);
         }
       }

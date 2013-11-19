@@ -41,7 +41,7 @@ public final class ParseDataset extends Job {
       dataset = DKV.get(keys[i]);
       total += dataset.length() * Pass.values().length;
     }
-    _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
+    _progress = Key.make((byte) 0, Key.JOB);
     UKV.put(_progress, new Progress(0,total));
   }
 

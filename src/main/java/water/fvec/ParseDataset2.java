@@ -49,7 +49,7 @@ public final class ParseDataset2 extends Job {
   private ParseDataset2(Key dest, Key[] fkeys) {
     destination_key = dest;
     // Job progress Key
-    _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
+    _progress = Key.make((byte) 0, Key.JOB);
     UKV.put(_progress, ParseProgress.make(fkeys));
   }
 

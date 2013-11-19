@@ -263,7 +263,7 @@ public abstract class Trainer {
       _epochs = epochs;
       _job = job;
 
-      _key = Key.make(UUID.randomUUID().toString(), (byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
+      _key = Key.make((byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
       _instances.put(_key, this);
       DKV.put(_key, new Value(_key, new byte[0]));
 
