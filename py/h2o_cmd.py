@@ -222,8 +222,16 @@ def checkKeyDistribution():
 # might be able to use more widely
 def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     inspect = runInspect(key=key, **kwargs)
-    num_rows = inspect['num_rows']
-    num_cols = inspect['num_cols']
+
+    if h2o.beta_features:
+        num_rows = inspect['numRows']
+        num_cols = inspect['numCols']
+        keyNA = 'naCnt'
+    else:
+        num_rows = inspect['num_rows']
+        num_cols = inspect['num_cols']
+        keyNA = 'num_missing_values'
+
     cols = inspect['cols']
     # type
     # key
@@ -250,15 +258,18 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         msg = "%s %d" % (c['name'], k)
         msg += " type: %s" % c['type']
         printMsg = False
-        if c['type'] == 'enum':
-            msg += (" enum_domain_size: %d" % c['enum_domain_size'])
-            enumSizeDict[k] = c['enum_domain_size']
-            printMsg = True
 
-        if c['num_missing_values'] != 0:
-            pct = ((c['num_missing_values'] + 0.0)/ num_rows) * 100
-            msg += (" num_missing_values: %s (%0.1f%s)" % (c['num_missing_values'], pct, '%'))
-            missingValuesDict[k] = c['num_missing_values']
+        if not h2o.beta_features:
+            if c['type'] == 'enum':
+                msg += (" enum_domain_size: %d" % c['enum_domain_size'])
+                enumSizeDict[k] = c['enum_domain_size']
+                printMsg = True
+
+
+        if c[keyNA] != 0:
+            pct = ((c[keyNA] + 0.0)/ num_rows) * 100
+            msg += (" %s: %s (%0.1f%s)" % (keyNA, c[keyNA], pct, '%'))
+            missingValuesDict[k] = c[keyNA]
             printMsg = True
 
         if c['min'] == c['max']:
@@ -296,14 +307,14 @@ def infoFromInspect(inspect, csvPathname):
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
     if h2o.beta_features:
-        naString = 'naCnt'
+        keyNA = 'naCnt'
     else:
-        naString = 'num_missing_values'
+        keyNA = 'num_missing_values'
     missingValuesList = []
     for i, colDict in enumerate(cols):
-        num_missing_values = colDict[naString]
+        num_missing_values = colDict[keyNA]
         if num_missing_values != 0:
-            print "%s: col: %d, %s: %d" % (csvPathname, i, naString, num_missing_values)
+            print "%s: col: %d, %s: %d" % (csvPathname, i, keyNA, num_missing_values)
             missingValuesList.append(num_missing_values)
 
     if h2o.beta_features:
