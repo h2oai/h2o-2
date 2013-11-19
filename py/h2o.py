@@ -970,7 +970,7 @@ class H2O(object):
             ### print "putfile specifying this key:", key
 
         resp = self.__do_json_request(
-                'PostFile.json',
+                '2/PostFile.json' if beta_features else 'PostFile.json',
                 cmd='post',
                 timeout=timeoutSecs,
                 params={"key": key},
@@ -1299,6 +1299,7 @@ class H2O(object):
         # header
         # exclude
         params_dict = {
+            'blocking': None, # debug only
             'source_key': key, # can be a regex
             'destination_key': key2,
             'parser_type': None,
@@ -1504,6 +1505,10 @@ class H2O(object):
                 'sample_rate': None,
                 'seed': None,
                 }
+            if 'model_key' in kwargs:
+                kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
+
+
         else:
             params_dict = {
                 'data_key': data_key,
@@ -1530,6 +1535,12 @@ class H2O(object):
 
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
+
+        if beta_features and not params_dict['response']:
+            # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
+            inspect = h2o_cmd.runInspect(key=data_key)
+            # response only takes names. can't use col index..have to look it up
+            params_dict['response'] = str(inspect['cols'][-1]['name'])
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
