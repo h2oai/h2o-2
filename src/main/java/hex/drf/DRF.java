@@ -316,6 +316,8 @@ public class DRF extends SharedTreeModelBuilder {
       if( tree == null ) continue;
       for( int i=0; i<tree.len()-leafs[k]; i++ ) {
         // setup prediction for k-tree's i-th leaf
+        // for classification it is a weight of votes for the i-th class
+        // for regression it is mean of rows' predictions in the leaf
         ((LeafNode)tree.node(leafs[k]+i)).pred( gp._voters[k][i] > 0 ? gp._votes[k][i] / gp._voters[k][i] : 0);
       }
     }
@@ -349,7 +351,7 @@ public class DRF extends SharedTreeModelBuilder {
     // Collect leaves stats
     for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
-    //printGenerateTrees(ktrees);
+    // printGenerateTrees(ktrees);
 
     return ktrees;
   }
