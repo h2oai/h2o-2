@@ -7,6 +7,7 @@ import java.util.Arrays;
 
 import water.Iced;
 import water.MemoryManager;
+import water.util.Utils;
 
 import com.google.gson.JsonObject;
 
@@ -122,20 +123,27 @@ public abstract class LSMSolver extends Iced{
 
     @Override
     public boolean solve(Gram gram, double [] xy, double yy, double[] z) {
+//      System.out.println(Utils.pprint(gram.getXX()));
+//      System.out.println(Utils.pprint(new double[][]{xy}));
       final int N = xy.length;
       Arrays.fill(z, 0);
-      if(_lambda>0)gram.addDiag(_lambda*(1-_alpha)*0.5 + _rho);
+      if(_lambda>0){
+        gram.addDiag(_lambda*(1-_alpha)*0.5);
+        if(_alpha > 0)gram.addDiag(_rho, true);
+      }
       int attempts = 0;
       Cholesky chol = gram.cholesky(null);
-      double rhoAdd = 0;
       while(!chol.isSPD() && attempts < 10){
-        double rhoIncrement = _rho*(1<< ++attempts);
-        gram.addDiag(rhoIncrement); // try to add L2 penalty to make the Gram issp
-        rhoAdd += rhoIncrement;
+        _rho *= 8;
+        ++attempts;
+        gram.addDiag(_rho,true); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
-      if(!chol.isSPD()) throw new NonSPDMatrixException();
-      _rho += rhoAdd;
+      if(!chol.isSPD()){
+        if(xy.length < 1000)System.out.println(Utils.pprint(gram.getXX())); else System.out.println("NON SPD matrix of dimension " + xy.length);
+        throw new NonSPDMatrixException();
+      }
+
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
         System.arraycopy(xy, 0, z, 0, xy.length);
         chol.solve(z);

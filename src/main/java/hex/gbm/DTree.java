@@ -548,11 +548,12 @@ public class DTree extends Iced {
           preds[c] += ts[c].score(data);
     }
 
-    public void generateHTML(String title, StringBuilder sb) {
+    public void generateHTML(String title, StringBuilder sb, boolean includeModelCode) {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
-      if(sb.indexOf("<h3>GBMModelView</h3>") != -1) {
+      // include link to java code for all models
+      if (includeModelCode) {
         sb.insert(sb.indexOf("</pre>") +"</pre></div>".length(),
         "<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
         "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
@@ -565,7 +566,7 @@ public class DTree extends Iced {
         assert cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey.equals(_dataKey) ) {
-          sb.append("<div class=\"alert\">Reported on training data</div>");
+          sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
         } else {
           RString rs = new RString("Reported on <a href='Inspect2.html?src_key=%$key'>%key</a>");
           rs.replace("key", testKey);
@@ -775,16 +776,15 @@ public class DTree extends Iced {
 
       // Call either the single-class leaf or the full-prediction leaf
       private final void leaf2( int mask ) throws T {
-        assert (mask& 8)== 8;   // Is a leaf
-        assert (mask&16)==16;   // No longer do small leaf
+        assert (mask==0 || ( (mask&8)== 8 && (mask&16)==16) ) : "Unknown mask: " + mask;   // Is a leaf or a special leaf on the top of tree
         leaf(_ts.get4f());
       }
 
       public final void visit() throws T {
         int nodeType = _ts.get1();
         int col = _ts.get2();
-        float fcmp = _ts.get4f();
         if( col==65535 ) { leaf2(nodeType); return; }
+        float fcmp = _ts.get4f();
         boolean equal = ((nodeType&4)==4);
         // Compute the amount to skip.
         int lmask =  nodeType & 0x1B;
@@ -852,8 +852,10 @@ public class DTree extends Iced {
               _bits[_depth]=1;
             }
             @Override protected void leaf( float pred  ) {
-              assert _bits[_depth-1] > 0 : Arrays.toString(_bits);
-              if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+              assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
+              if( _depth==0) { // it is de-generated tree
+                sb.p(pred);
+              } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
                 _bits[_depth-1]=2; _fs[_depth-1]=pred;
               } else {          // Else==2 (prior leaf) or 3 (prior tree)
                 if( _bits[_depth-1] == 2 ) sb.p(" ? ").p(_fs[_depth-1]).p(" ");
@@ -869,6 +871,10 @@ public class DTree extends Iced {
           sb.p(";\n");
         }
       }
+      sb.indent(2).p("// Compute Probabilities\n");
+      sb.indent(2).p("float sum = 0;\n");
+      sb.indent(2).p("for(int i=1;i<preds.length; i++) sum += Math.exp(preds[i]);\n");
+      sb.indent(2).p("for(int i=1; i<preds.length; i++) preds[i] = (float)Math.exp(preds[i]) / sum;\n");
     }
   }
 

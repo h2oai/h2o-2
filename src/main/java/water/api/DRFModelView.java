@@ -19,7 +19,7 @@ public class DRFModelView extends Request2 {
   }
 
   @Override public boolean toHTML(StringBuilder sb){
-    drf_model.generateHTML("DRF Model", sb);
+    drf_model.generateHTML("DRF Model", sb, true);
     return true;
   }
 

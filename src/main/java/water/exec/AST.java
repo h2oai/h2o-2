@@ -226,7 +226,6 @@ class ASTSlice extends AST {
     long cols[];
     if( !env.isAry() ) {
       int col = (int)env._d[env._sp-1]; // Peek double; Silent truncation (R semantics)
-      if( col > 0 && col >  len ) throw new IllegalArgumentException("Trying to select column "+col+" but only "+len+" present.");
       if( col < 0 && col < -len ) col=0; // Ignore a non-existent column
       if( col == 0 ) return new long[0];
       return new long[]{col};
@@ -390,19 +389,60 @@ class ASTAssign extends AST {
     // Peel apart a slice assignment
     ASTSlice slice = (ASTSlice)_lhs;
     ASTId id = (ASTId)slice._ast;
+    assert id._depth==0;        // Can only modify in the local scope.
+    // Simple assignment using the slice syntax
+    if( slice._rows==null & slice._cols==null ) {
+      env.tos_into_slot(id._depth,id._num,id._id);
+      return;
+    }
+    // Pull the LHS off the stack; do not lower the refcnt
+    Frame ary = env.frId(id._depth,id._num);
+    // Pull the RHS off the stack; do not lower the refcnt
+    Frame ary_rhs=null;  double d=Double.NaN;
+    if( env.isDbl() ) d = env.popDbl(); else ary_rhs = env.popAry();
+
     // Typed as a double ==> the row & col selectors are simple constants
     if( slice._t == Type.DBL ) { // Typed as a double?
-      double d = env.popDbl();   // Only allows double into a double
+      assert ary_rhs==null;
       long row = (long)((ASTNum)slice._rows)._d;
       int  col = (int )((ASTNum)slice._cols)._d;
-      assert id._depth==0;      // Can only modify in the local scope.
-      env.frId(id._depth,id._num).vecs()[col].set(row,d);
+      ary.vecs()[col].set(row,d);
       env.push(d);
       return;
     }
 
-    // Slice assignment
-    throw H2O.unimpl();
+    // Execute the slice LHS selection operators
+    Object cols = ASTSlice.select(ary.numCols(),slice._cols,env);
+    Object rows = ASTSlice.select(ary.numRows(),slice._rows,env);
+
+    // Partial row assignment?
+    if( rows != null ) throw H2O.unimpl();
+    assert cols != null; // all/all assignment uses simple-assignment
+
+    // Convert constant into a whole vec
+    if( ary_rhs == null )
+      ary_rhs = new Frame(env.addRef(ary.anyVec().makeCon(d)));
+    // Make sure we either have 1 col (repeated) or exactly a matching count
+    long[] cs = (long[]) cols;  // Columns to act on
+    if( ary_rhs.numCols() != 1 && 
+        ary_rhs.numCols() != cs.length )
+      throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign "+ary_rhs.numCols()+" cols over "+cs.length+" cols");
+    // Replace the LHS cols with the RHS cols
+    Vec rvecs[] = ary_rhs.vecs();
+    Futures fs = null;
+    for( long i : cs ) {
+      int cidx = (int)i-1;      // Convert 1-based to 0-based
+      Vec rv = env.addRef(rvecs[rvecs.length==1?0:cidx]);
+      if( cidx == ary.numCols() ) ary.add("C"+cidx,rv);
+      else fs = env.subRef(ary.replace(cidx,rv),fs);
+    }
+    if( fs != null )  fs.blockForPending();
+
+    // After slicing, pop all expressions (cannot lower refcnt till after all uses)
+    if( rows!= null ) env.pop();
+    if( cols!= null ) env.pop();
+    env.subRef(ary_rhs,null);
+    env.push(ary);
   }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {

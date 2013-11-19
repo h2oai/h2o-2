@@ -19,6 +19,7 @@ public abstract class FileVec extends ByteVec {
   @Override public int nChunks() { return (int)Math.max(1,_len>>LOG_CHK); }
   @Override public boolean writable() { return false; }
 
+  //NOTE: override ALL rollups-related methods or ALL files will be loaded after import.
   @Override
   public double min()  { return Double.NaN; }
   /** Return column max - lazily computed as needed. */

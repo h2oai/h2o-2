@@ -312,6 +312,10 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, **kwargs):
 
+    if h2o.beta_features:
+        print "HACK: temporarily disabling Summary always in v2 import_parse"
+        doSummary = False
+
     if not node: node = h2o.nodes[0]
 
     (importResult, importPattern) = import_only(node, schema, bucket, path,

@@ -10,8 +10,7 @@ h2o.installDepPkgs <- function(optional = FALSE) {
   if(!"RCurl" %in% myPackages) install.packages("RCurl")
   if(!"rjson" %in% myPackages) install.packages("rjson")
   if(!"statmod" %in% myPackages) install.packages("statmod")
-  if(!"uuid" %in% myPackages) install.packages("uuid")
-  myReqPkgs = c("RCurl", "rjson", "tools", "statmod", "uuid")
+  myReqPkgs = c("RCurl", "rjson", "tools", "statmod")
   
   # For plotting clusters in h2o.kmeans demo
   if(optional) {
@@ -20,7 +19,7 @@ h2o.installDepPkgs <- function(optional = FALSE) {
     myReqPkgs = c(myReqPkgs, "fpc", "cluster")
   }
   
-  # myReqPkgs = c("RCurl", "rjson", "tools", "statmod", "uuid", "fpc", "cluster")
+  # myReqPkgs = c("RCurl", "rjson", "tools", "statmod", "fpc", "cluster")
   temp = lapply(myReqPkgs, require, character.only = TRUE)
 }
 
@@ -30,7 +29,7 @@ h2o.installDepPkgs <- function(optional = FALSE) {
 # 3) If user does want to start H2O, but running non-locally, print an error
 setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logical", silentUpgrade="logical", promptUpgrade="logical"), 
           function(ip, port, startH2O, silentUpgrade, promptUpgrade) {
-  myReqPkgs = c("RCurl", "rjson", "tools", "statmod", "uuid")
+  myReqPkgs = c("RCurl", "rjson", "tools", "statmod")
   temp = lapply(myReqPkgs, require, character.only = TRUE)
             
   myURL = paste("http://", ip, ":", port, sep="")

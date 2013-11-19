@@ -9,14 +9,14 @@ import java.io.File;
 
 import junit.framework.Assert;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import water.*;
 import water.fvec.*;
 import water.util.Log;
 import water.util.Utils;
 
+@Ignore
 public class NeuralNetIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
   Frame _train, _test;

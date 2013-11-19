@@ -16,10 +16,8 @@ import java.util.Random;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.H2O.H2OEmptyCompleter;
 import water.Job.ValidatedJob;
 import water.api.*;
-import water.api.RequestBuilders.Response;
 import water.fvec.*;
 import water.util.RString;
 import water.util.Utils;
@@ -42,7 +40,7 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Activation function", filter = Default.class)
   public Activation activation = Activation.Tanh;
 
-  @API(help = "Hidden layer sizes, e.g. (1000, 1000)", filter = Default.class)
+  @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
   public int[] hidden = new int[] { 500 };
 
   @API(help = "Learning rate", filter = Default.class)
@@ -69,15 +67,14 @@ public class NeuralNet extends ValidatedJob {
     H2OCountedCompleter start = new H2OCountedCompleter() {
       @Override public void compute2() {
         startTrain();
-        tryComplete();
       }
 
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        Job.cancel(job_key, Utils.getStackAsString(ex));
+        Job.findJob(job_key).cancel(Utils.getStackAsString(ex));
         return super.onExceptionalCompletion(ex, caller);
       }
     };
-    start(new H2OEmptyCompleter());
+    start(start);
     H2O.submitTask(start);
     return this;
   }

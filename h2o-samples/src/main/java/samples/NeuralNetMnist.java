@@ -123,7 +123,6 @@ public class NeuralNetMnist extends Job {
     imagesBuf.readInt(); // Cols
 
     System.out.println("Count=" + count);
-    count = 500 * 1000;
     byte[][] rawI = new byte[count][PIXELS];
     byte[] rawL = new byte[count];
     for( int n = 0; n < count; n++ ) {

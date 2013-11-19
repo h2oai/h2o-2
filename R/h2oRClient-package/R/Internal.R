@@ -60,6 +60,8 @@ h2o.__PAGE_KMSCORE = "KMeansScore.json"
 h2o.__PAGE_RF  = "RF.json"
 h2o.__PAGE_RFVIEW = "RFView.json"
 h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
+h2o.__PAGE_DRF = "2/DRF.json"
+h2o.__PAGE_DRFModelView = "2/DRFModelView.json"
 h2o.__PAGE_GLMGrid = "GLMGrid.json"
 h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_GBM = "2/GBM.json"
@@ -225,6 +227,23 @@ h2o.__escape <- function(key) {
     key_esc = gsub("\\\\", "\\\\\\\\", key)
     
   paste("|", key_esc, "|", sep="")
+}
+
+h2o.__uniqID <- function(prefix = "") {
+  if("uuid" %in% installed.packages())
+    temp = UUIDgenerate()
+  else {
+    hex_digits <- c(as.character(0:9), letters[1:6])
+    y_digits <- hex_digits[9:12]
+    temp = paste(
+      paste(sample(hex_digits, 8, replace=TRUE), collapse='', sep=''),
+      paste(sample(hex_digits, 4, replace=TRUE), collapse='', sep=''),
+      paste('4', paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep=''),
+      paste(sample(y_digits,1), paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse=''),
+      paste(sample(hex_digits, 12, replace=TRUE), collapse='', sep=''), sep='-')
+  }
+  temp = gsub("-", "", temp)
+  paste(prefix, temp, sep="_")
 }
 
 h2o.__func <- function(fname, x, type) {

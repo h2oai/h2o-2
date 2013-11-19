@@ -263,7 +263,7 @@ public abstract class Trainer {
       _epochs = epochs;
       _job = job;
 
-      _key = Key.make(UUID.randomUUID().toString(), (byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
+      _key = Key.make((byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
       _instances.put(_key, this);
       DKV.put(_key, new Value(_key, new byte[0]));
 
@@ -316,8 +316,10 @@ public abstract class Trainer {
       UKV.remove(_key);
       if( _job != null ) {
         Job job = Job.findJob(_job);
-        if( job != null )
+        if( job != null ) {
+          job._fjtask.tryComplete();
           job.remove();
+        }
       }
     }
   }
@@ -381,7 +383,7 @@ public abstract class Trainer {
       String error = Utils.getStackAsString(ex);
       Log.info(error);
       if( _node._job != null )
-        Job.cancel(_node._job, error);
+        Job.findJob(_node._job).cancel(error);
       return super.onExceptionalCompletion(ex, caller);
     }
   }

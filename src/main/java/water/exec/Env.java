@@ -182,21 +182,24 @@ public class Env extends Iced {
     return true;
   }
 
+  public Futures subRef( Vec vec, Futures fs ) {
+    int cnt = _refcnt.get(vec)-1;
+    if( cnt > 0 ) _refcnt.put(vec,cnt);
+    else {
+      if( fs == null ) fs = new Futures();
+      UKV.remove(vec._key,fs);
+      _refcnt.remove(vec);
+    }
+    return fs;
+  }
+
   // Lower the refcnt on all vecs in this frame.
   // Immediately free all vecs with zero count.
   // Always return a null.
   public Frame subRef( Frame fr, String key ) {
     if( fr == null ) return null;
     Futures fs = null;
-    for( Vec vec : fr.vecs() ) {
-      int cnt = _refcnt.get(vec)-1;
-      if( cnt > 0 ) _refcnt.put(vec,cnt);
-      else {
-        if( fs == null ) fs = new Futures();
-        UKV.remove(vec._key,fs);
-        _refcnt.remove(vec);
-      }
-    }
+    for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
     if( key != null && fs != null ) UKV.remove(Key.make(key),fs);
     if( fs != null )
       fs.blockForPending();
@@ -255,17 +258,19 @@ public class Env extends Iced {
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
         Frame fr = popAry();  // Pop w/out lower refcnt & delete
-        String skey = key();
-        int refcnt = _refcnt.get(fr.anyVec());
-        for( Vec v : fr.vecs() )
-          if( _refcnt.get(v) != refcnt )
-            throw H2O.unimpl();
-        assert refcnt > 0;
         Frame fr2=fr;
-        if( refcnt > 1 ) {       // Need a deep-copy now
-          fr2 = fr.deepSlice(null,null);
-          subRef(fr,skey);      // Now lower refcnt for good assertions
-        } // But not down to zero (do not delete items in global scope)
+        String skey = key();
+        for( int i=0; i<fr.numCols(); i++ ) {
+          Vec v = fr.vecs()[i];
+          int refcnt = _refcnt.get(v);
+          assert refcnt > 0;
+          if( refcnt > 1 ) {    // Need a deep-copy now
+            if( fr2==fr ) fr2 = new Frame(fr);
+            Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
+            fr2.replace(i,v2);  // Replace with private deep-copy
+            subRef(v,null);     // Now lower refcnt for good assertions
+          } // But not down to zero (do not delete items in global scope)
+        }
         UKV.put(Key.make(_key[_sp]),fr2);
       } else
         pop();
