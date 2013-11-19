@@ -1,10 +1,11 @@
 package hex.glm;
 
 
+import hex.GridSearch;
+import hex.glm.GLM2.GLMGridSearch;
 import water.*;
-import water.api.Progress2;
-import water.api.Request;
-import water.api.RequestBuilders.Response;
+import water.api.*;
+import water.api.RequestServer.API_VERSION;
 
 import com.google.gson.JsonObject;
 
@@ -28,5 +29,34 @@ public class GLMProgressPage2 extends Progress2 {
     } else
       sb.append("<b>No model yet.</b>");
     return true;
+  }
+
+
+  public static class GLMGrid extends Progress2 {
+    API_VERSION _v;
+    boolean _isDone;
+    public static Response redirect(Request req, Key jobkey, Key dest,API_VERSION v) {
+      return new Response(Response.Status.redirect, req, -1, -1, href2(v), JOB_KEY, jobkey, DEST_KEY, dest );
+    }
+
+    private static String href2(API_VERSION v) {
+      return v.prefix() + "GLMGrid";
+    }
+    @Override protected String href(API_VERSION v) {
+      return href2(v);
+    }
+    @Override public boolean toHTML(StringBuilder sb) {
+      try{
+        GLM2.GLMGrid grid = UKV.get(destination_key);
+        grid.toHTML(sb);
+      }catch(Throwable t){
+//        t.printStackTrace();
+      }
+      return true;
+    }
+    @Override protected Response jobDone(final Job job, final Key dst) {
+      _isDone = true;
+      return new Response(Response.Status.done, this, 0, 0, null);
+    }
   }
 }

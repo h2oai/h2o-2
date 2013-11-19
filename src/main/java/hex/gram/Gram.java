@@ -3,7 +3,6 @@ package hex.gram;
 import hex.DLSM.ADMMSolver.NonSPDMatrixException;
 import hex.FrameTask;
 
-import java.text.DecimalFormat;
 import java.util.Arrays;
 
 import jsr166y.RecursiveAction;
@@ -37,10 +36,12 @@ public final class Gram extends Iced {
       _xx[i] = MemoryManager.malloc8d(diag + i + 1);
   }
 
-  public void addDiag(double d) {
+  public void addDiag(double d) {addDiag(d,false);}
+  public void addDiag(double d, boolean add2Intercept) {
     for( int i = 0; i < _diag.length; ++i )
       _diag[i] += d;
-    for( int i = 0; i < _xx.length - 1; ++i )
+    int ii = (_hasIntercept && add2Intercept)?1:0;
+    for( int i = 0; i < _xx.length - ii; ++i )
       _xx[i][_xx[i].length - 1] += d;
   }
 
@@ -253,16 +254,16 @@ public final class Gram extends Iced {
    * @author tomasnykodym
    */
   public static class GramTask extends FrameTask<GramTask> {
-    final boolean _hasIntercept;
     public Gram _gram;
     public long _nobs;
+    public final boolean _hasIntercept;
 
-    public GramTask(Job job, boolean standardize, boolean hasIntercept){
-      super(job,standardize,false);
+    public GramTask(Job job, DataInfo dinfo, boolean hasIntercept){
+      super(job,dinfo);
       _hasIntercept = hasIntercept;
     }
     @Override protected void chunkInit(){
-      _gram = new Gram(fullN(), largestCat(), _nums, _cats,_hasIntercept);
+      _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,_hasIntercept);
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats) {
       _gram.addRow(nums, ncats, cats, 1.0);

@@ -23,7 +23,9 @@ import water.util.Utils.ExpectedExceptionForDebug;
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
+  public static class JobCancelledException extends RuntimeException {
+    public JobCancelledException(){super("job was cancelled!");}
+  }
   // Global LIST of Jobs key.
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
   private static final int KEEP_LAST_COUNT = 100;
@@ -302,7 +304,7 @@ public class Job extends Request2 {
     return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
   }
 
-  public void start(final H2OCountedCompleter fjtask) {
+  public Job start(final H2OCountedCompleter fjtask) {
     // Subtle FJ stuff: we create another counted completer and set it as completer of the user's task.
     // This is to ensure that if anyone calls this.get() it will block until all completion methods
     // (if there are any) of the _fjtask completed. Common case is that the user's FJtask has
@@ -322,6 +324,7 @@ public class Job extends Request2 {
       }
     }.invoke(LIST);
     fs.blockForPending();
+    return this;
   }
   // Overridden for Parse
   public float progress() {
@@ -345,17 +348,21 @@ public class Job extends Request2 {
     return ans;
   }
 
-  public void cancel() { cancel("cancelled by user"); }
+  public void cancel() {
+    cancel("");
+  }
   public void cancel(Throwable ex){
+
+    if(_fjtask != null && !_fjtask.isDone())_fjtask.completeExceptionally(ex);
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);
+//    ex.printStackTrace();
     String stackTrace = sw.toString();
     cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
   }
-  public void cancel(String msg) { cancel(job_key,msg); }
-  public static void cancel(final Key self, final String exception) {
-    DKV.remove(self);
+  public void cancel(final String msg) {
+    DKV.remove(self());
     DKV.write_barrier();
     new TAtomic<List>() {
       transient private Job _job;
@@ -363,9 +370,9 @@ public class Job extends Request2 {
         if( old == null ) old = new List();
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i].job_key.equals(self) ) {
+          if( jobs[i].job_key.equals(self()) ) {
             jobs[i].end_time = CANCELLED_END_TIME;
-            jobs[i].exception = exception;
+            jobs[i].exception = msg;
             _job = jobs[i];
             break;
           }

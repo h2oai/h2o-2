@@ -53,11 +53,12 @@ public class GLMValidation extends Iced {
 
   public static class GLMXValidation extends GLMValidation {
     Key [] _xvalModels;
-    public GLMXValidation(GLMModel mainModel, Key [] xvalModels) {
-      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank());
-      for(Key k:_xvalModels = xvalModels){
-        GLMModel xm = DKV.get(k).get();
-        add(xm.validation());
+    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx) {
+      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambdaIdx));
+      _xvalModels = new Key[xvalModels.length];
+      for(int i = 0; i < xvalModels.length; ++i){
+        add(xvalModels[i].validation());
+        _xvalModels[i] = xvalModels[i]._selfKey;
       }
       finalize_AIC_AUC();
     }
@@ -69,7 +70,7 @@ public class GLMValidation extends Iced {
       int i = 0;
       for(Key k:_xvalModels){
         sb.append("<tr>");
-        sb.append("<td>" + "<a href='Inspect.html?key="+k+"'>" + "Model " + ++i + "</a></td>");
+        sb.append("<td>" + GLMModelView.link("Model" + ++i, k) + "</td>");
         sb.append("</tr>");
       }
       sb.append("</table>");
@@ -112,7 +113,7 @@ public class GLMValidation extends Iced {
   public void add(GLMValidation v){
     residual_deviance  += v.residual_deviance;
     null_deviance += v.null_deviance;
-    avg_err += v.avg_err;
+    avg_err = (double)nobs/(nobs+v.nobs)*avg_err +  (double)v.nobs/(nobs+v.nobs)*v.avg_err;
     nobs += v.nobs;
     _aic2 += v._aic2;
     if(_cms == null)_cms = v._cms;
@@ -174,7 +175,7 @@ public class GLMValidation extends Iced {
       FPR_pre = FPR;
     }
     auc += trapeziod_area(FPR_pre, 0, TPR_pre, 0);
-    this.auc = auc;
+    this.auc = Math.round(1000*auc)*0.001;
     if(_glm.family == Family.binomial){
       int best = 0;
       for(int i = 1; i < _cms.length; ++i){
@@ -200,7 +201,7 @@ public class GLMValidation extends Iced {
     sb.append("<tr><th>Residual Deviance</th><td>" + residual_deviance + "</td></tr>");
     sb.append("<tr><th>AIC</th><td>" + aic() + "</td></tr>");
     sb.append("<tr><th>Training Error Rate Avg</th><td>" + avg_err + "</td></tr>");
-    if(_glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + auc() + "</td></tr>");
+    if(_glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + DFORMAT.format(auc()) + "</td></tr>");
     sb.append("</table>");
 
     if(_glm.family == Family.binomial){

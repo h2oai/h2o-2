@@ -36,11 +36,10 @@ public class Progress2 extends Request2 {
     Job jjob = Job.findJob(job_key);
     if(jjob != null && jjob.exception != null){
       status = "error";
-      return Response.error(jjob.exception);
+      return Response.error(jjob.exception == null?"cancelled":jjob.exception);
     }
-    if(jjob == null || jjob.end_time > 0 || jjob.cancelled()) {
+    if(jjob == null || jjob.end_time > 0 || jjob.cancelled())
       return jobDone(jjob, destination_key);
-    }
     status = "poll";
     return jobInProgress(jjob, destination_key);
   }

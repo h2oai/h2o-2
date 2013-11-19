@@ -1,5 +1,6 @@
 package hex.pca;
 
+import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import water.Key;
 import water.Model;
@@ -39,14 +40,14 @@ public class PCAModel extends Model {
   @API(help = "PCA parameters")
   final PCAParams params;
 
-  public PCAModel(Key selfKey, Key dataKey, Frame fr, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
-    super(selfKey, dataKey, fr);
+  public PCAModel(Key selfKey, Key dataKey, DataInfo dinfo, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
+    super(selfKey, dataKey, dinfo._adaptedFrame);
     this.sdev = sdev;
     this.propVar = propVar;
     this.cumVar = cumVar;
     this.eigVec = eigVec;
     this.params = params;
-    this.catOffsets = gramt.catOffsets();
+    this.catOffsets = dinfo._catOffsets;
     this.namesExp = namesExp();
     this.rank = rank;
     this.num_pc = num_pc;

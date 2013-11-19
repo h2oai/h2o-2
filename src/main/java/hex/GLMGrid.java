@@ -4,7 +4,6 @@ import hex.DGLM.Family;
 import hex.DGLM.GLMModel;
 import hex.DGLM.GLMParams;
 import hex.DLSM.ADMMSolver;
-import hex.NewRowVecTask.JobCancelledException;
 
 import java.util.*;
 

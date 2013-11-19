@@ -22,6 +22,8 @@ import water.H2O.H2OCountedCompleter;
  *
  */
 public abstract class DTask<T extends DTask> extends H2OCountedCompleter implements Freezable {
+  public DTask(){}
+  public DTask(H2OCountedCompleter completer){super(completer);}
   // NOTE: DTask CAN NOT have any ICED members (FetchId is DTask, causes DEADLOCK in multinode environment)
   // exception info, it must be unrolled here
   protected String _exception;
@@ -130,10 +132,6 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
     that._fname = _fname;
     that._cls = _cls;
     that._mth = _mth;
-  }
-  @Override public DTask clone() {
-    try { return (DTask)super.clone(); }
-    catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
   }
   private RuntimeException barf(String method) {
     return new RuntimeException(H2O.SELF + ":" + getClass().toString()+ " " + method +  " should be automatically overridden in the subclass by the auto-serialization code");

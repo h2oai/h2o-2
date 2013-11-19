@@ -1,18 +1,20 @@
 package hex.pca;
 
+import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 
 import java.util.*;
 
 import org.apache.commons.lang.ArrayUtils;
 
+import water.Job.ColumnsJob;
+import water.*;
+import water.api.DocGen;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.RString;
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
-import water.*;
-import water.Job.*;
-import water.api.DocGen;
-import water.fvec.*;
-import water.util.RString;
 
 /**
  * Principal Components Analysis
@@ -70,9 +72,9 @@ public class PCA extends ColumnsJob {
         cols[i] = removeCols.get(i);
       fr.remove(cols);
     }
-
-    GramTask tsk = new GramTask(this, standardize, false).doIt(fr);
-    PCAModel myModel = buildModel(fr, tsk);
+    DataInfo dinfo = new DataInfo(fr, false, standardize);
+    GramTask tsk = new GramTask(this, dinfo, false).doAll(dinfo._adaptedFrame);
+    PCAModel myModel = buildModel(dinfo, tsk);
     UKV.put(destination_key, myModel);
   }
 
@@ -80,7 +82,7 @@ public class PCA extends ColumnsJob {
     return PCAProgressPage.redirect(this, self(), dest());
   }
 
-  public PCAModel buildModel(Frame data, GramTask tsk) {
+  public PCAModel buildModel(DataInfo dinfo, GramTask tsk) {
     Matrix myGram = new Matrix(tsk._gram.getXX());   // X'X/n where n = num rows
     SingularValueDecomposition mySVD = myGram.svd();
 
@@ -93,7 +95,7 @@ public class PCA extends ColumnsJob {
     // Compute standard deviation
     double[] sdev = new double[Sval.length];
     double totVar = 0;
-    double dfcorr = data.numRows()/(data.numRows() - 1.0);
+    double dfcorr = dinfo._adaptedFrame.numRows()/(dinfo._adaptedFrame.numRows() - 1.0);
     for(int i = 0; i < Sval.length; i++) {
       // if(standardize)
         Sval[i] = dfcorr*Sval[i];   // Correct since degrees of freedom = n-1
@@ -112,7 +114,7 @@ public class PCA extends ColumnsJob {
     Key dataKey = input("source") == null ? null : Key.make(input("source"));
     int ncomp = Math.min(getNumPC(sdev, tolerance), max_pc);
     PCAParams params = new PCAParams(max_pc, tolerance, standardize);
-    return new PCAModel(destination_key, dataKey, data, tsk, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
+    return new PCAModel(destination_key, dataKey, dinfo, tsk, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
   }
 
   static class reverseDouble implements Comparator<Double> {

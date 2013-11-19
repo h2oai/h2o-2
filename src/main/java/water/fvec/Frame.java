@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
+import com.google.common.base.Throwables;
+
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
@@ -210,19 +212,23 @@ public class Frame extends Iced {
   /** Check that the vectors are all compatible.  All Vecs have their content
    *  sharded using same number of rows per chunk.  */
   public void checkCompatible( ) {
-    Vec v0 = anyVec();
-    int nchunks = v0.nChunks();
-    for( Vec vec : _vecs ) {
-      if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
-      if( vec.nChunks() != nchunks )
-        throw new IllegalArgumentException("Vectors different numbers of chunks, "+nchunks+" and "+vec.nChunks());
-    }
-    // Also check each chunk has same rows
-    for( int i=0; i<nchunks; i++ ) {
-      long es = v0.chunk2StartElem(i);
-      for( Vec vec : _vecs )
-        if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
-          throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
+    try{
+      Vec v0 = anyVec();
+      int nchunks = v0.nChunks();
+      for( Vec vec : vecs() ) {
+        if( vec instanceof AppendableVec ) continue; // New Vectors are endlessly compatible
+        if( vec.nChunks() != nchunks )
+          throw new IllegalArgumentException("Vectors different numbers of chunks, "+nchunks+" and "+vec.nChunks());
+      }
+      // Also check each chunk has same rows
+      for( int i=0; i<nchunks; i++ ) {
+        long es = v0.chunk2StartElem(i);
+        for( Vec vec : vecs() )
+          if( !(vec instanceof AppendableVec) && vec.chunk2StartElem(i) != es )
+            throw new IllegalArgumentException("Vector chunks different numbers of rows, "+es+" and "+vec.chunk2StartElem(i));
+      }
+    }catch(Throwable ex){
+      Throwables.propagate(ex);
     }
   }
 

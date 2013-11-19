@@ -3,58 +3,27 @@ package hex;
 import java.util.Arrays;
 
 import water.*;
+import water.H2O.H2OCountedCompleter;
+import water.Job.JobCancelledException;
 import water.fvec.*;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
-  protected final boolean _standardize;
-  public final boolean standardize(){return _standardize;}
-  final int _offset;
-  final int _step;
-  final boolean _complement;
-  final boolean _hasResponse;
+  final protected DataInfo _dinfo;
   final Job _job;
-
-  protected int _nums = -1;
-  public final int nums(){return _nums;}
-  protected int _cats = -1;
-  public final int cats(){return _cats;}
-  // offsets of categorcial variables
-  // each categorical with n levels is virtually expanded into a binary vector of length n -1.
-  // _catOffsets basically hold a sum of cardinlities of all preceding categorical variables
-  // to be able to address correct elements in the beta vector (which must be fully expanded).
-  protected int [] _catOffsets;
-  public final int [] catOffsets(){return _catOffsets;}
-  // data-regularization params
-  double [] _normSub; // means to be subtracted
-  public final double [] normSub(){return _normSub;}
-  double [] _normMul; // 1/sigma to multiply each numeric param with
-  public final double [] normMul(){return _normMul;}
   double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
-  final protected int fullN(){return _nums + _catOffsets[_cats];}
-  final protected int largestCat(){return _cats > 0?_catOffsets[1]:0;}
 
-  public FrameTask(Job job, boolean standardize, boolean hasResponse) {this(job,standardize,hasResponse, 1,0,false);}
-  public FrameTask(Job job, boolean standardize, boolean hasResponse, int step, int offset, boolean complement) {
-    _hasResponse = hasResponse;
-    _standardize = standardize;
+  public FrameTask(Job job, DataInfo dinfo) {
+    this(job,dinfo,null);
+  }
+  public FrameTask(Job job, DataInfo dinfo, H2OCountedCompleter cmp) {
+    super(cmp);
     _job = job;
-    _step = step;
-    _offset = offset;
-    _complement = complement;
+    _dinfo = dinfo;
   }
   protected FrameTask(FrameTask ft){
-    _standardize = ft._standardize;
-    _hasResponse = ft._hasResponse;
-    _nums = ft._nums;
-    _cats = ft._cats;
-    _catOffsets = ft._catOffsets;
-    _normMul = ft._normMul;
-    _normSub = ft._normSub;
-    _step = ft._step;
-   _offset = ft._offset;
-   _complement = ft._complement;
-   _job = ft._job;
+    _dinfo = ft._dinfo;
+    _job = ft._job;
   }
 
   /**
@@ -83,74 +52,95 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   protected void processRow(double [] nums, int ncats, int [] cats, double response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
   protected void processRow(double [] nums, int ncats, int [] cats, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
 
-  /**
-   * Reorder the frame's columns so that numeric columns come first followed by categoricals ordered by cardinality in decreasing order and
-   * the response is the last.
-   * @param fr
-   * @return
-   */
-  public Frame adaptFrame(Frame fr){
-    final Vec [] vecs = fr.vecs();
-    final int n = vecs.length-(_hasResponse?1:0); // -1 for response
-    int [] nums = MemoryManager.malloc4(n);
-    int [] cats = MemoryManager.malloc4(n);
-    int nnums = 0, ncats = 0;
-    for(int i = 0; i < n; ++i){
-      if(vecs[i].isEnum())
-        cats[ncats++] = i;
-      else
-        nums[nnums++] = i;
+
+  public static class DataInfo extends Iced {
+    public final Frame _adaptedFrame;
+    public final boolean _hasResponse;
+    public final boolean _standardize;
+    public final int _nums;
+    public final int _cats;
+    public final int [] _catOffsets;
+    public final double [] _normMul;
+    public final double [] _normSub;
+    public final int _foldId;
+    public final int _nfolds;
+
+    private DataInfo(DataInfo dinfo,int foldId, int nfolds){
+      _standardize = dinfo._standardize;
+      _hasResponse = dinfo._hasResponse;
+      _nums = dinfo._nums;
+      _cats = dinfo._cats;
+      _adaptedFrame = dinfo._adaptedFrame;
+      _catOffsets = dinfo._catOffsets;
+      _normMul = dinfo._normMul;
+      _normSub = dinfo._normSub;
+      _foldId = foldId;
+      _nfolds = nfolds;
     }
-    // sort the cats in the decreasing order according to their size
-    for(int i = 0; i < ncats; ++i)
-      for(int j = i+1; j < ncats; ++j)
-        if(vecs[cats[i]].domain().length < vecs[cats[j]].domain().length){
-          int x = cats[i];
-          cats[i] = cats[j];
-          cats[j] = x;
-        }
-    Vec [] vecs2 = vecs.clone();
-    String [] names = fr._names.clone();
-    for(int i = 0; i < ncats; ++i){
-      vecs2[i] = vecs[cats[i]];
-      names[i] = fr._names[cats[i]];
-    }
-    for(int i = 0; i < nnums; ++i){
-      vecs2[i+ncats]  = vecs [nums[i]];
-      names[i+ncats] = fr._names[nums[i]];
-    }
-    return new Frame(names,vecs2);
-  }
-  public T doIt(Frame fr){return dfork2(fr).getResult();}
-  public T dfork2(Frame fr){
-    if(_cats == -1 && _nums == -1 ){
-      fr = adaptFrame(fr);
-      assert _normMul == null;
-      assert _normSub == null;
-      int i = 0;
+    public DataInfo(Frame fr, boolean hasResponse, boolean standardize){
+      _nfolds = _foldId = 0;
+      _standardize = standardize;
+      _hasResponse = hasResponse;
       final Vec [] vecs = fr.vecs();
-      final int n = _hasResponse?vecs.length-1:vecs.length; // -1 for response
-      while(i < n && vecs[i].isEnum())++i;
-      _cats = i;
-      while(i < n && !vecs[i].isEnum())++i;
-      _nums = i-_cats;
-      if(i != n)
-        throw new RuntimeException("Incorrect format of the input frame. Frame is assumed to be ordered so that categorical columns come before numerics.");
-      _normSub = MemoryManager.malloc8d(_nums);
-      _normMul = MemoryManager.malloc8d(_nums); Arrays.fill(_normMul, 1);
-      if(_standardize) for(i = 0; i < _nums; ++i){
-        _normSub[i] = vecs[i+_cats].mean();
-        _normMul[i] = 1.0/vecs[i+_cats].sigma();
+      final int n = vecs.length-(hasResponse?1:0); // -1 for response
+      int [] nums = MemoryManager.malloc4(n);
+      int [] cats = MemoryManager.malloc4(n);
+      int nnums = 0, ncats = 0;
+      for(int i = 0; i < n; ++i){
+        if(vecs[i].isEnum())
+          cats[ncats++] = i;
+        else
+          nums[nnums++] = i;
       }
-      _catOffsets = MemoryManager.malloc4(_cats+1);
+      _nums = nnums;
+      _cats = ncats;
+      // sort the cats in the decreasing order according to their size
+      for(int i = 0; i < ncats; ++i)
+        for(int j = i+1; j < ncats; ++j)
+          if(vecs[cats[i]].domain().length < vecs[cats[j]].domain().length){
+            int x = cats[i];
+            cats[i] = cats[j];
+            cats[j] = x;
+          }
+      Vec [] vecs2 = vecs.clone();
+      String [] names = fr._names.clone();
+      _catOffsets = MemoryManager.malloc4(ncats+1);
       int len = _catOffsets[0] = 0;
-      for(i = 0; i < _cats; ++i)
-        _catOffsets[i+1] = (len += vecs[i].domain().length - 1);
-      // get mean of response...
-      if(Double.isNaN(_ymu))_ymu = vecs[vecs.length-1].mean();
+
+      for(int i = 0; i < ncats; ++i){
+        Vec v = (vecs2[i] = vecs[cats[i]]);
+        names[i] = fr._names[cats[i]];
+        _catOffsets[i+1] = (len += v.domain().length - 1);
+      }
+      if(standardize){
+        _normSub = MemoryManager.malloc8d(nnums);
+        _normMul = MemoryManager.malloc8d(nnums); Arrays.fill(_normMul, 1);
+      } else
+        _normSub = _normMul = null;
+      for(int i = 0; i < nnums; ++i){
+        Vec v = (vecs2[i+ncats]  = vecs [nums[i]]);
+        names[i+ncats] = fr._names[nums[i]];
+        if(standardize){
+          _normSub[i] = v.mean();
+          _normMul[i] = 1.0/v.sigma();
+        }
+      }
+      _adaptedFrame = new Frame(names,vecs2);
     }
-    return dfork(fr);
+    public DataInfo getFold(int foldId, int nfolds){
+      return new DataInfo(this, foldId, nfolds);
+    }
+    public final int fullN(){return _nums + _catOffsets[_cats];}
+    public final int largestCat(){return _cats > 0?_catOffsets[1]:0;}
+    public final int numStart(){return _catOffsets[_cats];}
   }
+
+  @Override
+  public T dfork(Frame fr){
+    assert fr == _dinfo._adaptedFrame;
+    return super.dfork(fr);
+  }
+
   /**
    * Override this to initialize at the beginning of chunk processing.
    */
@@ -167,30 +157,32 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
-    if(_job != null && _job.cancelled())throw new RuntimeException("Cancelled");
+    if(_job != null && _job.cancelled())throw new JobCancelledException();
     chunkInit();
     final int nrows = chunks[0]._len;
-    double [] nums = MemoryManager.malloc8d(_nums);
-    int    [] cats = MemoryManager.malloc4(_cats);
-    final int step = _complement?_step:1;
-    final int start = _complement?_offset:0;
+    double [] nums = MemoryManager.malloc8d(_dinfo._nums);
+    int    [] cats = MemoryManager.malloc4(_dinfo._cats);
+
     OUTER:
-    for(int r = start; r < nrows; r += step){
-      if(_step > step && (r % _step) == _offset)continue;
+    for(int r = 0; r < nrows; ++r){
+      if(_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
       int i = 0, ncats = 0;
-      for(; i < _cats; ++i){
+      for(; i < _dinfo._cats; ++i){
         int c = (int)chunks[i].at80(r);
-        if(c != 0)cats[ncats++] = c + _catOffsets[i] - 1;
+        if(c != 0)cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
       }
-      final int n = _hasResponse?chunks.length-1:chunks.length;
-      for(;i < n;++i)
-        nums[i-_cats] = (chunks[i].at0(r) - _normSub[i-_cats])*_normMul[i-_cats];
+      final int n = _dinfo._hasResponse?chunks.length-1:chunks.length;
+      for(;i < n;++i){
+        double d = chunks[i].at0(r);
+        if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
+        nums[i-_dinfo._cats] = d;
+      }
       if(outputs != null && outputs.length > 0){
-        if(!_hasResponse) processRow(nums, ncats, cats,outputs);
+        if(!_dinfo._hasResponse) processRow(nums, ncats, cats,outputs);
         else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r),outputs);
       } else {
-        if(!_hasResponse) processRow(nums, ncats, cats);
+        if(!_dinfo._hasResponse) processRow(nums, ncats, cats);
         else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r));
       }
     }

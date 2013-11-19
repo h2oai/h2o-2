@@ -2,17 +2,20 @@ package hex.glm;
 
 import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
+import hex.glm.GLMValidation.GLMXValidation;
 
 import java.text.DecimalFormat;
 import java.util.HashMap;
 
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.fvec.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
 import water.util.RString;
 
-public class GLMModel extends Model {
+public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -25,11 +28,6 @@ public class GLMModel extends Model {
   @API(help="value used to co compare agains using case-predicate to turn the response into 0/1")
   final double _caseVal;
 
-  @API(help="Beta vector containing model coefficients.")
-  final double []  beta;
-
-  @API(help="Beta vector containing normalized coefficients (coefficients obtained on normalized data).")
-  final double []  norm_beta;
   @API(help="offsets of categorical columns into the beta vector. The last value is the offset of the first numerical column.")
   final int    []  catOffsets;
   @API(help="warnings")
@@ -42,80 +40,134 @@ public class GLMModel extends Model {
   final double     beta_eps;
   @API(help="regularization parameter driving proportion of L1/L2 penalty.")
   final double     alpha;
-  @API(help="regularization param giving the strength of the applied regularization. high values drive coeffficients to zero.")
-  final double     lambda;
-  @API(help="number of iterations computed.")
-  final int        iteration;
-  @API(help="running time of the algo in ms.")
-  final long       run_time;
-  @API(help="Validation")
-  GLMValidation validation;
 
+  @API(help="index of lambda giving best results")
+  int best_lambda_idx;
+
+  public double auc(){
+    if(glm.family == Family.binomial && submodels != null && submodels[best_lambda_idx].validation != null)
+      return submodels[best_lambda_idx].validation.auc;
+    return -1;
+  }
+  public double aic(){
+    if(submodels != null && submodels[best_lambda_idx].validation != null)
+      return submodels[best_lambda_idx].validation.aic;
+    return Double.MAX_VALUE;
+  }
+  public double devExplained(){
+    if(submodels == null || submodels[best_lambda_idx].validation == null)
+      return 0;
+    GLMValidation val = submodels[best_lambda_idx].validation;
+    return 1.0 - val.residual_deviance/val.null_deviance;
+  }
+
+
+  @Override
+  public int compareTo(GLMModel m){
+//    assert m._dataKey.equals(_dataKey);
+    assert m.glm.family == glm.family;
+    assert m.glm.link == glm.link;
+    switch(glm.family){
+      case binomial: // compare by AUC, higher is better
+        return (int)(1e6*(m.auc()-auc()));
+      case gamma: // compare by percentage of explained deviance, higher is better
+        return (int)(100*(m.devExplained()-devExplained()));
+      default: // compare by AICs by default, lower is better
+        return (int)(100*(aic()- m.aic()));
+    }
+  }
+  @API(help="Overall run time")
+  long run_time;
+  @API(help="computation started at")
+  long start_time;
+
+  static class Submodel extends Iced {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    @API(help="regularization param giving the strength of the applied regularization. high values drive coeffficients to zero.")
+    final double     lambda;
+    @API(help="number of iterations computed.")
+    final int        iteration;
+    @API(help="running time of the algo in ms.")
+    final long       run_time;
+    @API(help="Validation")
+    GLMValidation validation;
+    @API(help="Beta vector containing model coefficients.") double []  beta;
+    @API(help="Beta vector containing normalized coefficients (coefficients obtained on normalized data).") double []  norm_beta;
+
+
+
+    public Submodel(double lambda, double [] beta, double [] norm_beta, long run_time, int iteration){
+      this.lambda = lambda;
+      this.beta = beta;
+      this.norm_beta = norm_beta;
+      this.run_time = run_time;
+      this.iteration = iteration;
+    }
+  }
+
+  @API(help = "models computed for particular lambda values")
+  Submodel [] submodels;
   private static final DecimalFormat DFORMAT = new DecimalFormat("###.####");
 
-  public GLMModel(Key selfKey, Frame fr, GLMParams glm, double beta_eps, double alpha, double lambda,long run_time, CaseMode caseMode, double caseVal ) {
+  public GLMModel(Key selfKey, Frame fr, int [] catOffsets, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
     super(selfKey,null,fr);
-    ymu = 0;
-    beta = null;
-    norm_beta = null;
+    this.ymu = ymu;
     this.glm = glm;
     threshold = 0.5;
-    iteration = 0;
-    this.catOffsets = null;
+    this.catOffsets = catOffsets;
     this.warnings = null;
     this.alpha = alpha;
-    this.lambda = lambda;
     this.beta_eps = beta_eps;
-    this.run_time = run_time;
     _caseVal = caseVal;
     _caseMode = caseMode;
+    submodels = new Submodel[lambda.length];
+    for(int i = 0; i < submodels.length; ++i)
+      submodels[i] = new Submodel(lambda[i], null, null, 0, 0);
+    run_time = 0;
+    start_time = System.currentTimeMillis();
+  }
+  public void setLambdaSubmodel(int lambdaIdx,double lambda, double [] beta, double [] norm_beta, int iteration){
+    submodels[lambdaIdx] = new Submodel(lambda, beta, norm_beta, run_time, iteration);
+    run_time = (System.currentTimeMillis()-start_time);
   }
 
-  public GLMModel(Key selfKey, Key dataKey, int iteration, Frame fr, GLMTask glmt, double beta_eps, double alpha, double lambda, double [] beta, double threshold, String [] warnings, long run_time, CaseMode caseMode, double caseVal) {
-    super(selfKey, dataKey, fr);
-    glm = glmt._glm;
-    this.threshold = threshold;
-    catOffsets = glmt.catOffsets();
-    if(glmt.standardize()){
-      this.norm_beta = beta;
-      // denormalize beta
-      this.beta = beta.clone();
-      double norm = 0.0;        // Reverse any normalization on the intercept
-      // denormalize only the number coefs (categoricals are not normalized)
-      final int numoff = beta.length - glmt.nums() - 1;
-      for( int i=numoff; i< this.beta.length-1; i++ ) {
-        double b = this.beta[i]*glmt.normMul()[i-numoff];
-        norm += b*glmt.normSub()[i-numoff]; // Also accumulate the intercept adjustment
-        this.beta[i] = b;
-      }
-      this.beta[beta.length-1] -= norm;
-    } else {
-      this.beta = beta;
-      norm_beta = null;
-    }
-    final Vec [] vecs = fr.vecs();
-    ymu = vecs[vecs.length-1].mean();
-    this.iteration = iteration;
-    this.warnings = warnings;
-    this.alpha = alpha;
-    this.lambda = lambda;
-    this.beta_eps = beta_eps;
-    this.run_time = run_time;
-    _caseMode = caseMode;
-    _caseVal = caseVal;
+  public void setBeta(int lambdaIdx, double [] beta, double [] norm_beta){
+    Submodel sm = submodels[lambdaIdx];
+    sm.beta = beta;
+    sm.norm_beta = norm_beta;
+  }
+
+  public double lambda(){
+    if(submodels == null)return Double.NaN;
+    return submodels[best_lambda_idx].lambda;
+  }
+  public double lambdaMax(){
+    return submodels[0].lambda;
+  }
+  public double lambdaMin(){
+    return submodels[submodels.length-1].lambda;
   }
   public GLMValidation validation(){
-    return validation;
+    return submodels[best_lambda_idx].validation;
   }
-  public double [] beta(){return beta;}
+  public int iteration(){return submodels[best_lambda_idx].iteration;}
+  public double [] beta(){return submodels[best_lambda_idx].beta;}
+  public double [] beta(int i){return submodels[i].beta;}
+  public double [] norm_beta(){return submodels[best_lambda_idx].norm_beta;}
+  public double [] norm_beta(int i){return submodels[i].norm_beta;}
   @Override protected float[] score0(double[] data, float[] preds) {
+    return score0(data,preds,best_lambda_idx);
+  }
+  protected float[] score0(double[] data, float[] preds, int lambdaIdx) {
     double eta = 0.0;
+    final double [] b = beta(lambdaIdx);
     for(int i = 0; i < catOffsets.length-1; ++i) if(data[i] != 0)
-      eta += beta[catOffsets[i] + (int)(data[i]-1)];
+      eta += b[catOffsets[i] + (int)(data[i]-1)];
     final int noff = catOffsets[catOffsets.length-1] - catOffsets.length + 1;
     for(int i = catOffsets.length-1; i < data.length; ++i)
-      eta += beta[noff+i]*data[i];
-    eta += beta[beta.length-1]; // add intercept
+      eta += b[noff+i]*data[i];
+    eta += b[b.length-1]; // add intercept
     double mu = glm.linkInv(eta);
     preds[0] = (float)mu;
     if(glm.family == Family.binomial){ // threshold
@@ -124,54 +176,102 @@ public class GLMModel extends Model {
     }
     return preds;
   }
+  public final int ncoefs() {return beta().length;}
 
-  public final int ncoefs() {return beta.length;}
-
-  // use general score to reduce number of possible different code paths
-  public static class GLMValidationTask extends MRTask2<GLMValidationTask>{
-    final GLMModel _model;
-    GLMValidation _res;
-    private final int _offset;
-    private final int _step;
-    private final boolean _complement;
-
+  public static class GLMValidationTask<T extends GLMValidationTask<T>> extends MRTask2<T> {
+    protected final GLMModel _model;
+    protected GLMValidation _res;
+    public int _lambdaIdx;
+    public boolean _improved;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
-    public GLMValidationTask(GLMModel m, int step, int offset,boolean complement){_model = m; _step = step; _offset = offset;_complement = complement;}
+    public GLMValidationTask(GLMModel model, int lambdaIdx){this(model,lambdaIdx,null);}
+    public GLMValidationTask(GLMModel model, int lambdaIdx, H2OCountedCompleter completer){super(completer); _lambdaIdx = lambdaIdx; _model = model;}
     @Override public void map(Chunk [] chunks){
-      _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank());
+      _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank(_lambdaIdx));
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
       float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?2:1);
-      final int step  = _complement?_step:1;
-      final int start = _complement?_offset:0;
       OUTER:
-      for(int i = start; i < nrows; i += step){
-        if(_step > step && (i % _step) == _offset)continue;
+      for(int i = 0; i < nrows; ++i){
         if(chunks[chunks.length-1].isNA0(i))continue;
         for(int j = 0; j < chunks.length-1; ++j){
           if(chunks[j].isNA0(i))continue OUTER;
           row[j] = chunks[j].at0(i);
         }
-        _model.score0(row, preds);
+        _model.score0(row, preds,_lambdaIdx);
         double response = chunks[chunks.length-1].at80(i);
         if(_model._caseMode != CaseMode.none)
           response = _model._caseMode.isCase(response, _model._caseVal)?1:0;
         _res.add(response, _model.glm.family == Family.binomial?preds[1]:preds[0]);
       }
-      if(_res.nobs > 0)_res.avg_err = Math.sqrt(_res.avg_err)/_res.nobs;
+      _res.avg_err /= _res.nobs;
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
+    @Override public void postGlobal(){
+      _res.finalize_AIC_AUC();
+      _improved = _model.setAndTestValidation(_lambdaIdx, _res);
+      UKV.put(_model._selfKey,_model);
+    }
+  }
+  // use general score to reduce number of possible different code paths
+  public static class GLMXValidationTask extends GLMValidationTask<GLMXValidationTask>{
+    protected final GLMModel [] _xmodels;
+    protected GLMValidation [] _xvals;
+    public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
+    public GLMXValidationTask(GLMModel mainModel,int lambdaIdx, GLMModel [] xmodels){this(mainModel,lambdaIdx,xmodels,null);}
+    public GLMXValidationTask(GLMModel mainModel,int lambdaIdx, GLMModel [] xmodels, H2OCountedCompleter completer){super(mainModel, lambdaIdx, completer); _xmodels = xmodels;}
+    @Override public void map(Chunk [] chunks){
+      _xvals = new GLMValidation[_xmodels.length];
+      for(int i = 0; i < _xmodels.length; ++i)
+        _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank());
+      final int nrows = chunks[0]._len;
+      double [] row   = MemoryManager.malloc8d(_model._names.length);
+      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?2:1);
+      OUTER:
+      for(int i = 0; i < nrows; ++i){
+        if(chunks[chunks.length-1].isNA0(i))continue;
+        for(int j = 0; j < chunks.length-1; ++j){
+          if(chunks[j].isNA0(i))continue OUTER;
+          row[j] = chunks[j].at0(i);
+        }
+        final int mid = i % _xmodels.length;
+        final GLMModel model = _xmodels[mid];
+        final GLMValidation val = _xvals[mid];
+        model.score0(row, preds);
+        double response = chunks[chunks.length-1].at80(i);
+        if(model._caseMode != CaseMode.none)
+          response = model._caseMode.isCase(response, model._caseVal)?1:0;
+        val.add(response, model.glm.family == Family.binomial?preds[1]:preds[0]);
+      }
+      for(GLMValidation val:_xvals)
+        if(val.nobs > 0)val.avg_err = Math.sqrt(val.avg_err)/val.nobs;
+    }
+    @Override public void reduce(GLMXValidationTask gval){
+      for(int i = 0; i < _xvals.length; ++i)
+        _xvals[i].add(gval._xvals[i]);}
+    @Override public void postGlobal(){
+      for(int i = 0; i < _xmodels.length; ++i){
+        _xvals[i].finalize_AIC_AUC();
+        _xmodels[i].setValidation(0, _xvals[i]);
+        Futures fs = new Futures();
+        DKV.put(_xmodels[i]._selfKey, _xmodels[i],fs);
+        _res = new GLMXValidation(_model, _xmodels,_lambdaIdx);
+        _improved = _model.setAndTestValidation(_lambdaIdx, _res);
+        DKV.put(_model._selfKey, _model);
+        fs.blockForPending();
+      }
+    }
   }
 
   public void generateHTML(String title, StringBuilder sb) {
     if(title != null && !title.isEmpty())DocGen.HTML.title(sb,title);
     DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
-    if(beta != null)
+
+    if(submodels != null)
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
     String succ = (warnings == null || warnings.length == 0)?"alert-success":"alert-warning";
     sb.append("<div class='alert " + succ + "'>");
-    sb.append(iteration + " iterations computed in ");
-    pprintTime(sb, run_time);
+    pprintTime(sb.append(iteration() + " iterations computed in "),run_time);
     if(warnings != null && warnings.length > 0){
       sb.append("<b>Warnings:</b><ul>");
       for(String w:warnings)sb.append("<li>" + w + "</li>");
@@ -183,8 +283,8 @@ public class GLMModel extends Model {
     parm(sb,"link",glm.link);
     parm(sb,"&epsilon;<sub>&beta;</sub>",beta_eps);
     parm(sb,"&alpha;",alpha);
-    parm(sb,"&lambda;",lambda);
-    if(beta != null)
+    parm(sb,"&lambda;",lambda());
+    if(beta() != null)
       coefs2html(sb);
     GLMValidation val = validation();
     if(val != null)val.generateHTML("Training Set Validation", sb);
@@ -196,17 +296,20 @@ public class GLMModel extends Model {
   public HashMap<String,Double> coefficients(){
     String [] names = coefNames();
     HashMap<String, Double> res = new HashMap<String, Double>();
-    for(int i = 0; i < beta.length; ++i)res.put(names[i],beta[i]);
+    final double [] b = beta();
+    if(b != null) for(int i = 0; i < b.length; ++i)res.put(names[i],b[i]);
     return res;
   }
   public String [] coefNames(){
     final int cats = catOffsets.length-1;
     int k = 0;
-    String [] res = new String[beta.length];
+    double [] b = beta();
+    if(b == null)return null;
+    String [] res = new String[b.length];
     for(int i = 0; i < cats; ++i)
       for(int j = 1; j < _domains[i].length; ++j)
         res[k++] = _names[i] + "." + _domains[i][j];
-    final int nums = beta.length-k-1;
+    final int nums = b.length-k-1;
     for(int i = 0; i < nums; ++i)
       res[k+i] = _names[cats+i];
     assert k + nums == res.length-1;
@@ -217,6 +320,7 @@ public class GLMModel extends Model {
     sb.append("<span><b>").append(x).append(": </b>").append(y[0]).append("</span> ");
   }
   private void coefs2html(StringBuilder sb){
+    final double [] beta = beta(), norm_beta = norm_beta();
     StringBuilder names = new StringBuilder();
     StringBuilder equation = new StringBuilder();
     StringBuilder vals = new StringBuilder();
@@ -270,7 +374,8 @@ public class GLMModel extends Model {
   }
   @Override
   public String toString(){
-    StringBuilder sb = new StringBuilder("GLM Model (key=" + _selfKey + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration + "):\n");
+    final double [] beta = beta(), norm_beta = norm_beta();
+    StringBuilder sb = new StringBuilder("GLM Model (key=" + _selfKey + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + "):\n");
     final int cats = catOffsets.length-1;
     int k = 0;
     for(int i = 0; i < cats; ++i)
@@ -282,12 +387,26 @@ public class GLMModel extends Model {
     sb.append("Intercept: " + beta[beta.length-1] + "\n");
     return sb.toString();
   }
-  public int rank() {
+  public int rank() {return rank(best_lambda_idx);}
+  public int rank(int lambdaIdx) {
+    final double [] beta = beta(lambdaIdx);
     if( beta == null ) return -1;
-    int res = 0; //we do not count intercept so we start from -1
+    int res = 0;
     for( double b : beta ) if( b != 0 ) ++res;
     return res;
   }
   @Override public void delete(){super.delete();}
-  public void setValidation(GLMValidation val ){validation = val;}
+
+  public void  setValidation(int lambdaIdx,GLMValidation val ){
+    submodels[lambdaIdx].validation = val;
+  }
+  public boolean  setAndTestValidation(int lambdaIdx,GLMValidation val ){
+    submodels[lambdaIdx].validation = val;
+    if(lambdaIdx == 0 || rank(lambdaIdx) == 1)
+      return true;
+    double diff = submodels[best_lambda_idx].validation.residual_deviance - val.residual_deviance;
+    if(diff/val.null_deviance >= 0.01)
+      best_lambda_idx = lambdaIdx;
+    return (diff >= 0);
+  }
 }
