@@ -23,6 +23,8 @@ setClass("H2OGBMGrid", contains="H2OGrid")
 setClass("H2ORawData2", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData2", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData2", contains="H2OParsedData2")
+setClass("H2OModel2", representation(key="character", data="H2OParsedData2", model="list", env="environment", "VIRTUAL"))
+setClass("H2ODRFModel", contains="H2OModel2")
 
 # Register finalizers for H2O data and model objects
 # setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
@@ -155,7 +157,17 @@ setMethod("show", "H2ORForestModel", function(object) {
   model = object@model
   cat("\n\nType of random forest:", model$type)
   cat("\nNumber of trees:", model$ntree)
-  cat("\n\nOOB estimate of error rate: ", round(100*model$oob_err, 2), "%", sep = "")
+  cat("\n\nMean squared error: "); print(model$mse)
+  cat("\nConfusion matrix:\n"); print(model$confusion)
+})
+
+setMethod("show", "H2ODRFModel", function(object) {
+  print(object@data)
+  cat("Distributed Random Forest Model Key:", object@key)
+  
+  model = object@model
+  cat("\nNumber of trees:", model$ntree)
+  cat("\nTree statistics:\n"); print(model$forest)
   cat("\nConfusion matrix:\n"); print(model$confusion)
 })
 
@@ -415,9 +427,10 @@ setMethod("show", "H2ORawData2", function(object) {
 setMethod("show", "H2OParsedData2", function(object) {
   print(object@h2o)
   cat("Parsed Data Key:", object@key, "\n")
-  if(ncol(object) <= 1000) print(head(object))
+  # if(ncol(object) <= 1000) print(head(object))
 })
 
+# i are the rows, j are the columns. These can be vectors of integers or character strings, or a single H2OLogicalData2 object.
 setMethod("[", "H2OParsedData2", function(x, i, j, ..., drop = TRUE) {
   # if(!missing(j) && length(j) > 1) stop("Currently, can only select one column at a time")
   # if(!missing(i) && length(i) > 1) stop("Currently, can only select one row at a time")
@@ -489,6 +502,26 @@ setMethod("$", "H2OParsedData2", function(x, name) {
     res$scalar
   else
     new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
+})
+
+setMethod("[<-", "H2OParsedData2", function(x, i, j, ..., value) {
+  numRows = nrow(x); numCols = ncol(x)
+  if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
+       (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
+    stop("Array index out of bounds!")
+  if(!is.numeric(i) || !(is.numeric(j) || is.character(j))) stop("Row/column types not supported!")
+  if(length(i) > 1 || length(j) > 1) stop("Currently can only operate on one entry at a time!")
+  
+  if(is.character(j)) {
+    myNames = colnames(x)
+    if(!(j %in% myNames))
+      stop(paste("Unimplemented:", j, "not the name of a column"))
+    cind = which(j == myNames)
+  } else if(is.numeric(j))
+    cind = j-1
+  expr = paste(x@key, "[", i-1, ",", cind, "] =", value)
+  res = h2o.__exec2(x@h2o, expr)
+  return(x)
 })
 
 setMethod("+", c("H2OParsedData2", "H2OParsedData2"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
