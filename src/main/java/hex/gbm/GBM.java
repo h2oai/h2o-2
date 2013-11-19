@@ -109,16 +109,16 @@ public class GBM extends SharedTreeModelBuilder {
 
       // Check latest predictions
       tstats.updateBy(ktrees);
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false);
     }
     // Final scoring
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
+    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true);
     cleanUp(fr,t_build); // Shared cleanup
   }
 
-  private GBMModel doScoring(GBMModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats ) {
+  private GBMModel doScoring(GBMModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
     Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid,ktrees);
-    model = new GBMModel(model, ktrees, (float)sc._sum/_nrows, sc._cm, tstats);
+    model = new GBMModel(model, finalScoring?null:ktrees, (float)sc._sum/_nrows, sc._cm, tstats);
     DKV.put(outputKey, model);
     return model;
   }
