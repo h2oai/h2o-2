@@ -429,7 +429,7 @@ public class GLM2 extends ModelJob {
 
     @Override public Response redirect() {
       String n = GridSearchProgress.class.getSimpleName();
-      return new Response(Response.Status.redirect, this, -1, -1, n, "job_key", job_key, "destination_key", destination_key);
+      return Response.redirect( this, n, "job_key", job_key, "destination_key", destination_key);
     }
   }
   public boolean isDone(){return DKV.get(self()) == null;}
