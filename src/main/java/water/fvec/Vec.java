@@ -116,6 +116,7 @@ public class Vec extends Iced {
   public Vec makeCon( final double d ) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
+    if( (long)d==d ) return makeCon((long)d);
     int nchunks = nChunks();
     Vec v0 = new Vec(group().addVecs(1)[0],_espc);
     long row=0;                 // Start row

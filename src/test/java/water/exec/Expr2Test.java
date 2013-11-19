@@ -8,10 +8,11 @@ import water.fvec.*;
 public class Expr2Test extends TestUtil {
   int i = 0;
 
-  /*@Test*/ public void testBasicExpr1() {
+  @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
-      File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
+      File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
+      //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
       //File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
@@ -45,7 +46,7 @@ public class Expr2Test extends TestUtil {
       checkStr("min(h.hex,1+2)");
       checkStr("is.na(h.hex)");
       checkStr("nrow(h.hex)*3");
-      checkStr("h.hex[ncol(h.hex),nrow(h.hex)]");
+      checkStr("h.hex[nrow(h.hex)-1,ncol(h.hex)-1]");
       checkStr("1=2");
       checkStr("x");
       checkStr("x+2");
@@ -102,9 +103,14 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})");
 
       // Slice assignment & map
+      checkStr("h.hex[,2]");
+      checkStr("h.hex[,2]+1");
+      checkStr("h.hex[,3]=3.3;h.hex");   // Replace a col with a constant
+      checkStr("h.hex[,3]=h.hex[,2]+1"); // Replace a col
+      checkStr("h.hex[,ncol(h.hex)+1]=4"); // Extend a col
+      checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
-      //checkStr("h.hex[,2]=h.hex[,7]+1");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4),2]");
       //checkStr("map()");
@@ -115,10 +121,6 @@ public class Expr2Test extends TestUtil {
       //checkStr("map(function(a,b,d){a+b+d},h.hex,h.hex,1)");
       //checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
 
-      // Needed examples: 
-      // (2) Drop 95% outliers (top & bot 2.5% outliers)
-      // (3) DONE Table command? (co-occurance matrix)
-      // (4) Cut command?
       checkStr("a=0;x=0");      // Delete keys from global scope
 
     } finally {
