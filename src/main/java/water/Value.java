@@ -86,7 +86,7 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     return (_mem = loadPersist());
   }
   public final byte[] getBytes() {
-    assert _type==TypeMap.PRIM_B && _pojo == null && _max > 0;
+    assert _type==TypeMap.PRIM_B && _pojo == null;
     byte[] mem = _mem;          // Read once!
     return mem != null ? mem : (_mem = loadPersist());
   }
