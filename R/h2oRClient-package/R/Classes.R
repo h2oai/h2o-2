@@ -432,8 +432,6 @@ setMethod("show", "H2OParsedData2", function(object) {
 
 # i are the rows, j are the columns. These can be vectors of integers or character strings, or a single H2OLogicalData2 object.
 setMethod("[", "H2OParsedData2", function(x, i, j, ..., drop = TRUE) {
-  # if(!missing(j) && length(j) > 1) stop("Currently, can only select one column at a time")
-  # if(!missing(i) && length(i) > 1) stop("Currently, can only select one row at a time")
   numRows = nrow(x); numCols = ncol(x)
   if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
      (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
@@ -506,21 +504,59 @@ setMethod("$", "H2OParsedData2", function(x, name) {
 
 setMethod("[<-", "H2OParsedData2", function(x, i, j, ..., value) {
   numRows = nrow(x); numCols = ncol(x)
-  if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
-       (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
-    stop("Array index out of bounds!")
-  if(!is.numeric(i) || !(is.numeric(j) || is.character(j))) stop("Row/column types not supported!")
-  if(length(i) > 1 || length(j) > 1) stop("Currently can only operate on one entry at a time!")
+  # if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
+  #     (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
+  #  stop("Array index out of bounds!")
+  if(!(missing(i) || is.numeric(i)) || !(missing(j) || is.numeric(j) || is.character(j))) 
+    stop("Row/column types not supported!")
   
-  if(is.character(j)) {
-    myNames = colnames(x)
-    if(!(j %in% myNames))
-      stop(paste("Unimplemented:", j, "not the name of a column"))
-    cind = which(j == myNames)
-  } else if(is.numeric(j))
-    cind = j-1
-  expr = paste(x@key, "[", i-1, ",", cind, "] =", value)
-  res = h2o.__exec2(x@h2o, expr)
+  if(!missing(i) && is.numeric(i)) {
+    if(any(i == 0)) stop("Array index out of bounds")
+    if(any(i < 0 && abs(i) > numRows)) stop("Unimplemented")
+    if(min(i) > numRows) stop("new rows would leave holes after existing rows")
+  }
+  if(!missing(j) && is.numeric(j)) {
+    if(any(j == 0)) stop("Array index out of bounds")
+    if(any(j < 0 && abs(j) > numCols)) stop("Unimplemented")
+    if(min(j) > numCols) stop("new columns would leaves holes after existing columns")
+  }
+  
+  if(missing(i) && missing(j))
+    lhs = x@key
+  else if(missing(i) && !missing(j)) {
+    if(is.character(j)) {
+      myNames = colnames(x)
+      if(any(!(j %in% myNames)))
+        stop(paste("Unimplemented:", paste(j[!(j %in% myNames)], collapse=','), "is not the name of a column"))
+      cind = match(j, myNames)
+    } else cind = j
+    cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
+    lhs = paste(x@key, "[,", cind, "]", sep = "")
+  } else if(!missing(i) && missing(j)) {
+    rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
+    lhs = paste(x@key, "[", rind, ",]", sep = "")
+  } else {
+    if(is.character(j)) {
+      myNames = colnames(x)
+      if(any(!(j %in% myNames)))
+        stop(paste("Unimplemented:", paste(j[!(j %in% myNames)], collapse=','), "is not the name of a column"))
+      cind = match(j, myNames)
+    } else cind = j
+    cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
+    rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
+    lhs = paste(x@key, "[", rind, ",", cind, "]", sep = "")
+  }
+  
+  rhs = ifelse(class(value) == "H2OParsedData2", value@key, value)
+  res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
+  return(x)
+})
+
+setMethod("$<-", "H2OParsedData2", function(x, name, value) {
+  lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
+  rhs = ifelse(class(value) == "H2OParsedData2", value@key, value)
+  res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
+  # TODO: Set column name of ncol(x) + 1 to name
   return(x)
 })
 
@@ -632,7 +668,9 @@ setMethod("dim", "H2OParsedData2", function(x) {
 })
 
 setMethod("as.data.frame", "H2OParsedData2", function(x) {
-  as.data.frame(new("H2OParsedData", h2o=x@h2o, key=x@key))
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
+  ttt <- getURL(url)
+  read.csv(textConnection(ttt))
 })
 
 setMethod("head", "H2OParsedData2", function(x, n = 6L, ...) { 
