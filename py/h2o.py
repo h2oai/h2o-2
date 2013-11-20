@@ -1047,9 +1047,9 @@ class H2O(object):
 
         # if we never poll
         msgUsed = None
-        r = {}
+        r = response
 
-        if beta_features:
+        if beta_features or 'response_info' in response: # trigger v2 for GBM always?
             status = response['response_info']['status']
         else:
             # status = response['response']['status']
@@ -1110,8 +1110,7 @@ class H2O(object):
             r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
             # if ((count%5)==0):
-            if 1==1:
-                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
+            verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
             # if ((count%15)==0):
@@ -1740,7 +1739,7 @@ class H2O(object):
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
-        a = self.__do_json_request('2/GBMModelView.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GBMModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
@@ -1751,7 +1750,7 @@ class H2O(object):
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
-        a = self.__do_json_request('2/GridSearchProgress.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
         print "\ngbm_search_progress result:", dump_json(a)
         return a
 
@@ -1761,7 +1760,7 @@ class H2O(object):
            '_modelKey' : modelKey,
         }
         check_params_update_kwargs(params_dict, kwargs, 'pca_view', print_params)
-        a = self.__do_json_request('2/PCAModelView.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/PCAModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\npca_view_result:", dump_json(a))
         return a
 
@@ -1771,7 +1770,7 @@ class H2O(object):
             '_modelKey' : modelKey,
         }
         check_params_update_kwargs(params_dict, kwargs, 'glm_view', print_params)
-        a = self.__do_json_request('2/GLMModelView.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GLMModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nglm_view result:", dump_json(a))
         return a
 
