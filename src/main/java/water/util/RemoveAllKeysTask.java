@@ -14,7 +14,6 @@ public class RemoveAllKeysTask extends DRemoteTask {
     // First cancel all jobs and wait for them to be done.
     for (Job job : Job.all()) {
       job.cancel();
-      if(job.cancelled()) continue;
       Job.waitUntilJobEnded(job.self());
     }
 
