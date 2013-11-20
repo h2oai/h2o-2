@@ -1018,7 +1018,7 @@ class H2O(object):
                     # if status is 'done', it's okay for 'redirect_url' to be null.
                     redirect_url = response_info['redirect_url']
                     # HACK: NeuralNetProgress is missing the "2/" prefix
-                    if 'NeuralNetProgress' in str(redirect_url):
+                    if 'NeuralNetProgress' in str(redirect_url) or 'KMeans2Progress' in str(redirect_url):
                         if "2/" not in str(redirect_url):
                             redirect_url = "2/" + redirect_url
 
@@ -1274,10 +1274,6 @@ class H2O(object):
         if noPoll:
             return a
 
-        # Check that the response has the right Progress url it's going to steer us to.
-        if 'response' not in a or a['response']['redirect_request']!='Progress':
-            print dump_json(a)
-            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
 
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,

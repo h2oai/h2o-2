@@ -50,19 +50,35 @@ public class GridSearch extends Job {
   }
 
   public static class GridSearchProgress extends Progress2 {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help = "Jobs")
+    public Job[] jobs;
+
+    @Override protected Response serve() {
+      Response response = super.serve();
+      if( destination_key != null ) {
+        GridSearch grid = UKV.get(destination_key);
+        if( grid != null )
+          jobs = grid.jobs;
+      }
+      return response;
+    }
+
     @Override public boolean toHTML(StringBuilder sb) {
-      GridSearch grid = UKV.get(destination_key);
-      if( grid != null ) {
+      if( jobs != null ) {
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr class='warning'>");
-        ArrayList<Argument> args = grid.jobs[0].arguments();
+        ArrayList<Argument> args = jobs[0].arguments();
         // Filter some keys to simplify UI
         args = (ArrayList<Argument>) args.clone();
-        filter(args, "destination_key", "source", "cols", "ignored_cols_by_name", "response", "classification", "validation");
+        filter(args, "destination_key", "source", "cols", "ignored_cols_by_name", "response", "classification",
+            "validation");
         for( int i = 0; i < args.size(); i++ )
           sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
         sb.append("<td><b>").append("run time").append("</b></td>");
-        String perf = grid.jobs[0].speedDescription();
+        String perf = jobs[0].speedDescription();
         if( perf != null )
           sb.append("<td><b>").append(perf).append("</b></td>");
         sb.append("<td><b>").append("model key").append("</b></td>");
@@ -71,7 +87,7 @@ public class GridSearch extends Job {
         sb.append("</tr>");
 
         ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
-        for( Job job : grid.jobs ) {
+        for( Job job : jobs ) {
           JobInfo info = new JobInfo();
           info._job = job;
           Object value = UKV.get(job.destination_key);

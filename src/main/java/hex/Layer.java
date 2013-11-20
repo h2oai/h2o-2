@@ -12,7 +12,7 @@ import water.fvec.Vec;
 
 /**
  * Neural network layer.
- * 
+ *
  * @author cypof
  */
 public abstract class Layer extends Iced {
@@ -99,6 +99,9 @@ public abstract class Layer extends Iced {
     }
 
     anneal(step);
+  }
+
+  public void close() {
   }
 
   abstract void fprop(boolean training);
@@ -351,6 +354,16 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Output extends Layer {
+    static final int API_WEAVER = 1;
+    public static DocGen.FieldDoc[] DOC_FIELDS;
+
+    public enum Loss {
+      MeanSquare, CrossEntropy
+    }
+
+    @API(help = "Loss function")
+    public Loss loss = Loss.CrossEntropy;
+
     Input _input;
 
     @Override public void init(Layer[] ls, int index, boolean weights, long step) {
@@ -360,12 +373,6 @@ public abstract class Layer extends Iced {
   }
 
   public static abstract class Softmax extends Output {
-    enum Loss {
-      MeanSquare, CrossEntropy
-    };
-
-    Loss _loss = Loss.CrossEntropy;
-
     abstract int target();
 
     @Override void fprop(boolean training) {
@@ -393,7 +400,7 @@ public abstract class Layer extends Iced {
         float t = o == label ? 1 : 0;
         float e = t - _a[o];
         float g = e;
-        if( _loss == Loss.MeanSquare )
+        if( loss == Loss.MeanSquare )
           g *= (1 - _a[o]) * _a[o];
         for( int i = 0; i < _in._a.length; i++ ) {
           int w = o * _in._a.length + i;
@@ -407,19 +414,28 @@ public abstract class Layer extends Iced {
 
   public static class VecSoftmax extends Softmax {
     public Vec vec;
+    private Vec _toClose;
 
     VecSoftmax() {
     }
 
     public VecSoftmax(Vec vec, VecSoftmax stats) {
-      if( vec.domain() == null )
+      if( vec.domain() == null ) {
         vec = vec.toEnum();
+        _toClose = vec;
+      }
       this.units = stats != null ? stats.units : vec.domain().length;
       this.vec = vec;
     }
 
     @Override int target() {
       return (int) vec.at8(_input._pos);
+    }
+
+    @Override public void close() {
+      super.close();
+      if( _toClose != null )
+        UKV.remove(_toClose._key);
     }
   }
 
@@ -538,18 +554,6 @@ public abstract class Layer extends Iced {
         float max = (float) +Math.sqrt(6. / (_in.units + units));
         for( int i = 0; i < _w.length; i++ )
           _w[i] = rand(rand, min, max);
-
-//        Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-//        int count = Math.min(15, _in.units);
-//        //float min = -.1f, max = +.1f;
-//        float min = -1f, max = +1f;
-//        for( int o = 0; o < units; o++ ) {
-//          for( int n = 0; n < count; n++ ) {
-//            int i = rand.nextInt(_in.units);
-//            int w = o * _in.units + i;
-//            _w[w] = rand(rand, min, max);
-//          }
-//        }
       }
     }
 
