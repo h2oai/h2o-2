@@ -1005,13 +1005,6 @@ class H2O(object):
             url = None
             params = None
             if beta_features or 'response_info' in response: # trigger v2 for GBM always?
-                # "response_info": {
-                #     "h2o": "pytest-kevin-10389", 
-                #     "node": "/192.168.1.80:54321", 
-                #     "redirect_url": "GBMProgressPage.json?job_key=%...&destination_key=GBMKEY", 
-                #     "status": "redirect", 
-                #     "time": 2
-                # }, 
                 if 'response_info' not in response:
                     raise Exception("The response during polling should have 'response_info'. Don't see it: \n%s" % dump_json(response))
 
@@ -1019,18 +1012,24 @@ class H2O(object):
                 if 'redirect_url' not in response_info:
                     raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
 
-                # if status is 'done', it's okay for 'redirect_url' to be null.
-                redirect_url = response_info['redirect_url']
-                print "redirect_url:", redirect_url
-                if redirect_url:
-                    # url = self.__url(response['redirect_url'] + ".json")
-                    # this is the full url now, with params?
-                    url = self.__url(redirect_url)
-                    # params = {'job_key': response['job_key'], 'destination_key': response['destination_key']}
-                    params = None
+                if response_info['status'] == 'done':
+                    pass # keep the last url value? h2o doesn't give the redirect_request and redirect_args
                 else:
-                    if response_info['status'] != 'done':
-                        raise Exception("'redirect_url' during polling is null but status!='done': \n%s" % dump_json(response))
+                    # if status is 'done', it's okay for 'redirect_url' to be null.
+                    redirect_url = response_info['redirect_url']
+                    # HACK: NeuralNetProgress is missing the "2/" prefix
+                    if 'NeuralNetProgress' in str(redirect_url) or 'KMeans2Progress' in str(redirect_url):
+                        if "2/" not in str(redirect_url):
+                            redirect_url = "2/" + redirect_url
+
+                    ### print "redirect_url:", redirect_url
+                    if redirect_url:
+                        # this is the full url now, with params?
+                        url = self.__url(redirect_url)
+                        params = None
+                    else:
+                        if response_info['status'] != 'done':
+                            raise Exception("'redirect_url' during polling is null but status!='done': \n%s" % dump_json(response))
             else:
                 if 'response' not in response:
                     raise Exception("'response' not in response.\n%s" % dump_json(response))
@@ -1045,6 +1044,19 @@ class H2O(object):
                     params = response['response']['redirect_request_args']
 
             return (url, params)
+
+        # if we never poll
+        msgUsed = None
+        r = response
+
+        if beta_features or 'response_info' in response: # trigger v2 for GBM always?
+            status = response['response_info']['status']
+        else:
+            # status = response['response']['status']
+            # always make the first one look like poll? 
+            # we don't update the url during polling for via
+            # so have a problem with first redirect vs last reedirect, detection
+            status = 'poll'
 
         (url, params) = get_redirect_url(response, beta_features)
 
@@ -1066,9 +1078,6 @@ class H2O(object):
             else:
                 noiseParamsStr =  '&'.join(['%s=%s' % (k,v) for (k,v) in noiseParams.items()])
 
-        status = 'poll'
-        r = {} # response
-
         start = time.time()
         count = 0
         if initialDelaySecs:
@@ -1077,10 +1086,12 @@ class H2O(object):
         # can end with status = 'redirect' or 'done'
         # Update: on DRF2, the first RF redirects to progress. So we should follow that, and follow any redirect to view?
         # so for v2, we'll always follow redirects?
+        # Update, for v1, we're not forcing the first status to be 'poll' now..so it could be redirect or done?(NN score? if blocking)
 
         # Don't follow the Parse redirect to Inspect, because we want parseResult['destination_key'] to be the end.
         # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
         while status == 'poll' or (beta_features and status == 'redirect' and 'Inspect' not in url):
+            print status, url
             # UPDATE: 1/24/13 change to always wait before the first poll..
             time.sleep(retryDelaySecs)
             # every other one?
@@ -1099,8 +1110,7 @@ class H2O(object):
             r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
             # if ((count%5)==0):
-            if 1==1:
-                verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
+            verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?
             # if ((count%15)==0):
@@ -1136,7 +1146,8 @@ class H2O(object):
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
-        if 1==1:
+        # won't print if we didn't poll
+        if msgUsed:
             verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
         return r
 
@@ -1233,7 +1244,7 @@ class H2O(object):
                 'source': key,
                 'destination_key': key2,
                 'seed': None,
-                'ignored_cols_by_name': None,
+                'ignored_cols': None,
                 'max_iter': None,
                 'normalize': None,
                 }
@@ -1262,10 +1273,6 @@ class H2O(object):
         if noPoll:
             return a
 
-        # Check that the response has the right Progress url it's going to steer us to.
-        if 'response' not in a or a['response']['redirect_request']!='Progress':
-            print dump_json(a)
-            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
 
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
             initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
@@ -1398,6 +1405,11 @@ class H2O(object):
     def remove_key(self, key, timeoutSecs=30):
         a = self.__do_json_request('Remove.json', 
             params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
+        return a
+
+    # this removes all keys!
+    def remove_all_keys(self, timeoutSecs=30):
+        a = self.__do_json_request('RemoveAll.json', timeout=timeoutSecs)
         return a
 
     # only model keys can be exported?
@@ -1659,9 +1671,10 @@ class H2O(object):
 
         # add a fake redirect_request and redirect_request_args
         # to the RF response, to make it look like everyone else
-
         if beta_features:
-            rfView = a
+            rfView = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+                initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging)
         else:
             fake_a = {}
             fake_a['response'] = a['response']
@@ -1731,7 +1744,7 @@ class H2O(object):
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_view', print_params)
-        a = self.__do_json_request('2/GBMModelView.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GBMModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\ngbm_view result:", dump_json(a))
         return a
 
@@ -1742,7 +1755,7 @@ class H2O(object):
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
-        a = self.__do_json_request('2/GridSearchProgress.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
         print "\ngbm_search_progress result:", dump_json(a)
         return a
 
@@ -1752,7 +1765,7 @@ class H2O(object):
            '_modelKey' : modelKey,
         }
         check_params_update_kwargs(params_dict, kwargs, 'pca_view', print_params)
-        a = self.__do_json_request('2/PCAModelView.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/PCAModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\npca_view_result:", dump_json(a))
         return a
 
@@ -1762,7 +1775,7 @@ class H2O(object):
             '_modelKey' : modelKey,
         }
         check_params_update_kwargs(params_dict, kwargs, 'glm_view', print_params)
-        a = self.__do_json_request('2/GLMModelView.json',timeout=timeoutSecs,params=params_dict)
+        a = self.__do_json_request('2/GLMModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nglm_view result:", dump_json(a))
         return a
 
@@ -1966,8 +1979,9 @@ class H2O(object):
             a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
             return a
 
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        # no polling
+        # a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+        #                   initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nneural net score result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
@@ -2005,7 +2019,7 @@ class H2O(object):
 
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-        verboseprint("\nPCAScore result:", dump_json(a))
+        verboseprint("\nneural_net result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed']*100 / timeoutSecs
         return a

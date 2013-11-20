@@ -20,7 +20,7 @@ public class TransfVec extends Vec {
     _domain = domain;
   }
 
-  private Vec masterVec() {
+  @Override public Vec masterVec() {
     if (_masterVec==null) _masterVec = DKV.get(_masterVecKey).get();
     return _masterVec;
   }
@@ -28,10 +28,6 @@ public class TransfVec extends Vec {
   @Override public Chunk elem2BV(int cidx) {
     Chunk c = masterVec().elem2BV(cidx);
     return new TransfChunk(c, _domMap, this);
-  }
-
-  @Override public void remove( Futures fs ) {
-    // The TransfVec is a just wrapper vector => it should not delete underlying chunks or underlying vector.
   }
 
   static class TransfChunk extends Chunk {

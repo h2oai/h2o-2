@@ -43,6 +43,7 @@ h2o.__PAGE_PARSE = "Parse.json"
 h2o.__PAGE_PARSE2 = "2/Parse2.json"
 h2o.__PAGE_PUT = "PutVector.json"
 h2o.__PAGE_REMOVE = "Remove.json"
+h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
 h2o.__PAGE_VIEWALL = "StoreView.json"
 h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 

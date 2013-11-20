@@ -10,7 +10,7 @@ import hex.Layer.VecsInput;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
-import java.util.*;
+import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -93,12 +93,13 @@ public abstract class Trainer {
    * Trains NN on current thread.
    */
   public static class Direct extends Base {
-    public int samples;
+    long _samples;
     Thread _thread;
     Key _job;
 
-    public Direct(Layer[] ls, Key job) {
+    public Direct(Layer[] ls, int epochs, Key job) {
       super(ls);
+      _samples = epochs * ((Input) ls[0])._len;
       _job = job;
     }
 
@@ -108,7 +109,7 @@ public abstract class Trainer {
 
     public void run() {
       Input input = (Input) _ls[0];
-      for( long i = 0; samples == 0 || i < samples; i++ ) {
+      for( long i = 0; _samples == 0 || i < _samples; i++ ) {
         step();
         input.move();
         if( _job != null && Job.cancelled(_job) )

@@ -215,15 +215,25 @@ public final class AutoBuffer {
   }
 
   private static final ByteBuffer bbMake() {
-    ByteBuffer bb = null;
-    try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
-    catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
-    if( bb != null ) {
-      bbstats(BBCACHE);
-      return bb;
+    while( true ) {             // Repeat loop for DBB OutOfMemory errors
+      ByteBuffer bb = null;
+      try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
+      catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
+      if( bb != null ) {
+        bbstats(BBCACHE);
+        return bb;
+      }
+      try {
+        bb = ByteBuffer.allocateDirect(BBSIZE).order(ByteOrder.nativeOrder());
+        bbstats(BBMAKE);
+        return bb;
+      } catch( OutOfMemoryError oome ) {
+        // java.lang.OutOfMemoryError: Direct buffer memory
+        if( !"Direct buffer memory".equals(oome.getMessage()) ) throw oome;
+        System.out.println("Sleeping & retrying");
+        try { Thread.sleep(100); } catch( InterruptedException ie ) { }
+      }
     }
-    bbstats(BBMAKE);
-    return ByteBuffer.allocateDirect(BBSIZE).order(ByteOrder.nativeOrder());
   }
   private static final void bbFree(ByteBuffer bb) {
     bbstats(BBFREE);

@@ -19,7 +19,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_from_import(self):
+    def test_delete_all_keys(self):
+        # FIX! should have some model keys in here too, from RF etc.
         importFolderPath = 'standard'
         timeoutSecs = 500
 
@@ -40,6 +41,9 @@ class Basic(unittest.TestCase):
 
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 print "\n" + csvFilename
+
+                print "Delete all keys"
+                h2o.nodes[0].remove_all_keys()
 
 
             print "\nTrial", trial, "completed\n"

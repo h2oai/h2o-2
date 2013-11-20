@@ -1,5 +1,4 @@
 # Model-building operations and algorithms
-
 #----------------------- Generalized Boosting Machines (GBM) -----------------------#
 #TODO: dont support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02) {
@@ -620,12 +619,12 @@ h2o.randomForest.FV <- function(x, y, data, n.trees=50, interaction.depth=50, no
 verify_dataxy <- function(data, x, y){
   if( missing(data) ) stop('must specify data')
   if(!( class(data) %in% c('H2OParsedData', 'H2OParsedData2') )) stop('data must be an h2o dataset')
-  
+
   if( missing(x) ) stop('must specify x')
   if( missing(y) ) stop('must specify y')
   if(!( class(x) %in% c('numeric', 'character', 'integer') )) stop('x must be column names or indices')
   if(!( class(y) %in% c('numeric', 'character', 'integer') )) stop('y must be a column name or index')
-  
+
   cc <- colnames( data )
   if( class(x) == 'character' ){
     if(any(!(x %in% cc))) stop(paste(paste(x[!(x %in% cc)], collapse=','), 'is not a valid column name'))
@@ -635,7 +634,7 @@ verify_dataxy <- function(data, x, y){
     x_i <- x
     x <- cc[ x_i ]
   }
-  
+
   if( class(y) == 'character' ){
     if(!( y %in% cc )) stop(paste(y, 'is not a column name'))
     y_i <- which(y == cc)
@@ -644,8 +643,8 @@ verify_dataxy <- function(data, x, y){
     y_i <- y
     y <- cc[ y ]
   }
-  if( y %in% x ) stop(paste(colnames(data)[y], 'is both an explanatory and dependent variable'))
-  
+  if( y %in% x ) stop(paste( y, 'is both an explanatory and dependent variable'))
+
   x_ignore <- setdiff(setdiff( cc, x ), y)
   if( length(x_ignore) == 0 ) x_ignore <- ''
   list(x=x, y=y, x_i=x_i, x_ignore=x_ignore, y_i=y_i)

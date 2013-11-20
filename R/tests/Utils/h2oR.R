@@ -71,7 +71,6 @@ function() {
   logging("\nLoading RUnit and testthat\n")
   require(RUnit)
   require(testthat)
-  require(h2oRClient)
 }
 
 logging("\n============== Setting up R-Unit environment... ================\n")
@@ -79,6 +78,17 @@ defaultPath <- "../../target/R"
 ipPort <- get_args(commandArgs(trailingOnly = TRUE))
 checkNLoadWrapper(ipPort)
 checkNLoadPackages()
+
+source("../h2oRClient-package/R/Algorithms.R")
+source("../h2oRClient-package/R/Classes.R")
+source("../h2oRClient-package/R/ParseImport.R")
+source("../h2oRClient-package/R/Internal.R")
+
+h2o.removeAll <-
+function(object) {
+  logging("=============Throwing away any keys on the H2O cluster======")
+  h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
+}
 
 logging("\nLoading other required test packages")
 if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
@@ -88,7 +98,6 @@ require(gbm)
 
 myIP   <- ipPort[[1]]
 myPort <- ipPort[[2]]
-
-
+h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))
 
 

@@ -347,7 +347,7 @@ public class TestUtil {
 
   public static Frame parseFromH2OFolder(String path) {
     File file = new File(VM.h2oFolder(), path);
-    return parseFrame(Key.make(file.getName()), file);
+    return parseFrame(null, file);
   }
 
   public static Frame parseFrame(File file) {
