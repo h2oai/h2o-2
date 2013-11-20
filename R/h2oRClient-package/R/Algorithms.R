@@ -644,7 +644,7 @@ verify_dataxy <- function(data, x, y){
     y_i <- y
     y <- cc[ y ]
   }
-  if( y %in% x ) stop(paste(colnames(data)[y], 'is both an explanatory and dependent variable'))
+  if( y %in% x ) stop(paste( y, 'is both an explanatory and dependent variable'))
 
   x_ignore <- setdiff(setdiff( cc, x ), y)
   if( length(x_ignore) == 0 ) x_ignore <- ''

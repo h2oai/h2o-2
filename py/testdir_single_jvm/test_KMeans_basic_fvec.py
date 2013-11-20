@@ -2,6 +2,8 @@ import unittest, time, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_jobs
 
+DO_POLL=True
+DO_IGNORE=True # hits bug if true
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -14,13 +16,13 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(1)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
-        h2o.beta_features = True # fvec
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_B_kmeans_benign(self):
+        h2o.beta_features = True # fvec
         importFolderPath = "standard"
         csvFilename = "benign.csv"
         hex_key = "benign.hex"
@@ -28,9 +30,9 @@ class Basic(unittest.TestCase):
         csvPathname = importFolderPath + "/" + csvFilename
         # FIX! hex_key isn't working with Parse2 ? parseResult['destination_key'] not right?
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, header=1, 
-            timeoutSecs=180, noPoll=h2o.beta_features, doSummary=False)
+            timeoutSecs=180, noPoll=not DO_POLL, doSummary=False)
 
-        if h2o.beta_features:
+        if not DO_POLL:
             h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
             parseResult['destination_key'] = hex_key
         
@@ -38,44 +40,47 @@ class Basic(unittest.TestCase):
         print "\nStarting", csvFilename
 
         expected = [
-            ([24.538961038961038, 2.772727272727273, 46.89032467532467, 0.1266233766233766, 12.012142857142857, 1.0105194805194804, 1.5222727272727272, 22.26039690646432, 12.582467532467534, 0.5275062016635049, 2.9477601050634767, 162.52136363636365, 41.94558441558441, 1.661883116883117], 77, 46889.32010560476) ,
-            ([25.587719298245613, 2.2719298245614037, 45.64035087719298, 0.35964912280701755, 13.026315789473685, 1.4298245614035088, 1.3070175438596492, 24.393307707470925, 13.333333333333334, 0.5244431302976542, 2.7326039818647745, 122.46491228070175, 40.973684210526315, 1.6754385964912282], 114, 64011.20272144667) ,
-            ([30.833333333333332, 2.9166666666666665, 46.833333333333336, 0.0, 13.083333333333334, 1.4166666666666667, 1.5833333333333333, 24.298220973782772, 11.666666666666666, 0.37640449438202245, 3.404494382022472, 224.91666666666666, 39.75, 1.4166666666666667], 12, 13000.485226507595) ,
-
+            ([23.10144927536232, 2.4927536231884058, 48.0, 0.21739130434782608, 12.565217391304348, 1.2028985507246377, 1.4057971014492754, 23.116674808663088, 12.826086956521738, 0.5451880801172447, 2.9851815665201102, 146.0144927536232, 42.84057971014493, 1.8985507246376812], 69, 32591.363626134153) ,
+            ([25.68421052631579, 3.0526315789473686, 46.5, 0.02631578947368421, 12.236842105263158, 1.105263157894737, 1.5789473684210527, 22.387788290952102, 12.105263157894736, 0.5934358367829686, 2.9358367829686576, 184.5, 41.026315789473685, 1.5263157894736843], 38, 21419.904448700647) ,
+            ([26.943181818181817, 2.272727272727273, 44.51136363636363, 0.38636363636363635, 12.840909090909092, 1.3636363636363635, 1.3181818181818181, 24.40187691521961, 13.477272727272727, 0.4736976506639427, 2.7090143003064355, 118.14772727272727, 40.13636363636363, 1.5568181818181819], 88, 44285.07981193549) ,
+            ([31.8, 2.4, 48.2, 0.0, 13.4, 1.8, 1.6, 24.51573033707865, 11.8, 0.3033707865168539, 2.9707865168539325, 252.0, 41.4, 1.0], 5, 2818.6716828683248) ,
         ]
+
         # all are multipliers of expected tuple value
-        allowedDelta = (0.01, 0.01, 0.01)
+        allowedDelta = (0.01, 0.01, 0.01, 0.01)
 
         # loop, to see if we get same centers
-        for k in range(2, 6):
-            kwargs = {'k': k, 'ignored_cols_by_name': None, 'destination_key': 'benign_k.hex',
-                # reuse the same seed, to get deterministic results (otherwise sometimes fails
-                'seed': 265211114317615310}
 
-            # for fvec only?
-            kwargs.update({'max_iter': 10})
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, noPoll=h2o.beta_features, **kwargs)
+        if DO_IGNORE:
+            kwargs = {'k': 4, 'ignored_cols': 'STR', 'destination_key': 'benign_k.hex', 'seed': 265211114317615310}
+        else:
+            kwargs = {'k': 4, 'ignored_cols': None, 'destination_key': 'benign_k.hex', 'seed': 265211114317615310}
 
-            if h2o.beta_features:
-                h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
-                # hack..supposed to be there like va
-                kmeans['destination_key'] = 'benign_k.hex'
-            ## h2o.verboseprint("kmeans result:", h2o.dump_json(kmeans))
-            modelView = h2o.nodes[0].kmeans_model_view(model='benign_k.hex')
-            h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
-            model = modelView['model']
-            clusters = model['clusters']
-            cluster_variances = model['cluster_variances']
-            error = model['error']
-            print "cluster_variances:", cluster_variances
-            print "error:", error
+        # for fvec only?
+        kwargs.update({'max_iter': 10})
+        kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, noPoll=not DO_POLL, **kwargs)
 
-            # make this fvec legal?
-            ### (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
-            ### h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
+        if not DO_POLL:
+            h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
+            # hack..supposed to be there like va
+            kmeans['destination_key'] = 'benign_k.hex'
+        ## h2o.verboseprint("kmeans result:", h2o.dump_json(kmeans))
+        modelView = h2o.nodes[0].kmeans_model_view(model='benign_k.hex')
+        h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
+        model = modelView['model']
+        clusters = model['clusters']
+        cluster_variances = model['cluster_variances']
+        error = model['error']
+        print "cluster_variances:", cluster_variances
+        print "error:", error
+
+        # make this fvec legal?
+        (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
+        h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
 
     def test_C_kmeans_prostate(self):
+        h2o.beta_features = True # fvec
 
         importFolderPath = "standard"
         csvFilename = "prostate.csv"
@@ -102,8 +107,8 @@ class Basic(unittest.TestCase):
             # for fvec only?
             kwargs.update({'max_iter': 50})
 
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, noPoll=h2o.beta_features, **kwargs)
-            if h2o.beta_features:
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, noPoll=not DO_POLL, **kwargs)
+            if not DO_POLL:
                 h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
                 # hack..supposed to be there like va
                 kmeans['destination_key'] = 'prostate_k.hex'
@@ -128,9 +133,8 @@ class Basic(unittest.TestCase):
             
 
             # make this fvec legal?
-            ### (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
-
-            ### h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
+            (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
+            h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
 
 
