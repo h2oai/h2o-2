@@ -1244,7 +1244,7 @@ class H2O(object):
                 'source': key,
                 'destination_key': key2,
                 'seed': None,
-                'ignored_cols_by_name': None,
+                'ignored_cols': None,
                 'max_iter': None,
                 'normalize': None,
                 }
@@ -1405,6 +1405,11 @@ class H2O(object):
     def remove_key(self, key, timeoutSecs=30):
         a = self.__do_json_request('Remove.json', 
             params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
+        return a
+
+    # this removes all keys!
+    def remove_all_keys(self, timeoutSecs=30):
+        a = self.__do_json_request('RemoveAll.json', timeout=timeoutSecs)
         return a
 
     # only model keys can be exported?

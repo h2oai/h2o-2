@@ -40,9 +40,7 @@ Quick Step-by-step
   03:05:45.322 main      INFO WATER: ICE root: '/tmp/h2o-tomk'
   03:05:45.364 main      INFO WATER: Internal communication uses port: 54322
   +                                  Listening for HTTP and REST traffic on  http://192.168.1.52:54321/
-  03:05:45.409 main      INFO WATER: H2O cloud name: 'mystats-cloud'
-  03:05:45.409 main      INFO WATER: (v1.7.0.520) 'mystats-cloud' on /192.168.1.52:54321, discovery address /236.151.114.91:60567
-  03:05:45.411 main      INFO WATER: Cloud of size 1 formed [/192.168.1.52:54321]
+  03:05:45.409 main      INFO WATER:  03:05:45.411 main      INFO WATER: Cloud of size 1 formed [/192.168.1.52:54321]
   03:05:45.543 main      INFO WATER: Log dir: '/tmp/h2o-tomk/h2ologs'
 
 5. Point your web-browser to:

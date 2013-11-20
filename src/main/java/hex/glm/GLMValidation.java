@@ -53,6 +53,10 @@ public class GLMValidation extends Iced {
 
   private static final DecimalFormat DFORMAT = new DecimalFormat("##.##");
 
+  private static String format(double d){
+    return DFORMAT.format(0.01*(int)(100*d));
+  }
+
   public static class GLMXValidation extends GLMValidation {
     Key [] _xvalModels;
     public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx) {
@@ -69,10 +73,18 @@ public class GLMValidation extends Iced {
       // add links to the xval models
       sb.append("<h4>Cross Validation Models</h4>");
       sb.append("<table class='table table-bordered table-condensed'>");
+      sb.append("<tr><th>Model</th><th>nonzeros</th>");
+      sb.append("<th>" + ((_glm.family == Family.binomial)?"AUC":"AIC") + "</th>");
+      sb.append("<th>Deviance Explained</th>");
+      sb.append("</tr>");
       int i = 0;
       for(Key k:_xvalModels){
+        GLMModel m = DKV.get(k).get();
         sb.append("<tr>");
-        sb.append("<td>" + GLMModelView.link("Model" + ++i, k) + "</td>");
+        sb.append("<td>" + GLMModelView.link("Model " + ++i, k) + "</td>");
+        sb.append("<td>" + (m.rank()-1) + "</td>");
+        sb.append("<td>" + ((_glm.family == Family.binomial)?format(m.auc()):format(m.aic())) + "</td>");
+        sb.append("<td>" + format(m.devExplained()) + "</td>");
         sb.append("</tr>");
       }
       sb.append("</table>");
@@ -291,7 +303,7 @@ public class GLMValidation extends Iced {
     sb.append("];\n");
 
     sb.append(
-            "//Create scale functions\n"+  
+            "//Create scale functions\n"+
                     "var xScale = d3.scale.linear()\n"+
                     ".domain([0, d3.max(dataset, function(d) { return d[0]; })])\n"+
                     ".range([padding, w - padding * 2]);\n"+
@@ -347,7 +359,7 @@ public class GLMValidation extends Iced {
                     "  return 2\n"+
                     "  }\n"+
                     "});\n"+
-                    
+
                     "/*"+
                     "//Create labels\n"+
                     "svg.selectAll(\"text\")"+

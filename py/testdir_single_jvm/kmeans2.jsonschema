@@ -1,0 +1,38 @@
+
+{
+    "type":"object",
+    "properties":{
+        "Request2": { "type":"number" },
+        "model": { "type":"object", "properties": {
+            "_dataKey": { "type":"string" },
+            "_domains": { "type":"array", "items": 
+                { "type":"string" }
+            },
+            "_names": { "type":"array", "items": 
+                { "type":"string" }
+            },
+            "_selfKey": { "type":"string" },
+            "cluster_variances": { "type":"array", "items":
+                { "type":"number" } 
+            },
+            "clusters": { "type":"array", "items":
+                { "type":"array" }
+            },
+            "error": { "type":"number" },
+            "iterations": { "type":"number" },
+            "max_iter": { "type":"number" },
+            "normalized": { "type":"string"
+            }
+            }
+        },
+        "response_info": { "type":"object", "properties": {
+            "h2o": { "type":"string" },
+            "node": { "type":"string" },
+            "redirect_url": { "type":"null" },
+            "status": { "type":"string" },
+            "time": { "type":"number" }
+        }
+        }
+    }
+}
+
