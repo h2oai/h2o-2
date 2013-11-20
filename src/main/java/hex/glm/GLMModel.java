@@ -95,7 +95,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @API(help="Beta vector containing model coefficients.") double []  beta;
     @API(help="Beta vector containing normalized coefficients (coefficients obtained on normalized data).") double []  norm_beta;
 
-
+    final int rank;
+    final int [] idxs;
 
     public Submodel(double lambda, double [] beta, double [] norm_beta, long run_time, int iteration){
       this.lambda = lambda;
@@ -103,6 +104,27 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       this.norm_beta = norm_beta;
       this.run_time = run_time;
       this.iteration = iteration;
+      int r = 0;
+      if(beta != null){
+        final double [] b = norm_beta != null?norm_beta:beta;
+        // grab the indeces of non-zero coefficients
+        for(double d:beta)if(d != 0)++r;
+        idxs = new int[r];
+        int ii = 0;
+        for(int i = 0; i < b.length; ++i)if(b[i] != 0)idxs[ii++] = i;
+        // now sort them
+        for(int i = 1; i < r; ++i){
+          for(int j = 1; j < r-i;++j){
+            if(Math.abs(b[idxs[j-1]]) < Math.abs(b[idxs[j]])){
+              int jj = idxs[j];
+              idxs[j] = idxs[j-1];
+              idxs[j-1] = jj;
+            }
+          }
+        }
+
+      } else idxs = null;
+      rank = r;
     }
   }
 
@@ -131,12 +153,12 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     submodels[lambdaIdx] = new Submodel(lambda, beta, norm_beta, run_time, iteration);
     run_time = (System.currentTimeMillis()-start_time);
   }
-
-  public void setBeta(int lambdaIdx, double [] beta, double [] norm_beta){
-    Submodel sm = submodels[lambdaIdx];
-    sm.beta = beta;
-    sm.norm_beta = norm_beta;
-  }
+//
+//  public void setBeta(int lambdaIdx, double [] beta, double [] norm_beta){
+//    Submodel sm = submodels[lambdaIdx];
+//    sm.beta = beta;
+//    sm.norm_beta = norm_beta;
+//  }
 
   public double lambda(){
     if(submodels == null)return Double.NaN;
@@ -320,21 +342,22 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     sb.append("<span><b>").append(x).append(": </b>").append(y[0]).append("</span> ");
   }
   private void coefs2html(StringBuilder sb){
-    final double [] beta = beta(), norm_beta = norm_beta();
+    final Submodel sm = submodels[best_lambda_idx];
+
     StringBuilder names = new StringBuilder();
     StringBuilder equation = new StringBuilder();
     StringBuilder vals = new StringBuilder();
-    StringBuilder normVals = norm_beta == null?null:new StringBuilder();
+    StringBuilder normVals = sm.norm_beta == null?null:new StringBuilder();
     String [] cNames = coefNames();
-    for(int i = 0; i < cNames.length; ++i){
+    for(int i:sm.idxs){
       names.append("<th>" + cNames[i] + "</th>");
-      vals.append("<td>" + beta[i] + "</td>");
+      vals.append("<td>" + sm.beta[i] + "</td>");
       if(i != 0)
-        equation.append(beta[i] > 0?" + ":" - ");
-      equation.append(DFORMAT.format(Math.abs(beta[i])));
+        equation.append(sm.beta[i] > 0?" + ":" - ");
+      equation.append(DFORMAT.format(Math.abs(sm.beta[i])));
       if(i < (cNames.length-1))
          equation.append("*x[" + cNames[i] + "]");
-      if(norm_beta != null) normVals.append("<td>" + norm_beta[i] + "</td>");
+      if(sm.norm_beta != null) normVals.append("<td>" + sm.norm_beta[i] + "</td>");
     }
     sb.append("<h4>Equation</h4>");
     RString eq = null;
@@ -353,7 +376,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     sb.append("<tr>" + names.toString() + "</tr>");
     sb.append("<tr>" + vals.toString() + "</tr>");
     sb.append("</table>");
-    if(norm_beta != null){
+    if(sm.norm_beta != null){
       sb.append("<h4>Normalized Coefficients</h4>" +
       		"<table class='table table-bordered table-condensed'>");
       sb.append("<tr>" + names.toString()    + "</tr>");
