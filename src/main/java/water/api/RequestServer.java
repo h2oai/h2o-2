@@ -162,6 +162,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RPackage());
     registerRequest(new RReaderProgress());
     registerRequest(new Remove());
+    registerRequest(new RemoveAll());
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
