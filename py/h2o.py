@@ -1244,7 +1244,7 @@ class H2O(object):
                 'source': key,
                 'destination_key': key2,
                 'seed': None,
-                'ignored_cols_by_name': None,
+                'ignored_cols': None,
                 'max_iter': None,
                 'normalize': None,
                 }
