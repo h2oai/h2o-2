@@ -626,6 +626,9 @@ setMethod("h2o.cut", signature(x="H2OParsedData2", breaks="numeric"), function(x
 setGeneric("h2o.table", function(x) { standardGeneric("h2o.table") })
 setMethod("h2o.table", signature(x="H2OParsedData2"), function(x) { h2o.__unop2("table", x) })
 
+setGeneric("h2o.factor", function(x) { standardGeneric("h2o.factor") })
+setMethod("h2o.factor", signature(x="H2OParsedData2"), function(x) { h2o.__unop2("factor", x) })
+
 setMethod("colnames", "H2OParsedData2", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   unlist(lapply(res$cols, function(y) y$name))

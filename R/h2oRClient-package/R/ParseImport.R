@@ -122,7 +122,7 @@ setMethod("h2o.importFolder", signature(object="H2OClient", path="character", pa
 })
 
 setMethod("h2o.importFile", signature(object="H2OClient", path="character", key="ANY", parse="ANY", sep="ANY"), 
-  function(object, path, pattern, key, parse, sep) { h2o.importFolder(object, path, pattern="", key, parse, sep) })
+  function(object, path, key, parse, sep) { h2o.importFolder(object, path, pattern="", key, parse, sep) })
 
 setMethod("h2o.uploadFile", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character", silent="logical"), {
   function(object, path, key, parse, sep, silent) {
