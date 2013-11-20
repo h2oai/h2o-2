@@ -14,14 +14,15 @@ public class RemoveAllKeysTask extends DRemoteTask {
     // First cancel all jobs and wait for them to be done.
     for (Job job : Job.all()) {
       job.cancel();
+      if(job.cancelled()) continue;
       Job.waitUntilJobEnded(job.self());
     }
 
     // Now remove all keys.
     Futures fs = new Futures();
-    for( Key key : H2O.keySet() ) {
+    for( Key key : H2O.keySet() )
       DKV.remove(key, fs);
-    }
+
     fs.blockForPending();
 
     Log.info("Keys remaining: "+H2O.store_size());
