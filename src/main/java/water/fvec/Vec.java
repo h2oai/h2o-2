@@ -177,45 +177,19 @@ public class Vec extends Iced {
    *  categorical columns.  Returns null for non-Enum/factor columns. */
   public String[] domain() { return _domain; }
 
-  /** Convert an integer column to an enum column, with just number strings for
-   *  the factors or levels.
-   *
-   *  Deprecated - you should use toEnum ALWAYS returning a new vector which
-   *  provides a correct transformation to enum. The caller of {@link #toEnum()} is ALWAYS responsible
-   *  for its deletion!!!
-   *  */
-  @Deprecated
-  public void asEnum() {
-    if( _domain!=null ) return;
-    if( !isInt() ) throw new IllegalArgumentException("Cannot convert a float column to an enum.");
-    _domain = defaultLevels();
-    DKV.put(_key,this);
-  }
-
   /** Transform this vector to enum.
-   * Transformation is done by a {@link TransfVec} which provides a mapping between values.
+   *  Transformation is done by a {@link TransfVec} which provides a mapping between values.
    *
-   * The caller is responsible for vector deletion!
+   *  The caller is responsible for vector deletion!
    */
   public Vec toEnum() {
-    if( _domain!=null ) return this.makeTransf(seq(0,_domain.length), _domain);
-    else {
-      int[] domain;
-      String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
-      int[] domMap = Utils.mapping(domain);
-      if( domain.length > MAX_ENUM_SIZE ) throw H2O.unimpl();
-      return this.makeTransf(domMap, sdomain);
-    }
-  }
-
-  @Deprecated
-  public String[] defaultLevels() {
-    long min = (long)min(), max = (long)max();
-    if( min < 0 || max > 100000L ) throw H2O.unimpl();
-    String domain[] = new String[(int)max+1];
-    for( int i=0; i<(int)max+1; i++ )
-      domain[i] = Integer.toString(i);
-    return domain;
+    if( isEnum() ) return this.makeTransf(seq(0,_domain.length), _domain);
+    if( !isInt() ) throw new IllegalArgumentException("Enum conversion only works on integer columns");
+    int[] domain;
+    String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
+    int[] domMap = Utils.mapping(domain);
+    if( domain.length > MAX_ENUM_SIZE ) throw H2O.unimpl();
+    return this.makeTransf(domMap, sdomain);
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
@@ -250,38 +224,23 @@ public class Vec extends Iced {
   }
 
   /** Compute the roll-up stats as-needed, and copy into the Vec object */
-  public Vec rollupStats() {
-    rollupStats((H2OCountedCompleter)null);
-    return this;
-  }
-  // wrap CPS style invocation into more convenient interface using Futures
-  public void rollupStats(Futures fs) {
-    H2OEmptyCompleter ec = new H2OEmptyCompleter();
-    rollupStats(ec);
-    fs.add(ec);
-  }
-  // Allow a bunch of rollups to run in parallel allowing CPS style invocation
-  public void rollupStats(final H2OCountedCompleter cc) {
+  public Vec rollupStats() { return rollupStats(null); }
+  // Allow a bunch of rollups to run in parallel.  If Futures is passed in, run
+  // the rollup in the background.  *Always* returns "this".
+  public Vec rollupStats(Futures fs) {
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 ) throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 ) {    // KV store has a better answer
+      if( vthis == this ) return this;
       _min  = vthis._min;   _max   = vthis._max;
       _mean = vthis._mean;  _sigma = vthis._sigma;
       _size = vthis._size;  _isInt = vthis._isInt;
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
-      // tell the caller we're done!
-      if(cc != null) H2O.submitTask(new H2OCountedCompleter() {  // submit new task to do the completion
-        @Override public byte priority() {return cc.priority();} // as the completer may have some extensive work to do.
-        @Override public void compute2() {cc.tryComplete();}
-      });
-      return;
+    } else {                 // KV store reports we need to recompute
+      RollupStats rs = new RollupStats().dfork(this);
+      if(fs != null) fs.add(rs); else rs.getResult();
     }
-    RollupStats rs = new RollupStats();
-    if(cc != null) {
-      rs.setCompleter(cc);
-      rs.dfork(this);
-    } else
-      rs.doAll(this);
+    return this;
   }
 
   /** A private class to compute the rollup stats */
