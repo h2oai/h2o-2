@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         params = {
             'destination_key': modelKey,
             'ignored_cols_by_name': 'STR',
-            'learn_rate': 'c(.1,.2)',
+            'learn_rate': '.1,.2',
             'ntrees': 2,
             'max_depth': 8,
             'min_rows': 1,
@@ -90,7 +90,7 @@ class Basic(unittest.TestCase):
             'destination_key': modelKey,
             'ignored_cols_by_name': 'ID',
             'learn_rate': .1,
-            'ntrees': 'c(2,4)',
+            'ntrees': '2,4',
             'max_depth': 8,
             'min_rows': 1,
             'response': 'CAPSULE',

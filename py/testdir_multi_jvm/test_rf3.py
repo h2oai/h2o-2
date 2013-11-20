@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3)
+            h2o.build_cloud(3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             # broke out the put separately so we can iterate a test just on the RF
-            parseResult = h2i.import_parse(path=csvPathname, schema='put')
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', pollTimeoutSecs=60, timeoutSecs=60)
 
             h2o.verboseprint("Trial", trial)
             h2o_cmd.runRF(parseResult=parseResult, trees=237, depth=45, timeoutSecs=480)
