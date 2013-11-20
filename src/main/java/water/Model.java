@@ -11,7 +11,7 @@ import water.api.Request.API;
 import water.fvec.*;
 import water.util.Log.Tag.Sys;
 import water.util.Log;
-import water.util.Utils;
+import water.util.*;
 
 /**
  * A Model models reality (hopefully).
@@ -318,8 +318,8 @@ public abstract class Model extends Iced {
    *    }
    *  </pre>
    */
-  public String toJava() {
-    SB sb = new SB();
+  public String toJava() { return toJava(new SB()).toString(); }
+  public SB toJava( SB sb ) {
     sb.p("\n");
     sb.p("class ").p(toJavaId(_selfKey.toString())).p(" {\n");
     toJavaNAMES(sb);
@@ -331,7 +331,7 @@ public abstract class Model extends Iced {
     sb.p(TOJAVA_PREDICT_MAP_ALLOC1);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
     sb.p("}\n");
-    return sb.toString();
+    return sb;
   }
   // Same thing as toJava, but as a Javassist CtClass
   private CtClass makeCtClass() throws CannotCompileException {
@@ -349,7 +349,7 @@ public abstract class Model extends Iced {
 
 
   private SB toJavaNAMES( SB sb ) {
-    return sb.p("  public static final String[] NAMES = new String[] ").p(_names).p(";\n");
+    return sb.p("  public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";\n");
   }
   private SB toJavaNCLASSES( SB sb ) {
     return sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
@@ -400,24 +400,6 @@ public abstract class Model extends Iced {
     "  float[] predict( java.util.HashMap row ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
     "  }\n";
-
-  // Can't believe this wasn't done long long ago
-  protected static class SB {
-    public final StringBuilder _sb = new StringBuilder();
-    public SB p( String s ) { _sb.append(s); return this; }
-    public SB p( float  s ) { _sb.append(s); return this; }
-    public SB p( char   s ) { _sb.append(s); return this; }
-    public SB p( int    s ) { _sb.append(s); return this; }
-    public SB indent( int d ) { for( int i=0; i<d; i++ ) p("  "); return this; }
-    // Convert a String[] into a valid Java String initializer
-    SB p( String[] ss ) {
-      p('{');
-      for( int i=0; i<ss.length-1; i++ )  p('"').p(ss[i]).p("\",");
-      if( ss.length > 0 ) p('"').p(ss[ss.length-1]).p('"');
-      return p('}');
-    }
-    @Override public String toString() { return _sb.toString(); }
-  }
 
   // Convenience method for testing: build Java, convert it to a class &
   // execute it: compare the results of the new class's (JIT'd) scoring with
