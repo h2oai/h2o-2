@@ -144,7 +144,6 @@ class Basic(unittest.TestCase):
 
                 # These will move into the h2o_gbm.py
                 pctWrong = h2o_gbm.pp_cm_summary(cm);
-                print "Last line of this cm is really NAs, not CM"
                 print "\nTest\n==========\n"
                 print h2o_gbm.pp_cm(cm)
 

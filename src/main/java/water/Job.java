@@ -32,7 +32,7 @@ public class Job extends Request2 {
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
 
-  @API(help = "Destination key", required = true, filter = Default.class)
+  @API(help = "Destination key", filter = Default.class, json = true)
   public Key destination_key; // Key holding final value after job is removed
 
   @API(help = "Job description")

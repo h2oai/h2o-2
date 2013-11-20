@@ -53,7 +53,8 @@ class Basic(unittest.TestCase):
                 'initialization': None,
                 'seed': 3923021996079663354, 
                 'normalize': 0, 
-                'max_iter': "c(2,5,10)"
+                'max_iter': '2',
+                'destination_key': 'd.hex'
             }
     
             for trial in range(3):

@@ -7,7 +7,7 @@ H2Ocon <- new("H2OClient", ip=myIP, port=myPort)
 
 test.tail.numeric <- function(con) {
   cat("\nImporting USArrests.csv data...\n")
-  arrests.hex = h2o.uploadFile(H2Ocon, "../../smalldata/pca_test/USArrests.csv", "arrests.hex")
+  arrests.hex = h2o.importFile(H2Ocon, "./smalldata/pca_test/USArrests.csv", "arrests.hex")
   cat("\nCheck that tail works...")
   tail(arrests.hex)
   tail_ <- tail(arrests.hex)

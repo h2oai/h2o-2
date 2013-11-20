@@ -239,6 +239,7 @@ public class NeuralNet extends ValidatedJob {
       error.classification = Double.NaN;
       error.mean_square /= len;
     }
+    input._pos = 0;
     return error;
   }
 

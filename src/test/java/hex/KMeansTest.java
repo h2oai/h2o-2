@@ -14,7 +14,7 @@ public class KMeansTest extends TestUtil {
   private static final long SEED = 8683452581122892189L;
 
   @BeforeClass public static void stall() {
-    stall_till_cloudsize(3);
+    stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
   @Test public void test1Dimension() {

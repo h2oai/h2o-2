@@ -1,6 +1,6 @@
 package hex;
 
-import hex.Layer.Softmax.Loss;
+import hex.Layer.Output.Loss;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.rng.MersenneTwisterRNG;
@@ -9,20 +9,20 @@ import java.io.File;
 
 import junit.framework.Assert;
 
-import org.junit.*;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import water.*;
 import water.fvec.*;
 import water.util.Log;
 import water.util.Utils;
 
-@Ignore
 public class NeuralNetIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
   Frame _train, _test;
 
   @BeforeClass public static void stall() {
-    stall_till_cloudsize(3);
+    stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
   @Test public void compare() throws Exception {
@@ -60,7 +60,7 @@ public class NeuralNetIrisTest extends TestUtil {
     Vec labels = _train.vecs()[_train.vecs().length - 1];
     VecsInput input = new VecsInput(data, null);
     VecSoftmax output = new VecSoftmax(labels, null);
-    output._loss = Loss.MeanSquare;
+    output.loss = Loss.MeanSquare;
     Layer[] ls = new Layer[3];
     ls[0] = input;
     ls[1] = new Layer.Tanh(7);
@@ -87,8 +87,7 @@ public class NeuralNetIrisTest extends TestUtil {
     ref.train(epochs, rate);
 
     // H2O
-    Trainer.Direct trainer = new Trainer.Direct(ls, null);
-    trainer.samples = epochs * (int) _train.numRows();
+    Trainer.Direct trainer = new Trainer.Direct(ls, epochs, null);
     trainer.run();
 
     // Make sure outputs are equal
@@ -124,6 +123,8 @@ public class NeuralNetIrisTest extends TestUtil {
 
     Log.info("H2O and Reference equal, train: " + train + ", test: " + test);
 
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].close();
     _train.remove();
     _test.remove();
   }
