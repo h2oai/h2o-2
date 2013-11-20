@@ -110,7 +110,7 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
   public int       _vcol;
   public long[]    _gids;
   public Summary[] _gsums;
-  private SummaryHashMap _gs;
+  private Utils.IcedHashMap<Utils.IcedLong, Summary> _gs;
 
   public GroupedPct(Frame fr, int gcol, int vcol) {
     _fr = fr;
@@ -118,7 +118,7 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
     _vcol = vcol;
 
     // collects simple summary(min, max, size) for each group
-    SummaryHashMap gs = new Pass1(fr, gcol, vcol).doAll(_fr).gs;
+    Utils.IcedHashMap<Utils.IcedLong, Summary> gs = new Pass1(fr, gcol, vcol).doAll(_fr).gs;
     for (Summary s : gs.values())
       s.allocBins(s._min, s._max);
     gs = new Pass2(fr, gcol, vcol, gs).doAll(fr).gs;
@@ -146,12 +146,12 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
     final Frame fr;
     final int   gc;
     final int   vc;
-    SummaryHashMap gs;
+    Utils.IcedHashMap<Utils.IcedLong, Summary> gs;
     public Pass1(Frame fr, int gcol, int vcol){
       this.fr = fr;
       this.gc = gcol;
       this.vc = vcol;
-      this.gs = new SummaryHashMap();
+      this.gs = new Utils.IcedHashMap<Utils.IcedLong, Summary>();
     }
     @Override public void map(Chunk[] cs) {
       Utils.IcedLong gid = new Utils.IcedLong(0);
@@ -181,8 +181,8 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
     final Frame fr;
     final int   gc;
     final int   vc;
-    SummaryHashMap gs;
-    public Pass2(Frame fr, int gcol, int vcol, SummaryHashMap gs){
+    Utils.IcedHashMap<Utils.IcedLong, Summary> gs;
+    public Pass2(Frame fr, int gcol, int vcol, Utils.IcedHashMap<Utils.IcedLong, Summary> gs){
       this.fr = fr;
       this.gc = gcol;
       this.vc = vcol;
@@ -216,8 +216,8 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
     final Frame fr;
     final int   gc;
     final int   vc;
-    SummaryHashMap gs;
-    public AppendPct(Frame fr, int gcol, int vcol, SummaryHashMap gs){
+    Utils.IcedHashMap<Utils.IcedLong, Summary> gs;
+    public AppendPct(Frame fr, int gcol, int vcol, Utils.IcedHashMap<Utils.IcedLong, Summary> gs){
       this.fr = fr;
       this.gc = gcol;
       this.vc = vcol;
