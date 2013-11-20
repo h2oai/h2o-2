@@ -226,6 +226,11 @@ public class NewChunk extends Chunk {
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
+    if(_len2 != _len){ // sparse? compare xmin/lemin/lemax with 0
+      lemin = Math.min(0, lemin);
+      lemax = Math.max(0, lemax);
+      xmin = Math.min(xmin, 0);
+    }
 
     // Constant column?
     if( _naCnt==0 && min==max ) {

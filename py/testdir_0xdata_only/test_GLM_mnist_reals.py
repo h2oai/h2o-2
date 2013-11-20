@@ -34,8 +34,7 @@ class Basic(unittest.TestCase):
             csvPathname = importFolderPath + "/" + testCsvFilename
             testKey = testCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=testKey,
-                key2=testKey, timeoutSecs=timeoutSecs)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=testKey, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", testCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -50,8 +49,7 @@ class Basic(unittest.TestCase):
             trainKey = trainCsvFilename + "_" + str(trial) + ".hex"
             start = time.time()
             csvPathname = importFolderPath + "/" + trainCsvFilename
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=trainKey,
-                key2=trainKey, timeoutSecs=timeoutSecs)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=trainKey, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "parse end on ", trainCsvFilename, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

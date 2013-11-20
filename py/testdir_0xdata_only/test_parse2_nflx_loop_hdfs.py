@@ -16,7 +16,8 @@ class Basic(unittest.TestCase):
         # the node state is gone when we tear down the cloud, so pass the ignore here also.
         h2o.tear_down_cloud(sandboxIgnoreErrors=True)
 
-    def test_parse_nflx_loop_hdfs(self):
+    def test_parse2_nflx_loop_hdfs(self):
+        h2o.beta_features = True
         print "Using the -.gz files from hdfs"
         # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
         csvFilename = "file_10.dat.gz"
