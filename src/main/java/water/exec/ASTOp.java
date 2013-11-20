@@ -26,6 +26,7 @@ public abstract class ASTOp extends AST {
     put(new ASTExp());
     put(new ASTNot());
     put(new ASTScale());
+    put(new ASTFactor());
 
     put(new ASTCos());  // Trigonometric functions
     put(new ASTSin());
@@ -743,5 +744,26 @@ class ASTCut extends ASTOp {
       env.pop();
       env.push(fr2);
     } else throw H2O.unimpl();
+  }
+}
+
+class ASTFactor extends ASTOp {
+  ASTFactor() { super(new String[]{"factor", "ary"}, new Type[]{Type.ARY, Type.ARY}); }
+  @Override String opStr() { return "factor"; }
+  @Override ASTOp make() {return new ASTFactor();}
+  @Override void apply(Env env, int argcnt) {
+    Frame ary = env.popAry();   // Ary pulled from stack, keeps +1 refcnt
+    if( ary.numCols() != 1 ) 
+      throw new IllegalArgumentException("factor requires a single column");
+    Vec v0 = ary.vecs()[0];
+    if( !v0.isEnum() ) {        // Frame on the stack is already a factor
+      Vec v1 = v0.toEnum();
+      Vec vmaster = v1.masterVec(); // Maybe v1 is built over v0?
+      if( vmaster != null ) env.addRef(vmaster);
+      ary = env.addRef(new Frame(ary._names,new Vec[]{v1}));
+    }
+    env.pop();                  // Pop fcn
+    env.push(1);                // Put ary back on stack with same refcnt
+    env._ary[env._sp-1] = ary;
   }
 }

@@ -383,10 +383,10 @@ When :math:`Y` has a pdf from the exponential family:
 Let :math:`g(\mu_{i})=\eta_{i}` be a monotonic, differentiable
 transformation of the expected value of :math:`y_{i}`. The function
 :math:`\eta_{i}` is the link function and follows a linear model.
-:math:`g(\mu_{i})=\eta_{i}=\vec{x_{i}^{\prime}}\beta`
+:math:`g(\mu_{i})=\eta_{i}=\mathbf{x_{i}^{\prime}}\beta`
 
 When inverted: 
-:math:`\mu=g^{-1}(\vec{x_{i}^{\prime}}\beta)`
+:math:`\mu=g^{-1}(\mathbf{x_{i}^{\prime}}\beta)`
 
 
 **Maximum Likelihood Estimation**
@@ -416,9 +416,9 @@ factor :math:`\phi`.
 
 Regress :math:`z_{i}` on the predictors :math:`x_{i}` using the
 weights :math:`w_{i}` to obtain new estimates of :math:`\beta`. 
-:math:`\hat{\beta}=(\vec{X}^{\prime}\vec{W}\vec{X})^{-1}\vec{X}^{\prime}\vec{W}\vec{z}`
-Where :math:`\vec{X}` is the model matrix, :math:`\vec{W}` is a
-diagonal matrix of :math:`w_{i}`, and :math:`\vec{z}` is a vector of
+:math:`\hat{\beta}=(\mathbf{X}^{\prime}\mathbf{W}\mathbf{X})^{-1}\mathbf{X}^{\prime}\mathbf{W}\mathbf{z}`
+Where :math:`\mathbf{X}` is the model matrix, :math:`\mathbf{W}` is a
+diagonal matrix of :math:`w_{i}`, and :math:`\mathbf{z}` is a vector of
 the working response variable :math:`z_{i}`.
 
 This process is repeated until the estimates :math:`\hat{\beta}` change by less than a specified amount. 

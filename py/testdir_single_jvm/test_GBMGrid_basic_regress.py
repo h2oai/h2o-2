@@ -3,6 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs 
 
 DO_CLASSIFICATION = False
+DO_POLL = True
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -51,14 +52,14 @@ class Basic(unittest.TestCase):
         kwargs = params.copy()
         timeoutSecs = 1800
         start = time.time()
-        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
-        print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
+        GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=not DO_POLL, **kwargs)
+        if not DO_POLL:
         # no pattern waits for all
-        h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+            print "\nfirst GBMResult:", h2o.dump_json(GBMResult)
+            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
-
-        gbmGridView = h2o.nodes[0].gbm_grid_view(job_key=GBMFirstResult['job_key'], destination_key=modelKey)
+        gbmGridView = h2o.nodes[0].gbm_grid_view(job_key=GBMResult['job_key'], destination_key=modelKey)
 
         if 1==0:
             # FIX! get model?
@@ -100,15 +101,18 @@ class Basic(unittest.TestCase):
         kwargs = params.copy()
         timeoutSecs = 1800
         start = time.time()
-        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
-        print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
-        # no pattern waits for all
-        h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+        GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=not DO_POLL, **kwargs)
+        if not DO_POLL:
+            print "\nfirst GBMResult:", h2o.dump_json(GBMResult)
+
+            # no pattern waits for all
+            h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
 
         # FIX! after gbm grid, have to get the model keys from the json?
-        gbmGridView = h2o.nodes[0].gbm_grid_view(job_key=GBMFirstResult['job_key'], destination_key=modelKey)
+        gbmGridView = h2o.nodes[0].gbm_grid_view(job_key=GBMResult['job_key'], destination_key=modelKey)
         print h2o.dump_json(gbmGridView)
 
         if 1==0:

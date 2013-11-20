@@ -136,8 +136,7 @@ public class KMeans2 extends ColumnsJob {
   }
 
   @Override protected Response redirect() {
-    String redirectName = KMeans2Progress.class.getSimpleName();
-    return Response.redirect(this, redirectName, "job_key", job_key, "destination_key", destination_key);
+    return KMeans2Progress.redirect(this, job_key, destination_key);
   }
 
   public static class KMeans2Progress extends Progress2 {
@@ -145,7 +144,11 @@ public class KMeans2 extends ColumnsJob {
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @Override protected Response jobDone(Job job, Key dst) {
-      return Response.redirect(this, new KMeans2ModelView().href(), "destination_key", destination_key);
+      return KMeans2ModelView.redirect(this, destination_key);
+    }
+
+    public static Response redirect(Request req, Key job_key, Key destination_key) {
+      return Response.redirect(req, new KMeans2Progress().href(), JOB_KEY, job_key, DEST_KEY, destination_key);
     }
   }
 
