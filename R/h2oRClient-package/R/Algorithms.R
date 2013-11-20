@@ -158,10 +158,11 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
 #----------------------------- K-Means Clustering -------------------------------#
 #setGeneric("h2o.kmeans", function(data, centers, cols = "", iter.max = 10) { standardGeneric("h2o.kmeans") })
 #TODO: limitation: centers must be # of clusters; don't support cluster init values yet
-h2o.kmeans <- function(data, centers, cols='', iter.max=10){
+h2o.kmeans <- function(data, centers, cols, iter.max=10){
   if( missing(data) ) stop('must specify data')
   if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
 
+  if( missing( cols ) ) stop('must provide cols')
   if(!( class(cols) %in% c('character', 'numeric', 'integer') )) stop('cols must be character or numeric')
   if( class(iter.max) != 'numeric') stop('iter.max must be numeric')
   if( iter.max < 1 ) stop('iter.max must be >= 1')

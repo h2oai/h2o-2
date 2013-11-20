@@ -85,6 +85,89 @@ public class ParserTest2 extends TestUtil {
     }
   }
 
+  // test correctnes of sparse chunks
+  // added after failing to encode properly following data as
+  // 0s were not considered when computing compression strategy and then
+  // lemin was 6108 and there was Short overlfow when encoding zeros.
+  // So, the first column was compressed into C2SChunk with 0s causing short overflow,
+  @Test public void testSparse2(){
+    String data =
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "35351, 0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "6108,  0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "35351, 0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "6334,  0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n" +
+        "0,     0,0,0,0,0\n";
+
+    double[][] exp = new double[][] {
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(35351,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(6108,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(35351,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(6334,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+        d(0,0,0,0,0,0),
+    };
+    Key k = FVecTest.makeByteVec(Key.make().toString(),data);
+    Key r1 = Key.make("r1");
+    ParseDataset2.parse(r1, new Key[]{k});
+    testParsed(r1,exp,k);
+
+  }
+
   @Test public void testChunkBoundaries() {
     String[] data = new String[] {
         "1|2|3\n1|2|3\n",

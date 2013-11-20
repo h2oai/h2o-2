@@ -1,7 +1,6 @@
 package hex;
 
 import hex.KMeans.Initialization;
-
 import hex.KMeans2.KMeans2Model;
 
 import java.util.Random;
@@ -18,7 +17,7 @@ public class KMeans2Test extends TestUtil {
   private static final double SIGMA = 3;
 
   @BeforeClass public static void stall() {
-    stall_till_cloudsize(3);
+    stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
   @Test public void test1Dimension() {

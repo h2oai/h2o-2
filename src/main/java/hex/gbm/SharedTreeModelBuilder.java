@@ -62,15 +62,22 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     Log.info("    nbins: " + nbins);
   }
 
+  @Override protected void init() {
+    super.init();
+    if (source.numRows()==0
+        || source.numRows() - response.naCnt() <=0) throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+  }
+
   // --------------------------------------------------------------------------
   // Driver for model-building.
   public void buildModel( ) {
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     assert 1 <= min_rows;
-    _ncols = _train.length;
-    _nrows = source.numRows() - response.naCnt();
     assert (classification && response.isInt()) || // Classify Int or Enums
       (!classification && !response.isEnum());     // Regress  Int or Float
+    _ncols = _train.length;
+    _nrows = source.numRows() - response.naCnt();
+    assert (_nrows>0) : "Dataset contains no rows - validation of input parameters is probably broken!";
     _nclass = classification ? (char)(response.max()-response.min()+1) : 1;
     // Transform response to enum
     if (response.domain()==null && classification) {
@@ -94,7 +101,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // For doing classification on Integer (not Enum) columns, we want some
     // handy names in the Model.  This really should be in the Model code.
     String[] domain = response.domain();
-    if( domain == null && _nclass > 1 ) // No names?  Make some up.
+    if( domain == null && _nclass > 1 ) // No names?  Something is wrong since we converted response to enum
       assert false : "Response domain' names should be always presented in case of classification";
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 

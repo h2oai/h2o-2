@@ -11,8 +11,8 @@ public class Expr2Test extends TestUtil {
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
-      File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
-      //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
+      //File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
+      File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
       //File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
@@ -52,7 +52,7 @@ public class Expr2Test extends TestUtil {
       checkStr("x+2");
       checkStr("2+x");
       checkStr("x=1");
-      checkStr("x<-1");
+      checkStr("x<-1");         // Alternative R assignment syntax
       checkStr("x=1;x=h.hex");  // Allowed to change types via shadowing at REPL level
       checkStr("a=h.hex");      // Top-level assignment back to H2O.STORE
       checkStr("x<-+");
@@ -101,6 +101,7 @@ public class Expr2Test extends TestUtil {
       checkStr("(1? h.hex : (h.hex+1))[1,2]"); // True (vs false) test
       // Impute the mean
       checkStr("apply(h.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})");
+      checkStr("factor(h.hex[,5])");
 
       // Slice assignment & map
       checkStr("h.hex[,2]");

@@ -11,13 +11,13 @@ zeroList = [
 # factor
 # bug?
 exprList = [
-        'Result.hex = Result<n> = slice(c.hex[<col1>],<row>)',
-        'Result.hex = Result<n> = colSwap(c.hex,<col1>,(c.hex[2]==0 ? 54321 : 54321))',
-        'Result.hex = Result<n> = c.hex[<col1>]',
-        'Result.hex = Result<n> = min(c.hex[,<col1>])',
-        'Result.hex = Result<n> = max(c.hex[,<col1>]) + Result.hex[0]',
+        # 'Result.hex = Result<n> = slice(c.hex[<col1>],<row>)',
+        'Result.hex = Result<n> = c.hex[,<col1>] = ((c.hex[,2]==0) ? 54321 : 54321))',
+        'Result.hex = Result<n> = c.hex[,<col1>]',
+        'Result.hex = Result<n> = min(c.hex[,<col1>], c.hex[,<col1>])',
+        'Result.hex = Result<n> = max(c.hex[,<col1>], c.hex[,<col1>]) + Result.hex[,0]',
         ### 'Result.hex = Result<n> = mean(c.hex[,<col1>]) + Result.hex[0]',
-        'Result.hex = Result<n> = sum(c.hex[,<col1>]) + Result.hex[0]',
+        'Result.hex = Result<n> = sum(c.hex[,<col1>], c.hex[,<col1>]) + Result.hex[,0]',
         # have to figure out how to avoid infinity results
         # 'Result<n> = log(c.hex[<col1>]) + Result.hex[0]',
         ]
@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='local', hex_key='c.hex', timeoutSecs=15)
         print "\nParse key is:", parseResult['destination_key']
 
-        h2b.browseTheCloud()
+        ### h2b.browseTheCloud()
         h2e.exec_zero_list(zeroList)
         start = time.time()
         h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'c.hex', 

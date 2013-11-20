@@ -79,11 +79,13 @@ class Basic(unittest.TestCase):
 
         glm_model = a['glm_model']
         _names = glm_model['_names']
-        beta = glm_model['beta']
-        norm_beta = glm_model['norm_beta']
-        iteration = glm_model['iteration']
+        submodels = glm_model['submodels'][0]
 
-        validation = glm_model['validation']
+        beta = submodels['beta']
+        norm_beta = submodels['norm_beta']
+        iteration = submodels['iteration']
+
+        validation = submodels['validation']
         avg_err = validation['avg_err']
         auc = validation['auc']
         aic = validation['aic']
