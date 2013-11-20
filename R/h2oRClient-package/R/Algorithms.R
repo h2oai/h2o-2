@@ -479,7 +479,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   if( class(lambda) != 'numeric' ) stop('lambda must be numeric')
   if( lambda < 0 ) stop('lambda must be >= 0')
 
-  if( class(tweedie.p) != 'numeric' ) stop('tweedie.p must be numeric')
+  if(! class(tweedie.p) %in% c('logical','numeric')) stop('tweedie.p must be numeric')
   if( family != 'tweedie' && !(missing(tweedie.p) || is.na(tweedie.p)) ) stop("tweedie.p may only be set for family tweedie")
 
   cc <- colnames(data)
