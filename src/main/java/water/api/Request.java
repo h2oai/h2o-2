@@ -262,6 +262,7 @@ public abstract class Request extends RequestBuilders {
   public boolean toHTML(StringBuilder sb) {
     return false;
   }
+  public void toJava(StringBuilder sb) {}
 
   public String toDocGET() {
     return null;
