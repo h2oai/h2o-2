@@ -92,6 +92,7 @@ public class Inspect2 extends Request2 {
               GBM.link(skey, "Distributed GBM") +", "+
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
+              PctPage.link(skey,"Percentiles")+", "+
               DownloadDataset.link(skey, "Download as CSV") +
               "</div>");
     String _scrollto = String.valueOf(offset - 1);

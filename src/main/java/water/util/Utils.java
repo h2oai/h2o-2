@@ -555,13 +555,14 @@ public class Utils {
     public IcedInt(int v){_val = v;}
   }
   public static class IcedLong extends Iced {
-    public final long _val;
+    public long _val;
     public IcedLong(long v){_val = v;}
-    public boolean equals(IcedLong other) {
-      return this._val == other._val;
+    @Override public boolean equals(Object other) {
+      return this._val == ((IcedLong)other)._val;
     }
     public int hashCode() {
-      return Long.valueOf(_val).hashCode();
+      int code = Long.valueOf(_val).hashCode();
+      return code;
     }
   }
   public static class IcedDouble extends Iced {
