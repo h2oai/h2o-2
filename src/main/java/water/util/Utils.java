@@ -554,6 +554,21 @@ public class Utils {
     public final int _val;
     public IcedInt(int v){_val = v;}
   }
+  public static class IcedLong extends Iced {
+    public final long _val;
+    public IcedLong(long v){_val = v;}
+    public boolean equals(IcedLong other) {
+      return this._val == other._val;
+    }
+    public int hashCode() {
+      return Long.valueOf(_val).hashCode();
+    }
+  }
+  public static class IcedDouble extends Iced {
+    public final double _val;
+    public IcedDouble(double v){_val = v;}
+  }
+
   /**
    * Simple wrapper around HashMap with support for H2O serialization
    * @author tomasnykodym
