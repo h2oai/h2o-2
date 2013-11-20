@@ -1407,6 +1407,11 @@ class H2O(object):
             params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
         return a
 
+    # this removes all keys!
+    def remove_all_keys(self, timeoutSecs=30):
+        a = self.__do_json_request('RemoveAll.json', timeout=timeoutSecs)
+        return a
+
     # only model keys can be exported?
     def export_hdfs(self, source_key, path):
         a = self.__do_json_request('ExportHdfs.json',

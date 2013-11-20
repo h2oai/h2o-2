@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
         csvTrainFilename = 'covtype.shuffled.90pct.data'
         csvTrainPathname = importFolderPath + "/" + csvTrainFilename
         hex_key = csvTrainFilename + ".hex"
-        parseTrainResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvTrainPathname, hex_key=hex_key, timeoutSecs=180)
+        parseTrainResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvTrainPathname, hex_key=hex_key, timeoutSecs=180, doSummary=False)
         inspect = h2o_cmd.runInspect(None, parseTrainResult['destination_key'])
 
         # Parse Test ******************************************************
@@ -123,7 +123,8 @@ class Basic(unittest.TestCase):
             model_key = rfView['model_key']
             ntrees = rfView['ntrees']
 
-            rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, noPoll=False, doSimpleCheck=False)
+            rfView = h2o_cmd.runRFView(None, model_key=model_key, 
+                timeoutSecs=60, retryDelaySecs=5, noPoll=False, doSimpleCheck=False)
             h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
             # rfView = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
             ## print "rfView:", h2o.dump_json(rfView)
