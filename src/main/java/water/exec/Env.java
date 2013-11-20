@@ -85,7 +85,7 @@ public class Env extends Iced {
     _ary[_sp-1] = addRef(_ary[idx]);
     _d  [_sp-1] =        _d  [idx];
     _fcn[_sp-1] = addRef(_fcn[idx]);
-    assert check_refcnt(_ary[0].anyVec());
+    assert _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
   void push_slot( int d, int n, Env global ) {
     assert _refcnt==null;       // Should use a fcn's closure for d>1
@@ -187,8 +187,10 @@ public class Env extends Iced {
     if( cnt > 0 ) _refcnt.put(vec,cnt);
     else {
       if( fs == null ) fs = new Futures();
+      Vec vmaster = vec.masterVec();
       UKV.remove(vec._key,fs);
       _refcnt.remove(vec);
+      if( vmaster != null ) subRef(vmaster,fs);
     }
     return fs;
   }

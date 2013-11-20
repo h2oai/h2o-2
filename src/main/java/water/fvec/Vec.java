@@ -140,6 +140,9 @@ public class Vec extends Iced {
     fs.blockForPending();
     return v0;
   }
+  // This Vec does not have dependent hidden Vec it uses
+  public Vec masterVec() { return null; }
+
   /**
    * Adapt given vector <code>v</code> to this vector.
    * I.e., unify domains and call makeTransf().

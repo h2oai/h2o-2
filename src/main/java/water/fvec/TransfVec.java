@@ -20,7 +20,7 @@ public class TransfVec extends Vec {
     _domain = domain;
   }
 
-  private Vec masterVec() {
+  @Override public Vec masterVec() {
     if (_masterVec==null) _masterVec = DKV.get(_masterVecKey).get();
     return _masterVec;
   }
