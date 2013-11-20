@@ -124,10 +124,11 @@ public class DRF extends SharedTreeModelBuilder {
 
       // TODO: Do validation or OOBEE scoring only if trees are produced fast enough.
       tstats.updateBy(ktrees);
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats,false);
     }
     // Do final scoring with all the trees.
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats);
+    model = doScoring(model, outputKey, fr, ktrees, tid, tstats,true);
+    // Compute variable importance if required
     if (classification && importance) {
       float varimp[] = doVarImp(model, fr);
       Log.info(Sys.DRF__,"Var. importance: "+Arrays.toString(varimp));
@@ -139,9 +140,9 @@ public class DRF extends SharedTreeModelBuilder {
     cleanUp(fr,t_build); // Shared cleanup
   }
 
-  private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats ) {
+  private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
     Score sc = new Score().doIt(model, fr, validation, _validResponse, validation==null).report(Sys.DRF__,tid,ktrees);
-    model = new DRFModel(model, ktrees, (float)sc.sum()/sc.nrows(), sc.cm(), tstats);
+    model = new DRFModel(model, finalScoring?null:ktrees, (float)sc.sum()/sc.nrows(), sc.cm(), tstats);
     DKV.put(outputKey, model);
     return model;
   }

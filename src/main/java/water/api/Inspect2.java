@@ -5,6 +5,7 @@ import water.api.RequestBuilders.Response;
 import water.fvec.*;
 import hex.drf.DRF;
 import hex.gbm.GBM;
+import hex.glm.GLM2;
 
 public class Inspect2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -90,6 +91,7 @@ public class Inspect2 extends Request2 {
               "<br/>Build models using " +
               DRF.link(skey, "Distributed Random Forest") +", "+
               GBM.link(skey, "Distributed GBM") +", "+
+              GLM2.link(skey, "Generalized Linear Modeling (beta)") +", "+
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV") +

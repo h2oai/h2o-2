@@ -164,17 +164,18 @@ public final class ParseDataset2 extends Job {
     @Override public void map(Chunk [] chks){
       int [][] emap = emap(_chunk2Enum[chks[0].cidx()]);
       final int cidx = chks[0].cidx();
-      for(int i = 0; i < chks.length; ++i){
+      for(int i = 0; i < chks.length; ++i) {
+        Chunk chk = chks[i];
         if(_gDomain[i] == null) // killed, replace with all NAs
-          DKV.put(chks[i]._vec.chunkKey(chks[i].cidx()),new C0DChunk(Double.NaN,chks[i]._len));
-        else for( int j = 0; j < chks[i]._len; ++j){
-          if( chks[i].isNA0(j) )continue;
-          long l = chks[i].at80(j);
-          assert l >= 0 && l < emap[i].length : "Found OOB index "+l+" pulling from "+chks[i].getClass().getSimpleName();
-          assert emap[i][(int)l] >= 0: H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chks[i].getClass().getSimpleName();
-          chks[i].set0(j, emap[i][(int)l]);
+          DKV.put(chk._vec.chunkKey(chk.cidx()),new C0DChunk(Double.NaN,chk._len));
+        else for( int j = 0; j < chk._len; ++j){
+          if( chk.isNA0(j) )continue;
+          long l = chk.at80(j);
+          assert l >= 0 && l < emap[i].length : "Found OOB index "+l+" pulling from "+chk.getClass().getSimpleName();
+          assert emap[i][(int)l] >= 0: H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chk.getClass().getSimpleName();
+          chk.set0(j, emap[i][(int)l]);
         }
-        chks[i].close(cidx, _fs);
+        chk.close(cidx, _fs);
       }
     }
   }
