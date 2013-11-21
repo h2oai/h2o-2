@@ -10,6 +10,7 @@ import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
+@Ignore
 public class DRFTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
@@ -110,23 +111,23 @@ public class DRFTest extends TestUtil {
   /*@Test*/ public void testAirlines() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
-        new PrepData() { 
-          @Override int prep(Frame fr) { 
-            UKV.remove(fr.remove("DepTime")._key); 
-            UKV.remove(fr.remove("ArrTime")._key); 
-            UKV.remove(fr.remove("ActualElapsedTime")._key); 
-            UKV.remove(fr.remove("AirTime")._key); 
-            UKV.remove(fr.remove("ArrDelay")._key); 
-            UKV.remove(fr.remove("DepDelay")._key); 
-            UKV.remove(fr.remove("Cancelled")._key); 
-            UKV.remove(fr.remove("CancellationCode")._key); 
-            UKV.remove(fr.remove("CarrierDelay")._key); 
-            UKV.remove(fr.remove("WeatherDelay")._key); 
-            UKV.remove(fr.remove("NASDelay")._key); 
-            UKV.remove(fr.remove("SecurityDelay")._key); 
-            UKV.remove(fr.remove("LateAircraftDelay")._key); 
-            UKV.remove(fr.remove("IsArrDelayed")._key); 
-            return fr.find("IsDepDelayed"); } 
+        new PrepData() {
+          @Override int prep(Frame fr) {
+            UKV.remove(fr.remove("DepTime")._key);
+            UKV.remove(fr.remove("ArrTime")._key);
+            UKV.remove(fr.remove("ActualElapsedTime")._key);
+            UKV.remove(fr.remove("AirTime")._key);
+            UKV.remove(fr.remove("ArrDelay")._key);
+            UKV.remove(fr.remove("DepDelay")._key);
+            UKV.remove(fr.remove("Cancelled")._key);
+            UKV.remove(fr.remove("CancellationCode")._key);
+            UKV.remove(fr.remove("CarrierDelay")._key);
+            UKV.remove(fr.remove("WeatherDelay")._key);
+            UKV.remove(fr.remove("NASDelay")._key);
+            UKV.remove(fr.remove("SecurityDelay")._key);
+            UKV.remove(fr.remove("LateAircraftDelay")._key);
+            UKV.remove(fr.remove("IsArrDelayed")._key);
+            return fr.find("IsDepDelayed"); }
         },
         50,
         a( a(14890, 5997),

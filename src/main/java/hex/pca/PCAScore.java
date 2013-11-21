@@ -31,7 +31,7 @@ public class PCAScore extends FrameJob {
   @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 10000)
   int num_pc = 1;
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     // Note: Source data MUST contain all features (matched by name) used to build PCA model!
     // If additional columns exist in source, they are automatically ignored in scoring
     Frame fr = model.adapt(source, true, false)[0];
@@ -46,6 +46,7 @@ public class PCAScore extends FrameJob {
       domains[i] = null;
     }
     DKV.put(destination_key, tsk.outputFrame(names, domains));
+    return Status.Done;
   }
 
   @Override protected void init() {

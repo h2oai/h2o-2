@@ -85,9 +85,10 @@ public class DRF extends SharedTreeModelBuilder {
     Log.info("    seed: " + seed);
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     logStart();
     buildModel();
+    return Status.Done;
   }
 
   @Override protected Response redirect() {

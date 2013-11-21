@@ -7,10 +7,7 @@ import java.util.ArrayList;
 
 import water.Job.ColumnsJob;
 import water.*;
-import water.api.*;
-import water.api.Request.API;
-import water.api.Request.Default;
-import water.api.RequestBuilders.Response;
+import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.RString;
@@ -59,7 +56,7 @@ public class PCA extends ColumnsJob {
     this.standardize = standardize;
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     Frame fr = selectFrame(source);
     Vec[] vecs = fr.vecs();
 
@@ -80,6 +77,7 @@ public class PCA extends ColumnsJob {
     GramTask tsk = new GramTask(this, dinfo, false).doAll(dinfo._adaptedFrame);
     PCAModel myModel = buildModel(dinfo, tsk);
     UKV.put(destination_key, myModel);
+    return Status.Done;
   }
 
   @Override protected void init() {

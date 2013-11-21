@@ -318,7 +318,9 @@ public abstract class Trainer {
       if( _job != null ) {
         Job job = Job.findJob(_job);
         if( job != null ) {
-          job._fjtask.tryComplete();
+          H2OCountedCompleter task = job._fjtask;
+          if( task != null )
+            task.tryComplete();
           job.remove();
         }
       }
