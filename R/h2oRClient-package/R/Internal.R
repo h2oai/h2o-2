@@ -12,20 +12,38 @@ LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!")
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
 if(Sys.info()["sysname"] == "Windows")
   myPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
-h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
-h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
-h2o.__startLogging <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
-h2o.__stopLogging <- function() { assign("IS_LOGGING", FALSE, envir = pkg.env) }
-h2o.__clearLogs <- function() { unlink(h2o.__LOG_COMMAND); unlink(h2o.__LOG_ERROR) }
-h2o.__openCmdLog <- function() {
+pkg.env$h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
+pkg.env$h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
+h2o.__changeCommandLog <- function(path) { 
+    cmd <- paste(path, 'commands.log', sep='/') 
+    assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
+    }
+h2o.__changeErrorLog   <- function(path) { 
+    cmd <- paste(path, 'errors.log', sep=',') 
+    assign("h2o.__LOG_ERROR", cmd, envir = pkg.env)
+    }
+h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
+h2o.__stopLogging      <- function() { assign("IS_LOGGING", FALSE, envir = pkg.env) }
+h2o.__clearLogs        <- function() { unlink(pkg.env$h2o.__LOG_COMMAND); unlink(pkg.env$h2o.__LOG_ERROR) }
+h2o.__openCmdLog       <- function() {
   myOS = Sys.info()["sysname"]
-  if(myOS == "Windows") shell.exec(paste("open '", h2o.__LOG_COMMAND, "'", sep="")) 
-  else system(paste("open '", h2o.__LOG_COMMAND, "'", sep=""))
+  if(myOS == "Windows") shell.exec(paste("open '", pkg.env$h2o.__LOG_COMMAND, "'", sep="")) 
+  else system(paste("open '", pkg.env$h2o.__LOG_COMMAND, "'", sep=""))
 }
 h2o.__openErrLog <- function() {
   myOS = Sys.info()["sysname"]
-  if(myOS == "Windows") shell.exec(paste("open '", h2o.__LOG_ERROR, "'", sep="")) 
-  else system(paste("open '", h2o.__LOG_ERROR, "'", sep=""))
+  if(myOS == "Windows") shell.exec(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep="")) 
+  else system(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep=""))
+}
+
+h2o.__logIt<-
+function(url, tmp, commandOrErr) {
+  tmp = get("tmp"); nams = names(tmp)
+  s = rep(" ", length(tmp))
+  for(i in seq_along(tmp))
+    s[i] = paste(nams[i], ": ", tmp[[i]], sep="")
+  s = paste(url, '\t', paste(s, collapse=", "))
+  write(s, file = pkg.env$h2o.__LOG_COMMAND, append = TRUE)
 }
 
 # Internal functions & declarations
@@ -86,18 +104,9 @@ h2o.__remoteSend <- function(client, page, ...) {
   
   # Log list of parameters sent to H2O
   if(pkg.env$IS_LOGGING) {
-    # print(substitute(list(...)))
-    # temp = deparse(substitute(list(...)))
-    # write(paste(myURL, '\t', temp), file = h2o.__LOG_COMMAND, append = TRUE)
-    temp = list(...); temp = get("temp"); nams = names(temp)
-    str = rep(" ", length(temp))
-    for(i in seq_along(temp))
-      str[i] = paste(nams[i], ": ", temp[[i]], sep="")
-    str = paste(myURL, '\t', paste(str, collapse=", "))
-    write(str, file = h2o.__LOG_COMMAND, append = TRUE)
+    h2o.__logIt(myURL, list(...), "Command")
   }
   
-  # TODO (Spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
   # temp = postForm(myURL, style = "POST", ...)
   if(length(list(...)) == 0)
@@ -113,7 +122,7 @@ h2o.__remoteSend <- function(client, page, ...) {
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
-    if(pkg.env$IS_LOGGING) h2o.__writeToFile(res, h2o.__LOG_ERROR)
+    if(pkg.env$IS_LOGGING) h2o.__writeToFile(res, pkg.env$h2o.__LOG_ERROR)
     stop(paste(myURL," returned the following error:\n", h2o.__formatError(res$error)))
   }
   res

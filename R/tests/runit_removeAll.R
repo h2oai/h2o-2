@@ -4,22 +4,26 @@
 
 source('./Utils/h2oR.R')
 
-logging("\n======================== Begin Test ===========================\n")
-conn = new("H2OClient", ip=myIP, port=myPort)
+Log.info("======================== Begin Test ===========================\n")
 
-test <- function(serverH2O) {
-  
- 
-  arrests.hex = h2o.uploadFile(serverH2O, "../../smalldata/pca_test/USArrests.csv", "arrests.hex")
+test <- function(conn) {
+  arrests.hex = h2o.uploadFile(conn, "../../smalldata/pca_test/USArrests.csv", "arrests.hex")
 
+  Log.info("Slicing column 1 of arrests 250 times")
   for(i in 1:250) {
     arrests.hex[,1]
+    if( i %% 50 )
   }
 
+  Log.info("Performing 1000 PCA's on the arrests data")
   for(i in 1:1000) {
     arrests.pca.h2o = h2o.prcomp(arrests.hex, standardize = FALSE)
   }
-  h2o.removeAll(serverH2O)
+  Log.info("Making a call to remove all")
+  h2o.removeAll(conn)
 }
 
-test(conn)
+conn = new("H2OClient", ip=myIP, port=myPort)
+
+tryCatch(test_that("many keys test", test(conn)),  error = function(e) FAIL(e))
+PASS()
