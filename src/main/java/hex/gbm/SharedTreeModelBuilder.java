@@ -43,6 +43,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @API(help = "Class distribution, ymin based")
   protected long _distribution[];
 
+  private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
+
   /** Marker for already decided row. */
   static public final int DECIDED_ROW = -1;
   /** Marker for sampled out rows */
@@ -64,8 +66,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
   @Override protected void init() {
     super.init();
-    if (source.numRows()==0
-        || source.numRows() - response.naCnt() <=0) throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+    if (source.numRows()==0 || source.numRows() - response.naCnt() <=0)
+      throw new IllegalArgumentException("Cannot build a model on empty dataset!");
   }
 
   // --------------------------------------------------------------------------
@@ -78,12 +80,12 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     _ncols = _train.length;
     _nrows = source.numRows() - response.naCnt();
     assert (_nrows>0) : "Dataset contains no rows - validation of input parameters is probably broken!";
-    _nclass = classification ? (char)(response.max()-response.min()+1) : 1;
     // Transform response to enum
-    if (response.domain()==null && classification) {
+    if( !response.isEnum() && classification ) {
       response = response.toEnum();
-      _nclass = response.domain().length;
+      _gen_enum = true;
     }
+    _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
     _errs = new double[0];                // No trees yet
     assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
@@ -138,6 +140,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // Remove temp vectors; cleanup the Frame
     while( fr.numCols() > _ncols+1/*Do not delete the response vector*/ )
       UKV.remove(fr.remove(fr.numCols()-1)._key);
+    // If we made a response column with toEnum, nuke it.
+    if( _gen_enum ) UKV.remove(response._key);
     remove();                   // Remove Job
   }
 
