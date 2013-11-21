@@ -7,7 +7,7 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs
 # don't allow None on ntree..causes 50 tree default!
 print "Temporarily not using bin_limit=1 to 4"
 print "Use out_of_bag_error_estimate=0, to get full scoring, for when we change datasets"
-paramDict = {
+drf1ParamDict = {
     'response_variable': [None,54],
     'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'], 'ntree': [5], 
     # UPDATE: H2O...OOBE has to be 0 for scoring
@@ -36,6 +36,16 @@ paramDict = {
         ]
     }
 
+drf2ParamDict = {
+    'response': [None, 'C54'],
+    'max_depth': [None, 1,10,20,100],
+    'nbins': [None,5,10,100,1000],
+    'ignored_cols_by_name': [None,'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
+    'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
+    'seed': [None,'0','1','11111','19823134','1231231'],
+    'mtries': [None,1,3,5,7,9,11,13,17,19,23,37,51],
+    }
+
 print "Will RF train on one dataset, test on another (multiple params)"
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -56,6 +66,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_covtype20x(self):
+        h2o.beta_features = True
         importFolderPath = 'standard'
 
         csvFilenameTrain = 'covtype20x.data'
@@ -78,7 +89,6 @@ class Basic(unittest.TestCase):
         inspect = h2o_cmd.runInspect(key=parseResultTest['destination_key'])
         dataKeyTest = parseResultTest['destination_key']
         dataKeyTest2 = 'covtype20x.data.C.hex'
-
         print "Parse end", dataKeyTest
         
         # make a 3rd key so the predict is uncached too!
@@ -92,20 +102,33 @@ class Basic(unittest.TestCase):
 
         # params is mutable. This is default.
         print "RF with no_confusion_matrix=1, so we can 'time' the RFView separately after job completion?"
-        params = {
-            'ntree': 6, 
-            'parallel': 1, 
-            'out_of_bag_error_estimate': 0, 
-# Causes rest api illegal argument error.
-#            'no_confusion_matrix': 1,
-            'model_key': 'RF_model'
-        }
+
+        if h2o.beta_features:
+            paramDict = drf1ParamDict
+            params = {
+                'ntrees': 6, 
+                'destination_key': 'RF_model'
+            }
+        else:
+            paramDict = drf2ParamDict
+            params = {
+                'ntree': 6, 
+                'parallel': 1, 
+                'out_of_bag_error_estimate': 0, 
+    # Causes rest api illegal argument error.
+    #            'no_confusion_matrix': 1,
+                'model_key': 'RF_model'
+            }
 
         colX = h2o_rf.pickRandRfParams(paramDict, params)
+
         kwargs = params.copy()
+        if h2o.beta_features:
+            timeoutSecs = 30 + kwargs['ntrees'] * 60
+        else:
+            timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
         # adjust timeoutSecs with the number of trees
         # seems ec2 can be really slow
-        timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
 
         start = time.time()
         rfv = h2o_cmd.runRF(parseResult=parseResultTrain,
@@ -119,17 +142,22 @@ class Basic(unittest.TestCase):
         print "rf job end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
         print "\nRFView start after job completion"
-        model_key = kwargs['model_key']
-        ntree = kwargs['ntree']
+        if h2o.beta_features:
+            model_key = kwargs['destination_key']
+            ntree = kwargs['ntrees']
+        else:
+            model_key = kwargs['model_key']
+            ntree = kwargs['ntree']
+
         start = time.time()
-        h2o_cmd.runRFView(None, dataKeyTrain, model_key, ntree, timeoutSecs)
+        h2o_cmd.runRFView(None, dataKeyTrain, model_key, ntree=ntree, timeoutSecs=timeoutSecs)
         print "First rfview end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
         for trial in range(3):
             # scoring
             start = time.time()
             rfView = h2o_cmd.runRFView(None, dataKeyTest, 
-                model_key, ntree, timeoutSecs, out_of_bag_error_estimate=0, retryDelaySecs=1)
+                model_key, ntree=ntree, timeoutSecs=timeoutSecs, out_of_bag_error_estimate=0, retryDelaySecs=1)
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             # FIX! should update this expected classification error

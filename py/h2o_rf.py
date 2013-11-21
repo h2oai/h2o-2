@@ -258,8 +258,8 @@ def trainRF(trainParseResult, **kwargs):
 def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
     # Run validation on dataset
 
+    parseKey = scoreParseResult['destination_key']
     if h2o.beta_features:
-        parseKey = scoreParseResult['destination_key']
         # this is how we're supposed to do scorin?
         rfModelKey  = trainResult['drf_model']['_selfKey']
         predictKey = 'Predict.hex'
@@ -287,7 +287,6 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
         scoreResult = predictCMResult
 
     else:
-        parseKey = scoreParseResult['destination_key']
         ntree = trainResult['ntree']
         rfModelKey  = trainResult['model_key']
         start = time.time()

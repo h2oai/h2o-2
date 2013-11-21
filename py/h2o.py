@@ -1620,7 +1620,13 @@ class H2O(object):
             # return r
 
         # algo = '2/DRFView2' if beta_features else 'RFView'
+        # for drf2, you can't pass a new dataset here, compared to what you trained with.
+        # should complain or something if tried with a data_key
+        if h2o.beta_features and data_key:
+            raise Exception("Can't pass a new data_key to random_forest_view for v2's DRFModelView")
+
         algo = '2/DRFModelView' if beta_features else 'RFView'
+        # No such thing as 2/DRFScore2
         algoScore = '2/DRFScore2' if beta_features else 'RFScore'
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
