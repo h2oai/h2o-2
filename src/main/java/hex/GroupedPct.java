@@ -33,6 +33,11 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
     public double[] _pctiles;
 
     public Summary(long gid) {_gid = gid;_min=Double.MAX_VALUE;_max=Double.MIN_VALUE;_size=0;_step=0;_bins=null;_pctiles=null;}
+    public Summary(Summary other) {_gid = other._gid; _min=other._min; _max=other._max; _size=other._size;_step=other._step;
+      _bins=other._bins==null?null:other._bins.clone();
+      _invpct=other._invpct==null?null:other._invpct.clone();
+      _pctiles=other._pctiles==null?null:other._pctiles.clone();
+    }
     public Summary add(Summary other) {
       _min = Math.min(_min, other._min);
       _max = Math.max(_max, other._max);
@@ -55,22 +60,22 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
       } 
       return this;
     }
-    public void computePctiles() {
+    public void computeInvpct() {
       if (_pctiles != null) return;
-      int k = 0;
       long s = 0;
-      _pctiles = new double[100];
+      _pctiles = new double[101];
       _invpct  = new int[_bins.length];
-      for(int j = 0; j < 100; ++j) {
-        final long s1 = _size*j/100;
-        long bc = 0;
-        while(s1 > s+(bc = _bins[k])){
-          _invpct[k] = j;
-          s  += bc;
-          k++;
-        }
-        _pctiles[j] = _min + k*_step;
+
+      for (int i = 0; i < _pctiles.length; i++) _pctiles[i] = _max;
+      for(int i = 0; i < _bins.length; i++) {
+        _invpct[i] = (int)(s*100/_size);
+        s += _bins[i];
       }
+    }
+    public void cleanUpPct() {
+      for (int i = _pctiles.length-2; i >= 0; i--)
+        if (_pctiles[i] > _pctiles[i+1])
+          _pctiles[i] = _pctiles[i+1];
     }
     public boolean toHTML( StringBuilder sb ) {
       sb.append("<div class='table' style='width:90%;heigth:90%;border-top-style:solid;'>" +
@@ -129,16 +134,20 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
       _gids[i++] = key._val;
     Arrays.sort(_gids);
     i = 0;
-    for (long gid : _gids)
+    for (long gid : _gids) {
       _gsums[i++] = gs.get(new Utils.IcedLong(gid));
+    }
     for (Summary s : _gsums)
-      s.computePctiles();
+      s.computeInvpct();
     _gs = gs;
+    appendPctCol();
+    for (Summary s : _gsums)
+      s.cleanUpPct();
   }
 
   public Frame appendPctCol() {
-    Frame pctfr = new AppendPct(_fr, _gcol, _vcol, _gs).doAll(1,_fr)
-            .outputFrame(new String[]{"Percentile"}, new String[][]{null});
+    Frame pctfr = new AppendPct(_fr, _gcol, _vcol, _gs).doAll(2,_fr)
+      .outputFrame(new String[]{"GroupId","Percentile"}, new String[][]{null,null});
     return _fr.add(pctfr);
   }
 
@@ -205,7 +214,7 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
         gid._val= cs[gc].at80(i);
         double v = cs[vc].at0(i);
         Summary ss = gs.get(gid);
-        if (ss == null) gs.put(new Utils.IcedLong(gid._val), (ss = gs0.get(gid)));
+        if (ss == null) gs.put(new Utils.IcedLong(gid._val), (ss = new Summary(gs0.get(gid))));
         //Log.info("Looking for " + gid._val);
         //for (Utils.IcedLong key : gs.keySet())
         //  Log.info("hash keys : " + key._val);
@@ -235,16 +244,20 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
       this.vc = vcol;
       this.gs = gs;
     }
-    @Override public void map(Chunk[] cs, NewChunk nc) {
+    @Override public void map(Chunk[] cs, NewChunk[] ncs) {
       Utils.IcedLong gid = new Utils.IcedLong(0);
       for (int i = 0; i < cs[0]._len; i++) {
         if (cs[gc].isNA0(i) || cs[vc].isNA0(i))
-        { nc.addNum(Double.NaN); continue; }
+        { ncs[0].addNum(Double.NaN);ncs[1].addNum(Double.NaN); continue; }
         gid._val = cs[gc].at80(i);
         double v = cs[vc].at0(i);
         Summary ss = gs.get(gid);
         int ix = (int)((v - ss._min)/ss._step);
-        nc.addNum(ss._invpct[ix]);
+//         Log.info("add GroupId " + gid._val + " add pct " + ss._invpct[ix]) ;
+        int pct = ss._invpct[ix];
+        if (v < ss._pctiles[pct]) ss._pctiles[pct] = v; // Racy!
+        ncs[0].addNum(gid._val);
+        ncs[1].addNum(ss._invpct[ix]);
       }
     }
   }

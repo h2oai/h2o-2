@@ -28,9 +28,6 @@ public class PctPage extends Request2 {
   @API(help = "Percentiles over groups.")
   GroupedPct.Summary[] gpct;
 
-  @API(help = "Augmented Frame with percentiles on groups.")
-  Frame dest;
-
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='PctPage.query?source=%$key'>"+content+"</a>");
     rs.replace("key", k.toString());
@@ -42,7 +39,6 @@ public class PctPage extends Request2 {
     // select all columns
     GroupedPct pct = new GroupedPct(source, source.find(gcol), source.find(vcol));
     gpct = pct._gsums;
-    dest = pct.appendPctCol();
     return Response.done(this);
   }
 
