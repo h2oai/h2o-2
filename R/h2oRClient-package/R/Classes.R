@@ -12,13 +12,21 @@ setClass("H2OModel", representation(key="character", data="H2OParsedData", model
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
-setClass("H2OGLMGrid", contains="H2OGrid")
+# setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ONNModel", contains="H2OModel")
 setClass("H2ODRFModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel")
 setClass("H2OGBMGrid", contains="H2OGrid")
+
+setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
+setClass("H2OParsedDataVA", representation(h2o="H2OClient", key="character", env="environment"))
+setClass("H2OLogicalDataVA", contains="H2OParsedDataVA")
+setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", env="environment", "VIRTUAL"))
+setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
+setClass("H2OGLMModelVA", contains="H2OModelVA")
+setClass("H2OGLMGridVA", contains="H2OGridVA")
 
 # Register finalizers for H2O data and model objects
 # setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
@@ -90,8 +98,8 @@ setMethod("show", "H2OGLMModel", function(object) {
   
   # if(model$family == "binomial") {
   if(model$family$family == "binomial") {
-    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
-    cat("\nConfusion Matrix:\n"); print(model$confusion)
+    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$best_threshold,5), "\n")
+    cat("\nConfusion Matrix:\n"); print(round(model$confusion,2))
   }
     
   if(length(object@xval) > 0) {
@@ -110,13 +118,13 @@ setMethod("show", "H2OGLMModel", function(object) {
   }
 })
 
-setMethod("show", "H2OGLMGrid", function(object) {
-  print(object@data)
-  cat("GLMGrid Model Key:", object@key, "\n")
-  
-  temp = data.frame(t(sapply(object@sumtable, c)))
-  cat("\nSummary\n"); print(temp)
-})
+# setMethod("show", "H2OGLMGrid", function(object) {
+#   print(object@data)
+#   cat("GLMGrid Model Key:", object@key, "\n")
+#   
+#   temp = data.frame(t(sapply(object@sumtable, c)))
+#   cat("\nSummary\n"); print(temp)
+# })
 
 setMethod("show", "H2OKMeansModel", function(object) {
   print(object@data)
@@ -558,4 +566,56 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
   expr = paste("apply(", paste(params, collapse=","), ")", sep="")
   res = h2o.__exec2(X@h2o, expr)
   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
+})
+
+#--------------------------------- ValueArray -----------------------------#
+setMethod("show", "H2ORawDataVA", function(object) {
+  print(object@h2o)
+  cat("Raw Data Key:", object@key, "\n")
+})
+
+setMethod("show", "H2OParsedDataVA", function(object) {
+  print(object@h2o)
+  cat("Parsed Data Key:", object@key, "\n")
+})
+
+setMethod("show", "H2OGLMModelVA", function(object) {
+  print(object@data)
+  cat("GLM Model Key:", object@key, "\n\nCoefficients:\n")
+  
+  model = object@model
+  print(round(model$coefficients,5))
+  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
+  cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
+  cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
+  
+  # if(model$family == "binomial") {
+  if(model$family$family == "binomial") {
+    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
+    cat("\nConfusion Matrix:\n"); print(model$confusion)
+  }
+  
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    # if(model$family == "binomial") {
+    if(model$family$family == "binomial") {
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
+      colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+    } else {
+      modelXval = sapply(object@xval, function(x) { x@model$train.err })
+      modelXval = data.frame(modelXval)
+      colnames(modelXval) = c("Error")
+    }
+    rownames(modelXval) = paste("Model", 0:(nrow(modelXval)-1))
+    print(modelXval)
+  }
+})
+
+setMethod("show", "H2OGLMGridVA", function(object) {
+  print(object@data)
+  cat("GLMGrid Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
 })
