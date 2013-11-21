@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
+import h2o, h2o_cmd,h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_rf
 import time, random
 
 class Basic(unittest.TestCase):
@@ -12,15 +12,15 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10)
+            h2o.build_cloud(1,java_heap_GB=14, enable_benchmark_log=True)
         else:
-            h2o_hosts.build_cloud_with_hosts(1,java_heap_GB=10)
+            h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_from_import(self):
+    def test_from_import_fvec(self):
         h2o.beta_features = True
 
         timeoutSecs = 500
@@ -28,9 +28,6 @@ class Basic(unittest.TestCase):
             "covtype.data",
             "covtype20x.data",
             ]
-
-        # pop open a browser on the cloud
-        # h2b.browseTheCloud()
 
         for csvFilename in csvFilenameAll:
             # creates csvFilename.hex from file in importFolder dir 
@@ -45,11 +42,19 @@ class Basic(unittest.TestCase):
             summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
             h2o_cmd.infoFromSummary(summaryResult)
 
-            if not h2o.beta_features:
-                RFview = h2o_cmd.runRF(trees=1,depth=25,parseResult=parseResult, timeoutSecs=timeoutSecs)
+            trees = 2
+            start = time.time()
+            rfView = h2o_cmd.runRF(trees=trees, max_depth=20, parseResult=parseResult, timeoutSecs=timeoutSecs)
+            elapsed = time.time() - start
 
-            ## h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-            ## time.sleep(10)
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=trees)
+
+            l = '{!s} jvms, {!s}GB heap, {:s} {:s} {:.2f} secs. \
+                trees: {:} classification_error: {:} classErrorPct: {:} totalScores: {:}' .format(
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'DRF2', csvFilename, elapsed, 
+                    trees, classification_error, classErrorPctList, totalScores)
+            print "\n"+l
+            h2o.cloudPerfH2O.message(l)
 
             # just to make sure we test this
             h2i.delete_keys_at_all_nodes(pattern=hex_key)

@@ -1006,25 +1006,23 @@ class H2O(object):
             params = None
             if beta_features or 'response_info' in response: # trigger v2 for GBM always?
                 if 'response_info' not in response:
-                    raise Exception("The response during polling should have 'response_info'. Don't see it: \n%s" % dump_json(response))
+                    raise Exception("Response during polling must have 'response_info'\n%s" % dump_json(response))
 
                 response_info = response['response_info']
                 if 'redirect_url' not in response_info:
-                    raise Exception("The response during polling should have 'redirect_url'. Don't see it: \n%s" % dump_json(response))
+                    raise Exception("Response during polling must have 'redirect_url'\n%s" % dump_json(response))
 
                 if response_info['status'] == 'done':
-                    pass # keep the last url value? h2o doesn't give the redirect_request and redirect_args
-                else:
                     # if status is 'done', it's okay for 'redirect_url' to be null.
+                    pass
+                else:
                     redirect_url = response_info['redirect_url']
-                    # HACK: NeuralNetProgress is missing the "2/" prefix
+                    # HACK: these are missing the "2/" prefix for now
                     if 'NeuralNetProgress' in str(redirect_url) or 'KMeans2Progress' in str(redirect_url):
                         if "2/" not in str(redirect_url):
                             redirect_url = "2/" + redirect_url
 
-                    ### print "redirect_url:", redirect_url
                     if redirect_url:
-                        # this is the full url now, with params?
                         url = self.__url(redirect_url)
                         params = None
                     else:
@@ -1035,7 +1033,7 @@ class H2O(object):
                     raise Exception("'response' not in response.\n%s" % dump_json(response))
 
                 if response['response']['status'] == 'done':
-                    pass # keep the last url value? h2o doesn't give the redirect_request and redirect_args
+                    pass 
                 else:
                     if 'redirect_request' not in response['response']:
                         raise Exception("'redirect_request' not in response. \n%s" % dump_json(response))
@@ -1052,13 +1050,9 @@ class H2O(object):
         if beta_features or 'response_info' in response: # trigger v2 for GBM always?
             status = response['response_info']['status']
         else:
-            # status = response['response']['status']
-            # always make the first one look like poll? 
-            # we don't update the url during polling for via
-            # so have a problem with first redirect vs last reedirect, detection
             status = response['response']['status']
-            if status == 'redirect': # kludge to force a poll for v1
-                status = 'poll'
+
+        firstPoll = status != 'done'
 
         (url, params) = get_redirect_url(response, beta_features)
 
@@ -1088,11 +1082,12 @@ class H2O(object):
         # can end with status = 'redirect' or 'done'
         # Update: on DRF2, the first RF redirects to progress. So we should follow that, and follow any redirect to view?
         # so for v2, we'll always follow redirects?
-        # Update, for v1, we're not forcing the first status to be 'poll' now..so it could be redirect or done?(NN score? if blocking)
+        # For v1, we're not forcing the first status to be 'poll' now..so it could be redirect or done?(NN score? if blocking)
 
         # Don't follow the Parse redirect to Inspect, because we want parseResult['destination_key'] to be the end.
         # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
-        while status == 'poll' or (beta_features and status == 'redirect' and 'Inspect' not in url):
+        while status == 'poll' or firstPoll or (beta_features and status == 'redirect' and 'Inspect' not in url):
+            firstPoll = False
             print status, url
             # UPDATE: 1/24/13 change to always wait before the first poll..
             time.sleep(retryDelaySecs)
@@ -1111,11 +1106,8 @@ class H2O(object):
 
             r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
 
-            # if ((count%5)==0):
             verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
-            # to find the badness?
-            # if ((count%15)==0):
             if ((count%6)==0):
                 check_sandbox_for_errors()
 
@@ -1147,6 +1139,7 @@ class H2O(object):
             
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
+
 
         # won't print if we didn't poll
         if msgUsed:
@@ -1494,7 +1487,7 @@ class H2O(object):
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees, 
-        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, print_params=True, noPoll=False, rfView=True, **kwargs):
 
         algo = '2/DRF' if beta_features else 'RF'
@@ -1623,7 +1616,7 @@ class H2O(object):
         # for drf2, you can't pass a new dataset here, compared to what you trained with.
         # should complain or something if tried with a data_key
         if beta_features and data_key:
-            raise Exception("Can't pass a new data_key to random_forest_view for v2's DRFModelView")
+            print "Can't pass a new data_key to random_forest_view for v2's DRFModelView. Not using"
 
         algo = '2/DRFModelView' if beta_features else 'RFView'
         # No such thing as 2/DRFScore2
@@ -1712,11 +1705,6 @@ class H2O(object):
             # numberBuilt = rfView['trees']['number_built']
             # if numberBuilt!=ntree:
             #     raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
-
-        # can't check this? These are returned in the middle but not at the end
-        ## progress = rfView['response']['progress']
-        ## progressTotal = rfView['response']['progress_total']
-        ##    progress<0 or progressTotal<0 or progress>progressTotal or \
 
         # want to double check all this because it's new
         # and we had problems with races/doneness before
