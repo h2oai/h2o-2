@@ -30,7 +30,6 @@ h2o.__openErrLog <- function() {
 
 # Internal functions & declarations
 h2o.__PAGE_CLOUD = "Cloud.json"
-h2o.__PAGE_EXEC = "Exec.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
@@ -187,49 +186,6 @@ h2o.__pollAll <- function(client, timeout) {
   }
 }
 
-h2o.__exec <- function(client, expr) {
-  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
-  if (type != "character")
-    expr = deparse(substitute(expr))
-  destKey = paste("Result_", pkg.env$result_count, ".hex", sep="")
-  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC, expression=expr, destination_key=destKey)
-  pkg.env$result_count = (pkg.env$result_count + 1) %% RESULT_MAX
-  res$key
-}
-
-h2o.__exec_dest_key <- function(client, expr, destKey) {
-  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
-  if (type != "character")
-    expr = deparse(substitute(expr))
-  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC, expression=expr, destination_key=destKey)
-  pkg.env$result_count = (pkg.env$result_count + 1) %% RESULT_MAX
-  res$key
-}
-
-h2o.__operator <- function(op, x, y) {
-  if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
-    stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData", h2o.__escape(x@key), x)
-  RHS = ifelse(class(y) == "H2OParsedData", h2o.__escape(y@key), y)
-  expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData") myClient = x@h2o
-  else myClient = y@h2o
-  res = h2o.__exec(myClient, expr)
-  if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData", h2o=myClient, key=res)
-  else
-    new("H2OParsedData", h2o=myClient, key=res)
-}
-
-h2o.__escape <- function(key) {
-  key_esc = key
-  myOS = Sys.info()["sysname"]
-  if(myOS == "Windows")
-    key_esc = gsub("\\\\", "\\\\\\\\", key)
-    
-  paste("|", key_esc, "|", sep="")
-}
-
 h2o.__uniqID <- function(prefix = "") {
   if("uuid" %in% installed.packages()) {
     library(uuid)
@@ -246,19 +202,6 @@ h2o.__uniqID <- function(prefix = "") {
   }
   temp = gsub("-", "", temp)
   paste(prefix, temp, sep="_")
-}
-
-h2o.__func <- function(fname, x, type) {
-  if(ncol(x) != 1) stop("Can only operate on single column vectors")
-  expr = paste(fname, "(", h2o.__escape(x@key), ")", sep="")
-  res = h2o.__exec(x@h2o, expr)
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=res)
-  
-  if(type == "Number")
-    as.numeric(res$rows[[1]]$'0')
-  else if(type == "Vector")
-    new("H2OParsedData", h2o=x@h2o, key=res$key)
-  else res
 }
 
 # Check if key_env$key exists in H2O and remove if it does
@@ -319,25 +262,25 @@ h2o.__unop2 <- function(op, x) {
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData2", h2o=x@h2o, key=res$dest_key)
+    new("H2OLogicalData", h2o=x@h2o, key=res$dest_key)
   else
-    new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 }
 
 h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData2" || class(x) == "H2OLogicalData2", x@key, x)
-  RHS = ifelse(class(y) == "H2OParsedData2" || class(y) == "H2OLogicalData2", y@key, y)
+  LHS = ifelse(class(x) == "H2OParsedData" || class(x) == "H2OLogicalData", x@key, x)
+  RHS = ifelse(class(y) == "H2OParsedData" || class(y) == "H2OLogicalData", y@key, y)
   expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData2" || class(x) == "H2OLogicalData2") myClient = x@h2o
+  if(class(x) == "H2OParsedData" || class(x) == "H2OLogicalData") myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData2", h2o=myClient, key=res$dest_key)
+    new("H2OLogicalData", h2o=myClient, key=res$dest_key)
   else
-    new("H2OParsedData2", h2o=myClient, key=res$dest_key)
+    new("H2OParsedData", h2o=myClient, key=res$dest_key)
 }
