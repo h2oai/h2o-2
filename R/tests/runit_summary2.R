@@ -2,7 +2,6 @@ source('./Utils/h2oR.R')
 
 Log.info("\n======================== Begin Test ===========================\n")
 
-
 test.summary2 <- function(con) {
   Log.info("\nImporting iris.csv data...\n")
   iris.hex <- h2o.importFile.FV(con, "./smalldata/iris/iris_wheader.csv")
@@ -19,5 +18,4 @@ test.summary2 <- function(con) {
 conn <- new("H2OClient", ip=myIP, port=myPort)
 
 tryCatch(test_that("summary2",test.summary2(conn)), error = function(e) FAIL(e))
-
 PASS()
