@@ -49,9 +49,21 @@ public class PctPage extends Request2 {
   @Override public boolean toHTML( StringBuilder sb ) {
     sb.append("<div class=container-fluid'>");
     sb.append("<div class='row-fluid'>");
+
     for( int i = 0; i < gpct.length; i++) {
-      gpct[i].toHTML(sb);
+      String levelName = null;
+      try {
+        levelName = gcol.domain(i);
+      }
+      catch (Exception _) {}
+
+      if (levelName == null) {
+        levelName = Integer.toString(i);
+      }
+
+      gpct[i].toHTML(sb, levelName);
     }
+
     sb.append("</div>");
     sb.append("</div>");
     return true;

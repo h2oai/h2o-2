@@ -7,6 +7,7 @@ import water.api.Request;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.*;
@@ -64,7 +65,7 @@ public final class GroupedPct {
      * @param max Maximum value in the group
      * @return the array
      */
-    public Summary allocBins(double min, double max) {
+    public Summary allocBins(long groupId, double min, double max) {
       if (max - min < 1e-10) {
         _bins = new long[1]; _step = 1e-10;
       }
@@ -73,7 +74,10 @@ public final class GroupedPct {
         _step = (max - min)/(double)nbin;
         while ((int)((max - min)/_step) >= nbin++);
         _bins = new long[nbin];
-      } 
+      }
+
+      Log.info("allocated groupId "+groupId+" number of bins: "+_bins.length);
+
       return this;
     }
 
@@ -98,9 +102,9 @@ public final class GroupedPct {
       }
     }
 
-    public boolean toHTML( StringBuilder sb ) {
+    public boolean toHTML( StringBuilder sb, String groupName ) {
       sb.append("<div class='table' style='width:90%;heigth:90%;border-top-style:solid;'>" +
-              "<div class='alert-success'><h4>GID: " + _gid + "</h4></div>");
+              "<div class='alert-success'><h4>GID: " + _gid + " ("+groupName+")</h4></div>");
       sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
       sb.append("<tr> <th colspan='" + _pctiles.length + "' " +
               "style='text-align:center' " +
@@ -146,11 +150,18 @@ public final class GroupedPct {
 
     // Collects simple summary(min, max, size) for each group.
     Utils.IcedHashMap<Utils.IcedLong, Summary> gs = new Pass1(fr, gcol, vcol).doAll(_fr).gs;
-    for (Summary s : gs.values())
-      s.allocBins(s._min, s._max);
+
+    Set<Utils.IcedLong> keySet = gs.keySet();
+    Log.info("keySet size: " + keySet.size());
+    for (Utils.IcedLong il : keySet) {
+      long groupId = il._val;
+      Summary summary = gs.get(il);
+      summary.allocBins(groupId, summary._min, summary._max);
+    }
 
     // Calculate summary for each group as a MapReduce Task.
     gs = new Pass2(fr, gcol, vcol, gs).doAll(fr).gs;
+    Log.info("gs size: " + gs.size());
 
     // Sort output based on groupId and calculate percentiles.
     _gids = new long[gs.size()];
@@ -172,8 +183,8 @@ public final class GroupedPct {
    * @return The same frame.
    */
   public Frame appendPctCol() {
-    Frame pctfr = new AppendPct(_fr, _gcol, _vcol, _gs).doAll(1,_fr)
-            .outputFrame(new String[]{"Percentile"}, new String[][]{null});
+    Frame pctfr = new AppendPct(_fr, _gcol, _vcol, _gs).doAll(2,_fr)
+            .outputFrame(new String[]{"GroupId", "Percentile"}, new String[][]{null, null});
     return _fr.add(pctfr);
   }
 
@@ -298,16 +309,20 @@ public final class GroupedPct {
       this.vc = vcol;
       this.gs = gs;
     }
-    @Override public void map(Chunk[] cs, NewChunk nc) {
+    @Override public void map(Chunk[] cs, NewChunk[] ncs) {
       Utils.IcedLong gid = new Utils.IcedLong(0);
       for (int i = 0; i < cs[0]._len; i++) {
-        if (cs[gc].isNA0(i) || cs[vc].isNA0(i))
-        { nc.addNum(Double.NaN); continue; }
+        if (cs[gc].isNA0(i) || cs[vc].isNA0(i)) {
+          ncs[0].addNum(Double.NaN);
+          ncs[1].addNum(Double.NaN);
+          continue;
+        }
         gid._val = cs[gc].at80(i);
         double v = cs[vc].at0(i);
         Summary ss = gs.get(gid);
         int ix = (int)((v - ss._min)/ss._step);
-        nc.addNum(ss._invpct[ix]);
+        ncs[0].addNum(gid._val);
+        ncs[1].addNum(ss._invpct[ix]);
       }
     }
   }
