@@ -86,7 +86,7 @@ setMethod("show", "H2OParsedData", function(object) {
 
 setMethod("show", "H2OGLMModel", function(object) {
   print(object@data)
-  cat("GLM Model Key:", object@key, "\n\nCoefficients:\n")
+  cat("GLM2 Model Key:", object@key, "\n\nCoefficients:\n")
   
   model = object@model
   print(round(model$coefficients,5))
@@ -105,14 +105,13 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("\nCross-Validation Models:\n")
     # if(model$family == "binomial") {
     if(model$family$family == "binomial") {
-      modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
-      colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
+      colnames(modelXval) = c("Nonzeros", "AUC", "Deviance Explained")
     } else {
-      modelXval = sapply(object@xval, function(x) { x@model$train.err })
-      modelXval = data.frame(modelXval)
-      colnames(modelXval) = c("Error")
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
+      colnames(modelXval) = c("Nonzeros", "AIC", "Deviance Explained")
     }
-    rownames(modelXval) = paste("Model", 0:(nrow(modelXval)-1))
+    rownames(modelXval) = paste("Model", 1:nrow(modelXval))
     print(modelXval)
   }
 })

@@ -83,10 +83,21 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=rand_glm_key)
-  resModel = res$glm_model
+  resModel = res$glm_model; destKey = resModel$'_selfKey'
   modelOrig = h2o.__getGLM2Results(resModel, y, resModel$submodels[[1]]$validation)
-  # TODO: Fix this to display cross-validation models
-  new("H2OGLMModel", key=resModel$'_selfKey', data=data, model=modelOrig, xval=list())
+  
+  # Get results from cross-validation
+  if(nfolds < 2)
+    return(new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list()))
+  
+  res_xval = list()
+  for(i in 1:nfolds) {
+    xvalKey = paste(destKey, "_xval", seq(0,nfolds-1), sep="")
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
+    modelXval = h2o.__getGLM2Results(res$glm_model, y, res$glm_model$submodels[[1]]$validation)
+    res_xval[[i]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
+  }
+  new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
 }
 
 # Pretty formatting of H2O GLM results
