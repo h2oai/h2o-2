@@ -40,7 +40,7 @@ public class PctPage extends Request2 {
     // select all columns
     GroupedPct pct = new GroupedPct(source, gcols, source.find(vcol));
     gpct = pct._gsums;
-    source.add(pct.makeGroupPctCols());
+    source.add(pct.getPctCols());
     return Response.done(this);
   }
 

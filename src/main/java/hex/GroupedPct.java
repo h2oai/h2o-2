@@ -38,6 +38,12 @@ public final class GroupedPct {
 
     public Summary(long gid) {_gid = gid;_min=Double.MAX_VALUE;_max=Double.MIN_VALUE;_size=0;_step=0;
       _bins=null;_pctiles=null;_invpct=null;_name=null;}
+    public Summary(Summary other) {_gid = other._gid; _min=other._min; _max=other._max; _size=other._size;_step=other._step;
+      _name = other._name;
+      _bins=other._bins==null?null:other._bins.clone();
+      _invpct=other._invpct==null?null:other._invpct.clone();
+      _pctiles=other._pctiles==null?null:other._pctiles.clone();
+    }
     public Summary add(Summary other) {
       _min = Math.min(_min, other._min);
       _max = Math.max(_max, other._max);
@@ -60,26 +66,26 @@ public final class GroupedPct {
       } 
       return this;
     }
-    public void computePctiles() {
+    public void computeInvpct() {
       if (_pctiles != null) return;
-      int k = 0;
       long s = 0;
-      _pctiles = new double[100];
+      _pctiles = new double[101];
       _invpct  = new int[_bins.length];
-      for(int j = 0; j < 100; ++j) {
-        final long s1 = _size*j/100;
-        long bc = 0;
-        while(s1 > s+(bc = _bins[k])){
-          _invpct[k] = j;
-          s  += bc;
-          k++;
-        }
-        _pctiles[j] = _min + k*_step;
+
+      for (int i = 0; i < _pctiles.length; i++) _pctiles[i] = _max;
+      for(int i = 0; i < _bins.length; i++) {
+        _invpct[i] = (int)(s*100/_size);
+        s += _bins[i];
       }
+    }
+    public void cleanUpPct() {
+      for (int i = _pctiles.length-2; i >= 0; i--)
+        if (_pctiles[i] > _pctiles[i+1])
+          _pctiles[i] = _pctiles[i+1];
     }
     public boolean toHTML( StringBuilder sb ) {
       sb.append("<div class='table' style='width:90%;heigth:90%;border-top-style:solid;'>" +
-              "<div class='alert-success'><h4>GID: " + _gid + "</h4></div>");
+              "<div class='alert-success'><h4>GID: " + _gid + "   " + _name + "</h4></div>");
       sb.append("<div style='width:100%;overflow-x:auto;'><table class='table-bordered'>");
       sb.append("<tr> <th colspan='" + _pctiles.length + "' " +
               "style='text-align:center' " +
@@ -97,8 +103,6 @@ public final class GroupedPct {
       return true;
     }
   }
-  public static class SummaryHashMap extends Utils.IcedHashMap<Utils.IcedLong, Summary>{}
-
   public abstract static class GID extends Iced {
     int[] ncls;
     abstract public long gid(long[] levels);
@@ -182,6 +186,7 @@ public final class GroupedPct {
   }
 
   private Frame    _wf;             /*work frame*/
+  private Frame    _pctfr;
   private Grouping _grp;
   public int       _vcol;
   public long[]    _gids;
@@ -205,8 +210,9 @@ public final class GroupedPct {
     // collects simple summary(min, max, size) for each group
     GID g = _grp.buildGID();
     Utils.IcedHashMap<Utils.IcedLong, Summary> sums = new Pass1(_wf,g).doAll(_wf).sums;
-    for (Summary s : sums.values())
+    for (Summary s : sums.values()) {
       s.allocBins(s._min, s._max);
+    }
     sums = new Pass2(_wf, g, sums).doAll(_wf).sums;
     _gids = new long[sums.size()];
     _gsums = new Summary[sums.size()];
@@ -219,18 +225,22 @@ public final class GroupedPct {
       _gsums[i++] = sums.get(new Utils.IcedLong(gid));
     // finally compute percentiles and put in group names
     for (Summary s : _gsums) {
-      s.computePctiles();
+      s.computeInvpct();
       long[] levels = g.levels(s._gid);
       s._name = new String("");
       for (int k = 0; k < levels.length; k++)
-        s._name += (k==0?"":" ") + _wf._names[k] + ":" + _wf.vecs()[k].domain(levels[k]);
+        s._name += (k==0?"":"  ") + "[" + _wf._names[k] + "]" + _wf.vecs()[k].domain(levels[k]);
     }
     _sums = sums;
+    _pctfr = makeGroupPctCols();
+    for (Summary s : _gsums)
+      s.cleanUpPct();
   }
 
+  public Frame getPctCols() { return _pctfr; }
   public Frame makeGroupPctCols() {
     return new Pass3(_wf,_grp.buildGID(),_sums).doAll(2,_wf)
-            .outputFrame(new String[]{"GroupID","Percentile"}, new String[][]{null});
+            .outputFrame(new String[]{"GroupID","Percentile"}, new String[][]{null,null});
   }
 
   static class Pass1 extends MRTask2<Pass1>{
@@ -240,9 +250,10 @@ public final class GroupedPct {
     public Pass1(Frame fr, GID g){
       this.fr = fr;
       this.g  = g;
-      this.sums = new Utils.IcedHashMap<Utils.IcedLong, Summary>();
+      this.sums = null; 
     }
     @Override public void map(Chunk[] cs) {
+      sums = new Utils.IcedHashMap<Utils.IcedLong, Summary>();
       int vix = cs.length-1;
       Utils.IcedLong gid = new Utils.IcedLong(0);
       long[] levels = new long[vix];
@@ -254,7 +265,6 @@ public final class GroupedPct {
           levels[k] = cs[k].at80(i);
         }
         gid._val = g.gid(levels);
-        Log.info("GID " + gid._val);
         double v = cs[vix].at0(i);
         Summary ss = sums.get(gid);
         if (ss == null)
@@ -264,8 +274,8 @@ public final class GroupedPct {
         ss._size ++;
       }
     }
-    @Override public void reduce(Pass1 other) {
-      for (Map.Entry<Utils.IcedLong, Summary> e : other.sums.entrySet()) {
+    @Override public void reduce(Pass1 that) {
+      for (Map.Entry<Utils.IcedLong, Summary> e : that.sums.entrySet()) {
         Utils.IcedLong k = e.getKey();
         Summary s = this.sums.get(k);
         if (s == null) this.sums.put(k, e.getValue());
@@ -277,24 +287,31 @@ public final class GroupedPct {
   static class Pass2 extends MRTask2<Pass2> {
     final Frame fr;
     final GID   g;
+    Utils.IcedHashMap<Utils.IcedLong, Summary> sums0;
     Utils.IcedHashMap<Utils.IcedLong, Summary> sums;
+
     public Pass2(Frame fr, GID g, Utils.IcedHashMap<Utils.IcedLong, Summary> sums){
       this.fr = fr;
       this.g  = g;
-      this.sums = sums;
+      this.sums0 = sums;
+      this.sums = null;
     }
     @Override public void map(Chunk[] cs) {
+      sums = new Utils.IcedHashMap<Utils.IcedLong, Summary>();
       int vix = cs.length-1;
       Utils.IcedLong gid = new Utils.IcedLong(0);
       long[] levels = new long[vix];
       OUTER:
       for (int i = 0; i < cs[0]._len; i++) {
         if (cs[vix].isNA0(i)) continue;
-        for (int k = 0; k < vix; k++)
+        for (int k = 0; k < vix; k++) {
           if (cs[k].isNA0(i)) continue OUTER;
+          levels[k] = cs[k].at80(i);
+        }
         gid._val= g.gid(levels);
         double v = cs[vix].at0(i);
         Summary ss = sums.get(gid);
+        if (ss==null) sums.put(new Utils.IcedLong(gid._val), (ss = new Summary(sums0.get(gid))));
         //Log.info("Looking for " + gid._val);
         //for (Utils.IcedLong key : sums.keySet())
         //  Log.info("hash keys : " + key._val);
@@ -302,10 +319,11 @@ public final class GroupedPct {
         ss._bins[ix]++;
       }
     }
-    public void reduce(Pass2 other) {
-      for (Map.Entry<Utils.IcedLong, Summary> e : other.sums.entrySet()) {
+    public void reduce(Pass2 that) {
+      for (Map.Entry<Utils.IcedLong, Summary> e : that.sums.entrySet()) {
         Utils.IcedLong k = e.getKey();
         Summary s = this.sums.get(k);
+        if (s==null) { sums.put(k, e.getValue()); continue; }
         long[] ob = e.getValue()._bins;
         for (int i = 0; i < s._bins.length; i++)
           s._bins[i] += ob[i];
@@ -328,12 +346,19 @@ public final class GroupedPct {
       long[] levels = new long[vix];
       OUTER:
       for (int i = 0; i < cs[0]._len; i++) {
-        for (int k = 0; k < vix; k++)
-          if (cs[k].isNA0(i)) {
+        if (cs[vix].isNA0(i)) {
           ncs[0].addNum(Double.NaN);
+          ncs[1].addNum(Double.NaN);
+          continue;
+        }
+        for (int k = 0; k < vix; k++) {
+          if (cs[k].isNA0(i)) {
+            ncs[0].addNum(Double.NaN);
             ncs[1].addNum(Double.NaN);
             continue OUTER;
           }
+          levels[k] = cs[k].at80(i);
+        }
         gid._val= g.gid(levels);
         ncs[0].addNum(gid._val);
         if (cs[vix].isNA0(i)) {
@@ -346,6 +371,8 @@ public final class GroupedPct {
         //for (Utils.IcedLong key : sums.keySet())
         //  Log.info("hash keys : " + key._val);
         int ix = (int)((v - ss._min)/ss._step);
+        int pct = ss._invpct[ix];
+        if (v < ss._pctiles[pct]) ss._pctiles[pct] = v; // Racy!
         ncs[1].addNum(ss._invpct[ix]);
       }
     }
