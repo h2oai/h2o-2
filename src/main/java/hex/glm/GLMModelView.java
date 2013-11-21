@@ -18,7 +18,7 @@ public class GLMModelView extends Request2 {
   GLMModel glm_model;
 
   public static String link(String txt, Key model) {
-    return "<a href='GBMModelView.html?_modelKey=" + model + "'>" + txt + "</a>";
+    return "<a href='GLMModelView.html?_modelKey=" + model + "'>" + txt + "</a>";
   }
 
   public static Response redirect(Request req, Key modelKey) {

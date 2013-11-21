@@ -1,3 +1,4 @@
+options(echo=FALSE)
 read.zip <- function(zipfile, exdir,header=T) {
     zipdir <- exdir
     unzip(zipfile, exdir=zipdir)
@@ -11,9 +12,52 @@ remove_exdir <- function(exdir) {
     system(exec)
 }
 
+Log.info<-
+function(m) {
+ message <- paste("[INFO]: ",m, sep="")
+ logging(message)
+}
+
+Log.warn<-
+function(m) {
+ logging(paste("[WARN] : ",m,sep=""))
+}
+
+Log.err<-
+function(m) {
+ logging(paste("[ERROR] : ",m,sep=""))
+ q("no",1,FALSE) #exit with nonzero exit code
+}
+
+
 logging<- 
 function(m) {
   cat(sprintf("[%s] %s\n", Sys.time(),m))
+}
+
+PASS <- 
+function() {
+cat("######     #     #####   #####  \n")
+cat("#     #   # #   #     # #     # \n")
+cat("#     #  #   #  #       #       \n")
+cat("######  #     #  #####   #####  \n")
+cat("#       #######       #       # \n")
+cat("#       #     # #     # #     # \n")
+cat("#       #     #  #####   #####  \n")
+}
+
+FAIL <-
+function(e) {
+cat("")
+cat("########    ###    #### ##       \n")
+cat("##         ## ##    ##  ##       \n")
+cat("##        ##   ##   ##  ##       \n")
+cat("######   ##     ##  ##  ##       \n")
+cat("##       #########  ##  ##       \n")
+cat("##       ##     ##  ##  ##       \n")
+cat("##       ##     ## #### ########\n")
+
+Log.err(e)
 }
 
 get_args<-
@@ -68,17 +112,27 @@ function() {
   if (Sys.info()['sysname'] == "Windows")
     options(RCurlOptions = list(cainfo = system.file("CurlSSL", "cacert.pem", package = "RCurl")))
 
-  logging("\nLoading RUnit and testthat\n")
+  Log.info("Loading RUnit and testthat\n")
   require(RUnit)
   require(testthat)
-  require(h2oRClient)
 }
 
-logging("\n============== Setting up R-Unit environment... ================\n")
+Log.info("============== Setting up R-Unit environment... ================")
 defaultPath <- "../../target/R"
 ipPort <- get_args(commandArgs(trailingOnly = TRUE))
 checkNLoadWrapper(ipPort)
 checkNLoadPackages()
+
+source("../h2oRClient-package/R/Algorithms.R")
+source("../h2oRClient-package/R/Classes.R")
+source("../h2oRClient-package/R/ParseImport.R")
+source("../h2oRClient-package/R/Internal.R")
+
+h2o.removeAll <-
+function(object) {
+  Log.info("=============Throwing away any keys on the H2O cluster======")
+  h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
+}
 
 logging("\nLoading other required test packages")
 if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
@@ -88,7 +142,4 @@ require(gbm)
 
 myIP   <- ipPort[[1]]
 myPort <- ipPort[[2]]
-
-
-
-
+h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))

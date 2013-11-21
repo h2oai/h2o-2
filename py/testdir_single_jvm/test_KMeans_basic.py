@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
         # loop, to see if we get same centers
         for trial in range(2):
             # 3 clusters wasn't stable? try 4 (3 wasn't stable in sklearn either)
-            kwargs = {'k': 4, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'benign_k.hex', 'max_iter': 20,
+            kwargs = {'k': 4, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'benign_k.hex', 'max_iter': 50,
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310}
 
@@ -52,15 +52,16 @@ class Basic(unittest.TestCase):
 
         # loop, to see if we get same centers
         expected = [
-            ([55.63235294117647], 68, 667.8088235294117) ,
-            ([63.93984962406015], 133, 611.5187969924812) ,
-            ([71.55307262569832], 179, 1474.2458100558654) ,
+            ([63.0, 0.384, 67.696, 1.088, 2.32, 1.168, 16.680799999999998, 15.549599999999995, 6.664], 125, 267074.35439999995) ,
+            ([188.5, 0.47619047619047616, 65.26190476190476, 1.1031746031746033, 2.3174603174603177, 1.0873015873015872, 16.17603174603175, 15.611825396825397, 6.436507936507937], 126, 257264.28207380953) ,
+            ([316.0, 0.3488372093023256, 65.1937984496124, 1.069767441860465, 2.1782945736434107, 1.069767441860465, 13.426356589147293, 16.264496124031005, 6.062015503875969], 129, 278906.3168310078) ,
+
         ]
 
         # all are multipliers of expected tuple value
         allowedDelta = (0.01, 0.01, 0.01)
         for trial in range(2):
-            kwargs = {'k': 3, 'initialization': 'Furthest', 'cols': 2, 'destination_key': 'prostate_k.hex', 'max_iter': 20,
+            kwargs = {'k': 3, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'prostate_k.hex', 'max_iter': 50,
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310}
 

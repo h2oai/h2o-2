@@ -229,7 +229,6 @@ public class NewChunk extends Chunk {
     if(_len2 != _len){ // sparse? compare xmin/lemin/lemax with 0
       lemin = Math.min(0, lemin);
       lemax = Math.max(0, lemax);
-      xmin = Math.min(xmin, 0);
     }
 
     // Constant column?
@@ -241,7 +240,7 @@ public class NewChunk extends Chunk {
 
     // Boolean column?
     if (max == 1 && min == 0 && xmin == 0) {
-      if( _nzCnt*32 < _len2 && _naCnt==0 && _len2 < 65535 ) // Very sparse? (and not too big?)
+      if( _nzCnt*32 < _len2 && _naCnt==0 && _len2 < 65535 && xmin == 0 ) // Very sparse? (and not too big?)
         if( _len2 == _len ) return new CX0Chunk(_ls,_len2,_nzCnt); // Dense  constructor
         else                return new CX0Chunk(_xs,_len2,_len  ); // Sparse constructor
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;   // Bit-vector
@@ -251,14 +250,12 @@ public class NewChunk extends Chunk {
 
     final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
 
-/*
     // Result column must hold floats?
     // Highly sparse but not a bitvector or constant?
-    if( !fpoint && (_nzCnt+_naCnt)*8 < _len2 && _len2 < 65535 && // (and not too big?)
-        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE )    // Only handling unbiased shorts here
+    if( !fpoint && (_nzCnt+_naCnt)*8 < _len2 && _len2 < 65535 && xmin==0 && // (and not too big?)
+        lemin > Short.MIN_VALUE && lemax <= Short.MAX_VALUE ) // Only handling unbiased shorts here
       if( _len2==_len ) return new CX2Chunk(_ls,_xs,_len2,_nzCnt,_naCnt);  // Sparse byte chunk
       else              return new CX2Chunk(_ls,_xs,_len2,_len);
-*/
 
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
     // byte and we scale the column by 0.1.  A set of numbers like

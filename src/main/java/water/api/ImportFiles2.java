@@ -1,6 +1,7 @@
 package water.api;
 
 import java.io.*;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -10,6 +11,7 @@ import org.apache.hadoop.fs.Path;
 import water.*;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.S3FileVec;
+import water.fvec.UploadFileVec;
 import water.persist.PersistHdfs;
 import water.persist.PersistS3;
 import water.util.FileIntegrityChecker;
@@ -63,6 +65,7 @@ public class ImportFiles2 extends Request2 {
         String p2 = path.toLowerCase();
         if(p2.startsWith("hdfs://") || p2.startsWith("s3n://"))serveHdfs();
         else if(p2.startsWith("s3://")) serveS3();
+        else if(p2.startsWith("http://") || p2.startsWith("https://")) serveHttp();
         else serveLocalDisk();
       }
       return Response.done(this);
@@ -140,6 +143,30 @@ public class ImportFiles2 extends Request2 {
     fails = afails.toArray(new String[0]);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
+  }
+
+  protected void serveHttp() {
+    try {
+      java.net.URL url = new URL(path);
+      Key k = Key.make(path);
+      InputStream is = url.openStream();
+      if( is == null ) {
+        Log.err("Unable to open stream to URL " + path);
+      }
+
+      UploadFileVec.readPut(k, is);
+      fails = new String[0];
+      String[] filesArr = { path };
+      files = filesArr;
+      String[] keysArr = { k.toString() };
+      keys = keysArr;
+    }
+    catch (Exception e) {
+      String[] arr = { path };
+      fails = arr;
+      files = new String[0];
+      keys = new String[0];
+    }
   }
 
   // HTML builder
