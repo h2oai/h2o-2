@@ -3,6 +3,7 @@ package hex.gbm;
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
+import hex.gbm.DTree.TreeModel.CompressedTree;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -823,58 +824,68 @@ public class DTree extends Iced {
     }
 
     // Convert Tree model to Java
-    @Override protected void toJavaPredictBody( final SB sb ) {
+    @Override protected void toJavaPredictBody( final SB sb, final SB afterBodySb) {
       String[] cnames = classNames();
-      sb.indent(2).p("java.util.Arrays.fill(preds,0f);\n");
+      sb.indent().p("java.util.Arrays.fill(preds,0f);\n");
       for( int i=0; i < treeBits.length; i++ ) {
         CompressedTree cts[] = treeBits[i];
         for( int c=0; c<cts.length; c++ ) {
           if( cts[c] == null ) continue;
-          sb.indent(2).p("// Tree ").p(i);
+          sb.indent().p("// Tree ").p(i);
           if( cnames != null ) sb.p(", class=").p(cnames[c]);
           sb.p("\n");
-          sb.indent(2).p("preds[").p(c+1).p("] +=");
-          final int x=c;
-          new TreeVisitor<RuntimeException>(this,cts[c]) {
-            byte _bits[] = new byte[100];
-            float _fs[] = new float[100];
-            @Override protected void pre( int col, float fcmp, boolean equal ) {
-              if( _depth > 0 ) {
-                int b = _bits[_depth-1];
-                assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
-                if( b==1         ) _bits[_depth-1]=3;
-                if( b==1 || b==2 ) sb.p('\n').indent(_depth+3).p("?");
-                if( b==2         ) sb.p(' ').p(_fs[_depth]); // Dump the leaf
-                if( b==2 || b==3 ) sb.p('\n').indent(_depth+3).p(":");
-              }
-              sb.p(" (data[").p(col).p("] ").p(equal?"== ":"< ").p(fcmp);
-              assert _bits[_depth]==0;
-              _bits[_depth]=1;
-            }
-            @Override protected void leaf( float pred  ) {
-              assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
-              if( _depth==0) { // it is de-generated tree
-                sb.p(pred);
-              } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
-                _bits[_depth-1]=2; _fs[_depth-1]=pred;
-              } else {          // Else==2 (prior leaf) or 3 (prior tree)
-                if( _bits[_depth-1] == 2 ) sb.p(" ? ").p(_fs[_depth-1]).p(" ");
-                else                       sb.p('\n').indent(_depth+3);
-                sb.p(": ").p(pred);
-              }
-            }
-            @Override protected void post( int col, float fcmp, boolean equal ) {
-              sb.p(')');
-              _bits[_depth]=0;
-            }
-          }.visit();
-          sb.p(";\n");
+          sb.indent().p("preds[").p(c+1).p("] +=").p(" pred_tree_").p(i).p("_class_").p(c).p("(data);\n");
+          // append body of tree predictor function
+          toJavaTreePredictFct(afterBodySb, cts[c], i, c);
         }
       }
-      sb.indent(2).p("// Compute Probabilities\n");
-      sb.indent(2).p("float sum = 0;\n");
-      sb.indent(2).p("for(int i=1;i<preds.length; i++) sum += Math.exp(preds[i]);\n");
-      sb.indent(2).p("for(int i=1; i<preds.length; i++) preds[i] = (float)Math.exp(preds[i]) / sum;\n");
+      sb.indent().p("// Compute Probabilities\n");
+      sb.indent().p("float sum = 0;\n");
+      sb.indent().p("for(int i=1;i<preds.length; i++) sum += Math.exp(preds[i]);\n");
+      sb.indent().p("for(int i=1; i<preds.length; i++) preds[i] = (float) Math.exp(preds[i]) / sum;\n");
+    }
+
+    // Produce prediction code for one tree
+    protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int tidx, int c) {
+      sb.indent().p("// Tree predictor for ").p(tidx).p("-tree and ").p(c).p("-class\n");
+      sb.indent().p("final float pred_tree_").p(tidx).p("_class_").p(c).p("(double[] data) {\n" );
+      sb.indent(1).p("float pred = ");
+      new TreeVisitor<RuntimeException>(this,cts) {
+        byte _bits[] = new byte[100];
+        float _fs[] = new float[100];
+        @Override protected void pre( int col, float fcmp, boolean equal ) {
+          if( _depth > 0 ) {
+            int b = _bits[_depth-1];
+            assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
+            if( b==1         ) _bits[_depth-1]=3;
+            if( b==1 || b==2 ) sb.p('\n').indent(_depth).p("?");
+            if( b==2         ) sb.p(' ').p(_fs[_depth]); // Dump the leaf containing float value
+            if( b==2 || b==3 ) sb.p('\n').indent(_depth).p(":");
+          }
+          sb.p(" (data[").p(col).p("] ").p(equal?"== ":"< ").p(fcmp);
+          assert _bits[_depth]==0;
+          _bits[_depth]=1;
+        }
+        @Override protected void leaf( float pred  ) {
+          assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
+          if( _depth==0) { // it is de-generated tree
+            sb.p(pred);
+          } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+            _bits[_depth-1]=2; _fs[_depth-1]=pred;
+          } else {          // Else==2 (prior leaf) or 3 (prior tree)
+            if( _bits[_depth-1] == 2 ) sb.p(" ? ").p(_fs[_depth-1]).p(" ");
+            else                       sb.p('\n').indent(_depth);
+            sb.p(": ").p(pred);
+          }
+        }
+        @Override protected void post( int col, float fcmp, boolean equal ) {
+          sb.p(')');
+          _bits[_depth]=0;
+        }
+      }.visit();
+      sb.p(";\n");
+      sb.indent(1).p("return pred;\n");
+      sb.indent().p("}\n");
     }
   }
 

@@ -3,6 +3,7 @@ package water;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 
+import java.io.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import javassist.*;
@@ -321,7 +322,9 @@ public abstract class Model extends Iced {
   public String toJava() {
     SB sb = new SB();
     sb.p("\n");
-    sb.p("class ").p(toJavaId(_selfKey.toString())).p(" {\n");
+    String modelName = toJavaId(_selfKey.toString());
+    sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName);
+    sb.p("\nclass ").p(modelName).p(" {\n");
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
     toJavaInit(sb);  sb.p("\n");
@@ -330,7 +333,26 @@ public abstract class Model extends Iced {
     sb.p(TOJAVA_PREDICT_MAP);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC1);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
+    // -- DEBUG CODE
+    sb.p("static int main(String[] args) {\n");
+    sb.indent(1).p(modelName).p(" m = new ").p(modelName).p("();\n");
+    sb.p("  return 0;");
+    sb.p("}");
+    // END of DEBUG CODE
     sb.p("}\n");
+    // DEBUG CODE
+    try {
+      File f = new File("/Users/michal/Tmp/genmodel/"+toJavaId(_selfKey.toString())+".java");
+      FileWriter fw = new FileWriter(f);
+      BufferedWriter bw = new BufferedWriter(fw);
+      bw.write(sb.toString());
+      bw.close();
+      //testJavaScoring(null);
+    } catch (Throwable t) {
+      t.printStackTrace();
+    }
+    // END of DEBUG CODE
+
     return sb.toString();
   }
   // Same thing as toJava, but as a Javassist CtClass
@@ -358,7 +380,9 @@ public abstract class Model extends Iced {
   protected void toJavaInit(SB sb) { };
   protected void toJavaInit(CtClass ct) { };
   // Override in subclasses to provide some inside 'predict' call goodness
-  protected void toJavaPredictBody(SB sb) {
+  // Method returns code which should be appended into generated top level class after
+  // predit method.
+  protected void toJavaPredictBody(SB sb, SB afterSb) {
     throw new IllegalArgumentException("This model type does not support conversion to Java");
   }
   // Wrapper around the main predict call, including the signature and return value
@@ -368,9 +392,11 @@ public abstract class Model extends Iced {
     sb.p("  // main prediction (class for classifiers or value for regression),\n");
     sb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
     sb.p("  float[] predict( double data[], float preds[] ) {\n");
-    toJavaPredictBody(sb);
+    SB afterCode = new SB().ii(1);
+    toJavaPredictBody(sb.ii(2), afterCode); sb.di(1);
     sb.p("    return preds;\n");
     sb.p("  }\n");
+    sb.p(afterCode);
     return sb;
   }
 
@@ -404,11 +430,17 @@ public abstract class Model extends Iced {
   // Can't believe this wasn't done long long ago
   protected static class SB {
     public final StringBuilder _sb = new StringBuilder();
+    private int _indent = 0;
+    public SB() {}
     public SB p( String s ) { _sb.append(s); return this; }
-    public SB p( float  s ) { _sb.append(s); return this; }
+    public SB p( float  s ) { _sb.append(s).append('f'); return this; }
     public SB p( char   s ) { _sb.append(s); return this; }
     public SB p( int    s ) { _sb.append(s); return this; }
-    public SB indent( int d ) { for( int i=0; i<d; i++ ) p("  "); return this; }
+    public SB p( SB     s ) { _sb.append(s._sb); return this; }
+    public SB indent( int d ) { for( int i=0; i<d+_indent; i++ ) _sb.append("  "); return this; }
+    public SB indent( ) { return indent(0); }
+    public SB ii( int i) { _indent += i; return this; }
+    public SB di( int i) { _indent -= i; return this; }
     // Convert a String[] into a valid Java String initializer
     SB p( String[] ss ) {
       p('{');
