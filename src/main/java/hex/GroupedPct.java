@@ -121,6 +121,7 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
     Utils.IcedHashMap<Utils.IcedLong, Summary> gs = new Pass1(fr, gcol, vcol).doAll(_fr).gs;
     for (Summary s : gs.values())
       s.allocBins(s._min, s._max);
+    new ValidPass(fr, gcol, vcol, gs).doAll(fr);
     gs = new Pass2(fr, gcol, vcol, gs).doAll(fr).gs;
     _gids = new long[gs.size()];
     _gsums = new Summary[gs.size()];
@@ -160,19 +161,63 @@ public final class GroupedPct extends MRTask2<GroupedPct> {
         gid._val = cs[gc].at80(i);
         double v = cs[vc].at0(i);
         Summary ss = gs.get(gid);
-        if (ss == null)
+        if (ss == null) {
           gs.put(new Utils.IcedLong(gid._val), (ss = new Summary(gid._val)));
-        ss._min = Math.min(ss._min, v);
-        ss._max = Math.max(ss._max, v);
+          ss._min = ss._max = v;
+        } else {
+          ss._min = Math.min(ss._min, v);
+          ss._max = Math.max(ss._max, v);
+        }
         ss._size ++;
+      }
+      for (Utils.IcedLong k : gs.keySet()) {
+        //Utils.IcedLong k = e.getKey();
+        Summary s = gs.get(k);
+        Log.info("MAP CHK " + cs[0]._start + " SUMMARY FOR GID "+ s._gid + "  MIN " + s._min + " MAX " + s._max);
       }
     }
     @Override public void reduce(Pass1 other) {
-      for (Map.Entry<Utils.IcedLong, Summary> e : other.gs.entrySet()) {
-        Utils.IcedLong k = e.getKey();
+      //for (Map.Entry<Utils.IcedLong, Summary> e : other.gs.entrySet()) {
+      for (Utils.IcedLong k : other.gs.keySet()) {
+        //Utils.IcedLong k = e.getKey();
         Summary s = this.gs.get(k);
-        if (s == null) this.gs.put(k, e.getValue());
-        else s.add(e.getValue());
+        //if (s == null) this.gs.put(k, e.getValue());
+        //else s.add(e.getValue());
+        if (s == null) this.gs.put(k,other.gs.get(k));
+        else s.add(gs.get(k));
+      }
+      for (Utils.IcedLong k : gs.keySet()) {
+        //Utils.IcedLong k = e.getKey();
+        Summary s = gs.get(k);
+        Log.info("RED SUMMARY FOR GID "+ s._gid + "  MIN " + s._min + " MAX " + s._max);
+      }
+    }
+  }
+
+  static class ValidPass extends MRTask2<Pass2> {
+    final Frame fr;
+    final int   gc;
+    final int   vc;
+    Utils.IcedHashMap<Utils.IcedLong, Summary> gs;
+    public ValidPass(Frame fr, int gcol, int vcol, Utils.IcedHashMap<Utils.IcedLong, Summary> gs){
+      this.fr = fr;
+      this.gc = gcol;
+      this.vc = vcol;
+      this.gs = gs;
+    }
+    @Override public void map(Chunk[] cs) {
+      Utils.IcedLong gid = new Utils.IcedLong(0);
+      for (int i = 0; i < cs[0]._len; i++) {
+        if (cs[gc].isNA0(i) || cs[vc].isNA0(i)) continue;
+        gid._val= cs[gc].at80(i);
+        double v = cs[vc].at0(i);
+        Summary ss = gs.get(gid);
+        if (ss._gid != gid._val)
+          throw new RuntimeException("GID MISMATCH ");
+        if (v < ss._min)
+          Log.err("MIN MISMATCH " + v + " < " + ss._min);
+        if (v > ss._max)
+          Log.err("MAX MISMATCH " + v + " > " + ss._max);
       }
     }
   }
