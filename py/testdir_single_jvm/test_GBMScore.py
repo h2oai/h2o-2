@@ -46,8 +46,7 @@ class Basic(unittest.TestCase):
 
         parseResult = {'destination_key' : trainhex}
         kwargs    = params.copy()
-        gbm = h2o_cmd.runGBM(parseResult = parseResult, noPoll=True, timeoutSecs=4800, **kwargs)
-        h2j.pollWaitJobs(timeoutSecs=16000, pollTimeoutSecs=16000, retryDelaySecs=5)
+        gbm = h2o_cmd.runGBM(parseResult = parseResult, timeoutSecs=4800, **kwargs)
 
         scoreStart = time.time()
         h2o.nodes[0].generate_predictions(model_key = 'GBMScore', data_key = trainhex)
