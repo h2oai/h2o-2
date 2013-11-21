@@ -5,13 +5,13 @@
         "Request2": { "type":"number" },
         "model": { "type":"object", "properties": {
             "_dataKey": { "type":"string" },
+            "_selfKey": { "type":"string" },
             "_domains": { "type":"array", "items": 
                 { "type":"string" }
             },
             "_names": { "type":"array", "items": 
                 { "type":"string" }
             },
-            "_selfKey": { "type":"string" },
             "cluster_variances": { "type":"array", "items":
                 { "type":"number" } 
             },

@@ -1,5 +1,5 @@
 exportPattern("^[[:alpha:]]+")
-export('h2o.glm', 'h2o.kmeans', 'h2o.randomForest', 'h2o.getTree', 'h2o.prcomp')
+export('h2o.glm', 'h2o.kmeans', 'h2o.randomForest', 'h2o.prcomp', 'h2o.gbm', 'h2o.nn')
 exportMethods(
   "colnames",
   "h2o.checkClient",
@@ -17,9 +17,9 @@ exportClasses(
   "H2OGLMModel",
   "H2OKMeansModel",
   "H2OParsedData",
-  "H2OParsedData2",
   "H2ORawData",
-  "H2ORForestModel",
+  "H2ODRFModel",
   "H2OPCAModel",
+  "H2OGBMModel",
   "H2OModel"
 )
