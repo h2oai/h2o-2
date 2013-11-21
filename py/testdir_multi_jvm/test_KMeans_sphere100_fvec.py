@@ -160,7 +160,8 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'k': CLUSTERS, 
                 'initialization': 'Furthest', 
-                'cols': cols,
+                # 'cols': cols,
+                'max_iter': 20,
                 'destination_key': 'syn_spheres100.hex'
             }
             timeoutSecs = 100
@@ -170,7 +171,8 @@ class Basic(unittest.TestCase):
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
+            ### kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
+            kmeansResult = kmeans
             # print h2o.dump_json(kmeansResult)
 
             ### print h2o.dump_json(kmeans)
@@ -178,7 +180,7 @@ class Basic(unittest.TestCase):
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
             # cluster centers can return in any order
-            clusters = kmeansResult['KMeansModel']['clusters']
+            clusters = kmeansResult['model']['clusters']
 
             # the way we create the centers above, if we sort on the sum of xyz
             # we should get the order the same as when they were created.
