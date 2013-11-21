@@ -39,9 +39,9 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
 }
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
-#setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm") })
-#setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
-h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
+# setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm") })
+# setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
   if( missing(data) ) stop('must specify data')
   if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if( missing(x) ) stop('must specify x')
@@ -456,7 +456,9 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
   return(result)
 }
 
-h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsilon=1e-5, standardize=T, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA))) {
+h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsilon=1e-5, standardize=T, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA))) {
+  if(class(data) != "H2OParsedDataVA")
+    stop("GLM currently only working under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   args <- verify_dataxy(data, x, y)
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if( alpha < 0 ) stop('alpha must be >= 0')
@@ -479,7 +481,7 @@ h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, ep
 # Used to verify data, x, y and turn into the appropriate things
 verify_dataxy <- function(data, x, y){
   if( missing(data) ) stop('must specify data')
-  if(class(data) != "H2OParsedData") stop('data must be an h2o dataset')
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop('data must be an h2o dataset')
 
   if( missing(x) ) stop('must specify x')
   if( missing(y) ) stop('must specify y')
