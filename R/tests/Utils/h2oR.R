@@ -1,3 +1,4 @@
+options(echo=FALSE)
 read.zip <- function(zipfile, exdir,header=T) {
     zipdir <- exdir
     unzip(zipfile, exdir=zipdir)
@@ -11,9 +12,51 @@ remove_exdir <- function(exdir) {
     system(exec)
 }
 
+Log.info<-
+function(m) {
+ message <- paste("[INFO]: ",m, sep="")
+ logging(message)
+}
+
+Log.warn<-
+function(m) {
+ logging(paste("[WARN] : ",m,sep=""))
+}
+
+Log.err<-
+function(m) {
+ logging(paste("[ERROR] : ",m,sep=""))
+ q("no",1,FALSE) #exit with nonzero exit code
+}
+
+
 logging<- 
 function(m) {
   cat(sprintf("[%s] %s\n", Sys.time(),m))
+}
+
+PASS <- 
+function() {
+cat("######     #     #####   #####  \n")
+cat("#     #   # #   #     # #     # \n")
+cat("#     #  #   #  #       #       \n")
+cat("######  #     #  #####   #####  \n")
+cat("#       #######       #       # \n")
+cat("#       #     # #     # #     # \n")
+cat("#       #     #  #####   #####  \n")
+}
+
+FAIL <-
+function(e) {
+cat("########    ###    #### ##       \n")
+cat("##         ## ##    ##  ##       \n")
+cat("##        ##   ##   ##  ##       \n")
+cat("######   ##     ##  ##  ##       \n")
+cat("##       #########  ##  ##       \n")
+cat("##       ##     ##  ##  ##       \n")
+cat("##       ##     ## #### ########\n")
+
+Log.err(e)
 }
 
 get_args<-
