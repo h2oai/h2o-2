@@ -344,19 +344,20 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.
 #setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 h2o.predict <- function(object, newdata) {
   if( missing(object) ) stop('must specify object')
-  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel') )) stop('object must be an H2OModel')
+  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel', 'H2OGLMModelVA') )) stop('object must be an H2OModel')
   if( missing(newdata) ) newdata <- object@data
   if(class(newdata) != 'H2OParsedData' ) stop('newdata must be h2o data')
 
-  if(class(object) == "H2OGLMModel") {
+  if(class(object) == "H2OGLMModelVA") {
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
-    new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-  } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel")) {
+    new("H2OParsedDataVA", h2o=object@data@h2o, key=res$key)
+  } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel")) {
     # Set randomized prediction key
     if(class(object) == "H2OGBMModel") key_prefix = "GBMPredict"
     else if(class(object) == "H2OKMeansModel") key_prefix = "KMeansPredict"
-    else key_prefix = "DRFPredict"
+    else if(class(object) == "H2ODRFModel") key_prefix = "DRFPredict"
+    else key_prefix = "GLM2Predict"
     rand_pred_key = h2o.__uniqID(key_prefix)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
