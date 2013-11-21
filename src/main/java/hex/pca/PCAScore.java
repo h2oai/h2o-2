@@ -34,7 +34,7 @@ public class PCAScore extends FrameJob {
   @Override protected Status exec() {
     // Note: Source data MUST contain all features (matched by name) used to build PCA model!
     // If additional columns exist in source, they are automatically ignored in scoring
-    Frame fr = model.adapt(source, true, false)[0];
+    Frame fr = model.adapt(source, true)[0];
     int nfeat = model._names.length;
     DataInfo dinfo = new DataInfo(fr,false, model.normSub,model.normMul);
     PCAScoreTask tsk = new PCAScoreTask(this, dinfo, nfeat, num_pc, model.eigVec);

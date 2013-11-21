@@ -42,7 +42,15 @@ public class Frame extends Iced {
     for( int i=0; i<vecs.length; i++ )
       assert grp.equals(vecs[i].group());
   }
-
+  public Frame subframe(String [] names){
+    Vec [] vecs = new Vec[names.length];
+    HashMap<String, Integer> map = new HashMap<String, Integer>();
+    for(int i = 0; i < _names.length; ++i)map.put(_names[i], i);
+    for(int i = 0; i < names.length; ++i)
+      if(map.containsKey(names[i]))vecs[i] = _vecs[map.get(names[i])];
+      else throw new IllegalArgumentException("Missing column called "+names[i]);
+    return new Frame(names,vecs);
+  }
   public final Vec[] vecs() {
     if( _vecs != null ) return _vecs;
     // Load all Vec headers; load them all in parallel by spawning F/J tasks.
