@@ -21,7 +21,7 @@ public class DRFProgressPage extends Progress2 {
   @Override public boolean toHTML( StringBuilder sb ) {
     Job jjob = Job.findJob(job_key);
     DRFModel m = UKV.get(jjob.dest());
-    if (m!=null) m.generateHTML("DRF Model", sb, false);
+    if (m!=null) m.generateHTML("DRF Model", sb);
     else DocGen.HTML.paragraph(sb, "Pending...");
 
     return true;

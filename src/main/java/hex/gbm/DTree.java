@@ -12,8 +12,7 @@ import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
-import water.util.Log;
-import water.util.RString;
+import water.util.*;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -549,17 +548,10 @@ public class DTree extends Iced {
           preds[c] += ts[c].score(data);
     }
 
-    public void generateHTML(String title, StringBuilder sb, boolean includeModelCode) {
+    public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
-      // include link to java code for all models
-      if (includeModelCode) {
-        sb.insert(sb.indexOf("</pre>") +"</pre></div>".length(),
-        "<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
-        "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
-        "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">"+DocGen.HTML.escape2(toJava())+"</code></pre></div>");
-      }
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM
@@ -821,6 +813,17 @@ public class DTree extends Iced {
         }
       }.visit();
       return sb;
+    }
+
+    public void toJavaHtml( StringBuilder sb ) {
+      sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
+                "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
+                "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+      if( numTrees() * treeStats.meanLeaves > 10000 )
+        sb.append("/* Java code is too large to display, download it directly. */");
+      else
+        DocGen.HTML.escape(sb,toJava());        
+      sb.append("</code></pre></div>");
     }
 
     // Convert Tree model to Java

@@ -1,6 +1,6 @@
 source('./Utils/h2oR.R')
 
-logging("\n======================== Begin Test ===========================\n")
+Log.info("\n======================== Begin Test ===========================\n")
 serverH2O = new("H2OClient", ip=myIP, port=myPort)
 checkPCAModel <- function(myPCA.h2o, myPCA.r, toleq = 1e-5) {
   checkEqualsNumeric(myPCA.h2o@model$sdev, myPCA.r$sdev)

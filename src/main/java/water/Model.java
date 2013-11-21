@@ -11,8 +11,7 @@ import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
 import water.util.Log.Tag.Sys;
-import water.util.Log;
-import water.util.Utils;
+import water.util.*;
 
 /**
  * A Model models reality (hopefully).
@@ -319,12 +318,12 @@ public abstract class Model extends Iced {
    *    }
    *  </pre>
    */
-  public String toJava() {
-    SB sb = new SB();
+  public String toJava() { return toJava(new SB()).toString(); }
+  public SB toJava( SB sb ) {
     sb.p("\n");
     String modelName = toJavaId(_selfKey.toString());
     sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName);
-    sb.p("\nclass ").p(modelName).p(" {\n");
+    sb.p("\nclass ").p(modelName).p(" extends water.Model.GeneratedModel {\n");
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
     toJavaInit(sb);  sb.p("\n");
@@ -334,12 +333,22 @@ public abstract class Model extends Iced {
     sb.p(TOJAVA_PREDICT_MAP_ALLOC1);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
     // -- DEBUG CODE
-    sb.p("static int main(String[] args) {\n");
-    sb.indent(1).p(modelName).p(" m = new ").p(modelName).p("();\n");
-    sb.p("  return 0;");
-    sb.p("}");
+    Frame fr = UKV.get(_dataKey);
+    int nrows = (int) Math.min(1000, fr.numRows());
+    sb.p("public static final double[][] DATA = new double[][] {").nl();
+    Vec[] vecs = new Vec[_names.length-1];
+    for (int i=0; i<_names.length-1; i++) vecs[i] = fr.vecs()[fr.find(_names[i])];
+    for (int row=0; row<nrows; row++) {
+      sb.indent(1).p(row>0?",":"").p("new double[] {");
+      for (int v=0; v<vecs.length;v++) sb.p(v>0?",":"").p(vecs[v].at(row));
+      sb.p("}").nl();
+    }
+    sb.p("};").nl();
+    sb.p("public static void main(String[] args) {\n");
+    sb.indent(1).p(modelName).p(" m = new ").p(modelName).p("();").nl();
     // END of DEBUG CODE
-    sb.p("}\n");
+    sb.p("}").nl();
+
     // DEBUG CODE
     try {
       File f = new File("/Users/michal/Tmp/genmodel/"+toJavaId(_selfKey.toString())+".java");
@@ -353,7 +362,7 @@ public abstract class Model extends Iced {
     }
     // END of DEBUG CODE
 
-    return sb.toString();
+    return sb;
   }
   // Same thing as toJava, but as a Javassist CtClass
   private CtClass makeCtClass() throws CannotCompileException {
@@ -371,7 +380,7 @@ public abstract class Model extends Iced {
 
 
   private SB toJavaNAMES( SB sb ) {
-    return sb.p("  public static final String[] NAMES = new String[] ").p(_names).p(";\n");
+    return sb.p("  public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";\n");
   }
   private SB toJavaNCLASSES( SB sb ) {
     return sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
@@ -391,7 +400,7 @@ public abstract class Model extends Iced {
     sb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the\n");
     sb.p("  // main prediction (class for classifiers or value for regression),\n");
     sb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
-    sb.p("  float[] predict( double data[], float preds[] ) {\n");
+    sb.p("  @Override final float[] predict( double data[], float preds[] ) {\n");
     SB afterCode = new SB().ii(1);
     toJavaPredictBody(sb.ii(2), afterCode); sb.di(1);
     sb.p("    return preds;\n");
@@ -426,31 +435,6 @@ public abstract class Model extends Iced {
     "  float[] predict( java.util.HashMap row ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
     "  }\n";
-
-  // Can't believe this wasn't done long long ago
-  protected static class SB {
-    public final StringBuilder _sb = new StringBuilder();
-    private int _indent = 0;
-    public SB() {}
-    public SB p( String s ) { _sb.append(s); return this; }
-    public SB p( float  s ) { _sb.append(s).append('f'); return this; }
-    public SB p( char   s ) { _sb.append(s); return this; }
-    public SB p( int    s ) { _sb.append(s); return this; }
-    public SB p( SB     s ) { _sb.append(s._sb); return this; }
-    public SB indent( int d ) { for( int i=0; i<d+_indent; i++ ) _sb.append("  "); return this; }
-    public SB indent( ) { return indent(0); }
-    public SB ii( int i) { _indent += i; return this; }
-    public SB di( int i) { _indent -= i; return this; }
-    // Convert a String[] into a valid Java String initializer
-    SB p( String[] ss ) {
-      p('{');
-      for( int i=0; i<ss.length-1; i++ )  p('"').p(ss[i]).p("\",");
-      if( ss.length > 0 ) p('"').p(ss[ss.length-1]).p('"');
-      return p('}');
-    }
-    @Override public String toString() { return _sb.toString(); }
-  }
-
   // Convenience method for testing: build Java, convert it to a class &
   // execute it: compare the results of the new class's (JIT'd) scoring with
   // the built-in (interpreted) scoring on this dataset.  Throws if there
@@ -469,5 +453,38 @@ public abstract class Model extends Iced {
   // Transform given string to legal java Identifier (see Java grammar http://docs.oracle.com/javase/specs/jls/se7/html/jls-3.html#jls-3.8)
   private String toJavaId(String s) {
     return s.replace('-', '_');
+  }
+
+  public abstract static class GeneratedModel {
+    // Predict a row
+    abstract float[] predict( double data[], float preds[] );
+    // Run benchmark
+    public final void bench(long iters, double[][] data, float[] preds, int ntrees) {
+      int rows = data.length;
+      int cols = data[0].length;
+      int levels = preds.length-1;
+      int ntrees_internal = ntrees*levels;
+      System.out.println("Iterations: " + iters);
+      System.out.println("Rows      : " + rows);
+      System.out.println("Cols      : " + cols);
+      System.out.println("Levels    : " + levels);
+      System.out.println("Ntrees    : " + ntrees);
+      System.out.println("Ntrees internal   : " + ntrees_internal);
+      System.out.println("iter,total_time,time_per_row,time_per_tree,time_per_row_tree,time_per_inter_tree,time_per_row_inter_tree");
+      StringBuilder sb = new StringBuilder(100);
+      for (int i=0; i<iters; i++) {
+        long startTime = System.nanoTime();
+        // Run dummy score
+        for (double[] row : data) predict(row, preds);
+        long ttime = System.nanoTime() - startTime;
+        sb.append(i).append(',');
+        sb.append(ttime).append(',');
+        sb.append(ttime/rows).append(',');
+        sb.append(ttime/ntrees).append(',');
+        sb.append(ttime/(ntrees*rows)).append(',');
+        sb.append(ttime/ntrees_internal).append(',');
+        sb.append(ttime/(ntrees_internal*rows)).append('\n');
+      }
+    }
   }
 }
