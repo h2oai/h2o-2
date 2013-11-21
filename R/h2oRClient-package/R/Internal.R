@@ -231,9 +231,10 @@ h2o.__escape <- function(key) {
 }
 
 h2o.__uniqID <- function(prefix = "") {
-  if("uuid" %in% installed.packages())
+  if("uuid" %in% installed.packages()) {
+    library(uuid)
     temp = UUIDgenerate()
-  else {
+  } else {
     hex_digits <- c(as.character(0:9), letters[1:6])
     y_digits <- hex_digits[9:12]
     temp = paste(
@@ -313,7 +314,7 @@ h2o.__exec2_dest_key <- function(client, expr, destKey) {
 }
 
 h2o.__unop2 <- function(op, x) {
-  expr = paste(op, "(", x@key, ")")
+  expr = paste(op, "(", x@key, ")", sep = "")
   res = h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)

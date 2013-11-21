@@ -41,7 +41,9 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
         normalized = model["normalized"]
         max_iter = model["max_iter"]
     else:
-        clusters = kmeansResult["KMeansModel"]["clusters"]
+        model = kmeansResult["KMeansModel"]
+        clusters = model["clusters"]
+        error = model["error"]
 
     for i,c in enumerate(clusters):
         for n in c:
@@ -62,21 +64,28 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
 
         # can't use inspect on a model key? now?
         kmeansResult = kmeans
-        centers = kmeansResult['model']['clusters']
+        model = kmeansResult['model']
+        centers = model['clusters']
+        error = model["error"]
     else:
         model_key = kmeans["destination_key"]
         kmeansResult = h2o_cmd.runInspect(key=model_key)
-        centers = kmeansResult['KMeansModel']['clusters']
-
+        model = kmeansResult['KMeansModel']
+        centers = model['clusters']
+        error = model["error"]
 
     if h2o.beta_features:
         # need to use Predict2?
         pass 
         # no scoring on Kmeans2?..just reuse
-        kmeansScoreResult = kmeans
-        score = kmeansScoreResult['model']
-        rows_per_cluster = score['rows_per_cluster']
-        sqr_error_per_cluster = score['sqr_error_per_cluster']
+        # cols/max_ncols params?
+        predictKey = applyDestinationKey
+        predictResult = h2o.nodes[0].generate_predictions(data_key=parseResult['destination_key'], model_key=model_key, destination_key=predictKey)
+        summaryResult = h2o.nodes[0].summary_page(key=predictKey)
+        hcnt = summaryResult['summaries'][0]['hcnt'] # histogram
+        rows_per_cluster = hcnt
+        # have to figure out how to get this with fvec
+        sqr_error_per_cluster = [0 for h in hcnt]
     
     else:
         kmeansApplyResult = h2o.nodes[0].kmeans_apply(
@@ -96,6 +105,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
         sqr_error_per_cluster = score['sqr_error_per_cluster']
 
     tupleResultList = []
+    print "\nerror: ", error
     for i,c in enumerate(centers):
         print "\ncenters["+str(i)+"]: ", centers[i]
         print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
@@ -143,10 +153,11 @@ def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=
             self.assertAlmostEqual(expRows, actRows, delta=absAllowedDelta,
                 msg="Trial %d Rows expected: %s actual: %s delta > %s" % (trial, expRows, actRows, absAllowedDelta))
 
-            if expError is not None: # don't always check this
-                absAllowedDelta = allowedDelta[2] * expError
-                self.assertAlmostEqual(expError, actError, delta=absAllowedDelta,
-                    msg="Trial %d Error expected: %s actual: %s delta > %s" % (trial, expError, actError, absAllowedDelta))
+            if not h2o.beta_features:
+                if expError is not None: # don't always check this
+                    absAllowedDelta = allowedDelta[2] * expError
+                    self.assertAlmostEqual(expError, actError, delta=absAllowedDelta,
+                        msg="Trial %d Error expected: %s actual: %s delta > %s" % (trial, expError, actError, absAllowedDelta))
 
 
 # compare this clusters to last one. since the files are concatenations, 
