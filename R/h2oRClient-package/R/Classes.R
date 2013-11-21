@@ -285,12 +285,12 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   if(!missing(i) && is.numeric(i)) {
     if(any(i == 0)) stop("Array index out of bounds")
     if(any(i < 0 && abs(i) > numRows)) stop("Unimplemented")
-    if(min(i) > numRows) stop("new rows would leave holes after existing rows")
+    if(min(i) > numRows+1) stop("new rows would leave holes after existing rows")
   }
   if(!missing(j) && is.numeric(j)) {
     if(any(j == 0)) stop("Array index out of bounds")
     if(any(j < 0 && abs(j) > numCols)) stop("Unimplemented")
-    if(min(j) > numCols) stop("new columns would leaves holes after existing columns")
+    if(min(j) > numCols+1) stop("new columns would leaves holes after existing columns")
   }
   
   if(missing(i) && missing(j))
@@ -566,7 +566,7 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
 })
 
-#--------------------------------- ValueArray -----------------------------#
+#--------------------------------- ValueArray ----------------------------------#
 setMethod("show", "H2ORawDataVA", function(object) {
   print(object@h2o)
   cat("Raw Data Key:", object@key, "\n")
@@ -636,6 +636,14 @@ setMethod("dim", "H2OParsedDataVA", function(x) {
   as.numeric(c(res$num_rows, res$num_cols))
 })
 
+setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) { 
+  head(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
+})
+
+setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
+  tail(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
+})
+          
 setMethod("summary", "H2OParsedDataVA", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY, key=object@key)
   res = res$summary$columns
