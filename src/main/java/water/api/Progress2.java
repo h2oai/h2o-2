@@ -1,7 +1,6 @@
 package water.api;
 
 import water.*;
-import water.api.RequestBuilders.Response;
 import water.api.RequestServer.API_VERSION;
 
 public class Progress2 extends Request2 {
@@ -30,11 +29,12 @@ public class Progress2 extends Request2 {
   }
 
   @Override protected Response serve() {
-    Job jjob = Job.findJob(job_key);
-    if(jjob != null && jjob.exception != null){
-      return Response.error(jjob.exception == null?"cancelled":jjob.exception);
-    }
-    if(jjob == null || jjob.end_time > 0 || jjob.cancelled())
+    Job jjob = null;
+    if( job_key != null )
+      jjob = Job.findJob(job_key);
+    if( jjob != null && jjob.exception != null )
+      return Response.error(jjob.exception == null ? "cancelled" : jjob.exception);
+    if( jjob == null || jjob.end_time > 0 || jjob.cancelled() )
       return jobDone(jjob, destination_key);
     return jobInProgress(jjob, destination_key);
   }
@@ -47,11 +47,14 @@ public class Progress2 extends Request2 {
   /** Return default progress {@link Response}. */
   protected Response jobInProgress(final Job job, final Key dst) {
     progress = job.progress();
-    return Response.poll(this, (int) (100 * job.progress()), 100, "job_key", job_key.toString(), "destination_key", destination_key.toString());
+    return Response.poll(this, (int) (100 * job.progress()), 100, "job_key", job_key.toString(), "destination_key",
+        destination_key.toString());
   }
 
   @Override public boolean toHTML(StringBuilder sb) {
-    Job jjob = Job.findJob(job_key);
+    Job jjob = null;
+    if( job_key != null )
+      jjob = Job.findJob(job_key);
     DocGen.HTML.title(sb, jjob != null ? jjob.description : null);
     DocGen.HTML.section(sb, destination_key.toString());
     return true;

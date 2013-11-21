@@ -192,13 +192,6 @@ public class NeuralNet extends ValidatedJob {
     return 0;
   }
 
-  public static Error eval(Layer[] ls, Frame frame, long n, long[][] cm) {
-    Vec[] vecs = frame.vecs();
-    vecs = Utils.remove(vecs, vecs.length - 1);
-    Vec resp = frame.vecs()[frame.vecs().length - 1];
-    return eval(ls, vecs, resp, n, cm);
-  }
-
   public static Error eval(Layer[] ls, Vec[] vecs, Vec resp, long n, long[][] cm) {
     Output output = (Output) ls[ls.length - 1];
     if( output instanceof VecSoftmax )
@@ -253,9 +246,10 @@ public class NeuralNet extends ValidatedJob {
       float d = t - out[o];
       error.mean_square += d * d;
     }
-    float max = Float.NEGATIVE_INFINITY;
-    int idx = -1;
-    for( int o = 0; o < out.length; o++ ) {
+    float max = out[0];
+    int idx = 0;
+    for( int o = 1; o < out.length; o++ ) {
+      assert !Double.isNaN(out[o]);
       if( out[o] > max ) {
         max = out[o];
         idx = o;

@@ -77,14 +77,13 @@ public class UploadFileVec extends FileVec {
       }
 
       // Add last bytes onto last chunk, which may be bigger than CHUNK_SZ.
-      if (bytesInChunkSoFar != 0) {
-        if( prev==null ) {
-          uv.close(new C1NChunk(Arrays.copyOf(bytebuf,bytesInChunkSoFar)),0,fs);
-        } else {
-          byte buf2[] = Arrays.copyOf(prev,bytesInChunkSoFar+prev.length);
-          System.arraycopy(bytebuf,0,buf2,prev.length,bytesInChunkSoFar);
-          uv.close(new C1NChunk(buf2),uv._nchunks-1,fs);
-        }
+      if( prev==null ) {      // No chunks at all
+        uv._nchunks++;        // Put a 1st chunk
+        uv.close(new C1NChunk(Arrays.copyOf(bytebuf,bytesInChunkSoFar)),0,fs);
+      } else if (bytesInChunkSoFar != 0 ) {
+        byte buf2[] = Arrays.copyOf(prev,bytesInChunkSoFar+prev.length);
+        System.arraycopy(bytebuf,0,buf2,prev.length,bytesInChunkSoFar);
+        uv.close(new C1NChunk(buf2),uv._nchunks-1,fs);
       }
 
       Log.info("    totalFrames: " + 1);
