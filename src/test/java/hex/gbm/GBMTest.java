@@ -1,16 +1,12 @@
 package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
-
 import java.io.File;
-
 import org.junit.*;
-
 import water.*;
 import water.api.ConfusionMatrix;
 import water.fvec.*;
 
-@Ignore
 public class GBMTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(3); }

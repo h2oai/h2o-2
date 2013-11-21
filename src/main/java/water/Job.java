@@ -506,7 +506,6 @@ public class Job extends Request2 {
   public void invoke() {
     init();
     start(new H2OEmptyCompleter());
-    exec();
     Status status = exec();
     if(status == Status.Done)
       remove();

@@ -10,7 +10,6 @@ import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
-@Ignore
 public class DRFTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
