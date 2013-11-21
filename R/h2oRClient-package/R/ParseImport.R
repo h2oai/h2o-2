@@ -134,6 +134,7 @@ setMethod("h2o.uploadFile", signature(object="H2OClient", path="character", key=
   function(object, path, key, parse, sep, silent) {
     url = paste("http://", object@ip, ":", object@port, "/2/PostFile.json", sep="")
     url = paste(url, "?key=", path, sep="")
+    if(file.exists(h2o.__getCommandLog())) h2o.__logIt(url, NULL, "Command")
     if(silent)
       temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))))
     else

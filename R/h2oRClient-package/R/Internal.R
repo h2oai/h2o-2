@@ -14,6 +14,8 @@ if(Sys.info()["sysname"] == "Windows")
   myPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
 pkg.env$h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
 pkg.env$h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
+h2o.__getCommandLog <- function() { return(pkg.env$h2o.__LOG_COMMAND)}
+h2o.__getErrorLog <- function() { return(pkg.env$h2o.__LOG_ERROR)}
 h2o.__changeCommandLog <- function(path) { 
     cmd <- paste(path, 'commands.log', sep='/') 
     assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
@@ -38,12 +40,15 @@ h2o.__openErrLog <- function() {
 
 h2o.__logIt<-
 function(url, tmp, commandOrErr) {
-  tmp = get("tmp"); nams = names(tmp)
-  s = rep(" ", length(tmp))
+  if(is.null(tmp)) s <- url
+  else {
+  tmp <- get("tmp"); nams = names(tmp)
+  s <- rep(" ", length(tmp))
   for(i in seq_along(tmp))
-    s[i] = paste(nams[i], ": ", tmp[[i]], sep="")
-  s = paste(url, '\t', paste(s, collapse=", "))
-  write(s, file = pkg.env$h2o.__LOG_COMMAND, append = TRUE)
+    s[i] <- paste(nams[i], ": ", tmp[[i]], sep="")
+  s <- paste(url, '\t', paste(s, collapse=", "))
+  }
+  write(s, file = ifelse(commandOrErr == "Command", pkg.env$h2o.__LOG_COMMAND, pkg.env$h2o.__LOG_ERROR), append = TRUE)
 }
 
 # Internal functions & declarations
