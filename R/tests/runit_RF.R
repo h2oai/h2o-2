@@ -1,6 +1,6 @@
 source('./Utils/h2oR.R')
 
-logging("\n======================== Begin Test ===========================\n")
+Log.info("\n======================== Begin Test ===========================\n")
 serverH2O = new("H2OClient", ip=myIP, port=myPort)
 
 test.RF.iris_class <- function(serverH2O) {

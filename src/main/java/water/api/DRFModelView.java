@@ -19,7 +19,7 @@ public class DRFModelView extends Request2 {
   }
 
   @Override public boolean toHTML(StringBuilder sb){
-    drf_model.generateHTML("DRF Model", sb, true);
+    drf_model.generateHTML("DRF Model", sb);
     return true;
   }
 
@@ -28,4 +28,6 @@ public class DRFModelView extends Request2 {
     if (drf_model == null) return Response.error("Model '" + _modelKey + "' not found!");
     else return Response.done(this);
   }
+
+  @Override public void toJava(StringBuilder sb) { drf_model.toJavaHtml(sb); }
 }

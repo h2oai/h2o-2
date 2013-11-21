@@ -530,43 +530,53 @@ public class Job extends Request2 {
     remove();
   }
 
+  public static boolean isJobEnded(Key jobkey) {
+    boolean done = false;
+
+    Job[] jobs = Job.all();
+    boolean found = false;
+    for (int i = jobs.length - 1; i >= 0; i--) {
+      if (jobs[i].job_key == null) {
+        continue;
+      }
+
+      if (! jobs[i].job_key.equals(jobkey)) {
+        continue;
+      }
+
+      // This is the job we are looking for.
+      found = true;
+
+      if (jobs[i].end_time > 0) {
+        done = true;
+      }
+
+      if (jobs[i].cancelled()) {
+        done = true;
+      }
+
+      break;
+    }
+
+    if (! found) {
+      done = true;
+    }
+
+    return done;
+  }
+
   /**
    * Block synchronously waiting for a job to end, success or not.
    * @param jobkey Job to wait for.
    * @param pollingIntervalMillis Polling interval sleep time.
    */
   public static void waitUntilJobEnded(Key jobkey, int pollingIntervalMillis) {
-    boolean done = false;
-    while (! done) {
+    while (true) {
+      if (isJobEnded(jobkey)) {
+        return;
+      }
+
       try { Thread.sleep (pollingIntervalMillis); } catch (Exception _) {}
-      Job[] jobs = Job.all();
-      boolean found = false;
-      for (int i = jobs.length - 1; i >= 0; i--) {
-        if (jobs[i].job_key == null) {
-          continue;
-        }
-
-        if (! jobs[i].job_key.equals(jobkey)) {
-          continue;
-        }
-
-        // This is the job we are looking for.
-        found = true;
-
-        if (jobs[i].end_time > 0) {
-          done = true;
-        }
-
-        if (jobs[i].cancelled()) {
-          done = true;
-        }
-
-        break;
-      }
-
-      if (! found) {
-        done = true;
-      }
     }
   }
 

@@ -24,7 +24,7 @@ public class GBMModelView extends Request2 {
   }
 
   @Override public boolean toHTML(StringBuilder sb){
-    gbm_model.generateHTML("GBM Model", sb, true);
+    gbm_model.generateHTML("GBM Model", sb);
     return true;
   }
 
@@ -33,4 +33,6 @@ public class GBMModelView extends Request2 {
     if (gbm_model == null) return Response.error("Model '" + _modelKey + "' not found!");
     else return Response.done(this);
   }
+
+  @Override public void toJava(StringBuilder sb) { gbm_model.toJavaHtml(sb); }
 }

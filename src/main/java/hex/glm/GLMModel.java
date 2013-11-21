@@ -411,13 +411,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return sb.toString();
   }
   public int rank() {return rank(best_lambda_idx);}
-  public int rank(int lambdaIdx) {
-    final double [] beta = beta(lambdaIdx);
-    if( beta == null ) return -1;
-    int res = 0;
-    for( double b : beta ) if( b != 0 ) ++res;
-    return res;
-  }
+  public int rank(int lambdaIdx) {return submodels[lambdaIdx].rank;}
   @Override public void delete(){super.delete();}
 
   public void  setValidation(int lambdaIdx,GLMValidation val ){

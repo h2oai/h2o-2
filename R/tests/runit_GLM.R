@@ -1,6 +1,6 @@
 source('./Utils/h2oR.R')
 
-logging("\n========================== Begin Tests ==============================\n")
+Log.info("\n========================== Begin Tests ==============================\n")
 serverH2O = new("H2OClient", ip=myIP, port=myPort)
 checkGLMModel <- function(myGLM.h2o, myGLM.r) {
   coeff.mat = as.matrix(myGLM.r$beta)

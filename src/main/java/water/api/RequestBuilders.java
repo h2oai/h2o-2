@@ -56,6 +56,7 @@ public class RequestBuilders extends RequestQueries {
     sb.append("<div class='row-fluid'>");
     sb.append("<div class='span12'>");
     sb.append(buildJSONResponseBox(response));
+    if( response._status == Response.Status.done ) response.toJava(sb);
     sb.append(buildResponseHeader(response));
     Builder builder = response.getBuilderFor(ROOT_OBJECT);
     if (builder == null) {
@@ -530,6 +531,10 @@ public class RequestBuilders extends RequestQueries {
       }
       res.add(RESPONSE, responseToJson());
       return res;
+    }
+
+    public void toJava(StringBuilder sb) { 
+      if( _req != null ) _req.toJava(sb);
     }
 
      /** Returns the error of the request object if any. Returns null if the
