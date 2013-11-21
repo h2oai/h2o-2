@@ -19,17 +19,15 @@ public class PctPage extends Request2 {
   Frame source;
 
   class colFilter extends VecSelect { public colFilter() { super("source");} }
-  @API(help = "Select column to group by.", required = true, filter= colFilter.class)
-  Vec   gcol;
+  class colsFilter extends MultiVecSelect { public colsFilter() { super("source");} }
+  @API(help = "Select column to group by.", required = true, filter= colsFilter.class)
+  int[] gcols;
 
   @API(help = "Select the value column.", required = true, filter= colFilter.class)
   Vec   vcol;
 
   @API(help = "Percentiles over groups.")
   GroupedPct.Summary[] gpct;
-
-  @API(help = "Augmented Frame with percentiles on groups.")
-  Frame dest;
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='PctPage.query?source=%$key'>"+content+"</a>");
@@ -40,9 +38,9 @@ public class PctPage extends Request2 {
   @Override protected Response serve() {
     if( source == null ) return RequestServer._http404.serve();
     // select all columns
-    GroupedPct pct = new GroupedPct(source, source.find(gcol), source.find(vcol));
+    GroupedPct pct = new GroupedPct(source, gcols, source.find(vcol));
     gpct = pct._gsums;
-    dest = pct.appendPctCol();
+    source.add(pct.makeGroupPctCols());
     return Response.done(this);
   }
 
