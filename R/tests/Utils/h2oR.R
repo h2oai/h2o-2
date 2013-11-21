@@ -48,6 +48,7 @@ cat("#       #     #  #####   #####  \n")
 
 FAIL <-
 function(e) {
+cat("")
 cat("########    ###    #### ##       \n")
 cat("##         ## ##    ##  ##       \n")
 cat("##        ##   ##   ##  ##       \n")
@@ -111,12 +112,12 @@ function() {
   if (Sys.info()['sysname'] == "Windows")
     options(RCurlOptions = list(cainfo = system.file("CurlSSL", "cacert.pem", package = "RCurl")))
 
-  logging("\nLoading RUnit and testthat\n")
+  Log.info("Loading RUnit and testthat\n")
   require(RUnit)
   require(testthat)
 }
 
-logging("\n============== Setting up R-Unit environment... ================\n")
+Log.info("============== Setting up R-Unit environment... ================")
 defaultPath <- "../../target/R"
 ipPort <- get_args(commandArgs(trailingOnly = TRUE))
 checkNLoadWrapper(ipPort)
@@ -129,7 +130,7 @@ source("../h2oRClient-package/R/Internal.R")
 
 h2o.removeAll <-
 function(object) {
-  logging("=============Throwing away any keys on the H2O cluster======")
+  Log.info("=============Throwing away any keys on the H2O cluster======")
   h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
 }
 
