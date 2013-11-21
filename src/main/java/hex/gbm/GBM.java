@@ -118,7 +118,7 @@ public class GBM extends SharedTreeModelBuilder {
   }
 
   private GBMModel doScoring(GBMModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
-    Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid,ktrees);
+    Score sc = new Score().doIt(model,fr,validation).report(Sys.GBM__,tid,ktrees);
     model = new GBMModel(model, finalScoring?null:ktrees, (float)sc._sum/_nrows, sc._cm, tstats);
     DKV.put(outputKey, model);
     return model;

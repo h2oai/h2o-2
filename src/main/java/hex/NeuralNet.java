@@ -11,6 +11,7 @@ import hex.Layer.VecLinear;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import jsr166y.CountedCompleter;
@@ -120,7 +121,7 @@ public class NeuralNet extends ValidatedJob {
     model.validation_errors = validErrors0;
     UKV.put(destination_key, model);
 
-    final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
+    final Frame[] adapted = validation == null ? null : model.adapt(validation, false,false);
     final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
 
     // Use a separate thread for monitoring (blocked most of the time)
@@ -132,9 +133,10 @@ public class NeuralNet extends ValidatedJob {
           Vec[] valid = null;
           Vec validResp = null;
           if( validation != null ) {
-            valid = new Vec[adapted[0].vecs().length];
+            final Vec [] vs = adapted[0].vecs();
+            valid = Arrays.copyOf(vs,vs.length-1);
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
-            validResp = _validResponse;
+            validResp = vs[vs.length-1];
           }
           while( !cancelled() ) {
             eval(valid, validResp);

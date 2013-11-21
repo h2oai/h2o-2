@@ -10,7 +10,6 @@ import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
 import water.util.Log.Tag.Sys;
-import water.util.Log;
 import water.util.*;
 
 /**
@@ -207,6 +206,7 @@ public abstract class Model extends Iced {
       } else if( ms != null && ds == null ) {
         if( exact )
           throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) categorical, was passed a numeric");
+
         throw H2O.unimpl();     // Attempt an asEnum?
       } else if( !Arrays.deepEquals(ms, ds) ) {
         map[c] = getDomainMapping(_names[c], ms, ds, exact);
@@ -230,8 +230,21 @@ public abstract class Model extends Iced {
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
   public Frame[] adapt( Frame fr, boolean exact, boolean dropResponse ) {
+    if(!dropResponse){ // move response to the end!
+      String responseName = _names[_names.length-1];
+      for(int i = 0; i < fr._names.length; ++i){
+        if(fr._names[i].equalsIgnoreCase(responseName)){
+          fr.add(responseName,fr.remove(i));
+          break;
+        }
+      }
+    }
     String frnames[] = fr.names();
     Vec frvecs[] = fr.vecs();
+    int len = dropResponse?frvecs.length-1:frvecs.length;
+    if(!exact) for(int i = 0; i < len;++i)
+      if(_domains[i] != null && !frvecs[i].isEnum())
+        frvecs[i] = frvecs[i].toEnum();
     int map[][] = adapt(frnames,fr.domains(),exact,dropResponse);
     int cmap[] = dropResponse ? map[_names.length-1] : map[_names.length];
     Vec vecs[] = dropResponse ? new Vec[_names.length-1] : new Vec[_names.length];
