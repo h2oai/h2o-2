@@ -39,7 +39,7 @@ Troubleshooting R
 
 **Dependencies in R**
   
-  H\ :sub:`2`\ O wrapper and H\ :sub:`2`\ O both utilize other R packages (like lattice, and
+  H\ :sub:`2`\ O and H\ :sub:`2`\ O client utilize other R packages (like lattice, and
   curl). From time to time R will fail to download from CRAN and give
   an error. In that case it's best to get the binary from CRAN
   directly and install the package manually using the call:
@@ -65,29 +65,20 @@ Troubleshooting R
   work session. 
 
 
-**Updating the Wrapper Package**
+**Updating the R Package**
 
   H\ :sub:`2`\ O's R packages are headed for CRAN, but aren't there yet, and
   until recently, they were still "in development." We've made some
   great improvements to H\ :sub:`2`\ O in R. If you are having issues
-  running either package, please visit http://0xdata.com/h2O/, and
+  running either package, please visit http://0xdata.com/downloadtable/, and
   download our latest release. Follow the instructions in our R user
-  documentation to install h2oWrapper (even if it is already
+  documentation to install h2oR (even if it is already
   installed), in order to ensure that you have the most recent
   version. If your issue persists, please let us know. 
 
-
-**Step 2** 
-
-  From your email account contact h2ostream@googlegroups.com with a
-  brief description of the error you encountered, and your contact
-  information. Attach the downloaded H\ :sub:`2`\ O logs downloaded from log view
-  to the email before sending. 
-
-**Step 3**  
-
-  We will route your email to the correct engineer or data scientist
-  and work to resolve your issue. 
+**Internal Server Error in R**
+  
+  when passing data sets to H\ :sub:`2`\ O through R, users may see an error that reads    “Internal Server Error.” This error tells users that R can’t find the file they are trying to import and parse. It can be corrected by specifying a path to the data file relative to the directory from which H2O is running (not relative to where R is running). Alternatively, users can change their working directory in R (in R studio the option is under the Session menu. In R it is under the menu Misc). By setting the R working directory to the same directory that H2O is running from, the path relative to R and relative to H2O will be the same. 
   
 
 
