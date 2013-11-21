@@ -1622,7 +1622,7 @@ class H2O(object):
         # algo = '2/DRFView2' if beta_features else 'RFView'
         # for drf2, you can't pass a new dataset here, compared to what you trained with.
         # should complain or something if tried with a data_key
-        if h2o.beta_features and data_key:
+        if beta_features and data_key:
             raise Exception("Can't pass a new data_key to random_forest_view for v2's DRFModelView")
 
         algo = '2/DRFModelView' if beta_features else 'RFView'
