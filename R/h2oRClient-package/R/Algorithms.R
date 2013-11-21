@@ -39,9 +39,9 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
 }
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
-#setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm") })
-#setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
-h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
+# setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm") })
+# setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
+h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
   if( missing(data) ) stop('must specify data')
   if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if( missing(x) ) stop('must specify x')
@@ -83,10 +83,21 @@ h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=rand_glm_key)
-  resModel = res$glm_model
+  resModel = res$glm_model; destKey = resModel$'_selfKey'
   modelOrig = h2o.__getGLM2Results(resModel, y, resModel$submodels[[1]]$validation)
-  # TODO: Fix this to display cross-validation models
-  new("H2OGLMModel", key=resModel$'_selfKey', data=data, model=modelOrig, xval=list())
+  
+  # Get results from cross-validation
+  if(nfolds < 2)
+    return(new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list()))
+  
+  res_xval = list()
+  for(i in 1:nfolds) {
+    xvalKey = paste(destKey, "_xval", seq(0,nfolds-1), sep="")
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
+    modelXval = h2o.__getGLM2Results(res$glm_model, y, res$glm_model$submodels[[1]]$validation)
+    res_xval[[i]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
+  }
+  new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
 }
 
 # Pretty formatting of H2O GLM results
@@ -456,7 +467,9 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
   return(result)
 }
 
-h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsilon=1e-5, standardize=T, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA))) {
+h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsilon=1e-5, standardize=T, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA))) {
+  if(class(data) != "H2OParsedDataVA")
+    stop("GLM currently only working under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   args <- verify_dataxy(data, x, y)
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if( alpha < 0 ) stop('alpha must be >= 0')
@@ -479,7 +492,7 @@ h2o.glm.VA <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, ep
 # Used to verify data, x, y and turn into the appropriate things
 verify_dataxy <- function(data, x, y){
   if( missing(data) ) stop('must specify data')
-  if(class(data) != "H2OParsedData") stop('data must be an h2o dataset')
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop('data must be an h2o dataset')
 
   if( missing(x) ) stop('must specify x')
   if( missing(y) ) stop('must specify y')

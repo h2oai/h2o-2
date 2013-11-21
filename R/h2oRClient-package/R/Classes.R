@@ -22,10 +22,9 @@ setClass("H2OGBMGrid", contains="H2OGrid")
 
 setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
 setClass("H2OParsedDataVA", representation(h2o="H2OClient", key="character", env="environment"))
-setClass("H2OLogicalDataVA", contains="H2OParsedDataVA")
 setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
-setClass("H2OGLMModelVA", contains="H2OModelVA")
+setClass("H2OGLMModelVA", contains="H2OModelVA", representation(xval="list"))
 setClass("H2OGLMGridVA", contains="H2OGridVA")
 
 # Register finalizers for H2O data and model objects
@@ -87,7 +86,7 @@ setMethod("show", "H2OParsedData", function(object) {
 
 setMethod("show", "H2OGLMModel", function(object) {
   print(object@data)
-  cat("GLM Model Key:", object@key, "\n\nCoefficients:\n")
+  cat("GLM2 Model Key:", object@key, "\n\nCoefficients:\n")
   
   model = object@model
   print(round(model$coefficients,5))
@@ -106,14 +105,13 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("\nCross-Validation Models:\n")
     # if(model$family == "binomial") {
     if(model$family$family == "binomial") {
-      modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
-      colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
+      colnames(modelXval) = c("Nonzeros", "AUC", "Deviance Explained")
     } else {
-      modelXval = sapply(object@xval, function(x) { x@model$train.err })
-      modelXval = data.frame(modelXval)
-      colnames(modelXval) = c("Error")
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
+      colnames(modelXval) = c("Nonzeros", "AIC", "Deviance Explained")
     }
-    rownames(modelXval) = paste("Model", 0:(nrow(modelXval)-1))
+    rownames(modelXval) = paste("Model", 1:nrow(modelXval))
     print(modelXval)
   }
 })
@@ -618,4 +616,54 @@ setMethod("show", "H2OGLMGridVA", function(object) {
   
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)
+})
+
+setMethod("colnames", "H2OParsedDataVA", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
+  unlist(lapply(res$cols, function(y) y$name))
+})
+
+setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
+
+setMethod("nrow", "H2OParsedDataVA", function(x) { 
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); as.numeric(res$num_rows) })
+
+setMethod("ncol", "H2OParsedDataVA", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); as.numeric(res$num_cols) })
+
+setMethod("dim", "H2OParsedDataVA", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
+  as.numeric(c(res$num_rows, res$num_cols))
+})
+
+setMethod("summary", "H2OParsedDataVA", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY, key=object@key)
+  res = res$summary$columns
+  result = NULL; cnames = NULL
+  for(i in 1:length(res)) {
+    cnames = c(cnames, paste("      ", res[[i]]$name, sep=""))
+    if(res[[i]]$type == "number") {
+      if(is.null(res[[i]]$min) || length(res[[i]]$min) == 0) res[[i]]$min = NaN
+      if(is.null(res[[i]]$max) || length(res[[i]]$max) == 0) res[[i]]$max = NaN
+      if(is.null(res[[i]]$mean) || length(res[[i]]$mean) == 0) res[[i]]$mean = NaN
+      if(is.null(res[[i]]$percentiles))
+        params = format(rep(round(as.numeric(res[[i]]$mean), 3), 6), nsmall = 3)
+      else
+        params = format(round(as.numeric(c(res[[i]]$min[1], res[[i]]$percentiles$values[4], res[[i]]$percentiles$values[6], res[[i]]$mean, res[[i]]$percentiles$values[8], res[[i]]$max[1])), 3), nsmall = 3)
+      result = cbind(result, c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
+                               paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
+                               paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))                 
+    }
+    else if(res[[i]]$type == "enum") {
+      col = matrix(rep("", 6), ncol=1)
+      len = length(res[[i]]$histogram$bins)
+      for(j in 1:min(6,len))
+        col[j] = paste(res[[i]]$histogram$bin_names[len-j+1], ": ", res[[i]]$histogram$bins[len-j+1], sep="")
+      result = cbind(result, col)
+    }
+  }
+  result = as.table(result)
+  rownames(result) <- rep("", 6)
+  colnames(result) <- cnames
+  result
 })

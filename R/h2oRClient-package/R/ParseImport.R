@@ -14,6 +14,7 @@ setGeneric("h2o.importHDFS.VA", function(object, path, pattern = "", key = "", p
 setGeneric("h2o.importFile.VA", function(object, path, key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFile.VA") })
 setGeneric("h2o.importFolder.VA", function(object, path, pattern = "", key = "", parse = TRUE, sep = "") { standardGeneric("h2o.importFolder.VA") })
 setGeneric("h2o.uploadFile.VA", function(object, path, key = "", parse = TRUE, sep = "", silent = TRUE) { standardGeneric("h2o.uploadFile.VA") })
+setGeneric("h2o.parseRaw.VA", function(data, key = "", header, sep = "", col.names) { standardGeneric("h2o.parseRaw.VA") })
 
 # Unique methods to H2O
 # H2O client management operations
@@ -199,6 +200,14 @@ setMethod("h2o.parseRaw", signature(data="H2ORawData", key="ANY", header="ANY", 
       h2o.parseRaw(data, key, header, sep)
 })
 
+h2o.importURL <- function(object, path, pattern = "", key = "", parse = TRUE, sep = "") {
+  stop("This function has been deprecated in FluidVecs. Please use h2o.importFile with a http:// prefix instead.")
+}
+
+h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, sep = "") {
+  stop("This function has been deprecated in FluidVecs. Please use h2o.importFolder with a hdfs:// prefix instead.")
+}
+          
 #-------------------------------- ValueArray -----------------------------------#
 # Data import operations
 setMethod("h2o.importFolder.VA", signature(object="H2OClient", path="character", pattern="character", key="character", parse="logical", sep="character"),
@@ -208,14 +217,14 @@ setMethod("h2o.importFolder.VA", signature(object="H2OClient", path="character",
       regPath = paste(path, pattern, sep="/")
       srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
-      h2o.parseRaw(data=rawData, key=key, sep=sep) 
+      h2o.parseRaw.VA(data=rawData, key=key, sep=sep) 
     } else {
       myData = lapply(res$keys, function(x) { new("H2ORawDataVA", h2o=object, key=x) })
       if(length(res$keys) == 1) myData[[1]] else myData
     }
 })
 
-setMethod("h2o.importFolder.VA", signature(object="H2OClient", path="character", pattern="character", key="ANY", parse="ANY", sep="ANY"),
+setMethod("h2o.importFolder.VA", signature(object="H2OClient", path="character", pattern="ANY", key="ANY", parse="ANY", sep="ANY"),
   function(object, path, pattern, key, parse, sep) {
     if(!(missing(pattern) || class(pattern) == "character"))
       stop(paste("pattern cannot be of class", class(pattern)))
@@ -232,7 +241,7 @@ setMethod("h2o.importFile.VA", signature(object="H2OClient", path="character", k
   function(object, path, parse, sep) { h2o.importFolder.VA(object, path, "", parse, sep) })
 
 setMethod("h2o.importFile.VA", signature(object="H2OClient", path="character", key="character", parse="ANY", sep="ANY"), 
-  function(object, path, key, parse, sep) { h2o.importURL(object, paste("file:///", path, sep=""), key, parse, sep) })
+  function(object, path, key, parse, sep) { h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, sep) })
 
 setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", pattern="character", key="character", parse="logical", sep="character"),
   function(object, path, pattern, key, parse, sep) {
@@ -248,7 +257,7 @@ setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", p
         regPath = paste(path, pattern, sep="/")
         srcKey = ifelse(res$num_succeeded == 1, res$succeeded[[1]]$key, paste("*", regPath, "*", sep=""))
         rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
-        h2o.parseRaw(data=rawData, key=key, sep=sep) 
+        h2o.parseRaw.VA(data=rawData, key=key, sep=sep) 
       } else {
         myData = lapply(res$succeeded, function(x) { new("H2ORawDataVA", h2o=object, key=x$key) })
         if(res$num_succeeded == 1) myData[[1]] else myData
@@ -278,7 +287,7 @@ setMethod("h2o.uploadFile.VA", signature(object="H2OClient", path="character", k
     else
       temp = postForm(url, .params = list(fileData = fileUpload(normalizePath(path))), .opts = list(verbose = TRUE))
     rawData = new("H2ORawDataVA", h2o=object, key=path)
-    if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, sep=sep) else rawData
+    if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, sep=sep) else rawData
   }
 })
 
@@ -300,7 +309,7 @@ setMethod("h2o.importURL.VA", signature(object="H2OClient", path="character", ke
     destKey = ifelse(parse, "", key)
     res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTURL, url=path, key=destKey)
     rawData = new("H2ORawDataVA", h2o=object, key=res$key)
-    if(parse) parsedData = h2o.parseRaw(data=rawData, key=key, sep=sep) else rawData
+    if(parse) parsedData = h2o.parseRaw.VA(data=rawData, key=key, sep=sep) else rawData
 })
 
 setMethod("h2o.importURL.VA", signature(object="H2OClient", path="character", key="ANY", parse="ANY", sep="ANY"),
@@ -314,49 +323,49 @@ setMethod("h2o.importURL.VA", signature(object="H2OClient", path="character", ke
     h2o.importURL.VA(object, path, key, parse, sep)
 })
 
-setMethod("h2o.parseRaw", signature(data="H2ORawDataVA", key="character", header="logical", sep="character", col.names="H2OParsedData"), 
-          function(data, key, header, sep, col.names) {
-            sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, header=as.numeric(header), header_from_file=col.names@key, separator=sepAscii)
-            while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-            parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
-          })
+setMethod("h2o.parseRaw.VA", signature(data="H2ORawDataVA", key="character", header="logical", sep="character", col.names="H2OParsedData"), 
+  function(data, key, header, sep, col.names) {
+    sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, header=as.numeric(header), header_from_file=col.names@key, separator=sepAscii)
+    while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+    parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
+  })
 
-setMethod("h2o.parseRaw", signature(data="H2ORawDataVA", key="character", header="logical", sep="character", col.names="missing"), 
-          function(data, key, header, sep) {
-            sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, header=as.numeric(header), separator=sepAscii)
-            while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-            parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
-          })
+setMethod("h2o.parseRaw.VA", signature(data="H2ORawDataVA", key="character", header="logical", sep="character", col.names="missing"), 
+  function(data, key, header, sep) {
+    sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, header=as.numeric(header), separator=sepAscii)
+    while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+    parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
+  })
 
 # If both header and column names missing, then let H2O guess if header exists
-setMethod("h2o.parseRaw", signature(data="H2ORawDataVA", key="character", header="missing", sep="character", col.names="missing"), 
-          function(data, key, sep) {
-            sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
-            res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii)
-            while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-            parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
-          })
+setMethod("h2o.parseRaw.VA", signature(data="H2ORawDataVA", key="character", header="missing", sep="character", col.names="missing"), 
+  function(data, key, sep) {
+    sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE, source_key=data@key, destination_key=key, separator=sepAscii)
+    while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+    parsedData = new("H2OParsedDataVA", h2o=data@h2o, key=res$destination_key)
+  })
 
-setMethod("h2o.parseRaw", signature(data="H2ORawDataVA", key="ANY", header="ANY", sep="ANY", col.names="ANY"), 
-          function(data, key, header, sep, col.names) {
-            if(!(missing(key) || is.character(key)))
-              stop(paste("key cannot be of class", class(key)))
-            if(!(missing(header) || is.logical(header)))
-              stop(paste("header cannot be of class", class(header)))
-            if(!(missing(sep) || is.character(sep)))
-              stop(paste("sep cannot be of class", class(sep)))
-            if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA"))
-              stop(paste("col.names cannot be of class", class(col.names)))
-            
-            if(!missing(col.names))
-              h2o.parseRaw(data, key, header = TRUE, sep, col.names)
-            else if(missing(header))
-              h2o.parseRaw(data, key, sep=sep)
-            else
-              h2o.parseRaw(data, key, header, sep)
-          })
+setMethod("h2o.parseRaw.VA", signature(data="H2ORawDataVA", key="ANY", header="ANY", sep="ANY", col.names="ANY"), 
+    function(data, key, header, sep, col.names) {
+      if(!(missing(key) || is.character(key)))
+        stop(paste("key cannot be of class", class(key)))
+      if(!(missing(header) || is.logical(header)))
+        stop(paste("header cannot be of class", class(header)))
+      if(!(missing(sep) || is.character(sep)))
+        stop(paste("sep cannot be of class", class(sep)))
+      if(!(missing(col.names) || class(col.names) == "H2OParsedDataVA"))
+        stop(paste("col.names cannot be of class", class(col.names)))
+      
+      if(!missing(col.names))
+        h2o.parseRaw.VA(data, key, header = TRUE, sep, col.names)
+      else if(missing(header))
+        h2o.parseRaw.VA(data, key, sep=sep)
+      else
+        h2o.parseRaw.VA(data, key, header, sep)
+    })
 
 setMethod("colnames<-", signature(x="H2OParsedDataVA", value="H2OParsedDataVA"), 
   function(x, value) { h2o.__remoteSend(x@h2o, h2o.__PAGE_COLNAMES, target=x@key, source=value@key); return(x) })
