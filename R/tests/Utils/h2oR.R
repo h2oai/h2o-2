@@ -1,4 +1,5 @@
 options(echo=FALSE)
+
 read.zip <- function(zipfile, exdir,header=T) {
     zipdir <- exdir
     unzip(zipfile, exdir=zipdir)
@@ -10,6 +11,17 @@ read.zip <- function(zipfile, exdir,header=T) {
 remove_exdir <- function(exdir) {
     exec <- paste("rm -r ", exdir, sep="")
     system(exec)
+}
+
+sandbox<-
+function() {
+ unlink("./sandbox", TRUE)
+ dir.create("./sandbox")
+ h2o.__LOG_COMMAND <- "./sandbox/"
+ h2o.__LOG_ERROR     <- "./sandbox/"
+ h2o.__changeCommandLog(normalizePath(h2o.__LOG_COMMAND))
+ h2o.__changeErrorLog(normalizePath(h2o.__LOG_ERROR))
+ h2o.__startLogging()
 }
 
 Log.info<-
@@ -28,7 +40,6 @@ function(m) {
  logging(paste("[ERROR] : ",m,sep=""))
  q("no",1,FALSE) #exit with nonzero exit code
 }
-
 
 logging<- 
 function(m) {
@@ -97,10 +108,15 @@ function(ipPort) {
   logging("\nCheck that H2O R package matches version on server\n")
   library(h2o)
   h2o.installDepPkgs()      # Install R package dependencies
+  source("../h2oRClient-package/R/Algorithms.R")
+  source("../h2oRClient-package/R/Classes.R")
+  source("../h2oRClient-package/R/ParseImport.R")
+  source("../h2oRClient-package/R/Internal.R")
   h2o.init(ip            = ipPort[[1]], 
            port          = ipPort[[2]], 
            startH2O      = FALSE, 
            silentUpgrade = TRUE)
+  sandbox()
 }
 
 checkNLoadPackages<-
@@ -123,14 +139,9 @@ ipPort <- get_args(commandArgs(trailingOnly = TRUE))
 checkNLoadWrapper(ipPort)
 checkNLoadPackages()
 
-source("../h2oRClient-package/R/Algorithms.R")
-source("../h2oRClient-package/R/Classes.R")
-source("../h2oRClient-package/R/ParseImport.R")
-source("../h2oRClient-package/R/Internal.R")
-
 h2o.removeAll <-
 function(object) {
-  Log.info("=============Throwing away any keys on the H2O cluster======")
+  Log.info("Throwing away any keys on the H2O cluster")
   h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
 }
 
