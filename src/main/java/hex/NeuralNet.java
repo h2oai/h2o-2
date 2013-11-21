@@ -121,7 +121,7 @@ public class NeuralNet extends ValidatedJob {
     model.validation_errors = validErrors0;
     UKV.put(destination_key, model);
 
-    final Frame[] adapted = validation == null ? null : model.adapt(validation, false,false);
+    final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
 
     // Use a separate thread for monitoring (blocked most of the time)
