@@ -566,7 +566,7 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
 })
 
-#--------------------------------- ValueArray -----------------------------#
+#--------------------------------- ValueArray ----------------------------------#
 setMethod("show", "H2ORawDataVA", function(object) {
   print(object@h2o)
   cat("Raw Data Key:", object@key, "\n")
