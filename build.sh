@@ -39,7 +39,24 @@ SRC_JAR_FILE="${OUTDIR}/h2o-sources.jar"
 
 JAVA=`which java`||echo 'Missing java, please install jdk'
 JAVAC=`which javac`||echo 'Missing javac, please install jdk'
-JAVADOC=`which javadoc`||echo 'Missing javadoc, please install jdk'
+if [ "${LOGNAME}" = "jenkins" ]; then
+    # This is really awful, but javadoc 6 is reliably hitting this failure in Linux.
+    # Workaround this for now.
+    #
+    #    Standard Doclet version 1.6.0_45
+    #    Building tree for all the packages and classes...
+    #    java.lang.NullPointerException
+    #            at com.sun.tools.javadoc.TypeMaker.getType(TypeMaker.java:67)
+    #            at com.sun.tools.javadoc.TypeMaker.getType(TypeMaker.java:29)
+    #            at com.sun.tools.javadoc.ParameterizedTypeImpl.superclassType(ParameterizedTypeImpl.java:62)
+    #            at com.sun.tools.doclets.internal.toolkit.util.Util.findAllInterfaceTypes(Util.java:441)
+    #            at com.sun.tools.doclets.internal.toolkit.util.Util.addAllInterfaceTypes(Util.java:472)
+    #            ...
+    #
+    JAVADOC=/usr/lib/jvm/java-7-oracle/bin/javadoc
+else
+    JAVADOC=`which javadoc`||echo 'Missing javadoc, please install jdk'
+fi
 
 # need bootclasspath to point to jdk1.6 rt.jar bootstrap classes
 # extdirs can also be passed as -extdirs 
