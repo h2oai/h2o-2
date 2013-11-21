@@ -18,7 +18,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_hhp_2a(self):
+    def test_rf_hhp_2a_fvec(self):
+        h2o.beta_features = True
         csvFilenameList = {
             'hhp_9_17_12.predict.data.gz',
             'hhp.cut3.214.data.gz',

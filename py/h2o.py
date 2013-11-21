@@ -1056,7 +1056,9 @@ class H2O(object):
             # always make the first one look like poll? 
             # we don't update the url during polling for via
             # so have a problem with first redirect vs last reedirect, detection
-            status = 'poll'
+            status = response['response']['status']
+            if status == 'redirect': # kludge to force a poll for v1
+                status = 'poll'
 
         (url, params) = get_redirect_url(response, beta_features)
 
@@ -1603,6 +1605,7 @@ class H2O(object):
                 noise=noise, benchmarkLogging=benchmarkLogging, print_params=print_params, noPoll=noPoll, 
                 useRFScore=False, **params_dict) 
 
+            verboseprint("random_forest_view:", rfViewResult)
             return rfViewResult
 
     def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300, 
@@ -1676,7 +1679,7 @@ class H2O(object):
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                 noise=noise, benchmarkLogging=benchmarkLogging)
         else:
-            fake_a = {}
+            fake_a = a
             fake_a['response'] = a['response']
             fake_a['response']['redirect_request'] = whichUsed + ".json"
             fake_a['response']['redirect_request_args'] = params_dict
@@ -1697,9 +1700,12 @@ class H2O(object):
             drf_model = rfView['drf_model']
             numberBuilt = drf_model['N']
         else:
-            numberBuilt = rfView['trees']['number_built']
-            if numberBuilt!=ntree:
-                raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
+            pass
+            # rfView seems to have two ways of returning the number built
+            # this doesn't work when we call it directly?
+            # numberBuilt = rfView['trees']['number_built']
+            # if numberBuilt!=ntree:
+            #     raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
 
         # can't check this? These are returned in the middle but not at the end
         ## progress = rfView['response']['progress']

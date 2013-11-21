@@ -1,7 +1,5 @@
-import h2o
-import h2o_cmd
-import random
-import time
+import random, time
+import h2o, h2o_cmd, h2o_gbm
 
 # params is mutable here
 def pickRandRfParams(paramDict, params):
@@ -256,20 +254,49 @@ def trainRF(trainParseResult, **kwargs):
     trainResult['python_call_timer'] = rftime
     return trainResult
 
-def scoreRF(scoreParseResult, trainResult, **kwargs):
+# vactual only needed for v2?
+def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
     # Run validation on dataset
-    rfModelKey  = trainResult['model_key']
-    ntree       = trainResult['ntree']
-    
-    start = time.time()
-    parseKey = scoreParseResult['destination_key']
-    # NOTE: response_variable is required, and passed from kwargs here
-    scoreResult = h2o_cmd.runRFView(None, parseKey, rfModelKey, ntree, **kwargs)
+
+    if h2o.beta_features:
+        parseKey = scoreParseResult['destination_key']
+        # this is how we're supposed to do scorin?
+        rfModelKey  = trainResult['drf_model']['_selfKey']
+        predictKey = 'Predict.hex'
+        start = time.time()
+        predictResult = h2o_cmd.runPredict(
+            data_key=parseKey,
+            model_key=rfModelKey,
+            destination_key=predictKey,
+            timeoutSecs=timeoutSecs)
+
+        predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+            actual=parseKey,
+            vactual=vactual,
+            predict=predictKey,
+            vpredict='predict', 
+            )
+        rftime      = time.time()-start 
+
+        cm = predictCMResult['cm']
+
+        # These will move into the h2o_gbm.py
+        pctWrong = h2o_gbm.pp_cm_summary(cm);
+        print "\nTest\n==========\n"
+        print h2o_gbm.pp_cm(cm)
+        scoreResult = predictCMResult
+
+    else:
+        parseKey = scoreParseResult['destination_key']
+        ntree = trainResult['ntree']
+        rfModelKey  = trainResult['model_key']
+        start = time.time()
+        # NOTE: response_variable is required, and passed from kwargs here
+        scoreResult = h2o_cmd.runRFView(None, parseKey, rfModelKey, ntree=ntree, **kwargs)
 
     rftime      = time.time()-start 
     h2o.verboseprint("RF score results: ", scoreResult)
     h2o.verboseprint("RF computation took {0} sec".format(rftime))
-
     scoreResult['python_call_timer'] = rftime
     return scoreResult
 
