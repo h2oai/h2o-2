@@ -150,7 +150,7 @@ setMethod("h2o.uploadFile", signature(object="H2OClient", path="character", key=
     h2o.uploadFile(object, path, key, parse, sep, silent)
 })
 
-setMethod("h2o.parseRaw", signature(data="H2ORawData", key="character", header="logical", sep="character", col.names="H2OParsedData2"), 
+setMethod("h2o.parseRaw", signature(data="H2ORawData", key="character", header="logical", sep="character", col.names="H2OParsedData"), 
   function(data, key, header, sep, col.names) {
     sepAscii = ifelse(sep == "", sep, strtoi(charToRaw(sep), 16L))
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PARSE2, source_key=data@key, destination_key=key, header=as.numeric(header), header_from_file=col.names@key, separator=sepAscii)
