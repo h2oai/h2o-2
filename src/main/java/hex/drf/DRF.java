@@ -142,7 +142,7 @@ public class DRF extends SharedTreeModelBuilder {
   }
 
   private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
-    Score sc = new Score().doIt(model, fr, validation, _validResponse, validation==null).report(Sys.DRF__,tid,ktrees);
+    Score sc = new Score().doIt(model, fr, validation, validation==null).report(Sys.DRF__,tid,ktrees);
     model = new DRFModel(model, finalScoring?null:ktrees, (float)sc.sum()/sc.nrows(), sc.cm(), tstats);
     DKV.put(outputKey, model);
     return model;
