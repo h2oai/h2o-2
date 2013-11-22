@@ -317,7 +317,7 @@ public abstract class OldModel extends Iced {
   public double getThreshold() { return Double.NaN; }
 
   // Bridge from new Model scoring to old Model scoring
-  public Frame score( Frame data, boolean exact ) {
+  public Frame score( Frame data) {
     final double threshold = getThreshold();
     String[][] ds = _va.domains();
     if( ds[ds.length-1] == null && !Double.isNaN(threshold) ) {
@@ -337,6 +337,6 @@ public abstract class OldModel extends Iced {
           return preds;
         }
       };
-    return m.score(data,exact);
+    return m.score(data);
   }
 }

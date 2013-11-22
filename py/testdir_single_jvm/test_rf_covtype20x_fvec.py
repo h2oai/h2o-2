@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -19,8 +19,7 @@ drf1ParamDict = {
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
     'sample': [None,20,40,60,80,90],
     'seed': [None,'0','1','11111','19823134','1231231'],
-    # stack trace if we use more features than legal. dropped or redundanct cols reduce 
-    # legal max also.
+    # stack trace if we use more features than legal. dropped or redundant cols reduce legal max also.
     # only 51 non-constant cols in the 20k covtype?
     'features': [None,1,3,5,7,9,11,13,17,19,23,37,51],
     'exclusive_split_limit': [None,0,3,5],
@@ -65,15 +64,15 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_covtype20x(self):
+    def test_rf_covtype20x_fvec(self):
         h2o.beta_features = True
         importFolderPath = 'standard'
 
         csvFilenameTrain = 'covtype20x.data'
+        csvFilenameTrain = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilenameTrain
         hex_key = 'covtype20x.data.A.hex'
         parseResultTrain = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, timeoutSecs=500)
-        print csvFilenameTrain, 'parse time:', parseResultTrain['response']['time']
         inspect = h2o_cmd.runInspect(key=parseResultTrain['destination_key'])
         dataKeyTrain = parseResultTrain['destination_key']
         print "Parse end", dataKeyTrain
@@ -81,10 +80,10 @@ class Basic(unittest.TestCase):
         # have to re import since source key is gone
         # we could just copy the key, but sometimes we change the test/train data  to covtype.data
         csvFilenameTest = 'covtype20x.data'
+        csvFilenameTest = 'covtype.data'
         csvPathname = importFolderPath + "/" + csvFilenameTest
         hex_key = 'covtype20x.data.B.hex'
         parseResultTest = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, timeoutSecs=500)
-        print csvFilenameTest, 'parse time:', parseResultTest['response']['time']
         print "Parse result['destination_key']:", parseResultTest['destination_key']
         inspect = h2o_cmd.runInspect(key=parseResultTest['destination_key'])
         dataKeyTest = parseResultTest['destination_key']
@@ -93,7 +92,12 @@ class Basic(unittest.TestCase):
         
         # make a 3rd key so the predict is uncached too!
         execExpr = dataKeyTest2 + "=" + dataKeyTest
-        resultExec = h2o_cmd.runExec(expression=execExpr, timeoutSecs=15)
+        if h2o.beta_features:
+            kwargs = {'str': execExpr, 'timeoutSecs': 15}
+        else:
+            kwargs = {'expression': execExpr, 'timeoutSecs': 15}
+
+        resultExec = h2o_cmd.runExec(**kwargs)
 
         # train
         # this does RFView to understand when RF completes, so the time reported for RFView here, should be 
@@ -101,22 +105,18 @@ class Basic(unittest.TestCase):
         # unless the no_confusion_matrix works
 
         # params is mutable. This is default.
-        print "RF with no_confusion_matrix=1, so we can 'time' the RFView separately after job completion?"
-
         if h2o.beta_features:
-            paramDict = drf1ParamDict
+            paramDict = drf2ParamDict
             params = {
                 'ntrees': 6, 
                 'destination_key': 'RF_model'
             }
         else:
-            paramDict = drf2ParamDict
+            paramDict = drf1ParamDict
             params = {
                 'ntree': 6, 
                 'parallel': 1, 
                 'out_of_bag_error_estimate': 0, 
-    # Causes rest api illegal argument error.
-    #            'no_confusion_matrix': 1,
                 'model_key': 'RF_model'
             }
 
@@ -127,18 +127,10 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + kwargs['ntrees'] * 60
         else:
             timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
-        # adjust timeoutSecs with the number of trees
-        # seems ec2 can be really slow
 
         start = time.time()
         rfv = h2o_cmd.runRF(parseResult=parseResultTrain,
-            timeoutSecs=timeoutSecs, retryDelaySecs=1, noPoll=True, **kwargs)
-        print "rf job dispatch end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
-        ### print "rf response:", h2o.dump_json(rfv)
-
-
-        start = time.time()
-        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=500, retryDelaySecs=5)
+            timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
         print "rf job end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
         print "\nRFView start after job completion"
@@ -150,24 +142,52 @@ class Basic(unittest.TestCase):
             ntree = kwargs['ntree']
 
         start = time.time()
+        # this does the RFModel view for v2. but only model_key is used. Data doesn't matter? (nor ntree)
         h2o_cmd.runRFView(None, dataKeyTrain, model_key, ntree=ntree, timeoutSecs=timeoutSecs)
         print "First rfview end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
-        for trial in range(3):
+        for trial in range(1):
             # scoring
             start = time.time()
             rfView = h2o_cmd.runRFView(None, dataKeyTest, 
                 model_key, ntree=ntree, timeoutSecs=timeoutSecs, out_of_bag_error_estimate=0, retryDelaySecs=1)
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
-            # FIX! should update this expected classification error
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, 
+                msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest2)
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
+            parseKey = parseResult['destination_key']
+            rfModelKey  = trainResult['drf_model']['_selfKey']
+            predictKey = 'Predict.hex'
+            start = time.time()
+
+            predictResult = h2o_cmd.runPredict(
+                data_key=parseKey,
+                model_key=rfModelKey,
+                destination_key=predictKey,
+                timeoutSecs=timeoutSecs)
+
+            predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+                actual=parseKey,
+                vactual='C54',
+                predict=predictKey,
+                vpredict='predict',
+                )
+
+            cm = predictCMResult['cm']
+
+            # These will move into the h2o_gbm.py
+            pctWrong = h2o_gbm.pp_cm_summary(cm);
+            print "\nTest\n==========\n"
+            print h2o_gbm.pp_cm(cm)
+
             print "Trial #", trial, "completed"
+
+
 
 if __name__ == '__main__':
     h2o.unit_main()
