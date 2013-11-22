@@ -2,7 +2,6 @@ package water.api;
 
 import hex.gbm.GBM.GBMModel;
 import water.*;
-import water.api.RequestBuilders.Response;
 
 public class GBMModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -35,4 +34,11 @@ public class GBMModelView extends Request2 {
   }
 
   @Override public void toJava(StringBuilder sb) { gbm_model.toJavaHtml(sb); }
+  @Override protected String serveJava() {
+    GBMModel m = UKV.get(_modelKey);
+    if (m!=null)
+      return m.toJava();
+    else
+      return "";
+  }
 }

@@ -130,7 +130,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   @API(help = "models computed for particular lambda values")
   Submodel [] submodels;
-  private static final DecimalFormat DFORMAT = new DecimalFormat("###.####");
 
   public GLMModel(Key selfKey, Frame fr, int [] catOffsets, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
     super(selfKey,null,fr);
@@ -285,116 +284,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }
   }
 
-  public void generateHTML(String title, StringBuilder sb) {
-    if(title != null && !title.isEmpty())DocGen.HTML.title(sb,title);
-    DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
 
-    if(submodels != null)
-      DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
-    String succ = (warnings == null || warnings.length == 0)?"alert-success":"alert-warning";
-    sb.append("<div class='alert " + succ + "'>");
-    pprintTime(sb.append(iteration() + " iterations computed in "),run_time);
-    if(warnings != null && warnings.length > 0){
-      sb.append("<b>Warnings:</b><ul>");
-      for(String w:warnings)sb.append("<li>" + w + "</li>");
-      sb.append("</ul>");
-    }
-    sb.append("</div>");
-    sb.append("<h4>Parameters</h4>");
-    parm(sb,"family",glm.family);
-    parm(sb,"link",glm.link);
-    parm(sb,"&epsilon;<sub>&beta;</sub>",beta_eps);
-    parm(sb,"&alpha;",alpha);
-    parm(sb,"&lambda;",lambda());
-    if(beta() != null)
-      coefs2html(sb);
-    GLMValidation val = validation();
-    if(val != null)val.generateHTML("Training Set Validation", sb);
-  }
-  /**
-   * get beta coefficients in a map indexed by name
-   * @return
-   */
-  public HashMap<String,Double> coefficients(){
-    String [] names = coefNames();
-    HashMap<String, Double> res = new HashMap<String, Double>();
-    final double [] b = beta();
-    if(b != null) for(int i = 0; i < b.length; ++i)res.put(names[i],b[i]);
-    return res;
-  }
-  public String [] coefNames(){
-    final int cats = catOffsets.length-1;
-    int k = 0;
-    double [] b = beta();
-    if(b == null)return null;
-    String [] res = new String[b.length];
-    for(int i = 0; i < cats; ++i)
-      for(int j = 1; j < _domains[i].length; ++j)
-        res[k++] = _names[i] + "." + _domains[i][j];
-    final int nums = b.length-k-1;
-    for(int i = 0; i < nums; ++i)
-      res[k+i] = _names[cats+i];
-    assert k + nums == res.length-1;
-    res[k+nums] = "Intercept";
-    return res;
-  }
-  private static void parm( StringBuilder sb, String x, Object... y ) {
-    sb.append("<span><b>").append(x).append(": </b>").append(y[0]).append("</span> ");
-  }
-  private void coefs2html(StringBuilder sb){
-    final Submodel sm = submodels[best_lambda_idx];
-
-    StringBuilder names = new StringBuilder();
-    StringBuilder equation = new StringBuilder();
-    StringBuilder vals = new StringBuilder();
-    StringBuilder normVals = sm.norm_beta == null?null:new StringBuilder();
-    String [] cNames = coefNames();
-    for(int i:sm.idxs){
-      names.append("<th>" + cNames[i] + "</th>");
-      vals.append("<td>" + sm.beta[i] + "</td>");
-      if(i != 0)
-        equation.append(sm.beta[i] > 0?" + ":" - ");
-      equation.append(DFORMAT.format(Math.abs(sm.beta[i])));
-      if(i < (cNames.length-1))
-         equation.append("*x[" + cNames[i] + "]");
-      if(sm.norm_beta != null) normVals.append("<td>" + sm.norm_beta[i] + "</td>");
-    }
-    sb.append("<h4>Equation</h4>");
-    RString eq = null;
-    switch( glm.link ) {
-    case identity: eq = new RString("y = %equation");   break;
-    case logit:    eq = new RString("y = 1/(1 + Math.exp(-(%equation)))");  break;
-    case log:      eq = new RString("y = Math.exp((%equation)))");  break;
-    case inverse:  eq = new RString("y = 1/(%equation)");  break;
-    case tweedie:  eq = new RString("y = (%equation)^(1 -  )"); break;
-    default:       eq = new RString("equation display not implemented"); break;
-    }
-    eq.replace("equation",equation.toString());
-    sb.append("<div style='width:100%;overflow:scroll;'>");
-    sb.append("<div><code>" + eq + "</code></div>");
-    sb.append("<h4>Coefficients</h4><table class='table table-bordered table-condensed'>");
-    sb.append("<tr>" + names.toString() + "</tr>");
-    sb.append("<tr>" + vals.toString() + "</tr>");
-    sb.append("</table>");
-    if(sm.norm_beta != null){
-      sb.append("<h4>Normalized Coefficients</h4>" +
-      		"<table class='table table-bordered table-condensed'>");
-      sb.append("<tr>" + names.toString()    + "</tr>");
-      sb.append("<tr>" + normVals.toString() + "</tr>");
-      sb.append("</table>");
-    }
-    sb.append("</div>");
-  }
-  private void pprintTime(StringBuilder sb, long t){
-    long hrs = t / (1000*60*60);
-    long minutes = (t -= 1000*60*60*hrs)/(1000*60);
-    long seconds = (t -= 1000*60*minutes)/1000;
-    t -= 1000*seconds;
-    if(hrs > 0)sb.append(hrs + "hrs ");
-    if(hrs > 0 || minutes > 0)sb.append(minutes + "min ");
-    if(hrs > 0 || minutes > 0 | seconds > 0)sb.append(seconds + "sec ");
-    sb.append(t + "msec");
-  }
   @Override
   public String toString(){
     final double [] beta = beta(), norm_beta = norm_beta();
@@ -425,5 +315,33 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     if(diff/val.null_deviance >= 0.01)
       best_lambda_idx = lambdaIdx;
     return (diff >= 0);
+  }
+
+  /**
+   * get beta coefficients in a map indexed by name
+   * @return
+   */
+  public HashMap<String,Double> coefficients(){
+    String [] names = coefNames();
+    HashMap<String, Double> res = new HashMap<String, Double>();
+    final double [] b = beta();
+    if(b != null) for(int i = 0; i < b.length; ++i)res.put(names[i],b[i]);
+    return res;
+  }
+  public String [] coefNames(){
+    final int cats = catOffsets.length-1;
+    int k = 0;
+    double [] b = beta();
+    if(b == null)return null;
+    String [] res = new String[b.length];
+    for(int i = 0; i < cats; ++i)
+      for(int j = 1; j < _domains[i].length; ++j)
+        res[k++] = _names[i] + "." + _domains[i][j];
+    final int nums = b.length-k-1;
+    for(int i = 0; i < nums; ++i)
+      res[k+i] = _names[cats+i];
+    assert k + nums == res.length-1;
+    res[k+nums] = "Intercept";
+    return res;
   }
 }
