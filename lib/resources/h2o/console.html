@@ -10,20 +10,7 @@
   <script type="text/javascript">
     $(function () {
       var jqconsole = $('#console').jqconsole('Welcome to the H\u2082O interactive data console.\n Type "help" or "?" for help.\n', 'H\u2082O> ');
-      var toFixed = function(n) {
-        if(typeof(n) == typeof(123)) {
-          return n.toFixed(2);
-        }
-        return n;
-      }
-      var formatColumn = function(c, num_rows) {
-        return c.name +': '+ num_rows +' rows (' +
-            'min ' + toFixed(c.min ) +'/'+
-            'mean '+ toFixed(c.mean) +'/'+
-            'max ' + toFixed(c.max ) +')';
-      }
       
-      var resultNumber = 0;
       var startPrompt = function () {
         // Start the prompt with history enabled.
         jqconsole.Prompt(true, function (input) {
