@@ -247,6 +247,11 @@ public class RequestArguments extends RequestStatics {
      */
     public boolean _gridable;
 
+    /**
+     * For keys. If specified, the key must exist.
+     */
+    public boolean _mustExist;
+
     /** Override this method to provide parsing of the input string to the Java
      * expected value. The input is guaranteed to be non-empty when this method
      * is called and all prerequisities are guaranteed to be valid before this
