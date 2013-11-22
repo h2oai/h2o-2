@@ -30,4 +30,11 @@ public class DRFModelView extends Request2 {
   }
 
   @Override public void toJava(StringBuilder sb) { drf_model.toJavaHtml(sb); }
+  @Override protected String serveJava() {
+    DRFModel m = UKV.get(_modelKey);
+    if (m!=null)
+      return m.toJava();
+    else
+      return "";
+  }
 }

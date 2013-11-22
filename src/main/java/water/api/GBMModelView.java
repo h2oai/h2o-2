@@ -34,4 +34,11 @@ public class GBMModelView extends Request2 {
   }
 
   @Override public void toJava(StringBuilder sb) { gbm_model.toJavaHtml(sb); }
+  @Override protected String serveJava() {
+    GBMModel m = UKV.get(_modelKey);
+    if (m!=null)
+      return m.toJava();
+    else
+      return "";
+  }
 }

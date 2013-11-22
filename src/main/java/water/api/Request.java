@@ -107,6 +107,7 @@ public abstract class Request extends RequestBuilders {
         return wrap(server, query);
       }
       case java:
+        checkArguments(parms, type); // Do not check returned query but let it fail in serveJava
         String javacode = serveJava();
         return wrap(server, javacode, RequestType.java);
       default:

@@ -44,6 +44,7 @@ public class RequestStatics extends Constants {
     query(".query"), ///< Displays the query for the argument in html mode
     png(".png"), ///< image, e.g. plot
     txt(".txt"), ///< text, e.g. a script
+    java(".java"), ///< java program
     ;
     /** Suffix of the request - extension of the URL.
      */
@@ -67,6 +68,8 @@ public class RequestStatics extends Constants {
         return png;
       if (requestUrl.endsWith(txt._suffix))
         return txt;
+      if (requestUrl.endsWith(java._suffix))
+        return java;
       return json;
     }
 
@@ -75,8 +78,6 @@ public class RequestStatics extends Constants {
      */
     public String requestName(String requestUrl) {
       String result = (requestUrl.endsWith(_suffix)) ? requestUrl.substring(0, requestUrl.length()-_suffix.length()) : requestUrl;
-      //if (result.charAt(0) == '/')
-      //  return result.substring(1);
       return result;
     }
   }
