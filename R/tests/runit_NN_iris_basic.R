@@ -1,14 +1,14 @@
 source('./Utils/h2oR.R')
 
+Log.info("#------------------------------ Begin Tests ------------------------------#")
 
-#------------------------------ Begin Tests ------------------------------#
-
-serverH2O = new("H2OClient", ip=myIP, port=myPort)
-check.nn_basic <- function() {
-	iris.hex <- h2o.uploadFile(serverH2O, "../../smalldata/iris/iris.csv")
+check.nn_basic <- function(conn) {
+	iris.hex <- h2o.uploadFile(conn, "../../smalldata/iris/iris.csv")
 	hh=h2o.nn(x=c(1,2,3,4),y=5,data=iris.hex)
 	print(hh)
 }
 
-test_that("nn test", check.nn_basic())
-#stop("NNNNNN")
+conn = new("H2OClient", ip=myIP, port=myPort)
+
+tryCatch(test_that("nn test", check.nn_basic(conn)), error = function(e) FAIL(e))
+PASS()

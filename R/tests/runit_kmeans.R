@@ -1,7 +1,7 @@
 source('./Utils/h2oR.R')
 
-logging("\n======================== Begin Test ===========================\n")
-serverH2O = new("H2OClient", ip=myIP, port=myPort)
+Log.info("======================== Begin Test ===========================\n")
+
 checkKMModel <- function(myKM.h2o, myKM.r) {
   # checkEqualsNumeric(myKM.h2o@model$size, myKM.r$size, tolerance = 1.0)
   # checkEqualsNumeric(myKM.h2o@model$withinss, myKM.r$withinss, tolerance = 1.5)
@@ -10,33 +10,33 @@ checkKMModel <- function(myKM.h2o, myKM.r) {
 }
 
 # Test k-means clustering on benign.csv
-test.km.benign <- function(serverH2O) {
-  cat("\nImporting benign.csv data...\n")
-  # benign.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
-  # benign.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/benign.csv"))
-  benign.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/benign.csv")
-  benign.sum = summary(benign.hex)
+test.km.benign <- function(conn) {
+  Log.info("Importing benign.csv data...\n")
+  # benign.hex = h2o.importURL(conn, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
+  # benign.hex = h2o.importFile(conn, normalizePath("../../smalldata/logreg/benign.csv"))
+  benign.hex <- h2o.uploadFile(conn, "../../smalldata/logreg/benign.csv")
+  benign.sum <- summary(benign.hex)
   print(benign.sum)
   
   # benign.data = read.csv(text = getURL("https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
-  benign.data = read.csv("../../smalldata/logreg/benign.csv", header = TRUE)
-  benign.data = na.omit(benign.data)
+  benign.data <- read.csv("../../smalldata/logreg/benign.csv", header = TRUE)
+  benign.data <- na.omit(benign.data)
   
-  for(i in 1:5) {
-    cat("\nH2O K-Means with", i, "clusters:\n")
-    benign.km.h2o = h2o.kmeans(data = benign.hex, centers = i)
+  for(i in 2:6) {
+    Log.info(paste("H2O K-Means with ", i, " clusters:\n", sep = ""))
+    benign.km.h2o <- h2o.kmeans(data = benign.hex, centers = as.numeric(i), cols = colnames(benign.hex))
     print(benign.km.h2o)
-    benign.km = kmeans(benign.data, centers = i)
+    benign.km <- kmeans(benign.data, centers = i)
     checkKMModel(benign.km.h2o, benign.km)
   }
 }
 
 # Test k-means clustering on prostate.csv
-test.km.prostate <- function(serverH2O) {
-  cat("\nImporting prostate.csv data...\n")
-  # prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
-  # prostate.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/prostate.csv"))
-  prostate.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/prostate.csv")
+test.km.prostate <- function(conn) {
+  Log.info("Importing prostate.csv data...\n")
+  # prostate.hex = h2o.importURL(conn, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
+  # prostate.hex = h2o.importFile(conn, normalizePath("../../smalldata/logreg/prostate.csv"))
+  prostate.hex = h2o.uploadFile(conn, "../../smalldata/logreg/prostate.csv")
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   
@@ -45,13 +45,17 @@ test.km.prostate <- function(serverH2O) {
   prostate.data = na.omit(prostate.data)
   
   for(i in 5:8) {
-    cat("\nH2O K-Means with", i, "clusters:\n")
-    prostate.km.h2o = h2o.kmeans(data = prostate.hex, centers = i, cols = "2")
+    Log.info(paste("H2O K-Means with ", i, " clusters:\n", sep = ""))
+    prostate.km.h2o = h2o.kmeans(data = prostate.hex, centers = as.numeric(i), cols = colnames(prostate.hex)[-1])
     print(prostate.km.h2o)
     prostate.km = kmeans(prostate.data[,3], centers = i)
     checkKMModel(prostate.km.h2o, prostate.km)
   }
 }
 
-test.km.benign(serverH2O)
-test.km.prostate(serverH2O)
+conn <- new("H2OClient", ip=myIP, port=myPort)
+tryCatch("KMeans FVec", test.km.benign(conn), error = function(e) FAIL(e))
+PASS()
+
+tryCatch("KMeans FVec Test 2", test.km.prostate(conn), error = function(e) FAIL(e))
+PASS()

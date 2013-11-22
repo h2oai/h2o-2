@@ -210,7 +210,7 @@ public class Job extends Request2 {
     protected transient String[] _names;
     protected transient String _responseName;
 
-    @API(help = "Validation frame", filter = Default.class)
+    @API(help = "Validation frame", filter = Default.class, mustExist = true)
     public Frame validation;
 
     @Override protected void logStart() {

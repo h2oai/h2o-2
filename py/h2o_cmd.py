@@ -259,7 +259,15 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         msg += " type: %s" % c['type']
         printMsg = False
 
-        if not h2o.beta_features:
+        if h2o.beta_features:
+            if c['type'] == 'Enum':
+                enum_domain_size = (c['max'] - c['min']) + 1
+                msg += (" enum_domain_size: %d" % enum_domain_size)
+                # inspect2 doesn't have enum_domain_size but this is equivalent
+                enumSizeDict[k] = enum_domain_size
+                printMsg = True
+
+        else:
             if c['type'] == 'enum':
                 msg += (" enum_domain_size: %d" % c['enum_domain_size'])
                 enumSizeDict[k] = c['enum_domain_size']

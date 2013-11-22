@@ -71,13 +71,6 @@ public abstract class Trainer {
       bprop();
     }
 
-    final void adjust(long n) {
-      for( int i = 1; i < _ls.length; i++ ) {
-        _ls[i].anneal(n);
-        _ls[i].momentum(n);
-      }
-    }
-
     final void fprop() {
       for( int i = 0; i < _ls.length; i++ )
         _ls[i].fprop(true);

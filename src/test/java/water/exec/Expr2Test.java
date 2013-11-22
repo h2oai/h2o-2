@@ -12,8 +12,8 @@ public class Expr2Test extends TestUtil {
     Key dest = Key.make("h.hex");
     try {
       //File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
-      File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
-      //File file = TestUtil.find_test_file("smalldata/cars.csv");
+      //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
+      File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
@@ -78,6 +78,7 @@ public class Expr2Test extends TestUtil {
       checkStr("sum(1,h.hex,3)");
       checkStr("h.hex[,c(1,3,5)]");
       checkStr("h.hex[c(1,3,5),]");
+      checkStr("a=c(11,22,33,44,55,66); a[c(2,6,1),]");
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
@@ -110,6 +111,8 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[,3]=h.hex[,2]+1"); // Replace a col
       checkStr("h.hex[,ncol(h.hex)+1]=4"); // Extend a col
       checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
+      checkStr("table(h.hex)");
+      checkStr("table(h.hex[,3])");
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
