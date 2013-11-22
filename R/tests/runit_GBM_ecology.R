@@ -1,7 +1,6 @@
 source('./Utils/h2oR.R')
 
-Log.info("\n======================== Begin Test ===========================\n")
-serverH2O = new("H2OClient", ip=myIP, port=myPort)
+Log.info("======================== Begin Test ===========================\n")
 grabRemote <- function(myURL, myFile) {
   temp <- tempfile()
   download.file(myURL, temp, method = "curl")
@@ -10,57 +9,57 @@ grabRemote <- function(myURL, myFile) {
   return(aap.file)
 }
 
-checkGBMModel <- function(myGBM.h2o, myGBM.r,serverH2O) {
+checkGBMModel <- function(myGBM.h2o, myGBM.r,conn) {
   # Check GBM model against R
-  cat("\nMSE by tree in H2O:")
+  Log.info("MSE by tree in H2O:")
   print(myGBM.h2o@model$err)
-  cat("\nGaussian Deviance by tree in R (i.e. the per tree 'train error'): \n")
+  Log.info("Gaussian Deviance by tree in R (i.e. the per tree 'train error'): \n")
   print(myGBM.r$train.error)
-  cat("Expect these to be close... mean of the absolute differences is < .5, and sd < 0.1")
+  Log.info("Expect these to be close... mean of the absolute differences is < .5, and sd < 0.1")
   errDiff <- abs(myGBM.r$train.error - myGBM.h2o@model$err)
-  cat("\nMean of the absolute difference is: ", mean(errDiff))
-  cat("\nStandard Deviation of the absolute difference is: ", sd(errDiff))
+  Log.info(cat("Mean of the absolute difference is: ", mean(errDiff)))
+  Log.info(cat("Standard Deviation of the absolute difference is: ", sd(errDiff)))
   expect_true(mean(errDiff) < 0.5)
   expect_true(sd(errDiff) < 0.1)
  
   #TODO(spencer): checkGBMModel should be a general fcn
  
   # Compare GBM models on out-of-sample data
-  cat("\nUploading ecology testing data...\n")
-  ecologyTest.hex <- h2o.uploadFile(serverH2O, "../../smalldata/gbm_test/ecology_eval.csv")
+  Log.info("Uploading ecology testing data...\n")
+  ecologyTest.hex <- h2o.uploadFile(conn, "../../smalldata/gbm_test/ecology_eval.csv")
   ecologyTest.data <- read.csv("../../smalldata/gbm_test/ecology_eval.csv")
   actual <- ecologyTest.data[,1]
-  cat("\nPerforming the predictions on h2o GBM model: ")
+  Log.info("Performing the predictions on h2o GBM model: ")
   #TODO: Building CM in R instead of in H2O
   h2ogbm.predict <- h2o.predict(myGBM.h2o, ecologyTest.hex)
   h2o.preds <- head(h2ogbm.predict,nrow(h2ogbm.predict))[,1]
   h2oCM <- table(actual,h2o.preds)
-  cat("\nH2O CM is: \n")
+  Log.info("H2O CM is: \n")
   print(h2oCM)
-  cat("\nPerforming the predictions of R GBM model: ")
+  Log.info("Performing the predictions of R GBM model: ")
   R.preds <- ifelse(predict.gbm(myGBM.r, ecologyTest.data,n.trees=100,type="response") < 0.5, 0,1)
-  cat("\nR CM is: \n")
+  Log.info("R CM is: \n")
   RCM <- table(actual,R.preds)
   print(RCM)
-  cat("\nCompare AUC from R and H2O:\n")
-  cat("\nH2O AUC: ")
+  Log.info("Compare AUC from R and H2O:\n")
+  Log.info("H2O AUC: ")
   print(gbm.roc.area(actual,h2o.preds))
-  cat("\nR AUC: ")
+  Log.info("R AUC: ")
   print(gbm.roc.area(actual,R.preds))
 }
 
-test.GBM.ecology <- function(serverH2O) {
-  cat("\nImporting ecology_model.csv data...\n")
-  ecology.hex = h2o.uploadFile(serverH2O, "../../smalldata/gbm_test/ecology_model.csv")
+test.GBM.ecology <- function(conn) {
+  Log.info("Importing ecology_model.csv data...\n")
+  ecology.hex = h2o.uploadFile(conn, "../../smalldata/gbm_test/ecology_model.csv")
   ecology.sum = summary(ecology.hex)
-  cat("\nSummary of the ecology data from h2o: \n") 
+  Log.info("Summary of the ecology data from h2o: \n") 
   print(ecology.sum)
   
   #import csv data for R to use
   ecology.data = read.csv("../../smalldata/gbm_test/ecology_model.csv", header = TRUE)
   ecology.data = na.omit(ecology.data) #this omits NAs... does GBM do this? Perhaps better to model w/o doing this?
   
-  cat("\nH2O GBM with parameters:\nntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1\n")
+  Log.info("H2O GBM with parameters:\nntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1\n")
   #Train H2O GBM Model:
   ecology.h2o = h2o.gbm(x = 3:13, y = "Angaus", data = ecology.hex, n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
   print(ecology.h2o)
@@ -73,14 +72,14 @@ test.GBM.ecology <- function(serverH2O) {
                   shrinkage = 0.1,
                   bag.fraction=1)
 
-  checkGBMModel(ecology.h2o, ecology.r, serverH2O)
+  checkGBMModel(ecology.h2o, ecology.r, conn)
 }
 
 test.GBM.airlines <- function() {
   # allyears.data = grabRemote("https://raw.github.com/0xdata/h2o/master/smalldata/airlines/allyears2k.zip", "ecology.csv")
   # allyears.data = na.omit(allyears.data)
   # allyears.data = data.frame(rapply(allyears.data, as.factor, classes = "character", how = "replace"))
-  # allyears.hex = h2o.importFile(serverH2O, "../../smalldata/airlines/allyears2k.zip")
+  # allyears.hex = h2o.importFile(conn, "../../smalldata/airlines/allyears2k.zip")
   
   # ignoreNum = sapply(ignoreFeat, function(x) { which(allXCol == x) })
   # ignoreFeat = c("CRSDepTime", "CRSArrTime", "ActualElapsedTime", "CRSElapsedTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay")
@@ -92,4 +91,6 @@ test.GBM.airlines <- function() {
   # allyears.gbm = gbm.fit(y = allyears.data$IsArrDelayed, x = allyears.x, distribution = "bernoulli", n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
 }
 
-test.GBM.ecology(serverH2O)
+conn = new("H2OClient", ip=myIP, port=myPort)
+tryCatch(test_that("GBM Test: Ecology", test.GBM.ecology(conn)), error = function(e) FAIL(e))
+PASS()
