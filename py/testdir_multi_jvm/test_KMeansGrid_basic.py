@@ -47,6 +47,7 @@ class Basic(unittest.TestCase):
                 "    num_rows:", "{:,}".format(inspect['num_rows']), \
                 "    num_cols:", "{:,}".format(inspect['num_cols'])
 
+            destination_key = 'd.hex'
             params = {
                 'k': 2, 
                 # 'initialization': 'Furthest', 
@@ -54,7 +55,7 @@ class Basic(unittest.TestCase):
                 'seed': 3923021996079663354, 
                 'normalize': 0, 
                 'max_iter': '2',
-                'destination_key': 'd.hex'
+                'destination_key': destination_key
             }
     
             for trial in range(3):
@@ -68,9 +69,9 @@ class Basic(unittest.TestCase):
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
                 h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
-                ### print h2o.dump_json(kmeans)
-                inspect = h2o_cmd.runInspect(None,key=kmeans['destination_key'])
-                print h2o.dump_json(inspect)
+                # This doesn't work (inspecting the model)
+                # inspect = h2o_cmd.runInspect(None,key=destination_key)
+                # print h2o.dump_json(inspect)
 
                 print "Trial #", trial, "completed\n"
 
