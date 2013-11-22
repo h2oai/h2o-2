@@ -21,7 +21,7 @@ h2o.__changeCommandLog <- function(path) {
     assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
     }
 h2o.__changeErrorLog   <- function(path) { 
-    cmd <- paste(path, 'errors.log', sep=',') 
+    cmd <- paste(path, 'errors.log', sep=',/') 
     assign("h2o.__LOG_ERROR", cmd, envir = pkg.env)
     }
 h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }

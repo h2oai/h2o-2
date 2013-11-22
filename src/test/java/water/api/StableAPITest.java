@@ -240,7 +240,7 @@ public class StableAPITest {
     regR(GLMGrid.class, "key", "y", "x", "family", "n_folds", "alpha", "lambda", "case_mode", "case", "parallel" );
     regR(GLMGridProgress.class, "destination_key");
     regR(GLMModelView.class, "_modelKey");
-    regR(GLMValidationView.class, "_valKey");
+//    regR(GLMValidationView.class, "_valKey");
     regR(GetVector.class);
     regR(ImportFiles.class, "path");
     regR(ImportHdfs.class, "path");

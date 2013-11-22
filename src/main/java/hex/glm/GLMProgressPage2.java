@@ -25,7 +25,7 @@ public class GLMProgressPage2 extends Progress2 {
     Value v = DKV.get(jjob.dest());
     if(v != null){
       GLMModel m = v.get();
-      m.generateHTML("GLM Model", sb);
+      new GLMModelView(m).toHTML(sb);
     } else
       sb.append("<b>No model yet.</b>");
     return true;
