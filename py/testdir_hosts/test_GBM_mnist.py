@@ -11,9 +11,9 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1,java_heap_GB=13)
+            h2o.build_cloud(node_count=1,java_heap_GB=13) # fails with 13
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1,java_heap_GB=13)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -50,13 +50,15 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         timeoutSecs = 1800
         #noPoll -> False when GBM finished
+        start = time.time()
         GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
         # hack!
         if h2o.beta_features:
             h2o_jobs.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=5)
+        elapsed = time.time() - start
 
-        print "GBM training completed in", GBMResult['python_elapsed'], "seconds.", \
-            "%f pct. of timeout" % (GBMResult['python_%timeout'])
+        print "GBM training completed in", elapsed, "seconds.", \
+            "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
 
 if __name__ == '__main__':
