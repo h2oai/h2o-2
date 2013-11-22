@@ -699,7 +699,7 @@ public final class H2O {
     public JobCompleter(Job j){this(j,null);}
     public JobCompleter(Job j,H2OCountedCompleter cmp){super(cmp); _job = j;}
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){_job.done();}
+    @Override public void onCompletion(CountedCompleter caller){_job.remove();}
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter c){
       if(!(ex instanceof JobCancelledException))_job.cancel(ex);
       return true;

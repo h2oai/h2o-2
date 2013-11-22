@@ -110,6 +110,8 @@ def file_shuffle(infile, outfile):
     fo = open(outfile, 'w')
     subprocess.call(["sort", "-R"],stdin=fi, stdout=fo)
     print "\nShuffle took",  (time.time() - start), "secs"
+    fi.close()
+    fo.close()
 
 
 # FIX! This is a hack to deal with parser bug

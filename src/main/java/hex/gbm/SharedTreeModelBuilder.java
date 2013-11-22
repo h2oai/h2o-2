@@ -95,7 +95,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
 
     Frame fr = new Frame(_names, _train);
-    fr.add("response",response);
+    fr.add(_responseName,response);
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
     String names[] = frm.names();
     String domains[][] = frm.domains();
@@ -356,22 +356,22 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     public long     nrows() { return _snrows; }
 
     // Compute CM & MSE on either the training or testing dataset
-    public Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) { return doIt(model,fr,validation,vresponse,false); }
-    public Score doIt(Model model, Frame fr, Frame validation, Vec vresponse, boolean oob) {
+    public Score doIt(Model model, Frame fr, Frame validation) { return doIt(model,fr,validation,false); }
+    public Score doIt(Model model, Frame fr, Frame validation,boolean oob) {
       assert !oob || validation==null ; // oob => validation==null
       _oob = oob;
       // No validation, so do on training data
       if( validation == null ) return doAll(fr);
       // Validation: need to score the set, getting a probability distribution for each class
       // Frame has nclass vectors (nclass, or 1 for regression)
-      Frame res = model.score(validation,true);
+      Frame res = model.score(validation);
       // Adapt the validation set to the model
-      Frame frs[] = model.adapt(validation,true);
+      Frame frs[] = model.adapt(validation,false);
       Frame adapValidation = frs[0]; // adapted validation dataset
       // Adapt vresponse to original response
-      vresponse = _nclass > 1 ? vresponse.adaptTo(response, true) : vresponse;
-      // Dump in the prob distribution
-      adapValidation.add("response",vresponse);
+//      vresponse = _nclass > 1 ? vresponse.adaptTo(response, true) : vresponse;
+//      // Dump in the prob distribution
+//      adapValidation.add("response",vresponse);
       if (_nclass>1) { // Classification
         for( int i=0; i<_nclass; i++ )
           adapValidation.add("Work"+i,res.vecs()[i+1]);

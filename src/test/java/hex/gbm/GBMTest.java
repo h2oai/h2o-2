@@ -1,17 +1,8 @@
 package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
-import hex.rf.*;
-import hex.rf.ConfusionTask.CMFinal;
-import hex.rf.ConfusionTask.CMJob;
-import hex.rf.DRF.DRFJob;
-import hex.rf.Tree.StatType;
-
 import java.io.File;
-import java.util.Arrays;
-
 import org.junit.*;
-
 import water.*;
 import water.api.ConfusionMatrix;
 import water.fvec.*;

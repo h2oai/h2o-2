@@ -15,7 +15,7 @@ import water.util.Utils;
 public class GridSearch extends Job {
   public Job[] jobs;
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
@@ -30,6 +30,7 @@ public class GridSearch extends Job {
         }
       }
     }
+    return Status.Done;
   }
 
   @Override protected void onCancelled() {

@@ -45,7 +45,7 @@ public class GBM extends SharedTreeModelBuilder {
       return p;
     }
   }
-  public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
+  public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
   public GBM() { description = "Distributed GBM"; }
@@ -64,9 +64,10 @@ public class GBM extends SharedTreeModelBuilder {
     Log.info("    learn_rate: " + learn_rate);
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     logStart();
     buildModel();
+    return Status.Done;
   }
 
   @Override public int gridParallelism() {
@@ -117,7 +118,7 @@ public class GBM extends SharedTreeModelBuilder {
   }
 
   private GBMModel doScoring(GBMModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
-    Score sc = new Score().doIt(model,fr,validation,_validResponse).report(Sys.GBM__,tid,ktrees);
+    Score sc = new Score().doIt(model,fr,validation).report(Sys.GBM__,tid,ktrees);
     model = new GBMModel(model, finalScoring?null:ktrees, (float)sc._sum/_nrows, sc._cm, tstats);
     DKV.put(outputKey, model);
     return model;

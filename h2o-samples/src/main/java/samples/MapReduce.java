@@ -19,7 +19,7 @@ public class MapReduce extends Job {
     // samples.launchers.CloudRemote.launchDefaultIPs(MapReduce.class);
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     // Parse a dataset into a Frame, H2O's distributed table-like data structure
     File file = new File(VM.h2oFolder(), "smalldata/iris/iris.csv");
     Key fkey = NFSFileVec.make(file);
@@ -40,6 +40,7 @@ public class MapReduce extends Job {
     // At this point, all task instances have been merged by their 'reduce' method. We
     // are back to a state where only one instance exist, and it contains the overall sum.
     System.out.println("Sum is " + sum.value);
+    return Status.Done;
   }
 
   static class Sum extends MRTask2<Sum> {

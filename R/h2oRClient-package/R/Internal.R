@@ -14,6 +14,8 @@ if(Sys.info()["sysname"] == "Windows")
   myPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
 pkg.env$h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
 pkg.env$h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
+h2o.__getCommandLog <- function() { return(pkg.env$h2o.__LOG_COMMAND)}
+h2o.__getErrorLog <- function() { return(pkg.env$h2o.__LOG_ERROR)}
 h2o.__changeCommandLog <- function(path) { 
     cmd <- paste(path, 'commands.log', sep='/') 
     assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
@@ -38,12 +40,15 @@ h2o.__openErrLog <- function() {
 
 h2o.__logIt<-
 function(url, tmp, commandOrErr) {
-  tmp = get("tmp"); nams = names(tmp)
-  s = rep(" ", length(tmp))
+  if(is.null(tmp)) s <- url
+  else {
+  tmp <- get("tmp"); nams = names(tmp)
+  s <- rep(" ", length(tmp))
   for(i in seq_along(tmp))
-    s[i] = paste(nams[i], ": ", tmp[[i]], sep="")
-  s = paste(url, '\t', paste(s, collapse=", "))
-  write(s, file = pkg.env$h2o.__LOG_COMMAND, append = TRUE)
+    s[i] <- paste(nams[i], ": ", tmp[[i]], sep="")
+  s <- paste(url, '\t', paste(s, collapse=", "))
+  }
+  write(s, file = ifelse(commandOrErr == "Command", pkg.env$h2o.__LOG_COMMAND, pkg.env$h2o.__LOG_ERROR), append = TRUE)
 }
 
 # Internal functions & declarations
@@ -71,6 +76,7 @@ h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_PCA = "2/PCA.json"
 h2o.__PAGE_PCASCORE = "2/PCAScore.json"
+h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 h2o.__PAGE_GLM = "GLM.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"
@@ -91,7 +97,6 @@ h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
 h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
 h2o.__PAGE_EXEC2 = "2/Exec2.json"
-h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 h2o.__PAGE_NN = "2/NeuralNet.json"
 h2o.__PAGE_NNModelView = "2/ExportModel.json"
 

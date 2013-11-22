@@ -484,8 +484,9 @@ public class Job extends Request2 {
       @Override public void compute2() {
         Throwable t = null;
         try {
-          Job.this.exec();
-          Job.this.done();
+          Status status = Job.this.exec();
+          if(status == Status.Done)
+            Job.this.remove();
         } catch (Throwable t_) {
           t = t_;
           if(!(t instanceof ExpectedExceptionForDebug))
@@ -505,8 +506,9 @@ public class Job extends Request2 {
   public void invoke() {
     init();
     start(new H2OEmptyCompleter());
-    exec();
-    done();
+    Status status = exec();
+    if(status == Status.Done)
+      remove();
   }
 
   /**
@@ -516,18 +518,15 @@ public class Job extends Request2 {
   protected void init() throws IllegalArgumentException {
   }
 
-  /**
-   * Actual job code. Should be blocking until execution is done.
-   */
-  protected void exec() {
-    throw new RuntimeException("Should be overridden if job is a request");
-  }
+  protected enum Status { Running, Done }
 
   /**
-   * Invoked after job has run for cleanup purposes.
+   * Actual job code.
+   *
+   * @return true if job is done, false if it will still be running after the method returns.
    */
-  protected void done() {
-    remove();
+  protected Status exec() {
+    throw new RuntimeException("Should be overridden if job is a request");
   }
 
   public static boolean isJobEnded(Key jobkey) {

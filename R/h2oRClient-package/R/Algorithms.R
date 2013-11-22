@@ -45,9 +45,9 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   if( missing(data) ) stop('must specify data')
   if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
   if( missing(x) ) stop('must specify x')
-  if(!( class(x) %in% c('numeric', 'character') )) stop('x must be a vector of column names or indices')
+  if(!( class(x) %in% c('numeric', 'character', 'integer') )) stop('x must be a vector of column names or indices')
   if( missing(y) ) stop('must specify y')
-  if(!( class(y) %in% c('numeric', 'character') )) stop('y must be a column name or index')
+  if(!( class(y) %in% c('numeric', 'character', 'integer') )) stop('y must be a column name or index')
   
   if( class(nfolds) != 'numeric' ) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
@@ -227,21 +227,21 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
 
 
 #------------------------------- Principal Components Analysis ----------------------------------#
-h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc, tol, standardize) {
+h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=T) {
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, ignored_cols_by_name=x_ignore, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
-  while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  # while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   destKey = res$destination_key
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=destKey)
-  res = res$PCAModel
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
+  res = res$pca_model
 
   result = list()
+  result$num_pc = res$num_pc
   result$standardized = standardize
-  result$sdev = as.numeric(unlist(res$stdDev))
-  # result$rotation = do.call(rbind, res$eigenvectors)
-  # temp = t(do.call(rbind, res$eigenvectors))
-  nfeat = length(res$eigenvectors[[1]])
-  temp = matrix(unlist(res$eigenvectors), nrow = nfeat)
-  rownames(temp) = names(res$eigenvectors[[1]])
+  result$sdev = res$sdev
+  nfeat = length(res$eigVec[[1]])
+  temp = t(matrix(unlist(res$eigVec), nrow = nfeat))
+  rownames(temp) = res$'_names'
   colnames(temp) = paste("PC", seq(1, ncol(temp)), sep="")
   result$rotation = temp
   new("H2OPCAModel", key=destKey, data=data, model=result)
@@ -261,6 +261,7 @@ h2o.prcomp <- function(data, tol=0, standardize=T, retx=F) {
   res = res$pca_model
 
   result = list()
+  result$num_pc = res$num_pc
   result$standardized = standardize
   result$sdev = res$sdev
   nfeat = length(res$eigVec[[1]])
@@ -274,18 +275,17 @@ h2o.prcomp <- function(data, tol=0, standardize=T, retx=F) {
 }
 
 #setGeneric("h2o.pcr", function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, NA)) { standardGeneric("h2o.pcr") })
-h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5, tweedie.p=ifelse(family=="tweedie", 0, NA)) {
+h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5, tweedie.p=ifelse(family=="tweedie", 0, as.numeric(NA))) {
   args <- verify_dataxy(data, x, y)
 
-  if( class(nfolds) != 'numeric' ) stop('nfolds must be numeric')
+  if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
-  if( class(alpha) != 'numeric' ) stop('alpha must be numeric')
+  if( !is.numeric(alpha) ) stop('alpha must be numeric')
   if( alpha < 0 ) stop('alpha must be >= 0')
-  if( class(lambda) != 'numeric' ) stop('lambda must be numeric')
+  if( !is.numeric(lambda) ) stop('lambda must be numeric')
   if( lambda < 0 ) stop('lambda must be >= 0')
-  if( class(epsilon) != 'numeric' ) stop('epsilon must be numeric')
-  if( epsilon < 0 ) stop('epsilon must be >= 0')
 
+  cc = colnames(data)
   y <- args$y
   if( ncomp < 1 || ncomp > length(cc) ) stop("Number of components must be between 1 and ", ncol(data))
 
@@ -294,10 +294,13 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
   myModel <- h2o.prcomp.internal(data=data, x_ignore=x_ignore, dest="", max_pc=ncomp, tol=0, standardize=TRUE)
   myScore <- h2o.predict(myModel)
 
-  rand_cbind_key = h2o.__uniqID("PCABind")
-  res <- h2o.__remoteSend(data@h2o, h2o.__PAGE_FVEXEC, source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=args$y_i - 1, destination_key=rand_cbind_key, operation="cbind")
-  myGLMData <- new("H2OParsedData", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
-  h2o.glm.FV(paste("PC", 0:(ncomp-1), sep=""), y, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
+  # rand_cbind_key = h2o.__uniqID("PCABind")
+  # res <- h2o.__remoteSend(data@h2o, h2o.__PAGE_FVEXEC, source=myScore@key, source2=data@key, destination_key=rand_cbind_key, cols=args$y_i - 1, destination_key=rand_cbind_key, operation="cbind")
+  # myGLMData <- new("H2OParsedData", h2o=data@h2o, key=res$response$redirect_request_args$src_key)
+  # h2o.glm.FV(paste("PC", 0:(ncomp-1), sep=""), y, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
+  myScore[,ncomp+1] = data[,args$y_i]
+  myGLMData = new("H2OParsedData", h2o=data@h2o, key=myScore@key)
+  h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
 }
 
 #-------------------------------------- Random Forest ----------------------------------------------#
@@ -344,19 +347,22 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.
 #setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 h2o.predict <- function(object, newdata) {
   if( missing(object) ) stop('must specify object')
-  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel') )) stop('object must be an H2OModel')
+  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel', 'H2OGLMModelVA') )) stop('object must be an H2OModel')
   if( missing(newdata) ) newdata <- object@data
-  if(class(newdata) != 'H2OParsedData' ) stop('newdata must be h2o data')
+  if(!class(newdata) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('newdata must be h2o data')
 
-  if(class(object) == "H2OGLMModel") {
+  if(class(object) == "H2OGLMModelVA") {
+    if(class(newdata) != 'H2OParsedDataVA')
+      stop("Prediction requires newdata to be type H2OParsedDataVA")
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$key)
-    new("H2OParsedData", h2o=object@data@h2o, key=res$key)
-  } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel")) {
+    new("H2OParsedDataVA", h2o=object@data@h2o, key=res$key)
+  } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel")) {
     # Set randomized prediction key
     if(class(object) == "H2OGBMModel") key_prefix = "GBMPredict"
     else if(class(object) == "H2OKMeansModel") key_prefix = "KMeansPredict"
-    else key_prefix = "DRFPredict"
+    else if(class(object) == "H2ODRFModel") key_prefix = "DRFPredict"
+    else key_prefix = "GLM2Predict"
     rand_pred_key = h2o.__uniqID(key_prefix)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
@@ -365,7 +371,7 @@ h2o.predict <- function(object, newdata) {
     # Set randomized prediction key
     rand_pred_key = h2o.__uniqID("PCAPredict")
     numMatch = colnames(newdata) %in% rownames(object@model$rotation)
-    numPC = min(length(numMatch[numMatch == TRUE]), length(object@model$sdev))
+    numPC = min(length(numMatch[numMatch == TRUE]), object@model$num_pc)
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     while(h2o.__poll(object@data@h2o, res$job_key) != -1) { Sys.sleep(1) }
     new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)

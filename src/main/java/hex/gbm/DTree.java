@@ -816,6 +816,7 @@ public class DTree extends Iced {
     }
 
     public void toJavaHtml( StringBuilder sb ) {
+      if( treeStats == null ) return; // No trees yet
       sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
                 "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
                 "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");

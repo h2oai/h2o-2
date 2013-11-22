@@ -72,15 +72,16 @@ public class JobArgsTest extends HttpTest {
   }
 
   static class FailTestJobAsync extends ValidatedJob {
-    @Override protected void exec() {
+    @Override protected Status exec() {
       throw new ExpectedExceptionForDebug();
     }
   }
 
   static class ArgsTestJob extends ValidatedJob {
-    @Override protected void exec() {
+    @Override protected Status exec() {
       Assert.assertEquals(source.vecs()[1], _train[0]);
       Assert.assertEquals(source.vecs()[5], _train[1]);
+      return Status.Done;
     }
   }
 }
