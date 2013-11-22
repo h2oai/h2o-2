@@ -78,6 +78,7 @@ public class Expr2Test extends TestUtil {
       checkStr("sum(1,h.hex,3)");
       checkStr("h.hex[,c(1,3,5)]");
       checkStr("h.hex[c(1,3,5),]");
+      checkStr("a=c(11,22,33,44,55,66); a[c(2,6,1),]");
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
