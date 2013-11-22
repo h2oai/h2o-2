@@ -230,7 +230,6 @@ public class StableAPITest {
   @BeforeClass
   static public void registerRAPI() {
     regR(Cloud.class);
-    regR(DataManip.class, "source", "source2", "destination_key", "cols", "destination_key", "operation");
     regPy(DownloadDataset.class, "src_key");
     regR(Exec.class, "expression", "destination_key");
     regR(GeneratePredictionsPage.class, "model_key", "data_key");
