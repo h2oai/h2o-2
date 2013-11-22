@@ -133,10 +133,10 @@ public class NeuralNet extends ValidatedJob {
           Vec[] valid = null;
           Vec validResp = null;
           if( validation != null ) {
-            final Vec [] vs = adapted[0].vecs();
-            valid = Arrays.copyOf(vs,vs.length-1);
+            final Vec[] vs = adapted[0].vecs();
+            valid = Arrays.copyOf(vs, vs.length - 1);
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
-            validResp = vs[vs.length-1];
+            validResp = vs[vs.length - 1];
           }
           while( !cancelled() ) {
             eval(valid, validResp);
@@ -527,7 +527,10 @@ public class NeuralNet extends ValidatedJob {
         clones[y]._w = model.weights[y];
         clones[y]._b = model.biases[y];
       }
-      Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix);
+      Vec[] vecs = frs[0].vecs();
+      Vec[] data = Utils.remove(vecs, vecs.length - 1);
+      Vec resp = vecs[vecs.length - 1];
+      Error error = eval(clones, data, resp, max_rows, confusion_matrix);
       classification_error = error.classification;
       mean_square_error = error.mean_square;
       if( frs[1] != null )

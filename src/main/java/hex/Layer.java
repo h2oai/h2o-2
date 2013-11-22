@@ -45,8 +45,8 @@ public abstract class Layer extends Iced {
   float _perWeight;
   float _perWeightAnnealing;
 
-  // Current rate and momentum
-  transient float _r, _m;
+  // Current rate
+  transient float _r;
 
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
@@ -111,19 +111,10 @@ public abstract class Layer extends Iced {
 
   public final void anneal(long n) {
     _r = rate(n);
-    _m = _momentum * (n + 1) / ((n + 1) + _momentumAnnealing);
   }
 
   public float rate(long n) {
     return rate / (1 + rate_annealing * n);
-  }
-
-  public final void momentum(long n) {
-    for( int i = 0; i < _w.length; i++ )
-      adjust(i, _w, _wPrev, _wInit, _wMult);
-
-    for( int i = 0; i < _b.length; i++ )
-      adjust(i, _b, _bPrev, _bInit, _bMult);
   }
 
   private final void adjust(int i, float[] w, float[] prev, float[] init, float[] mult) {
@@ -146,45 +137,64 @@ public abstract class Layer extends Iced {
 
     if( prev != null ) {
       // Nesterov's Accelerated Gradient
-      float v = (w[i] - prev[i]) * _m;
-      prev[i] = w[i];
-      w[i] += coef * v;
-      if( w == _w )
-        _wSpeed[i] = v;
-      else
-        _bSpeed[i] = v;
+//      float v = (w[i] - prev[i]) * _m;
+//      prev[i] = w[i];
+//      w[i] += coef * v;
+//      if( w == _w )
+//        _wSpeed[i] = v;
+//      else
+//        _bSpeed[i] = v;
     }
 
     if( init != null )
       init[i] = w[i];
   }
 
-//  public static void momentum(final Layer[] ls) {
-//    Thread thread = new Thread() {
-//      @Override public void run() {
-//        for( int y = 0; y < ls.length; y++ )
-//          ls[y].initMomentum();
-//        for( ;; ) {
-//          for( int y = 0; y < ls.length; y++ )
-//            ls[y].momentum();
-//        }
-//      }
-//    };
-//    thread.start();
-//  }
-//
-//  void initMomentum() {
-//    for( int i = 0; i < _w.length; i++ )
-//      _wPrev[i] = _w[i];
-//  }
-//
-//  void momentum() {
-//    for( int y = 0; y < ls.length; y++ ) {
-//      for( int i = 0; i < ls.length; i++ ) {
-//
-//      }
-//    }
-//  }
+  public static void momentum(final Layer[] ls, final Trainer trainer) {
+    Thread thread = new Thread() {
+      @Override public void run() {
+        for( int y = 1; y < ls.length; y++ )
+          ls[y].initMomentum();
+        for( ;; ) {
+          long n = trainer.samples();
+          for( int y = 1; y < ls.length; y++ )
+            ls[y].momentum(n);
+//          try {
+//            Thread.sleep(1);
+//          } catch( InterruptedException e ) {
+//            throw new RuntimeException(e);
+//          }
+        }
+      }
+    };
+    thread.start();
+  }
+
+  private final void initMomentum() {
+    for( int i = 0; i < _w.length; i++ )
+      _wPrev[i] = _w[i];
+    for( int i = 0; i < _b.length; i++ )
+      _bPrev[i] = _b[i];
+  }
+
+  private final void momentum(long n) {
+    float m = _momentum * (n + 1) / ((n + 1) + _momentumAnnealing);
+    momentum(_w, _wPrev, _wSpeed, m);
+    momentum(_b, _bPrev, _bSpeed, m);
+  }
+
+  private static void momentum(float[] w, float[] prev, float[] speed, float m) {
+    for( int i = 0; i < w.length; i++ ) {
+      float d = w[i] - prev[i];
+      speed[i] += d;
+      speed[i] *= m;
+      float v = w[i] + speed[i];
+//      if( Double.isNaN(v) )
+//        System.out.println("dddddd");
+      w[i] = v;
+      prev[i] = v;
+    }
+  }
 
   public static abstract class Input extends Layer {
     long _pos, _len;
@@ -228,7 +238,9 @@ public abstract class Layer extends Iced {
       _len = vecs[0].length();
 
       if( train != null ) {
-        assert train.categoricals_lens.length == vecs.length;
+        int a =train.categoricals_lens.length;
+        int b = vecs.length;
+        assert  a== b;
         categoricals_lens = train.categoricals_lens;
         categoricals_mins = train.categoricals_mins;
         assert train.subs.length == units;
