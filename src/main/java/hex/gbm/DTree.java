@@ -820,8 +820,8 @@ public class DTree extends Iced {
       sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
                 "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
                 "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
-      boolean debug = true;
-      if( !debug && numTrees() * treeStats.meanLeaves > 10000 )
+
+      if( numTrees() * treeStats.meanLeaves > 10000 )
         sb.append("/* Java code is too large to display, download it directly. */");
       else
         DocGen.HTML.escape(sb,toJava());
@@ -833,9 +833,10 @@ public class DTree extends Iced {
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses());
       String modelName = JCodeGen.toJavaId(_selfKey.toString());
       // -- DEBUG CODE
-      Frame fr = UKV.get(_dataKey);
-      JCodeGen.toStaticVar(sb, fr.subframe(_names), "DATA", (int) Math.min(100, fr.numRows()));
-      // END of DEBUG CODE
+      // -- Frame fr = UKV.get(_dataKey);
+      // -- JCodeGen.toStaticVar(sb, fr.subframe(_names), "DATA", (int) Math.min(100, fr.numRows()));
+      // -- END of DEBUG CODE
+      JCodeGen.toStaticVar(sb, null, "DATA", 0);
       // Generate main method
       sb.p("public static void main(String[] args) {\n");
       sb.indent(1).p("long iters = args.length > 0 ? Integer.valueOf(args[0]) : 1000;").nl();

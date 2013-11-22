@@ -3,14 +3,14 @@ package water;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 
-import java.io.*;
 import java.util.*;
+
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
-import water.util.Log.Tag.Sys;
 import water.util.*;
+import water.util.Log.Tag.Sys;
 
 /**
  * A Model models reality (hopefully).
@@ -308,19 +308,6 @@ public abstract class Model extends Iced {
     sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
     sb.p("}").nl();
 
-    // DEBUG CODE
-    try {
-      File f = new File("/Users/michal/Tmp/genmodel/"+modelName+".java");
-      FileWriter fw = new FileWriter(f);
-      BufferedWriter bw = new BufferedWriter(fw);
-      bw.write(sb.toString());
-      bw.close();
-      //testJavaScoring(null);
-    } catch (Throwable t) {
-      t.printStackTrace();
-    }
-    // END of DEBUG CODE
-
     return sb;
   }
   // Same thing as toJava, but as a Javassist CtClass
@@ -418,12 +405,12 @@ public abstract class Model extends Iced {
       int cols = data[0].length;
       int levels = preds.length-1;
       int ntrees_internal = ntrees*levels;
-      System.out.println("Iterations: " + iters);
-      System.out.println("Rows      : " + rows);
-      System.out.println("Cols      : " + cols);
-      System.out.println("Levels    : " + levels);
-      System.out.println("Ntrees    : " + ntrees);
-      System.out.println("Ntrees internal   : " + ntrees_internal);
+      System.out.println("# Iterations: " + iters);
+      System.out.println("# Rows      : " + rows);
+      System.out.println("# Cols      : " + cols);
+      System.out.println("# Levels    : " + levels);
+      System.out.println("# Ntrees    : " + ntrees);
+      System.out.println("# Ntrees internal   : " + ntrees_internal);
       System.out.println("iter,total_time,time_per_row,time_per_tree,time_per_row_tree,time_per_inter_tree,time_per_row_inter_tree");
       StringBuilder sb = new StringBuilder(100);
       for (int i=0; i<iters; i++) {
