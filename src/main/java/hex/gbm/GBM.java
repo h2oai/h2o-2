@@ -44,6 +44,14 @@ public class GBM extends SharedTreeModelBuilder {
       }
       return p;
     }
+
+    @Override protected void toJavaPredictBody(SB sb, SB afterBodySb) {
+      super.toJavaPredictBody(sb, afterBodySb);
+      sb.indent().p("// Compute Probabilities\n");
+      sb.indent().p("float sum = 0;\n");
+      sb.indent().p("for(int i=1;i<preds.length; i++) sum += Math.exp(preds[i]);\n");
+      sb.indent().p("for(int i=1; i<preds.length; i++) preds[i] = (float) Math.exp(preds[i]) / sum;\n");
+    }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
