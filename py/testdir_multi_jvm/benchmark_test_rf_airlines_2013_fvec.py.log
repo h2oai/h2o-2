@@ -1,3 +1,0 @@
-2013-11-21 16:17:53,937 5 jvms, 20GB heap, DRF2 year2013.csv 325.74 secs.             trees: 10 classification_error: 25.94 classErrorPct: [14.0, 42.99] totalScores: 3673558
-2013-11-21 16:39:17,914 7 jvms, 28GB heap, DRF2 year2013.csv 359.98 secs.             trees: 10 classification_error: 25.92 classErrorPct: [13.99, 42.96] totalScores: 3673547
-2013-11-21 16:51:15,925 7 jvms, 4GB heap, DRF2 year2013.csv 329.90 secs.             trees: 10 classification_error: 25.92 classErrorPct: [14.0, 42.93] totalScores: 3673583
