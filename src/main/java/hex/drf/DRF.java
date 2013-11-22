@@ -55,7 +55,7 @@ public class DRF extends SharedTreeModelBuilder {
       return p;
     }
   }
-  public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr,true);  }
+  public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 50; min_rows = 1; }

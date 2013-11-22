@@ -3,8 +3,7 @@ package water;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -87,10 +86,15 @@ public abstract class Model extends Iced {
    *  For Regression (single-class) models, the 1st and only Vec is the
    *  prediction value.  Also passed in a flag describing how hard we try to
    *  adapt the frame.  */
-  public Frame score( Frame fr, boolean exact ) {
+  public Frame score( Frame fr) {
+    int ridx = fr.find(_names[_names.length-1]);
+    if(ridx != -1){ // drop the response for scoring!
+      fr = new Frame(fr._names,fr.vecs());
+      fr.remove(ridx);
+    }
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
-    Frame[] adaptFrms = adapt(fr,exact);
+    Frame[] adaptFrms = adapt(fr,false);
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
     Frame adaptFrm = adaptFrms[0];
@@ -176,49 +180,26 @@ public abstract class Model extends Iced {
    *    any enums returned by the model that the data does not have a mapping for.
    *  If 'exact' is false, these situations will use or return NA's instead.
    */
-  private int[][] adapt( String names[], String domains[][], boolean exact, boolean dropResponse ) {
-    int maplen = dropResponse ? _names.length : _names.length+1;
+  private int[][] adapt( String names[], String domains[][], boolean exact) {
+    int maplen = names.length;
     int map[][] = new int[maplen][];
-
-    // Build the column mapping: cmap[model_col] == user_col, or -1 if missing.
-    int cmap[] = map[maplen-1] = new int[maplen-1];
-    HashMap<String,Integer> m = new HashMap<String, Integer>();
-    for( int d = 0; d <  names.length  ; ++d) m.put(names[d], d);
-    for( int c = 0; c < maplen-1; ++c) {
-      Integer I = m.get(_names[c]);
-      cmap[c] = I==null ? -1 : I; // Check for data missing model column
-    }
-
     // Make sure all are compatible
-    for( int c=0; c<cmap.length; c++ ) {
-      int d = cmap[c];          // Matching data column
-      if( d == -1 ) {           // Column was missing from data
-        if( exact ) throw new IllegalArgumentException("Model requires a column called "+_names[c]);
-        continue;               // Cannot check domains of missing columns
-      }
-
-      // Now do domain mapping
+    for( int c=0; c<names.length;++c) {
+            // Now do domain mapping
       String ms[] = _domains[c];  // Model enum
-      String ds[] =  domains[d];  // Data  enum
+      String ds[] =  domains[c];  // Data  enum
       if( ms == ds ) { // Domains trivially equal?
       } else if( ms == null && ds != null ) {
         throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) numeric, was passed a categorical");
       } else if( ms != null && ds == null ) {
         if( exact )
           throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) categorical, was passed a numeric");
-
         throw H2O.unimpl();     // Attempt an asEnum?
       } else if( !Arrays.deepEquals(ms, ds) ) {
         map[c] = getDomainMapping(_names[c], ms, ds, exact);
-      } else {
-        // null mapping is equal to identity mapping
-      }
+      } // null mapping is equal to identity mapping
     }
     return map;
-  }
-
-  private int[][] adapt( String names[], String domains[][], boolean exact ) {
-    return adapt(names, domains, exact, true);
   }
 
   /** Build an adapted Frame from the given Frame. Useful for efficient bulk
@@ -229,49 +210,28 @@ public abstract class Model extends Iced {
    *  frame which contains only vectors which where adapted (the purpose of the
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
-  public Frame[] adapt( Frame fr, boolean exact, boolean dropResponse ) {
-    if(!dropResponse){ // move response to the end!
-      String responseName = _names[_names.length-1];
-      for(int i = 0; i < fr._names.length; ++i){
-        if(fr._names[i].equalsIgnoreCase(responseName)){
-          fr.add(responseName,fr.remove(i));
-          break;
-        }
-      }
+  public Frame[] adapt( Frame fr, boolean exact) {
+    int ridx = fr.find(_names[_names.length-1]);
+    if(ridx != -1 && ridx != fr._names.length-1){ // put response to the end
+      String n =fr._names[ridx];
+      fr.add(n,fr.remove(ridx));
     }
-    String frnames[] = fr.names();
-    Vec frvecs[] = fr.vecs();
-    int len = dropResponse?frvecs.length-1:frvecs.length;
-    if(!exact) for(int i = 0; i < len;++i)
+    int n = ridx == -1?_names.length-1:_names.length;
+    String [] names = Arrays.copyOf(_names, n);
+    fr = fr.subframe(names);
+    Vec [] frvecs = fr.vecs();
+    if(!exact) for(int i = 0; i < n;++i)
       if(_domains[i] != null && !frvecs[i].isEnum())
         frvecs[i] = frvecs[i].toEnum();
-    int map[][] = adapt(frnames,fr.domains(),exact,dropResponse);
-    int cmap[] = dropResponse ? map[_names.length-1] : map[_names.length];
-    Vec vecs[] = dropResponse ? new Vec[_names.length-1] : new Vec[_names.length];
-    int avCnt = 0;
-    for( int c=0; c<cmap.length; c++ ) if (map[c] != null) avCnt++;
-    Vec[]    avecs = new Vec[avCnt]; // list of adapted vectors
-    String[] anames = new String[avCnt]; // names of adapted vectors
-    avCnt = 0;
-    for( int c=0; c<cmap.length; c++ ) { // iterate over columns
-      int d = cmap[c];          // Data index
-      if( d == -1 ) throw H2O.unimpl(); // Swap in a new all-NA Vec
-      else if( map[c] == null ) {       // No or identity domain map?
-        vecs[c] = frvecs[d];            // Just use the Vec as-is
-      } else {
-        // Domain mapping - creates a new vector
-        vecs[c] = avecs[avCnt] = frvecs[d].makeTransf(map[c]);
-        anames[avCnt] = frnames[d];
-        avCnt++;
+    int map[][] = adapt(names,fr.domains(),exact);
+    ArrayList<Vec> avecs = new ArrayList<Vec>();
+    ArrayList<String> anames = new ArrayList<String>();
+    for( int c=0; c<map.length; c++ ) // iterate over columns
+      if(map[c] != null){
+        avecs.add(frvecs[c] = frvecs[c].makeTransf(map[c]));
+        anames.add(names[c]);
       }
-    }
-
-    String[] vnames = dropResponse ? Arrays.copyOf(_names,_names.length-1) : _names.clone();
-    return new Frame[] { new Frame(vnames,vecs), new Frame(anames, avecs) };
-  }
-
-  public Frame[] adapt( Frame fr, boolean exact) {
-    return adapt(fr, exact, true);
+    return new Frame[] { new Frame(names,frvecs), new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()])) };
   }
 
   /** Returns a mapping between values domains for a given column.  */

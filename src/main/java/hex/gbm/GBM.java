@@ -45,7 +45,7 @@ public class GBM extends SharedTreeModelBuilder {
       return p;
     }
   }
-  public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr,true);  }
+  public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
   public GBM() { description = "Distributed GBM"; }

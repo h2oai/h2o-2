@@ -364,9 +364,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       if( validation == null ) return doAll(fr);
       // Validation: need to score the set, getting a probability distribution for each class
       // Frame has nclass vectors (nclass, or 1 for regression)
-      Frame res = model.score(validation,true);
+      Frame res = model.score(validation);
       // Adapt the validation set to the model
-      Frame frs[] = model.adapt(validation,false,false);
+      Frame frs[] = model.adapt(validation,false);
       Frame adapValidation = frs[0]; // adapted validation dataset
       // Adapt vresponse to original response
 //      vresponse = _nclass > 1 ? vresponse.adaptTo(response, true) : vresponse;
