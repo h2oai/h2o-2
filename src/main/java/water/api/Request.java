@@ -82,6 +82,8 @@ public abstract class Request extends RequestBuilders {
 
   protected abstract Response serve();
 
+  protected String serveJava() { throw new UnsupportedOperationException("This request does not provide Java code!"); }
+
   public NanoHTTPD.Response serve(NanoHTTPD server, Properties parms, RequestType type) {
     switch( type ) {
       case help:
@@ -104,6 +106,9 @@ public abstract class Request extends RequestBuilders {
         String query = buildQuery(parms,type);
         return wrap(server, query);
       }
+      case java:
+        String javacode = serveJava();
+        return wrap(server, javacode, RequestType.java);
       default:
         throw new RuntimeException("Invalid request type " + type.toString());
     }
@@ -140,6 +145,8 @@ public abstract class Request extends RequestBuilders {
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String value, RequestType type) {
     if( type == RequestType.json )
       return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON, value);
+    if (type == RequestType.java)
+      return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_PLAINTEXT, value);
     return wrap(server, value);
   }
 
