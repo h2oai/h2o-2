@@ -5,6 +5,7 @@ package water.util;
 // Can't believe this wasn't done long long ago.
 public class SB {
   public final StringBuilder _sb;
+  private int _indent = 0;
   public SB(        ) { _sb = new StringBuilder( ); }
   public SB(String s) { _sb = new StringBuilder(s); }
   public SB p( String s ) { _sb.append(s); return this; }
@@ -12,7 +13,15 @@ public class SB {
   public SB p( char   s ) { _sb.append(s); return this; }
   public SB p( int    s ) { _sb.append(s); return this; }
   public SB p( Object s ) { _sb.append(s.toString()); return this; }
-  public SB indent( int d ) { for( int i=0; i<d; i++ ) p("  "); return this; }
+  public SB indent( int d ) { for( int i=0; i<d+_indent; i++ ) p("  "); return this; }
+  public SB indent( ) { return indent(0); }
+  // Java specif append of float
+  public SB pj( float  s ) { _sb.append(s).append('f'); return this; }
+  // Increase indentation
+  public SB ii( int i) { _indent += i; return this; }
+  // Decrease indentation
+  public SB di( int i) { _indent -= i; return this; }
+  public SB nl( ) { return p('\n'); }
   // Convert a String[] into a valid Java String initializer
   public SB toJavaStringInit( String[] ss ) {
     p('{');

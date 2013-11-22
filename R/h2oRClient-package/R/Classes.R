@@ -201,7 +201,6 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
   title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
 })
 
-
 # i are the rows, j are the columns. These can be vectors of integers or character strings, or a single H2OLogicalData2 object.
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   numRows = nrow(x); numCols = ncol(x)
@@ -227,7 +226,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     # if(!is.numeric(i)) stop("Row index must be numeric")
     if(class(i) == "H2OLogicalData")
       expr = paste(x@key, "[", i@key, ",]", sep="")
-    else if(is.numeric(i)) {
+    else if(is.numeric(i) || is.integer(i)) {
       if(length(i) == 1)
         expr = paste(x@key, "[", i, ",]", sep="")
       else
@@ -326,7 +325,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
 
 setMethod("$<-", "H2OParsedData", function(x, name, value) {
   lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
-  rhs = ifelse(class(value) == "H2OParsedData", value@key, value)
+  rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   # TODO: Set column name of ncol(x) + 1 to name
   return(x)
@@ -485,7 +484,8 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
 
 setMethod("is.factor", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  temp = sapply(res$summaries, function(x) { is.null(x$domains) })
+  # temp = sapply(res$summaries, function(x) { is.null(x$domains) })
+  temp = sapply(res$summaries, function(x) { x$stats$type != "Enum" })
   return(!any(temp))
 })
 
@@ -501,20 +501,22 @@ setMethod("quantile", "H2OParsedData", function(x) {
   matrix(unlist(temp), ncol = length(res$names), dimnames = list(paste(myQuantiles, "%", sep=""), myFeat))
 })
 
-histograms <- function(object) { UseMethod("histograms", object) }
+# histograms <- function(object) { UseMethod("histograms", object) }
+setGeneric("histograms", function(object) { standardGeneric("histograms") })
 setMethod("histograms", "H2OParsedData", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
-  list.of.bins <- lapply(res$summaries, function(res) {
-    if (res$type == 'Enum') {
+  list.of.bins <- lapply(res$summaries, function(x) {
+    if (x$stats$type == 'Enum') {
       bins <- NULL
     } else {
-      counts <- res$hcnt
-      breaks <- seq(res$hstart, by=res$hstep, length.out=length(res$hcnt) + 1)
+      counts <- x$hcnt
+      breaks <- seq(x$hstart, by=x$hstep, length.out=length(x$hcnt) + 1)
       bins <- list(counts,breaks)
       names(bins) <- cbind('counts', 'breaks')
     }
     bins
   })
+  return(list.of.bins)
 })
 
 setMethod("summary", "H2OParsedData", function(object) {

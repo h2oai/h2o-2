@@ -4,12 +4,13 @@ import hex.ConfusionMatrix;
 import hex.VariableImportance;
 
 import java.util.*;
+
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.*;
-import water.util.Log.Tag.Sys;
 import water.util.*;
+import water.util.Log.Tag.Sys;
 
 /**
  * A Model models reality (hopefully).
@@ -294,21 +295,24 @@ public abstract class Model extends Iced {
   public String toJava() { return toJava(new SB()).toString(); }
   public SB toJava( SB sb ) {
     sb.p("\n");
-    sb.p("class ").p(toJavaId(_selfKey.toString())).p(" {\n");
+    String modelName = JCodeGen.toJavaId(_selfKey.toString());
+    sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName);
+    sb.p("\nclass ").p(modelName).p(" extends water.Model.GeneratedModel {\n");
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
-    toJavaInit(sb);  sb.p("\n");
+    toJavaInit(sb);  sb.nl();
     toJavaPredict(sb);
     sb.p(TOJAVA_MAP);
     sb.p(TOJAVA_PREDICT_MAP);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC1);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
-    sb.p("}\n");
+    sb.p("}").nl();
+
     return sb;
   }
   // Same thing as toJava, but as a Javassist CtClass
   private CtClass makeCtClass() throws CannotCompileException {
-    CtClass clz = ClassPool.getDefault().makeClass(toJavaId(_selfKey.toString()));
+    CtClass clz = ClassPool.getDefault().makeClass(JCodeGen.toJavaId(_selfKey.toString()));
     clz.addField(CtField.make(toJavaNAMES   (new SB()).toString(),clz));
     clz.addField(CtField.make(toJavaNCLASSES(new SB()).toString(),clz));
     toJavaInit(clz);            // Model-specific top-level goodness
@@ -331,7 +335,9 @@ public abstract class Model extends Iced {
   protected void toJavaInit(SB sb) { };
   protected void toJavaInit(CtClass ct) { };
   // Override in subclasses to provide some inside 'predict' call goodness
-  protected void toJavaPredictBody(SB sb) {
+  // Method returns code which should be appended into generated top level class after
+  // predit method.
+  protected void toJavaPredictBody(SB sb, SB afterSb) {
     throw new IllegalArgumentException("This model type does not support conversion to Java");
   }
   // Wrapper around the main predict call, including the signature and return value
@@ -340,10 +346,12 @@ public abstract class Model extends Iced {
     sb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the\n");
     sb.p("  // main prediction (class for classifiers or value for regression),\n");
     sb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
-    sb.p("  float[] predict( double data[], float preds[] ) {\n");
-    toJavaPredictBody(sb);
+    sb.p("  @Override public final float[] predict( double[] data, float[] preds ) {\n");
+    SB afterCode = new SB().ii(1);
+    toJavaPredictBody(sb.ii(2), afterCode); sb.di(1);
     sb.p("    return preds;\n");
     sb.p("  }\n");
+    sb.p(afterCode);
     return sb;
   }
 
@@ -373,7 +381,6 @@ public abstract class Model extends Iced {
     "  float[] predict( java.util.HashMap row ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
     "  }\n";
-
   // Convenience method for testing: build Java, convert it to a class &
   // execute it: compare the results of the new class's (JIT'd) scoring with
   // the built-in (interpreted) scoring on this dataset.  Throws if there
@@ -389,8 +396,38 @@ public abstract class Model extends Iced {
     catch( IllegalAccessException cce ) { throw new Error(cce); }
   }
 
-  // Transform given string to legal java Identifier (see Java grammar http://docs.oracle.com/javase/specs/jls/se7/html/jls-3.html#jls-3.8)
-  private String toJavaId(String s) {
-    return s.replace('-', '_');
+  public abstract static class GeneratedModel {
+    // Predict a row
+    abstract public float[] predict( double data[], float preds[] );
+    // Run benchmark
+    public final void bench(long iters, double[][] data, float[] preds, int ntrees) {
+      int rows = data.length;
+      int cols = data[0].length;
+      int levels = preds.length-1;
+      int ntrees_internal = ntrees*levels;
+      System.out.println("# Iterations: " + iters);
+      System.out.println("# Rows      : " + rows);
+      System.out.println("# Cols      : " + cols);
+      System.out.println("# Levels    : " + levels);
+      System.out.println("# Ntrees    : " + ntrees);
+      System.out.println("# Ntrees internal   : " + ntrees_internal);
+      System.out.println("iter,total_time,time_per_row,time_per_tree,time_per_row_tree,time_per_inter_tree,time_per_row_inter_tree");
+      StringBuilder sb = new StringBuilder(100);
+      for (int i=0; i<iters; i++) {
+        long startTime = System.nanoTime();
+        // Run dummy score
+        for (double[] row : data) predict(row, preds);
+        long ttime = System.nanoTime() - startTime;
+        sb.append(i).append(',');
+        sb.append(ttime).append(',');
+        sb.append(ttime/rows).append(',');
+        sb.append(ttime/ntrees).append(',');
+        sb.append(ttime/(ntrees*rows)).append(',');
+        sb.append(ttime/ntrees_internal).append(',');
+        sb.append(ttime/(ntrees_internal*rows)).append('\n');
+        System.out.print(sb.toString());
+        sb.setLength(0);
+      }
+    }
   }
 }

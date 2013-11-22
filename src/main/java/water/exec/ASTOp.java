@@ -64,8 +64,9 @@ public abstract class ASTOp extends AST {
     put(new ASTReduce());
     put(new ASTIfElse());
     put(new ASTRApply());
-    put(new ASTRunif());
-    put(new ASTCut());
+    put(new ASTRunif ());
+    put(new ASTCut   ());
+    put(new ASTPrint ());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -438,8 +439,7 @@ class ASTTable extends ASTOp {
   @Override String opStr() { return "table"; }
   @Override ASTOp make() { return new ASTTable(); }
   @Override void apply(Env env, int argcnt) {
-    Frame fr = env.popAry();
-    String skey = env.key();
+    Frame fr = env.ary(-1);
     if (fr.vecs().length > 1)
       throw new IllegalArgumentException("table does not apply to multiple cols.");
     if (! fr.vecs()[0].isInt())
@@ -456,8 +456,7 @@ class ASTTable extends ASTOp {
     NewChunk c1 = new NewChunk(v1,0);
     for( int i=0; i<domain.length; i++ ) c1.addNum((double) counts[i]);
     c1.close(0,null);
-    env.subRef(fr,skey);
-    env.pop();
+    env.pop(2);
     env.push(new Frame(new String[]{fr._names[0],"count"}, new Vec[]{v0.close(null), v1.close(null)}));
   }
   private static class Tabularize extends MRTask2<Tabularize> {
@@ -759,11 +758,31 @@ class ASTFactor extends ASTOp {
     if( !v0.isEnum() ) {        // Frame on the stack is already a factor
       Vec v1 = v0.toEnum();
       Vec vmaster = v1.masterVec(); // Maybe v1 is built over v0?
-      if( vmaster != null ) env.addRef(vmaster);
       ary = env.addRef(new Frame(ary._names,new Vec[]{v1}));
     }
     env.pop();                  // Pop fcn
     env.push(1);                // Put ary back on stack with same refcnt
     env._ary[env._sp-1] = ary;
+  }
+}
+
+class ASTPrint extends ASTOp {
+  static Type[] newsig() {
+    Type t1 = Type.unbound();
+    return new Type[]{t1, t1, Type.varargs(Type.unbound())};
+  }
+  ASTPrint() { super(new String[]{"print", "x", "y..."}, newsig()); }
+  @Override String opStr() { return "print"; }
+  @Override ASTOp make() {return new ASTPrint();}
+  @Override void apply(Env env, int argcnt) {
+    for( int i=1; i<argcnt; i++ ) {
+      if( env.isAry(i-argcnt) ) {
+        env._sb.append(env.ary(i-argcnt).toStringAll());
+      } else {
+        env._sb.append(env.toString(env._sp+i-argcnt,true));
+      }
+    }
+    env.pop(argcnt-2);          // Pop most args
+    env.pop_into_stk(-2);       // Pop off fcn, returning 1st arg
   }
 }

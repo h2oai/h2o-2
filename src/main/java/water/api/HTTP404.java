@@ -23,6 +23,10 @@ public class HTTP404 extends Request {
     return Response.error(_error.value());
   }
 
+  @Override protected String serveJava() {
+    return _error.value();
+  }
+
   @Override public water.NanoHTTPD.Response serve(NanoHTTPD server, Properties parms, RequestType type) {
     water.NanoHTTPD.Response r = super.serve(server, parms, type);
     r.status = NanoHTTPD.HTTP_NOTFOUND;

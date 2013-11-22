@@ -62,8 +62,14 @@ class Basic(unittest.TestCase):
             numRows = inspect['numRows']
             numCols = inspect['numCols']
 
-            i = [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541,378]
-            ignored_cols = ",".join(map(lambda x: "C" + str(x), i))
+            ignore_x = [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541,378]
+            print ignore_x
+            ignored_cols = ",".join(map(lambda x: "C" + str(x), ignore_x))
+            
+            # for comparison
+            ignore_x = h2o_glm.goodXFromColumnInfo(378, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
+            print ignore_x
+
 
             # PCA(tolerance iterate)****************************************
             for tolerance in [i/10.0 for i in range(11)]:

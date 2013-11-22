@@ -21,7 +21,7 @@ h2o.__changeCommandLog <- function(path) {
     assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
     }
 h2o.__changeErrorLog   <- function(path) { 
-    cmd <- paste(path, 'errors.log', sep=',') 
+    cmd <- paste(path, 'errors.log', sep=',/') 
     assign("h2o.__LOG_ERROR", cmd, envir = pkg.env)
     }
 h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
@@ -53,53 +53,54 @@ function(url, tmp, commandOrErr) {
 
 # Internal functions & declarations
 h2o.__PAGE_CLOUD = "Cloud.json"
+h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
-h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
 h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
 h2o.__PAGE_INSPECT = "Inspect.json"
-h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
-h2o.__PAGE_PARSE2 = "2/Parse2.json"
+h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 h2o.__PAGE_PUT = "PutVector.json"
 h2o.__PAGE_REMOVE = "Remove.json"
 h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
+h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_VIEWALL = "StoreView.json"
 h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
-h2o.__PAGE_SUMMARY = "SummaryPage.json"
-h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
-h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
-h2o.__PAGE_PREDICT2 = "2/Predict.json"
-h2o.__PAGE_COLNAMES = "SetColumnNames.json"
-h2o.__PAGE_PCA = "2/PCA.json"
-h2o.__PAGE_PCASCORE = "2/PCAScore.json"
-h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 h2o.__PAGE_GLM = "GLM.json"
+h2o.__PAGE_GLMGrid = "GLMGrid.json"
+h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"
 h2o.__PAGE_KMSCORE = "KMeansScore.json"
 h2o.__PAGE_RF  = "RF.json"
 h2o.__PAGE_RFVIEW = "RFView.json"
 h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
+
+h2o.__PAGE_EXEC2 = "2/Exec2.json"
+h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
+h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
+h2o.__PAGE_PARSE2 = "2/Parse2.json"
+h2o.__PAGE_PREDICT2 = "2/Predict.json"
+h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
+
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFModelView = "2/DRFModelView.json"
-h2o.__PAGE_GLMGrid = "GLMGrid.json"
-h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_GBM = "2/GBM.json"
 h2o.__PAGE_GBMGrid = "2/GBMGrid.json"
 h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
-
 h2o.__PAGE_GLM2 = "2/GLM2.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
-h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
-h2o.__PAGE_EXEC2 = "2/Exec2.json"
+h2o.__PAGE_KMEANS2 = "2/KMeans2.json"
+h2o.__PAGE_KMModelView = "2/KMeans2ModelView.json"
 h2o.__PAGE_NN = "2/NeuralNet.json"
 h2o.__PAGE_NNModelView = "2/ExportModel.json"
-
+h2o.__PAGE_PCA = "2/PCA.json"
+h2o.__PAGE_PCASCORE = "2/PCAScore.json"
+h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
