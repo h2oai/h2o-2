@@ -758,7 +758,6 @@ class ASTFactor extends ASTOp {
     if( !v0.isEnum() ) {        // Frame on the stack is already a factor
       Vec v1 = v0.toEnum();
       Vec vmaster = v1.masterVec(); // Maybe v1 is built over v0?
-      if( vmaster != null ) env.addRef(vmaster);
       ary = env.addRef(new Frame(ary._names,new Vec[]{v1}));
     }
     env.pop();                  // Pop fcn
