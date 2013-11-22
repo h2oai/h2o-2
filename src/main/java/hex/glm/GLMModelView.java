@@ -132,13 +132,14 @@ public class GLMModelView extends Request2 {
       }
       sb.append("];\n");
       sb.append("function show_cm(i){\n");
+      //sb.append("\t" + "console.log(i);\n");
       sb.append("\t" + "document.getElementById('TN').innerHTML = cms[i][0][0];\n");
       sb.append("\t" + "document.getElementById('TP').innerHTML = cms[i][1][1];\n");
       sb.append("\t" + "document.getElementById('FN').innerHTML = cms[i][0][1];\n");
       sb.append("\t" + "document.getElementById('FP').innerHTML = cms[i][1][0];\n");
       sb.append("}\n");
       sb.append("</script>\n");
-      sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select onchange='show_cm(this.value)'>\n");
+      sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
       for(int i = 0; i < GLMValidation.DEFAULT_THRESHOLDS.length; ++i)
         sb.append("\t<option value='" + i + "'" + (GLMValidation.DEFAULT_THRESHOLDS[i] == glm_model.threshold?"selected='selected'":"") +">" + GLMValidation.DEFAULT_THRESHOLDS[i] + "</option>\n");
       sb.append("</select>\n");
@@ -297,6 +298,12 @@ public class GLMModelView extends Request2 {
                     "  } else {\n"+
                     "  return 2\n"+
                     "  }\n"+
+                    "})\n" +
+                    ".on(\"mouseover\", function(d,i){\n" +
+                    "   if(i <= 100) {" +
+                    "     document.getElementById(\"select\").selectedIndex = 100 - i\n" +
+                    "     show_cm(i)\n" +
+                    "   }\n" +
                     "});\n"+
 
                     "/*"+
