@@ -295,37 +295,22 @@ public abstract class Model extends Iced {
   public String toJava() { return toJava(new SB()).toString(); }
   public SB toJava( SB sb ) {
     sb.p("\n");
-    String modelName = toJavaId(_selfKey.toString());
+    String modelName = JCodeGen.toJavaId(_selfKey.toString());
     sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName);
     sb.p("\nclass ").p(modelName).p(" extends water.Model.GeneratedModel {\n");
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
-    toJavaInit(sb);  sb.p("\n");
+    toJavaInit(sb);  sb.nl();
     toJavaPredict(sb);
     sb.p(TOJAVA_MAP);
     sb.p(TOJAVA_PREDICT_MAP);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC1);
     sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
-    // -- DEBUG CODE
-    Frame fr = UKV.get(_dataKey);
-    int nrows = (int) Math.min(1000, fr.numRows());
-    sb.p("public static final double[][] DATA = new double[][] {").nl();
-    Vec[] vecs = new Vec[_names.length-1];
-    for (int i=0; i<_names.length-1; i++) vecs[i] = fr.vecs()[fr.find(_names[i])];
-    for (int row=0; row<nrows; row++) {
-      sb.indent(1).p(row>0?",":"").p("new double[] {");
-      for (int v=0; v<vecs.length;v++) sb.p(v>0?",":"").p(vecs[v].at(row));
-      sb.p("}").nl();
-    }
-    sb.p("};").nl();
-    sb.p("public static void main(String[] args) {\n");
-    sb.indent(1).p(modelName).p(" m = new ").p(modelName).p("();").nl();
-    // END of DEBUG CODE
     sb.p("}").nl();
 
     // DEBUG CODE
     try {
-      File f = new File("/Users/michal/Tmp/genmodel/"+toJavaId(_selfKey.toString())+".java");
+      File f = new File("/Users/michal/Tmp/genmodel/"+modelName+".java");
       FileWriter fw = new FileWriter(f);
       BufferedWriter bw = new BufferedWriter(fw);
       bw.write(sb.toString());
@@ -340,7 +325,7 @@ public abstract class Model extends Iced {
   }
   // Same thing as toJava, but as a Javassist CtClass
   private CtClass makeCtClass() throws CannotCompileException {
-    CtClass clz = ClassPool.getDefault().makeClass(toJavaId(_selfKey.toString()));
+    CtClass clz = ClassPool.getDefault().makeClass(JCodeGen.toJavaId(_selfKey.toString()));
     clz.addField(CtField.make(toJavaNAMES   (new SB()).toString(),clz));
     clz.addField(CtField.make(toJavaNCLASSES(new SB()).toString(),clz));
     toJavaInit(clz);            // Model-specific top-level goodness
@@ -374,7 +359,7 @@ public abstract class Model extends Iced {
     sb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the\n");
     sb.p("  // main prediction (class for classifiers or value for regression),\n");
     sb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
-    sb.p("  @Override final float[] predict( double data[], float preds[] ) {\n");
+    sb.p("  @Override public final float[] predict( double[] data, float[] preds ) {\n");
     SB afterCode = new SB().ii(1);
     toJavaPredictBody(sb.ii(2), afterCode); sb.di(1);
     sb.p("    return preds;\n");
@@ -424,14 +409,9 @@ public abstract class Model extends Iced {
     catch( IllegalAccessException cce ) { throw new Error(cce); }
   }
 
-  // Transform given string to legal java Identifier (see Java grammar http://docs.oracle.com/javase/specs/jls/se7/html/jls-3.html#jls-3.8)
-  private String toJavaId(String s) {
-    return s.replace('-', '_');
-  }
-
   public abstract static class GeneratedModel {
     // Predict a row
-    abstract float[] predict( double data[], float preds[] );
+    abstract public float[] predict( double data[], float preds[] );
     // Run benchmark
     public final void bench(long iters, double[][] data, float[] preds, int ntrees) {
       int rows = data.length;
@@ -458,6 +438,8 @@ public abstract class Model extends Iced {
         sb.append(ttime/(ntrees*rows)).append(',');
         sb.append(ttime/ntrees_internal).append(',');
         sb.append(ttime/(ntrees_internal*rows)).append('\n');
+        System.out.print(sb.toString());
+        sb.setLength(0);
       }
     }
   }

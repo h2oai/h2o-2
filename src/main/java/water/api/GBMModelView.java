@@ -2,7 +2,6 @@ package water.api;
 
 import hex.gbm.GBM.GBMModel;
 import water.*;
-import water.api.RequestBuilders.Response;
 
 public class GBMModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
