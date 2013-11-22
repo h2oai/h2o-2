@@ -7,7 +7,6 @@ import java.util.*;
 import water.*;
 import water.Job.ColumnsJob;
 import water.api.*;
-import water.api.RequestBuilders.Response;
 import water.fvec.Chunk;
 import water.fvec.Vec;
 import water.util.Utils;
@@ -41,7 +40,7 @@ public class KMeans2 extends ColumnsJob {
     description = "K-means";
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     String sourceArg = input("source");
     Key sourceKey = null;
     if( sourceArg != null )
@@ -103,7 +102,7 @@ public class KMeans2 extends ColumnsJob {
         clusters = Utils.append(clusters, sampler._sampled);
 
         if( cancelled() )
-          return;
+          return Status.Done;
         model.clusters = normalize ? denormalize(clusters, vecs) : clusters;
         model.error = sqr._sqr;
         model.iterations++;
@@ -133,6 +132,7 @@ public class KMeans2 extends ColumnsJob {
       if( cancelled() )
         break;
     }
+    return Status.Done;
   }
 
   @Override protected Response redirect() {

@@ -1,6 +1,7 @@
 package hex;
 
 import hex.rng.MersenneTwisterRNG;
+import hex.rng.XorShiftRNG;
 
 import java.util.Random;
 
@@ -37,15 +38,15 @@ public abstract class Layer extends Iced {
 
   // TODO disabled for now, not enough testing
   @ParamsSearch.Info(origin = 1)
-  float _momentum;
+  public float _momentum;
   float _momentumAnnealing;
 
   // TODO
   float _perWeight;
   float _perWeightAnnealing;
 
-  // Current rate and momentum
-  transient float _r, _m;
+  // Current rate
+  transient float _r;
 
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
@@ -110,19 +111,10 @@ public abstract class Layer extends Iced {
 
   public final void anneal(long n) {
     _r = rate(n);
-    _m = _momentum * (n + 1) / ((n + 1) + _momentumAnnealing);
   }
 
   public float rate(long n) {
     return rate / (1 + rate_annealing * n);
-  }
-
-  public final void momentum(long n) {
-    for( int i = 0; i < _w.length; i++ )
-      adjust(i, _w, _wPrev, _wInit, _wMult);
-
-    for( int i = 0; i < _b.length; i++ )
-      adjust(i, _b, _bPrev, _bInit, _bMult);
   }
 
   private final void adjust(int i, float[] w, float[] prev, float[] init, float[] mult) {
@@ -145,17 +137,63 @@ public abstract class Layer extends Iced {
 
     if( prev != null ) {
       // Nesterov's Accelerated Gradient
-      float v = (w[i] - prev[i]) * _m;
-      prev[i] = w[i];
-      w[i] += coef * v;
-      if( w == _w )
-        _wSpeed[i] = v;
-      else
-        _bSpeed[i] = v;
+//      float v = (w[i] - prev[i]) * _m;
+//      prev[i] = w[i];
+//      w[i] += coef * v;
+//      if( w == _w )
+//        _wSpeed[i] = v;
+//      else
+//        _bSpeed[i] = v;
     }
 
     if( init != null )
       init[i] = w[i];
+  }
+
+  public static void momentum(final Layer[] ls, final Trainer trainer) {
+    Thread thread = new Thread() {
+      @Override public void run() {
+        for( int y = 1; y < ls.length; y++ )
+          ls[y].initMomentum();
+        for( ;; ) {
+          long n = trainer.samples();
+          for( int y = 1; y < ls.length; y++ )
+            ls[y].momentum(n);
+//          try {
+//            Thread.sleep(1);
+//          } catch( InterruptedException e ) {
+//            throw new RuntimeException(e);
+//          }
+        }
+      }
+    };
+    thread.start();
+  }
+
+  private final void initMomentum() {
+    for( int i = 0; i < _w.length; i++ )
+      _wPrev[i] = _w[i];
+    for( int i = 0; i < _b.length; i++ )
+      _bPrev[i] = _b[i];
+  }
+
+  private final void momentum(long n) {
+    float m = _momentum * (n + 1) / ((n + 1) + _momentumAnnealing);
+    momentum(_w, _wPrev, _wSpeed, m);
+    momentum(_b, _bPrev, _bSpeed, m);
+  }
+
+  private static void momentum(float[] w, float[] prev, float[] speed, float m) {
+    for( int i = 0; i < w.length; i++ ) {
+      float d = w[i] - prev[i];
+      speed[i] += d;
+      speed[i] *= m;
+      float v = w[i] + speed[i];
+//      if( Double.isNaN(v) )
+//        System.out.println("dddddd");
+      w[i] = v;
+      prev[i] = v;
+    }
   }
 
   public static abstract class Input extends Layer {
@@ -200,7 +238,9 @@ public abstract class Layer extends Iced {
       _len = vecs[0].length();
 
       if( train != null ) {
-        assert train.categoricals_lens.length == vecs.length;
+        int a =train.categoricals_lens.length;
+        int b = vecs.length;
+        assert  a== b;
         categoricals_lens = train.categoricals_lens;
         categoricals_mins = train.categoricals_mins;
         assert train.subs.length == units;
@@ -420,11 +460,12 @@ public abstract class Layer extends Iced {
     }
 
     public VecSoftmax(Vec vec, VecSoftmax stats) {
-      if( vec.domain() == null ) {
-        vec = vec.toEnum();
-        _toClose = vec;
-      }
-      this.units = stats != null ? stats.units : vec.domain().length;
+// Waiting for Michal stuff, for now enum must start at 0
+//      if( vec.domain() == null ) {
+//        vec = vec.toEnum();
+//        _toClose = vec;
+//      }
+      this.units = stats != null ? stats.units : (int) (vec.max() + 1);
       this.vec = vec;
     }
 
@@ -672,20 +713,40 @@ public abstract class Layer extends Iced {
 
     public Maxout(int units) {
       this.units = units;
-      _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      _rand = new XorShiftRNG(123);
+    }
+
+    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
+      super.init(ls, index, weights, step);
+      if( weights ) {
+        Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        int count = Math.min(15, _in.units);
+        //float min = -.1f, max = +.1f;
+        float min = -1f, max = +1f;
+        for( int o = 0; o < units; o++ ) {
+          for( int n = 0; n < count; n++ ) {
+            int i = rand.nextInt(_in.units);
+            int w = o * _in.units + i;
+            _w[w] = rand(rand, min, max);
+          }
+        }
+        for( int i = 0; i < _b.length; i++ )
+          _b[i] = 1;
+      }
     }
 
     @Override void fprop(boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        if( !training || _rand.nextFloat() > dropout ) {
-          _a[o] = Float.NEGATIVE_INFINITY;
-          for( int i = 0; i < _in._a.length; i++ )
-            _a[o] = Math.max(_a[o], _w[o * _in._a.length + i] * _in._a[i]);
-          _a[o] += _b[o];
-          if( !training )
-            _a[o] *= 1 - _in.dropout;
-        }
+//        if( !training || _rand.nextFloat() > dropout ) {
+        _a[o] = Float.NEGATIVE_INFINITY;
+        for( int i = 0; i < _in._a.length; i++ )
+          _a[o] = Math.max(_a[o], _w[o * _in._a.length + i] * _in._a[i]);
+        _a[o] += _b[o];
+//          if( !training )
+//            _a[o] *= 1 - _in.dropout;
+//        }
       }
     }
 

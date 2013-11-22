@@ -130,16 +130,18 @@ public class Type {
         if( (varargs._t&VARARGS)!=0 )
           len--;                // Dont match the varargs arg in 1st loop
         else varargs=null;      // Else not a varargs
-
       }
       for( int i=0; i<len; i++ ) // Match all args
         if( !t0._ts[i].union(t1._ts[i]) )
           ok = false;           // Subtypes are unequal
       if( len == t1._ts.length ) return ok;
+      if( len == t1._ts.length-1 && (t1._ts[len].find()._t&VARARGS) != 0 )
+        return true;  // Also ok for a zero-length varargs in t1, and no arg in t0
       if( varargs==null ) return false;
       // Must be varargs: 
       for( int i=len; i<t1._ts.length; i++ ) {
-        Type var = (varargs._t&(VARARGS-1))==DBLARY0 ? dblary() : varargs; // Use a new unbound type
+        int tvar = (varargs._t&(VARARGS-1));
+        Type var = tvar==DBLARY0 ? dblary() : (tvar==UNBOUND ? unbound() : varargs); // Use a new unbound type
         if( !var.union(t1._ts[i]) )
           ok = false;         // Subtypes are unequal
       }

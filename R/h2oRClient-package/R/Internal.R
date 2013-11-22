@@ -12,72 +12,95 @@ LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!")
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
 if(Sys.info()["sysname"] == "Windows")
   myPath = paste(Sys.getenv("APPDATA"), "h2o", sep="/")
-h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
-h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
-h2o.__startLogging <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
-h2o.__stopLogging <- function() { assign("IS_LOGGING", FALSE, envir = pkg.env) }
-h2o.__clearLogs <- function() { unlink(h2o.__LOG_COMMAND); unlink(h2o.__LOG_ERROR) }
-h2o.__openCmdLog <- function() {
+pkg.env$h2o.__LOG_COMMAND = paste(myPath, "h2o_commands.log", sep="/")
+pkg.env$h2o.__LOG_ERROR = paste(myPath, "h2o_error_json.log", sep="/")
+h2o.__getCommandLog <- function() { return(pkg.env$h2o.__LOG_COMMAND)}
+h2o.__getErrorLog <- function() { return(pkg.env$h2o.__LOG_ERROR)}
+h2o.__changeCommandLog <- function(path) { 
+    cmd <- paste(path, 'commands.log', sep='/') 
+    assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
+    }
+h2o.__changeErrorLog   <- function(path) { 
+    cmd <- paste(path, 'errors.log', sep=',') 
+    assign("h2o.__LOG_ERROR", cmd, envir = pkg.env)
+    }
+h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
+h2o.__stopLogging      <- function() { assign("IS_LOGGING", FALSE, envir = pkg.env) }
+h2o.__clearLogs        <- function() { unlink(pkg.env$h2o.__LOG_COMMAND); unlink(pkg.env$h2o.__LOG_ERROR) }
+h2o.__openCmdLog       <- function() {
   myOS = Sys.info()["sysname"]
-  if(myOS == "Windows") shell.exec(paste("open '", h2o.__LOG_COMMAND, "'", sep="")) 
-  else system(paste("open '", h2o.__LOG_COMMAND, "'", sep=""))
+  if(myOS == "Windows") shell.exec(paste("open '", pkg.env$h2o.__LOG_COMMAND, "'", sep="")) 
+  else system(paste("open '", pkg.env$h2o.__LOG_COMMAND, "'", sep=""))
 }
 h2o.__openErrLog <- function() {
   myOS = Sys.info()["sysname"]
-  if(myOS == "Windows") shell.exec(paste("open '", h2o.__LOG_ERROR, "'", sep="")) 
-  else system(paste("open '", h2o.__LOG_ERROR, "'", sep=""))
+  if(myOS == "Windows") shell.exec(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep="")) 
+  else system(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep=""))
+}
+
+h2o.__logIt<-
+function(url, tmp, commandOrErr) {
+  if(is.null(tmp)) s <- url
+  else {
+  tmp <- get("tmp"); nams = names(tmp)
+  s <- rep(" ", length(tmp))
+  for(i in seq_along(tmp))
+    s[i] <- paste(nams[i], ": ", tmp[[i]], sep="")
+  s <- paste(url, '\t', paste(s, collapse=", "))
+  }
+  write(s, file = ifelse(commandOrErr == "Command", pkg.env$h2o.__LOG_COMMAND, pkg.env$h2o.__LOG_ERROR), append = TRUE)
 }
 
 # Internal functions & declarations
 h2o.__PAGE_CLOUD = "Cloud.json"
-h2o.__PAGE_EXEC = "Exec.json"
+h2o.__PAGE_COLNAMES = "SetColumnNames.json"
 h2o.__PAGE_GET = "GetVector.json"
 h2o.__PAGE_IMPORTURL = "ImportUrl.json"
 h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
-h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
 h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
 h2o.__PAGE_INSPECT = "Inspect.json"
-h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 h2o.__PAGE_JOBS = "Jobs.json"
 h2o.__PAGE_PARSE = "Parse.json"
-h2o.__PAGE_PARSE2 = "2/Parse2.json"
+h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 h2o.__PAGE_PUT = "PutVector.json"
 h2o.__PAGE_REMOVE = "Remove.json"
 h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
+h2o.__PAGE_SUMMARY = "SummaryPage.json"
 h2o.__PAGE_VIEWALL = "StoreView.json"
 h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
-h2o.__PAGE_SUMMARY = "SummaryPage.json"
-h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
-h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
-h2o.__PAGE_PREDICT2 = "2/Predict.json"
-h2o.__PAGE_COLNAMES = "SetColumnNames.json"
-h2o.__PAGE_PCA = "2/PCA.json"
-h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 h2o.__PAGE_GLM = "GLM.json"
+h2o.__PAGE_GLMGrid = "GLMGrid.json"
+h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_KMEANS = "KMeans.json"
 h2o.__PAGE_KMAPPLY = "KMeansApply.json"
 h2o.__PAGE_KMSCORE = "KMeansScore.json"
 h2o.__PAGE_RF  = "RF.json"
 h2o.__PAGE_RFVIEW = "RFView.json"
 h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
+
+h2o.__PAGE_EXEC2 = "2/Exec2.json"
+h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
+h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
+h2o.__PAGE_PARSE2 = "2/Parse2.json"
+h2o.__PAGE_PREDICT2 = "2/Predict.json"
+h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
+
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFModelView = "2/DRFModelView.json"
-h2o.__PAGE_GLMGrid = "GLMGrid.json"
-h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
 h2o.__PAGE_GBM = "2/GBM.json"
 h2o.__PAGE_GBMGrid = "2/GBMGrid.json"
 h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
-
 h2o.__PAGE_GLM2 = "2/GLM2.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
-h2o.__PAGE_FVEXEC = "2/DataManip.json"     # This is temporary until FluidVec Exec query is finished!
-h2o.__PAGE_EXEC2 = "2/Exec2.json"
-h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
+h2o.__PAGE_KMEANS2 = "2/KMeans2.json"
+h2o.__PAGE_KMModelView = "2/KMeans2ModelView.json"
 h2o.__PAGE_NN = "2/NeuralNet.json"
 h2o.__PAGE_NNModelView = "2/ExportModel.json"
-
+h2o.__PAGE_PCA = "2/PCA.json"
+h2o.__PAGE_PCASCORE = "2/PCAScore.json"
+h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 
 h2o.__remoteSend <- function(client, page, ...) {
   ip = client@ip
@@ -86,18 +109,9 @@ h2o.__remoteSend <- function(client, page, ...) {
   
   # Log list of parameters sent to H2O
   if(pkg.env$IS_LOGGING) {
-    # print(substitute(list(...)))
-    # temp = deparse(substitute(list(...)))
-    # write(paste(myURL, '\t', temp), file = h2o.__LOG_COMMAND, append = TRUE)
-    temp = list(...); temp = get("temp"); nams = names(temp)
-    str = rep(" ", length(temp))
-    for(i in seq_along(temp))
-      str[i] = paste(nams[i], ": ", temp[[i]], sep="")
-    str = paste(myURL, '\t', paste(str, collapse=", "))
-    write(str, file = h2o.__LOG_COMMAND, append = TRUE)
+    h2o.__logIt(myURL, list(...), "Command")
   }
   
-  # TODO (Spencer): Create "commands.log" using: list(...)
   # Sends the given arguments as URL arguments to the given page on the specified server
   # temp = postForm(myURL, style = "POST", ...)
   if(length(list(...)) == 0)
@@ -113,7 +127,7 @@ h2o.__remoteSend <- function(client, page, ...) {
   res = fromJSON(after)
   
   if (!is.null(res$error)) {
-    if(pkg.env$IS_LOGGING) h2o.__writeToFile(res, h2o.__LOG_ERROR)
+    if(pkg.env$IS_LOGGING) h2o.__writeToFile(res, pkg.env$h2o.__LOG_ERROR)
     stop(paste(myURL," returned the following error:\n", h2o.__formatError(res$error)))
   }
   res
@@ -187,53 +201,11 @@ h2o.__pollAll <- function(client, timeout) {
   }
 }
 
-h2o.__exec <- function(client, expr) {
-  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
-  if (type != "character")
-    expr = deparse(substitute(expr))
-  destKey = paste("Result_", pkg.env$result_count, ".hex", sep="")
-  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC, expression=expr, destination_key=destKey)
-  pkg.env$result_count = (pkg.env$result_count + 1) %% RESULT_MAX
-  res$key
-}
-
-h2o.__exec_dest_key <- function(client, expr, destKey) {
-  type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
-  if (type != "character")
-    expr = deparse(substitute(expr))
-  res = h2o.__remoteSend(client, h2o.__PAGE_EXEC, expression=expr, destination_key=destKey)
-  pkg.env$result_count = (pkg.env$result_count + 1) %% RESULT_MAX
-  res$key
-}
-
-h2o.__operator <- function(op, x, y) {
-  if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
-    stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData", h2o.__escape(x@key), x)
-  RHS = ifelse(class(y) == "H2OParsedData", h2o.__escape(y@key), y)
-  expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData") myClient = x@h2o
-  else myClient = y@h2o
-  res = h2o.__exec(myClient, expr)
-  if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData", h2o=myClient, key=res)
-  else
-    new("H2OParsedData", h2o=myClient, key=res)
-}
-
-h2o.__escape <- function(key) {
-  key_esc = key
-  myOS = Sys.info()["sysname"]
-  if(myOS == "Windows")
-    key_esc = gsub("\\\\", "\\\\\\\\", key)
-    
-  paste("|", key_esc, "|", sep="")
-}
-
 h2o.__uniqID <- function(prefix = "") {
-  if("uuid" %in% installed.packages())
+  if("uuid" %in% installed.packages()) {
+    library(uuid)
     temp = UUIDgenerate()
-  else {
+  } else {
     hex_digits <- c(as.character(0:9), letters[1:6])
     y_digits <- hex_digits[9:12]
     temp = paste(
@@ -245,19 +217,6 @@ h2o.__uniqID <- function(prefix = "") {
   }
   temp = gsub("-", "", temp)
   paste(prefix, temp, sep="_")
-}
-
-h2o.__func <- function(fname, x, type) {
-  if(ncol(x) != 1) stop("Can only operate on single column vectors")
-  expr = paste(fname, "(", h2o.__escape(x@key), ")", sep="")
-  res = h2o.__exec(x@h2o, expr)
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=res)
-  
-  if(type == "Number")
-    as.numeric(res$rows[[1]]$'0')
-  else if(type == "Vector")
-    new("H2OParsedData", h2o=x@h2o, key=res$key)
-  else res
 }
 
 # Check if key_env$key exists in H2O and remove if it does
@@ -313,30 +272,30 @@ h2o.__exec2_dest_key <- function(client, expr, destKey) {
 }
 
 h2o.__unop2 <- function(op, x) {
-  expr = paste(op, "(", x@key, ")")
+  expr = paste(op, "(", x@key, ")", sep = "")
   res = h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData2", h2o=x@h2o, key=res$dest_key)
+    new("H2OLogicalData", h2o=x@h2o, key=res$dest_key)
   else
-    new("H2OParsedData2", h2o=x@h2o, key=res$dest_key)
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 }
 
 h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData2" || class(x) == "H2OLogicalData2", x@key, x)
-  RHS = ifelse(class(y) == "H2OParsedData2" || class(y) == "H2OLogicalData2", y@key, y)
+  LHS = ifelse(class(x) == "H2OParsedData" || class(x) == "H2OLogicalData", x@key, x)
+  RHS = ifelse(class(y) == "H2OParsedData" || class(y) == "H2OLogicalData", y@key, y)
   expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData2" || class(x) == "H2OLogicalData2") myClient = x@h2o
+  if(class(x) == "H2OParsedData" || class(x) == "H2OLogicalData") myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData2", h2o=myClient, key=res$dest_key)
+    new("H2OLogicalData", h2o=myClient, key=res$dest_key)
   else
-    new("H2OParsedData2", h2o=myClient, key=res$dest_key)
+    new("H2OParsedData", h2o=myClient, key=res$dest_key)
 }

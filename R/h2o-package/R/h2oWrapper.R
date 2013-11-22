@@ -37,7 +37,7 @@ setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logica
     if(!startH2O)
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip=="localhost" || ip=="127.0.0.1") {
-      print("H2O is not running yet, launching it now.")
+      stop("H2O is not running yet, start it now.")
       h2oWrapper.startLauncher()
       invisible(readline("Start H2O, then hit <Return> to continue: "))
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")

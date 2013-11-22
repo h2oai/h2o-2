@@ -24,7 +24,10 @@ public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface API {
     String help();
+    /** Must be specified. */
     boolean required() default false;
+    /** For keys. If specified, the key must exist. */
+    boolean mustExist() default false;
     int since() default 1;
     int until() default Integer.MAX_VALUE;
     Class<? extends Filter> filter() default Filter.class;
@@ -262,6 +265,7 @@ public abstract class Request extends RequestBuilders {
   public boolean toHTML(StringBuilder sb) {
     return false;
   }
+  public void toJava(StringBuilder sb) {}
 
   public String toDocGET() {
     return null;

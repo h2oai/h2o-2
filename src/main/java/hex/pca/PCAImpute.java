@@ -22,9 +22,10 @@ public class PCAImpute extends FrameJob {
   @API(help = "Scale columns by their standard deviations", filter = Default.class)
   boolean scale = true;
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     Frame fr = source;
     DKV.put(destination_key, fr);
+    return Status.Done;
   }
 
   @Override protected void init() {

@@ -11,6 +11,7 @@ import hex.Layer.VecLinear;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import jsr166y.CountedCompleter;
@@ -132,9 +133,10 @@ public class NeuralNet extends ValidatedJob {
           Vec[] valid = null;
           Vec validResp = null;
           if( validation != null ) {
-            valid = new Vec[adapted[0].vecs().length];
+            final Vec[] vs = adapted[0].vecs();
+            valid = Arrays.copyOf(vs, vs.length - 1);
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
-            validResp = _validResponse;
+            validResp = vs[vs.length - 1];
           }
           while( !cancelled() ) {
             eval(valid, validResp);
@@ -192,13 +194,6 @@ public class NeuralNet extends ValidatedJob {
     return 0;
   }
 
-  public static Error eval(Layer[] ls, Frame frame, long n, long[][] cm) {
-    Vec[] vecs = frame.vecs();
-    vecs = Utils.remove(vecs, vecs.length - 1);
-    Vec resp = frame.vecs()[frame.vecs().length - 1];
-    return eval(ls, vecs, resp, n, cm);
-  }
-
   public static Error eval(Layer[] ls, Vec[] vecs, Vec resp, long n, long[][] cm) {
     Output output = (Output) ls[ls.length - 1];
     if( output instanceof VecSoftmax )
@@ -253,9 +248,10 @@ public class NeuralNet extends ValidatedJob {
       float d = t - out[o];
       error.mean_square += d * d;
     }
-    float max = Float.NEGATIVE_INFINITY;
-    int idx = -1;
-    for( int o = 0; o < out.length; o++ ) {
+    float max = out[0];
+    int idx = 0;
+    for( int o = 1; o < out.length; o++ ) {
+      assert !Double.isNaN(out[o]);
       if( out[o] > max ) {
         max = out[o];
         idx = o;
@@ -531,7 +527,10 @@ public class NeuralNet extends ValidatedJob {
         clones[y]._w = model.weights[y];
         clones[y]._b = model.biases[y];
       }
-      Error error = eval(clones, frs[0].vecs(), response, max_rows, confusion_matrix);
+      Vec[] vecs = frs[0].vecs();
+      Vec[] data = Utils.remove(vecs, vecs.length - 1);
+      Vec resp = vecs[vecs.length - 1];
+      Error error = eval(clones, data, resp, max_rows, confusion_matrix);
       classification_error = error.classification;
       mean_square_error = error.mean_square;
       if( frs[1] != null )

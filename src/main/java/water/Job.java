@@ -210,7 +210,7 @@ public class Job extends Request2 {
     protected transient String[] _names;
     protected transient String _responseName;
 
-    @API(help = "Validation frame", filter = Default.class)
+    @API(help = "Validation frame", filter = Default.class, mustExist = true)
     public Frame validation;
 
     @Override protected void logStart() {
@@ -484,8 +484,9 @@ public class Job extends Request2 {
       @Override public void compute2() {
         Throwable t = null;
         try {
-          Job.this.exec();
-          Job.this.done();
+          Status status = Job.this.exec();
+          if(status == Status.Done)
+            Job.this.remove();
         } catch (Throwable t_) {
           t = t_;
           if(!(t instanceof ExpectedExceptionForDebug))
@@ -505,8 +506,9 @@ public class Job extends Request2 {
   public void invoke() {
     init();
     start(new H2OEmptyCompleter());
-    exec();
-    done();
+    Status status = exec();
+    if(status == Status.Done)
+      remove();
   }
 
   /**
@@ -516,18 +518,50 @@ public class Job extends Request2 {
   protected void init() throws IllegalArgumentException {
   }
 
+  protected enum Status { Running, Done }
+
   /**
-   * Actual job code. Should be blocking until execution is done.
+   * Actual job code.
+   *
+   * @return true if job is done, false if it will still be running after the method returns.
    */
-  protected void exec() {
+  protected Status exec() {
     throw new RuntimeException("Should be overridden if job is a request");
   }
 
-  /**
-   * Invoked after job has run for cleanup purposes.
-   */
-  protected void done() {
-    remove();
+  public static boolean isJobEnded(Key jobkey) {
+    boolean done = false;
+
+    Job[] jobs = Job.all();
+    boolean found = false;
+    for (int i = jobs.length - 1; i >= 0; i--) {
+      if (jobs[i].job_key == null) {
+        continue;
+      }
+
+      if (! jobs[i].job_key.equals(jobkey)) {
+        continue;
+      }
+
+      // This is the job we are looking for.
+      found = true;
+
+      if (jobs[i].end_time > 0) {
+        done = true;
+      }
+
+      if (jobs[i].cancelled()) {
+        done = true;
+      }
+
+      break;
+    }
+
+    if (! found) {
+      done = true;
+    }
+
+    return done;
   }
 
   /**
@@ -536,37 +570,12 @@ public class Job extends Request2 {
    * @param pollingIntervalMillis Polling interval sleep time.
    */
   public static void waitUntilJobEnded(Key jobkey, int pollingIntervalMillis) {
-    boolean done = false;
-    while (! done) {
+    while (true) {
+      if (isJobEnded(jobkey)) {
+        return;
+      }
+
       try { Thread.sleep (pollingIntervalMillis); } catch (Exception _) {}
-      Job[] jobs = Job.all();
-      boolean found = false;
-      for (int i = jobs.length - 1; i >= 0; i--) {
-        if (jobs[i].job_key == null) {
-          continue;
-        }
-
-        if (! jobs[i].job_key.equals(jobkey)) {
-          continue;
-        }
-
-        // This is the job we are looking for.
-        found = true;
-
-        if (jobs[i].end_time > 0) {
-          done = true;
-        }
-
-        if (jobs[i].cancelled()) {
-          done = true;
-        }
-
-        break;
-      }
-
-      if (! found) {
-        done = true;
-      }
     }
   }
 

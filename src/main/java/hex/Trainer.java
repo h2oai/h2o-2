@@ -71,13 +71,6 @@ public abstract class Trainer {
       bprop();
     }
 
-    final void adjust(long n) {
-      for( int i = 1; i < _ls.length; i++ ) {
-        _ls[i].anneal(n);
-        _ls[i].momentum(n);
-      }
-    }
-
     final void fprop() {
       for( int i = 0; i < _ls.length; i++ )
         _ls[i].fprop(true);
@@ -318,7 +311,9 @@ public abstract class Trainer {
       if( _job != null ) {
         Job job = Job.findJob(_job);
         if( job != null ) {
-          job._fjtask.tryComplete();
+          H2OCountedCompleter task = job._fjtask;
+          if( task != null )
+            task.tryComplete();
           job.remove();
         }
       }

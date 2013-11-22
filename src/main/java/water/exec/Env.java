@@ -29,6 +29,8 @@ public class Env extends Iced {
   // Ref Counts for each vector
   transient final HashMap<Vec,Integer> _refcnt;
 
+  transient final public StringBuilder _sb; // Holder for print results
+
   transient boolean _allow_tmp;           // Deep-copy allowed to tmp
   transient boolean _busy_tmp;            // Assert temp is available for use
   transient Frame  _tmp;                  // The One Big Active Tmp
@@ -40,6 +42,7 @@ public class Env extends Iced {
     _fcn = new ASTOp [4]; // Functions (or null if not a function)
     _display= new int[4];
     _refcnt = new HashMap<Vec,Integer>();
+    _sb = new StringBuilder();
   }
 
   public int sp() { return _sp; }
@@ -172,6 +175,7 @@ public class Env extends Iced {
     _display = Arrays.copyOf(e._display,_tod+1);
     // All other fields are ignored/zero
     _refcnt = null;
+    _sb = null;
   }
 
 

@@ -8,7 +8,7 @@ import hex.NeuralNet.Error;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
-import java.util.UUID;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 import water.Job;
@@ -21,11 +21,12 @@ import water.util.Utils;
  */
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
-    samples.launchers.CloudLocal.launch(1, NeuralNetMnist.class);
-    // samples.launchers.CloudProcess.launch(4, NeuralNetMnist.class);
-    // samples.launchers.CloudRemote.launchDefaultIPs(NeuralNetMnist.class);
-    // samples.launchers.CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
-    // samples.launchers.CloudRemote.launchEC2(NeuralNetMnist.class);
+    Class job = NeuralNetMnist.class;
+    samples.launchers.CloudLocal.launch(1, job);
+    // samples.launchers.CloudProcess.launch(4, job);
+    // samples.launchers.CloudRemote.launchDefaultIPs(job);
+    // samples.launchers.CloudConnect.launch("localhost:54321", job);
+    // samples.launchers.CloudRemote.launchEC2(job);
   }
 
   protected Vec[] train, test;
@@ -57,49 +58,51 @@ public class NeuralNetMnist extends Job {
     return trainer;
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     load();
     System.out.println("Loaded data");
 
     // Labels are on last column for this dataset
-    Vec trainLabels = train[train.length - 1];
+    final Vec trainLabels = train[train.length - 1];
     train = Utils.remove(train, train.length - 1);
-    Vec testLabels = test[test.length - 1];
+    final Vec testLabels = test[test.length - 1];
     test = Utils.remove(test, test.length - 1);
 
-    Layer[] ls = build(train, trainLabels, null, null);
-    Trainer trainer = startTraining(ls);
+    final Layer[] ls = build(train, trainLabels, null, null);
+    final Trainer trainer = startTraining(ls);
 
     // Monitor training
-    long start = System.nanoTime();
-    while( !cancelled() ) {
-      try {
-        Thread.sleep(2000);
-      } catch( InterruptedException e ) {
-        throw new RuntimeException(e);
+    final Timer timer = new Timer();
+    final long start = System.nanoTime();
+    timer.schedule(new TimerTask() {
+      @Override public void run() {
+        if( NeuralNetMnist.this.cancelled() )
+          timer.cancel();
+        else {
+          double time = (System.nanoTime() - start) / 1e9;
+          long samples = trainer.samples();
+          int ps = (int) (samples / time);
+          String text = (int) time + "s, " + samples + " samples (" + (ps) + "/s) ";
+
+          // Build separate nets for scoring purposes, use same normalization stats as for training
+          Layer[] temp = build(train, trainLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
+          Layer.shareWeights(ls, temp);
+          Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
+          text += "train: " + error;
+
+          temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
+          Layer.shareWeights(ls, temp);
+          error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
+          text += ", test: " + error;
+          text += ", rates: ";
+          for( int i = 1; i < ls.length; i++ )
+            text += String.format("%.3g", ls[i].rate(samples)) + ", ";
+
+          System.out.println(text);
+        }
       }
-
-      double time = (System.nanoTime() - start) / 1e9;
-      long samples = trainer.samples();
-      int ps = (int) (samples / time);
-      String text = (int) time + "s, " + samples + " samples (" + (ps) + "/s) ";
-
-      // Build separate nets for scoring purposes, use same normalization stats as for training
-      Layer[] temp = build(train, trainLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
-      Layer.shareWeights(ls, temp);
-      Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
-      text += "train: " + error;
-
-      temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
-      Layer.shareWeights(ls, temp);
-      error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
-      text += ", test: " + error;
-      text += ", rates: ";
-      for( int i = 1; i < ls.length; i++ )
-        text += String.format("%.3g", ls[i].rate(samples)) + ", ";
-
-      System.out.println(text);
-    }
+    }, 0, 2000);
+    return Status.Running;
   }
 
   // Remaining code was used to shuffle & convert to CSV

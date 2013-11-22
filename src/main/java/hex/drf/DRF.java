@@ -55,7 +55,7 @@ public class DRF extends SharedTreeModelBuilder {
       return p;
     }
   }
-  public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr,true);  }
+  public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 50; min_rows = 1; }
@@ -85,9 +85,10 @@ public class DRF extends SharedTreeModelBuilder {
     Log.info("    seed: " + seed);
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     logStart();
     buildModel();
+    return Status.Done;
   }
 
   @Override protected Response redirect() {
@@ -141,7 +142,7 @@ public class DRF extends SharedTreeModelBuilder {
   }
 
   private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
-    Score sc = new Score().doIt(model, fr, validation, _validResponse, validation==null).report(Sys.DRF__,tid,ktrees);
+    Score sc = new Score().doIt(model, fr, validation, validation==null).report(Sys.DRF__,tid,ktrees);
     model = new DRFModel(model, finalScoring?null:ktrees, (float)sc.sum()/sc.nrows(), sc.cm(), tstats);
     DKV.put(outputKey, model);
     return model;

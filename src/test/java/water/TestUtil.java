@@ -351,7 +351,7 @@ public class TestUtil {
   }
 
   public static Frame parseFrame(File file) {
-    return parseFrame(Key.make(file.getName()), file);
+    return parseFrame(null, file);
   }
 
   public static Frame parseFrame(Key okey, String path) {
@@ -361,6 +361,8 @@ public class TestUtil {
   public static Frame parseFrame(Key okey, File file) {
     if( !file.exists() )
       throw new RuntimeException("File not found " + file);
+    if(okey == null)
+        okey = Key.make(file.getName());
     Key fkey = NFSFileVec.make(file);
     Frame fr = ParseDataset2.parse(okey, new Key[] { fkey });
     UKV.remove(fkey);

@@ -563,7 +563,7 @@ public class Inspect extends Request {
 
       row.addProperty(ROW, FIRST_CHUNK);
       for( int i = 0; i < _f.numCols(); i++ )
-        row.addProperty(_f._names[i], _f.vecs()[i].chunk(0).getClass().getSimpleName());
+        row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(0).getClass().getSimpleName());
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {

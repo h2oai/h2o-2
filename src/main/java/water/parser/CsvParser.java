@@ -681,8 +681,10 @@ NEXT_CHAR:
     } else {
       if(setup._separator == AUTO_SEP){ // first guess the separator{
         sep = guessSeparator(lines.get(0), lines.get(1));
-        if(sep == AUTO_SEP)sep = guessSeparator(lines.get(1), lines.get(2));
-        if(sep == AUTO_SEP)sep = guessSeparator(lines.get(0), lines.get(2));
+        if(sep == AUTO_SEP && lines.size() > 2){
+          if(sep == AUTO_SEP)sep = guessSeparator(lines.get(1), lines.get(2));
+          if(sep == AUTO_SEP)sep = guessSeparator(lines.get(0), lines.get(2));
+        }
         if(sep == AUTO_SEP)sep = (byte)' ';
       }
       for(int i = 0; i < lines.size(); ++i)

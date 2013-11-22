@@ -32,6 +32,8 @@ public class Exec2 extends Request2 {
     Exception e;
     try {
       Env env = water.exec.Exec2.exec(str);
+      StringBuilder sb = env._sb;
+      if( sb.length()!=0 ) sb.append("\n");
       if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
       if( env.sp() == 0 ) {      // Empty stack
       } else if( env.isAry() ) {
@@ -43,23 +45,22 @@ public class Exec2 extends Request2 {
         for( int i=0; i<num_cols; i++ )
           cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
         // Now the first few rows.
-        StringBuilder sb = new StringBuilder();
         String[] fs = fr.toStringHdr(sb);
         for( int i=0; i<Math.min(6,fr.numRows()); i++ )
           fr.toString(sb,fs,i);
-        result=sb.toString();
         // Nuke the result
         env.subRef(fr,skey);
       } else if( env.isFcn() ) {
         ASTOp op = env.popFcn();
         funstr = op.toString();
-        result = op.toString(true); // Verbose function
+        sb.append(op.toString(true)); // Verbose function
         env.subRef(op);
       } else {
         scalar = env.popDbl();
-        result = Double.toString(scalar);
+        sb.append(Double.toString(scalar));
       }
       env.remove();
+      result=sb.toString();
       return Response.done(this);
     }
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's

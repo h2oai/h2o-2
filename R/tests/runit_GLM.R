@@ -1,6 +1,6 @@
 source('./Utils/h2oR.R')
 
-logging("\n========================== Begin Tests ==============================\n")
+Log.info("\n========================== Begin Tests ==============================\n")
 serverH2O = new("H2OClient", ip=myIP, port=myPort)
 checkGLMModel <- function(myGLM.h2o, myGLM.r) {
   coeff.mat = as.matrix(myGLM.r$beta)
@@ -14,7 +14,7 @@ checkGLMModel <- function(myGLM.h2o, myGLM.r) {
 
 # Test GLM on benign.csv dataset
 test.GLM.benign <- function(serverH2O) {
-  cat("\nImporting benign.csv data...\n")
+  Log.info("\nImporting benign.csv data...\n")
   # benign.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
   # benign.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/benign.csv"))
   benign.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/benign.csv")
@@ -34,7 +34,7 @@ test.GLM.benign <- function(serverH2O) {
     myX = 1:maxx;
     myX = myX[which(myX != myY)]
     
-    cat("\nH2O GLM (binomial) with parameters:\nX:", myX, "\nY:", myY, "\n")
+    Log.info("\nH2O GLM (binomial) with parameters:\nX:", myX, "\nY:", myY, "\n")
     benign.glm.h2o = h2o.glm(y = myY, x = myX, data = benign.hex, family = "binomial", nfolds = 5, alpha = 0.5)
     print(benign.glm.h2o)
     
@@ -47,7 +47,7 @@ test.GLM.benign <- function(serverH2O) {
 
 # Test GLM on prostate dataset
 test.GLM.prostate <- function(serverH2O) {
-  cat("\nImporting prostate.csv data...\n")
+  Log.info("\nImporting prostate.csv data...\n")
   # prostate.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
   # prostate.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/logreg/prostate.csv"), "prostate.hex")
   prostate.hex = h2o.uploadFile(serverH2O, "../../smalldata/logreg/prostate.csv", "prostate.hex")
@@ -64,7 +64,7 @@ test.GLM.prostate <- function(serverH2O) {
     myX = myX[which(myX != myY)]
     # myX = paste(myX, collapse=",")
     
-    cat("\nH2O GLM (binomial) with parameters:\nX:", myX, "\nY:", myY, "\n")
+    Log.info("\nH2O GLM (binomial) with parameters:\nX:", myX, "\nY:", myY, "\n")
     prostate.glm.h2o = h2o.glm(y = myY, x = myX, data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
     print(prostate.glm.h2o)
     
@@ -76,7 +76,7 @@ test.GLM.prostate <- function(serverH2O) {
 
 # Test GLM on covtype (20k) dataset
 test.GLM.covtype <- function(serverH2O) {
-  cat("\nImporting covtype.20k.data...\n")
+  Log.info("\nImporting covtype.20k.data...\n")
   # covtype.hex = h2o.importFile(serverH2O, "../../UCI/UCI-large/covtype/covtype.data")
   # covtype.hex = h2o.importURL(serverH2O, "https://raw.github.com/0xdata/h2o/master/smalldata/covtype/covtype.20k.data")
   # covtype.hex = h2o.importFile(serverH2O, normalizePath("../../smalldata/covtype/covtype.20k.data"))
@@ -93,21 +93,21 @@ test.GLM.covtype <- function(serverH2O) {
   start = Sys.time()
   covtype.h2o1 = h2o.glm(y = myY, x = myX, data = covtype.hex, family = "binomial", nfolds = 2, alpha = 0, lambda = 0)
   end = Sys.time()
-  cat("\nGLM (L2) on", covtype.hex@key, "took", as.numeric(end-start), "seconds\n")
+  Log.info("\nGLM (L2) on", covtype.hex@key, "took", as.numeric(end-start), "seconds\n")
   print(covtype.h2o1)
   
   # Elastic: alpha = 0.5, lambda = 1e-4
   start = Sys.time()
   covtype.h2o2 = h2o.glm(y = myY, x = myX, data = covtype.hex, family = "binomial", nfolds = 2, alpha = 0.5, lambda = 1e-4)
   end = Sys.time()
-  cat("\nGLM (Elastic) on", covtype.hex@key, "took", as.numeric(end-start), "seconds\n")
+  Log.info("\nGLM (Elastic) on", covtype.hex@key, "took", as.numeric(end-start), "seconds\n")
   print(covtype.h2o2)
   
   # L1: alpha = 1, lambda = 1e-4
   start = Sys.time()
   covtype.h2o3 = h2o.glm(y = myY, x = myX, data = covtype.hex, family = "binomial", nfolds = 2, alpha = 1, lambda = 1e-4)
   end = Sys.time()
-  cat("\nGLM (L1) on", covtype.hex@key, "took", as.numeric(end-start), "seconds\n")
+  Log.info("\nGLM (L1) on", covtype.hex@key, "took", as.numeric(end-start), "seconds\n")
   print(covtype.h2o3)
 }
 
