@@ -470,6 +470,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override int target() {
+      if(vec.isNA(_input._pos))return -2;
       return (int) vec.at8(_input._pos);
     }
 
@@ -498,6 +499,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override int target() {
+      if(_chunk.isNA0((int)_input._pos))return -2;
       return (int) _chunk.at80((int) _input._pos);
     }
   }

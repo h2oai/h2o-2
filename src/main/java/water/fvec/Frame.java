@@ -556,7 +556,7 @@ public class Frame extends Iced {
       int rx = 0;               // Which row to in/ex-clude
       int rlo = 0;              // Lo/Hi for this block of rows
       int rhi = rlen;
-      while( rlo < rlen ) {     // Still got rows to include?
+      while( true ) {           // Still got rows to include?
         if( _rows != null ) {   // Got a row selector?
           if( rx >= _rows.length ) break; // All done with row selections
           long r = _rows[rx++]-1;// Next row selector
@@ -586,6 +586,7 @@ public class Frame extends Iced {
           }
         }
         rlo=rhi;
+        if( _rows==null ) break;
       }
     }
   }

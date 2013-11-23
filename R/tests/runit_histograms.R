@@ -1,15 +1,12 @@
 source('./Utils/h2oR.R')
 
-logging("\n======================== Begin Test ===========================\n")
-view_max <- 10000 #maximum returned by Inspect.java
-
-H2Ocon <- new("H2OClient", ip=myIP, port=myPort)
+Log.info("======================== Begin Test ===========================\n")
 
 test.histogram <- function (con, path, key) {
-  h2o.uploadFile(H2Ocon, path, key)
-  h2o.data <- new('H2OParsedData2')
-  h2o.data@h2o <- con
-  h2o.data@key <- key
+  h2o.data <- h2o.uploadFile(conn, path, key)
+  #h2o.data <- new('H2OParsedData')
+  #h2o.data@h2o <- con
+  #h2o.data@key <- key
   h2o.hists <- histograms(h2o.data)
   df<- as.data.frame(h2o.data)
   if (is.null(h2o.hists) || length(h2o.hists) == 0) {
@@ -19,7 +16,7 @@ test.histogram <- function (con, path, key) {
   for (i in 1:length(h2o.hists)) {     
     col.hist <- h2o.hists[[i]]
     if (is.null(col.hist)) {
-       logging(cat("Column ", i, " in ", path," has no histogram.\n"))
+       Log.info(paste("Column ", i, " in ", path," has no histogram.\n", sep = ""))
        next
     }
     if (is.null(col.hist$domains)) {
@@ -32,23 +29,31 @@ test.histogram <- function (con, path, key) {
 #      Binv <- 1 / B
 #      Binv[is.nan(Binv)] <- 0
 #      chisq <- (A - B) %*% ((A - B) * B)
-#      logging(cat("chisq = ", chisq, "\n"))
+#      Log.info(cat("chisq = ", chisq, "\n"))
 #      expect_true(chisq < 0.0001)
       expect_true(max(counts - r.hist$counts) <= 1)
-      logging(cat("Column ", i, " in ", path," successful.\n"))
+      Log.info(cat("Column ", i, " in ", path," successful.\n"))
     } else {
-      logging(cat("Column ", i, " in ", path," is enum, skipped.\n"))
+      Log.info(cat("Column ", i, " in ", path," is enum, skipped.\n"))
     }
   }
   h2o.rm(con, key)
 }
+
+
+
+conn <- new("H2OClient", ip=myIP, port=myPort)
 
 csv.files <- list.files('../../smalldata/', recursive=T, full.names=T, pattern='*.csv$')
 exclude <- c("../../smalldata//empty.csv",
               "../../smalldata//test/test_less_than_65535_unique_names.csv",
               "../../smalldata//test/test_more_than_65535_unique_names.csv")
 csv.files <- csv.files[-which(csv.files %in% exclude)]
+
+Log.info(csv.files)
+
 for ( f in csv.files ) {
   print(f)
-  test.histogram(H2Ocon, f, sub('.csv$', '.hex', f))
+  tryCatch("Histogram Test", test.histogram(conn, f, sub('.csv$', '.hex', f)), error = function(e) FAIL(e))
+  PASS()
 }

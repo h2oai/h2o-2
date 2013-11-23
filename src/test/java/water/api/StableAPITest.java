@@ -230,7 +230,6 @@ public class StableAPITest {
   @BeforeClass
   static public void registerRAPI() {
     regR(Cloud.class);
-    regR(DataManip.class, "source", "source2", "destination_key", "cols", "destination_key", "operation");
     regPy(DownloadDataset.class, "src_key");
     regR(Exec.class, "expression", "destination_key");
     regR(GeneratePredictionsPage.class, "model_key", "data_key");
@@ -241,7 +240,7 @@ public class StableAPITest {
     regR(GLMGrid.class, "key", "y", "x", "family", "n_folds", "alpha", "lambda", "case_mode", "case", "parallel" );
     regR(GLMGridProgress.class, "destination_key");
     regR(GLMModelView.class, "_modelKey");
-    regR(GLMValidationView.class, "_valKey");
+//    regR(GLMValidationView.class, "_valKey");
     regR(GetVector.class);
     regR(ImportFiles.class, "path");
     regR(ImportHdfs.class, "path");

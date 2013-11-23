@@ -230,14 +230,15 @@ public class NeuralNet extends ValidatedJob {
       len = Math.min(len, n);
     if( ls[ls.length - 1] instanceof Softmax ) {
       int correct = 0;
-      for( input._pos = 0; input._pos < len; input._pos++ )
-        if( correct(ls, error, cm) )
-          correct++;
+      for( input._pos = 0; input._pos < len; input._pos++ ){
+        if(((Softmax) ls[ls.length - 1]).target()==-2)continue;
+        if( correct(ls, error, cm) )correct++;
+      }
       error.classification = (len - (double) correct) / len;
       error.mean_square /= len;
     } else {
       for( input._pos = 0; input._pos < len; input._pos++ )
-        error(ls, error);
+        if(!Float.isNaN(ls[ls.length - 1]._a[0]))error(ls, error);
       error.classification = Double.NaN;
       error.mean_square /= len;
     }
@@ -247,6 +248,7 @@ public class NeuralNet extends ValidatedJob {
 
   private static boolean correct(Layer[] ls, Error error, long[][] confusion) {
     Softmax output = (Softmax) ls[ls.length - 1];
+    if(output.target() == -1)return false;
     for( int i = 0; i < ls.length; i++ )
       ls[i].fprop(false);
     float[] out = ls[ls.length - 1]._a;

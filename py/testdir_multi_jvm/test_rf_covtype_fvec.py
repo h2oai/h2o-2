@@ -2,10 +2,6 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_jobs, h2o_gbm
 
-# we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
-# only classes 1-7 in the 55th col
-# rng DETERMINISTIC is default
-
 paramDict = {
     'response': 'C54',
     'cols': None,
@@ -21,13 +17,13 @@ paramDict = {
     'sample_rate': 0.66,
     'importance': 0,
     'seed': None,
-
     }
-
 
 DO_OOBE = False
 DO_PLOT = True
-TRY = 'ntrees'    
+TRY = 'max_depth'
+TRY = 'ntrees'
+TRY = 'nbins'
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -41,27 +37,29 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(node_count=3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=10)
-        h2o.beta_features = True # fvec
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
     def test_rf_covtype_fvec(self):
+        h2o.beta_features = True # fvec
         importFolderPath = "standard"
 
         # Parse Train ******************************************************
         csvTrainFilename = 'covtype.shuffled.90pct.data'
         csvTrainPathname = importFolderPath + "/" + csvTrainFilename
         hex_key = csvTrainFilename + ".hex"
-        parseTrainResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvTrainPathname, hex_key=hex_key, timeoutSecs=180, doSummary=False)
+        parseTrainResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvTrainPathname, hex_key=hex_key, 
+            timeoutSecs=180, doSummary=False)
         inspect = h2o_cmd.runInspect(None, parseTrainResult['destination_key'])
 
         # Parse Test ******************************************************
         csvTestFilename = 'covtype.shuffled.10pct.data'
         csvTestPathname = importFolderPath + "/" + csvTestFilename
         hex_key = csvTestFilename + ".hex"
-        parseTestResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvTestPathname, hex_key=hex_key, timeoutSecs=180)
+        parseTestResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvTestPathname, hex_key=hex_key, 
+            timeoutSecs=180)
         inspect = h2o_cmd.runInspect(None, parseTestResult['destination_key'])
 
         rfViewInitial = []
@@ -107,7 +105,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + kwargs['ntrees'] * 200
 
             start = time.time()
-            rfFirstResult = h2o_cmd.runRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, noPoll=False, rfView=False, **kwargs)
+            rfFirstResult = h2o_cmd.runRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, rfView=False, **kwargs)
             # print h2o.dump_json(rfFirstResult)
             # FIX! are these already in there?
             rfView = {}
@@ -115,7 +113,6 @@ class Basic(unittest.TestCase):
             rfView['model_key'] = kwargs['destination_key']
             rfView['ntrees'] = kwargs['ntrees']
 
-            h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=5)
             trainElapsed = time.time() - start
             print "rf train end on ", csvTrainPathname, 'took', trainElapsed, 'seconds'
             ### print "rfView", h2o.dump_json(rfView)
@@ -123,16 +120,8 @@ class Basic(unittest.TestCase):
             model_key = rfView['model_key']
             ntrees = rfView['ntrees']
 
-            rfView = h2o_cmd.runRFView(None, model_key=model_key, 
-                timeoutSecs=60, retryDelaySecs=5, noPoll=False, doSimpleCheck=False)
-            h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
-            # rfView = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=True, doSimpleCheck=False)
+            rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, retryDelaySecs=5, doSimpleCheck=False)
             ## print "rfView:", h2o.dump_json(rfView)
-
-            # "N":1,
-            # "errs":[0.25,0.1682814508676529],
-            # "testKey":"syn_binary_10000x10.hex",
-            # "cm":[[3621,1399],[1515,3465]]}}
 
             rf_model = rfView['drf_model']
             cm = rf_model['cm']
@@ -153,29 +142,13 @@ class Basic(unittest.TestCase):
             print "errs[-1]:", errs[-1]
             print "errs:", errs
 
-            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRF2View(rfv=rfView)
-
-            # "treeStats": {
-            #     "maxDepth": 15, 
-            #     "maxLeaves": 1715, 
-            #     "meanDepth": 15, 
-            #     "meanLeaves": 421, 
-            #     "minDepth": 15, 
-            #     "minLeaves": 5
-            # }, 
-            # "varimp": null
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
+            # we iterate over params, so can't really do this check
+            # self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
 
             # FIX! should update this expected classification error
-            ## (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntrees)
-            ## self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=data_key)
 
-            # xList.append(ntrees)
-            # paramDict['max_depth']
-            # paramDict['nbins']
-            # paramDict['mtries']
-            # paramDict['ntrees']
-            # eList.append(errs[-1])
             eList.append(classErrorPctList[4])
             fList.append(trainElapsed)
             if DO_PLOT:

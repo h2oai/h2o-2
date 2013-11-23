@@ -47,6 +47,7 @@ public class GLM2 extends ModelJob {
   private GLMParams _glm;
   private double [] _beta;
 
+  private boolean _runAllLambdas = true;
 
 //  @API(help = "Link.", filter = Default.class)
   Link link = Link.identity;
@@ -62,7 +63,7 @@ public class GLM2 extends ModelJob {
   double [] alpha = new double[]{0.5};
 //  @API(help = "lambda", filter = RSeq2.class)
   @API(help = "lambda", filter = Default.class)
-  double [] lambda = new double[]{1e-5};
+  double [] lambda; // = new double[]{1e-5};
   public static final double DEFAULT_BETA_EPS = 1e-4;
   @API(help = "beta_eps", filter = Default.class)
   double beta_epsilon = DEFAULT_BETA_EPS;
@@ -211,7 +212,7 @@ public class GLM2 extends ModelJob {
           if(done){
             H2OCallback fin = new H2OCallback<GLMValidationTask>() {
               @Override public void callback(GLMValidationTask tsk) {
-                if(!diverged && tsk._improved && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
+                if(!diverged && (tsk._improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
                   _oldModel = _model;
                   _solver = new ADMMSolver(lambda[++_lambdaIdx],alpha[0]);
                   glmt._val = null;
@@ -259,7 +260,10 @@ public class GLM2 extends ModelJob {
         new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
           @Override public void callback(LMAXTask t){
             final double lmax = t.lmax();
-            if(lambda == null)lambda = new double[]{/*lmax,lmax*0.75,lmax*0.66,lmax*0.5,*/lmax*0.33,lmax*0.25,lmax*0.1,lmax*0.075,lmax*0.05,lmax*0.01}; // todo - make it a sequence of 100 lamdbas
+            if(lambda == null){
+              lambda = new double[]{lmax,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*0.1,lmax*0.075,lmax*0.05,lmax*0.01}; // todo - make it a sequence of 100 lamdbas
+              _runAllLambdas = false;
+            }
             else {
               int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
               if(i > 0)lambda = i == lambda.length?new double[]{lmax}:Arrays.copyOfRange(lambda, i, lambda.length);

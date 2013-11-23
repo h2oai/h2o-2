@@ -136,7 +136,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new DownloadDataset());
     registerRequest(new Exec2());
     registerRequest(new Exec());      // Will be replaced by Exec2
-    registerRequest(new DataManip()); // Will be replaced by Exec2
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
@@ -183,7 +182,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMProgressPage2());
     registerRequest(new GLMProgressPage2.GLMGrid());
     registerRequest(new GLMModelView());
-    registerRequest(new GLMValidationView());
+//    registerRequest(new GLMValidationView());
     registerRequest(new FrameSplit());
     registerRequest(new LaunchJar());
     Request.initializeNavBar();
