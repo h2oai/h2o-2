@@ -993,7 +993,7 @@ class H2O(object):
     # so we can create noise with different urls!, and different parms to that url
     # no noise if None
     def poll_url(self, response,
-        timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
+        timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=0, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
@@ -1560,12 +1560,14 @@ class H2O(object):
         # noPoll and rfView=False are similar?
         if (noPoll or not rfView) or (beta_features and rfView==False):
             # just return for now
-            print "HELLO rfView:", rfView, "noPoll", noPoll
+            print "no rfView:", rfView, "noPoll", noPoll
             return rf
 
         if beta_features:
             # since we don't know the model key from the rf response, we just let rf redirect us to completion
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
+            # HACK: wait more for first poll?
+            time.sleep(5)
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                 noise=noise, benchmarkLogging=benchmarkLogging)
