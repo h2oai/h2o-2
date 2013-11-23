@@ -120,7 +120,7 @@ class Basic(unittest.TestCase):
                 kwargs['destination_key'] = None
 
                 start = time.time()
-                rfFirstResult = h2o_cmd.runRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, 
+                rfResult = h2o_cmd.runRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, 
                     noPoll=False, rfView=False, **kwargs)
                 trainElapsed = time.time() - start
                 print 'rf train end', i, 'on', csvTrainPathname, 'took', trainElapsed, 'seconds'
@@ -131,18 +131,10 @@ class Basic(unittest.TestCase):
                     h2o_jobs.cancelAllJobs(timeoutSecs=2)
 
 
-            # print h2o.dump_json(rfFirstResult)
-            # FIX! are these already in there?
-            rfView = {}
-            rfView['data_key'] = hex_key
-            rfView['model_key'] = kwargs['destination_key']
-            rfView['ntrees'] = kwargs['ntrees']
-
             ### print "rfView", h2o.dump_json(rfView)
-            data_key = rfView['data_key']
-            model_key = rfView['model_key']
-            ntrees = rfView['ntrees']
-
+            model_key = rfResult['drf_model']['_selfKey']
+            data_key = rfResult['drf_model']['_dataKey']
+            ntrees = kwargs['ntrees']
             rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, retryDelaySecs=5, doSimpleCheck=False)
             ## print "rfView:", h2o.dump_json(rfView)
 

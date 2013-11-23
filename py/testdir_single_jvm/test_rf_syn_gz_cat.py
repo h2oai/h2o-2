@@ -157,7 +157,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             parseResult = make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs)
 
-            paramDict['response_variable'] = colCount - 1
+            paramDict['response_variable'] = colCount
             paramDict['features'] = 9
             paramDict['seed'] = random.randint(0, sys.maxint)
             kwargs = paramDict.copy()

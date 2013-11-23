@@ -386,7 +386,7 @@ nodes = []
 # but it uses hosts, so if that got shuffled, we got it covered?
 # the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
 # FIX! default to random_shuffle for now..then switch to not.
-def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True):
+def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=False):
     # always create the flatfile.
     ports_per_node = 2
     pff = open(flatfile_name(), "w+")
@@ -526,7 +526,7 @@ def setup_benchmark_log():
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None,
-    timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
+    timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=False,
     conservative=False, create_json=False, clone_cloud=None, **kwargs):
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
@@ -569,7 +569,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
             # best to just create it all the time..may or may not be used
             write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
-            if rand_shuffle: random.shuffle(portList)
+            if rand_shuffle: 
+                random.shuffle(portList)
             for p in portList:
                 verboseprint("psutil starting node", i)
                 newNode = LocalH2O(port=p, node_id=totalNodes, **kwargs)
