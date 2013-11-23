@@ -35,7 +35,7 @@ public class NeuralNet extends ValidatedJob {
   public static final int EVAL_ROW_COUNT = 1000;
 
   public enum Activation {
-    Tanh, Rectifier
+    Tanh, Rectifier, Maxout
   };
 
   @API(help = "Activation function", filter = Default.class)
@@ -92,10 +92,17 @@ public class NeuralNet extends ValidatedJob {
     final Layer[] ls = new Layer[hidden.length + 2];
     ls[0] = new VecsInput(train, null);
     for( int i = 0; i < hidden.length; i++ ) {
-      if( activation == Activation.Rectifier )
-        ls[i + 1] = new Layer.Rectifier(hidden[i]);
-      else
-        ls[i + 1] = new Layer.Tanh(hidden[i]);
+      switch( activation ) {
+        case Rectifier:
+          ls[i + 1] = new Layer.Rectifier(hidden[i]);
+          break;
+        case Tanh:
+          ls[i + 1] = new Layer.Tanh(hidden[i]);
+          break;
+        case Maxout:
+          ls[i + 1] = new Layer.Maxout(hidden[i]);
+          break;
+      }
       ls[i + 1].rate = (float) rate;
       ls[i + 1].rate_annealing = (float) rate_annealing;
       ls[i + 1].l2 = (float) l2;
