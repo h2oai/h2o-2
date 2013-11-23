@@ -57,6 +57,8 @@ public class TypeMap {
     "hex.drf.DRF",
     "water.AutoSerialTest",
     "water.KVTest$Atomic2",
+    //"water.FlowTest",
+    "water.FlowTest$SumCol",
   };
   // String -> ID mapping
   static private final NonBlockingHashMap<String, Integer> MAP = new NonBlockingHashMap();

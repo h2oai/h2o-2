@@ -601,4 +601,12 @@ public class Frame extends Iced {
       }
     }
   }
+
+  public <Y extends FlowTest.PerRow<Y>> FlowTest.ExecBuilderPerRow<Y> with( FlowTest.PerRow<Y> pr ) {
+    return new FlowTest.ExecBuilderPerRow<Y>(this,pr);
+  }
+
+  public FlowTest.ExecBuilder with( FlowTest.FilterRow filt ) {
+    return new FlowTest.ExecBuilder(this,filt);
+  }
 }
