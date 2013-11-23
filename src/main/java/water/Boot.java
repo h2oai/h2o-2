@@ -404,7 +404,12 @@ public class Boot extends ClassLoader {
     if( z != null ) return z;
     if( _weaver == null ) (_weaver = new Weaver()).initTypeMap(this);
     z = _weaver.weaveAndLoad(name, this);    // Try the Happy Class Loader
-    if( z != null ) return z;
+    if( z != null ) {
+      // Occasionally it's useful to print out class names that are actually Weaved.
+      // Leave this commented out println here so I can easily find it for next time.
+      //   System.out.println("WEAVED: " + name);
+      return z;
+    }
     z = getParent().loadClass(name); // Try the parent loader.  Probably the System loader.
     if( z != null ) return z;
     return z;
