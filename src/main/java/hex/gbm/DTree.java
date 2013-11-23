@@ -11,7 +11,6 @@ import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
-import water.fvec.Frame;
 import water.util.*;
 
 /**
@@ -846,27 +845,51 @@ public class DTree extends Iced {
     }
     // Convert Tree model to Java
     @Override protected void toJavaPredictBody( final SB sb, final SB afterBodySb) {
-      String[] cnames = classNames();
+      final int maxfsize = 100; // maximal number of trees in forest
+      int fidx = 0; // forest index
+      int treesInForest = 0;
+      SB forest = new SB();
+      // divide trees into small forests per 100 trees
       sb.indent().p("java.util.Arrays.fill(preds,0f);\n");
-      for( int i=0; i < treeBits.length; i++ ) {
-        CompressedTree cts[] = treeBits[i];
-        for( int c=0; c<cts.length; c++ ) {
+      for( int c=0; c<nclasses(); c++ ) {
+        toJavaForestBegin(sb, forest, c, fidx++);
+        for( int i=0; i < treeBits.length; i++ ) {
+          CompressedTree cts[] = treeBits[i];
           if( cts[c] == null ) continue;
-          sb.indent().p("// Tree ").p(i);
-          if( cnames != null ) sb.p(", class=").p(cnames[c]);
-          sb.p("\n");
-          sb.indent().p("preds[").p(c+1).p("] +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
-          // append body of tree predictor function
+          forest.indent().p("pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
+          // append representation of tree predictor
           toJavaTreePredictFct(afterBodySb, cts[c], i, c);
+          if (++treesInForest > maxfsize) {
+            toJavaForestEnd(sb, forest, c, fidx);
+            toJavaForestBegin(sb, forest, c, fidx++);
+            treesInForest = 0;
+          }
         }
+        toJavaForestEnd(sb, forest, c, fidx);
+        treesInForest = 0;
       }
+      afterBodySb.p(forest);
+    }
+
+    private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {
+      predictBody.indent().p("// Call forest predicting class ").p(c).nl();
+      predictBody.indent().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data);").nl();
+      forest.indent().p("// Forest representing a subset of trees scoring class ").p(c).nl();
+      forest.indent().p("public static class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
+      forest.indent().p("public static float predict(double[] data) {").nl().ii(1);
+      forest.indent().p("float pred = 0;").nl();
+    }
+    private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
+      forest.indent().p("return pred;").nl();
+      forest.indent().p("}").di(1).nl(); // end of function
+      forest.indent().p("}").di(1).nl(); // end of forest classs
     }
 
     // Produce prediction code for one tree
     protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int tidx, int c) {
       sb.indent().p("// Tree predictor for ").p(tidx).p("-tree and ").p(c).p("-class").nl();
       sb.indent().p("static class Tree_").p(tidx).p("_class_").p(c).p(" {").nl().ii(1);
-      sb.indent().p("static final float predict(double[] data) {").nl().ii(1);
+      sb.indent().p("static final float predict(double[] data) {").nl().ii(1); // predict method for one tree
       sb.indent().p("float pred = ");
       new TreeVisitor<RuntimeException>(this,cts) {
         byte _bits[] = new byte[100];
