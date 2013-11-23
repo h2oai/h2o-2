@@ -35,7 +35,7 @@ public class NeuralNet extends ValidatedJob {
   public static final int EVAL_ROW_COUNT = 1000;
 
   public enum Activation {
-    Tanh, Rectifier
+    Tanh, Rectifier, Maxout
   };
 
   @API(help = "Activation function", filter = Default.class)
@@ -52,6 +52,9 @@ public class NeuralNet extends ValidatedJob {
 
   @API(help = "L2 regularization", filter = Default.class)
   public double l2 = .001;
+
+  @API(help = "Ratio of units randomly set to 0", dmin = 0, dmax = 1, filter = Default.class)
+  public double dropout = 0;
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class)
   public int epochs = 100;
@@ -92,13 +95,21 @@ public class NeuralNet extends ValidatedJob {
     final Layer[] ls = new Layer[hidden.length + 2];
     ls[0] = new VecsInput(train, null);
     for( int i = 0; i < hidden.length; i++ ) {
-      if( activation == Activation.Rectifier )
-        ls[i + 1] = new Layer.Rectifier(hidden[i]);
-      else
-        ls[i + 1] = new Layer.Tanh(hidden[i]);
+      switch( activation ) {
+        case Rectifier:
+          ls[i + 1] = new Layer.Rectifier(hidden[i]);
+          break;
+        case Tanh:
+          ls[i + 1] = new Layer.Tanh(hidden[i]);
+          break;
+        case Maxout:
+          ls[i + 1] = new Layer.Maxout(hidden[i]);
+          break;
+      }
       ls[i + 1].rate = (float) rate;
       ls[i + 1].rate_annealing = (float) rate_annealing;
       ls[i + 1].l2 = (float) l2;
+      ls[i + 1].dropout = (float) dropout;
     }
     if( classification )
       ls[ls.length - 1] = new VecSoftmax(trainResp, null);
@@ -223,15 +234,18 @@ public class NeuralNet extends ValidatedJob {
       len = Math.min(len, n);
     if( ls[ls.length - 1] instanceof Softmax ) {
       int correct = 0;
-      for( input._pos = 0; input._pos < len; input._pos++ ){
-        if(((Softmax) ls[ls.length - 1]).target()==-2)continue;
-        if( correct(ls, error, cm) )correct++;
+      for( input._pos = 0; input._pos < len; input._pos++ ) {
+        if( ((Softmax) ls[ls.length - 1]).target() == -2 )
+          continue;
+        if( correct(ls, error, cm) )
+          correct++;
       }
       error.classification = (len - (double) correct) / len;
       error.mean_square /= len;
     } else {
       for( input._pos = 0; input._pos < len; input._pos++ )
-        if(!Float.isNaN(ls[ls.length - 1]._a[0]))error(ls, error);
+        if( !Float.isNaN(ls[ls.length - 1]._a[0]) )
+          error(ls, error);
       error.classification = Double.NaN;
       error.mean_square /= len;
     }
@@ -241,7 +255,8 @@ public class NeuralNet extends ValidatedJob {
 
   private static boolean correct(Layer[] ls, Error error, long[][] confusion) {
     Softmax output = (Softmax) ls[ls.length - 1];
-    if(output.target() == -1)return false;
+    if( output.target() == -1 )
+      return false;
     for( int i = 0; i < ls.length; i++ )
       ls[i].fprop(false);
     float[] out = ls[ls.length - 1]._a;
