@@ -22,7 +22,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_NN_mnist(self):
+    def test_NN_mnist_fvec(self):
+        h2o.beta_features = True
         csvFilelist = [
             ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
             ("mnist_training.csv.gz", "mnist_testing.csv.gz",    600), 
@@ -58,17 +59,17 @@ class Basic(unittest.TestCase):
             # NN****************************************
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + trainCsvFilename, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
-            response = inspect['num_cols'] - 1
+            response = inspect['numCols'] - 1
             # up to but not including
             x = ",".join(map(str,range(response)))
 
             modelKey = 'a.hex'
             kwargs = {
                 # this is ignore??
-                'response': 0, # first column is pixel value
+                'response': 'C0', # first column is pixel value
                 # 'cols': x, # apparently no longer required? 
                 'ignored_cols': None, # this is not consistent with ignored_cols_by_name
                 'classification': 1,
@@ -83,15 +84,12 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 600
             start = time.time()
-            h2o.beta_features = True
-            nnFirstResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-            print "nnFirstResult:", h2o.dump_json(nnFirstResult)
-            print "Hack: neural net apparently doesn't support the right polling response yet?"
-            h2o_jobs.pollWaitJobs(pattern=None, errorIfCancelled=True, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+            nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            print "nnResult:", h2o.dump_json(nnResult)
             print "neural net end on ", trainCsvFilename, 'took', time.time() - start, 'seconds'
 
             # hack it!
-            job_key = nnFirstResult['job_key']
+            job_key = nnResult['job_key']
             params = {'job_key': job_key, 'destination_key': modelKey}
             a = h2o.nodes[0].completion_redirect(jsonRequest="2/NeuralNetProgress.json", params=params)
             print "NeuralNetProgress:", h2o.dump_json(a)
@@ -101,7 +99,7 @@ class Basic(unittest.TestCase):
             if DO_SCORE:
                 kwargs = {
                     'max_rows': 0,
-                    'response': 0, # first column is pixel value
+                    'response': 'C0', # first column is pixel value
                     # 'cols': x, # apparently no longer required? 
                     'ignored_cols': None, # this is not consistent with ignored_cols_by_name
                     'cols': None, # this is not consistent with ignored_cols_by_name
@@ -109,16 +107,10 @@ class Basic(unittest.TestCase):
                     'destination_key': 'b.hex',
                     'model': modelKey,
                 }
-                nnScoreFirstResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-                h2o.beta_features = False
-                print "Hack: neural net apparently doesn't support the right polling response yet?"
-                h2o_jobs.pollWaitJobs(pattern=None, errorIfCancelled=True, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
-
-
+                nnScoreResult = h2o_cmd.runNNetScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, **kwargs)
                 print "neural net score end on ", trainCsvFilename, 'took', time.time() - start, 'seconds'
                 print "nnScoreResult:", h2o.dump_json(nnScoreResult)
 
-            h2o.beta_features = False
 
 if __name__ == '__main__':
     h2o.unit_main()
