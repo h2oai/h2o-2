@@ -120,8 +120,10 @@ def get_ip_address():
     return ip
 
 def get_sandbox_name():
-    if os.environ.has_key("H2O_SANDBOX_NAME"): return os.environ["H2O_SANDBOX_NAME"]
-    else: return "sandbox"
+    if os.environ.has_key("H2O_SANDBOX_NAME"): 
+        return os.environ["H2O_SANDBOX_NAME"]
+    else: 
+        return "sandbox"
 
 def unit_main():
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
