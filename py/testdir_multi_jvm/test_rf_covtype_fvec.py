@@ -12,11 +12,12 @@ paramDict = {
     # fail case
     # 'ntrees': 1,
     # 'max_depth': 30,
+    # 'nbins': 100,
     'ntrees': 1,
     'max_depth': 10,
     
     'min_rows': 2, # normally 1 for classification, 5 for regression
-    'nbins': 100,
+    'nbins': 2000,
     'mtries': None,
     'sample_rate': 0.66,
     'importance': 0,
