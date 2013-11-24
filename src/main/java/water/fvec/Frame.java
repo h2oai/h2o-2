@@ -11,6 +11,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
 import water.util.Log;
+import water.exec.Flow;
 
 /**
  * A collection of named Vecs.  Essentially an R-like data-frame.  Multiple
@@ -603,15 +604,15 @@ public class Frame extends Iced {
   }
 
   // ------------------------------------------------------------------------------
-  public <Y extends FlowTest.PerRow<Y>> FlowTest.ExecBuilderPerRow<Y> with( FlowTest.PerRow<Y> pr ) {
-    return new FlowTest.ExecBuilderPerRow<Y>(pr,new FlowTest.ExecBuilderFrame(this));
+  public <Y extends Flow.PerRow<Y>> Flow.FlowPerRow<Y> with( Flow.PerRow<Y> pr ) {
+    return new Flow.FlowPerRow<Y>(pr,new Flow.FlowFrame(this));
   }
 
-  public FlowTest.ExecBuilderFilter with( FlowTest.FilterRow fr ) {
-    return new FlowTest.ExecBuilderFilter(fr,new FlowTest.ExecBuilderFrame(this));
+  public Flow.FlowFilter with( Flow.Filter fr ) {
+    return new Flow.FlowFilter(fr,new Flow.FlowFrame(this));
   }
 
-  public FlowTest.ExecBuilderGroupBy with( FlowTest.GroupBy fr ) {
-    return new FlowTest.ExecBuilderGroupBy(fr,new FlowTest.ExecBuilderFrame(this));
+  public Flow.FlowGroupBy with( Flow.GroupBy fr ) {
+    return new Flow.FlowGroupBy(fr,new Flow.FlowFrame(this));
   }
 }
