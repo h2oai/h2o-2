@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBMGrid_basic_benign(self):
+    def test_GBM_basic_benign(self):
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
         csvPathname = 'logreg/' + csvFilename
@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         # fails with n_folds
         # check the first in the models list. It should be the best
         colNames = [ 'STR','OBS','AGMT','FNDX','HIGD','DEG','CHK', 'AGP1','AGMN','NLV','LIV','WT','AGLP','MST' ]
-        modelKey = 'GBMGrid_benign'
+        modelKey = 'GBM_benign'
 
         # 'cols', 'ignored_cols_by_name', and 'ignored_cols' have to be exclusive
         params = {
@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
             print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
 
 
-    def test_GBMGrid_basic_prostate(self):
+    def test_GBM_basic_prostate(self):
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
         # columns start at 0
@@ -80,7 +80,7 @@ class Basic(unittest.TestCase):
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         colNames = ['ID','CAPSULE','AGE','RACE','DPROS','DCAPS','PSA','VOL','GLEASON']
 
-        modelKey = 'GBMGrid_prostate'
+        modelKey = 'GBM_prostate'
         # 'cols', 'ignored_cols_by_name', and 'ignored_cols' have to be exclusive
         params = {
             'destination_key': modelKey,
