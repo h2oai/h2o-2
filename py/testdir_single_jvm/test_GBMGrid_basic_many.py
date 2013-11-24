@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
         # for more in range(8):
         # fast
         # for more in range(9):
-        for more in range(10 if DO_FAIL_CASE else 8):
+        for more in range(10 if DO_FAIL_CASE else 2):
             for i in range(5,10):
                 kwargs = params.copy()
                 kwargs['min_rows'] = '1,' + str(i)
@@ -96,12 +96,12 @@ class Basic(unittest.TestCase):
 
         h2o_jobs.pollWaitJobs(timeoutSecs=300)
         elapsed = time.time() - start
-        print "All GBM jobs completed in", elapsed, "seconds."
 
         for job_key, model_key  in jobs:
             GBMResult = h2o.nodes[0].gbm_grid_view(job_key=job_key, destination_key=model_key)
             showResults(GBMResult, 15)
 
+        print "All GBM jobs completed in", elapsed, "seconds."
         print "totalGBMGridJobs:", totalGBMGridJobs
 
 if __name__ == '__main__':
