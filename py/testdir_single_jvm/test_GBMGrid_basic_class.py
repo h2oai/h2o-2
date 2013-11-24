@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs 
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 DO_CLASSIFICATION = True
 
@@ -30,8 +30,6 @@ class Basic(unittest.TestCase):
         # cols 0-13. 3 is output
         # no member id in this one
         
-        # fails with n_folds
-        print "Not doing n_folds with benign. Fails with 'unable to solve?'"
         # check the first in the models list. It should be the best
         colNames = [ 'STR','OBS','AGMT','FNDX','HIGD','DEG','CHK', 'AGP1','AGMN','NLV','LIV','WT','AGLP','MST' ]
         modelKey = 'GBMGrid_benign'
@@ -41,9 +39,9 @@ class Basic(unittest.TestCase):
             'destination_key': modelKey,
             'ignored_cols_by_name': 'STR',
             'learn_rate': '.1,.2',
-            'ntrees': 2,
-            'max_depth': 8,
-            'min_rows': 1,
+            'ntrees': '3,4',
+            'max_depth': '5,7',
+            'min_rows': '1,2',
             'response': 'FNDX',
             'classification': 1 if DO_CLASSIFICATION else 0,
             }
@@ -51,30 +49,10 @@ class Basic(unittest.TestCase):
         kwargs = params.copy()
         timeoutSecs = 1800
         start = time.time()
-        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-        print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
-        # no pattern waits for all
-        h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+        GBMResult = h2o_cmd.runGBM(parseResult=parseResult, **kwargs)
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
-
-        gbmGridView = h2o.nodes[0].gbm_grid_view(job_key=GBMFirstResult['job_key'], destination_key=modelKey)
-        print h2o.dump_json(gbmGridView)
-
-        if 1==0:
-            gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
-            # errrs from end of list? is that the last tree?
-            errsLast = gbmTrainView['gbm_model']['errs'][-1]
-
-            print "GBM 'errsLast'", errsLast
-            if DO_CLASSIFICATION:
-                cm = gbmTrainView['gbm_model']['cm']
-                pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-                print "\nTrain\n==========\n"
-                print h2o_gbm.pp_cm(cm)
-            else:
-                print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
-
+        h2o_gbm.showGBMGridResults(GBMResult, 0)
 
     def test_GBMGrid_basic_prostate(self):
         csvFilename = "prostate.csv"
@@ -89,10 +67,10 @@ class Basic(unittest.TestCase):
         params = {
             'destination_key': modelKey,
             'ignored_cols_by_name': 'ID',
-            'learn_rate': .1,
-            'ntrees': '2,4',
-            'max_depth': 8,
-            'min_rows': 1,
+            'learn_rate': '.1,.2',
+            'ntrees': '1,2',
+            'max_depth': '8,9',
+            'min_rows': '1,5',
             'response': 'CAPSULE',
             'classification': 1 if DO_CLASSIFICATION else 0,
             }
@@ -100,29 +78,10 @@ class Basic(unittest.TestCase):
         kwargs = params.copy()
         timeoutSecs = 1800
         start = time.time()
-        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-        print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
-        # no pattern waits for all
-        h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+        GBMResult = h2o_cmd.runGBM(parseResult=parseResult, **kwargs)
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
-
-        gbmGridView = h2o.nodes[0].gbm_grid_view(job_key=GBMFirstResult['job_key'], destination_key=modelKey)
-        print h2o.dump_json(gbmGridView)
-
-        if 1==0:
-            gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
-            # errrs from end of list? is that the last tree?
-            errsLast = gbmTrainView['gbm_model']['errs'][-1]
-
-            print "GBM 'errsLast'", errsLast
-            if DO_CLASSIFICATION:
-                cm = gbmTrainView['gbm_model']['cm']
-                pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-                print "\nTrain\n==========\n"
-                print h2o_gbm.pp_cm(cm)
-            else:
-                print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
+        h2o_gbm.showGBMGridResults(GBMResult, 10)
 
 
 if __name__ == '__main__':

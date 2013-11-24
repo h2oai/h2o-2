@@ -44,6 +44,9 @@ class Basic(unittest.TestCase):
 
                 print "Delete all keys"
                 h2o.nodes[0].remove_all_keys()
+                print "This shouldn't see any keys"
+                h2i.delete_keys_at_all_nodes()
+
 
 
             print "\nTrial", trial, "completed\n"

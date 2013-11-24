@@ -32,8 +32,7 @@ public abstract class Layer extends Iced {
   @API(help = "L2 regularisation")
   public float l2;
 
-  // Not exposed until ready
-  //@API(help = "Ratio of units randomly set to 0", dmin = 0, dmax = 1)
+  @API(help = "Ratio of units randomly set to 0", dmin = 0, dmax = 1)
   public float dropout;
 
   // TODO disabled for now, not enough testing
@@ -238,9 +237,9 @@ public abstract class Layer extends Iced {
       _len = vecs[0].length();
 
       if( train != null ) {
-        int a =train.categoricals_lens.length;
+        int a = train.categoricals_lens.length;
         int b = vecs.length;
-        assert  a== b;
+        assert a == b;
         categoricals_lens = train.categoricals_lens;
         categoricals_mins = train.categoricals_mins;
         assert train.subs.length == units;
@@ -470,7 +469,8 @@ public abstract class Layer extends Iced {
     }
 
     @Override int target() {
-      if(vec.isNA(_input._pos))return -2;
+      if( vec.isNA(_input._pos) )
+        return -2;
       return (int) vec.at8(_input._pos);
     }
 
@@ -499,7 +499,8 @@ public abstract class Layer extends Iced {
     }
 
     @Override int target() {
-      if(_chunk.isNA0((int)_input._pos))return -2;
+      if( _chunk.isNA0((int) _input._pos) )
+        return -2;
       return (int) _chunk.at80((int) _input._pos);
     }
   }
@@ -715,8 +716,6 @@ public abstract class Layer extends Iced {
 
     public Maxout(int units) {
       this.units = units;
-      //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      _rand = new XorShiftRNG(123);
     }
 
     @Override public void init(Layer[] ls, int index, boolean weights, long step) {
@@ -741,14 +740,16 @@ public abstract class Layer extends Iced {
     @Override void fprop(boolean training) {
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-//        if( !training || _rand.nextFloat() > dropout ) {
-        _a[o] = Float.NEGATIVE_INFINITY;
-        for( int i = 0; i < _in._a.length; i++ )
-          _a[o] = Math.max(_a[o], _w[o * _in._a.length + i] * _in._a[i]);
-        _a[o] += _b[o];
-//          if( !training )
-//            _a[o] *= 1 - _in.dropout;
-//        }
+        if( _rand == null )
+          _rand = new XorShiftRNG(123);
+        if( !training || _rand.nextFloat() > dropout ) {
+          _a[o] = Float.NEGATIVE_INFINITY;
+          for( int i = 0; i < _in._a.length; i++ )
+            _a[o] = Math.max(_a[o], _w[o * _in._a.length + i] * _in._a[i]);
+          _a[o] += _b[o];
+          if( !training )
+            _a[o] *= 1 - _in.dropout;
+        }
       }
     }
 

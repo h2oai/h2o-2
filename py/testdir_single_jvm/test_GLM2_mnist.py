@@ -4,6 +4,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h
 
 
 DO_HDFS = False
+DO_ALL_DIGITS = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -80,8 +81,8 @@ class Basic(unittest.TestCase):
                 'case_mode': '=',
                 'case_val': 0,
                 'family': 'binomial',
-                'lambda': 1.0E-5,
-                'alpha': 0.0,
+                'lambda': 0.5,
+                'alpha': 1e-4,
                 'max_iter': 5,
                 ## 'thresholds': 0.5,
                 ## 'weight': 1.0,
@@ -89,7 +90,12 @@ class Basic(unittest.TestCase):
                 'beta_epsilon': 1.0E-4,
                 }
 
-            for c in [0,1,2,3,4,5,6,7,8,9]:
+            if DO_ALL_DIGITS:
+                cases = [0,1,2,3,4,5,6,7,8,9]
+            else:
+                cases = [8]
+
+            for c in cases:
                 kwargs = params.copy()
                 print "Trying binomial with case:", c
                 kwargs['case_val'] = c
@@ -106,8 +112,7 @@ class Basic(unittest.TestCase):
                 modelKey = GLMModel['model_key']
 
                 start = time.time()
-                glmScore = h2o_cmd.runGLMScore(key=testKey, model_key=modelKey, thresholds="0.5",
-                    timeoutSecs=60)
+                glmScore = h2o_cmd.runGLMScore(key=testKey, model_key=modelKey, thresholds="0.5", timeoutSecs=60)
                 elapsed = time.time() - start
                 print "GLMScore in",  elapsed, "secs", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

@@ -219,7 +219,7 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
             data_key=parseKey,
             model_key=rfModelKey,
             destination_key=predictKey,
-            timeoutSecs=timeoutSecs)
+            timeoutSecs=30)
 
         predictCMResult = h2o.nodes[0].predict_confusion_matrix(
             actual=parseKey,

@@ -122,7 +122,14 @@ public class Boot extends ClassLoader {
   public static void main(String[] args) throws Exception {  _init.boot(args); }
   // NOTE: This method cannot be run from jar
   public static void main(Class main, String[] args) throws Exception {
-    weavePackage(main.getPackage().getName());
+    String[] packageNamesToWeave = { main.getPackage().getName()} ;
+    main(main, args, packageNamesToWeave);
+  }
+  // NOTE: This method cannot be run from jar
+  public static void main(Class main, String[] args, String[] packageNamesToWeave) throws Exception{
+    for (String packageName : packageNamesToWeave) {
+      weavePackage(packageName);
+    }
     ArrayList<String> l = new ArrayList<String>(Arrays.asList(args));
     l.add(0, "-mainClass");
     l.add(1, main.getName());
@@ -397,7 +404,12 @@ public class Boot extends ClassLoader {
     if( z != null ) return z;
     if( _weaver == null ) (_weaver = new Weaver()).initTypeMap(this);
     z = _weaver.weaveAndLoad(name, this);    // Try the Happy Class Loader
-    if( z != null ) return z;
+    if( z != null ) {
+      // Occasionally it's useful to print out class names that are actually Weaved.
+      // Leave this commented out println here so I can easily find it for next time.
+      //   System.out.println("WEAVED: " + name);
+      return z;
+    }
     z = getParent().loadClass(name); // Try the parent loader.  Probably the System loader.
     if( z != null ) return z;
     return z;

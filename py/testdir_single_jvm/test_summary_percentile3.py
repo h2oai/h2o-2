@@ -6,6 +6,7 @@ print "Synthetic dataset with small/close reals and known mean and std dev"
 print "Use small numbers"
 
 DO_SCIPY_COMPARE = False
+DO_NOISE = False
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
     from numpy import loadtxt, genfromtxt, savetxt
@@ -52,7 +53,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
         rowData = []
 
         # random noise that is a huge outlier
-        if r1.randint(0,10000)==0:
+        if DO_NOISE and r1.randint(0,10000)==0:
             # ri = float(random.randint(-sys.maxint, sys.maxint))
             ri = 0
             if ri < noiseMin:
@@ -82,9 +83,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54327)
+            h2o.build_cloud(1)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):

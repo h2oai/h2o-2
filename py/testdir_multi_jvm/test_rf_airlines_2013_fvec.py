@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
         csvPathname = importFolderPath + "/" + csvFilename
         start      = time.time()
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', 
-            path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=900)
+            path=csvPathname, schema='local', hex_key=hex_key, timeoutSecs=900)
         parse_time = time.time() - start 
         print "parse and summary took {0} sec".format(parse_time)
 

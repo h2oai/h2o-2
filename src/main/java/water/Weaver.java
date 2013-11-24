@@ -56,7 +56,7 @@ public class Weaver {
 
   // See if javaassist can find this class; if so then check to see if it is a
   // subclass of water.DTask, and if so - alter the class before returning it.
-  public synchronized CtClass javassistLoadClass(String name) {
+  private synchronized CtClass javassistLoadClass(String name) {
     try {
       if( name.equals("water.Boot") ) return null;
       CtClass cc = _pool.get(name); // Full Name Lookup
@@ -66,6 +66,7 @@ public class Weaver {
       for( CtClass base : _serBases )
         if( cc.subclassOf(base) )
           return javassistLoadClass(cc);
+
       return cc;
     } catch( NotFoundException nfe ) {
       return null;              // Not found?  Use the normal loader then
@@ -83,7 +84,7 @@ public class Weaver {
     return false;
   }
 
-  public synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException {
+  private synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException {
     if( cc.isFrozen() ) return cc;
     // serialize parent
     javassistLoadClass(cc.getSuperclass());

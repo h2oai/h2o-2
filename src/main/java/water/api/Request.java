@@ -156,11 +156,21 @@ public abstract class Request extends RequestBuilders {
 
   // html template and navbar handling -----------------------------------------
 
-  private static String _htmlTemplate;
+  /**
+   * Read from file once.
+   */
+  private static final String _htmlTemplateFromFile;
+
+  /**
+   * Written by initializeNavBar().
+   */
+  private static volatile String _htmlTemplate;
+
   protected String htmlTemplate() { return _htmlTemplate; }
 
   static {
-    _htmlTemplate = loadTemplate("/page.html");
+    _htmlTemplateFromFile = loadTemplate("/page.html");
+    _htmlTemplate = "";
   }
 
   static final String loadTemplate(String name) {
@@ -203,8 +213,14 @@ public abstract class Request extends RequestBuilders {
   private static HashMap<String, ArrayList<MenuItem>> _navbar = new HashMap();
   private static ArrayList<String> _navbarOrdering = new ArrayList();
 
-  public static void initializeNavBar() { _htmlTemplate = initializeNavBar(_htmlTemplate); }
-  public static String initializeNavBar(String template) {
+  /**
+   * Call this after the last call addToNavbar().
+   * This is called automatically for navbar entries from inside H2O.
+   * If user app level code calls addToNavbar, then call this again to make those changes visible.
+   */
+  public static void initializeNavBar() { _htmlTemplate = initializeNavBar(_htmlTemplateFromFile); }
+
+  private static String initializeNavBar(String template) {
     StringBuilder sb = new StringBuilder();
     for( String s : _navbarOrdering ) {
       ArrayList<MenuItem> arl = _navbar.get(s);
