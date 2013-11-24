@@ -1888,7 +1888,7 @@ class H2O(object):
             'cols'                 : None,
             'nbins'                : None,
             'classification'       : None,
-            'grid_parallelism'       : None,
+            'grid_parallelism'     : None,
         }
 
         # only lets these params thru

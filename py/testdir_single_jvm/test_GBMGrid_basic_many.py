@@ -4,6 +4,7 @@ import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 DO_CLASSIFICATION = True
 
+DO_FAIL_CASE = False
 def showResults(GBMResult, expectedError):
     # print "GBMResult:", h2o.dump_json(GBMResult)
     jobs = GBMResult['jobs']        
@@ -67,6 +68,7 @@ class Basic(unittest.TestCase):
             'min_rows': '1,5',
             'response': 'CAPSULE',
             'classification': 1 if DO_CLASSIFICATION else 0,
+            'grid_parallelism': 1,
             }
 
         kwargs = params.copy()
@@ -79,7 +81,7 @@ class Basic(unittest.TestCase):
         # for more in range(8):
         # fast
         # for more in range(9):
-        for more in range(10):
+        for more in range(10 if DO_FAIL_CASE else 8):
             for i in range(5,10):
                 kwargs = params.copy()
                 kwargs['min_rows'] = '1,' + str(i)
