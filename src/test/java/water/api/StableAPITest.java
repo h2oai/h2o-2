@@ -155,7 +155,6 @@ public class StableAPITest {
     regPy(DRFProgressPage.class);
     regPy(Debug.class);
     regPy(DownloadDataset.class, "src_key");
-    regPy(Exec.class, "expression");
     regPy(ExportHdfs.class);
     regPy(ExportS3.class);
     regPy(ExportS3Progress.class);
@@ -169,7 +168,6 @@ public class StableAPITest {
     regPy(GLMScore.class, "key", "model_key", "thresholds");
     regPy(GeneratePredictionsPage.class, "data_key", "destination_key", "model_key");
     regPy(Get.class, "key");
-    regPy(GetVector.class);
     regPy(HTTP404.class);
     regPy(HTTP500.class);
     regPy(IOStatus.class);
@@ -200,7 +198,6 @@ public class StableAPITest {
     regPy(Progress.class, "destination_key", "job");
     regPy(Progress2.class);
     regPy(PutValue.class, "key", "value");
-    regPy(PutVector.class);
     regPy(QuantilesPage.class);
     regPy(RF.class, "bin_limit", "class_weights", "data_key", "depth", "exclusive_split_limit", "features", "ignore", "iterative_cm", "model_key", "ntree", "out_of_bag_error_estimate", "parallel", "response_variable", "sample", "sampling_strategy", "seed", "stat_type", "strata_samples", "use_non_local_data");
     regPy(RFScore.class);
@@ -231,7 +228,6 @@ public class StableAPITest {
   static public void registerRAPI() {
     regR(Cloud.class);
     regPy(DownloadDataset.class, "src_key");
-    regR(Exec.class, "expression", "destination_key");
     regR(GeneratePredictionsPage.class, "model_key", "data_key");
     regR(GBM.class, "destination_key", "source", "response", "cols", "ntrees", "max_depth", "learn_rate", "min_rows", "classification");
     regR(GBMModelView.class, "_modelKey");
@@ -241,7 +237,6 @@ public class StableAPITest {
     regR(GLMGridProgress.class, "destination_key");
     regR(GLMModelView.class, "_modelKey");
 //    regR(GLMValidationView.class, "_valKey");
-    regR(GetVector.class);
     regR(ImportFiles.class, "path");
     regR(ImportHdfs.class, "path");
     regR(ImportUrl.class, "url", "key" );
@@ -258,7 +253,6 @@ public class StableAPITest {
     // regR(PCAScore.class, "model_key", "key", "destination_key", "num_pc");
     regR(PCAScore.class, "source", "model", "destination_key", "num_pc");
     regR(Predict.class, "model", "data", "prediction");
-    regR(PutVector.class);
     regR(Remove.class, "key");
     regR(RF.class, "data_key", "response_variable", "ignore", "ntree", "depth", "class_weights", "model_key");
     regR(RFView.class, "model_key", "data_key", "response_variable", "ntree", "class_weights", "out_of_bag_error_estimate");

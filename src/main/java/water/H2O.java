@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import jsr166y.*;
 import water.Job.JobCancelledException;
-import water.exec.Function;
 import water.nbhm.NonBlockingHashMap;
 import water.parser.ParseDataset;
 import water.persist.*;
@@ -915,15 +914,9 @@ public final class H2O {
     startApiIpPortWatchdog(); // Check if the API port becomes unreachable
     Log.POST(360,"");
 
-    initializeExpressionEvaluation(); // starts the expression evaluation system
-    Log.POST(370,"");
     ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
-  }
-
-  private static void initializeExpressionEvaluation() {
-    Function.initializeCommonFunctions();
   }
 
   // Default location of the AWS credentials file

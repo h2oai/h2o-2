@@ -59,6 +59,7 @@ public class TypeMap {
     "water.KVTest$Atomic2",
     //"water.FlowTest",
     "water.FlowTest$SumCol",
+    "water.FlowTest$FilterCol",
   };
   // String -> ID mapping
   static private final NonBlockingHashMap<String, Integer> MAP = new NonBlockingHashMap();

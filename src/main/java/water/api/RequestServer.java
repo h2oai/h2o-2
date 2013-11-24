@@ -135,13 +135,11 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new DRFProgressPage());
     registerRequest(new DownloadDataset());
     registerRequest(new Exec2());
-    registerRequest(new Exec());      // Will be replaced by Exec2
     registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
     registerRequest(new GLMGridProgress());
     registerRequest(new GLMProgressPage());
-    registerRequest(new GetVector()); // Will be replaced by Exec2
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new RPackage.RDownload());
@@ -155,7 +153,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new Progress());
     registerRequest(new Progress2());
     registerRequest(new PutValue());
-    registerRequest(new PutVector()); // Will be replaced by Exec2
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
     registerRequest(new RPackage());

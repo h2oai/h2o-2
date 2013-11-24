@@ -602,11 +602,13 @@ public class Frame extends Iced {
     }
   }
 
+  // ------------------------------------------------------------------------------
   public <Y extends FlowTest.PerRow<Y>> FlowTest.ExecBuilderPerRow<Y> with( FlowTest.PerRow<Y> pr ) {
-    return new FlowTest.ExecBuilderPerRow<Y>(this,pr);
+    return new FlowTest.ExecBuilderPerRow<Y>(pr,new FlowTest.ExecBuilderFrame(this));
   }
 
-  public FlowTest.ExecBuilder with( FlowTest.FilterRow filt ) {
-    return new FlowTest.ExecBuilder(this,filt);
+  public FlowTest.ExecBuilderFilter with( FlowTest.FilterRow fr ) {
+    return new FlowTest.ExecBuilderFilter(fr,new FlowTest.ExecBuilderFrame(this));
   }
+
 }

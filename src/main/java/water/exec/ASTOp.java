@@ -11,7 +11,7 @@ import water.fvec.*;
 
 // --------------------------------------------------------------------------
 public abstract class ASTOp extends AST {
-  static final HashMap<String,ASTOp> OPS = new HashMap();
+  static final public HashMap<String,ASTOp> OPS = new HashMap();
   static {
     // Unary ops
     put(new ASTIsNA());
