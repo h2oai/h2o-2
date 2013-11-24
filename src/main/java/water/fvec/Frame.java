@@ -611,4 +611,7 @@ public class Frame extends Iced {
     return new FlowTest.ExecBuilderFilter(fr,new FlowTest.ExecBuilderFrame(this));
   }
 
+  public FlowTest.ExecBuilderGroupBy with( FlowTest.GroupBy fr ) {
+    return new FlowTest.ExecBuilderGroupBy(fr,new FlowTest.ExecBuilderFrame(this));
+  }
 }

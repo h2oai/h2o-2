@@ -24,10 +24,15 @@ public class FlowTest extends TestUtil {
       System.out.println(sumcols._sum+"/"+sumcols._n+" = "+(sumcols._sum/sumcols._n));
       
       SumCol sumcols1 = fr.
-        with(new FilterCol(cyl_idx)).
+        with(new FilterRow() { boolean filter(double ds[]) { return ds[cyl_idx]!=5; } }).
         with(new SumCol(year_idx)).
         doit();
       System.out.println(sumcols1._sum+"/"+sumcols1._n+" = "+(sumcols1._sum/sumcols1._n));
+      
+      NonBlockingHashMapLong<SumCol> sumcols2 = fr.
+        with(new GroupBy() { long groupId(double ds[]) { return (long)ds[cyl_idx];} }).
+        with(new SumCol(year_idx)).
+        doit();
       
       //NonBlockingHashMapLong<SumCol> sumcols2 = fr.
       //  with(new FilterRow() { boolean filter(double ds[]) { return ds[cyl_idx]!=5; }}).
@@ -52,12 +57,6 @@ public class FlowTest extends TestUtil {
     SumCol( int col_idx  ) { _col_idx = col_idx; }
     @Override public void mapreduce( double ds[] ) { _sum += ds[_col_idx]; _n++; }
     @Override public void reduce( SumCol sy ) { _sum += sy._sum; _n += sy._n; }
-  }
-
-  private static class FilterCol extends FilterRow {
-    final int _col_idx;
-    FilterCol( int col_idx  ) { _col_idx = col_idx; }
-    boolean filter(double ds[]) { return ds[_col_idx]!=5; }
   }
 
   public abstract static class GroupBy {
@@ -93,13 +92,28 @@ public class FlowTest extends TestUtil {
     final FilterRow _fr;
     final ExecBuilder _ex;
     public ExecBuilderFilter( FilterRow fr, ExecBuilder ex ) { _fr = fr; _ex = ex;}
-    public <Y extends FlowTest.PerRow<Y>> FlowTest.ExecBuilderPerRow<Y> with( FlowTest.PerRow<Y> pr ) {
+    public <Y extends PerRow<Y>> ExecBuilderPerRow<Y> with( PerRow<Y> pr ) {
       return new ExecBuilderPerRow<Y>(pr,this);
     }
     @Override Frame frame() { return _ex.frame(); }
     @Override public String toString() { return _ex.toString()+".with("+_fr+")"; }
     @Override void doit(PerRow pr, double ds[]) {
       if( _fr.filter(ds) ) pr.mapreduce(ds); 
+    }
+  }
+
+  public static class ExecBuilderGroupBy extends ExecBuilder {
+    final GroupBy _gb;
+    final ExecBuilder _ex;
+    public ExecBuilderGroupBy( GroupBy gb, ExecBuilder ex ) { _gb = gb; _ex = ex;}
+    public <Y extends PerRow<Y>> ExecBuilderPerRow<Y> with( PerRow<Y> pr ) {
+      return new ExecBuilderPerRow<Y>(pr,this);
+    }
+    public ExecBuilder with( FilterRow fr ) { return new ExecBuilderFilter(fr,this);  }
+    @Override Frame frame() { return _ex.frame(); }
+    @Override public String toString() { return _ex.toString()+".with("+_gb+")"; }
+    @Override void doit(PerRow pr, double ds[]) {
+      throw H2O.unimpl();
     }
   }
 
