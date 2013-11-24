@@ -1413,7 +1413,7 @@ class H2O(object):
 
     # this removes all keys!
     def remove_all_keys(self, timeoutSecs=30):
-        a = self.__do_json_request('RemoveAll.json', timeout=timeoutSecs)
+        a = self.__do_json_request('2/RemoveAll.json', timeout=timeoutSecs)
         return a
 
     # only model keys can be exported?
