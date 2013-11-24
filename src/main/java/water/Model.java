@@ -90,7 +90,7 @@ public abstract class Model extends Iced {
   public Frame score( Frame fr) {
     int ridx = fr.find(_names[_names.length-1]);
     if(ridx != -1){ // drop the response for scoring!
-      fr = new Frame(fr._names,fr.vecs());
+      fr = new Frame(fr._names,fr.vecs().clone());
       fr.remove(ridx);
     }
     // Adapt the Frame layout - returns adapted frame and frame containing only
