@@ -1032,7 +1032,7 @@ public final class H2O {
     } catch( NoSuchFieldException nsfe ) { }
 
     // Sleep a bit so all my other threads can 'catch up'
-    try { Thread.sleep(1000); } catch( InterruptedException e ) { }
+    try { Thread.sleep(100); } catch( InterruptedException e ) { }
   }
 
   public static DatagramChannel _udpSocket;
