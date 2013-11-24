@@ -1118,10 +1118,9 @@ class H2O(object):
             if (create_noise):
                 # this guarantees the loop is done, so we don't need to worry about
                 # a 'return r' being interpreted from a noise response
-                # status = 'poll'
+                status = 'poll'
                 progress = ''
             else:
-
                 if 'response_info' in response: # trigger v2 for GBM always?
                     status = response['response_info']['status']
                     # default to "" if doesn't exist
@@ -1143,7 +1142,7 @@ class H2O(object):
                 raise Exception(emsg)
             count += 1
 
-            if noPoll:
+            if noPoll and not create_noise:
                 return response
             
             if benchmarkLogging:
