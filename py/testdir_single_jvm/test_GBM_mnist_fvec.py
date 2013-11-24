@@ -19,7 +19,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_mnist(self):
+    def test_GBM_mnist_fvec(self):
+        h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilename = "train.csv.gz"
         timeoutSecs=1800
@@ -37,12 +38,13 @@ class Basic(unittest.TestCase):
 
         # GBM (train)****************************************
         params = { 
+            'classification': 0, # faster? 
             'destination_key': "GBMKEY",
             'learn_rate': .1,
-            'ntrees': 10,
+            'ntrees': 3,
             'max_depth': 8,
             'min_rows': 1,
-            'response': 784, # this dataset has the response in the last col (0-9 to check)
+            'response': 'C784', # this dataset has the response in the last col (0-9 to check)
             # 'ignored_cols_by_name': range(200,784) # only use the first 200 for speed?
             }
 
@@ -51,10 +53,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 1800
         #noPoll -> False when GBM finished
         start = time.time()
-        GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-        # hack!
-        if h2o.beta_features:
-            h2o_jobs.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=120, retryDelaySecs=5)
+        GBMResult = h2o_cmd.runGBM(parseResult=parseResult, **kwargs)
         elapsed = time.time() - start
 
         print "GBM training completed in", elapsed, "seconds.", \

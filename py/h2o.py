@@ -2209,7 +2209,11 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", parallel=1, **kwargs)
+        # default
+        if not kwargs['parallel']:
+            kwargs['parallel'] = 1
+
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if not beta_features:
@@ -2232,6 +2236,17 @@ class H2O(object):
             print "Viewing the GLM grid result through the browser"
             h2b.browseJsonHistoryAsUrlLastMatch('GLMGridProgress')
             time.sleep(5)
+        return a
+
+    def GLMGrid_view(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'job': None,
+            'destination_key': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'GLMGridProgress', print_params)
+        a = self.__do_json_request('GLMGridProgress.json', timeout=timeoutSecs, params=params_dict)
+        print "\nGLMGridProgress result:", dump_json(a)
         return a
 
     # GLMScore params

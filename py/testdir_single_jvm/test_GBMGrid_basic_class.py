@@ -4,33 +4,6 @@ import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 DO_CLASSIFICATION = True
 
-def showResults(GBMResult, expectedError):
-    print "GBMResult:", h2o.dump_json(GBMResult)
-    jobs = GBMResult['jobs']        
-    for jobnum, j in enumerate(jobs):
-        _distribution = j['_distribution'] 
-        model_key = j['destination_key']
-        job_key = j['job_key']
-        inspect = h2o_cmd.runInspect(key=model_key)
-        # print "jobnum:", jobnum, h2o.dump_json(inspect)
-        gbmTrainView = h2o_cmd.runGBMView(model_key=model_key)
-        print "jobnum:", jobnum, h2o.dump_json(gbmTrainView)
-
-        if DO_CLASSIFICATION:
-            cm = gbmTrainView['gbm_model']['cm']
-            pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-            if pctWrongTrain > expectedError:
-                raise Exception("Should have < %s error here. pctWrongTrain: %s" % expectedError, pctWrongTrain)
-
-            errsLast = gbmTrainView['gbm_model']['errs'][-1]
-            print "\nTrain", jobnum, job_key, "\n==========\n", "pctWrongTrain:", pctWrongTrain, "errsLast:", errsLast
-            print "GBM 'errsLast'", errsLast
-            print h2o_gbm.pp_cm(cm)
-        else:
-            print "\nTrain", jobnum, job_key, "\n==========\n", "errsLast:", errsLast
-            print "GBMTrainView errs:", gbmTrainView['gbm_model']['errs']
-
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -79,7 +52,7 @@ class Basic(unittest.TestCase):
         GBMResult = h2o_cmd.runGBM(parseResult=parseResult, **kwargs)
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
-        showResults(GBMResult, 0)
+        h2o_gbm.showGBMGridResults(GBMResult, 0)
 
     def test_GBMGrid_basic_prostate(self):
         csvFilename = "prostate.csv"
@@ -108,7 +81,7 @@ class Basic(unittest.TestCase):
         GBMResult = h2o_cmd.runGBM(parseResult=parseResult, **kwargs)
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
-        showResults(GBMResult, 10)
+        h2o_gbm.showGBMGridResults(GBMResult, 10)
 
 
 if __name__ == '__main__':

@@ -3,34 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 DO_CLASSIFICATION = True
-DO_FAIL_CASE = True
-
-def showResults(GBMResult, expectedError):
-    # print "GBMResult:", h2o.dump_json(GBMResult)
-    jobs = GBMResult['jobs']        
-    for jobnum, j in enumerate(jobs):
-        _distribution = j['_distribution'] 
-        model_key = j['destination_key']
-        job_key = j['job_key']
-        inspect = h2o_cmd.runInspect(key=model_key)
-        # print "jobnum:", jobnum, h2o.dump_json(inspect)
-        gbmTrainView = h2o_cmd.runGBMView(model_key=model_key)
-        print "jobnum:", jobnum, h2o.dump_json(gbmTrainView)
-
-        if DO_CLASSIFICATION:
-            cm = gbmTrainView['gbm_model']['cm']
-            pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
-            if pctWrongTrain > expectedError:
-                raise Exception("Should have < %s error here. pctWrongTrain: %s" % (expectedError, pctWrongTrain))
-
-            errsLast = gbmTrainView['gbm_model']['errs'][-1]
-            print "\nTrain", jobnum, job_key, "\n==========\n", "pctWrongTrain:", pctWrongTrain, "errsLast:", errsLast
-            print "GBM 'errsLast'", errsLast
-            print h2o_gbm.pp_cm(cm)
-        else:
-            print "\nTrain", jobnum, job_key, "\n==========\n", "errsLast:", errsLast
-            print "GBMTrainView errs:", gbmTrainView['gbm_model']['errs']
-
+DO_FAIL_CASE = False
+DO_FROM_TO_STEP = False
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -81,25 +55,27 @@ class Basic(unittest.TestCase):
         # for more in range(8):
         # fast
         # for more in range(9):
-        for more in range(10 if DO_FAIL_CASE else 2):
-            for i in range(5,10):
-                kwargs = params.copy()
-                kwargs['min_rows'] = '1,' + str(i)
-                kwargs['max_depth'] = '5,' + str(i)
+        for i in range(50 if DO_FAIL_CASE else 10):
+            kwargs = params.copy()
+            kwargs['min_rows'] = '1,2,3'
+            if DO_FROM_TO_STEP:
+                kwargs['max_depth'] = '5:10:1'
+            else:
+                kwargs['max_depth'] = '5,6,10'
 
-                GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
-                # print "GBMResult:", h2o.dump_json(GBMResult)
-                job_key = GBMResult['job_key']
-                model_key = GBMResult['destination_key']
-                jobs.append( (job_key, model_key) )
-                totalGBMGridJobs += 1
+            GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
+            # print "GBMResult:", h2o.dump_json(GBMResult)
+            job_key = GBMResult['job_key']
+            model_key = GBMResult['destination_key']
+            jobs.append( (job_key, model_key) )
+            totalGBMGridJobs += 1
 
         h2o_jobs.pollWaitJobs(timeoutSecs=300)
         elapsed = time.time() - start
 
         for job_key, model_key  in jobs:
             GBMResult = h2o.nodes[0].gbm_grid_view(job_key=job_key, destination_key=model_key)
-            showResults(GBMResult, 15)
+            h2o_gbm.showGBMGridResults(GBMResult, 15)
 
         print "All GBM jobs completed in", elapsed, "seconds."
         print "totalGBMGridJobs:", totalGBMGridJobs
