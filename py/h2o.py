@@ -386,7 +386,7 @@ nodes = []
 # but it uses hosts, so if that got shuffled, we got it covered?
 # the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
 # FIX! default to random_shuffle for now..then switch to not.
-def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=False):
+def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True):
     # always create the flatfile.
     ports_per_node = 2
     pff = open(flatfile_name(), "w+")
@@ -526,7 +526,7 @@ def setup_benchmark_log():
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=2, base_port=54321, hosts=None,
-    timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=False,
+    timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
     conservative=False, create_json=False, clone_cloud=None, **kwargs):
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts

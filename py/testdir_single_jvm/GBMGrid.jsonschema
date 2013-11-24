@@ -1,0 +1,37 @@
+{
+    "type":"object", "properties": {
+        "Request2": { "type":"number" },
+        "destination_key": { "type":"string" },
+        "job_key": { "type":"string" },
+        "jobs": {
+            "type":"array", "items": {
+                "type":"object", "properties": {
+                    "Request2": { "type":"number" },
+                    "_distribution": { "type":"array", "items":
+                        { "type":"number" }
+                    },
+                    "_nclass": { "type":"number" },
+                    "_ncols": { "type":"number" },
+                    "_nrows": { "type":"number" },
+                    "description": { "type":"string" },
+                    "destination_key": { "type":"string" },
+                    "end_time": { "type":"number" },
+                    "exception": { "type":"null" },
+                    "job_key": { "type":"string" },
+                    "response_info": { "type":"null" },
+                    "start_time": { "type":"number" }
+                }
+            }
+        },
+        "progress": { "type":"number" },
+        "response_info": { "type":"object", "properties": {
+            "h2o": { "type":"string" },
+            "node": { "type":"string" },
+            "redirect_url": { "type":"null" },
+            "status": { "type":"string" },
+            "time": { "type":"number" }
+        }
+        }
+    }
+}
+

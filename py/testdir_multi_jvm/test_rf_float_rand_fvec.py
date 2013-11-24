@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_MB=1300,use_flatfile=True)
+            h2o.build_cloud(2,java_heap_MB=1300,use_flatfile=True)
         else:
             import h2o_hosts
             h2o_hosts.build_cloud_with_hosts()
@@ -90,13 +90,9 @@ class Basic(unittest.TestCase):
                 'nbins': 1024,
                 'seed': 784834182943470027,
             }
-            start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
-            
-            if 1==0: # was for debug
-                summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=colCount+1)
-                h2o_cmd.infoFromSummary(summaryResult)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, doSummary=True)
 
+            start = time.time()
             rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=15, pollTimeoutSecs=5, **kwargs)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
