@@ -3,8 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 DO_CLASSIFICATION = True
+DO_FAIL_CASE = True
 
-DO_FAIL_CASE = False
 def showResults(GBMResult, expectedError):
     # print "GBMResult:", h2o.dump_json(GBMResult)
     jobs = GBMResult['jobs']        
