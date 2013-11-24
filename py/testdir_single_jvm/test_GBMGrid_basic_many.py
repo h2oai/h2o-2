@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=28)
+            h2o.build_cloud(1, java_heap_GB=14)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
                 kwargs['max_depth'] = '5,' + str(i)
 
                 GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
-                print "GBMResult:", h2o.dump_json(GBMResult)
+                # print "GBMResult:", h2o.dump_json(GBMResult)
                 job_key = GBMResult['job_key']
                 model_key = GBMResult['destination_key']
                 jobs.append( (job_key, model_key) )
@@ -99,7 +99,6 @@ class Basic(unittest.TestCase):
         for job_key, model_key  in jobs:
             GBMResult = h2o.nodes[0].gbm_grid_view(job_key=job_key, destination_key=model_key)
             showResults(GBMResult, 15)
-
 
         print "totalGBMGridJobs:", totalGBMGridJobs
 
