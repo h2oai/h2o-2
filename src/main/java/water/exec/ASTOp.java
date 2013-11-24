@@ -4,6 +4,7 @@ import java.util.*;
 
 import water.*;
 import water.fvec.*;
+import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -463,8 +464,9 @@ class ASTTable extends ASTOp {
     public final int[]  _domain;
     public long[] _counts;
 
-    public Tabularize(int[] dom) { super(); _domain=dom; _counts=new long[dom.length];}
+    public Tabularize(int[] dom) { super(); _domain=dom; }
     @Override public void map(Chunk chk) {
+      _counts=new long[_domain.length];
       for (int i = 0; i < chk._len; i++)
         if (! chk.isNA0(i)) {
           int cls = Arrays.binarySearch(_domain,(int)chk.at80(i));
@@ -472,9 +474,7 @@ class ASTTable extends ASTOp {
           _counts[cls] ++;
         }
     }
-    @Override public void reduce(Tabularize other) {
-      for (int i = 0; i < _counts.length; i++) _counts[i] += other._counts[i];
-    }
+    @Override public void reduce(Tabularize that) { Utils.add(_counts,that._counts); }
   }
 }
 // Variable length; instances will be created of required length
