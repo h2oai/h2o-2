@@ -295,13 +295,13 @@ public abstract class Model extends Iced {
    */
   public String toJava() { return toJava(new SB()).toString(); }
   public SB toJava( SB sb ) {
-    sb.p("\n");
+    sb.nl();
     String modelName = JCodeGen.toJavaId(_selfKey.toString());
-    sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName);
-    sb.p("\nclass ").p(modelName).p(" extends water.Model.GeneratedModel {\n");
+    sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName).nl();
+    sb.p("class ").p(modelName).p(" extends water.Model.GeneratedModel {").nl();
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
-    toJavaInit(sb);  sb.nl();
+    toJavaInit(sb).nl();
     toJavaPredict(sb);
     sb.p(TOJAVA_MAP);
     sb.p(TOJAVA_PREDICT_MAP);
@@ -333,7 +333,7 @@ public abstract class Model extends Iced {
     return sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
   }
   // Override in subclasses to provide some top-level model-specific goodness
-  protected void toJavaInit(SB sb) { };
+  protected SB toJavaInit(SB sb) { return sb; };
   protected void toJavaInit(CtClass ct) { };
   // Override in subclasses to provide some inside 'predict' call goodness
   // Method returns code which should be appended into generated top level class after
@@ -350,8 +350,8 @@ public abstract class Model extends Iced {
     sb.p("  @Override public final float[] predict( double[] data, float[] preds ) {\n");
     SB afterCode = new SB().ii(1);
     toJavaPredictBody(sb.ii(2), afterCode); sb.di(1);
-    sb.p("    return preds;\n");
-    sb.p("  }\n");
+    sb.p("    return preds;").nl();
+    sb.p("  }").nl();
     sb.p(afterCode);
     return sb;
   }

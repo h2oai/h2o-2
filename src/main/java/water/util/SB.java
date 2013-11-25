@@ -13,8 +13,8 @@ public class SB {
   public SB p( char   s ) { _sb.append(s); return this; }
   public SB p( int    s ) { _sb.append(s); return this; }
   public SB p( Object s ) { _sb.append(s.toString()); return this; }
-  public SB indent( int d ) { for( int i=0; i<d+_indent; i++ ) p("  "); return this; }
-  public SB indent( ) { return indent(0); }
+  public SB i( int d ) { for( int i=0; i<d+_indent; i++ ) p("  "); return this; }
+  public SB i( ) { return i(0); }
   // Java specif append of float
   public SB pj( float  s ) { _sb.append(s).append('f'); return this; }
   // Increase indentation
