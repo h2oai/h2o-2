@@ -265,7 +265,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         val.add(response, model.glm.family == Family.binomial?preds[1]:preds[0]);
       }
       for(GLMValidation val:_xvals)
-        if(val.nobs > 0)val.avg_err = Math.sqrt(val.avg_err)/val.nobs;
+        if(val.nobs > 0)val.avg_err = val.avg_err/val.nobs;
     }
     @Override public void reduce(GLMXValidationTask gval){
       for(int i = 0; i < _xvals.length; ++i)

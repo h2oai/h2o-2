@@ -32,15 +32,20 @@ public final class Gram extends Iced {
       _xx[i] = MemoryManager.malloc8d(diag + i + 1);
   }
 
-  public void addDiag(double d) {addDiag(d,false);}
+  public void addDiag(double d) {addDiag(d,!_hasIntercept);}
   public void addDiag(double d, boolean add2Intercept) {
     for( int i = 0; i < _diag.length; ++i )
       _diag[i] += d;
-    int ii = (_hasIntercept && add2Intercept)?1:0;
+    int ii = (_hasIntercept && add2Intercept)?0:1;
     for( int i = 0; i < _xx.length - ii; ++i )
       _xx[i][_xx[i].length - 1] += d;
   }
-
+  public String toString(){
+    if(_fullN >= 1000){
+      if(_denseN >= 1000) return "Gram(" + _fullN + ")";
+      else return "diag:\n" + Arrays.toString(_diag) + "\ndense:\n" + Utils.pprint(getDenseXX());
+    } else return Utils.pprint(getXX());
+  }
   static public class InPlaceCholesky {
     final double _xx[][];             // Lower triagle of the symmetric matrix.
     private boolean _isSPD;
@@ -211,6 +216,21 @@ public final class Gram extends Iced {
     }
     return xx;
   }
+
+  public double[][] getDenseXX() {
+    final int N = _denseN;
+    double[][] xx = new double[N][];
+    for( int i = 0; i < N; ++i )
+      xx[i] = MemoryManager.malloc8d(N);
+    for( int i = 0; i < _xx.length; ++i ) {
+      for( int j = _diagN; j < _xx[i].length; ++j ) {
+        xx[i][j-_diagN] = _xx[i][j];
+        xx[j-_diagN][i] = _xx[i][j];
+      }
+    }
+    return xx;
+  }
+
 
   public void add(Gram grm) {
     Utils.add(_xx,grm._xx);

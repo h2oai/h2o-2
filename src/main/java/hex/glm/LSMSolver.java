@@ -98,7 +98,7 @@ public abstract class LSMSolver extends Iced{
     public static final double DEFAULT_LAMBDA = 1e-5;
     public static final double DEFAULT_ALPHA = 0.5;
     public double _orlx = 1;//1.4; // over relaxation param
-    public double _rho = 1e-3;
+    public double _rho = 1e-5;
 
     public boolean normalize() {
       return _lambda != 0;
@@ -129,14 +129,15 @@ public abstract class LSMSolver extends Iced{
       Arrays.fill(z, 0);
       if(_lambda>0){
         gram.addDiag(_lambda*(1-_alpha)*0.5);
-        if(_alpha > 0)gram.addDiag(_rho, true);
+        if(_alpha > 0)gram.addDiag(_rho);
       }
       int attempts = 0;
       Cholesky chol = gram.cholesky(null);
       while(!chol.isSPD() && attempts < 10){
-        _rho *= 8;
+        System.out.println("got SPD, bumped up rho to " + _rho*10);
+        _rho *= 10;
         ++attempts;
-        gram.addDiag(_rho,true); // try to add L2 penalty to make the Gram issp
+        gram.addDiag(_rho); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
       if(!chol.isSPD()){
