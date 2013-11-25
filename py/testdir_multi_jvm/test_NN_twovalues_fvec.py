@@ -31,6 +31,7 @@ class GLM_twovalues(unittest.TestCase):
         h2o.tear_down_cloud(h2o.nodes)
     
     def test_GLM_twovalues(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_twovalues.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -65,16 +66,16 @@ class GLM_twovalues(unittest.TestCase):
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
-            response = inspect['num_cols'] - 1
+            response = inspect['numCols'] - 1
             # up to but not including
-            x = ",".join(map(str,range(response)))
+            x = ",".join(map(lambda x: 'C' + str(x), range(response)))
 
             kwargs = {
                 # this is ignore??
-                'response': response,
+                'response': 'C' + str(response),
                 'cols': x, # apparently no longer required? 
                 'ignored_cols': None, # this is not consistent with ignored_cols_by_name
                 'classification': 1,
@@ -91,11 +92,7 @@ class GLM_twovalues(unittest.TestCase):
                 timeoutSecs = 600
                 start = time.time()
                 h2o.beta_features = True
-                nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
-                h2o.beta_features = False
-
-                print "Hack: neural net apparently doesn't support the right polling response yet?"
-                h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+                nnResult = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
 
                 print "FIX! need to add something that looks at the neural net result here?"
                 print "nnResult:", h2o.dump_json(nnResult)

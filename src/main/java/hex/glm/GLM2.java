@@ -261,7 +261,7 @@ public class GLM2 extends ModelJob {
           @Override public void callback(LMAXTask t){
             final double lmax = t.lmax();
             if(lambda == null){
-              lambda = new double[]{lmax,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*0.1,lmax*0.075,lmax*0.05,lmax*0.01}; // todo - make it a sequence of 100 lamdbas
+              lambda = new double[]{lmax,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*0.1,lmax*0.075,lmax*0.05,lmax*0.01,lmax*0.0075,lmax*0.005,lmax*0.0025,lmax*0.001,lmax*0.00075,lmax*0.0005,lmax*0.00025,lmax*0.0001}; // todo - make it a sequence of 100 lamdbas
               _runAllLambdas = false;
             }
             else {
