@@ -142,7 +142,7 @@ h2o.__writeToFile <- function(res, fileName) {
     paste(result, collapse="\n")
   }
   
-  cat("Writing JSON response to", fileName)
+  cat("Writing JSON response to", fileName, "\n")
   temp = strsplit(as.character(Sys.time()), " ")[[1]]
   # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
   write(paste(temp[1], temp[2], '\t', formatVector(unlist(res))), file = fileName, append = TRUE)
