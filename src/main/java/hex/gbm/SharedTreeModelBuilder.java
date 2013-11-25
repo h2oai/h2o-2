@@ -45,6 +45,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
   private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
 
+  /** Maximal number of supported levels in response. */
+  public static final int MAX_SUPPORTED_LEVELS = 1000;
+
   /** Marker for already decided row. */
   static public final int DECIDED_ROW = -1;
   /** Marker for sampled out rows */
@@ -66,19 +69,20 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
   @Override protected void init() {
     super.init();
-    if (source.numRows()==0 || source.numRows() - response.naCnt() <=0)
-      throw new IllegalArgumentException("Cannot build a model on empty dataset!");
-  }
-
-  // --------------------------------------------------------------------------
-  // Driver for model-building.
-  public void buildModel( ) {
+    // Check parameters
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
-    assert 1 <= min_rows;
+    // Should be handled by input
     assert (classification && response.isInt()) || // Classify Int or Enums
-      (!classification && !response.isEnum());     // Regress  Int or Float
+    (!classification && !response.isEnum());     // Regress  Int or Float
+
+    if (source.numRows()==0)
+      throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+    if (source.numRows() - response.naCnt() <=0)
+      throw new IllegalArgumentException("Dataset contains too many NAs!");
+
     _ncols = _train.length;
     _nrows = source.numRows() - response.naCnt();
+
     assert (_nrows>0) : "Dataset contains no rows - validation of input parameters is probably broken!";
     // Transform response to enum
     if( !response.isEnum() && classification ) {
@@ -87,7 +91,15 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     }
     _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
     _errs = new double[0];                // No trees yet
-    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
+    if (_nclass < 1)
+      throw new IllegalArgumentException("Only one level in response column!");
+    if (_nclass > MAX_SUPPORTED_LEVELS)
+      throw new IllegalArgumentException("Too many levels in response column!");
+  }
+
+  // --------------------------------------------------------------------------
+  // Driver for model-building.
+  public void buildModel( ) {
     final Key outputKey = dest();
     String sd = input("source");
     final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
