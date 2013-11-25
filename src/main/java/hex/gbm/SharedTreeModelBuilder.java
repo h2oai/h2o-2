@@ -72,8 +72,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // Check parameters
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     // Should be handled by input
-    assert (classification && response.isInt()) || // Classify Int or Enums
-    (!classification && !response.isEnum());     // Regress  Int or Float
+    //assert response.isEnum() : "Response is not enum";
+    assert (classification && (response.isInt() || response.isEnum())) ||   // Classify Int or Enums
+           (!classification && !response.isEnum()) : "Classification="+classification + " and response="+response.isInt();  // Regress  Int or Float
 
     if (source.numRows()==0)
       throw new IllegalArgumentException("Cannot build a model on empty dataset!");
