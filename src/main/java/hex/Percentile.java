@@ -1,21 +1,27 @@
 package hex;
 
-import water.H2O;
-import water.Iced;
-import water.MRTask2;
+import com.google.common.hash.*;
+
+import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.slice.Slice;
+import water.slice.SliceKey;
+import water.slice.SliceTask.RowView;
+import water.slice.Workspace;
+
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
-import water.fvec.Vec;
 import water.util.Log;
 import water.util.Utils;
 
+import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public final class GroupedPct {
-  public static class Summary extends Iced {
+public final class Percentile {
+  public static class Summary extends Slice<Summary> {
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -44,7 +50,14 @@ public final class GroupedPct {
       _invpct=other._invpct==null?null:other._invpct.clone();
       _pctiles=other._pctiles==null?null:other._pctiles.clone();
     }
-    public Summary add(Summary other) {
+    public Summary makeCopy() {
+      Summary copy = (Summary) super.clone();
+      if (this._bins != null) copy._bins = this._bins.clone();
+      if (this._invpct != null) copy._invpct= this._invpct.clone();
+      if (this._pctiles != null) copy._pctiles= this._pctiles.clone();
+      return copy;
+    }
+    @Override public Summary merge(Summary other) {
       _min = Math.min(_min, other._min);
       _max = Math.max(_max, other._max);
       _size += other._size;
@@ -103,112 +116,90 @@ public final class GroupedPct {
       return true;
     }
   }
-  public abstract static class GID extends Iced {
-    int[] ncls;
-    abstract public long gid(long[] levels);
-    abstract public long[] levels(long gid);
+
+
+
+  public static abstract class AbsGroup extends Iced {
+    private int[]   _cs;  // the indexes of the columns the operations are to be grouped on
+    AbsGroup(int[] cs) { _cs = cs; }
+    // Put the group id into a bytebuffer then flip.
+    public void peekGroupId(RowView rv, ByteBuffer bb) {
+      for(int i = 0; i < _cs.length; i++) {
+        bb.putLong(_cs[i]);
+      }
+      bb.flip();
+    }
+    public static int hash(byte[] gid) {
+      Hasher hasher = Hashing.murmur3_32().newHasher();
+      return hasher.putBytes(gid).hash().hashCode();
+    }
+  }
+  public class GID<G extends AbsGroup> extends Iced {
+    byte[] _bytes;
+    @Override public int hashCode() { return G.hash(_bytes); }
+    @Override public boolean equals(Object o) {
+      GID that = (GID) o;
+      return Arrays.equals(this._bytes, that._bytes);
+    }
+    public GID<G> makeCopy() {
+      GID copy = (GID) super.clone();
+      copy._bytes = _bytes.clone();
+      return copy;
+    }
+  }
+  public static class SimpleColumnGroup extends AbsGroup {
+    public SimpleColumnGroup(int[] cs) {super(cs);}
+    public void unpackGroupId(ByteBuffer gidbb, long[] dest) {
+      int i = 0;
+      for (; gidbb.hasRemaining();)
+        dest[i++] = gidbb.getLong();
+      assert i == dest.length;
+    }
+  }
+  /////////////////////////////////////////////////////
+  static class ColumnGroupKey extends SliceKey {
+    byte[] _bytes;
+    @Override public int hashCode() {
+      Hasher hasher = Hashing.murmur3_32().newHasher();
+      return hasher.putBytes(_bytes).hash().hashCode();
+    }
+    @Override public boolean equals(Object o) {
+      ColumnGroupKey that = (ColumnGroupKey) o;
+      return Arrays.equals(this._bytes, that._bytes);
+    }
+    public ColumnGroupKey makeCopy() {
+      ColumnGroupKey copy = (ColumnGroupKey) super.clone();
+      copy._bytes = _bytes.clone();
+      return copy;
+    }
   }
 
-  public static class Grouping extends Iced {
-    private Vec[] _gcols;
-    private Vec[] _vcols;   /*enum-ized columns*/
-    private int[] _ncls;
-    public Grouping(Frame fr, int[] gcols) {
-      _gcols = new Vec[gcols.length];
-      _vcols = new Vec[gcols.length];
-      _ncls  = new int[gcols.length];
-      int vi = 0;
-      for (int i = 0; i < gcols.length; i++) {
-        Vec col = fr.vecs()[gcols[i]];
-        if (!col.isInt()) throw H2O.unimpl();
-        if (!col.isEnum()) {
-          col = col.toEnum();
-          _vcols[vi++] = col;
-        }
-        _gcols[i] = col;
-        _ncls[i] = col.domain().length;
-      }
-      _vcols = Arrays.copyOf(_vcols, vi);
-      long arity = 1;
-      for (int i = 0; i < _ncls.length; i++) {
-        arity *= _ncls[i];
-        if (arity < 0) throw H2O.unimpl();
-      }
-    }
-    public Vec[] columns() { return _gcols; }
-    public void remove() {}
+  private final Frame _DF;     // The main data frame
+  private final int   _VC;     // The index of the value column to get percentiles on
+  private LinkedBlockingQueue<Workspace> _WQ;  // Isolated workspaces.
+  public  final int   _WQSZ = 32;
 
-    public GID buildGID() {
-      return new GID() {
-        {
-          ncls = _ncls ;
-        }
-        @Override public long gid(long[] levels) {
-          assert levels.length == ncls.length;
-          long id = 0;
-          long arity = 1;
-          for (int i = 0; i < levels.length; i++) {
-            id += arity * levels[i];
-            arity *= ncls[i];
-          }
-          return id;
-        }
-        public long[] levels(long gid) {
-          long[] values = new long[ncls.length];
-          long   q = gid;
-          for (int i = 0; i < ncls.length; i++) {
-            values[i] = q % ncls[i];
-            q = q / ncls[i];
-          }
-          return values;
-        }
-      };
-    }
-    //public long gid(long[] levels) {
-    //  assert levels.length == _ncls.length;
-    //  long id = 0;
-    //  long arity = 1;
-    //  for (int i = 0; i < levels.length; i++) {
-    //    id += arity * levels[i];
-    //    arity *= _ncls[i];
-    //  }
-    //  return id;
-    //}
-    //public long[] levels(long gid) {
-    //  long[] values = new long[_ncls.length];
-    //  long   q = gid;
-    //  for (int i = 0; i < _ncls.length; i++) {
-    //    values[i] = q % _ncls[i];
-    //    q = q / _ncls[i];
-    //  }
-    //  return values;
-    //}
+  /**
+   * {@code Percentile} constructor.
+   * @param fr the data frame to operate on
+   * @param vc the index of the column to collect percentiles on
+   */
+  public Percentile(Frame fr, int vc) {
+    _DF = fr;
+    _VC = vc;
+    _WQ = new LinkedBlockingQueue<Workspace>(_WQSZ);
   }
 
-  private Frame    _wf;             /*work frame*/
-  private Frame    _pctfr;
-  private Grouping _grp;
-  public int       _vcol;
-  public long[]    _gids;
-  public Summary[] _gsums;
-  private Utils.IcedHashMap<Utils.IcedLong, Summary> _sums;
+  public void compute() {
+    // Create workspaces
+    _WQ = new LinkedBlockingQueue<Workspace>();
+    for (int w = 0; w < _WQSZ; w++) _WQ.add(new Workspace<ColumnGroupKey,Summary>());
+    new Pass1(_WQ).doAll(_DF);
+    new Pass2(_WQ).doAll(_DF);
+  }
 
-  public GroupedPct(Frame fr, int[] gcols, int vcol) {
-    _vcol = vcol;
-    _grp = new Grouping(fr, gcols);
 
-    String[] wf_names = new String[gcols.length+1];
-    Vec[]    wf_vecs  = new Vec[gcols.length+1];
-    for (int i = 0; i < gcols.length; i++) {
-      wf_names[i] = fr.names()[gcols[i]];
-      wf_vecs[i] = _grp.columns()[i];
-    }
-    wf_names[gcols.length] = fr.names()[vcol];
-    wf_vecs[gcols.length] = fr.vecs()[vcol];
-    _wf = new Frame(wf_names, wf_vecs);   /*work frame*/
-
-    // collects simple summary(min, max, size) for each group
-    GID g = _grp.buildGID();
+  {
     Utils.IcedHashMap<Utils.IcedLong, Summary> sums = new Pass1(_wf,g).doAll(_wf).sums;
     for (Summary s : sums.values()) {
       s.allocBins(s._min, s._max);
@@ -243,18 +234,28 @@ public final class GroupedPct {
             .outputFrame(new String[]{"GroupID","Percentile"}, new String[][]{null,null});
   }
 
-  static class Pass1 extends MRTask2<Pass1>{
-    final Frame fr;
-    final GID   g;
-    Utils.IcedHashMap<Utils.IcedLong, Summary> sums;
-    public Pass1(Frame fr, GID g){
-      this.fr = fr;
-      this.g  = g;
-      this.sums = null; 
+  /**
+   * A MR task that collects basic summaries for each group.
+   */
+  static class Pass1 extends MRTask2<Pass1> {
+    private Percentile _pct;
+    public Pass1(Percentile pct) {
+      _pct = pct;
     }
     @Override public void map(Chunk[] cs) {
-      sums = new Utils.IcedHashMap<Utils.IcedLong, Summary>();
-      int vix = cs.length-1;
+      Workspace ws;
+      try {
+        ws = _pct._WQ.take();
+      } catch (InterruptedException e) {
+        Log.err("mapper was interrupted.");
+        System.exit(-1);
+      }
+
+      RowView rv = new RowView(cs);
+      while (rv.hasNext()) {
+        if (_pct._GB == null)
+
+      }
       Utils.IcedLong gid = new Utils.IcedLong(0);
       long[] levels = new long[vix];
       OUTER:

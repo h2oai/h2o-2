@@ -1,6 +1,7 @@
 package water.api;
 
 import hex.GroupedPct;
+import hex.Percentile;
 import water.Key;
 import water.Request2;
 import water.fvec.Frame;
@@ -27,7 +28,7 @@ public class PctPage extends Request2 {
   Vec   vcol;
 
   @API(help = "Percentiles over groups.")
-  GroupedPct.Summary[] gpct;
+  Percentile.Summary[] gpct;
 
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='PctPage.query?source=%$key'>"+content+"</a>");
@@ -38,9 +39,13 @@ public class PctPage extends Request2 {
   @Override protected Response serve() {
     if( source == null ) return RequestServer._http404.serve();
     // select all columns
-    GroupedPct pct = new GroupedPct(source, gcols, source.find(vcol));
+    Percentile pct = new Percentile(source, source.find(vcol)).groupBy(gcols);
     gpct = pct._gsums;
     source.add(pct.getPctCols());
+    // refactoring...
+    Percentile[] pcts = new PercentileAlgo(vcol)
+            .withFilter(new GroupByFilter(int[] gcols))
+            .do(source);
     return Response.done(this);
   }
 
