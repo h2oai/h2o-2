@@ -11,7 +11,6 @@ import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
-import water.fvec.Frame;
 import water.util.*;
 
 /**
@@ -828,7 +827,8 @@ public class DTree extends Iced {
       sb.append("</code></pre></div>");
     }
 
-    @Override protected void toJavaInit(SB sb) {
+    @Override protected SB toJavaInit(SB sb) {
+      sb.ii(1);
       JCodeGen.toStaticVar(sb, "NTREES", numTrees());
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses());
       String modelName = JCodeGen.toJavaId(_selfKey.toString());
@@ -838,36 +838,64 @@ public class DTree extends Iced {
       // -- END of DEBUG CODE
       JCodeGen.toStaticVar(sb, null, "DATA", 0);
       // Generate main method
-      sb.p("public static void main(String[] args) {\n");
-      sb.indent(1).p("long iters = args.length > 0 ? Integer.valueOf(args[0]) : 1000;").nl();
-      sb.indent(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
-      sb.indent(1).p("model.bench(iters, DATA, new float[NCLASSES+1], NTREES );").nl(); // bench(long iters, double[][] data, float[] preds, int ntrees) {
-      sb.p("}").nl();
+      sb.i().p("public static void main(String[] args) throws Exception {").nl();
+      sb.i(1).p("if (args.length!=2) { System.err.println(\"Command line should include <num of iterations> <path to datafile>\"); System.exit(1); }").nl();
+      sb.i(1).p("long iters = Integer.valueOf(args[0]);").nl();
+      sb.i(1).p("String datafile = args[1];").nl();
+      sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
+      sb.i(1).p("model.bench(iters, datafile, new float[NCLASSES+1], NTREES, NAMES.length-1 );").nl(); // bench(long iters, double[][] data, float[] preds, int ntrees) {
+      sb.i().p("}").nl();
+      sb.di(1);
+      return sb;
     }
     // Convert Tree model to Java
     @Override protected void toJavaPredictBody( final SB sb, final SB afterBodySb) {
-      String[] cnames = classNames();
-      sb.indent().p("java.util.Arrays.fill(preds,0f);\n");
-      for( int i=0; i < treeBits.length; i++ ) {
-        CompressedTree cts[] = treeBits[i];
-        for( int c=0; c<cts.length; c++ ) {
+      final int maxfsize = 100; // maximal number of trees in forest
+      int fidx = 0; // forest index
+      int treesInForest = 0;
+      SB forest = new SB().ii(1);
+      // divide trees into small forests per 100 trees
+      sb.i().p("java.util.Arrays.fill(preds,0f);\n");
+      for( int c=0; c<nclasses(); c++ ) {
+        toJavaForestBegin(sb, forest, c, fidx++);
+        for( int i=0; i < treeBits.length; i++ ) {
+          CompressedTree cts[] = treeBits[i];
           if( cts[c] == null ) continue;
-          sb.indent().p("// Tree ").p(i);
-          if( cnames != null ) sb.p(", class=").p(cnames[c]);
-          sb.p("\n");
-          sb.indent().p("preds[").p(c+1).p("] +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
-          // append body of tree predictor function
+          forest.i(1).p("pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
+          // append representation of tree predictor
           toJavaTreePredictFct(afterBodySb, cts[c], i, c);
+          if (++treesInForest > maxfsize) {
+            toJavaForestEnd(sb, forest, c, fidx);
+            toJavaForestBegin(sb, forest, c, fidx++);
+            treesInForest = 0;
+          }
         }
+        toJavaForestEnd(sb, forest, c, fidx);
+        treesInForest = 0;
       }
+      afterBodySb.p(forest);
+    }
+
+    private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {
+      predictBody.i().p("// Call forest predicting class ").p(c).nl();
+      predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data);").nl();
+      forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
+      forest.i().p("public static class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
+      forest.i().p("public static float predict(double[] data) {").nl().ii(1);
+      forest.i().p("float pred = 0;").nl();
+    }
+    private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
+      forest.i().p("return pred;").nl();
+      forest.i().p("}").di(1).nl(); // end of function
+      forest.i().p("}").di(1).nl(); // end of forest classs
     }
 
     // Produce prediction code for one tree
     protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int tidx, int c) {
-      sb.indent().p("// Tree predictor for ").p(tidx).p("-tree and ").p(c).p("-class").nl();
-      sb.indent().p("static class Tree_").p(tidx).p("_class_").p(c).p(" {").nl().ii(1);
-      sb.indent().p("static final float predict(double[] data) {").nl().ii(1);
-      sb.indent().p("float pred = ");
+      sb.i().p("// Tree predictor for ").p(tidx).p("-tree and ").p(c).p("-class").nl();
+      sb.i().p("static class Tree_").p(tidx).p("_class_").p(c).p(" {").nl().ii(1);
+      sb.i().p("static final float predict(double[] data) {").nl().ii(1); // predict method for one tree
+      sb.i().p("float pred = ");
       new TreeVisitor<RuntimeException>(this,cts) {
         byte _bits[] = new byte[100];
         float _fs[] = new float[100];
@@ -876,9 +904,9 @@ public class DTree extends Iced {
             int b = _bits[_depth-1];
             assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
             if( b==1         ) _bits[_depth-1]=3;
-            if( b==1 || b==2 ) sb.p('\n').indent(_depth).p("?");
+            if( b==1 || b==2 ) sb.p('\n').i(_depth).p("?");
             if( b==2         ) sb.p(' ').pj(_fs[_depth]); // Dump the leaf containing float value
-            if( b==2 || b==3 ) sb.p('\n').indent(_depth).p(":");
+            if( b==2 || b==3 ) sb.p('\n').i(_depth).p(":");
           }
           sb.p(" (data[").p(col).p("] ").p(equal?"== ":"< ").pj(fcmp);
           assert _bits[_depth]==0;
@@ -892,7 +920,7 @@ public class DTree extends Iced {
             _bits[_depth-1]=2; _fs[_depth-1]=pred;
           } else {          // Else==2 (prior leaf) or 3 (prior tree)
             if( _bits[_depth-1] == 2 ) sb.p(" ? ").pj(_fs[_depth-1]).p(" ");
-            else                       sb.p('\n').indent(_depth);
+            else                       sb.p('\n').i(_depth);
             sb.p(": ").pj(pred);
           }
         }
@@ -902,9 +930,9 @@ public class DTree extends Iced {
         }
       }.visit();
       sb.p(";").nl();
-      sb.indent(1).p("return pred;").nl().di(1);
-      sb.indent().p("}").nl().di(1);
-      sb.indent().p("}").nl();
+      sb.i(1).p("return pred;").nl().di(1);
+      sb.i().p("}").nl().di(1);
+      sb.i().p("}").nl();
     }
   }
 

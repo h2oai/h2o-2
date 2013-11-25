@@ -3,6 +3,7 @@ package water;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 
+import java.io.*;
 import java.util.*;
 
 import javassist.*;
@@ -294,13 +295,13 @@ public abstract class Model extends Iced {
    */
   public String toJava() { return toJava(new SB()).toString(); }
   public SB toJava( SB sb ) {
-    sb.p("\n");
+    sb.nl();
     String modelName = JCodeGen.toJavaId(_selfKey.toString());
-    sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName);
-    sb.p("\nclass ").p(modelName).p(" extends water.Model.GeneratedModel {\n");
+    sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName).nl();
+    sb.p("class ").p(modelName).p(" extends water.Model.GeneratedModel {").nl();
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
-    toJavaInit(sb);  sb.nl();
+    toJavaInit(sb).nl();
     toJavaPredict(sb);
     sb.p(TOJAVA_MAP);
     sb.p(TOJAVA_PREDICT_MAP);
@@ -332,7 +333,7 @@ public abstract class Model extends Iced {
     return sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
   }
   // Override in subclasses to provide some top-level model-specific goodness
-  protected void toJavaInit(SB sb) { };
+  protected SB toJavaInit(SB sb) { return sb; };
   protected void toJavaInit(CtClass ct) { };
   // Override in subclasses to provide some inside 'predict' call goodness
   // Method returns code which should be appended into generated top level class after
@@ -349,8 +350,8 @@ public abstract class Model extends Iced {
     sb.p("  @Override public final float[] predict( double[] data, float[] preds ) {\n");
     SB afterCode = new SB().ii(1);
     toJavaPredictBody(sb.ii(2), afterCode); sb.di(1);
-    sb.p("    return preds;\n");
-    sb.p("  }\n");
+    sb.p("    return preds;").nl();
+    sb.p("  }").nl();
     sb.p(afterCode);
     return sb;
   }
@@ -399,7 +400,34 @@ public abstract class Model extends Iced {
   public abstract static class GeneratedModel {
     // Predict a row
     abstract public float[] predict( double data[], float preds[] );
+
+    // A simple helper to read a data from a file.
+    public double[][] readData(String file, int ncols) throws IOException {
+      int nrows = 0;
+      BufferedReader ir = null;
+      double[][] result = new double[1000][];
+      try {
+        ir = new BufferedReader(new FileReader(new File(file)));
+        String line = null;
+        while ( (line=ir.readLine()) != null) {
+          String[] row= line.split(",");
+          result[nrows] = new double[ncols];
+          for (int i=0; i<ncols;i++)
+            try { result[nrows][i] = Double.valueOf(row[i]); } catch (NumberFormatException e) { result[nrows][i] = Double.NaN; }
+          nrows++;
+          if (result.length==nrows) result = Arrays.copyOf(result, 2*nrows);
+        }
+      } finally {
+        ir.close();
+      }
+      if (nrows!=result.length) result = Arrays.copyOf(result, nrows);
+      return result;
+    }
     // Run benchmark
+    public final void bench(long iters, String datafile, float[] preds, int ntrees, int ncols) throws IOException {
+      double[][] data = readData(datafile, ncols);
+      bench(iters,data,preds,ntrees);
+    }
     public final void bench(long iters, double[][] data, float[] preds, int ntrees) {
       int rows = data.length;
       int cols = data[0].length;
