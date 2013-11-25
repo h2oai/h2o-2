@@ -2,21 +2,6 @@
 import h2o, h2o_cmd, sys
 import time, random, re
 import h2o_browse as h2b
-# Trying to share some functions useful for creating random exec expressions
-# and executing them
-# these lists are just included for example
-if (1==0):
-    zeroList = [
-            'Result0 = 0',
-    ]
-    exprList = [
-            'Result<n> = colSwap(<keyX>,<col1>,(<keyX>[2]==0 ? 54321 : 54321))',
-            'Result<n> = <keyX>[<col1>]',
-            'Result<n> = min(<keyX>[<col1>])',
-            'Result<n> = max(<keyX>[<col1>]) + Result<n-1>',
-            'Result<n> = mean(<keyX>[<col1>]) + Result<n-1>',
-            'Result<n> = sum(<keyX>[<col1>]) + Result.hex',
-        ]
 
 def checkForBadFP(min_value):
     if 'Infinity' in str(min_value):
@@ -31,60 +16,31 @@ def checkScalarResult(resultInspect, resultKey):
     # if 'type' is one level down, throw away the first level
     # weird..it's a tuple, not a list? when the extra level of hier is there
     # this works:
-    if type(resultInspect) is not dict:
-        resultInspect0 = resultInspect[0]
+    resultInspect0 = resultInspect[0]
+
+    if 'num_rows' not in resultInspect0:
+        emsg = "Inspect response: 'num_rows' missing. Look at the json just printed"
+    elif 'cols' not in resultInspect0:
+        emsg = "Inspect response: 'num_cols' missing. Look at the json just printed"
     else:
-        resultInspect0 = resultInspect
+        emsg = None
+        num_cols = resultInspect0["num_cols"]
+        num_rows = resultInspect0["num_rows"]
+        cols = resultInspect0["cols"]
+        print "cols:", h2o.dump_json(cols)
 
-    emsg = None
-    while(True):
-
-        if h2o.beta_features:
-            if 'num_rows' not in resultInspect0:
-                emsg = "Inspect response: 'num_rows' missing. Look at the json just printed"
-                break 
-            rows = resultInspect0["num_rows"]
-
-            if 'cols' not in resultInspect0:
-                emsg = "Inspect response: 'num_cols' missing. Look at the json just printed"
-                break 
-            cols = resultInspect0["cols"]
-
-            print "cols:", h2o.dump_json(cols)
-
-            num_cols = resultInspect0["num_cols"]
-
-        else:
-
-            if 'type' not in resultInspect0:
-                emsg = "'type' missing. Look at the json just printed"
-                break 
-            t = resultInspect0["type"]
-
-            if t != 'parsed':
-                emsg = resultKey + " 'type' is not 'parsed'. Look at the json just printed"
-                break 
-
-            if 'rows' not in resultInspect0:
-                emsg = "Inspect response: 'rows' missing. Look at the json just printed"
-                break 
-            rows = resultInspect0["rows"]
-
-            if 'cols' not in resultInspect0:
-                emsg = "Inspect response: 'cols' missing. Look at the json just printed"
-                break 
-            cols = resultInspect0["cols"]
-
-        break
-
-    if emsg is not None:
-        print "\nKey: '" + resultKey + "' being inspected:\n", h2o.dump_json(resultInspect)
+    if emsg:
+        print "\nKey: '" + str(resultKey) + "' inspect result:\n", h2o.dump_json(resultInspect)
         sys.stdout.flush()
         raise Exception("Inspect problem:" + emsg)
 
     # Cycle thru rows and extract all the meta-data into a dict?   
     # assume "0" and "row" keys exist for each list entry in rows
     # FIX! the key for the value can be 0 or 1 or ?? (apparently col?) Should change H2O here
+
+    if not cols:
+        raise Exception("cols is null: %s" % cols)
+
     metaDict = cols[0]
     for key,value in metaDict.items():
         if h2o.beta_features:
@@ -119,79 +75,50 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, 
     return execExpr
 
 
-def exec_expr(node=None, execExpr=None, resultKey="Result.hex", timeoutSecs=10, ignoreH2oError=False):
+def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2oError=False):
     if not node:
         node = h2o.nodes[0]
     start = time.time()
     # FIX! Exec has 'escape_nan' arg now. should we test?
     # 5/14/13 removed escape_nan=0
 
-    if h2o.beta_features:
-        kwargs = {'str': execExpr} 
-        resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
-    else:
-        kwargs = {'expression': execExpr} 
-        resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
-
-    h2o.verboseprint(resultExec)
+    kwargs = {'str': execExpr} 
+    resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
     h2o.verboseprint('exec took', time.time() - start, 'seconds')
-    ### print 'exec took', time.time() - start, 'seconds'
-
-    h2o.verboseprint("\nfirst look at the default Result key")
-    # new offset=-1 to get the metadata?
-    if h2o.beta_features: # default assign not present in v2?
-        # constants don't create keys.
-        # so the only way to see the results is to do another exec?
+    h2o.verboseprint(resultExec)
+    # inspect a result key?
+    if resultKey is not None:
         kwargs = {'str': resultKey} 
         resultExec2 = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
         print "resultExec2:", h2o.dump_json(resultExec2)
 
         # maybe return 'scalar' in some cases?
         return resultExec2, resultExec2['cols'][0]['min']
-        # exec_query parameters: {'str': 'Result0 = c(0)'}
-        # exec_query parameters: {'str': 'Result0'}
-        # resultExec2: {
-        #   "Request2": 0, 
-        #   "cols": [
-        #     {
-        #       "max": 0.0, 
-        #       "mean": 0.0, 
-        #       "min": 0.0, 
-        #       "naCnt": 0, 
-        #       "name": "c", 
-        #       "type": "Int"
-        #     }
-        #   ], 
-        #   "error": null, 
-        #   "funstr": null, 
-        #   "key": null, 
-        #   "num_cols": 1, 
-        #   "num_rows": 1, 
-        #   "result": "c \n0 \n", 
-        #   "scalar": 0.0
-        # }
-
     else:
-        defaultInspectM1 = h2o_cmd.runInspect(None, "Result.hex", offset=-1)
-        checkScalarResult(defaultInspectM1, "Result.hex")
+        if 'scalar' in resultExec:
+            result = resultExec['scalar']
+        elif 'result' in resultExec:
+            result = resultExec['result']
+        else:
+            result = None
 
-        h2o.verboseprint("\nNow look at the assigned " + resultKey + " key")
-        resultInspectM1 = h2o_cmd.runInspect(None, resultKey, offset=-1)
-        min_value = checkScalarResult(resultInspectM1, resultKey)
+        return resultExec, result
 
-        return resultInspectM1, min_value
 
 
 def exec_zero_list(zeroList):
     # zero the list of Results using node[0]
     for exprTemplate in zeroList:
-        execExpr = fill_in_expr_template(exprTemplate,0,0,0,"Result.hex")
-        execResult = exec_expr(h2o.nodes[0], execExpr, "Result.hex")
+        execExpr = fill_in_expr_template(exprTemplate,0, 0, 0, None)
+        execResult = exec_expr(h2o.nodes[0], execExpr, None)
         ### print "\nexecResult:", execResult
 
 
 def exec_expr_list_rand(lenNodes, exprList, keyX, 
-    minCol=0, maxCol=54, minRow=1, maxRow=400000, maxTrials=200, 
+    # exec2 uses R "start with 1" behavior?
+    minCol=1, maxCol=55, 
+    minRow=1, maxRow=400000, 
+    maxTrials=200, 
     timeoutSecs=10, ignoreH2oError=False):
 
     trial = 0
@@ -214,11 +141,11 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
         row = str(random.randint(minRow,maxRow))
 
         execExpr = fill_in_expr_template(exprTemplate, colX, ((trial+1)%4)+1, row, keyX)
-        execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, "Result.hex", 
+        execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, None, 
             timeoutSecs, ignoreH2oError)
         ### print "\nexecResult:", execResultInspect
 
-        checkScalarResult(execResultInspect, "Result.hex")
+        checkScalarResult(execResultInspect, None)
 
         sys.stdout.write('.')
         sys.stdout.flush()

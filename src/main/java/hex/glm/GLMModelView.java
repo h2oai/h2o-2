@@ -105,7 +105,7 @@ public class GLMModelView extends Request2 {
     String title = (val instanceof GLMXValidation)?"Cross Validation":"Validation";
     sb.append("<h4>" + title + "</h4>");
     sb.append("<table class='table table-striped table-bordered table-condensed'>");
-    final long null_dof = val.nobs-1, res_dof = Math.max(0,val.nobs-sm.rank-1);
+    final long null_dof = val.nobs-1, res_dof = Math.max(0,val.nobs-sm.rank);
     sb.append("<tr><th>Degrees of freedom:</th><td>" + null_dof + " total (i.e. Null); " + res_dof + " Residual</td></tr>");
     sb.append("<tr><th>Null Deviance</th><td>" + val.null_deviance + "</td></tr>");
     sb.append("<tr><th>Residual Deviance</th><td>" + val.residual_deviance + "</td></tr>");

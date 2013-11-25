@@ -9,10 +9,15 @@ paramDict = {
     'ignored_cols_by_name': None,
     'classification': 1, # regression
     'validation': None,
+    # fail case
+    # 'ntrees': 1,
+    # 'max_depth': 30,
+    # 'nbins': 100,
     'ntrees': 1,
-    'max_depth': 30,
+    'max_depth': 10,
+    
     'min_rows': 2, # normally 1 for classification, 5 for regression
-    'nbins': 100,
+    'nbins': 2000,
     'mtries': None,
     'sample_rate': 0.66,
     'importance': 0,
@@ -94,32 +99,42 @@ class Basic(unittest.TestCase):
 
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            trial += 1
-            paramDict['destination_key'] = 'RFModel_' + str(trial)
             if DO_OOBE:
                 paramDict['validation'] = None
             else:
                 paramDict['validation'] = parseTestResult['destination_key']
 
-            kwargs = paramDict.copy()
-            timeoutSecs = 30 + kwargs['ntrees'] * 200
+            timeoutSecs = 30 + paramDict['ntrees'] * 200
 
-            start = time.time()
-            rfFirstResult = h2o_cmd.runRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, rfView=False, **kwargs)
-            # print h2o.dump_json(rfFirstResult)
-            # FIX! are these already in there?
-            rfView = {}
-            rfView['data_key'] = hex_key
-            rfView['model_key'] = kwargs['destination_key']
-            rfView['ntrees'] = kwargs['ntrees']
+            
+            # do ten starts, to see the bad id problem?
+            TRIES = 10
+            for i in range(TRIES):
+                lastOne = i == (TRIES-1)
 
-            trainElapsed = time.time() - start
-            print "rf train end on ", csvTrainPathname, 'took', trainElapsed, 'seconds'
+                # have unique model names
+                trial += 1
+                kwargs = paramDict.copy()
+                # kwargs['destination_key'] = 'RFModel_' + str(trial)
+                # let h2o name it
+                kwargs['destination_key'] = None
+
+                start = time.time()
+                rfResult = h2o_cmd.runRF(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, 
+                    noPoll=False, rfView=False, **kwargs)
+                trainElapsed = time.time() - start
+                print 'rf train end', i, 'on', csvTrainPathname, 'took', trainElapsed, 'seconds'
+
+                # don't cancel the last one
+                if not lastOne:
+                    time.sleep(1) 
+                    h2o_jobs.cancelAllJobs(timeoutSecs=2)
+
+
             ### print "rfView", h2o.dump_json(rfView)
-            data_key = rfView['data_key']
-            model_key = rfView['model_key']
-            ntrees = rfView['ntrees']
-
+            model_key = rfResult['drf_model']['_selfKey']
+            data_key = rfResult['drf_model']['_dataKey']
+            ntrees = kwargs['ntrees']
             rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, retryDelaySecs=5, doSimpleCheck=False)
             ## print "rfView:", h2o.dump_json(rfView)
 

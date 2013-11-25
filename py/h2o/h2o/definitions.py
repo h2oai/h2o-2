@@ -15,7 +15,5 @@ URL = "Url"
 
 PAGE_EXEC = "Exec.json"
 PAGE_IMPORTURL = "ImportUrl.json"
-PAGE_GET = "GetVector.json"
-PAGE_PUT = "PutVector.json"
 PAGE_REMOVE = "Remove.json"
 PAGE_INSPECT = "Inspect.json"

@@ -120,8 +120,10 @@ def get_ip_address():
     return ip
 
 def get_sandbox_name():
-    if os.environ.has_key("H2O_SANDBOX_NAME"): return os.environ["H2O_SANDBOX_NAME"]
-    else: return "sandbox"
+    if os.environ.has_key("H2O_SANDBOX_NAME"): 
+        return os.environ["H2O_SANDBOX_NAME"]
+    else: 
+        return "sandbox"
 
 def unit_main():
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
@@ -567,7 +569,8 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
             # best to just create it all the time..may or may not be used
             write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
-            if rand_shuffle: random.shuffle(portList)
+            if rand_shuffle: 
+                random.shuffle(portList)
             for p in portList:
                 verboseprint("psutil starting node", i)
                 newNode = LocalH2O(port=p, node_id=totalNodes, **kwargs)
@@ -993,7 +996,7 @@ class H2O(object):
     # so we can create noise with different urls!, and different parms to that url
     # no noise if None
     def poll_url(self, response,
-        timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
+        timeoutSecs=10, retryDelaySecs=0.5, initialDelaySecs=0, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
@@ -1004,11 +1007,10 @@ class H2O(object):
         def get_redirect_url(response, beta_features):
             url = None
             params = None
-            if beta_features or 'response_info' in response: # trigger v2 for GBM always?
-                if 'response_info' not in response:
-                    raise Exception("Response during polling must have 'response_info'\n%s" % dump_json(response))
-
+            # StoreView has old style, while beta_features
+            if 'response_info' in response: # trigger v2 for GBM always?
                 response_info = response['response_info']
+
                 if 'redirect_url' not in response_info:
                     raise Exception("Response during polling must have 'redirect_url'\n%s" % dump_json(response))
 
@@ -1042,8 +1044,10 @@ class H2O(object):
         # if we never poll
         msgUsed = None
 
-        if beta_features or 'response_info' in response: # trigger v2 for GBM always?
+        if 'response_info' in response: # trigger v2 for GBM always?
             status = response['response_info']['status']
+            # default to "" if doesn't exist
+            progress = response.get('progress', "")
         else:
             status = response['response']['status']
         doFirstPoll = status != 'done'
@@ -1081,7 +1085,6 @@ class H2O(object):
         # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
         while status == 'poll' or doFirstPoll or (beta_features and status == 'redirect' and 'Inspect' not in url):
             count += 1
-
             if ((time.time()-start) > timeoutSecs):
                 # show what we're polling with
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
@@ -1108,7 +1111,6 @@ class H2O(object):
 
             response = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
             verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(response))
-
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             if ((count%6)==0):
                 check_sandbox_for_errors()
@@ -1117,6 +1119,7 @@ class H2O(object):
                 # this guarantees the loop is done, so we don't need to worry about
                 # a 'return r' being interpreted from a noise response
                 status = 'poll'
+                progress = ''
             else:
                 doFirstPoll = False
                 if beta_features or 'response_info' in response: # trigger v2 for GBM always?
@@ -1394,7 +1397,7 @@ class H2O(object):
 
     # this removes all keys!
     def remove_all_keys(self, timeoutSecs=30):
-        a = self.__do_json_request('RemoveAll.json', timeout=timeoutSecs)
+        a = self.__do_json_request('2/RemoveAll.json', timeout=timeoutSecs)
         return a
 
     # only model keys can be exported?
@@ -1434,20 +1437,15 @@ class H2O(object):
 
     # 'destination_key', 'escape_nan' 'expression'
     def exec_query(self, timeoutSecs=20, ignoreH2oError=False, **kwargs):
-        if beta_features:
-            params_dict = {
-                'str': None,
-                }
-        else:
-            params_dict = {
-                'expression': None,
-                ## 'escape_nan': 0,
-                }
+        # only v2 now
+        params_dict = {
+            'str': None,
+            }
 
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'exec_query', print_params=True)
         verboseprint("\nexec_query:", params_dict)
-        a = self.__do_json_request('2/Exec2.json' if beta_features else 'Exec.json',
+        a = self.__do_json_request('2/Exec2.json',
             timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a
@@ -1550,12 +1548,14 @@ class H2O(object):
         # noPoll and rfView=False are similar?
         if (noPoll or not rfView) or (beta_features and rfView==False):
             # just return for now
-            print "HELLO rfView:", rfView, "noPoll", noPoll
+            print "no rfView:", rfView, "noPoll", noPoll
             return rf
 
         if beta_features:
             # since we don't know the model key from the rf response, we just let rf redirect us to completion
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
+            # HACK: wait more for first poll?
+            time.sleep(5)
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                 initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                 noise=noise, benchmarkLogging=benchmarkLogging)
@@ -1867,7 +1867,7 @@ class H2O(object):
             'cols'                 : None,
             'nbins'                : None,
             'classification'       : None,
-            'grid_parallelism'       : None,
+            'grid_parallelism'     : None,
         }
 
         # only lets these params thru
@@ -2188,7 +2188,11 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", parallel=1, **kwargs)
+        # default
+        if not kwargs['parallel']:
+            kwargs['parallel'] = 1
+
+        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
 
         # Check that the response has the right Progress url it's going to steer us to.
         if not beta_features:
@@ -2211,6 +2215,17 @@ class H2O(object):
             print "Viewing the GLM grid result through the browser"
             h2b.browseJsonHistoryAsUrlLastMatch('GLMGridProgress')
             time.sleep(5)
+        return a
+
+    def GLMGrid_view(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'job': None,
+            'destination_key': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'GLMGridProgress', print_params)
+        a = self.__do_json_request('GLMGridProgress.json', timeout=timeoutSecs, params=params_dict)
+        print "\nGLMGridProgress result:", dump_json(a)
         return a
 
     # GLMScore params

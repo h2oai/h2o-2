@@ -553,6 +553,20 @@ public class Utils {
   public static class IcedInt extends Iced {
     public final int _val;
     public IcedInt(int v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedInt) ) return false;
+      return ((IcedInt)o)._val == _val;
+    }
+    @Override public int hashCode() { return _val; }
+  }
+  public static class IcedLong extends Iced {
+    public final long _val;
+    public IcedLong(long v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedLong) ) return false;
+      return ((IcedLong)o)._val == _val;
+    }
+    @Override public int hashCode() { return (int)_val; }
   }
   /**
    * Simple wrapper around HashMap with support for H2O serialization

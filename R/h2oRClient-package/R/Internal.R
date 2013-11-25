@@ -21,7 +21,7 @@ h2o.__changeCommandLog <- function(path) {
     assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
     }
 h2o.__changeErrorLog   <- function(path) { 
-    cmd <- paste(path, 'errors.log', sep=',/') 
+    cmd <- paste(path, 'errors.log', sep='/') 
     assign("h2o.__LOG_ERROR", cmd, envir = pkg.env)
     }
 h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
@@ -142,7 +142,7 @@ h2o.__writeToFile <- function(res, fileName) {
     paste(result, collapse="\n")
   }
   
-  cat("Writing JSON response to", fileName)
+  cat("Writing JSON response to", fileName, "\n")
   temp = strsplit(as.character(Sys.time()), " ")[[1]]
   # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
   write(paste(temp[1], temp[2], '\t', formatVector(unlist(res))), file = fileName, append = TRUE)

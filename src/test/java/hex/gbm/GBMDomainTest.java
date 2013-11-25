@@ -67,7 +67,6 @@ public class GBMDomainTest extends TestUtil {
       gbm.nbins = 1024;
       gbm.cols =  new int[] {0,1,2};
       gbm.invoke();
-      System.out.println("=========3========");   for( Key k : H2O.keySet() ) System.out.println(k);
 
       // The test data set has a few more enums than the train
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});

@@ -343,20 +343,24 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
     ### rows = inspectGG['rows']
     #value_size_bytes = inspectGG['value_size_bytes']
 
-    model0 = glmGridResult['models'][0]
-    alpha = model0['alpha']
-    area_under_curve = model0['area_under_curve']
-    error_0 = model0['error_0']
-    error_1 = model0['error_1']
-    model_key = model0['key']
-    print "best GLM model key:", model_key
-
-    glm_lambda = model0['lambda']
+    # FIX! does error_0/1 only exist for binomial?
+    for m, model in enumerate(glmGridResult['models']):
+        alpha = model['alpha']
+        area_under_curve = model['area_under_curve']
+        # FIX! should check max error?
+        error_0 = model['error_0']
+        error_1 = model['error_1']
+        model_key = model['key']
+        print "#%s GLM model key: %s" % (m, model_key)
+        glm_lambda = model['lambda']
 
     # now indirect to the GLM result/model that's first in the list (best)
-    inspectGLM = h2o_cmd.runInspect(None, model_key)
-    h2o.verboseprint("GLMGrid inspectGLM:", h2o.dump_json(inspectGLM))
-    simpleCheckGLM(self, inspectGLM, colX, allowFailWarning=allowFailWarning, **kwargs)
+    inspectGLM = h2o_cmd.runInspect(None, glmGridResult['models'][0]['key'])
+    h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(inspectGLM))
+    g = simpleCheckGLM(self, inspectGLM, colX, allowFailWarning=allowFailWarning, **kwargs)
+
+    return g
+
 
 # This gives me a comma separated x string, for all the columns, with cols with
 # missing values, enums, and optionally matching a pattern, removed. useful for GLM

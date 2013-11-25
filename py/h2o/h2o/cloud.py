@@ -73,24 +73,6 @@ class Cloud:
     def _execExpr(self,expr):
         return  self._remoteSend(PAGE_EXEC, { EXPR : expr })
 
-    def get(self,key):
-        """ Gets the given key. """
-        try:
-
-            res = self._remoteSend(PAGE_GET, { KEY : key })
-            return Key(self,key,self._keyToDict(res))
-        except H2OException:
-            return None
-
-    def put(self,key,what):
-        """ Puts the given list to the H2O as a key with given name. """
-        if (type(what) == list):
-            res = self._remoteSend(PAGE_PUT, { KEY : key, VALUE : " ".join([str(x) for x in what]) })
-            return self.get(key)
-        else:
-            raise NotImplementedError("At the moment only lists can be stored to H2O clouds.")
-        
-
     def importFile(self,key,url, hex = True):
         """ Imports the given server local file to the H2O and parses it to given key. If hex is False, does not
         parse the file. """
