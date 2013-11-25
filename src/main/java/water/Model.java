@@ -3,6 +3,7 @@ package water;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
 
+import java.io.*;
 import java.util.*;
 
 import javassist.*;
@@ -399,7 +400,34 @@ public abstract class Model extends Iced {
   public abstract static class GeneratedModel {
     // Predict a row
     abstract public float[] predict( double data[], float preds[] );
+
+    // A simple helper to read a data from a file.
+    public double[][] readData(String file, int ncols) throws IOException {
+      int nrows = 0;
+      BufferedReader ir = null;
+      double[][] result = new double[1000][];
+      try {
+        ir = new BufferedReader(new FileReader(new File(file)));
+        String line = null;
+        while ( (line=ir.readLine()) != null) {
+          String[] row= line.split(",");
+          result[nrows] = new double[ncols];
+          for (int i=0; i<ncols;i++)
+            try { result[nrows][i] = Double.valueOf(row[i]); } catch (NumberFormatException e) { result[nrows][i] = Double.NaN; }
+          nrows++;
+          if (result.length==nrows) result = Arrays.copyOf(result, 2*nrows);
+        }
+      } finally {
+        ir.close();
+      }
+      if (nrows!=result.length) result = Arrays.copyOf(result, nrows);
+      return result;
+    }
     // Run benchmark
+    public final void bench(long iters, String datafile, float[] preds, int ntrees, int ncols) throws IOException {
+      double[][] data = readData(datafile, ncols);
+      bench(iters,data,preds,ntrees);
+    }
     public final void bench(long iters, double[][] data, float[] preds, int ntrees) {
       int rows = data.length;
       int cols = data[0].length;

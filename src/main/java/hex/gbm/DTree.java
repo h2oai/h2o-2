@@ -837,10 +837,12 @@ public class DTree extends Iced {
       // -- END of DEBUG CODE
       JCodeGen.toStaticVar(sb, null, "DATA", 0);
       // Generate main method
-      sb.p("public static void main(String[] args) {\n");
-      sb.indent(1).p("long iters = args.length > 0 ? Integer.valueOf(args[0]) : 1000;").nl();
+      sb.p("public static void main(String[] args) throws Exception {").nl();
+      sb.indent(1).p("if (args.length!=2) { System.err.println(\"Command line should include <num of iterations> <path to datafile>\"); System.exit(1); }").nl();
+      sb.indent(1).p("long iters = Integer.valueOf(args[0]);").nl();
+      sb.indent(1).p("String datafile = args[1];").nl();
       sb.indent(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
-      sb.indent(1).p("model.bench(iters, DATA, new float[NCLASSES+1], NTREES );").nl(); // bench(long iters, double[][] data, float[] preds, int ntrees) {
+      sb.indent(1).p("model.bench(iters, datafile, new float[NCLASSES+1], NTREES, NAMES.length-1 );").nl(); // bench(long iters, double[][] data, float[] preds, int ntrees) {
       sb.p("}").nl();
     }
     // Convert Tree model to Java
