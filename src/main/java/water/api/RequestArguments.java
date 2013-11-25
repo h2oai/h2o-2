@@ -1074,7 +1074,7 @@ public class RequestArguments extends RequestStatics {
       double to = Double.parseDouble(parts[1]);
       if(to == from) return new double[]{from};
       if(to < from)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
-      if(step == 0)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      if(mul?(step <= 1):(step<=0))throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
       // make sure we have format from < to
 
       double [] res = new double[1024];
