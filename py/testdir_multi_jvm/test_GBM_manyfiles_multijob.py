@@ -89,7 +89,8 @@ class Basic(unittest.TestCase):
             if h2o.beta_features:
                 print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
 
-            parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
+            csvPathname = importFolderPath + "/" + testFilename
+            parseTestResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
                 hex_key=testKey, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
             # hack
             if h2o.beta_features:

@@ -1012,13 +1012,11 @@ class H2O(object):
                 if 'redirect_url' not in response_info:
                     raise Exception("Response during polling must have 'redirect_url'\n%s" % dump_json(response))
 
-                if response_info['status'] == 'done':
-                    # if status is 'done', it's okay for 'redirect_url' to be null.
-                    pass
-                else:
+                if response_info['status'] != 'done':
                     redirect_url = response_info['redirect_url']
                     # HACK: these are missing the "2/" prefix for now
                     if 'NeuralNetProgress' in str(redirect_url) or 'KMeans2Progress' in str(redirect_url):
+                        print "Hacking in the 2/ prefix..tell cyprien"
                         if "2/" not in str(redirect_url):
                             redirect_url = "2/" + redirect_url
 
@@ -1032,9 +1030,7 @@ class H2O(object):
                 if 'response' not in response:
                     raise Exception("'response' not in response.\n%s" % dump_json(response))
 
-                if response['response']['status'] == 'done':
-                    pass 
-                else:
+                if response['response']['status'] != 'done':
                     if 'redirect_request' not in response['response']:
                         raise Exception("'redirect_request' not in response. \n%s" % dump_json(response))
 
@@ -1045,17 +1041,14 @@ class H2O(object):
 
         # if we never poll
         msgUsed = None
-        r = response
 
         if beta_features or 'response_info' in response: # trigger v2 for GBM always?
             status = response['response_info']['status']
         else:
             status = response['response']['status']
-
-        firstPoll = status != 'done'
+        doFirstPoll = status != 'done'
 
         (url, params) = get_redirect_url(response, beta_features)
-
         # no need to recreate the string for messaging, in the loop..
         if params:
             paramsStr = '&'.join(['%s=%s' % (k,v) for (k,v) in params.items()])
@@ -1086,10 +1079,19 @@ class H2O(object):
 
         # Don't follow the Parse redirect to Inspect, because we want parseResult['destination_key'] to be the end.
         # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
-        while status == 'poll' or firstPoll or (beta_features and status == 'redirect' and 'Inspect' not in url):
-            firstPoll = False
+        while status == 'poll' or doFirstPoll or (beta_features and status == 'redirect' and 'Inspect' not in url):
+            count += 1
+
+            if ((time.time()-start) > timeoutSecs):
+                # show what we're polling with
+                emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
+                       "status: %s, url: %s?%s" % (status, urlUsed, paramsUsedStr)
+                raise Exception(emsg)
+
+            if benchmarkLogging:
+                cloudPerfH2O.get_log_save(benchmarkLogging)
+
             print status, url
-            # UPDATE: 1/24/13 change to always wait before the first poll..
             time.sleep(retryDelaySecs)
             # every other one?
             create_noise = noise_enable and ((count%2)==0)
@@ -1104,9 +1106,9 @@ class H2O(object):
                 paramsUsedStr = paramsStr
                 msgUsed = "\nPolling with"
 
-            r = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
+            response = self.__do_json_request(fullUrl=urlUsed, timeout=pollTimeoutSecs, params=paramsUsed)
+            verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(response))
 
-            verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             if ((count%6)==0):
                 check_sandbox_for_errors()
@@ -1116,35 +1118,23 @@ class H2O(object):
                 # a 'return r' being interpreted from a noise response
                 status = 'poll'
             else:
-                if beta_features:
-                    status = r['response_info']['status']
+                doFirstPoll = False
+                if beta_features or 'response_info' in response: # trigger v2 for GBM always?
+                    status = response['response_info']['status']
                 else:
-                    status = r['response']['status']
+                    status = response['response']['status']
 
-            # get the redirect url
-            # currently a bug...the url isn't right on poll
-            # if not reuseFirstPollUrl: # hack for v1 RfView which doesn't give it during polling
-            if beta_features and not reuseFirstPollUrl: # reuse url for all v1 stuff
-                (url, params) = get_redirect_url(r, beta_features)
+                # get the redirect url
+                if beta_features and not reuseFirstPollUrl: # reuse url for all v1 stuff
+                    (url, params) = get_redirect_url(response, beta_features)
 
-            if ((time.time()-start) > timeoutSecs):
-                # show what we're polling with
-                emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs +\
-                       "status: %s, url: %s?%s" % (status, urlUsed, paramsUsedStr)
-                raise Exception(emsg)
-            count += 1
-
-            if noPoll:
-                return r
-            
-            if benchmarkLogging:
-                cloudPerfH2O.get_log_save(benchmarkLogging)
-
+                if noPoll:
+                    return response
 
         # won't print if we didn't poll
         if msgUsed:
-            verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(r))
-        return r
+            verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(response))
+        return response
 
     def kmeans_apply(self, data_key, model_key, destination_key,
         timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
