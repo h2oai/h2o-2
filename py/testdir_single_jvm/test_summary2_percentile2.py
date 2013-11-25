@@ -2,7 +2,8 @@ import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 
-DO_TEMP_HACK = True
+
+DO_SCIPY_COMPARE = False
 
 def generate_scipy_comparison(csvPathname):
     # this is some hack code for reading the csv and doing some percentile stuff in scipy
@@ -203,7 +204,7 @@ class Basic(unittest.TestCase):
 
             trial += 1
 
-            if getpass.getuser() == 'kevin':
+            if DO_SCIPY_COMPARE:
                 generate_scipy_comparison(csvPathname)
 
 if __name__ == '__main__':

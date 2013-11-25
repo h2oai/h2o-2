@@ -3,18 +3,31 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts
 initList = [
-        'Result0 = 0',
-        'Result1 = 1',
-        'Result2 = 2',
-        'Result3 = 3',
+        ('Result0.hex', 'Result0.hex=c(1,0,1,2,3,4,5)'),
+        ('Result1.hex', 'Result1.hex=c(2,0,1,2,3,4,5)'),
+        ('Result2.hex', 'Result2.hex=c(3,0,1,2,3,4,5)'),
+        ('Result3.hex', 'Result3.hex=c(4,0,1,2,3,4,5)'),
+        ('Result4.hex', 'Result4.hex=c(5,0,1,2,3,4,5)'),
         ]
 
 exprList = [
-        'Result<n> = Result0 * Result<n-1>',
-        'Result<n> = Result1 + Result<n-1>',
-        'Result<n> = Result2 / Result<n-1>',
-        'Result<n> = Result3 - Result<n-1>',
+        # 'Result<n>[,0] = Result0[,0] * Result<n-1>[,0]',
+        # 'Result<n>[0,] = Result1[0,] + Result<n-1>[0,]',
+        # 'Result<n> = Result1 + Result<n-1>',
+        'Result0.hex[,1]=Result1.hex[,1]',
+        'Result0.hex[,1]=Result0.hex[,1]',
+        'Result1.hex[,1]=Result1.hex[,1]',
+        'Result2.hex[,1]=Result2.hex[,1]',
+        'Result3.hex[,1]=Result3.hex[,1]',
+        # 'Result<n>.hex=min(Result0.hex,1+2)',
+        # 'Result<n>.hex=Result1.hex + 1',
+        # 'Result<n>.hex=Result2.hex + 1',
+        # 'Result<n>.hex=Result3.hex + 1',
+        # 'Result<n>[,0] = Result2[,0] / Result<n-1>[,0]',
+        # 'Result<n>[,0] = Result3[,0] - Result<n-1>[,0]',
         ]
+         
+        
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -35,18 +48,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec_operators(self):
-        if 1==1:
-            for execExpr in initList:
-                h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result.hex", timeoutSecs=4)
-        else:
-            # init with put_value
-            for i in range(0,5):
-                key = "ResultUnparsed" + str(i)
-                put = h2o.nodes[0].put_value(i, key=key, repl=None)
-                # have to parse the key after you put_value it. put_value should parse the result first!
-                hex_key = "Result" + str(i) 
-                parse = h2o.nodes[0].parse(put['key'], hex_key, timeoutSecs=10)
-
+        for resultKey, execExpr in initList:
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
         start = time.time()
         h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
 
