@@ -235,16 +235,15 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
-    # if(!is.numeric(i)) stop("Row index must be numeric")
-    else if(class(i) == "H2OLogicalData") rind = i@key
-    else if(!is.numeric(i)) stop(paste("Row index of type", class(i), "unsupported!"))
-    rind = ifelse(length(i) == 1, i, paste("c(", paste(i, collapse=","), ")", sep=""))
+    if(class(i) == "H2OLogicalData") rind = i@key
+    else if(is.numeric(i) || is.integer(i))
+      rind = ifelse(length(i) == 1, i, paste("c(", paste(i, collapse=","), ")", sep=""))
+    else stop(paste("Row index of type", class(i), "unsupported!"))
     
+    # if(is.logical(j)) j = -which(!j)
+    if(is.logical(j)) j = which(j)
     if(class(j) == "H2OLogicalData") cind = j@key
-    else if(is.logical(j)) j = -which(!j)
-    else if(!is.numeric(j) && !is.character(j)) stop(paste("Column index of type", class(j), "unsupported!"))
-    
-    if(is.numeric(j))
+    else if(is.numeric(j) || is.integer(j))
       cind = ifelse(length(j) == 1, j, paste("c(", paste(j, collapse=","), ")", sep=""))
     else if(is.character(j)) {
       myCol = colnames(x)
@@ -252,6 +251,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
       j_num = match(j, myCol)
       cind = ifelse(length(j) == 1, j_num, paste("c(", paste(j_num, collapse=","), ")", sep=""))
     }
+    else stop(paste("Column index of type", class(j), "unsupported!"))
     expr = paste(x@key, "[", rind, ",", cind, "]", sep="")
   }
   res = h2o.__exec2(x@h2o, expr)
