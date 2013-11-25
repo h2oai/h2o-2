@@ -37,7 +37,7 @@ public class GLMModelView extends Request2 {
     return "<a href='GLMModelView.html?_modelKey=" + model + "&lambda=" + lambda + "'>" + txt + "</a>";
   }
   public static Response redirect(Request req, Key modelKey) {
-    return Response.redirect(req, "GLMModelView", "_modelKey", modelKey);
+    return Response.redirect(req, "/2/GLMModelView", "_modelKey", modelKey);
   }
 
   public static Response redirect2(Request req, Key modelKey) {
