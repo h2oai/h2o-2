@@ -3,8 +3,8 @@ package hex;
 import water.*;
 import water.api.*;
 import water.api.Request.API;
-import water.fvec.Chunk;
-import water.fvec.Vec;
+import water.fvec.*;
+import water.exec.Flow;
 import water.parser.*;
 import water.util.Utils;
 import water.util.Log;
@@ -35,6 +35,7 @@ public class Summary2 extends Iced {
   final           double[] _mins;
   final           double[] _maxs;
                   long     _zeros;
+                  long     _rows;
   final transient double   _min;
   final transient double   _max;
   final transient String[] _domain;
@@ -94,6 +95,67 @@ public class Summary2 extends Iced {
   @API(help="histogram bin step") public double    hstep;
   @API(help="histogram headers" ) public String[]  hbrk;
   @API(help="histogram bin values") public long[]  hcnt;
+
+  public static class SummaryTask2 extends MRTask2<SummaryTask2> {
+    public Summary2 _summaries[];
+    @Override public void map(Chunk[] cs) {
+      _summaries = new Summary2[cs.length];
+      for (int i = 0; i < cs.length; i++) {
+        (_summaries[i]=new Summary2(_fr.vecs()[i], _fr.names()[i])).add(cs[i]);
+      }
+    }
+    @Override public void reduce(SummaryTask2 other) {
+      for (int i = 0; i < _summaries.length; i++)
+        _summaries[i].add(other._summaries[i]);
+    }
+  }
+
+  // Entry point for the Flow passes, to allow easy percentiles on filtered GroupBy
+  public static class SummaryPerRow extends Flow.PerRow<SummaryPerRow> {
+    public final Frame _fr;
+    public final Summary2 _summaries[];
+    public SummaryPerRow( Frame fr ) { this(fr,null); }
+    private SummaryPerRow( Frame fr, Summary2[] sums ) { _fr = fr; _summaries = sums; }
+    @Override public void mapreduce( double ds[] ) { 
+      for( int i=0; i<ds.length; i++ )
+        _summaries[i].add(ds[i]);
+    }
+    @Override public void reduce( SummaryPerRow that ) { 
+      for (int i = 0; i < _summaries.length; i++)
+        _summaries[i].add(that._summaries[i]);
+    }
+    @Override public SummaryPerRow make() {
+      Vec[] vecs = _fr.vecs();
+      Summary2 sums[] = new Summary2[vecs.length];
+      for( int i=0; i<vecs.length; i++ )
+        sums[i] = new Summary2(vecs[i],_fr._names[i]);
+      return new SummaryPerRow(_fr,sums);
+    }
+    @Override public String toString() {
+      String s = "";
+      for( int i=0; i<_summaries.length; i++ )
+        s += _fr._names[i]+" "+_summaries[i]+"\n";
+      return s;
+    }
+    public void finishUp() {
+      Vec[] vecs = _fr.vecs();
+      for (int i = 0; i < vecs.length; i++) 
+        _summaries[i].finishUp(vecs[i]);
+    }
+  }
+
+  @Override public String toString() {
+    String s = "";
+    if( stats instanceof NumStats ) {
+      double pct   [] = ((NumStats)stats).pct   ;
+      double pctile[] = ((NumStats)stats).pctile;
+      for( int i=0; i<pct.length; i++ )
+        s += ""+(pct[i]*100)+"%="+pctile[i]+", ";
+    } else {
+      s += "cardinality="+((EnumStats)stats).cardinality;
+    }
+    return s;
+  }
 
   public void finishUp(Vec vec) {
     computePercentiles();
@@ -158,40 +220,43 @@ public class Summary2 extends Iced {
   }
 
   public void add(Chunk chk) {
-    for (int i = 0; i < chk._len; i++) {
-      if( chk.isNA0(i) ) continue;
-      double val = chk.at0(i);
-      assert val >= _min : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " < VEC.MIN " + _min;
-      assert val <= _max : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " > VEC.MAX " + _max;
-      if ( _type != T_ENUM ) {
-        if (val == 0.) _zeros++;
-        // update min/max
-        if (val < _mins[_mins.length-1]) {
-          int index = Arrays.binarySearch(_mins, val);
-          if (index < 0) {
-            index = -(index + 1);
-            for (int j = _mins.length-1; j > index; j--) _mins[j] = _mins[j-1];
-            _mins[index] = val;
-          }
-        }
-        if (val > _maxs[0]) {
-          int index = Arrays.binarySearch(_maxs, val);
-          if (index < 0) {
-            index = -(index + 1);
-            for (int j = 0; j < index-1; j++) _maxs[j] = _maxs[j+1];
-            _maxs[index-1] = val;
-          }
+    for (int i = 0; i < chk._len; i++)
+      add(chk.at0(i));
+  }
+  public void add(double val) {
+    if( Double.isNaN(val) ) return;
+    assert val >= _min : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " < VEC.MIN " + _min;
+    assert val <= _max : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " > VEC.MAX " + _max;
+    if ( _type != T_ENUM ) {
+      if (val == 0.) _zeros++;
+      // update min/max
+      if (val < _mins[_mins.length-1]) {
+        int index = Arrays.binarySearch(_mins, val);
+        if (index < 0) {
+          index = -(index + 1);
+          for (int j = _mins.length-1; j > index; j--) _mins[j] = _mins[j-1];
+          _mins[index] = val;
         }
       }
-      // update histogram
-      long binIdx = Math.round((val-_start)*1000000.0/_binsz)/1000000;
-      ++hcnt[(int)binIdx];
+      if (val > _maxs[0]) {
+        int index = Arrays.binarySearch(_maxs, val);
+        if (index < 0) {
+          index = -(index + 1);
+          for (int j = 0; j < index-1; j++) _maxs[j] = _maxs[j+1];
+          _maxs[index-1] = val;
+        }
+      }
     }
+    // update histogram
+    long binIdx = Math.round((val-_start)*1000000.0/_binsz)/1000000;
+    ++hcnt[(int)binIdx];
+    ++_rows;
   }
 
   public Summary2 add(Summary2 other) {
     _zeros += other._zeros;
     Utils.add(hcnt, other.hcnt);
+    _rows += other._rows;
     if (_type == T_ENUM) return this;
 
     double[] ds = MemoryManager.malloc8d(_mins.length);
@@ -216,7 +281,7 @@ public class Summary2 extends Iced {
     int k = 0;
     long s = 0;
     for(int j = 0; j < DEFAULT_PERCENTILES.length; ++j) {
-      final double s1 = DEFAULT_PERCENTILES[j]*_nrow;
+      final double s1 = DEFAULT_PERCENTILES[j]*_rows;
       long bc = 0;
       while(s1 > s+(bc = hcnt[k])){
         s  += bc;

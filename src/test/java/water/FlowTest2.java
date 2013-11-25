@@ -3,6 +3,7 @@ package water;
 import water.fvec.Frame;
 import water.exec.Flow;
 import water.util.Utils.*;
+import hex.Summary2.SummaryPerRow;
 
 // Called from FlowTest, and is NOT a JUnit - so instances of this class will
 // be lazily generated, so we do not need any TypeMap ID's before the H2O is up.
@@ -29,6 +30,12 @@ public class FlowTest2 {
         doit();
       System.out.println(sumcols1._sum+"/"+sumcols1._n+" = "+(sumcols1._sum/sumcols1._n));
       System.out.println();
+
+      // Run all the rollups in parallel before doing summary
+      Futures fs = new Futures();
+      for( int i=0; i<fr.numCols(); i++ )
+        fr.vecs()[i].rollupStats(fs);
+      fs.blockForPending();
       
       IcedHashMap<IcedLong,SumCol> sumcols2 = fr.
         with(new Flow.GroupBy() { public long groupId(double ds[]) { return (long)ds[cyl_idx];} }).
@@ -61,6 +68,29 @@ public class FlowTest2 {
         System.out.println("Cyl="+gid._val+", "+sumcol._sum+"/"+sumcol._n+" = "+(sumcol._sum/sumcol._n));
       }
       System.out.println();
+
+      // Percentiles
+      SummaryPerRow spr = fr.
+        with(new SummaryPerRow(fr)).
+        doit();
+      spr.finishUp();
+      System.out.println(spr);
+      System.out.println();
+      
+      // Percentiles per-Group
+      IcedHashMap<IcedLong,SummaryPerRow> sprs = fr.
+        with(new Flow.GroupBy() { public long groupId(double ds[]) { return (long)ds[cyl_idx];} }).
+        with(new SummaryPerRow(fr)).
+        doit();
+      for( IcedLong gid : sprs.keySet() ) {
+        SummaryPerRow spr2 = sprs.get(gid);
+        spr2.finishUp();
+        System.out.println("Group ID="+gid._val);
+        System.out.println(spr2);
+        System.out.println();
+      }
+      System.out.println();
+
       
     } finally {
       UKV.remove(k);
@@ -73,5 +103,6 @@ public class FlowTest2 {
     SumCol( int col_idx  ) { _col_idx = col_idx; }
     @Override public void mapreduce( double ds[] ) { _sum += ds[_col_idx]; _n++; }
     @Override public void reduce( SumCol that ) { _sum += that._sum; _n += that._n; }
+    @Override public SumCol make() { return new SumCol(_col_idx); }
   }
 }

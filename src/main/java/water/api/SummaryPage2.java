@@ -53,25 +53,11 @@ public class SummaryPage2 extends Request2 {
       names[i] = source._names[cols[i]];
     }
     Frame fr = new Frame(names, vecs);
-    summaries = new SummaryTask2().doAll(fr)._summaries;
+    summaries = new Summary2.SummaryTask2().doAll(fr)._summaries;
     if (summaries != null)
       for (int i = 0; i < cols.length; i++) 
         summaries[i].finishUp(vecs[i]);
     return Response.done(this);
-  }
-
-  private static class SummaryTask2 extends MRTask2<SummaryTask2> {
-    Summary2 _summaries[];
-    @Override public void map(Chunk[] cs) {
-      _summaries = new Summary2[cs.length];
-      for (int i = 0; i < cs.length; i++) {
-        (_summaries[i]=new Summary2(_fr.vecs()[i], _fr.names()[i])).add(cs[i]);
-      }
-    }
-    @Override public void reduce(SummaryTask2 other) {
-      for (int i = 0; i < _summaries.length; i++)
-        _summaries[i].add(other._summaries[i]);
-    }
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {

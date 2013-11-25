@@ -59,6 +59,7 @@ public abstract class Flow extends Iced {
   public abstract static class PerRow<X extends PerRow> extends Iced {
     abstract public void mapreduce( double ds[] );
     abstract public void reduce( X that );
+    abstract public X make();
     @Override public String toString() { return "perRow"; }
   }
 
@@ -84,7 +85,7 @@ public abstract class Flow extends Iced {
     @Override Frame frame() { return _fr; }
     @Override public String toString() { return _fr.toString(); }
     @Override <X extends PerRow<X>> PerRow<X> doit(PerRow<X> pr, double ds[], PerRow<X> pr0) {
-      if( pr == null ) pr = (PerRow<X>)pr0.clone();
+      if( pr == null ) pr = pr0.make();
       pr.mapreduce(ds); 
       return pr;
     }
@@ -164,7 +165,7 @@ public abstract class Flow extends Iced {
     public FlowPerRow( PerRow<X> pr, Flow ex ) { _pr = pr; _ex = ex;}
     public X doit() { return doAll(_ex.frame()).self(); }
     @Override public void map( Chunk chks[] ) {
-      _pr = (PerRow<X>)_pr.clone();
+      _pr = _pr.make();
       double ds[] = new double[chks.length];
       for( int i=0; i<chks[0]._len; i++ ) {
         // Load the internal double array
