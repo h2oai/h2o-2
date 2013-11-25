@@ -73,10 +73,7 @@ public class GLMValidation extends Iced {
     }
     this.dataKey = dataKey;
   }
-  protected void regularize(double reg){
-    avg_err = Math.sqrt(avg_err)*reg;
-  }
-
+  protected void regularize(double reg){avg_err = avg_err*reg;}
   public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make());}
   public void add(double yreal, double ymodel){
     null_deviance += _glm.deviance(yreal, _ymu);
