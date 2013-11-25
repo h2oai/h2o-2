@@ -7,7 +7,28 @@ import water.util.Utils.*;
 public abstract class Flow extends Iced {
 
   // Flow-Coding with Frames, Filters & GroupBy
-
+  //
+  // frame.with(filter).with(groupby).with(reducer).doit();
+  // 
+  // Define a pipeline of operations to perform on a frame.  Can use any number
+  // of filters, and one optional groupby, and one required reducer which must
+  // be last in the pipe.  The return result is either the instance of the
+  // reducer, or a collection of reducers (one per Group in the GroupBy).
+  //
+  // All elements are passed a row from the Frame in double ds[].
+  //
+  // Reducer uses "mapreduce(ds)" to collect data for one row into a reducer
+  // object, and "this.reduce(that)" to gather chunks of reduced objects.  Rows
+  // are reduced in parallel and in any order; each row exactly once.
+  //
+  // Filter returns boolean to ignore or reduce the row.
+  // 
+  // GroupBy returns a long to specify which Group this row belongs too.  The
+  // row is reduced into a seperate reducer for each group.  The group ids do
+  // not have to form a dense space, any unique long value specifies a group; a
+  // hash table is used to gather the groups.  The hashtable of reduced values
+  // is returned.
+  //
   //Frame fr = parseFrame("cars.hex", "smalldata/cars.csv");
   //final int cyl_idx = fr.find("cylinders");
   //final int year_idx = fr.find("year");
