@@ -272,6 +272,9 @@ h2o.__exec2_dest_key <- function(client, expr, destKey) {
 }
 
 h2o.__unop2 <- function(op, x) {
+  if(missing(x)) stop("Must specify data set")
+  if(class(x) != "H2OParsedData") stop("Data must be an H2O data set")
+    
   expr = paste(op, "(", x@key, ")", sep = "")
   res = h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate

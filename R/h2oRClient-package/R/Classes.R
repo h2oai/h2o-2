@@ -394,11 +394,9 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
-setGeneric("h2o.table", function(x) { standardGeneric("h2o.table") })
-setMethod("h2o.table", signature(x="H2OParsedData"), function(x) { h2o.__unop2("table", x) })
-
-setGeneric("h2o.factor", function(x) { standardGeneric("h2o.factor") })
-setMethod("h2o.factor", signature(x="H2OParsedData"), function(x) { h2o.__unop2("factor", x) })
+h2o.table <- function(x) { h2o.__unop2("table", x) }
+h2o.factor <- function(x) { h2o.__unop2("factor", x) }
+h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
@@ -491,17 +489,19 @@ setMethod("is.factor", "H2OParsedData", function(x) {
 
 setMethod("quantile", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  temp = sapply(res$summaries, function(x) { x$percentileValues })
+  # temp = sapply(res$summaries, function(x) { x$percentileValues })
+  temp = sapply(res$summaries, function(x) { x$stats$pctile })
   filt = !sapply(temp, is.null)
   temp = temp[filt]
   if(length(temp) == 0) return(NULL)
   
-  myFeat = res$names[filt[1:length(res$names)]]
-  myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
-  matrix(unlist(temp), ncol = length(res$names), dimnames = list(paste(myQuantiles, "%", sep=""), myFeat))
+  # myFeat = res$names[filt[1:length(res$names)]]
+  # myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
+  myFeat = sapply(res$summaries, function(x) { x$colname })
+  myQuantiles = 100 * res$summaries[[1]]$stats$pct
+  matrix(unlist(temp), ncol = length(myFeat), dimnames = list(paste(myQuantiles, "%", sep=""), myFeat))
 })
 
-# histograms <- function(object) { UseMethod("histograms", object) }
 setGeneric("histograms", function(object) { standardGeneric("histograms") })
 setMethod("histograms", "H2OParsedData", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
