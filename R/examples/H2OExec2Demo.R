@@ -5,29 +5,37 @@ localH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = F
 
 # Import iris file to H2O
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
-prostate.hex = h2o.importFile.FV(localH2O, path = prosPath, key = "prostate.hex")
+prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 
 # Print out basic summary
 summary(prostate.hex)
 head(prostate.hex)
 tail(prostate.hex)
-h2o.table(prostate.hex$RACE)    # Note: Currently only works on a single integer/factor column
+
+# Display count of a column's levels
+race.count = h2o.table(prostate.hex$RACE)    # Note: Currently only works on a single integer/factor column
+head(race.count)
+
+# Extract small sample (without replacement)
+prostate.samp = prostate.hex[sample(1:nrow(prostate.hex), 50),]
+prostate.samp.df = as.data.frame(prostate.samp)
+glm(CAPSULE ~ AGE + PSA + VOL + GLEASON, family = binomial(), data = prostate.samp.df)
 
 # Get quantiles and examine outliers
 prostate.qs = quantile(prostate.hex$PSA)
 print(prostate.qs)
 
 # Note: Right now, assignment must be done manually with h2o.assign!
-# PSA.outliers = prostate.hex[prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PSA >= prostate.qs[10],]
-PSA.outliers.ind = prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PSA >= prostate.qs[10]
-PSA.outliers = prostate.hex[PSA.outliers.ind,]
+PSA.outliers = prostate.hex[prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PSA >= prostate.qs[10],]
+# PSA.outliers.ind = prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PSA >= prostate.qs[10]
+# PSA.outliers = prostate.hex[PSA.outliers.ind,]
 PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
 nrow(PSA.outliers)
 head(PSA.outliers); tail(PSA.outliers)
 
 # Drop outliers from data
-# prostate.trim = prostate.hex[prostate.hex$PSA > prostate.qs[2] && prostate.hex$PSA < prostate.qs[10],]
-prostate.trim = prostate.hex[!PSA.outliers.ind,]
+prostate.trim = prostate.hex[prostate.hex$PSA > prostate.qs[2] & prostate.hex$PSA < prostate.qs[10],]
+# prostate.trim = prostate.hex[!PSA.outliers.ind,]
 prostate.trim = h2o.assign(prostate.trim, "prostate.trim")
 nrow(prostate.trim)
 
