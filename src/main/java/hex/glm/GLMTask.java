@@ -92,7 +92,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       double res = Math.abs(_z[0]);
       for( int i = 1; i < _z.length; ++i )
         res = Math.max(res, Math.abs(_z[i]));
-      return _glm.variance(_ymu) * res / (_nobs*_alpha);
+      return _glm.variance(_ymu) * res / (_nobs*Math.max(_alpha,1e-3));
     }
   }
 
