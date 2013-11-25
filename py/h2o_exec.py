@@ -115,7 +115,10 @@ def exec_zero_list(zeroList):
 
 
 def exec_expr_list_rand(lenNodes, exprList, keyX, 
-    minCol=0, maxCol=54, minRow=1, maxRow=400000, maxTrials=200, 
+    # exec2 uses R "start with 1" behavior?
+    minCol=1, maxCol=55, 
+    minRow=1, maxRow=400000, 
+    maxTrials=200, 
     timeoutSecs=10, ignoreH2oError=False):
 
     trial = 0
