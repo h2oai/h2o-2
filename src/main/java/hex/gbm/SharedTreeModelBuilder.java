@@ -67,6 +67,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     Log.info("    nbins: " + nbins);
   }
 
+  // Verify input parameters
   @Override protected void init() {
     super.init();
     // Check parameters

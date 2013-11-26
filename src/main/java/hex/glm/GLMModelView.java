@@ -6,12 +6,10 @@ import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
 import java.text.DecimalFormat;
-import java.util.HashMap;
 
 import water.*;
 import water.api.DocGen;
 import water.api.Request;
-import water.api.RequestBuilders.Response;
 import water.util.RString;
 
 public class GLMModelView extends Request2 {

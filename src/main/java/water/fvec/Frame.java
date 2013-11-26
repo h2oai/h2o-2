@@ -334,8 +334,8 @@ public class Frame extends Iced {
 
   @Override public String toString() {
     // Across
-    String s="{"+_names[0];
-    long bs=_vecs[0].byteSize();
+    String s="{"+(_names.length>0?_names[0]:"");
+    long bs=_vecs.length>0?_vecs[0].byteSize():0;
     for( int i=1; i<_names.length; i++ ) {
       s += ","+_names[i];
       bs+= _vecs[i].byteSize();
