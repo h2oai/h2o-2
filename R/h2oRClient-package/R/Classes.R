@@ -141,10 +141,10 @@ setMethod("show", "H2ONNModel", function(object) {
   cat("NN Model Key:", object@key)
   
   model = object@model
-  cat("\n\nTraining classification error:\n"); print(model$train_class_error)
-  cat("\nTraining square error:\n"); print(model$train_sqr_error)
-  cat("\n\nValidation classification error:\n"); print(model$valid_class_error)
-  cat("\nValidation square error:\n"); print(model$valid_sqr_error)
+  cat("\n\nTraining classification error:", model$train_class_error)
+  cat("\nTraining square error:", model$train_sqr_error)
+  cat("\n\nValidation classification error:", model$valid_class_error)
+  cat("\nValidation square error:", model$valid_sqr_error)
   cat("\n\nConfusion matrix:\n"); print(model$confusion)
 })
 

@@ -103,7 +103,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
 h2o.__getGLM2Results <- function(model, y, valid) {
   result = list()
   result$y = y
-  result$x = model$'_names'
+  result$x = model$'_names'     # BUG: I need these names to match the predictor cols passed in by the user (NOT all colnames)
   # result$coefficients = unlist(model$beta)
   result$coefficients = as.numeric(unlist(model$submodels[[1]]$beta))
   result$rank = valid$'_rank'
@@ -150,7 +150,7 @@ h2o.kmeans <- function(data, centers, cols='', iter.max=10) {
   if(!is.numeric(iter.max)) stop('iter.max must be numeric')
   if( iter.max < 1) stop('iter.max must be >=1')
   
-  if(cols == '') cols = colnames(data)
+  if(length(cols) == 1 && cols == '') cols = colnames(data)
   cc <- colnames(data)
   if(is.numeric(cols)) {
     if( any( cols < 1 | cols > length(cc) ) ) stop( paste(cols[ cols < 1 | cols > length(cc)], sep=','), 'is out of range of the columns' )
@@ -208,6 +208,7 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
       hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=data@key)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, model=destKey)
+  return(res2)
 
   result=list()
   categories=length(res2$model$confusion_matrix)
@@ -217,11 +218,17 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
   dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
 
   result$confusion = cf_matrix
-  result$items = res2$model$items
-  result$train_class_error = res2$model$train_classification_error
-  result$train_sqr_error = res2$model$train_mse
-  result$valid_class_error = res2$model$validation_classification_error
-  result$valid_sqr_error = res2$model$validation_mse
+  # result$items = res2$model$items
+  # result$train_class_error = res2$model$train_classification_error
+  # result$train_sqr_error = res2$model$train_mse
+  # result$valid_class_error = res2$model$validation_classification_error
+  # result$valid_sqr_error = res2$model$validation_mse
+  nn_train = tail(res2$model$training_errors,1)[[1]]     # BUG: For some reason, I'm not getting the errors for training_samples = 15000 in the JSON
+  nn_valid = tail(res2$model$validation_errors,1)[[1]]
+  result$train_class_error = nn_train$classification
+  result$train_sqr_error = nn_train$mean_square
+  result$valid_class_error = nn_valid$classification
+  result$valid_sqr_error = nn_valid$mean_square
   new("H2ONNModel", key=destKey, data=data, model=result)
 }
 
