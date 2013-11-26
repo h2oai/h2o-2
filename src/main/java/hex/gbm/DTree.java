@@ -483,8 +483,10 @@ public class DTree extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
     @API(help="MSE rate as trees are added")       public final double [] errs;
-    //@API(help="Min class - to zero-bias the CM")   public final int ymin;
     @API(help="Actual trees built (probably < N)") public final CompressedTree [/*N*/][/*nclass*/] treeBits;
+    @API(help="Maximum tree depth")                public final int max_depth;
+    @API(help = "Fewest allowed observations in a leaf") public final int min_rows;
+    @API(help = "Bins in the histograms")          public final int nbins;
 
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be seperate).
@@ -493,10 +495,11 @@ public class DTree extends Iced {
     @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
     @API(help="Tree statistics") public final TreeStats treeStats;
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) {
+    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey;  this.cm = null;
+      this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       treeBits = new CompressedTree[0][];
       varimp = null;
       treeStats = null;
@@ -508,6 +511,9 @@ public class DTree extends Iced {
       this.treeBits = prior.treeBits;
       this.varimp = varimp;
       this.treeStats = prior.treeStats;
+      this.max_depth = prior.max_depth;
+      this.min_rows = prior.min_rows;
+      this.nbins = prior.nbins;
     }
     public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
@@ -525,6 +531,9 @@ public class DTree extends Iced {
       }
       varimp = null;
       treeStats = tstats;
+      this.max_depth = prior.max_depth;
+      this.min_rows = prior.min_rows;
+      this.nbins = prior.nbins;
     }
 
     // Number of trees actually in the model (instead of expected/planned)
@@ -550,6 +559,8 @@ public class DTree extends Iced {
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
+      DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
+      generateModelDescription(sb);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
@@ -647,7 +658,7 @@ public class DTree extends Iced {
       for( int i=0; i<varimp.length; i++ )
         sb.append("<td>").append(_names[i]).append("</td>");
       sb.append("</tr>");
-      sb.append("<tr><th class='warning'>Mean Decrease Acurracy</th>");
+      sb.append("<tr><th class='warning'>Mean Decrease Accuracy</th>");
       for( int i=0; i<varimp.length; i++ )
         sb.append(String.format("<td>%5.3f</td>",varimp[i]));
       sb.append("</tr>");
@@ -813,6 +824,9 @@ public class DTree extends Iced {
       }.visit();
       return sb;
     }
+
+    // For GBM: learn_rate.  For DRF: mtries, sample_rate, seed.
+    abstract protected void generateModelDescription(StringBuilder sb);
 
     public void toJavaHtml( StringBuilder sb ) {
       if( treeStats == null ) return; // No trees yet

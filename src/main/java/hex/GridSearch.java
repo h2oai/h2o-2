@@ -5,6 +5,7 @@ import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
 import hex.NeuralNet.NeuralNetProgress;
 import hex.gbm.GBM.GBMModel;
+import hex.drf.DRF.DRFModel;
 
 import java.util.*;
 
@@ -133,6 +134,8 @@ public class GridSearch extends Job {
           if( info._job.start_time != 0 && DKV.get(info._job.destination_key) != null ) {
             if( info._model instanceof GBMModel )
               link = GBMModelView.link(link, info._job.destination_key);
+            else if( info._model instanceof DRFModel )
+              link = DRFModelView.link(link, info._job.destination_key);
             else if( info._model instanceof NeuralNetModel )
               link = NeuralNetProgress.link(info._job.self(), info._job.destination_key, link);
             if( info._model instanceof KMeans2Model )

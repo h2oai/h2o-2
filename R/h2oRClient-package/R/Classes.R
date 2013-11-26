@@ -92,13 +92,13 @@ setMethod("show", "H2OGLMModel", function(object) {
   print(round(model$coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
   
   # if(model$family == "binomial") {
   if(model$family$family == "binomial") {
-    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$best_threshold,5), "\n")
-    cat("\nConfusion Matrix:\n"); print(round(model$confusion,2))
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5), "\n")
+    cat("\nConfusion Matrix:\n"); print(model$confusion,2)
   }
     
   if(length(object@xval) > 0) {
@@ -131,7 +131,7 @@ setMethod("show", "H2OKMeansModel", function(object) {
   model = object@model
   cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
   cat("\n\nCluster means:\n"); print(model$centers)
-  cat("\nClustering vector:\n"); print(model$cluster)  # summary(model$cluster) currently broken
+  cat("\nClustering vector:\n"); print(summary(model$cluster))
   cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
   cat("\nAvailable components:\n\n"); print(names(model))
 })
@@ -587,12 +587,12 @@ setMethod("show", "H2OGLMModelVA", function(object) {
   print(round(model$coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
   
   # if(model$family == "binomial") {
   if(model$family$family == "binomial") {
-    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$threshold,5), "\n")
     cat("\nConfusion Matrix:\n"); print(model$confusion)
   }
   

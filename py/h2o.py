@@ -1049,9 +1049,9 @@ class H2O(object):
         if 'response_info' in response: # trigger v2 for GBM always?
             status = response['response_info']['status']
             # default to "" if doesn't exist
-            progress = response.get('progress', "")
         else:
             status = response['response']['status']
+        progress = response.get('progress', "")
         doFirstPoll = status != 'done'
 
         (url, params) = get_redirect_url(response, beta_features)
@@ -1096,7 +1096,7 @@ class H2O(object):
             if benchmarkLogging:
                 cloudPerfH2O.get_log_save(benchmarkLogging)
 
-            print status, url
+            print status, progress, url
             time.sleep(retryDelaySecs)
             # every other one?
             create_noise = noise_enable and ((count%2)==0)
@@ -1128,6 +1128,8 @@ class H2O(object):
                     status = response['response_info']['status']
                 else:
                     status = response['response']['status']
+
+                progress = response.get('progress', "")
 
                 # get the redirect url
                 if beta_features and not reuseFirstPollUrl: # reuse url for all v1 stuff
