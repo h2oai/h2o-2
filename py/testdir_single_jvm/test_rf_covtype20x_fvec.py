@@ -129,7 +129,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
 
         start = time.time()
-        rfv = h2o_cmd.runRF(parseResult=parseResultTrain,
+        rf = h2o_cmd.runRF(parseResult=parseResultTrain,
             timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
         print "rf job end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
@@ -154,14 +154,14 @@ class Basic(unittest.TestCase):
             print "rfview", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, 
+            self.assertAlmostEqual(classification_error, 5, delta=5, 
                 msg="Classification error %s differs too much" % classification_error)
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest2)
             print "predict", trial, "end on ", dataKeyTest, 'took', time.time() - start, 'seconds.'
 
-            parseKey = parseResult['destination_key']
-            rfModelKey  = trainResult['drf_model']['_selfKey']
+            parseKey = parseResultTrain['destination_key']
+            rfModelKey  = rfView['drf_model']['_selfKey']
             predictKey = 'Predict.hex'
             start = time.time()
 

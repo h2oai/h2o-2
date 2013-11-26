@@ -76,8 +76,8 @@ class Basic(unittest.TestCase):
         return trainKey
     
     def test_RF(self):
-
         h2o.beta_features = True
+
         if h2o.beta_features:
             paramsTrainRF = { 
                 'ntrees': 10, 
