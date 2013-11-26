@@ -70,14 +70,17 @@ public class DRFModelAdaptTest extends TestUtil {
       frTest = parseFrame(testKey, test);
       Assert.assertEquals("TEST CONF ERROR: The test dataset should contain 2*<number of input columns>+1!", 2*(frTrain.numCols()-1)+1, frTest.numCols());
       // Adapt test dataset
-      frAdapted = model.adapt(frTest, false);
+      frAdapted = model.adapt(frTest, true); // do not perform translation to enums
       Assert.assertEquals("Adapt method should return two frames", 2, frAdapted.length);
       Assert.assertEquals("Test expects that all columns in  test dataset has to be adapted", dprep.needAdaptation(frTrain), frAdapted[1].numCols());
 
       // Compare vectors
       Frame adaptedFrame = frAdapted[0];
+      System.err.println(frTest.toStringAll());
+      System.err.println(adaptedFrame.toStringAll());
+
       for (int av=0; av<frTrain.numCols()-1; av++) {
-        int ev = av + frTrain.numCols()-1;
+        int ev = av + frTrain.numCols();
         Vec actV = adaptedFrame.vecs()[av];
         Vec expV = frTest.vecs()[ev];
         Assert.assertEquals("Different number of rows in test vectors", expV.length(), actV.length());
