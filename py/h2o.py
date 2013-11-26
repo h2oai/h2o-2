@@ -1017,7 +1017,9 @@ class H2O(object):
                 if response_info['status'] != 'done':
                     redirect_url = response_info['redirect_url']
                     # HACK: these are missing the "2/" prefix for now
-                    if 'NeuralNetProgress' in str(redirect_url) or 'KMeans2Progress' in str(redirect_url):
+                    if 'NeuralNetProgress' in str(redirect_url) or  \
+                            'KMeans2Progress' in str(redirect_url) or \
+                            'GLMModelView' in str(redirect_url):
                         print "Hacking in the 2/ prefix..tell cyprien"
                         if "2/" not in str(redirect_url):
                             redirect_url = "2/" + redirect_url

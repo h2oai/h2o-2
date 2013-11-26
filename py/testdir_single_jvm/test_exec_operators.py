@@ -8,6 +8,7 @@ initList = [
         ('Result2.hex', 'Result2.hex=c(3.3,0,1,2,3,4,5)'),
         ('Result3.hex', 'Result3.hex=c(4.3,0,1,2,3,4,5)'),
         ('Result4.hex', 'Result4.hex=c(5.3,0,1,2,3,4,5)'),
+        ('a', 'a=Result4.hex'),
         ]
 
 exprList = [
@@ -15,6 +16,7 @@ exprList = [
         # 'Result<n>[0,] = Result1[0,] + Result<n-1>[0,]',
         # 'Result<n> = Result1 + Result<n-1>',
         'Result0.hex[,1]=Result0.hex[,1] == 1.0',
+        'a=runif(Result4.hex[,1])',
         # 'Result0.hex[,1]=Result0.hex[,1] + 1.3',
         # 'Result<n>.hex=min(Result0.hex,1+2)',
         # 'Result<n>.hex=Result1.hex + 1',
