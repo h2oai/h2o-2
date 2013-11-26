@@ -208,6 +208,15 @@ h2o.importURL <- function(object, path, pattern = "", key = "", parse = TRUE, se
 h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, sep = "") {
   stop("This function has been deprecated in FluidVecs. Please use h2o.importFolder with a hdfs:// prefix instead.")
 }
+
+setGeneric("h2o<-", function(x, value) { standardGeneric("h2o<-") })
+setMethod("h2o<-", signature(x="H2OParsedData", value="H2OParsedData"), function(x, value) {
+  res = h2o.__exec2_dest_key(x@h2o, value@key, x@key); return(x)
+})
+
+setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, value) {
+  res = h2o.__exec2_dest_key(x@h2o, paste("c(", paste(value, collapse=","), ")", sep=""), x@key); return(x)
+})
           
 #-------------------------------- ValueArray -----------------------------------#
 # Data import operations

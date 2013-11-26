@@ -191,7 +191,7 @@ public class Vec extends Iced {
     int[] domain;
     String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
     int[] domMap = Utils.mapping(domain);
-    if( domain.length > MAX_ENUM_SIZE ) throw H2O.unimpl();
+    if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column is to big to represent an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
     return this.makeTransf(domMap, sdomain);
   }
 
