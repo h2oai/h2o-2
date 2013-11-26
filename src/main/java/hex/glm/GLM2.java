@@ -100,6 +100,11 @@ public class GLM2 extends ModelJob {
     this.n_folds = nfolds;
   }
 
+  public GLM2 setCase(CaseMode cm, double cv){
+    case_mode = cm;
+    case_val = cv;
+    return this;
+  }
   /** Return the query link to this page */
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='GLM2.query?source=%$key'>%content</a>");
@@ -231,7 +236,7 @@ public class GLM2 extends ModelJob {
           } else {
             DKV.put(dest(),_oldModel);// validation is one iteration behind so put the old (now validated  model into K/V)
             int iter = glmt._iter+1;
-            GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, newBeta,iter,glmt._ymu,glmt._reg);
+            GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,iter,glmt._ymu,glmt._reg);
             nextIter.setCompleter(new Iteration(_model, _solver, _dinfo, _fjt)); // we need to clone here as FJT will set status to done after this method
             nextIter.dfork(_dinfo._adaptedFrame);
           }
@@ -256,8 +261,18 @@ public class GLM2 extends ModelJob {
   public void run(final H2OCountedCompleter completer){
     assert alpha.length == 1;
     UKV.remove(dest());
-    new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
+    new YMUTask(this, _dinfo, case_mode, case_val, new H2OCallback<YMUTask>() {
       @Override public void callback(final YMUTask ymut){
+        if(ymut._ymin == ymut._ymax){
+          String msg = case_mode == CaseMode.none
+              ?"Attempting to run GLM on column with constant value = " + ymut._ymin
+              :"Attempting to run GLM on column with constant value, y " + case_mode + " " + case_val  + " is " + (ymut._ymin == 0?"false":"true") + " for all rows!";
+          GLM2.this.cancel(msg);
+          GLM2.this._fjtask.completeExceptionally(new JobCancelledException(msg));
+        } else {
+          System.out.println("ymin = " + ymut._ymin);
+          System.out.println("ymax = " + ymut._ymax);
+        }
         new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
           @Override public void callback(LMAXTask t){
             final double lmax = t.lmax();
@@ -269,20 +284,20 @@ public class GLM2 extends ModelJob {
               int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
               if(i > 0)lambda = i == lambda.length?new double[]{lmax}:Arrays.copyOfRange(lambda, i, lambda.length);
             }
-            GLMIterationTask firstIter = new GLMIterationTask(GLM2.this,_dinfo,_glm,_beta,0,ymut.ymu(),1.0/ymut.nobs());
+            GLMIterationTask firstIter = new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, _beta,0,ymut.ymu(),1.0/ymut.nobs());
             final LSMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
             GLMModel model = new GLMModel(dest(),_dinfo._adaptedFrame, _dinfo._catOffsets, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,completer));
             firstIter.dfork(_dinfo._adaptedFrame);
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-            GLM2.this._fjtask.completeExceptionally(ex);
+            if(GLM2.this._fjtask != null)GLM2.this._fjtask.completeExceptionally(ex);
             return true;
           }
         }).dfork(_dinfo._adaptedFrame);
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-        GLM2.this._fjtask.completeExceptionally(ex);
+        if(GLM2.this._fjtask != null)GLM2.this._fjtask.completeExceptionally(ex);
         return true;
       }
     }).dfork(_dinfo._adaptedFrame);
@@ -309,7 +324,9 @@ public class GLM2 extends ModelJob {
     };
     callback.addToPendingCount(n_folds-1);
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).run(callback);
+      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).
+      setCase(case_mode,case_val).
+      run(callback);
   }
 
   // Expand grid search related argument sets
