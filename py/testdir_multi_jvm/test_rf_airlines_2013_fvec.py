@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         
         start = time.time()
         # noise=['JStack','cpu','disk'])
-        h2o_cmd.runSummary(key=hex_key)
+        h2o_cmd.runSummary(key=hex_key, timeoutSecs=200)
         elapsed = time.time() - start 
         print "summary took {0} sec".format(elapsed)
 
