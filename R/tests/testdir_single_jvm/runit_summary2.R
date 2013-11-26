@@ -4,9 +4,8 @@ Log.info("\n======================== Begin Test ===========================\n")
 
 test.summary2 <- function(con) {
   Log.info("\nImporting iris.csv data...\n")
-  # iris.hex <- h2o.importFile(con, "../smalldata/iris/iris_wheader.csv")
-  iris.hex <- h2o.uploadFile(con, "../../../smalldata/iris/iris_wheader.csv")  
-
+  iris.hex <- h2o.importFile(con, "smalldata/iris/iris_wheader.csv")
+  
   Log.info("\nCheck that summary works...")
   print(summary(iris.hex)) 
 

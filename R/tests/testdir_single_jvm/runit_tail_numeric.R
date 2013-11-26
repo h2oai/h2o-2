@@ -6,7 +6,7 @@ view_max <- 10000 #maximum returned by Inspect.java
 
 test.tail.numeric <- function(conn) {
   Log.info("Importing USArrests.csv data...")
-  arrests.hex = h2o.importFile.VA(conn, "../smalldata/pca_test/USArrests.csv", "arrests.hex")
+  arrests.hex = h2o.importFile.VA(conn, "smalldata/pca_test/USArrests.csv", "arrests.hex")
   
   Log.info("Check that tail works...")
   tail(arrests.hex)

@@ -206,51 +206,51 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   numRows = nrow(x); numCols = ncol(x)
   if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
      (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
-    stop("Array index out of bounds!")
+    stop("Array index out of bounds")
   
   if(missing(i) && missing(j)) return(x)
   if(missing(i) && !missing(j)) {
-    if(is.character(j)) return(do.call("$", c(x, j)))
-    if(is.logical(j)) j = -which(!j)
+    if(is.character(j)) { 
+      # return(do.call("$", c(x, j)))
+      myCol = colnames(x)
+      if(any(!(j %in% myCol))) stop("undefined columns selected")
+      j = match(j, myCol)
+    }
+    # if(is.logical(j)) j = -which(!j)
+    if(is.logical(j)) j = which(j)
+
     if(class(j) == "H2OLogicalData")
       expr = paste(x@key, "[", j@key, ",]", sep="")
-    else if(is.numeric(j)) {
-      if(length(j) == 1)
-        expr = paste(x@key, "[,", j, "]", sep="")
-      else
-        expr = paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
-    } else stop(paste("Column index of type", class(j), "unsupported!"))
+    else if(is.numeric(j) || is.integer(j))
+      expr = paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
+    else stop(paste("Column index of type", class(j), "unsupported!"))
   } else if(!missing(i) && missing(j)) {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
-    # if(!is.numeric(i)) stop("Row index must be numeric")
     if(class(i) == "H2OLogicalData")
       expr = paste(x@key, "[", i@key, ",]", sep="")
-    else if(is.numeric(i) || is.integer(i)) {
-      if(length(i) == 1)
-        expr = paste(x@key, "[", i, ",]", sep="")
-      else
-        expr = paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
-    } else stop(paste("Row index of type", class(i), "unsupported!"))
+    else if(is.numeric(i) || is.integer(i))
+      expr = paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
+    else stop(paste("Row index of type", class(i), "unsupported!"))
   } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
     if(class(i) == "H2OLogicalData") rind = i@key
     else if(is.numeric(i) || is.integer(i))
-      rind = ifelse(length(i) == 1, i, paste("c(", paste(i, collapse=","), ")", sep=""))
+      rind = paste("c(", paste(i, collapse=","), ")", sep="")
     else stop(paste("Row index of type", class(i), "unsupported!"))
     
+    if(is.character(j)) { 
+      # return(do.call("$", c(x, j)))
+      myCol = colnames(x)
+      if(any(!(j %in% myCol))) stop("undefined columns selected")
+      j = match(j, myCol)
+    }
     # if(is.logical(j)) j = -which(!j)
     if(is.logical(j)) j = which(j)
     if(class(j) == "H2OLogicalData") cind = j@key
     else if(is.numeric(j) || is.integer(j))
-      cind = ifelse(length(j) == 1, j, paste("c(", paste(j, collapse=","), ")", sep=""))
-    else if(is.character(j)) {
-      myCol = colnames(x)
-      if(any(!(j %in% myCol))) stop(paste(paste(j[which(!(j %in% myCol))], collapse=','), 'is not a valid column name'))
-      j_num = match(j, myCol)
-      cind = ifelse(length(j) == 1, j_num, paste("c(", paste(j_num, collapse=","), ")", sep=""))
-    }
+      cind = paste("c(", paste(j, collapse=","), ")", sep="")
     else stop(paste("Column index of type", class(j), "unsupported!"))
     expr = paste(x@key, "[", rind, ",", cind, "]", sep="")
   }
@@ -264,7 +264,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
 setMethod("$", "H2OParsedData", function(x, name) {
   myNames = colnames(x)
   if(!(name %in% myNames)) return(NULL)
-  cind = which(name == myNames)
+  cind = match(name, myNames)
   expr = paste(x@key, "[,", cind, "]", sep="")
   res = h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)
@@ -283,12 +283,12 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   
   if(!missing(i) && is.numeric(i)) {
     if(any(i == 0)) stop("Array index out of bounds")
-    if(any(i < 0 && abs(i) > numRows)) stop("Unimplemented")
+    if(any(i < 0 && abs(i) > numRows)) stop("Unimplemented: can't extend rows")
     if(min(i) > numRows+1) stop("new rows would leave holes after existing rows")
   }
   if(!missing(j) && is.numeric(j)) {
     if(any(j == 0)) stop("Array index out of bounds")
-    if(any(j < 0 && abs(j) > numCols)) stop("Unimplemented")
+    if(any(j < 0 && abs(j) > numCols)) stop("Unimplemented: can't extend columns")
     if(min(j) > numCols+1) stop("new columns would leaves holes after existing columns")
   }
   
@@ -297,8 +297,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   else if(missing(i) && !missing(j)) {
     if(is.character(j)) {
       myNames = colnames(x)
-      if(any(!(j %in% myNames)))
-        stop(paste("Unimplemented:", paste(j[!(j %in% myNames)], collapse=','), "is not the name of a column"))
+      if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
       cind = match(j, myNames)
     } else cind = j
     cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
@@ -309,8 +308,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   } else {
     if(is.character(j)) {
       myNames = colnames(x)
-      if(any(!(j %in% myNames)))
-        stop(paste("Unimplemented:", paste(j[!(j %in% myNames)], collapse=','), "is not the name of a column"))
+      if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
       cind = match(j, myNames)
     } else cind = j
     cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
