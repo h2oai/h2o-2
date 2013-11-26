@@ -40,7 +40,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @API(help = "Number of classes")
   protected int _nclass;
 
-  @API(help = "Class distribution, ymin based")
+  @API(help = "Class distribution")
   protected long _distribution[];
 
   private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
