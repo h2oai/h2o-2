@@ -29,6 +29,7 @@ public class Frame extends Iced {
   public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) {
+    // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
@@ -334,11 +335,13 @@ public class Frame extends Iced {
 
   @Override public String toString() {
     // Across
+    Vec vecs[] = vecs();
+    if( vecs.length==0 ) return "{}";
     String s="{"+_names[0];
-    long bs=_vecs[0].byteSize();
-    for( int i=1; i<_names.length; i++ ) {
+    long bs=vecs[0].byteSize();
+    for( int i=1; i<vecs.length; i++ ) {
       s += ","+_names[i];
-      bs+= _vecs[i].byteSize();
+      bs+= vecs[i].byteSize();
     }
     s += "}, "+PrettyPrint.bytes(bs)+"\n";
     // Down

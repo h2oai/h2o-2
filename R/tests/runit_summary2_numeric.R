@@ -5,7 +5,7 @@ Log.info("\n======================== Begin Test ===========================\n")
 H2Oserver <- new("H2OClient", ip=myIP, port=myPort)
 
 #import multimodal data set; parse as FV
-test.summary2.numeric <- function(con) {
+test.summary2.numeric <- function(H2Oserver) {
   Log.info("\nImporting wonkysummary.csv data...\n")
   wonkysummary.hex <- h2o.importFile(H2Oserver, "./smalldata/wonkysummary.csv")
   

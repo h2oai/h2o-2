@@ -41,9 +41,27 @@ public class DRF extends SharedTreeModelBuilder {
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) { super(key,dataKey,testKey,names,domains,ntrees); }
-    public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { super(prior, trees, err, cm, tstats); }
-    public DRFModel(DRFModel prior, float[] varimp) { super(prior, varimp); }
+    final int _mtries;
+    final float _sample_rate;
+    final long _seed;
+    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) { 
+      super(key,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins);
+      _mtries = mtries;
+      _sample_rate = sample_rate;
+      _seed = seed;
+    }
+    public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { 
+      super(prior, trees, err, cm, tstats); 
+      _mtries = prior._mtries;
+      _sample_rate = prior._sample_rate;
+      _seed = prior._seed;
+    }
+    public DRFModel(DRFModel prior, float[] varimp) { 
+      super(prior, varimp); 
+      _mtries = prior._mtries;
+      _sample_rate = prior._sample_rate;
+      _seed = prior._seed;
+    }
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);
       int ntrees = numTrees();
@@ -53,6 +71,9 @@ public class DRF extends SharedTreeModelBuilder {
         if (s>0) div(p, s); // unify over all classes
       }
       return p;
+    }
+    @Override protected void generateModelDescription(StringBuilder sb) {
+      DocGen.HTML.paragraph(sb,"mtries: "+_mtries+", Sample rate: "+_sample_rate+", Seed: "+_seed);
     }
   }
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
@@ -100,7 +121,7 @@ public class DRF extends SharedTreeModelBuilder {
         ( classification ? Math.max((int)Math.sqrt(_ncols),1) : Math.max(_ncols/3,1))  : mtries;
     assert 1 <= cmtries && cmtries <= _ncols : "Too large mtries="+cmtries+", ncols="+_ncols;
     assert 0.0 < sample_rate && sample_rate <= 1.0;
-    DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees);
+    DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, seed);
     DKV.put(outputKey, model);
 
     // The RNG used to pick split columns

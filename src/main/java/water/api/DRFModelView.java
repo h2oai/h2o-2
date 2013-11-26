@@ -14,6 +14,10 @@ public class DRFModelView extends Request2 {
   @API(help="DRF Model")
   DRFModel drf_model;
 
+  public static String link(String txt, Key model) {
+    return "<a href='DRFModelView.html?_modelKey=" + model + "'>" + txt + "</a>";
+  }
+
   public static Response redirect(Request req, Key modelKey) {
     return Response.redirect(req, "/2/DRFModelView", "_modelKey", modelKey);
   }

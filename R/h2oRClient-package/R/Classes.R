@@ -92,13 +92,13 @@ setMethod("show", "H2OGLMModel", function(object) {
   print(round(model$coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
   
   # if(model$family == "binomial") {
   if(model$family$family == "binomial") {
-    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$best_threshold,5), "\n")
-    cat("\nConfusion Matrix:\n"); print(round(model$confusion,2))
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5), "\n")
+    cat("\nConfusion Matrix:\n"); print(model$confusion,2)
   }
     
   if(length(object@xval) > 0) {
@@ -131,7 +131,7 @@ setMethod("show", "H2OKMeansModel", function(object) {
   model = object@model
   cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
   cat("\n\nCluster means:\n"); print(model$centers)
-  cat("\nClustering vector:\n"); print(model$cluster)  # summary(model$cluster) currently broken
+  cat("\nClustering vector:\n"); print(summary(model$cluster))
   cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
   cat("\nAvailable components:\n\n"); print(names(model))
 })
@@ -141,10 +141,10 @@ setMethod("show", "H2ONNModel", function(object) {
   cat("NN Model Key:", object@key)
   
   model = object@model
-  cat("\n\nTraining classification error:\n"); print(model$train_class_error)
-  cat("\nTraining square error:\n"); print(model$train_sqr_error)
-  cat("\n\nValidation classification error:\n"); print(model$valid_class_error)
-  cat("\nValidation square error:\n"); print(model$valid_sqr_error)
+  cat("\n\nTraining classification error:", model$train_class_error)
+  cat("\nTraining square error:", model$train_sqr_error)
+  cat("\n\nValidation classification error:", model$valid_class_error)
+  cat("\nValidation square error:", model$valid_sqr_error)
   cat("\n\nConfusion matrix:\n"); print(model$confusion)
 })
 
@@ -235,16 +235,15 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
-    # if(!is.numeric(i)) stop("Row index must be numeric")
-    else if(class(i) == "H2OLogicalData") rind = i@key
-    else if(!is.numeric(i)) stop(paste("Row index of type", class(i), "unsupported!"))
-    rind = ifelse(length(i) == 1, i, paste("c(", paste(i, collapse=","), ")", sep=""))
+    if(class(i) == "H2OLogicalData") rind = i@key
+    else if(is.numeric(i) || is.integer(i))
+      rind = ifelse(length(i) == 1, i, paste("c(", paste(i, collapse=","), ")", sep=""))
+    else stop(paste("Row index of type", class(i), "unsupported!"))
     
+    # if(is.logical(j)) j = -which(!j)
+    if(is.logical(j)) j = which(j)
     if(class(j) == "H2OLogicalData") cind = j@key
-    else if(is.logical(j)) j = -which(!j)
-    else if(!is.numeric(j) && !is.character(j)) stop(paste("Column index of type", class(j), "unsupported!"))
-    
-    if(is.numeric(j))
+    else if(is.numeric(j) || is.integer(j))
       cind = ifelse(length(j) == 1, j, paste("c(", paste(j, collapse=","), ")", sep=""))
     else if(is.character(j)) {
       myCol = colnames(x)
@@ -252,6 +251,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
       j_num = match(j, myCol)
       cind = ifelse(length(j) == 1, j_num, paste("c(", paste(j_num, collapse=","), ")", sep=""))
     }
+    else stop(paste("Column index of type", class(j), "unsupported!"))
     expr = paste(x@key, "[", rind, ",", cind, "]", sep="")
   }
   res = h2o.__exec2(x@h2o, expr)
@@ -394,11 +394,9 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
-setGeneric("h2o.table", function(x) { standardGeneric("h2o.table") })
-setMethod("h2o.table", signature(x="H2OParsedData"), function(x) { h2o.__unop2("table", x) })
-
-setGeneric("h2o.factor", function(x) { standardGeneric("h2o.factor") })
-setMethod("h2o.factor", signature(x="H2OParsedData"), function(x) { h2o.__unop2("factor", x) })
+h2o.table <- function(x) { h2o.__unop2("table", x) }
+h2o.factor <- function(x) { h2o.__unop2("factor", x) }
+h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
@@ -491,17 +489,19 @@ setMethod("is.factor", "H2OParsedData", function(x) {
 
 setMethod("quantile", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  temp = sapply(res$summaries, function(x) { x$percentileValues })
+  # temp = sapply(res$summaries, function(x) { x$percentileValues })
+  temp = sapply(res$summaries, function(x) { x$stats$pctile })
   filt = !sapply(temp, is.null)
   temp = temp[filt]
   if(length(temp) == 0) return(NULL)
   
-  myFeat = res$names[filt[1:length(res$names)]]
-  myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
-  matrix(unlist(temp), ncol = length(res$names), dimnames = list(paste(myQuantiles, "%", sep=""), myFeat))
+  # myFeat = res$names[filt[1:length(res$names)]]
+  # myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
+  myFeat = sapply(res$summaries, function(x) { x$colname })
+  myQuantiles = 100 * res$summaries[[1]]$stats$pct
+  matrix(unlist(temp), ncol = length(myFeat), dimnames = list(paste(myQuantiles, "%", sep=""), myFeat))
 })
 
-# histograms <- function(object) { UseMethod("histograms", object) }
 setGeneric("histograms", function(object) { standardGeneric("histograms") })
 setMethod("histograms", "H2OParsedData", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
@@ -587,12 +587,12 @@ setMethod("show", "H2OGLMModelVA", function(object) {
   print(round(model$coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
   
   # if(model$family == "binomial") {
   if(model$family$family == "binomial") {
-    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$threshold,5), "\n")
     cat("\nConfusion Matrix:\n"); print(model$confusion)
   }
   

@@ -40,10 +40,13 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @API(help = "Number of classes")
   protected int _nclass;
 
-  @API(help = "Class distribution, ymin based")
+  @API(help = "Class distribution")
   protected long _distribution[];
 
   private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
+
+  /** Maximal number of supported levels in response. */
+  public static final int MAX_SUPPORTED_LEVELS = 1000;
 
   /** Marker for already decided row. */
   static public final int DECIDED_ROW = -1;
@@ -64,21 +67,24 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     Log.info("    nbins: " + nbins);
   }
 
+  // Verify input parameters
   @Override protected void init() {
     super.init();
-    if (source.numRows()==0 || source.numRows() - response.naCnt() <=0)
-      throw new IllegalArgumentException("Cannot build a model on empty dataset!");
-  }
-
-  // --------------------------------------------------------------------------
-  // Driver for model-building.
-  public void buildModel( ) {
+    // Check parameters
     assert 0 <= ntrees && ntrees < 1000000; // Sanity check
-    assert 1 <= min_rows;
-    assert (classification && response.isInt()) || // Classify Int or Enums
-      (!classification && !response.isEnum());     // Regress  Int or Float
+    // Should be handled by input
+    //assert response.isEnum() : "Response is not enum";
+    assert (classification && (response.isInt() || response.isEnum())) ||   // Classify Int or Enums
+           (!classification && !response.isEnum()) : "Classification="+classification + " and response="+response.isInt();  // Regress  Int or Float
+
+    if (source.numRows()==0)
+      throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+    if (source.numRows() - response.naCnt() <=0)
+      throw new IllegalArgumentException("Dataset contains too many NAs!");
+
     _ncols = _train.length;
     _nrows = source.numRows() - response.naCnt();
+
     assert (_nrows>0) : "Dataset contains no rows - validation of input parameters is probably broken!";
     // Transform response to enum
     if( !response.isEnum() && classification ) {
@@ -87,7 +93,15 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     }
     _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
     _errs = new double[0];                // No trees yet
-    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
+    if (_nclass < 1)
+      throw new IllegalArgumentException("Only one level in response column!");
+    if (_nclass > MAX_SUPPORTED_LEVELS)
+      throw new IllegalArgumentException("Too many levels in response column!");
+  }
+
+  // --------------------------------------------------------------------------
+  // Driver for model-building.
+  public void buildModel( ) {
     final Key outputKey = dest();
     String sd = input("source");
     final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
@@ -108,7 +122,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution
-    _distribution = _nclass > 1 ? new ClassDist().doAll(response)._ys : null;
+    _distribution = _nclass > 1 ? new ClassDist(_nclass).doAll(response)._ys : null;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -327,7 +341,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   }
 
   // --------------------------------------------------------------------------
-  private class ClassDist extends MRTask2<ClassDist> {
+  private static class ClassDist extends MRTask2<ClassDist> {
+    ClassDist(int nclass) { _nclass = nclass; }
+    final int _nclass;
     long _ys[];
     @Override public void map(Chunk ys) {
       _ys = new long[_nclass];
@@ -368,10 +384,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // Adapt the validation set to the model
       Frame frs[] = model.adapt(validation,false);
       Frame adapValidation = frs[0]; // adapted validation dataset
-      // Adapt vresponse to original response
-//      vresponse = _nclass > 1 ? vresponse.adaptTo(response, true) : vresponse;
-//      // Dump in the prob distribution
-//      adapValidation.add("response",vresponse);
+      // All columns including response of validation frame are already adapted to model
       if (_nclass>1) { // Classification
         for( int i=0; i<_nclass; i++ )
           adapValidation.add("Work"+i,res.vecs()[i+1]);
@@ -383,7 +396,6 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // Remove the extra adapted Vecs
       frs[1].remove();
       // Remove temporary result
-      // FIXME delete vresponse res.remove();
       return this;
     }
 

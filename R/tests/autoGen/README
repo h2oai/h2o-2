@@ -1,0 +1,13 @@
+Usage: 
+    python writeFUs.py
+
+
+What it does:
+    1. Create arbitrary munging tasks against available datasets in smalldata
+        An arbitrary munging task may be:
+            -A col/row slicing
+            -A simple filter
+            -A compound filter
+
+    2. A simple filter is subsetting rows/cols by a single '<', '>', '=>','<=','!=','=='
+    3. A compound filter is an aribtrarily complicated sequence of '!','&','|','<', '>', '=>','<=','!=','=='

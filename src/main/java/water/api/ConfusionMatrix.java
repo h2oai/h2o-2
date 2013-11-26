@@ -1,10 +1,9 @@
 package water.api;
 
-import java.util.Arrays;
-
 import water.*;
 import water.fvec.*;
-import water.util.*;
+import water.util.Log;
+import water.util.Utils;
 
 /**
  *  Compare two categorical columns, reporting a grid of co-occurrences.

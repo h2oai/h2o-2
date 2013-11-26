@@ -6,12 +6,10 @@ import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
 import java.text.DecimalFormat;
-import java.util.HashMap;
 
 import water.*;
 import water.api.DocGen;
 import water.api.Request;
-import water.api.RequestBuilders.Response;
 import water.util.RString;
 
 public class GLMModelView extends Request2 {
@@ -37,7 +35,7 @@ public class GLMModelView extends Request2 {
     return "<a href='GLMModelView.html?_modelKey=" + model + "&lambda=" + lambda + "'>" + txt + "</a>";
   }
   public static Response redirect(Request req, Key modelKey) {
-    return Response.redirect(req, "GLMModelView", "_modelKey", modelKey);
+    return Response.redirect(req, "/2/GLMModelView", "_modelKey", modelKey);
   }
 
   public static Response redirect2(Request req, Key modelKey) {

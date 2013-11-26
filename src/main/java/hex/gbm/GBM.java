@@ -23,14 +23,21 @@ public class GBM extends SharedTreeModelBuilder {
   @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1)
   public double learn_rate = 0.1;
 
-  @API(help = "Grid search parallelism", filter = Default.class, lmax = 4)
+  @API(help = "Grid search parallelism", filter = Default.class, lmax = 4, gridable=false)
   public int grid_parallelism = 1;
 
   public static class GBMModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) { super(key,dataKey,testKey,names,domains,ntrees); }
-    public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { super(prior, trees, err, cm, tstats); }
+    final double _learn_rate;
+    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) { 
+      super(key,dataKey,testKey,names,domains,ntrees,max_depth,min_rows,nbins); 
+      _learn_rate = learn_rate;
+    }
+    public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { 
+      super(prior, trees, err, cm, tstats); 
+      _learn_rate = prior._learn_rate;
+    }
 
     @Override protected float[] score0(double[] data, float[] preds) {
       float sum = 0;
@@ -43,6 +50,10 @@ public class GBM extends SharedTreeModelBuilder {
         // do nothing for regression
       }
       return p;
+    }
+
+    @Override protected void generateModelDescription(StringBuilder sb) {
+      DocGen.HTML.paragraph(sb,"Learn rate: "+_learn_rate);
     }
 
     @Override protected void toJavaPredictBody(SB sb, SB afterBodySb) {
@@ -95,7 +106,7 @@ public class GBM extends SharedTreeModelBuilder {
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
   @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
-    GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees);
+    GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees, max_depth, min_rows, nbins, learn_rate);
     DKV.put(outputKey, model);
     // Build trees until we hit the limit
     int tid;
