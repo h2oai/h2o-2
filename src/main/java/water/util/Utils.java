@@ -323,6 +323,10 @@ public class Utils {
     for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
     return a;
   }
+  public static int[] or(int[] a, int[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
+    return a;
+  }
   public static byte[] add(byte[] a, byte[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
