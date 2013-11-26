@@ -38,8 +38,8 @@ class Basic(unittest.TestCase):
         params = {
             'destination_key': modelKey,
             'ignored_cols_by_name': 'STR',
-            'learn_rate': '.1,.2',
-            'ntrees': '3,4',
+            'learn_rate': '.1,.2,.25',
+            'ntrees': '3,4,5',
             'max_depth': '5,7',
             'min_rows': '1,2',
             'response': 'FNDX',

@@ -4,9 +4,10 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec a
 
 exprList = [
     # "rTest=randomFilter(<keyX>,58101,12345)",
-    "rTrain=randomFilter(<keyX>,522,12345)",
-    # "r1=slice(rTrain,1)",
-    "r2=slice(rTrain,1,100)",
+    
+    "a=runif(c.hex[,1]); rTrain=<keyX>[a<0.8,]",
+    # doesn't work yet
+    # "r2=c.hex[1:100,]",
     ]
 
 class Basic(unittest.TestCase):
@@ -27,14 +28,14 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec_filter_slice(self):
+    def test_exec_filter_slice_fvec(self):
+        h2o.beta_features = True
         timeoutSecs = 10
         csvFilename = "covtype.data"
         csvPathname = 'UCI/UCI-large/covtype/covtype.data'
-        hex_key = "c"
+        hex_key = "c.hex"
         parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=hex_key, 
             timeoutSecs=10)
-        print csvFilename, 'parse time:', parseResult['response']['time']
         print "Parse result['desination_key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
@@ -44,7 +45,7 @@ class Basic(unittest.TestCase):
             for exprTemplate in exprList:
                 execExpr = h2e.fill_in_expr_template(exprTemplate, colX=0, n=0, row=1, keyX=hex_key, m=2)
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
-                    resultKey="Result.hex", timeoutSecs=4)
+                    resultKey=None, timeoutSecs=4)
 
                 print "min_value:", min_value, "execExpr:", execExpr
                 h2o.verboseprint("min: ", min_value, "trial:", trial)

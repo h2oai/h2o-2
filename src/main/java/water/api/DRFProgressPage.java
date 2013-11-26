@@ -1,10 +1,10 @@
 package water.api;
 
 import com.google.gson.JsonObject;
-
 import hex.drf.DRF.DRFModel;
 import water.*;
 import water.api.RequestBuilders.Response;
+import water.api.RequestServer.API_VERSION;
 
 public class DRFProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
@@ -15,7 +15,7 @@ public class DRFProgressPage extends Progress2 {
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
-    return Response.redirect(req, "/2/DRFProgressPage", JOB_KEY, jobkey, DEST_KEY, dest );
+    return Response.redirect(req, "/2/DRFProgressPage", JOB_KEY, jobkey, DEST_KEY, dest);
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
@@ -23,7 +23,7 @@ public class DRFProgressPage extends Progress2 {
     DRFModel m = UKV.get(jjob.dest());
     if (m!=null) m.generateHTML("DRF Model", sb);
     else DocGen.HTML.paragraph(sb, "Pending...");
-
     return true;
   }
+  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
 }

@@ -12,12 +12,12 @@ zeroList = [
 # bug?
 exprList = [
         # 'Result.hex = Result<n> = slice(c.hex[<col1>],<row>)',
-        'Result.hex = Result<n> = c.hex[,<col1>] = ((c.hex[,2]==0) ? 54321 : 54321))',
-        'Result.hex = Result<n> = c.hex[,<col1>]',
-        'Result.hex = Result<n> = min(c.hex[,<col1>], c.hex[,<col1>])',
-        'Result.hex = Result<n> = max(c.hex[,<col1>], c.hex[,<col1>]) + Result.hex[,0]',
+        'Result<n> = c.hex[,<col1>] = ((c.hex[,2]==0))',
+        'Result<n> = c.hex[,<col1>]',
+        # 'Result<n> = min(c.hex[,<col1>], c.hex[,<col1>])',
+        # 'Result<n> = max(c.hex[,<col1>], c.hex[,<col1>]) + Result.hex[,0]',
         ### 'Result.hex = Result<n> = mean(c.hex[,<col1>]) + Result.hex[0]',
-        'Result.hex = Result<n> = sum(c.hex[,<col1>], c.hex[,<col1>]) + Result.hex[,0]',
+        # 'Result<n> = sum(c.hex[,<col1>], c.hex[,<col1>]) + Result.hex[,0]',
         # have to figure out how to avoid infinity results
         # 'Result<n> = log(c.hex[<col1>]) + Result.hex[0]',
         ]

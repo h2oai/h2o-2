@@ -9,7 +9,7 @@ public class GBMModelView extends Request2 {
 
   @API(help="GBM Model Key", required=true, filter=GBMModelKeyFilter.class)
   Key _modelKey;
-  class GBMModelKeyFilter extends H2OKey { public GBMModelKeyFilter() { super("",true); } }
+  class GBMModelKeyFilter extends H2OKey { public GBMModelKeyFilter() { super("model_key",true); } }
 
   @API(help="GBM Model")
   GBMModel gbm_model;
