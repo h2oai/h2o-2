@@ -53,6 +53,11 @@ public class SummaryPage2 extends Request2 {
       names[i] = source._names[cols[i]];
     }
     Frame fr = new Frame(names, vecs);
+
+    Futures fs = new Futures();
+    for( Vec vec : vecs) vec.rollupStats(fs);
+    fs.blockForPending();
+
     summaries = new Summary2.SummaryTask2().doAll(fr)._summaries;
     if (summaries != null)
       for (int i = 0; i < cols.length; i++) 
