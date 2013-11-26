@@ -333,9 +333,9 @@ public abstract class Log {
         p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
 
 	// Turn down the logging for some class hierarchies.
-        p.setProperty("log4j.logger.org.apache.http", "INFO");
-        p.setProperty("log4j.logger.com.amazonaws", "INFO");
-	p.setProperty("log4j.logger.org.apache.hadoop", "INFO");
+        p.setProperty("log4j.logger.org.apache.http", "WARN");
+        p.setProperty("log4j.logger.com.amazonaws", "WARN");
+        p.setProperty("log4j.logger.org.apache.hadoop", "WARN");
 
         // See the following document for information about the pattern layout.
         // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
