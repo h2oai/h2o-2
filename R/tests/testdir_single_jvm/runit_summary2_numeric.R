@@ -2,11 +2,10 @@ source('../Utils/h2oR.R')
 
 Log.info("\n======================== Begin Test ===========================\n")
 
-H2Oserver <- new("H2OClient", ip=myIP, port=myPort)
 
 #import multimodal data set; parse as FV
 test.summary2.numeric <- function(H2Oserver) {
-  Log.info("\nImporting wonkysummary.csv data...\n")
+  Log.info("Importing wonkysummary.csv data...")
   wonkysummary.hex <- h2o.importFile(H2Oserver, "./smalldata/wonkysummary.csv")
   
 
@@ -36,5 +35,6 @@ test.summary2.numeric <- function(H2Oserver) {
   print("End of test.")
 }
 
+H2Oserver <- new("H2OClient", ip=myIP, port=myPort)
 tryCatch(test_that("summaryTests",test.summary2.numeric(H2Oserver)), error = function(e) FAIL(e))
 PASS()

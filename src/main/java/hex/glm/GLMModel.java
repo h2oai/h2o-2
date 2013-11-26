@@ -1,5 +1,6 @@
 package hex.glm;
 
+import hex.FrameTask.DataInfo;
 import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
@@ -40,6 +41,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   final double     beta_eps;
   @API(help="regularization parameter driving proportion of L1/L2 penalty.")
   final double     alpha;
+
+  @API(help="column names including expanded categorical values")
+  public String [] coefficients_names;
 
   @API(help="index of lambda giving best results")
   int best_lambda_idx;
@@ -130,12 +134,12 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "models computed for particular lambda values")
   Submodel [] submodels;
 
-  public GLMModel(Key selfKey, Frame fr, int [] catOffsets, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
+  public GLMModel(Key selfKey, Frame fr, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
     super(selfKey,null,fr);
     this.ymu = ymu;
     this.glm = glm;
     threshold = 0.5;
-    this.catOffsets = catOffsets;
+    this.catOffsets = dinfo._catOffsets;
     this.warnings = null;
     this.alpha = alpha;
     this.beta_eps = beta_eps;
@@ -146,6 +150,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       submodels[i] = new Submodel(lambda[i], null, null, 0, 0);
     run_time = 0;
     start_time = System.currentTimeMillis();
+    coefficients_names = coefNames(dinfo.fullN()+1);
   }
   public void setLambdaSubmodel(int lambdaIdx,double lambda, double [] beta, double [] norm_beta, int iteration){
     submodels[lambdaIdx] = new Submodel(lambda, beta, norm_beta, run_time, iteration);
@@ -283,7 +288,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }
   }
 
-
   @Override
   public String toString(){
     final double [] beta = beta(), norm_beta = norm_beta();
@@ -321,22 +325,19 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
    * @return
    */
   public HashMap<String,Double> coefficients(){
-    String [] names = coefNames();
     HashMap<String, Double> res = new HashMap<String, Double>();
     final double [] b = beta();
-    if(b != null) for(int i = 0; i < b.length; ++i)res.put(names[i],b[i]);
+    if(b != null) for(int i = 0; i < b.length; ++i)res.put(coefficients_names[i],b[i]);
     return res;
   }
-  public String [] coefNames(){
+  private String [] coefNames(int n){
     final int cats = catOffsets.length-1;
     int k = 0;
-    double [] b = beta();
-    if(b == null)return null;
-    String [] res = new String[b.length];
+    String [] res = new String[n];
     for(int i = 0; i < cats; ++i)
       for(int j = 1; j < _domains[i].length; ++j)
         res[k++] = _names[i] + "." + _domains[i][j];
-    final int nums = b.length-k-1;
+    final int nums = n-k-1;
     for(int i = 0; i < nums; ++i)
       res[k+i] = _names[cats+i];
     assert k + nums == res.length-1;

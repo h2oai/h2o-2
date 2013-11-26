@@ -1,6 +1,6 @@
 source('../Utils/h2oR.R')
 
-Log.info("\n======================== Begin Test ===========================\n")
+Log.info("======================== Begin Test ===========================")
 
 test.summary2 <- function(con) {
   Log.info("\nImporting iris.csv data...\n")
@@ -9,9 +9,9 @@ test.summary2 <- function(con) {
   Log.info("\nCheck that summary works...")
   print(summary(iris.hex)) 
 
-  Log.info("\nSummary from R's iris data: \n")
-  data(iris); print(summary(iris))
-  
+  Log.info("Summary from R's iris data: ")
+  #data(iris); print(summary(iris))
+  summary(iris)
   Log.info("End of test.")
 }
 
