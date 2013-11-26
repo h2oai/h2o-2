@@ -1231,14 +1231,17 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected Long parse(String input) throws IllegalArgumentException {
-      try {
-        long i = Long.parseLong(input);
-        if ((i< _min) || (i > _max))
-          throw new IllegalArgumentException(_name+"Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
-        return i;
+      long i;
+      try { 
+        i = Long.parseLong(input); 
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(_name+"Value "+input+" is not a valid long integer.");
+        double d = Double.parseDouble(input);
+        i = (long)d;
+        if( i!=d ) throw new IllegalArgumentException(_name+"Value "+input+" is not a valid long integer.");
       }
+      if ((i< _min) || (i > _max))
+        throw new IllegalArgumentException(_name+"Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
+      return i;
     }
 
     @Override protected Long defaultValue() { return _defaultValue; }
