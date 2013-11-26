@@ -122,7 +122,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution
-    _distribution = _nclass > 1 ? new ClassDist().doAll(response)._ys : null;
+    _distribution = _nclass > 1 ? new ClassDist(_nclass).doAll(response)._ys : null;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -341,7 +341,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   }
 
   // --------------------------------------------------------------------------
-  private class ClassDist extends MRTask2<ClassDist> {
+  private static class ClassDist extends MRTask2<ClassDist> {
+    ClassDist(int nclass) { _nclass = nclass; }
+    final int _nclass;
     long _ys[];
     @Override public void map(Chunk ys) {
       _ys = new long[_nclass];
