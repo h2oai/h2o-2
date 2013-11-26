@@ -6,6 +6,7 @@ import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
 import java.text.DecimalFormat;
+import java.util.Arrays;
 
 import water.*;
 import water.api.DocGen;
@@ -377,7 +378,7 @@ public class GLMModelView extends Request2 {
     StringBuilder equation = new StringBuilder();
     StringBuilder vals = new StringBuilder();
     StringBuilder normVals = sm.norm_beta == null?null:new StringBuilder();
-    String [] cNames = glm_model.coefNames();
+    String [] cNames = glm_model.coefficients_names;
     boolean first = true;
     for(int i:sm.idxs){
       names.append("<th>" + cNames[i] + "</th>");
