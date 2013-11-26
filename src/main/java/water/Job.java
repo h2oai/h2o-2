@@ -22,6 +22,7 @@ public class Job extends Request2 {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
   public static class JobCancelledException extends RuntimeException {
     public JobCancelledException(){super("job was cancelled!");}
+    public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
   }
   // Global LIST of Jobs key.
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
@@ -332,13 +333,7 @@ public class Job extends Request2 {
 
   // Block until the Job finishes.
   public <T> T get() {
-    try{
-      _fjtask.join();             // Block until top-level job is done
-    } catch(DistributedException e){
-      // rethrow as a runtime exception to stay consistent with FJ and to keep record on where the exception
-      // was thrown locally
-      throw new RuntimeException(e);
-    }
+    _fjtask.join();             // Block until top-level job is done
     T ans = (T) UKV.get(destination_key);
     remove();                   // Remove self-job
     return ans;

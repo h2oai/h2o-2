@@ -122,7 +122,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
             }
           }
         }
-
       } else idxs = null;
       rank = r;
     }

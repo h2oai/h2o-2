@@ -215,22 +215,22 @@ public class GLMParams extends Iced {
       }
     }
 
-    public final boolean isCase(double x, double y) {
+    public final boolean isCase(double actual, double caseVal) {
       switch( this ) {
         case lt:
-          return x < y;
+          return actual < caseVal;
         case gt:
-          return x > y;
+          return actual > caseVal;
         case lte:
-          return x <= y;
+          return actual <= caseVal;
         case gte:
-          return x >= y;
+          return actual >= caseVal;
         case eq:
-          return x == y;
+          return actual == caseVal;
         case neq:
-          return x != y;
+          return actual != caseVal;
         default:
-          assert false;
+          assert false:"uncexpected case " + this;
           return false;
       }
     }
