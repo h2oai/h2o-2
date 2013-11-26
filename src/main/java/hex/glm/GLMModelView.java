@@ -432,7 +432,6 @@ public class GLMModelView extends Request2 {
   }
 
   @Override protected Response serve() {
-    System.out.println("lambda = " + lambda);
     glm_model = DKV.get(_modelKey).get();
     if(Double.isNaN(lambda))lambda = glm_model.submodels[glm_model.best_lambda_idx].lambda;
     return Response.done(this);

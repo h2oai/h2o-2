@@ -63,7 +63,7 @@ public class GLM2 extends ModelJob {
   double [] alpha = new double[]{0.5};
 //  @API(help = "lambda", filter = RSeq2.class)
   @API(help = "lambda", filter = Default.class)
-  double [] lambda; // = new double[]{1e-5};
+  double [] lambda;// = new double[]{1e-5};
   public static final double DEFAULT_BETA_EPS = 1e-4;
   @API(help = "beta_eps", filter = Default.class)
   double beta_epsilon = DEFAULT_BETA_EPS;
@@ -179,6 +179,7 @@ public class GLM2 extends ModelJob {
     @Override public Iteration clone(){return new Iteration(_model,_solver,_dinfo,_fjt);}
     @Override public void callback(final GLMIterationTask glmt) {
       try {
+//        System.out.println(glmt._gram);
 //        System.out.println(Utils.pprint(glmt._gram.getXX()));
 //        System.out.println(Utils.pprint(new double[][]{glmt._xy}));
         if(!cancelled()){
@@ -261,7 +262,7 @@ public class GLM2 extends ModelJob {
           @Override public void callback(LMAXTask t){
             final double lmax = t.lmax();
             if(lambda == null){
-              lambda = new double[]{lmax,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*0.1,lmax*0.075,lmax*0.05,lmax*0.01,lmax*0.0075,lmax*0.005,lmax*0.0025,lmax*0.001,lmax*0.00075,lmax*0.0005,lmax*0.00025,lmax*0.0001}; // todo - make it a sequence of 100 lamdbas
+              lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
               _runAllLambdas = false;
             }
             else {
