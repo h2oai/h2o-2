@@ -1,3 +1,12 @@
+##
+# Test tail of a data frame, check right result with R
+# Author: Spencer
+# Written under H2O git-hash: f983f28b1d07987105f122415768eb95f8c22f6a
+##
+# AutoGen meta:
+# SEED: 
+# task:
+##
 source('../Utils/h2oR.R')
 
 Log.info("======================== Begin Test ===========================")
@@ -37,4 +46,3 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 
 tryCatch(test_that("tailTests",test.tail.numeric(conn)), error = function(e) FAIL(e))
 PASS()
-

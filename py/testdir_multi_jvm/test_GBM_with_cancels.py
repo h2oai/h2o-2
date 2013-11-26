@@ -78,7 +78,8 @@ class Basic(unittest.TestCase):
 
             if importFolderPath=='manyfiles-nflx-gz':
                 if DO_CLASSIFICATION:
-                    execExpr = 'c.hex[,%s]=c.hex[,%s]>15' % (response,response)
+                    # need to flip the right col! (R wise)
+                    execExpr = 'c.hex[,%s]=c.hex[,%s]>15' % (response+1,response+1)
                     kwargs = { 'str': execExpr }
                     resultExec = h2o_cmd.runExec(**kwargs)
 
@@ -112,6 +113,7 @@ class Basic(unittest.TestCase):
                 'min_rows': 1,
                 'response': "C" + str(response),
                 'classification': 1 if DO_CLASSIFICATION else 0,
+                'grid_parallelism': 4,
                 }
 
             kwargs = params.copy()
@@ -127,7 +129,7 @@ class Basic(unittest.TestCase):
                 for j in range(5):
                     kwargs['destination_key'] = 'GBMBad' + str(j)
                     GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,**kwargs)
-                    jobids[j] = GBMFirstResult['job_key']
+                    jobids.append(GBMFirstResult['job_key'])
 
                 # have to pass the job id
                 for j in jobids:
