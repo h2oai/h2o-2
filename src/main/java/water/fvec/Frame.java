@@ -29,6 +29,7 @@ public class Frame extends Iced {
   public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) {
+    // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
