@@ -107,7 +107,7 @@ public abstract class LSMSolver extends Iced{
     }
 
     public ADMMSolver (double lambda, double alpha) {
-      this(lambda,alpha,lambda*0.1);
+      this(lambda,alpha,lambda*alpha*0.1);
     }
     public ADMMSolver (double lambda, double alpha, double rho) {
       super(lambda,alpha);
