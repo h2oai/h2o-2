@@ -18,7 +18,8 @@ def pickRandRfParams(paramDict, params):
         # test ask for 100
     return colX
 
-def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
+
+def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False, **kwargs):
     if not node:
         node = h2o.nodes[0]
 
@@ -30,9 +31,14 @@ def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
             if ('Failed' in w) or ('failed' in w):
                 raise Exception(w)
 
+    #****************************
     # v2 doesn't have the response variable, so removed looking at it
     if h2o.beta_features:
-        cm = rfv['drf_model']['cm']
+        # if we are checking after confusion_matrix for predict, the jsonschema is different
+        if 'cm' in rfv:
+            cm = rfv['cm']
+        else:
+            cm = rfv['drf_model']['cm']
         scoresList = cm
     else:
         cm = rfv['confusion_matrix']
@@ -56,6 +62,7 @@ def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
 
         scoresList = cm['scores'] # list
 
+    #****************************
     totalScores = 0
     totalRight = 0
     # individual scores can be all 0 if nothing for that output class
@@ -86,6 +93,7 @@ def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
 
         totalScores += classSum
 
+    #****************************
     if not noPrint: 
         print "Predicted summary:"
         # FIX! Not sure why we weren't working with a list..hack with dict for now
@@ -103,6 +111,13 @@ def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
         print "pctRight:", "%5.2f" % pctRight
         print "pctWrong:", "%5.2f" % pctWrong
 
+    if checkScoringOnly:
+        h2o.check_sandbox_for_errors()
+        classification_error = pctWrong
+        return (round(classification_error,2), classErrorPctList, totalScores)
+
+    #****************************
+    # more testing for RFView
     if (totalScores<=0 or totalScores>5e9):
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
 
@@ -194,6 +209,9 @@ def simpleCheckRFView(node=None, rfv=None, noPrint=False, **kwargs):
     h2o.check_sandbox_for_errors()
     return (round(classification_error,2), classErrorPctList, totalScores)
 
+def simpleCheckRFScore(node=None, rfv=None, noPrint=False, **kwargs):
+    simpleCheckRFView(node=node, rfv=rfv, noPrint=noPrint, checkScoringOnly=True, **kwargs)
+
 def trainRF(trainParseResult, **kwargs):
     # Train RF
     start = time.time()
@@ -250,12 +268,14 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
     scoreResult['python_call_timer'] = rftime
     return scoreResult
 
+# this is only for v1. simpleCheckRFView should be fine/equivalent for v1 + v2?
 def pp_rf_result(rf):
     jcm = rf['confusion_matrix']
     header = jcm['header']
-    #cm = '   '.join(header)
+
     cm = '{0:<15}'.format('')
     for h in header: cm = '{0}|{1:<15}'.format(cm, h)
+
     cm = '{0}|{1:<15}'.format(cm, 'error')
     c = 0
     for line in jcm['scores']:

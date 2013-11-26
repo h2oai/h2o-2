@@ -162,13 +162,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    */
   protected void chunkDone(){}
 
-  protected CaseMode _caseMode;
-  protected double _caseVal;
 
-  private double response(double d){
-    if(_caseMode == CaseMode.none)return d;
-    return _caseMode.isCase(d, _caseVal)?1:0;
-  }
   /**
    * Extracts the values, applies regularization to numerics, adds appropriate offsets to categoricals,
    * and adapts response according to the CaseMode/CaseValue if set.

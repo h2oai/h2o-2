@@ -122,8 +122,9 @@ public abstract class LSMSolver extends Iced{
     }
 
     public static class NonSPDMatrixException extends LSMSolverException {
-      public NonSPDMatrixException(){
-        super("Matrix is not SPD, can't solve without regularization");
+      public NonSPDMatrixException(){super("Matrix is not SPD, can't solve without regularization\n");}
+      public NonSPDMatrixException(Gram grm){
+        super("Matrix is not SPD, can't solve without regularization\n" + grm);
       }
     }
 
@@ -182,14 +183,15 @@ public abstract class LSMSolver extends Iced{
       int attempts = 0;
       Cholesky chol = gram.cholesky(null);
       while(!chol.isSPD() && attempts < 10){
-        _rho *= 10;
+        if(_rho == 0)_rho = 1e-5;
+        else _rho *= 10;
         ++attempts;
         gram.addDiag(_rho); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
       if(!chol.isSPD()){
         System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
-        throw new NonSPDMatrixException();
+        throw new NonSPDMatrixException(gram);
       }
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
         System.arraycopy(xy, 0, z, 0, xy.length);
