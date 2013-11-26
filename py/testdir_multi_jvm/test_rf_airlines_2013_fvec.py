@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_gbm, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_gbm, h2o_import as h2i, h2o_browse as h2b
 
 PARSE_TIMEOUT=14800
 
@@ -24,6 +24,8 @@ class Basic(unittest.TestCase):
         
     def test_rf_airlines_2013_fvec(self):
         h2o.beta_features = True
+        h2b.browseTheCloud()
+
 
         csvFilename = 'year2013.csv'
         hex_key = 'year2013.hex'
@@ -31,9 +33,16 @@ class Basic(unittest.TestCase):
         csvPathname = importFolderPath + "/" + csvFilename
         start      = time.time()
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', 
-            path=csvPathname, schema='local', hex_key=hex_key, timeoutSecs=900)
+            path=csvPathname, schema='local', hex_key=hex_key, timeoutSecs=900, doSummary=False)
         parse_time = time.time() - start 
-        print "parse and summary took {0} sec".format(parse_time)
+        print "parse took {0} sec".format(parse_time)
+        start      = time.time()
+        
+        start = time.time()
+        # noise=['JStack','cpu','disk'])
+        h2o_cmd.runSummary(key=hex_key)
+        elapsed = time.time() - start 
+        print "summary took {0} sec".format(elapsed)
 
         trees = 10
         paramsTrainRF = { 
