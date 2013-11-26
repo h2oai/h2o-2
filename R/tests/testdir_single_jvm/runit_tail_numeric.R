@@ -1,3 +1,12 @@
+##
+# Test tail of a data frame, check right result with R
+# Author: Spencer
+# Written under H2O git-hash: f983f28b1d07987105f122415768eb95f8c22f6a
+##
+# AutoGen meta:
+# SEED: 
+# task:
+##
 source('../Utils/h2oR.R')
 
 Log.info("======================== Begin Test ===========================")
@@ -6,7 +15,7 @@ view_max <- 10000 #maximum returned by Inspect.java
 
 test.tail.numeric <- function(conn) {
   Log.info("Importing USArrests.csv data...")
-  arrests.hex = h2o.importFile.VA(conn, "../smalldata/pca_test/USArrests.csv", "arrests.hex")
+  arrests.hex = h2o.importFile.VA(conn, "smalldata/pca_test/USArrests.csv", "arrests.hex")
   
   Log.info("Check that tail works...")
   tail(arrests.hex)
@@ -37,4 +46,3 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 
 tryCatch(test_that("tailTests",test.tail.numeric(conn)), error = function(e) FAIL(e))
 PASS()
-

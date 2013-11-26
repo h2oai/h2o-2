@@ -119,7 +119,7 @@ public class GLM2 extends ModelJob {
   public static Job gridSearch(Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds, double betaEpsilon){
     return new GLMGridSearch(4, destinationKey,dinfo,glm,lambda,alpha, nfolds,betaEpsilon).fork();
   }
-  private long _startTime;
+
   @Override protected Response serve() {
     init();
     if(this.destination_key == null){
@@ -127,7 +127,6 @@ public class GLM2 extends ModelJob {
     }
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
-    _startTime = System.currentTimeMillis();
     Frame fr = new Frame(source._names.clone(),source.vecs().clone());
     fr.remove(ignored_cols);
     final Vec [] vecs =  fr.vecs();
@@ -190,7 +189,6 @@ public class GLM2 extends ModelJob {
         if(!cancelled()){
           double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
           double [] newBetaDeNorm = null;
-
           _solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
           final boolean diverged = Utils.hasNaNsOrInfs(newBeta);
           if(diverged)
@@ -269,9 +267,6 @@ public class GLM2 extends ModelJob {
               :"Attempting to run GLM on column with constant value, y " + case_mode + " " + case_val  + " is " + (ymut._ymin == 0?"false":"true") + " for all rows!";
           GLM2.this.cancel(msg);
           GLM2.this._fjtask.completeExceptionally(new JobCancelledException(msg));
-        } else {
-          System.out.println("ymin = " + ymut._ymin);
-          System.out.println("ymax = " + ymut._ymax);
         }
         new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
           @Override public void callback(LMAXTask t){
@@ -286,7 +281,7 @@ public class GLM2 extends ModelJob {
             }
             GLMIterationTask firstIter = new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, _beta,0,ymut.ymu(),1.0/ymut.nobs());
             final LSMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
-            GLMModel model = new GLMModel(dest(),_dinfo._adaptedFrame, _dinfo._catOffsets, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
+            GLMModel model = new GLMModel(dest(),_dinfo._adaptedFrame, _dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,completer));
             firstIter.dfork(_dinfo._adaptedFrame);
           }
