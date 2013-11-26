@@ -1,13 +1,13 @@
-source('../Utils/h2oR.R')
+source('./Utils/h2oR.R')
 
 Log.info("\n======================== Begin Test ===========================\n")
 
 H2Oserver <- new("H2OClient", ip=myIP, port=myPort)
 
 #import multimodal data set; parse as FV
-test.summary2.numeric <- function(con) {
+test.summary2.numeric <- function(H2Oserver) {
   Log.info("\nImporting wonkysummary.csv data...\n")
-  wonkysummary.hex <- h2o.importFile(H2Oserver, "../smalldata/wonkysummary.csv")
+  wonkysummary.hex <- h2o.importFile(H2Oserver, "./smalldata/wonkysummary.csv")
   
 
 #check that summary2 gives expected output  
@@ -21,7 +21,7 @@ test.summary2.numeric <- function(con) {
 #check produced values against known values
   cat("\nCheck that the summary from H2O matches known good values: ")
   H2Osum<- summary(wonkysummary.hex)
-  wonky.df<- read.csv("../../../smalldata/wonkysummary.csv")
+  wonky.df<- read.csv("../../smalldata/wonkysummary.csv")
   wonky.Rsum<-as.table(summary(wonky.df))
   
   Log.info("R's summary:")
