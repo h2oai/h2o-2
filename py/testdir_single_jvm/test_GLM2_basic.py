@@ -27,9 +27,7 @@ class Basic(unittest.TestCase):
         csvPathname = importFolderPath + "/" + csvFilename
         hex_key = csvFilename + ".hex"
 
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='local', hex_key=hex_key, 
-             timeoutSecs=180, noPoll=True, doSummary=False)
-        h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='local', hex_key=hex_key, timeoutSecs=180)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print inspect
         print "\n" + csvPathname, \
@@ -59,23 +57,22 @@ class Basic(unittest.TestCase):
                          'destination_key'    : modelKey,
                  }
 
-
         timeoutSecs = 60
         start = time.time()
-        glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=0.25, pollTimeoutSecs=180, noPoll=True, **kwargs)
+        glmResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=0.25, pollTimeoutSecs=180, **kwargs)
 
-        h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
-        print "FIX! how do we get the GLM result"
-        # hack it!
-        job_key = glmFirstResult['job_key']
-
-        # is the job finishing before polling would say it's done?
-        params = {'job_key': job_key, 'destination_key': modelKey}
-        a = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMProgressPage2.json", params=params)
-        print "GLM result from completion_redirect:", h2o.dump_json(a)
-
-        a = h2o.nodes[0].glm_view(_modelKey=modelKey)
-        ### print "GLM result from glm_view:", h2o.dump_json(a)
+        # this stuff was left over from when we got the result after polling the jobs list
+        # okay to do it again
+        # GLM2: when it redirects to the model view, we no longer have the job_key! (unlike the first response and polling)
+        if 1==0:
+            job_key = glmResult['job_key']
+            # is the job finishing before polling would say it's done?
+            params = {'job_key': job_key, 'destination_key': modelKey}
+            a = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMProgressPage2.json", params=params)
+            print "GLM result from completion_redirect:", h2o.dump_json(a)
+        if 1==1:
+            a = h2o.nodes[0].glm_view(_modelKey=modelKey)
+            ### print "GLM result from glm_view:", h2o.dump_json(a)
 
         glm_model = a['glm_model']
         _names = glm_model['_names']
@@ -97,10 +94,6 @@ class Basic(unittest.TestCase):
         print 'iteration', iteration
         print 'avg_err', avg_err
         print 'auc', auc
-
-        # how do we get to the model view?
-        # http://192.168.0.37:54321/2/GLMModelView.html?_modelKey=GLM2_59af6ba2-3321-4a6a-84ed-16b44a087707
-
 
 
 if __name__ == '__main__':
