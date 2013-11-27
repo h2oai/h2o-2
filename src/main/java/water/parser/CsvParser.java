@@ -551,7 +551,6 @@ NEXT_CHAR:
             continue;
           }
           quotes = 0;
-          break;
         } else if ((quotes == 0) && ((c == separator) || (c == CHAR_CR) || (c == CHAR_LF))) {
           break;
         } else {
