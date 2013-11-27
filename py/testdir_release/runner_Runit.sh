@@ -19,7 +19,7 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 rm -f test.*xml
 
 # This gets the h2o.jar
-source ./runner_setup.sh "$@"
+#source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]
@@ -188,7 +188,7 @@ echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
 printenv | grep H2OWrapperDir
 
 #autoGen RUnits
- testdir_autoGen/runit_complexFilterTest_2_100kx7_logreg_140.R
+myR testdir_autoGen/runit_complexFilterTest_2_100kx7_logreg_140.R
 myR testdir_autoGen/runit_complexFilterTest_30k_categoricals_178.R
 myR testdir_autoGen/runit_complexFilterTest_Goalies_167.R
 myR testdir_autoGen/runit_complexFilterTest_HTWO_87_one_line_dataset_1dos_142.R
