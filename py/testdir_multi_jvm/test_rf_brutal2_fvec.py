@@ -88,6 +88,7 @@ class Basic(unittest.TestCase):
                 'nbins': 50,
                 'timeoutSecs': 600,
                 'response': 'C54',
+                'classification': 1,
             }
 
             paramsScoreRF = {
@@ -118,27 +119,31 @@ class Basic(unittest.TestCase):
             }
 
 
+        # train1
         trainKey1 = self.loadData(trainDS1)
         kwargs   = paramsTrainRF.copy()
         trainResult1 = h2o_rf.trainRF(trainKey1, **kwargs)
 
         scoreKey1 = self.loadData(scoreDS1)
         kwargs   = paramsScoreRF.copy()
-        h2o_cmd.runInspect(key='scoreDS1.hex')
+        h2o_cmd.runInspect(key='scoreDS1.hex', verbose=True)
         scoreResult1 = h2o_rf.scoreRF(scoreKey1, trainResult1, **kwargs)
+        h2o_cmd.runInspect(key='Predict.hex', verbose=True)
         print "\nTrain1\n=========="
         h2o_rf.simpleCheckRFScore(node=None, rfv=trainResult1, noPrint=False, **kwargs)
         print "\nScore1\n=========+"
         h2o_rf.simpleCheckRFScore(node=None, rfv=scoreResult1, noPrint=False, **kwargs)
 
+        # train2
         trainKey2 = self.loadData(trainDS2)
         kwargs   = paramsTrainRF.copy()
         trainResult2 = h2o_rf.trainRF(trainKey2, **kwargs)
 
         scoreKey2 = self.loadData(scoreDS2)
         kwargs   = paramsScoreRF.copy()
-        h2o_cmd.runInspect(key='scoreDS2.hex')
+        h2o_cmd.runInspect(key='scoreDS2.hex', verbose=True)
         scoreResult2 = h2o_rf.scoreRF(scoreKey2, trainResult2, **kwargs)
+        h2o_cmd.runInspect(key='Predict.hex', verbose=True)
         print "\nTrain2\n=========="
         h2o_rf.simpleCheckRFScore(node=None, rfv=trainResult2, noPrint=False, **kwargs)
         print "\nScore2\n=========="

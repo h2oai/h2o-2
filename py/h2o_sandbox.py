@@ -76,6 +76,7 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='python_test_name is
                     # don't detect these class loader info messags as errors
                     #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                     foundBad = regex1.search(line) and not (
+                        ('water.DException' in line) or
                         # the manyfiles data has eRRr in a warning about test/train data
                         ('WARN SCORM' in line) or
                         # ignore the long, long lines that the JStack prints as INFO

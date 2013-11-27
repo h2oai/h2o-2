@@ -5,12 +5,12 @@ import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import as h2i, h2o_rf
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
 paramDict = {
-    'response': 'C54',
+    'response': 'A55',
     'ntrees': 30,
     'destination_key': 'model_keyA',
     'max_depth': 20,
     'nbins': 100,
-    'ignored_cols_by_name': "C1,C2,C6,C7,C8",
+    'ignored_cols_by_name': "A1,A2,A6,A7,A8",
     'sample_rate': 0.80,
     }
 
@@ -50,8 +50,6 @@ class Basic(unittest.TestCase):
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
-
-            classification_error = rfView['confusion_matrix']['classification_error']
             self.assertLess(classification_error, 0.02, "train.csv should have full classification error <0.02")
 
             print "Trial #", trial, "completed"
