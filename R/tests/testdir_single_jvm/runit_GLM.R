@@ -1,4 +1,4 @@
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
 Log.info("========================== Begin Tests ==============================\n")
 conn = new("H2OClient", ip=myIP, port=myPort)
@@ -17,12 +17,12 @@ test.GLM.benign <- function(conn) {
   Log.info("Importing benign.csv data...\n")
   # benign.hex = h2o.importURL(conn, "https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
   # benign.hex = h2o.importFile(conn, normalizePath("../../../smalldata/logreg/benign.csv"))
-  benign.hex = h2o.uploadFile.VA(conn, "../../../smalldata/logreg/benign.csv")
+  benign.hex = h2o.uploadFile.VA(conn, locate("smalldata/logreg/benign.csv"), "benign.hex")
   benign.sum = summary(benign.hex)
   print(benign.sum)
   
   # benign.data = read.csv(text = getURL("https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
-  benign.data = read.csv("../../../smalldata/logreg/benign.csv", header = TRUE)
+  benign.data = read.csv(locate("smalldata/logreg/benign.csv"))
   benign.data = na.omit(benign.data)
   
   # myY = 3; myY.r = myY + 1
@@ -43,6 +43,8 @@ test.GLM.benign <- function(conn) {
     benign.glm = glmnet(y = benign.data[,myY], x = data.matrix(benign.data[,myX]), family = "binomial", alpha = 0.5)
     checkGLMModel(benign.glm.h2o, benign.glm)
   }
+  Log.info("End of test")
+  PASSS <<- TRUE
 }
 
 # Test GLM on prostate dataset
@@ -50,12 +52,12 @@ test.GLM.prostate <- function(conn) {
   Log.info("Importing prostate.csv data...\n")
   # prostate.hex = h2o.importURL(conn, "https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
   # prostate.hex = h2o.importFile(conn, normalizePath("../../../smalldata/logreg/prostate.csv"), "prostate.hex")
-  prostate.hex = h2o.uploadFile.VA(conn, "../../../smalldata/logreg/prostate.csv", "prostate.hex")
+  prostate.hex = h2o.uploadFile.VA(conn, locate("smalldata/logreg/prostate.csv"), "prostate.hex")
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   
   # prostate.data = read.csv(text = getURL("https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"), header = TRUE)
-  prostate.data = read.csv("../../../smalldata/logreg/prostate.csv", header = TRUE)
+  prostate.data = read.csv(locate("smalldata/logreg/prostate.csv"), header = TRUE)
   prostate.data = na.omit(prostate.data)
   
   myY = 2
@@ -72,6 +74,8 @@ test.GLM.prostate <- function(conn) {
     prostate.glm = glmnet(y = prostate.data[,myY], x = data.matrix(prostate.data[,myX]), family = "binomial", alpha = 0.5)
     checkGLMModel(prostate.glm.h2o, prostate.glm)
   }
+  Log.info("End of test")
+  PASSS <<- TRUE
 }
 
 # Test GLM on covtype (20k) dataset
@@ -80,7 +84,7 @@ test.GLM.covtype <- function(conn) {
   # covtype.hex = h2o.importFile(conn, "../../../UCI/UCI-large/covtype/covtype.data")
   # covtype.hex = h2o.importURL(conn, "https..//raw.github.com/0xdata/h2o/master/smalldata/covtype/covtype.20k.data")
   # covtype.hex = h2o.importFile(conn, normalizePath("../../../smalldata/covtype/covtype.20k.data"))
-  covtype.hex = h2o.uploadFile.VA(conn, "../../../smalldata/covtype/covtype.20k.data")
+  covtype.hex = h2o.uploadFile.VA(conn, locate("smalldata/covtype/covtype.20k.data"))
   covtype.sum = summary(covtype.hex)
   print(covtype.sum)
   
@@ -109,13 +113,20 @@ test.GLM.covtype <- function(conn) {
   end = Sys.time()
   Log.info(cat("GLM (L1) on", covtype.hex@key, "took", as.numeric(end-start), "seconds\n"))
   print(covtype.h2o3)
+  Log.info("End of test.")
+  PASSS <<- TRUE
 }
 
-
+PASSS <- FALSE
 conn = new("H2OClient", ip=myIP, port=myPort)
-tryCatch(test_that("GLM Test: Benign", test.GLM.benign(conn)), error = function(e) FAIL(e))
+tryCatch(test_that("GLM Test: Benign", test.GLM.benign(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()
-tryCatch(test_that("GLM TestL Prostate", test.GLM.prostate(conn)), error = function(e) FAIL(e))
+PASSS <- FALSE
+tryCatch(test_that("GLM TestL Prostate", test.GLM.prostate(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()
-tryCatch(test_that("GLM Test: Covtype", test.GLM.covtype(conn)), error = function(e) FAIL(e))
+PASSS <- FALSE
+tryCatch(test_that("GLM Test: Covtype", test.GLM.covtype(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()

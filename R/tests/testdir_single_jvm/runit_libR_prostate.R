@@ -1,6 +1,6 @@
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
-Log.info("\nLoading LiblineaR and ROCR packages\n")
+Log.info("Loading LiblineaR and ROCR packages\n")
 
 if(!"LiblineaR" %in% rownames(installed.packages())) install.packages("LiblineaR")
 if(!"ROCR" %in% rownames(installed.packages())) install.packages("ROCR")
@@ -16,18 +16,18 @@ test.LiblineaR <- function(conn) {
     Log.info("   cost =  100: Cost of connstraints parameter\n")
     Log.info("epsilon = 1E-2: Tolerance of termination criterion\n")
     Log.info("  cross =    0: No k-fold cross-validation\n")
-    LibR.m      <- LiblineaR(train, trainLabels,type=0, epsilon=1E-2, cost=100)#cost= 1../ (34 * 7))
+    LibR.m      <- LiblineaR(train, trainLabels,type=0, epsilon=1E-2, cost=100) #cost= 1../ (34 * 7))
     LibRpreds   <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
     LibRCM      <- table(testLabels, LibRpreds$predictions)
     
-    LibRPrecision <- LibRCM[1]../ (LibRCM[1] + LibRCM[3])
-    LibRRecall    <- LibRCM[1]../ (LibRCM[1] + LibRCM[2])
-    LibRF1        <- 2 * (LibRPrecision * LibRRecall)../ (LibRPrecision + LibRRecall)
+    LibRPrecision <- LibRCM[1]/ (LibRCM[1] + LibRCM[3])
+    LibRRecall    <- LibRCM[1]/ (LibRCM[1] + LibRCM[2])
+    LibRF1        <- 2 * (LibRPrecision * LibRRecall)/ (LibRPrecision + LibRRecall)
     LibRAUC       <- performance(prediction(as.numeric(LibRpreds$predictions), testLabels), measure = "auc")@y.values
     
     Log.info("Using these parameters for H2O: \n")
     Log.info(" family = 'binomial': Logistic Regression\n")
-    Log.info(" lambda =      ../700: Shrinkage Parameter\n")
+    Log.info(" lambda =      1/700: Shrinkage Parameter\n")
     Log.info("  alpha =        0.0: Elastic Net Parameter\n")
     Log.info("epsilon =      1E-02: Tolerance of termination criterion\n")
     Log.info(" nfolds =          1: No k-fold cross-validation\n")
@@ -36,7 +36,7 @@ test.LiblineaR <- function(conn) {
                      data         = trainhex,
                      family       = "binomial",
                      nfolds       = 1,
-                     lambda       = 1../ (7 * 100), #700,
+                     lambda       = 1/ (7 * 100), #700,
                      alpha        = 0.0,
                      epsilon = 1E-2)
     
@@ -44,9 +44,9 @@ test.LiblineaR <- function(conn) {
     h2opreds     <- head(h2op, nrow(h2op))
     h2oCM        <- table(testLabels, h2opreds$CAPSULE)
     
-    h2oPrecision <- h2oCM[1]../ (h2oCM[1] + h2oCM[3])
-    h2oRecall    <- h2oCM[1]../ (h2oCM[1] + h2oCM[2])
-    h2oF1        <- 2 * (h2oPrecision * h2oRecall)../ (h2oPrecision + h2oRecall)
+    h2oPrecision <- h2oCM[1]/ (h2oCM[1] + h2oCM[3])
+    h2oRecall    <- h2oCM[1]/ (h2oCM[1] + h2oCM[2])
+    h2oF1        <- 2 * (h2oPrecision * h2oRecall)/ (h2oPrecision + h2oRecall)
     h2oAUC       <- performance(prediction(h2opreds$CAPSULE, testLabels), measure = "auc")@y.values
     
     Log.info("                ============= H2O Performance =============\n")
@@ -76,9 +76,9 @@ test.LiblineaR <- function(conn) {
     LibRpreds  <- predict(LibR.m, test, proba=1, decisionValues=TRUE)
     LibRCM <- table(testLabels, LibRpreds$predictions)
     
-    LibRPrecision <- LibRCM[1]../ (LibRCM[1] + LibRCM[3])
-    LibRRecall    <- LibRCM[1]../ (LibRCM[1] + LibRCM[2])
-    LibRF1        <- 2 * (LibRPrecision * LibRRecall)../ (LibRPrecision + LibRRecall)
+    LibRPrecision <- LibRCM[1]/ (LibRCM[1] + LibRCM[3])
+    LibRRecall    <- LibRCM[1]/ (LibRCM[1] + LibRCM[2])
+    LibRF1        <- 2 * (LibRPrecision * LibRRecall)/ (LibRPrecision + LibRRecall)
     LibRAUC       <- performance(prediction(as.numeric(LibRpreds$predictions), testLabels), measure = "auc")@y.values
     
     Log.info("Using these parameters for H2O: \n")
@@ -92,7 +92,7 @@ test.LiblineaR <- function(conn) {
                      data         = trainhex, 
                      family       = "binomial",
                      nfolds       = 1, 
-                     lambda       = ../70,
+                     lambda       = 1/70,
                      alpha        = 0.00,
                      epsilon = 1E-2)
     
@@ -100,9 +100,9 @@ test.LiblineaR <- function(conn) {
     h2opreds <- head(h2op, nrow(h2op))
     h2oCM    <- table(testLabels, h2opreds$CAPSULE)
     
-    h2oPrecision <- h2oCM[1]../ (h2oCM[1] + h2oCM[3])
-    h2oRecall    <- h2oCM[1]../ (h2oCM[1] + h2oCM[2])
-    h2oF1        <- 2 * (h2oPrecision * h2oRecall)../ (h2oPrecision + h2oRecall)
+    h2oPrecision <- h2oCM[1]/ (h2oCM[1] + h2oCM[3])
+    h2oRecall    <- h2oCM[1]/ (h2oCM[1] + h2oCM[2])
+    h2oF1        <- 2 * (h2oPrecision * h2oRecall)/ (h2oPrecision + h2oRecall)
     h2oAUC       <- performance(prediction(h2opreds$CAPSULE, testLabels), measure = "auc")@y.values
     
     Log.info("                ============= H2O Performance =============\n")
@@ -139,11 +139,11 @@ test.LiblineaR <- function(conn) {
     Log.info(paste(all.equal(abs(as.vector(h2o@model$coefficients)), abs(as.vector(libR$W))), "\n", sep = ""))
   }
 
-  Log.info("\nImporting prostate tes../train data...\n")
-  prostate.train.hex <- h2o.uploadFile.VA(conn, "../../../smalldata/logreg/prostate_train.csv", "pTrain.hex")
-  prostate.test.hex  <- h2o.uploadFile.VA(conn, "../../../smalldata/logreg/prostate_test.csv", "pTest.hex")
-  prostate.train.dat <- read.csv("../../../smalldata/logreg/prostate_train.csv") #head(prostate.train.hex,nrow(prostate.train.hex))
-  prostate.test.dat  <- read.csv("../../../smalldata/logreg/prostate_test.csv") #head(prostate.test.hex,nrow(prostate.test.hex))
+  Log.info("\nImporting prostate test/train data...\n")
+  prostate.train.hex <- h2o.uploadFile.VA(conn, locate("../../../smalldata/logreg/prostate_train.csv"), "pTrain.hex")
+  prostate.test.hex  <- h2o.uploadFile.VA(conn, locate("../../../smalldata/logreg/prostate_test.csv"), "pTest.hex")
+  prostate.train.dat <- read.csv(locate("../../../smalldata/logreg/prostate_train.csv")) #head(prostate.train.hex,nrow(prostate.train.hex))
+  prostate.test.dat  <- read.csv(locate("../../../smalldata/logreg/prostate_test.csv")) #head(prostate.test.hex,nrow(prostate.test.hex))
   xTrain             <- prostate.train.dat[,-1]
   yTrain             <- factor(prostate.train.dat[,1])
   xTest              <- prostate.test.dat[,-1]
@@ -155,5 +155,5 @@ test.LiblineaR <- function(conn) {
 
 conn <- new("H2OClient", ip=myIP, port=myPort)
 
-tryCatch(test_that("LiblineaR Test", test.LiblineaR(conn)), error = function(e) FAIL(e))
+tryCatch(test_that("LiblineaR Test", test.LiblineaR(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
 PASS()

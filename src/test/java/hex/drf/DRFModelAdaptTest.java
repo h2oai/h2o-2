@@ -76,8 +76,8 @@ public class DRFModelAdaptTest extends TestUtil {
 
       // Compare vectors
       Frame adaptedFrame = frAdapted[0];
-      System.err.println(frTest.toStringAll());
-      System.err.println(adaptedFrame.toStringAll());
+      //System.err.println(frTest.toStringAll());
+      //System.err.println(adaptedFrame.toStringAll());
 
       for (int av=0; av<frTrain.numCols()-1; av++) {
         int ev = av + frTrain.numCols();

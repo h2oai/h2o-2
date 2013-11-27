@@ -5,6 +5,7 @@ import java.lang.management.ManagementFactory;
 import javax.management.*;
 
 import water.persist.Persist;
+import water.util.LinuxProcFileReader;
 import water.util.Log;
 
 /**
@@ -100,6 +101,20 @@ public class HeartBeatThread extends Thread {
       // persistent KV pairs are stored
       hb.set_free_disk(Persist.getIce().getUsableSpace());
       hb.set_max_disk(Persist.getIce().getTotalSpace());
+
+      // get cpu utilization for the system and for this process.  (linux only.)
+      LinuxProcFileReader lpfr = new LinuxProcFileReader();
+      lpfr.read();
+      if (lpfr.valid()) {
+        hb._system_idle_ticks = lpfr.getSystemIdleTicks();
+        hb._system_total_ticks = lpfr.getSystemTotalTicks();
+        hb._process_total_ticks = lpfr.getProcessTotalTicks();
+      }
+      else {
+        hb._system_idle_ticks = -1;
+        hb._system_total_ticks = -1;
+        hb._process_total_ticks = -1;
+      }
 
       // Announce what Cloud we think we are in.
       // Publish our health as well.

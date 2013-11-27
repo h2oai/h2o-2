@@ -15,7 +15,9 @@ public class HeartBeat extends Iced {
   public byte[] _jar_md5;       // JAR file digest
   public char _num_cpus;        // Number of CPUs for this Node, limit of 65535
   public float _system_load_average;
-
+  public long _system_idle_ticks;
+  public long _system_total_ticks;
+  public long _process_total_ticks;
 
   // Scaled by K or by M setters & getters.
   private int _free_mem;         // Free memory in K (goes up and down with GC)

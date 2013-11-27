@@ -1,4 +1,4 @@
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
 Log.info("======================== Begin Test ===========================\n")
 
@@ -14,12 +14,12 @@ test.km.benign <- function(conn) {
   Log.info("Importing benign.csv data...\n")
   # benign.hex = h2o.importURL(conn, "https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv")
   # benign.hex = h2o.importFile(conn, normalizePath("../../../smalldata/logreg/benign.csv"))
-  benign.hex <- h2o.uploadFile(conn, "../../../smalldata/logreg/benign.csv")
+  benign.hex <- h2o.uploadFile(conn, locate("../../../smalldata/logreg/benign.csv"))
   benign.sum <- summary(benign.hex)
   print(benign.sum)
   
   # benign.data = read.csv(text = getURL("https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/benign.csv"), header = TRUE)
-  benign.data <- read.csv("../../../smalldata/logreg/benign.csv", header = TRUE)
+  benign.data <- read.csv(locate("../../../smalldata/logreg/benign.csv"), header = TRUE)
   benign.data <- na.omit(benign.data)
   
   for(i in 2:6) {
@@ -36,12 +36,12 @@ test.km.prostate <- function(conn) {
   Log.info("Importing prostate.csv data...\n")
   # prostate.hex = h2o.importURL(conn, "https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
   # prostate.hex = h2o.importFile(conn, normalizePath("../../../smalldata/logreg/prostate.csv"))
-  prostate.hex = h2o.uploadFile(conn, "../../../smalldata/logreg/prostate.csv")
+  prostate.hex = h2o.uploadFile(conn, locate("../../../smalldata/logreg/prostate.csv"))
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   
   # prostate.data = read.csv(text = getURL("https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv"), header = TRUE)
-  prostate.data = read.csv("../../../smalldata/logreg/prostate.csv", header = TRUE)
+  prostate.data = read.csv(locate("../../../smalldata/logreg/prostate.csv"), header = TRUE)
   prostate.data = na.omit(prostate.data)
   
   for(i in 5:8) {
@@ -54,8 +54,8 @@ test.km.prostate <- function(conn) {
 }
 
 conn <- new("H2OClient", ip=myIP, port=myPort)
-tryCatch("KMeans FVec", test.km.benign(conn), error = function(e) FAIL(e))
+tryCatch("KMeans FVec", test.km.benign(conn), warning = function(w) WARN(w), error = function(e) FAIL(e))
 PASS()
 
-tryCatch("KMeans FVec Test 2", test.km.prostate(conn), error = function(e) FAIL(e))
+tryCatch("KMeans FVec Test 2", test.km.prostate(conn), warning = function(w) WARN(w), error = function(e) FAIL(e))
 PASS()

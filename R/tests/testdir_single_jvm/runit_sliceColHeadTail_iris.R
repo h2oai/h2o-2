@@ -1,11 +1,11 @@
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
 Log.info("======================== Begin Test ===========================\n")
 
 
 test.slice.colTail <- function(conn) {
   Log.info("Importing iris.csv data...\n")
-  iris.hex <- h2o.importFile(conn, "../smalldata/iris/iris_wheader.csv")
+  iris.hex <- h2o.importFile(conn, locate("../smalldata/iris/iris_wheader.csv", schema="local"))
   
   iris_nrows <- nrow(iris.hex)
   iris_ncols <- ncol(iris.hex)
@@ -42,5 +42,5 @@ test.slice.colTail <- function(conn) {
 }
 
 conn <- new("H2OClient", ip=myIP, port=myPort)
-tryCatch(test_that("sliceTestsColTail",test.slice.colTail(conn)), error = function(e) FAIL(e))
+tryCatch(test_that("sliceTestsColTail",test.slice.colTail(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
 PASS()

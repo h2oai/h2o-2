@@ -19,7 +19,7 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 rm -f test.*xml
 
 # This gets the h2o.jar
-source ./runner_setup.sh "$@"
+#source ./runner_setup.sh "$@"
 
 rm -f h2o-nodes.json
 if [[ $USER == "jenkins" ]]
@@ -133,13 +133,14 @@ myR() {
     # CLOUD_PORT=
     # get_s3_jar.sh now downloads it. We need to tell anqi's wrapper where to find it.
     # with an environment variable
-    if [ -z "$2" ] 
-    then
-        timeout=30 # default to 30
-    else
-        timeout=$2
-    fi
+    #if [[ -z $2 ]];
+    #then
+    #    timeout=30 # default to 30
+    #else
+    #    timeout=$2
+    #fi
 
+    timeout=30
     which R
     R --version
     H2O_R_HOME=../../R
@@ -186,21 +187,137 @@ mySetup libPaths
 export H2OWrapperDir=../../h2o-downloaded/R
 echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
 printenv | grep H2OWrapperDir
-myR runit_PCA 35
-myR runit_GLM 35
-myR runit_kmeans 60
-myR runit_tail_numeric 60
-myR runit_summary_numeric 60
-myR runit_GBM_ecology 1200
-myR runit_RF 120
-myR runit_libR_prostate 120
-myR runit_sliceColHeadTail_iris 60
-myR runit_sliceColSummary_iris 60
-myR runit_sliceColTypes_iris 60
+
+#autoGen RUnits
+myR testdir_autoGen/runit_complexFilterTest_2_100kx7_logreg_140
+myR testdir_autoGen/runit_complexFilterTest_30k_categoricals_178
+myR testdir_autoGen/runit_complexFilterTest_Goalies_167
+myR testdir_autoGen/runit_complexFilterTest_HTWO_87_one_line_dataset_1dos_142
+myR testdir_autoGen/runit_complexFilterTest_HTWO_87_one_line_dataset_1unix_148
+myR testdir_autoGen/runit_complexFilterTest_TwoBedrooms_Rent_Neighborhoods_190
+myR testdir_autoGen/runit_complexFilterTest_USArrests_163
+myR testdir_autoGen/runit_complexFilterTest_arit_153
+myR testdir_autoGen/runit_complexFilterTest_cars_170
+myR testdir_autoGen/runit_complexFilterTest_cgd_183
+myR testdir_autoGen/runit_complexFilterTest_cgd_204
+myR testdir_autoGen/runit_complexFilterTest_chdage_136
+myR testdir_autoGen/runit_complexFilterTest_chess_2x2_500_int_181
+myR testdir_autoGen/runit_complexFilterTest_chess_test_172
+myR testdir_autoGen/runit_complexFilterTest_constantColumn_161
+myR testdir_autoGen/runit_complexFilterTest_copen_179
+myR testdir_autoGen/runit_complexFilterTest_cuse_149
+myR testdir_autoGen/runit_complexFilterTest_datagen1_184
+myR testdir_autoGen/runit_complexFilterTest_dd_mon_yr_143
+myR testdir_autoGen/runit_complexFilterTest_dd_mon_yr_177
+myR testdir_autoGen/runit_complexFilterTest_iris22_198
+myR testdir_autoGen/runit_complexFilterTest_iris2_139
+myR testdir_autoGen/runit_complexFilterTest_iris_test_extra_199
+myR testdir_autoGen/runit_complexFilterTest_iris_test_extra_with_na_160
+myR testdir_autoGen/runit_complexFilterTest_iris_test_missing_extra_197
+myR testdir_autoGen/runit_complexFilterTest_iris_test_numeric_188
+myR testdir_autoGen/runit_complexFilterTest_iris_test_numeric_missing_171
+myR testdir_autoGen/runit_complexFilterTest_iris_test_numeric_missing_extra_182
+myR testdir_autoGen/runit_complexFilterTest_iris_train_165
+myR testdir_autoGen/runit_complexFilterTest_iris_wheader_135
+myR testdir_autoGen/runit_complexFilterTest_leads_169
+myR testdir_autoGen/runit_complexFilterTest_lowbwtm11_138
+myR testdir_autoGen/runit_complexFilterTest_make_me_converge_10000x5_185
+myR testdir_autoGen/runit_complexFilterTest_meexp_168
+myR testdir_autoGen/runit_complexFilterTest_nhanes3_174
+myR testdir_autoGen/runit_complexFilterTest_pbc_210
+myR testdir_autoGen/runit_complexFilterTest_pharynx_192
+myR testdir_autoGen/runit_complexFilterTest_poisson_tst1_166
+myR testdir_autoGen/runit_complexFilterTest_poker_hand_testing_175
+myR testdir_autoGen/runit_complexFilterTest_prostate_1_176
+myR testdir_autoGen/runit_complexFilterTest_prostate_4_147
+myR testdir_autoGen/runit_complexFilterTest_prostate_7_209
+myR testdir_autoGen/runit_complexFilterTest_prostate_8_145
+myR testdir_autoGen/runit_complexFilterTest_prostate_cat_replaced_202
+myR testdir_autoGen/runit_complexFilterTest_prostate_long_164
+myR testdir_autoGen/runit_complexFilterTest_prostate_long_195
+myR testdir_autoGen/runit_complexFilterTest_randomdata3_155
+myR testdir_autoGen/runit_complexFilterTest_stego_testing_152
+myR testdir_autoGen/runit_complexFilterTest_stego_training_151
+myR testdir_autoGen/runit_complexFilterTest_stego_training_162
+myR testdir_autoGen/runit_complexFilterTest_stego_training_modified_156
+myR testdir_autoGen/runit_complexFilterTest_syn_fp_prostate_189
+myR testdir_autoGen/runit_complexFilterTest_syn_sphere3_173
+myR testdir_autoGen/runit_complexFilterTest_test_150
+myR testdir_autoGen/runit_complexFilterTest_test_154
+myR testdir_autoGen/runit_complexFilterTest_test_159
+myR testdir_autoGen/runit_complexFilterTest_test_191
+myR testdir_autoGen/runit_complexFilterTest_test_200
+myR testdir_autoGen/runit_complexFilterTest_test_206
+myR testdir_autoGen/runit_complexFilterTest_test_26cols_single_space_sep_2_205
+myR testdir_autoGen/runit_complexFilterTest_test_all_raw_top10rows_141
+myR testdir_autoGen/runit_complexFilterTest_test_all_raw_top10rows_193
+myR testdir_autoGen/runit_complexFilterTest_test_enum_domain_size_201
+myR testdir_autoGen/runit_complexFilterTest_test_manycol_tree_158
+myR testdir_autoGen/runit_complexFilterTest_test_tree_187
+myR testdir_autoGen/runit_complexFilterTest_tnc3_10_194
+myR testdir_autoGen/runit_complexFilterTest_train_137
+myR testdir_autoGen/runit_complexFilterTest_train_146
+myR testdir_autoGen/runit_complexFilterTest_train_186
+myR testdir_autoGen/runit_complexFilterTest_train_196
+myR testdir_autoGen/runit_complexFilterTest_train_203
+myR testdir_autoGen/runit_complexFilterTest_train_207
+myR testdir_autoGen/runit_complexFilterTest_train_208
+myR testdir_autoGen/runit_complexFilterTest_wonkysummary_180
+myR testdir_autoGen/runit_simpleFilterTest_AirlinesTrain_96
+myR testdir_autoGen/runit_simpleFilterTest_Goalies_90
+myR testdir_autoGen/runit_simpleFilterTest_chdage_84
+myR testdir_autoGen/runit_simpleFilterTest_covtype_89
+myR testdir_autoGen/runit_simpleFilterTest_datagen1_78
+myR testdir_autoGen/runit_simpleFilterTest_iris22_83
+myR testdir_autoGen/runit_simpleFilterTest_nhanes3_80
+myR testdir_autoGen/runit_simpleFilterTest_parity_128_4_100_quad_91
+myR testdir_autoGen/runit_simpleFilterTest_parse_fail_double_space_77
+myR testdir_autoGen/runit_simpleFilterTest_prostate_long_94
+myR testdir_autoGen/runit_simpleFilterTest_syn_2659x1049_79
+myR testdir_autoGen/runit_simpleFilterTest_test_26cols_multi_space_sep_87
+myR testdir_autoGen/runit_simpleFilterTest_test_88
+myR testdir_autoGen/runit_simpleFilterTest_test_all_raw_top10rows_82
+myR testdir_autoGen/runit_simpleFilterTest_test_enum_domain_size_85
+myR testdir_autoGen/runit_simpleFilterTest_tnc6_86
+myR testdir_autoGen/runit_simpleFilterTest_train_92
+myR testdir_autoGen/runit_simpleFilterTest_wine_95
+myR testdir_autoGen/runit_simpleFilterTest_winesPCA_93
+myR testdir_autoGen/runit_sliceTest_2_100kx7_logreg_10
+myR testdir_autoGen/runit_sliceTest_30k_categoricals_9
+myR testdir_autoGen/runit_sliceTest_allyears2k_headers_11
+myR testdir_autoGen/runit_sliceTest_arit_20
+myR testdir_autoGen/runit_sliceTest_chess_2x2_500_int_12
+myR testdir_autoGen/runit_sliceTest_chess_test_7
+myR testdir_autoGen/runit_sliceTest_claim_prediction_train_set_10000_17
+myR testdir_autoGen/runit_sliceTest_clslowbwt_19
+myR testdir_autoGen/runit_sliceTest_coldom_train_2
+myR testdir_autoGen/runit_sliceTest_iris_6
+myR testdir_autoGen/runit_sliceTest_iris_test_numeric_missing_extra_18
+myR testdir_autoGen/runit_sliceTest_pros_5
+myR testdir_autoGen/runit_sliceTest_prostate_6_1
+myR testdir_autoGen/runit_sliceTest_randomdata3_3
+myR testdir_autoGen/runit_sliceTest_test_14
+myR testdir_autoGen/runit_sliceTest_train_13
+myR testdir_autoGen/runit_sliceTest_train_15
+myR testdir_autoGen/runit_sliceTest_train_16
+myR testdir_autoGen/runit_sliceTest_train_4
+myR testdir_autoGen/runit_sliceTest_wonkysummary_8
+single="testdir_single_jvm"
+myR $single/runit_PCA 35
+myR $single/runit_GLM 35
+myR $single/runit_kmeans 60
+myR $single/runit_tail_numeric 60
+myR $single/runit_summary_numeric 60
+myR $single/runit_GBM_ecology 1200
+myR $single/runit_RF 120
+myR $single/runit_libR_prostate 120
+myR $single/runit_sliceColHeadTail_iris 60
+myR $single/runit_sliceColSummary_iris 60
+myR $single/runit_sliceColTypes_iris 60
 # this guy was failing? not sure why
-myR runit_histograms 300
+myR $single/runit_histograms 1200
 # airlines is failing summary. put it last
-myR runit_libR_airlines 120
+myR $single/runit_libR_airlines 120
 # If this one fals, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.
 # produces xml too!

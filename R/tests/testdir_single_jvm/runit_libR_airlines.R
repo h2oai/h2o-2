@@ -1,5 +1,5 @@
-source('../Utils/h2oR.R')
-Log.info("\nLoading LiblineaR and ROCR packages\n")
+source('./findNSourceUtils.R')
+Log.info("Loading LiblineaR and ROCR packages\n")
 if(!"LiblineaR" %in% rownames(installed.packages())) install.packages("LiblineaR")
 if(!"ROCR" %in% rownames(installed.packages())) install.packages("ROCR")
 require(LiblineaR)
@@ -79,13 +79,13 @@ test.LiblineaR.airlines <- function(con) {
   }
   
   Log.info("Importing Airlines test/train data...\n")
-  exdir         <- "../../../smalldata/airlines/unzipped"
-  airlinesTrain <- "../../../smalldata/airlines/AirlinesTrain.csv.zip"
-  airlinesTest  <- "../../../smalldata/airlines/AirlinesTest.csv.zip"
+  exdir         <- locate("../../../smalldata/airlines/unzipped")
+  airlinesTrain <- locate("../../../smalldata/airlines/AirlinesTrain.csv.zip")
+  airlinesTest  <- locate("../../../smalldata/airlines/AirlinesTest.csv.zip")
   aTrain        <- na.omit(read.zip(zipfile = airlinesTrain, exdir = exdir))
   aTest         <- na.omit(read.zip(zipfile = airlinesTest,  exdir = exdir))
-  trainhex      <- h2o.uploadFile.VA(conn, paste(exdir, "../../../AirlinesTrain.csv", sep=""), "aTrain.hex")
-  testhex       <- h2o.uploadFile.VA(conn, paste(exdir, "../../../AirlinesTest.csv",  sep=""), "aTest.hex")
+  trainhex      <- h2o.uploadFile.VA(conn, paste(exdir, "/AirlinesTrain.csv", sep = ""), "aTrain.hex")
+  testhex       <- h2o.uploadFile.VA(conn, paste(exdir, "/AirlinesTest.csv",  sep=""), "aTest.hex")
   remove_exdir(exdir)
   
   #xTrain  <- scale(model.matrix(IsDepDelayed_REC ~., aTrain[,-11])[,-1])

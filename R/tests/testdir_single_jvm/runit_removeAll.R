@@ -2,12 +2,12 @@
 # Generate lots of keys then remove them
 ##
 
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
 Log.info("======================== Begin Test ===========================\n")
 
 test <- function(conn) {
-  arrests.hex = h2o.uploadFile(conn, "../../../smalldata/pca_test/USArrests.csv", "arrests.hex")
+  arrests.hex = h2o.uploadFile(conn, locate("../../../smalldata/pca_test/USArrests.csv"), "arrests.hex")
   
   Log.info("Slicing column 1 of arrests 250 times")
   for(i in 1:250) {
@@ -26,5 +26,5 @@ test <- function(conn) {
 
 conn = new("H2OClient", ip=myIP, port=myPort)
 
-tryCatch(test_that("many keys test", test(conn)),  error = function(e) FAIL(e))
+tryCatch(test_that("many keys test", test(conn)),  warning = function(w) WARN(w), error = function(e) FAIL(e))
 PASS()
