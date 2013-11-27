@@ -361,6 +361,8 @@ public abstract class Request2 extends Request {
             values[i] = split(value);
             if( values[i] != null && values[i].length > 1 )
               gridSearch = true;
+          } else if (arg._field.getType().isArray() && !imbricated) { // Copy values which are arrays
+            values[i] = new String[] { value };
           }
         }
       }
