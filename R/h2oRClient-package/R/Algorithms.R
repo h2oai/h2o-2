@@ -65,7 +65,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   }
   if(!y %in% cc) stop(paste(y, "is not a valid column name"))
   
-  if(is.character(x)){
+  if(is.character(x)) {
     if( any(!(x %in% cc)) ) stop(paste( paste(setdiff(x, cc), sep=','), 'are not valid column names'))
     x <- match(x, cc)
   }
@@ -83,7 +83,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=rand_glm_key)
   resModel = res$glm_model; destKey = resModel$'_selfKey'
-  modelOrig = h2o.__getGLM2Results(resModel, y, resModel$submodels[[1]]$validation)
+  modelOrig = h2o.__getGLM2Results(resModel, x, y, resModel$submodels[[1]]$validation)
   
   # Get results from cross-validation
   if(nfolds < 2)
@@ -93,19 +93,20 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   for(i in 1:nfolds) {
     xvalKey = paste(destKey, "_xval", seq(0,nfolds-1), sep="")
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
-    modelXval = h2o.__getGLM2Results(res$glm_model, y, res$glm_model$submodels[[1]]$validation)
+    modelXval = h2o.__getGLM2Results(res$glm_model, x, y, res$glm_model$submodels[[1]]$validation)
     res_xval[[i]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
   }
   new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
 }
 
 # Pretty formatting of H2O GLM2 results
-h2o.__getGLM2Results <- function(model, y, valid) {
+h2o.__getGLM2Results <- function(model, x, y, valid) {
   result = list()
   result$y = y
-  result$x = model$'_names'     # BUG: I need these names to match the predictor cols passed in by the user (NOT all colnames)
+  result$x = x
   # result$coefficients = unlist(model$beta)
   result$coefficients = as.numeric(unlist(model$submodels[[1]]$beta))
+  names(result$coefficients) = model$coefficients_names
   result$rank = valid$'_rank'
   if(model$glm$family == "tweedie")
     result$family = h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
@@ -116,7 +117,7 @@ h2o.__getGLM2Results <- function(model, y, valid) {
   
   result$deviance = as.numeric(valid$residual_deviance)
   result$null.deviance = as.numeric(valid$null_deviance)
-  result$df.residual = max(valid$nobs-result$rank-1,0)
+  result$df.residual = max(valid$nobs-result$rank,0)
   result$df.null = valid$nobs-1
   result$aic = as.numeric(valid$aic)
   result$train.err = as.numeric(valid$avg_err)
