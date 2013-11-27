@@ -239,6 +239,8 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
             destination_key=predictKey,
             timeoutSecs=30)
 
+        h2o_cmd.runInspect(key='Predict.hex', verbose=True)
+
         predictCMResult = h2o.nodes[0].predict_confusion_matrix(
             actual=parseKey,
             vactual=vactual,
