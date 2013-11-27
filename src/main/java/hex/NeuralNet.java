@@ -260,8 +260,9 @@ public class NeuralNet extends ValidatedJob {
     for( int i = 0; i < ls.length; i++ )
       ls[i].fprop(false);
     float[] out = ls[ls.length - 1]._a;
+    int target = output.target();
     for( int o = 0; o < out.length; o++ ) {
-      float t = o == output.target() ? 1 : 0;
+      float t = o == target ? 1 : 0;
       float d = t - out[o];
       error.mean_square += d * d;
     }

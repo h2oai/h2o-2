@@ -135,33 +135,30 @@ public abstract class Trainer {
 
   /**
    * Runs several trainers in parallel on the same weights, using threads. Only works on one node.
-   * There is no synchronization, so some updates are lost. Works well in practice.
    */
   public static class Threaded extends Trainer {
     final Base[] _trainers;
     final Thread[] _threads;
-    final int _stepsPerThread;
+    final long _stepsPerThread;
     static final CyclicBarrier DONE = new CyclicBarrier(1);
     volatile CyclicBarrier _suspend;
     final CyclicBarrier _resume;
     final AtomicLong _samples = new AtomicLong();
 
-    public Threaded(Layer[] ls) {
-      this(ls, 0, Runtime.getRuntime().availableProcessors());
-    }
-
-    public Threaded(Layer[] ls, int steps, int cores) {
-      _trainers = new Base[cores];
+    public Threaded(Layer[] ls, int epochs, final Key job) {
+      _trainers = new Base[Runtime.getRuntime().availableProcessors()];
       _threads = new Thread[_trainers.length];
-      _stepsPerThread = steps / _threads.length;
+      _stepsPerThread = epochs * ((Input) ls[0])._len / _threads.length;
       _resume = new CyclicBarrier(_threads.length + 1);
 
       for( int t = 0; t < _trainers.length; t++ ) {
         Layer[] clones = new Layer[ls.length];
         for( int y = 0; y < clones.length; y++ )
           clones[y] = ls[y].clone();
-        for( int y = 0; y < clones.length; y++ )
+        for( int y = 0; y < clones.length; y++ ) {
           clones[y].init(clones, y, false, 0);
+          clones[y]._trainer = this;
+        }
         final Input input = (Input) clones[0];
         input._pos = input._len * t / _trainers.length;
         _trainers[t] = new Base(clones);
@@ -169,9 +166,11 @@ public abstract class Trainer {
 
         _threads[t] = new Thread("H2O Trainer " + t) {
           @Override public void run() {
-            for( int i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
+            for( long i = 0; _stepsPerThread == 0 || i < _stepsPerThread; i++ ) {
               CyclicBarrier b = _suspend;
               if( b == DONE )
+                break;
+              if( Job.cancelled(job) )
                 break;
               if( b != null ) {
                 try {
@@ -423,6 +422,9 @@ public abstract class Trainer {
           clones[y].init(clones, y, false, _node._total);
           clones[y]._w = _node._ws[y];
           clones[y]._b = _node._bs[y];
+          clones[y]._wm = _node._wm[y];
+          clones[y]._bm = _node._bm[y];
+          clones[y]._trainer = ;
         }
         Base base = new Base(clones);
         for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
@@ -438,8 +440,9 @@ public abstract class Trainer {
     ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
     Key _job;
     Layer[] _ls;
-    float[][] _ws, _bs;
-    float[][] _wi, _bi;
+    float[][] _ws, _bs; // Current weights
+    float[][] _wi, _bi; // Initial weights, for synchronization
+    float[][] _wm, _bm; // Momentums
     Key _key;
     ConcurrentHashMap<Integer, Integer> _counters;
     MapReduce _trainer;
@@ -453,9 +456,15 @@ public abstract class Trainer {
       _bs = bs;
       _wi = new float[ws.length][];
       _bi = new float[bs.length][];
+      _wm = new float[ws.length][];
+      _bm = new float[bs.length][];
       for( int y = 1; y < _ws.length; y++ ) {
         _wi[y] = ws[y].clone();
         _bi[y] = bs[y].clone();
+        if( ls[y].momentum > 0 ) {
+          _wm[y] = new float[ws[y].length];
+          _bm[y] = new float[bs[y].length];
+        }
       }
       _trainer = MapReduce._instances.get(_key);
       assert (_trainer != null) == _key.home();
