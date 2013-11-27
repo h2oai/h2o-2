@@ -182,7 +182,7 @@ public final class H2O {
       CLOUDS[idx] = CLOUD = new H2O(h2os,hash,idx);
     }
     SELF._heartbeat._cloud_size=(char)CLOUD.size();
-    Paxos.print("Announcing new Cloud Membership: ",_memary);
+    //Paxos.print("Announcing new Cloud Membership: ",_memary);
   }
 
   // Check if the cloud id matches with one of the old clouds
