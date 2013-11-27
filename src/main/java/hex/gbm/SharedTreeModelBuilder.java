@@ -67,6 +67,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     Log.info("    nbins: " + nbins);
   }
 
+  // Verify input parameters
   @Override protected void init() {
     super.init();
     // Check parameters
@@ -121,7 +122,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution
-    _distribution = _nclass > 1 ? new ClassDist().doAll(response)._ys : null;
+    _distribution = _nclass > 1 ? new ClassDist(_nclass).doAll(response)._ys : null;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -340,7 +341,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   }
 
   // --------------------------------------------------------------------------
-  private class ClassDist extends MRTask2<ClassDist> {
+  private static class ClassDist extends MRTask2<ClassDist> {
+    ClassDist(int nclass) { _nclass = nclass; }
+    final int _nclass;
     long _ys[];
     @Override public void map(Chunk ys) {
       _ys = new long[_nclass];
@@ -381,10 +384,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // Adapt the validation set to the model
       Frame frs[] = model.adapt(validation,false);
       Frame adapValidation = frs[0]; // adapted validation dataset
-      // Adapt vresponse to original response
-//      vresponse = _nclass > 1 ? vresponse.adaptTo(response, true) : vresponse;
-//      // Dump in the prob distribution
-//      adapValidation.add("response",vresponse);
+      // All columns including response of validation frame are already adapted to model
       if (_nclass>1) { // Classification
         for( int i=0; i<_nclass; i++ )
           adapValidation.add("Work"+i,res.vecs()[i+1]);
@@ -396,7 +396,6 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // Remove the extra adapted Vecs
       frs[1].remove();
       // Remove temporary result
-      // FIXME delete vresponse res.remove();
       return this;
     }
 

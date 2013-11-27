@@ -63,7 +63,7 @@ public class GLM2 extends ModelJob {
   double [] alpha = new double[]{0.5};
 //  @API(help = "lambda", filter = RSeq2.class)
   @API(help = "lambda", filter = Default.class)
-  double [] lambda; // = new double[]{1e-5};
+  double [] lambda;// = new double[]{1e-5};
   public static final double DEFAULT_BETA_EPS = 1e-4;
   @API(help = "beta_eps", filter = Default.class)
   double beta_epsilon = DEFAULT_BETA_EPS;
@@ -100,6 +100,11 @@ public class GLM2 extends ModelJob {
     this.n_folds = nfolds;
   }
 
+  public GLM2 setCase(CaseMode cm, double cv){
+    case_mode = cm;
+    case_val = cv;
+    return this;
+  }
   /** Return the query link to this page */
   public static String link(Key k, String content) {
     RString rs = new RString("<a href='GLM2.query?source=%$key'>%content</a>");
@@ -114,7 +119,7 @@ public class GLM2 extends ModelJob {
   public static Job gridSearch(Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds, double betaEpsilon){
     return new GLMGridSearch(4, destinationKey,dinfo,glm,lambda,alpha, nfolds,betaEpsilon).fork();
   }
-  private long _startTime;
+
   @Override protected Response serve() {
     init();
     if(this.destination_key == null){
@@ -122,7 +127,6 @@ public class GLM2 extends ModelJob {
     }
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
-    _startTime = System.currentTimeMillis();
     Frame fr = new Frame(source._names.clone(),source.vecs().clone());
     fr.remove(ignored_cols);
     final Vec [] vecs =  fr.vecs();
@@ -179,12 +183,12 @@ public class GLM2 extends ModelJob {
     @Override public Iteration clone(){return new Iteration(_model,_solver,_dinfo,_fjt);}
     @Override public void callback(final GLMIterationTask glmt) {
       try {
+//        System.out.println(glmt._gram);
 //        System.out.println(Utils.pprint(glmt._gram.getXX()));
 //        System.out.println(Utils.pprint(new double[][]{glmt._xy}));
         if(!cancelled()){
           double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
           double [] newBetaDeNorm = null;
-
           _solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
           final boolean diverged = Utils.hasNaNsOrInfs(newBeta);
           if(diverged)
@@ -230,7 +234,7 @@ public class GLM2 extends ModelJob {
           } else {
             DKV.put(dest(),_oldModel);// validation is one iteration behind so put the old (now validated  model into K/V)
             int iter = glmt._iter+1;
-            GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, newBeta,iter,glmt._ymu,glmt._reg);
+            GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,iter,glmt._ymu,glmt._reg);
             nextIter.setCompleter(new Iteration(_model, _solver, _dinfo, _fjt)); // we need to clone here as FJT will set status to done after this method
             nextIter.dfork(_dinfo._adaptedFrame);
           }
@@ -255,33 +259,40 @@ public class GLM2 extends ModelJob {
   public void run(final H2OCountedCompleter completer){
     assert alpha.length == 1;
     UKV.remove(dest());
-    new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
+    new YMUTask(this, _dinfo, case_mode, case_val, new H2OCallback<YMUTask>() {
       @Override public void callback(final YMUTask ymut){
+        if(ymut._ymin == ymut._ymax){
+          String msg = case_mode == CaseMode.none
+              ?"Attempting to run GLM on column with constant value = " + ymut._ymin
+              :"Attempting to run GLM on column with constant value, y " + case_mode + " " + case_val  + " is " + (ymut._ymin == 0?"false":"true") + " for all rows!";
+          GLM2.this.cancel(msg);
+          GLM2.this._fjtask.completeExceptionally(new JobCancelledException(msg));
+        }
         new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
           @Override public void callback(LMAXTask t){
             final double lmax = t.lmax();
             if(lambda == null){
-              lambda = new double[]{lmax,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*0.1,lmax*0.075,lmax*0.05,lmax*0.01,lmax*0.0075,lmax*0.005,lmax*0.0025,lmax*0.001,lmax*0.00075,lmax*0.0005,lmax*0.00025,lmax*0.0001}; // todo - make it a sequence of 100 lamdbas
+              lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
               _runAllLambdas = false;
             }
             else {
               int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
               if(i > 0)lambda = i == lambda.length?new double[]{lmax}:Arrays.copyOfRange(lambda, i, lambda.length);
             }
-            GLMIterationTask firstIter = new GLMIterationTask(GLM2.this,_dinfo,_glm,_beta,0,ymut.ymu(),1.0/ymut.nobs());
+            GLMIterationTask firstIter = new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, _beta,0,ymut.ymu(),1.0/ymut.nobs());
             final LSMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
-            GLMModel model = new GLMModel(dest(),_dinfo._adaptedFrame, _dinfo._catOffsets, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
+            GLMModel model = new GLMModel(dest(),_dinfo._adaptedFrame, _dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,completer));
             firstIter.dfork(_dinfo._adaptedFrame);
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-            GLM2.this._fjtask.completeExceptionally(ex);
+            if(GLM2.this._fjtask != null)GLM2.this._fjtask.completeExceptionally(ex);
             return true;
           }
         }).dfork(_dinfo._adaptedFrame);
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-        GLM2.this._fjtask.completeExceptionally(ex);
+        if(GLM2.this._fjtask != null)GLM2.this._fjtask.completeExceptionally(ex);
         return true;
       }
     }).dfork(_dinfo._adaptedFrame);
@@ -308,7 +319,9 @@ public class GLM2 extends ModelJob {
     };
     callback.addToPendingCount(n_folds-1);
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).run(callback);
+      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).
+      setCase(case_mode,case_val).
+      run(callback);
   }
 
   // Expand grid search related argument sets

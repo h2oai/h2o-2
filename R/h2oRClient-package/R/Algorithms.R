@@ -65,7 +65,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   }
   if(!y %in% cc) stop(paste(y, "is not a valid column name"))
   
-  if(is.character(x)){
+  if(is.character(x)) {
     if( any(!(x %in% cc)) ) stop(paste( paste(setdiff(x, cc), sep=','), 'are not valid column names'))
     x <- match(x, cc)
   }
@@ -83,7 +83,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=rand_glm_key)
   resModel = res$glm_model; destKey = resModel$'_selfKey'
-  modelOrig = h2o.__getGLM2Results(resModel, y, resModel$submodels[[1]]$validation)
+  modelOrig = h2o.__getGLM2Results(resModel, x, y, resModel$submodels[[1]]$validation)
   
   # Get results from cross-validation
   if(nfolds < 2)
@@ -93,19 +93,20 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
   for(i in 1:nfolds) {
     xvalKey = paste(destKey, "_xval", seq(0,nfolds-1), sep="")
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
-    modelXval = h2o.__getGLM2Results(res$glm_model, y, res$glm_model$submodels[[1]]$validation)
+    modelXval = h2o.__getGLM2Results(res$glm_model, x, y, res$glm_model$submodels[[1]]$validation)
     res_xval[[i]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
   }
   new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
 }
 
-# Pretty formatting of H2O GLM results
-h2o.__getGLM2Results <- function(model, y, valid) {
+# Pretty formatting of H2O GLM2 results
+h2o.__getGLM2Results <- function(model, x, y, valid) {
   result = list()
   result$y = y
-  result$x = model$'_names'
+  result$x = x
   # result$coefficients = unlist(model$beta)
-  result$coefficients = unlist(model$submodels[[1]]$beta)
+  result$coefficients = as.numeric(unlist(model$submodels[[1]]$beta))
+  names(result$coefficients) = model$coefficients_names
   result$rank = valid$'_rank'
   if(model$glm$family == "tweedie")
     result$family = h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
@@ -114,17 +115,17 @@ h2o.__getGLM2Results <- function(model, y, valid) {
   # result$iter = model$iteration
   result$iter = model$submodels[[1]]$iteration
   
-  result$deviance = valid$residual_deviance
-  result$null.deviance = valid$null_deviance
-  result$df.residual = max(valid$nobs-result$rank-1,0)
+  result$deviance = as.numeric(valid$residual_deviance)
+  result$null.deviance = as.numeric(valid$null_deviance)
+  result$df.residual = max(valid$nobs-result$rank,0)
   result$df.null = valid$nobs-1
-  result$aic = valid$aic
-  result$train.err = valid$avg_err
+  result$aic = as.numeric(valid$aic)
+  result$train.err = as.numeric(valid$avg_err)
   
   if(model$glm$family == "binomial") {
-    result$threshold = model$threshold
-    result$best_threshold = valid$best_threshold
-    result$auc = valid$auc
+    result$threshold = as.numeric(model$threshold)
+    result$best_threshold = as.numeric(valid$best_threshold)
+    result$auc = as.numeric(valid$auc)
     
     # Construct confusion matrix
     cm_ind = trunc(100*result$best_threshold) + 1
@@ -150,8 +151,9 @@ h2o.kmeans <- function(data, centers, cols='', iter.max=10) {
   if(!is.numeric(iter.max)) stop('iter.max must be numeric')
   if( iter.max < 1) stop('iter.max must be >=1')
   
+  if(length(cols) == 1 && cols == '') cols = colnames(data)
   cc <- colnames(data)
-  if(is.numeric(cols)){
+  if(is.numeric(cols)) {
     if( any( cols < 1 | cols > length(cc) ) ) stop( paste(cols[ cols < 1 | cols > length(cc)], sep=','), 'is out of range of the columns' )
     cols <- cc[ cols ]
   }
@@ -167,14 +169,16 @@ h2o.kmeans <- function(data, centers, cols='', iter.max=10) {
   res = res$model
   
   rand_pred_key = h2o.__uniqID("KMeansClusters")
-  h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
   
   result = list()
-  result$clusters = new("H2OParsedData", h2o=data@h2o, key=rand_pred_key)
+  result$cluster = new("H2OParsedData", h2o=data@h2o, key=rand_pred_key)
   feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
   result$centers = t(matrix(unlist(res$clusters), ncol = centers))
   dimnames(result$centers) = list(seq(1,centers), feat)
   result$withinss = res$cluster_variances        # TODO: Not sure if this is within or between SS?
+  result$size = res2$summaries[[1]]$hcnt
   new("H2OKMeansModel", key=res$'_selfKey', data=data, model=result)
 }
 
@@ -205,6 +209,7 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
       hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=data@key)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, model=destKey)
+  return(res2)
 
   result=list()
   categories=length(res2$model$confusion_matrix)
@@ -214,11 +219,17 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
   dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
 
   result$confusion = cf_matrix
-  result$items = res2$model$items
-  result$train_class_error = res2$model$train_classification_error
-  result$train_sqr_error = res2$model$train_mse
-  result$valid_class_error = res2$model$validation_classification_error
-  result$valid_sqr_error = res2$model$validation_mse
+  # result$items = res2$model$items
+  # result$train_class_error = res2$model$train_classification_error
+  # result$train_sqr_error = res2$model$train_mse
+  # result$valid_class_error = res2$model$validation_classification_error
+  # result$valid_sqr_error = res2$model$validation_mse
+  nn_train = tail(res2$model$training_errors,1)[[1]]     # BUG: For some reason, I'm not getting the errors for training_samples = 15000 in the JSON
+  nn_valid = tail(res2$model$validation_errors,1)[[1]]
+  result$train_class_error = nn_train$classification
+  result$train_sqr_error = nn_train$mean_square
+  result$valid_class_error = nn_valid$classification
+  result$valid_sqr_error = nn_valid$mean_square
   new("H2ONNModel", key=destKey, data=data, model=result)
 }
 
@@ -393,8 +404,8 @@ h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_s
   res_xval = list()
   for(i in 1:nfolds) {
     xvalKey = resModel$validations[[1]]$xval_models[i]
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xvalKey)
-    modelXval = h2o.__getGLMResults(resModel, y, family, tweedie.p)
+    resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_INSPECT, key=xvalKey)
+    modelXval = h2o.__getGLMResults(resX$GLMModel, y, family, tweedie.p)
     res_xval[[i]] = new("H2OGLMModelVA", key=xvalKey, data=data, model=modelXval, xval=list())
   }
   new("H2OGLMModelVA", key=destKey, data=data, model=modelOrig, xval=res_xval)
@@ -437,20 +448,20 @@ h2o.__getGLMResults <- function(res, y, family, tweedie.p) {
   result$normalized_coefficients = unlist(res$normalized_coefficients)
   result$rank = res$nCols
   result$family = h2o.__getFamily(family, tweedie.var.p = tweedie.p)
-  result$deviance = res$validations[[1]]$resDev
-  result$aic = res$validations[[1]]$aic
-  result$null.deviance = res$validations[[1]]$nullDev
+  result$deviance = as.numeric(res$validations[[1]]$resDev)
+  result$aic = as.numeric(res$validations[[1]]$aic)
+  result$null.deviance = as.numeric(res$validations[[1]]$nullDev)
   result$iter = res$iterations
   result$df.residual = res$dof
   result$df.null = res$dof + result$rank
-  result$train.err = res$validations[[1]]$err
+  result$train.err = as.numeric(res$validations[[1]]$err)
   result$y = y
   result$x = res$column_names
   # result$tweedie.p = ifelse(missing(tweedie.p), 'NA', tweedie.p)
   
   if(family == "binomial") {
-    result$auc = res$validations[[1]]$auc
-    result$threshold = res$validations[[1]]$threshold
+    result$auc = as.numeric(res$validations[[1]]$auc)
+    result$threshold = as.numeric(res$validations[[1]]$threshold)
     result$class.err = res$validations[[1]]$classErr
     
     # Construct confusion matrix

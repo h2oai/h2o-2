@@ -1,4 +1,4 @@
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
 Log.info("======================== Begin Test ===========================\n")
 
@@ -43,17 +43,21 @@ test.histogram <- function (con, path, key) {
 
 
 conn <- new("H2OClient", ip=myIP, port=myPort)
-
-csv.files <- list.files('../../../smalldata/', recursive=T, full.names=T, pattern='*.csv$')
-exclude <- c("../../../smalldata//empty.csv",
-              "../../../smalldata//test/test_less_than_65535_unique_names.csv",
-              "../../../smalldata//test/test_more_than_65535_unique_names.csv")
-csv.files <- csv.files[-which(csv.files %in% exclude)]
-
+print("getting files...")
+bucket <- getBucket('smalldata')
+print(bucket)
+csv.files <- list.files(bucket, recursive=T, full.names=T, pattern='*.csv$')
+print(csv.files)
+exclude <- c(locate("../../../smalldata//empty.csv"),
+              locate("../../../smalldata//test/test_less_than_65535_unique_names.csv"),
+              locate("../../../smalldata//test/test_more_than_65535_unique_names.csv"))
+print(exclude)
+csvtry <- csv.files[!(csv.files %in% exclude)]
+csv.files <- csvtry
 Log.info(csv.files)
 
 for ( f in csv.files ) {
   print(f)
-  tryCatch("Histogram Test", test.histogram(conn, f, sub('.csv$', '.hex', f)), error = function(e) FAIL(e))
+  tryCatch("Histogram Test", test.histogram(conn, f, sub('.csv$', '.hex', f)), warning = function(w) WARN(w), error = function(e) FAIL(e))
   PASS()
 }

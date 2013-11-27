@@ -31,8 +31,23 @@ computing resource or server.
 Grid Search Models
 -------------------
 
-GLM, K-Means, and GBM all offer Grid Search Models. Each Grid Search modeling option allows users to generate multiple models simultaneously, and compare model criteria directly, rather than separately building models one at a time. Users can specify multiple  model configurations by entering different values of tuning parameters separated by pipe (shift + backslash). For example, to specify three different values of K in a K-means grid search in the K field enter 5|7|9, which will produce models for K=5, K=7, and K=9 respectively. When multiple levels are specified for many tuning parameters grid search returns one model for each unique combination. For example, in K-Means grid search specifying 3 values of K, and 4 values of Max Iterations, a total of 12 models will be returned one for each combination of K and Max Iterations. 
+GLM, K-Means, and GBM all offer Grid Search Models. Each Grid Search
+modeling option allows users to generate multiple models
+simultaneously, and compare model criteria directly, rather than
+separately building models one at a time. Users can specify multiple
+model configurations by entering different values of tuning parameters
+separated by pipe (shift + backslash). For example, to specify three
+different values of K in a K-means grid search in the K field enter
+5,7,9 which will produce models for K=5, K=7, and K=9
+respectively. When multiple levels are specified for many tuning
+parameters grid search returns one model for each unique
+combination. For example, in K-Means grid search specifying 3 values
+of K, and 4 values of Max Iterations, a total of 12 models will be
+returned one for each combination of K and Max Iterations.
 
-Grid search results return a table showing the combination of tuning parameters used for each model and basic model evaluation information, as well as a link to each model. Users can access the details of each model by clicking on the links in the table. 
+Grid search results return a table showing the combination of tuning
+parameters used for each model and basic model evaluation information,
+as well as a link to each model. Users can access the details of each
+model by clicking on the links in the table.
 
 

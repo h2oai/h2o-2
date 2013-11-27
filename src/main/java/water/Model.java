@@ -91,7 +91,7 @@ public abstract class Model extends Iced {
   public Frame score( Frame fr) {
     int ridx = fr.find(_names[_names.length-1]);
     if(ridx != -1){ // drop the response for scoring!
-      fr = new Frame(fr._names,fr.vecs().clone());
+      fr = new Frame(fr);
       fr.remove(ridx);
     }
     // Adapt the Frame layout - returns adapted frame and frame containing only
@@ -213,19 +213,20 @@ public abstract class Model extends Iced {
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
   public Frame[] adapt( Frame fr, boolean exact) {
-    int ridx = fr.find(_names[_names.length-1]);
-    if(ridx != -1 && ridx != fr._names.length-1){ // put response to the end
-      String n =fr._names[ridx];
-      fr.add(n,fr.remove(ridx));
+    Frame vfr = new Frame(fr);
+    int ridx = vfr.find(_names[_names.length-1]);
+    if(ridx != -1 && ridx != vfr._names.length-1){ // put response to the end
+      String n = vfr._names[ridx];
+      vfr.add(n,vfr.remove(ridx));
     }
     int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
-    fr = fr.subframe(names);
-    Vec [] frvecs = fr.vecs();
+    vfr = vfr.subframe(names);
+    Vec [] frvecs = vfr.vecs();
     if(!exact) for(int i = 0; i < n;++i)
       if(_domains[i] != null && !frvecs[i].isEnum())
         frvecs[i] = frvecs[i].toEnum();
-    int map[][] = adapt(names,fr.domains(),exact);
+    int map[][] = adapt(names,vfr.domains(),exact);
     ArrayList<Vec> avecs = new ArrayList<Vec>();
     ArrayList<String> anames = new ArrayList<String>();
     for( int c=0; c<map.length; c++ ) // iterate over columns

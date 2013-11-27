@@ -6,12 +6,11 @@ import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
 import java.text.DecimalFormat;
-import java.util.HashMap;
+import java.util.Arrays;
 
 import water.*;
 import water.api.DocGen;
 import water.api.Request;
-import water.api.RequestBuilders.Response;
 import water.util.RString;
 
 public class GLMModelView extends Request2 {
@@ -379,7 +378,7 @@ public class GLMModelView extends Request2 {
     StringBuilder equation = new StringBuilder();
     StringBuilder vals = new StringBuilder();
     StringBuilder normVals = sm.norm_beta == null?null:new StringBuilder();
-    String [] cNames = glm_model.coefNames();
+    String [] cNames = glm_model.coefficients_names;
     boolean first = true;
     for(int i:sm.idxs){
       names.append("<th>" + cNames[i] + "</th>");
@@ -432,7 +431,6 @@ public class GLMModelView extends Request2 {
   }
 
   @Override protected Response serve() {
-    System.out.println("lambda = " + lambda);
     glm_model = DKV.get(_modelKey).get();
     if(Double.isNaN(lambda))lambda = glm_model.submodels[glm_model.best_lambda_idx].lambda;
     return Response.done(this);

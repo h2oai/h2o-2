@@ -123,6 +123,7 @@ class Basic(unittest.TestCase):
                     'min_rows': 10,
                     'validation': parseTestResult['destination_key'],
                     'ignored_cols_by_name': ignored_cols_by_name,
+                    'grid_parallelism': 4
                 }
             
 
