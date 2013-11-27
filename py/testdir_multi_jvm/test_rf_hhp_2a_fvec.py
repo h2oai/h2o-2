@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,15 +27,15 @@ class Basic(unittest.TestCase):
         for csvFilename in csvFilenameList:
             csvPathname = csvFilename
             print "RF start on ", csvPathname
+            dataKeyTrain = 'rTrain.hex'
             start = time.time()
-            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')            
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=dataKeyTrain, schema='put')            
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
             numCols = inspect['numCols']
 
-            dataKeyTrain = 'rTrain.hex'
             # we want the last col. Should be values 0 to 14. 14 most rare
 
             # from the cut3 set
@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
             #     345 14
             #    3488 15
 
-            execExpr = "%s[,%s] = s[%s==14,]" % (dataKeyTrain, numCols, dataKeyTrain)
+            execExpr = "%s[,%s] = %s[,%s]==14" % (dataKeyTrain, numCols, dataKeyTrain, numCols)
             h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=10)
             inspect = h2o_cmd.runInspect(key=dataKeyTrain)
             h2o_cmd.infoFromInspect(inspect, "going into RF")
