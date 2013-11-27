@@ -30,12 +30,12 @@ public class GBM extends SharedTreeModelBuilder {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     final double _learn_rate;
-    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) { 
-      super(key,dataKey,testKey,names,domains,ntrees,max_depth,min_rows,nbins); 
+    public GBMModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) {
+      super(key,dataKey,testKey,names,domains,ntrees,max_depth,min_rows,nbins);
       _learn_rate = learn_rate;
     }
-    public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { 
-      super(prior, trees, err, cm, tstats); 
+    public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
+      super(prior, trees, err, cm, tstats);
       _learn_rate = prior._learn_rate;
     }
 
@@ -58,10 +58,10 @@ public class GBM extends SharedTreeModelBuilder {
 
     @Override protected void toJavaPredictBody(SB sb, SB afterBodySb) {
       super.toJavaPredictBody(sb, afterBodySb);
-      sb.i().p("// Compute Probabilities\n");
-      sb.i().p("float sum = 0;\n");
-      sb.i().p("for(int i=1;i<preds.length; i++) sum += Math.exp(preds[i]);\n");
-      sb.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) Math.exp(preds[i]) / sum;\n");
+      sb.i().p("// Compute Probabilities").nl();
+      sb.i().p("float sum = 0;").nl();
+      sb.i().p("for(int i=1;i<preds.length; i++) sum += Math.exp(preds[i]);").nl();
+      sb.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) Math.exp(preds[i]) / sum;").nl();
     }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
