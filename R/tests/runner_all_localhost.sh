@@ -22,14 +22,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-curl http://localhost:54321
+#curl http://localhost:54321
 
-for test in $(ls *.R)
+for test in $(ls */*.R | grep -v Utils)
 do
     echo "----------------------------------------------------------------------"
     echo "Starting $test"
     echo "----------------------------------------------------------------------"
     R -f $test 2>&1| tee results/${test}.out
+    exit 0
     RC=${PIPESTATUS[0]}
     echo exit code $RC
     if [ $RC -eq 0 ]; then
