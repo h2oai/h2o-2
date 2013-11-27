@@ -90,7 +90,7 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
     if resultKey is not None:
         kwargs = {'str': resultKey} 
         resultExec2 = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
-        print "resultExec2:", h2o.dump_json(resultExec2)
+        h2o.verboseprint("resultExec2:", h2o.dump_json(resultExec2))
 
         # maybe return 'scalar' in some cases?
         return resultExec2, resultExec2['cols'][0]['min']
