@@ -15,13 +15,13 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_import_billion_rows_parse_loop(self):
-        print "Apparently we can't handle 1B rows .gzed"
+    def test_parse_1B_loop_fvec(self):
+        h2o.beta_features = True
         csvFilename = "billion_rows.csv.gz"
         importFolderPath = "standard"
         csvPathname = importFolderPath + "/" + csvFilename
         trialMax = 3
-        for tryHeap in [4,16]:
+        for tryHeap in [16]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import folder,", \
                 "then loop parsing 'billion_rows.csv' to unique keys"
             h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=tryHeap)
@@ -30,7 +30,7 @@ class Basic(unittest.TestCase):
                 hex_key = csvFilename + "_" + str(trial) + ".hex"
                 start = time.time()
                 parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key=hex_key, 
-                    timeoutSecs=timeoutSecs, retryDelaySecs=4, pollTimeoutSecs=60)
+                    timeoutSecs=timeoutSecs, retryDelaySecs=4, pollTimeoutSecs=60, doSummary=True)
                 elapsed = time.time() - start
                 print "Trial #", trial, "completed in", elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

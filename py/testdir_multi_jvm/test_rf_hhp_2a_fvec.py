@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_rf
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -62,9 +62,15 @@ class Basic(unittest.TestCase):
             h2o_cmd.infoFromInspect(inspect, "going into RF")
             execResult = {'destination_key': dataKeyTrain}
 
-            rfView = h2o_cmd.runRF(parseResult=execResult, trees=50, timeoutSecs=300, retryDelaySecs=10)
+
+            kwargs = {
+                'ntrees': 20,
+                'max_depth': 20,
+                'nbins': 50,
+            }
+            rfView = h2o_cmd.runRF(parseResult=execResult, timeoutSecs=900, retryDelaySecs=10, **kwargs)
             print "RF end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRF2View(rfv=rfView)
+            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
 
 
 if __name__ == '__main__':
