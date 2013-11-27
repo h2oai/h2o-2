@@ -9,11 +9,13 @@ import java.util.Arrays;
 public class HeartBeat extends Iced {
   public int _hb_version;
   public int _cloud_hash;       // Cloud-membership hash?
+  public boolean _common_knowledge; // Cloud shares common knowledge
   public char _cloud_size;      // Cloud-size this guy is reporting
   public long _jvm_boot_msec;   // Boot time of JVM
   public byte[] _jar_md5;       // JAR file digest
   public char _num_cpus;        // Number of CPUs for this Node, limit of 65535
   public float _system_load_average;
+
 
   // Scaled by K or by M setters & getters.
   private int _free_mem;         // Free memory in K (goes up and down with GC)

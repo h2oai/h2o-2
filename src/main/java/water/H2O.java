@@ -182,7 +182,7 @@ public final class H2O {
       CLOUDS[idx] = CLOUD = new H2O(h2os,hash,idx);
     }
     SELF._heartbeat._cloud_size=(char)CLOUD.size();
-    Paxos.print("Announcing new Cloud Membership: ",_memary);
+    //Paxos.print("Announcing new Cloud Membership: ",_memary);
   }
 
   // Check if the cloud id matches with one of the old clouds
@@ -901,9 +901,6 @@ public final class H2O {
     startLocalNode();
     Log.POST(320,"");
 
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
-    Log.POST(330,"");
-
     String logDir = (Log.getLogDir() != null) ? Log.getLogDir() : "(unknown)";
     Log.info ("Log dir: '" + logDir + "'");
 
@@ -916,7 +913,6 @@ public final class H2O {
     startApiIpPortWatchdog(); // Check if the API port becomes unreachable
     Log.POST(360,"");
 
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
   }

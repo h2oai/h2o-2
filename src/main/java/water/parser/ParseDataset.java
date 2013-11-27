@@ -29,8 +29,6 @@ import com.google.common.io.Closeables;
 public final class ParseDataset extends Job {
   public static enum Compression { NONE, ZIP, GZIP }
 
-  public static int PLIMIT = Integer.MAX_VALUE;
-
   public final Key  _progress;
 
   private ParseDataset(Key dest, Key[] keys) {
@@ -555,7 +553,7 @@ public final class ParseDataset extends Job {
         int p = 0;
         int j = 0;
         for(int i = 0; i < _keys.length; ++i){
-          if(p == ParseDataset.PLIMIT) subTasks[j++].join(); else ++p;
+          if(p == H2O.OPT_ARGS.pparse_limit) subTasks[j++].join(); else ++p;
           H2O.submitTask((subTasks[i] = new UnzipAndParseLocalTask(i)));
         }
       }catch(Throwable t){t.printStackTrace();}
