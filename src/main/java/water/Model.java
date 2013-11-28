@@ -212,27 +212,36 @@ public abstract class Model extends Iced {
    *  frame which contains only vectors which where adapted (the purpose of the
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
-  public Frame[] adapt( Frame fr, boolean exact) {
-    Frame vfr = new Frame(fr);
+  public Frame[] adapt( final Frame fr, boolean exact) {
+    Frame vfr = new Frame(fr); // To avoid modification of original frame fr
     int ridx = vfr.find(_names[_names.length-1]);
-    if(ridx != -1 && ridx != vfr._names.length-1){ // put response to the end
+    if(ridx != -1 && ridx != vfr._names.length-1){ // Unify frame - put response to the end
       String n = vfr._names[ridx];
       vfr.add(n,vfr.remove(ridx));
     }
     int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
-    vfr = vfr.subframe(names);
-    Vec [] frvecs = vfr.vecs();
+    vfr = vfr.subframe(names); // select only supported columns, if column is missing Exception is thrown
+    Vec[] frvecs = vfr.vecs();
+    boolean[] toEnum = new boolean[frvecs.length];
     if(!exact) for(int i = 0; i < n;++i)
-      if(_domains[i] != null && !frvecs[i].isEnum())
+      if(_domains[i] != null && !frvecs[i].isEnum()) {// if model expects domain but input frame does not have domain => switch vector to enum
         frvecs[i] = frvecs[i].toEnum();
+        toEnum[i] = true;
+      }
     int map[][] = adapt(names,vfr.domains(),exact);
-    ArrayList<Vec> avecs = new ArrayList<Vec>();
-    ArrayList<String> anames = new ArrayList<String>();
-    for( int c=0; c<map.length; c++ ) // iterate over columns
-      if(map[c] != null){
-        avecs.add(frvecs[c] = frvecs[c].makeTransf(map[c]));
-        anames.add(names[c]);
+    assert map.length == names.length; // Be sure that adapt call above do not skip any column
+    ArrayList<Vec> avecs = new ArrayList<Vec>(); // adapted vectors
+    ArrayList<String> anames = new ArrayList<String>(); // names for adapted vector
+
+    for( int c=0; c<map.length; c++ ) // Iterate over columns
+      if(map[c] != null) { // Column needs adaptation
+        Vec adaptedVec = null;
+        if (toEnum[c]) { // Vector was flipped to column already, compose transformation
+          adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], false );
+        } else adaptedVec = frvecs[c].makeTransf(map[c]);
+        avecs.add(frvecs[c] = adaptedVec);
+        anames.add(names[c]); // Collect right names
       }
     return new Frame[] { new Frame(names,frvecs), new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()])) };
   }
