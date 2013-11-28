@@ -76,6 +76,7 @@ public class Cloud extends Request {
       node.addProperty(FJ_QUEUE_LO, (int) hb._fjqueue_lo);
       node.addProperty(RPCS, (int) hb._rpcs);
       node.addProperty(TCPS_ACTIVE, (int) hb._tcps_active);
+      if (hb._process_num_open_fds >= 0) { node.addProperty("open_fds", hb._process_num_open_fds); } else { node.addProperty("open_fds", "N/A"); }
 
       // Use tick information to calculate CPU usage percentage for the entire system and
       // for the specific H2O node.
