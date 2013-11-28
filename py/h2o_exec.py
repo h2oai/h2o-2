@@ -21,7 +21,7 @@ def checkScalarResult(resultInspect, resultKey):
     if 'num_rows' not in resultInspect0:
         emsg = "Inspect response: 'num_rows' missing. Look at the json just printed"
     elif 'cols' not in resultInspect0:
-        emsg = "Inspect response: 'num_cols' missing. Look at the json just printed"
+        emsg = "Inspect response: 'cols' missing. Look at the json just printed"
     else:
         emsg = None
         num_cols = resultInspect0["num_cols"]
@@ -38,8 +38,15 @@ def checkScalarResult(resultInspect, resultKey):
     # assume "0" and "row" keys exist for each list entry in rows
     # FIX! the key for the value can be 0 or 1 or ?? (apparently col?) Should change H2O here
 
+    # cols may not exist..if the result was just scalar?
     if not cols:
-        raise Exception("cols is null: %s" % cols)
+        # raise Exception("cols is null: %s" % cols)
+        # just return the scalar result then
+        scalar = resultInspect0['scalar']
+        if scalar is None:
+            raise Exception("both cols and scalar are null: %s %s" % (cols, scalar))
+        checkForBadFP(scalar)
+        return scalar
 
     metaDict = cols[0]
     for key,value in metaDict.items():
