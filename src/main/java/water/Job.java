@@ -6,16 +6,15 @@ import static water.util.Utils.isEmpty;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
-import water.DException.DistributedException;
+
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.api.*;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
+import water.util.*;
 import water.util.Utils.ExpectedExceptionForDebug;
-import water.util.Utils;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -24,8 +23,9 @@ public class Job extends Request2 {
     public JobCancelledException(){super("job was cancelled!");}
     public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
   }
-  // Global LIST of Jobs key.
+  // Global lists of Jobs key
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
+  static final Key SCHEDULED = Key.make(Constants.BUILT_IN_KEY_JOBS_SCHEDULED, (byte) 0, Key.BUILT_IN_KEY);
   private static final int KEEP_LAST_COUNT = 100;
   public static final long CANCELLED_END_TIME = -1;
   private static final int[] EMPTY = new int[0];
@@ -55,10 +55,6 @@ public class Job extends Request2 {
 
   protected void logStart() {
     Log.info("    destination_key: " + (destination_key != null ? destination_key : "null"));
-  }
-
-  public int gridParallelism() {
-    return 1;
   }
 
   public static abstract class FrameJob extends Job {
@@ -323,6 +319,39 @@ public class Job extends Request2 {
     fs.blockForPending();
     return this;
   }
+
+  public static final void schedule(final Job[] jobs) {
+    new TAtomic<List>() {
+      @Override public List atomic(List old) {
+        if( old == null ) old = new List();
+        old._jobs = Utils.append(old._jobs, jobs);
+        return old;
+      }
+    }.invoke(SCHEDULED);
+  }
+
+  public static Job startNextScheduled() {
+    GetJob task = new GetJob();
+    task.invoke(SCHEDULED);
+    if(task._job != null)
+      task._job.fork();
+    return task._job;
+  }
+
+  private static class GetJob extends TAtomic<List> {
+    Job _job;
+
+    @Override public List atomic(List old) {
+      if( old == null || old._jobs.length == 0 ) {
+        _job = null;
+        return null;
+      }
+      _job = old._jobs[0];
+      old._jobs = Utils.remove(old._jobs, 0);
+      return old;
+    }
+  }
+
   // Overridden for Parse
   public float progress() {
     Freezable f = UKV.get(destination_key);

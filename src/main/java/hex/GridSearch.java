@@ -4,8 +4,8 @@ import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
 import hex.NeuralNet.NeuralNetProgress;
-import hex.gbm.GBM.GBMModel;
 import hex.drf.DRF.DRFModel;
+import hex.gbm.GBM.GBMModel;
 
 import java.util.*;
 
@@ -18,20 +18,43 @@ public class GridSearch extends Job {
 
   @Override protected Status exec() {
     UKV.put(destination_key, this);
-    int max = jobs[0].gridParallelism();
-    int head = 0, tail = 0;
-    while( head < jobs.length && !cancelled() ) {
-      if( tail - head < max && tail < jobs.length )
-        jobs[tail++].fork();
-      else {
-        try {
-          jobs[head++].get();
-        } catch( Exception e ) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
+    Job.schedule(jobs);
+    PollOnEachNode task = new PollOnEachNode();
+    task.invokeOnAllNodes();
     return Status.Done;
+  }
+
+  static class PollOnEachNode extends DRemoteTask {
+    static {
+      // TODO gather all recurring tasks in a single scheduled thread pool
+      Thread thread = new Thread() {
+        @Override public void run() {
+          Key current = null;
+          for( ;; ) {
+            try {
+              Thread.sleep(1000);
+            } catch( InterruptedException e ) {
+              throw new RuntimeException(e);
+            }
+            if( current == null || Job.cancelled(current) ) {
+              if( H2O.loQPoolSize() < 100 ) {
+                Job job = Job.startNextScheduled();
+                if( job != null )
+                  current = job.self();
+              }
+            }
+          }
+        }
+      };
+      thread.start();
+    }
+
+    @Override public void lcompute() {
+      // Do nothing, just load the class
+    }
+
+    @Override public void reduce(DRemoteTask drt) {
+    }
   }
 
   @Override protected void onCancelled() {
@@ -90,6 +113,10 @@ public class GridSearch extends Job {
 
         ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
         for( Job job : jobs ) {
+          // TODO store jobs in their own keys instead of a list
+          Job latest = Job.findJob(job.self());
+          if( latest != null )
+            job = latest;
           JobInfo info = new JobInfo();
           info._job = job;
           Object value = UKV.get(job.destination_key);
