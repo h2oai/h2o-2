@@ -6,7 +6,7 @@ options(echo=FALSE)
 SEARCHPATH <- NULL
 calcPath<-
 function(path, root) {
-    if (basename(path) == "h2o") {
+    if (basename(path) == "h2o" || "smalldata" %in% dir(path)) {
         print("[WARN]: Could not find the bucket that you specified! Checking R/*.")
         SEARCHPATH <<- path
         return(-1)

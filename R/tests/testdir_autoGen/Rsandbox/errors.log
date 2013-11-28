@@ -1,0 +1,13 @@
+[ERROR] :  	 message: Test failed: 'compoundFilterTest_ on data iris_wheader'
+Data must be an H2O data set
+1: complexFilterTest_iris_wheader_154(conn)
+2: !((hex[, c("sepal_wid")] == 3.64222873072) & (hex[, c("petal_len")] > 4.67514574916))
+3: !((hex[, c("sepal_wid")] == 3.64222873072) & (hex[, c("petal_len")] > 4.67514574916))
+4: h2o.__unop2("!", x)
+5: stop("Data must be an H2O data set")
+6: .handleSimpleError(function (e) 
+   {
+    e$calls <- head(sys.calls()[-seq_len(frame + 7)], -2)
+    signalCondition(e)
+}, "Data must be an H2O data set", quote(h2o.__unop2("!", x))), call:  
+
