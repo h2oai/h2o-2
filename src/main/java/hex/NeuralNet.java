@@ -438,21 +438,22 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
+      final String mse_format = "%2.6f";
       Job nn = job_key == null ? null : Job.findJob(job_key);
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
         String cmTitle = "Confusion Matrix", trainC, trainS, validC = "", validS = "";
         Error train = model.training_errors[model.training_errors.length - 1];
         trainC = format(train.classification);
-        trainS = "" + train.mean_square;
+        trainS = String.format(mse_format, train.mean_square);
         if( model.validation_errors != null ) {
           Error valid = model.validation_errors[model.validation_errors.length - 1];
           validC = format(valid.classification);
-          validS = "" + valid.mean_square;
+          validS = String.format(mse_format, valid.mean_square);
         } else
           cmTitle += " (Training Data)";
         DocGen.HTML.section(sb, "Training classification error: " + trainC);
-        DocGen.HTML.section(sb, "Training mean square error: " + trainS);
+        DocGen.HTML.section(sb, "Training mean square error: " + String.format(mse_format, train.mean_square));
         DocGen.HTML.section(sb, "Validation classification error: " + validC);
         DocGen.HTML.section(sb, "Validation mean square error: " + validS);
         if( nn != null ) {
@@ -474,14 +475,14 @@ public class NeuralNet extends ValidatedJob {
         sb.append("<th>Validation Classification</th>");
         sb.append("</tr>");
         Error[] trains = model.training_errors;
-        for( int i = 0; i < trains.length; ++i ) {
+        for( int i = trains.length - 1; i >=0; --i ) {
           sb.append("<tr>");
           sb.append("<td>" + PrettyPrint.msecs(trains[i].training_time_ms, true) + "</td>");
-          sb.append("<td>" + trains[i].training_samples + "</td>");
-          sb.append("<td>" + trains[i].mean_square + "</td>");
+          sb.append("<td>" + String.format("%,d", trains[i].training_samples) + "</td>");
+          sb.append("<td>" + String.format(mse_format, trains[i].mean_square) + "</td>");
           sb.append("<td>" + format(trains[i].classification) + "</td>");
           if( model.validation_errors != null ) {
-            sb.append("<td>" + model.validation_errors[i].mean_square + "</td>");
+            sb.append("<td>" + String.format(mse_format, model.validation_errors[i].mean_square) + "</td>");
             sb.append("<td>" + format(model.validation_errors[i].classification) + "</td>");
           } else
             sb.append("<td></td><td></td>");

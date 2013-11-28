@@ -302,6 +302,7 @@ public abstract class Model extends Iced {
     sb.p("class ").p(modelName).p(" extends water.Model.GeneratedModel {").nl();
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
+    toJavaDOMAINS(sb);
     toJavaInit(sb).nl();
     toJavaPredict(sb);
     sb.p(TOJAVA_MAP);
@@ -328,10 +329,31 @@ public abstract class Model extends Iced {
 
 
   private SB toJavaNAMES( SB sb ) {
-    return sb.p("  public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";\n");
+    sb.i(1).p("// Names of columns used by model.").nl();
+    return sb.i(1).p("public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";").nl();
   }
   private SB toJavaNCLASSES( SB sb ) {
-    return sb.p("  public static final int NCLASSES = ").p(nclasses()).p(";\n");
+    sb.i(1).p("// Number of output classes included in training data response column,").nl();
+    return sb.i(1).p("public static final int NCLASSES = ").p(nclasses()).p(";").nl();
+  }
+  private SB toJavaDOMAINS( SB sb ) {
+    sb.i(1).p("// Column domains. The last array contains domain of response column.").nl();
+    sb.i(1).p("public static final String[][] DOMAINS = new String[][] {").nl();
+    for (int i=0; i<_domains.length; i++) {
+      String[] dom = _domains[i];
+      if (dom==null) sb.i(2).p("null");
+      else {
+        sb.i(2).p("new String[] {");
+        for (int j=0; j<dom.length; j++) {
+          if (j>0) sb.p(',');
+          sb.p('"').p(dom[j]).p('"');
+        }
+        sb.p("}");
+      }
+      if (i!=_domains.length-1) sb.p(',');
+      sb.nl();
+    }
+    return sb.i(1).p("};").nl();
   }
   // Override in subclasses to provide some top-level model-specific goodness
   protected SB toJavaInit(SB sb) { return sb; };
@@ -399,8 +421,16 @@ public abstract class Model extends Iced {
   }
 
   public abstract static class GeneratedModel {
-    // Predict a row
+    /** Predict a given row */
     abstract public float[] predict( double data[], float preds[] );
+
+    /** Return a response class for classifier or null if the model is not classifier
+     * or domain is null. */
+    public String toResponseClass(float[] preds, String[] domain) {
+      if (domain==null) return null;    // Empty domain
+      if (preds.length==1) return null; // It is regression model
+      return domain[(int) preds[0]];
+    }
 
     // A simple helper to read a data from a file.
     public double[][] readData(String file, int ncols) throws IOException {
@@ -457,6 +487,12 @@ public abstract class Model extends Iced {
         System.out.print(sb.toString());
         sb.setLength(0);
       }
+    }
+    public static int maxIndex(float[] from, int start) {
+      int result = start;
+      for (int i = start; i<from.length; ++i)
+        if (from[i]>from[result]) result = i;
+      return result;
     }
   }
 }

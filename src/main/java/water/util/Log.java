@@ -332,17 +332,17 @@ public abstract class Log {
         p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
         p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
 
-	// Turn down the logging for some class hierarchies.
+        // Turn down the logging for some class hierarchies.
         p.setProperty("log4j.logger.org.apache.http", "WARN");
         p.setProperty("log4j.logger.com.amazonaws", "WARN");
         p.setProperty("log4j.logger.org.apache.hadoop", "WARN");
+        p.setProperty("log4j.logger.org.jets3t.service", "WARN");
 
         // See the following document for information about the pattern layout.
         // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
-	//
-	// Uncomment this line to find the source of unwanted messages.
+        //
+        //  Uncomment this line to find the source of unwanted messages.
         //     p.setProperty("log4j.appender.R.layout.ConversionPattern", "%p %C %m%n");
-	//
         p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
 
         PropertyConfigurator.configure(p);

@@ -25,12 +25,14 @@ fi
 #curl http://localhost:54321
 
 for test in $(ls */*.R | grep -v Utils)
+#for test in $(ls */*.R | grep -v Utils | grep auto | awk '{gsub(".R","",$0); print $0}')
 do
+    #echo "myR $test 45"
+    #continue
     echo "----------------------------------------------------------------------"
     echo "Starting $test"
     echo "----------------------------------------------------------------------"
     R -f $test 2>&1| tee results/${test}.out
-    exit 0
     RC=${PIPESTATUS[0]}
     echo exit code $RC
     if [ $RC -eq 0 ]; then
