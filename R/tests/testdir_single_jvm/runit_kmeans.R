@@ -29,6 +29,8 @@ test.km.benign <- function(conn) {
     benign.km <- kmeans(benign.data, centers = i)
     checkKMModel(benign.km.h2o, benign.km)
   }
+  Log.info("End of test.")
+  PASSS <<- TRUE
 }
 
 # Test k-means clustering on prostate.csv
@@ -51,11 +53,18 @@ test.km.prostate <- function(conn) {
     prostate.km = kmeans(prostate.data[,3], centers = i)
     checkKMModel(prostate.km.h2o, prostate.km)
   }
+  Log.info("End of test.")
+  PASSS <<- TRUE
 }
 
 conn <- new("H2OClient", ip=myIP, port=myPort)
+
+PASSS <- FALSE
 tryCatch("KMeans FVec", test.km.benign(conn), warning = function(w) WARN(w), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()
 
+PASSS <- FALSE
 tryCatch("KMeans FVec Test 2", test.km.prostate(conn), warning = function(w) WARN(w), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()

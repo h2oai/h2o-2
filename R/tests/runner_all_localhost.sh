@@ -10,21 +10,22 @@ function info {
     echo INFO: $@ >> results/info.log
 }
 
-#curl -s http://localhost:54321 1> /dev/null
-#if [ $? -ne 0 ]; then
-#    echo ERROR: could not find h2o at localhost:54321
-#    exit 1
-#fi
-#
-#mkdir results
-#if [ $? -ne 0 ]; then
-#    error "directory results already exists"
-#    exit 1
-#fi
+curl -s http://localhost:54321 1> /dev/null
+if [ $? -ne 0 ]; then
+    echo ERROR: could not find h2o at localhost:54321
+    exit 1
+fi
+
+mkdir results
+if [ $? -ne 0 ]; then
+    error "directory results already exists"
+    exit 1
+fi
 
 #curl http://localhost:54321
 
 for test in $(ls */*.R | grep -v Utils)
+#for test in $(ls */*.R | grep -v Utils | grep auto | awk '{gsub(".R","",$0); print $0}')
 do
     #echo "myR $test 45"
     #continue

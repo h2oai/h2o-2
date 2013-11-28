@@ -96,9 +96,13 @@ test.LiblineaR.airlines <- function(con) {
   yTest   <- aTest[,12]
   models  <- L1logistic(xTrain,yTrain,xTest,yTest,trainhex,testhex)
   compareCoefs(models[[1]], models[[2]])
+  Log.info("End of test.")
+  PASSS <<- TRUE
 }
 #options(digits=8)
 
+PASSS <- FALSE
 conn <- new("H2OClient", ip=myIP, port=myPort)
 tryCatch(test_that("LiblineaR Test Airlines", test.LiblineaR.airlines(conn)), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()
