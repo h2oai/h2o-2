@@ -20,8 +20,8 @@ h2o.__changeCommandLog <- function(path) {
     cmd <- paste(path, 'commands.log', sep='/') 
     assign("h2o.__LOG_COMMAND", cmd, envir = pkg.env)
     }
-h2o.__changeErrorLog   <- function(path) { 
-    cmd <- paste(path, 'errors.log', sep='/') 
+h2o.__changeErrorLog <- function(path) { 
+    cmd <- paste(path, 'errors.log', sep='/')
     assign("h2o.__LOG_ERROR", cmd, envir = pkg.env)
     }
 h2o.__startLogging     <- function() { assign("IS_LOGGING", TRUE, envir = pkg.env) }
@@ -39,15 +39,17 @@ h2o.__openErrLog <- function() {
 }
 
 h2o.__logIt<-
-function(url, tmp, commandOrErr) {
-  if(is.null(tmp)) s <- url
+function(m, tmp, commandOrErr) {
+  #m is a url if commandOrErr == "Command"
+  if(is.null(tmp)) s <- m
   else {
-  tmp <- get("tmp"); nams = names(tmp)
-  s <- rep(" ", length(tmp))
-  for(i in seq_along(tmp))
-    s[i] <- paste(nams[i], ": ", tmp[[i]], sep="")
-  s <- paste(url, '\t', paste(s, collapse=", "))
+    tmp <- get("tmp"); nams = names(tmp)
+    s <- rep(" ", length(tmp))
+    for(i in seq_along(tmp))
+      s[i] <- paste(nams[i], ": ", tmp[[i]], sep="")
+    s <- paste(m, ' \t', paste(s, collapse=", "))
   }
+  if (commandOrErr != "Command") s <- paste(s, '\n')
   write(s, file = ifelse(commandOrErr == "Command", pkg.env$h2o.__LOG_COMMAND, pkg.env$h2o.__LOG_ERROR), append = TRUE)
 }
 

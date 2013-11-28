@@ -6,16 +6,51 @@ import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h
 # only classes 1-7 in the 55th col
 
 # this sucks!
-ALLOWED_DELTA=3.0
+ALLOWED_DELTA=40
+DO_MULTINOMIAL=False
 paramDict = {
     'response': 'C54',
     'ntrees': 30,
     'max_depth': 30,
-    'nbins': 50,
+    'nbins': 100,
     # 'ignored_cols_by_name': "C1,C2,C6,C7,C8",
     'sample_rate': 0.66,
+    'classification': 1
     # 'mtries': 6, 
     }
+
+def createTestTrain(srcKey, trainDstKey, testDstKey, percent, outputClass, numCols):
+    # will have to live with random extract. will create variance
+    print "train: get random %. change class 4 to 1, everything else to 0. factor() to turn real to int (for rf)"
+
+
+    # Create complexity for no good reason!. Do the same thing 5 times in the single exec expressions
+    execExpr = ""
+    STUPID_REPEAT = 20
+    for i in range(STUPID_REPEAT):
+        execExpr += "a.hex=runif(%s);" % srcKey
+        execExpr += "%s=%s[a.hex%s,];" % (trainDstKey, srcKey, '<=0.9')
+        if not DO_MULTINOMIAL:
+            execExpr += "%s[,%s]=%s[,%s]==%s;" % (trainDstKey, numCols, trainDstKey, numCols, outputClass)
+            execExpr +=  "factor(%s[, %s]);" % (trainDstKey, numCols)
+
+    h2o_exec.exec_expr(None, execExpr, resultKey=trainDstKey, timeoutSecs=STUPID_REPEAT * 15)
+
+    inspect = h2o_cmd.runInspect(key=trainDstKey)
+    h2o_cmd.infoFromInspect(inspect, "%s after mungeDataset on %s" % (trainDstKey, srcKey) )
+
+    print "test: same, but use the same runif() random result, complement"
+
+    execExpr = "a.hex=runif(%s);" % srcKey
+    execExpr += "%s=%s[a.hex%s,];" % (testDstKey, srcKey, '>0.9')
+    if not DO_MULTINOMIAL:
+        execExpr += "%s[,%s]=%s[,%s]==%s;" % (testDstKey, numCols, testDstKey, numCols, outputClass)
+        execExpr +=  "factor(%s[, %s])" % (testDstKey, numCols)
+    h2o_exec.exec_expr(None, execExpr, resultKey=testDstKey, timeoutSecs=10)
+
+    inspect = h2o_cmd.runInspect(key=testDstKey)
+    h2o_cmd.infoFromInspect(inspect, "%s after mungeDataset on %s" % (testDstKey, srcKey) )
+
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -63,13 +98,6 @@ class Basic(unittest.TestCase):
         expectTrainPctRightList = [0, 85.16, 88.45, 90.24, 91.27, 92.03, 92.64, 93.11, 93.48, 93.79]
         expectScorePctRightList = [0, 88.81, 91.72, 93.06, 94.02, 94.52, 95.09, 95.41, 95.77, 95.78]
 
-        print "Creating the key of the last 10% data, for scoring"
-        dataKeyTest = "rTest.hex"
-        execExpr = "a.hex=runif(%s); " % hex_key + "%s=%s[a.hex>=%s,]; factor(%s[,%s])" % \
-            (dataKeyTest, parseResult['destination_key'], 0.9, parseResult['destination_key'], numCols )
-        h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
-        inspect = h2o_cmd.runInspect(key=dataKeyTest)
-
         # keep the 0 entry empty
         actualTrainPctRightList = [0]
         actualScorePctRightList = [0]
@@ -80,16 +108,12 @@ class Basic(unittest.TestCase):
             # Not using this now (did use it for slicing)
             rowsToUse = rowsForPct[trial%10] 
             resultKey = "r_" + csvFilename + "_" + str(trial)
-
-            # will have to live with random extract. will create variance
-            dataKeyTrain = 'rTrain.hex'
-            execExpr = "a.hex=runif(%s); " % hex_key + "%s=%s[a.hex<%s,]; factor(%s[, %s])" % \
-                (dataKeyTrain, parseResult['destination_key'], 0.9, parseResult['destination_key'], numCols)
-            h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=10)
-            inspect = h2o_cmd.runInspect(key=dataKeyTrain)
-            h2o_cmd.infoFromInspect(inspect, "going into RF")
             
-            sliceResult = {'destination_key': 'rTrain.hex'}
+            # just do random split for now
+            dataKeyTrain = 'rTrain.hex'
+            dataKeyTest = 'rTest.hex'
+            createTestTrain(hex_key, dataKeyTrain, dataKeyTest, percent=0.90, outputClass=4, numCols=numCols)
+            sliceResult = {'destination_key': dataKeyTrain}
 
             # adjust timeoutSecs with the number of trees
             kwargs = paramDict.copy()
@@ -117,10 +141,6 @@ class Basic(unittest.TestCase):
             used_trees = rf_model['N']
             data_key = rf_model['_dataKey']
             model_key = rf_model['_selfKey']
-
-            # double check the rows/cols
-            inspect = h2o_cmd.runInspect(key=dataKeyTest)
-            h2o_cmd.infoFromInspect(inspect, "dataKeyTest")
 
             rfvScoring = h2o_cmd.runRFView(None, dataKeyTest, model_key, used_trees,
                 timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
@@ -159,22 +179,29 @@ class Basic(unittest.TestCase):
         print "\nRun test iterations/compare with covtype.data"
         rfv1 = self.rf_covtype_train_oobe('covtype.data', checkExpectedResults=False)
         (ce1, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv1)
+        # since we created a binomial output class..look at the error rate for class 1
+        ce1pct1 = classErrorPctList[1]
 
         print "\nRun test iterations/compare with covtype.shuffled.data"
         rfv2 = self.rf_covtype_train_oobe('covtype.shuffled.data', checkExpectedResults=True)
         (ce2, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv2)
+        ce2pct1 = classErrorPctList[1]
 
         print "\nRun test iterations/compare with covtype.sorted.data"
         rfv3 = self.rf_covtype_train_oobe('covtype.sorted.data', checkExpectedResults=False)
         (ce3, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv3)
+        ce3pct1 = classErrorPctList[1]
 
         print "rfv3, from covtype.sorted.data"
         print "\nJsonDiff covtype.data rfv, to covtype.sorted.data rfv"
         df = h2o_util.JsonDiff(rfv1, rfv3, with_values=True)
         print "df.difference:", h2o.dump_json(df.difference)
 
-        self.assertAlmostEqual(ce1, ce2, delta=0.5, msg="classication error %s isn't close to that when sorted %s" % (ce1, ce2))
-        self.assertAlmostEqual(ce1, ce3, delta=0.5, msg="classication error %s isn't close to that when sorted %s" % (ce1, ce3))
+        self.assertAlmostEqual(ce1, ce2, delta=0.5, msg="classification error %s isn't close to that when sorted %s" % (ce1, ce2))
+        self.assertAlmostEqual(ce1, ce3, delta=0.5, msg="classification error %s isn't close to that when sorted %s" % (ce1, ce3))
+
+        self.assertAlmostEqual(ce1pct1, ce2pct1, delta=0.5, msg="classErrorPctList[1] %s isn't close to that when sorted %s" % (ce1pct1, ce2pct1))
+        self.assertAlmostEqual(ce1pct1, ce3pct1, delta=0.5, msg="classErrorPctList[1] %s isn't close to that when sorted %s" % (ce1pct1, ce3pct1))
 
 if __name__ == '__main__':
     h2o.unit_main()

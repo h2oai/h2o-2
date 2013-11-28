@@ -56,11 +56,14 @@ public class Exec2 {
     // Preload the global environment from existing Frames
     Env env = new Env();
     ArrayList<ASTId> global = new ArrayList<ASTId>();
-    for( Value v : H2O.values() )
-      if( v.type()==TypeMap.FRAME ) { // Add to parser's namespace
-        global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
-        env.push((Frame)v.get(),v._key.toString());
-      }
+    for( Value v : H2O.values() ) { // Add Frames to parser's namespace
+      Frame fr;
+      if( v.type()==TypeMap.VALUE_ARRAY ) fr = ValueArray.asFrame(v);
+      else if( v.type()==TypeMap.FRAME ) fr = (Frame)v.get();
+      else continue;
+      env.push(fr,v._key.toString());
+      global.add(new ASTId(Type.ARY,v._key.toString(),0,global.size()));
+    }
 
     // Some global constants
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);

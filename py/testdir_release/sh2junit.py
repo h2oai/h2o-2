@@ -20,8 +20,8 @@ def sandbox_tmp_file(prefix='', suffix=''):
     # os.open(path, 'a').close()
     # give everyone permission to read it (jenkins running as 
     # 0xcustomer needs to archive as jenkins
-    permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
-    os.chmod(path, permissions)
+    #permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+    os.chmod(path, 0644) #'644')  #permissions)
     return (fd, path)
 
 #**************************************************************************
@@ -78,9 +78,12 @@ def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
 
     # see if adding nosetests makes michal's stuff pick it up??
     # and "test_" prefix"
-    f = open('./test_' + name + '.nosetests.xml', 'w')
-    f.write(content)
-    f.close()
+    x = './test_' + os.path.basename(name) + '.nosetests.xml'
+    with open(x, 'wb') as f:
+        f.write(content)
+    #f = open(x, 'w')
+    #f.write(content)
+    #f.close()
 
 #**************************************************************************
 # belt and suspenders. Do we really need to worry about this?

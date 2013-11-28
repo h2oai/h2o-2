@@ -1,4 +1,4 @@
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
 Log.info("======================== Begin Test ===========================\n")
 
@@ -18,9 +18,7 @@ checkPCAModel <- function(myPCA.h2o, myPCA.r, toleq = 1e-5) {
 
 test.PCA.arrests <- function(conn) {
   Log.info("Importing USArrests.csv data...\n")
-  # arrests.hex = h2o.importURL(conn, "https..//raw.github.com/0xdata/h2o/master/smalldata/pca_test/USArrests.csv")
-  # arrests.hex = h2o.importFile(conn, normalizePath("../../../smalldata/pca_test/USArrests.csv"))
-  arrests.hex = h2o.uploadFile(conn, "../../../smalldata/pca_test/USArrests.csv", "arrests.hex")
+  arrests.hex = h2o.uploadFile(conn, locate("smalldata/pca_test/USArrests.csv"), "arrests.hex")
   arrests.sum = summary(arrests.hex)
   print(arrests.sum)
   
@@ -35,13 +33,15 @@ test.PCA.arrests <- function(conn) {
   print(arrests.pca.h2o.std)
   arrests.pca.std = prcomp(USArrests, center = TRUE, scale. = TRUE, retx = TRUE)
   checkPCAModel(arrests.pca.h2o.std, arrests.pca.std)
+  Log.info("End of test")
+  PASSS <<- TRUE
+
 }
 
 test.PCA.australia <- function(conn) {
   Log.info("Importing AustraliaCoast.csv data...\n")
-  australia.data = read.csv("../../../smalldata/pca_test/AustraliaCoast.csv", header = TRUE)
-  # australia.hex = h2o.importFile(conn, normalizePath("../../../smalldata/pca_test/AustraliaCoast.csv"))
-  australia.hex = h2o.uploadFile(conn, "../../../smalldata/pca_test/AustraliaCoast.csv")
+  australia.data = read.csv(locate("smalldata/pca_test/AustraliaCoast.csv"), header = TRUE)
+  australia.hex = h2o.uploadFile(conn, locate( "smalldata/pca_test/AustraliaCoast.csv",))
   australia.sum = summary(australia.hex)
   print(australia.sum)
   
@@ -56,11 +56,18 @@ test.PCA.australia <- function(conn) {
   print(australia.pca.h2o.std)
   australia.pca.std = prcomp(australia.data, center = TRUE, scale. = TRUE, retx = TRUE)
   checkPCAModel(australia.pca.h2o.std, australia.pca.std)
+  Log.info("End of test")
+  PASSS <<- TRUE
 }
 
 conn = new("H2OClient", ip=myIP, port=myPort)
 
-tryCatch(test_that("PCA Test: USArrests", test.PCA.arrests(conn)), error = function(e) FAIL(e))
+PASSS <- FALSE
+tryCatch(test_that("PCA Test: USArrests", test.PCA.arrests(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()
-tryCatch(test_that("PCA Test: Australia", test.PCA.australia(conn)), error = function(e) FAIL(e))
+
+PASSS <- FALSE
+tryCatch(test_that("PCA Test: Australia", test.PCA.australia(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()

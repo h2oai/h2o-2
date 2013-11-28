@@ -507,6 +507,17 @@ public class ParserTest2 extends TestUtil {
 //    Key r1 = Key.make("single_quotes_test");
 //    ParseDataset2.parse(r1, new Key[]{k},gSetup);
 //  }
+  @Test public void testSingleQuotes() {
+    Key k = Key.make("q.hex");
+    try {
+      Frame fr = TestUtil.parseFrame(k,"smalldata/test/test_quote.csv");
+      Assert.assertEquals(fr.numCols(),11);
+      Assert.assertEquals(fr.numRows(), 7);
+    } finally {
+      UKV.remove(k);
+    }
+  }
+
   @Test public void testSVMLight() {
     String[] data = new String[] {
         "1 2:.2 5:.5 9:.9\n",

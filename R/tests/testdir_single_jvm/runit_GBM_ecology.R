@@ -1,6 +1,7 @@
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
 Log.info("======================== Begin Test ===========================\n")
+
 grabRemote <- function(myURL, myFile) {
   temp <- tempfile()
   download.file(myURL, temp, method = "curl")
@@ -9,10 +10,36 @@ grabRemote <- function(myURL, myFile) {
   return(aap.file)
 }
 
+Log.info("==============================")
+Log.info("H2O GBM Params: ")
+Log.info("x = 3:13")
+Log.info("y = Angaus")
+Log.info("data = ecology.hex,")
+Log.info("n.trees = 100") 
+Log.info("interaction.depth = 5")
+Log.info("n.minobsinnode = 10") 
+Log.info("shrinkage = 0.1")
+Log.info("==============================")
+Log.info("==============================")
+Log.info("R GBM Params: ")
+Log.info("Formula: Angaus ~ ., data = ecology.data[,-1]")
+Log.info("distribution =  gaussian")
+Log.info("ntrees = 100")
+Log.info("interaction.depth = 5")
+Log.info("n.minobsinnode = 10")
+Log.info("shrinkage = 0.1")
+Log.info("bag.fraction = 1")
+Log.info("==============================")
+n.trees <- 100
+interaction.depth <- 5
+n.minobsinnode <- 10
+shrinkage <- 1
+
 checkGBMModel <- function(myGBM.h2o, myGBM.r,conn) {
   # Check GBM model against R
   Log.info("MSE by tree in H2O:")
   print(myGBM.h2o@model$err)
+  expect_true(length(myGBM.h2o@model$err) == n.trees) #100 is ntrees
   Log.info("Gaussian Deviance by tree in R (i.e. the per tree 'train error'): \n")
   print(myGBM.r$train.error)
   Log.info("Expect these to be close... mean of the absolute differences is < .5, and sd < 0.1")
@@ -26,8 +53,8 @@ checkGBMModel <- function(myGBM.h2o, myGBM.r,conn) {
  
   # Compare GBM models on out-of-sample data
   Log.info("Uploading ecology testing data...\n")
-  ecologyTest.hex <- h2o.uploadFile(conn, "../../../smalldata/gbm_test/ecology_eval.csv")
-  ecologyTest.data <- read.csv("../../../smalldata/gbm_test/ecology_eval.csv")
+  ecologyTest.hex <- h2o.uploadFile(conn, locate("smalldata/gbm_test/ecology_eval.csv"))
+  ecologyTest.data <- read.csv(locate("smalldata/gbm_test/ecology_eval.csv"))
   actual <- ecologyTest.data[,1]
   Log.info("Performing the predictions on h2o GBM model: ")
   #TODO: Building CM in R instead of in H2O
@@ -50,18 +77,28 @@ checkGBMModel <- function(myGBM.h2o, myGBM.r,conn) {
 
 test.GBM.ecology <- function(conn) {
   Log.info("Importing ecology_model.csv data...\n")
-  ecology.hex = h2o.uploadFile(conn, "../../../smalldata/gbm_test/ecology_model.csv")
+  print("=============================")
+  print(locate("smalldata/gbm_test/ecology_model.csv"))
+  print("=============================")
+  ecology.hex = h2o.uploadFile(conn, locate("smalldata/gbm_test/ecology_model.csv", schema="put"))
   ecology.sum = summary(ecology.hex)
   Log.info("Summary of the ecology data from h2o: \n") 
   print(ecology.sum)
   
   #import csv data for R to use
-  ecology.data = read.csv("../../../smalldata/gbm_test/ecology_model.csv", header = TRUE)
+  ecology.data = read.csv(locate("smalldata/gbm_test/ecology_model.csv"), header = TRUE)
   ecology.data = na.omit(ecology.data) #this omits NAs... does GBM do this? Perhaps better to model w/o doing this?
   
   Log.info("H2O GBM with parameters:\nntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1\n")
   #Train H2O GBM Model:
-  ecology.h2o = h2o.gbm(x = 3:13, y = "Angaus", data = ecology.hex, n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
+  ecology.h2o = h2o.gbm(x = 3:13, 
+                        y = "Angaus", 
+                     data = ecology.hex, 
+                  n.trees = 100, 
+        interaction.depth = 5, 
+           n.minobsinnode = 10, 
+                shrinkage = 0.1)
+
   print(ecology.h2o)
   
   #Train R GBM Model: Using Gaussian loss function for binary outcome OK... Also more comparable to H2O, which uses MSE
@@ -73,6 +110,8 @@ test.GBM.ecology <- function(conn) {
                   bag.fraction=1)
 
   checkGBMModel(ecology.h2o, ecology.r, conn)
+  Log.info("End of test.")
+  PASSS <<- TRUE
 }
 
 test.GBM.airlines <- function() {
@@ -90,7 +129,8 @@ test.GBM.airlines <- function() {
   # allyears.x = subset(allyears.x, select = -ignoreNum)
   # allyears.gbm = gbm.fit(y = allyears.data$IsArrDelayed, x = allyears.x, distribution = "bernoulli", n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
 }
-
+PASSS <- FALSE
 conn = new("H2OClient", ip=myIP, port=myPort)
-tryCatch(test_that("GBM Test: Ecology", test.GBM.ecology(conn)), error = function(e) FAIL(e))
+tryCatch(test_that("GBM Test: Ecology", test.GBM.ecology(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()

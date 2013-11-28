@@ -11,9 +11,9 @@ public class Expr2Test extends TestUtil {
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
-      //File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
+      File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
       //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
-      File file = TestUtil.find_test_file("smalldata/cars.csv");
+      //File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);

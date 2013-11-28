@@ -3,12 +3,10 @@ package water.fvec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
 import water.nbhm.NonBlockingHashMap;
@@ -35,6 +33,7 @@ public final class ParseDataset2 extends Job {
     byte [] bits = v.elem2BV(0).getBytes();
     Compression cpr = Utils.guessCompressionMethod(bits);
     globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
+    if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
     return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
   // Same parse, as a backgroundable Job
