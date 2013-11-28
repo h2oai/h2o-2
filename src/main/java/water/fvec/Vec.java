@@ -598,6 +598,7 @@ public class Vec extends Iced {
     final int _nclass;
     final int _ymin;
     byte _dom[];
+
     public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
     @Override public void map(Chunk ys) {
       _dom = new byte[_nclass];

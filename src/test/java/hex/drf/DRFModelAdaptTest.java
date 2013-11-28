@@ -8,6 +8,7 @@ import org.junit.*;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Utils;
 
 public class DRFModelAdaptTest extends TestUtil {
 
@@ -67,6 +68,23 @@ public class DRFModelAdaptTest extends TestUtil {
         "./smalldata/test/classifier/coldom_test_3.csv",
         new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } },
         false);
+  }
+
+  static final int[]   a(int ...arr)   { return arr; }
+
+  @Test public void testBasics_1() {
+    // Simple domain mapping
+    Assert.assertArrayEquals( a(0, 1, 2, 3),      Utils.mapping(a( 0, 1, 2, 3)));
+    Assert.assertArrayEquals( a(0, 1, 2, -1, 3),  Utils.mapping(a( 0, 1, 2, 4)));
+    Assert.assertArrayEquals( a(0, -1, 1),        Utils.mapping(a(-1, 1)));
+    Assert.assertArrayEquals( a(0, -1, 1, -1, 2), Utils.mapping(a(-1, 1, 3)));
+  }
+
+  @Test public void testBasics_2() {
+    Assert.assertArrayEquals( a(2, 30, 400, 5000),      Utils.compose(Utils.mapping(a( 0, 1, 2, 3)), a(2,30,400,5000) ));
+    Assert.assertArrayEquals( a(2, 30, 400, -1, 5000),  Utils.compose(Utils.mapping(a( 0, 1, 2, 4)), a(2,30,400,5000) ));
+    Assert.assertArrayEquals( a(2, -1, 30),             Utils.compose(Utils.mapping(a(-1, 1)),       a(2,30,400,5000) ));
+    Assert.assertArrayEquals( a(2, -1, 30, -1, 400),    Utils.compose(Utils.mapping(a(-1, 1, 3)),    a(2,30,400,5000) ));
   }
 
   void testModelAdaptation(String train, String test, PrepData dprep, boolean exactAdaptation) {
