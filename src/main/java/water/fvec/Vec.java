@@ -597,19 +597,19 @@ public class Vec extends Iced {
   public static class CollectDomain extends MRTask2<CollectDomain> {
     final int _nclass;
     final int _ymin;
-    byte _dom[];
+    byte _dom[]; // Shared between all instances of this tasks since each instance is doing a simple write.
+
+    @Override protected void setupLocal() { _dom = new byte[_nclass]; }
 
     public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
     @Override public void map(Chunk ys) {
-      _dom = new byte[_nclass];
       int ycls=0;
       for( int row=0; row<ys._len; row++ ) {
         if (ys.isNA0(row)) continue;
         ycls = (int)ys.at80(row)-_ymin;
-        _dom[ycls] = 1;
+        _dom[ycls] = 1; // Only write to shared array
       }
     }
-    @Override public void reduce( CollectDomain that ) { Utils.or(_dom,that._dom); }
 
     /** Returns exact numeric domain of given vector computed by this task.
      * The domain is always sorted. Hence:
