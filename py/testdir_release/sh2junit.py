@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import sys, psutil, os, stat, tempfile, argparse, time
+from os import *
 sys.path.extend(['.','..','../..','py'])
 import h2o_sandbox
 
@@ -78,7 +79,7 @@ def create_junit_xml(name, out, err, sandboxErrorMessage, errors=0, elapsed=0):
 
     # see if adding nosetests makes michal's stuff pick it up??
     # and "test_" prefix"
-    f = open('./test_' + name + '.nosetests.xml', 'w')
+    f = open('./test_' + os.path.basename(name) + '.nosetests.xml', 'w')
     f.write(content)
     f.close()
 
