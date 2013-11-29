@@ -44,6 +44,7 @@ function(m) {
 Log.err<-
 function(m) {
   logging(paste("[ERROR] : ",m,sep=""))
+  logging("[ERROR] : TEST FAILED")
   #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
   #m <- paste('[',temp[1], ' ',temp[2],']', '\t', m)
   h2o.__logIt("[ERROR] :", m, "Error")
@@ -65,6 +66,9 @@ function() {
   cat("#       #######       #       # \n")
   cat("#       #     # #     # #     # \n")
   cat("#       #     #  #####   #####  \n")
+
+  Log.info("TEST PASSED")
+  q("no",0,FALSE)
 }
 
 FAIL<-

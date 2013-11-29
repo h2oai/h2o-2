@@ -7,7 +7,7 @@ SEARCHPATH <- NULL
 calcPath<-
 function(path, root) {
     if (basename(path) == "h2o" || "smalldata" %in% dir(path)) {
-        print("[WARN]: Could not find the bucket that you specified! Checking R/*.")
+        print("[INFO]: Could not find the bucket that you specified! Checking R/*. Will fail if cannot find")
         SEARCHPATH <<- path
         return(-1)
     }
@@ -32,7 +32,6 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
     if(!is.null(bucket)) {
         if(is.null(path)) stop("\"path\" must be specified along with bucket. Path is the bucket offset.")
         bucket <- gsub("[./]","",bucket)
-        cat("ALTERED BUCKET: ", bucket)
         path   <- ifelse(substring(path,1,1) == '/', substring(path,2), path)
         path   <- ifelse(substring(path,nchar(path)) == '/', substring(path,1,nchar(path)-1),path)
         if (schema == "local") return(paste("./",bucket,"/",path,sep = ""))
@@ -41,11 +40,8 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
             if (distance.bucket.root < 0) {
                 Log.err(paste("Could not find bucket ", bucket, "\n"))
             }
-            cat("\n IS MY BUCKET HERE?? :", bucket)
             bucket.dots <- genDots(distance.bucket.root)
             fullPath <- paste(bucket.dots,bucket,'/',path,sep="")
-            print("PATH BEING USED: ")
-            print(fullPath)
             return(fullPath)
         }
         if (schema == "S3") stop("Unimpl")
@@ -59,8 +55,7 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         psplit <- strsplit(dataName, "/")[[1]]
         bucket <- psplit[1]
         path   <- paste(psplit[-1], bn, collapse="/", sep = "/")
-        print("FETCHING BUCKET AND DATA")
-        cat("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema) 
+        Log.info("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema) 
         return(locate(bucket = bucket, path = path, schema = schema))
     }
 }

@@ -15,7 +15,7 @@ def genTasks():
     
     for FU in ['[','<','<=','>','>=','==','!=',makeCompound(1),makeCompound(2)]: #,makeCompound(3),makeCompound(4)]:
         achoice = None
-        for i in sample(range(len(data['datasets'])), 20): 
+        for i in sample(range(len(data['datasets'])), 10): 
         #[choice(range(len(data['datasets']))) for i in range(60)]:
         #for i in range(len(data['datasets'])):
             cnt = achoice
