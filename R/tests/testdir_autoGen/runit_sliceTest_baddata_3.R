@@ -13,7 +13,7 @@
                 slicedHex <- hex[c(1),c(1)]
                     Log.info("Performing a 1-by-1 column slice of baddata using these columns: ")
                     Log.info("Performing a 1-by-1 row slice of baddata using these rows: ")
-            Log.inf("End of test")
+            Log.info("End of test")
             PASSS <<- TRUE
             }
             PASSS <- FALSE

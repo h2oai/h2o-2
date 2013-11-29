@@ -15,7 +15,7 @@
                 slicedHex <- hex[c(38,20,48,33,47,1,5,4),c(1,5,7,6)]
                     Log.info("Performing a 1-by-1 column slice of prostate_3 using these columns: ")
                     Log.info("Performing a 1-by-1 row slice of prostate_3 using these rows: ")
-            Log.inf("End of test")
+            Log.info("End of test")
             PASSS <<- TRUE
             }
             PASSS <- FALSE

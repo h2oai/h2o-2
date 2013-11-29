@@ -11,7 +11,7 @@
                 hex <- h2o.uploadFile(conn, locate("../../smalldata/parse_folder_test/prostate_6.csv"), "rprostate_6.hex")
                     Log.info("Performing a 1-by-1 column slice of prostate_6 using these columns: ")
                     Log.info("Performing a 1-by-1 row slice of prostate_6 using these rows: ")
-            Log.inf("End of test")
+            Log.info("End of test")
             PASSS <<- TRUE
             }
             PASSS <- FALSE

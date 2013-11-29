@@ -13,7 +13,7 @@
                 slicedHex <- hex[c(6,155,213,210,147,313,336,454,332,390,110,83,234,495,236,251,119,399,493,304,157,22,264,41,289,159,180,404,403,36,343,283,365,349,200,203,339,33,331,441,325,136,463,261,74,385,71,488,164,389,94,221,2,424,39,55,18,57,122,284,472,415,259,477,438,439,297,294,432,433,431),c("ultraviolet (double)","declination (float)","objectid (long)","z (double)","red (double)")]
                     Log.info("Performing a 1-by-1 column slice of sdss174052 using these columns: ")
                     Log.info("Performing a 1-by-1 row slice of sdss174052 using these rows: ")
-            Log.inf("End of test")
+            Log.info("End of test")
             PASSS <<- TRUE
             }
             PASSS <- FALSE

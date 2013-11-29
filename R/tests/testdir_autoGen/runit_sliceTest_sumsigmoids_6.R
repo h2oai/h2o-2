@@ -15,7 +15,7 @@
                 slicedHex <- hex[c(30,37,36,60,82,62,63,64,68,83,80,84,85,24,26,20,22,23,43,2,14,9,77,74,71,91,15,79,78,11,59,58,17,33,32,57,49,51,50,53,52,18,31),c("X.2")]
                     Log.info("Performing a 1-by-1 column slice of sumsigmoids using these columns: ")
                     Log.info("Performing a 1-by-1 row slice of sumsigmoids using these rows: ")
-            Log.inf("End of test")
+            Log.info("End of test")
             PASSS <<- TRUE
             }
             PASSS <- FALSE
