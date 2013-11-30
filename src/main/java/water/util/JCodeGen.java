@@ -24,6 +24,10 @@ public class JCodeGen {
   }
 
   public static SB toStaticVar(SB sb, String varname, int value) {
+    return toStaticVar(sb, varname, value,null);
+  }
+  public static SB toStaticVar(SB sb, String varname, int value, String comment) {
+    if (comment!=null) sb.i().p("// ").p(comment).nl();
     return sb.i().p("public static final int ").p(varname).p(" = ").p(value).p(';').nl();
   }
 

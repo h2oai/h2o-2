@@ -1,4 +1,14 @@
-source('../Utils/h2oR.R')
+##
+# Test tail of a data frame, check right result with R
+# Author: Spencer
+# Written under H2O git-hash: f983f28b1d07987105f122415768eb95f8c22f6a
+##
+# AutoGen meta:
+# SEED: 
+# task:
+##
+
+source('./findNSourceUtils.R')
 
 Log.info("======================== Begin Test ===========================")
 view_max <- 10000 #maximum returned by Inspect.java
@@ -6,7 +16,7 @@ view_max <- 10000 #maximum returned by Inspect.java
 
 test.tail.numeric <- function(conn) {
   Log.info("Importing USArrests.csv data...")
-  arrests.hex = h2o.importFile.VA(conn, "../smalldata/pca_test/USArrests.csv", "arrests.hex")
+  arrests.hex = h2o.importFile.VA(conn, locate("smalldata/pca_test/USArrests.csv", schema = "local"), "arrests.hex")
   
   Log.info("Check that tail works...")
   tail(arrests.hex)
@@ -31,10 +41,12 @@ test.tail.numeric <- function(conn) {
     tail_max <- tail(arrests.hex,nrow(arrests.hex) + 1)
   }
   Log.info("End of test.")
+  PASSS <<- TRUE
 }
 
 conn <- new("H2OClient", ip=myIP, port=myPort)
+PASSS <- FALSE
+tryCatch(test_that("tailTests",test.tail.numeric(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
 
-tryCatch(test_that("tailTests",test.tail.numeric(conn)), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()
-

@@ -323,6 +323,10 @@ public class Utils {
     for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
     return a;
   }
+  public static int[] or(int[] a, int[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
+    return a;
+  }
   public static byte[] add(byte[] a, byte[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
@@ -737,12 +741,16 @@ public class Utils {
   }
 
   /** Returns a mapping of given domain to values (0, ... max(dom)).
-   * Unused domain items has mapping to -1. */
+   * Unused domain items has mapping to -1.
+   * @precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
   public static int[] mapping(int[] dom) {
+    assert dom.length > 0 : "Empty domain!";
+    assert dom[0] <= dom[dom.length-1] : "Domain is not sorted";
+    int min = dom[0];
     int max = dom[dom.length-1];
-    int[] result = new int[max+1];
+    int[] result = new int[(max-min)+1];
     for (int i=0; i<result.length; i++) result[i] = -1; // not used fields
-    for (int i=0; i<dom.length; i++) result[dom[i]] = i;
+    for (int i=0; i<dom.length; i++) result[dom[i]-min] = i;
     return result;
   }
   public static String[] toStringMap(int[] dom) {

@@ -843,14 +843,9 @@ public class DTree extends Iced {
 
     @Override protected SB toJavaInit(SB sb) {
       sb.ii(1);
-      JCodeGen.toStaticVar(sb, "NTREES", numTrees());
-      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses());
+      JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
+      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       String modelName = JCodeGen.toJavaId(_selfKey.toString());
-      // -- DEBUG CODE
-      // -- Frame fr = UKV.get(_dataKey);
-      // -- JCodeGen.toStaticVar(sb, fr.subframe(_names), "DATA", (int) Math.min(100, fr.numRows()));
-      // -- END of DEBUG CODE
-      JCodeGen.toStaticVar(sb, null, "DATA", 0);
       // Generate main method
       sb.i().p("public static void main(String[] args) throws Exception {").nl();
       sb.i(1).p("if (args.length!=2) { System.err.println(\"Command line should include <num of iterations> <path to datafile>\"); System.exit(1); }").nl();
@@ -888,6 +883,8 @@ public class DTree extends Iced {
         treesInForest = 0;
       }
       afterBodySb.p(forest);
+      // Pick max index as a prediction
+      sb.i().p("preds[0] = water.Model.GeneratedModel.maxIndex(preds,1);");
     }
 
     private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {

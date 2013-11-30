@@ -1,44 +1,55 @@
 options(echo=FALSE)
 
-read.zip <- function(zipfile, exdir,header=T) {
-    zipdir <- exdir
-    unzip(zipfile, exdir=zipdir)
-    files <- list.files(zipdir)
-    file <- paste(zipdir, files[1], sep="/")
-    read.csv(file,header=header)
+read.zip<- 
+function(zipfile, exdir,header=T) {
+  zipdir <- exdir
+  unzip(zipfile, exdir=zipdir)
+  files <- list.files(zipdir)
+  file <- paste(zipdir, files[1], sep="/")
+  read.csv(file,header=header)
 }
 
-remove_exdir <- function(exdir) {
-    exec <- paste("rm -r ", exdir, sep="")
-    system(exec)
+remove_exdir<- 
+function(exdir) {
+  exec <- paste("rm -r ", exdir, sep="")
+  system(exec)
 }
 
 sandbox<-
 function() {
- unlink("./sandbox", TRUE)
- dir.create("./sandbox")
- h2o.__LOG_COMMAND <- "./sandbox/"
- h2o.__LOG_ERROR     <- "./sandbox/"
- h2o.__changeCommandLog(normalizePath(h2o.__LOG_COMMAND))
- h2o.__changeErrorLog(normalizePath(h2o.__LOG_ERROR))
- h2o.__startLogging()
+  unlink("./Rsandbox", TRUE)
+  dir.create("./Rsandbox")
+  h2o.__LOG_COMMAND <- "./Rsandbox/"
+  h2o.__LOG_ERROR   <- "./Rsandbox/"
+  h2o.__changeCommandLog(normalizePath(h2o.__LOG_COMMAND))
+  h2o.__changeErrorLog(normalizePath(h2o.__LOG_ERROR))
+  h2o.__startLogging()
 }
 
 Log.info<-
 function(m) {
- message <- paste("[INFO]: ",m, sep="")
- logging(message)
+  message <- paste("[INFO]: ",m, sep="")
+  logging(message)
 }
 
 Log.warn<-
 function(m) {
- logging(paste("[WARN] : ",m,sep=""))
+  logging(paste("[WARN] : ",m,sep=""))
+  #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
+  #m <- paste('[',temp[1], ' ',temp[2],']', '\t', m)
+  h2o.__logIt("[WARN] :", m, "Error")
+  traceback()
 }
 
 Log.err<-
 function(m) {
- logging(paste("[ERROR] : ",m,sep=""))
- q("no",1,FALSE) #exit with nonzero exit code
+  logging(paste("[ERROR] : ",m,sep=""))
+  logging("[ERROR] : TEST FAILED")
+  #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
+  #m <- paste('[',temp[1], ' ',temp[2],']', '\t', m)
+  h2o.__logIt("[ERROR] :", m, "Error")
+  traceback()
+  q("no",1,FALSE) #exit with nonzero exit code
 }
 
 logging<- 
@@ -46,29 +57,37 @@ function(m) {
   cat(sprintf("[%s] %s\n", Sys.time(),m))
 }
 
-PASS <- 
+PASS<- 
 function() {
-cat("######     #     #####   #####  \n")
-cat("#     #   # #   #     # #     # \n")
-cat("#     #  #   #  #       #       \n")
-cat("######  #     #  #####   #####  \n")
-cat("#       #######       #       # \n")
-cat("#       #     # #     # #     # \n")
-cat("#       #     #  #####   #####  \n")
+  cat("######     #     #####   #####  \n")
+  cat("#     #   # #   #     # #     # \n")
+  cat("#     #  #   #  #       #       \n")
+  cat("######  #     #  #####   #####  \n")
+  cat("#       #######       #       # \n")
+  cat("#       #     # #     # #     # \n")
+  cat("#       #     #  #####   #####  \n")
+
+  Log.info("TEST PASSED")
+  q("no",0,FALSE)
 }
 
-FAIL <-
+FAIL<-
 function(e) {
-cat("")
-cat("########    ###    #### ##       \n")
-cat("##         ## ##    ##  ##       \n")
-cat("##        ##   ##   ##  ##       \n")
-cat("######   ##     ##  ##  ##       \n")
-cat("##       #########  ##  ##       \n")
-cat("##       ##     ##  ##  ##       \n")
-cat("##       ##     ## #### ########\n")
+  cat("")
+  cat("########    ###    #### ##       \n")
+  cat("##         ## ##    ##  ##       \n")
+  cat("##        ##   ##   ##  ##       \n")
+  cat("######   ##     ##  ##  ##       \n")
+  cat("##       #########  ##  ##       \n")
+  cat("##       ##     ##  ##  ##       \n")
+  cat("##       ##     ## #### ######## \n")
+  
+  Log.err(e)
+}
 
-Log.err(e)
+WARN<-
+function(w) {
+  Log.warn(w)
 }
 
 get_args<-
@@ -92,7 +111,7 @@ function(args) {
 
 checkNLoadWrapper<-
 function(ipPort) {
-  logging("\nCheck if H2O R wrapper package is installed\n")
+  Log.info("Check if H2O R wrapper package is installed\n")
   if (!"h2o" %in% rownames(installed.packages())) {
     envPath  = Sys.getenv("H2OWrapperDir")
     wrapDir  = ifelse(envPath == "", defaultPath, envPath)
@@ -105,23 +124,23 @@ function(ipPort) {
     install.packages(wrapPath, repos = NULL, type = "source")
   }
 
-  logging("\nCheck that H2O R package matches version on server\n")
+  Log.info("Check that H2O R package matches version on server\n")
   library(h2o)
   h2o.installDepPkgs()      # Install R package dependencies
   h2o.init(ip            = ipPort[[1]], 
            port          = ipPort[[2]], 
            startH2O      = FALSE, 
            silentUpgrade = TRUE)
-  source("../../h2oRClient-package/R/Algorithms.R")
-  source("../../h2oRClient-package/R/Classes.R")
-  source("../../h2oRClient-package/R/ParseImport.R")
-  source("../../h2oRClient-package/R/Internal.R")
-  sandbox()
+  #source("../../h2oRClient-package/R/Algorithms.R")
+  #source("../../h2oRClient-package/R/Classes.R")
+  #source("../../h2oRClient-package/R/ParseImport.R")
+  #source("../../h2oRClient-package/R/Internal.R")
+  #sandbox()
 }
 
 checkNLoadPackages<-
 function() {
-  logging("\nChecking Package dependencies for this test.\n")
+  Log.info("Checking Package dependencies for this test.\n")
   if (!"RUnit"    %in% rownames(installed.packages())) install.packages("RUnit")
   if (!"testthat" %in% rownames(installed.packages())) install.packages("testthat")
   
@@ -145,7 +164,7 @@ function(object) {
   h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
 }
 
-logging("\nLoading other required test packages")
+Log.info("Loading other required test packages")
 if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
 if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
 require(glmnet)

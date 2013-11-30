@@ -1,6 +1,7 @@
 package hex.gram;
 
 import hex.FrameTask;
+import hex.glm.LSMSolver.LSMSolverException;
 import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 
 import java.util.Arrays;
@@ -32,14 +33,32 @@ public final class Gram extends Iced {
       _xx[i] = MemoryManager.malloc8d(diag + i + 1);
   }
 
-  public void addDiag(double d) {addDiag(d,!_hasIntercept);}
+  public Gram(Gram g){
+    _diagN = g._diagN;
+    _denseN = g._denseN;
+    _fullN = g._fullN;
+    _hasIntercept = g._hasIntercept;
+    if(g._diag != null)_diag = g._diag.clone();
+    if(g._xx != null){
+      _xx = g._xx.clone();
+      for(int i = 0; i < _xx.length; ++i)
+        _xx[i] = _xx[i].clone();
+    }
+  }
+
+  public double _diagAdded;
+  public void addDiag(double d) {addDiag(d,false);}
   public void addDiag(double d, boolean add2Intercept) {
+    _diagAdded += d;
     for( int i = 0; i < _diag.length; ++i )
       _diag[i] += d;
-    int ii = (_hasIntercept && add2Intercept)?0:1;
+    int ii = (!_hasIntercept || add2Intercept)?0:1;
     for( int i = 0; i < _xx.length - ii; ++i )
       _xx[i][_xx[i].length - 1] += d;
   }
+
+  @Override
+  public Gram clone(){return new Gram(this);}
   public String toString(){
     if(_fullN >= 1000){
       if(_denseN >= 1000) return "Gram(" + _fullN + ")";

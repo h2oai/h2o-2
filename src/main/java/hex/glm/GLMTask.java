@@ -1,6 +1,7 @@
 package hex.glm;
 
 import hex.FrameTask;
+import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
 import water.Job;
@@ -39,18 +40,28 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
   static class YMUTask extends FrameTask<YMUTask>{
     private long   _nobs;
     protected double _ymu;
-
-    public YMUTask(Job job, DataInfo dinfo) {this(job,dinfo,null);}
-    public YMUTask(Job job, DataInfo dinfo, H2OCountedCompleter cmp) {
+    public double _ymin = Double.POSITIVE_INFINITY;
+    public double _ymax = Double.NEGATIVE_INFINITY;
+    final CaseMode _caseMode;
+    final double _caseVal;
+    public YMUTask(Job job, DataInfo dinfo, CaseMode cm, double caseVal) {this(job,dinfo,cm, caseVal,null);}
+    public YMUTask(Job job, DataInfo dinfo, CaseMode cm, double cval, H2OCountedCompleter cmp) {
       super(job,dinfo,cmp);
+      _caseMode = cm;
+      _caseVal = cval;
     }
     @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
+      if(_caseMode != CaseMode.none) response = _caseMode.isCase(response,_caseVal)?1:0;
       _ymu += response;
+      if(response < _ymin)_ymin = response;
+      if(response > _ymax)_ymax = response;
       ++_nobs;
     }
     @Override public void reduce(YMUTask t){
       _ymu = _ymu*((double)_nobs/(_nobs+t._nobs)) + t._ymu*t._nobs/(_nobs+t._nobs);
       _nobs += t._nobs;
+      _ymax = Math.max(_ymax,t._ymax);
+      _ymin = Math.min(_ymin,t._ymin);
     }
     @Override protected void chunkDone(){_ymu /= _nobs;}
     public double ymu(){return _ymu;}
@@ -112,15 +123,21 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     final double _ymu;
     protected final double _reg;
 
-    public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, double [] beta, int iter, double ymu, double reg) {
+    protected final CaseMode _caseMode;
+    protected final double _caseVal;
+
+    public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, CaseMode cmode, double cval, double [] beta, int iter, double ymu, double reg) {
       super(job, dinfo,glm);
       _iter = iter;
       _beta = beta;
       _ymu = ymu;
       _reg = reg;
+      _caseMode = cmode;
+      _caseVal = cval;
     }
 
-    @Override public final void processRow(final double [] nums, final int ncats, final int [] cats, final double y){
+    @Override public final void processRow(final double [] nums, final int ncats, final int [] cats, double y){
+      if(_caseMode != CaseMode.none)y = _caseMode.isCase(y, _caseVal)?1:0;
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
       assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
       final double w, eta, mu, var, z;

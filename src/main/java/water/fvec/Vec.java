@@ -135,7 +135,7 @@ public class Vec extends Iced {
   public Vec makeTransf(final int[] domMap, final String[] domain) {
     Futures fs = new Futures();
     if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, domMap, domain, group().addVecs(1)[0],_espc);
+    Vec v0 = new TransfVec(this._key, domMap, (int) min(), domain, group().addVecs(1)[0],_espc);
     DKV.put(v0._key,v0,fs);
     fs.blockForPending();
     return v0;
@@ -593,21 +593,29 @@ public class Vec extends Iced {
     }
   }
 
+  /** Collect numeric domain of given vector */
   public static class CollectDomain extends MRTask2<CollectDomain> {
     final int _nclass;
     final int _ymin;
-    byte _dom[];
+    byte _dom[]; // Shared between all instances of this tasks since each instance is doing a simple write.
+
+    @Override protected void setupLocal() { _dom = new byte[_nclass]; }
+
     public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
     @Override public void map(Chunk ys) {
-      _dom = new byte[_nclass];
       int ycls=0;
       for( int row=0; row<ys._len; row++ ) {
         if (ys.isNA0(row)) continue;
         ycls = (int)ys.at80(row)-_ymin;
-        _dom[ycls] = 1;
+        _dom[ycls] = 1; // Only write to shared array
       }
     }
-    @Override public void reduce( CollectDomain that ) { Utils.or(_dom,that._dom); }
+
+    /** Returns exact numeric domain of given vector computed by this task.
+     * The domain is always sorted. Hence:
+     *    domain()[0] - minimal domain value
+     *    domain()[domain().length-1] - maximal domain value
+     */
     public int[] domain() {
       int cnt = 0;
       for (int i=0; i<_dom.length; i++) if (_dom[i]>0) cnt++;
