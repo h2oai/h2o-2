@@ -8,7 +8,8 @@ public class JCodeGen {
   /**
    * Outputs given frame as static variable with given name.
    */
-  public static SB toStaticVar(SB sb, Frame f, String varname, int nrows) {
+  public static SB toStaticVar(SB sb, String varname, Frame f, int nrows, String comment) {
+    if (comment!=null) sb.i().p("// ").p(comment).nl();
     sb.i().p("public static final double[][] ").p(varname).p(" = new double[][] {").nl();
     if (f!=null) {
       Vec[] vecs = f.vecs();

@@ -305,10 +305,12 @@ public abstract class Model extends Iced {
    */
   public String toJava() { return toJava(new SB()).toString(); }
   public SB toJava( SB sb ) {
-    sb.nl();
     String modelName = JCodeGen.toJavaId(_selfKey.toString());
-    sb.p("// Model for ").p(this.getClass().getSimpleName()).p(" with name ").p(modelName).nl();
-    sb.p("class ").p(modelName).p(" extends water.Model.GeneratedModel {").nl();
+    sb.p("// Code for ").p(this.getClass().getSimpleName()).p(" named ").p(modelName).nl();
+    sb.p("// Get:     curl http:/").p(H2O.SELF.toString()).p("/2/").p(this.getClass().getSimpleName()).p("View.java?_modelKey=").p(_selfKey).p(" > ").p(modelName).p(".java").nl();
+    sb.p("// Compile: javac -J-Xmx2g -J-XX:MaxPermSize=128m ").p(modelName).p(".java").nl();
+    sb.p("// Execute: java ").p(modelName).nl();
+    sb.p("class ").p(modelName).p(" {").nl(); // or extends GenerateModel
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
     toJavaDOMAINS(sb);
@@ -379,7 +381,7 @@ public abstract class Model extends Iced {
     sb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the\n");
     sb.p("  // main prediction (class for classifiers or value for regression),\n");
     sb.p("  // and remaining columns hold a probability distribution for classifiers.\n");
-    sb.p("  @Override public final float[] predict( double[] data, float[] preds ) {\n");
+    sb.p("  public final float[] predict( double[] data, float[] preds ) {\n");
     SB afterCode = new SB().ii(1);
     toJavaPredictBody(sb.ii(2), afterCode); sb.di(1);
     sb.p("    return preds;").nl();
@@ -414,6 +416,7 @@ public abstract class Model extends Iced {
     "  float[] predict( java.util.HashMap row ) {\n"+
     "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
     "  }\n";
+
   // Convenience method for testing: build Java, convert it to a class &
   // execute it: compare the results of the new class's (JIT'd) scoring with
   // the built-in (interpreted) scoring on this dataset.  Throws if there
@@ -429,6 +432,9 @@ public abstract class Model extends Iced {
     catch( IllegalAccessException cce ) { throw new Error(cce); }
   }
 
+  /** This is a helper class to support Generated Models.
+   * Note: it is not used in the generated code now. But please keep it here
+   * since it can be easily used. */
   public abstract static class GeneratedModel {
     /** Predict a given row */
     abstract public float[] predict( double data[], float preds[] );
