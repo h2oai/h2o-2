@@ -13,11 +13,13 @@ public class CX2Chunk extends Chunk {
     byte[] buf = new byte[(nzcnt+nacnt)*(2+2)+OFF]; // 2 bytes row, 2 bytes val
     UDP.set4(buf,0,len2);
     int j = OFF;
-    for( int i=0; i<len2; i++ )
-      if( ls[i] != 0 || xs[i] != 0 )
+    for( int i=0; i<len2; i++ ) {
+      int scale = xs[i]==Integer.MIN_VALUE+1 ? 0 : xs[i];
+      if( ls[i] != 0 || scale != 0 )
         j +=
           UDP.set2(buf,j  ,(short)i) +
-          UDP.set2(buf,j+2,(short)(ls[i]==0 ? C2Chunk._NA : ls[i]*DParseTask.pow10(xs[i])));
+          UDP.set2(buf,j+2,(short)(ls[i]==0 ? C2Chunk._NA : ls[i]*DParseTask.pow10(scale)));
+    }
     assert j==buf.length;
     _mem = buf;
   }

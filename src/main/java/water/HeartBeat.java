@@ -18,6 +18,7 @@ public class HeartBeat extends Iced {
   public long _system_idle_ticks;
   public long _system_total_ticks;
   public long _process_total_ticks;
+  public int _process_num_open_fds;
 
   // Scaled by K or by M setters & getters.
   private int _free_mem;         // Free memory in K (goes up and down with GC)

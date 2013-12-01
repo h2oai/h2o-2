@@ -1,14 +1,102 @@
-http://127.0.0.1:54321/2/Parse2.json  	 source_key: ../../../smalldata/iris/iris_wheader.csv.gz, destination_key: riris_wheader.hex, separator: 
+http://127.0.0.1:54321/2/Parse2.json  	 source_key: ../../../smalldata/test/HTWO-87-two-lines-dataset.csv, destination_key: rHTWO_87_two_lines_dataset.hex, separator: 
 http://127.0.0.1:54321/Jobs.json  	 
-http://127.0.0.1:54321/Jobs.json  	 
-http://127.0.0.1:54321/2/Inspect2.json  	 src_key: riris_wheader.hex
-http://127.0.0.1:54321/2/Inspect2.json  	 src_key: riris_wheader.hex
-http://127.0.0.1:54321/2/Inspect2.json  	 src_key: riris_wheader.hex
-http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.0 = riris_wheader.hex[,c(2)]
-http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.1 = Last.value.0 == 3.64222873072
-http://127.0.0.1:54321/2/Inspect2.json  	 src_key: riris_wheader.hex
-http://127.0.0.1:54321/2/Inspect2.json  	 src_key: riris_wheader.hex
-http://127.0.0.1:54321/2/Inspect2.json  	 src_key: riris_wheader.hex
-http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.2 = riris_wheader.hex[,c(3)]
-http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.3 = Last.value.2 > 4.67514574916
-http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.4 = Last.value.1 && Last.value.3
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.0 = rHTWO_87_two_lines_dataset.hex[,c(1)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.1 = Last.value.0 < 10
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.2 = rHTWO_87_two_lines_dataset.hex[Last.value.1,]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.3 = rHTWO_87_two_lines_dataset.hex[c(),]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.4 = rHTWO_87_two_lines_dataset.hex[,c(8)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.5 = Last.value.4 < 0
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.6 = rHTWO_87_two_lines_dataset.hex[Last.value.5,]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.7 = rHTWO_87_two_lines_dataset.hex[c(),]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.8 = rHTWO_87_two_lines_dataset.hex[,c(5)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.9 = Last.value.8 < 0
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.10 = rHTWO_87_two_lines_dataset.hex[Last.value.9,]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.11 = rHTWO_87_two_lines_dataset.hex[c(),]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.12 = rHTWO_87_two_lines_dataset.hex[,c(1)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.13 = Last.value.12 < 10
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.14 = rHTWO_87_two_lines_dataset.hex[Last.value.13,]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.15 = rHTWO_87_two_lines_dataset.hex[c(),]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.16 = rHTWO_87_two_lines_dataset.hex[,c(1)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.17 = Last.value.16 < 0
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.18 = rHTWO_87_two_lines_dataset.hex[Last.value.17,c(1)]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.19 = rHTWO_87_two_lines_dataset.hex[,c(1)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.20 = Last.value.19 < 0
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.21 = rHTWO_87_two_lines_dataset.hex[Last.value.20,c(1,3,2,5,4,7,6,8)]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.22 = rHTWO_87_two_lines_dataset.hex[,c(6)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.23 = Last.value.22 < 0
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.24 = rHTWO_87_two_lines_dataset.hex[Last.value.23,c(6)]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.25 = rHTWO_87_two_lines_dataset.hex[,c(6)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.26 = Last.value.25 < 0
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.27 = rHTWO_87_two_lines_dataset.hex[Last.value.26,c(1,3,2,5,4,7,6,8)]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.28 = rHTWO_87_two_lines_dataset.hex[,c(7)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.29 = Last.value.28 < 5
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.30 = rHTWO_87_two_lines_dataset.hex[Last.value.29,c(7)]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.31 = rHTWO_87_two_lines_dataset.hex[,c(7)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.32 = Last.value.31 < 5
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.33 = rHTWO_87_two_lines_dataset.hex[Last.value.32,c(1,3,2,5,4,7,6,8)]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.34 = rHTWO_87_two_lines_dataset.hex[,c(3)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.35 = Last.value.34 < 5
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.36 = rHTWO_87_two_lines_dataset.hex[Last.value.35,c(3)]
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.37 = rHTWO_87_two_lines_dataset.hex[,c(3)]
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.38 = Last.value.37 < 5
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Inspect2.json  	 src_key: rHTWO_87_two_lines_dataset.hex
+http://127.0.0.1:54321/2/Exec2.json  	 str: Last.value.39 = rHTWO_87_two_lines_dataset.hex[Last.value.38,c(1,3,2,5,4,7,6,8)]
