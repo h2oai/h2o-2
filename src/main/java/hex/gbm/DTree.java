@@ -838,6 +838,8 @@ public class DTree extends Iced {
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_selfKey).append(" > ").append(modelName).append(".java\n");
+        sb.append("     javac -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
+        sb.append("     java ").append(modelName).append('\n');
         sb.append("*/");
       } else
         DocGen.HTML.escape(sb,toJava());
