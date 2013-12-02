@@ -3,8 +3,8 @@ import random, sys, time, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j, h2o_gbm
 
-
 DO_FAIL = False
+DO_CLASSIFICATION = True
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3, java_heap_GB=4)
+            h2o.build_cloud(1, java_heap_GB=12)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -75,7 +75,12 @@ class Basic(unittest.TestCase):
             # Make col 378 it something we can do binomial regression on!
             # execExpr = '%s=colSwap(%s,378,(%s[378]>15 ? 1 : 0))' % (trainKey, trainKey, trainKey)
             # inc by 1 for R col
+            # BUG: if left as integer..GBM changes to Enum. multiple jobs collide on this translate
+            # only a problem if they share the dataset, do classification with integers.
+            # change to factor here, to avoid the problem
             execExpr = '%s[,378+1]=%s[,378+1]>15' % (trainKey, trainKey)
+            if not DO_FAIL:
+                execExpr +=  "; factor(%s[, 378+1]);" % (trainKey)
 
             resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=60)
 
@@ -90,7 +95,9 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             # plus 1 for R indexing
-            execExpr = '%s[,378+1]=%s[,378+1]>15' % (trainKey, trainKey)
+            execExpr = '%s[,378+1]=%s[,378+1]>15' % (testKey, testKey)
+            if not DO_FAIL:
+                execExpr +=  "; factor(%s[, 378+1]);" % (testKey)
             resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=60)
 
             # Note ..no inspect of test data here..so translate happens later?
@@ -129,7 +136,8 @@ class Basic(unittest.TestCase):
                     'min_rows': 10,
                     'validation': parseTestResult['destination_key'],
                     'ignored_cols_by_name': ignored_cols_by_name,
-                    'grid_parallelism': 4
+                    'grid_parallelism': 1,
+                    'classification': 1 if DO_CLASSIFICATION else 0,
                 }
             
 
