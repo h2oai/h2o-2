@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.concurrent.*;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinPool;
 import water.DException.DistributedException;
 import water.util.Log;
 
