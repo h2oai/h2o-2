@@ -4,7 +4,7 @@ import hex.*;
 import hex.Layer.Tanh;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-import hex.NeuralNet.Error;
+import hex.NeuralNet.Errors;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
@@ -80,20 +80,20 @@ public class NeuralNetMnist extends Job {
           timer.cancel();
         else {
           double time = (System.nanoTime() - start) / 1e9;
-          long samples = trainer.samples();
+          long samples = trainer.processed();
           int ps = (int) (samples / time);
           String text = (int) time + "s, " + samples + " samples (" + (ps) + "/s) ";
 
           // Build separate nets for scoring purposes, use same normalization stats as for training
           Layer[] temp = build(train, trainLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
           Layer.shareWeights(ls, temp);
-          Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
-          text += "train: " + error;
+          Errors e = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
+          text += "train: " + e;
 
           temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
           Layer.shareWeights(ls, temp);
-          error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
-          text += ", test: " + error;
+          e = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
+          text += ", test: " + e;
           text += ", rates: ";
           for( int i = 1; i < ls.length; i++ )
             text += String.format("%.3g", ls[i].rate(samples)) + ", ";

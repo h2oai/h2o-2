@@ -2,8 +2,7 @@ package hex;
 
 import hex.rng.MersenneTwisterRNG;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -13,13 +12,17 @@ import water.util.Log;
 /**
  * Looks for parameters on a set of objects and perform random search.
  */
-class ParamsSearch {
+public class ParamsSearch {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface Info {
     /**
      * Parameter search will move the value relative to origin.
      */
     double origin() default 0;
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Ignore {
   }
 
   Param[] _params;
@@ -37,7 +40,7 @@ class ParamsSearch {
       assert t == boolean.class || t == float.class || t == int.class;
     }
 
-    void modify(Object o) throws Exception {
+    void modify(Object o) throws IllegalAccessException {
       if( _field.getType() == boolean.class ) {
         if( _rand.nextDouble() < _rate ) {
           _last = _best == 0 ? 1 : 0;
@@ -69,63 +72,74 @@ class ParamsSearch {
     }
   }
 
-  void run(Object... os) throws Exception {
-    ArrayList<Object> expanded = new ArrayList<Object>();
-    for( Object o : os ) {
-      if( o instanceof Object[] )
-        expanded.addAll(Arrays.asList((Object[]) o));
-      else if( o instanceof Collection )
-        expanded.addAll((Collection) o);
-      else
-        expanded.add(o);
-    }
+  public void run(Object... os) {
+    try {
+      ArrayList<Object> expanded = new ArrayList<Object>();
+      for( Object o : os ) {
+        if( o instanceof Object[] )
+          expanded.addAll(Arrays.asList((Object[]) o));
+        else if( o instanceof Collection )
+          expanded.addAll((Collection) o);
+        else
+          expanded.add(o);
+      }
 
-    if( _params == null ) {
-      ArrayList<Param> params = new ArrayList<Param>();
-      for( int i = 0; i < expanded.size(); i++ ) {
-        Class c = expanded.get(i).getClass();
-        ArrayList<Field> fields = new ArrayList<Field>();
-        getAllFields(fields, c);
-        for( Field f : fields ) {
-          f.setAccessible(true);
-          if( (f.getModifiers() & Modifier.STATIC) == 0 ) {
-            Object v = f.get(expanded.get(i));
-            if( v instanceof Number || (_booleans && v instanceof Boolean) ) {
-              Param param = new Param();
-              param._objectIndex = i;
-              param._field = f;
-              if( v instanceof Boolean )
-                param._initial = ((Boolean) v).booleanValue() ? 1 : 0;
-              else
-                param._initial = ((Number) v).doubleValue();
-              param._last = param._best = param._initial;
-              params.add(param);
-              param.write();
+      if( _params == null ) {
+        ArrayList<Param> params = new ArrayList<Param>();
+        for( int i = 0; i < expanded.size(); i++ ) {
+          Class c = expanded.get(i).getClass();
+          ArrayList<Field> fields = new ArrayList<Field>();
+          getAllFields(fields, c);
+          for( Field f : fields ) {
+            f.setAccessible(true);
+            if( (f.getModifiers() & Modifier.STATIC) == 0 && !ignore(f) ) {
+              Object v = f.get(expanded.get(i));
+              if( v instanceof Number || (_booleans && v instanceof Boolean) ) {
+                Param param = new Param();
+                param._objectIndex = i;
+                param._field = f;
+                if( v instanceof Boolean )
+                  param._initial = ((Boolean) v).booleanValue() ? 1 : 0;
+                else
+                  param._initial = ((Number) v).doubleValue();
+                param._last = param._best = param._initial;
+                params.add(param);
+                param.write();
+              }
             }
           }
         }
+        _params = params.toArray(new Param[0]);
+        Log.info(toString());
+      } else {
+        for( int i = 0; i < _params.length; i++ )
+          modify(expanded, i);
       }
-      _params = params.toArray(new Param[0]);
-      Log.info(toString());
-    } else {
-      for( int i = 0; i < _params.length; i++ )
-        modify(expanded, i);
+    } catch( IllegalAccessException ex ) {
+      throw new RuntimeException(ex);
     }
   }
 
-  static void getAllFields(List<Field> fields, Class<?> type) {
+  private static boolean ignore(Field f) {
+    for( Annotation a : f.getAnnotations() )
+      if( a.annotationType() == Ignore.class )
+        return true;
+    return false;
+  }
+
+  private static void getAllFields(List<Field> fields, Class<?> type) {
     for( Field field : type.getDeclaredFields() )
       fields.add(field);
     if( type.getSuperclass() != null )
       getAllFields(fields, type.getSuperclass());
   }
 
-  void modify(ArrayList<Object> expanded, int i) throws Exception {
+  private void modify(ArrayList<Object> expanded, int i) throws IllegalAccessException {
     Object o = expanded.get(_params[i]._objectIndex);
     _params[i].modify(o);
   }
 
-  void save() {
+  public void save() {
     for( int i = 0; i < _params.length; i++ )
       _params[i]._best = _params[i]._last;
   }
