@@ -386,7 +386,8 @@ class ASTCat extends ASTOp {
                     new Type[]{Type.ARY,Type.varargs(Type.DBL)}); }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
-    AppendableVec av = new AppendableVec(Vec.newKey());
+    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
+    AppendableVec av = new AppendableVec(key);
     NewChunk nc = new NewChunk(av,0);
     for( int i=0; i<argcnt-1; i++ )
       nc.addNum(env.dbl(-argcnt+1+i));
