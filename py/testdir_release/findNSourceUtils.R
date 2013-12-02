@@ -54,8 +54,9 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         if(!is.null(SEARCHPATH)) return(paste(SEARCHPATH, "/", dataName, "/", bn, sep = ""))
         psplit <- strsplit(dataName, "/")[[1]]
         bucket <- psplit[1]
-        path   <- paste(psplit[-1], bn, collapse="/", sep = "/")
-        Log.info("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema) 
+        path   <- paste(psplit[-1], collapse="/")
+        path   <- paste(path, bn, sep = "/")
+        Log.info(cat("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema))
         return(locate(bucket = bucket, path = path, schema = schema))
     }
 }
