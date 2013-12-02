@@ -109,13 +109,13 @@ public class NeuralNetIrisTest extends TestUtil {
     }
 
     // Make sure errors are equal
-    NeuralNet.Errors train = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    NeuralNet.Errors train = NeuralNet.eval(ls, 0, null);
     data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
     labels = _test.vecs()[_test.vecs().length - 1];
     input.vecs = data;
     input._len = data[0].length();
     ((VecSoftmax) ls[2]).vec = labels;
-    NeuralNet.Errors test = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    NeuralNet.Errors test = NeuralNet.eval(ls, 0, null);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
     Assert.assertEquals(trainAcc, train.classification, epsilon);
     float testAcc = ref._nn.Accuracy(ref._testData);

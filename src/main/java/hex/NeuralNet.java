@@ -32,7 +32,6 @@ public class NeuralNet extends ValidatedJob {
   static final int API_WEAVER = 1;
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network";
-  public static final int EVAL_ROW_COUNT = 1000;
 
   public enum Activation {
     Tanh, Rectifier, RectifierWithDropout, Maxout
@@ -182,10 +181,10 @@ public class NeuralNet extends ValidatedJob {
           int classes = ls[ls.length - 1].units;
           cm = new long[classes][classes];
         }
-        Errors e = eval(train, trainResp, valid == null ? cm : null);
+        Errors e = eval(train, trainResp, 10000, valid == null ? cm : null);
         trainErrors = Utils.append(trainErrors, e);
         if( valid != null ) {
-          e = eval(valid, validResp, cm);
+          e = eval(valid, validResp, 0, cm);
           validErrors = Utils.append(validErrors, e);
         }
         NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
@@ -195,10 +194,9 @@ public class NeuralNet extends ValidatedJob {
         UKV.put(model._selfKey, model);
       }
 
-      private Errors eval(Vec[] vecs, Vec resp, long[][] cm) {
-        Errors e = NeuralNet.eval(ls, vecs, resp, EVAL_ROW_COUNT, cm);
+      private Errors eval(Vec[] vecs, Vec resp, long n, long[][] cm) {
+        Errors e = NeuralNet.eval(ls, vecs, resp, n, cm);
         e.training_samples = trainer.processed();
-        e.evaluation_samples = EVAL_ROW_COUNT;
         e.training_time_ms = runTimeMs();
         return e;
       }
@@ -211,7 +209,7 @@ public class NeuralNet extends ValidatedJob {
     NeuralNetModel model = UKV.get(destination_key);
     if( model != null && source != null && epochs > 0 ) {
       Errors e = model.training_errors[model.training_errors.length - 1];
-      return 0.1f + Math.min(1, e.evaluation_samples / (float) (epochs * source.numRows()));
+      return 0.1f + Math.min(1, e.training_samples / (float) (epochs * source.numRows()));
     }
     return 0;
   }
@@ -345,9 +343,6 @@ public class NeuralNet extends ValidatedJob {
 
     @API(help = "How long the algorithm ran in ms")
     public long training_time_ms;
-
-    @API(help = "How many rows were used to evaluate this error")
-    public long evaluation_samples;
 
     @API(help = "Classification error")
     public double classification = 1;

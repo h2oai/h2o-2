@@ -63,7 +63,7 @@ public class NeuralNetSpiralsTest extends TestUtil {
       int ps = (int) (processed / time);
       String text = (int) time + "s, " + processed + " samples (" + (ps) + "/s) ";
 
-      Errors error = NeuralNet.eval(ls, data, labels, NeuralNet.EVAL_ROW_COUNT, null);
+      Errors error = NeuralNet.eval(ls, data, labels, 0, null);
       text += "train: " + error;
       text += ", rates: ";
       for( int i = 1; i < ls.length; i++ )
