@@ -225,7 +225,6 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  Note: the desired name 'get' is final in ForkJoinTask.  */
   public final T getResult() {
     try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
-    //join();
     // Do any post-writing work (zap rollup fields, etc)
     _fr.reloadVecs();
     for( int i=0; i<_fr.numCols(); i++ )
@@ -238,7 +237,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // Possibly blocks the current thread.  Returns true if isReleasable would
   // return true.  Used by the FJ Pool management to spawn threads to prevent
   // deadlock is otherwise all threads would block on waits.
-  public synchronized boolean block() {
+  public boolean block() {
     while( !isDone() ) join();
     return true;
   }
