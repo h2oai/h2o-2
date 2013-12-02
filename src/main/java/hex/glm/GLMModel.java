@@ -5,16 +5,14 @@ import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
-import java.text.DecimalFormat;
 import java.util.HashMap;
 
-import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.util.RString;
+import water.util.Utils;
 
 public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -29,8 +27,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="value used to co compare agains using case-predicate to turn the response into 0/1")
   final double _caseVal;
 
-  @API(help="offsets of categorical columns into the beta vector. The last value is the offset of the first numerical column.")
-  final int    []  catOffsets;
+  @API(help="Input data info")
+  DataInfo data_info;
+
   @API(help="warnings")
   final String []  warnings;
   @API(help="Decision threshold.")
@@ -88,8 +87,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   static class Submodel extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-    @API(help="regularization param giving the strength of the applied regularization. high values drive coeffficients to zero.")
-    final double     lambda;
     @API(help="number of iterations computed.")
     final int        iteration;
     @API(help="running time of the algo in ms.")
@@ -102,8 +99,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     final int rank;
     final int [] idxs;
 
-    public Submodel(double lambda, double [] beta, double [] norm_beta, long run_time, int iteration){
-      this.lambda = lambda;
+    public Submodel(double [] beta, double [] norm_beta, long run_time, int iteration){
       this.beta = beta;
       this.norm_beta = norm_beta;
       this.run_time = run_time;
@@ -129,31 +125,37 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       } else idxs = null;
       rank = r;
     }
+    @Override
+    public Submodel clone(){return new Submodel(beta == null?null:beta.clone(),norm_beta == null?null:norm_beta.clone(),run_time,iteration);}
   }
 
   @API(help = "models computed for particular lambda values")
   Submodel [] submodels;
 
-  public GLMModel(Key selfKey, Frame fr, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
-    super(selfKey,null,fr);
+  @API(help = "lambda sequence")
+  final double [] lambdas;
+
+  public GLMModel(Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
+    super(selfKey,null,dinfo._adaptedFrame);
     this.ymu = ymu;
     this.glm = glm;
     threshold = 0.5;
-    this.catOffsets = dinfo._catOffsets;
+    this.data_info = dinfo;
     this.warnings = null;
     this.alpha = alpha;
+    this.lambdas = lambda;
     this.beta_eps = beta_eps;
     _caseVal = caseVal;
     _caseMode = caseMode;
     submodels = new Submodel[lambda.length];
     for(int i = 0; i < submodels.length; ++i)
-      submodels[i] = new Submodel(lambda[i], null, null, 0, 0);
+      submodels[i] = new Submodel(null, null, 0, 0);
     run_time = 0;
     start_time = System.currentTimeMillis();
-    coefficients_names = coefNames(dinfo.fullN()+1);
+    coefficients_names = coefNames();
   }
-  public void setLambdaSubmodel(int lambdaIdx,double lambda, double [] beta, double [] norm_beta, int iteration){
-    submodels[lambdaIdx] = new Submodel(lambda, beta, norm_beta, run_time, iteration);
+  public void setLambdaSubmodel(int lambdaIdx, double [] beta, double [] norm_beta, int iteration){
+    submodels[lambdaIdx] = new Submodel(beta, norm_beta, run_time, iteration);
     run_time = (System.currentTimeMillis()-start_time);
   }
 //
@@ -165,18 +167,23 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public double lambda(){
     if(submodels == null)return Double.NaN;
-    return submodels[best_lambda_idx].lambda;
+    return lambdas[best_lambda_idx];
   }
   public double lambdaMax(){
-    return submodels[0].lambda;
+    return lambdas[0];
   }
   public double lambdaMin(){
-    return submodels[submodels.length-1].lambda;
+    return lambdas[lambdas.length-1];
   }
   public GLMValidation validation(){
     return submodels[best_lambda_idx].validation;
   }
-  public int iteration(){return submodels[best_lambda_idx].iteration;}
+  public int iteration(){
+    int res = 0;
+    for(int i = 0; i < submodels.length && submodels[i] != null && submodels[i].iteration != 0; ++i)
+      res = submodels[i].iteration;
+    return res;
+  }
   public double [] beta(){return submodels[best_lambda_idx].beta;}
   public double [] beta(int i){return submodels[i].beta;}
   public double [] norm_beta(){return submodels[best_lambda_idx].norm_beta;}
@@ -187,10 +194,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   protected float[] score0(double[] data, float[] preds, int lambdaIdx) {
     double eta = 0.0;
     final double [] b = beta(lambdaIdx);
-    for(int i = 0; i < catOffsets.length-1; ++i) if(data[i] != 0)
-      eta += b[catOffsets[i] + (int)(data[i]-1)];
-    final int noff = catOffsets[catOffsets.length-1] - catOffsets.length + 1;
-    for(int i = catOffsets.length-1; i < data.length; ++i)
+    for(int i = 0; i < data_info._catOffsets.length-1; ++i) if(data[i] != 0)
+      eta += b[data_info._catOffsets[i] + (int)(data[i]-1)];
+    final int noff = data_info.numStart() - data_info._cats;
+    for(int i = data_info._cats; i < data.length; ++i)
       eta += b[noff+i]*data[i];
     eta += b[b.length-1]; // add intercept
     double mu = glm.linkInv(eta);
@@ -277,14 +284,11 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @Override public void postGlobal(){
       for(int i = 0; i < _xmodels.length; ++i){
         _xvals[i].finalize_AIC_AUC();
-        _xmodels[i].setValidation(0, _xvals[i]);
-        Futures fs = new Futures();
-        DKV.put(_xmodels[i]._selfKey, _xmodels[i],fs);
-        _res = new GLMXValidation(_model, _xmodels,_lambdaIdx);
-        _improved = _model.setAndTestValidation(_lambdaIdx, _res);
-        DKV.put(_model._selfKey, _model);
-        fs.blockForPending();
+        _xmodels[i].setValidation(0, _xvals[i]).store();
       }
+      _res = new GLMXValidation(_model, _xmodels,_lambdaIdx);
+      _improved = _model.setAndTestValidation(_lambdaIdx, _res);
+      _model.store();
     }
   }
 
@@ -292,7 +296,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public String toString(){
     final double [] beta = beta(), norm_beta = norm_beta();
     StringBuilder sb = new StringBuilder("GLM Model (key=" + _selfKey + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + "):\n");
-    final int cats = catOffsets.length-1;
+    final int cats = data_info._cats;
     int k = 0;
     for(int i = 0; i < cats; ++i)
       for(int j = 1; j < _domains[i].length; ++j)
@@ -307,8 +311,29 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public int rank(int lambdaIdx) {return submodels[lambdaIdx].rank;}
   @Override public void delete(){super.delete();}
 
-  public void  setValidation(int lambdaIdx,GLMValidation val ){
+
+  public GLMModel  setValidation(int lambdaIdx,GLMValidation val ){
     submodels[lambdaIdx].validation = val;
+    return this;
+  }
+  @Override
+  public GLMModel clone(){
+    GLMModel res = new GLMModel(_selfKey, data_info, glm, beta_eps, alpha, lambdas, ymu, _caseMode, _caseVal);
+    res.submodels = submodels.clone();
+    for(int i = 0; i < submodels.length && submodels[i] != null;++i)
+      res.submodels[i] = submodels[i].clone();
+
+    return (GLMModel)super.clone();
+  }
+
+  public void store(){clone().store2();}
+  private void store2(){
+    new TAtomic<GLMModel>() {
+      @Override public GLMModel atomic(GLMModel old) {
+        if(old == null)return GLMModel.this;
+        return GLMModel.this.iteration() > old.iteration()?GLMModel.this:old;
+      }
+    }.fork(_selfKey);
   }
   public boolean  setAndTestValidation(int lambdaIdx,GLMValidation val ){
     submodels[lambdaIdx].validation = val;
@@ -330,18 +355,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     if(b != null) for(int i = 0; i < b.length; ++i)res.put(coefficients_names[i],b[i]);
     return res;
   }
-  private String [] coefNames(int n){
-    final int cats = catOffsets.length-1;
-    int k = 0;
-    String [] res = new String[n];
-    for(int i = 0; i < cats; ++i)
-      for(int j = 1; j < _domains[i].length; ++j)
-        res[k++] = _names[i] + "." + _domains[i][j];
-    final int nums = n-k-1;
-    for(int i = 0; i < nums; ++i)
-      res[k+i] = _names[cats+i];
-    assert k + nums == res.length-1;
-    res[k+nums] = "Intercept";
-    return res;
+  private String [] coefNames(){
+    return Utils.append(data_info.coefNames(),new String[]{"Intercept"});
   }
 }
