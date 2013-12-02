@@ -4,6 +4,7 @@ import hex.Layer.ChunkLinear;
 import hex.Layer.ChunkSoftmax;
 import hex.Layer.ChunksInput;
 import hex.Layer.Input;
+import hex.Layer.Training;
 import hex.Layer.VecLinear;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
@@ -41,7 +42,7 @@ public abstract class Trainer {
 
   public abstract void join();
 
-  public long samples() {
+  public long processed() {
     throw new UnsupportedOperationException();
   }
 
@@ -86,13 +87,13 @@ public abstract class Trainer {
    * Trains NN on current thread.
    */
   public static class Direct extends Base {
-    long _samples;
+    long _processed, _limit;
     Thread _thread;
     Key _job;
 
     public Direct(Layer[] ls, int epochs, Key job) {
       super(ls);
-      _samples = epochs * ((Input) ls[0])._len;
+      _limit = epochs * ((Input) ls[0])._len;
       _job = job;
     }
 
@@ -101,8 +102,16 @@ public abstract class Trainer {
     }
 
     public void run() {
+      Training training = new Training() {
+        @Override long processed() {
+          return _processed;
+        }
+      };
+      for( int i = 0; i < _ls.length; i++ )
+        _ls[i]._training = training;
+
       Input input = (Input) _ls[0];
-      for( long i = 0; _samples == 0 || i < _samples; i++ ) {
+      for( ; _limit == 0 || _processed < _limit; _processed++ ) {
         step();
         input.move();
         if( _job != null && Job.cancelled(_job) )
@@ -110,9 +119,8 @@ public abstract class Trainer {
       }
     }
 
-    @Override public long samples() {
-      Input input = (Input) _ls[0];
-      return input._pos;
+    @Override public long processed() {
+      return _processed;
     }
 
     @Override public void start() {
@@ -143,12 +151,12 @@ public abstract class Trainer {
     static final CyclicBarrier DONE = new CyclicBarrier(1);
     volatile CyclicBarrier _suspend;
     final CyclicBarrier _resume;
-    final AtomicLong _samples = new AtomicLong();
+    final AtomicLong _processed = new AtomicLong();
 
-    public Threaded(Layer[] ls, int epochs, final Key job) {
+    public Threaded(Layer[] ls, double epochs, final Key job) {
       _trainers = new Base[Runtime.getRuntime().availableProcessors()];
       _threads = new Thread[_trainers.length];
-      _stepsPerThread = epochs * ((Input) ls[0])._len / _threads.length;
+      _stepsPerThread = (long) (epochs * ((Input) ls[0])._len / _threads.length);
       _resume = new CyclicBarrier(_threads.length + 1);
 
       for( int t = 0; t < _trainers.length; t++ ) {
@@ -157,7 +165,11 @@ public abstract class Trainer {
           clones[y] = ls[y].clone();
         for( int y = 0; y < clones.length; y++ ) {
           clones[y].init(clones, y, false, 0);
-          clones[y]._trainer = this;
+          clones[y]._training = new Training() {
+            @Override long processed() {
+              return _processed.get();
+            }
+          };
         }
         final Input input = (Input) clones[0];
         input._pos = input._len * t / _trainers.length;
@@ -182,7 +194,7 @@ public abstract class Trainer {
               }
               trainer.step();
               input.move();
-              _samples.incrementAndGet();
+              _processed.incrementAndGet();
             }
           }
         };
@@ -194,8 +206,8 @@ public abstract class Trainer {
       return _trainers[0].layers();
     }
 
-    @Override public long samples() {
-      return _samples.get();
+    @Override public long processed() {
+      return _processed.get();
     }
 
     @Override public void start() {
@@ -270,7 +282,7 @@ public abstract class Trainer {
       return _ls;
     }
 
-    @Override public long samples() {
+    @Override public long processed() {
       Vec[] vecs = ((VecsInput) _ls[0]).vecs;
       long n = 0;
       for( int i = 0; i < _counts.length(); i++ )
@@ -341,7 +353,7 @@ public abstract class Trainer {
             if( !home )
               _node.sync();
             else {
-              _node._total = _node._trainer.samples();
+              _node._total = _node._trainer.processed();
               try {
                 Thread.sleep(1);
               } catch( InterruptedException ex ) {
@@ -424,7 +436,11 @@ public abstract class Trainer {
           clones[y]._b = _node._bs[y];
           clones[y]._wm = _node._wm[y];
           clones[y]._bm = _node._bm[y];
-          clones[y]._trainer = ;
+          clones[y]._training = new Training() {
+            @Override long processed() {
+              return _node._total;
+            }
+          };
         }
         Base base = new Base(clones);
         for( input._pos = 0; input._pos < _cs[0]._len; input._pos++ )
@@ -461,7 +477,7 @@ public abstract class Trainer {
       for( int y = 1; y < _ws.length; y++ ) {
         _wi[y] = ws[y].clone();
         _bi[y] = bs[y].clone();
-        if( ls[y].momentum > 0 ) {
+        if( ls[y].momentum_start != 0 || ls[y].momentum_stable != 0 ) {
           _wm[y] = new float[ws[y].length];
           _bm[y] = new float[bs[y].length];
         }
@@ -526,7 +542,7 @@ public abstract class Trainer {
         }
         s._counts = counts;
         s.invoke(_key);
-        _total = s._total;
+        _total = s._processed;
         for( int y = 1; y < _ws.length; y++ ) {
           for( int i = 0; i < _ws[y].length; i++ ) {
             float d = _ws[y][i] - _wi[y][i];
@@ -547,7 +563,7 @@ public abstract class Trainer {
     static class Shuttle extends Atomic {
       float[][] _w, _b; // Deltas in, values out
       int[] _counts;
-      long _total;
+      long _processed;
 
       @Override public Value atomic(Value value) {
         assert _key.home();
@@ -566,7 +582,7 @@ public abstract class Trainer {
           for( int i = 0; i < _counts.length; i += 2 )
             trainer._counts.addAndGet(_counts[i], _counts[i + 1]);
           _counts = null;
-          _total = trainer.samples();
+          _processed = trainer.processed();
         }
         return null;
       }
@@ -620,7 +636,7 @@ public abstract class Trainer {
             bprops[y] = program.createCLKernel(_ls.getClass().getSimpleName() + "_bprop");
             bprops[y].putArg(_ls[y - 1]._a.length);
             bprops[y].putArgs(a[y - 1], w[y], b[y], a[y], e[y]);
-            bprops[y].putArg(_ls[y]._r);
+//            bprops[y].putArg(_ls[y]._r);
             if( e[y - 1] != null )
               bprops[y].putArg(e[y - 1]);
 

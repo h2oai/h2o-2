@@ -1,9 +1,9 @@
 package hex;
 
 import hex.rng.MersenneTwisterRNG;
+import hex.rng.XorShiftRNG;
 
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicLong;
 
 import water.*;
 import water.api.DocGen;
@@ -32,13 +32,11 @@ public abstract class Layer extends Iced {
   @API(help = "L2 regularisation")
   public float l2;
 
-  @API(help = "Ratio of units randomly set to 0")
-  public float dropout;
-
   // TODO disabled for now, not enough testing
+  public float momentum_start;
   @ParamsSearch.Info(origin = 1)
-  public float momentum;
-  public float momentum_annealing;
+  public long momentum_ramp;
+  public float momentum_stable;
 
   // TODO
   float _perWeight;
@@ -55,8 +53,14 @@ public abstract class Layer extends Iced {
   transient Layer _previous;
   transient Input _input;
 
-  // Processed samples
-  transient AtomicLong _processed;
+  /**
+   * Start of refactoring in specification & running data, for layers and trainers.
+   */
+  static abstract class Training {
+    abstract long processed();
+  }
+
+  transient Training _training;
 
   public final void init(Layer[] ls, int index) {
     init(ls, index, true, 0);
@@ -71,7 +75,7 @@ public abstract class Layer extends Iced {
     if( weights ) {
       _w = new float[units * _previous.units];
       _b = new float[units];
-      if( momentum != 0 ) {
+      if( momentum_start != 0 || momentum_stable != 0 ) {
         _wm = new float[_w.length];
         _bm = new float[_b.length];
       }
@@ -104,6 +108,7 @@ public abstract class Layer extends Iced {
    * Apply gradient g to unit u with rate r and momentum m.
    */
   protected final void bprop(int u, float g, float r, float m) {
+    float r2 = 0;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = u * _previous._a.length + i;
       if( _previous._e != null )
@@ -114,6 +119,14 @@ public abstract class Layer extends Iced {
         _wm[w] = d = _wm[w] + d;
       }
       _w[w] += r * d;
+      r2 += _w[w] * _w[w];
+    }
+    if( r2 > 15 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+      float scale = (float) Math.sqrt(15 / r2);
+      for( int i = 0; i < _previous._a.length; i++ ) {
+        int w = u * _previous._a.length + i;
+        _w[w] *= scale;
+      }
     }
     float d = g;
     if( _bm != null ) {
@@ -128,7 +141,14 @@ public abstract class Layer extends Iced {
   }
 
   public float momentum(long n) {
-    return momentum * (n + 1) / (n + 1 + momentum_annealing);
+    float m = momentum_start;
+    if( momentum_ramp > 0 ) {
+      if( n >= momentum_ramp )
+        m = momentum_stable;
+      else
+        m += (momentum_stable - momentum_start) * n / momentum_ramp;
+    }
+    return m;
   }
 
   private final void adjust(int i, float[] w, float[] prev, float[] init, float[] mult) {
@@ -400,7 +420,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _trainer.samples();
+      long processed = _training.processed();
       float r = rate(processed);
       float m = momentum(processed);
       int label = target();
@@ -455,8 +475,9 @@ public abstract class Layer extends Iced {
       // TODO extract layer info in separate Ice
       rate = stats.rate;
       rate_annealing = stats.rate_annealing;
-      momentum = stats.momentum;
-      momentum_annealing = stats.momentum_annealing;
+      momentum_start = stats.momentum_start;
+      momentum_stable = stats.momentum_stable;
+      momentum_ramp = stats.momentum_ramp;
       _perWeight = stats._perWeight;
       _perWeightAnnealing = stats._perWeightAnnealing;
       l2 = stats.l2;
@@ -482,7 +503,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _trainer.samples();
+      long processed = _training.processed();
       float r = rate(processed);
       float m = momentum(processed);
       float[] v = target();
@@ -526,12 +547,12 @@ public abstract class Layer extends Iced {
       // TODO extract layer info in separate Ice
       rate = stats.rate;
       rate_annealing = stats.rate_annealing;
-      momentum = stats.momentum;
-      momentum_annealing = stats.momentum_annealing;
+      momentum_start = stats.momentum_start;
+      momentum_stable = stats.momentum_stable;
+      momentum_ramp = stats.momentum_ramp;
       _perWeight = stats._perWeight;
       _perWeightAnnealing = stats._perWeightAnnealing;
       l2 = stats.l2;
-      dropout = stats.dropout;
     }
 
     @Override float[] target() {
@@ -579,44 +600,13 @@ public abstract class Layer extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _trainer.samples();
+      long processed = _training.processed();
       float r = rate(processed);
       float m = momentum(processed);
       for( int u = 0; u < _a.length; u++ ) {
         // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
         float g = _e[u] * (1 - _a[u] * _a[u]);
         bprop(u, g, r, m);
-      }
-    }
-  }
-
-  public static class TanhDropout extends Tanh {
-    transient Random _rand;
-
-    TanhDropout() {
-    }
-
-    public TanhDropout(int units) {
-      super(units);
-    }
-
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
-      //rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      _rand = new Random();
-    }
-
-    @Override protected void fprop(boolean training) {
-      for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = 0;
-        if( !training || _rand.nextFloat() > dropout ) {
-          for( int i = 0; i < _previous._a.length; i++ )
-            _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
-          _a[o] += _b[o];
-          if( !training )
-            _a[o] *= 1 - _previous.dropout;
-          _a[o] = (float) Math.tanh(_a[o]);
-        }
       }
     }
   }
@@ -649,7 +639,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _trainer.samples();
+      long processed = _training.processed();
       float r = rate(processed);
       for( int o = 0; o < _a.length; o++ ) {
         assert _previous._previous.units == units;
@@ -680,17 +670,22 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step) {
       super.init(ls, index, weights, step);
       if( weights ) {
+//        Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+//        int count = Math.min(15, _previous.units);
+//        //float min = -.1f, max = +.1f;
+//        float min = -1f, max = +1f;
+//        for( int o = 0; o < units; o++ ) {
+//          for( int n = 0; n < count; n++ ) {
+//            int i = rand.nextInt(_previous.units);
+//            int w = o * _previous.units + i;
+//            _w[w] = rand(rand, min, max);
+//          }
+//        }
         Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-        int count = Math.min(15, _previous.units);
-        //float min = -.1f, max = +.1f;
-        float min = -1f, max = +1f;
-        for( int o = 0; o < units; o++ ) {
-          for( int n = 0; n < count; n++ ) {
-            int i = rand.nextInt(_previous.units);
-            int w = o * _previous.units + i;
-            _w[w] = rand(rand, min, max);
-          }
-        }
+        float min = (float) -Math.sqrt(6. / (_previous.units + units));
+        float max = (float) +Math.sqrt(6. / (_previous.units + units));
+        for( int i = 0; i < _w.length; i++ )
+          _w[i] = rand(rand, min, max);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -711,13 +706,13 @@ public abstract class Layer extends Iced {
             _a[o] = Math.max(_a[o], _w[o * _previous._a.length + i] * _previous._a[i]);
           _a[o] += _b[o];
           if( !training )
-            _a[o] *= 1 - _previous.dropout;
+            _a[o] *= .5f;
         }
       }
     }
 
     @Override protected void bprop() {
-      long processed = _trainer.samples();
+      long processed = _training.processed();
       float r = rate(processed);
       float m = momentum(processed);
       for( int u = 0; u < _a.length; u++ ) {
@@ -740,17 +735,23 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step) {
       super.init(ls, index, weights, step);
       if( weights ) {
+//        Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+//        int count = Math.min(15, _previous.units);
+//        float min = -.1f, max = +.1f;
+//        //float min = -1f, max = +1f;
+//        for( int o = 0; o < units; o++ ) {
+//          for( int n = 0; n < count; n++ ) {
+//            int i = rand.nextInt(_previous.units);
+//            int w = o * _previous.units + i;
+//            _w[w] = rand(rand, min, max);
+//          }
+//        }
         Random rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-        int count = Math.min(15, _previous.units);
-        //float min = -.1f, max = +.1f;
-        float min = -1f, max = +1f;
-        for( int o = 0; o < units; o++ ) {
-          for( int n = 0; n < count; n++ ) {
-            int i = rand.nextInt(_previous.units);
-            int w = o * _previous.units + i;
-            _w[w] = rand(rand, min, max);
-          }
-        }
+        float min = (float) -Math.sqrt(6. / (_previous.units + units));
+        float max = (float) +Math.sqrt(6. / (_previous.units + units));
+        for( int i = 0; i < _w.length; i++ )
+          _w[i] = rand(rand, min, max);
+
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -768,9 +769,9 @@ public abstract class Layer extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _trainer.samples();
-      float r = rate(processed);
+      long processed = _training.processed();
       float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         float g = _e[u];
         if( _a[u] < 0 )
@@ -781,7 +782,8 @@ public abstract class Layer extends Iced {
   }
 
   public static class RectifierDropout extends Rectifier {
-    transient Random rand;
+    transient Random _rand;
+    transient byte[] _bits;
 
     RectifierDropout() {
     }
@@ -790,23 +792,24 @@ public abstract class Layer extends Iced {
       super(units);
     }
 
-    @Override public void init(Layer[] ls, int index, boolean weights, long step) {
-      super.init(ls, index, weights, step);
-      //rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      rand = new Random();
-    }
-
     @Override protected void fprop(boolean training) {
+      if( _rand == null ) {
+        //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        _rand = new XorShiftRNG(0x9afa938d554f4e76L);
+        _bits = new byte[units / 8 + 1];
+      }
+      _rand.nextBytes(_bits);
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        if( !training || rand.nextFloat() > dropout ) {
+        boolean b = (_bits[o >> 3] & (1 << o)) != 0;
+        if( !training || b ) {
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           _a[o] += _b[o];
           if( _a[o] < 0 )
             _a[o] = 0;
           else if( !training )
-            _a[o] *= 1 - _previous.dropout;
+            _a[o] *= .5f;
         }
       }
     }
@@ -840,7 +843,7 @@ public abstract class Layer extends Iced {
     }
 
     @Override protected void bprop() {
-      long processed = _trainer.samples();
+      long processed = _training.processed();
       float r = rate(processed);
       for( int o = 0; o < _a.length; o++ ) {
         assert _previous._previous.units == units;
