@@ -72,14 +72,14 @@ public class NeuralNetIrisTest extends TestUtil {
 
     Layer l = ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
-      for( int i = 0; i < l._in._a.length; i++ )
-        ref._nn.ihWeights[i][o] = l._w[o * l._in._a.length + i];
+      for( int i = 0; i < l._previous._a.length; i++ )
+        ref._nn.ihWeights[i][o] = l._w[o * l._previous._a.length + i];
       ref._nn.hBiases[o] = l._b[o];
     }
     l = ls[2];
     for( int o = 0; o < l._a.length; o++ ) {
-      for( int i = 0; i < l._in._a.length; i++ )
-        ref._nn.hoWeights[i][o] = l._w[o * l._in._a.length + i];
+      for( int i = 0; i < l._previous._a.length; i++ )
+        ref._nn.hoWeights[i][o] = l._w[o * l._previous._a.length + i];
       ref._nn.oBiases[o] = l._b[o];
     }
 
@@ -101,21 +101,21 @@ public class NeuralNetIrisTest extends TestUtil {
     // Make sure weights are equal
     l = ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
-      for( int i = 0; i < l._in._a.length; i++ ) {
+      for( int i = 0; i < l._previous._a.length; i++ ) {
         float a = ref._nn.ihWeights[i][o];
-        float b = l._w[o * l._in._a.length + i];
+        float b = l._w[o * l._previous._a.length + i];
         Assert.assertEquals(a, b, epsilon);
       }
     }
 
     // Make sure errors are equal
-    NeuralNet.Error train = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    NeuralNet.Errors train = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
     data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
     labels = _test.vecs()[_test.vecs().length - 1];
     input.vecs = data;
     input._len = data[0].length();
     ((VecSoftmax) ls[2]).vec = labels;
-    NeuralNet.Error test = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    NeuralNet.Errors test = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
     Assert.assertEquals(trainAcc, train.classification, epsilon);
     float testAcc = ref._nn.Accuracy(ref._testData);

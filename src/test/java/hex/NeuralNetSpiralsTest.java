@@ -2,14 +2,14 @@ package hex;
 
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-import hex.NeuralNet.Error;
+import hex.NeuralNet.Errors;
 
 import java.io.File;
 
 import org.junit.*;
 
-import water.*;
 import water.JUnitRunner.Nightly;
+import water.*;
 import water.deploy.VM;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -59,15 +59,15 @@ public class NeuralNetSpiralsTest extends TestUtil {
       }
 
       double time = (System.nanoTime() - start) / 1e9;
-      long samples = trainer.samples();
-      int ps = (int) (samples / time);
-      String text = (int) time + "s, " + samples + " samples (" + (ps) + "/s) ";
+      long processed = trainer.processed();
+      int ps = (int) (processed / time);
+      String text = (int) time + "s, " + processed + " samples (" + (ps) + "/s) ";
 
-      Error error = NeuralNet.eval(ls, data, labels, NeuralNet.EVAL_ROW_COUNT, null);
+      Errors error = NeuralNet.eval(ls, data, labels, NeuralNet.EVAL_ROW_COUNT, null);
       text += "train: " + error;
       text += ", rates: ";
       for( int i = 1; i < ls.length; i++ )
-        text += String.format("%.3g", ls[i].rate(samples)) + ", ";
+        text += String.format("%.3g", ls[i].rate(processed)) + ", ";
 
       System.out.println(text);
     }
