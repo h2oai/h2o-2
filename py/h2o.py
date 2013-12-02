@@ -2123,7 +2123,7 @@ class H2O(object):
                 # 'weight': None,
                 # 'thresholds': None,
                 # only GLMGrid has this..we should complain about it on GLM?
-                'parallel': None,
+                'parallelism': None,
                 'beta_eps': None,
             } 
         else:
@@ -2148,7 +2148,7 @@ class H2O(object):
                 'expert_settings': None,
                 'thresholds': None,
                 # only GLMGrid has these..we should complain about it on GLM?
-                'parallel': None,
+                'parallelism': None,
                 'beta_eps': None,
             }
 
@@ -2193,8 +2193,8 @@ class H2O(object):
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
         # default
-        if not kwargs['parallel']:
-            kwargs['parallel'] = 1
+        if not kwargs['parallelism']:
+            kwargs['parallelism'] = 1
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
 
