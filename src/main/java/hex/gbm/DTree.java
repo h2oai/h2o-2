@@ -901,7 +901,7 @@ public class DTree extends Iced {
       }
       afterBodySb.p(forest);
       // Pick max index as a prediction
-      sb.i().p("preds[0] = maxIndex(preds,1);");
+      sb.i().p("preds[0] = maxIndex(preds,1)-1;");
     }
 
     private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {
