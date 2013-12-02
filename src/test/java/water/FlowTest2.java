@@ -11,7 +11,7 @@ public class FlowTest2 {
 
   // Use a static method so all my anonymous inner classes do not carry a hidden
   // link to a FlowTest object.
-  static void basicStatic( Key k, Frame fr ) {
+  public static void basicStatic( Key k, Frame fr ) {
     try {
       final int cyl_idx = fr.find("cylinders");
       final int year_idx = fr.find("year");

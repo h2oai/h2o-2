@@ -300,7 +300,7 @@ abstract class ASTBinOp extends ASTOp {
               n.addNum(bin.op(lf ? c0.at0(r) : fd0, rf ? c1.at0(r) : fd1));
           }
         }
-      }.doAll(ncols,fr).outputFrame(fr._names,fr.domains());
+      }.doAll(ncols,fr).outputFrame((lf ? fr0 : fr1)._names,(lf ? fr0 : fr1).domains());
     if( fr0 != null ) env.subRef(fr0,k0);
     if( fr1 != null ) env.subRef(fr1,k1);
     env.pop();

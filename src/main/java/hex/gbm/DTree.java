@@ -346,7 +346,6 @@ public class DTree extends Iced {
       }
 
       _splat = _split.splat(n._hs); // Split-at value
-      final char nclass  = _tree._nclass;
       final char nbins   = _tree._nbins;
       final int min_rows = _tree._min_rows;
 
@@ -834,32 +833,50 @@ public class DTree extends Iced {
                 "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
                 "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
 
-      if( numTrees() * treeStats.meanLeaves > 10000 )
-        sb.append("/* Java code is too large to display, download it directly. */");
-      else
+      if( numTrees() * treeStats.meanLeaves > 5000 ) {
+        String modelName = JCodeGen.toJavaId(_selfKey.toString());
+        sb.append("/* Java code is too large to display, download it directly.\n");
+        sb.append("   To obtain the code please invoke in your terminal:\n");
+        sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_selfKey).append(" > ").append(modelName).append(".java\n");
+        sb.append("     javac -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
+        sb.append("     java ").append(modelName).append('\n');
+        sb.append("*/");
+      } else
         DocGen.HTML.escape(sb,toJava());
       sb.append("</code></pre></div>");
     }
 
     @Override protected SB toJavaInit(SB sb) {
-      sb.ii(1);
-      JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
-      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
+      sb = super.toJavaInit(sb);
+
       String modelName = JCodeGen.toJavaId(_selfKey.toString());
+
+      sb.ii(1);
       // Generate main method
+      sb.i().p("/**").nl();
+      sb.i().p(" * Sample program harness providing an example of how to call predict().").nl();
+      sb.i().p(" */").nl();
       sb.i().p("public static void main(String[] args) throws Exception {").nl();
-      sb.i(1).p("if (args.length!=2) { System.err.println(\"Command line should include <num of iterations> <path to datafile>\"); System.exit(1); }").nl();
-      sb.i(1).p("long iters = Integer.valueOf(args[0]);").nl();
-      sb.i(1).p("String datafile = args[1];").nl();
+      sb.i(1).p("int iters = args.length > 0 ? Integer.valueOf(args[0]) : DEFAULT_ITERATIONS;").nl();
       sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
-      sb.i(1).p("model.bench(iters, datafile, new float[NCLASSES+1], NTREES, NAMES.length-1 );").nl(); // bench(long iters, double[][] data, float[] preds, int ntrees) {
+      sb.i(1).p("model.bench(iters, DATA, new float[NCLASSES+1], NTREES);").nl();
       sb.i().p("}").nl();
       sb.di(1);
+      sb.p(TO_JAVA_BENCH_FUNC);
+
+      JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
+      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
+      JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
+      JCodeGen.toStaticVar(sb, "DATA", ValueArray.asFrame(DKV.get(_dataKey)), 100, "Sample test data.");
+
+      // Nasty code - should be provided by a non-generated parent class, BUT ...
+      sb.i(1).p(TO_JAVA_MAX_INDEX_FUNC);
+
       return sb;
     }
     // Convert Tree model to Java
     @Override protected void toJavaPredictBody( final SB sb, final SB afterBodySb) {
-      final int maxfsize = 100; // maximal number of trees in forest
+      final int maxfsize = numTrees()*nclasses(); // maximal number of trees in forest
       int fidx = 0; // forest index
       int treesInForest = 0;
       SB forest = new SB().ii(1);
@@ -884,7 +901,7 @@ public class DTree extends Iced {
       }
       afterBodySb.p(forest);
       // Pick max index as a prediction
-      sb.i().p("preds[0] = water.Model.GeneratedModel.maxIndex(preds,1);");
+      sb.i().p("preds[0] = maxIndex(preds,1);");
     }
 
     private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {
@@ -903,6 +920,7 @@ public class DTree extends Iced {
 
     // Produce prediction code for one tree
     protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int tidx, int c) {
+      sb.nl();
       sb.i().p("// Tree predictor for ").p(tidx).p("-tree and ").p(c).p("-class").nl();
       sb.i().p("static class Tree_").p(tidx).p("_class_").p(c).p(" {").nl().ii(1);
       sb.i().p("static final float predict(double[] data) {").nl().ii(1); // predict method for one tree
@@ -958,4 +976,77 @@ public class DTree extends Iced {
     assert ab.position() == sz;
     return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
   }
+
+  // Static Java code which is generated :-(
+  private static final SB TO_JAVA_MAX_INDEX_FUNC = new SB().
+      nl().
+      p("  /**").nl().
+      p("   * Find the index of the largest value in an array.").nl().
+      p("   *").nl().
+      p("   * @param from array of predictions per output class").nl().
+      p("   * @param start starting index to test from").nl().
+      p("   * @returns The index of the largest value").nl().
+      p("   */").nl().
+      p("  public static int maxIndex(float[] from, int start) {").nl().
+      p("    int result = start;").nl().
+      p("    for (int i = start; i < from.length; ++i) {").nl().
+      p("      if (from[i] > from[result]) {").nl().
+      p("        result = i;").nl().
+      p("      }").nl().
+      p("    }").nl().
+      p("    return result;").nl().
+      p("  }").nl().
+      nl();
+
+  private static final SB TO_JAVA_BENCH_FUNC = new SB().
+      nl().
+      p("  /**").nl().
+      p("   * Run a predict() benchmark with the generated model and some synthetic test data.").nl().
+      p("   *").nl().
+      p("   * @param iters number of iterations to run; each iteration predicts on every sample (i.e. row) in the test data").nl().
+      p("   * @param data test data to predict on").nl().
+      p("   * @param preds output predictions").nl().
+      p("   * @param ntrees number of trees").nl().
+      p("   */").nl().
+      p("  public void bench(int iters, double[][] data, float[] preds, int ntrees) {").nl().
+      p("    System.out.println(\"Iterations: \" + iters);").nl().
+      p("    System.out.println(\"Data rows : \" + data.length);").nl().
+      p("    System.out.println(\"Trees     : \" + ntrees + \"x\" + (preds.length-1));").nl().
+      nl().
+      p("    long startMillis;").nl().
+      p("    long endMillis;").nl().
+      p("    long deltaMillis;").nl().
+      p("    double deltaSeconds;").nl().
+      p("    double samplesPredicted;").nl().
+      p("    double samplesPredictedPerSecond;").nl().
+      p("    System.out.println(\"Starting timing phase of \"+iters+\" iterations...\");").nl().
+      nl().
+      p("    startMillis = System.currentTimeMillis();").nl().
+      p("    for (int i=0; i<iters; i++) {").nl().
+      p("      // Uncomment the nanoTime logic for per-iteration prediction times.").nl().
+      p("      // long startTime = System.nanoTime();").nl().
+      nl().
+      p("      for (double[] row : data) {").nl().
+      p("        predict(row, preds);").nl().
+      p("      }").nl().
+      nl().
+      p("      // long ttime = System.nanoTime()-startTime;").nl().
+      p("      // System.out.println(i+\". iteration took \" + (ttime) + \"ns: scoring time per row: \" + ttime/data.length +\"ns, scoring time per row and tree: \" + ttime/data.length/ntrees + \"ns\");").nl().
+      nl().
+      p("      if ((i % 1000) == 0) {").nl().
+      p("        System.out.println(\"finished \"+i+\" iterations (of \"+iters+\")...\");").nl().
+      p("      }").nl().
+      p("    }").nl().
+      p("    endMillis = System.currentTimeMillis();").nl().
+      nl().
+      p("    deltaMillis = endMillis - startMillis;").nl().
+      p("    deltaSeconds = (double)deltaMillis / 1000.0;").nl().
+      p("    samplesPredicted = data.length * iters;").nl().
+      p("    samplesPredictedPerSecond = samplesPredicted / deltaSeconds;").nl().
+      p("    System.out.println(\"finished in \"+deltaSeconds+\" seconds.\");").nl().
+      p("    System.out.println(\"samplesPredicted: \" + samplesPredicted);").nl().
+      p("    System.out.println(\"samplesPredictedPerSecond: \" + samplesPredictedPerSecond);").nl().
+      p("  }").nl().
+
+  nl();
 }

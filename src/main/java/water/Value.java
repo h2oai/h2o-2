@@ -81,7 +81,9 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     byte[] mem = _mem;          // Read once!
     if( mem != null ) return mem;
     Freezable pojo = _pojo;     // Read once!
-    if( pojo != null ) return (_mem = pojo.write(new AutoBuffer()).buf());
+    if( pojo != null ) 
+      if( pojo instanceof Chunk ) return (_mem = ((Chunk)pojo).getBytes());
+      else return (_mem = pojo.write(new AutoBuffer()).buf());
     if( _max == 0 ) return (_mem = new byte[0]);
     return (_mem = loadPersist());
   }

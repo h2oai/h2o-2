@@ -2192,10 +2192,6 @@ class H2O(object):
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
 
-        # default
-        if not kwargs['parallelism']:
-            kwargs['parallelism'] = 1
-
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
 
         # Check that the response has the right Progress url it's going to steer us to.

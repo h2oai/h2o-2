@@ -6,8 +6,8 @@ options(echo=FALSE)
 SEARCHPATH <- NULL
 calcPath<-
 function(path, root) {
-    if (basename(path) == "h2o") {
-        print("[WARN]: Could not find the bucket that you specified! Checking R/*.")
+    if (basename(path) == "h2o" || "smalldata" %in% dir(path)) {
+        print("[INFO]: Could not find the bucket that you specified! Checking R/*. Will fail if cannot find")
         SEARCHPATH <<- path
         return(-1)
     }
@@ -51,10 +51,11 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         bn <- basename(dataName)
         dataName <- dirname(dataName)
         dataName <- gsub("\\.","", gsub("\\./","",dataName))
-        if(!is.null(SEARCHPATH)) return(paste(SEARCHPATH, "/", dataName, sep = ""))
+        if(!is.null(SEARCHPATH)) return(paste(SEARCHPATH, "/", dataName, "/", bn, sep = ""))
         psplit <- strsplit(dataName, "/")[[1]]
         bucket <- psplit[1]
         path   <- paste(psplit[-1], bn, collapse="/", sep = "/")
+        Log.info("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema) 
         return(locate(bucket = bucket, path = path, schema = schema))
     }
 }

@@ -23,6 +23,8 @@ public class LinuxProcFileReader {
   private long _systemTotalTicks = -1;
   private long _processTotalTicks = -1;
 
+  private int _processNumOpenFds = -1;
+
   /**
    * Constructor.
    */
@@ -45,6 +47,11 @@ public class LinuxProcFileReader {
   public long getProcessTotalTicks() { assert _processTotalTicks > 0;  return _processTotalTicks; }
 
   /**
+   * @return number of currently open fds of this process.
+   */
+  public int getProcessNumOpenFds() { assert _processNumOpenFds > 0;  return _processNumOpenFds; }
+
+  /**
    * Read and parse data from /proc/stat and /proc/<pid>/stat.
    * If this doesn't work for some reason, the values will be -1.
    */
@@ -54,17 +61,25 @@ public class LinuxProcFileReader {
       return;
     }
 
-    readSystemProcFile();
-    readProcessProcFile();
-    parseSystemProcFile(_systemData);
-    parseProcessProcFile(_processData);
+    String pid;
+    try {
+      pid = getProcessId();
+
+      readSystemProcFile();
+      readProcessProcFile(pid);
+      readProcessNumOpenFds(pid);
+      parseSystemProcFile(_systemData);
+      parseProcessProcFile(_processData);
+    }
+    catch (Exception _) {}
   }
 
   /**
    * @return true if all the values are ok to use; false otherwise.
    */
   public boolean valid() {
-    return (_systemIdleTicks >= 0) && (_systemTotalTicks >= 0) && (_processTotalTicks >= 0);
+    return ((_systemIdleTicks >= 0) && (_systemTotalTicks >= 0) && (_processTotalTicks >= 0) &&
+            (_processNumOpenFds >= 0));
   }
 
   private static String getProcessId() throws Exception {
@@ -90,16 +105,19 @@ public class LinuxProcFileReader {
     while (true) {
       int n = fr.read(buffer, bytesRead, buffer.length - bytesRead);
       if (n < 0) {
+        fr.close();
         return new String (buffer, 0, bytesRead);
       }
       else if (n == 0) {
         // This is weird.
+        fr.close();
         throw new Exception("LinuxProcFileReader readFile read 0 bytes");
       }
 
       bytesRead += n;
 
       if (bytesRead >= buffer.length) {
+        fr.close();
         throw new Exception("LinuxProcFileReader readFile unexpected buffer full");
       }
     }
@@ -138,9 +156,8 @@ public class LinuxProcFileReader {
     catch (Exception _) {}
   }
 
-  private void readProcessProcFile() {
+  private void readProcessProcFile(String pid) {
     try {
-      String pid = getProcessId();
       String s = "/proc/" + pid + "/stat";
       _processData = readFile(new File(s));
     }
@@ -164,6 +181,18 @@ public class LinuxProcFileReader {
       long processUserTicks   = Long.parseLong(m.group(14));
       long processSystemTicks   = Long.parseLong(m.group(15));
       _processTotalTicks = processUserTicks + processSystemTicks;
+    }
+    catch (Exception _) {}
+  }
+
+  private void readProcessNumOpenFds(String pid) {
+    try {
+      String s = "/proc/" + pid + "/fd";
+      File f = new File(s);
+      String[] arr = f.list();
+      if (arr != null) {
+        _processNumOpenFds = arr.length;
+      }
     }
     catch (Exception _) {}
   }

@@ -134,10 +134,13 @@ def writeSimpleSliceTestTask(FU, data, dataPath, FUParams):
             test += colRowSlice.format(i[0], i[1])
 
     test += """
+            Log.inf("End of test")
+            PASSS <<- TRUE
             }}
-            
+            PASSS <- FALSE
             conn = new("H2OClient", ip=myIP, port=myPort)
             tryCatch(test_that({1}, {0}(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+            if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
             PASS()""".format(TESTNAME.replace('-','_'), DESCRIPTION)
 
     return test
@@ -238,10 +241,13 @@ def writeSimpleNumericFilterTestTask(FU, data, dataPath, FUParams):
             cC = filter(lambda a: a != i[1], compCols)
             test += rowFilterByColNSelect.format(FU, makeVec(i[1]), i[0], makeVec(';'.join(cC)))
     test += """ 
+            Log.info("End of test")
+            PASSS <<- TRUE
             }}
-            
+            PASSS <- FALSE
             conn = new("H2OClient", ip=myIP, port=myPort)
             tryCatch(test_that({1}, {0}(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+            if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
             PASS()""".format(TESTNAME.replace('-','_'), DESCRIPTION)
 
     return test
@@ -340,10 +346,14 @@ def writeCompoundFilterTestTask(FU, data, dataPath, FUParams):
         test += rowFilterByColNSelect.format(EXPRESSION, makeVec(';'.join(cC)))
 
     test += """
+            Log.info("End of test")
+            PASSS <<- TRUE
             }}
             
+            PASSS <- FALSE
             conn = new("H2OClient", ip=myIP, port=myPort)
             tryCatch(test_that({1}, {0}(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+            if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
             PASS()""".format(TESTNAME.replace('-','_'), DESCRIPTION)
 
     return test

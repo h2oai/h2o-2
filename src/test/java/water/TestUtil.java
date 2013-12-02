@@ -387,4 +387,12 @@ public class TestUtil {
     fs.blockForPending();
     return new Frame(names, vecs);
   }
+
+  public static void dumpKeys(String msg) {
+    System.err.println("-->> Store dump <<--");
+    System.err.println("    " + msg);
+    System.err.println(" Keys: " + H2O.store_size());
+    for ( Key k : H2O.keySet()) System.err.println(" * " + k);
+    System.err.println("----------------------");
+  }
 }
