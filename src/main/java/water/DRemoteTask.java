@@ -11,7 +11,7 @@ import water.util.Log;
  * Execute a set of Keys on the home for each Key.
  * Limited to doing a map/reduce style.
  */
-public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implements Cloneable {
+public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implements Cloneable, ForkJoinPool.ManagedBlocker {
   // Keys to be worked over
   protected Key[] _keys;
   // One-time flips from false to true
@@ -54,18 +54,32 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public T dfork ( Key... keys ) { keys(keys); compute2(); return self(); }
   public void keys( Key... keys ) { _keys = flatten(keys); }
   public T invoke( Key... keys ) {
-    try { dfork(keys).get(); }
-    catch(ExecutionException eex) { // skip the execution part
-      Throwable tex = eex.getCause();
-      if( tex instanceof Error ) throw (Error)tex;
-      if( tex instanceof DistributedException ) throw (DistributedException)tex;
-      throw new RuntimeException(tex);
-    }
-    catch(InterruptedException  iex) { Log.errRTExcept(iex); }
-    catch(CancellationException cex) { Log.errRTExcept(cex); }
+    try { 
+      ForkJoinPool.managedBlock(dfork(keys));
+    } catch(InterruptedException  iex) { Log.errRTExcept(iex); }
+
     // Intent was to quietlyJoin();
     // Which forks, then QUIETLY join to not propagate local exceptions out.
     return self();
+  }
+
+  // Return true if blocking is unnecessary, which is true if the Task isDone.
+  public boolean isReleasable() {  return isDone();  }
+  // Possibly blocks the current thread.  Returns true if isReleasable would
+  // return true.  Used by the FJ Pool management to spawn threads to prevent
+  // deadlock is otherwise all threads would block on waits.
+  public boolean block() throws InterruptedException {
+    while( !isDone() ) {
+      try { get(); }
+      catch(ExecutionException eex) { // skip the execution part
+        Throwable tex = eex.getCause();
+        if( tex instanceof Error ) throw (Error)tex;
+        if( tex instanceof DistributedException ) throw (DistributedException)tex;
+        throw new RuntimeException(tex);
+      }
+      catch(CancellationException cex) { Log.errRTExcept(cex); }
+    }
+    return true;
   }
 
   // Decide to do local-work or remote-work
