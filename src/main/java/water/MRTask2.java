@@ -1,6 +1,7 @@
 package water;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinPool;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
@@ -25,7 +26,7 @@ import water.fvec.Vec.VectorGroup;
  * NewChunks.  MRTask2 will automatically close the new Appendable vecs and
  * produce an output frame with newly created Vecs.
  */
-public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable {
+public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable, ForkJoinPool.ManagedBlocker {
   public MRTask2(){}
   public MRTask2(H2OCountedCompleter completer){super(completer);}
 
@@ -223,12 +224,23 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Block for & get any final results from a dfork'd MRTask2.
    *  Note: the desired name 'get' is final in ForkJoinTask.  */
   public final T getResult() {
-    join();
+    try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
+    //join();
     // Do any post-writing work (zap rollup fields, etc)
     _fr.reloadVecs();
     for( int i=0; i<_fr.numCols(); i++ )
       _fr.vecs()[i].postWrite();
     return self();
+  }
+
+  // Return true if blocking is unnecessary, which is true if the Task isDone.
+  public boolean isReleasable() {  return isDone();  }
+  // Possibly blocks the current thread.  Returns true if isReleasable would
+  // return true.  Used by the FJ Pool management to spawn threads to prevent
+  // deadlock is otherwise all threads would block on waits.
+  public synchronized boolean block() {
+    while( !isDone() ) join();
+    return true;
   }
 
   /** Called once on remote at top level, probably with a subset of the cloud.
