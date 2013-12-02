@@ -113,6 +113,7 @@ public class Expr2Test extends TestUtil {
       checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
       checkStr("table(h.hex)");
       checkStr("table(h.hex[,3])");
+      checkStr("h.hex[,4] != 29 || h.hex[,2] < 305 && h.hex[,2] < 81");
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
