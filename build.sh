@@ -126,6 +126,11 @@ function build_classes() {
         $SRC/jsr166y/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
+
+    # Copy Java resources
+    # If you delete this line you take responsibility for logging and you have to make
+    # sure that jests3 library will not output its logs into our log files !!!
+    cp -r ${RESOURCES}/* "${CLASSES}"
 }
 
 function build_initializer() {

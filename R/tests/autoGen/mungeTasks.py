@@ -34,8 +34,8 @@ def writeSimpleSliceTestTask(FU, data, dataPath, FUParams):
             {3} <- function(conn) {{
                 Log.info("A munge-task R unit test on data <{0}> testing the functional unit <{1}> ")
                 Log.info("Uploading {0}")
-                hex <- h2o.uploadFile(conn, {2}, "r{0}.hex")
-           """.format(DATANAME, FU, DATAPATH, TESTNAME.replace('-','_'), st, githash, seed)
+                hex <- h2o.uploadFile(conn, locate({2}), "r{0}.hex")
+           """.format(DATANAME.replace('-','_'), FU, DATAPATH, TESTNAME.replace('-','_'), st, githash, seed)
 
     cols = makeVec(COLS)
     rows = makeVec(ROWS)
@@ -134,10 +134,13 @@ def writeSimpleSliceTestTask(FU, data, dataPath, FUParams):
             test += colRowSlice.format(i[0], i[1])
 
     test += """
+            Log.inf("End of test")
+            PASSS <<- TRUE
             }}
-            
+            PASSS <- FALSE
             conn = new("H2OClient", ip=myIP, port=myPort)
             tryCatch(test_that({1}, {0}(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+            if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
             PASS()""".format(TESTNAME.replace('-','_'), DESCRIPTION)
 
     return test
@@ -171,8 +174,8 @@ def writeSimpleNumericFilterTestTask(FU, data, dataPath, FUParams):
             {3} <- function(conn) {{
                 Log.info("A munge-task R unit test on data <{0}> testing the functional unit <{1}> ")
                 Log.info("Uploading {0}")
-                hex <- h2o.uploadFile(conn, {2}, "r{0}.hex")
-           """.format(DATANAME, FU, DATAPATH, TESTNAME.replace('-', '_'), st, githash, seed)
+                hex <- h2o.uploadFile(conn, locate({2}), "r{0}.hex")
+           """.format(DATANAME.replace('-','_'), FU, DATAPATH, TESTNAME.replace('-', '_'), st, githash, seed)
 
     valCol = zip(VALUECOL.split('|')[0].split(';'), VALUECOL.split('|')[1].split(';'))
     valCol2 = zip(VALUECOL2.split('|')[0].split(';'), VALUECOL2.split('|')[1].split(';')) if VALUECOL2 != '0' else '0'
@@ -238,10 +241,13 @@ def writeSimpleNumericFilterTestTask(FU, data, dataPath, FUParams):
             cC = filter(lambda a: a != i[1], compCols)
             test += rowFilterByColNSelect.format(FU, makeVec(i[1]), i[0], makeVec(';'.join(cC)))
     test += """ 
+            Log.info("End of test")
+            PASSS <<- TRUE
             }}
-            
+            PASSS <- FALSE
             conn = new("H2OClient", ip=myIP, port=myPort)
             tryCatch(test_that({1}, {0}(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+            if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
             PASS()""".format(TESTNAME.replace('-','_'), DESCRIPTION)
 
     return test
@@ -276,8 +282,8 @@ def writeCompoundFilterTestTask(FU, data, dataPath, FUParams):
             {3} <- function(conn) {{
                 Log.info("A munge-task R unit test on data <{0}> testing the functional unit <{1}> ")
                 Log.info("Uploading {0}")
-                hex <- h2o.uploadFile(conn, {2}, "r{0}.hex")
-           """.format(DATANAME, FU, DATAPATH, TESTNAME.replace('-','_'), st, githash, seed)
+                hex <- h2o.uploadFile(conn, locate({2}), "r{0}.hex")
+           """.format(DATANAME.replace('-','_'), FU, DATAPATH, TESTNAME.replace('-','_'), st, githash, seed)
 
     valColL = zip(VALUECOLL.split('|')[0].split(';'), VALUECOLL.split('|')[1].split(';'))
     valColR = zip(VALUECOLR.split('|')[0].split(';'), VALUECOLR.split('|')[1].split(';'))
@@ -340,10 +346,14 @@ def writeCompoundFilterTestTask(FU, data, dataPath, FUParams):
         test += rowFilterByColNSelect.format(EXPRESSION, makeVec(';'.join(cC)))
 
     test += """
+            Log.info("End of test")
+            PASSS <<- TRUE
             }}
             
+            PASSS <- FALSE
             conn = new("H2OClient", ip=myIP, port=myPort)
             tryCatch(test_that({1}, {0}(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+            if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
             PASS()""".format(TESTNAME.replace('-','_'), DESCRIPTION)
 
     return test

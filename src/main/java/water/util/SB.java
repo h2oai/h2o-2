@@ -9,13 +9,16 @@ public class SB {
   public SB(        ) { _sb = new StringBuilder( ); }
   public SB(String s) { _sb = new StringBuilder(s); }
   public SB p( String s ) { _sb.append(s); return this; }
-  public SB p( float  s ) { _sb.append(s); return this; }
+  public SB p( float  s ) { if(  Float.isNaN(s) ) _sb.append( "Float.NaN"); else _sb.append(s); return this; }
+  public SB p( double s ) { if( Double.isNaN(s) ) _sb.append("Double.NaN"); else _sb.append(s); return this; }
   public SB p( char   s ) { _sb.append(s); return this; }
   public SB p( int    s ) { _sb.append(s); return this; }
-  public SB p( Object s ) { _sb.append(s.toString()); return this; }
+  // Not spelled "p" on purpose: too easy to accidentally say "p(1.0)" and
+  // suddenly call the the autoboxed version.
+  public SB pobj( Object s ) { _sb.append(s.toString()); return this; }
   public SB i( int d ) { for( int i=0; i<d+_indent; i++ ) p("  "); return this; }
   public SB i( ) { return i(0); }
-  // Java specif append of float
+  // Java specific append of float
   public SB pj( float  s ) { _sb.append(s).append('f'); return this; }
   // Increase indentation
   public SB ii( int i) { _indent += i; return this; }

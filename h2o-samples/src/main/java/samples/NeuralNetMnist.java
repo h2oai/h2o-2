@@ -4,11 +4,12 @@ import hex.*;
 import hex.Layer.Tanh;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
-import hex.NeuralNet.Error;
+import hex.NeuralNet.Errors;
 import hex.rng.MersenneTwisterRNG;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
 import water.Job;
@@ -74,31 +75,32 @@ public class NeuralNetMnist extends Job {
     // Monitor training
     final Timer timer = new Timer();
     final long start = System.nanoTime();
+    final AtomicInteger evals = new AtomicInteger(1);
     timer.schedule(new TimerTask() {
       @Override public void run() {
         if( NeuralNetMnist.this.cancelled() )
           timer.cancel();
         else {
           double time = (System.nanoTime() - start) / 1e9;
-          long samples = trainer.samples();
+          long samples = trainer.processed();
           int ps = (int) (samples / time);
           String text = (int) time + "s, " + samples + " samples (" + (ps) + "/s) ";
 
           // Build separate nets for scoring purposes, use same normalization stats as for training
           Layer[] temp = build(train, trainLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
           Layer.shareWeights(ls, temp);
-          Error error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
-          text += "train: " + error;
-
-          temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
-          Layer.shareWeights(ls, temp);
-          error = NeuralNet.eval(temp, NeuralNet.EVAL_ROW_COUNT, null);
-          text += ", test: " + error;
+          Errors e = NeuralNet.eval(temp, 1000, null);
+          text += "train: " + e;
           text += ", rates: ";
           for( int i = 1; i < ls.length; i++ )
             text += String.format("%.3g", ls[i].rate(samples)) + ", ";
-
           System.out.println(text);
+          if( (evals.incrementAndGet() % 8) == 0 ) {
+            temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
+            Layer.shareWeights(ls, temp);
+            e = NeuralNet.eval(temp, 0, null);
+            System.out.println("Test error: " + e);
+          }
         }
       }
     }, 0, 2000);

@@ -8,6 +8,7 @@ import org.junit.*;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Utils;
 
 public class DRFModelAdaptTest extends TestUtil {
 
@@ -24,11 +25,13 @@ public class DRFModelAdaptTest extends TestUtil {
    *  C - 2    D - 1    mapping should remap it into:  D - 3
    *  D - 3
    */
-  @Test public void testModelAdapt() {
+  //@Ignore
+  @Test public void testModelAdapt1() {
     testModelAdaptation(
-        "./smalldata/test/classifier/coldom_train.csv",
-        "./smalldata/test/classifier/coldom_test.csv",
-        new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } });
+        "./smalldata/test/classifier/coldom_train_1.csv",
+        "./smalldata/test/classifier/coldom_test_1.csv",
+        new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } },
+        true);
   }
 
   /**
@@ -39,21 +42,52 @@ public class DRFModelAdaptTest extends TestUtil {
    *  C - 2    X - 1    mapping should remap it into:  X - NA
    *  D - 3
    */
-  @Test public void testModelAdapt2() {
+  //@Ignore
+  @Test public void testModelAdapt1_2() {
     testModelAdaptation(
-        "./smalldata/test/classifier/coldom_train.csv",
-        "./smalldata/test/classifier/coldom_test2.csv",
-        new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } });
+        "./smalldata/test/classifier/coldom_train_1.csv",
+        "./smalldata/test/classifier/coldom_test_1_2.csv",
+        new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } },
+        true);
   }
 
-  @Test public void testModelAdapt3() {
+  //@Ignore
+  @Test public void testModelAdapt2() {
     testModelAdaptation(
         "./smalldata/test/classifier/coldom_train_2.csv",
         "./smalldata/test/classifier/coldom_test_2.csv",
-        new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.find("R")]; }; @Override int needAdaptation(Frame fr) { return 0;} });
+        new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.find("R")]; }; @Override int needAdaptation(Frame fr) { return 0;} },
+        true);
   }
 
-  void testModelAdaptation(String train, String test, PrepData dprep) {
+  /** Test adaptation of numeric values in response column. */
+  //@Ignore
+  @Test public void testModelAdapt3() {
+    testModelAdaptation(
+        "./smalldata/test/classifier/coldom_train_3.csv",
+        "./smalldata/test/classifier/coldom_test_3.csv",
+        new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } },
+        false);
+  }
+
+  static final int[]   a(int ...arr)   { return arr; }
+
+  @Test public void testBasics_1() {
+    // Simple domain mapping
+    Assert.assertArrayEquals( a(0, 1, 2, 3),      Utils.mapping(a( 0, 1, 2, 3)));
+    Assert.assertArrayEquals( a(0, 1, 2, -1, 3),  Utils.mapping(a( 0, 1, 2, 4)));
+    Assert.assertArrayEquals( a(0, -1, 1),        Utils.mapping(a(-1, 1)));
+    Assert.assertArrayEquals( a(0, -1, 1, -1, 2), Utils.mapping(a(-1, 1, 3)));
+  }
+
+  @Test public void testBasics_2() {
+    Assert.assertArrayEquals( a(2, 30, 400, 5000),      Utils.compose(Utils.mapping(a( 0, 1, 2, 3)), a(2,30,400,5000) ));
+    Assert.assertArrayEquals( a(2, 30, 400, -1, 5000),  Utils.compose(Utils.mapping(a( 0, 1, 2, 4)), a(2,30,400,5000) ));
+    Assert.assertArrayEquals( a(2, -1, 30),             Utils.compose(Utils.mapping(a(-1, 1)),       a(2,30,400,5000) ));
+    Assert.assertArrayEquals( a(2, -1, 30, -1, 400),    Utils.compose(Utils.mapping(a(-1, 1, 3)),    a(2,30,400,5000) ));
+  }
+
+  void testModelAdaptation(String train, String test, PrepData dprep, boolean exactAdaptation) {
     DRFModel model = null;
     Frame frTest = null;
     Frame frTrain = null;
@@ -70,7 +104,7 @@ public class DRFModelAdaptTest extends TestUtil {
       frTest = parseFrame(testKey, test);
       Assert.assertEquals("TEST CONF ERROR: The test dataset should contain 2*<number of input columns>+1!", 2*(frTrain.numCols()-1)+1, frTest.numCols());
       // Adapt test dataset
-      frAdapted = model.adapt(frTest, true); // do not perform translation to enums
+      frAdapted = model.adapt(frTest, exactAdaptation); // do/do not perform translation to enums
       Assert.assertEquals("Adapt method should return two frames", 2, frAdapted.length);
       Assert.assertEquals("Test expects that all columns in  test dataset has to be adapted", dprep.needAdaptation(frTrain), frAdapted[1].numCols());
 

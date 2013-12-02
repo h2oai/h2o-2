@@ -13,7 +13,7 @@ numExprList = [
         # 'tnc3.hex = colSwap(tnc3.hex,<col1>,tnc3.hex[<col1>] + 0)',
         # 'tnc3.hex = colSwap(tnc3.hex,<col1>,(tnc3.hex[<col1>]==0 ? 9999 : tnc3.hex[<col1>]))',
         # 'tnc3.hex = colSwap( tnc3.hex, <col1>, (tnc3.hex[<col1>] + 1) )',
-        'tnc3.hex = colSwap(tnc3.hex,<col1>,(tnc3.hex[<col1>]==-1 ? 1 : tnc3.hex[<col1>]))',
+        'apply(tnc3.hex,2,function(x){ifelse(x==-1,1,x)})'
     ]
 
 charExprList = [

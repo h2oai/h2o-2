@@ -528,6 +528,8 @@ public class Frame extends Iced {
     for( int i=0; i<c2.length; i++ )
       if( c2[i] >= numCols() )
         throw new IllegalArgumentException("Trying to select column "+c2[i]+" but only "+numCols()+" present.");
+    if( c2.length==0 )
+      throw new IllegalArgumentException("No columns selected (did you try to select column 0 instead of column 1?)");
 
     // Do Da Slice
     // orows is either a long[] or a Vec
