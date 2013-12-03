@@ -7,34 +7,19 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 # don't allow None on ntree..causes 50 tree default!
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
-# Comment out illegal rest api parameter.
-    'use_non_local_data': [None, 0, 1],
-    'iterative_cm': [None, 0, 1],
-    'response_variable': [None,54],
-    'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'],
-    'ntree': [1,3,7,19],
-    'model_key': ['model_keyA', '012345', '__hello'],
-    'out_of_bag_error_estimate': [None,0,1],
-    'stat_type': [None, 'ENTROPY', 'GINI'],
-    'depth': [None, 1,10,20,100],
-    'bin_limit': [None,5,10,100,1000],
-    'parallel': [None,0,1],
-    'ignore': [None,0,1,2,3,4,5,6,7,8,9],
-    'sample': [None,20,40,60,80,90],
+    'response': [None,'C54'],
+    'ntrees': [1,3,7,19],
+    'destination_key': ['model_keyA', '012345', '__hello'],
+    'max_depth': [None, 1,10,20,100],
+    'nbins': [None,5,10,100,1000],
+    'ignored_cols_by_name': [None, None, None, None, 'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
+    'cols': [None, None, None, None, None, '0,1,2,3,4,','C1,C2,C3,C4'],
+
+    'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
     'seed': [None,'0','1','11111','19823134','1231231'],
     # stack trace if we use more features than legal. dropped or redundanct cols reduce 
     # legal max also.
-    'features': [1,3,5,7,9,11,13,17,19,23,37,53],
-    'exclusive_split_limit': [None,0,3,5],
-    'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL'],
-    'strata_samples': [
-        None,
-        "1=5",
-        "2=3",
-        "1=1,2=1,3=1,4=1,5=1,6=1,7=1",
-        "1=99,2=99,3=99,4=99,5=99,6=99,7=99", # fails with 100?
-        "1=0,2=0,3=0,4=0,5=0,6=0,7=0",
-        ]
+    'mtries': [1,3,5,7,9,11,13,17,19,23,37,53],
     }
 
 class Basic(unittest.TestCase):
@@ -56,14 +41,15 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_params_rand2(self):
+        h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         for trial in range(10):
             # params is mutable. This is default.
-            params = {'ntree': 13, 'parallel': 1, 'features': 7}
+            params = {'ntrees': 13, 'mtries': 7}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
-            timeoutSecs = 30 + ((kwargs['ntree']*20) * max(1,kwargs['features']/15) * (kwargs['parallel'] and 1 or 3))
+            timeoutSecs = 30 + ((kwargs['ntrees']*80) * max(1,kwargs['mtries']/60) )
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
