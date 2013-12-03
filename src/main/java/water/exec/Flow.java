@@ -101,6 +101,9 @@ public abstract class Flow extends Iced {
     public FlowGroupBy with( GroupBy fr ) {
       return new FlowGroupBy(fr,this);
     }
+    public FlowFilter with ( Filter filter){
+      return new FlowFilter(filter, this);
+    }
     @Override Frame frame() { return _ex.frame(); }
     @Override public String toString() { return _ex.toString()+".with("+_fr+")"; }
     @Override <X extends PerRow<X>> PerRow<X> doit(PerRow<X> pr, double ds[], PerRow<X> pr0) {
