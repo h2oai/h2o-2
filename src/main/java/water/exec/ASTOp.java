@@ -46,8 +46,6 @@ public abstract class ASTOp extends AST {
     put(new ASTDiv ());
     put(new ASTPow ());
     put(new ASTMod ());
-    put(new ASTMin ());
-    put(new ASTMax ());
     put(new ASTLT  ());
     put(new ASTLE  ());
     put(new ASTGT  ());
@@ -57,10 +55,14 @@ public abstract class ASTOp extends AST {
     put(new ASTLA  ());
     put(new ASTLO  ());
 
+    // More generic reducers
+    put(new ASTMin ());
+    put(new ASTMax ());
+    put(new ASTSum ());
+
     // Misc
     put(new ASTCat ());
     put(new ASTCbind());
-    put(new ASTSum ());
     put(new ASTTable ());
     put(new ASTReduce());
     put(new ASTIfElse());
@@ -248,6 +250,9 @@ class ASTScale extends ASTUniOp {
   }
 }
 
+// Class of things that will auto-expand across arrays in a 2-to-1 way:
+// applying 2 things (from an array or scalar to array or scalar) producing an
+// array or scalar result.
 abstract class ASTBinOp extends ASTOp {
   static final String VARS[] = new String[]{ "", "x","y"};
   static Type[] newsig() {
@@ -313,8 +318,6 @@ class ASTMul  extends ASTBinOp { String opStr(){ return "*"  ;} ASTOp make() {re
 class ASTDiv  extends ASTBinOp { String opStr(){ return "/"  ;} ASTOp make() {return new ASTDiv ();} double op(double d0, double d1) { return d0/d1;}}
 class ASTPow  extends ASTBinOp { String opStr(){ return "^"  ;} ASTOp make() {return new ASTPow ();} double op(double d0, double d1) { return Math.pow(d0,d1);}}
 class ASTMod  extends ASTBinOp { String opStr(){ return "%"  ;} ASTOp make() {return new ASTMod ();} double op(double d0, double d1) { return d0%d1;}}
-class ASTMin  extends ASTBinOp { String opStr(){ return "min";} ASTOp make() {return new ASTMin ();} double op(double d0, double d1) { return Math.min(d0,d1);}}
-class ASTMax  extends ASTBinOp { String opStr(){ return "max";} ASTOp make() {return new ASTMax ();} double op(double d0, double d1) { return Math.max(d0,d1);}}
 class ASTLT   extends ASTBinOp { String opStr(){ return "<"  ;} ASTOp make() {return new ASTLT  ();} double op(double d0, double d1) { return d0< d1?1:0;}}
 class ASTLE   extends ASTBinOp { String opStr(){ return "<=" ;} ASTOp make() {return new ASTLE  ();} double op(double d0, double d1) { return d0<=d1?1:0;}}
 class ASTGT   extends ASTBinOp { String opStr(){ return ">"  ;} ASTOp make() {return new ASTGT  ();} double op(double d0, double d1) { return d0> d1?1:0;}}
@@ -323,6 +326,44 @@ class ASTEQ   extends ASTBinOp { String opStr(){ return "==" ;} ASTOp make() {re
 class ASTNE   extends ASTBinOp { String opStr(){ return "!=" ;} ASTOp make() {return new ASTNE  ();} double op(double d0, double d1) { return d0!=d1?1:0;}}
 class ASTLA   extends ASTBinOp { String opStr(){ return "&&" ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0)?1:0;}}
 class ASTLO   extends ASTBinOp { String opStr(){ return "||" ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0)?0:1;}}
+
+// Variable length; instances will be created of required length
+abstract class ASTReducerOp extends ASTOp {
+  ASTReducerOp( ) { super(new String[]{"","dbls"},
+                          new Type[]{Type.DBL,Type.varargs(Type.dblary())}); }
+  abstract double op( double d0, double d1 );
+  @Override void apply(Env env, int argcnt) {
+    double sum=0;
+    for( int i=0; i<argcnt-1; i++ )
+      if( env.isDbl() ) sum = op(sum,env.popDbl());
+      else {
+        Frame fr = env.popAry();
+        String skey = env.key();
+        sum = op(sum,new RedOp(this).doAll(fr)._d);
+        env.subRef(fr,skey);
+      }
+    env.poppush(sum);
+  }
+
+  private static class RedOp extends MRTask2<RedOp> {
+    final ASTReducerOp _bin;
+    RedOp( ASTReducerOp bin ) { _bin = bin; }
+    double _d;
+    @Override public void map( Chunk chks[] ) {
+      for( int i=0; i<chks.length; i++ ) {
+        Chunk C = chks[i];
+        for( int r=0; r<C._len; r++ )
+          _d = _bin.op(_d,C.at0(r));
+        if( Double.isNaN(_d) ) break;
+      }
+    }
+    @Override public void reduce( RedOp s ) { _d = _bin.op(_d,s._d); }
+  }
+}
+
+class ASTSum extends ASTReducerOp { String opStr(){ return "sum"  ;} ASTOp make() {return new ASTSum();} double op(double d0, double d1) { return d0+d1;}}
+class ASTMax extends ASTReducerOp { String opStr(){ return "max"  ;} ASTOp make() {return new ASTMax();} double op(double d0, double d1) { return Math.max(d0,d1);}}
+class ASTMin extends ASTReducerOp { String opStr(){ return "min"  ;} ASTOp make() {return new ASTMin();} double op(double d0, double d1) { return Math.min(d0,d1);}}
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
@@ -476,38 +517,6 @@ class ASTTable extends ASTOp {
         }
     }
     @Override public void reduce(Tabularize that) { Utils.add(_counts,that._counts); }
-  }
-}
-// Variable length; instances will be created of required length
-class ASTSum extends ASTOp {
-  @Override String opStr() { return "sum"; }
-  ASTSum( ) { super(new String[]{"sum","dbls"},
-                    new Type[]{Type.DBL,Type.varargs(Type.dblary())}); }
-  @Override ASTOp make() {return new ASTSum();}
-  @Override void apply(Env env, int argcnt) {
-    double sum=0;
-    for( int i=0; i<argcnt-1; i++ )
-      if( env.isDbl() ) sum += env.popDbl();
-      else {
-        Frame fr = env.popAry();
-        String skey = env.key();
-        sum += new Sum().doAll(fr)._d;
-        env.subRef(fr,skey);
-      }
-    env.poppush(sum);
-  }
-
-  private static class Sum extends MRTask2<Sum> {
-    double _d;
-    @Override public void map( Chunk chks[] ) {
-      for( int i=0; i<chks.length; i++ ) {
-        Chunk C = chks[i];
-        for( int r=0; r<C._len; r++ )
-          _d += C.at0(r);
-        if( Double.isNaN(_d) ) break;
-      }
-    }
-    @Override public void reduce( Sum s ) { _d+=s._d; }
   }
 }
 
