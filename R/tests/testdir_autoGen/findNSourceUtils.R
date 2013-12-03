@@ -1,4 +1,5 @@
 options(echo=FALSE)
+
 ##
 # Utilities for relative paths in R
 ##
@@ -8,9 +9,13 @@ calcPath<-
 function(path, root, optional_root_parent = NULL) {
     #takes the given path & root and searches upward...
     #if not found, searches R/*
-    #use optional_root_parent if your root directory is too generic (e.g. root == "tests")
+    #use optional_root_parent if your root directory is too generic (e.g. root = "tests")
     bdp <- basename(dirname(path)) == root
     rddNbdpEopr <- root %in% dir(dirname(path)) & (is.null(optional_root_parent) || basename(dirname(path)) == optional_root_parent)
+
+    if (basename(path) == root || root %in% dir(path)) {  #rddNbdpEopr) {
+        return(0)
+    }
 
     if(!is.null(optional_root_parent)) cat("Using optional root parent: ", optional_root_parent)
     if (basename(path) == "h2o" || "smalldata" %in% dir(path)) {
@@ -18,12 +23,10 @@ function(path, root, optional_root_parent = NULL) {
         SEARCHPATH <<- path
         return(-1)
     }
-    if (basename(path) == root || rddNbdpEopr) {
-        print("Found the directory!!")
-        return(0)
+    if ( bdp || rddNbdpEopr ) {
+        return(1)
     }
-    if ( bdp || rddNbdpEopr ) return(1)
-    return(ifelse( calcPath( dirname( path), root, optional_root_parent) < 0, -1, 1 + calcPath( dirname( path), root, optional_root_parent) ) )
+    return(ifelse( calcPath( dirname(path), root, optional_root_parent) < 0, -1, 1 + calcPath( dirname(path), root, optional_root_parent) ) )
 }
 
 genDots<-
