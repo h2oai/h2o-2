@@ -188,104 +188,16 @@ echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
 printenv | grep H2OWrapperDir
 
 #autoGen RUnits
-myR testdir_autoGen/runit_complexFilterTest_100kx7_logreg_80 120
-myR testdir_autoGen/runit_complexFilterTest_HTWO_87_one_line_dataset_1unix_75 120
-myR testdir_autoGen/runit_complexFilterTest_HTWO_87_one_line_dataset_1unix_81 120
-myR testdir_autoGen/runit_complexFilterTest_ecology_model_72 120
-myR testdir_autoGen/runit_complexFilterTest_iris_86 120
-myR testdir_autoGen/runit_complexFilterTest_iris_train_70 120
-myR testdir_autoGen/runit_complexFilterTest_iris_train_79 120
-myR testdir_autoGen/runit_complexFilterTest_iris_train_numeric_73 120
-myR testdir_autoGen/runit_complexFilterTest_parse_zeros_100x8500_84 120
-myR testdir_autoGen/runit_complexFilterTest_pros_68 120
-myR testdir_autoGen/runit_complexFilterTest_pros_85 120
-myR testdir_autoGen/runit_complexFilterTest_test_69 120
-myR testdir_autoGen/runit_complexFilterTest_test_77 120
-myR testdir_autoGen/runit_complexFilterTest_test_82 120
-myR testdir_autoGen/runit_complexFilterTest_tnc6_71 120
-myR testdir_autoGen/runit_complexFilterTest_train_74 120
-myR testdir_autoGen/runit_complexFilterTest_train_76 120
-myR testdir_autoGen/runit_complexFilterTest_train_78 120
-myR testdir_autoGen/runit_complexFilterTest_uis_83 120
-myR testdir_autoGen/runit_complexFilterTest_wine_87 120
-myR testdir_autoGen/runit_simpleFilterTest_100kx7_logreg_39 120
-myR testdir_autoGen/runit_simpleFilterTest_2_100kx7_logreg_37 120
-myR testdir_autoGen/runit_simpleFilterTest_40k_categoricals_33 120
-myR testdir_autoGen/runit_simpleFilterTest_AirlinesTest_59 120
-myR testdir_autoGen/runit_simpleFilterTest_AirlinesTrain_53 120
-myR testdir_autoGen/runit_simpleFilterTest_AllBedroomsent_Neighborhoods_55 120
-myR testdir_autoGen/runit_simpleFilterTest_Benchmark_dojo_test_32 120
-myR testdir_autoGen/runit_simpleFilterTest_HTWO_87_one_line_dataset_0_62 120
-myR testdir_autoGen/runit_simpleFilterTest_HTWO_87_one_line_dataset_1dos_25 120
-myR testdir_autoGen/runit_simpleFilterTest_HTWO_87_one_line_dataset_1dos_44 120
-myR testdir_autoGen/runit_simpleFilterTest_HTWO_87_two_lines_dataset_17 120
-myR testdir_autoGen/runit_simpleFilterTest_Test_Arabic_Digit_short_49 120
-myR testdir_autoGen/runit_simpleFilterTest_allyears2k_46 120
-myR testdir_autoGen/runit_simpleFilterTest_cgd_23 120
-myR testdir_autoGen/runit_simpleFilterTest_cgd_30 120
-myR testdir_autoGen/runit_simpleFilterTest_chess_train_19 120
-myR testdir_autoGen/runit_simpleFilterTest_claim_prediction_train_set_10000_int_50 120
-myR testdir_autoGen/runit_simpleFilterTest_clslowbwt_63 120
-myR testdir_autoGen/runit_simpleFilterTest_coldom_test_67 120
-myR testdir_autoGen/runit_simpleFilterTest_failtoconverge_100x50_47 120
-myR testdir_autoGen/runit_simpleFilterTest_iris_test_extra_57 120
-myR testdir_autoGen/runit_simpleFilterTest_iris_test_numeric_missing_56 120
-myR testdir_autoGen/runit_simpleFilterTest_iris_test_numeric_missing_extra_14 120
-myR testdir_autoGen/runit_simpleFilterTest_iris_train_27 120
-myR testdir_autoGen/runit_simpleFilterTest_iris_wheader_34 120
-myR testdir_autoGen/runit_simpleFilterTest_iris_wheader_48 120
-myR testdir_autoGen/runit_simpleFilterTest_lowbwtm11_64 120
-myR testdir_autoGen/runit_simpleFilterTest_meexp_31 120
-myR testdir_autoGen/runit_simpleFilterTest_na_test_58 120
-myR testdir_autoGen/runit_simpleFilterTest_parse_fail_double_space_40 120
-myR testdir_autoGen/runit_simpleFilterTest_pharynx_54 120
-myR testdir_autoGen/runit_simpleFilterTest_pros_24 120
-myR testdir_autoGen/runit_simpleFilterTest_prostate_3_60 120
-myR testdir_autoGen/runit_simpleFilterTest_prostate_4_26 120
-myR testdir_autoGen/runit_simpleFilterTest_prostate_6_22 120
-myR testdir_autoGen/runit_simpleFilterTest_prostate_cat_replaced_41 120
-myR testdir_autoGen/runit_simpleFilterTest_sdss174052_29 120
-myR testdir_autoGen/runit_simpleFilterTest_sdss174052_42 120
-myR testdir_autoGen/runit_simpleFilterTest_sin_pattern_16 120
-myR testdir_autoGen/runit_simpleFilterTest_sin_pattern_61 120
-myR testdir_autoGen/runit_simpleFilterTest_sumsigmoids_test_66 120
-myR testdir_autoGen/runit_simpleFilterTest_swiss_11 120
-myR testdir_autoGen/runit_simpleFilterTest_test_13 120
-myR testdir_autoGen/runit_simpleFilterTest_test_15 120
-myR testdir_autoGen/runit_simpleFilterTest_test_18 120
-myR testdir_autoGen/runit_simpleFilterTest_test_35 120
-myR testdir_autoGen/runit_simpleFilterTest_test_120 45
-myR testdir_autoGen/runit_simpleFilterTest_test_51 120
-myR testdir_autoGen/runit_simpleFilterTest_test_all_raw_top10rows_36 120
-myR testdir_autoGen/runit_simpleFilterTest_test_manycol_tree_52 120
-myR testdir_autoGen/runit_simpleFilterTest_train_21 120
-myR testdir_autoGen/runit_simpleFilterTest_train_28 120
-myR testdir_autoGen/runit_simpleFilterTest_train_43 120
-myR testdir_autoGen/runit_simpleFilterTest_two_spiral_65 120
-myR testdir_autoGen/runit_simpleFilterTest_zero_dot_zero_one_20 120
-myR testdir_autoGen/runit_simpleFilterTest_zero_dot_zero_zero_one_38 120
-myR testdir_autoGen/runit_sliceTest_AirlinesTrain_4 120
-myR testdir_autoGen/runit_sliceTest_baddata_3 120
-myR testdir_autoGen/runit_sliceTest_chdage_7 120
-myR testdir_autoGen/runit_sliceTest_poker1000_9 120
-myR testdir_autoGen/runit_sliceTest_prostate_0_2 120
-myR testdir_autoGen/runit_sliceTest_prostate_3_1 120
-myR testdir_autoGen/runit_sliceTest_prostate_6_8 120
-myR testdir_autoGen/runit_sliceTest_sdss174052_10 120
-myR testdir_autoGen/runit_sliceTest_sumsigmoids_6 120
-myR testdir_autoGen/runit_sliceTest_test_tree_minmax_5 120
-single="testdir_single_jvm"
-myR $single/runit_PCA 10
-myR $single/runit_GLM 10
-myR $single/runit_kmeans 60
-myR $single/runit_tail_numeric 60
-myR $single/runit_summary_numeric 60
-myR $single/runit_GBM_ecology 1200
-myR $single/runit_RF 120
-myR $single/runit_libR_prostate 120
-myR $single/runit_sliceColHeadTail_iris 60
-myR $single/runit_sliceColSummary_iris 60
-myR $single/runit_sliceColTypes_iris 60
+#!/bin/bash
+
+for test in $(ls ../../R/tests/*/*.R | grep -v Utils | grep -v histograms | awk '{gsub(".R","",$0); print $0}')
+do
+    testName=$(basename $test)
+    testDir=$(dirname $test)
+    testDirName=$(basename $testDir)
+    myR $testDirName/$testName 300
+done
+
 # this guy was failing? not sure why
 myR $single/runit_histograms 1200
 # airlines is failing summary. put it last
