@@ -22,7 +22,8 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_exec_covtype_cols(self):
+    def test_exec2_covtype_cols(self):
+        h2o.beta_features = True
         csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=10)
         print "\nParse key is:", parseResult['destination_key']
@@ -32,10 +33,8 @@ class Basic(unittest.TestCase):
         # passes with suffix, fails without?
         # suffix = ""
         suffix = ".hex"
-        print "Using .hex suffix everywhere until we get type checking in H2O.." + \
-              "Fails with first size=1 otherwise"
         for i in range(54):
-            execExpr = "Result" + str(i) + suffix + " = c.hex[" + str(i) + "]"
+            execExpr = "Result" + str(i) + suffix + " = c.hex[," + str(i+1) + "]"
             print "execExpr:", execExpr
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result" + str(i) + suffix, 
                 timeoutSecs=4)
