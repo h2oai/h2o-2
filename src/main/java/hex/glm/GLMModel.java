@@ -7,16 +7,12 @@ import hex.glm.GLMValidation.GLMXValidation;
 
 import java.util.HashMap;
 
-import water.H2O.H2OCountedCompleter;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
-<<<<<<< HEAD
 import water.util.Utils;
-=======
-import water.fvec.Frame;
->>>>>>> 317e9bd4aef65efc97affd9c89d295cb666ca0cc
 
 public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -332,15 +328,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public GLMModel  setValidation(int lambdaIdx,GLMValidation val ){
     submodels[lambdaIdx].validation = val;
     return this;
-  }
-  @Override
-  public GLMModel clone(){
-    GLMModel res = new GLMModel(_selfKey, data_info, glm, beta_eps, alpha, lambdas, ymu, _caseMode, _caseVal);
-    res.submodels = submodels.clone();
-    for(int i = 0; i < submodels.length && submodels[i] != null;++i)
-      res.submodels[i] = submodels[i].clone();
-
-    return (GLMModel)super.clone();
   }
 
   public void store(){clone().store2();}
