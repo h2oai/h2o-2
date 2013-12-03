@@ -738,12 +738,13 @@ public class DTree extends Iced {
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
           }
 
-          if( !Double.isNaN(row[colId]) ) // NaNs always go to bin 0
+          if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
             if( ( equal && ((float)row[colId]) == splitVal) ||
                 (!equal && ((float)row[colId]) >= splitVal) ) {
               ab.position(ab.position()+skip); // Skip right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
+          } else { ab.position(ab.position()+skip); lmask = rmask; }
           if( (lmask&8)==8 ) return scoreLeaf(ab);
         }
       }
