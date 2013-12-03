@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
             'beta_eps': 1e-3,
             'lambda': '0,0.5,0.8',
             'alpha': '0,1e-8,1e-4',
-            'parallel': 1,
+            'parallelism': 1,
         }
 
         start = time.time()

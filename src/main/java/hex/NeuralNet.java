@@ -230,7 +230,7 @@ public class NeuralNet extends ValidatedJob {
       clones[y] = ls[y].clone();
     clones[clones.length - 1] = output;
     for( int y = 0; y < clones.length; y++ )
-      clones[y].init(clones, y, false, 0);
+      clones[y].init(clones, y, false, 0, null);
     Layer.shareWeights(ls, clones);
     return eval(clones, n, cm);
   }
@@ -278,7 +278,6 @@ public class NeuralNet extends ValidatedJob {
     float max = out[0];
     int idx = 0;
     for( int o = 1; o < out.length; o++ ) {
-      assert !Double.isNaN(out[o]);
       if( out[o] > max ) {
         max = out[o];
         idx = o;
@@ -406,7 +405,7 @@ public class NeuralNet extends ValidatedJob {
       for( int y = 0; y < clones.length; y++ ) {
         clones[y]._w = weights[y];
         clones[y]._b = biases[y];
-        clones[y].init(clones, y, false, 0);
+        clones[y].init(clones, y, false, 0, null);
       }
       ((Input) clones[0])._pos = rowInChunk;
       for( int i = 0; i < clones.length; i++ )
