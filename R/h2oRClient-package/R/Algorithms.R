@@ -256,7 +256,7 @@ h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, stand
 
 h2o.prcomp <- function(data, tol=0, standardize=T, retx=F) {
   if( missing(data) ) stop('must specify data')
-  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+  if(class(data) != "H2OParsedData") stop('data must be an H2O FluidVec dataset')
   if(!is.numeric(tol)) stop('tol must be numeric')
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')

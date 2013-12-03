@@ -20,7 +20,7 @@ public class StringTest extends TestUtil {
 
       StringBuilder sb = new StringBuilder();
       String[] fs = fr.toStringHdr(sb);
-      int lim = Math.min(10,(int)fr.numRows());
+      int lim = Math.min(40,(int)fr.numRows());
       for( int i=0; i<lim; i++ )
         fr.toString(sb,fs,i);
       System.out.println(sb.toString());
