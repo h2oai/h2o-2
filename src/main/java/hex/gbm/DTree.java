@@ -867,7 +867,7 @@ public class DTree extends Iced {
       JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
-      JCodeGen.toStaticVar(sb, "DATA", ValueArray.asFrame(DKV.get(_dataKey)), 100, "Sample test data.");
+      JCodeGen.toStaticVar(sb, "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 100, "Sample test data.");
 
       // Nasty code - should be provided by a non-generated parent class, BUT ...
       sb.i(1).p(TO_JAVA_MAX_INDEX_FUNC);
