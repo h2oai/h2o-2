@@ -169,7 +169,9 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
     minCol=0, maxCol=54, timeoutSecs=10, incrementingResult=True):
     colResultList = []
     for colX in range(minCol, maxCol):
-        for exprTemplate in exprList:
+        for i, exprTemplate in enumerate(exprList):
+            print "HELLO:", i
+
             # do each expression at a random node, to facilate key movement
             # UPDATE: all execs are to a single node. No mixed node streams
             # eliminates some store/store race conditions that caused problems.
@@ -189,10 +191,18 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
 
             # kbn
 
-            execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, resultKey, timeoutSecs)
-            ### print "\nexecResult:", h2o.dump_json(execResultInspect)
+            # v1
+            # execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, resultKey, timeoutSecs)
+            # v2
+            execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, None, timeoutSecs)
+            print "\nexecResult:", h2o.dump_json(execResultInspect)
             execResultKey = execResultInspect[0]['key']
-            resultInspect = h2o_cmd.runInspect(None, execResultKey)
+
+            # v2: Exec2 'apply' can have no key field? (null) maybe just use keyX then
+            if execResultKey:
+                resultInspect = h2o_cmd.runInspect(None, execResultKey)
+            else:
+                resultInspect = h2o_cmd.runInspect(None, keyX)
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
 
             # min is keyword. shouldn't use.
