@@ -8,6 +8,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_four_billion_rows(self):
+        h2o.beta_features = True
         timeoutSecs = 1500
 
         importFolderPath = "billions"
@@ -29,20 +30,20 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             # Inspect*********************************
             # We should be able to see the parse result?
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
-            num_cols = inspect['num_cols']
-            num_rows = inspect['num_rows']
+            numCols = inspect['numCols']
+            numRows = inspect['numRows']
             value_size_bytes = inspect['value_size_bytes']
             row_size = inspect['row_size']
             print "\n" + csvFilename, \
-                "    num_rows:", "{:,}".format(num_rows), \
-                "    num_cols:", "{:,}".format(num_cols), \
+                "    numRows:", "{:,}".format(numRows), \
+                "    numCols:", "{:,}".format(numCols), \
                 "    value_size_bytes:", "{:,}".format(value_size_bytes), \
                 "    row_size:", "{:,}".format(row_size)
 
-            expectedRowSize = num_cols * 1 # plus output
-            expectedValueSize = expectedRowSize * num_rows
+            expectedRowSize = numCols * 1 # plus output
+            expectedValueSize = expectedRowSize * numRows
             self.assertEqual(row_size, expectedRowSize,
-                msg='row_size %s is not expected num_cols * 1 byte: %s' % \
+                msg='row_size %s is not expected numCols * 1 byte: %s' % \
                 (row_size, expectedRowSize))
             self.assertEqual(value_size_bytes, expectedValueSize,
                 msg='value_size_bytes %s is not expected row_size * rows: %s' % \
@@ -51,10 +52,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], timeoutSecs=timeoutSecs)
             h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
-            self.assertEqual(2, num_cols,
-                msg="generated %s cols (including output).  parsed to %s cols" % (2, num_cols))
-            self.assertEqual(4*1000000000, num_rows,
-                msg="generated %s rows, parsed to %s rows" % (4*1000000000, num_rows))
+            self.assertEqual(2, numCols,
+                msg="generated %s cols (including output).  parsed to %s cols" % (2, numCols))
+            self.assertEqual(4*1000000000, numRows,
+                msg="generated %s rows, parsed to %s rows" % (4*1000000000, numRows))
 
             # KMeans*********************************
             kwargs = {
@@ -73,7 +74,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             # GLM*********************************
             print "\n" + csvFilename
-            kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case': 1}
+            kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case_val': 1}
             # one coefficient is checked a little more
             colX = 0
 

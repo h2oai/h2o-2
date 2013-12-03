@@ -1,40 +1,67 @@
 # Model-building operations and algorithms
 # ----------------------- Generalized Boosting Machines (GBM) -----------------------#
+h2o.gbm.internal <- function(x, y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+  destKey = h2o.__uniqID("GBMModel")
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=y, cols=paste(x, collapse=","), ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
+  while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
+  
+  result=h2o.__getGBMResults(res2$gbm_model)
+  new("H2OGBMModel", key=destKey, data=data, model=result)
+}
+
+h2o.gbmgrid.internal <- function(x, y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=y, cols=paste(x, collapse=","), ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
+  while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GRIDSEARCH, job_key=res$job_key, destination_key=res$destination_key)
+  destKey = res$destination_key
+  allModels = res2$jobs
+  
+  result = list()
+  for(i in 1:length(allModels)) {
+    resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=allModels[[i]]$destination_key)
+    modelOrig = h2o.__getGBMResults(resH$gbm_model)
+    result[[i]] = new("H2OGBMModel", key=allModels[[i]]$destination_key, data=data, model=modelOrig)
+  }
+  myModelsSum = lapply(allModels, function(x) { list(model_key = x$destination_key, run_time = x$end_time - x$start_time) })
+  new("H2OGBMGrid", key=destKey, data=data, model=result, sumtable=myModelsSum)
+}
+
+h2o.__getGBMResults <- function(res) {
+  result=list()
+  categories=length(res$cm)
+  cf_matrix = t(matrix(unlist(res$cm), nrow=categories))
+  cf_names <- res[['_domains']]
+  cf_names <- cf_names[[ length(cf_names) ]]
+  
+  dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
+  result$confusion = cf_matrix
+  result$err = res$errs
+  return(result)
+}
+
 # TODO: dont support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02) {
   args <- verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
-  if( n.trees < 1 ) stop('n.trees must be >=1')
+  if( any(n.trees < 1) ) stop('n.trees must be >=1')
   if(!is.numeric(interaction.depth)) stop('interaction.depth must be numeric')
-  if( interaction.depth < 1 ) stop('interaction.depth must be >= 1')
+  if( any(interaction.depth < 1) ) stop('interaction.depth must be >= 1')
   if(!is.numeric(n.minobsinnode)) stop('n.minobsinnode must be numeric')
-  if( n.minobsinnode < 1) stop('n.minobsinnode must be >= 1')
+  if( any(n.minobsinnode < 1) ) stop('n.minobsinnode must be >= 1')
   if(!is.numeric(shrinkage)) stop('shrinkage must be numeric')
-  if( shrinkage < 0 ) stop('shrinkage must be >= 0')
-
-  # NB: externally, 1 based indexing; internally, 0 based
-  cols <- paste(args$x_i - 1,collapse=',')
-
+  if( any(shrinkage < 0) ) stop('shrinkage must be >= 0')
+  
   if( !(distribution %in% c('multinomial', 'gaussian')) )
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
   classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
-
-  destKey = h2o.__uniqID("GBMModel")
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
-  while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
-
-  result=list()
-  categories=length(res2$gbm_model$cm)
-  cf_matrix = t(matrix(unlist(res2$gbm_model$cm), nrow=categories))
-  cf_names <- res2$gbm_model[['_domains']]
-  cf_names <- cf_names[[ length(cf_names) ]]
-
-  dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
-  result$confusion = cf_matrix
-  result$err = res2$gbm_model$errs
-  new("H2OGBMModel", key=destKey, data=data, model=result)
+    
+  # NB: externally, 1 based indexing; internally, 0 based
+  if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1)
+    h2o.gbm.internal(args$x_i - 1, args$y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+  else
+    h2o.gbmgrid.internal(args$x_i - 1, args$y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
 }
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
@@ -256,7 +283,7 @@ h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, stand
 
 h2o.prcomp <- function(data, tol=0, standardize=T, retx=F) {
   if( missing(data) ) stop('must specify data')
-  if( class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
+  if(class(data) != "H2OParsedData") stop('data must be an H2O FluidVec dataset')
   if(!is.numeric(tol)) stop('tol must be numeric')
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
@@ -438,7 +465,7 @@ h2o.glmgrid.internal <- function(x, y, data, family, nfolds, alpha, lambda) {
       result[[i]] = new("H2OGLMModelVA", key=allModels[[i]]$key, data=data, model=modelOrig, xval=res_xval)
     }
   }
-  new("H2OGLMGridVA", key=destKey, data=data, models=result, sumtable=allModels)
+  new("H2OGLMGridVA", key=destKey, data=data, model=result, sumtable=allModels)
 }
 
 # Pretty formatting of H2O GLM results

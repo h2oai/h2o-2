@@ -115,7 +115,7 @@ exprListSmall = [
         "runif(r4.hex[,1])",
     
         # doesn't work
-        # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
 
         ]
 

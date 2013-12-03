@@ -3,15 +3,13 @@ package water.fvec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-
-import com.google.common.base.Throwables;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.fvec.Vec.VectorGroup;
-import water.util.Log;
 import water.exec.Flow;
+import water.fvec.Vec.VectorGroup;
+
+import com.google.common.base.Throwables;
 
 /**
  * A collection of named Vecs.  Essentially an R-like data-frame.  Multiple
@@ -378,13 +376,21 @@ public class Frame extends Iced {
     for( int c=0; c<fs.length; c++ ) {
       String n = (c < _names.length) ? _names[c] : ("C"+c);
       if( numRows()==0 ) { sb.append(n).append(' '); continue; }
-      Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
-      String f = fs[c] = C.pformat();  // Printable width
       int w=0;
-      for( int x=0; x<f.length(); x++ )// Get printable width from format
-        if( Character.isDigit(f.charAt(x)) ) w = w*10+(f.charAt(x)-'0');
-        else if( w>0 ) break;
-      if( f.charAt(1)==' ' ) w++; // Leading blank is not in print-width
+      if( _vecs[c].isEnum() ) {
+        String ss[] = _vecs[c]._domain;
+        for( int i=0; i<ss.length; i++ )
+          w = Math.max(w,ss[i].length());
+        w = Math.min(w,10);
+        fs[c] = "%"+w+"."+w+"s";
+      } else {
+        Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+        String f = fs[c] = C.pformat();  // Printable width
+        for( int x=0; x<f.length(); x++ )// Get printable width from format
+          if( Character.isDigit(f.charAt(x)) ) w = w*10+(f.charAt(x)-'0');
+          else if( w>0 ) break;
+        if( f.charAt(1)==' ' ) w++; // Leading blank is not in print-width
+      }
       int len = sb.length();
       if( n.length() <= w ) {          // Short name, big digits
         sb.append(n);
@@ -405,23 +411,28 @@ public class Frame extends Iced {
     return fs;
   }
   public StringBuilder toString( StringBuilder sb, String[] fs, long idx ) {
+    Vec vecs[] = vecs();
     for( int c=0; c<fs.length; c++ ) {
-      if( vecs()[c].isInt() ) {
-        if( _vecs[c].isNA(idx) ) {
-          Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+      Vec vec = vecs[c];
+      if( vec.isEnum() ) {
+        String s = vec.isNA(idx) ? "----------" : vec._domain[(int)vec.at8(idx)];
+        sb.append(String.format(fs[c],s));
+      } else if( vec.isInt() ) {
+        if( vec.isNA(idx) ) {
+          Chunk C = vec.elem2BV(0);   // 1st Chunk
           int len = C.pformat_len0();  // Printable width
           for( int i=0; i<len; i++ ) sb.append('-');
         } else {
           try {
-            sb.append(String.format(fs[c],_vecs[c].at8(idx)));
+            sb.append(String.format(fs[c],vec.at8(idx)));
           } catch( IllegalFormatException ife ) {
             System.out.println("Format: "+fs[c]+" col="+c+" not for ints");
             ife.printStackTrace();
           }
         }
       } else {
-        sb.append(String.format(fs[c],_vecs[c].at (idx)));
-        if( _vecs[c].isNA(idx) ) sb.append(' ');
+        sb.append(String.format(fs[c],vec.at (idx)));
+        if( vec.isNA(idx) ) sb.append(' ');
       }
       sb.append(' ');           // Column seperator
     }

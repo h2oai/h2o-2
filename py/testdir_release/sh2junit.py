@@ -200,6 +200,9 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
                 terminate_process_tree(ps.pid, including_parent=False)
                 break
             line = ps.stdout.readline()
+        if timeoutError:
+            print "\n\n\nERROR: timeout"
+            break
         # stderr from subprocess
         line = ps.stderr.readline()
         while line:
@@ -221,9 +224,6 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
         elapsed = time.time() - start
         # forever if timeout is None
         #if timeout and elapsed > timeout:
-        if timeoutError:
-            print "\n\n\nERROR: timeout"
-            break
         if elapsed > timeout:
             timeoutError = True
             errors += 1
