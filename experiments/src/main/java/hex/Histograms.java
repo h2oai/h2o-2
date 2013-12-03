@@ -22,17 +22,17 @@ import javafx.stage.Stage;
 
 import javax.swing.SwingUtilities;
 
-public class Histogram extends LineChart {
+public class Histograms extends LineChart {
   private static final int SLICES = 64;
 
-  private static final ArrayList<Histogram> _instances = new ArrayList<Histogram>();
+  private static final ArrayList<Histograms> _instances = new ArrayList<Histograms>();
   private static final ScheduledExecutorService _executor = Executors.newSingleThreadScheduledExecutor();
   private static CheckBox _auto;
 
   private final float[] _data;
   private final ObservableList<Data<Float, Float>> _list = FXCollections.observableArrayList();
 
-  static void init() {
+  public static void init() {
     final CountDownLatch latch = new CountDownLatch(1);
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
@@ -57,10 +57,10 @@ public class Histogram extends LineChart {
         VBox v = new VBox();
         for( int i = ls.length - 1; i > 0; i-- ) {
           HBox h = new HBox();
-          h.getChildren().add(new Histogram("Layer " + i + " W", ls[i]._w));
-          h.getChildren().add(new Histogram("B", ls[i]._b));
-          h.getChildren().add(new Histogram("A", ls[i]._a));
-          h.getChildren().add(new Histogram("E", ls[i]._e));
+          h.getChildren().add(new Histograms("Layer " + i + " W", ls[i]._w));
+          h.getChildren().add(new Histograms("B", ls[i]._b));
+          h.getChildren().add(new Histograms("A", ls[i]._a));
+          h.getChildren().add(new Histograms("E", ls[i]._e));
           v.getChildren().add(h);
         }
         Stage stage = new Stage();
@@ -103,7 +103,7 @@ public class Histogram extends LineChart {
     });
   }
 
-  public Histogram(String title, float[] data) {
+  public Histograms(String title, float[] data) {
     super(new NumberAxis(), new NumberAxis());
     _data = data;
 
@@ -119,7 +119,7 @@ public class Histogram extends LineChart {
   }
 
   static void refresh() {
-    for( Histogram h : _instances ) {
+    for( Histograms h : _instances ) {
       if( h._data != null ) {
         float[] data = h._data.clone();
         float min = Float.MAX_VALUE, max = Float.MIN_VALUE;

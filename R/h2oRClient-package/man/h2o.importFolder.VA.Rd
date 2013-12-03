@@ -1,14 +1,14 @@
-\name{h2o.importFolder}
-\alias{h2o.importFolder}
+\name{h2o.importFolder.VA}
+\alias{h2o.importFolder.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Import Local Directory
+  Import Local Directory to ValueArray
 }
 \description{
   Imports all the files in the local directory and parses them, returning a list of objects containing the identifying hex keys.
 }
 \usage{
-  h2o.importFolder(object, path, pattern = "", parse = TRUE, sep = "")
+  h2o.importFolder.VA(object, path, pattern = "", parse = TRUE, sep = "")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -29,7 +29,7 @@
   }
 }
 \details{
-WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importFolder will automatically parse all files in the directory.
+This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.importFolder}}. WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete. By default, h2o.importFolder will automatically parse all files in the directory.
 }
 \value{
   If \code{parse = TRUE}, the function returns a list of objects of class \code{\linkS4class{H2OParsedData}}, otherwise it returns a list of objects of class \code{\linkS4class{H2ORawData}}.
@@ -59,7 +59,7 @@ library(h2o)
 h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 myPath = paste(path.package("h2oRClient"), "extdata", sep="/")
-all_files.hex = h2o.importFolder(localH2O, path = myPath)
+all_files.hex = h2o.importFolder.VA(localH2O, path = myPath)
 for(i in 1:length(all_files.hex))
   print(summary(all_files.hex[[i]]))
 }

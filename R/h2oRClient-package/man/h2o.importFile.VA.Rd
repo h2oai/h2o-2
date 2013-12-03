@@ -1,14 +1,14 @@
-\name{h2o.importFile}
-\alias{h2o.importFile}
+\name{h2o.importFile.VA}
+\alias{h2o.importFile.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Import Local Data File
+Import Local Data File to ValueArray
 }
 \description{
-Imports a file from the local path and parses it, returning an object containing the identifying hex key.
+Imports a file from the local path and parses it, returning an object containing the identifying hex key. 
 }
 \usage{
-h2o.importFile(object, path, key = "", parse = TRUE, sep = "")
+h2o.importFile.VA(object, path, key = "", parse = TRUE, sep = "")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -29,7 +29,7 @@ The path of the file to be imported. Each row of data appears as one line of the
 }  
 }
 \details{
-WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importFile will automatically parse the file.
+This method should only be used for running GLM. For all other algorithms, please use \code{\link{h2o.importFile}}. WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete. By default, h2o.importFile will automatically parse the file.
 }
 \value{
 If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}, otherwise it returns an object of class \code{\linkS4class{H2ORawData}}.
@@ -60,7 +60,7 @@ h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
 + silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
-iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
+iris.hex = h2o.importFile.VA(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

@@ -446,8 +446,12 @@ def goodXFromColumnInfo(y,
     if not noPrint:
         print "x has", len(x), "cols"
         print "ignore_x has", len(ignore_x), "cols"
+
+    # this is probably used in 'cols" in v2, which can take numbers
     x = ",".join(map(str,x))
-    ignore_x = ",".join(map(str,ignore_x))
+
+    if h2o.beta_features: # add the 'C" prefix
+        ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
 
     if not noPrint:
         print "\nx:", x

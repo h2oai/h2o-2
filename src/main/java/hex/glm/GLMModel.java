@@ -12,7 +12,11 @@ import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
+<<<<<<< HEAD
 import water.util.Utils;
+=======
+import water.fvec.Frame;
+>>>>>>> 317e9bd4aef65efc97affd9c89d295cb666ca0cc
 
 public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -64,6 +68,11 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return 1.0 - val.residual_deviance/val.null_deviance;
   }
 
+  @Override public GLMModel clone(){
+    GLMModel res = (GLMModel)super.clone();
+    res.submodels = submodels.clone();
+    return res;
+  }
 
   @Override
   public int compareTo(GLMModel m){
@@ -249,6 +258,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public static class GLMXValidationTask extends GLMValidationTask<GLMXValidationTask>{
     protected final GLMModel [] _xmodels;
     protected GLMValidation [] _xvals;
+    long _nobs;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
     public GLMXValidationTask(GLMModel mainModel,int lambdaIdx, GLMModel [] xmodels){this(mainModel,lambdaIdx,xmodels,null);}
     public GLMXValidationTask(GLMModel mainModel,int lambdaIdx, GLMModel [] xmodels, H2OCountedCompleter completer){super(mainModel, lambdaIdx, completer); _xmodels = xmodels;}
@@ -266,6 +276,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
           if(chunks[j].isNA0(i))continue OUTER;
           row[j] = chunks[j].at0(i);
         }
+        ++_nobs;
         final int mid = i % _xmodels.length;
         final GLMModel model = _xmodels[mid];
         final GLMValidation val = _xvals[mid];
@@ -279,16 +290,22 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         if(val.nobs > 0)val.avg_err = val.avg_err/val.nobs;
     }
     @Override public void reduce(GLMXValidationTask gval){
+      _nobs += gval._nobs;
       for(int i = 0; i < _xvals.length; ++i)
         _xvals[i].add(gval._xvals[i]);}
+
     @Override public void postGlobal(){
+      Futures fs = new Futures();
       for(int i = 0; i < _xmodels.length; ++i){
         _xvals[i].finalize_AIC_AUC();
-        _xmodels[i].setValidation(0, _xvals[i]).store();
+        _xvals[i].nobs = _nobs-_xvals[i].nobs;
+        _xmodels[i].setValidation(0, _xvals[i]);
+        DKV.put(_xmodels[i]._selfKey, _xmodels[i],fs);
       }
-      _res = new GLMXValidation(_model, _xmodels,_lambdaIdx);
+      _res = new GLMXValidation(_model, _xmodels,_lambdaIdx,_nobs);
       _improved = _model.setAndTestValidation(_lambdaIdx, _res);
-      _model.store();
+      UKV.put(_model._selfKey, _model);
+      fs.blockForPending();
     }
   }
 

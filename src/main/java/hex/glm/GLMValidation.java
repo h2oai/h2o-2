@@ -52,13 +52,14 @@ public class GLMValidation extends Iced {
 
   public static class GLMXValidation extends GLMValidation {
     Key [] _xvalModels;
-    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx) {
+    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx, long nobs) {
       super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambdaIdx));
       _xvalModels = new Key[xvalModels.length];
       for(int i = 0; i < xvalModels.length; ++i){
         add(xvalModels[i].validation());
         _xvalModels[i] = xvalModels[i]._selfKey;
       }
+      this.nobs = nobs;
       finalize_AIC_AUC();
     }
   }
