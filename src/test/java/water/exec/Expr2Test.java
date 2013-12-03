@@ -44,6 +44,7 @@ public class Expr2Test extends TestUtil {
       checkStr("1.23+(h.hex-h.hex)");
       checkStr("(1.23+h.hex)-h.hex");
       checkStr("min(h.hex,1+2)");
+      checkStr("max(h.hex,1+2)");
       checkStr("is.na(h.hex)");
       checkStr("nrow(h.hex)*3");
       checkStr("h.hex[nrow(h.hex)-1,ncol(h.hex)-1]");
