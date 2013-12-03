@@ -190,7 +190,7 @@ printenv | grep H2OWrapperDir
 #autoGen RUnits
 #!/bin/bash
 
-for test in $(ls ../../R/tests/*/*.R | grep -v Utils | grep -v histograms | awk '{gsub(".R","",$0); print $0}')
+for test in $(ls ../../R/tests/*/*.R | grep -v Utils | grep -v histograms | awk '{gsub("\\.R","",$0); print $0}')
 do
     testName=$(basename $test)
     testDir=$(dirname $test)
