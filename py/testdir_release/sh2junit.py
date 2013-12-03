@@ -191,6 +191,14 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
             # maybe I should use p.communicate() instead. have to keep it to stdout? or do stdout+stderr here
             sys.stdout.write("R->" + line) # to our python stdout, with a prefix so it's obviously from R
             os.write(outfd, line) # to sandbox R stdout
+            elapsed = time.time() - start
+            if elapsed > timeout:
+                timeoutError = True
+                errors += 1
+                print "ERROR: sh2junit: elapsed: %0.2f timeout: %s (secs) while echoing subprocess stdout" % (elapsed, timeout)
+                #kill R subprocess but don't kill me
+                terminate_process_tree(ps.pid, including_parent=False)
+                break
             line = ps.stdout.readline()
         # stderr from subprocess
         line = ps.stderr.readline()
@@ -212,13 +220,19 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
 
         elapsed = time.time() - start
         # forever if timeout is None
-        if timeout and elapsed > timeout:
+        #if timeout and elapsed > timeout:
+        if timeoutError:
+            print "\n\n\nERROR: timeout"
+            break
+        if elapsed > timeout:
             timeoutError = True
             errors += 1
             # we don't want to exception here, because we're going to print the xml that says there's an error
             # I guess we'll end up terminating the R process down below
             # could we have lines in stdout we didn't catch up on? maybe, but do we care?
             print "ERROR: sh2junit: elapsed: %0.2f timeout: %s (secs) while echoing subprocess stdout" % (elapsed, timeout)
+            #kill R subprocess but don't kill me
+            #terminate_process_tree(ps.pid, including_parent=False)
             break
         # wait for some more output to accumulate
         time.sleep(0.25)
@@ -259,19 +273,29 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, **kwargs):
     else:
         # dump all the info as part of the exception? maybe too much
         # is this bad to do in all cases? do we need it? 
+        hline = "\n===========================================BEGIN DUMP=============================================================\n"
+        hhline = "\n===========================================END DUMP=============================================================\n"
+        out = '[stdout->err]: '.join(out.splitlines(True))
+        err = '[sterr->err]: '.join(err.splitlines(True))
         if ps.is_running():
             print "Before terminate:", ps.pid, ps.is_running()
             terminate_process_tree(ps.pid, including_parent=True)
         if sandboxErrorMessage:
-            raise Exception("%s %s lastrc:%s errors:%s Errors found in ./sandbox log files?.\nR stdout:\n%s\n\nR stderr:\n%s" % 
-                (name, cmd_string, lastrc, errors, out, err))
+            print "\n\n\nError in Sandbox. Ending test. Dumping sub-process output.\n"
+            print hline
+            raise Exception("%s %s \n\tlastrc:%s \n\terrors:%s \n\tErrors found in ./sandbox log files?.\nR stdout:\n%s\n\nR stderr:\n%s\n%s" % 
+                (name, cmd_string, lastrc, errors, out, err, hhline))
         # could have already terminated?
         elif timeoutError:
-            raise Exception("%s %s lastrc:%s errors:%s timed out after %d secs. \nR stdout:\n%s\n\nR stderr:\n%s" %
-                (name, cmd_string, lastrc, errors, timeout or 0, out, err))
+            print "\n\n\nTimeout Error. Ending test. Dumping sub-process output.\n"
+            print hline
+            raise Exception("%s %s \n\tlastrc:%s \n\terrors:%s \n\ttimed out after %d secs. \nR stdout:\n%s\n\nR stderr:\n%s\n%s" %
+                (name, cmd_string, lastrc, errors, timeout or 0, out, err, hhline))
         else:
-            raise Exception("%s %s lastrc:%s errors:%s Likely non-zero exit code from R.\nR stdout:\n%s\n\nR stderr:\n%s" % 
-                (name, cmd_string, lastrc, errors, out, err))
+            print "\n\n\nCaught exception. Ending test. Dumping sub-process output.\n"
+            print hline
+            raise Exception("%s %s \n\tlastrc:%s \n\terrors:%s \n\tLikely non-zero exit code from R.\nR stdout:\n%s\n\nR stderr:\n%s\n%s" % 
+                (name, cmd_string, lastrc, errors, out, err, hhline))
 
 
 #**************************************************************************
