@@ -13,7 +13,7 @@ public class JCodeGen {
     sb.i(1).p("public static final double[][] ").p(varname).p(" = new double[][] {").nl();
     if (f!=null) {
       Vec[] vecs = f.vecs();
-      for( int row = 0; row < nrows; row++ ) {
+      for( int row = 0; row < Math.min(nrows,f.numRows()); row++ ) {
         sb.i(2).p(row > 0 ? "," : "").p("new double[] {");
         for( int v = 0; v < vecs.length; v++ )
           sb.p(v > 0 ? "," : "").p(vecs[v].at(row));
