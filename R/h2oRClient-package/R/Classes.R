@@ -539,7 +539,8 @@ setMethod("summary", "H2OParsedData", function(object) {
     }
     else {
       top.ix <- sort.int(col$hcnt, decreasing=T, index.return=T)$ix[1:6]
-      domains <- col$hbrk[top.ix]
+      # domains <- col$hbrk[top.ix]
+      if(is.null(col$hbrk)) domains <- top.ix[1:6] else domains <- col$hbrk[top.ix]
       counts <- col$hcnt[top.ix]
       width <- max(cbind(nchar(domains), nchar(counts)))
       result <- paste(domains,

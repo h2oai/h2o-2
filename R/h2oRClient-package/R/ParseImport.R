@@ -223,15 +223,23 @@ setMethod("h2o<-", signature(x="H2OParsedData", value="numeric"), function(x, va
 setMethod("h2o.importFolder.VA", signature(object="H2OClient", path="character", pattern="character", key="character", parse="logical", sep="character"),
   function(object, path, pattern, key, parse, sep) {
     res = h2o.__remoteSend(object, h2o.__PAGE_IMPORTFILES, path=path)
-    if(parse) {
-      regPath = paste(path, pattern, sep="/")
-      srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
-      rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
-      h2o.parseRaw.VA(data=rawData, key=key, sep=sep) 
-    } else {
-      myData = lapply(res$keys, function(x) { new("H2ORawDataVA", h2o=object, key=x) })
-      if(length(res$keys) == 1) myData[[1]] else myData
+    if(length(res$fails) > 0) {
+      for(i in 1:length(res$fails)) 
+        cat(res$fails[[i]], "failed to import")
     }
+    
+    # Return only the files that successfully imported
+    if(length(res$files) > 0) {
+      if(parse) {
+        regPath = paste(path, pattern, sep="/")
+        srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
+        rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
+        h2o.parseRaw.VA(data=rawData, key=key, sep=sep) 
+      } else {
+        myData = lapply(res$keys, function(x) { new("H2ORawDataVA", h2o=object, key=x) })
+        if(length(res$keys) == 1) myData[[1]] else myData
+      }
+    } else stop("All files failed to import!")
 })
 
 setMethod("h2o.importFolder.VA", signature(object="H2OClient", path="character", pattern="ANY", key="ANY", parse="ANY", sep="ANY"),

@@ -6,13 +6,14 @@ library(h2o)
 h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 
-prostate.hex = h2o.importFile(localH2O, system.file("extdata", "prostate.csv", package="h2oRClient"), "prostate.hex")
+prostate.hex = h2o.uploadFile(localH2O, path = system.file("extdata", "prostate.csv", package="h2oRClient"), key = "prostate.hex")
 summary(prostate.hex)
 prostate.km = h2o.kmeans(prostate.hex, centers = 10, cols = c("AGE","RACE","GLEASON","CAPSULE","DCAPS"))
 print(prostate.km)
 
-  prostate.data = as.data.frame(prostate.hex)
-  prostate.clus = as.data.frame(prostate.km@model$cluster)
+prostate.data = as.data.frame(prostate.hex)
+prostate.clus = as.data.frame(prostate.km@model$cluster)
+
 # Plot categorized data
 # if(!"fpc" %in% rownames(installed.packages())) install.packages("fpc")
 if("fpc" %in% rownames(installed.packages())) {
