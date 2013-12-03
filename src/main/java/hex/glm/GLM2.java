@@ -206,7 +206,7 @@ public class GLM2 extends ModelJob {
             newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
           }
           boolean done = false;
-          _model = (GLMModel)_oldModel.clone();
+          _model = _oldModel.clone();
           done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || cancelled();
           _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, glmt._iter+1);
           if(done){
@@ -318,7 +318,7 @@ public class GLM2 extends ModelJob {
     };
     callback.addToPendingCount(n_folds-1);
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).
+      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).
       setCase(case_mode,case_val).
       run(callback);
   }
