@@ -49,13 +49,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 #noPoll -> False when GBM finished
                 GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,timeoutSecs=timeoutSecs,**kwargs)
 
-                statMean = h2o_jobs.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
+                statMean = h2j.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
                 num_cpus = statMean['num_cpus'],
                 my_cpu_pct = statMean['my_cpu_%'],
                 sys_cpu_pct = statMean['sys_cpu_%'],
                 system_load = statMean['system_load']
                 # shouldn't need this?
-                h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
+                h2j.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
 
                 h2j.pollWaitJobs(pattern="GBMKEY",timeoutSecs=1800,pollTimeoutSecs=1800)
                 print "Finished time is: ", time.time()
