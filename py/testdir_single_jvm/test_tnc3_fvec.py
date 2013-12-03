@@ -29,15 +29,16 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1)
+            h2o.build_cloud(1)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_tnc3_ignore(self):
+    def test_tnc3_fvec(self):
+        h2o.beta_features = True
         csvPathname = 'tnc3.csv'
         print "\n" + csvPathname
         hex_key = "tnc3.hex"
@@ -48,7 +49,6 @@ class Basic(unittest.TestCase):
         print "Parse result['Key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-        ### time.sleep(10)
 
         if 1==1:
             lenNodes = len(h2o.nodes)
@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
         if (1==1):
             print "\nWe're not CM data getting back from RFView.json that we can check!. so look at the browser"
             print 'The good case with ignore="boat,body"'
-            rfv = h2o_cmd.runRF(parseResult=parseResult, trees=5, timeoutSecs=10, ignore="boat,body")
+            rfv = h2o_cmd.runRF(parseResult=parseResult, trees=5, timeoutSecs=10, ignored_cols_by_name="boat,body")
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
@@ -81,10 +81,6 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
-        if not h2o.browse_disable:
-            ### print "\n <ctrl-C> to quit sleeping here"
-            ### time.sleep(1500)
-            pass
 
 if __name__ == '__main__':
     h2o.unit_main()

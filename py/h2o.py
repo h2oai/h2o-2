@@ -1535,7 +1535,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
 
-        if beta_features and not params_dict['response']:
+        if beta_features and params_dict['response'] is None:
             # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
             inspect = h2o_cmd.runInspect(key=data_key)
             # response only takes names. can't use col index..have to look it up
