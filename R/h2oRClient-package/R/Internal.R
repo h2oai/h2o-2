@@ -91,7 +91,7 @@ h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFModelView = "2/DRFModelView.json"
 h2o.__PAGE_GBM = "2/GBM.json"
-h2o.__PAGE_GBMGrid = "2/GBMGrid.json"
+h2o.__PAGE_GBMGridProgress = "2/GridSearchProgress.json"
 h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
 h2o.__PAGE_GLM2 = "2/GLM2.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
@@ -275,7 +275,7 @@ h2o.__exec2_dest_key <- function(client, expr, destKey) {
 
 h2o.__unop2 <- function(op, x) {
   if(missing(x)) stop("Must specify data set")
-  if(class(x) != "H2OParsedData") stop("Data must be an H2O data set")
+  if(!(class(x) %in% c("H2OLogicalData","H2OParsedData"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
     
   expr = paste(op, "(", x@key, ")", sep = "")
   res = h2o.__exec2(x@h2o, expr)

@@ -81,7 +81,6 @@ function(e) {
   cat("##       #########  ##  ##       \n")
   cat("##       ##     ##  ##  ##       \n")
   cat("##       ##     ## #### ######## \n")
-  
   Log.err(e)
 }
 
@@ -172,4 +171,4 @@ require(gbm)
 
 myIP   <- ipPort[[1]]
 myPort <- ipPort[[2]]
-h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))
+#h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))
