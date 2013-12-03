@@ -2,7 +2,7 @@
 \alias{h2o.importFolder.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Import Local Directory
+  Import Local Directory to ValueArray
 }
 \description{
   Imports all the files in the local directory and parses them, returning a list of objects containing the identifying hex keys.

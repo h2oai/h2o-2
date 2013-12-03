@@ -2,7 +2,7 @@
 \alias{h2o.uploadFile.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Upload Local Data File
+Upload Local Data File to ValueArray
 }
 \description{
 Uploads a file from the local drive and parses it, returning an object containing the identifying hex key.

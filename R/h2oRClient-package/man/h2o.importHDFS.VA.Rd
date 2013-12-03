@@ -2,7 +2,7 @@
 \alias{h2o.importHDFS.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Import from HDFS
+  Import from HDFS to ValueArray
 }
 \description{
   Imports a HDFS file or set of files in a directory and parses them, returning a list of objects containing the identifying hex keys.

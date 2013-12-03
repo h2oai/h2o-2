@@ -2,7 +2,7 @@
 \alias{h2o.importURL.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Import Data from URL
+Import Data from URL to ValueArray
 }
 \description{
 Imports a file from the URL and parses it, returning an object containing the identifying hex key.
