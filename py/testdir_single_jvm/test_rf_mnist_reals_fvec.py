@@ -22,7 +22,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_mnist_reals(self):
+    def test_RF_mnist_reals_fvec(self):
+        h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilelist = [
             # ("mnist_reals_testing.csv.gz", "mnist_reals_testing.csv.gz",    600), 
@@ -60,29 +61,18 @@ class Basic(unittest.TestCase):
             print "parse result:", parseResult['destination_key']
 
             # RF+RFView (train)****************************************
-            print "This is the 'ignore=' we'll use"
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
-            ntree = 10
+            ntrees = 10
             params = {
-                'response_variable': 0,
-                'ignore': ignore_x, 
-                'ntree': ntree,
-                'iterative_cm': 1,
-                'out_of_bag_error_estimate': 1,
-                # 'data_key='mnist_reals_training.csv.hex'
-                'features': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
-                'exclusive_split_limit': None,
-                'depth': 2147483647,
-                'stat_type': 'ENTROPY',
-                'sampling_strategy': 'RANDOM',
-                'sample': 67,
-                # 'model_key': '__RFModel_7055e6cf-a0de-44db-b165-f5994730ac77',
-                'model_key': 'RF_model',
-                'bin_limit': 1024,
+                'response': 'C0',
+                'ignored_cols_by_name': ignore_x, 
+                'ntrees': ntrees,
+                'mtries': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
+                'max_depth': 15,
+                'sample_rate': 0.67,
+                'destination_key': 'RF_model',
+                'nbins': 1024,
                 'seed': 784834182943470027,
-                'parallel': 1,
-                'use_non_local_data': 0,
-                'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
                 }
 
             kwargs = params.copy()
@@ -101,7 +91,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             # FIX! 1 on oobe causes stack trace?
             kwargs = {'response_variable': y}
-            rfView = h2o_cmd.runRFView(data_key=testKey2, model_key=modelKey, ntree=ntree, out_of_bag_error_estimate=0, 
+            rfView = h2o_cmd.runRFView(data_key=testKey2, model_key=modelKey, ntrees=ntrees, out_of_bag_error_estimate=0, 
                 timeoutSecs=60, pollTimeoutSecs=60, noSimpleCheck=False, **kwargs)
             elapsed = time.time() - start
             print "RFView in",  elapsed, "secs", \
