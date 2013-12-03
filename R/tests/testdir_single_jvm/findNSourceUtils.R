@@ -17,9 +17,9 @@ function(path, root, optional_root_parent = NULL) {
         return(0)
     }
 
-    if(!is.null(optional_root_parent)) cat("Using optional root parent: ", optional_root_parent)
+    if(!is.null(optional_root_parent)) cat("\nUsing optional root parent: ", optional_root_parent, "\n")
     if (basename(path) == "h2o" || "smalldata" %in% dir(path)) {
-        print("[INFO]: Could not find the bucket that you specified! Checking R/*. Will fail if cannot find")
+        print("\n[INFO]: Could not find the bucket that you specified! Checking R/*. Will fail if cannot find\n")
         SEARCHPATH <<- path
         return(-1)
     }
@@ -51,7 +51,7 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         if (schema == "put") {
             distance.bucket.root <- calcPath(getwd(), bucket)
             if (distance.bucket.root < 0) {
-                Log.err(paste("Could not find bucket ", bucket, "\n"))
+                Log.err(paste("Could not find bucket <", bucket, ">\n"))
             }
             bucket.dots <- genDots(distance.bucket.root)
             fullPath <- paste(bucket.dots,bucket,'/',path,sep="")
@@ -69,7 +69,8 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         bucket <- psplit[1]
         path   <- paste(psplit[-1], collapse="/")
         path   <- paste(path, bn, sep = "/")
-        Log.info(cat("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema))
+        m <- paste("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema)
+        Log.info(m)
         return(locate(bucket = bucket, path = path, schema = schema))
     }
 }
@@ -93,7 +94,6 @@ if (distance < 0) {
     source(paste(path, "h2oRClient-package/R/Classes.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/ParseImport.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Internal.R", sep = ""))
-    sandbox()
 } else {
     distance <- calcPath(getwd(), "tests")
     dots     <- genDots(distance)
@@ -107,5 +107,6 @@ if (distance < 0) {
     source(paste(rdots, "h2oRClient-package/R/Classes.R", sep = ""))
     source(paste(rdots, "h2oRClient-package/R/ParseImport.R", sep = ""))
     source(paste(rdots, "h2oRClient-package/R/Internal.R", sep = ""))
-    sandbox()
 }
+sandbox()
+h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))

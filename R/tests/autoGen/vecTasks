@@ -1,0 +1,9 @@
+h2o.factor
+min
+max
+range
+as.data.frame
+head
+tail
+quantile
+summary
