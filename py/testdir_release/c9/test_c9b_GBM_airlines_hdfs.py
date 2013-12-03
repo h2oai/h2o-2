@@ -8,8 +8,7 @@ import h2o_common
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_GBM_ec2_airlines(self):
-
-        h2o.beta_features = False
+        h2o.beta_features = True
 
         files = [
                  ('datasets', 'airlines_all.csv', 'airlines_all.hex', 1800, 'IsDepDelayed')
@@ -49,6 +48,15 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "Start time is: ", time.time()
                 #noPoll -> False when GBM finished
                 GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True,timeoutSecs=timeoutSecs,**kwargs)
+
+                statMean = h2o_jobs.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
+                num_cpus = statMean['num_cpus'],
+                my_cpu_pct = statMean['my_cpu_%'],
+                sys_cpu_pct = statMean['sys_cpu_%'],
+                system_load = statMean['system_load']
+                # shouldn't need this?
+                h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
+
                 h2j.pollWaitJobs(pattern="GBMKEY",timeoutSecs=1800,pollTimeoutSecs=1800)
                 print "Finished time is: ", time.time()
                 elapsed = time.time() - start

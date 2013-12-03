@@ -15,6 +15,7 @@ print "via the cloned cloud mechanism (h2o-nodes.json)"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c7_rel(self):
+        h2o.beta_features = True
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
@@ -57,9 +58,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             'lambda': 1.0E-5,
             'alpha': 0.5,
             'max_iter': 4,
-            'thresholds': 0.5,
             'n_folds': 1,
-            'weight': 100,
             'beta_epsilon': 1.0E-4,
             }
 
