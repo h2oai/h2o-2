@@ -2,11 +2,11 @@
 \alias{h2o.gbm}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-H2O: GBM
+H2O: Gradient Boosting Machines
 }
 %%  ~~function to do ... ~~
 
-\description{Builds gradient boosed classification trees on a parsed data set.
+\description{Builds gradient boosted classification trees on a parsed data set.
 }
 \usage{
 h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 8, 
@@ -39,7 +39,7 @@ A learning-rate parameter defining step size reduction.
 }   
   }
 \value{
-An object of class \code{\linkS4class{H2OGBM}} with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2OGBMModel}} with slots key, data, and model, where the last is a list of the following components:
 \item{type }{The type of the tree, which currently must be classification.}
 \item{n.trees }{Numbe
 	r of trees grown.}

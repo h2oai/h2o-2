@@ -36,12 +36,12 @@ cd $d
 
 rm -f ./latest_h2o_jar_version
 
-curl --silent -o latest_h2o_jar_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/latest
+curl -k --silent -o latest_h2o_jar_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/latest
 
 version=$(<latest_h2o_jar_version)
 echo "latest h2o jar version is: $version"
 
-curl --silent -o latest_h2o_project_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/${version}/project_version
+curl -k --silent -o latest_h2o_project_version https://h2o-release.s3.amazonaws.com/h2o/${BRANCH}/${version}/project_version
 project_version=$(<latest_h2o_project_version)
 
 # a secret way to skip the download (use any arg)
@@ -52,7 +52,7 @@ then
     rm -f ./h2o*$version.zip
     zipurl=https://s3.amazonaws.com/h2o-release/h2o/${BRANCH}/${version}/h2o-${project_version}.zip
     echo Downloading ${zipurl} ...
-    curl -o h2o-${project_version}.zip ${zipurl}
+    curl -k -o h2o-${project_version}.zip ${zipurl}
     mv h2o-*$version.zip h2o_$version.zip
 fi
 
