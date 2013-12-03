@@ -20,11 +20,13 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_Basic(self):
+        h2o.beta_features = True
         for n in h2o.nodes:
             c = n.get_cloud()
             self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
 
     def notest_RF_iris2(self):
+        h2o.beta_features = True
         trees = 6
         timeoutSecs = 20
         csvPathname = 'iris/iris2.csv'
@@ -32,6 +34,7 @@ class Basic(unittest.TestCase):
         h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
 
     def notest_RF_poker100(self):
+        h2o.beta_features = True
         trees = 6
         timeoutSecs = 20
         csvPathname = 'poker/poker100'
@@ -39,6 +42,7 @@ class Basic(unittest.TestCase):
         h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
 
     def test_GenParity1(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         parityPl = h2o.find_file('syn_scripts/parity.pl')
 

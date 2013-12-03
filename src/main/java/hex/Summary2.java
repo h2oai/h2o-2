@@ -213,7 +213,7 @@ public class Summary2 extends Iced {
       if (d < 1. && vec.isInt()) d = 1.;
       _binsz = d;
       _start = _binsz * Math.floor(vec.min()/_binsz);
-      int nbin = (int)Math.floor((vec.max() + (vec.isInt()?.5:0) - _start)/_binsz) + 1;
+      int nbin = (int)(Math.round((vec.max() + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
       assert nbin > 0;
       hcnt = new long[nbin];
     }
