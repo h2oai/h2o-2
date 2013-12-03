@@ -3,15 +3,13 @@ package water.fvec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-
-import com.google.common.base.Throwables;
 
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.fvec.Vec.VectorGroup;
-import water.util.Log;
 import water.exec.Flow;
+import water.fvec.Vec.VectorGroup;
+
+import com.google.common.base.Throwables;
 
 /**
  * A collection of named Vecs.  Essentially an R-like data-frame.  Multiple

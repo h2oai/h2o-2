@@ -900,8 +900,18 @@ public class DTree extends Iced {
         treesInForest = 0;
       }
       fileCtxSb.p(forest);
+      toJavaUnifyPreds(bodySb);
+      toJavaFillPreds0(bodySb);
+    }
+
+    /** Generates code which unify preds[1,...NCLASSES] */
+    protected void toJavaUnifyPreds(SB bodySb) {
+    }
+    /** Fill preds[0] based on already filled and unified preds[1,..NCLASSES]. */
+    protected void toJavaFillPreds0(SB bodySb) {
       // Pick max index as a prediction
-      bodySb.i().p("preds[0] = maxIndex(preds,1)-1;");
+      if (isClassifier()) bodySb.i().p("preds[0] = maxIndex(preds,1)-1;").nl();
+      else bodySb.i().p("preds[0] = preds[1];").nl();
     }
 
     private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {
@@ -1028,6 +1038,7 @@ public class DTree extends Iced {
       nl().
       p("      for (double[] row : data) {").nl().
       p("        predict(row, preds);").nl().
+      p("        // System.out.println(java.util.Arrays.toString(preds) + \" : \" + (DOMAINS[DOMAINS.length-1]!=null?(DOMAINS[DOMAINS.length-1][(int)preds[0]]+\"~\"+DOMAINS[DOMAINS.length-1][(int)row[row.length-1]]):(preds[0] + \" ~ \" + row[row.length-1])) );").nl().
       p("      }").nl().
       nl().
       p("      // long ttime = System.nanoTime()-startTime;").nl().
