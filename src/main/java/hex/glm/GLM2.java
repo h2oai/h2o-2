@@ -206,13 +206,9 @@ public class GLM2 extends ModelJob {
             newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
           }
           boolean done = false;
-          if(glmt._val != null){
-            glmt._val.finalize_AIC_AUC();
-            _oldModel.setValidation(_lambdaIdx,glmt._val);
-          }
-          _model = (GLMModel)_oldModel.clone();
+          _model = _oldModel.clone();
           done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || cancelled();
-          _model.setLambdaSubmodel(_lambdaIdx,lambda[_lambdaIdx], newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, glmt._iter+1);
+          _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, glmt._iter+1);
           if(done){
             H2OCallback fin = new H2OCallback<GLMValidationTask>() {
               @Override public void callback(GLMValidationTask tsk) {
@@ -232,7 +228,10 @@ public class GLM2 extends ModelJob {
             if(GLM2.this.n_folds >= 2) xvalidate(_model, _lambdaIdx, fin);
             else  new GLMValidationTask(_model,_lambdaIdx,fin).dfork(_dinfo._adaptedFrame);
           } else {
-            DKV.put(dest(),_oldModel);// validation is one iteration behind so put the old (now validated  model into K/V)
+            if(glmt._val != null){
+              glmt._val.finalize_AIC_AUC();
+              _oldModel.setValidation(_lambdaIdx,glmt._val).store();
+            }
             int iter = glmt._iter+1;
             GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,iter,glmt._ymu,glmt._reg);
             nextIter.setCompleter(new Iteration(_model, _solver, _dinfo, _fjt)); // we need to clone here as FJT will set status to done after this method
@@ -281,7 +280,7 @@ public class GLM2 extends ModelJob {
             }
             GLMIterationTask firstIter = new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, _beta,0,ymut.ymu(),1.0/ymut.nobs());
             final LSMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
-            GLMModel model = new GLMModel(dest(),_dinfo._adaptedFrame, _dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
+            GLMModel model = new GLMModel(dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,completer));
             firstIter.dfork(_dinfo._adaptedFrame);
           }
@@ -319,7 +318,7 @@ public class GLM2 extends ModelJob {
     };
     callback.addToPendingCount(n_folds-1);
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).
+      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).
       setCase(case_mode,case_val).
       run(callback);
   }
