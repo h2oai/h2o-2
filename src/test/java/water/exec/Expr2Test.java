@@ -11,9 +11,9 @@ public class Expr2Test extends TestUtil {
   @Test public void testBasicExpr1() {
     Key dest = Key.make("h.hex");
     try {
-      //File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
+      File file = TestUtil.find_test_file("smalldata/tnc3_10.csv");
       //File file = TestUtil.find_test_file("smalldata/iris/iris_wheader.csv");
-      File file = TestUtil.find_test_file("smalldata/cars.csv");
+      //File file = TestUtil.find_test_file("smalldata/cars.csv");
       Key fkey = NFSFileVec.make(file);
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
@@ -44,6 +44,7 @@ public class Expr2Test extends TestUtil {
       checkStr("1.23+(h.hex-h.hex)");
       checkStr("(1.23+h.hex)-h.hex");
       checkStr("min(h.hex,1+2)");
+      checkStr("max(h.hex,1+2)");
       checkStr("is.na(h.hex)");
       checkStr("nrow(h.hex)*3");
       checkStr("h.hex[nrow(h.hex)-1,ncol(h.hex)-1]");
@@ -113,6 +114,8 @@ public class Expr2Test extends TestUtil {
       checkStr("a=ncol(h.hex);h.hex[,c(a+1,a+2)]=5"); // Extend two cols
       checkStr("table(h.hex)");
       checkStr("table(h.hex[,3])");
+      checkStr("h.hex[,4] != 29 || h.hex[,2] < 305 && h.hex[,2] < 81");
+      checkStr("a=cbind(c(1,2,3), c(4,5,6))");
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");

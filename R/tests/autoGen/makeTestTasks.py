@@ -13,9 +13,9 @@ def genTasks():
     
     tasks = open('./tasks', 'wb')
     
-    for FU in ['[','<','<=','>','>=','==','!=',makeCompound(1),makeCompound(2),makeCompound(3),makeCompound(4)]:
+    for FU in ['[','<','<=','>','>=','==','!=',makeCompound(1),makeCompound(2)]: #,makeCompound(3),makeCompound(4)]:
         achoice = None
-        for i in sample(range(len(data['datasets'])), 20): 
+        for i in sample(range(len(data['datasets'])), 10): 
         #[choice(range(len(data['datasets']))) for i in range(60)]:
         #for i in range(len(data['datasets'])):
             cnt = achoice
@@ -39,12 +39,8 @@ def genTasks():
                 task = ','.join([TESTNAME,FU,DATANAME,PATH,'filterTask','mungeTask',FUPARAMS])
                 tasks.write(task)
                 tasks.write('\n')
-            if FU =='>=':
-                valPipeCol, valPipeCol2 = FUPARAMS
-                FUPARAMS = ':'.join([TESTNAME, DESCRIPTION, ';'.join(COLS),valPipeCol, valPipeCol2])
-                task = ','.join([TESTNAME,FU,DATANAME,PATH,'filterTask','mungeTask',FUPARAMS])
-                tasks.write(task)
-                tasks.write('\n')
+                continue
+
             if len(FU.split(';')) > 1:
                 valLPipeColL, valRPipeColR, valL2PipeColL2, valR2PipeColR2 = FUPARAMS
                 FUPARAMS = ':'.join([TESTNAME,DESCRIPTION,';'.join(COLS),valLPipeColL, valRPipeColR, valL2PipeColL2, valR2PipeColR2])
@@ -52,3 +48,12 @@ def genTasks():
                 tasks.write(task)
                 tasks.write('\n')
                 achoice += 1
+                continue
+
+
+            valPipeCol, valPipeCol2 = FUPARAMS
+            FUPARAMS = ':'.join([TESTNAME, DESCRIPTION, ';'.join(COLS),valPipeCol, valPipeCol2])
+            task = ','.join([TESTNAME,FU,DATANAME,PATH,'filterTask','mungeTask',FUPARAMS])
+            tasks.write(task)
+            tasks.write('\n')
+

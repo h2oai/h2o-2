@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_enum_with_syn(self):
+    def test_dkv(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilenameAll = [
             ("syn_10x8.csv", 'cA', 5),
@@ -83,7 +83,7 @@ class Basic(unittest.TestCase):
             h2e.exec_zero_list(zeroList)
             # does n+1 so use maxCol 6
             h2e.exec_expr_list_rand(lenNodes, exprList, hex_key, 
-                maxCol=0, maxRow=400000, maxTrials=100, timeoutSecs=timeoutSecs)
+                maxCol=6, maxRow=400000, maxTrials=100, timeoutSecs=timeoutSecs)
 
 if __name__ == '__main__':
     h2o.unit_main()

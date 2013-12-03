@@ -43,8 +43,8 @@ public class MnistCanvas extends Canvas {
     });
     bar.add(new JButton("histo") {
       @Override protected void fireActionPerformed(ActionEvent event) {
-        Histogram.initFromSwingThread();
-        Histogram.build(_trainer.layers());
+        Histograms.initFromSwingThread();
+        Histograms.build(_trainer.layers());
       }
     });
     JPanel pane = new JPanel();
@@ -135,9 +135,9 @@ public class MnistCanvas extends Canvas {
         buf += pad + edge;
       }
 
-      int[] start = new int[layer._in._a.length];
-      for( int i = 0; i < layer._in._a.length; i++ ) {
-        double w = layer._w[o * layer._in._a.length + i];
+      int[] start = new int[layer._previous._a.length];
+      for( int i = 0; i < layer._previous._a.length; i++ ) {
+        double w = layer._w[o * layer._previous._a.length + i];
         w = ((w - mean) / sigma) * 200;
         if( w >= 0 )
           start[i] = ((int) Math.min(+w, 255)) << 8;

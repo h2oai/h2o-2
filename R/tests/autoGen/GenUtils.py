@@ -7,6 +7,7 @@ from random import randrange, uniform, random, choice, sample, randint, seed
 from math import floor, ceil
 import sys
 
+count = 0
 def setup_random_seed(random_seed=None):
     if random_seed is not None:
         SEED = random_seed
@@ -150,7 +151,9 @@ def convertSeq(seq):
             yield str(x)
 
 def genTestName(FU, dataname):
-    res = dataname + '_' + str(uuid4()).replace('-','_')
+    global count
+    count += 1
+    res = dataname + '_' + str(count) #str(uuid4()).replace('-','_')
     if FU == '[': 
         return 'sliceTest_' + res
     if len(FU.split(';')) > 1:

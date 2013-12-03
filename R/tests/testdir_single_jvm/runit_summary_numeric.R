@@ -1,11 +1,11 @@
-source('../Utils/h2oR.R')
+source('./findNSourceUtils.R')
 
-Log.info("\n======================== Begin Test ===========================\n")
+Log.info("======================== Begin Test ===========================\n")
 view_max <- 10000 #maximum returned by Inspect.java
 
 test.summary.numeric <- function(conn) {
-  Log.info("\nImporting USArrests.csv data...\n")
-  arrests.hex <- h2o.uploadFile(conn, "../../../smalldata/pca_test/USArrests.csv", "arrests.hex")
+  Log.info("Importing USArrests.csv data...\n")
+  arrests.hex <- h2o.importFile.VA(conn, locate("smalldata/pca_test/USArrests.csv", schema = "local"), "arrests.hex")
   
   Log.info("\nCheck that summary works...")
   summary(arrests.hex)
@@ -27,9 +27,11 @@ test.summary.numeric <- function(conn) {
   expect_that(summary(tail(arrests.hex)), equals(summary_2))
 
   Log.info("End of test.")
+  PASSS <<- TRUE
 }
 
 conn <- new("H2OClient", ip=myIP, port=myPort)
-
+PASSS <- FALSE
 tryCatch(test_that("summaryTests",test.summary.numeric(conn)), error = function(e) FAIL(e))
+if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()

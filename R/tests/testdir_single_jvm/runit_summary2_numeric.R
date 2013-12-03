@@ -1,4 +1,4 @@
-source('./Utils/h2oR.R')
+source('../Utils/h2oR.R')
 
 Log.info("\n======================== Begin Test ===========================\n")
 
@@ -18,9 +18,9 @@ test.summary2.numeric <- function(H2Oserver) {
   
 
 #check produced values against known values
-  cat("Check that the summary from H2O matches known good values: ")
+  cat("\nCheck that the summary from H2O matches known good values:\n ")
   H2Osum<- summary(wonkysummary.hex)
-  wonky.df<- read.csv("../../smalldata/wonkysummary.csv")
+  wonky.df<- read.csv("../../../smalldata/wonkysummary.csv")
   wonky.Rsum<-as.table(summary(wonky.df))
   
   Log.info("R's summary:")

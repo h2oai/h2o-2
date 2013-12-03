@@ -22,10 +22,13 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-curl http://localhost:54321
+#curl http://localhost:54321
 
-for test in $(ls *.R)
+for test in $(ls */*.R | grep -v Utils)
+#for test in $(ls */*.R | grep -v Utils | grep auto | awk '{gsub(".R","",$0); print $0}')
 do
+    #echo "myR $test 45"
+    #continue
     echo "----------------------------------------------------------------------"
     echo "Starting $test"
     echo "----------------------------------------------------------------------"
