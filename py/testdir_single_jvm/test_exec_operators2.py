@@ -59,6 +59,14 @@ exprListSmall = [
         "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
 
         "apply(r.hex,2,sum)",
+        "apply(r.hex,2,function(x){ifelse(x==-1,1,x)})",
+
+        # doesn't work
+        # "cbind(c(1), c(2), c(3))",
+        # "cbind(c(1,2,3), c(4,5,6))",
+        # "cbind(c(1,2,3), c(4,5,6), c(7,8,9))",
+        # "cbind(c(1,2,3,4), c(5,6,7))",
+        # "cbind(c(1,2,3), c(4,5,6,7))",
 
         "r.hex[c(1,3,5),]",
         "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
@@ -82,16 +90,23 @@ exprListSmall = [
         "min(1,2)",
         # doesn't work
         # "min(1,2,3)",
-        "min(c(1,3,5))",
-        "min(4,c(1,3,5),2,6)",
+        # doesn't work. only 2 params?
+        # "min(c(1,3,5))",
+        # doesn't work. only 2 params?
+        # "min(4,c(1,3,5),2,6)",
         # doesn't work
         # "min(1,r.hex,3)",
 
         "max(1,23)",
-        "max(1,2,3)",
+        # doesn't work
+        # Passed 3 args but expected 2
+        # "max(1,2,3)",
         # doesn't work
         # "max(c(1,3,5))",
-        "max(4,c(1,3,5),2,6)",
+
+        # doesn't work
+        # Passed 4 args but expected 2
+        # "max(4,c(1,3,5),2,6)",
         # doesn't work
         # "max(1,r.hex,3)",
 

@@ -1,9 +1,9 @@
-import unittest, time, sys
+import time, sys, unittest
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i, h2o_jobs 
 
 DO_CLASSIFICATION = False
-DO_POLL = True
+DO_POLL = False
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -14,9 +14,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(3)
         else:
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -105,7 +105,13 @@ class Basic(unittest.TestCase):
         if not DO_POLL:
             print "\nfirst GBMResult:", h2o.dump_json(GBMResult)
 
-            # no pattern waits for all
+            statMean = h2o_jobs.pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
+            num_cpus = statMean['num_cpus'],
+            my_cpu_pct = statMean['my_cpu_%'],
+            sys_cpu_pct = statMean['sys_cpu_%'],
+            system_load = statMean['system_load']
+
+            # shouldn't need this?
             h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
 
         elapsed = time.time() - start
