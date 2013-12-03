@@ -184,7 +184,7 @@ h2o.__poll <- function(client, keyName) {
       prog = res[[i]]
   }
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
-  if(prog$cancelled) stop("Job key ", keyName, " has been cancelled")
+  if(prog$end_time == -1) stop("Job key ", keyName, " has been cancelled")
   prog$progress
 }
 
