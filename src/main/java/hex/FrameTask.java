@@ -145,6 +145,19 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public final int fullN(){return _nums + _catOffsets[_cats];}
     public final int largestCat(){return _cats > 0?_catOffsets[1]:0;}
     public final int numStart(){return _catOffsets[_cats];}
+    public final String [] coefNames(){
+      int k = 0;
+      final int n = fullN();
+      String [] res = new String[n];
+      final Vec [] vecs = _adaptedFrame.vecs();
+      for(int i = 0; i < _cats; ++i)
+        for(int j = 1; j < vecs[i]._domain.length; ++j)
+          res[k++] = _adaptedFrame._names[i] + "." + vecs[i]._domain[j];
+      final int nums = n-k;
+      for(int i = 0; i < nums; ++i)
+        res[k+i] = _adaptedFrame._names[_cats+i];
+      return res;
+    }
   }
 
   @Override
