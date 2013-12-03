@@ -198,6 +198,7 @@ do
     myR $testDirName/$testName 300
 done
 
+single="testdir_single_jvm"
 # this guy was failing? not sure why
 myR $single/runit_histograms 1200
 # airlines is failing summary. put it last
