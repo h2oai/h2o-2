@@ -9,8 +9,8 @@
                 Log.info("A munge-task R unit test on data <na_test> testing the functional unit <==> ")
                 Log.info("Uploading na_test")
                 hex <- h2o.uploadFile(conn, locate("../../smalldata/test/na_test.zip"), "rna_test.hex")
-                Log.info("Filtering out rows by == from dataset na_test and column \"C4FChunk\" using value 18.5844709112")
-                     filterHex <- hex[hex[,c("C4FChunk")] == 18.5844709112,]
+                #Log.info("Filtering out rows by == from dataset na_test and column \"C4FChunk\" using value 18.5844709112")
+                #     filterHex <- hex[hex[,c("C4FChunk")] == 18.5844709112,]
                     Log.info("Perform filtering with the '$' sign also")
                     filterHex <- hex[hex$"C4FChunk" == 18.5844709112,]
                 Log.info("Filtering out rows by == from dataset na_test and column \"C8DChunk\" using value 7.27298100402e+29")

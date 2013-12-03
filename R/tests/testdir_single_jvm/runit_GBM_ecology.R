@@ -80,18 +80,18 @@ test.GBM.ecology <- function(conn) {
   print("=============================")
   print(locate("smalldata/gbm_test/ecology_model.csv"))
   print("=============================")
-  ecology.hex = h2o.uploadFile(conn, locate("smalldata/gbm_test/ecology_model.csv", schema="put"))
-  ecology.sum = summary(ecology.hex)
+  ecology.hex <- h2o.uploadFile(conn, locate("smalldata/gbm_test/ecology_model.csv", schema="put"))
+  ecology.sum <- summary(ecology.hex)
   Log.info("Summary of the ecology data from h2o: \n") 
   print(ecology.sum)
   
   #import csv data for R to use
-  ecology.data = read.csv(locate("smalldata/gbm_test/ecology_model.csv"), header = TRUE)
-  ecology.data = na.omit(ecology.data) #this omits NAs... does GBM do this? Perhaps better to model w/o doing this?
+  ecology.data <- read.csv(locate("smalldata/gbm_test/ecology_model.csv"), header = TRUE)
+  ecology.data <- na.omit(ecology.data) #this omits NAs... does GBM do this? Perhaps better to model w/o doing this?
   
   Log.info("H2O GBM with parameters:\nntrees = 100, max_depth = 5, min_rows = 10, learn_rate = 0.1\n")
   #Train H2O GBM Model:
-  ecology.h2o = h2o.gbm(x = 3:13, 
+  ecology.h2o <- h2o.gbm(x = 3:13, 
                         y = "Angaus", 
                      data = ecology.hex, 
                   n.trees = 100, 
@@ -102,7 +102,7 @@ test.GBM.ecology <- function(conn) {
   print(ecology.h2o)
   
   #Train R GBM Model: Using Gaussian loss function for binary outcome OK... Also more comparable to H2O, which uses MSE
-  ecology.r = gbm(Angaus ~ ., data = ecology.data[,-1], distribution = "gaussian", 
+  ecology.r <- gbm(Angaus ~ ., data = ecology.data[,-1], distribution = "gaussian", 
                   n.trees = 100,
                   interaction.depth = 5, 
                   n.minobsinnode = 10, 
@@ -114,23 +114,8 @@ test.GBM.ecology <- function(conn) {
   PASSS <<- TRUE
 }
 
-test.GBM.airlines <- function() {
-  # allyears.data = grabRemote("https://raw.github.com/0xdata/h2o/master/smalldata/airlines/allyears2k.zip", "ecology.csv")
-  # allyears.data = na.omit(allyears.data)
-  # allyears.data = data.frame(rapply(allyears.data, as.factor, classes = "character", how = "replace"))
-  # allyears.hex = h2o.importFile(conn, ../../../smalldata/airlines/allyears2k.zip")
-  
-  # ignoreNum = sapply(ignoreFeat, function(x) { which(allXCol == x) })
-  # ignoreFeat = c("CRSDepTime", "CRSArrTime", "ActualElapsedTime", "CRSElapsedTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay")
-  # myX = setdiff(colnames(allyears.hex), c(ignoreFeat, "IsArrDelayed"))
-  # allyears.h2o = h2o.gbm(x = myX, y = "IsArrDelayed", data = allyears.hex, n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
-  
-  # allyears.x = allyears.data[,-which(colnames(allyears.data) == "IsArrDelayed")]
-  # allyears.x = subset(allyears.x, select = -ignoreNum)
-  # allyears.gbm = gbm.fit(y = allyears.data$IsArrDelayed, x = allyears.x, distribution = "bernoulli", n.trees = 100, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1)
-}
 PASSS <- FALSE
-conn = new("H2OClient", ip=myIP, port=myPort)
+conn <- new("H2OClient", ip=myIP, port=myPort)
 tryCatch(test_that("GBM Test: Ecology", test.GBM.ecology(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
 if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
 PASS()

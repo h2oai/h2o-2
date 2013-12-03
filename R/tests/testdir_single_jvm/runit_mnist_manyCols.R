@@ -11,7 +11,7 @@ test.mnist.manyCols <- function(conn) {
   tail(train.hex)
   tail_ <- tail(train.hex)
   Log.info("Doing gbm on mnist training data.... \n")
-  gbm.mnist <- h2o.gbm(x= 1:784, y = 785, data = train.hex, n.trees = 5, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.01)
+  gbm.mnist <- h2o.gbm(x= 1:784, y = 785, data = train.hex, n.trees = 1, interaction.depth = 1, n.minobsinnode = 10, shrinkage = 0.01)
   print(gbm.mnist)
   
   Log.info("End of test.")

@@ -11,13 +11,11 @@ def genTasks():
     data = json.load(jsondata)
     jsondata.close()
     
-    tasks = open('./tasks', 'wb')
+    tasks = open('./filterTasks', 'wb')
     
-    for FU in ['[','<','<=','>','>=','==','!=',makeCompound(1),makeCompound(2)]: #,makeCompound(3),makeCompound(4)]:
+    for FU in ['[','<','<=','>','>=','==','!=',makeCompound(1),makeCompound(2)]:
         achoice = None
-        for i in sample(range(len(data['datasets'])), 10): 
-        #[choice(range(len(data['datasets']))) for i in range(60)]:
-        #for i in range(len(data['datasets'])):
+        for i in sample(range(len(data['datasets'])), 5): 
             cnt = achoice
             datajson = data['datasets'][i]
             DATANAME = datajson.keys()[0]
@@ -49,7 +47,6 @@ def genTasks():
                 tasks.write('\n')
                 achoice += 1
                 continue
-
 
             valPipeCol, valPipeCol2 = FUPARAMS
             FUPARAMS = ':'.join([TESTNAME, DESCRIPTION, ';'.join(COLS),valPipeCol, valPipeCol2])

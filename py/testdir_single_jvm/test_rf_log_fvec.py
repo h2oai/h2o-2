@@ -8,20 +8,13 @@ print "We have to make the output integer though, still (no regression support?"
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 paramDict = {
     # FIX! if there's a header, can you specify column number or column header
-    # 'response_variable': 54,
-    'class_weights': None,
-    'ntree': 10,
-    'depth': 10,
-    'model_key': 'model_keyA',
-    'out_of_bag_error_estimate': 1,
-    'stat_type': 'ENTROPY',
-    'depth': 2147483647, 
-    'bin_limit': 10000,
-    'parallel': 1,
-    'sample': 66,
+    # 'response': 'C54',
+    'ntrees': 10,
+    'destination_key': 'model_keyA',
+    'max_depth': 20, 
+    'nbins': 1000,
     ## 'seed': 3,
-    ## 'features': 30,
-    'exclusive_split_limit': 0,
+    ## 'mtries': 30,
     }
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
@@ -64,7 +57,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_log(self):
+    def test_rf_log_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
@@ -97,45 +91,37 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
             kwargs = paramDict.copy()
-            timeoutSecs = 30 + kwargs['ntree'] * 20
+            timeoutSecs = 30 + kwargs['ntrees'] * 20
             start = time.time()
             # do oobe
-            kwargs['out_of_bag_error_estimate'] = 1
-            kwargs['response_variable'] = colCount
+            kwargs['response'] = "C" + str(colCount)
             
             rfv = h2o_cmd.runRF(parseResult=trainParseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            oobeTrainPctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
-            expectTrainPctRight = 98
+            rf_model = rfv['drf_model']
+            used_trees = rf_model['N']
+            data_key = rf_model['_dataKey']
+            model_key = rf_model['_selfKey']
+
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
+            oobeTrainPctRight = 100.0 - classification_error
+            expectTrainPctRight = 99
             self.assertAlmostEqual(oobeTrainPctRight, expectTrainPctRight,\
                 msg="OOBE: pct. right for training not close enough %6.2f %6.2f"% (oobeTrainPctRight, expectTrainPctRight), delta=1)
 
             # RF score******************************************************
             print "Now score with the 2nd random dataset"
-            # pop the stuff from kwargs that were passing as params
-            model_key = rfv['model_key']
-            kwargs.pop('model_key',None)
+            rfv = h2o_cmd.runRFView(data_key=dataKeyTest, model_key=model_key, 
+                timeoutSecs=timeoutSecs, retryDelaySecs=1, print_params=True)
 
-            data_key = rfv['data_key']
-            kwargs.pop('data_key',None)
-
-            ntree = rfv['ntree']
-            kwargs.pop('ntree',None)
-
-            kwargs['iterative_cm'] = 1
-            # do full scoring
-            kwargs['out_of_bag_error_estimate'] = 0
-            rfv = h2o_cmd.runRFView(None, dataKeyTest, model_key, ntree,
-                timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
-
-            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=ntree)
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
             self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
-            fullScorePctRight = 100 * (1.0 - rfv['confusion_matrix']['classification_error'])
+            fullScorePctRight = 100.0 - classification_error
             expectScorePctRight = 99
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRight,
                 msg="Full: pct. right for scoring not close enough %6.2f %6.2f"% (fullScorePctRight, expectScorePctRight), delta=1)
