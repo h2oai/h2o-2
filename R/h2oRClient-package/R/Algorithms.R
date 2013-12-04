@@ -17,14 +17,29 @@ h2o.gbmgrid.internal <- function(x, y, classification, data, n.trees, interactio
   destKey = res$destination_key
   allModels = res2$jobs
   
-  result = list()
+  result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
     resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=allModels[[i]]$destination_key)
+    myModelSum[[i]] = h2o.__getGBMSummary(resH$gbm_model)
     modelOrig = h2o.__getGBMResults(resH$gbm_model)
     result[[i]] = new("H2OGBMModel", key=allModels[[i]]$destination_key, data=data, model=modelOrig, valid=validation)
   }
-  myModelsSum = lapply(allModels, function(x) { list(model_key = x$destination_key, run_time = x$end_time - x$start_time) })
-  new("H2OGBMGrid", key=destKey, data=data, model=result, sumtable=myModelsSum)
+  # myModelSum = lapply(allModels, function(x) { list(model_key = x$destination_key, run_time = x$end_time - x$start_time) })
+  new("H2OGBMGrid", key=destKey, data=data, model=result, sumtable=myModelSum)
+}
+
+h2o.__getGBMSummary <- function(res) {
+  mySum = list()
+  mySum$model_key = res$'_selfKey'
+  mySum$ntrees = res$N
+  mySum$max_depth = res$max_depth
+  mySum$min_rows = res$min_rows
+  mySum$nbins = res$nbins
+  mySum$learn_rate = res$learn_rate
+  
+  temp = matrix(unlist(res$cm), nrow = length(res$cm))
+  mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+  return(mySum)
 }
 
 h2o.__getGBMResults <- function(res) {
@@ -34,7 +49,13 @@ h2o.__getGBMResults <- function(res) {
   cf_names <- res[['_domains']]
   cf_names <- cf_names[[length(cf_names)]]
   
-  dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
+  cf_total = apply(cf_matrix, 2, sum)
+  cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
+  cf_matrix = rbind(cf_matrix, cf_total)
+  cf_matrix = cbind(cf_matrix, round(cf_error, 3))
+  
+  # dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
+  dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
   result$confusion = cf_matrix
   result$err = res$errs
   return(result)
