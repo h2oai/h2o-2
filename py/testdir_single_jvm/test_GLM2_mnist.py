@@ -108,8 +108,7 @@ class Basic(unittest.TestCase):
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
                 h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
-                GLMModel = glm['GLMModel']
-                modelKey = GLMModel['model_key']
+                modelKey = glm['glm_model']['_selfKey']
 
                 start = time.time()
                 glmScore = h2o_cmd.runGLMScore(key=testKey, model_key=modelKey, thresholds="0.5", timeoutSecs=60)
