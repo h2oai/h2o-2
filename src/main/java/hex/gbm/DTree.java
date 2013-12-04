@@ -321,7 +321,7 @@ public class DTree extends Iced {
     // ----------------+----------
     //       F         |   <   >=
     //       T         |  !=   ==
-    public final int _nids[];          // Children NIDS for the split
+    public final int _nids[];          // Children NIDS for the split LEFT, RIGHT
 
     transient byte _nodeType; // Complex encoding: see the compressed struct comments
     transient int _size = 0;  // Compressed byte size of this subtree
@@ -741,7 +741,7 @@ public class DTree extends Iced {
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
             if( ( equal && ((float)row[colId]) == splitVal) ||
                 (!equal && ((float)row[colId]) >= splitVal) ) {
-              ab.position(ab.position()+skip); // Skip right subtree
+              ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
           } else { ab.position(ab.position()+skip); lmask = rmask; }
@@ -945,10 +945,10 @@ public class DTree extends Iced {
             assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
             if( b==1         ) _bits[_depth-1]=3;
             if( b==1 || b==2 ) sb.p('\n').i(_depth).p("?");
-            if( b==2         ) sb.p(' ').pj(_fs[_depth]); // Dump the leaf containing float value
+            if( b==2         ) sb.p(' ').pj(_fs[_depth-1]); // Dump the leaf containing float value
             if( b==2 || b==3 ) sb.p('\n').i(_depth).p(":");
           }
-          sb.p(" (data[").p(col).p("] ").p(equal?"== ":"< ").pj(fcmp);
+          sb.p(" (data[").p(col).p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
           assert _bits[_depth]==0;
           _bits[_depth]=1;
         }
