@@ -344,7 +344,7 @@ public class GBM extends SharedTreeModelBuilder {
     // Collect leaves stats
     for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
-    //printGenerateTrees(ktrees);
+    printGenerateTrees(ktrees);
 
     return ktrees;
   }
