@@ -33,10 +33,13 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
             # sum all individual stats
             for stat in n:
                 if stat in statSum:
-                    statSum[stat] += n[stat]
+                    try: 
+                        statSum[stat] += n[stat]
+                    except TypeError:
+                        raise Exception("statSum[stat] should be number %s %s" % (statSum[stat], stat))
                 else:
                     try: 
-                        statSum[stat] = n[stat]  + 0.0
+                        statSum[stat] = n[stat] + 0.0
                     except TypeError:
                         pass # ignore non-numbers
 
