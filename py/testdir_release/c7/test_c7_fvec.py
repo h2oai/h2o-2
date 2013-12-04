@@ -86,13 +86,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         timeoutSecs = 3600
         start = time.time()
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noPoll=True, **kwargs)
-        statMean = h2o_jobs.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
+        statMean = h2j.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
         num_cpus = statMean['num_cpus'],
         my_cpu_pct = statMean['my_cpu_%'],
         sys_cpu_pct = statMean['sys_cpu_%'],
         system_load = statMean['system_load']
         # shouldn't need this?
-        h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
+        h2j.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
 
         # can't figure out how I'm supposed to get the model
         # GLMModel = glm['GLMModel']

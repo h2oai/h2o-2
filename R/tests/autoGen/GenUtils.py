@@ -57,6 +57,84 @@ def makeCharVec(item):
 def escape(E):
     return E.replace('"', '\\"')
 
+def getCol(colValDict):
+    while(1):
+        col = choice(colValDict.keys())
+        if colValDict[col][0] != 'NA':
+            return col
+
+def makeChar(seq):
+    for x in seq:
+        yield str(x)
+
+def convertSeq(seq):
+    for x in seq:
+        try:
+            yield float(x)
+        except:
+            yield str(x)
+
+def getNumCols(datajson, dataname):
+    ncols = int(datajson[dataname]['ATTRS']['NUMCOLS'])
+    #limit the number of cols
+    if ncols >= 50:
+        return 15
+   
+def getNumRows(datajson, dataname):
+    nrows = int(datajson[dataname]['ATTRS']['NUMROWS'])
+    if nrows >= 10000:
+        return 500
+
+def getColNames(datajson, dataname):
+    names = datajson[dataname]['ATTRS']['NAMES']
+    if names[0] == 0:
+        names = [i + 1 for i in names]
+    if names[0] not in range(numCols): names = ['"' + i + '"' for i in names]
+    return names
+
+def getRanges(datajson, dataname):
+    names = getColNames(datajson, dataname)
+    ranges = datajson[dataname]['ATTRS']['RANGE']
+    ranges = [r.strip('(').strip(')').split(',') for r in ranges]
+    ranges = [list(convertSeq(seq)) for seq in ranges]
+    colValDict = dict(zip(names, ranges))
+    return colValDict
+
+def getColChoices(numCols):
+    return range(1, numCols + 1)
+
+def getRowChoices(numRows):
+    return range(1, numRows + 1)
+   
+def genTestName(FU, dataname, taskDesc = None):
+    global count
+    count += 1
+    if not taskDesc:
+        return "runit_{0}_{1}_{2}_{3}".format(taskDesc,FU,dataname,str(count))
+    res = dataname + '_' + str(count) #str(uuid4()).replace('-','_')
+    if FU == '[': 
+        return 'sliceTest_' + res
+    if len(FU.split(';')) > 1:
+        return 'complexFilterTest_' + res
+    return 'simpleFilterTest_' + res
+
+def genTestDescription(FU, dataname,taskDesc = None):
+    if not taskDesc:
+        return "{0} operation on data {1} using {2}".format(taskDesc, dataname, FU)
+    res = " on data {0}".format(dataname) 
+    if FU == '[': 
+        return 'sliceTest_' + res 
+    if len(FU.split(';')) > 1:
+        return 'compoundFilterTest_' + res 
+    return 'simpleFilterTest_' + res 
+
+
+#####################################
+#                                   #
+#        Filter Task Utilities      #
+#                                   #
+#####################################
+
 #takes a pair of val-col pair (val, col) and an operator FU
 #FU is in ['<', '!=', '>=', '<=', '>', '==']
 #aux is possibly '!' if it's passed in
@@ -98,7 +176,7 @@ def makeExpression(O, vcPairs):
                 EXPRESSION += '( ' + makeUnit(vcPair[0],O.pop(0)) + ' )' + ' '
                 break
             else:
-                EXPRESSION += '( ' + makeUnit(vcPair[0],O.pop(0)) + ' ' + O.pop(0) + ' ' + makeUnit(vcPair[1], O.pop(0)) + ')' 
+                EXPRESSION += '( ' + makeUnit(vcPair[0],O.pop(0)) + ' ' + O.pop(0) + ' ' + makeUnit(vcPair[1], O.pop(0)) + ')'
             continue
         if O[0] == '&':
             O.pop(0)
@@ -106,13 +184,13 @@ def makeExpression(O, vcPairs):
         if O[0] == '|':
             O.pop(0)
             EXPRESSION += ' ' + '|' + ' '
-    
+
         if len(O) == 1:
             EXPRESSION += '( ' + makeUnit(vcPair[0],O.pop(0)) + ') '
             break
         EXPRESSION += makeUnit(vcPair[0], O.pop(0)) + ' ' + O.pop(0) + ' ' + makeUnit(vcPair[1], O.pop(0))
 
-    if endParen: EXPRESSION += ')' 
+    if endParen: EXPRESSION += ')'
     return EXPRESSION
 
 def makeCompound(choiceAs):
@@ -132,41 +210,6 @@ def makeCompound(choiceAs):
         if choiceAs <= 0:
             start.append(choice(A))
             return ';'.join(start)
-
-def getCol(colValDict):
-    while(1):
-        col = choice(colValDict.keys())
-        if colValDict[col][0] != 'NA':
-            return col
-
-def makeChar(seq):
-    for x in seq:
-        yield str(x)
-
-def convertSeq(seq):
-    for x in seq:
-        try:
-            yield float(x)
-        except:
-            yield str(x)
-
-def genTestName(FU, dataname):
-    global count
-    count += 1
-    res = dataname + '_' + str(count) #str(uuid4()).replace('-','_')
-    if FU == '[': 
-        return 'sliceTest_' + res
-    if len(FU.split(';')) > 1:
-        return 'complexFilterTest_' + res
-    return 'simpleFilterTest_' + res
-
-def genTestDescription(FU, dataname):
-    res = " on data {0}".format(dataname) 
-    if FU == '[': 
-        return 'sliceTest_' + res 
-    if len(FU.split(';')) > 1:
-        return 'compoundFilterTest_' + res 
-    return 'simpleFilterTest_' + res 
 
 def generateFUParams(FU, dataname, datajson, choiceAs = None):
     numCols = int(datajson[dataname]['ATTRS']['NUMCOLS'])
@@ -264,3 +307,15 @@ def generateFUParams(FU, dataname, datajson, choiceAs = None):
     valPipeCol = valPipe + '|' + colPipe
     valPipeCol2 = valPipe2 + '|' + colPipe2
     return [valPipeCol, valPipeCol2]
+
+############################################################################################################
+
+
+#####################################
+#                                   #
+#        Vector Task Utilities      #
+#                                   #
+#####################################
+
+
+

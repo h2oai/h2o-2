@@ -4,18 +4,20 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
+
+DO_ONE_NODE_ONLY = True
 initList = [
-        'Result0 = 0',
-        'Result1 = 1',
-        'Result2 = 2',
-        'Result3 = 3',
-        'Result4 = 4',
-        'Result5 = 5',
-        'Result6 = 6',
-        'Result7 = 7',
-        'Result8 = 8',
-        'Result9 = 9',
-        'Result10 = 10',
+        'Result0 = c(0)',
+        'Result1 = c(1)',
+        'Result2 = c(2)',
+        'Result3 = c(3)',
+        'Result4 = c(4)',
+        'Result5 = c(5)',
+        'Result6 = c(6)',
+        'Result7 = c(7)',
+        'Result8 = c(8)',
+        'Result9 = c(9)',
+        'Result10 = c(10)',
     ]
 
 # NOTE. the inc has to match the goback used below
@@ -64,7 +66,7 @@ class Basic(unittest.TestCase):
                 # for the first 100 trials: do each expression at node 0,
                 # for the second 100 trials: do each expression at a random node, to facilate key movement
                 # FIX! there's some problem with the initList not taking if rotated amongst nodes?
-                if (trial < 100):
+                if (DO_ONE_NODE_ONLY or trial < 100):
                     nodeX = 0
                 else:
                     nodeX = random.randint(0,lenNodes-1)
@@ -74,7 +76,7 @@ class Basic(unittest.TestCase):
                 resultKey="Result" + str(number%period)
                 execExpr = h2e.fill_in_expr_template(exprTemplate, n=(number%period), m=((number-goback)%period))
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr,
-                    resultKey=resultKey, timeoutSecs=4)
+                    resultKey=None, timeoutSecs=4)
 
                 print "min_value:", min_value, "execExpr:", execExpr, "number:", number
                 h2o.verboseprint("min: ", min_value, "trial:", trial)

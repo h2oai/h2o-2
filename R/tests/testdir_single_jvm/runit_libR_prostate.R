@@ -7,8 +7,6 @@ if(!"ROCR" %in% rownames(installed.packages())) install.packages("ROCR")
 require(LiblineaR)
 require(ROCR)
 
-Log.info("======================== Begin Test ===========================\n")
-
 test.LiblineaR <- function(conn) {
   L1logistic <- function(train,trainLabels,test,testLabels,trainhex,testhex) {
     Log.info("Using default parameters for LiblineaR: \n")
@@ -139,7 +137,7 @@ test.LiblineaR <- function(conn) {
     Log.info(paste(all.equal(abs(as.vector(h2o@model$coefficients)), abs(as.vector(libR$W))), "\n", sep = ""))
   }
 
-  Log.info("\nImporting prostate test/train data...\n")
+  Log.info("Importing prostate test/train data...\n")
   prostate.train.hex <- h2o.uploadFile.VA(conn, locate("../../../smalldata/logreg/prostate_train.csv"), "pTrain.hex")
   prostate.test.hex  <- h2o.uploadFile.VA(conn, locate("../../../smalldata/logreg/prostate_test.csv"), "pTest.hex")
   prostate.train.dat <- read.csv(locate("../../../smalldata/logreg/prostate_train.csv")) #head(prostate.train.hex,nrow(prostate.train.hex))
@@ -151,9 +149,8 @@ test.LiblineaR <- function(conn) {
   models             <- L1logistic(xTrain,yTrain,xTest,yTest,prostate.train.hex,prostate.test.hex)
   #models2            <- L2logistic(xTrain,yTrain,xTest,yTest,prostate.train.hex,prostate.test.hex)
   compareCoefs(models[[1]], models[[2]])
+  testEnd()
 }
 
-conn <- new("H2OClient", ip=myIP, port=myPort)
+doTest("LiblineaR Test: Prostate", test.LiblineaR)
 
-tryCatch(test_that("LiblineaR Test", test.LiblineaR(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
-PASS()
