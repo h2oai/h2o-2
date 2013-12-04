@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec_filter_slice_fvec(self):
+    def test_exec2_filter_slice(self):
         h2o.beta_features = True
         timeoutSecs = 10
         csvFilename = "covtype.data"

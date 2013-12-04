@@ -147,7 +147,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec_operators2(self):
+    def test_exec2_operators2(self):
         bucket = 'smalldata'
         csvPathname = 'iris/iris2.csv'
         hexKey = 'i.hex'

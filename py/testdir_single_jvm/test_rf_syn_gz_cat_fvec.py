@@ -69,7 +69,6 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, co
     doSummary = False
     parseResult = h2i.import_parse(path=csvPathnameReplgz, schema='put', hex_key=hex_key, 
         timeoutSecs=timeoutSecs, pollTimeoutSecs=120, doSummary=doSummary)
-    print csvFilenameReplgz, 'parse time:', parseResult['response']['time']
     if doSummary:
         algo = "Parse and Summary:"
     else:
@@ -82,19 +81,19 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, co
     print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
     h2o_cmd.infoFromInspect(inspect, csvPathname)
     print "\n" + csvPathname, \
-        "    num_rows:", "{:,}".format(inspect['num_rows']), \
-        "    num_cols:", "{:,}".format(inspect['num_cols'])
+        "    numRows:", "{:,}".format(inspect['numRows']), \
+        "    numCols:", "{:,}".format(inspect['numCols'])
 
     # there is an extra response variable
-    if inspect['num_cols'] != (colCount + 1):
-        raise Exception("parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], colCount))
-    if inspect['num_rows'] != totalRows:
+    if inspect['numCols'] != (colCount + 1):
+        raise Exception("parse created result with the wrong number of cols %s %s" % (inspect['numCols'], colCount))
+    if inspect['numRows'] != totalRows:
         raise Exception("parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-        (inspect['num_rows'], rowCount))
+        (inspect['numRows'], rowCount))
 
     # hack it in! for test purposees only
-    parseResult['num_rows'] = inspect['num_rows']
-    parseResult['num_cols'] = inspect['num_cols']
+    parseResult['numRows'] = inspect['numRows']
+    parseResult['numCols'] = inspect['numCols']
     parseResult['value_size_bytes'] = inspect['value_size_bytes']
     return parseResult
 
@@ -118,6 +117,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_syn_gz_cat(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # summary fails with 100000 cols
@@ -135,16 +135,11 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
 
         paramDict = {
-            'class_weights': None,
-            'ntree': 10,
-            'model_key': 'model_keyA',
-            'out_of_bag_error_estimate': 1,
-            'stat_type': 'GINI',
-            'depth': 2147483647,
-            'bin_limit': 10000,
-            'parallel': 1,
-            'sample': 80,
-            'exclusive_split_limit': 0,
+            'ntrees': 10,
+            'destination_key': 'model_keyA',
+            'max_depth': 10,
+            'nbins': 100,
+            'sample_rate': 0.80,
             }
 
 
@@ -157,8 +152,8 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             parseResult = make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs)
 
-            paramDict['response_variable'] = colCount
-            paramDict['features'] = 9
+            paramDict['response'] = 'C' + str(colCount)
+            paramDict['mtries'] = 9
             paramDict['seed'] = random.randint(0, sys.maxint)
             kwargs = paramDict.copy()
 
@@ -168,14 +163,13 @@ class Basic(unittest.TestCase):
             print "RF end on ", parseResult['destination_key'], 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            classification_error = rfView['confusion_matrix']['classification_error']
-            ### self.assertLess(classification_error, 0.7, "Should have full classification error <0.7")
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
 
             algo = "RF " 
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
-                num_rows: {:d} num_cols: {:d} value_size_bytes: {:d}'.format(
-                len(h2o.nodes), tryHeap, algo, parseResult['destination_key'], elapsed, kwargs['ntree'], \
-                classification_error, parseResult['num_rows'], parseResult['num_cols'], parseResult['value_size_bytes'])
+                numRows: {:d} numCols: {:d} value_size_bytes: {:d}'.format(
+                len(h2o.nodes), tryHeap, algo, parseResult['destination_key'], elapsed, kwargs['ntrees'], \
+                classification_error, parseResult['numRows'], parseResult['numCols'], parseResult['value_size_bytes'])
             print l
             h2o.cloudPerfH2O.message(l)
 

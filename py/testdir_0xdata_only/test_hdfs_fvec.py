@@ -2,26 +2,25 @@ import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
 
-# bug with summary (NPE?)
-DO_SUMMARY=False
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
     @classmethod
     def setUpClass(cls):
+        # assume we're at 0xdata with it's hdfs namenode
+        global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3, use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
+            h2o.build_cloud(1, use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
         else:
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(1, use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hdfs2_3(self):
+    def test_hdfs_fvec(self):
         h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
@@ -29,7 +28,6 @@ class Basic(unittest.TestCase):
         # fails because classes aren't integers
         #    "allstate_claim_prediction_train_set.zip",
         csvFilenameAll = [
-            "covtype.data",
             "TEST-poker1000.csv",
             "leads.csv",
             "and-testing.data",
@@ -38,6 +36,7 @@ class Basic(unittest.TestCase):
             # these can't RF ..output classes not integer?
             # "bestbuy_test.csv",
             # "bestbuy_train.csv",
+            "covtype.data",
             "covtype.4x.shuffle.data",
             "covtype4x.shuffle.data",
             "covtype.13x.data",
@@ -66,37 +65,14 @@ class Basic(unittest.TestCase):
             csvFilenameList = csvFilenameAll
 
         # pop open a browser on the cloud
-        ### h2b.browseTheCloud()
+        # h2b.browseTheCloud()
 
-        timeoutSecs = 200
-        # save the first, for all comparisions, to avoid slow drift with each iteration
-        importFolderPath = "datasets"
         for csvFilename in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
-            csvPathname = importFolderPath + "/" + csvFilename
-            start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=1000, doSummary=DO_SUMMARY, blocking=1)
-            print "parse result:", parseResult['destination_key'], 'took', time.time() - start, 'secs'
-
-            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
-            ## print "inspect:", h2o.dump_json(inspect)
-            numRows = inspect['numRows']
-            numCols = inspect['numCols']
-            print "\n" + csvPathname, \
-                "    numRows:", "{:,}".format(numRows), \
-                "    numCols:", "{:,}".format(numCols)
-
-
-            start = time.time()
-            modelKey = 'rfmodel.hex'
-            kwargs = {}
-            RFview = h2o_cmd.runRF(trees=1, parseResult=parseResult, timeoutSecs=2000, retryDelaySecs=0.5, destination_key=modelKey, **kwargs)
-            # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-
-            # we should be able to export the model to hdfs
-            # fails
-            ### e = h2o.nodes[0].export_hdfs(source_key=modelKey, path="/datasets/rfmodel.hex")
+            csvPathname = "datasets/" + csvFilename
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=1000)
+            print "parse result:", parseResult['destination_key']
 
 if __name__ == '__main__':
     h2o.unit_main()
