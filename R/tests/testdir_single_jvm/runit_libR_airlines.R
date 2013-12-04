@@ -60,7 +60,7 @@ test.LiblineaR.airlines <- function(con) {
     return(list(h2o.m,LibR.m));
   }
 
-  compareCoefs <- function(h2o, libR) {
+  compareCoefs <- function(h2o, libR, conn) {
     Log.info("
             Comparing the L1-regularized LR coefficients (should be close in magnitude)
             Expect a sign flip because modeling against log(../(1-p)) vs log((1-p)/p).
@@ -94,7 +94,7 @@ test.LiblineaR.airlines <- function(con) {
   xTest   <- scale(data.frame(aTest$DepTime, aTest$ArrTime, aTest$Distance))
   yTest   <- aTest[,12]
   models  <- L1logistic(xTrain,yTrain,xTest,yTest,trainhex,testhex)
-  compareCoefs(models[[1]], models[[2]])
+  compareCoefs(models[[1]], models[[2]], conn)
   
   testEnd()
 }

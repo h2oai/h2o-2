@@ -27,5 +27,5 @@ glm2Benign <- function(conn) {
   testEnd()
 }
 
-doTest("GLM2: Benign Data", glm2Benigh)
+doTest("GLM2: Benign Data", glm2Benign)
 
