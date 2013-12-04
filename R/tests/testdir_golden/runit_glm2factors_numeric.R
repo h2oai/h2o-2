@@ -4,8 +4,8 @@ source('./findNSourceUtils.R')
 test.glm2factors.numeric <- function(H2Oserver) {
   
   Log.info("Importing cuseexpanded.csv data...")
-  cuse.hex<- h2o.importFile(H2Oserver, "./smalldata/cuseexpanded.csv")
-  cuse<- read.csv("../../smalldata/cuseexpanded.csv", header=T)
+  cuse.hex<- h2o.importFile(H2Oserver, locate("./smalldata/cuseexpanded.csv", schema = "local"))
+  cuse<- read.csv(locate("../../smalldata/cuseexpanded.csv"), header=T)
   
   #run binomial regression on data in R for baseline. Expanded data set has binomial expansions, and factors. Factors are Age, Ed, Wantsmore.
   
@@ -16,7 +16,7 @@ test.glm2factors.numeric <- function(H2Oserver) {
   #run h2o GLM2 binomial with no CV, no regularization
 
   Log.info("Run H2O GLM2 on cuse data...")
-  cuseH2O.glm<- h2o.glm.FV(x=c("Age", "Ed"  "Wantsmore"), y="UsingBinom", data=cuse.hex, family="binomial", nfolds=0, alpha=0, lambda=0)
+  cuseH2O.glm<- h2o.glm.FV(x=c("Age", "Ed", "Wantsmore"), y="UsingBinom", data=cuse.hex, family="binomial", nfolds=0, alpha=0, lambda=0)
   print(cuseH2O.glm)
   
 

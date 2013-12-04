@@ -3,8 +3,8 @@ source('./findNSourceUtils.R')
 #import swiss data set to R; import to H2O and parse as FV
 test.glm2linear.numeric <- function(H2Oserver) {
   Log.info("Importing swiss.csv data...")
-  swiss.hex<- h2o.importFile(H2Oserver, locate("./smalldata/wonkysummary.csv", )
-  swiss.df<- read.csv("../../smalldata/wonkysummary.csv", header=T)
+  swiss.hex<- h2o.importFile(H2Oserver, locate("./smalldata/wonkysummary.csv", schema = "local"))
+  swiss.df<- read.csv(locate("../../smalldata/wonkysummary.csv"), header=T)
   
   #run vanilla glm on swiss.df for comparrison
   Log.info("Run GLM in R...")
