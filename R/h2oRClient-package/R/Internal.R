@@ -41,12 +41,16 @@ h2o.__openErrLog <- function() {
 h2o.__logIt<-
 function(m, tmp, commandOrErr) {
   #m is a url if commandOrErr == "Command"
-  if(is.null(tmp)) s <- m
+  if(is.null(tmp) || is.null(get("tmp"))) s <- m
   else {
     tmp <- get("tmp"); nams = names(tmp)
-    s <- rep(" ", length(tmp))
-    for(i in seq_along(tmp))
-      s[i] <- paste(nams[i], ": ", tmp[[i]], sep="")
+    if(length(nams) != length(tmp)) {
+        if (is.null(nams) && commandOrErr != "Command") nams = "[WARN/ERROR]"
+    }
+    s <- rep(" ", max(length(tmp), length(nams)))
+    for(i in seq_along(tmp)){
+      s[i] <- paste(nams[i], ": ", tmp[[i]], sep="", collapse = " ")
+    }
     s <- paste(m, ' \t', paste(s, collapse=", "))
   }
   if (commandOrErr != "Command") s <- paste(s, '\n')
