@@ -1,7 +1,5 @@
 source('./findNSourceUtils.R')
 
-Log.info("------------------------------ Begin Tests ------------------------------")
-
 glm2Benign <- function(conn) { 
   # bhexFV <- h2o.importFile(conn, "./smalldata/logreg/benign.csv", key="benignFV.hex")
   bhexFV <- h2o.uploadFile(conn, locate("../../../smalldata/logreg/benign.csv"), key="benignFV.hex")
@@ -25,12 +23,9 @@ glm2Benign <- function(conn) {
   #Check coeffs here
   #tryCatch(expect_that(mFV@model$x, equals(colnames(bhexFV)[X])), error = function(e) Log.warn("Not getting colnames back, just indices"))
    expect_that(mFV@model$x, equals(X))
-  Log.info("End of test")
-  PASSS <<- TRUE
+
+  testEnd()
 }
-PASSS <- FALSE
-conn <- new("H2OClient", ip=myIP, port=myPort)
-tryCatch(testResult <- test_that("glm2 benign", glm2Benign(conn)), warning = function(w) WARN(w), error = function(e) { FAIL(e)})
-if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
-PASS()
+
+doTest("GLM2: Benign Data", glm2Benign)
 

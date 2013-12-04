@@ -4,8 +4,6 @@
 
 source('./findNSourceUtils.R')
 
-Log.info("======================== Begin Test ===========================\n")
-
 test <- function(conn) {
   arrests.hex = h2o.uploadFile(conn, locate("../../../smalldata/pca_test/USArrests.csv"), "arrests.hex")
   
@@ -22,9 +20,9 @@ test <- function(conn) {
   }
   Log.info("Making a call to remove all")
   h2o.removeAll(conn)
+
+  testEnd()
 }
 
-conn = new("H2OClient", ip=myIP, port=myPort)
+doTest("Many Keys Test: Removing", test)
 
-tryCatch(test_that("many keys test", test(conn)),  warning = function(w) WARN(w), error = function(e) FAIL(e))
-PASS()

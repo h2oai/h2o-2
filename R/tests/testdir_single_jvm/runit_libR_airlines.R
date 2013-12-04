@@ -1,11 +1,10 @@
 source('./findNSourceUtils.R')
+
 Log.info("Loading LiblineaR and ROCR packages\n")
 if(!"LiblineaR" %in% rownames(installed.packages())) install.packages("LiblineaR")
 if(!"ROCR" %in% rownames(installed.packages())) install.packages("ROCR")
 require(LiblineaR)
 require(ROCR)
-
-Log.info("======================== Begin Test ===========================\n")
 
 test.LiblineaR.airlines <- function(con) {
   L1logistic <- function(train,trainLabels,test,testLabels,trainhex,testhex) {
@@ -61,7 +60,7 @@ test.LiblineaR.airlines <- function(con) {
     return(list(h2o.m,LibR.m));
   }
 
-  compareCoefs <- function(h2o, libR) {
+  compareCoefs <- function(h2o, libR, conn) {
     Log.info("
             Comparing the L1-regularized LR coefficients (should be close in magnitude)
             Expect a sign flip because modeling against log(../(1-p)) vs log((1-p)/p).
@@ -95,14 +94,10 @@ test.LiblineaR.airlines <- function(con) {
   xTest   <- scale(data.frame(aTest$DepTime, aTest$ArrTime, aTest$Distance))
   yTest   <- aTest[,12]
   models  <- L1logistic(xTrain,yTrain,xTest,yTest,trainhex,testhex)
-  compareCoefs(models[[1]], models[[2]])
-  Log.info("End of test.")
-  PASSS <<- TRUE
+  compareCoefs(models[[1]], models[[2]], conn)
+  
+  testEnd()
 }
-#options(digits=8)
 
-PASSS <- FALSE
-conn <- new("H2OClient", ip=myIP, port=myPort)
-tryCatch(test_that("LiblineaR Test Airlines", test.LiblineaR.airlines(conn)), error = function(e) FAIL(e))
-if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
-PASS()
+doTest("LiblineaR Test: Airlines", test.LiblineaR.airlines)
+

@@ -13,7 +13,7 @@ h2o.gbm.internal <- function(x, y, classification, data, n.trees, interaction.de
 h2o.gbmgrid.internal <- function(x, y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=y, cols=paste(x, collapse=","), ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMGridProgress, job_key=res$job_key, destination_key=res$destination_key)
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GRIDSEARCH, job_key=res$job_key, destination_key=res$destination_key)
   destKey = res$destination_key
   allModels = res2$jobs
   
