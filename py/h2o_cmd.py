@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys, socket
 import h2o
-import h2o_browse as h2b, h2o_rf as h2f
+import h2o_browse as h2b, h2o_rf as h2f, h2o_exec
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
@@ -472,3 +472,37 @@ def sleep_with_dot(sec, message=None):
         time.sleep(1)
         dot()
         count += 1
+
+def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent, outputClass, outputCol, changeToBinomial=False):
+    # will have to live with random extract. will create variance
+
+    print "train: get random", trainPercent
+    print "test: get remaining", 100 - trainPercent
+    if changeToBinomial:
+        print "change class", outputClass, "to 1, everything else to 0. factor() to turn real to int (for rf)"
+
+    execExpr = ""
+    execExpr += "cct.hex=runif(%s);" % srcKey
+    execExpr += "%s=%s[cct.hex%s,];" % (trainDstKey, srcKey, '<=0.9')
+    if changeToBinomial:
+        execExpr += "%s[,%s]=%s[,%s]==%s;" % (trainDstKey, outputCol+1, trainDstKey, outputCol+1, outputClass)
+        execExpr +=  "factor(%s[, %s]);" % (trainDstKey, outputCol+1)
+
+    h2o_exec.exec_expr(None, execExpr, resultKey=trainDstKey, timeoutSecs=15)
+
+    inspect = runInspect(key=trainDstKey)
+    infoFromInspect(inspect, "%s after mungeDataset on %s" % (trainDstKey, srcKey) )
+
+    print "test: same, but use the same runif() random result, complement"
+
+    execExpr = "cct.hex=runif(%s);" % srcKey
+    execExpr += "%s=%s[cct.hex%s,];" % (testDstKey, srcKey, '>0.9')
+    if changeToBinomial:
+        execExpr += "%s[,%s]=%s[,%s]==%s;" % (testDstKey, outputCol+1, testDstKey, outputCol+1, outputClass)
+        execExpr +=  "factor(%s[, %s])" % (testDstKey, outputCol+1)
+    h2o_exec.exec_expr(None, execExpr, resultKey=testDstKey, timeoutSecs=10)
+
+    inspect = runInspect(key=testDstKey)
+    infoFromInspect(inspect, "%s after mungeDataset on %s" % (testDstKey, srcKey) )
+
+
