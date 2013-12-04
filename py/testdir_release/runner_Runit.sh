@@ -196,7 +196,6 @@ do
     testDir=$(dirname $test)
     testDirName=$(basename $testDir)
     myR $testDirName/$testName 300
-    break
 done
 
 #single="testdir_single_jvm"
