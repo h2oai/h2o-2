@@ -1,5 +1,13 @@
 options(echo=FALSE)
 
+grabRemote <- function(myURL, myFile) {
+  temp <- tempfile()
+  download.file(myURL, temp, method = "curl")
+  aap.file <- read.csv(file = unz(description = temp, filename = myFile), as.is = TRUE)
+  unlink(temp)
+  return(aap.file)
+}
+
 read.zip<- 
 function(zipfile, exdir,header=T) {
   zipdir <- exdir
@@ -184,6 +192,9 @@ if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
 require(glmnet)
 require(gbm)
 
+
+#Global Variables
 myIP   <- ipPort[[1]]
 myPort <- ipPort[[2]]
 PASSS <- FALSE
+view_max <- 10000 #maximum returned by Inspect.java
