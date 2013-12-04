@@ -37,7 +37,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary_percentile2(self):
+    def test_summary2_percentile(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100000, 1, 'cD', 300),
@@ -66,7 +67,6 @@ class Basic(unittest.TestCase):
 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=10, doSummary=False)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
@@ -77,65 +77,56 @@ class Basic(unittest.TestCase):
             if h2o.verbose:
                 print "summaryResult:", h2o.dump_json(summaryResult)
 
+            summaries = summaryResult['summaries']
+            for column in summaries:
+                colname = column['colname']
+                coltype = column['type']
+                nacnt = column['nacnt']
 
-            # remove bin_names because it's too big (256?) and bins
-            # just touch all the stuff returned
-            h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
+                stats = column['stats']
+                stattype= stats['type']
+                mean = stats['mean']
+                sd = stats['sd']
+                zeros = stats['zeros']
+                mins = stats['mins']
+                maxs = stats['maxs']
+                pct = stats['pct']
+                pctile = stats['pctile']
 
-            summary = summaryResult['summary']
-            columnsList = summary['columns']
-            for columns in columnsList:
-                N = columns['N']
-                self.assertEqual(N, rowCount)
+                hstart = column['hstart']
+                hstep = column['hstep']
+                hbrk = column['hbrk']
+                hcnt = column['hcnt']
 
-                name = columns['name']
-                stype = columns['type']
-                self.assertEqual(stype, 'number')
-
-                histogram = columns['histogram']
-                bin_size = histogram['bin_size']
-                self.assertEqual(bin_size, 1)
-
-                bin_names = histogram['bin_names']
-                for b in bin_names:
+                for b in hbrk:
                     self.assertIn(int(b), legalValues)
+                self.assertEqual(len(hbrk), len(legalValues))
 
-                bins = histogram['bins']
-                nbins = histogram['bins']
+                self.assertAlmostEqual(hcnt[0], 0.5 * rowCount, delta=.01*rowCount)
+                self.assertAlmostEqual(hcnt[1], 0.5 * rowCount, delta=.01*rowCount)
 
-                self.assertEqual(len(bins), len(legalValues))
-                # this distribution assumes 4 values with mean on the 3rd
-                self.assertAlmostEqual(bins[0], 0.5 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(bins[1], 0.5 * rowCount, delta=.01*rowCount)
+                print "pctile:", pctile
+                print "maxs:", maxs
+                # we round to int, so we may introduce up to 0.5 rounding error? compared to "mode" target
+                self.assertAlmostEqual(maxs[0], expectedMax, delta=0.01)
+                print "mins:", mins
+                self.assertAlmostEqual(mins[0], expectedMin, delta=0.01)
 
-                # not done if enum
-                if stype != "enum":
-                    zeros = columns['zeros']
-                    na = columns['na']
-                    smax = columns['max']
-                    smin = columns['min']
-                    percentiles = columns['percentiles']
-                    thresholds = percentiles['thresholds']
-                    values = percentiles['values']
-                    mean = columns['mean']
-                    sigma = columns['sigma']
+                for v in pctile:
+                    self.assertTrue(v >= expectedMin,
+                        "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
+                    self.assertTrue(v <= expectedMax,
+                        "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
 
-                    self.assertEqual(smax[0], expectedMax)
-                    self.assertEqual(smin[0], expectedMin)
-
-                    for v in values:
-                        ##    self.assertIn(v,legalValues,"Value in percentile 'values' is not present in the dataset") 
-                        # but: you would think it should be within the min-max range?
-                        self.assertTrue(v >= expectedMin, 
-                            "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
-                        self.assertTrue(v <= expectedMax, 
-                            "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
-                
-                    # we round to int, so we may introduce up to 0.5 rounding error? compared to "mode" target
-                    self.assertAlmostEqual(mean, expectedMean, delta=0.01)
-                    self.assertAlmostEqual(sigma, expectedSigma, delta=0.01)
-
-            trial += 1
+                eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
+                if expectedMin==1:
+                    eV = eV1
+                elif expectedMin==0:
+                    eV = [e-1 for e in eV1]
+                elif expectedMin==2:
+                    eV = [e+1 for e in eV1]
+                else:
+                    raise Exception("Test doesn't have the expected percentileValues for expectedMin: %s" % expectedMin)
 
 
 if __name__ == '__main__':

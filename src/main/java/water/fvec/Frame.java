@@ -42,6 +42,12 @@ public class Frame extends Iced {
     for( int i=0; i<vecs.length; i++ )
       assert grp.equals(vecs[i].group());
   }
+  public Vec vec(String name){
+    Vec [] vecs = vecs();
+    for(int i = 0; i < _names.length; ++i)
+      if(_names[i].equals(name))return vecs[i];
+    return null;
+  }
   public Frame subframe(String [] names){
     Vec [] vecs = new Vec[names.length];
     HashMap<String, Integer> map = new HashMap<String, Integer>();

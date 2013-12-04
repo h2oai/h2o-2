@@ -72,31 +72,23 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             timeoutSecs = 1000
             # do an import first, because we want to get the size of the file
             (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs)
-            succeeded = importResult['succeeded']
-            if len(succeeded) < 1:
+            keys = importResult['keys']
+            if len(keys) < 1:
                 raise Exception("Should have imported at least 1 key for %s" % csvPathname)
 
             # just do a search
             foundIt = None
-            for f in succeeded:
-                if csvPathname in f['key']:
+            for f in keys:
+                if csvPathname in f:
                     foundIt = f
                     break
 
-            if foundIt:
-                value_size_bytes = f['value_size_bytes']
-            else:
+            if not foundIt:
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
 
             # no pattern matching, so no multiple files to add up
             totalBytes = value_size_bytes
 
-            #  "succeeded": [
-            #    {
-            #      "file": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "key": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "value_size_bytes": 1115287100
-            #    },
 
             print "Loading", csvFilename, 'from hdfs'
             start = time.time()

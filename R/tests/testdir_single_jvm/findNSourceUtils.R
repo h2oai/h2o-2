@@ -90,6 +90,9 @@ distance <- calcPath(getwd(), "tests", "R")
 if (distance < 0) {
     path <- paste(SEARCHPATH, "/R/", sep = "")
     source(paste(path, "tests/Utils/h2oR.R", sep = ""))
+    source(paste(path, "tests/Utils/pcaR.R", sep = ""))
+    source(paste(path, "tests/Utils/glmR.R", sep = ""))
+    source(paste(path, "tests/Utils/gbmR.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Algorithms.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Classes.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/ParseImport.R", sep = ""))
@@ -97,8 +100,10 @@ if (distance < 0) {
 } else {
     distance <- calcPath(getwd(), "tests")
     dots     <- genDots(distance)
-    newPath  <- paste(dots, "Utils/h2oR.R", sep = "")
-    source(newPath)
+    source(paste(dots, "Utils/h2oR.R", sep = ""))
+    source(paste(dots, "Utils/pcaR.R", sep = ""))
+    source(paste(dots, "Utils/glmR.R", sep = ""))
+    source(paste(dots, "Utils/gbmR.R", sep = ""))
 
     #rdots is the calculated path to the R source files...
     rdots <- ifelse(dots == "./", "../", paste("../", dots, sep = ""))

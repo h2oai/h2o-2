@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_exec_result_race(self):
+    def test_exec2_result_race(self):
         ### h2b.browseTheCloud()
 
         lenNodes = len(h2o.nodes)

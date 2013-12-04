@@ -1,13 +1,9 @@
 source('./findNSourceUtils.R')
 
-Log.info("======================== Begin Test ===========================")
-
-
 #import multimodal data set; parse as FV
 test.summary2.numeric <- function(conn) {
   Log.info("Importing wonkysummary.csv data...")
   wonkysummary.hex <- h2o.importFile(conn, locate("./smalldata/wonkysummary.csv", schema = "local"), "wonky.hex")
-  
 
 #check that summary2 gives expected output
   Log.info("Check that summary gives output...")
@@ -32,12 +28,8 @@ test.summary2.numeric <- function(conn) {
   
   expect_that(H2Osum, equals(wonky.Rsum))
  
-  Log.info("End of test.")
-  PASSS <<- TRUE
+  testEnd()
 }
 
-PASSS <- FALSE
-conn <- new("H2OClient", ip=myIP, port=myPort)
-tryCatch(test_that("summaryTests",test.summary2.numeric(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
-if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
-PASS()
+doTest("Summary Tests", test.summary2.numeric)
+
