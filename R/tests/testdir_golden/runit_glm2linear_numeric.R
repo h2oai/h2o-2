@@ -3,8 +3,8 @@ source('./findNSourceUtils.R')
 #import swiss data set to R; import to H2O and parse as FV
 test.glm2linear.numeric <- function(H2Oserver) {
   Log.info("Importing swiss.csv data...")
-  swiss.hex<- h2o.importFile(H2Oserver, locate("./smalldata/wonkysummary.csv", schema = "local"))
-  swiss.df<- read.csv(locate("../../smalldata/wonkysummary.csv"), header=T)
+  swiss.hex<- h2o.importFile(H2Oserver, locate("./smalldata/swiss.csv", schema = "local"))
+  swiss.df<- read.csv(locate("../../smalldata/swiss.csv"), header=T)
   
   #run vanilla glm on swiss.df for comparrison
   Log.info("Run GLM in R...")
@@ -21,17 +21,16 @@ test.glm2linear.numeric <- function(H2Oserver) {
   #check produced values against known values
   Log.info("Check that the descriptives from H2O matches known good values... ")
   library(testthat)
-  print(swiss.h2o@model$deviance)
-  print(swiss.h2o@model$null.deviance)
-  print(swiss.h2o@model$df.residual)
-  print(swiss.h2o@model$df.null)  
+  print(swissH2O.glm@model$deviance)
+  print(swissH2O.glm@model$null.deviance)
+  print(swissH2O.glm@model$df.residual)
+  print(swissH2O.glm@model$df.null)  
   
-  expect_true(abs(swiss.h2o@model$deviance-7178)<(1))
-  expect_true(abs(swiss.h2o@model$null.deviance-2105)<(1))
-  expect_equal(object=swiss.h2o@model$df.residual, expected=41, tolerance=.01, scale=41)
-  expect_equal(object=swiss.h2o@model$df.null, expected=46, tolerance=.01, scale=46)
-  expect_equal(object=swiss.h2o@model$aic, expected=326, tolerance=.01, scale=326) 
-  
+  expect_true(abs(swissH2O.glm@model$deviance-7178)<(1))
+  expect_true(abs(swissH2O.glm@model$null.deviance-2105)<(1))
+  expect_equal(object=swissH2O.glm@model$df.residual, expected=41, tolerance=.01, scale=41)
+  expect_equal(object=swissH2O.glm@model$df.null, expected=46, tolerance=.01, scale=46)
+  expect_equal(object=swissH2O.glm@model$aic, expected=326, tolerance=.01, scale=326) 
  
   testEnd()
 }
