@@ -6,7 +6,7 @@ if(!"ROCR" %in% rownames(installed.packages())) install.packages("ROCR")
 require(LiblineaR)
 require(ROCR)
 
-test.LiblineaR.airlines <- function(con) {
+test.LiblineaR.airlines <- function(conn) {
   L1logistic <- function(train,trainLabels,test,testLabels,trainhex,testhex) {
     Log.info("Using these parameters for LiblineaR: \n")
     Log.info("   type =    0: Logistic Regression L1-Regularized\n")
