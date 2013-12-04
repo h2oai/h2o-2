@@ -115,6 +115,7 @@ BUILD_DESCRIBE=$(shell git describe --always --dirty)
 BUILD_ON=$(shell date)
 BUILD_BY=$(shell whoami | sed 's/.*\\\\//')
 BUILD_VERSION_JAVA_FILE = src/main/java/water/BuildVersion.java
+GA_FILE=lib/resources/h2o/js/ga
 
 build_version:
 	@rm -f ${BUILD_VERSION_JAVA_FILE}
@@ -128,9 +129,11 @@ build_version:
 	@echo "    public String compiledBy()     { return \"$(BUILD_BY)\"; }"        >> ${BUILD_VERSION_JAVA_FILE}.tmp
 	@echo "}"                                                                     >> ${BUILD_VERSION_JAVA_FILE}.tmp
 	mv ${BUILD_VERSION_JAVA_FILE}.tmp ${BUILD_VERSION_JAVA_FILE}
+	cp ${GA_FILE}.release.js ${GA_FILE}.js
 
 build_h2o:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
+	git checkout -- ${GA_FILE}.js
 
 build_package:
 	echo $(PROJECT_VERSION) > target/project_version
