@@ -94,7 +94,7 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, co
     # hack it in! for test purposees only
     parseResult['numRows'] = inspect['numRows']
     parseResult['numCols'] = inspect['numCols']
-    parseResult['value_size_bytes'] = inspect['value_size_bytes']
+    parseResult['byteSize'] = inspect['byteSize']
     return parseResult
 
 class Basic(unittest.TestCase):
@@ -121,6 +121,7 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # summary fails with 100000 cols
+            # (10, 50, 2, 'cA', 600),
             (10, 50, 5000, 'cA', 600),
             (50, 50, 5000, 'cB', 600),
             (100, 50, 5000, 'cC', 600),
@@ -153,7 +154,7 @@ class Basic(unittest.TestCase):
             parseResult = make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs)
 
             paramDict['response'] = 'C' + str(colCount)
-            paramDict['mtries'] = 9
+            paramDict['mtries'] = 2
             paramDict['seed'] = random.randint(0, sys.maxint)
             kwargs = paramDict.copy()
 
@@ -169,7 +170,7 @@ class Basic(unittest.TestCase):
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
                 numRows: {:d} numCols: {:d} value_size_bytes: {:d}'.format(
                 len(h2o.nodes), tryHeap, algo, parseResult['destination_key'], elapsed, kwargs['ntrees'], \
-                classification_error, parseResult['numRows'], parseResult['numCols'], parseResult['value_size_bytes'])
+                classification_error, parseResult['numRows'], parseResult['numCols'], parseResult['byteSize'])
             print l
             h2o.cloudPerfH2O.message(l)
 
