@@ -1,17 +1,17 @@
 # Model-building operations and algorithms
 # ----------------------- Generalized Boosting Machines (GBM) -----------------------#
-h2o.gbm.internal <- function(x, y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
+h2o.gbm.internal <- function(x, y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage, n.bins, validation) {
   destKey = h2o.__uniqID("GBMModel")
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=y, cols=paste(x, collapse=","), ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=y, cols=paste(x, collapse=","), ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
   
   result=h2o.__getGBMResults(res2$gbm_model)
-  new("H2OGBMModel", key=destKey, data=data, model=result)
+  new("H2OGBMModel", key=destKey, data=data, model=result, valid=validation)
 }
 
-h2o.gbmgrid.internal <- function(x, y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage) {
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=y, cols=paste(x, collapse=","), ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification)
+h2o.gbmgrid.internal <- function(x, y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage, n.bins, validation) {
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=y, cols=paste(x, collapse=","), ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
   while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GRIDSEARCH, job_key=res$job_key, destination_key=res$destination_key)
   destKey = res$destination_key
@@ -21,7 +21,7 @@ h2o.gbmgrid.internal <- function(x, y, classification, data, n.trees, interactio
   for(i in 1:length(allModels)) {
     resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=allModels[[i]]$destination_key)
     modelOrig = h2o.__getGBMResults(resH$gbm_model)
-    result[[i]] = new("H2OGBMModel", key=allModels[[i]]$destination_key, data=data, model=modelOrig)
+    result[[i]] = new("H2OGBMModel", key=allModels[[i]]$destination_key, data=data, model=modelOrig, valid=validation)
   }
   myModelsSum = lapply(allModels, function(x) { list(model_key = x$destination_key, run_time = x$end_time - x$start_time) })
   new("H2OGBMGrid", key=destKey, data=data, model=result, sumtable=myModelsSum)
@@ -32,7 +32,7 @@ h2o.__getGBMResults <- function(res) {
   categories=length(res$cm)
   cf_matrix = t(matrix(unlist(res$cm), nrow=categories))
   cf_names <- res[['_domains']]
-  cf_names <- cf_names[[ length(cf_names) ]]
+  cf_names <- cf_names[[length(cf_names)]]
   
   dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
   result$confusion = cf_matrix
@@ -40,18 +40,23 @@ h2o.__getGBMResults <- function(res) {
   return(result)
 }
 
-# TODO: dont support missing x; default to everything?
-h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02) {
+# TODO: don't support missing x; default to everything?
+h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02, n.bins=100, validation) {
   args <- verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
-  if( any(n.trees < 1) ) stop('n.trees must be >=1')
+  if( any(n.trees < 1) ) stop('n.trees must be >= 1')
   if(!is.numeric(interaction.depth)) stop('interaction.depth must be numeric')
   if( any(interaction.depth < 1) ) stop('interaction.depth must be >= 1')
   if(!is.numeric(n.minobsinnode)) stop('n.minobsinnode must be numeric')
   if( any(n.minobsinnode < 1) ) stop('n.minobsinnode must be >= 1')
   if(!is.numeric(shrinkage)) stop('shrinkage must be numeric')
-  if( any(shrinkage < 0) ) stop('shrinkage must be >= 0')
+  if( any(shrinkage < 0 | shrinkage > 1) ) stop('shrinkage must be in [0,1]')
+  if(!is.numeric(n.bins)) stop('n.bins must be numeric')
+  if(any(n.bins < 1)) stop('n.bins must be >= 1')
+  
+  if(missing(validation)) validation = data
+  else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   
   if( !(distribution %in% c('multinomial', 'gaussian')) )
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
@@ -59,9 +64,9 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     
   # NB: externally, 1 based indexing; internally, 0 based
   if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1)
-    h2o.gbm.internal(args$x_i - 1, args$y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+    h2o.gbm.internal(args$x_i - 1, args$y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage, n.bins, validation)
   else
-    h2o.gbmgrid.internal(args$x_i - 1, args$y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage)
+    h2o.gbmgrid.internal(args$x_i - 1, args$y, classification, data, n.trees, interaction.depth, n.minobsinnode, shrinkage, n.bins, validation)
 }
 
 #----------------------------- Generalized Linear Models (GLM) ---------------------------#
@@ -524,7 +529,7 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
 }
 
 # Used to verify data, x, y and turn into the appropriate things
-verify_dataxy <- function(data, x, y){
+verify_dataxy <- function(data, x, y) {
   if( missing(data) ) stop('must specify data')
   if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop('data must be an h2o dataset')
 

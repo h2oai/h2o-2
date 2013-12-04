@@ -17,7 +17,7 @@ setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ONNModel", contains="H2OModel")
 setClass("H2ODRFModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
-setClass("H2OGBMModel", contains="H2OModel")
+setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
 setClass("H2OGBMGrid", contains="H2OGrid")
 
 setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
@@ -172,7 +172,7 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("GBM Model Key:", object@key)
   
   model = object@model
-  cat("\n\nConfusion matrix:\n"); print(model$confusion)
+  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
 
