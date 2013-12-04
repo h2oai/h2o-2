@@ -33,3 +33,4 @@ hadoop/build.log
 .DS_Store
 /.idea
 .Rproj.user
+lib/resources/R/
