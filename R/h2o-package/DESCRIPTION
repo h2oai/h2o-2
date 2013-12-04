@@ -1,7 +1,7 @@
 Package: h2o
 Type: Package
 Title: Installer for H2O R Interface
-Version: 1.0.3
+Version: 99.70
 Date: 2013-09-13
 Author: Anqi Fu
 Maintainer: Anqi Fu <anqi@0xdata.com>
@@ -9,4 +9,5 @@ Description: This is a wrapper that installs the package for running H2O via its
 License: Apache-2
 Depends: R (>= 2.13.0)
 NeedsCompilation: no
+SystemRequirements: java
 URL: http://www.0xdata.com
