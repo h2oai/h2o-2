@@ -1,5 +1,13 @@
 options(echo=FALSE)
 
+grabRemote <- function(myURL, myFile) {
+  temp <- tempfile()
+  download.file(myURL, temp, method = "curl")
+  aap.file <- read.csv(file = unz(description = temp, filename = myFile), as.is = TRUE)
+  unlink(temp)
+  return(aap.file)
+}
+
 read.zip<- 
 function(zipfile, exdir,header=T) {
   zipdir <- exdir
@@ -81,7 +89,6 @@ function(e) {
   cat("##       #########  ##  ##       \n")
   cat("##       ##     ##  ##  ##       \n")
   cat("##       ##     ## #### ######## \n")
-  
   Log.err(e)
 }
 
@@ -107,6 +114,21 @@ function(args) {
     myPort   = as.numeric(argsplit[2])
   }
   return(list(myIP,myPort));
+}
+
+testEnd<-
+function() {
+    Log.info("End of test.")
+    PASSS <<- TRUE
+}
+
+doTest<-
+function(testDesc, test) {
+    Log.info("======================== Begin Test ===========================\n")
+    conn <- new("H2OClient", ip=myIP, port=myPort)
+    tryCatch(test_that(testDesc, test(conn)), warning = function(w) WARN(w), error =function(e) FAIL(e))
+    if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
+    PASS()
 }
 
 checkNLoadWrapper<-
@@ -170,6 +192,9 @@ if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
 require(glmnet)
 require(gbm)
 
+
+#Global Variables
 myIP   <- ipPort[[1]]
 myPort <- ipPort[[2]]
-h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))
+PASSS <- FALSE
+view_max <- 10000 #maximum returned by Inspect.java

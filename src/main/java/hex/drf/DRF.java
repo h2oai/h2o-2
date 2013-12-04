@@ -44,20 +44,20 @@ public class DRF extends SharedTreeModelBuilder {
     final int _mtries;
     final float _sample_rate;
     final long _seed;
-    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) { 
+    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
       super(key,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins);
       _mtries = mtries;
       _sample_rate = sample_rate;
       _seed = seed;
     }
-    public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { 
-      super(prior, trees, err, cm, tstats); 
+    public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
+      super(prior, trees, err, cm, tstats);
       _mtries = prior._mtries;
       _sample_rate = prior._sample_rate;
       _seed = prior._seed;
     }
-    public DRFModel(DRFModel prior, float[] varimp) { 
-      super(prior, varimp); 
+    public DRFModel(DRFModel prior, float[] varimp) {
+      super(prior, varimp);
       _mtries = prior._mtries;
       _sample_rate = prior._sample_rate;
       _seed = prior._seed;
@@ -74,6 +74,13 @@ public class DRF extends SharedTreeModelBuilder {
     }
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+_mtries+", Sample rate: "+_sample_rate+", Seed: "+_seed);
+    }
+    @Override protected void toJavaUnifyPreds(SB bodySb) {
+      if (isClassifier()) {
+        bodySb.i().p("float sum = 0;").nl();
+        bodySb.i().p("for(int i=1;i<preds.length; i++) sum += preds[i];").nl();
+        bodySb.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
+      } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
   }
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }

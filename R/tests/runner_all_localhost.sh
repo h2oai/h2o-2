@@ -26,9 +26,10 @@ fi
 
 for test in $(ls */*.R | grep -v Utils)
 #for test in $(ls */*.R | grep -v Utils | grep auto | awk '{gsub(".R","",$0); print $0}')
+#for test in $(ls */*.R | grep -v Utils | awk '{gsub(".R","",$0); print $0}')
 do
-    #echo "myR $test 45"
-    #continue
+#    echo "myR $test 300"
+#    continue
     echo "----------------------------------------------------------------------"
     echo "Starting $test"
     echo "----------------------------------------------------------------------"

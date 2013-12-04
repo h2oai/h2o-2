@@ -66,6 +66,12 @@ public class C2SChunk extends Chunk {
     }
     return nc;
   }
-  public int pformat_len0() { return hasFloat() ? pformat_len0(_scale,5) : super.pformat_len0(); }
-  public String  pformat0() { return hasFloat() ? "% 10.4e" : super.pformat0(); }
+  public int pformat_len0() { 
+    if( _scale==0.01 ) return 5;
+    return hasFloat() ? pformat_len0(_scale,5) : super.pformat_len0(); 
+  }
+  public String  pformat0() { 
+    if( _scale==0.01 ) return "%7.2f";
+    return hasFloat() ? "% 10.4e" : super.pformat0(); 
+  }
 }

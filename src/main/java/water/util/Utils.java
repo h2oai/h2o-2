@@ -846,4 +846,35 @@ public class Utils {
     for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
     return nums;
   }
+  /**
+   * Replace given characters in a given string builder.
+   * The number of characters to replace has to match to number of
+   * characters serving as a replacement.
+   *
+   * @param sb string builder containing a string to be modified
+   * @param from characters to replaced
+   * @param to replacement characters
+   * @return original string builder with replaced characters.
+   */
+  public static StringBuilder replace(StringBuilder sb, CharSequence from, CharSequence to) {
+    assert from.length() == to.length();
+    for (int i=0; i<sb.length(); i++)
+      for (int j=0; j<from.length(); j++)
+        if (sb.charAt(i)==from.charAt(j)) sb.setCharAt(i, to.charAt(j));
+    return sb;
+  }
+
+  /**
+   * Returns true if given string contains at least on of character of
+   * given sequence.
+   * @param s string
+   * @param cs a sequence of character
+   * @return true if s contains at least one of character from given sequence, else false
+   */
+  public static boolean contains(String s, CharSequence cs) {
+    for (int i=0; i<s.length(); i++)
+      for (int j=0; j<cs.length(); j++)
+        if (s.charAt(i) == cs.charAt(j)) return true;
+    return false;
+  }
 }

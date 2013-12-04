@@ -12,6 +12,7 @@ FROM_HDFS = 'CDH3'
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_KMeans_sphere15_180GB(self):
+        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
