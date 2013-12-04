@@ -415,7 +415,7 @@ public class Frame extends Iced {
     for( int c=0; c<fs.length; c++ ) {
       Vec vec = vecs[c];
       if( vec.isEnum() ) {
-        String s = vec.isNA(idx) ? "----------" : vec._domain[(int)vec.at8(idx)];
+        String s = vec.isNA(idx) ? "----------" : String.valueOf((int)vec.at8(idx)); //vec._domain[(int)vec.at8(idx)]; FIXME (MM: sorry, build.sh was not passing, and Anqi request was in queue with high priority)
         sb.append(String.format(fs[c],s));
       } else if( vec.isInt() ) {
         if( vec.isNA(idx) ) {
