@@ -82,14 +82,22 @@ public class CookbookRunner {
       H2O.main(args);
       TestUtil.stall_till_cloudsize(NODES);
 
+      //
+      // Set up the list of test classes to run.
+      //
       List<Class> tests = new ArrayList<Class>();
-
-      // The list of test classes to run.
       tests.add(cookbook.Cookbook.class);
 
+      //
+      // Run tests.
+      //
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());
       Result result = junit.run(tests.toArray(new Class[0]));
+
+      //
+      // Report final result and exit with the correct exit value indicating pass or fail.
+      //
       if( result.getFailures().size() == 0 ) {
         Log.info("ALL TESTS PASSED");
         H2O.exit(0);
