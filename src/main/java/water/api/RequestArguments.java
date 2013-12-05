@@ -16,6 +16,7 @@ import water.*;
 import water.Request2.TypeaheadKey;
 import water.ValueArray.Column;
 import water.api.Request.Filter;
+import water.api.Request.Validator;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Check;
@@ -251,6 +252,9 @@ public class RequestArguments extends RequestStatics {
      * For keys. If specified, the key must exist.
      */
     public boolean _mustExist;
+
+    /** Value validator. */
+    public Validator<T> _validator;
 
     /** Override this method to provide parsing of the input string to the Java
      * expected value. The input is guaranteed to be non-empty when this method
@@ -1232,8 +1236,8 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected Long parse(String input) throws IllegalArgumentException {
       long i;
-      try { 
-        i = Long.parseLong(input); 
+      try {
+        i = Long.parseLong(input);
       } catch (NumberFormatException e) {
         double d = Double.parseDouble(input);
         i = (long)d;

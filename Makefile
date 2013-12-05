@@ -81,9 +81,9 @@ nightly_build_stuff:
 
 build:
 	@echo
-	@echo "PHASE: Building R packages..."
+	@echo "PHASE: Building R inner package..."
 	@echo
-	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION)
 	@echo
 	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
 	@echo
@@ -92,6 +92,10 @@ build:
 	@echo "PHASE: Building H2O..."
 	@echo
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Building R outer package..."
+	@echo
+	$(MAKE) -C R build_outer PROJECT_VERSION=$(PROJECT_VERSION)
 	@echo
 	@echo "PHASE: Building hadoop driver..."
 	@echo
