@@ -28,7 +28,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
             ]
 
-
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
         else:

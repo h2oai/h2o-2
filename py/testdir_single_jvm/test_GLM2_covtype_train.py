@@ -20,7 +20,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype_train(self):
+    def test_GLM2_covtype_train(self):
+        h2o.beta_features = True
         importFolderPath = "standard"
         csvFilename = 'covtype.shuffled.data'
         csvPathname = importFolderPath + "/" + csvFilename
@@ -32,62 +33,56 @@ class Basic(unittest.TestCase):
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
-            "    num_rows:", "{:,}".format(inspect['num_rows']), \
-            "    num_cols:", "{:,}".format(inspect['num_cols'])
+            "    numRows:", "{:,}".format(inspect['numRows']), \
+            "    numCols:", "{:,}".format(inspect['numCols'])
 
         # how many rows for each pct?
-        num_rows = inspect['num_rows']
-        pct10 = int(num_rows * .1)
+        numRows = inspect['numRows']
+        pct10 = int(numRows * .1)
         rowsForPct = [i * pct10 for i in range(0,11)]
         # this can be slightly less than 10%
-        last10 = num_rows - rowsForPct[9]
+        last10 = numRows - rowsForPct[9]
         rowsForPct[10] = last10
         # use mod below for picking "rows-to-do" in case we do more than 9 trials
         # use 10 if 0 just to see (we copied 10 to 0 above)
         rowsForPct[0] = rowsForPct[10]
 
         print "Creating the key of the last 10% data, for scoring"
-        dataKeyTest = "rTest"
+        trainDataKey = "rTrain"
+        testDataKey = "rTest"
         # start at 90% rows + 1
         
-        execExpr = dataKeyTest + " = slice(" + hex_key + "," + str(rowsForPct[9]+1) + ")"
-        h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTest, timeoutSecs=10)
+        h2o_cmd.createTestTrain(srcKey=hex_key, trainDstKey=trainDataKey, testDstKey=testDataKey, trainPercent=90)
+        # will have to live with random extract. will create variance
 
         kwargs = {
-            'y': 54, 
+            'response': 'C54', 
             'max_iter': 20, 
             'n_folds': 0, 
-            'thresholds': 0.5,
             'alpha': 0.1, 
             'lambda': 1e-5, 
             'family': 'binomial',
             'case_mode': '=', 
-            'case': 2
+            'case_val': 4,
         }
         timeoutSecs = 60
 
         for trial in range(10):
             # always slice from the beginning
             rowsToUse = rowsForPct[trial%10] 
-            resultKey = "r" + str(trial)
-            execExpr = resultKey + " = slice(" + hex_key + ",1," + str(rowsToUse) + ")"
-            h2o_exec.exec_expr(None, execExpr, resultKey=resultKey, timeoutSecs=10)
-            parseResult['destination_key'] = resultKey
-            # adjust timeoutSecs with the number of trees
-            # seems ec2 can be really slow
+
+            h2o_cmd.createTestTrain(srcKey=hex_key, trainDstKey=trainDataKey, testDstKey=testDataKey, trainPercent=90)
+            parseResult['destination_key'] = trainDataKey
 
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-
-            GLMModel = glm['GLMModel']
-            modelKey = GLMModel['model_key']
+            modelKey = glm['glm_model']['_selfKey']
 
             start = time.time()
-            glmScore = h2o_cmd.runGLMScore(key=dataKeyTest, model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-            print "glmScore end on ", dataKeyTest, 'took', time.time() - start, 'seconds'
-            ### print h2o.dump_json(glmScore)
+            glmScore = h2o_cmd.runGLMScore(key=testDataKey, model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
+            print "glmScore end on ", testDataKey, 'took', time.time() - start, 'seconds'
             classErr = glmScore['validation']['classErr']
             auc = glmScore['validation']['auc']
             err = glmScore['validation']['err']
@@ -95,7 +90,7 @@ class Basic(unittest.TestCase):
             print "err:", err
             print "auc:", auc
 
-            print "Trial #", trial, "completed", "using %6.2f" % (rowsToUse*100.0/num_rows), "pct. of all rows"
+            print "Trial #", trial, "completed", "using %6.2f" % (rowsToUse*100.0/numRows), "pct. of all rows"
 
 if __name__ == '__main__':
     h2o.unit_main()

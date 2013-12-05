@@ -11,11 +11,12 @@ ifeq ($(PDFLATEX),)
 else
 	R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
 endif
+	mkdir -p h2o-package/inst/java/
 	cp -f ../target/h2o.jar h2o-package/inst/java/h2o.jar
 	R CMD build h2o-package
 	mkdir -p ../target/R
 	cp -p README.txt ../target/R
-	mv h2o_$(PROJECT_VERSION).tar.gz ../target/R
+	mv h2o_1.0.4.tar.gz ../target/R
 
 build_inner:
 	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2oRClient-DESCRIPTION.template > h2oRClient-package/DESCRIPTION

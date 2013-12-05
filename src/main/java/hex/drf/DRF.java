@@ -16,6 +16,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
+import water.api.Request.API;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -36,6 +37,9 @@ public class DRF extends SharedTreeModelBuilder {
 
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
   boolean importance = false; // compute variable importance
+
+  @API(help = "Computed number of split features")
+  protected int _mtry;
 
   /** DRF model holding serialized tree and implementing logic for scoring a row */
   public static class DRFModel extends DTree.TreeModel {
@@ -123,11 +127,17 @@ public class DRF extends SharedTreeModelBuilder {
     return DRFProgressPage.redirect(this, self(), dest());
   }
 
-  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
-    final int cmtries = (mtries==-1) ? // classification: mtry=sqrt(_ncols), regression: mtry=_ncols/3
+  @Override protected void init() {
+    super.init();
+    // Initialize local variables
+    _mtry = (mtries==-1) ? // classification: mtry=sqrt(_ncols), regression: mtry=_ncols/3
         ( classification ? Math.max((int)Math.sqrt(_ncols),1) : Math.max(_ncols/3,1))  : mtries;
-    assert 1 <= cmtries && cmtries <= _ncols : "Too large mtries="+cmtries+", ncols="+_ncols;
-    assert 0.0 < sample_rate && sample_rate <= 1.0;
+    if (!(1 <= _mtry && _mtry <= _ncols)) throw new IllegalArgumentException("Computed mtry should be in interval <1,#cols> but it is " + _mtry);
+    if (!(0.0 < sample_rate && sample_rate <= 1.0)) throw new IllegalArgumentException("Sample rate should be interval (0,1> but it is " + sample_rate);
+  }
+
+  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
+
     DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, seed);
     DKV.put(outputKey, model);
 
@@ -147,7 +157,7 @@ public class DRF extends SharedTreeModelBuilder {
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
       Timer t_kTrees = new Timer();
-      ktrees = buildNextKTrees(fr,cmtries,sample_rate,rand);
+      ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
       Log.info(Sys.DRF__, "Tree "+(tid+1)+"x"+_nclass+" produced in "+t_kTrees);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 

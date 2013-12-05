@@ -38,8 +38,7 @@ h2o.__openErrLog <- function() {
   else system(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep=""))
 }
 
-h2o.__logIt<-
-function(m, tmp, commandOrErr) {
+h2o.__logIt <- function(m, tmp, commandOrErr) {
   #m is a url if commandOrErr == "Command"
   if(is.null(tmp) || is.null(get("tmp"))) s <- m
   else {
