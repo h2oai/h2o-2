@@ -166,6 +166,12 @@ build_installer:
 test:
 	./build.sh
 
+# Run Cookbook tests.
+# Add to make test once they are reliable.
+testcb:
+	$(MAKE) -C h2o-cookbook build
+	$(MAKE) -C h2o-cookbook test
+
 TOPDIR:=$(CURDIR)
 BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
 SPHINXBUILD=$(shell which sphinx-build)

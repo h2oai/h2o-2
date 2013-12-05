@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/java" isTestSource="true" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="h2o" level="project" />
+    <orderEntry type="library" name="junit" level="project" />
+    <orderEntry type="library" name="apache" level="project" />
+    <orderEntry type="library" name="gson" level="project" />
+    <orderEntry type="library" name="cdh3" level="project" />
+    <orderEntry type="library" name="jama" level="project" />
+    <orderEntry type="library" name="jets3t" level="project" />
+    <orderEntry type="library" name="jogamp" level="project" />
+    <orderEntry type="library" name="log4j" level="project" />
+    <orderEntry type="library" name="mockito" level="project" />
+    <orderEntry type="library" name="poi" level="project" />
+    <orderEntry type="library" name="s3" level="project" />
+    <orderEntry type="library" name="lib" level="project" />
+  </component>
+</module>
+

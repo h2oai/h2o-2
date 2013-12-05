@@ -225,20 +225,31 @@ public class Boot extends ClassLoader {
         File tmproot = new File(ice_root);
         if( !tmproot.mkdirs() && !tmproot.isDirectory() ) throw new IOException("Unable to create ice root: " + tmproot.getAbsolutePath());
 
-        long now = System.currentTimeMillis();
-        String pid = "unknown";
-        try {
-          String s = ManagementFactory.getRuntimeMXBean().getName();
-          Pattern p = Pattern.compile("([0-9]*).*");
-          Matcher m = p.matcher(s);
-          boolean b = m.matches();
-          if (b == true) {
-            pid = m.group(1);
-          }
-        }
-        catch (Exception _) {}
+        long now;
+        String randomChars;
+        String pid;
+        {
+          now = System.currentTimeMillis();
+          pid = "unknown";
 
-        tmproottmpdir = tmproot + File.separator + "h2o-temp-" + now + "-" + pid;
+          Random r = new Random();
+          byte[] bytes = new byte[4];
+          r.nextBytes(bytes);
+          randomChars = String.format("%02x%02x%02x%02x", bytes[0], bytes[1], bytes[2], bytes[3]);
+
+          try {
+            String s = ManagementFactory.getRuntimeMXBean().getName();
+            Pattern p = Pattern.compile("([0-9]*).*");
+            Matcher m = p.matcher(s);
+            boolean b = m.matches();
+            if (b == true) {
+              pid = m.group(1);
+            }
+          }
+          catch (Exception _) {}
+        }
+
+        tmproottmpdir = tmproot + File.separator + "h2o-temp-" + now + "-" + randomChars + "-" + pid;
       }
 
       File dir = new File (tmproottmpdir);
