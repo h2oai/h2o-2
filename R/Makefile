@@ -11,6 +11,7 @@ ifeq ($(PDFLATEX),)
 else
 	R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
 endif
+	mkdir -p h2o-package/inst/java/
 	cp -f ../target/h2o.jar h2o-package/inst/java/h2o.jar
 	R CMD build h2o-package
 	mkdir -p ../target/R

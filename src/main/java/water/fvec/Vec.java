@@ -611,6 +611,8 @@ public class Vec extends Iced {
       }
     }
 
+    @Override public void reduce(CollectDomain mrt) { Utils.or(this._dom, mrt._dom); }
+
     /** Returns exact numeric domain of given vector computed by this task.
      * The domain is always sorted. Hence:
      *    domain()[0] - minimal domain value
