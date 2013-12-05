@@ -24,7 +24,7 @@ public class KMeans2 extends ColumnsJob {
   @API(help = "Clusters initialization", filter = Default.class)
   public Initialization initialization = Initialization.None;
 
-  @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 2, lmax = 100000)
+  @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 2, lmax = 100000)
   public int k = 2;
 
   @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000)
@@ -56,6 +56,7 @@ public class KMeans2 extends ColumnsJob {
     String[] namesResp = Utils.append(names, "response");
     String[][] domaiResp = (String[][]) Utils.append(source.domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
+    model.k = k; model.normalized = normalize;
 
     // TODO remove when stats are propagated with vecs?
     double[] means = new double[vecs.length];
@@ -212,6 +213,9 @@ public class KMeans2 extends ColumnsJob {
 
     @API(help = "Sum of min square distances")
     public double error;
+
+    @API(help = "Number of clusters")
+    public int k;
 
     @API(help = "Whether data was normalized")
     public boolean normalized;

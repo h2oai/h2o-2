@@ -473,7 +473,8 @@ def sleep_with_dot(sec, message=None):
         dot()
         count += 1
 
-def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent, outputClass, outputCol, changeToBinomial=False):
+def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent, 
+    outputClass=None, outputCol=None, changeToBinomial=False):
     # will have to live with random extract. will create variance
 
     print "train: get random", trainPercent
@@ -481,9 +482,11 @@ def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent, outputClass, 
     if changeToBinomial:
         print "change class", outputClass, "to 1, everything else to 0. factor() to turn real to int (for rf)"
 
+    boundary = (trainPercent + 0.0)/100
+
     execExpr = ""
     execExpr += "cct.hex=runif(%s);" % srcKey
-    execExpr += "%s=%s[cct.hex%s,];" % (trainDstKey, srcKey, '<=0.9')
+    execExpr += "%s=%s[cct.hex<=%s,];" % (trainDstKey, srcKey, boundary)
     if changeToBinomial:
         execExpr += "%s[,%s]=%s[,%s]==%s;" % (trainDstKey, outputCol+1, trainDstKey, outputCol+1, outputClass)
         execExpr +=  "factor(%s[, %s]);" % (trainDstKey, outputCol+1)
@@ -493,10 +496,10 @@ def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent, outputClass, 
     inspect = runInspect(key=trainDstKey)
     infoFromInspect(inspect, "%s after mungeDataset on %s" % (trainDstKey, srcKey) )
 
-    print "test: same, but use the same runif() random result, complement"
+    print "test: same, but use the same runif() random result, complement comparison"
 
-    execExpr = "cct.hex=runif(%s);" % srcKey
-    execExpr += "%s=%s[cct.hex%s,];" % (testDstKey, srcKey, '>0.9')
+    execExpr = ""
+    execExpr += "%s=%s[cct.hex>%s,];" % (testDstKey, srcKey, boundary)
     if changeToBinomial:
         execExpr += "%s[,%s]=%s[,%s]==%s;" % (testDstKey, outputCol+1, testDstKey, outputCol+1, outputClass)
         execExpr +=  "factor(%s[, %s])" % (testDstKey, outputCol+1)

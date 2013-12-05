@@ -117,6 +117,7 @@ function clean() {
 function build_classes() {
     echo "building classes..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
+    echo $CLASSPATH > target/classpath
     "$JAVAC" ${JAVAC_ARGS} \
         -cp "${CLASSPATH}" \
         -sourcepath "$SRC" \
