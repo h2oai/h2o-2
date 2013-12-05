@@ -75,8 +75,7 @@ public class GridSearch extends Job {
         ArrayList<Argument> args = jobs[0].arguments();
         // Filter some keys to simplify UI
         args = (ArrayList<Argument>) args.clone();
-        filter(args, "destination_key", "source", "cols", "ignored_cols_by_name", "response", "classification",
-            "validation");
+        filter(args, "destination_key", "source", "cols", "ignored_cols", "response", "classification", "validation");
         for( int i = 0; i < args.size(); i++ )
           sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
         sb.append("<td><b>").append("run time").append("</b></td>");

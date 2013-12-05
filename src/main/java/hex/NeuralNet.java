@@ -58,6 +58,9 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Momentum once the initial increase is over", filter = Default.class)
   public double momentum_stable = .99;
 
+  @API(help = "L1 regularization", filter = Default.class)
+  public double l1;
+
   @API(help = "L2 regularization", filter = Default.class)
   public double l2 = .001;
 
@@ -119,6 +122,7 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1].momentum_start = (float) momentum_start;
       ls[i + 1].momentum_ramp = momentum_ramp;
       ls[i + 1].momentum_stable = (float) momentum_stable;
+      ls[i + 1].l1 = (float) l1;
       ls[i + 1].l2 = (float) l2;
     }
     if( classification )
@@ -127,6 +131,7 @@ public class NeuralNet extends ValidatedJob {
       ls[ls.length - 1] = new VecLinear(trainResp, null);
     ls[ls.length - 1].rate = (float) rate;
     ls[ls.length - 1].rate_annealing = (float) rate_annealing;
+    ls[ls.length - 1].l1 = (float) l1;
     ls[ls.length - 1].l2 = (float) l2;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
@@ -436,11 +441,27 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @API(help = "Model")
-    public NeuralNetModel model;
+    @API(help = "Errors on the training set")
+    public Errors[] training_errors;
+
+    @API(help = "Errors on the validation set")
+    public Errors[] validation_errors;
+
+    @API(help = "Confusion matrix")
+    public long[][] confusion_matrix;
 
     @Override protected String name() {
       return DOC_GET;
+    }
+
+    @Override protected Response serve() {
+      NeuralNetModel model = UKV.get(destination_key);
+      if( model != null ) {
+        training_errors = model.training_errors;
+        validation_errors = model.validation_errors;
+        confusion_matrix = model.confusion_matrix;
+      }
+      return super.serve();
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
