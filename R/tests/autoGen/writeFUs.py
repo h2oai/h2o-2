@@ -5,8 +5,7 @@
 
 import os
 from writers import *
-from makeTestTasks import genTasks
-from GenUtils import setup_random_seed
+import makeFilterTasks
 import GenUtils
 
 def writeFU(FU, data, dataPath, dataTask, taskType, FUParams):
@@ -18,19 +17,19 @@ def writeFU(FU, data, dataPath, dataTask, taskType, FUParams):
     wt.setDataTask(dataTask)
     return wt.invoke(switch(taskType))
 
-SEED = setup_random_seed()
+SEED = GenUtils.setup_random_seed()
 #s = str(SEED)
 #os.system(s +' > seed')
 
 with open("seed", "wb") as f:
     f.write(str(SEED))
 
-genTasks()
+makeFilterTasks.genTasks()
 os.system('git rev-parse HEAD > githash')
 
 #seed = SEED
 #task = None
-with open('./tasks', 'rb') as f:
+with open('./filterTasks', 'rb') as f:
     for line in f:
         with open("task", "wb") as g:
             g.write(line)

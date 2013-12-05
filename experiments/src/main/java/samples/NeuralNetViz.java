@@ -4,12 +4,13 @@ import hex.*;
 
 import javax.swing.JFrame;
 
-public class NeuralNetViz extends NeuralNetMnistDeep {
+public class NeuralNetViz extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {
-    samples.launchers.CloudLocal.launch(1, NeuralNetViz.class);
-    // samples.launchers.CloudProcess.launch(4, NeuralNetMnist.class);
-    // samples.launchers.CloudRemote.launchIPs(NeuralNetMnist.class);
-    // samples.launchers.CloudConnect.launch("localhost:54321", NeuralNetMnist.class);
+    Class c = Class.forName(Thread.currentThread().getStackTrace()[1].getClassName());
+    samples.launchers.CloudLocal.launch(1, c);
+    // samples.launchers.CloudProcess.launch(4, c);
+    // samples.launchers.CloudRemote.launchIPs(c);
+    // samples.launchers.CloudConnect.launch("localhost:54321", c);
   }
 
   protected Trainer startTraining(Layer[] ls) {
@@ -25,7 +26,7 @@ public class NeuralNetViz extends NeuralNetMnistDeep {
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
 
-    preTrain(ls);
+    //preTrain(ls);
     trainer.start();
     return trainer;
   }

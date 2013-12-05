@@ -100,6 +100,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
     def test_B_c2_rel_long(self):
+        h2o.beta_features = True
         self.sub_c2_rel_long()
 
 if __name__ == '__main__':

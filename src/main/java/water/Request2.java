@@ -44,6 +44,7 @@ public abstract class Request2 extends Request {
     }
 
     @Override protected Key parse(String input) {
+      if (_validator!=null) _validator.validateRaw(input);
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if( v == null && _mustExist )
@@ -288,6 +289,7 @@ public abstract class Request2 extends Request {
             arg._hideInQuery = api.hide();
             arg._gridable = api.gridable();
             arg._mustExist = api.mustExist();
+            arg._validator = newValidator(api);
           }
         }
       }
@@ -303,7 +305,7 @@ public abstract class Request2 extends Request {
     return null;
   }
 
-  // Extracted in separate class as Weaver cannot load REquest during boot
+  // Extracted in separate class as Weaver cannot load Request during boot
   static final class Helper {
     static boolean isInput(API api) {
       return api.filter() != Filter.class || api.filters().length != 0;
@@ -330,6 +332,15 @@ public abstract class Request2 extends Request {
         return (Filter) c.newInstance();
     }
     throw new Exception("Class " + api.filter().getName() + " must have an empty constructor");
+  }
+
+  private Validator newValidator(API api) throws Exception {
+    for( Constructor c : api.validator().getDeclaredConstructors() ) {
+      c.setAccessible(true);
+      Class[] ps = c.getParameterTypes();
+      return (Validator) c.newInstance();
+    }
+    return null;
   }
 
   // Create an instance per call instead of ThreadLocals

@@ -8,18 +8,19 @@ public class JCodeGen {
   /**
    * Outputs given frame as static variable with given name.
    */
-  public static SB toStaticVar(SB sb, Frame f, String varname, int nrows) {
-    sb.i().p("public static final double[][] ").p(varname).p(" = new double[][] {").nl();
+  public static SB toStaticVar(SB sb, String varname, Frame f, int nrows, String comment) {
+    if (comment!=null) sb.i(1).p("// ").p(comment).nl();
+    sb.i(1).p("public static final double[][] ").p(varname).p(" = new double[][] {").nl();
     if (f!=null) {
       Vec[] vecs = f.vecs();
-      for( int row = 0; row < nrows; row++ ) {
-        sb.i(1).p(row > 0 ? "," : "").p("new double[] {");
+      for( int row = 0; row < Math.min(nrows,f.numRows()); row++ ) {
+        sb.i(2).p(row > 0 ? "," : "").p("new double[] {");
         for( int v = 0; v < vecs.length; v++ )
           sb.p(v > 0 ? "," : "").p(vecs[v].at(row));
         sb.p("}").nl();
       }
     }
-    sb.i().p("};").nl();
+    sb.i(1).p("};").nl();
     return sb;
   }
 
@@ -27,8 +28,8 @@ public class JCodeGen {
     return toStaticVar(sb, varname, value,null);
   }
   public static SB toStaticVar(SB sb, String varname, int value, String comment) {
-    if (comment!=null) sb.i().p("// ").p(comment).nl();
-    return sb.i().p("public static final int ").p(varname).p(" = ").p(value).p(';').nl();
+    if (comment!=null) sb.i(1).p("// ").p(comment).nl();
+    return sb.i(1).p("public static final int ").p(varname).p(" = ").p(value).p(';').nl();
   }
 
   /**
@@ -36,6 +37,9 @@ public class JCodeGen {
    *
    */
   public static String toJavaId(String s) {
-    return s.replace('-', '_');
+    StringBuilder sb = new StringBuilder(s);
+    return Utils.replace(sb,
+        "+-*/ !@#$%^&()={}[]|\\;:'\"<>,.?/",
+        "_______________________________").toString();
   }
 }

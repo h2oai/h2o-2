@@ -30,13 +30,13 @@ public class Cloud {
   public final Set<String> fannedRSyncExcludes = new HashSet<String>();
 
   /** Port for all remote machines. */
-  public static final int PORT = 54321;
+  public static final int PORT = 54328;
   public static final int FORWARDED_LOCAL_PORT = 54321;
   /**
    * To avoid configuring remote machines, a JVM can be sent through rsync with H2O. By default,
    * decompress the Oracle Linux x64 JDK to a local folder and point this path to it.
    */
-  static final String JRE = null; //System.getProperty("user.home") + "/libs/jdk/jre";
+  static final String JRE = System.getProperty("user.home") + "/libs/jdk/jre";
   /** Watch dogs are additional JVMs that shutdown the cluster when the client is killed */
   static final boolean WATCHDOGS = true;
   static final String FLATFILE = "flatfile";

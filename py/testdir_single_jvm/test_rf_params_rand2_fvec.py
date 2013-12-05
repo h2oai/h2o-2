@@ -1,0 +1,60 @@
+import unittest, random, sys, time
+sys.path.extend(['.','..','py'])
+import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
+
+# we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
+# only classes 1-7 in the 55th col
+# don't allow None on ntree..causes 50 tree default!
+print "Temporarily not using bin_limit=1 to 4"
+paramDict = {
+    'response': [None,'C54'],
+    'ntrees': [1,3,7,19],
+    'destination_key': ['model_keyA', '012345', '__hello'],
+    'max_depth': [None, 1,10,20,100],
+    'nbins': [None,5,10,100,1000],
+    'ignored_cols_by_name': [None, None, None, None, 'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
+    'cols': [None, None, None, None, None, '0,1,2,3,4,','C1,C2,C3,C4'],
+
+    'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
+    'seed': [None,'0','1','11111','19823134','1231231'],
+    # stack trace if we use more features than legal. dropped or redundanct cols reduce 
+    # legal max also.
+    'mtries': [1,3,5,7,9,11,13,17,19,23,37,53],
+    }
+
+class Basic(unittest.TestCase):
+    def tearDown(self):
+        h2o.check_sandbox_for_errors()
+
+    @classmethod
+    def setUpClass(cls):
+        global SEED, localhost
+        SEED = h2o.setup_random_seed()
+        localhost = h2o.decide_if_localhost()
+        if (localhost):
+            h2o.build_cloud(node_count=1, java_heap_GB=10)
+        else:
+            h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=10)
+
+    @classmethod
+    def tearDownClass(cls):
+        h2o.tear_down_cloud()
+
+    def test_rf_params_rand2(self):
+        h2o.beta_features = True
+        csvPathname = 'standard/covtype.data'
+        for trial in range(10):
+            # params is mutable. This is default.
+            params = {'ntrees': 13, 'mtries': 7}
+            colX = h2o_rf.pickRandRfParams(paramDict, params)
+            kwargs = params.copy()
+            # adjust timeoutSecs with the number of trees
+            timeoutSecs = 30 + ((kwargs['ntrees']*80) * max(1,kwargs['mtries']/60) )
+            start = time.time()
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
+            h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
+            elapsed = time.time()-start
+            print "Trial #", trial, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
+if __name__ == '__main__':
+    h2o.unit_main()

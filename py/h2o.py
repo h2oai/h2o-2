@@ -1535,7 +1535,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso',False)
         check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
 
-        if beta_features and not params_dict['response']:
+        if beta_features and params_dict['response'] is None:
             # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
             inspect = h2o_cmd.runInspect(key=data_key)
             # response only takes names. can't use col index..have to look it up
@@ -2123,7 +2123,7 @@ class H2O(object):
                 # 'weight': None,
                 # 'thresholds': None,
                 # only GLMGrid has this..we should complain about it on GLM?
-                'parallel': None,
+                'parallelism': None,
                 'beta_eps': None,
             } 
         else:
@@ -2148,7 +2148,7 @@ class H2O(object):
                 'expert_settings': None,
                 'thresholds': None,
                 # only GLMGrid has these..we should complain about it on GLM?
-                'parallel': None,
+                'parallelism': None,
                 'beta_eps': None,
             }
 
@@ -2191,10 +2191,6 @@ class H2O(object):
     def GLMGrid(self, key,
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
         noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
-
-        # default
-        if not kwargs['parallel']:
-            kwargs['parallel'] = 1
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
 

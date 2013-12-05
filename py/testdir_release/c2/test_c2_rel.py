@@ -9,7 +9,6 @@ LOG_MACHINE_STATS = False
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
-
     def sub_c2_rel_long(self):
         # a kludge
         h2o.setup_benchmark_log()
@@ -28,7 +27,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
                 # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
             ]
-
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
@@ -102,10 +100,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
 
     def test_A_c2_rel_short(self):
+        h2o.beta_features = True
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c2_rel_long(self):
+        h2o.beta_features = True
         self.sub_c2_rel_long()
 
 

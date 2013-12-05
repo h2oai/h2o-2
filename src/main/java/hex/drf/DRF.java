@@ -16,6 +16,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
+import water.api.Request.API;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -37,6 +38,9 @@ public class DRF extends SharedTreeModelBuilder {
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
   boolean importance = false; // compute variable importance
 
+  @API(help = "Computed number of split features")
+  protected int _mtry;
+
   /** DRF model holding serialized tree and implementing logic for scoring a row */
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -44,20 +48,20 @@ public class DRF extends SharedTreeModelBuilder {
     final int _mtries;
     final float _sample_rate;
     final long _seed;
-    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) { 
+    public DRFModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
       super(key,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins);
       _mtries = mtries;
       _sample_rate = sample_rate;
       _seed = seed;
     }
-    public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) { 
-      super(prior, trees, err, cm, tstats); 
+    public DRFModel(DRFModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
+      super(prior, trees, err, cm, tstats);
       _mtries = prior._mtries;
       _sample_rate = prior._sample_rate;
       _seed = prior._seed;
     }
-    public DRFModel(DRFModel prior, float[] varimp) { 
-      super(prior, varimp); 
+    public DRFModel(DRFModel prior, float[] varimp) {
+      super(prior, varimp);
       _mtries = prior._mtries;
       _sample_rate = prior._sample_rate;
       _seed = prior._seed;
@@ -74,6 +78,13 @@ public class DRF extends SharedTreeModelBuilder {
     }
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+_mtries+", Sample rate: "+_sample_rate+", Seed: "+_seed);
+    }
+    @Override protected void toJavaUnifyPreds(SB bodySb) {
+      if (isClassifier()) {
+        bodySb.i().p("float sum = 0;").nl();
+        bodySb.i().p("for(int i=1;i<preds.length; i++) sum += preds[i];").nl();
+        bodySb.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
+      } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
   }
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
@@ -116,11 +127,17 @@ public class DRF extends SharedTreeModelBuilder {
     return DRFProgressPage.redirect(this, self(), dest());
   }
 
-  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
-    final int cmtries = (mtries==-1) ? // classification: mtry=sqrt(_ncols), regression: mtry=_ncols/3
+  @Override protected void init() {
+    super.init();
+    // Initialize local variables
+    _mtry = (mtries==-1) ? // classification: mtry=sqrt(_ncols), regression: mtry=_ncols/3
         ( classification ? Math.max((int)Math.sqrt(_ncols),1) : Math.max(_ncols/3,1))  : mtries;
-    assert 1 <= cmtries && cmtries <= _ncols : "Too large mtries="+cmtries+", ncols="+_ncols;
-    assert 0.0 < sample_rate && sample_rate <= 1.0;
+    if (!(1 <= _mtry && _mtry <= _ncols)) throw new IllegalArgumentException("Computed mtry should be in interval <1,#cols> but it is " + _mtry);
+    if (!(0.0 < sample_rate && sample_rate <= 1.0)) throw new IllegalArgumentException("Sample rate should be interval (0,1> but it is " + sample_rate);
+  }
+
+  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
+
     DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, seed);
     DKV.put(outputKey, model);
 
@@ -140,7 +157,7 @@ public class DRF extends SharedTreeModelBuilder {
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
       Timer t_kTrees = new Timer();
-      ktrees = buildNextKTrees(fr,cmtries,sample_rate,rand);
+      ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
       Log.info(Sys.DRF__, "Tree "+(tid+1)+"x"+_nclass+" produced in "+t_kTrees);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 

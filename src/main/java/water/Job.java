@@ -6,16 +6,16 @@ import static water.util.Utils.isEmpty;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
-import water.DException.DistributedException;
+
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.api.*;
+import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
+import water.util.*;
 import water.util.Utils.ExpectedExceptionForDebug;
-import water.util.Utils;
 
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -33,8 +33,14 @@ public class Job extends Request2 {
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
 
-  @API(help = "Destination key", filter = Default.class, json = true)
+  @API(help = "Destination key", filter = Default.class, json = true, validator = DestKeyValidator.class)
   public Key destination_key; // Key holding final value after job is removed
+  static class DestKeyValidator extends NOPValidator<Key> {
+    @Override public void validateRaw(String value) {
+      if (Utils.contains(value, Key.ILLEGAL_USER_KEY_CHARS))
+        throw new IllegalArgumentException("Key '" + value + "' contains illegal character! Please avoid these characters: " + Key.ILLEGAL_USER_KEY_CHARS);
+    }
+  }
 
   @API(help = "Job description")
   public String description;

@@ -1,19 +1,32 @@
 options(echo=FALSE)
+
 ##
 # Utilities for relative paths in R
 ##
 
 SEARCHPATH <- NULL
 calcPath<-
-function(path, root) {
+function(path, root, optional_root_parent = NULL) {
+    #takes the given path & root and searches upward...
+    #if not found, searches R/*
+    #use optional_root_parent if your root directory is too generic (e.g. root = "tests")
+    bdp <- basename(dirname(path)) == root
+    rddNbdpEopr <- root %in% dir(dirname(path)) & (is.null(optional_root_parent) || basename(dirname(path)) == optional_root_parent)
+
+    if (basename(path) == root || root %in% dir(path)) {  #rddNbdpEopr) {
+        return(0)
+    }
+
+    if(!is.null(optional_root_parent)) cat("\nUsing optional root parent: ", optional_root_parent, "\n")
     if (basename(path) == "h2o" || "smalldata" %in% dir(path)) {
-        print("[WARN]: Could not find the bucket that you specified! Checking R/*.")
+        print("\n[INFO]: Could not find the bucket that you specified! Checking R/*. Will fail if cannot find\n")
         SEARCHPATH <<- path
         return(-1)
     }
-    if (basename(path) == root || root %in% dir(path)) return(0)
-    if (basename(dirname(path)) == root || root %in% dir(dirname(path))) return(1)
-    return(ifelse( calcPath( dirname( path), root) < 0, -1, 1 + calcPath( dirname( path), root) ) )
+    if ( bdp || rddNbdpEopr ) {
+        return(1)
+    }
+    return(ifelse( calcPath( dirname(path), root, optional_root_parent) < 0, -1, 1 + calcPath( dirname(path), root, optional_root_parent) ) )
 }
 
 genDots<-
@@ -32,20 +45,16 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
     if(!is.null(bucket)) {
         if(is.null(path)) stop("\"path\" must be specified along with bucket. Path is the bucket offset.")
         bucket <- gsub("[./]","",bucket)
-        cat("ALTERED BUCKET: ", bucket)
         path   <- ifelse(substring(path,1,1) == '/', substring(path,2), path)
         path   <- ifelse(substring(path,nchar(path)) == '/', substring(path,1,nchar(path)-1),path)
         if (schema == "local") return(paste("./",bucket,"/",path,sep = ""))
         if (schema == "put") {
             distance.bucket.root <- calcPath(getwd(), bucket)
             if (distance.bucket.root < 0) {
-                Log.err(paste("Could not find bucket ", bucket, "\n"))
+                Log.err(paste("Could not find bucket <", bucket, ">\n"))
             }
-            cat("\n IS MY BUCKET HERE?? :", bucket)
             bucket.dots <- genDots(distance.bucket.root)
             fullPath <- paste(bucket.dots,bucket,'/',path,sep="")
-            print("PATH BEING USED: ")
-            print(fullPath)
             return(fullPath)
         }
         if (schema == "S3") stop("Unimpl")
@@ -58,9 +67,10 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         if(!is.null(SEARCHPATH)) return(paste(SEARCHPATH, "/", dataName, "/", bn, sep = ""))
         psplit <- strsplit(dataName, "/")[[1]]
         bucket <- psplit[1]
-        path   <- paste(psplit[-1], bn, collapse="/", sep = "/")
-        print("FETCHING BUCKET AND DATA")
-        cat("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema) 
+        path   <- paste(psplit[-1], collapse="/")
+        path   <- paste(path, bn, sep = "/")
+        m <- paste("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema)
+        Log.info(m)
         return(locate(bucket = bucket, path = path, schema = schema))
     }
 }
@@ -76,20 +86,24 @@ function(bucket = NULL) {
     return(newBucket)
 }
 
-distance <- calcPath(getwd(), "tests")
+distance <- calcPath(getwd(), "tests", "R")
 if (distance < 0) {
     path <- paste(SEARCHPATH, "/R/", sep = "")
     source(paste(path, "tests/Utils/h2oR.R", sep = ""))
+    source(paste(path, "tests/Utils/pcaR.R", sep = ""))
+    source(paste(path, "tests/Utils/glmR.R", sep = ""))
+    source(paste(path, "tests/Utils/gbmR.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Algorithms.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Classes.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/ParseImport.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Internal.R", sep = ""))
-    sandbox()
 } else {
     distance <- calcPath(getwd(), "tests")
     dots     <- genDots(distance)
-    newPath  <- paste(dots, "Utils/h2oR.R", sep = "")
-    source(newPath)
+    source(paste(dots, "Utils/h2oR.R", sep = ""))
+    source(paste(dots, "Utils/pcaR.R", sep = ""))
+    source(paste(dots, "Utils/glmR.R", sep = ""))
+    source(paste(dots, "Utils/gbmR.R", sep = ""))
 
     #rdots is the calculated path to the R source files...
     rdots <- ifelse(dots == "./", "../", paste("../", dots, sep = ""))
@@ -98,5 +112,6 @@ if (distance < 0) {
     source(paste(rdots, "h2oRClient-package/R/Classes.R", sep = ""))
     source(paste(rdots, "h2oRClient-package/R/ParseImport.R", sep = ""))
     source(paste(rdots, "h2oRClient-package/R/Internal.R", sep = ""))
-    sandbox()
 }
+sandbox()
+h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))

@@ -34,6 +34,13 @@ H\ :sub:`2`\ O Troubleshooting
   and work to resolve your issue. 
 
 
+Common Question: Why is “Upload” is no longer working?
+“”””””””””””””””””””””””””””””””””””””””””””””””””””””
+
+This can occur when a user’s local disk is full or almost full. 
+Free up space on your local disk, and the behavior should resolve. 
+
+
 Troubleshooting R
 """"""""""""""""""
 

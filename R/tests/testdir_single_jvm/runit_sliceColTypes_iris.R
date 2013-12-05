@@ -1,8 +1,5 @@
 source('./findNSourceUtils.R')
 
-Log.info("======================== Begin Test ===========================\n")
-view_max <- 10000 #maximum returned by Inspect.java
-
 test.slice.colTypes <- function(conn) {
   Log.info("Importing iris.csv data...")
   iris.hex = h2o.uploadFile(conn, locate("../../../smalldata/iris/iris_wheader.csv"), "iris.hex")
@@ -30,12 +27,9 @@ test.slice.colTypes <- function(conn) {
   expect_that(col3_type, equals("double"))
   expect_that(col4_type, equals("double"))
   expect_that(col5_type, equals("integer"))
-  Log.info("End of test.")
-  PASSS <<- TRUE
+
+  testEnd()
 }
 
-PASSS <- FALSE
-conn <- new("H2OClient", ip=myIP, port=myPort)
-tryCatch(test_that("sliceTestsColTypes",test.slice.colTypes(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
-if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
-PASS()
+doTest("Slice Tests: Check Col Types", test.slice.colTypes)
+

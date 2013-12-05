@@ -1,6 +1,70 @@
 import time, sys
 import h2o, h2o_browse as h2b
 
+
+def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
+    busy = True
+    trials = 0
+
+    start = time.time()
+    polls = 0
+    statSum = {}
+    while busy:
+        polls += 1
+        # get utilization and print it
+        # any busy jobs
+        a = h2o.nodes[0].jobs_admin(timeoutSecs=10)
+        busy = False
+        for j in a['jobs']:
+            if j['end_time'] == '':
+                busy = True
+                h2o.verboseprint("Still busy")
+                break
+
+        cloudStatus = h2o.nodes[0].get_cloud(timeoutSecs=timeoutSecs)
+        nodes = cloudStatus['nodes']
+        print "\n"
+        for i,n in enumerate(nodes):
+            print 'Node %s:' % i, \
+                'num_cpus:', n['num_cpus'],\
+                'my_cpu_%:', n['my_cpu_%'],\
+                'sys_cpu_%:', n['sys_cpu_%'],\
+                'system_load:', n['system_load']
+            # sum all individual stats
+            for stat in n:
+                if stat in statSum:
+                    try: 
+                        statSum[stat] += n[stat]
+                    except TypeError:
+                        raise Exception("statSum[stat] should be number %s %s" % (statSum[stat], stat))
+                else:
+                    try: 
+                        statSum[stat] = n[stat] + 0.0
+                    except TypeError:
+                        pass # ignore non-numbers
+
+        trials += 1
+        if trials%5 == 0:
+            h2o.check_sandbox_for_errors()
+
+        time.sleep(retryDelaySecs)
+        if ((time.time() - start) > timeoutSecs):
+            raise Exception("Timeout while polling in pollAnyBusy: %s seconds" % timeoutSecs)
+    
+
+    # now print man 
+    print "Did %s polls" % polls
+    statMean = {}
+    for s in statSum:
+        statMean[s] = round((statSum[s] + 0.0) / polls, 2)
+        print "mean", s + ':', statMean[s]
+
+    return  statMean
+    # statMean['num_cpus'],
+    # statMean['my_cpu_%'],
+    # statMean['sys_cpu_%'],
+    # statMean['system_load']
+
 # poll the Jobs queue and wait if not all done. 
 # Return matching keys to a pattern for 'destination_key"
 # for a job (model usually)
@@ -10,6 +74,7 @@ import h2o, h2o_browse as h2b
 # 'key' 'description' 'destination_key' could all be interesting things you want to pattern match agains?
 # what the heck, just look for a match in any of the 3 (no regex)
 # if pattern is not None, only stall on jobs that match the pattern (in any of those 3)
+
 def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeoutSecs=30, retryDelaySecs=5, benchmarkLogging=None, stallForNJobs=None):
     wait = True
     waitTime = 0
