@@ -37,6 +37,9 @@ public class JCodeGen {
    *
    */
   public static String toJavaId(String s) {
-    return s.replace('-', '_');
+    StringBuilder sb = new StringBuilder(s);
+    return Utils.replace(sb,
+        "+-*/ !@#$%^&()={}[]|\\;:'\"<>,.?/",
+        "_______________________________").toString();
   }
 }
