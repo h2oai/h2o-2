@@ -15,10 +15,10 @@ public class Cookbook extends TestUtil {
     Log.info("Removed all keys.");
   }
 
-  @Test
-  public void testWillFail() {
-    throw new RuntimeException("first test fails");
-  }
+//  @Test
+//  public void testWillFail() {
+//    throw new RuntimeException("first test fails");
+//  }
 
   // ---
   // Test flow-coding a filter & group-by computing e.g. mean
@@ -32,8 +32,8 @@ public class Cookbook extends TestUtil {
     Cookbook2.basicStatic(k, fr);
   }
 
-  @Test
-  public void testWillFail2() {
-    throw new RuntimeException("3 test fails");
-  }
+//  @Test
+//  public void testWillFail2() {
+//    throw new RuntimeException("3 test fails");
+//  }
 }
