@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
             # just do random split for now
             dataKeyTrain = 'rTrain.hex'
             dataKeyTest = 'rTest.hex'
-            h2o_cmd.createTestTrain(hex_key, dataKeyTrain, dataKeyTest, trainPercent=0.90, outputClass=4, 
+            h2o_cmd.createTestTrain(hex_key, dataKeyTrain, dataKeyTest, trainPercent=90, outputClass=4, 
                 outputCol=numCols-1, changeToBinomial=not DO_MULTINOMIAL)
             sliceResult = {'destination_key': dataKeyTrain}
 
