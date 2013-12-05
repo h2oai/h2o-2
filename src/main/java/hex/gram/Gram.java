@@ -1,15 +1,13 @@
 package hex.gram;
 
 import hex.FrameTask;
-import hex.glm.LSMSolver.LSMSolverException;
 import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 
+import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
-import water.util.Log;
 import water.util.Utils;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
@@ -48,6 +46,7 @@ public final class Gram extends Iced {
     }
   }
 
+  public final int fullN(){return _fullN;}
   public double _diagAdded;
   public void addDiag(double d) {addDiag(d,false);}
   public void addDiag(double d, boolean add2Intercept) {
@@ -170,13 +169,13 @@ public final class Gram extends Iced {
       for( int j = 0; j < denseN; ++j )
         chol._xx[j][i] = d*_xx[j][i];
     }
-    Futures fs = new Futures();
+    ForkJoinTask [] fjts = new ForkJoinTask[denseN];
     // compute the outer product of diagonal*dense
     //Log.info("SPARSEN = " + sparseN + "    DENSEN = " + denseN);
     final int[][] nz = new int[denseN][];
     for( int i = 0; i < denseN; ++i ) {
       final int fi = i;
-      fs.add(new RecursiveAction() {
+      fjts[i] = new RecursiveAction() {
         @Override protected void compute() {
           int[] tmp = new int[sparseN];
           double[] rowi = fchol._xx[fi];
@@ -185,13 +184,12 @@ public final class Gram extends Iced {
             if (rowi[k] != .0) tmp[n++] = k;
           nz[fi] = Arrays.copyOf(tmp, n);
         }
-      }.fork());
+      };
     }
-    fs.blockForPending();
-    fs = new Futures();
+    ForkJoinTask.invokeAll(fjts);
     for( int i = 0; i < denseN; ++i ) {
       final int fi = i;
-      fs.add(new RecursiveAction() {
+      fjts[i] = new RecursiveAction() {
           @Override protected void compute() {
             double[] rowi = fchol._xx[fi];
             int[]    nzi  = nz[fi];
@@ -212,9 +210,9 @@ public final class Gram extends Iced {
               rowi[j + sparseN] = _xx[fi][j + sparseN] - s;
             }
           }
-        }.fork());
+        };
     }
-    fs.blockForPending();
+    ForkJoinTask.invokeAll(fjts);
     // compute the cholesky of dense*dense-outer_product(diagonal*dense)
     // TODO we still use Jama, which requires (among other things) copy and expansion of the matrix. Do it here without copy and faster.
     double[][] arr = new double[denseN][];
@@ -403,27 +401,56 @@ public final class Gram extends Iced {
    */
   public static class GramTask extends FrameTask<GramTask> {
     public Gram _gram;
+    public double [][] _XY;
     public long _nobs;
     public final boolean _hasIntercept;
+    public final boolean _isWeighted; // last response is weigth vector?
 
-    public GramTask(Job job, DataInfo dinfo, boolean hasIntercept){
+    public GramTask(Job job, DataInfo dinfo, boolean hasIntercept, boolean isWeighted){
       super(job,dinfo);
       _hasIntercept = hasIntercept;
+      _isWeighted = isWeighted;
     }
     @Override protected void chunkInit(){
       _gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,_hasIntercept);
+      final int responses = _dinfo._responses - (_isWeighted?1:0);
+      if(responses > 0){
+        _XY = new double[responses][];
+        for(int i = 0; i < responses; ++i)
+          _XY[i] = MemoryManager.malloc8d(_gram._fullN);
+      }
     }
-    @Override protected void processRow(double[] nums, int ncats, int[] cats) {
-      _gram.addRow(nums, ncats, cats, 1.0);
+    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] responses) {
+      double w = _isWeighted?responses[responses.length-1]:1;
+      _gram.addRow(nums, ncats, cats, w);
+      if(_XY != null){
+        for(int i = 0 ; i < _XY.length; ++i){
+          final double y = responses[i]*w;
+          for(int j = 0; j < ncats; ++i)
+            _XY[i][cats[j]] += y;
+          int numoff = _dinfo.numStart();
+          for(int j = 0; j < nums.length; ++j)
+            _XY[i][numoff+j] += nums[j]*y;
+        }
+      }
       ++_nobs;
     }
-    @Override protected void chunkDone(){_gram.mul(1.0/_nobs);}
-    @Override public void reduce(GramTask gt){
-      double r = (double)_nobs/(_nobs+gt._nobs);
+    @Override protected void chunkDone(){
+      double r = 1.0/_nobs;
       _gram.mul(r);
+      if(_XY != null)for(int i = 0; i < _XY.length; ++i)
+        for(int j = 0; j < _XY[i].length; ++j)
+          _XY[i][j] *= r;
+    }
+    @Override public void reduce(GramTask gt){
+      double r1 = (double)_nobs/(_nobs+gt._nobs);
+      _gram.mul(r1);
       double r2 = (double)gt._nobs/(_nobs+gt._nobs);
       gt._gram.mul(r2);
       _gram.add(gt._gram);
+      if(_XY != null)for(int i = 0; i < _XY.length; ++i)
+        for(int j = 0; j < _XY[i].length; ++j)
+          _XY[i][j] = _XY[i][j]*r1 + gt._XY[i][j]*r2;
       _nobs += gt._nobs;
     }
   }

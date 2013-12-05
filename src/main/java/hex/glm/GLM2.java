@@ -23,6 +23,7 @@ import water.H2O.H2OCountedCompleter;
 import water.H2O.JobCompleter;
 import water.Job.ModelJob;
 import water.api.DocGen;
+import water.api.Request.API;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -45,6 +46,8 @@ public class GLM2 extends ModelJob {
 
   private DataInfo _dinfo;
   private GLMParams _glm;
+  private double [] _wgiven;
+  private double _proximalPenalty;
   private double [] _beta;
 
   private boolean _runAllLambdas = true;
@@ -83,9 +86,9 @@ public class GLM2 extends ModelJob {
     this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,null);
   }
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob){
-    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null);
+    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,0);
   }
-  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta) {
+  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, double proximalPenalty) {
     assert beta == null || beta.length == (dinfo.fullN()+1):"unexpected size of beta, got length " + beta.length + ", expected " + dinfo.fullN();
     job_key = jobKey;
     description = desc;
@@ -96,6 +99,8 @@ public class GLM2 extends ModelJob {
     _glm = glm;
     this.lambda = lambda;
     _beta = beta;
+    if((_proximalPenalty = proximalPenalty) != 0)
+      _wgiven = beta;
     this.alpha= new double[]{alpha};
     this.n_folds = nfolds;
   }
@@ -143,11 +148,11 @@ public class GLM2 extends ModelJob {
       for(int i = 0; i < cols.length; ++i)cols[i] = constantOrNAs.get(i);
       fr.remove(cols);
     }
-    _dinfo = new DataInfo(fr, true, standardize);
+    _dinfo = new DataInfo(fr, 1, standardize);
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
       Job j = gridSearch(destination_key, _dinfo, _glm, lambda, alpha,n_folds);
-      return GLMProgressPage2.GLMGrid.redirect(this, j.self(), j.destination_key, API_VERSION.V_2);
+      return GLMGridView.redirect(this,j.destination_key);
     } else {
       start(null);
       return GLMProgressPage2.redirect(this, self(),dest());
@@ -279,7 +284,9 @@ public class GLM2 extends ModelJob {
               if(i > 0)lambda = i == lambda.length?new double[]{lmax}:Arrays.copyOfRange(lambda, i, lambda.length);
             }
             GLMIterationTask firstIter = new GLMIterationTask(GLM2.this,_dinfo,_glm,case_mode, case_val, _beta,0,ymut.ymu(),1.0/ymut.nobs());
-            final LSMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
+            final ADMMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
+            solver._proximalPenalty = _proximalPenalty;
+            solver._wgiven = _wgiven;
             GLMModel model = new GLMModel(dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,completer));
             firstIter.dfork(_dinfo._adaptedFrame);
@@ -317,8 +324,9 @@ public class GLM2 extends ModelJob {
       }
     };
     callback.addToPendingCount(n_folds-1);
+    double proximal_penalty = 0;
     for(int i = 0; i < n_folds; ++i)
-      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd)).
+      new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),proximal_penalty).
       setCase(case_mode,case_val).
       run(callback);
   }
@@ -343,10 +351,16 @@ public class GLM2 extends ModelJob {
     return AUC_DFORMAT.format(Math.round(1000*dev)*0.001);
   }
 
+
   public static class GLMGrid extends Iced {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+    final Key _jobKey;
+
     final long _startTime;
-//    final Key [] _jobKeys;
-    final Key [] _dstKeys;
+    @API(help="mean of response in the training dataset")
+    final Key [] destination_keys;
     final double [] _alphas;
 
 //    final Comparator<GLMModel> _cmp;
@@ -354,65 +368,15 @@ public class GLM2 extends ModelJob {
 //    public GLMGrid (Key [] keys, double [] alphas){
 //      this(keys,alphas,null);
 //    }
-    public GLMGrid (GLM2 [] jobs){
+    public GLMGrid (Key jobKey, GLM2 [] jobs){
+      _jobKey = jobKey;
       _alphas = new double [jobs.length];
-//      _jobKeys = new Key[jobs.length];
-      _dstKeys = new Key[jobs.length];
+      destination_keys = new Key[jobs.length];
       for(int i = 0; i < jobs.length; ++i){
-//        _jobKeys[i] = jobs[i].job_key;
-        _dstKeys[i] = jobs[i].destination_key;
+        destination_keys[i] = jobs[i].destination_key;
         _alphas[i] = jobs[i].alpha[0];
       }
       _startTime = System.currentTimeMillis();
-    }
-    public void toHTML(StringBuilder sb){
-      ArrayList<GLMModel> models = new ArrayList<GLMModel>(_dstKeys.length);
-      for(int i = 0; i < _dstKeys.length; ++i){
-        Value v = DKV.get(_dstKeys[i]);
-        if(v != null)models.add(v.<GLMModel>get());
-      }
-      if(models.isEmpty()){
-        sb.append("no models computed yet..");
-      } else {
-        DocGen.HTML.arrayHead(sb);
-        sb.append("<tr>");
-        sb.append("<th>&alpha;</th>");
-        sb.append("<th>&lambda;<sub>max</sub></th>");
-        sb.append("<th>&lambda;<sub>min</sub></th>");
-        sb.append("<th>&lambda;<sub>best</sub></th>");
-        sb.append("<th>nonzeros</th>");
-        sb.append("<th>iterations</td>");
-        if(models.get(0).glm.family == Family.binomial)
-          sb.append("<th>AUC</td>");
-        if(models.get(0).glm.family != Family.gamma)
-          sb.append("<th>AIC</td>");
-        sb.append("<th>Deviance Explained</td>");
-        sb.append("<th>Model</th>");
-//        sb.append("<th>Progress</th>");
-        sb.append("</tr>");
-        Collections.sort(models);//, _cmp);
-        for(int i = 0; i < models.size();++i){
-          GLMModel m = models.get(i);
-          sb.append("<tr>");
-          sb.append("<td>" + m.alpha + "</td>");
-          sb.append("<td>" + m.lambdaMax() + "</td>");
-          sb.append("<td>" + m.lambdaMin() + "</td>");
-          sb.append("<td>" + m.lambda() + "</td>");
-          sb.append("<td>" + (m.rank()-1) + "</td>");
-          sb.append("<td>" + m.iteration() + "</td>");
-          if(m.glm.family == Family.binomial)
-            sb.append("<td>" + aucStr(m.auc()) +  "</td>");
-          if(m.glm.family != Family.gamma)
-            sb.append("<td>" + aicStr(m.aic()) +  "</td>");
-          sb.append("<td>" + devExplainedStr(m.devExplained()) +  "</td>");
-          sb.append("<td>" + GLMModelView.link("View Model", m._selfKey) + "</td>");
-//          if(job != null && !job.isDone())DocGen.HTML.progress(job.progress(), sb.append("<td>")).append("</td>");
-//          else sb.append("<td class='alert alert-success'>" + "DONE" + "</td>");
-          sb.append("</tr>");
-        }
-        DocGen.HTML.arrayTail(sb);
-      }
-      // now sort the models...
     }
   }
   public static class GLMGridSearch extends Job {
@@ -434,7 +398,7 @@ public class GLM2 extends ModelJob {
     }
     @Override
     public Job fork(){
-      DKV.put(destination_key, new GLMGrid(_jobs));
+      DKV.put(destination_key, new GLMGrid(self(),_jobs));
       assert _maxParallelism >= 1;
       final H2OCountedCompleter fjt = new JobCompleter(this);
       fjt.setPendingCount(_jobs.length-1);

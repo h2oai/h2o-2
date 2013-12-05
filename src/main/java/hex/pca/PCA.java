@@ -73,8 +73,8 @@ public class PCA extends ColumnsJob {
         cols[i] = removeCols.get(i);
       fr.remove(cols);
     }
-    DataInfo dinfo = new DataInfo(fr, false, standardize);
-    GramTask tsk = new GramTask(this, dinfo, false).doAll(dinfo._adaptedFrame);
+    DataInfo dinfo = new DataInfo(fr, 0, standardize);
+    GramTask tsk = new GramTask(this, dinfo, false,false).doAll(dinfo._adaptedFrame);
     PCAModel myModel = buildModel(dinfo, tsk);
     UKV.put(destination_key, myModel);
     return Status.Done;

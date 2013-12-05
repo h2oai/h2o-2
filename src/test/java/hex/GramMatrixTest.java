@@ -49,15 +49,15 @@ GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.3
     try{
       ParseDataset2.parse(okey2, new Key[]{ikey2});
       Frame fr2 = DKV.get(okey2).get();
-      DataInfo dinfo = new DataInfo(fr2, false, false);
-      GramTask gt = new GramTask(null, dinfo, true);
+      DataInfo dinfo = new DataInfo(fr2, 0, false);
+      GramTask gt = new GramTask(null, dinfo, true,false);
       gt.doAll(dinfo._adaptedFrame);
       double [][] res = gt._gram.getXX();
       System.out.println(Utils.pprint(gt._gram.getXX()));
       for(int i = 0; i < exp_result.length; ++i)
         for(int j = 0; j < exp_result.length; ++j)
           assertEquals(exp_result[i][j],gt._nobs*res[i][j],1e-5);
-      gt = new GramTask(null, dinfo, false);
+      gt = new GramTask(null, dinfo, false,false);
       gt.doAll(dinfo._adaptedFrame);
       for(int i = 0; i < exp_result.length-1; ++i)
         for(int j = 0; j < exp_result.length-1; ++j)
