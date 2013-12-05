@@ -93,7 +93,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     }
     _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
     _errs = new double[0];                // No trees yet
-    if (_nclass <= 1)
+    if (classification && _nclass <= 1)
       throw new IllegalArgumentException("Constant response column!");
     if (_nclass > MAX_SUPPORTED_LEVELS)
       throw new IllegalArgumentException("Too many levels in response column!");
