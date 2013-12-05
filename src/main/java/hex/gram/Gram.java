@@ -4,6 +4,7 @@ import hex.FrameTask;
 import hex.glm.LSMSolver.LSMSolverException;
 import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 
 import jsr166y.RecursiveAction;
@@ -172,22 +173,41 @@ public final class Gram extends Iced {
     Futures fs = new Futures();
     // compute the outer product of diagonal*dense
     //Log.info("SPARSEN = " + sparseN + "    DENSEN = " + denseN);
-
+    final int[][] nz = new int[denseN][];
+    for( int i = 0; i < denseN; ++i ) {
+      final int fi = i;
+      fs.add(new RecursiveAction() {
+        @Override protected void compute() {
+          int[] tmp = new int[sparseN];
+          double[] rowi = fchol._xx[fi];
+          int n = 0;
+          for( int k = 0; k < sparseN; ++k )
+            if (rowi[k] != .0) tmp[n++] = k;
+          nz[fi] = Arrays.copyOf(tmp, n);
+        }
+      }.fork());
+    }
+    fs.blockForPending();
+    fs = new Futures();
     for( int i = 0; i < denseN; ++i ) {
       final int fi = i;
       fs.add(new RecursiveAction() {
           @Override protected void compute() {
             double[] rowi = fchol._xx[fi];
-            int[] nz = new int[sparseN];
-            int   n = 0;
-            for( int k = 0; k < sparseN; ++k )
-              if (rowi[k] != .0) nz[n++] = k;
+            int[]    nzi  = nz[fi];
             for( int j = 0; j <= fi; ++j ) {
               double[] rowj = fchol._xx[j];
+              int[]    nzj  = nz[j];
               double s = 0;
-              for ( int z = 0; z < n; z++) {
-                int k = nz[z];
-                s += rowi[k] * rowj[k];
+              for (int t=0,z=0; t < nzi.length && z < nzj.length; ) {
+                int k1 = nzi[t];
+                int k2 = nzj[z];
+                if (k1 < k2) { t++; continue; }
+                else if (k1 > k2) { z++; continue; }
+                else {
+                  s += rowi[k1] * rowj[k1];
+                  t++; z++;
+                }
               }
               rowi[j + sparseN] = _xx[fi][j + sparseN] - s;
             }
