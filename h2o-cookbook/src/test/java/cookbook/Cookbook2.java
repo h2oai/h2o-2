@@ -24,6 +24,11 @@ public class Cookbook2 {
         doit();
       System.out.println(sumcols._sum+"/"+sumcols._n+" = "+(sumcols._sum/sumcols._n));
       System.out.println();
+
+      SumCol sumCol = new SumCol(year_idx);
+      Flow.FlowPerRow<SumCol> flowPerRow = fr.with(sumCol);
+      SumCol result = flowPerRow.doit();
+      System.out.println("TOM: " + result._sum + " " + result._n);
       
       SumCol sumcols1 = fr.
         with(new Flow.Filter() { public boolean filter(double ds[]) { return ds[cyl_idx]!=5; } }).
@@ -47,7 +52,25 @@ public class Cookbook2 {
         System.out.println("Cyl="+gid._val+", "+sumcol._sum+"/"+sumcol._n+" = "+(sumcol._sum/sumcol._n));
       }
       System.out.println();
-      
+
+      {
+        System.out.println("TOM ----- START");
+        class MyGroupBy extends Flow.GroupBy {
+          public long groupId(double ds[]) { return (long)ds[cyl_idx];}
+        }
+
+        SumCol sumCol10 = new SumCol(year_idx);
+        Flow.FlowGroupBy flowGroupBy = fr.with(new MyGroupBy());
+        Flow.FlowGroupPerRow flowGroupPerRow = flowGroupBy.with(sumCol10);
+        IcedHashMap<IcedLong,SumCol> hashMap = flowGroupPerRow.doit();
+        for( IcedLong gid : hashMap.keySet() ) {
+          SumCol sumcol = sumcols2.get(gid);
+          System.out.println("Cyl="+gid._val+", "+sumcol._sum+"/"+sumcol._n+" = "+(sumcol._sum/sumcol._n));
+        }
+        System.out.println("TOM ----- END");
+        System.out.println();
+      }
+
       IcedHashMap<IcedLong,SumCol> sumcols3 = fr.
         with(new Flow.Filter () { public boolean filter(double ds[]) { return ds[cyl_idx]!=5; } }).
         with(new Flow.GroupBy() { public long groupId ( double ds[]) { return (long)ds[cyl_idx];} }).
