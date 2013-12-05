@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
         case_mode = '='
         case_val  = '1'
         f         = 'prostate'
-        modelKey  = 'GLM(' + f + ')'
+        modelKey  = 'GLM_' + f
 
         kwargs = {       'response'          : y,
                          'ignored_cols'       : x,
