@@ -441,11 +441,47 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "Activation function")
+    public Activation activation;
+
+    @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)")
+    public int[] hidden;
+
+    @API(help = "Learning rate")
+    public double rate;
+
+    @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)")
+    public double rate_annealing;
+
+    @API(help = "Momentum at the beggining of training")
+    public double momentum_start;
+
+    @API(help = "Number of samples for which momentum increases")
+    public long momentum_ramp;
+
+    @API(help = "Momentum once the initial increase is over")
+    public double momentum_stable;
+
+    @API(help = "L1 regularization")
+    public double l1;
+
+    @API(help = "L2 regularization")
+    public double l2;
+
+    @API(help = "How many times the dataset should be iterated")
+    public int epochs;
+
+    @API(help = "Seed for the random number generator")
+    public long seed;
+
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
 
     @API(help = "Errors on the validation set")
     public Errors[] validation_errors;
+
+    @API(help = "Dataset headers")
+    public String[] class_names;
 
     @API(help = "Confusion matrix")
     public long[][] confusion_matrix;
@@ -455,10 +491,25 @@ public class NeuralNet extends ValidatedJob {
     }
 
     @Override protected Response serve() {
+      NeuralNet job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
+      if( job != null ) {
+        activation = job.activation;
+        hidden = job.hidden;
+        rate = job.rate;
+        rate_annealing = job.rate_annealing;
+        momentum_start = job.momentum_start;
+        momentum_ramp = job.momentum_ramp;
+        momentum_stable = job.momentum_stable;
+        l1 = job.l1;
+        l2 = job.l2;
+        epochs = job.epochs;
+        seed = job.seed;
+      }
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
         training_errors = model.training_errors;
         validation_errors = model.validation_errors;
+        class_names = model.classNames();
         confusion_matrix = model.confusion_matrix;
       }
       return super.serve();
