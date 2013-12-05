@@ -1,18 +1,27 @@
 source('./findNSourceUtils.R')
 
-Log.info("======================== Begin Test ===========================\n")
-
-test.histogram <- function (con, path, key) {
-  h2o.data <- h2o.uploadFile(conn, path, key)
-  #h2o.data <- new('H2OParsedData')
-  #h2o.data@h2o <- con
-  #h2o.data@key <- key
+test.histogram <- function (conn) {
+  print("getting files...")
+  bucket <- getBucket('smalldata')
+  print(bucket)
+  csv.files <- list.files(bucket, recursive=T, full.names=T, pattern='*.csv$')
+  exclude <- c(locate("../../../smalldata//empty.csv"),
+                locate("../../../smalldata//test/test_less_than_65535_unique_names.csv"),
+                locate("../../../smalldata//test/test_more_than_65535_unique_names.csv"))
+  csvtry <- csv.files[!(csv.files %in% exclude)]
+  csv.files <- csvtry
+  Log.info(csv.files)
+  path <- csv.files[sample(length(csv.files),1)]
+  
+  Log.info(paste("Using path: ", path))
+  h2o.data <- h2o.uploadFile(conn, path, "f.hex") #paste(path,".hex",sep=""))
   h2o.hists <- histograms(h2o.data)
   df<- as.data.frame(h2o.data)
+  
   if (is.null(h2o.hists) || length(h2o.hists) == 0) {
-    h2o.rm(con,key)
-    return(0)
+    FAIL("Could not perform histogram!")
   }
+
   for (i in 1:length(h2o.hists)) {     
     col.hist <- h2o.hists[[i]]
     if (is.null(col.hist)) {
@@ -37,27 +46,8 @@ test.histogram <- function (con, path, key) {
       Log.info(cat("Column ", i, " in ", path," is enum, skipped.\n"))
     }
   }
-  h2o.rm(con, key)
+  
+  testEnd()
 }
 
-
-
-conn <- new("H2OClient", ip=myIP, port=myPort)
-print("getting files...")
-bucket <- getBucket('smalldata')
-print(bucket)
-csv.files <- list.files(bucket, recursive=T, full.names=T, pattern='*.csv$')
-print(csv.files)
-exclude <- c(locate("../../../smalldata//empty.csv"),
-              locate("../../../smalldata//test/test_less_than_65535_unique_names.csv"),
-              locate("../../../smalldata//test/test_more_than_65535_unique_names.csv"))
-print(exclude)
-csvtry <- csv.files[!(csv.files %in% exclude)]
-csv.files <- csvtry
-Log.info(csv.files)
-
-for ( f in csv.files ) {
-  print(f)
-  tryCatch("Histogram Test", test.histogram(conn, f, sub('.csv$', '.hex', f)), warning = function(w) WARN(w), error = function(e) FAIL(e))
-  PASS()
-}
+doTest("Histogram Test", test.histogram)

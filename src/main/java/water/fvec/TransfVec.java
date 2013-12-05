@@ -69,7 +69,7 @@ public class TransfVec extends Vec {
   public static Vec compose(TransfVec origVec, int[] transfMap, boolean keepOrig) {
     // Do a mapping from INT -> ENUM -> this vector ENUM
     int[] domMap = Utils.compose(origVec._domMap, transfMap);
-    Vec result = origVec.makeTransf(domMap, origVec._domain);
+    Vec result = origVec.masterVec().makeTransf(domMap, origVec._domain);
     if (!keepOrig) DKV.remove(origVec._key);
     return result;
   }

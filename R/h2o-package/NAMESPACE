@@ -1,4 +1,8 @@
 exportPattern("^[[:alpha:]]+")
 exportMethods(
-    "h2o.init"
+    "h2o.init",
+    "h2o.shutdown"
 )
+exportClasses(
+	"H2OClient"
+}

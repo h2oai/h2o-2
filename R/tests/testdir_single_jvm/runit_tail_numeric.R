@@ -10,10 +10,6 @@
 
 source('./findNSourceUtils.R')
 
-Log.info("======================== Begin Test ===========================")
-view_max <- 10000 #maximum returned by Inspect.java
-
-
 test.tail.numeric <- function(conn) {
   Log.info("Importing USArrests.csv data...")
   arrests.hex = h2o.importFile.VA(conn, locate("smalldata/pca_test/USArrests.csv", schema = "local"), "arrests.hex")
@@ -40,13 +36,9 @@ test.tail.numeric <- function(conn) {
     Log.info(paste("Data has ", paste(nrow(arrests.hex), " rows",sep=""),sep=""))
     tail_max <- tail(arrests.hex,nrow(arrests.hex) + 1)
   }
-  Log.info("End of test.")
-  PASSS <<- TRUE
+  testEnd()
+ 
 }
 
-conn <- new("H2OClient", ip=myIP, port=myPort)
-PASSS <- FALSE
-tryCatch(test_that("tailTests",test.tail.numeric(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
+doTest("Tail Tests", test.tail.numeric)
 
-if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
-PASS()

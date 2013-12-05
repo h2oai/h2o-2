@@ -11,6 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.*;
 
 import water.*;
+import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.util.*;
@@ -41,6 +42,17 @@ public abstract class Request extends RequestBuilders {
     boolean hide() default false;
     String displayName() default "";
     boolean gridable() default true;
+    Class<? extends Validator> validator() default NOPValidator.class;
+  }
+
+  public interface Validator<V> extends Freezable {
+    void validateRaw(String value) throws IllegalArgumentException;
+    void validateValue(V value) throws IllegalArgumentException;
+    /** Dummy helper class for NOP validator. */
+    public static class NOPValidator<V> extends Iced implements Validator<V> {
+      @Override public void validateRaw(String value) { }
+      @Override public void validateValue(V value) { }
+    }
   }
 
   public interface Filter {

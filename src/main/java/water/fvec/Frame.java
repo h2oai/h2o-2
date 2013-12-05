@@ -42,6 +42,12 @@ public class Frame extends Iced {
     for( int i=0; i<vecs.length; i++ )
       assert grp.equals(vecs[i].group());
   }
+  public Vec vec(String name){
+    Vec [] vecs = vecs();
+    for(int i = 0; i < _names.length; ++i)
+      if(_names[i].equals(name))return vecs[i];
+    return null;
+  }
   public Frame subframe(String [] names){
     Vec [] vecs = new Vec[names.length];
     HashMap<String, Integer> map = new HashMap<String, Integer>();
@@ -409,7 +415,7 @@ public class Frame extends Iced {
     for( int c=0; c<fs.length; c++ ) {
       Vec vec = vecs[c];
       if( vec.isEnum() ) {
-        String s = vec.isNA(idx) ? "----------" : vec._domain[(int)vec.at8(idx)];
+        String s = vec.isNA(idx) ? "----------" : String.valueOf((int)vec.at8(idx)); //vec._domain[(int)vec.at8(idx)]; FIXME (MM: sorry, build.sh was not passing, and Anqi request was in queue with high priority)
         sb.append(String.format(fs[c],s));
       } else if( vec.isInt() ) {
         if( vec.isNA(idx) ) {

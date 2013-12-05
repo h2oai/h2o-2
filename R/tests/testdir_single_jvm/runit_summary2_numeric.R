@@ -1,26 +1,22 @@
-source('../Utils/h2oR.R')
-
-Log.info("\n======================== Begin Test ===========================\n")
-
+source('./findNSourceUtils.R')
 
 #import multimodal data set; parse as FV
-test.summary2.numeric <- function(H2Oserver) {
+test.summary2.numeric <- function(conn) {
   Log.info("Importing wonkysummary.csv data...")
-  wonkysummary.hex <- h2o.importFile(H2Oserver, "./smalldata/wonkysummary.csv")
-  
+  wonkysummary.hex <- h2o.importFile(conn, locate("./smalldata/wonkysummary.csv", schema = "local"), "wonky.hex")
 
-#check that summary2 gives expected output  
+#check that summary2 gives expected output
   Log.info("Check that summary gives output...")
-  summary(wonkysummary.hex) 
+  summary(wonkysummary.hex)
   summary_ <- summary(wonkysummary.hex)
-  cat("Check that we get a table back from the summary(hex)")
+  Log.info("Check that we get a table back from the summary(hex)")
   expect_that(summary_, is_a("table"))
-  
+
 
 #check produced values against known values
-  cat("\nCheck that the summary from H2O matches known good values:\n ")
+  Log.info("Check that the summary from H2O matches known good values: ")
   H2Osum<- summary(wonkysummary.hex)
-  wonky.df<- read.csv("../../../smalldata/wonkysummary.csv")
+  wonky.df<- read.csv(locate("../../../smalldata/wonkysummary.csv"))
   wonky.Rsum<-as.table(summary(wonky.df))
   
   Log.info("R's summary:")
@@ -32,9 +28,8 @@ test.summary2.numeric <- function(H2Oserver) {
   
   expect_that(H2Osum, equals(wonky.Rsum))
  
-  print("End of test.")
+  testEnd()
 }
 
-H2Oserver <- new("H2OClient", ip=myIP, port=myPort)
-tryCatch(test_that("summaryTests",test.summary2.numeric(H2Oserver)), error = function(e) FAIL(e))
-PASS()
+doTest("Summary Tests", test.summary2.numeric)
+

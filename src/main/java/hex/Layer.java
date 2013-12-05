@@ -258,9 +258,8 @@ public abstract class Layer extends Iced {
     }
 
     static int categories(Vec vec) {
-      if( vec.domain() == null )
-        return 1;
-      return (int) (vec.max() - vec.min());
+      String [] dom = vec.domain();
+      return dom == null?1:dom.length-1;
     }
 
     static int expand(Vec[] vecs) {

@@ -15,10 +15,13 @@ setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 # setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ONNModel", contains="H2OModel")
-setClass("H2ODRFModel", contains="H2OModel")
+setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
 setClass("H2OPCAModel", contains="H2OModel")
-setClass("H2OGBMModel", contains="H2OModel")
+setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
+
 setClass("H2OGBMGrid", contains="H2OGrid")
+setClass("H2OKMeansGrid", contains="H2OGrid")
+setClass("H2ODRFGrid", contains="H2OGrid")
 
 setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
 setClass("H2OParsedDataVA", representation(h2o="H2OClient", key="character", env="environment"))
@@ -155,7 +158,7 @@ setMethod("show", "H2ODRFModel", function(object) {
   model = object@model
   cat("\nNumber of trees:", model$ntree)
   cat("\nTree statistics:\n"); print(model$forest)
-  cat("\nConfusion matrix:\n"); print(model$confusion)
+  cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
@@ -172,13 +175,29 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("GBM Model Key:", object@key)
   
   model = object@model
-  cat("\n\nConfusion matrix:\n"); print(model$confusion)
+  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
 
 setMethod("show", "H2OGBMGrid", function(object) {
   print(object@data)
   cat("GBMGrid Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
+})
+
+setMethod("show", "H2OKMeansGrid", function(object) {
+  print(object@data)
+  cat("KMeans2Grid Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
+})
+
+setMethod("show", "H2ODRFGrid", function(object) {
+  print(object@data)
+  cat("DRFGrid Model Key:", object@key, "\n")
   
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)

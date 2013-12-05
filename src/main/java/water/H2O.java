@@ -5,12 +5,10 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import jsr166y.*;
 import water.Job.JobCancelledException;
 import water.nbhm.NonBlockingHashMap;
-import water.parser.ParseDataset;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -805,32 +803,35 @@ public final class H2O {
 
   public static boolean IS_SYSTEM_RUNNING = false;
 
+  /** Load a h2o build version or return default unknown version
+   * @return never returns null
+   */
+  public static AbstractBuildVersion getBuildVersion() {
+    try {
+      Class klass = Class.forName("water.BuildVersion");
+      java.lang.reflect.Constructor constructor = klass.getConstructor();
+      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
+      return abv;
+      // it exists on the classpath
+    } catch (Exception e) {
+      return AbstractBuildVersion.UNKNOWN_VERSION;
+    }
+  }
+
   /**
    * If logging has not been setup yet, then Log.info will only print to stdout.
    * This allows for early processing of the '-version' option without unpacking
    * the jar file and other startup stuff.
    */
   public static void printAndLogVersion() {
-    String build_branch = "(unknown)";
-    String build_hash = "(unknown)";
-    String build_describe = "(unknown)";
-    String build_project_version = "(unknown)";
-    String build_by = "(unknown)";
-    String build_on = "(unknown)";
-    try {
-      Class klass = Class.forName("water.BuildVersion");
-      java.lang.reflect.Constructor constructor = klass.getConstructor();
-      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
-      build_branch = abv.branchName();
-      build_hash = abv.lastCommitHash();
-      build_describe = abv.describe();
-      build_project_version = abv.projectVersion();
-      build_by = abv.compiledBy();
-      build_on = abv.compiledOn();
-      // it exists on the classpath
-    } catch (Exception e) {
-      // it does not exist on the classpath
-    }
+    // Try to load a version
+    AbstractBuildVersion abv = getBuildVersion();
+    String build_branch = abv.branchName();
+    String build_hash = abv.lastCommitHash();
+    String build_describe = abv.describe();
+    String build_project_version = abv.projectVersion();
+    String build_by = abv.compiledBy();
+    String build_on = abv.compiledOn();
 
     Log.info ("----- H2O started -----");
     Log.info ("Build git branch: " + build_branch);

@@ -10,6 +10,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c6_maprfs(self):
+        h2o.beta_features = True
         print "\nLoad a list of files from maprfs, parse and do 1 RF tree"
         # larger set in my local dir
         # fails because classes aren't integers
