@@ -169,7 +169,8 @@ test:
 # Run Cookbook tests.
 # Add to make test once they are reliable.
 testcb:
-	java -cp `cat target/classpath`:target/h2o.jar water.cookbook.CookbookRunner
+	$(MAKE) -C h2o-cookbook build
+	$(MAKE) -C h2o-cookbook test
 
 TOPDIR:=$(CURDIR)
 BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
