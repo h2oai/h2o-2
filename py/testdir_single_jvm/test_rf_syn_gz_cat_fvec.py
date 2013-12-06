@@ -196,7 +196,7 @@ class Basic(unittest.TestCase):
 
                 algo = "RF " 
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
-                    numRows: {:d} numCols: {:d} value_size_bytes: {:d}'.format(
+                    numRows: {:d} numCols: {:d} byteSize: {:d}'.format(
                     len(h2o.nodes), tryHeap, algo, parseResult['destination_key'], elapsed, kwargs['ntrees'], \
                     classification_error, parseResult['numRows'], parseResult['numCols'], parseResult['byteSize'])
                 print l

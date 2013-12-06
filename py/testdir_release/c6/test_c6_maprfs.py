@@ -82,18 +82,18 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     break
 
             if foundIt:
-                value_size_bytes = f['value_size_bytes']
+                byteSize = f['byteSize']
             else:
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
 
             # no pattern matching, so no multiple files to add up
-            totalBytes = value_size_bytes
+            totalBytes = byteSize
 
             #  "succeeded": [
             #    {
             #      "file": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
             #      "key": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "value_size_bytes": 1115287100
+            #      "byteSize": 1115287100
             #    },
 
             print "Loading", csvFilename, 'from maprfs'
