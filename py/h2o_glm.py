@@ -31,21 +31,22 @@ def pickRandGlmParams(paramDict, params):
 
         # case only used if binomial? binomial is default if no family
         # update: apparently case and case_mode always affect things
-        maxCase = max(paramDict['case'])
-        minCase = min(paramDict['case'])
         # make sure the combo of case and case_mode makes sense
         # there needs to be some entries in both effective cases
         if ('case_mode' in params):
             if ('case' not in params) or (params['case'] is None):
                 params['case'] = 1
-            elif params['case_mode']=="<" and params['case']==minCase:
-                params['case'] += 1
-            elif params['case_mode']==">" and params['case']==maxCase:
-                params['case'] -= 1
-            elif params['case_mode']==">=" and params['case']==minCase:
-                params['case'] += 1
-            elif params['case_mode']=="<=" and params['case']==maxCase:
-                params['case'] -= 1
+            else:
+                maxCase = max(paramDict['case'])
+                minCase = min(paramDict['case'])
+                if params['case_mode']=="<" and params['case']==minCase:
+                    params['case'] += 1
+                elif params['case_mode']==">" and params['case']==maxCase:
+                    params['case'] -= 1
+                elif params['case_mode']==">=" and params['case']==minCase:
+                    params['case'] += 1
+                elif params['case_mode']=="<=" and params['case']==maxCase:
+                    params['case'] -= 1
 
     return colX
 

@@ -100,7 +100,6 @@ class Basic(unittest.TestCase):
                 'use_non_local_data' : 1,
                 'ntree'      : 10,
                 'depth'      : 300,
-                'parallel'   : 1,
                 'bin_limit'  : 20000,
                 'stat_type'  : 'ENTROPY',
                 'out_of_bag_error_estimate': 1,

@@ -5,6 +5,7 @@ options(echo=FALSE)
 ##
 
 SEARCHPATH <- NULL
+ROOTISPARENT <- FALSE
 calcPath<-
 function(path, root, optional_root_parent = NULL) {
     #takes the given path & root and searches upward...
@@ -14,6 +15,8 @@ function(path, root, optional_root_parent = NULL) {
     rddNbdpEopr <- root %in% dir(dirname(path)) & (is.null(optional_root_parent) || basename(dirname(path)) == optional_root_parent)
 
     if (basename(path) == root || root %in% dir(path)) {  #rddNbdpEopr) {
+        #I am in the root being searched for, or it's in the directory I am in currently
+        if(!is.null(optional_root_parent)) ROOTISPARENT <<- TRUE
         return(0)
     }
 
@@ -24,6 +27,9 @@ function(path, root, optional_root_parent = NULL) {
         return(-1)
     }
     if ( bdp || rddNbdpEopr ) {
+        #The root is in the directory parent to my current directory, and the parent of my parent is null or the optional_root_parent
+        #print("\n[INFO]: ROOT is in the parent of current directory!")  
+        if(!is.null(optional_root_parent)) ROOTISPARENT <<- TRUE
         return(1)
     }
     return(ifelse( calcPath( dirname(path), root, optional_root_parent) < 0, -1, 1 + calcPath( dirname(path), root, optional_root_parent) ) )
@@ -36,7 +42,7 @@ function(distance) {
 }
 
 locate<-
-function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = "put") {
+function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = "put", optional_root_parent = NULL) {
     if (!is.null(fullPath)) {   
         if (schema == "local") return(paste("./", gsub("[./]",fullPath), sep = ""))
         return(fullPath) #schema is put
@@ -49,12 +55,13 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         path   <- ifelse(substring(path,nchar(path)) == '/', substring(path,1,nchar(path)-1),path)
         if (schema == "local") return(paste("./",bucket,"/",path,sep = ""))
         if (schema == "put") {
-            distance.bucket.root <- calcPath(getwd(), bucket)
+            distance.bucket.root <- calcPath(getwd(), bucket, optional_root_parent)
             if (distance.bucket.root < 0) {
                 Log.err(paste("Could not find bucket <", bucket, ">\n"))
             }
             bucket.dots <- genDots(distance.bucket.root)
-            fullPath <- paste(bucket.dots,bucket,'/',path,sep="")
+            if (is.null(optional_root_parent)) ROOTISPARENT <<- FALSE
+            fullPath <- ifelse(ROOTISPARENT == TRUE, paste(bucket.dots,path,sep = ""), paste(bucket.dots,bucket,'/',path,sep=""))
             return(fullPath)
         }
         if (schema == "S3") stop("Unimpl")
@@ -72,6 +79,25 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         m <- paste("BUCKET: ", bucket, " PATH: ", path, " SCHEMA: ", schema)
         Log.info(m)
         return(locate(bucket = bucket, path = path, schema = schema))
+    }
+}
+
+select.help<-
+function() {
+    datajson <- locate(bucket = "tests", path = "smalldata.json", optional_root_parent = "R")
+    datajson <- fromJSON(paste(readLines(datajson), collapse=""))
+    random.dataset.id <- sample(length(datajson$datasets),1)
+    ROOTISPARENT <<- FALSE
+    return(datajson$datasets[random.dataset.id][[1]])
+}
+
+select<-
+function() {
+    a <- select.help()
+    if ( a[[1]]$ATTRS$NUMROWS != "0" && a[[1]]$ATTRS$NUMCOLS != "0" && file_test("-f", locate(a[[1]]$PATHS[1]))) {
+        return(a)
+    } else {
+        return(select())
     }
 }
 
@@ -93,6 +119,7 @@ if (distance < 0) {
     source(paste(path, "tests/Utils/pcaR.R", sep = ""))
     source(paste(path, "tests/Utils/glmR.R", sep = ""))
     source(paste(path, "tests/Utils/gbmR.R", sep = ""))
+    source(paste(path, "tests/Utils/utilsR.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Algorithms.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Classes.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/ParseImport.R", sep = ""))
@@ -104,6 +131,7 @@ if (distance < 0) {
     source(paste(dots, "Utils/pcaR.R", sep = ""))
     source(paste(dots, "Utils/glmR.R", sep = ""))
     source(paste(dots, "Utils/gbmR.R", sep = ""))
+    source(paste(dots, "Utils/utilsR.R", sep = ""))
 
     #rdots is the calculated path to the R source files...
     rdots <- ifelse(dots == "./", "../", paste("../", dots, sep = ""))
@@ -114,4 +142,6 @@ if (distance < 0) {
     source(paste(rdots, "h2oRClient-package/R/Internal.R", sep = ""))
 }
 sandbox()
+#This random seed is overwritten by any seed set in a test
+setupRandomSeed(suppress = TRUE)
 h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))

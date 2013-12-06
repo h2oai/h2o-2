@@ -7,7 +7,7 @@
 \f0\fs24 \cf0 Read Me: CUSE expanded \
 source: http://data.princeton.edu/wws509/\
 \
-n(observations) = 16\
+n(observations) = 16 (originally) \
 \
 Dependent Variable: \
 \
@@ -16,6 +16,13 @@ using: a count of the number of observations matching the factor levels in the r
 not using: a count of the number of observations matching the the factor levels in the row and is not using birth control \
 \
 Example: in the first row - 6 women were observed to be using birth control, were younger than 25, had low education, and do want more children. 53 women not using birth control met the same conditions. \
+\
+EXPANDED: \
+\
+Binomial expansion by factor level and count to produce binomial column such that 0=not using, 1= using, and there is one row for each count in the original 16 observation data set. \
+\
+UsingMultiClass: a derived column for multi class classification tasks that ranks observations by membership in userate group, so that women observed as part of the 4-30 using\
+\
 \
 Independent Variables: \
 \

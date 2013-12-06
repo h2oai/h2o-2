@@ -9,14 +9,12 @@ paramsTrainRF = {
     'nbins': 100,
     'ignored_cols_by_name': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
     'timeoutSecs': 14800,
+    'response': 'IsDepDelayed'
     }
 
 # RF test parameters
 paramsScoreRF = {
-    # scoring requires the response_variable. it defaults to last, so normally
-    # we don't need to specify. But put this here and (above if used) 
-    # in case a dataset doesn't use last col 
-    'response_variable': None,
+    'vactual': 'IsDepDelayed'
     'timeoutSecs': 14800,
     }
 
@@ -69,6 +67,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         return scoreParseResult 
 
     def test_c8_rf_airlines_hdfs(self):
+        h2o.beta_features = True
         trainParseResult = self.loadTrainData()
         kwargs   = paramsTrainRF.copy()
         trainResult = h2o_rf.trainRF(trainParseResult, **kwargs)

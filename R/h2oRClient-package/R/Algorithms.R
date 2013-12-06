@@ -1,5 +1,5 @@
 # Model-building operations and algorithms
-# ----------------------- Generalized Boosting Machines (GBM) -----------------------#
+# ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interaction.depth=5, n.minobsinnode=10, shrinkage=0.02, n.bins=100, validation) {
   args <- verify_dataxy(data, x, y)
@@ -55,25 +55,13 @@ h2o.__getGBMSummary <- function(res) {
 }
 
 h2o.__getGBMResults <- function(res) {
-  result=list()
-  categories=length(res$cm)
-  cf_matrix = t(matrix(unlist(res$cm), nrow=categories))
-  cf_names <- res[['_domains']]
-  cf_names <- cf_names[[length(cf_names)]]
-  
-  cf_total = apply(cf_matrix, 2, sum)
-  cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
-  cf_matrix = rbind(cf_matrix, cf_total)
-  cf_matrix = cbind(cf_matrix, round(cf_error, 3))
-  
-  # dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
-  dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
-  result$confusion = cf_matrix
+  result = list()
+  result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
   result$err = res$errs
   return(result)
 }
 
-#----------------------------- Generalized Linear Models (GLM) ---------------------------#
+# -------------------------- Generalized Linear Models (GLM) ------------------------ #
 # setGeneric("h2o.glm", function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p=ifelse(family=='tweedie', 0, NA)) { standardGeneric("h2o.glm") })
 # setMethod("h2o.glm", signature(x="character", y="character", data="H2OParsedData", family="character", nfolds="ANY", alpha="ANY", lambda="ANY", tweedie.p="ANY"),
 h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
@@ -176,7 +164,7 @@ h2o.__getGLM2Results <- function(model, x, y, valid) {
   return(result)
 }
 
-#----------------------------- K-Means Clustering -------------------------------#
+# ------------------------------ K-Means Clustering --------------------------------- #
 h2o.kmeans <- function(data, centers, cols='', iter.max=10) {
   if( missing(data) ) stop('must specify data')
   if(class(data) != 'H2OParsedData' ) stop('data must be an h2o dataset')
@@ -237,7 +225,7 @@ h2o.__getKMResults <- function(res, data) {
   return(result)
 }
 
-#------------------------------- Neural Network ----------------------------------#
+# ------------------------------- Neural Network ------------------------------------ #
 h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500, rate=0.01, regularization=1e-4, epoch=100, validation) {
   args <- verify_dataxy(data, x, y)
 
@@ -245,50 +233,73 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
   if(!is.character(activation)) stop('activation must be [Tanh, Rectifier]')
   if(!( activation %in% c('Tanh', 'Rectifier')) ) stop(paste('invalid activation', activation))
   if(!is.numeric(layers)) stop('layers must be numeric')
-  if( layers < 1 ) stop('layers must be >= 1')
+  if( any(layers < 1) ) stop('layers must be >= 1')
   if(!is.numeric(rate)) stop('rate must be numeric')
-  if( rate < 0 ) stop('rate must be >= 1')
+  if( any(rate < 0) ) stop('rate must be >= 1')
   if(!is.numeric(regularization)) stop('regularization must be numeric')
-  if( regularization < 0 ) stop('regularization must be >= 1')
+  if( any(regularization < 0) ) stop('regularization must be >= 1')
   if(!is.numeric(epoch)) stop('epoch must be numeric')
-  if( epoch < 0 ) stop('epoch must be >= 1')
+  if( any(epoch < 0) ) stop('epoch must be >= 1')
 
+  if(missing(validation)) validation = data
+  if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
+  
   if( !(activation %in% c('Tanh', 'Rectifier')) )
     stop(paste(activation, "is not a valid activation; only [Tanh, Rectifier] are supported"))
   if( !(classification %in% c( 0, 1)) )
     stop(paste(classification, "is not a valid classification index; only [0, 1] are supported"))
 
-  destKey = h2o.__uniqID("NNModel")
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
-      classification=as.numeric(classification), activation=activation, rate=rate,
-      hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=data@key)
-  while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, model=destKey)
-  return(res2)
+  # BUG: Resulting numbers are off from browser. I don't think the algorithm is finished even when progress = -1
+  if(length(layers) == 1 && length(rate) == 1 && length(regularization) == 1 && length(epoch) == 1) {
+    destKey = h2o.__uniqID("NNModel")
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
+        classification=as.numeric(classification), activation=activation, rate=rate,
+        hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=validation@key)
+    while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, destination_key=destKey)
 
-  result=list()
-  categories=length(res2$model$confusion_matrix)
-  cf_matrix = t(matrix(unlist(res2$model$confusion_matrix), nrow=categories))
-  cf_names <- res2$model[['_domains']]
-  cf_names <- cf_names[[ length(cf_names) ]]
-  dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
+    result = h2o.__getNNResults(res2)
+    new("H2ONNModel", key=destKey, data=data, model=result, valid=validation)
+  } else {
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
+                           classification=as.numeric(classification), activation=activation, rate=rate,
+                           hidden=paste(layers, sep="", collapse=","), l2=regularization, epochs=epoch, validation=validation@key)
+    h2o.gridsearch.internal("NN", data, res$job_key, res$destination_key, validation)
+  }
+}
 
-  result$confusion = cf_matrix
-  # result$items = res2$model$items
-  # result$train_class_error = res2$model$train_classification_error
-  # result$train_sqr_error = res2$model$train_mse
-  # result$valid_class_error = res2$model$validation_classification_error
-  # result$valid_sqr_error = res2$model$validation_mse
-  nn_train = tail(res2$model$training_errors,1)[[1]]     # BUG: For some reason, I'm not getting the errors for training_samples = 15000 in JSON
-  nn_valid = tail(res2$model$validation_errors,1)[[1]]
+h2o.__getNNSummary <- function(res) {
+  mySum = list()
+  mySum$model_key = res$destination_key
+  mySum$activation = res$activation
+  mySum$hidden = res$hidden
+  mySum$rate = res$rate
+  mySum$rate_annealing = res$rate_annealing
+  mySum$momentum_start = res$momentum_start
+  mySum$momentum_ramp = res$momentum_ramp
+  mySum$momentum_stable = res$momentum_stable
+  mySum$l1_reg = res$l1
+  mySum$l2_reg = res$l2
+  mySum$epochs = res$epochs
+  
+  temp = matrix(unlist(res$confusion_matrix), nrow = length(res$confusion_matrix))
+  mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+  return(mySum)
+}
+
+h2o.__getNNResults <- function(res) {
+  result = list()
+  result$confusion = build_cm(res$confusion_matrix, res$class_names)
+  nn_train = tail(res$training_errors,1)[[1]]
+  nn_valid = tail(res$validation_errors,1)[[1]]
   result$train_class_error = nn_train$classification
   result$train_sqr_error = nn_train$mean_square
   result$valid_class_error = nn_valid$classification
   result$valid_sqr_error = nn_valid$mean_square
-  new("H2ONNModel", key=destKey, data=data, model=result)
+  return(result)
 }
 
-#------------------------------- Principal Components Analysis ----------------------------------#
+# ----------------------- Principal Components Analysis ----------------------------- #
 h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=T) {
   res = h2o.__remoteSend(data@h2o, h2o.__PAGE_PCA, source=data@key, ignored_cols_by_name=x_ignore, destination_key=dest, max_pc=max_pc, tolerance=tol, standardize=as.numeric(standardize))
   # while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
@@ -361,7 +372,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds=10, alpha=0.5, lambda=1e-5
   h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, tweedie.p)
 }
 
-#-------------------------------------- Random Forest ----------------------------------------------#
+# ----------------------------------- Random Forest --------------------------------- #
 h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.rate=2/3, nbins=100, validation) {
   args <- verify_dataxy(data, x, y)
   
@@ -411,12 +422,6 @@ h2o.__getDRFSummary <- function(res) {
 
 h2o.__getDRFResults <- function(res) {
   result = list()
-  categories = length(res$cm)
-  cf_matrix = t(matrix(unlist(res$cm), nrow=categories))
-  cf_names <- res[['_domains']]
-  cf_names <- cf_names[[ length(cf_names) ]]
-  dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
-  result$confusion = cf_matrix
   
   treeStats = unlist(res$treeStats)
   rf_matrix = rbind(treeStats[1:3], treeStats[4:6])
@@ -424,12 +429,13 @@ h2o.__getDRFResults <- function(res) {
   rownames(rf_matrix) = c("Depth", "Leaves")
   result$forest = rf_matrix
   
+  result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
   result$mse = res$errs
   result$ntree = res$N
   return(result)
 }
 
-#------------------------------- Prediction ----------------------------------------#
+# ------------------------------- Prediction ---------------------------------------- #
 #setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 h2o.predict <- function(object, newdata) {
   if( missing(object) ) stop('must specify object')
@@ -463,7 +469,7 @@ h2o.predict <- function(object, newdata) {
     stop(paste("Prediction has not yet been implemented for", class(object)))
 }
 
-#------------------------------- ValueArray -------------------------------------#
+# --------------------------------- ValueArray -------------------------------------- #
 # Internally called GLM to allow games with method dispatch
 # x should be TODO; y should be TODO
 h2o.glm.internal <- function(x, y, data, family, nfolds, alpha, lambda, expert_settings, beta_epsilon, standardize, tweedie.p) {
@@ -630,18 +636,34 @@ h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = 
   
   result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
-    if(algo == "KM" || algo == "NN")
+    if(algo == "KM")
       resH = h2o.__remoteSend(data@h2o, model_view, model=allModels[[i]]$destination_key)
+    else if(algo == "NN")
+      resH = h2o.__remoteSend(data@h2o, model_view, job_key=allModels[[i]]$job_key, destination_key=allModels[[i]]$destination_key)
     else
       resH = h2o.__remoteSend(data@h2o, model_view, '_modelKey'=allModels[[i]]$destination_key)
-    myModelSum[[i]] = switch(algo, GBM = h2o.__getGBMSummary(resH[[3]]), KM = h2o.__getKMSummary(resH[[3]]), RF = h2o.__getDRFSummary(resH[[3]]), NN = h2o.__getNNSummary(resH[[3]]))
+    myModelSum[[i]] = switch(algo, GBM = h2o.__getGBMSummary(resH[[3]]), KM = h2o.__getKMSummary(resH[[3]]), RF = h2o.__getDRFSummary(resH[[3]]), NN = h2o.__getNNSummary(resH))
     myModelSum[[i]]$run_time = allModels[[i]]$end_time - allModels[[i]]$start_time
-    modelOrig = switch(algo, GBM = h2o.__getGBMResults(resH[[3]]), KM = h2o.__getKMResults(resH[[3]], data), RF = h2o.__getDRFResults(resH[[3]]), NN = h2o.__getNNResults(resH[[3]]))
+    modelOrig = switch(algo, GBM = h2o.__getGBMResults(resH[[3]]), KM = h2o.__getKMResults(resH[[3]], data), RF = h2o.__getDRFResults(resH[[3]]), NN = h2o.__getNNResults(resH))
     
-    if(algo == "GBM" || algo == "RF")
-      result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig, valid=validation)
-    else
+    if(algo == "KM")
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig)
+    else
+      result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig, valid=validation)
   }
   new(grid_obj, key=dest_key, data=data, model=result, sumtable=myModelSum)
+}
+
+build_cm <- function(cm, cf_names) {
+  categories = length(cm)
+  cf_matrix = t(matrix(unlist(cm), nrow=categories))
+  
+  cf_total = apply(cf_matrix, 2, sum)
+  cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
+  cf_matrix = rbind(cf_matrix, cf_total)
+  cf_matrix = cbind(cf_matrix, round(cf_error, 3))
+  
+  # dimnames(cf_matrix) = list(Actual = cf_names, Predicted = cf_names)
+  dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
+  return(cf_matrix)
 }

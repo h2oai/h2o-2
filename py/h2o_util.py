@@ -96,6 +96,7 @@ def file_append(infile, outfile):
     in_file = open(infile,'rb')
     out_file = open(outfile,'a')
     out_file.write(in_file.read())
+    in_file.close()
     out_file.close()
     h2o.verboseprint("\nAppend took",  (time.time() - start), "secs")
 

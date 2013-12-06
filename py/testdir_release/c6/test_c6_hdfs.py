@@ -87,7 +87,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
 
             # no pattern matching, so no multiple files to add up
-            totalBytes = value_size_bytes
+            totalBytes = byteSize
 
 
             print "Loading", csvFilename, 'from hdfs'
@@ -96,7 +96,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 
             elapsed = time.time() - start

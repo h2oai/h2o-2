@@ -5,8 +5,7 @@
 # control to the other writers.
 ##
 
-from filterTasks import *
-from vecTasks import *
+from mungeTasks import *
 
 def switch(x):
     return {
@@ -99,16 +98,15 @@ class FilterWriter:
 #        #unimpl
 #
 ##writes a single vec task, (e.g. slice, sign, ...), exercises unop 
-class VecTaskWriter:
-    def __init__(self):
-        self._data = None
-        self._dataPath = None
-        self._FUParams = None
-        self._FU = None
-
-    def writeIt(self):
-        return writeVecTestTask(self._FU, self._data, self._dataPath, self._FUParams)
-
+#class VecTaskWriter:
+#    def __init__(self):
+#        self._data = None
+#        self._dataPath = None
+#        self._FUParams = None
+#
+#    def writeIt():
+#        #unimpl
+#
 ##writes a frame task, exercises things like summary, head, tail
 #class FrameTaskWriter:
 #    def __init__(self):

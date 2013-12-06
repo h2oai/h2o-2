@@ -51,6 +51,8 @@ function(m) {
 
 Log.err<-
 function(m) {
+  seedm <- paste("SEED used: ", SEED, sep = "")
+  m <- paste(m, "\n", seedm, "\n", sep = "")
   logging(paste("[ERROR] : ",m,sep=""))
   logging("[ERROR] : TEST FAILED")
   #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
@@ -131,6 +133,19 @@ function(testDesc, test) {
     PASS()
 }
 
+installDepPkgs <- function(optional = FALSE) {
+  myPackages = rownames(installed.packages())
+  myReqPkgs = c("RCurl", "rjson", "tools", "statmod")
+  
+  # For plotting clusters in h2o.kmeans demo
+  if(optional)
+    myReqPkgs = c(myReqPkgs, "fpc", "cluster")
+  
+  # For communicating with H2O via REST API
+  temp = lapply(myReqPkgs, function(x) { if(!x %in% myPackages) install.packages(x) })
+  temp = lapply(myReqPkgs, require, character.only = TRUE)
+}
+
 checkNLoadWrapper<-
 function(ipPort) {
   Log.info("Check if H2O R wrapper package is installed\n")
@@ -147,8 +162,8 @@ function(ipPort) {
   }
 
   Log.info("Check that H2O R package matches version on server\n")
+  installDepPkgs()
   library(h2o)
-  h2o.installDepPkgs()      # Install R package dependencies
   h2o.init(ip            = ipPort[[1]], 
            port          = ipPort[[2]], 
            startH2O      = FALSE, 
@@ -198,3 +213,4 @@ myIP   <- ipPort[[1]]
 myPort <- ipPort[[2]]
 PASSS <- FALSE
 view_max <- 10000 #maximum returned by Inspect.java
+SEED <- NULL

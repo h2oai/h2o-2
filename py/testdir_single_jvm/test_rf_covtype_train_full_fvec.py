@@ -12,6 +12,7 @@ paramDict = {
     'nbins': 100,
     'ignored_cols_by_name': "A1,A2,A6,A7,A8",
     'sample_rate': 0.80,
+    'validation': 'train.csv.hex'
     }
 
 class Basic(unittest.TestCase):
@@ -45,6 +46,7 @@ class Basic(unittest.TestCase):
             # seems ec2 can be really slow
             timeoutSecs = 30 + kwargs['ntrees'] * 20
             start = time.time()
+            print "Note train.csv is used for both train and validation"
             rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
