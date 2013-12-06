@@ -61,7 +61,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-                print csvFilepattern, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
 
@@ -80,7 +79,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                         x.remove(i)
                     x = ",".join(map(str,x))
 
-                    GLMkwargs = {'x': x, 'y': 378, 'case': 15, 'case_mode': '>',
+                    GLMkwargs = {'cols': x, 'response': 'C378', 'case_val': 15, 'case_mode': '>',
                         'max_iter': 4, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
                     start = time.time()

@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_PCA_many_cols_enum(self):
+    def test_PCA_many_cols_enum_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']

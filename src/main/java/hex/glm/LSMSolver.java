@@ -101,10 +101,10 @@ public abstract class LSMSolver extends Iced{
     public static final double DEFAULT_ALPHA = 0.5;
     public double _orlx = 1;//1.4; // over relaxation param
     public double _rho = 1e-5;
+    public double [] _wgiven;
+    public double _proximalPenalty;
 
-    public boolean normalize() {
-      return _lambda != 0;
-    }
+    public boolean normalize() {return _lambda != 0;}
 
     public ADMMSolver (double lambda, double alpha) {
       this(lambda,alpha,lambda*alpha*0.1);
@@ -179,6 +179,12 @@ public abstract class LSMSolver extends Iced{
       if(_lambda>0){
         gram.addDiag(_lambda*(1-_alpha)*0.5);
         if(_alpha > 0)gram.addDiag(_rho);
+      }
+      if(_proximalPenalty > 0 && _wgiven != null){
+        gram.addDiag(_proximalPenalty, true);
+        xy = xy.clone();
+        for(int i = 0; i < xy.length; ++i)
+          xy[i] += _proximalPenalty*_wgiven[i];
       }
       int attempts = 0;
       Cholesky chol = gram.cholesky(null);

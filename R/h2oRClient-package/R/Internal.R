@@ -38,8 +38,7 @@ h2o.__openErrLog <- function() {
   else system(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep=""))
 }
 
-h2o.__logIt<-
-function(m, tmp, commandOrErr) {
+h2o.__logIt <- function(m, tmp, commandOrErr) {
   #m is a url if commandOrErr == "Command"
   if(is.null(tmp) || is.null(get("tmp"))) s <- m
   else {
@@ -103,7 +102,7 @@ h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
 h2o.__PAGE_KMEANS2 = "2/KMeans2.json"
 h2o.__PAGE_KMModelView = "2/KMeans2ModelView.json"
 h2o.__PAGE_NN = "2/NeuralNet.json"
-h2o.__PAGE_NNModelView = "2/ExportModel.json"
+h2o.__PAGE_NNModelView = "2/NeuralNetProgress.json"
 h2o.__PAGE_PCA = "2/PCA.json"
 h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 h2o.__PAGE_PCAModelView = "2/PCAModelView.json"

@@ -1017,9 +1017,10 @@ class H2O(object):
                 if response_info['status'] != 'done':
                     redirect_url = response_info['redirect_url']
                     # HACK: these are missing the "2/" prefix for now
+                    # 'KMeans2Progress' in str(redirect_url) or
+                    # 'GLMModelView' in str(redirect_url) or
                     if 'NeuralNetProgress' in str(redirect_url) or  \
-                            'KMeans2Progress' in str(redirect_url) or \
-                            'GLMModelView' in str(redirect_url):
+                        'PCAProgressPage' in str(redirect_url):
                         print "Hacking in the 2/ prefix..tell cyprien"
                         if "2/" not in str(redirect_url):
                             redirect_url = "2/" + redirect_url
@@ -2158,7 +2159,7 @@ class H2O(object):
 
     def GLM(self, key,
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_$python_0_default_0',**kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_python_0_default_0',**kwargs):
         parentName = "2/GLM2" if beta_features else "GLM"
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName ,destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.

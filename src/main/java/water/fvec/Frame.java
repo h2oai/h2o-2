@@ -626,7 +626,13 @@ public class Frame extends Iced {
   }
 
   // ------------------------------------------------------------------------------
-  public <Y extends Flow.PerRow<Y>> Flow.FlowPerRow<Y> with( Flow.PerRow<Y> pr ) {
+
+  public
+  <Y extends Flow.PerRow<Y>>      // Type parameter
+  Flow.FlowPerRow<Y>              // Return type of with()
+  with                            // The method name
+  ( Flow.PerRow<Y> pr )           // Arguments for with()
+  {
     return new Flow.FlowPerRow<Y>(pr,new Flow.FlowFrame(this));
   }
 

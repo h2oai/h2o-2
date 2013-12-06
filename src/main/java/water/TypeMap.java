@@ -133,7 +133,9 @@ public class TypeMap {
     Freezable f = GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw Log.errRTExcept(e); }
+      catch( Exception e ) {
+        throw Log.errRTExcept(e);
+      }
     }
     return f.newInstance();
   }
