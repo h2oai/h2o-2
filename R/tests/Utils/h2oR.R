@@ -51,6 +51,8 @@ function(m) {
 
 Log.err<-
 function(m) {
+  seedm <- paste("SEED used: ", SEED, sep = "")
+  m <- paste(m, "\n", seedm, "\n", sep = "")
   logging(paste("[ERROR] : ",m,sep=""))
   logging("[ERROR] : TEST FAILED")
   #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
@@ -198,3 +200,4 @@ myIP   <- ipPort[[1]]
 myPort <- ipPort[[2]]
 PASSS <- FALSE
 view_max <- 10000 #maximum returned by Inspect.java
+SEED <- NULL
