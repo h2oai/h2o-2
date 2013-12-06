@@ -1522,7 +1522,6 @@ class H2O(object):
                 'stat_type': None,
                 'depth': None,
                 'bin_limit': None,
-                'parallel': None,
                 'ignore': None,
                 'sample': None,
                 'seed': None,

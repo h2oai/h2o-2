@@ -19,7 +19,6 @@ paramDict = {
     'stat_type': [None, 'ENTROPY', 'GINI'],
     'depth': [None, 1,10,20,100],
     'bin_limit': [None,5,10,100,1000],
-    'parallel': [None,0,1],
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
     'sample': [None,20,40,60,80,90],
     'seed': [None,'0','1','11111','19823134','1231231'],
@@ -74,12 +73,12 @@ class Basic(unittest.TestCase):
 
         for trial in range(5):
             # params is mutable. This is default.
-            params = {'ntree': 13, 'parallel': 1, 'out_of_bag_error_estimate': 0}
+            params = {'ntree': 13, 'out_of_bag_error_estimate': 0}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             # seems ec2 can be really slow
-            timeoutSecs = 30 + kwargs['ntree'] * 10 * (kwargs['parallel'] and 1 or 5)
+            timeoutSecs = 30 + kwargs['ntree'] * 10
             rfv = h2o_cmd.runRF(parseResult=parseResultTrain, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             ### print "rf response:", h2o.dump_json(rfv)
 

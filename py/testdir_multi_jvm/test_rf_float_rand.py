@@ -91,7 +91,6 @@ class Basic(unittest.TestCase):
                 'model_key': None,
                 'bin_limit': 1024,
                 'seed': 784834182943470027,
-                'parallel': 1,
                 'exclusive_split_limit': None,
                 'iterative_cm': 1,
                 'use_non_local_data': 1,

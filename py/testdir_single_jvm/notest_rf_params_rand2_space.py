@@ -9,7 +9,6 @@ print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
     # 'class_weights': [None,'yes=1000','no=1000'], 'model_key': ['model_keyA', '012345', '__hello'],
     'depth': [None, 1,10,20,100], 'bin_limit': [None,5,10,100,1000],
-    'parallel': [None,0,1],
     'seed': [None,'0','1','11111','19823134','1231231'],
     # stack trace if we use more features than legal. dropped or redundanct cols reduce 
     # legal max also.
@@ -54,7 +53,6 @@ class Basic(unittest.TestCase):
                 'stat_type': 'ENTROPY',
                 'class_weights': 'yes=1000',
                 'ntree': 50, 
-                'parallel': 1, 
                 'response_variable': 'damage', 
                 'ignore': 'flight',
                 'ntree': 25,
@@ -64,9 +62,7 @@ class Basic(unittest.TestCase):
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             print "params:", params 
             kwargs = params.copy()
-            # adjust timeoutSecs with the number of trees
-            # seems ec2 can be really slow
-            timeoutSecs = 30 + 15 * (kwargs['parallel'] and 6 or 10)
+            timeoutSecs = 180
             start = time.time()
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
             rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)

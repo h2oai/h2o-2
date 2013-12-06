@@ -24,7 +24,6 @@ paramDict = {
     'stat_type': [None, 'ENTROPY', 'GINI'],
     'depth': [None, 1,10,20,100],
     'bin_limit': [None,4,5,10,100,1000],
-    'parallel': [None, 0,1],
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
     'sample': [None,20,40,60,80,90],
     'seed': [None,'0','1','11111','19823134','1231231'],
@@ -68,13 +67,13 @@ class Basic(unittest.TestCase):
         csvPathname = 'poker/poker1000'
         for trial in range(10):
             # params is mutable. This is default.
-            params = {'ntree': 63, 'parallel': 1, 'use_non_local_data': 1}
+            params = {'ntree': 63, 'use_non_local_data': 1}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             print kwargs
             # slower if parallel=0
-            timeoutSecs = 30 + kwargs['ntree'] * 6 * (kwargs['parallel'] and 1 or 5)
+            timeoutSecs = 30 + kwargs['ntree'] * 6
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs)
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "Trial #", trial, "completed"
