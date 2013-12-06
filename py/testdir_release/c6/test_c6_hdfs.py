@@ -96,7 +96,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 
             elapsed = time.time() - start

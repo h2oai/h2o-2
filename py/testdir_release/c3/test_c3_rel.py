@@ -61,7 +61,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print "Parse #", trial, "completed in", "%6.2f" % elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-                print csvFilepattern, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)
 
