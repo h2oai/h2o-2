@@ -4,8 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 import water.*;
 import water.exec.Flow;
-import water.fvec.Chunk;
-import water.fvec.Frame;
+import water.fvec.*;
 import water.util.Log;
 import water.util.RemoveAllKeysTask;
 import water.util.Utils;
@@ -167,6 +166,11 @@ public class CookbookGroupedQuantiles extends  TestUtil {
       double v = ds[_val_idx];
       double w;
       int ix = (int) ((v - _min)/_step);
+      if (Double.isNaN(_values[ix]))
+        _values[ix] = v;
+      else if (!Double.isNaN(v))
+        _values[ix] = Math.min( _values[ix], v);
+
       if (_weighted) {
         w = ds[_wt_idx];
         _bins[ix] += w * v;
@@ -189,9 +193,9 @@ public class CookbookGroupedQuantiles extends  TestUtil {
         for (int i = 0; i < _bins.length; i++) {
           _bins[i] += that._bins[i];
           if (Double.isNaN(_values[i])) {
-            _values[i] = that._bins[i];
+            _values[i] = that._values[i];
           }
-          else if (Double.isNaN(that._bins[i])) {
+          else if (Double.isNaN(that._values[i])) {
             // do nothing
           }
           else {
@@ -252,12 +256,58 @@ public class CookbookGroupedQuantiles extends  TestUtil {
     // Pass 5, calculate histograms
     IcedHashMap<IcedLong, Histogram> histograms =
       fr.with(new MyGroupBy(dg_idx))
-      .with(new Histogram(dg_idx, val_idx, wt_idx, true, basic_summaries))
+      .with(new Histogram(dg_idx, val_idx, wt_idx, false, basic_summaries))
       .doit();
 
+    Log.info("FINISHED PASS 5, CREATING FRAME OF HISTOGRAM DATA");
+
+    AppendableVec gidVec = new AppendableVec("GID");
+    AppendableVec[] avecs = new AppendableVec[1001];
+    Vec[]           vecs  = new Vec[1001];
+    NewChunk[] chunks = new NewChunk[1001];
+    for (int i = 1; i < 1001; i++) {
+      avecs[i] =  new AppendableVec("Bin_" + i);
+      chunks[i] = new NewChunk(avecs[i], 0);
+    }
+    avecs[0] = gidVec;
+    chunks[0] = new NewChunk(avecs[0], 0);
+
+    fs = new Futures();
+    for (IcedLong key : histograms.keySet()) {
+      Histogram hist = histograms.get(key);
+      chunks[0].addNum(key._val);
+      chunks[0].addNum(key._val);
+      double[] bins = hist._bins;
+      double[] vals = hist._values;
+      for (int i=1; i < 1001; i++) {
+        if (i-1 < bins.length) {
+          chunks[i].addNum(bins[i-1]);
+          chunks[i].addNum(vals[i-1]);
+        } else {
+          chunks[i].addNum(Double.NaN);
+          chunks[i].addNum(Double.NaN);
+        }
+      }
+    }
+    for (int i=0; i < chunks.length; i++) {
+      chunks[i].close(0, fs);
+      vecs[i] = avecs[i].close(fs);
+    }
+    fs.blockForPending();
+    String[] vnames = new String[1001];
+    vnames[0] = "GID";
+    for (int i = 1; i < 1001; i++) vnames[i] = "Bin_" + (i-1);
+    Frame histfr = new Frame(vnames, vecs);
+    Key histfr_key = Key.make("histograms.hex");
+
+    fs = new Futures();
+    UKV.put(histfr_key, histfr, fs);
+    fs.blockForPending();
+
+    Log.info("BEFORE SLEEP");
     //Log.info("SIZE " + sparse_group_number_set.keySet().size());
 
-    //try { Thread.sleep(100000000); } catch (Exception e) {}
+    try { Thread.sleep(100000000); } catch (Exception e) {}
 
     UKV.remove(k);
   }
