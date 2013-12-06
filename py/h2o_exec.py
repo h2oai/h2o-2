@@ -65,8 +65,10 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, 
     # just a string? 
     execExpr = exprTemplate
     if colX is not None:
-        execExpr = re.sub('<col1>', str(colX), execExpr)
-        execExpr = re.sub('<col2>', str(colX+1), execExpr)
+        print "Assume colX %s is zero-based..added 1 for R based exec2" % colX
+        execExpr = re.sub('<col1>', str(colX+1), execExpr)
+        # this is just another value
+        execExpr = re.sub('<col2>', str(colX+2), execExpr)
     if n is not None:
         execExpr = re.sub('<n>', str(n), execExpr)
         execExpr = re.sub('<n-1>', str(n-1), execExpr)
@@ -170,7 +172,6 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
     colResultList = []
     for colX in range(minCol, maxCol):
         for i, exprTemplate in enumerate(exprList):
-            print "HELLO:", i
 
             # do each expression at a random node, to facilate key movement
             # UPDATE: all execs are to a single node. No mixed node streams

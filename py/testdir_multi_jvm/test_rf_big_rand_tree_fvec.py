@@ -51,7 +51,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
     
-    def test_rf_big_rand_tree(self):
+    def test_rf_big_rand_tree_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -69,7 +70,7 @@ class Basic(unittest.TestCase):
             # to guarantee no dropped cols!
             # kwargs = {'ntree': 3, 'depth': 50, 'seed': seed}
             # out of memory/GC errors with the above. reduce depth
-            kwargs = {'ntree': 3, 'depth': 20, 'seed': seed}
+            kwargs = {'ntrees': 3, 'max_depth': 20, 'seed': seed}
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=200, pollTimeoutSecs=180, **kwargs)
@@ -80,12 +81,10 @@ class Basic(unittest.TestCase):
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
             cols = inspect['cols']
-            num_cols = inspect['num_cols']
+            numCols = inspect['numCols']
             for i,c in enumerate(cols):
                 colType = c['type']
-                colSize = c['size']
-                self.assertEqual(colType, 'int', msg="col %d should be type in: %s" % (i, colType))
-                self.assertEqual(colSize, 2, msg="col %d should be size 2: %d" % (i, colSize))
+                self.assertEqual(colType, 'Int', msg="col %d should be type in: %s" % (i, colType))
 
             h2o.check_sandbox_for_errors()
 

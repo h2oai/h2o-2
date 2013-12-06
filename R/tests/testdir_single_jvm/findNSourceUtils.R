@@ -56,7 +56,11 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
         if (schema == "local") return(paste("./",bucket,"/",path,sep = ""))
         if (schema == "put") {
             distance.bucket.root <- calcPath(getwd(), bucket, optional_root_parent)
-            if (distance.bucket.root < 0) {
+            if (distance.bucket.root < 0 && optional_root_parent == "R") {
+                fullPath <- paste(SEARCHPATH, '/', optional_root_parent, '/', bucket, '/', path, sep = "", collapse = "")
+                return(fullPath)
+            }
+            if (distance.bucket.root < 0 && is.null(optional_root_parent)) {
                 Log.err(paste("Could not find bucket <", bucket, ">\n"))
             }
             bucket.dots <- genDots(distance.bucket.root)

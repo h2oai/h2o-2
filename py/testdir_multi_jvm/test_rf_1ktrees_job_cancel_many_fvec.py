@@ -42,13 +42,13 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            h2o_cmd.runRF(parseResult=parseResult, trees=trial, depth=50, rfView=False, noPoll=True, timeoutSecs=6, retryDelaySecs=0.25)
+            h2o_cmd.runRF(parseResult=parseResult, trees=trial, max_depth=50, rfView=False, noPoll=True, timeoutSecs=6, retryDelaySecs=0.25)
             print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
             ### h2o_jobs.cancelAllJobs(timeoutSecs=10)
             h2o.check_sandbox_for_errors()
 
         # do one last good one
-        rfView = h2o_cmd.runRF(parseResult=parseResult, trees=trial, depth=50, rfView=False, noPoll=False, timeoutSecs=600, retryDelaySecs=3)
+        rfView = h2o_cmd.runRF(parseResult=parseResult, trees=trial, max_depth=50, rfView=False, noPoll=False, timeoutSecs=600, retryDelaySecs=3)
         (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=trial)
 
 

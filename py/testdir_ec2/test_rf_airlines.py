@@ -6,7 +6,6 @@ import h2o, h2o_cmd, h2o_hosts, h2o_rf
 paramsTrainRF = { 
             'ntree'      : 50, 
             'depth'      : 30,
-            'parallel'   : 1, 
             'bin_limit'  : 10000,
             'ignore'     : 'AirTime,ArrDelay,DepDelay,CarrierDelay,IsArrDelayed',
             'stat_type'  : 'ENTROPY',

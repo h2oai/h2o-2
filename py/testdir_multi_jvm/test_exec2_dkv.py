@@ -32,7 +32,7 @@ zeroList = [
 ]
 
 exprList = [
-        'Result<n> = max(<keyX>[<col1>])',
+        'Result<n> = max(<keyX>[,<col1>])',
     ]
 
 class Basic(unittest.TestCase):
