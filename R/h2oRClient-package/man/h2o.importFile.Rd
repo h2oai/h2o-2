@@ -56,7 +56,6 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
 + silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
