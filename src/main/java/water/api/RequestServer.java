@@ -91,9 +91,6 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",       "Score");
 
-    //Request.addToNavbar(registerRequest(new Plot()),        "Basic",         "Plot");
-    registerRequest(new Plot());
-
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",            "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",  "Admin");
     Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",     "Admin");
