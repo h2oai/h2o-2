@@ -120,8 +120,6 @@ class Basic(unittest.TestCase):
         scoreKey1 = self.loadData(scoreDS1)
         kwargs   = paramsScoreRF.copy()
         scoreResult1 = h2o_rf.scoreRF(scoreKey1, trainResult1, **kwargs)
-        print "\nTrain1\n=========={0}".format(h2o_rf.pp_rf_result(trainResult1))
-        print "\nScore1\n========={0}".format(h2o_rf.pp_rf_result(scoreResult1))
 
         trainKey2 = self.loadData(trainDS2)
         kwargs   = paramsTrainRF.copy()
@@ -130,8 +128,6 @@ class Basic(unittest.TestCase):
         scoreKey2 = self.loadData(scoreDS2)
         kwargs   = paramsScoreRF.copy()
         scoreResult2 = h2o_rf.scoreRF(scoreKey2, trainResult2, **kwargs)
-        print "\nTrain2\n=========={0}".format(h2o_rf.pp_rf_result(trainResult2))
-        print "\nScore2\n========={0}".format(h2o_rf.pp_rf_result(scoreResult2))
 
         print "\nTraining: JsonDiff sorted data results, to non-sorted results (json responses)"
         df = h2o_util.JsonDiff(trainResult1, trainResult2, with_values=True)
