@@ -1,7 +1,0 @@
-http://127.0.0.1:54321/2/RemoveAll.json  	 
-http://127.0.0.1:54321/2/PostFile.json?key=../../../smalldata/gbm_test/ecology_model.csv
-http://127.0.0.1:54321/2/Parse2.json  	 source_key: ../../../smalldata/gbm_test/ecology_model.csv, destination_key: , separator: 
-http://127.0.0.1:54321/Jobs.json  	 
-http://127.0.0.1:54321/2/SummaryPage2.json  	 source: ecology_model.hex
-http://127.0.0.1:54321/2/Inspect2.json  	 src_key: ecology_model.hex
-http://127.0.0.1:54321/2/GBM.json  	 destination_key: GBMModel_e90f5c9b178640a3a 83c37897cb77cc4, source: ecology_model.hex, response: Angaus, cols: 2,3,4,5,6,7,8,9,10,11,12, ntrees: 100, max_depth: 5, learn_rate: 0.1, min_rows: 10, classification: 1, nbins: 100, validation: ecology_model.hex
