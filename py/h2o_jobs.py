@@ -31,15 +31,14 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
                 'my_cpu_%:', n['my_cpu_%'],\
                 'sys_cpu_%:', n['sys_cpu_%'],\
                 'system_load:', n['system_load'],\
-                'free_mem_bytes', n['free_mem_bytes']
+                'free_mem_bytes: {:,}'.format(n['free_mem_bytes'])
 
             # check for drop in free_mem_bytes, and report as "probably post GC"
             freeMemBytes = n['free_mem_bytes']
-            decrease = round((0.0 + lastFreeMemBytes[i] - freeMemBytes) / lastFreeMemBytes[i], 2)
+            decrease = round((0.0 + lastFreeMemBytes[i] - freeMemBytes) / lastFreeMemBytes[i], 3)
             if decrease > .05:
                 print
-                print '\nProbably GC at Node %s:' % i, \
-                    "free_mem_bytes decreased by %s pct.. %s %s" % \
+                print "\nProbably GC at Node {:,s}: free_mem_bytes decreased by %s pct.. {:,} {:,}".format\
                     (100 * decrease, lastFreeMemBytes[i], freeMemBytes)
                 lastFreeMemBytes[i] = freeMemBytes
             # don't update lastFreeMemBytes if we're decreasing

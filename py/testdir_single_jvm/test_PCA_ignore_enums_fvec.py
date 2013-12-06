@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
-            (100001, 2, 'cA', 300), 
+            (10001, 3, 'cA', 300), 
             # (10001, 2, 'cA', 300), 
             # (10000, 500, 'cH', 300), 
             # (10000, 1000, 'cI', 300), 
@@ -103,7 +103,8 @@ class Basic(unittest.TestCase):
                 kwargs = params.copy()
                 PCAResult = {'python_elapsed': 0, 'python_%timeout': 0}
                 start = time.time()
-                pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+                pcaResult = h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+                h2j.pollStatsWhileBusy(timeoutSecs=timeoutSecs)
                 elapsed = time.time() - start
                 PCAResult['python_elapsed']  = elapsed
                 PCAResult['python_%timeout'] = 1.0*elapsed / timeoutSecs
