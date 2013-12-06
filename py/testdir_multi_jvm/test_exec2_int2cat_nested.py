@@ -49,7 +49,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_int2cat(self):
+    def test_exec2_int2cat_nested(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (1000,  10, 'cA', 100),
@@ -65,20 +65,13 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         # we're going to do a special exec across all the columns to turn them into enums
         # including the duplicate of the output!
-        if 1==0:
-            exprList = [
-                    '<keyX> = colSwap(<keyX>,<col1>,' +
-                                 'colSwap(<keyX>,<col2>,' +
-                                 'colSwap(<keyX>,<col1>,' +
-                                 'colSwap(<keyX>,<col2>,' +
-                                 '<keyX>[0]' +
-                                 '))))',
-                ]
-        else:
-            exprList = [
-                    '<keyX> = colSwap(<keyX>,<col1>,' + 
-                                 '<keyX>[0]' +
-                                 ')',
+        exprList = [
+                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);' + \
+                '<keyX>[,<col1>] = factor(<keyX>[,1]);'  + \
+                '<keyX>[,1] = factor(<keyX>[,<col2>]);'  + \
+                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);' + \
+                '<keyX>[,<col1>] = factor(<keyX>[,1]);'  + \
+                '<keyX>[,1] = factor(<keyX>[,<col2>]);' \
                 ]
 
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
@@ -89,12 +82,11 @@ class Basic(unittest.TestCase):
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            print "\nNow running the int 2 enum exec command across all input cols"
+            print "\nNow running the exec commands across all input cols"
             colResultList = h2e.exec_expr_list_across_cols(None, exprList, hex_key, maxCol=colCount, 
                 timeoutSecs=30, incrementingResult=False)
             print "\nexec colResultList", colResultList
