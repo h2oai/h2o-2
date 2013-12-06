@@ -44,7 +44,6 @@ This function modifies the \code{data} file directly. It does not create a new c
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")

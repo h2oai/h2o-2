@@ -3,7 +3,6 @@
 # Then, it runs RF with 50 trees, maximum depth of 100, using the iris class as the response
 # Note: This demo runs H2O on localhost:54321
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 
 iris.hex = h2o.uploadFile(localH2O, path = system.file("extdata", "iris_wheader.csv", package="h2oRClient"), key = "iris.hex")

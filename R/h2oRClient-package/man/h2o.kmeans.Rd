@@ -58,7 +58,6 @@ An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)

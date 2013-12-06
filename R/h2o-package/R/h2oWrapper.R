@@ -6,20 +6,10 @@ setGeneric("h2o.shutdown", function(object, prompt = TRUE) { standardGeneric("h2
 h2o.__PAGE_RPACKAGE = "RPackage.json"
 h2o.__PAGE_SHUTDOWN = "Shutdown.json"
 
-# Install H2O R package dependencies
-# MUST RUN THIS ON FIRST INSTALLATION!!
-h2o.installDepPkgs <- function(optional = FALSE) {
-  myPackages = rownames(installed.packages())
-  myReqPkgs = c("RCurl", "rjson", "tools", "statmod")
-  
-  # For plotting clusters in h2o.kmeans demo
-  if(optional)
-    myReqPkgs = c(myReqPkgs, "fpc", "cluster")
-  
-  # For communicating with H2O via REST API
-  temp = lapply(myReqPkgs, function(x) { if(!x %in% myPackages) install.packages(x) })
-  temp = lapply(myReqPkgs, require, character.only = TRUE)
-}
+setMethod("show", "H2OClient", function(object) {
+  cat("IP Address:", object@ip, "\n")
+  cat("Port      :", object@port, "\n")
+})
 
 # Checks H2O connection and installs H2O R package matching version on server if indicated by user
 # 1) If can't connect and user doesn't want to start H2O, stop immediately
@@ -27,9 +17,6 @@ h2o.installDepPkgs <- function(optional = FALSE) {
 # 3) If user does want to start H2O, but running non-locally, print an error
 setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logical", silentUpgrade="logical", promptUpgrade="logical"), 
           function(ip, port, startH2O, silentUpgrade, promptUpgrade) {
-  # myReqPkgs = c("RCurl", "rjson", "tools", "statmod")
-  # temp = lapply(myReqPkgs, require, character.only = TRUE)
-            
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
     if(!startH2O)
@@ -82,7 +69,7 @@ setMethod("h2o.shutdown", signature(object="H2OClient", prompt="logical"),
       if(!is.null(res$error))
         stop(paste("Unable to shutdown H2O. Server returned the following error:\n", res$error))
     }
-    if(url.exists(myURL)) stop("H2O failed to shutdown.")
+    # if(url.exists(myURL)) stop("H2O failed to shutdown.")
 })
 
 setMethod("h2o.shutdown", signature(object="ANY", prompt="ANY"),
@@ -123,7 +110,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
     install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
     file.remove(paste(getwd(), myFile, sep="/"))
     # cat("\nSuccess\nYou may now type 'library(h2oRClient)' to load the R package\n\n")
-    # library(h2oRClient)
+    # require(h2oRClient)
   }
 }
 
@@ -154,14 +141,16 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 .onLoad <- function(lib, pkg) {
   .h2o.pkg.path <<- paste(lib, pkg, sep = .Platform$file.sep)
   
+  # Install and load H2O R package dependencies
+  require(tools)
   myPackages = rownames(installed.packages())
   myReqPkgs = c("bitops", "RCurl", "rjson", "statmod")
-  temp = lapply(myReqPkgs, function(x) { if(x %in% myPackages) require(x, character.only = TRUE)
-                                         else stop("The required package ", x, " is not installed. Please type h2o.installDepPkgs() to install all dependencies.") })
+  temp = lapply(myReqPkgs, function(x) { if(!x %in% myPackages) { cat("Installing package dependency", x, "\n"); install.packages(x, repos = "http://cran.rstudio.com/") }
+                                         if(!require(x, character.only = TRUE)) stop("The required package ", x, " is not installed. Please type install.packages(\"", x, "\") to install the dependency from CRAN.") })
 }
 
 .onAttach <- function(libname, pkgname) {
-  packageStartupMessage("Please type h2o.init() to launch H2O, and use h2o.shutdown() to quit H2O. More information can be found at http://docs.0xdata.com/.\n")
+  packageStartupMessage("\nPlease type h2o.init() to launch H2O, and use h2o.shutdown() to quit H2O. More information can be found at http://docs.0xdata.com/.\n")
 }
 
 h2o.startJar <- function() {

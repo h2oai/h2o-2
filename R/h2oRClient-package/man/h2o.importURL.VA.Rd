@@ -53,7 +53,6 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prostate.hex = h2o.importURL.VA(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 summary(prostate.hex)
