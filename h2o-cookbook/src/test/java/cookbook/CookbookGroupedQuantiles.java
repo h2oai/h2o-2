@@ -107,11 +107,112 @@ public class CookbookGroupedQuantiles extends  TestUtil {
     }
   }
 
+  static class Histogram extends Flow.PerRow<Histogram> {
+    private final IcedHashMap<IcedLong, BasicSummary> _bs;
+    private final int  _dg_idx;
+    private final int  _val_idx;
+    private final int  _wt_idx;
+    private final boolean _weighted;
+
+    long   _n;          // Number of samples in this group.
+    double _min;        // Smallest sample value in this group.
+
+    double _step;       // Bin step size.
+    double[] _bins;     // Array of bins (note: optionally weighted).
+    double[] _values;   // Smallest value in the bin.
+
+    public Histogram(int gix, int vix, int wix, boolean wt, IcedHashMap<IcedLong, BasicSummary> bs) {
+      _dg_idx = gix;
+      _val_idx = vix;
+      _wt_idx = wix;
+      _weighted = wt;
+      _bs = bs;
+
+      _n = 0;
+    }
+
+    public void allocBins(double min, double max) {
+      if (max - min < 1e-10) {
+        // Case where the column has a constant value.
+        // Only need one bucket.
+        _bins = new double[1]; _step = 1e-10;
+        _values = new double[1];
+        _values[0] = Double.NaN;
+      }
+      else {
+        // Normal case where the column has many buckets.
+        int nbin = 1000;
+        _step = (max - min)/(double)nbin;
+
+        // Guard against off-by-one bucketing due to floating point rounding error.
+        while ((int)((max - min)/_step) >= nbin++);
+
+        // Allocate and initialize.
+        _bins = new double[nbin];
+        _values = new double[nbin];
+        for (int i = 0; i < _values.length; i++) {
+          _values[i] = Double.NaN;
+        }
+      }
+    }
+
+    @Override public void mapreduce( double ds[] ) {
+      if (_bins == null) {
+        long gid = (long) ds[_dg_idx];
+        BasicSummary bs = _bs.get(new IcedLong(gid));
+        _min = bs._min;
+        _n   = bs._n;
+        allocBins(bs._min, bs._max);
+      }
+      double v = ds[_val_idx];
+      double w;
+      int ix = (int) ((v - _min)/_step);
+      if (_weighted) {
+        w = ds[_wt_idx];
+        _bins[ix] += w * v;
+      } else {
+        _bins[ix]++;
+      }
+    }
+
+    @Override public void reduce( Histogram that ) {
+      if (this._bins == null) {
+        _min = that._min;
+        _n = that._n;
+        _step = that._step;
+        _bins = that._bins;
+        _values = that._values;
+      }
+      else if (that._bins == null) {
+        // do nothing
+      } else {
+        for (int i = 0; i < _bins.length; i++) {
+          _bins[i] += that._bins[i];
+          if (Double.isNaN(_values[i])) {
+            _values[i] = that._bins[i];
+          }
+          else if (Double.isNaN(that._bins[i])) {
+            // do nothing
+          }
+          else {
+            _values[i] = Math.min(_values[i], that._values[i]);
+          }
+        }
+      }
+    }
+
+    @Override public Histogram make() {
+      Histogram h = new Histogram(_dg_idx, _val_idx, _wt_idx, _weighted, _bs);
+      return h;
+    }
+  }
+
   @Test
   public void testGroupedQuantiles() {
     final String INPUT_FILE_NAME = "/Users/bai/testdata/year2013.csv";// "../smalldata/cars.csv";
     final String GROUP_COLUMN_NAME = "CRSDepTime"; // "cylinders";
     final String VALUE_COLUMN_NAME = "Distance"; // "cylinders";
+    final String WEIGHT_COLUMN_NAME = ""; // "cylinders";
     final String KEY_STRING = "year2013.hex";
     Key k = Key.make(KEY_STRING);
     Frame fr = parseFrame(k, INPUT_FILE_NAME);
@@ -128,6 +229,7 @@ public class CookbookGroupedQuantiles extends  TestUtil {
     final int sg_idx  = fr.find("sparse_group_number");
     final int dg_idx  = fr.find("dense_group_number");
     final int val_idx = fr.find(VALUE_COLUMN_NAME);
+    final int wt_idx  = fr.find(WEIGHT_COLUMN_NAME);
     new AddSparseGroupNumber(cyl_idx, sg_idx).doAll(fr);
 
     // Pass 2, compact group numbers
@@ -142,20 +244,20 @@ public class CookbookGroupedQuantiles extends  TestUtil {
     new AssignCompactGroupNumber(sparse_group_number_set, sg_idx, dg_idx).doAll(fr);
 
     // Pass 4, collect basic stats for each dense group
-
     IcedHashMap<IcedLong, BasicSummary> basic_summaries =
       fr.with(new MyGroupBy(dg_idx))
       .with(new BasicSummary(val_idx))
       .doit();
 
-     for (IcedLong key : basic_summaries.keySet()) {
-       BasicSummary bs = basic_summaries.get(key);
-       Log.info("sgid " + key._val + "  min " + bs._min + "  max " + bs._max, " n " + bs._n);
-     }
+    // Pass 5, calculate histograms
+    IcedHashMap<IcedLong, Histogram> histograms =
+      fr.with(new MyGroupBy(dg_idx))
+      .with(new Histogram(dg_idx, val_idx, wt_idx, true, basic_summaries))
+      .doit();
 
     //Log.info("SIZE " + sparse_group_number_set.keySet().size());
 
-    try { Thread.sleep(100000000); } catch (Exception e) {}
+    //try { Thread.sleep(100000000); } catch (Exception e) {}
 
     UKV.remove(k);
   }
