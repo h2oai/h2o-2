@@ -43,10 +43,14 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=1000, max_depth=2, rfView=False,
+            rfv = h2o_cmd.runRF(parseResult=parseResult, trees=1000, max_depth=2, rfView=False,
                 timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
-            model_key = rfResult['model_key']
+            rf_model = rfv['drf_model']
+            used_trees = rf_model['N']
+            data_key = rf_model['_dataKey']
+            model_key = rf_model['_selfKey']
+
             print "model_key:", model_key
 
             # FIX! need to get more intelligent here
