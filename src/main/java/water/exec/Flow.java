@@ -76,7 +76,12 @@ public abstract class Flow extends Iced {
 
 
   abstract Frame frame();
-  abstract <X extends PerRow<X>> PerRow<X> doit(PerRow<X> pr, double ds[], PerRow<X> pr0);
+
+  abstract
+  <X extends PerRow<X>>                           // Type parameter
+  PerRow<X>                                       // Return type of doit()
+  doit                                            // Method name
+  ( PerRow<X> pr, double ds[], PerRow<X> pr0 );   // Arguments for doit()
 
 
   public static class FlowFrame extends Flow {
