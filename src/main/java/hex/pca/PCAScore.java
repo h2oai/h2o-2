@@ -36,7 +36,7 @@ public class PCAScore extends FrameJob {
     // If additional columns exist in source, they are automatically ignored in scoring
     Frame fr = model.adapt(source, true)[0];
     int nfeat = model._names.length;
-    DataInfo dinfo = new DataInfo(fr,false, model.normSub,model.normMul);
+    DataInfo dinfo = new DataInfo(fr,0, model.normSub,model.normMul);
     PCAScoreTask tsk = new PCAScoreTask(this, dinfo, nfeat, num_pc, model.eigVec);
     tsk.doAll(num_pc, dinfo._adaptedFrame);
     String[] names = new String[num_pc];
@@ -88,7 +88,7 @@ public class PCAScore extends FrameJob {
     }
 
     // Note: Rows with NAs (missing values) are automatically skipped!
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, NewChunk[] outputs) {
+    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] response, NewChunk[] outputs) {
       for(int c = 0; c < _ncomp; c++) {
         double x = 0;
         for(int d = 0; d < ncats; d++)

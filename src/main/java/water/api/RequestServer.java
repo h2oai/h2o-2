@@ -177,8 +177,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TestPoll());
     registerRequest(new TestRedirect());
     registerRequest(new GLMProgressPage2());
-    registerRequest(new GLMProgressPage2.GLMGrid());
     registerRequest(new GLMModelView());
+    registerRequest(new GLMGridView());
 //    registerRequest(new GLMValidationView());
     registerRequest(new FrameSplit());
     registerRequest(new LaunchJar());

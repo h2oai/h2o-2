@@ -50,7 +50,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _caseMode = cm;
       _caseVal = cval;
     }
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
+    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] responses) {
+      double response = responses[0];
       if(_caseMode != CaseMode.none) response = _caseMode.isCase(response,_caseVal)?1:0;
       _ymu += response;
       if(response < _ymin)_ymin = response;
@@ -90,8 +91,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     @Override public void chunkInit(){
       _z = MemoryManager.malloc8d(_n);
     }
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, double response) {
-      double w = (response - _ymu) * _gPrimeMu;
+    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] responses) {
+      double w = (responses[0] - _ymu) * _gPrimeMu;
       for( int i = 0; i < ncats; ++i ) _z[cats[i]] += w;
       final int numStart = _dinfo.numStart();
       ++_nobs;
@@ -136,7 +137,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _caseVal = cval;
     }
 
-    @Override public final void processRow(final double [] nums, final int ncats, final int [] cats, double y){
+    @Override public final void processRow(final double [] nums, final int ncats, final int [] cats, double [] responses){
+      double y = responses[0];
       if(_caseMode != CaseMode.none)y = _caseMode.isCase(y, _caseVal)?1:0;
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
       assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
