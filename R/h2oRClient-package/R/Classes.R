@@ -14,7 +14,7 @@ setClass("H2OGrid", representation(key="character", data="H2OParsedData", model=
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 # setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
-setClass("H2ONNModel", contains="H2OModel")
+setClass("H2ONNModel", contains="H2OModel", representation(valid="H2OParsedData"))
 setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
@@ -22,6 +22,7 @@ setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData
 setClass("H2OGBMGrid", contains="H2OGrid")
 setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
+setClass("H2ONNGrid", contains="H2OGrid")
 
 setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
 setClass("H2OParsedDataVA", representation(h2o="H2OClient", key="character", env="environment"))
@@ -87,6 +88,14 @@ setMethod("show", "H2OParsedData", function(object) {
   cat("Parsed Data Key:", object@key, "\n")
 })
 
+setMethod("show", "H2OGrid", function(object) {
+  print(object@data)
+  cat("Grid Search Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
+})
+
 setMethod("show", "H2OGLMModel", function(object) {
   print(object@data)
   cat("GLM2 Model Key:", object@key, "\n\nCoefficients:\n")
@@ -119,14 +128,6 @@ setMethod("show", "H2OGLMModel", function(object) {
   }
 })
 
-# setMethod("show", "H2OGLMGrid", function(object) {
-#   print(object@data)
-#   cat("GLMGrid Model Key:", object@key, "\n")
-#   
-#   temp = data.frame(t(sapply(object@sumtable, c)))
-#   cat("\nSummary\n"); print(temp)
-# })
-
 setMethod("show", "H2OKMeansModel", function(object) {
   print(object@data)
   cat("K-Means Model Key:", object@key)
@@ -148,7 +149,7 @@ setMethod("show", "H2ONNModel", function(object) {
   cat("\nTraining square error:", model$train_sqr_error)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
-  cat("\n\nConfusion matrix:\n"); print(model$confusion)
+  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
 
 setMethod("show", "H2ODRFModel", function(object) {
@@ -177,30 +178,6 @@ setMethod("show", "H2OGBMModel", function(object) {
   model = object@model
   cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
   cat("\nMean Squared error by tree:\n"); print(model$err)
-})
-
-setMethod("show", "H2OGBMGrid", function(object) {
-  print(object@data)
-  cat("GBMGrid Model Key:", object@key, "\n")
-  
-  temp = data.frame(t(sapply(object@sumtable, c)))
-  cat("\nSummary\n"); print(temp)
-})
-
-setMethod("show", "H2OKMeansGrid", function(object) {
-  print(object@data)
-  cat("KMeans2Grid Model Key:", object@key, "\n")
-  
-  temp = data.frame(t(sapply(object@sumtable, c)))
-  cat("\nSummary\n"); print(temp)
-})
-
-setMethod("show", "H2ODRFGrid", function(object) {
-  print(object@data)
-  cat("DRFGrid Model Key:", object@key, "\n")
-  
-  temp = data.frame(t(sapply(object@sumtable, c)))
-  cat("\nSummary\n"); print(temp)
 })
 
 setMethod("summary", "H2OPCAModel", function(object) {
@@ -561,9 +538,10 @@ setMethod("summary", "H2OParsedData", function(object) {
       # domains <- col$hbrk[top.ix]
       if(is.null(col$hbrk)) domains <- top.ix[1:6] else domains <- col$hbrk[top.ix]
       counts <- col$hcnt[top.ix]
-      width <- max(cbind(nchar(domains), nchar(counts)))
+      # width <- max(cbind(nchar(domains), nchar(counts)))
+      width <- max(nchar(domains) + nchar(counts))
       result <- paste(domains,
-                      mapply(function(x, y) { paste(rep(' ',max(width + 1 - nchar(x) - nchar(y),0)), collapse='') }, domains, counts),
+                      mapply(function(x, y) { paste(rep(' ',width - nchar(x) - nchar(y)), collapse='') }, domains, counts),
                       ":",
                       counts,
                       " ",
