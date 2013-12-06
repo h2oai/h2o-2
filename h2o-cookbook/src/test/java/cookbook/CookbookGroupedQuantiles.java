@@ -259,8 +259,6 @@ public class CookbookGroupedQuantiles extends  TestUtil {
       .with(new Histogram(dg_idx, val_idx, wt_idx, false, basic_summaries))
       .doit();
 
-    Log.info("FINISHED PASS 5, CREATING FRAME OF HISTOGRAM DATA");
-
     AppendableVec gidVec = new AppendableVec("GID");
     AppendableVec[] avecs = new AppendableVec[1001];
     Vec[]           vecs  = new Vec[1001];
@@ -304,11 +302,9 @@ public class CookbookGroupedQuantiles extends  TestUtil {
     UKV.put(histfr_key, histfr, fs);
     fs.blockForPending();
 
-    Log.info("BEFORE SLEEP");
-    //Log.info("SIZE " + sparse_group_number_set.keySet().size());
-
-    try { Thread.sleep(100000000); } catch (Exception e) {}
+    //try { Thread.sleep(100000000); } catch (Exception e) {}
 
     UKV.remove(k);
+    UKV.remove(histfr_key);
   }
 }
