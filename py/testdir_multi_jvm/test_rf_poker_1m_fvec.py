@@ -18,7 +18,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_poker_1m_rf(self):
+    def test_rf_poker_1m_fvec(self):
+        h2o.beta_features = True
         csvPathname = 'poker/poker-hand-testing.data'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
         h2o_cmd.runRF(parseResult=parseResult, trees=15, timeoutSecs=800, retryDelaySecs=5)
