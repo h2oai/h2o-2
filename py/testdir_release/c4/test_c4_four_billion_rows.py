@@ -23,7 +23,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local',
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=180)
             elapsed = time.time() - start
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
@@ -32,22 +31,17 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             numCols = inspect['numCols']
             numRows = inspect['numRows']
-            value_size_bytes = inspect['value_size_bytes']
-            row_size = inspect['row_size']
+            byteSize = inspect['byteSize']
             print "\n" + csvFilename, \
                 "    numRows:", "{:,}".format(numRows), \
                 "    numCols:", "{:,}".format(numCols), \
-                "    value_size_bytes:", "{:,}".format(value_size_bytes), \
-                "    row_size:", "{:,}".format(row_size)
+                "    byteSize:", "{:,}".format(byteSize)
 
             expectedRowSize = numCols * 1 # plus output
             expectedValueSize = expectedRowSize * numRows
-            self.assertEqual(row_size, expectedRowSize,
-                msg='row_size %s is not expected numCols * 1 byte: %s' % \
-                (row_size, expectedRowSize))
-            self.assertEqual(value_size_bytes, expectedValueSize,
-                msg='value_size_bytes %s is not expected row_size * rows: %s' % \
-                (value_size_bytes, expectedValueSize))
+            self.assertEqual(byteSize, expectedValueSize,
+                msg='byteSize %s is not expected: %s' % \
+                (byteSize, expectedValueSize))
 
             summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], timeoutSecs=timeoutSecs)
             h2o_cmd.infoFromSummary(summaryResult, noPrint=True)

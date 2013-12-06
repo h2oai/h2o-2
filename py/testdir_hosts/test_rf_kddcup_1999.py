@@ -51,7 +51,6 @@ class Basic(unittest.TestCase):
                 'bin_limit': 1024,
                 'depth': 2147483647,
                 'seed': 784834182943470027,
-                'parallel': 1,
                 'exclusive_split_limit': None,
                 }
 

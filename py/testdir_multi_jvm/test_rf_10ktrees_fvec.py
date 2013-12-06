@@ -18,7 +18,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GenParity1(self):
+    def test_rf_10ktrees_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         # always match the run below!
@@ -29,7 +30,7 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
 
         # always match the gen above!
-        for trial in range (1,5):
+        for trial in range (1,3):
             sys.stdout.write('.')
             sys.stdout.flush()
 
@@ -41,7 +42,7 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            h2o_cmd.runRF(parseResult=parseResult, trees=1000, depth=2, timeoutSecs=600, retryDelaySecs=3)
+            h2o_cmd.runRF(parseResult=parseResult, trees=10000, max_depth=2, timeoutSecs=900, retryDelaySecs=3)
             print "RF #", trial,  "end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
         print "Waiting 60 secs for TIME_WAIT sockets to go away"
@@ -49,3 +50,4 @@ class Basic(unittest.TestCase):
 
 if __name__ == '__main__':
     h2o.unit_main()
+

@@ -32,7 +32,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=True)
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
-        print csvFilename, 'parse time:', parseResult['response']['time']
         print "Parse result['destination_key']:", parseResult['destination_key']
 
         start = time.time()
