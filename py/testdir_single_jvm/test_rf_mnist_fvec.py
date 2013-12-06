@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_mnist_fvec(self):
+    def test_rf_mnist_fvec(self):
         h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilelist = [
@@ -97,7 +97,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 10, delta=2, msg="Classification error %s differs too much" % classification_error)
 
             # Predict (on test)****************************************
             start = time.time()

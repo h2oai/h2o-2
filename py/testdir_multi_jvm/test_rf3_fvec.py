@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2)
+            h2o.build_cloud(3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -18,35 +18,37 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GenParity1(self):
+    def test_rf3_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
-
         # always match the run below!
-        # just using one file for now
-        for x in [1000]:
+        for x in [10000]:
+            # Have to split the string out to list for pipe
             shCmdString = "perl " + h2o.find_file("syn_scripts/parity.pl") + " 128 4 "+ str(x) + " quad " + SYNDATASETS_DIR
             h2o.spawn_cmd_and_wait('parity.pl', shCmdString.split(),4)
+            # the algorithm for creating the path and filename is hardwired in parity.pl..i.e
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
 
         # always match the gen above!
-        for trial in range (1,3):
+        trial = 1
+        for x in xrange (1,10,1):
             sys.stdout.write('.')
             sys.stdout.flush()
 
-            csvFilename = "parity_128_4_" + str(1000) + "_quad.data"  
+            # just use one file for now
+            csvFilename = "parity_128_4_" + str(10000) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-            hex_key = csvFilename + "_" + str(trial) + ".hex"
-            parseResult = h2o_cmd.parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
+            # broke out the put separately so we can iterate a test just on the RF
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', pollTimeoutSecs=60, timeoutSecs=60)
 
             h2o.verboseprint("Trial", trial)
-            start = time.time()
-            h2o_cmd.runRF(parseResult=parseResult, trees=10000, depth=2, timeoutSecs=900, retryDelaySecs=3)
-            print "RF #", trial,  "end on ", csvFilename, 'took', time.time() - start, 'seconds'
+            h2o_cmd.runRF(parseResult=parseResult, trees=237, max_depth=45, timeoutSecs=480)
 
-        print "Waiting 60 secs for TIME_WAIT sockets to go away"
-        time.sleep(60)
+            # don't change tree count yet
+            ## trees += 10
+            ### timeoutSecs += 2
+            trial += 1
 
 if __name__ == '__main__':
     h2o.unit_main()
-

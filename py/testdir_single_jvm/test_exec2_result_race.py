@@ -4,17 +4,17 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_hosts, h2o_browse as h2b, h2o_exec as h2e
 
 initList = [
-        'Result.hex = 0',
-        'Result.hex = 1',
-        'Result.hex = 2',
-        'Result.hex = 3',
-        'Result.hex = 4',
-        'Result.hex = 5',
-        'Result.hex = 6',
-        'Result.hex = 7',
-        'Result.hex = 8',
-        'Result.hex = 9',
-        'Result.hex = 10',
+        'Result.hex = c(0)',
+        'Result.hex = c(1)',
+        'Result.hex = c(2)',
+        'Result.hex = c(3)',
+        'Result.hex = c(4)',
+        'Result.hex = c(5)',
+        'Result.hex = c(6)',
+        'Result.hex = c(7)',
+        'Result.hex = c(8)',
+        'Result.hex = c(9)',
+        'Result.hex = c(10)',
     ]
 
 exprList = [
@@ -53,7 +53,7 @@ class Basic(unittest.TestCase):
 
         trial = 0
         while (trial < 200):
-            for exprExpr in exprList:
+            for execExpr in exprList:
                 # for the first 100 trials: do each expression at node 0,
                 # for the second 100 trials: do each expression at a random node, to facilate key movement
                 # FIX! there's some problem with the initList not taking if rotated amongst nodes?

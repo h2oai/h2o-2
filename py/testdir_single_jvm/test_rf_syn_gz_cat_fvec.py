@@ -12,6 +12,11 @@ print "response variable is the modulo sum of all features, for a given base"
 print "\nThen do RF"
 
 BASE = 2
+DO_RF = False
+NO_GZ = False
+NO_REPL = False
+DO_SUMMARY = False
+DO_BLOCKING = 1
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # 8 random generators, 1 per column
     r1 = random.Random(SEED)
@@ -66,21 +71,32 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, co
 
     start = time.time()
     print "Parse start:", csvPathnameReplgz
-    doSummary = False
+
+    # experiment to see if the gz is causing it to fail 
+    if NO_GZ:
+        csvPathnameReplgz = csvPathname
+        totalRows = rowCount
+    # hack experiment
+    if NO_REPL:
+        h2o_util.file_gzip(csvPathname, csvPathnameReplgz)
+        totalRows = rowCount
+
     parseResult = h2i.import_parse(path=csvPathnameReplgz, schema='put', hex_key=hex_key, 
-        timeoutSecs=timeoutSecs, pollTimeoutSecs=120, doSummary=doSummary)
-    if doSummary:
+        timeoutSecs=timeoutSecs, pollTimeoutSecs=120, doSummary=DO_SUMMARY, blocking=DO_BLOCKING)
+
+    if DO_SUMMARY:
         algo = "Parse and Summary:"
     else:
         algo = "Parse:"
     print algo , parseResult['destination_key'], "took", time.time() - start, "seconds"
 
     print "Inspecting.."
+    time.sleep(5)
     start = time.time()
-    inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
+    inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=timeoutSecs)
     print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
-    h2o_cmd.infoFromInspect(inspect, csvPathname)
-    print "\n" + csvPathname, \
+    h2o_cmd.infoFromInspect(inspect, csvPathnameReplgz)
+    print "\n" + csvPathnameReplgz, \
         "    numRows:", "{:,}".format(inspect['numRows']), \
         "    numCols:", "{:,}".format(inspect['numCols'])
 
@@ -89,7 +105,7 @@ def make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, co
         raise Exception("parse created result with the wrong number of cols %s %s" % (inspect['numCols'], colCount))
     if inspect['numRows'] != totalRows:
         raise Exception("parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-        (inspect['numRows'], rowCount))
+        (inspect['numRows'], totalRows))
 
     # hack it in! for test purposees only
     parseResult['numRows'] = inspect['numRows']
@@ -104,30 +120,40 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED, localhost, tryHeap
-        tryHeap = 14
+        tryHeap = 4
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=tryHeap, enable_benchmark_log=True)
+            h2o.build_cloud(1, java_heap_GB=tryHeap, enable_benchmark_log=True, base_port=54321)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
     @classmethod
     def tearDownClass(cls):
+        # time.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_rf_syn_gz_cat(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
+        REPL = 3
         tryList = [
             # summary fails with 100000 cols
             # (10, 50, 2, 'cA', 600),
-            (10, 50, 5000, 'cA', 600),
-            (50, 50, 5000, 'cB', 600),
-            (100, 50, 5000, 'cC', 600),
-            (500, 50, 5000, 'cD', 600),
-            (1000, 50, 5000, 'cE', 600),
-            (5000, 50, 5000, 'cF', 600),
+            # pass
+            # (2, 50, 50, 'cA', 600),
+            # (2, 100, 50, 'cA', 600),
+            (REPL, 200, 50, 'cA', 600),
+            (REPL, 300, 50, 'cA', 600),
+            (REPL, 350, 50, 'cA', 600),
+            (REPL, 375, 50, 'cB', 600),
+            # fail
+            (REPL, 500, 300, 'cC', 600),
+            (REPL, 500, 400, 'cD', 600),
+            (REPL, 500, 500, 'cE', 600),
+            (10, 50, 1600, 'cF', 600),
+            (10, 50, 3200, 'cG', 600),
+            (10, 50, 5000, 'cH', 600),
             # at 6000, it gets connection reset on the parse on ec2
             # (6000, 50, 5000, 'cG', 600),
             # (7000, 50, 5000, 'cH', 600),
@@ -153,26 +179,28 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             parseResult = make_datasetgz_and_parse(SYNDATASETS_DIR, csvFilename, hex_key, rowCount, colCount, FILEREPL, SEEDPERFILE, timeoutSecs)
 
-            paramDict['response'] = 'C' + str(colCount)
-            paramDict['mtries'] = 2
-            paramDict['seed'] = random.randint(0, sys.maxint)
-            kwargs = paramDict.copy()
 
-            start = time.time()
-            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
-            elapsed = time.time() - start
-            print "RF end on ", parseResult['destination_key'], 'took', elapsed, 'seconds.', \
-                "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+            if DO_RF:
+                paramDict['response'] = 'C' + str(colCount)
+                paramDict['mtries'] = 2
+                paramDict['seed'] = random.randint(0, sys.maxint)
+                kwargs = paramDict.copy()
 
-            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
+                start = time.time()
+                rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+                elapsed = time.time() - start
+                print "RF end on ", parseResult['destination_key'], 'took', elapsed, 'seconds.', \
+                    "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            algo = "RF " 
-            l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
-                numRows: {:d} numCols: {:d} value_size_bytes: {:d}'.format(
-                len(h2o.nodes), tryHeap, algo, parseResult['destination_key'], elapsed, kwargs['ntrees'], \
-                classification_error, parseResult['numRows'], parseResult['numCols'], parseResult['byteSize'])
-            print l
-            h2o.cloudPerfH2O.message(l)
+                (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
+
+                algo = "RF " 
+                l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs. trees: {:d} Error: {:6.2f} \
+                    numRows: {:d} numCols: {:d} value_size_bytes: {:d}'.format(
+                    len(h2o.nodes), tryHeap, algo, parseResult['destination_key'], elapsed, kwargs['ntrees'], \
+                    classification_error, parseResult['numRows'], parseResult['numCols'], parseResult['byteSize'])
+                print l
+                h2o.cloudPerfH2O.message(l)
 
             print "Trial #", trial, "completed"
 

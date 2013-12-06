@@ -18,7 +18,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_1ktrees_job_cancel(self):
+    def test_rf_1ktrees_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         # always match the run below!
@@ -41,21 +42,11 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=1000, depth=2, rfView=False,
-                timeoutSecs=600, retryDelaySecs=3)
-            print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
-            model_key = rfResult['model_key']
-            print "model_key:", model_key
+            h2o_cmd.runRF(parseResult=parseResult, trees=1000, max_depth=2, timeoutSecs=600, retryDelaySecs=3)
+            print "RF #", trial,  "end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
-            # FIX! need to get more intelligent here
-            a = h2o.nodes[0].jobs_admin()
-            print "jobs_admin():", h2o.dump_json(a)
-            # this is the wrong key to ancel with
-            # "destination_key": "pytest_model", 
-            print "cancelling with a bad key"
-            b = h2o.nodes[0].jobs_cancel(key=model_key)
-            print "jobs_cancel():", h2o.dump_json(b)
-
+        print "Waiting 60 secs for TIME_WAIT sockets to go away"
+        time.sleep(60)
 
 if __name__ == '__main__':
     h2o.unit_main()

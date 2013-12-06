@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3)
+            h2o.build_cloud(2)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -18,8 +18,10 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_1ktrees_job_cancel_3(self):
+    def test_rf_1ktrees_job_cancel_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
+
 
         # always match the run below!
         # just using one file for now
@@ -29,7 +31,7 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
 
         # always match the gen above!
-        for trial in range (1,20):
+        for trial in range (1,5):
             sys.stdout.write('.')
             sys.stdout.flush()
 
@@ -41,23 +43,21 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
-            h2o_cmd.runRF(parseResult=parseResult, trees=trial, depth=2, rfView=False,
+            rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=1000, max_depth=2, rfView=False,
                 timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
+            model_key = rfResult['model_key']
+            print "model_key:", model_key
 
             # FIX! need to get more intelligent here
-            time.sleep(1)
             a = h2o.nodes[0].jobs_admin()
             print "jobs_admin():", h2o.dump_json(a)
+            # this is the wrong key to ancel with
             # "destination_key": "pytest_model", 
-            # FIX! using 'key': 'pytest_model" with no time delay causes a failure
-            time.sleep(1)
-            jobsList = a['jobs']
-            for j in jobsList:
-                b = h2o.nodes[0].jobs_cancel(key=j['key'])
-                print "jobs_cancel():", h2o.dump_json(b)
-                # redirects to jobs, but we just do it directly.
+            print "cancelling with a bad key"
+            b = h2o.nodes[0].jobs_cancel(key=model_key)
+            print "jobs_cancel():", h2o.dump_json(b)
+
 
 if __name__ == '__main__':
     h2o.unit_main()
-

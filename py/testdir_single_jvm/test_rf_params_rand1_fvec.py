@@ -48,13 +48,13 @@ class Basic(unittest.TestCase):
         csvPathname = 'poker/poker1000'
         for trial in range(10):
             # params is mutable. This is default.
-            params = {'ntree': 63}
+            params = {'ntrees': 63}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             print kwargs
             # slower if parallel=0
-            timeoutSecs = 30 + kwargs['ntree'] * 30
+            timeoutSecs = 30 + kwargs['ntrees'] * 30
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs)
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "Trial #", trial, "completed"
