@@ -7,7 +7,6 @@ import water.exec.Flow;
 import water.fvec.*;
 import water.util.Log;
 import water.util.RemoveAllKeysTask;
-import water.util.Utils;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedLong;
 
@@ -213,22 +212,30 @@ public class CookbookGroupedQuantiles extends  TestUtil {
 
   @Test
   public void testGroupedQuantiles() {
-    final String INPUT_FILE_NAME = "/Users/bai/testdata/year2013.csv";// "../smalldata/cars.csv";
-    final String GROUP_COLUMN_NAME = "CRSDepTime"; // "cylinders";
-    final String VALUE_COLUMN_NAME = "Distance"; // "cylinders";
-    final String WEIGHT_COLUMN_NAME = ""; // "cylinders";
-    final String KEY_STRING = "year2013.hex";
+    // final String INPUT_FILE_NAME = "/Users/bai/testdata/year2013.csv";
+    final String INPUT_FILE_NAME = "../smalldata/airlines/allyears2k_headers.zip";
+    final String KEY_STRING = "airlines.hex";
+
+    final String GROUP_COLUMN_NAME = "CRSDepTime";
+    final String VALUE_COLUMN_NAME = "Distance";
+    final String WEIGHT_COLUMN_NAME = "";
     Key k = Key.make(KEY_STRING);
     Frame fr = parseFrame(k, INPUT_FILE_NAME);
 
-    // Pass 0, add group number columns to frame
+    Log.info("");
+    Log.info("Pass 0, add group number columns to frame");
+    Log.info("");
+
     fr.add("sparse_group_number", fr.anyVec().makeZero());
     fr.add("dense_group_number", fr.anyVec().makeZero());
     Futures fs = new Futures();
     UKV.put(k, fr, fs);
     fs.blockForPending();
 
-    // Pass 1, assign group numbers to rows
+    Log.info("");
+    Log.info("Pass 1, assign group numbers to rows");
+    Log.info("");
+
     final int cyl_idx = fr.find(GROUP_COLUMN_NAME);
     final int sg_idx  = fr.find("sparse_group_number");
     final int dg_idx  = fr.find("dense_group_number");
@@ -236,7 +243,11 @@ public class CookbookGroupedQuantiles extends  TestUtil {
     final int wt_idx  = fr.find(WEIGHT_COLUMN_NAME);
     new AddSparseGroupNumber(cyl_idx, sg_idx).doAll(fr);
 
-    // Pass 2, compact group numbers
+
+    Log.info("");
+    Log.info("Pass 2, compact group numbers");
+    Log.info("");
+
     IcedHashMap<IcedLong, IcedLong> sparse_group_number_set =
             new CompactGroupNumber(sg_idx).doAll(fr).sparse_group_number_set;
 
@@ -244,20 +255,33 @@ public class CookbookGroupedQuantiles extends  TestUtil {
     for (IcedLong key : sparse_group_number_set.keySet())
       sparse_group_number_set.put(key, new IcedLong(ng++));
 
-    // Pass 3, assign dense group numbers
+    Log.info("");
+    Log.info("Pass 3, assign dense group numbers");
+    Log.info("");
+
     new AssignCompactGroupNumber(sparse_group_number_set, sg_idx, dg_idx).doAll(fr);
 
-    // Pass 4, collect basic stats for each dense group
+    Log.info("");
+    Log.info("Pass 4, collect basic stats for each dense group");
+    Log.info("");
+
     IcedHashMap<IcedLong, BasicSummary> basic_summaries =
       fr.with(new MyGroupBy(dg_idx))
       .with(new BasicSummary(val_idx))
       .doit();
 
-    // Pass 5, calculate histograms
+    Log.info("");
+    Log.info("Pass 5, calculate histograms");
+    Log.info("");
+
     IcedHashMap<IcedLong, Histogram> histograms =
       fr.with(new MyGroupBy(dg_idx))
       .with(new Histogram(dg_idx, val_idx, wt_idx, false, basic_summaries))
       .doit();
+
+    Log.info("");
+    Log.info("Debug Step 6 (not a real pass), put histograms into a frame for display");
+    Log.info("");
 
     AppendableVec gidVec = new AppendableVec("GID");
     AppendableVec[] avecs = new AppendableVec[1001];
@@ -302,7 +326,10 @@ public class CookbookGroupedQuantiles extends  TestUtil {
     UKV.put(histfr_key, histfr, fs);
     fs.blockForPending();
 
-    //try { Thread.sleep(100000000); } catch (Exception e) {}
+//    Log.info("");
+//    Log.info("Debug Step 7 (not a real pass), sleep for browser testing");
+//    Log.info("");
+//    try { Thread.sleep(100000000); } catch (Exception e) {}
 
     UKV.remove(k);
     UKV.remove(histfr_key);
