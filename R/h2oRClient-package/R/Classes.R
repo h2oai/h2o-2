@@ -6,7 +6,7 @@ MAX_INSPECT_VIEW = 10000
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character", env="environment"))
 # setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
-setClass("H2OParsedData", representation(h2o="H2OClient", key="character", env="environment"))
+setClass("H2OParsedData", representation(h2o="H2OClient", key="character", env="environment", logic="logical"), prototype(logic=FALSE))
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 
@@ -196,7 +196,7 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
   title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
 })
 
-# i are the rows, j are the columns. These can be vectors of integers or character strings, or a single H2OLogicalData2 object.
+# i are the rows, j are the columns. These can be vectors of integers or character strings, or a single logical data object
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   numRows = nrow(x); numCols = ncol(x)
   if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
@@ -214,7 +214,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     # if(is.logical(j)) j = -which(!j)
     if(is.logical(j)) j = which(j)
 
-    if(class(j) == "H2OLogicalData")
+    # if(class(j) == "H2OLogicalData")
+    if(class(j) == "H2OParsedData" && j@logic)
       expr = paste(x@key, "[", j@key, ",]", sep="")
     else if(is.numeric(j) || is.integer(j))
       expr = paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
@@ -222,7 +223,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   } else if(!missing(i) && missing(j)) {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
-    if(class(i) == "H2OLogicalData")
+    # if(class(i) == "H2OLogicalData")
+    if(class(i) == "H2OParsedData" && i@logic)
       expr = paste(x@key, "[", i@key, ",]", sep="")
     else if(is.numeric(i) || is.integer(i))
       expr = paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
@@ -230,7 +232,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
-    if(class(i) == "H2OLogicalData") rind = i@key
+    # if(class(i) == "H2OLogicalData") rind = i@key
+    if(class(i) == "H2OParsedData" && i@logic) rind = i@key
     else if(is.numeric(i) || is.integer(i))
       rind = paste("c(", paste(i, collapse=","), ")", sep="")
     else stop(paste("Row index of type", class(i), "unsupported!"))
@@ -243,7 +246,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     }
     # if(is.logical(j)) j = -which(!j)
     if(is.logical(j)) j = which(j)
-    if(class(j) == "H2OLogicalData") cind = j@key
+    # if(class(j) == "H2OLogicalData") cind = j@key
+    if(class(j) == "H2OParsedData" && j@logic) cind = j@key
     else if(is.numeric(j) || is.integer(j))
       cind = paste("c(", paste(j, collapse=","), ")", sep="")
     else stop(paste("Column index of type", class(j), "unsupported!"))

@@ -2,7 +2,7 @@ library(h2o)
 myIP = "127.0.0.1"; myPort = 54321
 localH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
 
-# Import iris file to H2O
+# Import prostate file to H2O
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 
@@ -16,12 +16,12 @@ prostate.hex$RACE = as.factor(prostate.hex$RACE)
 summary(prostate.hex)
 
 # Display count of a column's levels
-race.count = h2o.table(prostate.hex$RACE)    # Note: Currently only works on a single integer/factor column
-head(race.count)
+age.count = h2o.table(prostate.hex$AGE)    # Note: Currently only works on a single integer/factor column
+head(age.count)
 
 # Extract small sample (without replacement)
 prostate.samp = prostate.hex[sample(1:nrow(prostate.hex), 50),]
-prostate.samp.df = as.data.frame(prostate.samp)
+prostate.samp.df = as.data.frame(prostate.samp)    # Pull into R as a data frame
 glm(CAPSULE ~ AGE + PSA + VOL + GLEASON, family = binomial(), data = prostate.samp.df)
 
 # Get quantiles and examine outliers
@@ -52,9 +52,16 @@ nrow(prostate.train) + nrow(prostate.test)
 
 # Run GBM on training set and predict on test set
 myY = "CAPSULE"; myX = setdiff(colnames(prostate.train), c(myY, "ID"))
-prostate.gbm = h2o.gbm(x = myX, y = myY, distribution = "multinomial", data = prostate.train)
+prostate.gbm = h2o.gbm(x = myX, y = myY, distribution = "multinomial", data = prostate.train, validation = prostate.test)
 print(prostate.gbm)
 prostate.pred = h2o.predict(prostate.gbm, prostate.test)
 summary(prostate.pred)
 head(prostate.pred)
 tail(prostate.pred)
+
+# Create new column based on 25% and 75% quantiles
+prostate.hex[,10] = prostate.hex$PSA <= prostate.qs["25%",]
+head(prostate.hex)
+# prostate.hex[,11] = prostate.hex$PSA >= prostate.qs["75%",]
+prostate.rf = h2o.randomForest(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex)
+print(prostate.glm)
