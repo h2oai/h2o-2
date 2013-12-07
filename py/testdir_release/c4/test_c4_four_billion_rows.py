@@ -38,7 +38,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 "    byteSize:", "{:,}".format(byteSize)
 
             expectedRowSize = numCols * 1 # plus output
-            expectedValueSize = expectedRowSize * numRows
+            # expectedValueSize = expectedRowSize * numRows
+            expectedValueSize =  8001271520
             self.assertEqual(byteSize, expectedValueSize,
                 msg='byteSize %s is not expected: %s' % \
                 (byteSize, expectedValueSize))

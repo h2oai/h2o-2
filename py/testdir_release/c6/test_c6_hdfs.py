@@ -83,11 +83,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     foundIt = f
                     break
 
-            if not foundIt:
+            if foundIt:
+                value_size_bytes = f['value_size_bytes']
+            else:
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
 
             # no pattern matching, so no multiple files to add up
-            totalBytes = byteSize
+            totalBytes = value_size_bytes
 
 
             print "Loading", csvFilename, 'from hdfs'

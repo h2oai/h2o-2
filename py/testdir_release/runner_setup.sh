@@ -16,7 +16,7 @@ echo "current PID: $$"
 NO_DOWNLOAD=0
 BRANCH=master
 TESTDIR=
-while getopts nb:d: flag
+while getopts nb:d:t: flag
 do
     case $flag in
         n)
@@ -25,11 +25,15 @@ do
             ;;
         b)
             BRANCH=$OPTARG
-            echo "test is $BRANCH"
+            echo "branch is $BRANCH"
             ;;
         d)
             TESTDIR=$OPTARG
             echo "testdir is $TESTDIR"
+            ;;
+        t)
+            TEST=$OPTARG
+            echo "test is $TEST"
             ;;
         ?)
             exit
