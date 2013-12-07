@@ -14,7 +14,7 @@ paramsTrainRF = {
 
 # RF test parameters
 paramsScoreRF = {
-    'vactual': 'IsDepDelayed'
+    'vactual': 'IsDepDelayed',
     'timeoutSecs': 14800,
     }
 

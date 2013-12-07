@@ -75,11 +75,15 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     # these are all the columns that are enums in the dataset...too many for GLM!
                     x = range(542) # don't include the output column
                     # remove the output too! (378)
-                    for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541,378]:
+                    ignore_x = []
+                    for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
                         x.remove(i)
-                    x = ",".join(map(str,x))
+                        ignore_x.append(i)
 
-                    GLMkwargs = {'cols': x, 'response': 'C378', 'case_val': 15, 'case_mode': '>',
+                    x = ",".join(map(lambda x: "C" + str(x), x))
+                    ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
+
+                    GLMkwargs = {'ignored_cols': ignore_x, 'response': 'C378', 'case_val': 15, 'case_mode': '>',
                         'max_iter': 4, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
                     start = time.time()
