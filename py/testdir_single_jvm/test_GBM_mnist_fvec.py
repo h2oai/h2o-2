@@ -2,7 +2,9 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs, h2o_gbm
+
+DO_CLASSIFICATION=True
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -11,7 +13,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1,java_heap_GB=13) # fails with 13
+            h2o.build_cloud(node_count=1,java_heap_GB=13, base_port=54327) # fails with 13
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -37,9 +39,10 @@ class Basic(unittest.TestCase):
         print "parse result:", parseResult['destination_key']
 
         # GBM (train)****************************************
+        modelKey = "GBM_model"
         params = { 
-            'classification': 0, # faster? 
-            'destination_key': "GBMKEY",
+            'classification': 1, # faster? 
+            'destination_key': modelKey,
             'learn_rate': .1,
             'ntrees': 3,
             'max_depth': 8,
@@ -53,11 +56,24 @@ class Basic(unittest.TestCase):
         timeoutSecs = 1800
         #noPoll -> False when GBM finished
         start = time.time()
-        GBMResult = h2o_cmd.runGBM(parseResult=parseResult, **kwargs)
+        GBMFirstResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
+        h2o_jobs.pollStatsWhileBusy(timeoutSecs=1200, pollTimeoutSecs=120, retryDelaySecs=5)
         elapsed = time.time() - start
 
         print "GBM training completed in", elapsed, "seconds.", \
             "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+
+        gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
+        errsLast = gbmTrainView['gbm_model']['errs'][-1]
+
+        print "GBM 'errsLast'", errsLast
+        if DO_CLASSIFICATION:
+            cm = gbmTrainView['gbm_model']['cm']
+            pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
+            print "\nTrain\n==========\n"
+            print h2o_gbm.pp_cm(cm)
+        else:
+            print "GBMTrainView:", h2o.dump_json(gbmTrainView['gbm_model']['errs'])
 
 
 if __name__ == '__main__':
