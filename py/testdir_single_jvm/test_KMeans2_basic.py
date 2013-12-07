@@ -39,12 +39,12 @@ class Basic(unittest.TestCase):
 
         # loop, to see if we get same centers
         for trial in range(2):
-            params = {'k'                    : 3, 
-                      'initialization'       : 'Furthest', 
-                      'ignored_cols_by_name' : None, 
-                      'destination_key'      : 'benign_k.hex',
-                      'max_iter'             : 50,
-                      'seed'                 : 265211114317615310,
+            params = {'k': 3, 
+                      'initialization': 'Furthest', 
+                      'ignored_cols' : None, 
+                      'destination_key': 'benign_k.hex',
+                      'max_iter': 50,
+                      'seed': 265211114317615310,
                      }
             kwargs = params.copy()
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
@@ -70,12 +70,12 @@ class Basic(unittest.TestCase):
         # all are multipliers of expected tuple value
         allowedDelta = (0.01, 0.01, 0.01)
         for trial in range(2):
-            params = {'k'                    : 3, 
-                     'initialization'        : 'Furthest', 
-                      'ignored_cols_by_name' : "ID",
-                      'destination_key'      : 'prostate_k.hex',
-                      'max_iter'             : 100,
-                      'seed'                 : 265211114317615310
+            params = {'k': 3, 
+                     'initialization': 'Furthest', 
+                     'ignored_cols': "ID",
+                     'destination_key': 'prostate_k.hex',
+                     'max_iter': 100,
+                     'seed': 265211114317615310
                     }
             kwargs = params.copy()
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)

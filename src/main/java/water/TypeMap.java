@@ -36,7 +36,12 @@ public class TypeMap {
     "water.ValueArray$Column",
     "water.api.Constants",
     "water.api.RequestArguments",
+    "water.api.RequestArguments$FrameKeyVec",
+    "water.api.RequestArguments$FrameClassVec",
+    "water.api.RequestArguments$HexColumnSelect",
+    "water.api.RequestArguments$HexAllColumnSelect",
     "water.api.RequestBuilders",
+    "water.api.RequestBuilders$ResponseInfo",
     "water.api.RequestQueries",
     "water.api.RequestStatics",
     "water.api.Script$Done",
@@ -54,6 +59,7 @@ public class TypeMap {
     // dependency from core code into tests !!!!
     "hex.DGLM$GLMParams",
     "hex.NewRowVecTask$DataFrame",
+    "hex.drf.DRF",
     "water.AutoSerialTest",
     "water.KVTest$Atomic2",
   };
@@ -127,7 +133,9 @@ public class TypeMap {
     Freezable f = GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw Log.errRTExcept(e); }
+      catch( Exception e ) {
+        throw Log.errRTExcept(e);
+      }
     }
     return f.newInstance();
   }

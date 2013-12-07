@@ -10,7 +10,7 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
-source ./runner_setup.sh
+source ./runner_setup.sh "$@"
 echo "Do we have to clean out old ice_root dirs somewhere?"
 
 echo "Setting up sandbox, since no cloud build here will clear it out! (unlike other runners)"
@@ -47,34 +47,7 @@ echo "scp some jars"
 $REMOTE_SCP $H2O_HADOOP/$CDH4_YARN_JAR  $REMOTE_USER:$REMOTE_HOME
 $REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
-#***********************************************************************************
-echo "Does 0xcustomer have any mapred jobs left running from something? (manual/jenkins/whatever)"
-rm -f /tmp/my_jobs_on_hadoop_$REMOTE_IP
-
-
-echo "Checking mapred jobs"
-echo "'hadoop job' is deprecated, we use 'mapred job'"
-$REMOTE_SSH_USER 'mapred job -list' > /tmp/my_jobs_on_hadoop_$REMOTE_IP
-cat /tmp/my_jobs_on_hadoop_$REMOTE_IP
-
-echo "kill any running mapred jobs by me"
-while read jobid state rest
-do
-    echo $jobid $state
-    # ignore these kind of lines
-    # cdh4, which incidentally also requires yarn to be running!
-    # Total jobs:0
-    #                   JobId      State  <more>
-
-    # cdh3
-    # 0 jobs currently running
-    # JobId   State   StartTime   UserName    Priority    SchedulingInfo
-    if [[ ("$jobid" != "JobId") && ("$state" != "jobs") && ("$jobid" != "Total") ]]
-    then
-        echo "mapred job -kill $jobid"
-        $REMOTE_SSH_USER "mapred job -kill $jobid"
-    fi
-done < /tmp/my_jobs_on_hadoop_$REMOTE_IP
+source ./kill_hadoop_jobs.sh
 
 #*****HERE' WHERE WE START H2O ON HADOOP*******************************************
 rm -f /tmp/h2o_on_hadoop_$REMOTE_IP.sh
@@ -94,20 +67,7 @@ cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh | $REMOTE_SSH_USER &
 CLOUD_PID=$!
 jobs -l
 
-echo ""
-echo "Have to wait until h2o_one_node is available from the cloud build. Deleted it above."
-echo "spin loop here waiting for it."
-
-rm -fr h2o_one_node
-while [ ! -f h2o_one_node ]
-do
-    sleep 5
-    set +e
-    echo "$REMOTE_SCP $REMOTE_USER:$REMOTE_HOME/h2o_one_node ."
-    $REMOTE_SCP $REMOTE_USER:$REMOTE_HOME/h2o_one_node .
-    set -e
-done
-ls -lt h2o_one_node
+source ./wait_for_h2o_on_hadoop.sh
 
 # use these args when we do Runit
 while IFS=';' read CLOUD_IP CLOUD_PORT 

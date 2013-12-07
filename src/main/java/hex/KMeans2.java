@@ -24,7 +24,7 @@ public class KMeans2 extends ColumnsJob {
   @API(help = "Clusters initialization", filter = Default.class)
   public Initialization initialization = Initialization.None;
 
-  @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 2, lmax = 100000)
+  @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 2, lmax = 100000)
   public int k = 2;
 
   @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000)
@@ -40,7 +40,7 @@ public class KMeans2 extends ColumnsJob {
     description = "K-means";
   }
 
-  @Override protected void exec() {
+  @Override protected Status exec() {
     String sourceArg = input("source");
     Key sourceKey = null;
     if( sourceArg != null )
@@ -56,6 +56,7 @@ public class KMeans2 extends ColumnsJob {
     String[] namesResp = Utils.append(names, "response");
     String[][] domaiResp = (String[][]) Utils.append(source.domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
+    model.k = k; model.normalized = normalize;
 
     // TODO remove when stats are propagated with vecs?
     double[] means = new double[vecs.length];
@@ -102,7 +103,7 @@ public class KMeans2 extends ColumnsJob {
         clusters = Utils.append(clusters, sampler._sampled);
 
         if( cancelled() )
-          return;
+          return Status.Done;
         model.clusters = normalize ? denormalize(clusters, vecs) : clusters;
         model.error = sqr._sqr;
         model.iterations++;
@@ -132,13 +133,11 @@ public class KMeans2 extends ColumnsJob {
       if( cancelled() )
         break;
     }
+    return Status.Done;
   }
 
   @Override protected Response redirect() {
-    String n = KMeans2Progress.class.getSimpleName();
-    return new Response(Response.Status.redirect, this, -1, -1, n, //
-        "job_key", job_key, //
-        "destination_key", destination_key);
+    return KMeans2Progress.redirect(this, job_key, destination_key);
   }
 
   public static class KMeans2Progress extends Progress2 {
@@ -146,7 +145,11 @@ public class KMeans2 extends ColumnsJob {
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @Override protected Response jobDone(Job job, Key dst) {
-      return new Response(Response.Status.redirect, this, 0, 0, new KMeans2ModelView().href(), "model", destination_key);
+      return KMeans2ModelView.redirect(this, destination_key);
+    }
+
+    public static Response redirect(Request req, Key job_key, Key destination_key) {
+      return Response.redirect(req, new KMeans2Progress().href(), JOB_KEY, job_key, DEST_KEY, destination_key);
     }
   }
 
@@ -162,11 +165,11 @@ public class KMeans2 extends ColumnsJob {
     }
 
     public static Response redirect(Request req, Key model) {
-      return new Response(Response.Status.redirect, req, -1, -1, new KMeans2ModelView().href(), "model", model);
+      return Response.redirect(req, new KMeans2ModelView().href(), "model", model);
     }
 
     @Override protected Response serve() {
-      return new Response(Response.Status.done, this, -1, -1, null);
+      return Response.done(this);
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
@@ -210,6 +213,9 @@ public class KMeans2 extends ColumnsJob {
 
     @API(help = "Sum of min square distances")
     public double error;
+
+    @API(help = "Number of clusters")
+    public int k;
 
     @API(help = "Whether data was normalized")
     public boolean normalized;

@@ -76,27 +76,70 @@ public class Boot extends ClassLoader {
 
   private Boot() throws IOException {
     final String ownJar = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+    Log.POST(2000, "ownJar is " + ownJar);
     ZipFile jar = null;
-    if( ownJar.endsWith(".jar") ) { // do nothing if not run from jar
+
+    // do nothing if not run from jar
+    if( ownJar.endsWith(".jar") ) {
+      Log.POST(2001, "");
       _jarPath = URLDecoder.decode(ownJar, "UTF-8");
-      InputStream is = new FileInputStream(_jarPath);
-      this._jarHash = getMD5(is);
-      is.close();
-      jar = new ZipFile(_jarPath);
-    } else {
-      this._jarHash = new byte[16];
-      Arrays.fill(this._jarHash, (byte)0xFF);
+    }
+    else if ( ownJar.endsWith(".jar/") ) {
+      Log.POST(2002, "");
+      // Some hadoop versions (like Hortonworks) will unpack the jar
+      // file on their own.
+      String stem = "h2o.jar";
+      File f = new File (ownJar + stem);
+      if (f.exists()) {
+        Log.POST(2003, "");
+	_jarPath = URLDecoder.decode(ownJar + stem, "UTF-8");
+      }
+      else {
+	_jarPath = null;
+      }
+    }
+    else {
       _jarPath = null;
     }
-    _h2oJar = jar;
+
+    if (_jarPath == null) {
+      Log.POST(2004, "");
+      this._jarHash = new byte[16];
+      Arrays.fill(this._jarHash, (byte)0xFF);
+      _h2oJar = null;
+    }
+    else {
+      Log.POST(2005, "");
+      InputStream is = new FileInputStream(_jarPath);
+      _jarHash = getMD5(is);
+      is.close();
+      _h2oJar = new ZipFile(_jarPath);
+    }
+
+    Log.POST(2010, "_h2oJar is null: " + ((_h2oJar == null) ? "true" : "false"));
   }
 
   public static void main(String[] args) throws Exception {  _init.boot(args); }
-  public static void main(Class main, String... args) throws Exception {
+  // NOTE: This method cannot be run from jar
+  public static void main(Class main, String[] args) throws Exception {
+    String[] packageNamesToWeave = { main.getPackage().getName()} ;
+    main(main, args, packageNamesToWeave);
+  }
+  // NOTE: This method cannot be run from jar
+  public static void main(Class main, String[] args, String[] packageNamesToWeave) throws Exception{
+    for (String packageName : packageNamesToWeave) {
+      weavePackage(packageName);
+    }
     ArrayList<String> l = new ArrayList<String>(Arrays.asList(args));
     l.add(0, "-mainClass");
     l.add(1, main.getName());
-    _init.boot(l.toArray(new String[0]));
+    _init.boot2(l.toArray(new String[0]));
+  }
+  public static void weavePackage(String name) {
+    Weaver.registerPackage(name);
+  }
+  public static String[] wovenPackages() {
+    return Weaver._packages;
   }
 
   private URLClassLoader _systemLoader;
@@ -159,11 +202,11 @@ public class Boot extends ClassLoader {
       H2O.exit (0);
     }
 
-    if( fromJar() ) {
-      _systemLoader = (URLClassLoader)getSystemClassLoader();
-      _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-      _addUrl.setAccessible(true);
+    _systemLoader = (URLClassLoader) getSystemClassLoader();
+    _addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+    _addUrl.setAccessible(true);
 
+    if( fromJar() ) {
       // Calculate directory name of where to unpack JAR file stuff.
       String tmproottmpdir;
       {
@@ -182,20 +225,31 @@ public class Boot extends ClassLoader {
         File tmproot = new File(ice_root);
         if( !tmproot.mkdirs() && !tmproot.isDirectory() ) throw new IOException("Unable to create ice root: " + tmproot.getAbsolutePath());
 
-        long now = System.currentTimeMillis();
-        String pid = "unknown";
-        try {
-          String s = ManagementFactory.getRuntimeMXBean().getName();
-          Pattern p = Pattern.compile("([0-9]*).*");
-          Matcher m = p.matcher(s);
-          boolean b = m.matches();
-          if (b == true) {
-            pid = m.group(1);
-          }
-        }
-        catch (Exception _) {}
+        long now;
+        String randomChars;
+        String pid;
+        {
+          now = System.currentTimeMillis();
+          pid = "unknown";
 
-        tmproottmpdir = tmproot + File.separator + "h2o-temp-" + now + "-" + pid;
+          Random r = new Random();
+          byte[] bytes = new byte[4];
+          r.nextBytes(bytes);
+          randomChars = String.format("%02x%02x%02x%02x", bytes[0], bytes[1], bytes[2], bytes[3]);
+
+          try {
+            String s = ManagementFactory.getRuntimeMXBean().getName();
+            Pattern p = Pattern.compile("([0-9]*).*");
+            Matcher m = p.matcher(s);
+            boolean b = m.matches();
+            if (b == true) {
+              pid = m.group(1);
+            }
+          }
+          catch (Exception _) {}
+        }
+
+        tmproottmpdir = tmproot + File.separator + "h2o-temp-" + now + "-" + randomChars + "-" + pid;
       }
 
       File dir = new File (tmproottmpdir);
@@ -318,16 +372,14 @@ public class Boot extends ClassLoader {
       return _systemLoader.getResourceAsStream("resources"+uri);
     } else {
       try {
-        return new FileInputStream(new File("lib/resources"+uri));
-        // The following code is busted on windows with spaces in user-names,
-        // and I've no idea where it comes from - GIT claims it came from
-        // cliffc-fvec2 merge into master, but there's no indication of this
-        // code in cliffc-fvec2 and cliffc didn't write this code (and it's
-        // instantly busted for the windows user name "Cliff Click").
-        //// IDE mode assumes classes are in target/classes. Not using current path
-        //// to allow running from other locations.
-        //String classes = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
-        //return new FileInputStream(new File(classes + "/../../lib/resources"+uri));
+        File resources  = new File("lib/resources");
+        if(!resources.exists()) {
+          // IDE mode assumes classes are in target/classes. Not using current path
+          // to allow running from other locations.
+          String h2oClasses = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+          resources = new File(h2oClasses + "/../../lib/resources");
+        }
+        return new FileInputStream(new File(resources, uri));
       } catch (FileNotFoundException e) {
         Log.err(e);
         return null;
@@ -350,7 +402,7 @@ public class Boot extends ClassLoader {
   // methods to classes that inherit from DTask & Iced.  Notice that this
   // changes the default search order: existing classes first, then my class
   // search, THEN the System or parent loader.
-  public synchronized Class loadClass( String name, boolean resolve ) throws ClassNotFoundException {
+  @Override public synchronized Class loadClass( String name, boolean resolve ) throws ClassNotFoundException {
     assert !name.equals(Weaver.class.getName());
     Class z = loadClass2(name);      // Do all the work in here
     if( resolve ) resolveClass(z);   // Resolve here instead in the work method
@@ -363,7 +415,12 @@ public class Boot extends ClassLoader {
     if( z != null ) return z;
     if( _weaver == null ) (_weaver = new Weaver()).initTypeMap(this);
     z = _weaver.weaveAndLoad(name, this);    // Try the Happy Class Loader
-    if( z != null ) return z;
+    if( z != null ) {
+      // Occasionally it's useful to print out class names that are actually Weaved.
+      // Leave this commented out println here so I can easily find it for next time.
+      //   System.out.println("WEAVED: " + name);
+      return z;
+    }
     z = getParent().loadClass(name); // Try the parent loader.  Probably the System loader.
     if( z != null ) return z;
     return z;
@@ -388,7 +445,7 @@ public class Boot extends ClassLoader {
 
     for( int i = 0; i < names.size(); i++ ) {
       String n = names.get(i);
-      names.set(i, n.replace('\\', '/').replace('/', '.').substring(0, n.length() - 6));
+      names.set(i, Utils.className(n));
     }
     return names;
   }

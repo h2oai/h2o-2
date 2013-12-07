@@ -10,6 +10,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c6_hdfs(self):
+        h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
         # larger set in my local dir
@@ -71,31 +72,19 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             timeoutSecs = 1000
             # do an import first, because we want to get the size of the file
             (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs)
-            succeeded = importResult['succeeded']
-            if len(succeeded) < 1:
+            keys = importResult['keys']
+            if len(keys) < 1:
                 raise Exception("Should have imported at least 1 key for %s" % csvPathname)
 
             # just do a search
             foundIt = None
-            for f in succeeded:
-                if csvPathname in f['key']:
+            for f in keys:
+                if csvPathname in f:
                     foundIt = f
                     break
 
-            if foundIt:
-                value_size_bytes = f['value_size_bytes']
-            else:
+            if not foundIt:
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
-
-            # no pattern matching, so no multiple files to add up
-            totalBytes = value_size_bytes
-
-            #  "succeeded": [
-            #    {
-            #      "file": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "key": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "value_size_bytes": 1115287100
-            #    },
 
             print "Loading", csvFilename, 'from hdfs'
             start = time.time()
@@ -103,13 +92,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 doSummary=True, benchmarkLogging=benchmarkLogging, noPoll=h2o.beta_features)
             if h2o.beta_features:
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "parse result:", parseResult['destination_key']
 
             elapsed = time.time() - start
-            fileMBS = (totalBytes/1e6)/elapsed
-            l = '{!s} jvms, {!s}GB heap, {:s} {:s} {:6.2f}MB {:6.2f} MB/sec for {:.2f} secs'.format(
-                len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, (totalBytes+0.0)/1e6, fileMBS, elapsed)
+            l = '{!s} jvms, {!s}GB heap, {:s} {:s} for {:.2f} secs'.format(
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, elapsed)
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 

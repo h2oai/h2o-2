@@ -1,6 +1,7 @@
 import h2o_cmd, h2o
 import re, random, math
 
+
 def plotLists(xList, xLabel=None, eListTitle=None, eList=None, eLabel=None, fListTitle=None, fList=None, fLabel=None):
     if h2o.python_username!='kevin':
         return
@@ -145,6 +146,10 @@ def simpleCheckGBMScore(self, glmScore, family='gaussian', allowFailWarning=Fals
                     raise Exception(w)
 
     validation = glmScore['validation']
+    validation['err'] = h2o_util.cleanseInfNan(validation['err'])
+    validation['nullDev'] = h2o_util.cleanseInfNan(validation['nullDev'])
+    validation['resDev'] = h2o_util.cleanseInfNan(validation['resDev'])
+
     print "%15s %s" % ("err:\t", validation['err'])
     print "%15s %s" % ("nullDev:\t", validation['nullDev'])
     print "%15s %s" % ("resDev:\t", validation['resDev'])
@@ -230,6 +235,10 @@ def simpleCheckGBM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
                 raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
 
     print "GBMModel/validations"
+    validations['err'] = h2o_util.cleanseInfNan(validations['err'])
+    validations['nullDev'] = h2o_util.cleanseInfNan(validations['nullDev'])
+    validations['resDev'] = h2o_util.cleanseInfNan(validations['resDev'])
+
     print "%15s %s" % ("err:\t", validations['err'])
     print "%15s %s" % ("nullDev:\t", validations['nullDev'])
     print "%15s %s" % ("resDev:\t", validations['resDev'])
@@ -516,5 +525,32 @@ def goodXFromColumnInfo(y,
         return ignore_x
     else:
         return x
+
+
+def showGBMGridResults(GBMResult, expectedErrorMax, classification=True):
+    # print "GBMResult:", h2o.dump_json(GBMResult)
+    jobs = GBMResult['jobs']
+    for jobnum, j in enumerate(jobs):
+        _distribution = j['_distribution']
+        model_key = j['destination_key']
+        job_key = j['job_key']
+        inspect = h2o_cmd.runInspect(key=model_key)
+        # print "jobnum:", jobnum, h2o.dump_json(inspect)
+        gbmTrainView = h2o_cmd.runGBMView(model_key=model_key)
+        print "jobnum:", jobnum, h2o.dump_json(gbmTrainView)
+
+        if classification:
+            cm = gbmTrainView['gbm_model']['cm']
+            pctWrongTrain = pp_cm_summary(cm);
+            if pctWrongTrain > expectedErrorMax:
+                raise Exception("Should have < %s error here. pctWrongTrain: %s" % (expectedErrorMax, pctWrongTrain))
+
+            errsLast = gbmTrainView['gbm_model']['errs'][-1]
+            print "\nTrain", jobnum, job_key, "\n==========\n", "pctWrongTrain:", pctWrongTrain, "errsLast:", errsLast
+            print "GBM 'errsLast'", errsLast
+            print pp_cm(cm)
+        else:
+            print "\nTrain", jobnum, job_key, "\n==========\n", "errsLast:", errsLast
+            print "GBMTrainView errs:", gbmTrainView['gbm_model']['errs']
 
 

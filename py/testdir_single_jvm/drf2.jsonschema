@@ -1,0 +1,50 @@
+{
+    "type":"object", "properties": {
+        "Request2": { "type":"number" },
+        "drf_model": { "type":"object", "properties": {
+            "N": { "type":"number" },
+            "_dataKey": { "type":"string" },
+            "_domains": { "type":"array", "items": [
+                { "type":"string" },
+                { "type":"array" }
+            ]
+            },
+            "_names": { "type":"array", "items":
+                { "type":"string" }
+            },
+            "_selfKey": { "type":"string" },
+            "cm": { "type":"array", "items":
+                { "type":"array" }
+            },
+            "errs": { "type":"array", "items":
+                { "type":"number" }
+            },
+            "testKey": { "type":"string" },
+            "treeBits": { "type":"array", "items":
+                { "type":"array" }
+            },
+            "treeStats": { "type":"object", "properties": {
+                "maxDepth": { "type":"number" },
+                "maxLeaves": { "type":"number" },
+                "meanDepth": { "type":"number" },
+                "meanLeaves": { "type":"number" },
+                "minDepth": { "type":"number" },
+                "minLeaves": { "type":"number" }
+            }
+            },
+            "varimp": { "type":"array", "items":
+                { "type":"number" }
+            }
+        }
+        },
+        "response_info": { "type":"object", "properties": {
+            "h2o": { "type":"string" },
+            "node": { "type":"string" },
+            "redirect_url": { "type":"null" },
+            "status": { "type":"string" },
+            "time": { "type":"number" }
+        }
+        }
+    }
+}
+

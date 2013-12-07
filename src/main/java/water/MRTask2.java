@@ -1,6 +1,8 @@
 package water;
 
 import jsr166y.CountedCompleter;
+import jsr166y.ForkJoinPool;
+import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
 
@@ -15,20 +17,41 @@ import water.fvec.Vec.VectorGroup;
  * way back to the invoking node. When the last reduce method has been called, fields
  * of the initial MRTask2 instance contains the computation results.
  * <nl>
- * Apart from small reduced POJO returned to the calling node, MRtask2 can produce output vector(s) as a result.
- * These will have chunks co-located with the input dataset, however, their number of lines will generally differ,
- * (so they won't be strictly compatible with the original). To produce output vectors, call doAll.dfork version
- * with required number of outputs and override appropriate <code>map</code> call taking required number of NewChunks.
- * MRTask2 will automatically close the new Appendable vecs and produce an output frame with newly created Vecs.
+ * Apart from small reduced POJO returned to the calling node, MRtask2 can
+ * produce output vector(s) as a result.  These will have chunks co-located
+ * with the input dataset, however, their number of lines will generally
+ * differ, (so they won't be strictly compatible with the original). To produce
+ * output vectors, call doAll.dfork version with required number of outputs and
+ * override appropriate <code>map</code> call taking required number of
+ * NewChunks.  MRTask2 will automatically close the new Appendable vecs and
+ * produce an output frame with newly created Vecs.
  */
-public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable {
+public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Cloneable, ForkJoinPool.ManagedBlocker {
+  public MRTask2(){}
+  public MRTask2(H2OCountedCompleter completer){super(completer);}
 
   /** The Vectors to work on. */
   public Frame _fr;
-  public Frame _outputFrame;
-  private AppendableVec [] _appendables; // appendables are treated separately (roll-ups computed in map/reduce style, can not be passed via K/V store).
+  // appendables are treated separately (roll-ups computed in map/reduce style, can not be passed via K/V store).
+  protected AppendableVec [] _appendables; 
   private int _vid;
   private int _noutputs;
+
+  public Frame outputFrame(String [] names, String [][] domains){
+    Futures fs = new Futures();
+    Frame res = outputFrame(names, domains, fs);
+    fs.blockForPending();
+    return res;
+  }
+  public Frame outputFrame(String [] names, String [][] domains, Futures fs){
+    if(_noutputs == 0)return null;
+    Vec [] vecs = new Vec[_noutputs];
+    for(int i = 0; i < _noutputs; ++i){
+      _appendables[i]._domain = domains[i];
+      vecs[i] = _appendables[i].close(fs);
+    }
+    return new Frame(names,vecs);
+  }
 
   /** Override with your map implementation.  This overload is given a single
    *  <strong>local</strong> input Chunk.  It is meant for map/reduce jobs that use a
@@ -123,7 +146,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       }
       if( size_rez !=0 )        // Record i/o result size
         if( _size_rez0 == 0 ) {      _size_rez0=size_rez; }
-        else { assert _size_rez1==0; _size_rez1=size_rez; }
+        else { /*assert _size_rez1==0;*/ _size_rez1=size_rez; }
       assert _last._onCdone >= _done1st;
     }
 
@@ -183,7 +206,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  asynchronous.  It returns 'this', on which getResult() can be invoked
    *  later to wait on the computation.  */
   public final T dfork( Vec...vecs ) {return dfork(0,vecs);}
-  public final T dfork( Frame fr ) {return dfork(0,fr);}
+  public T dfork( Frame fr ) {return dfork(0,fr);}
   public final T dfork( int outputs, Vec... vecs) {
     return dfork(outputs,new Frame(vecs));
   }
@@ -201,12 +224,22 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Block for & get any final results from a dfork'd MRTask2.
    *  Note: the desired name 'get' is final in ForkJoinTask.  */
   public final T getResult() {
-    join();
+    try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
     // Do any post-writing work (zap rollup fields, etc)
     _fr.reloadVecs();
     for( int i=0; i<_fr.numCols(); i++ )
       _fr.vecs()[i].postWrite();
     return self();
+  }
+
+  // Return true if blocking is unnecessary, which is true if the Task isDone.
+  public boolean isReleasable() {  return isDone();  }
+  // Possibly blocks the current thread.  Returns true if isReleasable would
+  // return true.  Used by the FJ Pool management to spawn threads to prevent
+  // deadlock is otherwise all threads would block on waits.
+  public boolean block() {
+    while( !isDone() ) join();
+    return true;
   }
 
   /** Called once on remote at top level, probably with a subset of the cloud.
@@ -382,18 +415,8 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
       copyOver(_res);             // So copy into self
     }
     closeLocal();
-    if( ns == (1L<<H2O.CLOUD.size())-1){
-      if(_noutputs > 0){ // All-done on head of whole MRTask tree?
-        // close the appendables and make the output frame
-        Futures fs = new Futures();
-        Vec [] vecs = new Vec[_noutputs];
-        for(int i = 0; i < _noutputs; ++i)
-          vecs[i] = _appendables[i].close(fs);
-        fs.blockForPending();
-        _outputFrame = new Frame(vecs);
-      }
+    if( ns == (1L<<H2O.CLOUD.size())-1)
       postGlobal();
-    }
   }
 
   // Block for RPCs to complete, then reduce global results into self results
@@ -412,9 +435,9 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  internal by F/J.  Not expected to be user-called.  */
   protected void reduce4( T mrt ) {
     // Reduce any AppendableVecs
-    for( int i=0; i<_fr.vecs().length; i++ )
-      if( _fr.vecs()[i] instanceof AppendableVec )
-        ((AppendableVec)_fr.vecs()[i]).reduce((AppendableVec)mrt._fr.vecs()[i]);
+    if( _noutputs > 0 )
+      for( int i=0; i<_appendables.length; i++ )
+        _appendables[i].reduce(mrt._appendables[i]);
     // User's reduction
     reduce(mrt);
   }

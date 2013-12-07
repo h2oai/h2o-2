@@ -1,4 +1,4 @@
-import h2o_cmd, h2o
+import h2o_cmd, h2o, h2o_util
 import re, random, math
 
 def pickRandGlmParams(paramDict, params):
@@ -30,15 +30,16 @@ def pickRandGlmParams(paramDict, params):
                         params['link'] = None
 
         # case only used if binomial? binomial is default if no family
-        if 'family' not in params or params['family'] == 'binomial':
-            maxCase = max(paramDict['case'])
-            minCase = min(paramDict['case'])
-            # make sure the combo of case and case_mode makes sense
-            # there needs to be some entries in both effective cases
-            if ('case_mode' in params):
-                if ('case' not in params) or (params['case'] is None):
-                    params['case'] = 1
-                elif params['case_mode']=="<" and params['case']==minCase:
+        # update: apparently case and case_mode always affect things
+        # make sure the combo of case and case_mode makes sense
+        # there needs to be some entries in both effective cases
+        if ('case_mode' in params):
+            if ('case' not in params) or (params['case'] is None):
+                params['case'] = 1
+            else:
+                maxCase = max(paramDict['case'])
+                minCase = min(paramDict['case'])
+                if params['case_mode']=="<" and params['case']==minCase:
                     params['case'] += 1
                 elif params['case_mode']==">" and params['case']==maxCase:
                     params['case'] -= 1
@@ -69,6 +70,9 @@ def simpleCheckGLMScore(self, glmScore, family='gaussian', allowFailWarning=Fals
                     raise Exception(w)
 
     validation = glmScore['validation']
+    validation['err'] = h2o_util.cleanseInfNan(validation['err'])
+    validation['nullDev'] = h2o_util.cleanseInfNan(validation['nullDev'])
+    validation['resDev'] = h2o_util.cleanseInfNan(validation['resDev'])
     print "%15s %s" % ("err:\t", validation['err'])
     print "%15s %s" % ("nullDev:\t", validation['nullDev'])
     print "%15s %s" % ("resDev:\t", validation['resDev'])
@@ -90,9 +94,11 @@ def simpleCheckGLMScore(self, glmScore, family='gaussian', allowFailWarning=Fals
         emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validation['resDev'])
         raise Exception(emsg)
 
+    # legal?
     if math.isnan(validation['nullDev']):
-        emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", validation['nullDev'])
-        raise Exception(emsg)
+        ## emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", validation['nullDev'])
+        ## raise Exception(emsg)
+        pass
 
 def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False,
     prettyPrint=False, noPrint=False, maxExpectedIterations=None, doNormalized=False, **kwargs):
@@ -101,9 +107,13 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # h2o GLM will verboseprint the result and print errors. 
     # so don't have to do that
     # different when cross validation  is used? No trainingErrorDetails?
-    GLMModel = glm['GLMModel']
+    if h2o.beta_features:
+        GLMModel = glm['glm_model']
+    else:
+        GLMModel = glm['GLMModel']
+
     warnings = None
-    if 'warnings' in GLMModel:
+    if 'warnings' in GLMModel and GLMModel['warnings']:
         warnings = GLMModel['warnings']
         # stop on failed
         x = re.compile("failed", re.IGNORECASE)
@@ -123,74 +133,132 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # not in GLMGrid?
 
     # FIX! don't get GLMParams if it can't solve?
-    GLMParams = GLMModel["GLMParams"]
+    if h2o.beta_features:
+        GLMParams = GLMModel['glm']
+    else:
+        GLMParams = GLMModel["GLMParams"]
     family = GLMParams["family"]
 
-    iterations = GLMModel['iterations']
+    if h2o.beta_features:
+        submodels0 = GLMModel['submodels'][0]
+        iterations = submodels0['iteration']
+    else:
+        iterations = GLMModel['iterations']
+
     print "GLMModel/iterations:", iterations
 
             # if we hit the max_iter, that means it probably didn't converge. should be 1-maxExpectedIter
     if maxExpectedIterations is not None and iterations  > maxExpectedIterations:
             raise Exception("Convergence issue? GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
 
-    # pop the first validation from the list
-    validationsList = GLMModel['validations']
-    # don't want to modify validationsList in case someone else looks at it
-    validations = validationsList[0]
+    if h2o.beta_features:
+        if 'validation' not in submodels0:
+            raise Exception("Should be a 'validations' key in submodels0: %s" % h2o.dump_json(submodels0))
+        validationsList = submodels0['validation']
+        validations = validationsList
+        
+    else:
+        # pop the first validation from the list
+        if 'validations' not in GLMModel:
+            raise Exception("Should be a 'validations' key in GLMModel: %s" % h2o.dump_json(GLMModel))
+        validationsList = GLMModel['validations']
+        # don't want to modify validationsList in case someone else looks at it
+        validations = validationsList[0]
 
     # xval. compare what we asked for and what we got.
     n_folds = kwargs.setdefault('n_folds', None)
-    if not 'xval_models' in validations:
-        if n_folds > 1:
-            raise Exception("No cross validation models returned. Asked for "+n_folds)
-    else:
-        xval_models = validations['xval_models']
-        if n_folds and n_folds > 1:
-            if len(xval_models) != n_folds:
-                raise Exception(len(xval_models)+" cross validation models returned. Asked for "+n_folds)
-        else:
-            # should be default 10?
-            if len(xval_models) != 10:
-                raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
 
-    print "GLMModel/validations"
-    print "%15s %s" % ("err:\t", validations['err'])
-    print "%15s %s" % ("nullDev:\t", validations['nullDev'])
-    print "%15s %s" % ("resDev:\t", validations['resDev'])
+    # not checked in v2?
+    if not h2o.beta_features:
+        if not 'xval_models' in validations:
+            if n_folds > 1:
+                raise Exception("No cross validation models returned. Asked for "+n_folds)
+        else:
+            xval_models = validations['xval_models']
+            if n_folds and n_folds > 1:
+                if len(xval_models) != n_folds:
+                    raise Exception(len(xval_models)+" cross validation models returned. Asked for "+n_folds)
+            else:
+                # should be default 10?
+                if len(xval_models) != 10:
+                    raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
+
+    if h2o.beta_features:
+        print "GLMModel/validations"
+        validations['avg_err'] = h2o_util.cleanseInfNan(validations['avg_err'])
+        validations['null_deviance'] = h2o_util.cleanseInfNan(validations['null_deviance'])
+        validations['residual_deviance'] = h2o_util.cleanseInfNan(validations['residual_deviance'])
+        print "%15s %s" % ("avg_err:\t", validations['avg_err'])
+        print "%15s %s" % ("null_deviance:\t", validations['null_deviance'])
+        print "%15s %s" % ("residual_deviance:\t", validations['residual_deviance'])
+
+    else:
+        print "GLMModel/validations"
+        validations['err'] = h2o_util.cleanseInfNan(validations['err'])
+        validations['nullDev'] = h2o_util.cleanseInfNan(validations['nullDev'])
+        validations['resDev'] = h2o_util.cleanseInfNan(validations['resDev'])
+        print "%15s %s" % ("err:\t", validations['err'])
+        print "%15s %s" % ("nullDev:\t", validations['nullDev'])
+        print "%15s %s" % ("resDev:\t", validations['resDev'])
 
     # threshold only there if binomial?
     # auc only for binomial
     if family=="binomial":
         print "%15s %s" % ("auc:\t", validations['auc'])
-        print "%15s %s" % ("threshold:\t", validations['threshold'])
+        if h2o.beta_features:
+            print "%15s %s" % ("best_threshold:\t", validations['best_threshold'])
+        else:
+            print "%15s %s" % ("threshold:\t", validations['threshold'])
 
     if family=="poisson" or family=="gaussian":
         print "%15s %s" % ("aic:\t", validations['aic'])
 
-    if math.isnan(validations['err']):
-        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])
-        raise Exception(emsg)
+    if not h2o.beta_features:
+        if math.isnan(validations['err']):
+            emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", validations['err'])
+            raise Exception(emsg)
 
-    if math.isnan(validations['resDev']):
-        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validations['resDev'])
-        raise Exception(emsg)
+        if math.isnan(validations['resDev']):
+            emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validations['resDev'])
+            raise Exception(emsg)
 
-    if math.isnan(validations['nullDev']):
-        emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", validations['nullDev'])
-        raise Exception(emsg)
+        # legal?
+        if math.isnan(validations['nullDev']):
+            pass
 
     # get a copy, so we don't destroy the original when we pop the intercept
-    if doNormalized:
-        coefficients = GLMModel['normalized_coefficients'].copy()
-    else:
-        coefficients = GLMModel['coefficients'].copy()
+    if h2o.beta_features:
+        if doNormalized:
+            coefficients = submodels0['normalized_beta'].copy()
+        else:
+            print "beta:", submodels0['beta']
+            coefficients = list(submodels0['beta']) # copy
 
-    column_names = GLMModel['column_names']
-    # get the intercept out of there into it's own dictionary
-    intercept = coefficients.pop('Intercept', None)
+    else:
+        if doNormalized:
+            coefficients = GLMModel['normalized_coefficients'].copy()
+        else:
+            coefficients = GLMModel['coefficients'].copy()
+
+    if h2o.beta_features:
+        # 'beta' has to use 'idxs' to index into these names
+        coefficients_names = GLMModel['coefficients_names']
+        idxs = GLMModel['idxs']
+        for i in idxs:
+            column_names = coefficient_names[i]
+        print "column_names:", column_names
+        intercept = coefficients.pop('Intercept', None)
+    else:
+        column_names = GLMModel['column_names']
+        # get the intercept out of there into it's own dictionary
+        intercept = coefficients.pop('Intercept', None)
+
     # have to skip the output col! get it from kwargs
     # better always be there!
-    y = kwargs['y']
+    if h2o.beta_features:
+        y = kwargs['response']
+    else:
+        y = kwargs['y']
 
 
     # the dict keys are column headers if they exist...how to order those? new: use the 'column_names'
@@ -223,7 +291,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # print in order using col_names
     # column_names is input only now..same for header or no header, or expanded enums
     for c in column_names:
-        cString = add_to_coefficient_list_and_string(c,cList,cString)
+        cString = add_to_coefficient_list_and_string(c, cList, cString)
 
     if prettyPrint: 
         print "\nH2O intercept:\t\t%.5e" % intercept
@@ -278,9 +346,13 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             "sum of abs. value of GLM coefficients/intercept is " + str(s) + ", not >= 1e-26"
             ))
 
-    print "GLMModel model time (milliseconds):", GLMModel['model_time']
-    print "GLMModel validation time (milliseconds):", validations['val_time']
-    print "GLMModel lsm time (milliseconds):", GLMModel['lsm_time']
+    if h2o.beta_features:
+        print "submodels0, run_time (milliseconds):", submodels0['run_time']
+    else:
+
+        print "GLMModel model time (milliseconds):", GLMModel['model_time']
+        print "GLMModel validation time (milliseconds):", validations['val_time']
+        print "GLMModel lsm time (milliseconds):", GLMModel['lsm_time']
 
     # shouldn't have any errors
     h2o.check_sandbox_for_errors()
@@ -330,20 +402,24 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
     ### rows = inspectGG['rows']
     #value_size_bytes = inspectGG['value_size_bytes']
 
-    model0 = glmGridResult['models'][0]
-    alpha = model0['alpha']
-    area_under_curve = model0['area_under_curve']
-    error_0 = model0['error_0']
-    error_1 = model0['error_1']
-    model_key = model0['key']
-    print "best GLM model key:", model_key
-
-    glm_lambda = model0['lambda']
+    # FIX! does error_0/1 only exist for binomial?
+    for m, model in enumerate(glmGridResult['models']):
+        alpha = model['alpha']
+        area_under_curve = model['area_under_curve']
+        # FIX! should check max error?
+        error_0 = model['error_0']
+        error_1 = model['error_1']
+        model_key = model['key']
+        print "#%s GLM model key: %s" % (m, model_key)
+        glm_lambda = model['lambda']
 
     # now indirect to the GLM result/model that's first in the list (best)
-    inspectGLM = h2o_cmd.runInspect(None, model_key)
-    h2o.verboseprint("GLMGrid inspectGLM:", h2o.dump_json(inspectGLM))
-    simpleCheckGLM(self, inspectGLM, colX, allowFailWarning=allowFailWarning, **kwargs)
+    inspectGLM = h2o_cmd.runInspect(None, glmGridResult['models'][0]['key'])
+    h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(inspectGLM))
+    g = simpleCheckGLM(self, inspectGLM, colX, allowFailWarning=allowFailWarning, **kwargs)
+
+    return g
+
 
 # This gives me a comma separated x string, for all the columns, with cols with
 # missing values, enums, and optionally matching a pattern, removed. useful for GLM
@@ -429,8 +505,12 @@ def goodXFromColumnInfo(y,
     if not noPrint:
         print "x has", len(x), "cols"
         print "ignore_x has", len(ignore_x), "cols"
+
+    # this is probably used in 'cols" in v2, which can take numbers
     x = ",".join(map(str,x))
-    ignore_x = ",".join(map(str,ignore_x))
+
+    if h2o.beta_features: # add the 'C" prefix
+        ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
 
     if not noPrint:
         print "\nx:", x

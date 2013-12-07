@@ -4,25 +4,17 @@ import h2o, h2o_hosts, h2o_cmd, h2o_import as h2i, h2o_common, h2o_print, h2o_rf
 
 # RF train parameters
 paramsTrainRF = { 
-    'ntree'      : 5, 
-    'depth'      : 15,
-    'parallel'   : 1, 
-    'bin_limit'  : 10000,
-    'ignore'     : 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
-    'stat_type'  : 'ENTROPY',
-    'out_of_bag_error_estimate': 1, 
-    'exclusive_split_limit'    : 0,
+    'ntrees': 5, 
+    'max_depth': 15,
+    'nbins': 100,
+    'ignored_cols_by_name': 'AirTime, ArrDelay, DepDelay, CarrierDelay, IsArrDelayed', 
     'timeoutSecs': 14800,
-    'iterative_cm': 0,
+    'response': 'IsDepDelayed'
     }
 
 # RF test parameters
 paramsScoreRF = {
-    # scoring requires the response_variable. it defaults to last, so normally
-    # we don't need to specify. But put this here and (above if used) 
-    # in case a dataset doesn't use last col 
-    'response_variable': None,
-    'out_of_bag_error_estimate': 0, 
+    'vactual': 'IsDepDelayed',
     'timeoutSecs': 14800,
     }
 
@@ -59,9 +51,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         elapsed = time.time() - start
         print "Inspect:", parseResult['destination_key'], "took", elapsed, "seconds"
         h2o_cmd.infoFromInspect(inspect, csvPathname)
-        num_rows = inspect['num_rows']
-        num_cols = inspect['num_cols']
-        print "num_rows:", num_rows, "num_cols", num_cols
+        numRows = inspect['numRows']
+        numCols = inspect['numCols']
+        print "numRows:", numRows, "numCols", numCols
         return parseResult
 
     def loadTrainData(self):
@@ -75,6 +67,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         return scoreParseResult 
 
     def test_c8_rf_airlines_hdfs(self):
+        h2o.beta_features = True
         trainParseResult = self.loadTrainData()
         kwargs   = paramsTrainRF.copy()
         trainResult = h2o_rf.trainRF(trainParseResult, **kwargs)
@@ -82,9 +75,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         scoreParseResult = self.loadScoreData()
         kwargs   = paramsScoreRF.copy()
         scoreResult = h2o_rf.scoreRF(scoreParseResult, trainResult, **kwargs)
-
-        print "\nTrain\n=========={0}".format(h2o_rf.pp_rf_result(trainResult))
-        print "\nScoring\n========={0}".format(h2o_rf.pp_rf_result(scoreResult))
 
 if __name__ == '__main__':
     h2o.unit_main()

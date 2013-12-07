@@ -13,25 +13,38 @@ echo "current PID: $$"
 #**************************************
 # do some bash parameters, just in case we have future expansion
 # -n is no download of the jar
-no_download=0
-while getopts nf: flag
+NO_DOWNLOAD=0
+BRANCH=master
+TESTDIR=
+while getopts nb:d:t: flag
 do
     case $flag in
         n)
             echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
-            no_download=1
+            NO_DOWNLOAD=1
             ;;
-        f)
-            file=$OPTARG
-            echo "filename is $file (fake)"
+        b)
+            BRANCH=$OPTARG
+            echo "branch is $BRANCH"
+            ;;
+        d)
+            TESTDIR=$OPTARG
+            echo "testdir is $TESTDIR"
+            ;;
+        t)
+            TEST=$OPTARG
+            echo "test is $TEST"
             ;;
         ?)
             exit
+            echo "Something wrong with the args to runner_setup.sh"
             ;;
     esac
 done
 shift $(( OPTIND - 1 ))  # shift past the last flag or argument
-echo remaining parameters to Bash are $*
+# echo remaining parameters to Bash are $*
+
+echo "using branch: $BRANCH"
 
 #**************************************
 
@@ -43,10 +56,10 @@ echo remaining parameters to Bash are $*
 # Get the latest jar from s3. Has to execute up in h2o
 
 # a secret way to skip the download (use any arg)
-if [ $no_download -eq 0 ]
+if [ $NO_DOWNLOAD -eq 0 ]
 then
     cd ../..
-    ./get_s3_jar.sh
+    ./get_s3_jar.sh -b $BRANCH
     # I'm back!
     cd -
 fi

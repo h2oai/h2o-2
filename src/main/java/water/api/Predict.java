@@ -1,8 +1,7 @@
 package water.api;
 
-import hex.ScoreTask;
 import water.*;
-import water.fvec.Frame;
+import water.fvec.*;
 import water.util.Log;
 import water.util.RString;
 
@@ -30,16 +29,12 @@ public class Predict extends Request2 {
     try {
       if( model == null )
         throw new IllegalArgumentException("Model is missing");
-      if( model instanceof Model ) {
-        Frame fr = ((Model) model).score(data, true);
-        UKV.put(prediction, fr);
-        return Inspect2.redirect(this, prediction.toString());
-      } else {
-        // Assume dataset has been converted from a VA
-        ValueArray va = UKV.get(Key.make(input("data")));
-        OldModel m = (OldModel) model;
-        return Inspect.redirect(this, ScoreTask.score(m, va, prediction));
-      }
+      Frame fr;
+      if( model instanceof Model )
+           fr = ((   Model)model).score(data);
+      else fr = ((OldModel)model).score(data);
+      UKV.put(prediction, fr);
+      return Inspect2.redirect(this, prediction.toString());
     } catch( Throwable t ) {
       Log.err(t);
       return Response.error(t.getMessage());

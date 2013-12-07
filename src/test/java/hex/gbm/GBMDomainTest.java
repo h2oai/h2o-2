@@ -26,8 +26,8 @@ public class GBMDomainTest extends TestUtil {
    */
   @Test public void testModelAdapt() {
     runAndScoreGBM(
-        "./smalldata/test/classifier/coldom_train.csv",
-        "./smalldata/test/classifier/coldom_test.csv",
+        "./smalldata/test/classifier/coldom_train_1.csv",
+        "./smalldata/test/classifier/coldom_test_1.csv",
         new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } });
   }
 
@@ -41,8 +41,8 @@ public class GBMDomainTest extends TestUtil {
    */
   @Test public void testModelAdapt2() {
     runAndScoreGBM(
-        "./smalldata/test/classifier/coldom_train.csv",
-        "./smalldata/test/classifier/coldom_test2.csv",
+        "./smalldata/test/classifier/coldom_train_1.csv",
+        "./smalldata/test/classifier/coldom_test_1_2.csv",
         new PrepData() { @Override Vec prep(Frame fr) { return fr.vecs()[fr.numCols()-1]; } });
   }
   // Adapt a trained model to a test dataset with different enums
@@ -67,7 +67,6 @@ public class GBMDomainTest extends TestUtil {
       gbm.nbins = 1024;
       gbm.cols =  new int[] {0,1,2};
       gbm.invoke();
-      System.out.println("=========3========");   for( Key k : H2O.keySet() ) System.out.println(k);
 
       // The test data set has a few more enums than the train
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});

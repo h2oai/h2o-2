@@ -1,6 +1,8 @@
 package hex.gbm;
 
+import static hex.gbm.SharedTreeModelBuilder.createRNG;
 import hex.ConfusionMatrix;
+import hex.VariableImportance;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -9,9 +11,7 @@ import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.util.Log;
-import water.util.RString;
+import water.util.*;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -30,16 +30,18 @@ import water.util.RString;
 
    @author Cliff Click
 */
-class DTree extends Iced {
+public class DTree extends Iced {
   final String[] _names; // Column names
   final int _ncols;      // Active training columns
   final char _nbins;     // Max number of bins to split over
   final char _nclass;    // #classes, or 1 for regression trees
   final int _min_rows;   // Fewest allowed rows in any split
+  final long _seed;      // RNG seed; drives sampling seeds if necessary
   private Node[] _ns;    // All the nodes in the tree.  Node 0 is the root.
   int _len;              // Resizable array
-  DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) {
-    _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; }
+  public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) { this(names,ncols,nbins,nclass,min_rows,-1); }
+  public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows, long seed ) {
+    _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; _seed = seed; }
 
   public final Node root() { return _ns[0]; }
   // One-time local init after wire transfer
@@ -62,13 +64,19 @@ class DTree extends Iced {
   // Override this in, e.g. Random Forest algos, to get a per-chunk RNG
   public Random rngForChunk( int cidx ) { throw H2O.fail(); }
 
+  public final int len() { return _len; }
+  public final void len(int len) { _len = len; }
+
+  // Public stats about tree
+  public int leaves;
+  public int depth;
 
   // --------------------------------------------------------------------------
   // Abstract node flavor
-  static abstract class Node extends Iced {
-    transient DTree _tree;    // Make transient, lest we clone the whole tree
-    final int _pid;           // Parent node id, root has no parent and uses -1
-    final int _nid;           // My node-ID, 0 is root
+  public static abstract class Node extends Iced {
+    transient protected DTree _tree;    // Make transient, lest we clone the whole tree
+    final protected int _pid;           // Parent node id, root has no parent and uses -1
+    final protected int _nid;           // My node-ID, 0 is root
     Node( DTree tree, int pid, int nid ) {
       _tree = tree;
       _pid=pid;
@@ -83,24 +91,31 @@ class DTree extends Iced {
       parent.printLine(sb).append(" to ");
       return parent.printChild(sb,_nid);
     }
-    abstract protected StringBuilder toString2(StringBuilder sb, int depth);
+    abstract public StringBuilder toString2(StringBuilder sb, int depth);
     abstract protected AutoBuffer compress(AutoBuffer ab);
     abstract protected int size();
+
+    public final int nid() { return _nid; }
+    public final int pid() { return _pid; }
   }
 
   // --------------------------------------------------------------------------
   // Records a column, a bin to split at within the column, and the MSE.
-  static class Split extends Iced {
+  public static class Split extends Iced {
     final int _col, _bin;       // Column to split, bin where being split
     final boolean _equal;       // Split is < or == ?
     final double _se0, _se1;    // Squared error of each subsplit
     final long _n0, _n1;        // Rows in each final split
 
-    Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1 ) {
+    public Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1 ) {
       _col = col;  _bin = bin;  _equal = equal;
       _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
     }
     public final double se() { return _se0+_se1; }
+    public final int   col() { return _col; }
+    public final int   bin() { return _bin; }
+    public final long  rowsLeft () { return _n0; }
+    public final long  rowsRight() { return _n1; }
 
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
@@ -191,10 +206,10 @@ class DTree extends Iced {
   // An UndecidedNode: Has a DHistogram which is filled in (in parallel with other
   // histograms) in a single pass over the data.  Does not contain any
   // split-decision.
-  static abstract class UndecidedNode extends Node {
-    DHistogram _hs[];      // DHistograms per column
-    int _scoreCols[];      // A list of columns to score; could be null for all
-    UndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) {
+  public static abstract class UndecidedNode extends Node {
+    public DHistogram _hs[];      // DHistograms per column
+    public int _scoreCols[];      // A list of columns to score; could be null for all
+    public UndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) {
       super(tree,pid,tree.newIdx());
       _hs=hs;
       assert hs.length==tree._ncols;
@@ -203,12 +218,12 @@ class DTree extends Iced {
 
     // Pick a random selection of columns to compute best score.
     // Can return null for 'all columns'.
-    abstract int[] scoreCols( DHistogram[] hs );
+    abstract public int[] scoreCols( DHistogram[] hs );
 
     // Make the parent of this Node use a -1 NID to prevent the split that this
     // node otherwise induces.  Happens if we find out too-late that we have a
     // perfect prediction here, and we want to turn into a leaf.
-    void do_not_split( ) {
+    public void do_not_split( ) {
       if( _pid == -1 ) return;
       DecidedNode dn = _tree.decided(_pid);
       for( int i=0; i<dn._nids.length; i++ )
@@ -216,6 +231,9 @@ class DTree extends Iced {
           { dn._nids[i] = -1; return; }
       throw H2O.fail();
     }
+
+    public final DHistogram[] hs() { return _hs; }
+    public final int[] scoreCols() { return _scoreCols; }
 
     @Override public String toString() {
       final int nclass = _tree._nclass;
@@ -296,25 +314,25 @@ class DTree extends Iced {
   // Internal tree nodes which split into several children over a single
   // column.  Includes a split-decision: which child does this Row belong to?
   // Does not contain a histogram describing how the decision was made.
-  static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
-    final Split _split;         // Split: col, equal/notequal/less/greater, nrows, MSE
-    final float _splat;         // Split At point: lower bin-edge of split
+  public static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
+    public final Split _split;         // Split: col, equal/notequal/less/greater, nrows, MSE
+    public final float _splat;         // Split At point: lower bin-edge of split
     // _equals\_nids[] \   0   1
     // ----------------+----------
     //       F         |   <   >=
     //       T         |  !=   ==
-    final int _nids[];          // Children NIDS for the split
+    public final int _nids[];          // Children NIDS for the split LEFT, RIGHT
 
     transient byte _nodeType; // Complex encoding: see the compressed struct comments
     transient int _size = 0;  // Compressed byte size of this subtree
 
     // Make a correctly flavored Undecided
-    abstract UDN makeUndecidedNode(DBinHistogram[] nhists );
+    public abstract UDN makeUndecidedNode(DBinHistogram[] nhists );
 
     // Pick the best column from the given histograms
-    abstract Split bestCol( UDN udn );
+    public abstract Split bestCol( UDN udn );
 
-    DecidedNode( UDN n ) {
+    public DecidedNode( UDN n ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
       _nids = new int[2];           // Split into 2 subsets
       _split = bestCol(n);          // Best split-point for this tree
@@ -328,7 +346,6 @@ class DTree extends Iced {
       }
 
       _splat = _split.splat(n._hs); // Split-at value
-      final char nclass  = _tree._nclass;
       final char nbins   = _tree._nbins;
       final int min_rows = _tree._min_rows;
 
@@ -444,16 +461,19 @@ class DTree extends Iced {
     }
   }
 
-  static abstract class LeafNode extends Node {
+  public static abstract class LeafNode extends Node {
     double _pred;
-    LeafNode( DTree tree, int pid ) { super(tree,pid); }
-    LeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
+    public LeafNode( DTree tree, int pid ) { super(tree,pid); }
+    public LeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
     @Override public String toString() { return "Leaf#"+_nid+" = "+_pred; }
     @Override public final StringBuilder toString2(StringBuilder sb, int depth) {
       for( int d=0; d<depth; d++ ) sb.append("  ");
       sb.append(_nid).append(" ");
       return sb.append("pred=").append(_pred).append("\n");
     }
+
+    public final double pred() { return _pred; }
+    public final void pred(double pred) { _pred = pred; }
   }
 
   // --------------------------------------------------------------------------
@@ -462,21 +482,39 @@ class DTree extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
     @API(help="MSE rate as trees are added")       public final double [] errs;
-    //@API(help="Min class - to zero-bias the CM")   public final int ymin;
     @API(help="Actual trees built (probably < N)") public final CompressedTree [/*N*/][/*nclass*/] treeBits;
+    @API(help="Maximum tree depth")                public final int max_depth;
+    @API(help = "Fewest allowed observations in a leaf") public final int min_rows;
+    @API(help = "Bins in the histograms")          public final int nbins;
 
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be seperate).
     @API(help="Testing key for cm and errs") public final Key testKey;
     @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
+    @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
+    @API(help="Tree statistics") public final TreeStats treeStats;
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees) {
+    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey;  this.cm = null;
+      this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       treeBits = new CompressedTree[0][];
+      varimp = null;
+      treeStats = null;
     }
-    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm) {
+    public TreeModel(TreeModel prior, float[] varimp) {
+      super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
+      this.N = prior.N; this.testKey = prior.testKey; this.cm = prior.cm;
+      this.errs = prior.errs;
+      this.treeBits = prior.treeBits;
+      this.varimp = varimp;
+      this.treeStats = prior.treeStats;
+      this.max_depth = prior.max_depth;
+      this.min_rows = prior.min_rows;
+      this.nbins = prior.nbins;
+    }
+    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey; this.cm = cm;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
@@ -490,32 +528,39 @@ class DTree extends Iced {
           if( trees[c] != null )
               ts[c] = trees[c].compress();
       }
+      varimp = null;
+      treeStats = tstats;
+      this.max_depth = prior.max_depth;
+      this.min_rows = prior.min_rows;
+      this.nbins = prior.nbins;
     }
 
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
 
     @Override public ConfusionMatrix cm() { return cm == null ? null : new ConfusionMatrix(cm); }
+    @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
 
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
-      for( CompressedTree ts[] : treeBits )
-        for( int c=0; c<ts.length; c++ )
-          if( ts[c] != null )
-            preds[c] += ts[c].score(data);
+      for( int tidx=0; tidx<treeBits.length; tidx++ )
+        score0(data, preds, tidx);
       return preds;
+    }
+    // Score per line per tree
+    public void score0(double data[], float preds[], int treeIdx) {
+      CompressedTree ts[] = treeBits[treeIdx];
+      for( int c=0; c<ts.length; c++ )
+        if( ts[c] != null )
+          preds[c] += ts[c].score(data);
     }
 
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       DocGen.HTML.paragraph(sb,"Model Key: "+_selfKey);
+      DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
+      generateModelDescription(sb);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
-      if(sb.indexOf("<h3>GBMModelView</h3>") != -1) {
-        sb.insert(sb.indexOf("</pre>") +"</pre></div>".length(),
-        "<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
-        "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
-        "<pre style=\"overflow-y:scroll;\">"+DocGen.HTML.escape2(toJava())+"</pre></div>");
-      }
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
       // Top row of CM
@@ -523,7 +568,7 @@ class DTree extends Iced {
         assert cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey.equals(_dataKey) ) {
-          sb.append("<div class=\"alert\">Reported on training data</div>");
+          sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
         } else {
           RString rs = new RString("Reported on <a href='Inspect2.html?src_key=%$key'>%key</a>");
           rs.replace("key", testKey);
@@ -581,6 +626,77 @@ class DTree extends Iced {
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
       }
+
+      // Show tree stats
+      if (treeStats != null) generateHTMLTreeStats(sb);
+
+      // Show variable importance
+      if (varimp != null) generateHTMLVarImp(sb);
+
+    }
+
+    protected void generateHTMLTreeStats(StringBuilder sb) {
+      DocGen.HTML.section(sb,"Tree stats");
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr><th>&nbsp;</th>").append("<th>Min</th><th>Mean</th><th>Max</th></tr>");
+      sb.append("<tr><th>Depth</th>")
+            .append("<td>").append(treeStats.minDepth).append("</td>")
+            .append("<td>").append(treeStats.meanDepth).append("</td>")
+            .append("<td>").append(treeStats.maxDepth).append("</td></tr>");
+      sb.append("<th>Leaves</th>")
+            .append("<td>").append(treeStats.minLeaves).append("</td>")
+            .append("<td>").append(treeStats.meanLeaves).append("</td>")
+            .append("<td>").append(treeStats.maxLeaves).append("</td></tr>");
+      DocGen.HTML.arrayTail(sb);
+    }
+
+    protected void generateHTMLVarImp(StringBuilder sb) {
+      DocGen.HTML.section(sb,"Unscaled Variable Importance");
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr><th>Variable</th>");
+      for( int i=0; i<varimp.length; i++ )
+        sb.append("<td>").append(_names[i]).append("</td>");
+      sb.append("</tr>");
+      sb.append("<tr><th class='warning'>Mean Decrease Accuracy</th>");
+      for( int i=0; i<varimp.length; i++ )
+        sb.append(String.format("<td>%5.3f</td>",varimp[i]));
+      sb.append("</tr>");
+      DocGen.HTML.arrayTail(sb);
+      // Generate a graph - horrible code
+      DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
+          DocGen.HTML.toJSArray(new StringBuilder(), Arrays.copyOf(_names, _names.length-1)),
+          DocGen.HTML.toJSArray(new StringBuilder(), varimp)
+          );
+    }
+
+    public static class TreeStats extends Iced {
+      static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+      static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+      @API(help="Minimal tree depth.") int minDepth = Integer.MAX_VALUE;
+      @API(help="Maximum tree depth.") int maxDepth = Integer.MIN_VALUE;
+      @API(help="Average tree depth.") int meanDepth;
+      @API(help="Minimal num. of leaves.") int minLeaves = Integer.MAX_VALUE;
+      @API(help="Maximum num. of leaves.") int maxLeaves = Integer.MIN_VALUE;
+      @API(help="Average num. of leaves.") int meanLeaves;
+
+      transient long sumDepth  = 0;
+      transient long sumLeaves = 0;
+      transient int  numTrees = 0;
+      public void updateBy(DTree[] ktrees) {
+        if (ktrees==null) return;
+        for (int i=0; i<ktrees.length; i++) {
+          DTree tree = ktrees[i];
+          if (minDepth > tree.depth) minDepth = tree.depth;
+          if (maxDepth < tree.depth) maxDepth = tree.depth;
+          if (minLeaves > tree.leaves) minLeaves = tree.leaves;
+          if (maxLeaves < tree.leaves) maxLeaves = tree.leaves;
+          sumDepth += tree.depth;
+          sumLeaves += tree.leaves;
+          numTrees++;
+          meanDepth = (int) (sumDepth / numTrees);
+          meanLeaves = (int) (sumLeaves / numTrees);
+        }
+      }
     }
 
     // --------------------------------------------------------------------------
@@ -598,7 +714,8 @@ class DTree extends Iced {
     public static class CompressedTree extends Iced {
       final byte [] _bits;
       final int _nclass;
-      public CompressedTree( byte [] bits, int nclass ) { _bits = bits; _nclass = nclass; }
+      final long _seed;
+      public CompressedTree( byte [] bits, int nclass, long seed ) { _bits = bits; _nclass = nclass; _seed = seed; }
       float score( final double row[] ) {
         AutoBuffer ab = new AutoBuffer(_bits);
         while(true) {
@@ -615,23 +732,31 @@ class DTree extends Iced {
           switch(lmask) {
           case 1:  skip = ab.get1();  break;
           case 2:  skip = ab.get2();  break;
-          case 3:  skip = ab.get3();  break;
+          case 3:  skip = ab.get3();  break; // skip 3bytes value ~ 16MB for left subtree ~ we support 32MB trees now
           case 8:  skip = _nclass < 256?1:2;  break; // Small leaf
           case 24: skip = 4;          break; // skip the prediction
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
           }
 
-          if( !Double.isNaN(row[colId]) ) // NaNs always go to bin 0
+          if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
             if( ( equal && ((float)row[colId]) == splitVal) ||
                 (!equal && ((float)row[colId]) >= splitVal) ) {
-              ab.position(ab.position()+skip); // Skip right subtree
+              ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
+          } else { ab.position(ab.position()+skip); lmask = rmask; }
           if( (lmask&8)==8 ) return scoreLeaf(ab);
         }
       }
 
       private float scoreLeaf( AutoBuffer ab ) { return ab.get4f(); }
+      public Random rngForChunk( int cidx ) {
+        Random rand = createRNG(_seed);
+        // Argh - needs polishment
+        for( int i=0; i<cidx; i++ ) rand.nextLong();
+        long seed = rand.nextLong();
+        return createRNG(seed);
+      }
     }
 
     /** Abstract visitor class for serialized trees.*/
@@ -654,16 +779,15 @@ class DTree extends Iced {
 
       // Call either the single-class leaf or the full-prediction leaf
       private final void leaf2( int mask ) throws T {
-        assert (mask& 8)== 8;   // Is a leaf
-        assert (mask&16)==16;   // No longer do small leaf
+        assert (mask==0 || ( (mask&8)== 8 && (mask&16)==16) ) : "Unknown mask: " + mask;   // Is a leaf or a special leaf on the top of tree
         leaf(_ts.get4f());
       }
 
       public final void visit() throws T {
         int nodeType = _ts.get1();
         int col = _ts.get2();
-        float fcmp = _ts.get4f();
         if( col==65535 ) { leaf2(nodeType); return; }
+        float fcmp = _ts.get4f();
         boolean equal = ((nodeType&4)==4);
         // Compute the amount to skip.
         int lmask =  nodeType & 0x1B;
@@ -701,53 +825,154 @@ class DTree extends Iced {
       return sb;
     }
 
+    // For GBM: learn_rate.  For DRF: mtries, sample_rate, seed.
+    abstract protected void generateModelDescription(StringBuilder sb);
+
+    public void toJavaHtml( StringBuilder sb ) {
+      if( treeStats == null ) return; // No trees yet
+      sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
+                "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
+                "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+
+      if( numTrees() * treeStats.meanLeaves > 5000 ) {
+        String modelName = JCodeGen.toJavaId(_selfKey.toString());
+        sb.append("/* Java code is too large to display, download it directly.\n");
+        sb.append("   To obtain the code please invoke in your terminal:\n");
+        sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_selfKey).append(" > ").append(modelName).append(".java\n");
+        sb.append("     javac -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
+        sb.append("     java -Xmx2g -XX:MaxPermSize=256m ").append(modelName).append('\n');
+        sb.append("*/");
+      } else
+        DocGen.HTML.escape(sb,toJava());
+      sb.append("</code></pre></div>");
+    }
+
+    @Override protected SB toJavaInit(SB sb) {
+      sb = super.toJavaInit(sb);
+
+      String modelName = JCodeGen.toJavaId(_selfKey.toString());
+
+      sb.ii(1);
+      // Generate main method
+      sb.i().p("/**").nl();
+      sb.i().p(" * Sample program harness providing an example of how to call predict().").nl();
+      sb.i().p(" */").nl();
+      sb.i().p("public static void main(String[] args) throws Exception {").nl();
+      sb.i(1).p("int iters = args.length > 0 ? Integer.valueOf(args[0]) : DEFAULT_ITERATIONS;").nl();
+      sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
+      sb.i(1).p("model.bench(iters, DATA, new float[NCLASSES+1], NTREES);").nl();
+      sb.i().p("}").nl();
+      sb.di(1);
+      sb.p(TO_JAVA_BENCH_FUNC);
+
+      JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
+      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
+      JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
+      JCodeGen.toStaticVar(sb, "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 100, "Sample test data.");
+
+      // Nasty code - should be provided by a non-generated parent class, BUT ...
+      sb.i(1).p(TO_JAVA_MAX_INDEX_FUNC);
+
+      return sb;
+    }
     // Convert Tree model to Java
-    @Override protected void toJavaPredictBody( final SB sb ) {
-      String[] cnames = classNames();
-      sb.indent(2).p("java.util.Arrays.fill(preds,0f);\n");
-      for( int i=0; i < treeBits.length; i++ ) {
-        CompressedTree cts[] = treeBits[i];
-        for( int c=0; c<cts.length; c++ ) {
+    @Override protected void toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
+      final int maxfsize = numTrees()*nclasses(); // maximal number of trees in forest
+      int fidx = 0; // forest index
+      int treesInForest = 0;
+      SB forest = new SB();
+      // divide trees into small forests per 100 trees
+      bodySb.i().p("java.util.Arrays.fill(preds,0f);\n");
+      for( int c=0; c<nclasses(); c++ ) {
+        toJavaForestBegin(bodySb, forest, c, fidx++);
+        for( int i=0; i < treeBits.length; i++ ) {
+          CompressedTree cts[] = treeBits[i];
           if( cts[c] == null ) continue;
-          sb.indent(2).p("// Tree ").p(i);
-          if( cnames != null ) sb.p(", class=").p(cnames[c]);
-          sb.p("\n");
-          sb.indent(2).p("preds[").p(c+1).p("] +=");
-          final int x=c;
-          new TreeVisitor<RuntimeException>(this,cts[c]) {
-            byte _bits[] = new byte[100];
-            float _fs[] = new float[100];
-            @Override protected void pre( int col, float fcmp, boolean equal ) {
-              if( _depth > 0 ) {
-                int b = _bits[_depth-1];
-                assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
-                if( b==1         ) _bits[_depth-1]=3;
-                if( b==1 || b==2 ) sb.p('\n').indent(_depth+3).p("?");
-                if( b==2         ) sb.p(' ').p(_fs[_depth]); // Dump the leaf
-                if( b==2 || b==3 ) sb.p('\n').indent(_depth+3).p(":");
-              }
-              sb.p(" (data[").p(col).p("] ").p(equal?"== ":"< ").p(fcmp);
-              assert _bits[_depth]==0;
-              _bits[_depth]=1;
-            }
-            @Override protected void leaf( float pred  ) {
-              assert _bits[_depth-1] > 0 : Arrays.toString(_bits);
-              if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
-                _bits[_depth-1]=2; _fs[_depth-1]=pred;
-              } else {          // Else==2 (prior leaf) or 3 (prior tree)
-                if( _bits[_depth-1] == 2 ) sb.p(" ? ").p(_fs[_depth-1]).p(" ");
-                else                       sb.p('\n').indent(_depth+3);
-                sb.p(": ").p(pred);
-              }
-            }
-            @Override protected void post( int col, float fcmp, boolean equal ) {
-              sb.p(')');
-              _bits[_depth]=0;
-            }
-          }.visit();
-          sb.p(";\n");
+          forest.i(1).p("pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
+          // append representation of tree predictor
+          toJavaTreePredictFct(fileCtxSb, cts[c], i, c);
+          if (++treesInForest > maxfsize) {
+            toJavaForestEnd(bodySb, forest, c, fidx);
+            toJavaForestBegin(bodySb, forest, c, fidx++);
+            treesInForest = 0;
+          }
         }
+        toJavaForestEnd(bodySb, forest, c, fidx);
+        treesInForest = 0;
       }
+      fileCtxSb.p(forest);
+      toJavaUnifyPreds(bodySb);
+      toJavaFillPreds0(bodySb);
+    }
+
+    /** Generates code which unify preds[1,...NCLASSES] */
+    protected void toJavaUnifyPreds(SB bodySb) {
+    }
+    /** Fill preds[0] based on already filled and unified preds[1,..NCLASSES]. */
+    protected void toJavaFillPreds0(SB bodySb) {
+      // Pick max index as a prediction
+      if (isClassifier()) bodySb.i().p("preds[0] = maxIndex(preds,1)-1;").nl();
+      else bodySb.i().p("preds[0] = preds[1];").nl();
+    }
+
+    private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx) {
+      predictBody.i().p("// Call forest predicting class ").p(c).nl();
+      predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data);").nl();
+      forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
+      forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
+      forest.i().p("public static float predict(double[] data) {").nl().ii(1);
+      forest.i().p("float pred = 0;").nl();
+    }
+    private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
+      forest.i().p("return pred;").nl();
+      forest.i().p("}").di(1).nl(); // end of function
+      forest.i().p("}").di(1).nl(); // end of forest classs
+    }
+
+    // Produce prediction code for one tree
+    protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int tidx, int c) {
+      sb.nl();
+      sb.i().p("// Tree predictor for ").p(tidx).p("-tree and ").p(c).p("-class").nl();
+      sb.i().p("class Tree_").p(tidx).p("_class_").p(c).p(" {").nl().ii(1);
+      sb.i().p("static final float predict(double[] data) {").nl().ii(1); // predict method for one tree
+      sb.i().p("float pred = ");
+      new TreeVisitor<RuntimeException>(this,cts) {
+        byte _bits[] = new byte[100];
+        float _fs[] = new float[100];
+        @Override protected void pre( int col, float fcmp, boolean equal ) {
+          if( _depth > 0 ) {
+            int b = _bits[_depth-1];
+            assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
+            if( b==1         ) _bits[_depth-1]=3;
+            if( b==1 || b==2 ) sb.p('\n').i(_depth).p("?");
+            if( b==2         ) sb.p(' ').pj(_fs[_depth-1]); // Dump the leaf containing float value
+            if( b==2 || b==3 ) sb.p('\n').i(_depth).p(":");
+          }
+          sb.p(" (data[").p(col).p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+          assert _bits[_depth]==0;
+          _bits[_depth]=1;
+        }
+        @Override protected void leaf( float pred  ) {
+          assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
+          if( _depth==0) { // it is de-generated tree
+            sb.pj(pred);
+          } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+            _bits[_depth-1]=2; _fs[_depth-1]=pred;
+          } else {          // Else==2 (prior leaf) or 3 (prior tree)
+            if( _bits[_depth-1] == 2 ) sb.p(" ? ").pj(_fs[_depth-1]).p(" ");
+            else                       sb.p('\n').i(_depth);
+            sb.p(": ").pj(pred);
+          }
+        }
+        @Override protected void post( int col, float fcmp, boolean equal ) {
+          sb.p(')');
+          _bits[_depth]=0;
+        }
+      }.visit();
+      sb.p(";").nl();
+      sb.i(1).p("return pred;").nl().di(1);
+      sb.i().p("}").nl().di(1);
+      sb.i().p("}").nl();
     }
   }
 
@@ -760,6 +985,80 @@ class DTree extends Iced {
       ab.put1(0).put2((char)65535); // Flag it special so the decompress doesn't look for top-level decision
     root().compress(ab);      // Compress whole tree
     assert ab.position() == sz;
-    return new TreeModel.CompressedTree(ab.buf(),_nclass);
+    return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
   }
+
+  // Static Java code which is generated :-(
+  private static final SB TO_JAVA_MAX_INDEX_FUNC = new SB().
+      nl().
+      p("  /**").nl().
+      p("   * Find the index of the largest value in an array.").nl().
+      p("   *").nl().
+      p("   * @param from array of predictions per output class").nl().
+      p("   * @param start starting index to test from").nl().
+      p("   * @returns The index of the largest value").nl().
+      p("   */").nl().
+      p("  public static int maxIndex(float[] from, int start) {").nl().
+      p("    int result = start;").nl().
+      p("    for (int i = start; i < from.length; ++i) {").nl().
+      p("      if (from[i] > from[result]) {").nl().
+      p("        result = i;").nl().
+      p("      }").nl().
+      p("    }").nl().
+      p("    return result;").nl().
+      p("  }").nl().
+      nl();
+
+  private static final SB TO_JAVA_BENCH_FUNC = new SB().
+      nl().
+      p("  /**").nl().
+      p("   * Run a predict() benchmark with the generated model and some synthetic test data.").nl().
+      p("   *").nl().
+      p("   * @param iters number of iterations to run; each iteration predicts on every sample (i.e. row) in the test data").nl().
+      p("   * @param data test data to predict on").nl().
+      p("   * @param preds output predictions").nl().
+      p("   * @param ntrees number of trees").nl().
+      p("   */").nl().
+      p("  public void bench(int iters, double[][] data, float[] preds, int ntrees) {").nl().
+      p("    System.out.println(\"Iterations: \" + iters);").nl().
+      p("    System.out.println(\"Data rows : \" + data.length);").nl().
+      p("    System.out.println(\"Trees     : \" + ntrees + \"x\" + (preds.length-1));").nl().
+      nl().
+      p("    long startMillis;").nl().
+      p("    long endMillis;").nl().
+      p("    long deltaMillis;").nl().
+      p("    double deltaSeconds;").nl().
+      p("    double samplesPredicted;").nl().
+      p("    double samplesPredictedPerSecond;").nl().
+      p("    System.out.println(\"Starting timing phase of \"+iters+\" iterations...\");").nl().
+      nl().
+      p("    startMillis = System.currentTimeMillis();").nl().
+      p("    for (int i=0; i<iters; i++) {").nl().
+      p("      // Uncomment the nanoTime logic for per-iteration prediction times.").nl().
+      p("      // long startTime = System.nanoTime();").nl().
+      nl().
+      p("      for (double[] row : data) {").nl().
+      p("        predict(row, preds);").nl().
+      p("        // System.out.println(java.util.Arrays.toString(preds) + \" : \" + (DOMAINS[DOMAINS.length-1]!=null?(DOMAINS[DOMAINS.length-1][(int)preds[0]]+\"~\"+DOMAINS[DOMAINS.length-1][(int)row[row.length-1]]):(preds[0] + \" ~ \" + row[row.length-1])) );").nl().
+      p("      }").nl().
+      nl().
+      p("      // long ttime = System.nanoTime()-startTime;").nl().
+      p("      // System.out.println(i+\". iteration took \" + (ttime) + \"ns: scoring time per row: \" + ttime/data.length +\"ns, scoring time per row and tree: \" + ttime/data.length/ntrees + \"ns\");").nl().
+      nl().
+      p("      if ((i % 1000) == 0) {").nl().
+      p("        System.out.println(\"finished \"+i+\" iterations (of \"+iters+\")...\");").nl().
+      p("      }").nl().
+      p("    }").nl().
+      p("    endMillis = System.currentTimeMillis();").nl().
+      nl().
+      p("    deltaMillis = endMillis - startMillis;").nl().
+      p("    deltaSeconds = (double)deltaMillis / 1000.0;").nl().
+      p("    samplesPredicted = data.length * iters;").nl().
+      p("    samplesPredictedPerSecond = samplesPredicted / deltaSeconds;").nl().
+      p("    System.out.println(\"finished in \"+deltaSeconds+\" seconds.\");").nl().
+      p("    System.out.println(\"samplesPredicted: \" + samplesPredicted);").nl().
+      p("    System.out.println(\"samplesPredictedPerSecond: \" + samplesPredictedPerSecond);").nl().
+      p("  }").nl().
+
+  nl();
 }

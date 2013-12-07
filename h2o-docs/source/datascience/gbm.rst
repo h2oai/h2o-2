@@ -22,7 +22,7 @@ Defining a GBM Model
 **Ignored Columns**
 
   By default all of the information submitted in a data frame will be
-  used in building the   GBM model. Users specify those attributes
+  used in building the GBM model. Users specify those attributes
   that should be omitted from analysis. 
 
 **Classification**
@@ -33,7 +33,8 @@ Defining a GBM Model
 
 **Validation** 
 
-  A .hex key associated with data to be used in validation of the model built using the data specified in **Source**.
+  A .hex key associated with data to be used in validation of the
+  model built using the data specified in **Source**.
 
 **NTrees**
 
@@ -41,7 +42,8 @@ Defining a GBM Model
 
 **Max Depth** 
 
-  The maximum number of edges to be generated between the first node and the terminal node. 
+  The maximum number of edges to be generated between the first node
+  and the terminal node. 
 
 **Min Rows** 
 
@@ -61,10 +63,32 @@ Defining a GBM Model
   algorithm should converge. Learning rate is inversely related to the
   number of iterations taken for the algorithm to complete. 
 
+**Treatment of Factors**
+
+  When the specified GBM model includes factors, those factors are
+  analyzed by assigning each distinct factor level an integer, and
+  then binning the ordered integers according to the user specified
+  number of bins (N Bins). Split points are determined by considering
+  as the end points of each bin, and the one versus many split for
+  each bin. 
+
+  For example, if the factor is split
+  into 5 bins, then the split between the first and second bin, the
+  second and third, the third and fourth, and the fourth and fifth are 
+  considered. Additionally the split that comes of splitting the first
+  bin from the other four, and all analogous splits for the other four
+  bins are considered. If users wish to specify a model such that all
+  factors are considered individually, they can do so by setting N
+  Bins equal to the number of factor levels. This can be done even in
+  excess of 1024 levels (the maximum number of levels that can be
+  handled in R), though this will increase the time it takes for a
+  model to be fully generated. 
+
 Interpreting Results
 """""""""""""""""""""
 
-GBM results are comprised of a confusion matrix and the mean squared error of each tree. 
+GBM results for classification models are comprised of a confusion
+matrix and the mean squared error of each tree. 
 
 An example of a confusion matrix is given below:
 
@@ -73,9 +97,11 @@ number of true members of the class who were correctly predicted as
 true. The overall error rate is shown in the bottom right field. It reflects
 the proportion of incorrect predictions overall.  
 
-.. image:: GBMmatrix.png
+.. Image:: GBMmatrix.png
    :width: 70 %
 
+
+For regression models, returned results 
 **MSE**
 
   Mean squared error is an indicator of goodness of fit. It measures
@@ -86,6 +112,7 @@ the proportion of incorrect predictions overall.
   The cost of computation in GBM is bounded above in the following way:
 
   :math:`Cost = bins\times (2^{leaves}) \times columns \times classes`
+
 
 
 GBM Algorithm
@@ -119,6 +146,22 @@ Initialize :math:`f_{k0} = 0,\: k=1,2,…,K`
 
 Output :math:`\:\hat{f_{k}}(x)=f_{kM}(x),\:k=1,2,…,K.` 
 
+**BETA: Standalone Scoring:**
+
+  As a beta feature still undergoing testing, GBM models now offer
+  users an option to download a generated GBM model in java code. This
+  new feature can be accessed by clicking **Java Model** in the upper
+  right corner. When the model is small enough, the java code for the
+  model will be made available to inspect from within the GUI, larger
+  models can be inspected after users have downloaded the model. 
+
+  To download the model open the terminal window, create a directory
+  where the model will be saved, set the new directory as the working
+  directory and follow the curl and java compile commands displayed in
+  the instructions at the top of the java model.  
+
+.. Image:: GBMjavaout.png
+   :width: 70 %  
 
 Reference
 """""""""
@@ -145,7 +188,7 @@ http://projecteuclid.org/DPubS?service=UI&version=1.0&verb=Display&handle=euclid
 
 Hastie, Trevor, Robert Tibshirani, and J Jerome H Friedman. The
 Elements of Statistical Learning.
-Vol.1. N.p., page 387: Springer New York, 2001. 
+Vol.1. N.p., page 339: Springer New York, 2001. 
 http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 
 

@@ -1,6 +1,9 @@
 package hex.gbm;
 
+import hex.rng.MersenneTwisterRNG;
+
 import java.util.Arrays;
+import java.util.Random;
 
 import water.*;
 import water.Job.ValidatedJob;
@@ -8,7 +11,6 @@ import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.fvec.Vec.CollectDomain;
 
 public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -17,10 +19,10 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
   public int ntrees = 100;
 
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=0, lmax=10000)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
   public int max_depth = 5;
 
-  @API(help = "Fewest allowed observations in a leaf", filter = Default.class, lmin=1)
+  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1)
   public int min_rows = 10;
 
   @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
@@ -38,8 +40,18 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @API(help = "Number of classes")
   protected int _nclass;
 
-  @API(help = "Class distribution, ymin based")
+  @API(help = "Class distribution")
   protected long _distribution[];
+
+  private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
+
+  /** Maximal number of supported levels in response. */
+  public static final int MAX_SUPPORTED_LEVELS = 1000;
+
+  /** Marker for already decided row. */
+  static public final int DECIDED_ROW = -1;
+  /** Marker for sampled out rows */
+  static public final int OUT_OF_BAG = -2;
 
   @Override public float progress(){
     Value value = DKV.get(dest());
@@ -55,23 +67,41 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     Log.info("    nbins: " + nbins);
   }
 
+  // Verify input parameters
+  @Override protected void init() {
+    super.init();
+    // Check parameters
+    assert 0 <= ntrees && ntrees < 1000000; // Sanity check
+    // Should be handled by input
+    //assert response.isEnum() : "Response is not enum";
+    assert (classification && (response.isInt() || response.isEnum())) ||   // Classify Int or Enums
+           (!classification && !response.isEnum()) : "Classification="+classification + " and response="+response.isInt();  // Regress  Int or Float
+
+    if (source.numRows()==0)
+      throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+    if (source.numRows() - response.naCnt() <=0)
+      throw new IllegalArgumentException("Dataset contains too many NAs!");
+
+    _ncols = _train.length;
+    _nrows = source.numRows() - response.naCnt();
+
+    assert (_nrows>0) : "Dataset contains no rows - validation of input parameters is probably broken!";
+    // Transform response to enum
+    if( !response.isEnum() && classification ) {
+      response = response.toEnum();
+      _gen_enum = true;
+    }
+    _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
+    _errs = new double[0];                // No trees yet
+    if (classification && _nclass <= 1)
+      throw new IllegalArgumentException("Constant response column!");
+    if (_nclass > MAX_SUPPORTED_LEVELS)
+      throw new IllegalArgumentException("Too many levels in response column!");
+  }
+
   // --------------------------------------------------------------------------
   // Driver for model-building.
   public void buildModel( ) {
-    assert 0 <= ntrees && ntrees < 1000000; // Sanity check
-    assert 1 <= min_rows;
-    _ncols = _train.length;
-    _nrows = source.numRows() - response.naCnt();
-    assert (classification && response.isInt()) || // Classify Int or Enums
-      (!classification && !response.isEnum());     // Regress  Int or Float
-    _nclass = classification ? (char)(response.max()-response.min()+1) : 1;
-    // Transform response to enum
-    if (response.domain()==null && classification) {
-      response = response.toEnum();
-      _nclass = response.domain().length;
-    }
-    _errs = new double[0];                // No trees yet
-    assert 1 <= _nclass && _nclass <= 1000; // Arbitrary cutoff for too many classes
     final Key outputKey = dest();
     String sd = input("source");
     final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
@@ -79,7 +109,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
 
     Frame fr = new Frame(_names, _train);
-    fr.add("response",response);
+    fr.add(_responseName,response);
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
     String names[] = frm.names();
     String domains[][] = frm.domains();
@@ -87,12 +117,12 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // For doing classification on Integer (not Enum) columns, we want some
     // handy names in the Model.  This really should be in the Model code.
     String[] domain = response.domain();
-    if( domain == null && _nclass > 1 ) // No names?  Make some up.
+    if( domain == null && _nclass > 1 ) // No names?  Something is wrong since we converted response to enum
       assert false : "Response domain' names should be always presented in case of classification";
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution
-    _distribution = _nclass > 1 ? new ClassDist().doAll(response)._ys : null;
+    _distribution = _nclass > 1 ? new ClassDist(_nclass).doAll(response)._ys : null;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -124,6 +154,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // Remove temp vectors; cleanup the Frame
     while( fr.numCols() > _ncols+1/*Do not delete the response vector*/ )
       UKV.remove(fr.remove(fr.numCols()-1)._key);
+    // If we made a response column with toEnum, nuke it.
+    if( _gen_enum ) UKV.remove(response._key);
     remove();                   // Remove Job
   }
 
@@ -134,10 +166,13 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     assert chks.length == _ncols+1/*response*/+_nclass/*prob dist so far*/+_nclass/*tmp*/+_nclass/*NIDs, one tree per class*/;
     return chks;
   }
-  Chunk chk_resp( Chunk chks[]        ) { return chks[_ncols]; }
-  Chunk chk_tree( Chunk chks[], int c ) { return chks[_ncols+1+c]; }
-  Chunk chk_work( Chunk chks[], int c ) { return chks[_ncols+1+_nclass+c]; }
-  Chunk chk_nids( Chunk chks[], int t ) { return chks[_ncols+1+_nclass+_nclass+t]; }
+  protected Chunk chk_resp( Chunk chks[]        ) { return chks[_ncols]; }
+  protected Chunk chk_tree( Chunk chks[], int c ) { return chks[_ncols+1+c]; }
+  protected Chunk chk_work( Chunk chks[], int c ) { return chks[_ncols+1+_nclass+c]; }
+  protected Chunk chk_nids( Chunk chks[], int t ) { return chks[_ncols+1+_nclass+_nclass+t]; }
+
+  protected final Vec vec_work( Frame fr, int c) { return fr.vecs()[_ncols+1+_nclass+c]; }
+  protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
 
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
@@ -159,12 +194,12 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   //
   // The other result is a prediction "score" for the whole dataset, based on
   // the previous passes' DHistograms.
-  class ScoreBuildHistogram extends MRTask2<ScoreBuildHistogram> {
+  public class ScoreBuildHistogram extends MRTask2<ScoreBuildHistogram> {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
     // Histograms for every tree, split & active column
     DHistogram _hcs[/*tree/klass*/][/*tree-relative node-id*/][/*column*/];
-    ScoreBuildHistogram(DTree trees[], int leafs[]) {
+    public ScoreBuildHistogram(DTree trees[], int leafs[]) {
       assert trees.length==_nclass; // One tree per-class
       assert leafs.length==_nclass; // One count of leaves per-class
       _trees=trees;
@@ -195,7 +230,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
         if( tree == null ) continue; // Ignore unused classes
-        final int leaf   = _leafs[k];
+        final int leaf   = _leafs[k]; // Number of active leafs per tree for given class
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[k] = new DHistogram[tree._len-leaf][];
         final Chunk nids = chk_nids(chks,k);
@@ -206,16 +241,26 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         // assigned DecidedNode, "scoring" the row against that Node's decision
         // criteria, and assigning the row to a new child UndecidedNode (and
         // giving it an improved prediction).
-        for( int i=0; i<nids._len; i++ ) {
-          int nid = (int)nids.at80(i); // Get Node to decide from
-          if( nid==-2 ) continue; // sampled away
+        for( int row=0; row<nids._len; row++ ) { // Over all rows
+          int nid = (int)nids.at80(row); // Get Node to decide from
+          if (isDecidedRow(nid)) continue; // already done
+          if (isOOBRow(nid)) { // sampled away - we track the position in the tree
+            if ( leaf > 0) {
+              int nnid = oob2Nid(nid);
+              DTree.DecidedNode dn = tree.decided(nnid);
+              if( dn._split._col == -1 ) nids.set0(row,nid2Oob(nnid = dn._pid)); // Might have a leftover non-split
+              if( nnid != -1 ) nnid = tree.decided(nnid).ns(chks,row); // Move down the tree 1 level
+              if( nnid != -1 ) nids.set0(row,nid2Oob(nnid));
+            }
+            continue;
+          }
 
           // Score row against current decisions & assign new split
           if( leaf > 0 ) {      // Prior pass exists?
             DTree.DecidedNode dn = tree.decided(nid);
-            if( dn._split._col == -1 ) nids.set0(i,(nid = dn._pid)); // Might have a leftover non-split
-            nid = tree.decided(nid).ns(chks,i); // Move down the tree 1 level
-            if( nid != -1 ) nids.set0(i,nid);
+            if( dn._split._col == -1 ) nids.set0(row,(nid = dn._pid)); // Might have a leftover non-split
+            if( nid != -1 ) nid = tree.decided(nid).ns(chks,row); // Move down the tree 1 level
+            if( nid != -1 ) nids.set0(row,nid);
           }
 
           // Pass 1.9
@@ -228,7 +273,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
           // Lazily manifest this histogram for tree-node 'nid'
           nhs = hcs[nid-leaf] = new DHistogram[_ncols];
           DHistogram ohs[] = tree.undecided(nid)._hs; // The existing column of Histograms
-          int sCols[] = tree.undecided(nid)._scoreCols;
+          int sCols[] = tree.undecided(nid)._scoreCols; // Columns to score (null, or a list of selected cols)
           if( sCols != null ) { // Sub-selecting just some columns?
             // For just the selected columns make Big Histograms
             for( int j=0; j<sCols.length; j++ ) { // Make private copies
@@ -260,7 +305,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
           for( int j=0; j<_ncols; j++) { // For all columns
             DHistogram nh = nhs[j];
             if( nh == null ) continue; // Not tracking this column?
-            float col_data = (float)chks[j].at0(row);
+            float col_data = (float)chks[j].at0(row); // Data stored in the column and put them into histogram
             if( nh instanceof DBinHistogram ) // Big histogram
               ((DBinHistogram)nh).incr(row,col_data,y);
             else              nh .incr(col_data); // Small histogram
@@ -271,8 +316,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         for( DHistogram dbh[] : hcs )
           if( dbh != null )
             for( int j=0; j<dbh.length; j++ )
-              if( dbh[j] != null )
-                ((DBinHistogram)dbh[j]).fini();
+              if( dbh[j] != null ) // There are two kinds of histograms - small and big
+                (dbh[j]).fini();
       }
     }
 
@@ -296,7 +341,9 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   }
 
   // --------------------------------------------------------------------------
-  private class ClassDist extends MRTask2<ClassDist> {
+  private static class ClassDist extends MRTask2<ClassDist> {
+    ClassDist(int nclass) { _nclass = nclass; }
+    final int _nclass;
     long _ys[];
     @Override public void map(Chunk ys) {
       _ys = new long[_nclass];
@@ -314,25 +361,30 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   protected abstract double score0( Chunk chks[], double ds[/*nclass*/], int row );
 
   // Score the *tree* columns, and produce a confusion matrix
-  protected class Score extends MRTask2<Score> {
+  public class Score extends MRTask2<Score> {
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
+    long _snrows;
+    /* @IN */ boolean _oob;
+
+    public double   sum()   { return _sum; }
+    public long[][] cm ()   { return _cm;  }
+    public long     nrows() { return _snrows; }
 
     // Compute CM & MSE on either the training or testing dataset
-    Score doIt(Model model, Frame fr, Frame validation, Vec vresponse) {
+    public Score doIt(Model model, Frame fr, Frame validation) { return doIt(model,fr,validation,false); }
+    public Score doIt(Model model, Frame fr, Frame validation,boolean oob) {
+      assert !oob || validation==null ; // oob => validation==null
+      _oob = oob;
       // No validation, so do on training data
       if( validation == null ) return doAll(fr);
-
       // Validation: need to score the set, getting a probability distribution for each class
       // Frame has nclass vectors (nclass, or 1 for regression)
-      Frame res = model.score(validation,true);
+      Frame res = model.score(validation);
       // Adapt the validation set to the model
-      Frame frs[] = model.adapt(validation,true);
+      Frame frs[] = model.adapt(validation,false);
       Frame adapValidation = frs[0]; // adapted validation dataset
-      // Adapt vresponse to original response
-      vresponse = _nclass > 1 ? vresponse.adaptTo(response, true) : vresponse;
-      // Dump in the prob distribution
-      adapValidation.add("response",vresponse);
+      // All columns including response of validation frame are already adapted to model
       if (_nclass>1) { // Classification
         for( int i=0; i<_nclass; i++ )
           adapValidation.add("Work"+i,res.vecs()[i+1]);
@@ -344,7 +396,6 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       // Remove the extra adapted Vecs
       frs[1].remove();
       // Remove temporary result
-      // FIXME delete vresponse res.remove();
       return this;
     }
 
@@ -358,9 +409,10 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         double sum = score0(chks,ds,row);
         double err;  int ycls=0;
         if( _nclass > 1 ) {    // Classification
-          if( sum == 0 )       // This tree does not predict this row *at all*?
+          if( sum == 0 ) {       // This tree does not predict this row *at all*?
             err = 1.0f-1.0f/_nclass; // Then take ycls=0, uniform predictive power
-          else {
+            if (_oob) continue; // it is in-bag row (no vote by any tree)
+          } else {
             ycls = (int)ys.at80(row); // Response class from 0 to nclass-1
             if (ycls >= _nclass) continue;
             assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row);
@@ -368,7 +420,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
               ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
               : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
           }
-          assert !Double.isNaN(err) : ds[ycls] + " " + sum;
+          assert !Double.isNaN(err) : "ds[cls]="+ds[ycls] + ", sum=" + sum;
         } else {                // Regression
           err = ys.at0(row) - sum;
         }
@@ -378,20 +430,25 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         for( int c=1; c<_nclass; c++ )
           if( ds[best] < ds[c] ) best=c;
         _cm[ycls][best]++;      // Bump Confusion Matrix also
+        _snrows++;
       }
     }
-    @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); }
+    @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); _snrows += t._snrows; }
 
     public Score report( Sys tag, int ntree, DTree[] trees ) {
       assert !Double.isNaN(_sum);
       int lcnt=0;
-      for( DTree t : trees ) if( t != null ) lcnt += t._len;
-      long err=_nrows;
-      for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
       Log.info(tag,"============================================================== ");
-      Log.info(tag,"Mean Squared Error is "+(_sum/_nrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
-      if( _nclass > 1 )
-        Log.info(tag,"Total of "+err+" errors on "+_nrows+" rows, CM= "+Arrays.deepToString(_cm));
+      if (trees==null) {
+        Log.info("No trees...");
+      } else {
+        for( DTree t : trees ) if( t != null ) lcnt += t._len;
+        long err=_snrows;
+        for( int c=0; c<_nclass; c++ ) err -= _cm[c][c];
+        Log.info(tag,"Mean Squared Error is "+(_sum/_snrows)+", with "+ntree+"x"+_nclass+" trees (average of "+((float)lcnt/_nclass)+" nodes)");
+        if( _nclass > 1 )
+          Log.info(tag,"Total of "+err+" errors on "+_snrows+" rows, CM= "+Arrays.deepToString(_cm));
+      }
       return this;
     }
   }
@@ -407,4 +464,21 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
+
+  static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
+  static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }
+  static public final int     oob2Nid(int oobNid)   { return -oobNid + OUT_OF_BAG; }
+  static public final int     nid2Oob(int nid)      { return -nid + OUT_OF_BAG; }
+
+  // Helper to unify use of M-T RNG
+  public static Random createRNG(long seed) {
+    return new MersenneTwisterRNG(new int[] { (int)(seed>>32L),(int)seed });
+  }
+
+  // helper for debugging
+  static protected void printGenerateTrees(DTree[] trees) {
+    for( int k=0; k<trees.length; k++ )
+      if( trees[k] != null )
+        System.out.println(trees[k].root().toString2(new StringBuilder(),0));
+  }
 }

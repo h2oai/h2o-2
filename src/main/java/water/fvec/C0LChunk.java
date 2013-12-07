@@ -2,6 +2,7 @@ package water.fvec;
 
 import java.util.Arrays;
 import water.AutoBuffer;
+import water.MemoryManager;
 import water.UDP;
 
 /**
@@ -10,7 +11,7 @@ import water.UDP;
 public class C0LChunk extends Chunk {
   static final int OFF=8+4;
   long _con;
-  C0LChunk(long con, int len) { _mem=new byte[OFF]; _start = -1; _len = len;
+  public C0LChunk(long con, int len) { _mem=new byte[OFF]; _start = -1; _len = len;
     _con = con;
     UDP.set8(_mem,0,con);
     UDP.set4(_mem,8,len);
@@ -32,8 +33,8 @@ public class C0LChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    if( nc._ls != null ) Arrays.fill(nc._ls,_con);
-    else                 Arrays.fill(nc._ds,_con);
+    nc._xs = MemoryManager.malloc4(_len);
+    Arrays.fill(nc._ls = MemoryManager.malloc8(_len),_con);
     return nc;
   }
 }

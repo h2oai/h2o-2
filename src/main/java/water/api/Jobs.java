@@ -32,7 +32,7 @@ public class Jobs extends Request {
       json.addProperty(DEST_KEY, jobs[i].dest() != null ? jobs[i].dest().toString() : "");
       json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i].start_time)));
       long end = jobs[i].end_time;
-      boolean cancelled = (end == 0 ? jobs[i].cancelled() : end == Job.CANCELLED_END_TIME);
+      boolean cancelled = (end == Job.CANCELLED_END_TIME);
       json.addProperty(END_TIME, end == 0 ? "" : RequestBuilders.ISO8601.get().format(new Date(end)));
       json.addProperty(PROGRESS, end == 0 ? (cancelled ? -2 : jobs[i].progress()) : (cancelled ? -2 : -1));
       json.addProperty(CANCELLED, cancelled);

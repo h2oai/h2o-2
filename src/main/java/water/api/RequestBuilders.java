@@ -7,13 +7,12 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 
-import water.AutoBuffer;
-import water.H2O;
-import water.PrettyPrint;
+import water.*;
+import water.api.Request.API;
+import water.api.RequestBuilders.Response.Status;
 import water.util.*;
 
 import com.google.gson.*;
-import com.google.gson.stream.JsonReader;
 
 /** Builders & response object.
  *
@@ -57,6 +56,7 @@ public class RequestBuilders extends RequestQueries {
     sb.append("<div class='row-fluid'>");
     sb.append("<div class='span12'>");
     sb.append(buildJSONResponseBox(response));
+    if( response._status == Response.Status.done ) response.toJava(sb);
     sb.append(buildResponseHeader(response));
     Builder builder = response.getBuilderFor(ROOT_OBJECT);
     if (builder == null) {
@@ -125,9 +125,9 @@ public class RequestBuilders extends RequestQueries {
 
   private static final String _jsonResponseBox =
             "<div class='pull-right'><a href='#' onclick='$(\"#json_box\").toggleClass(\"hide\");' class='btn btn-inverse btn-mini'>JSON</a></div>"
-          + "<div class='hide' id='json_box'><pre>"
+          + "<div class='hide' id='json_box'><pre><code class=\"language-json\">"
           + "%JSON_RESPONSE_BOX"
-          + "</pre></div>";
+          + "</code></pre></div>";
 
   protected String buildJSONResponseBox(Response response) {
     switch (response._status) {
@@ -171,11 +171,11 @@ public class RequestBuilders extends RequestQueries {
       case poll:
         if (response._redirectArgs != null) {
           RString poll = new RString(_redirectJs);
-          poll.replace("REDIRECT_URL",getClass().getSimpleName()+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
+          poll.replace("REDIRECT_URL",requestName()+".html"+encodeRedirectArgs(response._redirectArgs,response._redirArgs));
           result.replace("JSSTUFF", poll.toString());
         } else {
           RString poll = new RString(_pollJs);
-          poll.replace("TIMEOUT", response._pollProgress==0 ? 500 : 2000);
+          poll.replace("TIMEOUT", response._pollProgress==0 ? 1500 : 2000);
           result.replace("JSSTUFF", poll.toString());
         }
         int pct = (int) ((double)response._pollProgress / response._pollProgressElements * 100);
@@ -349,7 +349,20 @@ public class RequestBuilders extends RequestQueries {
       _req = null;
     }
 
-    public Response(Status status, Request req, int progress, int total, String redirTo, Object... args) {
+    private Response(Status status, Request req, int progress, int total, Object...pollArgs) {
+      assert (status == Status.poll);
+      _status = status;
+      _response = null;
+      _redirectName = null;
+      _redirectArgs = null;
+      _redirArgs = pollArgs;
+      _pollProgress = progress;
+      _pollProgressElements = total;
+      _req = req;
+    }
+
+    /** Response v2 constructor */
+    private Response(Status status, Request req, int progress, int total, String redirTo, Object... args) {
       _status = status;
       _response = null;
       _redirectName = redirTo;
@@ -378,6 +391,11 @@ public class RequestBuilders extends RequestQueries {
       return new Response(Status.done, response);
     }
 
+    /** Response done v2. */
+    public static Response done(Request req) {
+      return new Response(Response.Status.done,req,-1,-1,(String) null);
+    }
+
     /** A unique empty response which carries an empty JSON object */
     public static final Response EMPTY_RESPONSE = Response.done(new JsonObject());
 
@@ -399,6 +417,11 @@ public class RequestBuilders extends RequestQueries {
           req.getSimpleName(), args);
     }
 
+    /** Redirect for v2 API */
+    public static Response redirect(Request req, String redirectName, Object...redirectArgs) {
+      return new Response(Response.Status.redirect, req, -1, -1, redirectName, redirectArgs);
+    }
+
     /** Returns the poll response object.
      */
     public static Response poll(JsonObject response, int progress, int total) {
@@ -417,7 +440,12 @@ public class RequestBuilders extends RequestQueries {
      */
     public static Response poll(JsonObject response, int progress, int total, JsonObject pollArgs) {
       return new Response(Status.poll,response, progress, total, pollArgs);
+    }
 
+    /** Returns the poll response object.
+     */
+    public static Response poll(Request req, int progress, int total, Object...pollArgs) {
+      return new Response(Status.poll,req, progress, total, pollArgs);
     }
 
     /** Sets the time of the response as a difference between the given time and
@@ -505,6 +533,10 @@ public class RequestBuilders extends RequestQueries {
       return res;
     }
 
+    public void toJava(StringBuilder sb) { 
+      if( _req != null ) _req.toJava(sb);
+    }
+
      /** Returns the error of the request object if any. Returns null if the
      * response is not in error state.
      */
@@ -518,6 +550,33 @@ public class RequestBuilders extends RequestQueries {
       _strictJsonCompliance = true;
     }
 
+    public ResponseInfo extractInfo() {
+      String redirectUrl = null;
+      if (_status == Status.redirect) redirectUrl = _redirectName+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
+      if (_status == Status.poll)     redirectUrl = _req.href()+".json"+encodeRedirectArgs(_redirectArgs,_redirArgs);
+      return new ResponseInfo(redirectUrl, _time, _status);
+    }
+  }
+
+  /** Class holding technical information about request/response. It will be served as a part of Request2's
+   * response.
+   */
+  public static class ResponseInfo extends Iced {
+    static final int API_WEAVER=1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    final @API(help="H2O cloud name.") String h2o;
+    final @API(help="Node serving the response.") String node;
+    final @API(help="Request processing time.") long time;
+    final @API(help="Response status") Response.Status status;
+    final @API(help="Redirect name.") String redirect_url;
+    public ResponseInfo(String redirect_url, long time, Status status) {
+      this.h2o = H2O.NAME;
+      this.node = H2O.SELF.toString();
+      this.redirect_url = redirect_url;
+      this.time = time;
+      this.status = status;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1061,4 +1120,5 @@ public class RequestBuilders extends RequestQueries {
       return "<strong>"+trunc(obj,HEADER,10)+"</strong>"+trunc(obj,MIN,6)+trunc(obj,MEAN,6)+trunc(obj,MAX,6);
     }
   }
+
 }

@@ -1,6 +1,7 @@
 package hex;
 
-import hex.Layer.FrameInput;
+import hex.Layer.VecSoftmax;
+import hex.Layer.VecsInput;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -10,6 +11,8 @@ import java.util.Random;
 
 import javax.swing.*;
 
+import water.fvec.Vec;
+
 public class MnistCanvas extends Canvas {
   static final int PIXELS = 784, EDGE = 28;
 
@@ -17,11 +20,11 @@ public class MnistCanvas extends Canvas {
   static int _level = 1;
   Trainer _trainer;
 
-  MnistCanvas(Trainer trainer) {
+  public MnistCanvas(Trainer trainer) {
     _trainer = trainer;
   }
 
-  JPanel init() {
+  public JPanel init() {
     JToolBar bar = new JToolBar();
     bar.add(new JButton("refresh") {
       @Override protected void fireActionPerformed(ActionEvent event) {
@@ -40,8 +43,8 @@ public class MnistCanvas extends Canvas {
     });
     bar.add(new JButton("histo") {
       @Override protected void fireActionPerformed(ActionEvent event) {
-        Histogram.initFromSwingThread();
-        Histogram.build(_trainer.layers());
+        Histograms.initFromSwingThread();
+        Histograms.build(_trainer.layers());
       }
     });
     JPanel pane = new JPanel();
@@ -55,9 +58,10 @@ public class MnistCanvas extends Canvas {
 
   @Override public void paint(Graphics g) {
     Layer[] ls = _trainer.layers();
-    water.fvec.Frame frame = ((FrameInput) ls[0])._frame;
+    Vec[] vecs = ((VecsInput) ls[0]).vecs;
+    Vec resp = ((VecSoftmax) ls[ls.length - 1]).vec;
     int edge = 56, pad = 10;
-    int rand = _rand.nextInt((int) frame.numRows());
+    int rand = _rand.nextInt((int) vecs[0].length());
 
     // Side
     {
@@ -67,12 +71,12 @@ public class MnistCanvas extends Canvas {
       // Input
       int[] pix = new int[PIXELS];
       for( int i = 0; i < pix.length; i++ )
-        pix[i] = (int) (frame._vecs[i].at8(rand));
+        pix[i] = (int) (vecs[i].at8(rand));
       r.setDataElements(0, 0, EDGE, EDGE, pix);
       g.drawImage(in, pad, pad, null);
 
       // Labels
-      g.drawString("" + frame._vecs[PIXELS].at8(rand), 10, 50);
+      g.drawString("" + resp.at8(rand), 10, 50);
       g.drawString("RBM " + _level, 10, 70);
     }
 
@@ -131,9 +135,9 @@ public class MnistCanvas extends Canvas {
         buf += pad + edge;
       }
 
-      int[] start = new int[layer._in._a.length];
-      for( int i = 0; i < layer._in._a.length; i++ ) {
-        double w = layer._w[o * layer._in._a.length + i];
+      int[] start = new int[layer._previous._a.length];
+      for( int i = 0; i < layer._previous._a.length; i++ ) {
+        double w = layer._w[o * layer._previous._a.length + i];
         w = ((w - mean) / sigma) * 200;
         if( w >= 0 )
           start[i] = ((int) Math.min(+w, 255)) << 8;

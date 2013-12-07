@@ -36,6 +36,9 @@ public abstract class UKV {
   }
   static public void put( Key key, Iced val, Futures fs ) { put(key,new Value(key, val),fs); }
 
+  static public void removeAll(Key[] keys) {
+    for(Key key: keys) remove(key);
+  }
   static public void remove( Key key ) { remove(key,true); }
   static public void remove( Key key, boolean block) {
     Futures fs = new Futures();

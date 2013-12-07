@@ -12,7 +12,13 @@ import water.fvec.Frame;
 import water.util.Utils;
 
 public abstract class Request2 extends Request {
-  transient Properties _parms;
+  static final int API_WEAVER = 1;
+  static public DocGen.FieldDoc[] DOC_FIELDS;
+
+  protected transient Properties _parms;
+
+  @API(help = "Response stats and info.")
+  public ResponseInfo response_info;
 
   public String input(String fieldName) {
     return _parms == null ? null : _parms.getProperty(fieldName);
@@ -38,9 +44,12 @@ public abstract class Request2 extends Request {
     }
 
     @Override protected Key parse(String input) {
+      if (_validator!=null) _validator.validateRaw(input);
       Key k = Key.make(input);
+      Value v = DKV.get(k);
+      if( v == null && _mustExist )
+        throw new IllegalArgumentException("Key '" + input + "' does not exist!");
       if( _type != null ) {
-        Value v = DKV.get(k);
         if( v != null && !compatible(_type, v.get()) )
           throw new IllegalArgumentException(input + ":" + errors()[0]);
         if( v == null && _required )
@@ -102,14 +111,14 @@ public abstract class Request2 extends Request {
    */
   public enum MultiVecSelectType {
     /**
-     * Treat a token as a column name.
-     * Otherwise, treat it as a 0-based index if it looks like a positive integer.
+     * Treat a token as a column name. Otherwise, treat it as a 0-based index if it looks like a
+     * positive integer.
      */
     NAMES_THEN_INDEXES,
 
     /**
-     * Treat a token as a column name no matter what (even if it looks like it is an integer).
-     * This is used by the Web UI, which blindly specifies column names.
+     * Treat a token as a column name no matter what (even if it looks like it is an integer). This
+     * is used by the Web UI, which blindly specifies column names.
      */
     NAMES_ONLY
   }
@@ -142,7 +151,9 @@ public abstract class Request2 extends Request {
   }
 
   public class DoClassBoolean extends Dependent {
-    protected DoClassBoolean(String key) { super(key); }
+    protected DoClassBoolean(String key) {
+      super(key);
+    }
   }
 
   /**
@@ -180,8 +191,9 @@ public abstract class Request2 extends Request {
           Argument arg = null;
 
           // Simplest case, filter is an Argument
-          if( Argument.class.isAssignableFrom(api.filter()) )
+          if( Argument.class.isAssignableFrom(api.filter()) ) {
             arg = (Argument) newInstance(api);
+          }
 
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
@@ -237,13 +249,13 @@ public abstract class Request2 extends Request {
               for( int i = 0; i < ds.length; i++ )
                 ds[i] = val[i];
             }
-            arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null), false);
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(ds, null, true), false, api.help());
           }
 
           // RSeq
           else if( f.getType() == double[].class ) {
             double[] val = (double[]) defaultValue;
-            arg = new RSeq(f.getName(), api.required(), new NumberSequence(val, null), false);
+            arg = new RSeq(f.getName(), api.required(), new NumberSequence(val, null, false), false, api.help());
           }
 
           // Bool
@@ -275,6 +287,9 @@ public abstract class Request2 extends Request {
             arg._required = api.required();
             arg._field = f;
             arg._hideInQuery = api.hide();
+            arg._gridable = api.gridable();
+            arg._mustExist = api.mustExist();
+            arg._validator = newValidator(api);
           }
         }
       }
@@ -290,7 +305,7 @@ public abstract class Request2 extends Request {
     return null;
   }
 
-  // Extracted in separate class as Weaver cannot load REquest during boot
+  // Extracted in separate class as Weaver cannot load Request during boot
   static final class Helper {
     static boolean isInput(API api) {
       return api.filter() != Filter.class || api.filters().length != 0;
@@ -319,6 +334,15 @@ public abstract class Request2 extends Request {
     throw new Exception("Class " + api.filter().getName() + " must have an empty constructor");
   }
 
+  private Validator newValidator(API api) throws Exception {
+    for( Constructor c : api.validator().getDeclaredConstructors() ) {
+      c.setAccessible(true);
+      Class[] ps = c.getParameterTypes();
+      return (Validator) c.newInstance();
+    }
+    return null;
+  }
+
   // Create an instance per call instead of ThreadLocals
   @Override protected Request create(Properties parms) {
     Request2 request;
@@ -337,11 +361,21 @@ public abstract class Request2 extends Request {
     String[][] values = new String[_arguments.size()][];
     boolean gridSearch = false;
     for( int i = 0; i < _arguments.size(); i++ ) {
-      String value = _parms.getProperty(_arguments.get(i)._name);
-      if( value != null ) {
-        values[i] = split(value);
-        if( values[i].length > 1 )
-          gridSearch = true;
+      Argument arg = _arguments.get(i);
+      if( arg._gridable ) {
+        String value = _parms.getProperty(arg._name);
+        if( value != null ) {
+          // Skips grid if argument is an array, except if imbricated expression
+          // Little hackish, waiting for real language
+          boolean imbricated = value.contains("(");
+          if( !arg._field.getType().isArray() || imbricated ) {
+            values[i] = split(value);
+            if( values[i] != null && values[i].length > 1 )
+              gridSearch = true;
+          } else if (arg._field.getType().isArray() && !imbricated) { // Copy values which are arrays
+            values[i] = new String[] { value };
+          }
+        }
       }
     }
     if( !gridSearch )
@@ -378,32 +412,39 @@ public abstract class Request2 extends Request {
     return grid.superServeGrid(server, parms, type);
   }
 
-  // Splits imbricated expressions like c(4, 5, '2,3', 7)
-  // TODO: switch to real parser for unified imbricated argument sets, expressions etc?
+  // Splits one-level imbricated expressions like 4, 5, (2, 3), 7
+  // TODO: switch to real parser for unified imbricated argument sets, expressions etc.
   public static String[] split(String value) {
     String[] values = null;
     value = value.trim();
-    if( value.startsWith("c(") && value.endsWith(")") ) {
-      value = value.substring(2, value.length() - 1);
-      StringTokenizer st = new StringTokenizer(value, ",'", true);
-      String s, current = "";
-      while( (s = getNextToken(st)) != null ) {
-        if( ",".equals(s) ) {
-          values = Utils.append(values, current);
-          current = "";
-        } else if( "'".equals(s) ) {
-          while( !("'".equals((s = getNextToken(st)))) ) {
-            if( s == null )
-              throw new IllegalArgumentException("Missing closing quote");
-            current += s;
-          }
-        } else
+    StringTokenizer st = new StringTokenizer(value, ",()", true);
+    String s, current = "";
+    while( (s = getNextToken(st)) != null ) {
+      if( ",".equals(s) ) {
+        values = addSplit(values, current);
+        current = "";
+      } else if( "(".equals(s) ) {
+        while( !(")".equals((s = getNextToken(st)))) ) {
+          if( s == null )
+            throw new IllegalArgumentException("Missing closing parenthesis");
           current += s;
-      }
-      if( current.length() > 0 )
-        values = Utils.append(values, current);
-    } else
-      values = new String[] { value };
+        }
+        values = addSplit(values, current);
+        current = "";
+      } else
+        current += s;
+    }
+    values = addSplit(values, current);
+    return values;
+  }
+
+  private static String[] addSplit(String[] values, String value) {
+    if( value.contains(":") ) {
+      double[] gen = NumberSequence.parseGenerator(value, false, 1);
+      for( double d : gen )
+        values = Utils.append(values, "" + d);
+    } else if( value.length() > 0 )
+      values = Utils.append(values, value);
     return values;
   }
 
@@ -474,5 +515,11 @@ public abstract class Request2 extends Request {
     }
   }
 
-  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
+  @Override public API_VERSION[] supportedVersions() {
+    return SUPPORTS_ONLY_V2;
+  }
+
+  public void fillResponseInfo(Response response) {
+    this.response_info = response.extractInfo();
+  }
 }

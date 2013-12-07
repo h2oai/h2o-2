@@ -7,18 +7,29 @@ setClass("H2OClient", representation(ip="character", port="numeric"), prototype(
 setClass("H2ORawData", representation(h2o="H2OClient", key="character", env="environment"))
 # setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character", env="environment"))
-setClass("H2OParsedData2", representation(h2o="H2OClient", key="character"))
 setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
-setClass("H2OGLMGrid", contains="H2OGrid")
+# setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
-setClass("H2ORForestModel", contains="H2OModel")
+setClass("H2ONNModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
 setClass("H2OPCAModel", contains="H2OModel")
-setClass("H2OGBMModel", contains="H2OModel")
+setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
+
 setClass("H2OGBMGrid", contains="H2OGrid")
+setClass("H2OKMeansGrid", contains="H2OGrid")
+setClass("H2ODRFGrid", contains="H2OGrid")
+setClass("H2ONNGrid", contains="H2OGrid")
+
+setClass("H2ORawDataVA", representation(h2o="H2OClient", key="character", env="environment"))
+setClass("H2OParsedDataVA", representation(h2o="H2OClient", key="character", env="environment"))
+setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", env="environment", "VIRTUAL"))
+setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
+setClass("H2OGLMModelVA", contains="H2OModelVA", representation(xval="list"))
+setClass("H2OGLMGridVA", contains="H2OGridVA")
 
 # Register finalizers for H2O data and model objects
 # setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
@@ -77,50 +88,44 @@ setMethod("show", "H2OParsedData", function(object) {
   cat("Parsed Data Key:", object@key, "\n")
 })
 
-setMethod("show", "H2OParsedData2", function(object) {
-  print(object@h2o)
-  cat("Parsed Data Key:", object@key, "\n")
+setMethod("show", "H2OGrid", function(object) {
+  print(object@data)
+  cat("Grid Search Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
 })
 
 setMethod("show", "H2OGLMModel", function(object) {
   print(object@data)
-  cat("GLM Model Key:", object@key, "\n\nCoefficients:\n")
+  cat("GLM2 Model Key:", object@key, "\n\nCoefficients:\n")
   
   model = object@model
   print(round(model$coefficients,5))
   cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
   cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
-  cat("Residual Deviance:", round(model$deviance,1), " AIC:", ifelse( is.numeric(model$aic), round(model$aic,1), 'NaN'), "\n")
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
   cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
   
   # if(model$family == "binomial") {
   if(model$family$family == "binomial") {
-    cat("AUC:", ifelse(is.numeric(model$auc), round(model$auc,5), 'NaN'), " Best Threshold:", round(model$threshold,5), "\n")
-    cat("\nConfusion Matrix:\n"); print(model$confusion)
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5), "\n")
+    cat("\nConfusion Matrix:\n"); print(model$confusion,2)
   }
     
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
     # if(model$family == "binomial") {
     if(model$family$family == "binomial") {
-      modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
-      colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
+      colnames(modelXval) = c("Nonzeros", "AUC", "Deviance Explained")
     } else {
-      modelXval = sapply(object@xval, function(x) { x@model$train.err })
-      modelXval = data.frame(modelXval)
-      colnames(modelXval) = c("Error")
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
+      colnames(modelXval) = c("Nonzeros", "AIC", "Deviance Explained")
     }
-    rownames(modelXval) = paste("Model", 0:(nrow(modelXval)-1))
+    rownames(modelXval) = paste("Model", 1:nrow(modelXval))
     print(modelXval)
   }
-})
-
-setMethod("show", "H2OGLMGrid", function(object) {
-  print(object@data)
-  cat("GLMGrid Model Key:", object@key, "\n")
-  
-  temp = data.frame(t(sapply(object@sumtable, c)))
-  cat("\nSummary\n"); print(temp)
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
@@ -130,20 +135,31 @@ setMethod("show", "H2OKMeansModel", function(object) {
   model = object@model
   cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
   cat("\n\nCluster means:\n"); print(model$centers)
-  cat("\nClustering vector:\n"); print(model$cluster)  # summary(model$cluster) currently broken
+  cat("\nClustering vector:\n"); print(summary(model$cluster))
   cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
   cat("\nAvailable components:\n\n"); print(names(model))
 })
 
-setMethod("show", "H2ORForestModel", function(object) {
+setMethod("show", "H2ONNModel", function(object) {
   print(object@data)
-  cat("Random Forest Model Key:", object@key)
+  cat("NN Model Key:", object@key)
   
   model = object@model
-  cat("\n\nType of random forest:", model$type)
+  cat("\n\nTraining classification error:", model$train_class_error)
+  cat("\nTraining square error:", model$train_sqr_error)
+  cat("\n\nValidation classification error:", model$valid_class_error)
+  cat("\nValidation square error:", model$valid_sqr_error)
+  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+})
+
+setMethod("show", "H2ODRFModel", function(object) {
+  print(object@data)
+  cat("Distributed Random Forest Model Key:", object@key)
+  
+  model = object@model
   cat("\nNumber of trees:", model$ntree)
-  cat("\n\nOOB estimate of error rate: ", round(100*model$oob_err, 2), "%", sep = "")
-  cat("\nConfusion matrix:\n"); print(model$confusion)
+  cat("\nTree statistics:\n"); print(model$forest)
+  cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
@@ -160,119 +176,473 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("GBM Model Key:", object@key)
   
   model = object@model
-  cat("\n\nConfusion matrix:\n"); print(model$confusion)
+  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
 
-setMethod("show", "H2OGBMGrid", function(object) {
-  print(object@data)
-  cat("GBMGrid Model Key:", object@key, "\n")
+setMethod("summary", "H2OPCAModel", function(object) {
+  # TODO: Save propVar and cumVar from the Java output instead of computing here
+  myVar = object@model$sdev^2
+  myProp = myVar/sum(myVar)
+  result = rbind(object@model$sdev, myProp, cumsum(myProp))   # Need to limit decimal places to 4
+  colnames(result) = paste("PC", seq(1, length(myVar)), sep="")
+  rownames(result) = c("Standard deviation", "Proportion of Variance", "Cumulative Proportion")
   
-  temp = data.frame(t(sapply(object@sumtable, c)))
-  cat("\nSummary\n"); print(temp)
+  cat("Importance of components:\n")
+  print(result)
 })
 
-setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("+", e1, e2) })
-setMethod("-", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("-", e1, e2) })
-setMethod("*", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("*", e1, e2) })
-setMethod("/", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("/", e1, e2) })
-setMethod("%%", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("%", e1, e2) })
-setMethod("==", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("==", e1, e2) })
-setMethod(">", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator(">", e1, e2) })
-setMethod("<", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("<", e1, e2) })
-setMethod("!=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("!=", e1, e2) })
-setMethod(">=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator(">=", e1, e2) })
-setMethod("<=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__operator("<=", e1, e2) })
+setMethod("plot", "H2OPCAModel", function(x, y, ...) {
+  barplot(x@model$sdev^2)
+  title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
+})
 
-setMethod("+", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("+", e1, e2) })
-setMethod("-", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("-", e1, e2) })
-setMethod("*", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("*", e1, e2) })
-setMethod("/", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("/", e1, e2) })
-setMethod("%%", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("%", e1, e2) })
-setMethod("==", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("==", e1, e2) })
-setMethod(">", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator(">", e1, e2) })
-setMethod("<", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("<", e1, e2) })
-setMethod("!=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("!=", e1, e2) })
-setMethod(">=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator(">=", e1, e2) })
-setMethod("<=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__operator("<=", e1, e2) })
-
-setMethod("+", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("+", e1, e2) })
-setMethod("-", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("-", e1, e2) })
-setMethod("*", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("*", e1, e2) })
-setMethod("/", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("/", e1, e2) })
-setMethod("%%", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("%", e1, e2) })
-setMethod("==", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("==", e1, e2) })
-setMethod(">", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator(">", e1, e2) })
-setMethod("<", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("<", e1, e2) })
-setMethod("!=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("!=", e1, e2) })
-setMethod(">=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator(">=", e1, e2) })
-setMethod("<=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__operator("<=", e1, e2) })
-
-setMethod("min", "H2OParsedData", function(x) { h2o.__func("min", x, "Number") })
-setMethod("max", "H2OParsedData", function(x) { h2o.__func("max", x, "Number") })
-setMethod("mean", "H2OParsedData", function(x) { h2o.__func("mean", x, "Number") })
-setMethod("sum", "H2OParsedData", function(x) { h2o.__func("sum", x, "Number") })
-setMethod("log2", "H2OParsedData", function(x) { h2o.__func("log", x, "Vector") })
-
+# i are the rows, j are the columns. These can be vectors of integers or character strings, or a single H2OLogicalData2 object.
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
-  # Currently, you can only select one column at a time
-  if(!missing(j) && length(j) > 1) stop("Currently, can only select one column at a time")
+  numRows = nrow(x); numCols = ncol(x)
+  if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
+     (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
+    stop("Array index out of bounds")
+  
   if(missing(i) && missing(j)) return(x)
   if(missing(i) && !missing(j)) {
-    if(is.character(j)) return(do.call("$", c(x, j)))
-    expr = paste(h2o.__escape(x@key), "[", j-1, "]", sep="")
-  } else {
-    if(class(i) == "H2OLogicalData") {
-      opt = paste(h2o.__escape(x@key), h2o.__escape(i@key), sep=",")
-      if(missing(j))
-        expr = paste("filter(", opt, ")", sep="")
-      else if(is.character(j))
-        expr = paste("filter(", opt, ")$", j, sep="")
-      else if(is.numeric(j))
-        expr = paste("filter(", opt, ")[", j-1, "]", sep="")
-      else stop("Rows must be numeric or column names")
+    if(is.character(j)) { 
+      # return(do.call("$", c(x, j)))
+      myCol = colnames(x)
+      if(any(!(j %in% myCol))) stop("undefined columns selected")
+      j = match(j, myCol)
     }
-    else if(is.numeric(i)) {
-      start = min(i); i_off = i - start + 1;
-      opt = paste(h2o.__escape(x@key), start-1, max(i_off), sep=",")
-      if(missing(j))
-        expr = paste("slice(", opt, ")", sep="")
-      else if(is.character(j))
-        expr = paste("slice(", opt, ")$", j, sep="")
-      else if(is.numeric(j))
-        expr = paste("slice(", opt, ")[", j-1, "]", sep="")
-    } else stop("Rows must be numeric or column names")
+    # if(is.logical(j)) j = -which(!j)
+    if(is.logical(j)) j = which(j)
+
+    if(class(j) == "H2OLogicalData")
+      expr = paste(x@key, "[", j@key, ",]", sep="")
+    else if(is.numeric(j) || is.integer(j))
+      expr = paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
+    else stop(paste("Column index of type", class(j), "unsupported!"))
+  } else if(!missing(i) && missing(j)) {
+    # if(is.logical(i)) i = -which(!i)
+    if(is.logical(i)) i = which(i)
+    if(class(i) == "H2OLogicalData")
+      expr = paste(x@key, "[", i@key, ",]", sep="")
+    else if(is.numeric(i) || is.integer(i))
+      expr = paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
+    else stop(paste("Row index of type", class(i), "unsupported!"))
+  } else {
+    # if(is.logical(i)) i = -which(!i)
+    if(is.logical(i)) i = which(i)
+    if(class(i) == "H2OLogicalData") rind = i@key
+    else if(is.numeric(i) || is.integer(i))
+      rind = paste("c(", paste(i, collapse=","), ")", sep="")
+    else stop(paste("Row index of type", class(i), "unsupported!"))
+    
+    if(is.character(j)) { 
+      # return(do.call("$", c(x, j)))
+      myCol = colnames(x)
+      if(any(!(j %in% myCol))) stop("undefined columns selected")
+      j = match(j, myCol)
+    }
+    # if(is.logical(j)) j = -which(!j)
+    if(is.logical(j)) j = which(j)
+    if(class(j) == "H2OLogicalData") cind = j@key
+    else if(is.numeric(j) || is.integer(j))
+      cind = paste("c(", paste(j, collapse=","), ")", sep="")
+    else stop(paste("Column index of type", class(j), "unsupported!"))
+    expr = paste(x@key, "[", rind, ",", cind, "]", sep="")
   }
-  res = h2o.__exec(x@h2o, expr)
-  new("H2OParsedData", h2o=x@h2o, key=res)
+  res = h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    res$scalar
+  else
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
 setMethod("$", "H2OParsedData", function(x, name) {
-  myNames = names(x)
-  if(!(name %in% myNames)) {
-    print("Column", as.character(name), "not present in expression"); return(NULL)
-  } else {
-    # x[match(name, myNames)]
-    expr = paste(h2o.__escape(x@key), "$", name, sep="")
-    res = h2o.__exec(x@h2o, expr)
-    new("H2OParsedData", h2o=x@h2o, key=res)
-  }
+  myNames = colnames(x)
+  if(!(name %in% myNames)) return(NULL)
+  cind = match(name, myNames)
+  expr = paste(x@key, "[,", cind, "]", sep="")
+  res = h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    res$scalar
+  else
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
+setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
+  numRows = nrow(x); numCols = ncol(x)
+  # if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
+  #     (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
+  #  stop("Array index out of bounds!")
+  if(!(missing(i) || is.numeric(i)) || !(missing(j) || is.numeric(j) || is.character(j))) 
+    stop("Row/column types not supported!")
+  
+  if(!missing(i) && is.numeric(i)) {
+    if(any(i == 0)) stop("Array index out of bounds")
+    if(any(i < 0 && abs(i) > numRows)) stop("Unimplemented: can't extend rows")
+    if(min(i) > numRows+1) stop("new rows would leave holes after existing rows")
+  }
+  if(!missing(j) && is.numeric(j)) {
+    if(any(j == 0)) stop("Array index out of bounds")
+    if(any(j < 0 && abs(j) > numCols)) stop("Unimplemented: can't extend columns")
+    if(min(j) > numCols+1) stop("new columns would leaves holes after existing columns")
+  }
+  
+  if(missing(i) && missing(j))
+    lhs = x@key
+  else if(missing(i) && !missing(j)) {
+    if(is.character(j)) {
+      myNames = colnames(x)
+      if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
+      cind = match(j, myNames)
+    } else cind = j
+    cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
+    lhs = paste(x@key, "[,", cind, "]", sep = "")
+  } else if(!missing(i) && missing(j)) {
+    rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
+    lhs = paste(x@key, "[", rind, ",]", sep = "")
+  } else {
+    if(is.character(j)) {
+      myNames = colnames(x)
+      if(any(!(j %in% myNames))) stop("Unimplemented: undefined column names specified")
+      cind = match(j, myNames)
+    } else cind = j
+    cind = paste("c(", paste(cind, collapse = ","), ")", sep = "")
+    rind = paste("c(", paste(i, collapse = ","), ")", sep = "")
+    lhs = paste(x@key, "[", rind, ",", cind, "]", sep = "")
+  }
+  
+  rhs = ifelse(class(value) == "H2OParsedData", value@key, value)
+  res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
+  return(x)
+})
+
+setMethod("$<-", "H2OParsedData", function(x, name, value) {
+  lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
+  rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
+  res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
+  # TODO: Set column name of ncol(x) + 1 to name
+  return(x)
+})
+
+setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
+setMethod("-", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("-", e1, e2) })
+setMethod("*", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("*", e1, e2) })
+setMethod("/", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("/", e1, e2) })
+setMethod("%%", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("%", e1, e2) })
+setMethod("==", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("==", e1, e2) })
+setMethod(">", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2(">", e1, e2) })
+setMethod("<", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("<", e1, e2) })
+setMethod("!=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
+setMethod(">=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
+setMethod("<=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
+setMethod("&", c("H2OParsedData", "H2OParsedData"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("H2OParsedData", "H2OParsedData"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
+
+setMethod("+", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
+setMethod("-", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("-", e1, e2) })
+setMethod("*", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("*", e1, e2) })
+setMethod("/", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("/", e1, e2) })
+setMethod("%%", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("%", e1, e2) })
+setMethod("==", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("==", e1, e2) })
+setMethod(">", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2(">", e1, e2) })
+setMethod("<", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("<", e1, e2) })
+setMethod("!=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
+setMethod(">=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
+setMethod("<=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
+setMethod("&", c("numeric", "H2OParsedData"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("numeric", "H2OParsedData"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
+
+setMethod("+", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
+setMethod("-", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("-", e1, e2) })
+setMethod("*", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("*", e1, e2) })
+setMethod("/", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("/", e1, e2) })
+setMethod("%%", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("%", e1, e2) })
+setMethod("==", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("==", e1, e2) })
+setMethod(">", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2(">", e1, e2) })
+setMethod("<", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("<", e1, e2) })
+setMethod("!=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
+setMethod(">=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
+setMethod("<=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
+setMethod("&", c("H2OParsedData", "numeric"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("H2OParsedData", "numeric"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
+
+setMethod("!", "H2OParsedData", function(x) { h2o.__unop2("!", x) })
+setMethod("abs", "H2OParsedData", function(x) { h2o.__unop2("abs", x) })
+setMethod("sign", "H2OParsedData", function(x) { h2o.__unop2("sgn", x) })
+setMethod("sqrt", "H2OParsedData", function(x) { h2o.__unop2("sqrt", x) })
+setMethod("ceiling", "H2OParsedData", function(x) { h2o.__unop2("ceil", x) })
+setMethod("floor", "H2OParsedData", function(x) { h2o.__unop2("floor", x) })
+setMethod("log", "H2OParsedData", function(x) { h2o.__unop2("log", x) })
+setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
+setMethod("sum", "H2OParsedData", function(x) { h2o.__unop2("sum", x) })
+setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
+
+setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
+setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x, breaks) {
+  nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
+  expr = paste("cut(", x@key, ",", nums, ")", sep="")
+  res = h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
+    return(res$scalar)
+  new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
+})
+
+h2o.table <- function(x) { h2o.__unop2("table", x) }
+h2o.factor <- function(x) { h2o.__unop2("factor", x) }
+h2o.runif <- function(x) { h2o.__unop2("runif", x) }
+
 setMethod("colnames", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
 })
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
 
 setMethod("nrow", "H2OParsedData", function(x) { 
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_rows })
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numRows) })
 
 setMethod("ncol", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); res$num_cols })
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numCols) })
+
+setMethod("min", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  min(sapply(res$cols, function(x) { x$min }))
+})
+
+setMethod("max", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  max(sapply(res$cols, function(x) { x$max }))
+})
+
+setMethod("range", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  temp = sapply(res$cols, function(x) { c(x$min, x$max) })
+  c(min(temp[1,]), max(temp[2,]))
+})
+
+setMethod("colMeans", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  temp = sapply(res$cols, function(x) { x$mean })
+  names(temp) = sapply(res$cols, function(x) { x$name })
+  temp
+})
+
+setMethod("dim", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  as.numeric(c(res$numRows, res$numCols))
+})
+
+setMethod("as.data.frame", "H2OParsedData", function(x) {
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
+  ttt <- getURL(url)
+  read.csv(textConnection(ttt))
+})
+
+setMethod("head", "H2OParsedData", function(x, n = 6L, ...) { 
+  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
+  n = round(n)
+  # if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
+  numRows = nrow(x)
+  if(n < 0 && abs(n) >= numRows) return(data.frame())
+  myView = ifelse(n > 0, min(n, numRows), numRows+n)
+  if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
+  
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=myView)
+  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
+  if(is.null(temp)) return(temp)
+  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
+  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
+  x.df
+})
+
+setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
+  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
+  n = round(n)
+  # if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
+  numRows = nrow(x)
+  if(n < 0 && abs(n) >= numRows) return(data.frame())
+  myOff = ifelse(n > 0, max(0, numRows-n), abs(n))
+  myView = ifelse(n > 0, min(n, numRows), numRows+n)
+  if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
+  
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=myOff, view=myView)
+  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
+  if(is.null(temp)) return(temp)
+  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
+  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
+  x.df
+})
+
+setMethod("is.factor", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
+  # temp = sapply(res$summaries, function(x) { is.null(x$domains) })
+  temp = sapply(res$summaries, function(x) { x$stats$type != "Enum" })
+  return(!any(temp))
+})
+
+setMethod("quantile", "H2OParsedData", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
+  # temp = sapply(res$summaries, function(x) { x$percentileValues })
+  temp = sapply(res$summaries, function(x) { x$stats$pctile })
+  filt = !sapply(temp, is.null)
+  temp = temp[filt]
+  if(length(temp) == 0) return(NULL)
+  
+  # myFeat = res$names[filt[1:length(res$names)]]
+  # myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
+  myFeat = sapply(res$summaries, function(x) { x$colname })
+  myQuantiles = 100 * res$summaries[[1]]$stats$pct
+  matrix(unlist(temp), ncol = length(myFeat), dimnames = list(paste(myQuantiles, "%", sep=""), myFeat))
+})
+
+setGeneric("histograms", function(object) { standardGeneric("histograms") })
+setMethod("histograms", "H2OParsedData", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
+  list.of.bins <- lapply(res$summaries, function(x) {
+    if (x$stats$type == 'Enum') {
+      bins <- NULL
+    } else {
+      counts <- x$hcnt
+      breaks <- seq(x$hstart, by=x$hstep, length.out=length(x$hcnt) + 1)
+      bins <- list(counts,breaks)
+      names(bins) <- cbind('counts', 'breaks')
+    }
+    bins
+  })
+  return(list.of.bins)
+})
 
 setMethod("summary", "H2OParsedData", function(object) {
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
+  cols <- sapply(res$summaries, function(col) {
+    if(col$stats$type != 'Enum') { # numeric column
+      if(is.null(col$stats$mins) || length(col$stats$mins) == 0) col$stats$mins = NaN
+      if(is.null(col$stats$maxs) || length(col$stats$maxs) == 0) col$stats$maxs = NaN
+      if(is.null(col$stats$pctile))
+        params = format(rep(round(as.numeric(col$stats$mean), 3), 6), nsmall = 3)
+      else
+        params = format(round(as.numeric(c(
+          col$stats$mins[1],
+          col$stats$pctile[4],
+          col$stats$pctile[6],
+          col$stats$mean,
+          col$stats$pctile[8],
+          col$stats$maxs[1])), 3), nsmall = 3)
+      result = c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
+                 paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
+                 paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")) 
+    }
+    else {
+      top.ix <- sort.int(col$hcnt, decreasing=T, index.return=T)$ix[1:6]
+      # domains <- col$hbrk[top.ix]
+      if(is.null(col$hbrk)) domains <- top.ix[1:6] else domains <- col$hbrk[top.ix]
+      counts <- col$hcnt[top.ix]
+      # width <- max(cbind(nchar(domains), nchar(counts)))
+      width <- max(nchar(domains) + nchar(counts))
+      result <- paste(domains,
+                      mapply(function(x, y) { paste(rep(' ',width - nchar(x) - nchar(y)), collapse='') }, domains, counts),
+                      ":",
+                      counts,
+                      " ",
+                      sep='')
+      result[is.na(top.ix)] <- NA
+      result
+    }
+  })
+  
+  result = as.table(cols)
+  rownames(result) <- rep("", 6)
+  colnames(result) <- sapply(res$summaries, function(col) col$colname)
+  result
+})
+
+setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
+  params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
+  expr = paste("apply(", paste(params, collapse=","), ")", sep="")
+  res = h2o.__exec2(X@h2o, expr)
+  new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
+})
+
+#--------------------------------- ValueArray ----------------------------------#
+setMethod("show", "H2ORawDataVA", function(object) {
+  print(object@h2o)
+  cat("Raw Data Key:", object@key, "\n")
+})
+
+setMethod("show", "H2OParsedDataVA", function(object) {
+  print(object@h2o)
+  cat("Parsed Data Key:", object@key, "\n")
+})
+
+setMethod("show", "H2OGLMModelVA", function(object) {
+  print(object@data)
+  cat("GLM Model Key:", object@key, "\n\nCoefficients:\n")
+  
+  model = object@model
+  print(round(model$coefficients,5))
+  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual\n")
+  cat("Null Deviance:    ", round(model$null.deviance,1), "\n")
+  cat("Residual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1), "\n")
+  cat("Avg Training Error Rate:", round(model$train.err,5), "\n")
+  
+  # if(model$family == "binomial") {
+  if(model$family$family == "binomial") {
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$threshold,5), "\n")
+    cat("\nConfusion Matrix:\n"); print(model$confusion)
+  }
+  
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    # if(model$family == "binomial") {
+    if(model$family$family == "binomial") {
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
+      colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+    } else {
+      modelXval = sapply(object@xval, function(x) { x@model$train.err })
+      modelXval = data.frame(modelXval)
+      colnames(modelXval) = c("Error")
+    }
+    rownames(modelXval) = paste("Model", 0:(nrow(modelXval)-1))
+    print(modelXval)
+  }
+})
+
+setMethod("show", "H2OGLMGridVA", function(object) {
+  print(object@data)
+  cat("GLMGrid Model Key:", object@key, "\n")
+  
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
+})
+
+setMethod("colnames", "H2OParsedDataVA", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
+  unlist(lapply(res$cols, function(y) y$name))
+})
+
+setMethod("names", "H2OParsedDataVA", function(x) { colnames(x) })
+
+setMethod("nrow", "H2OParsedDataVA", function(x) { 
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); as.numeric(res$num_rows) })
+
+setMethod("ncol", "H2OParsedDataVA", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key); as.numeric(res$num_cols) })
+
+setMethod("dim", "H2OParsedDataVA", function(x) {
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key)
+  as.numeric(c(res$num_rows, res$num_cols))
+})
+
+setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) { 
+  head(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
+})
+
+setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
+  tail(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
+})
+          
+setMethod("summary", "H2OParsedDataVA", function(object) {
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY, key=object@key)
   res = res$summary$columns
   result = NULL; cnames = NULL
@@ -302,180 +672,4 @@ setMethod("summary", "H2OParsedData", function(object) {
   rownames(result) <- rep("", 6)
   colnames(result) <- cnames
   result
-})
-
-histograms <- function(object) { UseMethod("histograms", object) }
-setMethod("histograms", "H2OParsedData2", function(object) {
-  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
-  list.of.bins <- lapply(res$summaries, function(res) {
-    if (res$rows == 0) {
-      bins <- NULL
-    } else {
-      domains <- res$domains
-      counts <- res$bins
-      breaks <- seq(res$start, by=res$binsz, length.out=length(res$bins) + 1)
-      bins <- list(domains,counts,breaks)
-      names(bins) <- cbind('domains', 'counts', 'breaks')
-    }
-    bins
-  })
-})
-
-setMethod("summary", "H2OParsedData2", function(object) {
-  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
-  col.summaries = res$summaries
-  col.names     = res$names
-  col.means     = res$means
-  col.results   = mapply(c, res$summaries, res$names, res$means, SIMPLIFY=FALSE)
-  for (i in 1:length(col.results))
-    names(col.results[[i]])[(length(col.results[[i]]) - 1) : length(col.results[[i]])] <- c('name', 'mean')
-  result = NULL
-
-  result <- sapply(col.results, function(res) {
-    if(is.null(res$domains)) { # numeric column
-      if(is.null(res$mins) || length(res$mins) == 0) res$mins = NaN
-      if(is.null(res$maxs) || length(res$maxs) == 0) res$maxs = NaN
-      if(is.null(res$percentileValues))
-        params = format(rep(round(as.numeric(col.means[[i]]), 3), 6), nsmall = 3)
-      else
-        params = format(round(as.numeric(c(
-          res$mins[1],
-          res$percentileValues[4],
-          res$percentileValues[6],
-          res$mean,
-          res$percentileValues[8],
-          tail(res$maxs, 1))), 3), nsmall = 3)
-      result = c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
-                 paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
-                 paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")) 
-    }
-    else {
-      domains <- res$domains[res$maxs + 1]
-      counts <- res$bins[res$maxs + 1]
-      width <- max(cbind(nchar(domains), nchar(counts)))
-      result <- paste(domains,
-                      mapply(function(x, y) { paste(rep(' ', max(width + 1 - nchar(x) - nchar(y),0)), collapse='') }, domains, counts),
-                      ":",
-                      counts,
-                      " ",
-                      sep='')
-      result[6] <- NA
-      result
-    }
-  })
-  
-  result = as.table(result)
-  rownames(result) <- rep("", 6)
-  colnames(result) <- col.names
-  result
-})
-
-setMethod("summary", "H2OPCAModel", function(object) {
-  # TODO: Save propVar and cumVar from the Java output instead of computing here
-  myVar = object@model$sdev^2
-  myProp = myVar/sum(myVar)
-  result = rbind(object@model$sdev, myProp, cumsum(myProp))   # Need to limit decimal places to 4
-  colnames(result) = paste("PC", seq(1, length(myVar)), sep="")
-  rownames(result) = c("Standard deviation", "Proportion of Variance", "Cumulative Proportion")
-  
-  cat("Importance of components:\n")
-  print(result)
-})
-
-setMethod("as.data.frame", "H2OParsedData", function(x) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
-  ttt <- getURL(url)
-  read.csv(textConnection(ttt))
-})
-
-setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
-  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
-  n = round(n)
-  # if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
-  numRows = nrow(x)
-  if(n < 0 && abs(n) >= numRows) return(data.frame())
-  myView = ifelse(n > 0, min(n, numRows), numRows+n)
-  if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
-  
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=myView)
-  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
-  if(is.null(temp)) return(temp)
-  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
-  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
-  x.df
-  
-  # if(n > 0) as.data.frame(x[1:n,])
-  # else as.data.frame(x[1:(nrow(x)+n),])
-})
-
-setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
-  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
-  n = round(n)
-  # if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
-  numRows = nrow(x)
-  if(n < 0 && abs(n) >= numRows) return(data.frame())
-  myOff = ifelse(n > 0, max(0, numRows-n), abs(n))
-  myView = ifelse(n > 0, min(n, numRows), numRows+n)
-  if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
-  
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=myOff, view=myView)
-  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
-  if(is.null(temp)) return(temp)
-  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
-  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
-  x.df
-  
-  # if(n > 0) opt = paste(h2o.__escape(x@key), nrow(x)-n, sep=",")
-  # else opt = paste(h2o.__escape(x@key), abs(n), sep=",")
-  # res = h2o.__exec(x@h2o, paste("slice(", opt, ")", sep=""))
-  # as.data.frame(new("H2OParsedData", h2o=x@h2o, key=res))
-})
-
-setMethod("plot", "H2OPCAModel", function(x, y, ...) {
-  barplot(x@model$sdev^2)
-  title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
-})
-
-setGeneric("h2o.factor", function(data, col) { standardGeneric("h2o.factor") })
-setMethod("h2o.factor", signature(data="H2OParsedData", col="numeric"),
-   function(data, col) {
-     if(col < 1 || col > ncol(data)) stop("col must be between 1 and ", ncol(data))
-     col = col - 1
-      newCol = paste("factor(", h2o.__escape(data@key), "[", col, "])", sep="")
-      expr = paste("colSwap(", h2o.__escape(data@key), ",", col, ",", newCol, ")", sep="")
-      res = h2o.__exec_dest_key(data@h2o, expr, destKey=data@key)
-      data
-})
-
-setMethod("h2o.factor", signature(data="H2OParsedData", col="character"), 
-   function(data, col) {
-      ind = match(col, colnames(data))
-      if(is.na(ind)) stop("Column ", col, " does not exist in ", data@key)
-      h2o.factor(data, ind-1)
-})
-
-#--------------------------------- FluidVecs --------------------------------------#
-setMethod("colnames", "H2OParsedData2", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
-  unlist(lapply(res$cols, function(y) y$name))
-})
-
-setMethod("names", "H2OParsedData2", function(x) { colnames(x) })
-
-setMethod("nrow", "H2OParsedData2", function(x) { 
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numRows })
-
-setMethod("ncol", "H2OParsedData2", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); res$numCols })
-
-setMethod("as.data.frame", "H2OParsedData2", function(x) {
-  as.data.frame(new("H2OParsedData", h2o=x@h2o, key=x@key))
-})
-
-setMethod("head", "H2OParsedData2", function(x, n = 6L, ...) { 
-  head(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
-})
-
-setMethod("tail", "H2OParsedData2", function(x, n = 6L, ...) {
-  tail(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
 })

@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 import water.*;
 import water.api.Constants.Schemes;
+import water.fvec.Vec;
 import water.util.Log;
 
 public abstract class Persist {

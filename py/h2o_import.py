@@ -1,6 +1,6 @@
 import h2o, h2o_cmd, re, os
 import h2o_print as h2p
-import getpass
+import getpass, time
 
 #****************************************************************************************
 # hdfs/maprfs/s3/s3n paths should be absolute from the bucket (top level)
@@ -311,6 +311,10 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, **kwargs):
+
+    ## if h2o.beta_features:
+    ##     print "HACK: temporarily disabling Summary always in v2 import_parse"
+    ##     doSummary = False
 
     if not node: node = h2o.nodes[0]
 

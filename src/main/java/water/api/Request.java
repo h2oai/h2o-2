@@ -1,8 +1,8 @@
 package water.api;
 
-import hex.pca.PCAModel;
 import hex.KMeansModel;
 import hex.glm.GLMModel;
+import hex.pca.PCAModel;
 import hex.rf.RFModel;
 
 import java.io.InputStream;
@@ -11,6 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.*;
 
 import water.*;
+import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.util.*;
@@ -24,18 +25,34 @@ public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface API {
     String help();
+    /** Must be specified. */
     boolean required() default false;
+    /** For keys. If specified, the key must exist. */
+    boolean mustExist() default false;
     int since() default 1;
     int until() default Integer.MAX_VALUE;
     Class<? extends Filter> filter() default Filter.class;
     Class<? extends Filter>[] filters() default {};
-    boolean json() default false; // Forces an input field to also appear in JSON
+    /** Forces an input field to also appear in JSON. */
+    boolean json() default false;
     long   lmin() default Long  .MIN_VALUE;
     long   lmax() default Long  .MAX_VALUE;
     double dmin() default Double.NEGATIVE_INFINITY;
     double dmax() default Double.POSITIVE_INFINITY;
     boolean hide() default false;
     String displayName() default "";
+    boolean gridable() default true;
+    Class<? extends Validator> validator() default NOPValidator.class;
+  }
+
+  public interface Validator<V> extends Freezable {
+    void validateRaw(String value) throws IllegalArgumentException;
+    void validateValue(V value) throws IllegalArgumentException;
+    /** Dummy helper class for NOP validator. */
+    public static class NOPValidator<V> extends Iced implements Validator<V> {
+      @Override public void validateRaw(String value) { }
+      @Override public void validateValue(V value) { }
+    }
   }
 
   public interface Filter {
@@ -80,6 +97,8 @@ public abstract class Request extends RequestBuilders {
 
   protected abstract Response serve();
 
+  protected String serveJava() { throw new UnsupportedOperationException("This request does not provide Java code!"); }
+
   public NanoHTTPD.Response serve(NanoHTTPD server, Properties parms, RequestType type) {
     switch( type ) {
       case help:
@@ -102,6 +121,10 @@ public abstract class Request extends RequestBuilders {
         String query = buildQuery(parms,type);
         return wrap(server, query);
       }
+      case java:
+        checkArguments(parms, type); // Do not check returned query but let it fail in serveJava
+        String javacode = serveJava();
+        return wrap(server, javacode, RequestType.java);
       default:
         throw new RuntimeException("Invalid request type " + type.toString());
     }
@@ -114,6 +137,10 @@ public abstract class Request extends RequestBuilders {
     long time = System.currentTimeMillis();
     Response response = serve();
     response.setTimeStart(time);
+    // Argh - referencing subclass, sorry for that, but it is temporary hack
+    // for transition between v1 and v2 API
+    if (this instanceof Request2) ((Request2) this).fillResponseInfo(response);
+    if (this instanceof Parse2) ((Parse2) this).fillResponseInfo(response); // FIXME: Parser2 should inherit from Request2
     if( type == RequestType.json )
       return response._req == null ? //
             wrap(server, response.toJson()) : //
@@ -122,7 +149,7 @@ public abstract class Request extends RequestBuilders {
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String response) {
-    RString html = new RString(_htmlTemplate);
+    RString html = new RString(htmlTemplate());
     html.replace("CONTENTS", response);
     return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_HTML, html.toString());
   }
@@ -134,21 +161,39 @@ public abstract class Request extends RequestBuilders {
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String value, RequestType type) {
     if( type == RequestType.json )
       return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON, value);
+    if (type == RequestType.java)
+      return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_PLAINTEXT, value);
     return wrap(server, value);
   }
 
   // html template and navbar handling -----------------------------------------
 
-  private static String _htmlTemplate;
+  /**
+   * Read from file once.
+   */
+  private static final String _htmlTemplateFromFile;
+
+  /**
+   * Written by initializeNavBar().
+   */
+  private static volatile String _htmlTemplate;
+
+  protected String htmlTemplate() { return _htmlTemplate; }
 
   static {
-    InputStream resource = Boot._init.getResource2("/page.html");
+    _htmlTemplateFromFile = loadTemplate("/page.html");
+    _htmlTemplate = "";
+  }
+
+  static final String loadTemplate(String name) {
+    InputStream resource = Boot._init.getResource2(name);
     try {
-      _htmlTemplate = new String(ByteStreams.toByteArray(resource)).replace("%cloud_name", H2O.NAME);
+      if( H2O.NAME != null )
+        return new String(ByteStreams.toByteArray(resource)).replace("%cloud_name", H2O.NAME);
     } catch( NullPointerException e ) {
       if( !Log._dontDie ) {
         Log.err(e);
-        Log.die("page.html not found in resources.");
+        Log.die(name+" not found in resources.");
       }
     } catch( Exception e ) {
       Log.err(e);
@@ -156,6 +201,7 @@ public abstract class Request extends RequestBuilders {
     } finally {
       Closeables.closeQuietly(resource);
     }
+    return null;
   }
 
   private static class MenuItem {
@@ -179,7 +225,14 @@ public abstract class Request extends RequestBuilders {
   private static HashMap<String, ArrayList<MenuItem>> _navbar = new HashMap();
   private static ArrayList<String> _navbarOrdering = new ArrayList();
 
-  public static void initializeNavBar() {
+  /**
+   * Call this after the last call addToNavbar().
+   * This is called automatically for navbar entries from inside H2O.
+   * If user app level code calls addToNavbar, then call this again to make those changes visible.
+   */
+  public static void initializeNavBar() { _htmlTemplate = initializeNavBar(_htmlTemplateFromFile); }
+
+  private static String initializeNavBar(String template) {
     StringBuilder sb = new StringBuilder();
     for( String s : _navbarOrdering ) {
       ArrayList<MenuItem> arl = _navbar.get(s);
@@ -197,10 +250,10 @@ public abstract class Request extends RequestBuilders {
         sb.append("</ul></li>");
       }
     }
-    RString str = new RString(_htmlTemplate);
+    RString str = new RString(template);
     str.replace("NAVBAR", sb.toString());
     str.replace("CONTENTS", "%CONTENTS");
-    _htmlTemplate = str.toString();
+    return str.toString();
   }
 
   public static Request addToNavbar(Request r, String name) {
@@ -248,6 +301,7 @@ public abstract class Request extends RequestBuilders {
   public boolean toHTML(StringBuilder sb) {
     return false;
   }
+  public void toJava(StringBuilder sb) {}
 
   public String toDocGET() {
     return null;

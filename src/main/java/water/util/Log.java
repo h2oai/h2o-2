@@ -325,15 +325,24 @@ public abstract class Log {
         String logPathFileName = getLogPathFileName();
         java.util.Properties p = new java.util.Properties();
 
-        p.setProperty("log4j.rootLogger", "debug, R");
+        p.setProperty("log4j.rootLogger", "INFO, R");
         p.setProperty("log4j.appender.R", "org.apache.log4j.RollingFileAppender");
         p.setProperty("log4j.appender.R.File", logPathFileName);
         p.setProperty("log4j.appender.R.MaxFileSize", "256KB");
         p.setProperty("log4j.appender.R.MaxBackupIndex", "5");
         p.setProperty("log4j.appender.R.layout", "org.apache.log4j.PatternLayout");
 
+        // Turn down the logging for some class hierarchies.
+        p.setProperty("log4j.logger.org.apache.http", "WARN");
+        p.setProperty("log4j.logger.com.amazonaws", "WARN");
+        p.setProperty("log4j.logger.org.apache.hadoop", "WARN");
+        p.setProperty("log4j.logger.org.jets3t.service", "WARN");
+
         // See the following document for information about the pattern layout.
         // http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
+        //
+        //  Uncomment this line to find the source of unwanted messages.
+        //     p.setProperty("log4j.appender.R.layout.ConversionPattern", "%p %C %m%n");
         p.setProperty("log4j.appender.R.layout.ConversionPattern", "%m%n");
 
         PropertyConfigurator.configure(p);
@@ -503,7 +512,10 @@ public abstract class Log {
     Event e =  Event.make( t, Kind.INFO, null, objects);
     write(e,false);
   }
-  /** Log a debug message to the log file and the store if the subsystem's flag is set. */
+  /** Temporary log statement. Search for references to make sure they have been removed. */
+  static public void tmp(Object... objects) {
+    info(objects);
+  }
   public static String fixedLength(String s, int length) {
     String r = padRight(s, length);
     if( r.length() > length ) {

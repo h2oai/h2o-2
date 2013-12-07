@@ -103,6 +103,7 @@ A few more things that you might be interested in...
 .. toctree::
    :maxdepth: 1
 
+   resources/community
    misc/license
    misc/troubleshoot
    misc/contactus

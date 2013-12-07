@@ -37,9 +37,12 @@ public class C1Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
+    nc._xs = MemoryManager.malloc4(_len);
+    nc._ls = MemoryManager.malloc8(_len);
     for( int i=0; i<_len; i++ ) {
-      if( isNA_impl(i) ) nc.setInvalid(i);
-      else nc._ls[i] = at8_impl(i);
+      int res = 0xFF&_mem[i+OFF];
+      if( res == C1Chunk._NA ) nc._xs[i] = Integer.MIN_VALUE;
+      else                     nc._ls[i] = res;
     }
     return nc;
   }

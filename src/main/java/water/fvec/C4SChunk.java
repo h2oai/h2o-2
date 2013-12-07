@@ -1,5 +1,6 @@
 package water.fvec;
 
+import java.util.Arrays;
 import water.*;
 import water.parser.DParseTask;
 
@@ -49,15 +50,13 @@ public class C4SChunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
-    int x = (int)dx;
-    if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
+    assert DParseTask.fitsIntoInt(dx);
+    Arrays.fill(nc._xs = MemoryManager.malloc4(_len), (int)dx);
+    nc._ls = MemoryManager.malloc8(_len);
     for( int i=0; i<_len; i++ ) {
-      long res = UDP.get4(_mem,(i<<2)+OFF);
-      if( res == _NA ) nc.setInvalid(i);
-      else {
-        nc._ls[i] = res+_bias;
-        nc._xs[i] = x;
-      }
+      int res = UDP.get4(_mem,(i<<2)+OFF);
+      if( res == _NA ) nc._xs[i] = Integer.MIN_VALUE;
+      else             nc._ls[i] = res+_bias;
     }
     return nc;
   }

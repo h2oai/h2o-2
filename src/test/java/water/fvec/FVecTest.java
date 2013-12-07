@@ -102,7 +102,7 @@ public class FVecTest extends TestUtil {
     File file = TestUtil.find_test_file("./smalldata/cars.csv");
     Key key = NFSFileVec.make(file);
     NFSFileVec nfs=DKV.get(key).get();
-    Vec res = new TestNewVec().doAll(1,nfs)._outputFrame.anyVec();
+    Vec res = new TestNewVec().doAll(1,nfs).outputFrame(new String[]{"v"},new String[][]{null}).anyVec();
     assertEquals(nfs.at8(0)+1,res.at8(0));
     assertEquals(nfs.at8(1)+1,res.at8(1));
     assertEquals(nfs.at8(2)+1,res.at8(2));

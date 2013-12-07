@@ -3,6 +3,17 @@ import gzip, shutil, random, time, re
 import os, zipfile, simplejson as json
 import h2o
 
+def cleanseInfNan(value):
+    # change the strings returned in h2o json to the IEEE number values
+    translate = {
+        'NaN': float('NaN'),
+        'Infinity': float('Inf'),
+        '-Infinity': -float('Inf'),
+    }
+    if str(value) in translate:
+        value = translate[str(value)]
+    return value
+
 # x = choice_with_probability( [('one',0.25), ('two',0.25), ('three',0.5)] )
 # need to sum to 1 or less. check error case if you go negative
 def choice_with_probability(tupleList):
@@ -85,6 +96,7 @@ def file_append(infile, outfile):
     in_file = open(infile,'rb')
     out_file = open(outfile,'a')
     out_file.write(in_file.read())
+    in_file.close()
     out_file.close()
     h2o.verboseprint("\nAppend took",  (time.time() - start), "secs")
 
@@ -99,6 +111,8 @@ def file_shuffle(infile, outfile):
     fo = open(outfile, 'w')
     subprocess.call(["sort", "-R"],stdin=fi, stdout=fo)
     print "\nShuffle took",  (time.time() - start), "secs"
+    fi.close()
+    fo.close()
 
 
 # FIX! This is a hack to deal with parser bug

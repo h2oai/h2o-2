@@ -2,8 +2,6 @@ package water.api;
 
 import water.Job;
 import water.Key;
-import water.api.Request.API;
-import water.api.Request.Default;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.ParseDataset2;
 import water.parser.CustomParser;
@@ -13,14 +11,16 @@ public class Parse2 extends Parse {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+  @API(help="Response stats and info.") ResponseInfo response_info; // FIXME Parse2 should inherit from Request2
+
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
 
   @API(help = "Destination key")
   public Key destination_key; // Key holding final value after job is removed
 
-  @API(help = "redirect to url")
-  public String redirect_url; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
+  @API(help="Drop source text from H2O memory after parsing")
+  public Bool delete_on_done = new Bool("delete_on_done",true, "");
 
   @API(help="Should block and wait for result?")
   protected Bool _blocking = new Bool("blocking",false, "");
@@ -40,8 +40,7 @@ public class Parse2 extends Parse {
     try {
       // Make a new Setup, with the 'header' flag set according to user wishes.
       Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      job_key = ParseDataset2.forkParseDataset(destination_key, keys, setup).job_key;
-      redirect_url = Progress2.jsonUrl(job_key, destination_key);
+      job_key = ParseDataset2.forkParseDataset(destination_key, keys, setup, delete_on_done.value()).job_key;
       // Allow the user to specify whether to block synchronously for a response or not.
       if (_blocking.value())
         Job.waitUntilJobEnded(job_key);
@@ -54,4 +53,8 @@ public class Parse2 extends Parse {
   }
 
   @Override public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V2; }
+
+  public void fillResponseInfo(Response response) {
+    this.response_info = response.extractInfo();
+  }
 }

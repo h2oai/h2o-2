@@ -10,20 +10,7 @@
   <script type="text/javascript">
     $(function () {
       var jqconsole = $('#console').jqconsole('Welcome to the H\u2082O interactive data console.\n Type "help" or "?" for help.\n', 'H\u2082O> ');
-      var toFixed = function(n) {
-        if(typeof(n) == typeof(123)) {
-          return n.toFixed(2);
-        }
-        return n;
-      }
-      var formatColumn = function(c, num_rows) {
-        return c.name +': '+ num_rows +' rows (' +
-            'min ' + toFixed(c.min ) +'/'+
-            'mean '+ toFixed(c.mean) +'/'+
-            'max ' + toFixed(c.max ) +')';
-      }
       
-      var resultNumber = 0;
       var startPrompt = function () {
         // Start the prompt with history enabled.
         jqconsole.Prompt(true, function (input) {
@@ -36,31 +23,20 @@
             %HELP
             startPrompt();
           } else if( input ) {
-            $.get('Exec2',
+            $.get('/2/Exec2',
               // name 'str' matches the Java field name 'water/api/Exec2.str'
               { str: input },
               function (data) {
                 if( data.error ) {
                   jqconsole.Write(data.error, 'jqconsole-error');
-                } else if( data.cols ) {
-                  var res = $('<a href="Inspect2.html?src_key='+data.key+'" target="_blank"/>');
-                  res.append(data.key);
-                  jqconsole.Append(res);
-                  jqconsole.Write(': ');
-                  if( data.num_rows == 1 && data.num_cols == 1 ) {
-                    jqconsole.Write(data.scalar, 'jqconsole-output');
-                  } else if( data.num_cols == 1 ) {
-                    var msg = formatColumn(data.cols[0], data.num_rows)
-                    jqconsole.Write(msg, 'jqconsole-output');
-                  } else {
-                    var msg = data.num_cols + " columns";
-                    for( var i = 0; i < data.num_cols; ++i ) {
-                      msg += "\n" + formatColumn(data.cols[i], data.num_rows)
-                    }
-                    jqconsole.Write(msg, 'jqconsole-output');
-                  }
                 } else {
-                  jqconsole.Write(JSON.stringify(data), 'jqconsole-output');
+                  if( data.key ) {
+                    var res = $('<a href="Inspect2.html?src_key='+data.key+'" target="_blank"/>');
+                    res.append(data.key);
+                    jqconsole.Append(res);
+                    jqconsole.Write(':\n');
+                  }
+                  jqconsole.Write(data.result, 'jqconsole-output');
                 }
                 jqconsole.Write('\n')
                 startPrompt();

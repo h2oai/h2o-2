@@ -101,21 +101,7 @@ class Basic(unittest.TestCase):
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison
-                warnings = h2o_glm.simpleCheckGLMGrid(self, glm, None, allowFailWarning=True, **kwargs)
-
-                # gets the failed to converge, here, after we see it in the browser too
-                x = re.compile("[Ff]ailed")
-                if warnings:
-                    for w in warnings:
-                        if (re.search(x,w)): 
-                            # first
-                            if emsg is None: emsg = w
-                            print w
-                if emsg: break
-        
-            if not h2o.browse_disable:
-                h2b.browseJsonHistoryAsUrlLastMatch("GLMGridProgress")
-                time.sleep(5)
+                h2o_glm.simpleCheckGLMGrid(self, glm, None, allowFailWarning=True, **kwargs)
 
             # gets the failed to converge, here, after we see it in the browser too
             if emsg is not None:

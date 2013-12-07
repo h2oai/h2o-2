@@ -7,6 +7,7 @@ import java.util.Arrays;
 
 import water.Iced;
 import water.MemoryManager;
+import water.util.Utils;
 
 import com.google.gson.JsonObject;
 
@@ -44,13 +45,15 @@ public abstract class LSMSolver extends Iced{
   public abstract JsonObject toJson();
 
   protected boolean _converged;
+
   public final boolean converged(){return _converged;}
   public static class LSMSolverException extends RuntimeException {
     public LSMSolverException(String msg){super(msg);}
   }
   public abstract String name();
 
-  private static double shrinkage(double x, double kappa) {
+
+  protected static double shrinkage(double x, double kappa) {
     return Math.max(0, x - kappa) - Math.max(0, -x - kappa);
   }
 
@@ -94,17 +97,21 @@ public abstract class LSMSolver extends Iced{
 
   public static final class ADMMSolver extends LSMSolver {
 
-    public static final double DEFAULT_LAMBDA = 1e-5;
+    //public static final double DEFAULT_LAMBDA = 1e-5;
     public static final double DEFAULT_ALPHA = 0.5;
     public double _orlx = 1;//1.4; // over relaxation param
-    public double _rho = 1e-3;
+    public double _rho = 1e-5;
+    public double [] _wgiven;
+    public double _proximalPenalty;
 
-    public boolean normalize() {
-      return _lambda != 0;
-    }
+    public boolean normalize() {return _lambda != 0;}
 
     public ADMMSolver (double lambda, double alpha) {
+      this(lambda,alpha,lambda*alpha*0.1);
+    }
+    public ADMMSolver (double lambda, double alpha, double rho) {
       super(lambda,alpha);
+      _rho = rho;
     }
 
     public JsonObject toJson(){
@@ -115,27 +122,83 @@ public abstract class LSMSolver extends Iced{
     }
 
     public static class NonSPDMatrixException extends LSMSolverException {
-      public NonSPDMatrixException(){
-        super("Matrix is not SPD, can't solve without regularization");
+      public NonSPDMatrixException(){super("Matrix is not SPD, can't solve without regularization\n");}
+      public NonSPDMatrixException(Gram grm){
+        super("Matrix is not SPD, can't solve without regularization\n" + grm);
       }
     }
 
+
     @Override
     public boolean solve(Gram gram, double [] xy, double yy, double[] z) {
+      return solve(gram, xy, yy, z, Double.POSITIVE_INFINITY);
+    }
+
+
+    private static double l1_norm(double [] v){
+      double res = 0;
+      for(double d:v)res += Math.abs(d);
+      return res;
+    }
+    private static double l2_norm(double [] v){
+      double res = 0;
+      for(double d:v)res += d*d;
+      return res;
+    }
+
+    /**
+     * Compute least squares objective function value: g(beta) = 0.5*(y - X*b)'*(y
+     * - X*b) = 0.5*y'y - (X'y)'*b + 0.5*b'*X'X*b)
+     * @param xx: X'X
+     * @param xy: -X'y
+     * @param yy: 0.5*y'y
+     * @param beta: b (vector of coefficients)
+     * @return 0.5*(y - X*b)'*(y - X*b)
+     */
+    protected double g_beta(Gram gram, double[] xy, double yy, double[] beta) {
+      gram.addDiag(-_rho);
+      double [][] xx = gram.getXX();
+      gram.addDiag(_rho);
+      final int n = xy.length;
+      double res = yy;
+      for( int i = 0; i < n; ++i ) {
+        double x = 0;
+        for( int j = 0; j < n; ++j ){
+          x += xx[i][j] * beta[j];
+        }
+        res += (0.5*x + xy[i]) * beta[i];
+      }
+      res += _lambda*(_alpha * l1_norm(beta) + (1 - _alpha)*l2_norm(beta)*0.5);
+      return res;
+    }
+
+    public boolean solve(Gram gram, double [] xy, double yy, double[] z, double objVal) {
+      double d = gram._diagAdded;
       final int N = xy.length;
       Arrays.fill(z, 0);
-      if(_lambda>0)gram.addDiag(_lambda*(1-_alpha)*0.5 + _rho);
+      if(_lambda>0){
+        gram.addDiag(_lambda*(1-_alpha)*0.5);
+        if(_alpha > 0)gram.addDiag(_rho);
+      }
+      if(_proximalPenalty > 0 && _wgiven != null){
+        gram.addDiag(_proximalPenalty, true);
+        xy = xy.clone();
+        for(int i = 0; i < xy.length; ++i)
+          xy[i] += _proximalPenalty*_wgiven[i];
+      }
       int attempts = 0;
       Cholesky chol = gram.cholesky(null);
-      double rhoAdd = 0;
       while(!chol.isSPD() && attempts < 10){
-        double rhoIncrement = _rho*(1<< ++attempts);
-        gram.addDiag(rhoIncrement); // try to add L2 penalty to make the Gram issp
-        rhoAdd += rhoIncrement;
+        if(_rho == 0)_rho = 1e-5;
+        else _rho *= 10;
+        ++attempts;
+        gram.addDiag(_rho); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
-      if(!chol.isSPD()) throw new NonSPDMatrixException();
-      _rho += rhoAdd;
+      if(!chol.isSPD()){
+        System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
+        throw new NonSPDMatrixException(gram);
+      }
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
         System.arraycopy(xy, 0, z, 0, xy.length);
         chol.solve(z);
@@ -180,16 +243,18 @@ public abstract class LSMSolver extends Iced{
         s_norm = _rho * Math.sqrt(s_norm);
         eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
         eps_dual = ABSTOL + _rho * RELTOL * Math.sqrt(u_norm);
-        if( r_norm < eps_pri && s_norm < eps_dual )
-          return _converged = true;
+        if( r_norm < eps_pri && s_norm < eps_dual ){
+           gram.addDiag(-gram._diagAdded + d);
+           assert gram._diagAdded == d;
+           return _converged = true;
+        }
       }
+      gram.addDiag(-gram._diagAdded + d);
+      assert gram._diagAdded == d;
       return false;
     }
-
     @Override
-    public String name() {
-      return "ADMM";
-    }
+    public String name() {return "ADMM";}
   }
 
 

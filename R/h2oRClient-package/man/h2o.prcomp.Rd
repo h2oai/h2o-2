@@ -48,7 +48,6 @@ The signs of the columns of the rotation matrix are arbitrary, and so may differ
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
 australia.hex = h2o.importFile(localH2O, path = ausPath)

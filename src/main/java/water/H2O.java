@@ -5,12 +5,13 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
+import java.util.concurrent.Future;
 
 import jsr166y.*;
 import water.api.dsl.ScAlH2ORepl;
 import water.exec.Function;
+import water.Job.JobCancelledException;
 import water.nbhm.NonBlockingHashMap;
-import water.parser.ParseDataset;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -160,13 +161,14 @@ public final class H2O {
   }
 
   // Static list of acceptable Cloud members
-  static HashSet<H2ONode> STATIC_H2OS = null;
+  public static HashSet<H2ONode> STATIC_H2OS = null;
 
   // Reverse cloud index to a cloud; limit of 256 old clouds.
   static private final H2O[] CLOUDS = new H2O[256];
 
   // Enables debug features like more logging and multiple instances per JVM
-  public static final boolean DEBUG = System.getProperty("h2o.debug") != null;
+  public static final String DEBUG_ARG = "h2o.debug";
+  public static final boolean DEBUG = System.getProperty(DEBUG_ARG) != null;
 
   // Construct a new H2O Cloud from the member list
   public H2O( H2ONode[] h2os, int hash, int idx ) {
@@ -186,7 +188,7 @@ public final class H2O {
       CLOUDS[idx] = CLOUD = new H2O(h2os,hash,idx);
     }
     SELF._heartbeat._cloud_size=(char)CLOUD.size();
-    Paxos.print("Announcing new Cloud Membership: ",_memary);
+    //Paxos.print("Announcing new Cloud Membership: ",_memary);
   }
 
   // Check if the cloud id matches with one of the old clouds
@@ -214,7 +216,8 @@ public final class H2O {
         break;
       try { Thread.sleep(100); } catch( InterruptedException ie ) { }
     }
-    assert H2O.CLOUD.size() >= x : "Cloud size of " + x;
+    if( H2O.CLOUD.size() < x )
+      throw new RuntimeException("Cloud size under " + x);
   }
 
   // *Desired* distribution function on keys & replication factor. Replica #0
@@ -282,6 +285,79 @@ public final class H2O {
     return Arrays.toString(_memary);
   }
 
+  /**
+   * Return a list of interfaces sorted by importance (most important first).
+   * This is the order we want to test for matches when selecting an interface.
+   */
+  private static ArrayList<NetworkInterface> calcPrioritizedInterfaceList() {
+    ArrayList<NetworkInterface> networkInterfaceList = null;
+    try {
+      Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
+      ArrayList<NetworkInterface> tmpList = Collections.list(nis);
+
+      Comparator<NetworkInterface> c = new Comparator<NetworkInterface>() {
+        public int compare(NetworkInterface lhs, NetworkInterface rhs) {
+          // Handle null inputs.
+          if ((lhs == null) && (rhs == null)) { return 0; }
+          if (lhs == null) { return 1; }
+          if (rhs == null) { return -1; }
+
+          // If the names are equal, then they are equal.
+          if (lhs.getName().equals (rhs.getName())) { return 0; }
+
+          // If both are bond drivers, choose a precedence.
+          if (lhs.getName().startsWith("bond") && (rhs.getName().startsWith("bond"))) {
+            Integer li = lhs.getName().length();
+            Integer ri = rhs.getName().length();
+
+            // Bond with most number of characters is always highest priority.
+            if (li.compareTo(ri) != 0) {
+              return li.compareTo(ri);
+            }
+
+            // Otherwise, sort lexicographically by name.
+            return lhs.getName().compareTo(rhs.getName());
+          }
+
+          // If only one is a bond driver, give that precedence.
+          if (lhs.getName().startsWith("bond")) { return -1; }
+          if (rhs.getName().startsWith("bond")) { return 1; }
+
+          // Everything that isn't a bond driver is equal.
+          return 0;
+        }
+      };
+
+      Collections.sort(tmpList, c);
+      networkInterfaceList = tmpList;
+    } catch( SocketException e ) { Log.err(e); }
+
+    return networkInterfaceList;
+  }
+
+  /**
+   * Return a list of internet addresses sorted by importance (most important first).
+   * This is the order we want to test for matches when selecting an internet address.
+   */
+  public static ArrayList<java.net.InetAddress> calcPrioritizedInetAddressList() {
+    ArrayList<java.net.InetAddress> ips = new ArrayList<java.net.InetAddress>();
+    {
+      ArrayList<NetworkInterface> networkInterfaceList = calcPrioritizedInterfaceList();
+
+      for (int i = 0; i < networkInterfaceList.size(); i++) {
+        NetworkInterface ni = networkInterfaceList.get(i);
+        Enumeration<InetAddress> ias = ni.getInetAddresses();
+        while( ias.hasMoreElements() ) {
+          InetAddress ia;
+          ia = ias.nextElement();
+          ips.add(ia);
+          Log.info("Possible IP Address: " + ni.getName() + " (" + ni.getDisplayName() + "), " + ia.getHostAddress());
+        }
+      }
+    }
+
+    return ips;
+  }
 
   public static InetAddress findInetAddressForSelf() throws Error {
     if(SELF_ADDRESS == null) {
@@ -296,19 +372,8 @@ public final class H2O {
         H2O.exit(-1);
       }
 
-      // Get a list of all valid IPs on this machine.  Typically 1 on Mac or
-      // Windows, but could be many on Linux or if a hypervisor is present.
-      ArrayList<InetAddress> ips = new ArrayList<InetAddress>();
-      try {
-        Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
-        while( nis.hasMoreElements() ) {
-          NetworkInterface ni = nis.nextElement();
-          Enumeration<InetAddress> ias = ni.getInetAddresses();
-          while( ias.hasMoreElements() ) {
-            ips.add(ias.nextElement());
-          }
-        }
-      } catch( SocketException e ) { Log.err(e); }
+      // Get a list of all valid IPs on this machine.
+      ArrayList<InetAddress> ips = calcPrioritizedInetAddressList();
 
       InetAddress local = null;   // My final choice
 
@@ -531,8 +596,9 @@ public final class H2O {
   static class FJWThrFact implements ForkJoinPool.ForkJoinWorkerThreadFactory {
     private final int _cap;
     FJWThrFact( int cap ) { _cap = cap; }
-    public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
-      return pool.getPoolSize() <= _cap ? new FJWThr(pool) : null;
+    @Override public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
+      int cap = _cap==-1 ? OPT_ARGS.nthreads : _cap;
+      return pool.getPoolSize() <= cap ? new FJWThr(pool) : null;
     }
   }
 
@@ -544,7 +610,7 @@ public final class H2O {
   }
 
   // Normal-priority work is generally directly-requested user ops.
-  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,99);
+  private static final ForkJoinPool2 FJP_NORM = new ForkJoinPool2(MIN_PRIORITY,-1);
   // Hi-priority work, sorted into individual queues per-priority.
   // Capped at a small number of threads per pool.
   private static final ForkJoinPool2 FJPS[] = new ForkJoinPool2[MAX_PRIORITY+1];
@@ -577,7 +643,10 @@ public final class H2O {
   // entire node for lack of some small piece of data).  So each attempt to do
   // lower-priority F/J work starts with an attempt to work & drain the
   // higher-priority queues.
-  public static abstract class H2OCountedCompleter extends CountedCompleter {
+  public static abstract class H2OCountedCompleter extends CountedCompleter implements Cloneable {
+    public H2OCountedCompleter(){}
+    public H2OCountedCompleter(H2OCountedCompleter completer){super(completer);}
+
     // Once per F/J task, drain the high priority queue before doing any low
     // priority work.
     @Override public final void compute() {
@@ -606,17 +675,48 @@ public final class H2O {
     }
     // Do the actually intended work
     public abstract void compute2();
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      if(!(ex instanceof JobCancelledException) && this.getCompleter() == null)
+        ex.printStackTrace();
+      return true;
+    }
     // In order to prevent deadlock, threads that block waiting for a reply
     // from a remote node, need the remote task to run at a higher priority
     // than themselves.  This field tracks the required priority.
     public byte priority() { return MIN_PRIORITY; }
-
+    public H2OCountedCompleter clone(){
+      try { return (H2OCountedCompleter)super.clone(); }
+      catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
+    }
   }
+
+
   public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
+    public H2OCallback(){this(null);}
+    public H2OCallback(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){callback((T)caller);}
+    @Override public void onCompletion(CountedCompleter caller){
+      try {
+        callback((T)caller);
+      } catch(Throwable ex){
+        completeExceptionally(ex);
+      }
+    }
     public abstract void callback(T t);
   }
+
+  public static class JobCompleter extends H2OCountedCompleter{
+    final Job _job;
+    public JobCompleter(Job j){this(j,null);}
+    public JobCompleter(Job j,H2OCountedCompleter cmp){super(cmp); _job = j;}
+    @Override public void compute2(){throw new UnsupportedOperationException();}
+    @Override public void onCompletion(CountedCompleter caller){_job.remove();}
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter c){
+      if(!(ex instanceof JobCancelledException))_job.cancel(ex);
+      return true;
+    }
+  }
+
   public static class H2OEmptyCompleter extends H2OCountedCompleter{
     @Override public void compute2(){throw new UnsupportedOperationException();}
   }
@@ -643,6 +743,7 @@ public final class H2O {
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
     public boolean scala_repl = false; // enable Scala REPL by specifying option -scala_repl
+    public int    nthreads=Math.max(99,10*NUMCPUS); // Max number of F/J threads in the low-priority batch queue
     public String h = null;
     public String help = null;
     public String version = null;
@@ -688,6 +789,10 @@ public final class H2O {
     "          The directory where H2O spills temporary data to disk.\n" +
     "          (The default is '" + DEFAULT_ICE_ROOT() + "'.)\n" +
     "\n" +
+    "    -nthreads <#threads>\n" +
+    "          Maximum number of threads in the low priority batch-work queue.\n" +
+    "          (The default is 99.)\n" +
+    "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
     "    New H2O nodes join together to form a cloud at startup time.\n" +
@@ -713,32 +818,35 @@ public final class H2O {
 
   public static boolean IS_SYSTEM_RUNNING = false;
 
+  /** Load a h2o build version or return default unknown version
+   * @return never returns null
+   */
+  public static AbstractBuildVersion getBuildVersion() {
+    try {
+      Class klass = Class.forName("water.BuildVersion");
+      java.lang.reflect.Constructor constructor = klass.getConstructor();
+      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
+      return abv;
+      // it exists on the classpath
+    } catch (Exception e) {
+      return AbstractBuildVersion.UNKNOWN_VERSION;
+    }
+  }
+
   /**
    * If logging has not been setup yet, then Log.info will only print to stdout.
    * This allows for early processing of the '-version' option without unpacking
    * the jar file and other startup stuff.
    */
   public static void printAndLogVersion() {
-    String build_branch = "(unknown)";
-    String build_hash = "(unknown)";
-    String build_describe = "(unknown)";
-    String build_project_version = "(unknown)";
-    String build_by = "(unknown)";
-    String build_on = "(unknown)";
-    try {
-      Class klass = Class.forName("water.BuildVersion");
-      java.lang.reflect.Constructor constructor = klass.getConstructor();
-      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
-      build_branch = abv.branchName();
-      build_hash = abv.lastCommitHash();
-      build_describe = abv.describe();
-      build_project_version = abv.projectVersion();
-      build_by = abv.compiledBy();
-      build_on = abv.compiledOn();
-      // it exists on the classpath
-    } catch (Exception e) {
-      // it does not exist on the classpath
-    }
+    // Try to load a version
+    AbstractBuildVersion abv = getBuildVersion();
+    String build_branch = abv.branchName();
+    String build_hash = abv.lastCommitHash();
+    String build_describe = abv.describe();
+    String build_project_version = abv.projectVersion();
+    String build_by = abv.compiledBy();
+    String build_on = abv.compiledOn();
 
     Log.info ("----- H2O started -----");
     Log.info ("Build git branch: " + build_branch);
@@ -753,6 +861,8 @@ public final class H2O {
     Log.info ("Java availableProcessors: " + runtime.availableProcessors());
     Log.info ("Java heap totalMemory: " + String.format("%.2f gb", runtime.totalMemory() / ONE_GB));
     Log.info ("Java heap maxMemory: " + String.format("%.2f gb", runtime.maxMemory() / ONE_GB));
+    Log.info ("Java version: " + String.format("Java %s (from %s)", System.getProperty("java.version"), System.getProperty("java.vendor")));
+    Log.info ("OS   version: " + String.format("%s %s (%s)", System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch")));
   }
 
   public static String getVersion() {
@@ -807,9 +917,6 @@ public final class H2O {
     startLocalNode();
     Log.POST(320,"");
 
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
-    Log.POST(330,"");
-
     String logDir = (Log.getLogDir() != null) ? Log.getLogDir() : "(unknown)";
     Log.info ("Log dir: '" + logDir + "'");
 
@@ -822,17 +929,10 @@ public final class H2O {
     startApiIpPortWatchdog(); // Check if the API port becomes unreachable
     Log.POST(360,"");
 
-    initializeExpressionEvaluation(); // starts the expression evaluation system
-    Log.POST(370,"");
-    ParseDataset.PLIMIT = OPT_ARGS.pparse_limit;
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
 
     initializeScalaRepl();
-  }
-
-  private static void initializeExpressionEvaluation() {
-    Function.initializeCommonFunctions();
   }
 
   // Default location of the AWS credentials file
@@ -948,7 +1048,7 @@ public final class H2O {
     } catch( NoSuchFieldException nsfe ) { }
 
     // Sleep a bit so all my other threads can 'catch up'
-    try { Thread.sleep(1000); } catch( InterruptedException e ) { }
+    try { Thread.sleep(100); } catch( InterruptedException e ) { }
   }
 
   public static DatagramChannel _udpSocket;

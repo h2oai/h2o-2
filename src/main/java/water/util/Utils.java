@@ -6,13 +6,11 @@ import hex.rng.H2ORandomRNG.RNGType;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.URL;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.zip.*;
-
-import org.apache.commons.lang.ArrayUtils;
-
 import water.*;
 import water.api.DocGen.FieldDoc;
 import water.parser.ParseDataset;
@@ -82,6 +80,11 @@ public class Utils {
   public static int sum(int[] from) {
     int result = 0;
     for (int d: from) result += d;
+    return result;
+  }
+  public static float sum(float[] from) {
+    float result = 0;
+    for (float d: from) result += d;
     return result;
   }
 
@@ -287,6 +290,24 @@ public class Utils {
     }
   }
 
+  public static void readFile(File file, OutputStream out) {
+    BufferedInputStream in = null;
+    try {
+      in = new BufferedInputStream(new FileInputStream(file));
+      byte[] buffer = new byte[1024];
+      while( true ) {
+        int count = in.read(buffer);
+        if( count == -1 )
+          break;
+        out.write(buffer, 0, count);
+      }
+    } catch(IOException e) {
+      throw Log.errRTExcept(e);
+    } finally {
+      close(in);
+    }
+  }
+
   public static String join(char sep, Object[] array) {
     return join(sep, Arrays.asList(array));
   }
@@ -299,6 +320,10 @@ public class Utils {
   }
 
   public static byte[] or(byte[] a, byte[] b) {
+    for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
+    return a;
+  }
+  public static int[] or(int[] a, int[] b) {
     for(int i = 0; i < a.length; i++ ) a[i] |= b[i];
     return a;
   }
@@ -362,15 +387,25 @@ public class Utils {
   }
 
   public static <T> T[] append(T[] a, T... b) {
-    return (T[]) ArrayUtils.addAll(a, b);
+    if( a==null ) return b;
+    T[] tmp = Arrays.copyOf(a,a.length+b.length);
+    System.arraycopy(b,0,tmp,a.length,b.length);
+    return tmp;
   }
 
   public static <T> T[] remove(T[] a, int i) {
-    return (T[]) ArrayUtils.remove(a, i);
+    T[] tmp = Arrays.copyOf(a,a.length-1);
+    System.arraycopy(a,i+1,tmp,i,tmp.length-i);
+    return tmp;
+  }
+  public static int[] remove(int[] a, int i) {
+    int[] tmp = Arrays.copyOf(a,a.length-1);
+    System.arraycopy(a,i+1,tmp,i,tmp.length-i);
+    return tmp;
   }
 
   public static <T> T[] subarray(T[] a, int off, int len) {
-    return (T[]) ArrayUtils.subarray(a, off, off + len);
+    return Arrays.copyOfRange(a,off,off+len);
   }
 
   public static void clearFolder(String folder) {
@@ -386,6 +421,17 @@ public class Utils {
         if (!child.delete())
           throw new RuntimeException("Cannot delete " + child);
       }
+    }
+  }
+
+  /**
+   * Returns the system temporary folder, e.g. /tmp
+   */
+  public static File tmp() {
+    try {
+      return File.createTempFile("h2o", null).getParentFile();
+    } catch( IOException e ) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -435,11 +481,12 @@ public class Utils {
         ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bs));
         ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
         // There is at least one entry in zip file and it is not a directory.
-        if( ze != null && !ze.isDirectory() )
+        if( ze != null && !ze.isDirectory() ) {
           is = zis;
-        else
-          zis.close();
-        break;
+          break;
+        }
+        zis.close();
+        return bs; // Don't crash, ignore file if cannot unzip
       }
       case GZIP:
         is = new GZIPInputStream(new ByteArrayInputStream(bs));
@@ -510,6 +557,20 @@ public class Utils {
   public static class IcedInt extends Iced {
     public final int _val;
     public IcedInt(int v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedInt) ) return false;
+      return ((IcedInt)o)._val == _val;
+    }
+    @Override public int hashCode() { return _val; }
+  }
+  public static class IcedLong extends Iced {
+    public final long _val;
+    public IcedLong(long v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedLong) ) return false;
+      return ((IcedLong)o)._val == _val;
+    }
+    @Override public int hashCode() { return (int)_val; }
   }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
@@ -680,12 +741,16 @@ public class Utils {
   }
 
   /** Returns a mapping of given domain to values (0, ... max(dom)).
-   * Unused domain items has mapping to -1. */
+   * Unused domain items has mapping to -1.
+   * @precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
   public static int[] mapping(int[] dom) {
+    assert dom.length > 0 : "Empty domain!";
+    assert dom[0] <= dom[dom.length-1] : "Domain is not sorted";
+    int min = dom[0];
     int max = dom[dom.length-1];
-    int[] result = new int[max+1];
+    int[] result = new int[(max-min)+1];
     for (int i=0; i<result.length; i++) result[i] = -1; // not used fields
-    for (int i=0; i<dom.length; i++) result[dom[i]] = i;
+    for (int i=0; i<dom.length; i++) result[dom[i]-min] = i;
     return result;
   }
   public static String[] toStringMap(int[] dom) {
@@ -757,5 +822,59 @@ public class Utils {
     int[] res = new int[len];
     for(int i=start; i<stop;i++) res[i-start] = i;
     return res;
+  }
+
+  public static String className(String path) {
+    return path.replace('\\', '/').replace('/', '.').substring(0, path.length() - 6);
+  }
+
+  public static double avg(double[] nums) {
+    double sum = 0;
+    for(double n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static double avg(long[] nums) {
+    long sum = 0;
+    for(long n: nums) sum+=n;
+    return sum/nums.length;
+  }
+  public static float[] div(float[] nums, int n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  public static float[] div(float[] nums, float n) {
+    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    return nums;
+  }
+  /**
+   * Replace given characters in a given string builder.
+   * The number of characters to replace has to match to number of
+   * characters serving as a replacement.
+   *
+   * @param sb string builder containing a string to be modified
+   * @param from characters to replaced
+   * @param to replacement characters
+   * @return original string builder with replaced characters.
+   */
+  public static StringBuilder replace(StringBuilder sb, CharSequence from, CharSequence to) {
+    assert from.length() == to.length();
+    for (int i=0; i<sb.length(); i++)
+      for (int j=0; j<from.length(); j++)
+        if (sb.charAt(i)==from.charAt(j)) sb.setCharAt(i, to.charAt(j));
+    return sb;
+  }
+
+  /**
+   * Returns true if given string contains at least on of character of
+   * given sequence.
+   * @param s string
+   * @param cs a sequence of character
+   * @return true if s contains at least one of character from given sequence, else false
+   */
+  public static boolean contains(String s, CharSequence cs) {
+    for (int i=0; i<s.length(); i++)
+      for (int j=0; j<cs.length(); j++)
+        if (s.charAt(i) == cs.charAt(j)) return true;
+    return false;
   }
 }

@@ -2,13 +2,11 @@ package water.fvec;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.UUID;
+import java.util.*;
 import java.util.zip.*;
 
 import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
 import water.nbhm.NonBlockingHashMap;
@@ -27,20 +25,21 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs
-  public static Frame parse(Key okey, Key [] keys) {return parse(okey,keys,new ParserSetup());}
+  public static Frame parse(Key okey, Key [] keys) {return parse(okey,keys,new ParserSetup(),true);}
 
-  public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup) {
+  public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
     Key k = keys[0];
     ByteVec v = (ByteVec)getVec(k);
     byte [] bits = v.elem2BV(0).getBytes();
     Compression cpr = Utils.guessCompressionMethod(bits);
     globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
-    return forkParseDataset(okey, keys, globalSetup).get();
+    if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
+    return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
   // Same parse, as a backgroundable Job
-  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup) {
+  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
     ParseDataset2 job = new ParseDataset2(dest, keys);
-    ParserFJTask fjt = new ParserFJTask(job, keys, setup);
+    ParserFJTask fjt = new ParserFJTask(job, keys, setup, delete_on_done);
     job.start(fjt);
     H2O.submitTask(fjt);
     return job;
@@ -49,7 +48,7 @@ public final class ParseDataset2 extends Job {
   private ParseDataset2(Key dest, Key[] fkeys) {
     destination_key = dest;
     // Job progress Key
-    _progress = Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB);
+    _progress = Key.make((byte) 0, Key.JOB);
     UKV.put(_progress, ParseProgress.make(fkeys));
   }
 
@@ -58,14 +57,16 @@ public final class ParseDataset2 extends Job {
     final ParseDataset2 _job;
     Key [] _keys;
     CustomParser.ParserSetup _setup;
+    boolean _delete_on_done;
 
-    public ParserFJTask( ParseDataset2 job, Key [] keys, CustomParser.ParserSetup setup) {
+    public ParserFJTask( ParseDataset2 job, Key [] keys, CustomParser.ParserSetup setup, boolean delete_on_done) {
       _job = job;
       _keys = keys;
       _setup = setup;
+      _delete_on_done = delete_on_done;
     }
     @Override public void compute2() {
-      parse_impl(_job, _keys, _setup);
+      parse_impl(_job, _keys, _setup, _delete_on_done);
       tryComplete();
     }
 
@@ -162,17 +163,18 @@ public final class ParseDataset2 extends Job {
     @Override public void map(Chunk [] chks){
       int [][] emap = emap(_chunk2Enum[chks[0].cidx()]);
       final int cidx = chks[0].cidx();
-      for(int i = 0; i < chks.length; ++i){
+      for(int i = 0; i < chks.length; ++i) {
+        Chunk chk = chks[i];
         if(_gDomain[i] == null) // killed, replace with all NAs
-          DKV.put(chks[i]._vec.chunkKey(chks[i].cidx()),new C0DChunk(Double.NaN,chks[i]._len));
-        else for( int j = 0; j < chks[i]._len; ++j){
-          if( chks[i].isNA0(j) )continue;
-          long l = chks[i].at80(j);
-          assert l >= 0 && l < emap[i].length : "Found OOB index "+l+" pulling from "+chks[i].getClass().getSimpleName();
-          assert emap[i][(int)l] >= 0: H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chks[i].getClass().getSimpleName();
-          chks[i].set0(j, emap[i][(int)l]);
+          DKV.put(chk._vec.chunkKey(chk.cidx()),new C0DChunk(Double.NaN,chk._len));
+        else for( int j = 0; j < chk._len; ++j){
+          if( chk.isNA0(j) )continue;
+          long l = chk.at80(j);
+          assert l >= 0 && l < emap[i].length : "Found OOB index "+l+" pulling from "+chk.getClass().getSimpleName();
+          assert emap[i][(int)l] >= 0: H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chk.getClass().getSimpleName();
+          chk.set0(j, emap[i][(int)l]);
         }
-        chks[i].close(cidx, _fs);
+        chk.close(cidx, _fs);
       }
     }
   }
@@ -256,7 +258,7 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Top-level parser driver
-  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CustomParser.ParserSetup setup) {
+  private static void parse_impl(ParseDataset2 job, Key [] fkeys, CustomParser.ParserSetup setup, boolean delete_on_done) {
     assert setup._ncols > 0;
     // remove any previous instance and insert a sentinel (to ensure no one has
     // been writing to the same keys during our parse)!
@@ -283,7 +285,7 @@ public final class ParseDataset2 extends Job {
       for(int i:ecols)ds[j++] =  uzpt._dout._vecs[i]._domain = enums[i].computeColumnDomain();
       eut = new EnumUpdateTask(ds, eft._lEnums, uzpt._chunk2Enum, uzpt._eKey, ecols);
     }
-    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(setup._ncols),uzpt._dout.closeVecs());
+    Frame fr = new Frame(setup._columnNames != null?setup._columnNames:genericColumnNames(uzpt._dout._nCols),uzpt._dout.closeVecs());
     // SVMLight is sparse format, there may be missing chunks with all 0s, fill them in
     SVFTask t = new SVFTask(fr);
     t.invokeOnAllNodes();
@@ -293,7 +295,11 @@ public final class ParseDataset2 extends Job {
       eut.doAll(evecs);
     }
     // Jam the frame of columns into the K/V store
-    UKV.put(job.dest(),fr);
+    Futures fs = new Futures();
+    UKV.put(job.dest(),fr,fs);
+    // Remove CSV files from H2O memory
+    if( delete_on_done ) for( Key k : fkeys ) UKV.remove(k,fs);
+    fs.blockForPending();
     job.remove();
   }
 
@@ -385,17 +391,12 @@ public final class ParseDataset2 extends Job {
         switch( cpr ) {
         case NONE:
           if(localSetup._pType.parallelParseSupported){
-            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx);
+            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
             addToPendingCount(1);
-            dp.setCompleter(new H2OCallback<DParse>() {
-              @Override public void callback(DParse d){
-                _dout = d._dout;
-                MultiFileParseTask.this.tryComplete();
-              }
-            });
+            dp.setCompleter(this);
             dp.dfork(new Frame(vec));
-            for(int i = chunkStartIdx; i < vec.nChunks(); ++i)
-              _chunk2Enum[i] = vec.chunkKey(i-chunkStartIdx).home_node().index();
+            for(int i = 0; i < vec.nChunks(); ++i)
+              _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
           }else {
             ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
             _dout = streamParse(vec.openStream(pmon), localSetup, _vecIdStart, chunkStartIdx,pmon);
@@ -483,12 +484,14 @@ public final class ParseDataset2 extends Job {
       final int _startChunkIdx; // for multifile parse, offset of the first chunk in the final dataset
       final VectorGroup _vg;
       FVecDataOut _dout;
+      transient final MultiFileParseTask _outerMFPT;
 
-      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx) {
+      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
         _vg = vg;
         _setup = setup;
         _vecIdStart = vecIdstart;
         _startChunkIdx = startChunkIdx;
+        _outerMFPT = mfpt;
       }
       @Override public void map( Chunk in ) {
         Enum [] enums = enums();
@@ -517,6 +520,10 @@ public final class ParseDataset2 extends Job {
         if(_dout == null)_dout = dp._dout;
         else _dout.reduce(dp._dout);
       }
+      @Override public void postGlobal() {
+        super.postGlobal();
+        _outerMFPT._dout = _dout;
+      }
     }
   }
 
@@ -539,10 +546,10 @@ public final class ParseDataset2 extends Job {
     boolean _closedVecs = false;
     private final VectorGroup _vg;
 
-    final private byte UCOL = 0;
-    final private byte NCOL = 1;
-    final private byte ECOL = 2;
-    final private byte TCOL = 3;
+    static final private byte UCOL = 0;
+    static final private byte NCOL = 1;
+    static final private byte ECOL = 2;
+    static final private byte TCOL = 3;
 
     public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
       _vecs = new AppendableVec[ncols];
@@ -689,6 +696,8 @@ public final class ParseDataset2 extends Job {
         _chk = cidx < _vec.nChunks()?_vec.elem2BV(_idx=cidx):null;
       return (_chk == null)?null:_chk._mem;
     }
+    @Override public int  getChunkDataStart(int cidx) { return -1; }
+    @Override public void setChunkDataStart(int cidx, int offset) { }
   }
   public static class ParseException extends RuntimeException {
     public ParseException(String msg) { super(msg); }

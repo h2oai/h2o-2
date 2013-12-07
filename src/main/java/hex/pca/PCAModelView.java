@@ -3,6 +3,7 @@ package hex.pca;
 import water.*;
 import water.api.DocGen;
 import water.api.Request;
+import water.api.RequestBuilders.Response;
 
 public class PCAModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -20,7 +21,7 @@ public class PCAModelView extends Request2 {
   }
 
   public static Response redirect(Request req, Key modelKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "/2/PCAModelView", "_modelKey", modelKey);
+    return Response.redirect(req, "/2/PCAModelView", "_modelKey", modelKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){
@@ -30,6 +31,6 @@ public class PCAModelView extends Request2 {
 
   @Override protected Response serve() {
     pca_model = DKV.get(_modelKey).get();
-    return new Response(Response.Status.done, this,-1, -1, null);
+    return Response.done(this);
   }
 }

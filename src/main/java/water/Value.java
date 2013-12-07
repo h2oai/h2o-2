@@ -81,12 +81,14 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
     byte[] mem = _mem;          // Read once!
     if( mem != null ) return mem;
     Freezable pojo = _pojo;     // Read once!
-    if( pojo != null ) return (_mem = pojo.write(new AutoBuffer()).buf());
+    if( pojo != null ) 
+      if( pojo instanceof Chunk ) return (_mem = ((Chunk)pojo).getBytes());
+      else return (_mem = pojo.write(new AutoBuffer()).buf());
     if( _max == 0 ) return (_mem = new byte[0]);
     return (_mem = loadPersist());
   }
   public final byte[] getBytes() {
-    assert _type==TypeMap.PRIM_B && _pojo == null && _max > 0;
+    assert _type==TypeMap.PRIM_B && _pojo == null;
     byte[] mem = _mem;          // Read once!
     return mem != null ? mem : (_mem = loadPersist());
   }
@@ -260,9 +262,16 @@ public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // For plain Values, just the length in bytes.
   // For ValueArrays, the length of all chunks.
+  // For Frames, the compressed size of all vecs within the frame.
   public long length() {
-    if(!isArray()) return _max;
-    return ((ValueArray)get()).length();
+    if (isArray()) {
+      return ((ValueArray)get()).length();
+    }
+    else if (isFrame()) {
+      return ((Frame)get()).byteSize();
+    }
+
+    return _max;
   }
 
   public InputStream openStream() throws IOException {

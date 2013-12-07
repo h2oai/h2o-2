@@ -2,7 +2,9 @@ package water;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
+import water.fvec.UploadFileVec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -367,7 +369,8 @@ public class NanoHTTPD
               sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but boundary syntax error. Usage: GET /example/file.html" );
             st.nextToken();
             String boundary = st.nextToken();
-            fileUpload(boundary,is,parms);
+            boolean useValueArray = !Pattern.matches("/[0-9]+/.*", uri);  // For /2 and beyond, use fluid vector.
+            fileUpload(boundary,is,parms, useValueArray);
           } else {
             // Handle application/x-www-form-urlencoded
             String postLine = "";
@@ -517,7 +520,7 @@ public class NanoHTTPD
       return sz;
     }
 
-    private void fileUpload(String boundary, InputStream in, Properties parms) throws InterruptedException {
+    private void fileUpload(String boundary, InputStream in, Properties parms, boolean useValueArray) throws InterruptedException {
       try {
         String line = readLine(in);
         int i = line.indexOf(boundary);
@@ -541,10 +544,16 @@ public class NanoHTTPD
             sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but no content-disposition info found. Usage: GET /example/file.html" );
           }
           String key = parms.getProperty("key");
-          ValueArray.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
+          if (useValueArray) {
+            ValueArray.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
+          }
+          else {
+            UploadFileVec.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
+          }
         }
-      } catch (IOException e) {
-        sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: IOException: " + e.getMessage());
+      }
+      catch (Exception e) {
+        sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: Exception: " + e.getMessage());
       }
     }
 

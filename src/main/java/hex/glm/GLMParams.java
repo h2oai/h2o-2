@@ -19,6 +19,9 @@ public class GLMParams extends Iced {
   @API(help="tweedie link power")
   final double tweedie_link_power;
 
+  public GLMParams(Family f){this(f,0,f.defaultLink,0);}
+  public GLMParams(Family f,Link l){this(f,0,l,0);}
+  public GLMParams(Family f, double twVar){this(f,twVar,f.defaultLink,1-twVar);}
   public GLMParams(Family f, double twVar, Link l, double twLnk){
     family = f;
     link = l;
@@ -212,22 +215,22 @@ public class GLMParams extends Iced {
       }
     }
 
-    public final boolean isCase(double x, double y) {
+    public final boolean isCase(double actual, double caseVal) {
       switch( this ) {
         case lt:
-          return x < y;
+          return actual < caseVal;
         case gt:
-          return x > y;
+          return actual > caseVal;
         case lte:
-          return x <= y;
+          return actual <= caseVal;
         case gte:
-          return x >= y;
+          return actual >= caseVal;
         case eq:
-          return x == y;
+          return actual == caseVal;
         case neq:
-          return x != y;
+          return actual != caseVal;
         default:
-          assert false;
+          assert false:"uncexpected case " + this;
           return false;
       }
     }

@@ -56,6 +56,9 @@ public final class Key extends Iced implements Comparable {
 
   public static final byte USER_KEY = 32;
 
+  /** List of illegal characters which are not allowed in user keys. */
+  public static final CharSequence ILLEGAL_USER_KEY_CHARS = " !@#$%^&*()+={}[]|\\;:\"'<>,/?";
+
   // 64 bits of Cloud-specific cached stuff. It is changed atomically by any
   // thread that visits it and has the wrong Cloud. It has to be read *in the
   // context of a specific Cloud*, since a re-read may be for another Cloud.
@@ -168,10 +171,9 @@ public final class Key extends Iced implements Comparable {
     int chk = 0; // Chunk number, for chunks beyond 64Meg
     if( kb.length >= 10 && kb[0] == ARRAYLET_CHUNK && kb[1] == 0 ) {
       long off = UDP.get8(kb,2);
-      if( (off >> 20) >= 64 ) { // Is offset >= 64Meg?
-        i += 2+8; // Skip the length bytes; they are now not part of hash
-        chk = (int)(off >>> (6+20)); // Divide by 64Meg; comes up with a "block number"
-      }
+      i += 2+8; // Skip the length bytes; they are now not part of hash
+      boolean big = (off>>20) >= 64; // Is offset >= 64Meg?
+      chk = (int)(off >>> ((big?6:2)+20)); // Divide by 64Meg or 4Meg; comes up with a "block number"
     }
     int hash = hash(kb, i, kb.length);
     _hash = hash+chk; // Add sequential block numbering
@@ -191,16 +193,28 @@ public final class Key extends Iced implements Comparable {
     key.cloud_info(cloud); // Now compute & cache the real data
     return key;
   }
+
+  // A random string, useful as a Key name or partial Key suffix.
+  static public String rand() {
+    UUID uid = UUID.randomUUID();
+    long l1 = uid.getLeastSignificantBits();
+    long l2 = uid. getMostSignificantBits();
+    return "_"+Long.toHexString(l1)+Long.toHexString(l2);
+  }
+
   static public Key make(byte[] kb) { return make(kb,DEFAULT_DESIRED_REPLICA_FACTOR); }
   static public Key make(String s) { return make(decodeKeyName(s));}
   static public Key make(String s, byte rf) { return make(decodeKeyName(s), rf);}
-  static public Key make() { return make( UUID.randomUUID().toString() ); }
+  static public Key make() { return make(rand()); }
 
   // Make a particular system key that is homed to given node and possibly
   // specifies also other 2 replicas. Works for both IPv4 and IPv6 addresses.
   // If the addresses are not specified, returns a key with no home information.
   static public Key make(String s, byte rf, byte systemType, H2ONode... replicas) {
     return make(decodeKeyName(s),rf,systemType,replicas);
+  }
+  static public Key make(byte rf, byte systemType, H2ONode... replicas) {
+    return make(rand(),rf,systemType,replicas);
   }
 
 

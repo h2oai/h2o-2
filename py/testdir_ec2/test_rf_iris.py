@@ -7,7 +7,6 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 paramsTrainRF = { 
             'ntree'      : 100, 
             'depth'      : 300,
-            'parallel'   : 1, 
             'bin_limit'  : 20000,
             'ignore'     : None,
             'stat_type'  : 'ENTROPY',

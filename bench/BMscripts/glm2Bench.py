@@ -1,17 +1,18 @@
 #GLM2 bench
-import os, sys, time, csv, re, requests
+import os, sys, time, csv, re, requests, string
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_jobs
 from pprint import pprint
 
-csv_header = ('h2o_build','java_heap_GB','dataset','nTrainRows','nTestRows','nCols','nPredictors','trainParseWallTime','nfolds','glm2BuildTime','testParseWallTime','nIterations','AUC','AIC','AverageError')
+csv_header = ('h2o_build','nMachines','nJVMs','Xmx/JVM','dataset','nTrainRows','nTestRows','nCols','nPredictors','trainParseWallTime','nfolds','family','glm2BuildTime','testParseWallTime','nIterations','AUC','AIC','AverageError')
 
 files      = {'Airlines'    : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', 'AirlinesTrain100x'),          'test' : 'AirlinesTest'},
               'AllBedrooms' : {'train': ('AllBedroomsTrain1x', 'AllBedroomsTrain10x', 'AllBedroomsTrain100x'), 'test' : 'AllBedroomsTest'},
              }
 build = ""
 debug = False
+json  = ""
 def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row, case_mode, case_val):
     debug = False
     bench = "bench"
@@ -22,7 +23,7 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
     overallWallStart  = time.time()
     pre               = ""
     if debug: pre     = "DEBUG"
-    glm2benchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'glm2bench.csv'
+    glm2benchcsv      = 'benchmarks/'+build+'/'+pre+'glm2bench.csv'
     if not os.path.exists(glm2benchcsv):
         output = open(glm2benchcsv,'w')
         output.write(','.join(csv_header)+'\n')
@@ -66,15 +67,18 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
         h2o.beta_features = True
         inspect_train  = h2o.nodes[0].inspect(hex_key, timeoutSecs=7200)
         inspect_test   = h2o.nodes[0].inspect(testFilehex, timeoutSecs=7200)
-        
-        row.update( {'h2o_build'          : build,  
-                     'java_heap_GB'       : java_heap_GB,
+        nMachines      = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts) 
+        row.update( {'h2o_build'          : build,
+                     'nMachines'          : nMachines,
+                     'Xmx/JVM'            : java_heap_GB,
+                     'nJVMs'              : len(h2o.nodes),
                      'dataset'            : f,
                      'nTrainRows'         : inspect_train['numRows'],
                      'nTestRows'          : inspect_test['numRows'],
                      'nCols'              : inspect_train['numCols'],
                      'trainParseWallTime' : parseWallTime,
                      'nfolds'             : nfolds,
+                     'family'             : family,
                     })
     
         params   =  {'vresponse'       : y,
@@ -93,8 +97,10 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
         glm       = h2o_cmd.runGLM(parseResult = parseResult, timeoutSecs=1800, noPoll=True, **kwargs)
         h2o_jobs.pollWaitJobs(timeoutSecs=7200, pollTimeoutSecs=7200, retryDelaySecs=5)
         glmTime   = time.time() - glmStart
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
+        os.system(cmd)
         #glm       = h2o.nodes[0].inspect("GLM("+f+")")
-        row.update( {'glmBuildTime'       : glmTime,
+        row.update( {'glm2BuildTime'       : glmTime,
                      #'AverageErrorOver10Folds'    : glm['glm_model']['validations'][0]['err'],
                     })
         #if "Bedrooms" in f: 
@@ -118,9 +124,9 @@ def doGLM2(f, folderPath, family, lambda_, alpha, nfolds, y, x, testFilehex, row
             r       = requests.get(url).text
             p1      = re.compile('threshold[:<>/a-z]*[0-9]\.[0-9]*')
             p2      = re.compile('[0-9]\.[0-9]*')
-            best    = int(float(p2.search(p1.search(text).group()).group()) * 100)
+            best    = int(float(p2.search(p1.search(r).group()).group()) * 100)
             best_cm = glmView['glm_model']['validation']['_cms'][best]['_arr']
-            avg_err = (best_cm[0][1] + best_cm[1][0]) / (sum([i for sublist in best_cm for i in sublist]))
+            avg_err = 1.0*(best_cm[0][1] + best_cm[1][0] + 0.0) / (sum([i for sublist in best_cm for i in sublist]))
             row.update( {#'scoreTime'          : scoreTime,
                          'AUC'                : glmView['glm_model']['validation']['auc'],
                          'AverageError'       : avg_err,
@@ -138,6 +144,7 @@ if __name__ == '__main__':
     dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
+    json  = sys.argv[-1].split('/')[-1]
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
@@ -149,7 +156,7 @@ if __name__ == '__main__':
     if dat == 'AllB10x'  : fs = files['AllBedrooms']['train'][1]
     if dat == 'AllB100x' : fs = files['AllBedrooms']['train'][2]
 
-    
+    debug = False 
     bench = "bench"
     if debug:
         bench = "bench/debug"

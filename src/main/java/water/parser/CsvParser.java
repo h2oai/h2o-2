@@ -53,13 +53,16 @@ public class CsvParser extends CustomParser {
     ValueString _str = new ValueString();
     byte[] bits = din.getChunkData(cidx);
     if( bits == null ) return dout;
+    int offset  = din.getChunkDataStart(cidx); // General cursor into the giant array of bytes
     final byte[] bits0 = bits;  // Bits for chunk0
     boolean firstChunk = true;  // Have not rolled into the 2nd chunk
     byte[] bits1 = null;        // Bits for chunk1, loaded lazily.
-    int offset = 0;             // General cursor into the giant array of bytes
     // Starting state.  Are we skipping the first (partial) line, or not?  Skip
     // a header line, or a partial line if we're in the 2nd and later chunks.
     int state = (_setup._header || cidx > 0) ? SKIP_LINE : WHITESPACE_BEFORE_TOKEN;
+    // If handed a skipping offset, then it points just past the prior partial line.
+    if( offset >= 0 ) state = WHITESPACE_BEFORE_TOKEN;
+    else offset = 0; // Else start skipping at the start
     int quotes = 0;
     long number = 0;
     int exp = 0;
@@ -440,6 +443,9 @@ NEXT_CHAR:
     } // end MAIN_LOOP
     if (colIdx == 0)
       dout.rollbackLine();
+    // If offset is still validly within the buffer, save it so the next pass
+    // can start from there.
+    if( offset+1 < bits.length ) din.setChunkDataStart(cidx+1, offset+1 );
     return dout;
   }
 
@@ -502,13 +508,13 @@ NEXT_CHAR:
   /** Dermines the number of separators in given line. Correctly handles quoted
    * tokens.
    */
-  private static int[] determineSeparatorCounts(String from) {
+  private static int[] determineSeparatorCounts(String from, int single_quote) {
     int[] result = new int[separators.length];
     byte[] bits = from.getBytes();
     boolean in_quote = false;
     for( int j=0; j< bits.length; j++ ) {
       byte c = bits[j];
-      if( (c == CHAR_SINGLE_QUOTE) || (c == CHAR_DOUBLE_QUOTE) )
+      if( (c == single_quote) || (c == CHAR_DOUBLE_QUOTE) )
         in_quote ^= true;
       if( !in_quote || c == HIVE_SEP )
         for( int i = 0; i < separators.length; ++i)
@@ -521,7 +527,7 @@ NEXT_CHAR:
   /** Determines the tokens that are inside a line and returns them as strings
    *  in an array.  Assumes the given separator.
    */
-  private static String[] determineTokens(String from, byte separator) {
+  private static String[] determineTokens(String from, byte separator, int single_quote) {
     ArrayList<String> tokens = new ArrayList();
     byte[] bits = from.getBytes();
     int offset = 0;
@@ -531,7 +537,7 @@ NEXT_CHAR:
       if(offset == bits.length)break;
       StringBuilder t = new StringBuilder();
       byte c = bits[offset];
-      if ((c == '"') || (c == '\'')) {
+      if ((c == CHAR_DOUBLE_QUOTE) || (c == single_quote)) {
         quotes = c;
         ++offset;
       }
@@ -545,7 +551,6 @@ NEXT_CHAR:
             continue;
           }
           quotes = 0;
-          break;
         } else if ((quotes == 0) && ((c == separator) || (c == CHAR_CR) || (c == CHAR_LF))) {
           break;
         } else {
@@ -583,9 +588,9 @@ NEXT_CHAR:
     return allStrings(l1) && !allStrings(l2);
   }
 
-  private static byte guessSeparator(String l1, String l2){
-    int[] s1 = determineSeparatorCounts(l1);
-    int[] s2 = determineSeparatorCounts(l2);
+  private static byte guessSeparator(String l1, String l2, int single_quote){
+    int[] s1 = determineSeparatorCounts(l1, single_quote);
+    int[] s2 = determineSeparatorCounts(l2, single_quote);
     // now we have the counts - if both lines have the same number of separators
     // the we assume it is the separator. Separators are ordered by their
     // likelyhoods. If no separators have same counts, space will be used as the
@@ -593,8 +598,8 @@ NEXT_CHAR:
     for (int i = 0; i < s1.length; ++i)
       if (((s1[i] == s2[i]) && (s1[i] != 0)) || (i == separators.length-1)) {
         try {
-          String[] t1 = determineTokens(l1, separators[i]);
-          String[] t2 = determineTokens(l2, separators[i]);
+          String[] t1 = determineTokens(l1, separators[i], single_quote);
+          String[] t2 = determineTokens(l2, separators[i], single_quote);
           if (t1.length == 0 || t1.length != t2.length)
             continue;
           return separators[i];
@@ -653,6 +658,7 @@ NEXT_CHAR:
     if(lines.isEmpty())
       return new PSetupGuess(new ParserSetup(ParserType.AUTO,CsvParser.AUTO_SEP,0,false,null,setup._singleQuotes),0,0,null,null);
     boolean hasHeader = false;
+    final int single_quote = setup._singleQuotes ? CHAR_SINGLE_QUOTE : -1;
     byte sep = setup._separator;
     final String [][] data = new String[lines.size()][];
     int ncols;
@@ -669,18 +675,20 @@ NEXT_CHAR:
         }
       }
       if(lines.size() == 1)
-        data[0] = determineTokens(lines.get(0), sep);
+        data[0] = determineTokens(lines.get(0), sep, single_quote);
       ncols = (setup._ncols > 0)?setup._ncols:data[0].length;
       hasHeader = (checkHeader && allStrings(data[0])) || setup._header;
     } else {
-      if(setup._separator == AUTO_SEP){ // first guess the separator{
-        sep = guessSeparator(lines.get(0), lines.get(1));
-        if(sep == AUTO_SEP)sep = guessSeparator(lines.get(1), lines.get(2));
-        if(sep == AUTO_SEP)sep = guessSeparator(lines.get(0), lines.get(2));
+      if(setup._separator == AUTO_SEP){ // first guess the separator
+        sep = guessSeparator(lines.get(0), lines.get(1), single_quote);
+        if(sep == AUTO_SEP && lines.size() > 2){
+          if(sep == AUTO_SEP)sep = guessSeparator(lines.get(1), lines.get(2), single_quote);
+          if(sep == AUTO_SEP)sep = guessSeparator(lines.get(0), lines.get(2), single_quote);
+        }
         if(sep == AUTO_SEP)sep = (byte)' ';
       }
       for(int i = 0; i < lines.size(); ++i)
-        data[i] = determineTokens(lines.get(i), sep);
+        data[i] = determineTokens(lines.get(i), sep, single_quote);
       // we do not have enough lines to decide
       ncols = (setup._ncols > 0)?setup._ncols:guessNcols(setup,data);
       if(checkHeader){
@@ -701,7 +709,7 @@ NEXT_CHAR:
     int ilines = 0;
     for(int i = 0; i < data.length; ++i){
       if(data[i].length != resSetup._ncols){
-        errors.add("error at line " + i + " : incompatoble line length. Got " + data[i].length + " columns.");
+        errors.add("error at line " + i + " : incompatible line length. Got " + data[i].length + " columns.");
         ++ilines;
       }
     }

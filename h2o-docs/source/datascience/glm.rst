@@ -54,14 +54,15 @@ Defining a GLM Model
      of such columns are 0. In this case Y is independent of X, and X
      is not an explanatory variable.
    
-     H\ :sub:`2`\ O factors (also called categorical variables or enumerators) as
-     if they are collapsed columns of binomial variables at each
-     factor level. When a factor is encountered, H\ :sub:`2`\ O determines the
-     cardinality of the variable, and generates a unique regression
-     coefficient for all but one of the factor levels. The omitted
-     factor level becomes the reference level. H\ :sub:`2`\ O omits the first
-     level in the ordered set. For instance, if factor levels are A, 
-     B, and C, level A will be omitted. 
+     H\ :sub:`2`\ O factors (also called categorical variables or
+     enumerators) as if they are collapsed columns of binomial
+     variables at each  factor level. When a factor is encountered, H\
+     :sub:`2`\ O determines the  cardinality of the variable, and
+     generates a unique regression coefficient for all but one of the
+     factor levels. The omitted  factor level becomes the reference
+     level. H\ :sub:`2`\ O omits the first level in the ordered
+     set. For instance, if factor levels are A, B, and C, level A will
+     be omitted. 
 
      Please note that H\ :sub:`2`\ O does not currently return a warning when
      users predict on data outside of the range on which the model was
@@ -97,7 +98,28 @@ Defining a GLM Model
 
   *Gamma (inverse):* 
 
-     Dependent variable is a survival measure
+     Dependent variable is a survival measure, or is distributed as
+     Poisson where variance   is greater than the mean of the distribution. 
+
+   *Tweedie Power:* 
+      
+    Tweedie distributions are distributions of the dependent variable Y where
+    :math:`var(Y)=a[E(Y)]^{p}`
+
+    where a and p are constants, and p is determined on the basis of
+    the distribution of Y. Guidelines for selecting Tweedie power and
+    given below.   
+
+    Tweedie power characterizes the distribution of the dependent variable. 
+
+    *p*	        *Response distribution*
+
+    0	        Normal
+    1	        Poisson
+    (1, 2)	Compound Poisson, non-negative with mass at zero
+    2	        Gamma
+    3	        Inverse-Gaussian
+    > 2	        Stable, with support on the positive reals 
 
 **Lambda:**
 
@@ -125,26 +147,46 @@ Defining a GLM Model
 **Case and Casemode:**
 
       These tuning parameters are used in combination when predicting
-      binomial dependent variables. The default behavior of H\ :sub:`2`\ O is to 
-      the Y variable can be specified, and the model can be asked to
-      predict for observations above, below, or equal to this value. 
-      Used in binomial prediction, where the default case is the mean of
-      the Y column. 
-
-**Tweedie Power** 
-      
-      Tweedie power characterizes the distribution of the dependent variable.
-
-    p	        Response distribution
-    0	        Normal
-    1	        Poisson
-    (1, 2)	Compound Poisson, non-negative with mass at zero
-    2	        Gamma
-    3	        Inverse-Gaussian
-    > 2	        Stable, with support on the positive reals
+      binomial dependent variables. The default behavior of H\
+      :sub:`2`\ O is to the Y variable can be specified, and the model
+      can be asked to predict for observations above, below, or equal
+      to this value. Used in binomial prediction, where the default
+      case is the mean of the Y column. 
 
 
+Expert Settings
+"""""""""""""""      
+  Expert settings can be accessed by checking the tic box at the
+  bottom of the model page. 
 
+**Standardize** 
+
+     An option that transforms variables into
+     standardized variables, each with mean 0 and unit
+     variance. Variables and coefficients are now expressed in terms
+     of their relative position to 0, and in standard units. 
+
+**Threshold** 
+
+     An option only for binomial models that allows the user
+     to define the degree to which they prefer to weight the
+     sensitivity (the proportion of correctly classified 1s) and
+     specificity (the proportion of correctly classified 0s). The
+     default option is joint optimization for the overall
+     classification rate. Changing this will alter the confusion
+     matrix and the AUC.
+ 
+**LSM Solver** 
+
+     LSM stands for Least Squares Method. Least squares is
+     the optimization criterion for the model residuals.
+
+ 
+**Beta Epsilon** 
+
+     Precision of the vector of coefficients. Computation
+     stops when the maximal difference between two beta vectors is
+     below than Beta epsilon
 
 
 Interpreting a Model
@@ -184,9 +226,14 @@ Interpreting a Model
 
 **AIC:** 
 
-     A model selection criterial that penalizes models having large
+     A model selection criterion that penalizes models having large
      numbers of predictors. AIC stands for Akiaike Information
-     Criterion. It is defined as AIC = n ln SSEp - n ln n + 2p
+     Criterion. It is defined as 
+     :math:`AIC = 2k + n Log(\frac{RSS}{n}`
+
+     Where :math:`k` is the number of model parameters, :math:`n` is
+     the number of observations, and :math:`RSS` is the residual sum
+     of squares. 
 
 **AUC:** 
  
@@ -336,10 +383,10 @@ When :math:`Y` has a pdf from the exponential family:
 Let :math:`g(\mu_{i})=\eta_{i}` be a monotonic, differentiable
 transformation of the expected value of :math:`y_{i}`. The function
 :math:`\eta_{i}` is the link function and follows a linear model.
-:math:`g(\mu_{i})=\eta_{i}=\vec{x_{i}^{\prime}}\beta`
+:math:`g(\mu_{i})=\eta_{i}=\mathbf{x_{i}^{\prime}}\beta`
 
 When inverted: 
-:math:`\mu=g^{-1}(\vec{x_{i}^{\prime}}\beta)`
+:math:`\mu=g^{-1}(\mathbf{x_{i}^{\prime}}\beta)`
 
 
 **Maximum Likelihood Estimation**
@@ -369,9 +416,9 @@ factor :math:`\phi`.
 
 Regress :math:`z_{i}` on the predictors :math:`x_{i}` using the
 weights :math:`w_{i}` to obtain new estimates of :math:`\beta`. 
-:math:`\hat{\beta}=(\vec{X}^{\prime}\vec{W}\vec{X})^{-1}\vec{X}^{\prime}\vec{W}\vec{z}`
-Where :math:`\vec{X}` is the model matrix, :math:`\vec{W}` is a
-diagonal matrix of :math:`w_{i}`, and :math:`\vec{z}` is a vector of
+:math:`\hat{\beta}=(\mathbf{X}^{\prime}\mathbf{W}\mathbf{X})^{-1}\mathbf{X}^{\prime}\mathbf{W}\mathbf{z}`
+Where :math:`\mathbf{X}` is the model matrix, :math:`\mathbf{W}` is a
+diagonal matrix of :math:`w_{i}`, and :math:`\mathbf{z}` is a vector of
 the working response variable :math:`z_{i}`.
 
 This process is repeated until the estimates :math:`\hat{\beta}` change by less than a specified amount. 

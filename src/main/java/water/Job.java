@@ -6,14 +6,11 @@ import static water.util.Utils.isEmpty;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
-import java.util.UUID;
 
-import org.apache.commons.lang.ArrayUtils;
-
-import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
 import water.api.*;
+import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -24,6 +21,14 @@ public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+  public Job(Key jobKey, Key dstKey){
+   job_key = jobKey;
+   destination_key = dstKey;
+  }
+  public static class JobCancelledException extends RuntimeException {
+    public JobCancelledException(){super("job was cancelled!");}
+    public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
+  }
   // Global LIST of Jobs key.
   static final Key LIST = Key.make(Constants.BUILT_IN_KEY_JOBS, (byte) 0, Key.BUILT_IN_KEY);
   private static final int KEEP_LAST_COUNT = 100;
@@ -33,8 +38,14 @@ public class Job extends Request2 {
   @API(help = "Job key")
   public Key job_key; // Boolean read-only value; exists==>running, not-exists==>canceled/removed
 
-  @API(help = "Destination key", required = true, filter = Default.class)
+  @API(help = "Destination key", filter = Default.class, json = true, validator = DestKeyValidator.class)
   public Key destination_key; // Key holding final value after job is removed
+  static class DestKeyValidator extends NOPValidator<Key> {
+    @Override public void validateRaw(String value) {
+      if (Utils.contains(value, Key.ILLEGAL_USER_KEY_CHARS))
+        throw new IllegalArgumentException("Key '" + value + "' contains illegal character! Please avoid these characters: " + Key.ILLEGAL_USER_KEY_CHARS);
+    }
+  }
 
   @API(help = "Job description")
   public String description;
@@ -193,14 +204,13 @@ public class Job extends Request2 {
 
     @Override protected void init() {
       super.init();
-
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
-
+      Vec[] vecs = source.vecs();
       for( int i = cols.length - 1; i >= 0; i-- )
-        if( source.vecs()[cols[i]] == response )
-          cols = ArrayUtils.remove(cols, i);
+        if( vecs[cols[i]] == response )
+          cols = Utils.remove(cols,i);
     }
   }
 
@@ -212,7 +222,7 @@ public class Job extends Request2 {
     protected transient String[] _names;
     protected transient String _responseName;
 
-    @API(help = "Validation frame", filter = Default.class)
+    @API(help = "Validation frame", filter = Default.class, mustExist = true)
     public Frame validation;
 
     @Override protected void logStart() {
@@ -295,20 +305,15 @@ public class Job extends Request2 {
 
   protected Key defaultJobKey() {
     // Pinned to self, because it should be almost always updated locally
-    return Key.make(UUID.randomUUID().toString(), (byte) 0, Key.JOB, H2O.SELF);
+    return Key.make((byte) 0, Key.JOB, H2O.SELF);
   }
 
   protected Key defaultDestKey() {
-    return Key.make(getClass().getSimpleName() + "_" + UUID.randomUUID().toString());
+    return Key.make(getClass().getSimpleName() + Key.rand());
   }
 
-  public void start(final H2OCountedCompleter fjtask) {
-    // Subtle FJ stuff: we create another counted completer and set it as completer of the user's task.
-    // This is to ensure that if anyone calls this.get() it will block until all completion methods
-    // (if there are any) of the _fjtask completed. Common case is that the user's FJtask has
-    // on(Exceptionl)Completion method removing the job. Calling get() directly on it opens up a race when the
-    // get() may return before the onCompletion ran and the job might not have been removed yet.
-    fjtask.setCompleter(_fjtask = new H2OEmptyCompleter());
+  public Job start(final H2OCountedCompleter fjtask) {
+    _fjtask = fjtask;
     Futures fs = new Futures();
     DKV.put(job_key, new Value(job_key, new byte[0]),fs);
     start_time = System.currentTimeMillis();
@@ -322,6 +327,7 @@ public class Job extends Request2 {
       }
     }.invoke(LIST);
     fs.blockForPending();
+    return this;
   }
   // Overridden for Parse
   public float progress() {
@@ -333,29 +339,27 @@ public class Job extends Request2 {
 
   // Block until the Job finishes.
   public <T> T get() {
-    try{
-      _fjtask.join();             // Block until top-level job is done
-    } catch(DistributedException e){
-      // rethrow as a runtime exception to stay consistent with FJ and to keep record on where the exception
-      // was thrown locally
-      throw new RuntimeException(e);
-    }
+    _fjtask.join();             // Block until top-level job is done
     T ans = (T) UKV.get(destination_key);
     remove();                   // Remove self-job
     return ans;
   }
 
-  public void cancel() { cancel("cancelled by user"); }
+  public void cancel() {
+    cancel("");
+  }
   public void cancel(Throwable ex){
+
+    if(_fjtask != null && !_fjtask.isDone())_fjtask.completeExceptionally(ex);
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);
+//    ex.printStackTrace();
     String stackTrace = sw.toString();
     cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace);
   }
-  public void cancel(String msg) { cancel(job_key,msg); }
-  public static void cancel(final Key self, final String exception) {
-    DKV.remove(self);
+  public void cancel(final String msg) {
+    DKV.remove(self());
     DKV.write_barrier();
     new TAtomic<List>() {
       transient private Job _job;
@@ -363,9 +367,9 @@ public class Job extends Request2 {
         if( old == null ) old = new List();
         Job[] jobs = old._jobs;
         for( int i = 0; i < jobs.length; i++ ) {
-          if( jobs[i].job_key.equals(self) ) {
+          if( jobs[i].job_key.equals(self()) ) {
             jobs[i].end_time = CANCELLED_END_TIME;
-            jobs[i].exception = exception;
+            jobs[i].exception = msg;
             _job = jobs[i];
             break;
           }
@@ -481,8 +485,9 @@ public class Job extends Request2 {
       @Override public void compute2() {
         Throwable t = null;
         try {
-          Job.this.exec();
-          Job.this.done();
+          Status status = Job.this.exec();
+          if(status == Status.Done)
+            Job.this.remove();
         } catch (Throwable t_) {
           t = t_;
           if(!(t instanceof ExpectedExceptionForDebug))
@@ -491,7 +496,7 @@ public class Job extends Request2 {
           tryComplete();
         }
         if(t != null)
-          update(Job.this, Utils.getStackAsString(t));
+          Job.this.cancel(t);
       }
     };
     start(task);
@@ -499,23 +504,12 @@ public class Job extends Request2 {
     return this;
   }
 
-  private static void update(final Job job, final String exception) {
-    new TAtomic<List>() {
-      @Override public List atomic(List old) {
-        if( old != null && old._jobs != null )
-          for(Job current : old._jobs)
-            if(current == job)
-              job.exception = exception;
-        return old;
-      }
-    }.invoke(LIST);
-  }
-
   public void invoke() {
     init();
     start(new H2OEmptyCompleter());
-    exec();
-    done();
+    Status status = exec();
+    if(status == Status.Done)
+      remove();
   }
 
   /**
@@ -525,18 +519,50 @@ public class Job extends Request2 {
   protected void init() throws IllegalArgumentException {
   }
 
+  protected enum Status { Running, Done }
+
   /**
-   * Actual job code. Should be blocking until execution is done.
+   * Actual job code.
+   *
+   * @return true if job is done, false if it will still be running after the method returns.
    */
-  protected void exec() {
+  protected Status exec() {
     throw new RuntimeException("Should be overridden if job is a request");
   }
 
-  /**
-   * Invoked after job has run for cleanup purposes.
-   */
-  protected void done() {
-    remove();
+  public static boolean isJobEnded(Key jobkey) {
+    boolean done = false;
+
+    Job[] jobs = Job.all();
+    boolean found = false;
+    for (int i = jobs.length - 1; i >= 0; i--) {
+      if (jobs[i].job_key == null) {
+        continue;
+      }
+
+      if (! jobs[i].job_key.equals(jobkey)) {
+        continue;
+      }
+
+      // This is the job we are looking for.
+      found = true;
+
+      if (jobs[i].end_time > 0) {
+        done = true;
+      }
+
+      if (jobs[i].cancelled()) {
+        done = true;
+      }
+
+      break;
+    }
+
+    if (! found) {
+      done = true;
+    }
+
+    return done;
   }
 
   /**
@@ -545,37 +571,12 @@ public class Job extends Request2 {
    * @param pollingIntervalMillis Polling interval sleep time.
    */
   public static void waitUntilJobEnded(Key jobkey, int pollingIntervalMillis) {
-    boolean done = false;
-    while (! done) {
+    while (true) {
+      if (isJobEnded(jobkey)) {
+        return;
+      }
+
       try { Thread.sleep (pollingIntervalMillis); } catch (Exception _) {}
-      Job[] jobs = Job.all();
-      boolean found = false;
-      for (int i = jobs.length - 1; i >= 0; i--) {
-        if (jobs[i].job_key == null) {
-          continue;
-        }
-
-        if (! jobs[i].job_key.equals(jobkey)) {
-          continue;
-        }
-
-        // This is the job we are looking for.
-        found = true;
-
-        if (jobs[i].end_time > 0) {
-          done = true;
-        }
-
-        if (jobs[i].cancelled()) {
-          done = true;
-        }
-
-        break;
-      }
-
-      if (! found) {
-        done = true;
-      }
     }
   }
 

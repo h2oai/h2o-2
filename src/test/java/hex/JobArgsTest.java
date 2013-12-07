@@ -2,8 +2,8 @@ package hex;
 
 import org.junit.*;
 
-import water.Job.ValidatedJob;
 import water.*;
+import water.Job.ValidatedJob;
 import water.api.RequestServer;
 import water.fvec.Frame;
 import water.util.Utils.ExpectedExceptionForDebug;
@@ -11,7 +11,7 @@ import water.util.Utils.ExpectedExceptionForDebug;
 @Ignore
 public class JobArgsTest extends HttpTest {
   @BeforeClass public static void stall() {
-    stall_till_cloudsize(3);
+    stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
   @Test public void testIndexesVsNames() throws Exception {
@@ -72,15 +72,16 @@ public class JobArgsTest extends HttpTest {
   }
 
   static class FailTestJobAsync extends ValidatedJob {
-    @Override protected void exec() {
+    @Override protected Status exec() {
       throw new ExpectedExceptionForDebug();
     }
   }
 
   static class ArgsTestJob extends ValidatedJob {
-    @Override protected void exec() {
+    @Override protected Status exec() {
       Assert.assertEquals(source.vecs()[1], _train[0]);
       Assert.assertEquals(source.vecs()[5], _train[1]);
+      return Status.Done;
     }
   }
 }

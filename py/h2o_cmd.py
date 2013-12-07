@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys, socket
 import h2o
-import h2o_browse as h2b, h2o_rf as h2f
+import h2o_browse as h2b, h2o_rf as h2f, h2o_exec
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
@@ -52,7 +52,11 @@ def runStore2HDFS(node=None, key=None, timeoutSecs=5, **kwargs):
 def runExec(node=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     # no such thing as GLMView..don't use retryDelaySecs
-    return node.exec_query(timeoutSecs, **kwargs)
+    a = node.exec_query(timeoutSecs, **kwargs)
+    # temporary?
+    if h2o.beta_features:
+        h2o.check_sandbox_for_errors()
+    return a
 
 def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for KMeans')
@@ -83,13 +87,17 @@ def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, returnFas
     data_key = parseResult['destination_key']
     return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, returnFast=returnFast, **kwargs)
 
+def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, noPoll=False, **kwargs):
+    if not node: node = h2o.nodes[0]
+    return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+
 def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for NN')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
     return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
 
-def runGBM(node=None, parseResult=None, timeoutSecs=500, noPoll=True, **kwargs):
+def runGBM(node=None, parseResult=None, timeoutSecs=500, noPoll=False, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
@@ -214,8 +222,16 @@ def checkKeyDistribution():
 # might be able to use more widely
 def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     inspect = runInspect(key=key, **kwargs)
-    num_rows = inspect['num_rows']
-    num_cols = inspect['num_cols']
+
+    if h2o.beta_features:
+        num_rows = inspect['numRows']
+        num_cols = inspect['numCols']
+        keyNA = 'naCnt'
+    else:
+        num_rows = inspect['num_rows']
+        num_cols = inspect['num_cols']
+        keyNA = 'num_missing_values'
+
     cols = inspect['cols']
     # type
     # key
@@ -242,15 +258,26 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         msg = "%s %d" % (c['name'], k)
         msg += " type: %s" % c['type']
         printMsg = False
-        if c['type'] == 'enum':
-            msg += (" enum_domain_size: %d" % c['enum_domain_size'])
-            enumSizeDict[k] = c['enum_domain_size']
-            printMsg = True
 
-        if c['num_missing_values'] != 0:
-            pct = ((c['num_missing_values'] + 0.0)/ num_rows) * 100
-            msg += (" num_missing_values: %s (%0.1f%s)" % (c['num_missing_values'], pct, '%'))
-            missingValuesDict[k] = c['num_missing_values']
+        if h2o.beta_features:
+            if c['type'] == 'Enum':
+                enum_domain_size = (c['max'] - c['min']) + 1
+                msg += (" enum_domain_size: %d" % enum_domain_size)
+                # inspect2 doesn't have enum_domain_size but this is equivalent
+                enumSizeDict[k] = enum_domain_size
+                printMsg = True
+
+        else:
+            if c['type'] == 'enum':
+                msg += (" enum_domain_size: %d" % c['enum_domain_size'])
+                enumSizeDict[k] = c['enum_domain_size']
+                printMsg = True
+
+
+        if c[keyNA] != 0:
+            pct = ((c[keyNA] + 0.0)/ num_rows) * 100
+            msg += (" %s: %s (%0.1f%s)" % (keyNA, c[keyNA], pct, '%'))
+            missingValuesDict[k] = c[keyNA]
             printMsg = True
 
         if c['min'] == c['max']:
@@ -288,14 +315,14 @@ def infoFromInspect(inspect, csvPathname):
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
     if h2o.beta_features:
-        naString = 'naCnt'
+        keyNA = 'naCnt'
     else:
-        naString = 'num_missing_values'
+        keyNA = 'num_missing_values'
     missingValuesList = []
     for i, colDict in enumerate(cols):
-        num_missing_values = colDict[naString]
+        num_missing_values = colDict[keyNA]
         if num_missing_values != 0:
-            print "%s: col: %d, %s: %d" % (csvPathname, i, naString, num_missing_values)
+            print "%s: col: %d, %s: %d" % (csvPathname, i, keyNA, num_missing_values)
             missingValuesList.append(num_missing_values)
 
     if h2o.beta_features:
@@ -323,27 +350,50 @@ def infoFromInspect(inspect, csvPathname):
 
 def infoFromSummary(summaryResult, noPrint=False):
     if h2o.beta_features:
-        names = summaryResult['names']
-        means = summaryResult['means']
+        # names = summaryResult['names']
+        # means = summaryResult['means']
         summaries = summaryResult['summaries']
-        for column in summaries:
-            rows = column['rows']
-            start = column['start']
-            zeros = column['zeros']
-            bins = column['bins']
-            binsz = column['binsz']
-            domains = column['domains']
-            maxs = column['maxs']
-            mins = column['mins']
-            percentileValues = column['percentileValues']
 
-        if not noPrint:
-            print "\n\n************************"
-            print "rows:", rows
-            print "start:", start
-            print "zeros:", zeros
-            print "len(names):", len(names)
-            print "len(means):", len(means)
+        for column in summaries:
+            colname = column['colname']
+            coltype = column['type']
+            nacnt = column['nacnt']
+
+            stats = column['stats']
+            stattype= stats['type']
+            mean = stats['mean']
+            sd = stats['sd']
+            zeros = stats['zeros']
+            mins = stats['mins']
+            maxs = stats['maxs']
+            pct = stats['pct']
+            pctile = stats['pctile']
+
+            hstart = column['hstart']
+            hstep = column['hstep']
+            hbrk = column['hbrk']
+            hcnt = column['hcnt']
+
+            if not noPrint:
+                print "\n\n************************"
+                print "colname:", colname
+                print "coltype:", coltype
+                print "nacnt:", nacnt
+
+                print "stattype:", stattype
+                print "mean:", mean
+                print "sd:", sd
+                print "zeros:", zeros
+                print "mins:", mins
+                print "maxs:", maxs
+                print "pct:", pct
+                print "pctile:", pctile
+
+                # histogram stuff
+                print "hstart:", hstart
+                print "hstep:", hstep
+                print "hbrk:", hbrk
+                print "hcnt:", hcnt
 
     else:
         summary = summaryResult['summary']
@@ -422,3 +472,40 @@ def sleep_with_dot(sec, message=None):
         time.sleep(1)
         dot()
         count += 1
+
+def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent, 
+    outputClass=None, outputCol=None, changeToBinomial=False):
+    # will have to live with random extract. will create variance
+
+    print "train: get random", trainPercent
+    print "test: get remaining", 100 - trainPercent
+    if changeToBinomial:
+        print "change class", outputClass, "to 1, everything else to 0. factor() to turn real to int (for rf)"
+
+    boundary = (trainPercent + 0.0)/100
+
+    execExpr = ""
+    execExpr += "cct.hex=runif(%s);" % srcKey
+    execExpr += "%s=%s[cct.hex<=%s,];" % (trainDstKey, srcKey, boundary)
+    if changeToBinomial:
+        execExpr += "%s[,%s]=%s[,%s]==%s;" % (trainDstKey, outputCol+1, trainDstKey, outputCol+1, outputClass)
+        execExpr +=  "factor(%s[, %s]);" % (trainDstKey, outputCol+1)
+
+    h2o_exec.exec_expr(None, execExpr, resultKey=trainDstKey, timeoutSecs=15)
+
+    inspect = runInspect(key=trainDstKey)
+    infoFromInspect(inspect, "%s after mungeDataset on %s" % (trainDstKey, srcKey) )
+
+    print "test: same, but use the same runif() random result, complement comparison"
+
+    execExpr = ""
+    execExpr += "%s=%s[cct.hex>%s,];" % (testDstKey, srcKey, boundary)
+    if changeToBinomial:
+        execExpr += "%s[,%s]=%s[,%s]==%s;" % (testDstKey, outputCol+1, testDstKey, outputCol+1, outputClass)
+        execExpr +=  "factor(%s[, %s])" % (testDstKey, outputCol+1)
+    h2o_exec.exec_expr(None, execExpr, resultKey=testDstKey, timeoutSecs=10)
+
+    inspect = runInspect(key=testDstKey)
+    infoFromInspect(inspect, "%s after mungeDataset on %s" % (testDstKey, srcKey) )
+
+

@@ -2,12 +2,12 @@
 # It imports a data set, parses it, and prints a summary
 # Then, it runs GLM with a binomial link function using 10-fold cross-validation
 library(h2o)
-h2o.installDepPkgs()
 myIP = readline("Enter IP address of H2O server: ")
 myPort = readline("Enter port number of H2O server: ")
 remoteH2O = h2o.init(ip = myIP, port = as.numeric(myPort), startH2O = FALSE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 
-prostate.hex = h2o.uploadFile(remoteH2O, path = system.file("extdata", "prostate.csv", package="h2oRClient"), key = "prostate.hex")
+# prostate.hex = h2o.uploadFile(remoteH2O, path = system.file("extdata", "prostate.csv", package="h2oRClient"), key = "prostate.hex")
+prostate.hex = h2o.uploadFile.VA(remoteH2O, path = system.file("extdata", "prostate.csv", package="h2oRClient"), key = "prostate.hex")
 summary(prostate.hex)
 prostate.glm = h2o.glm(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(prostate.glm)

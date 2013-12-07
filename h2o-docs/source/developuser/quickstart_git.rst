@@ -178,8 +178,8 @@ These instructions assume you are using Linux, MacOSX, or Cygwin (on Windows).
   +                                  Using /192.168.1.28
   04:57:15.997 main      INFO WATER: Internal communication uses port: 54322
   +                                  Listening for HTTP and REST traffic on  http://192.168.1.28:54321/
-  04:57:16.029 main      INFO WATER: H2O cloud name: 'mystats-cloud'
-  04:57:16.029 main      INFO WATER: (v0.3) 'mystats-cloud' on /192.168.1.28:54321, discovery address /236.151.114.91:60567
+  04:57:16.029 main      
+  04:57:16.029 main      INFO WATER: 192.168.1.28:54321, discovery address /236.151.114.91:60567
   04:57:16.031 main      INFO WATER: Cloud of size 1 formed [/192.168.1.28:54321]
   04:57:16.032 main      INFO WATER: Log dir: '/tmp/h2ologs'
 

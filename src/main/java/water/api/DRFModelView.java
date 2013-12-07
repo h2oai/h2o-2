@@ -1,8 +1,7 @@
 package water.api;
 
-import hex.gbm.DRF.DRFModel;
+import hex.drf.DRF.DRFModel;
 import water.*;
-import water.api.RequestBuilders.Response;
 
 public class DRFModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -15,8 +14,12 @@ public class DRFModelView extends Request2 {
   @API(help="DRF Model")
   DRFModel drf_model;
 
+  public static String link(String txt, Key model) {
+    return "<a href='DRFModelView.html?_modelKey=" + model + "'>" + txt + "</a>";
+  }
+
   public static Response redirect(Request req, Key modelKey) {
-    return new Response(Response.Status.redirect, req, -1, -1, "/2/DRFModelView", "_modelKey", modelKey);
+    return Response.redirect(req, "/2/DRFModelView", "_modelKey", modelKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){
@@ -25,7 +28,17 @@ public class DRFModelView extends Request2 {
   }
 
   @Override protected Response serve() {
-    drf_model = DKV.get(_modelKey).get();
-    return new Response(Response.Status.done,this,-1,-1,null);
+    drf_model = UKV.get(_modelKey);
+    if (drf_model == null) return Response.error("Model '" + _modelKey + "' not found!");
+    else return Response.done(this);
+  }
+
+  @Override public void toJava(StringBuilder sb) { drf_model.toJavaHtml(sb); }
+  @Override protected String serveJava() {
+    DRFModel m = UKV.get(_modelKey);
+    if (m!=null)
+      return m.toJava();
+    else
+      return "";
   }
 }

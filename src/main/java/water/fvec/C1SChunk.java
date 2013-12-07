@@ -1,5 +1,6 @@
 package water.fvec;
 
+import java.util.Arrays;
 import water.*;
 import water.parser.DParseTask;
 
@@ -36,7 +37,7 @@ public class C1SChunk extends Chunk {
   @Override boolean set_impl(int i, double d) { return false; }
   @Override boolean set_impl(int i, float f ) { return false; }
   @Override boolean setNA_impl(int idx) { _mem[idx+OFF] = (byte)C1Chunk._NA; return true; }
-  @Override boolean hasFloat() { return _scale < 1.0; }
+  @Override boolean hasFloat() { return _scale < 1.0 || _scale > Long.MAX_VALUE; }
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.putA1(_mem,_mem.length); }
   @Override public C1SChunk read(AutoBuffer bb) {
     _mem = bb.bufClose();
@@ -48,18 +49,16 @@ public class C1SChunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
-    int x = (int)dx;
-    if( DParseTask.pow10i(x) != _scale ) throw H2O.unimpl();
+    assert DParseTask.fitsIntoInt(dx);
+    Arrays.fill(nc._xs = MemoryManager.malloc4(_len), (int)dx);
+    nc._ls = MemoryManager.malloc8(_len);
     for( int i=0; i<_len; i++ ) {
-      long res = 0xFF&_mem[i+OFF];
-      if( res == C1Chunk._NA ) nc.setInvalid(i);
-      else {
-        nc._ls[i] = res+_bias;
-        nc._xs[i] = x;
-      }
+      int res = 0xFF&_mem[i+OFF];
+      if( res == C1Chunk._NA ) nc._xs[i] = Integer.MIN_VALUE;
+      else                     nc._ls[i] = res+_bias;
     }
     return nc;
   }
-  public int pformat_len0() { return pformat_len0(_scale,3); }
-  public String pformat0() { return "% 8.2e"; }
+  public int pformat_len0() { return hasFloat() ? pformat_len0(_scale,3) : super.pformat_len0(); }
+  public String  pformat0() { return hasFloat() ? "% 8.2e" : super.pformat0(); }
 }

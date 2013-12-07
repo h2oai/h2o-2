@@ -24,7 +24,6 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 # This is where the source files (java) and resources are relative to the path of this file
       SRC=src/main/java
   TESTSRC=src/test/java
-SAMPLESRC=src/samples/java
 RESOURCES=src/main/resources
 # and this is where the jar contents is stored relative to this file again
 JAR_ROOT=lib
@@ -40,7 +39,24 @@ SRC_JAR_FILE="${OUTDIR}/h2o-sources.jar"
 
 JAVA=`which java`||echo 'Missing java, please install jdk'
 JAVAC=`which javac`||echo 'Missing javac, please install jdk'
-JAVADOC=`which javadoc`||echo 'Missing javadoc, please install jdk'
+if [ "${LOGNAME}" = "jenkins" ]; then
+    # This is really awful, but javadoc 6 is reliably hitting this failure in Linux.
+    # Workaround this for now.
+    #
+    #    Standard Doclet version 1.6.0_45
+    #    Building tree for all the packages and classes...
+    #    java.lang.NullPointerException
+    #            at com.sun.tools.javadoc.TypeMaker.getType(TypeMaker.java:67)
+    #            at com.sun.tools.javadoc.TypeMaker.getType(TypeMaker.java:29)
+    #            at com.sun.tools.javadoc.ParameterizedTypeImpl.superclassType(ParameterizedTypeImpl.java:62)
+    #            at com.sun.tools.doclets.internal.toolkit.util.Util.findAllInterfaceTypes(Util.java:441)
+    #            at com.sun.tools.doclets.internal.toolkit.util.Util.addAllInterfaceTypes(Util.java:472)
+    #            ...
+    #
+    JAVADOC=/usr/lib/jvm/java-7-oracle/bin/javadoc
+else
+    JAVADOC=`which javadoc`||echo 'Missing javadoc, please install jdk'
+fi
 
 # need bootclasspath to point to jdk1.6 rt.jar bootstrap classes
 # extdirs can also be passed as -extdirs 
@@ -101,6 +117,7 @@ function clean() {
 function build_classes() {
     echo "building classes..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
+    echo $CLASSPATH > target/classpath
     "$JAVAC" ${JAVAC_ARGS} \
         -cp "${CLASSPATH}" \
         -sourcepath "$SRC" \
@@ -108,9 +125,13 @@ function build_classes() {
         $SRC/water/*java \
         $SRC/water/*/*java \
         $SRC/jsr166y/*java \
-        $SAMPLESRC/water/*java \
         $TESTSRC/*/*java \
         $TESTSRC/*/*/*java
+
+    # Copy Java resources
+    # If you delete this line you take responsibility for logging and you have to make
+    # sure that jests3 library will not output its logs into our log files !!!
+    cp -r ${RESOURCES}/* "${CLASSES}"
 }
 
 function build_initializer() {
@@ -134,7 +155,7 @@ function build_jar() {
       "$JAR" xf ../scala-reflect-2.10.3.jar
       rm -rf META-INF
     )
-    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v mapr | grep -v 'h2o-scala'`
+    "$JAR" -cfm ../${JAR_FILE} ../manifest.txt `/usr/bin/find . -type f | grep -v 'sources.jar' | grep -v 'hadoop/mapr' | grep -v 'hadoop/hdp' | grep -v 'h2o-scala'`
     "$JAR" uf ../${JAR_FILE} -C "h2o-scala/tmp/" .
     rm -rf h2o-scala/tmp
     cd ..
@@ -153,6 +174,16 @@ function build_src_jar() {
     # include H2O source files
     "$JAR" cf ${SRC_JAR_FILE} -C "${SRC}" .
     "$JAR" uf ${SRC_JAR_FILE} -C "${TESTSRC}" .
+}
+
+function build_samples() {
+    echo "building samples..."
+    mkdir -p h2o-samples/target/classes
+    "$JAVAC" \
+    	-cp ${JAR_FILE}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/* \
+    	-d h2o-samples/target/classes \
+    	-sourcepath h2o-samples/src/main/java \
+    	h2o-samples/src/main/java/*/*java
 }
 
 function build_javadoc() {
@@ -182,6 +213,7 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_jar
 build_src_jar
+build_samples
 if [ "$1" = "build" ]; then exit 0; fi
 build_javadoc
 if [ "$1" = "doc" ]; then exit 0; fi

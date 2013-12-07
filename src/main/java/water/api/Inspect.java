@@ -7,6 +7,7 @@ import hex.*;
 import hex.KMeans2.KMeans2Model;
 import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
+import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.*;
 import hex.rf.RFModel;
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
+import water.api.RequestBuilders.Response;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.parser.CustomParser.PSetupGuess;
@@ -70,7 +72,7 @@ public class Inspect extends Request {
   }
 
   public static Response redirect(Request req, Key dest) {
-    return new Response(Response.Status.redirect, req, -1, -1, "Inspect", KEY, dest );
+    return Response.redirect(req, "Inspect", KEY, dest );
   }
 
   public static String link(String txt, Key key) {
@@ -152,16 +154,18 @@ public class Inspect extends Request {
       return GLMModelView.redirect2(this, key);
     if(f instanceof GBMModel)
       return GBMModelView.redirect(this, key);
-    if( f instanceof GLMValidation)
-      return GLMValidationView.redirect(this, key);
+//    if( f instanceof GLMValidation)
+//      return GLMValidationView.redirect(this, key);
     if(f instanceof NeuralNetModel)
-      return ((NeuralNet) f).redirect(this, key);
+      return ((NeuralNetModel) f).redirect(this);
     if(f instanceof KMeans2Model)
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
       return ((GridSearch) f).redirect();
     if(f instanceof hex.pca.PCAModel)
       return PCAModelView.redirect(this, key);
+    if (f instanceof DRFModel)
+      return DRFModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
   }
 
@@ -194,7 +198,7 @@ public class Inspect extends Request {
                 "</div>");
     // Set the builder for showing the rows
     r.setBuilder(ROWS, new ArrayBuilder() {
-      public String caption(JsonArray array, String name) {
+      @Override public String caption(JsonArray array, String name) {
         return "<h4>First few sample rows</h4>";
       }
     });
@@ -325,6 +329,7 @@ public class Inspect extends Request {
         sb.append("<div class='alert alert-success'>"
         		+ "<b>Produced in ").append(PrettyPrint.msecs(job.runTimeMs(),true)).append(".</b></div>");
     }
+    sb.append("<div class='alert alert-info'>").append(Inspect4UX.link(key, "NEW Inspect!")).append("</div>");
     sb.append("<div class='alert'>Set " + SetColumnNames.link(key,"Column Names") +"<br/>View " + SummaryPage.link(key, "Summary") +  "<br/>Build models using "
           + PCA.link(key, "PCA") + ", "
           + RF.link(key, "Random Forest") + ", "
@@ -558,7 +563,7 @@ public class Inspect extends Request {
 
       row.addProperty(ROW, FIRST_CHUNK);
       for( int i = 0; i < _f.numCols(); i++ )
-        row.addProperty(_f._names[i], _f.vecs()[i].chunk(0).getClass().getSimpleName());
+        row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(0).getClass().getSimpleName());
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {

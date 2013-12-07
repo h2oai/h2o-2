@@ -1,5 +1,5 @@
 #PCA bench
-import os, sys, time, csv
+import os, sys, time, csv, string
 sys.path.append('../py/')
 sys.path.extend(['.','..'])
 import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util
@@ -12,18 +12,19 @@ files      = {'Airlines'   : {'train': ('AirlinesTrain1x', 'AirlinesTrain10x', '
              }
 build = ""
 debug = False
+json = ""
 def doPCA(f, folderPath):
     debug = False
     bench = "bench"
     if debug:
         print "Doing PCA DEBUG"
         bench = "bench/debug"
-    date = '-'.join([str(x) for x in list(time.localtime())][0:3])
+    #date = '-'.join([str(x) for x in list(time.localtime())][0:3])
     retryDelaySecs = 5 #if f == 'AirlinesTrain1x' else 30
     overallWallStart = time.time()
     pre = ""
     if debug: pre    = 'DEBUG'
-    pcabenchcsv      = 'benchmarks/'+build+'/'+date+'/'+pre+'pcabench.csv'
+    pcabenchcsv      = 'benchmarks/'+build+'/'+pre+'pcabench.csv'
     if not os.path.exists(pcabenchcsv):
         output = open(pcabenchcsv,'w')
         output.write(','.join(csv_header)+'\n')
@@ -60,7 +61,6 @@ def doPCA(f, folderPath):
                                       )
         parseWallTime       = time.time() - trainParseWallStart
         print "Parsing training file took ", parseWallTime ," seconds." 
-        
         inspect             = h2o.nodes[0].inspect(parseResult['destination_key'], timeoutSecs=7200)
         
         nMachines           = 1 if len(h2o_hosts.hosts) is 0 else len(h2o_hosts.hosts)
@@ -81,11 +81,16 @@ def doPCA(f, folderPath):
 
         kwargs              = params.copy()
         pcaStart            = time.time()
-        pcaResult = h2o_cmd.runPCA(parseResult = parseResult, 
+        #h2o.beta_features   = True
+        pcaResult = h2o_cmd.runPCA(parseResult = parseResult, noPoll = True,
                                    timeoutSecs = 7200, 
                                    **kwargs)
-        pcaTime   = time.time() - pcaStart
 
+        h2j.pollWaitJobs(timeoutSecs=4800, pollTimeoutSecs=4800, retryDelaySecs=2)
+        pcaTime   = time.time() - pcaStart
+        cmd = 'bash startloggers.sh ' + json + ' stop_'
+        #stop all loggers
+        os.system(cmd)
         row.update({'pcaBuildTime' : pcaTime})
         csvWrt.writerow(row)
     finally:
@@ -95,6 +100,7 @@ if __name__ == '__main__':
     dat   = sys.argv.pop(-1)
     debug = sys.argv.pop(-1)
     build = sys.argv.pop(-1)
+    json  = sys.argv[-1].split('/')[-1]
     fp    = 'Airlines' if 'Air' in dat else 'AllBedrooms'
     h2o.parse_our_args()
     h2o_hosts.build_cloud_with_hosts()

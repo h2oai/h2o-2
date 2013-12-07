@@ -15,17 +15,14 @@ print "via the cloned cloud mechanism (h2o-nodes.json)"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_c7_rel(self):
+        print "Running with h2o.beta_features=True for all"
+        h2o.beta_features = True
 
         DO_INSPECT = True
         print "Since the python is not necessarily run as user=0xcust..., can't use a  schema='put' here"
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
         print "For files that we want to put (for testing put), we can get non-private files"
-
-
-        print "Running with h2o.beta_features=True for all"
-
-        h2o.beta_features = True
 
         csvFilename = 'part-00000b'
         if getpass.getuser()=='kevin':
@@ -74,7 +71,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         kwargs = {
             # 'x': x,
-            'vresponse': y,
+            'response': y,
             # 'case_mode': '>',
             # 'case': 0,
             'family': 'binomial',
@@ -89,7 +86,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         timeoutSecs = 3600
         start = time.time()
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, noPoll=True, **kwargs)
-        h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
+        statMean = h2j.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
+        num_cpus = statMean['num_cpus'],
+        my_cpu_pct = statMean['my_cpu_%'],
+        sys_cpu_pct = statMean['sys_cpu_%'],
+        system_load = statMean['system_load']
+        # shouldn't need this?
+        h2j.pollWaitJobs(pattern=None, timeoutSecs=timeoutSecs, pollTimeoutSecs=30, retryDelaySecs=5)
 
         # can't figure out how I'm supposed to get the model
         # GLMModel = glm['GLMModel']

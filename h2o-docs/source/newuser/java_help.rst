@@ -2,7 +2,7 @@ H\ :sub:`2`\ O Command-line Options
 """"""""""""""""""""""""""""""""""""
 When an instance of H\ :sub:`2`\ O is started from the command line, users
 generally call a java command similar to "java -Xmx1g -jar
-h2o.jar -name mystats-cloud." Users can customize their running
+h2o.jar " Users can customize their running
 instance of H\ :sub:`2`\ O by changing options in this java command. Each of the
 options has a default. 
 
@@ -78,6 +78,13 @@ H\ :sub:`2`\ O Options
   Use instead of -ip when a broad range of addresses is legal.
   (Example network specification: '10.1.2.0/24' allows 256 legal
   possibilities.)
+
+**-nthreads <number>**
+
+  Maximum number of typical worker threads.  Think of this as the 
+  maximum number of CPUs H\ :sub:`2`\ O will use.  This value is
+  per java instance.  Specifying too small a value may result in
+  deadlocks.  Never specify fewer than 4.  The default value is 99.
 
 **-port <port>**
 

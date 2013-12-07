@@ -139,10 +139,9 @@ public abstract class Chunk extends Iced implements Cloneable {
     return true;
   }
 
-
   /** After writing we must call close() to register the bulk changes */
   public void close( int cidx, Futures fs ) {
-    if( _chk instanceof NewChunk ) _chk = ((NewChunk)_chk).close(fs);
+    if( _chk instanceof NewChunk ) _chk = ((NewChunk)_chk).new_close(fs);
     if( _chk == this ) return;            // No change?
     DKV.put(_vec.chunkKey(cidx),_chk,fs); // Write updated chunk back into K/V
   }
@@ -194,7 +193,7 @@ public abstract class Chunk extends Iced implements Cloneable {
     double dx = Math.log10(scale);
     int x = (int)dx;
     if( DParseTask.pow10i(x) != scale ) throw H2O.unimpl();
-    int w=1+/*blank/sign*/+lg/*compression limits digits*/+1/*dot*/+1/*e*/+1/*neg exp*/+2/*digits of exp*/;
+    int w=1/*blank/sign*/+lg/*compression limits digits*/+1/*dot*/+1/*e*/+1/*neg exp*/+2/*digits of exp*/;
     return w;
   }
 

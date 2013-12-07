@@ -1,5 +1,6 @@
 package hex;
 
+import hex.Layer.Output.Loss;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.rng.MersenneTwisterRNG;
@@ -21,7 +22,7 @@ public class NeuralNetIrisTest extends TestUtil {
   Frame _train, _test;
 
   @BeforeClass public static void stall() {
-    stall_till_cloudsize(3);
+    stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
   @Test public void compare() throws Exception {
@@ -58,25 +59,27 @@ public class NeuralNetIrisTest extends TestUtil {
     Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
     Vec labels = _train.vecs()[_train.vecs().length - 1];
     VecsInput input = new VecsInput(data, null);
+    VecSoftmax output = new VecSoftmax(labels, null);
+    output.loss = Loss.MeanSquare;
     Layer[] ls = new Layer[3];
     ls[0] = input;
     ls[1] = new Layer.Tanh(7);
-    ls[1]._rate = rate;
-    ls[2] = new VecSoftmax(labels, null);
-    ls[2]._rate = rate;
+    ls[1].rate = rate;
+    ls[2] = output;
+    ls[2].rate = rate;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
 
     Layer l = ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
-      for( int i = 0; i < l._in._a.length; i++ )
-        ref._nn.ihWeights[i][o] = l._w[o * l._in._a.length + i];
+      for( int i = 0; i < l._previous._a.length; i++ )
+        ref._nn.ihWeights[i][o] = l._w[o * l._previous._a.length + i];
       ref._nn.hBiases[o] = l._b[o];
     }
     l = ls[2];
     for( int o = 0; o < l._a.length; o++ ) {
-      for( int i = 0; i < l._in._a.length; i++ )
-        ref._nn.hoWeights[i][o] = l._w[o * l._in._a.length + i];
+      for( int i = 0; i < l._previous._a.length; i++ )
+        ref._nn.hoWeights[i][o] = l._w[o * l._previous._a.length + i];
       ref._nn.oBiases[o] = l._b[o];
     }
 
@@ -84,9 +87,7 @@ public class NeuralNetIrisTest extends TestUtil {
     ref.train(epochs, rate);
 
     // H2O
-    Trainer.Direct trainer = new Trainer.Direct(ls);
-    trainer._batches = epochs * (int) _train.numRows();
-    trainer._batch = 1;
+    Trainer.Direct trainer = new Trainer.Direct(ls, epochs, null);
     trainer.run();
 
     // Make sure outputs are equal
@@ -100,28 +101,30 @@ public class NeuralNetIrisTest extends TestUtil {
     // Make sure weights are equal
     l = ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
-      for( int i = 0; i < l._in._a.length; i++ ) {
+      for( int i = 0; i < l._previous._a.length; i++ ) {
         float a = ref._nn.ihWeights[i][o];
-        float b = l._w[o * l._in._a.length + i];
+        float b = l._w[o * l._previous._a.length + i];
         Assert.assertEquals(a, b, epsilon);
       }
     }
 
     // Make sure errors are equal
-    NeuralNet.Error train = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    NeuralNet.Errors train = NeuralNet.eval(ls, 0, null);
     data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
     labels = _test.vecs()[_test.vecs().length - 1];
-    input._vecs = data;
+    input.vecs = data;
     input._len = data[0].length();
-    ((VecSoftmax) ls[2])._vec = labels;
-    NeuralNet.Error test = NeuralNet.eval(ls, NeuralNet.EVAL_ROW_COUNT, null);
+    ((VecSoftmax) ls[2]).vec = labels;
+    NeuralNet.Errors test = NeuralNet.eval(ls, 0, null);
     float trainAcc = ref._nn.Accuracy(ref._trainData);
-    Assert.assertEquals(trainAcc, train.Value, epsilon);
+    Assert.assertEquals(trainAcc, train.classification, epsilon);
     float testAcc = ref._nn.Accuracy(ref._testData);
-    Assert.assertEquals(testAcc, test.Value, epsilon);
+    Assert.assertEquals(testAcc, test.classification, epsilon);
 
     Log.info("H2O and Reference equal, train: " + train + ", test: " + test);
 
+    for( int i = 0; i < ls.length; i++ )
+      ls[i].close();
     _train.remove();
     _test.remove();
   }

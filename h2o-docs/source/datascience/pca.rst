@@ -59,7 +59,7 @@ behaviors for further modeling.
 
    *Standard deviation.* This is the standard deviation of the component
    defined in that column. In the example shown below the standard
-   deviation of component PC0 is given as 2.6244. 
+   deviation of component PC0 is given as 2.5999. 
 
  **Prop Var**
 

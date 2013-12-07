@@ -36,9 +36,11 @@ public class Weaver {
   public static void registerPackage(String name) {
     synchronized( Weaver.class ) {
       String[] a = _packages;
-      String[] t = Arrays.copyOf(a, a.length + 1);
-      t[t.length-1] = name;
-      _packages = t;
+      if(Arrays.asList(a).indexOf(name) < 0) {
+        String[] t = Arrays.copyOf(a, a.length + 1);
+        t[t.length-1] = name;
+        _packages = t;
+      }
     }
   }
 
@@ -54,7 +56,7 @@ public class Weaver {
 
   // See if javaassist can find this class; if so then check to see if it is a
   // subclass of water.DTask, and if so - alter the class before returning it.
-  public synchronized CtClass javassistLoadClass(String name) {
+  private synchronized CtClass javassistLoadClass(String name) {
     try {
       if( name.equals("water.Boot") ) return null;
       CtClass cc = _pool.get(name); // Full Name Lookup
@@ -64,6 +66,7 @@ public class Weaver {
       for( CtClass base : _serBases )
         if( cc.subclassOf(base) )
           return javassistLoadClass(cc);
+
       return cc;
     } catch( NotFoundException nfe ) {
       return null;              // Not found?  Use the normal loader then
@@ -81,7 +84,7 @@ public class Weaver {
     return false;
   }
 
-  public synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException {
+  private synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException {
     if( cc.isFrozen() ) return cc;
     // serialize parent
     javassistLoadClass(cc.getSuperclass());
@@ -133,7 +136,7 @@ public class Weaver {
         // Eclipse apparently stores this in a different place.
         field = cc.getField("ENUM$VALUES");
       }
-      String body = "static "+cc.getName()+" raw_enum(int i) { return i==255?null:"+field.getName()+"[i]; } ";
+      String body = "public static "+cc.getName()+" raw_enum(int i) { return i==255?null:"+field.getName()+"[i]; } ";
       try {
         cc.addMethod(CtNewMethod.make(body,cc));
       } catch( CannotCompileException ce ) {
@@ -237,7 +240,7 @@ public class Weaver {
     // ---
 
     // Auto-gen JSON & Args doc method.  Requires a structured java object.
-    // Every non-transient field is ALSO either a JSON field or an Argument
+    // Every @API annotated field is either a JSON field, an Argument, or both.
     // field, and has some associated fields.
     //
     //     H2OHexKey someField2; // Anything derived from RequestArguments$Argument
@@ -269,15 +272,14 @@ public class Weaver {
     for(CtClass c : classes) {
       for( CtField ctf : c.getDeclaredFields() ) {
         int mods = ctf.getModifiers();
-        if( javassist.Modifier.isTransient(mods) || javassist.Modifier.isStatic(mods) ) {
+        if( javassist.Modifier.isStatic(mods) ) {
           if( c == cc ) {     // Capture the DOC_* fields for self only
             if( ctf.getName().equals("DOC_FIELDS") ) fielddoc = ctf;
             if( ctf.getName().equals("DOC_GET") ) getdoc = ctf;
           }
-          continue;  // Only auto-doc not-transient instance fields (not static)
+          continue;  // Only auto-doc instance fields (not static)
         }
-        // This field needs documentation. Get the required API annotation.
-        first = addFieldWeave(sb,ctf,cc,first);
+        first = addDocIfAPI(sb,ctf,cc,first);
       }
     }
 
@@ -293,27 +295,26 @@ public class Weaver {
       cc.addMethod(CtNewMethod.make("  public String toDocGET() { return DOC_GET; }",cc));
   }
 
-  private boolean addFieldWeave( StringBuilder sb, CtField ctf, CtClass cc, boolean first ) throws NotFoundException, CannotCompileException {
-    // This field needs documentation.  Get the required API annotation.
+  private boolean addDocIfAPI( StringBuilder sb, CtField ctf, CtClass cc, boolean first ) throws NotFoundException, CannotCompileException {
     String name = ctf.getName();
     Object[] as;
     try { as = ctf.getAnnotations(); }
     catch( ClassNotFoundException ex) { throw new NotFoundException("getAnnotations throws ", ex); }
     API api = null;
     for(Object o : as) if(o instanceof API)  api = (API) o;
-    if( api == null ) throw new CannotCompileException("Class "+cc.getName()+" has non-transient field '"+name+"' without an API annotation");
+    if( api != null ) {
+      String help = api.help();
+      int min = api.since();
+      int max = api.until();
+      if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but 'since' < 1 or 'since' > 1000000");
+      if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
+        throw new CannotCompileException("Found field '"+name+"' but 'until' < "+min+" or 'until' > 1000000");
 
-    String help = api.help();
-    int min = api.since();
-    int max = api.until();
-    if( min < 1 || min > 1000000 ) throw new CannotCompileException("Found field '"+name+"' but 'since' < 1 or 'since' > 1000000");
-    if( max < min || (max > 1000000 && max != Integer.MAX_VALUE) )
-      throw new CannotCompileException("Found field '"+name+"' but 'until' < "+min+" or 'until' > 1000000");
-
-    if( first ) first = false;
-    else sb.append(",");
-    boolean input = isInput(ctf.getType(), api);
-    sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class,"+input+","+api.required()+")");
+      if( first ) first = false;
+      else sb.append(",");
+      boolean input = isInput(ctf.getType(), api);
+      sb.append("new water.api.DocGen$FieldDoc(\""+name+"\",\""+help+"\","+min+","+max+","+ctf.getType().getName()+".class,"+input+","+api.required()+")");
+    }
     return first;
   }
 
