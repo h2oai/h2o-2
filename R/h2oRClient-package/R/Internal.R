@@ -99,6 +99,7 @@ h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
 h2o.__PAGE_GLM2 = "2/GLM2.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
+h2o.__PAGE_GLM2GridView = "2/GLMGridView.json"
 h2o.__PAGE_KMEANS2 = "2/KMeans2.json"
 h2o.__PAGE_KMModelView = "2/KMeans2ModelView.json"
 h2o.__PAGE_NN = "2/NeuralNet.json"
@@ -278,32 +279,32 @@ h2o.__exec2_dest_key <- function(client, expr, destKey) {
 
 h2o.__unop2 <- function(op, x) {
   if(missing(x)) stop("Must specify data set")
-  if(!(class(x) %in% c("H2OLogicalData","H2OParsedData"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(!(class(x) %in% c("H2OParsedData","H2OParsedDataVA"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
     
   expr = paste(op, "(", x@key, ")", sep = "")
   res = h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData", h2o=x@h2o, key=res$dest_key)
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
   else
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
 }
 
 h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData" || class(x) == "H2OLogicalData", x@key, x)
-  RHS = ifelse(class(y) == "H2OParsedData" || class(y) == "H2OLogicalData", y@key, y)
+  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
   expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData" || class(x) == "H2OLogicalData") myClient = x@h2o
+  if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData", h2o=myClient, key=res$dest_key)
+    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
   else
-    new("H2OParsedData", h2o=myClient, key=res$dest_key)
+    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=FALSE)
 }

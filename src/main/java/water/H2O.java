@@ -688,7 +688,13 @@ public final class H2O {
     public H2OCallback(){this(null);}
     public H2OCallback(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){callback((T)caller);}
+    @Override public void onCompletion(CountedCompleter caller){
+      try {
+        callback((T)caller);
+      } catch(Throwable ex){
+        completeExceptionally(ex);
+      }
+    }
     public abstract void callback(T t);
   }
 

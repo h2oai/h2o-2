@@ -102,6 +102,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @API(help="Beta vector containing normalized coefficients (coefficients obtained on normalized data).") double []  norm_beta;
 
     final int rank;
+
+    @API(help="Indexes to the coefficient_names array containing names (and order) of the non-zero coefficients in this model.")
     final int [] idxs;
 
     public Submodel(double [] beta, double [] norm_beta, long run_time, int iteration){

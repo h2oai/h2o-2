@@ -82,18 +82,20 @@ public class NeuralNetMnist extends Job {
           timer.cancel();
         else {
           double time = (System.nanoTime() - start) / 1e9;
-          long samples = trainer.processed();
-          int ps = (int) (samples / time);
-          String text = (int) time + "s, " + samples + " samples (" + (ps) + "/s) ";
+          long processed = trainer.processed();
+          int ps = (int) (processed / time);
+          String text = (int) time + "s, " + processed + " samples (" + (ps) + "/s) ";
 
           // Build separate nets for scoring purposes, use same normalization stats as for training
           Layer[] temp = build(train, trainLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
           Layer.shareWeights(ls, temp);
+          // Estimate training error on subset of dataset for speed
           Errors e = NeuralNet.eval(temp, 1000, null);
           text += "train: " + e;
-          text += ", rates: ";
-          for( int i = 1; i < ls.length; i++ )
-            text += String.format("%.3g", ls[i].rate(samples)) + ", ";
+          text += ", rate: ";
+          text += String.format("%.5g", ls[0].rate(processed)) + ", ";
+          text += ", momentum: ";
+          text += String.format("%.5g", ls[0].momentum(processed)) + ", ";
           System.out.println(text);
           if( (evals.incrementAndGet() % 8) == 0 ) {
             temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);

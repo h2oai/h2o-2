@@ -371,7 +371,7 @@ public class GLMModelView extends Request2 {
   private static void parm( StringBuilder sb, String x, Object... y ) {
     sb.append("<span><b>").append(x).append(": </b>").append(y[0]).append("</span> ");
   }
-  private static final DecimalFormat DFORMAT = new DecimalFormat("###.####");
+  private static final DecimalFormat DFORMAT = new DecimalFormat("###.###");
   private static final DecimalFormat DFORMAT2 = new DecimalFormat("0.##E0");
 
   private void coefs2html(final Submodel sm,StringBuilder sb){

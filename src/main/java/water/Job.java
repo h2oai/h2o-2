@@ -20,6 +20,11 @@ import water.util.Utils.ExpectedExceptionForDebug;
 public class Job extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+  public Job(Key jobKey, Key dstKey){
+   job_key = jobKey;
+   destination_key = dstKey;
+  }
   public static class JobCancelledException extends RuntimeException {
     public JobCancelledException(){super("job was cancelled!");}
     public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
@@ -308,12 +313,7 @@ public class Job extends Request2 {
   }
 
   public Job start(final H2OCountedCompleter fjtask) {
-    // Subtle FJ stuff: we create another counted completer and set it as completer of the user's task.
-    // This is to ensure that if anyone calls this.get() it will block until all completion methods
-    // (if there are any) of the _fjtask completed. Common case is that the user's FJtask has
-    // on(Exceptionl)Completion method removing the job. Calling get() directly on it opens up a race when the
-    // get() may return before the onCompletion ran and the job might not have been removed yet.
-    fjtask.setCompleter(_fjtask = new H2OEmptyCompleter());
+    _fjtask = fjtask;
     Futures fs = new Futures();
     DKV.put(job_key, new Value(job_key, new byte[0]),fs);
     start_time = System.currentTimeMillis();

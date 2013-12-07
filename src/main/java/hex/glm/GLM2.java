@@ -18,17 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCallback;
-import water.H2O.H2OCountedCompleter;
-import water.H2O.JobCompleter;
+import water.H2O.*;
 import water.Job.ModelJob;
 import water.api.DocGen;
-import water.api.Request.API;
-import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Utils;
 import water.util.RString;
+import water.util.Utils;
 
 public class GLM2 extends ModelJob {
 //  private transient GLM2 [] _subjobs;
@@ -71,6 +67,11 @@ public class GLM2 extends ModelJob {
   @API(help = "beta_eps", filter = Default.class)
   double beta_epsilon = DEFAULT_BETA_EPS;
   int _lambdaIdx = 0;
+
+  @Override public Key defaultDestKey(){
+    return null;
+  }
+  @Override public Key defaultJobKey() {return null;}
 
   public GLM2() {}
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda){
@@ -118,18 +119,15 @@ public class GLM2 extends ModelJob {
     return rs.toString();
   }
 
-  public static Job gridSearch(Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds){
-    return gridSearch(destinationKey, dinfo, glm, lambda, alpha,nfolds,DEFAULT_BETA_EPS);
+  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds){
+    return gridSearch(jobKey, destinationKey, dinfo, glm, lambda, alpha,nfolds,DEFAULT_BETA_EPS);
   }
-  public static Job gridSearch(Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds, double betaEpsilon){
-    return new GLMGridSearch(4, destinationKey,dinfo,glm,lambda,alpha, nfolds,betaEpsilon).fork();
+  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds, double betaEpsilon){
+    return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm,lambda,alpha, nfolds,betaEpsilon).fork();
   }
 
   @Override protected Response serve() {
     init();
-    if(this.destination_key == null){
-      this.destination_key = Key.make("GLM<"+ family + ">(" + SOURCE_KEY.toString() + ")" + Key.make().toString());
-    }
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
     Frame fr = new Frame(source._names.clone(),source.vecs().clone());
@@ -151,10 +149,14 @@ public class GLM2 extends ModelJob {
     _dinfo = new DataInfo(fr, 1, standardize);
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
-      Job j = gridSearch(destination_key, _dinfo, _glm, lambda, alpha,n_folds);
+      if(destination_key == null)destination_key = Key.make("GLMGridModel_"+Key.make());
+      if(job_key == null)job_key = Key.make("GLMGridJob_"+Key.make());
+      Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda, alpha,n_folds);
       return GLMGridView.redirect(this,j.destination_key);
     } else {
-      start(null);
+      if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
+      if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());
+      fork();
       return GLMProgressPage2.redirect(this, self(),dest());
     }
   }
@@ -187,65 +189,58 @@ public class GLM2 extends ModelJob {
 
     @Override public Iteration clone(){return new Iteration(_model,_solver,_dinfo,_fjt);}
     @Override public void callback(final GLMIterationTask glmt) {
-      try {
-//        System.out.println(glmt._gram);
-//        System.out.println(Utils.pprint(glmt._gram.getXX()));
-//        System.out.println(Utils.pprint(new double[][]{glmt._xy}));
-        if(!cancelled()){
-          double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
-          double [] newBetaDeNorm = null;
-          _solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
-          final boolean diverged = Utils.hasNaNsOrInfs(newBeta);
-          if(diverged)
-            newBeta = glmt._beta == null?newBeta:glmt._beta;
-          if(_dinfo._standardize){
-            newBetaDeNorm = newBeta.clone();
-            double norm = 0.0;        // Reverse any normalization on the intercept
-            // denormalize only the numeric coefs (categoricals are not normalized)
-            final int numoff = newBeta.length - _dinfo._nums - 1;
-            for( int i=numoff; i< newBeta.length-1; i++ ) {
-              double b = newBetaDeNorm[i]*_dinfo._normMul[i-numoff];
-              norm += b*_dinfo._normSub[i-numoff]; // Also accumulate the intercept adjustment
-              newBetaDeNorm[i] = b;
-            }
-            newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
+      if(!cancelled()){
+        double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
+        double [] newBetaDeNorm = null;
+        _solver.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+        final boolean diverged = Utils.hasNaNsOrInfs(newBeta);
+        if(diverged)
+          newBeta = glmt._beta == null?newBeta:glmt._beta;
+        if(_dinfo._standardize) {
+          newBetaDeNorm = newBeta.clone();
+          double norm = 0.0;        // Reverse any normalization on the intercept
+          // denormalize only the numeric coefs (categoricals are not normalized)
+          final int numoff = newBeta.length - _dinfo._nums - 1;
+          for( int i=numoff; i< newBeta.length-1; i++ ) {
+            double b = newBetaDeNorm[i]*_dinfo._normMul[i-numoff];
+            norm += b*_dinfo._normSub[i-numoff]; // Also accumulate the intercept adjustment
+            newBetaDeNorm[i] = b;
           }
-          boolean done = false;
-          _model = _oldModel.clone();
-          done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || cancelled();
-          _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, glmt._iter+1);
-          if(done){
-            H2OCallback fin = new H2OCallback<GLMValidationTask>() {
-              @Override public void callback(GLMValidationTask tsk) {
-                if(!diverged && (tsk._improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
-                  _oldModel = _model;
-                  _solver = new ADMMSolver(lambda[++_lambdaIdx],alpha[0]);
-                  glmt._val = null;
-                  Iteration.this.callback(glmt);
-                } else    // nope, we're done
-                  _fjt.tryComplete(); // signal we're done to anyone waiting for the job
-              }
-              @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-                _fjt.completeExceptionally(ex);
-                return true;
-              }
-            };
-            if(GLM2.this.n_folds >= 2) xvalidate(_model, _lambdaIdx, fin);
-            else  new GLMValidationTask(_model,_lambdaIdx,fin).dfork(_dinfo._adaptedFrame);
-          } else {
-            if(glmt._val != null){
-              glmt._val.finalize_AIC_AUC();
-              _oldModel.setValidation(_lambdaIdx,glmt._val).store();
+          newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
+        }
+        boolean done = false;
+        _model = _oldModel.clone();
+        done = done || _glm.family == Family.gaussian || (glmt._iter+1) == max_iter || beta_diff(glmt._beta, newBeta) < beta_epsilon || cancelled();
+        _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, glmt._iter+1);
+        if(done){
+          H2OCallback fin = new H2OCallback<GLMValidationTask>() {
+            @Override public void callback(GLMValidationTask tsk) {
+              if(!diverged && (tsk._improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
+                _oldModel = _model;
+                _solver = new ADMMSolver(lambda[++_lambdaIdx],alpha[0]);
+                glmt._val = null;
+                Iteration.this.callback(glmt);
+              } else    // nope, we're done
+                _fjt.tryComplete(); // signal we're done to anyone waiting for the job
             }
-            int iter = glmt._iter+1;
-            GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,iter,glmt._ymu,glmt._reg);
-            nextIter.setCompleter(new Iteration(_model, _solver, _dinfo, _fjt)); // we need to clone here as FJT will set status to done after this method
-            nextIter.dfork(_dinfo._adaptedFrame);
+            @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
+              _fjt.completeExceptionally(ex);
+              return true;
+            }
+          };
+          if(GLM2.this.n_folds >= 2) xvalidate(_model, _lambdaIdx, fin);
+          else  new GLMValidationTask(_model,_lambdaIdx,fin).dfork(_dinfo._adaptedFrame);
+        } else {
+          if(glmt._val != null){
+            glmt._val.finalize_AIC_AUC();
+            _oldModel.setValidation(_lambdaIdx,glmt._val).store();
           }
-        } else throw new JobCancelledException();
-      } catch(Throwable ex){
-        _fjt.completeExceptionally(ex);
-      }
+          int iter = glmt._iter+1;
+          GLMIterationTask nextIter = new GLMIterationTask(GLM2.this, _dinfo,glmt._glm, case_mode, case_val, newBeta,iter,glmt._ymu,glmt._reg);
+          nextIter.setCompleter(new Iteration(_model, _solver, _dinfo, _fjt)); // we need to clone here as FJT will set status to done after this method
+          nextIter.dfork(_dinfo._adaptedFrame);
+        }
+      } else throw new JobCancelledException();
     }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       _fjt.completeExceptionally(ex);
@@ -254,13 +249,18 @@ public class GLM2 extends ModelJob {
   }
 
   @Override
-  public Job start(final H2OCountedCompleter completer){
-    final H2OCountedCompleter fjt = new JobCompleter(this,completer);
-    super.start(fjt);
-    run(fjt);
+  public GLM2 fork(){
+    start(new JobCompleter(this));
+    run();
     return this;
   }
-  public void run(final H2OCountedCompleter completer){
+  // start inside of parent job
+  public void run(final H2OCountedCompleter fjt){
+    assert GLM2.this._fjtask == null;
+    GLM2.this._fjtask = fjt;
+    run();
+  }
+  public void run(){
     assert alpha.length == 1;
     UKV.remove(dest());
     new YMUTask(this, _dinfo, case_mode, case_val, new H2OCallback<YMUTask>() {
@@ -288,7 +288,7 @@ public class GLM2 extends ModelJob {
             solver._proximalPenalty = _proximalPenalty;
             solver._wgiven = _wgiven;
             GLMModel model = new GLMModel(dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
-            firstIter.setCompleter(new Iteration(model,solver,_dinfo,completer));
+            firstIter.setCompleter(new Iteration(model,solver,_dinfo,GLM2.this._fjtask));
             firstIter.dfork(_dinfo._adaptedFrame);
           }
           @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
@@ -303,9 +303,6 @@ public class GLM2 extends ModelJob {
       }
     }).dfork(_dinfo._adaptedFrame);
   }
-
-  @Override
-  public Job fork(){start(null); return this;}
 
   private void xvalidate(final GLMModel model, int lambdaIxd,final H2OCountedCompleter cmp){
     final Key [] keys = new Key[n_folds];
@@ -384,7 +381,9 @@ public class GLM2 extends ModelJob {
     transient private AtomicInteger _idx;
 
     public final GLM2 [] _jobs;
-    public GLMGridSearch(int maxP, Key dstKey, DataInfo dinfo, GLMParams glm, double [] lambdas, double [] alphas, int nfolds, double betaEpsilon){
+    public GLMGridSearch(int maxP, Key jobKey, Key dstKey, DataInfo dinfo, GLMParams glm, double [] lambdas, double [] alphas, int nfolds, double betaEpsilon){
+      super(jobKey, dstKey);
+      description = "GLM Grid with params " + glm.toString() + "on data " + dinfo.toString() ;
       _maxParallelism = maxP;
       _jobs = new GLM2[alphas.length];
       _idx = new AtomicInteger(_maxParallelism);

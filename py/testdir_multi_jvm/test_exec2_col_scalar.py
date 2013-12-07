@@ -3,35 +3,41 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 zeroList = [
-        'ScalarRes0 = 0',
-        'ScalarRes1 = 0',
-        'ScalarRes2 = 0',
-        'ScalarRes3 = 0',
+        'ScalarRes0 = c(0)',
+        'ScalarRes1 = c(0)',
+        'ScalarRes2 = c(0)',
+        'ScalarRes3 = c(0)',
         # FIX! how can this work? no size specified??, so scalar?
-        'ColumnRes0 = 0',
-        'ColumnRes1 = 0',
-        'ColumnRes2 = 0',
-        'ColumnRes3 = 0',
-]
+        'ColumnRes0 = c(0)',
+        'ColumnRes1 = c(0)',
+        'ColumnRes2 = c(0)',
+        'ColumnRes3 = c(0)',
+        ]
 
 # 'randomBitVector'
 # 'randomFilter'
 # 'log"
 # 'makeEnum'
 # bug?
-# ['ScalarRes<n> = slice(<keyX>[<col1>],<row>)',
-# ['MatrixRes<n> = colSwap(<keyX>,<col1>,(<keyX>[2]==0 ? 54321 : 54321))',
+# 'MatrixRes<n> = slice(<keyX>[<col1>],<row>)',
+# 'MatrixRes<n> = colSwap(<keyX>,<col1>,(<keyX>[2]==0 ? 54321 : 54321))',
 exprList = [
-        'ColumnRes<n> = <keyX>[<col1>]',
-        'ColumnRes<n> = <keyX>[<col1>] + ColumnRes<n-1>',
-        'ColumnRes<n> = <keyX>[<col1>] + ColumnRes0',
-        'ColumnRes<n> = <keyX>[<col1>] + ColumnRes1',
-        'ColumnRes<n> = <keyX>[<col1>] + ColumnRes2',
-        'ColumnRes<n> = <keyX>[<col1>] + ColumnRes3',
-        'ScalarRes<n> = min(<keyX>[<col1>])',
-        'ScalarRes<n> = max(<keyX>[<col1>]) + ScalarRes<n-1>',
-        'ScalarRes<n> = mean(<keyX>[<col1>]) + ScalarRes<n-1>',
-        'ScalarRes0 = sum(<keyX>[<col1>]) + ScalarRes0',
+        'ColumnRes<n> = <keyX>[,<col1>] + ColumnRes0',
+        'ColumnRes<n> = <keyX>[,<col1>] + ColumnRes1',
+        'ColumnRes<n> = <keyX>[,<col1>] + ColumnRes2',
+        'ColumnRes<n> = <keyX>[,<col1>] + ColumnRes3',
+        'ScalarRes<n> = min(<keyX>[,<col1>]) + ScalarRes0',
+        'ScalarRes<n> = min(<keyX>[,<col1>]) + ScalarRes1',
+        'ScalarRes<n> = min(<keyX>[,<col1>]) + ScalarRes2',
+        'ScalarRes<n> = min(<keyX>[,<col1>]) + ScalarRes3',
+        'ColumnRes<n> = <keyX>[,<col1>] + ColumnRes<n-1>',
+        'ColumnRes<n> = <keyX>[,<col1>] + ColumnRes<n-1>',
+        'ColumnRes<n> = <keyX>[,<col1>] + ColumnRes<n-1>',
+        'ColumnRes<n> = <keyX>[,<col1>] + ColumnRes<n-1>',
+        'ScalarRes<n> = min(<keyX>[,<col1>]) + ScalarRes<n-1>',
+        'ScalarRes<n> = min(<keyX>[,<col1>]) + ScalarRes<n-1>',
+        'ScalarRes<n> = min(<keyX>[,<col1>]) + ScalarRes<n-1>',
+        'ScalarRes<n> = min(<keyX>[,<col1>]) + ScalarRes<n-1>',
     ]
 
 class Basic(unittest.TestCase):
@@ -54,14 +60,14 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_exec_import_hosts(self):
+    def test_exec2_col_scalar(self):
+        h2o.beta_features = True
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         if localhost:
             maxTrials = 200
             csvFilenameAll = [
                 ("covtype.data", "cA", 15),
-                ("covtype.data", "cB", 15),
             ]
         else:
             maxTrials = 20
@@ -75,14 +81,14 @@ class Basic(unittest.TestCase):
         ## h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
         importFolderPath = "standard"
+
         for (csvFilename, hex_key, timeoutSecs) in csvFilenameList:
-            # import each time, because h2o deletes source file after parse
+            SEEDPERFILE = random.randint(0, sys.maxint)
             # creates csvFilename.hex from file in importFolder dir 
             csvPathname = importFolderPath + "/" + csvFilename
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
                 hex_key=hex_key, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseResult['response']['time']
-            print "Parse result['Key']:", parseResult['destination_key']
+            print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvFilename
