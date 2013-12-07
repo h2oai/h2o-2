@@ -83,14 +83,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     foundIt = f
                     break
 
-            if foundIt:
-                value_size_bytes = f['value_size_bytes']
-            else:
+            if not foundIt:
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
-
-            # no pattern matching, so no multiple files to add up
-            totalBytes = value_size_bytes
-
 
             print "Loading", csvFilename, 'from hdfs'
             start = time.time()
@@ -101,9 +95,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "parse result:", parseResult['destination_key']
 
             elapsed = time.time() - start
-            fileMBS = (totalBytes/1e6)/elapsed
-            l = '{!s} jvms, {!s}GB heap, {:s} {:s} {:6.2f}MB {:6.2f} MB/sec for {:.2f} secs'.format(
-                len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, (totalBytes+0.0)/1e6, fileMBS, elapsed)
+            l = '{!s} jvms, {!s}GB heap, {:s} {:s} for {:.2f} secs'.format(
+                len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, elapsed)
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 

@@ -242,7 +242,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     if h2o.beta_features:
         # 'beta' has to use 'idxs' to index into these names
-        coefficient_names = GLMModel['coefficient_names']
+        coefficients_names = GLMModel['coefficients_names']
         idxs = GLMModel['idxs']
         for i in idxs:
             column_names = coefficient_names[i]

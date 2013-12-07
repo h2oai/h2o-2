@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_manyfiles_train_test(self):
+    def test_GBM_manyfiles_multijob(self):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
