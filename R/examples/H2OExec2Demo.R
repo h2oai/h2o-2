@@ -1,5 +1,4 @@
 library(h2o)
-h2o.installDepPkgs()
 myIP = "127.0.0.1"; myPort = 54321
 localH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
 
@@ -11,6 +10,10 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 summary(prostate.hex)
 head(prostate.hex)
 tail(prostate.hex)
+
+# Convert Race column to a factor variable
+prostate.hex$RACE = as.factor(prostate.hex$RACE)
+summary(prostate.hex)
 
 # Display count of a column's levels
 race.count = h2o.table(prostate.hex$RACE)    # Note: Currently only works on a single integer/factor column

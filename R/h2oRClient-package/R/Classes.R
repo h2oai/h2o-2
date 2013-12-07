@@ -394,7 +394,6 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
 })
 
 h2o.table <- function(x) { h2o.__unop2("table", x) }
-h2o.factor <- function(x) { h2o.__unop2("factor", x) }
 h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
@@ -478,6 +477,8 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
   x.df
 })
+
+setMethod("as.factor", "H2OParsedData", function(x) { h2o.__unop2("factor", x) })
 
 setMethod("is.factor", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)

@@ -1,6 +1,5 @@
 # Initialize H2O and check/install correct version of H2O R package
 library(h2o)
-h2o.installDepPkgs(optional = FALSE)
 localH2O = h2o.init(ip = "127.0.0.1", port = 54321)
 # localH2O = new("H2OClient", ip = "127.0.0.1", port = 54321)
 
