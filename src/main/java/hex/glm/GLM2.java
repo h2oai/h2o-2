@@ -18,17 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.H2OCallback;
-import water.H2O.H2OCountedCompleter;
-import water.H2O.JobCompleter;
+import water.H2O.*;
 import water.Job.ModelJob;
 import water.api.DocGen;
-import water.api.Request.API;
-import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Utils;
 import water.util.RString;
+import water.util.Utils;
 
 public class GLM2 extends ModelJob {
 //  private transient GLM2 [] _subjobs;
@@ -71,6 +67,11 @@ public class GLM2 extends ModelJob {
   @API(help = "beta_eps", filter = Default.class)
   double beta_epsilon = DEFAULT_BETA_EPS;
   int _lambdaIdx = 0;
+
+  @Override public Key defaultDestKey(){
+    return null;
+  }
+  @Override public Key defaultJobKey() {return null;}
 
   public GLM2() {}
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda){
@@ -118,18 +119,15 @@ public class GLM2 extends ModelJob {
     return rs.toString();
   }
 
-  public static Job gridSearch(Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds){
-    return gridSearch(destinationKey, dinfo, glm, lambda, alpha,nfolds,DEFAULT_BETA_EPS);
+  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds){
+    return gridSearch(jobKey, destinationKey, dinfo, glm, lambda, alpha,nfolds,DEFAULT_BETA_EPS);
   }
-  public static Job gridSearch(Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds, double betaEpsilon){
-    return new GLMGridSearch(4, destinationKey,dinfo,glm,lambda,alpha, nfolds,betaEpsilon).fork();
+  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds, double betaEpsilon){
+    return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm,lambda,alpha, nfolds,betaEpsilon).fork();
   }
 
   @Override protected Response serve() {
     init();
-    if(this.destination_key == null){
-      this.destination_key = Key.make("GLM<"+ family + ">(" + SOURCE_KEY.toString() + ")" + Key.make().toString());
-    }
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
     Frame fr = new Frame(source._names.clone(),source.vecs().clone());
@@ -151,10 +149,14 @@ public class GLM2 extends ModelJob {
     _dinfo = new DataInfo(fr, 1, standardize);
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
-      Job j = gridSearch(destination_key, _dinfo, _glm, lambda, alpha,n_folds);
+      if(destination_key == null)destination_key = Key.make("GLMGridModel_"+Key.make());
+      if(job_key == null)job_key = Key.make("GLMGridJob_"+Key.make());
+      Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda, alpha,n_folds);
       return GLMGridView.redirect(this,j.destination_key);
     } else {
-      start(null);
+      if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
+      if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());
+      fork();
       return GLMProgressPage2.redirect(this, self(),dest());
     }
   }
@@ -246,8 +248,9 @@ public class GLM2 extends ModelJob {
     }
   }
 
-  @Override public GLM2 start(H2OCountedCompleter fjt){
-    super.start(fjt);
+  @Override
+  public GLM2 fork(){
+    start(new JobCompleter(this));
     run();
     return this;
   }
@@ -300,9 +303,6 @@ public class GLM2 extends ModelJob {
       }
     }).dfork(_dinfo._adaptedFrame);
   }
-
-  @Override
-  public Job fork(){start(null); return this;}
 
   private void xvalidate(final GLMModel model, int lambdaIxd,final H2OCountedCompleter cmp){
     final Key [] keys = new Key[n_folds];
@@ -381,7 +381,9 @@ public class GLM2 extends ModelJob {
     transient private AtomicInteger _idx;
 
     public final GLM2 [] _jobs;
-    public GLMGridSearch(int maxP, Key dstKey, DataInfo dinfo, GLMParams glm, double [] lambdas, double [] alphas, int nfolds, double betaEpsilon){
+    public GLMGridSearch(int maxP, Key jobKey, Key dstKey, DataInfo dinfo, GLMParams glm, double [] lambdas, double [] alphas, int nfolds, double betaEpsilon){
+      super(jobKey, dstKey);
+      description = "GLM Grid with params " + glm.toString() + "on data " + dinfo.toString() ;
       _maxParallelism = maxP;
       _jobs = new GLM2[alphas.length];
       _idx = new AtomicInteger(_maxParallelism);

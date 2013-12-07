@@ -137,6 +137,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       }
       _adaptedFrame = new Frame(names,vecs2);
     }
+    public String toString(){
+      return "";
+    }
     public DataInfo getFold(int foldId, int nfolds){
       return new DataInfo(this, foldId, nfolds);
     }

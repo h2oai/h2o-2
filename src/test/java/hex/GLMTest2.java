@@ -60,7 +60,7 @@ public class GLMTest2  extends TestUtil {
      Frame fr = ParseDataset2.parse(parsed, new Key[]{raw});
      DataInfo dinfo = new DataInfo(fr, 1, false);
      GLMParams glm = new GLMParams(Family.poisson);
-     new GLM2("GLM test of poisson regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).start(null).get();
+     new GLM2("GLM test of poisson regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
      model = DKV.get(modelKey).get();
      for(double c:model.beta())assertEquals(Math.log(2),c,1e-4);
      // Test 2, example from http://www.biostat.umn.edu/~dipankar/bmtry711.11/lecture_13.pdf
@@ -71,7 +71,7 @@ public class GLMTest2  extends TestUtil {
      FVecTest.makeByteVec(raw, "x,y\n1,0\n2,1\n3,2\n4,3\n5,1\n6,4\n7,9\n8,18\n9,23\n10,31\n11,20\n12,25\n13,37\n14,45\n");
      fr = ParseDataset2.parse(parsed, new Key[]{raw});
      dinfo = new DataInfo(fr, 1, false);
-     new GLM2("GLM test of poisson regression(2).",Key.make(),modelKey,dinfo,glm,new double[]{0},0).start(null).get();
+     new GLM2("GLM test of poisson regression(2).",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
      model = DKV.get(modelKey).get();
      assertEquals(0.3396,model.beta()[1],1e-4);
      assertEquals(0.2565,model.beta()[0],1e-4);
@@ -103,7 +103,7 @@ public class GLMTest2  extends TestUtil {
       //public GLM2(String desc, Key dest, Frame src, Family family, Link link, double alpha, double lambda) {
       DataInfo dinfo = new DataInfo(fr, 1, false);
       GLMParams glm = new GLMParams(Family.gamma);
-      new GLM2("GLM test of gamma regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).start(null).get();
+      new GLM2("GLM test of gamma regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
       model = DKV.get(modelKey).get();
       for(double c:model.beta())assertEquals(1.0, c,1e-4);
     }finally{
@@ -130,7 +130,7 @@ public class GLMTest2  extends TestUtil {
         DataInfo dinfo = new DataInfo(fr, 1, false);
         GLMParams glm = new GLMParams(Family.tweedie,powers[i]);
 
-        new GLM2("GLM test of gaussian(linear) regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).start(null).get();
+        new GLM2("GLM test of gaussian(linear) regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
         model = DKV.get(modelKey).get();
         HashMap<String, Double> coefs = model.coefficients();
         assertEquals(intercepts[i],coefs.get("Intercept"),1e-3);
@@ -163,7 +163,7 @@ public class GLMTest2  extends TestUtil {
       Frame fr = getFrameForFile(parsed, "smalldata/cars.csv", ignores, response);
       DataInfo dinfo = new DataInfo(fr, 1, true);
       GLMParams glm = new GLMParams(Family.poisson,0,Family.poisson.defaultLink,0);
-      new GLM2("GLM test on cars.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).start(null).get();
+      new GLM2("GLM test on cars.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
       model = DKV.get(modelKey).get();
       HashMap<String,Double> coefs = model.coefficients();
       String [] cfs1 = new String[]{"Intercept","economy (mpg)", "cylinders", "displacement (cc)", "weight (lb)", "0-60 mph (s)", "year"};
@@ -175,7 +175,7 @@ public class GLMTest2  extends TestUtil {
       model.delete();
       dinfo = new DataInfo(fr, 1, true);
       glm = new GLMParams(Family.gamma,0,Family.gamma.defaultLink,0);
-      new GLM2("GLM test on cars.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).start(null).get();
+      new GLM2("GLM test on cars.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
       model = DKV.get(modelKey).get();
       coefs = model.coefficients();
       for(int i = 0; i < cfs1.length; ++i)
@@ -185,7 +185,7 @@ public class GLMTest2  extends TestUtil {
       double [] vls3 = new double []{166.95862,-0.00531,-2.46690,0.12635,0.02159,-4.66995,-0.85724};
       glm = new GLMParams(Family.gaussian);
       dinfo = new DataInfo(fr, 1, true);
-      new GLM2("GLM test on cars.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).start(null).get();
+      new GLM2("GLM test on cars.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
       model = DKV.get(modelKey).get();
       coefs = model.coefficients();
       for(int i = 0; i < cfs1.length; ++i)
@@ -221,7 +221,7 @@ public class GLMTest2  extends TestUtil {
       DataInfo dinfo = new DataInfo(fr, 1, false);
       GLMParams glm = new GLMParams(Family.binomial);
 
-      new GLM2("GLM test on prostate.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).start(null).get();
+      new GLM2("GLM test on prostate.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
 
       model = DKV.get(modelKey).get();
       HashMap<String, Double> coefs = model.coefficients();
