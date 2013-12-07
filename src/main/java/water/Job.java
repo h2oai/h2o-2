@@ -9,6 +9,7 @@ import java.util.Arrays;
 
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
+import water.H2O.JobCompleter;
 import water.api.*;
 import water.api.Request.Validator.NOPValidator;
 import water.api.RequestServer.API_VERSION;
@@ -313,7 +314,7 @@ public class Job extends Request2 {
     // (if there are any) of the _fjtask completed. Common case is that the user's FJtask has
     // on(Exceptionl)Completion method removing the job. Calling get() directly on it opens up a race when the
     // get() may return before the onCompletion ran and the job might not have been removed yet.
-    fjtask.setCompleter(_fjtask = new H2OEmptyCompleter());
+    _fjtask = new JobCompleter(this,fjtask);
     Futures fs = new Futures();
     DKV.put(job_key, new Value(job_key, new byte[0]),fs);
     start_time = System.currentTimeMillis();
