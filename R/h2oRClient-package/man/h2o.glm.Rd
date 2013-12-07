@@ -80,7 +80,6 @@ The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, 
 + promptUpgrade = FALSE)
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS

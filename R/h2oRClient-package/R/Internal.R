@@ -217,7 +217,7 @@ h2o.__uniqID <- function(prefix = "") {
       paste(sample(hex_digits, 8, replace=TRUE), collapse='', sep=''),
       paste(sample(hex_digits, 4, replace=TRUE), collapse='', sep=''),
       paste('4', paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep=''),
-      paste(sample(y_digits,1), paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse=''),
+      paste(sample(y_digits,1), paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep = ''),
       paste(sample(hex_digits, 12, replace=TRUE), collapse='', sep=''), sep='-')
   }
   temp = gsub("-", "", temp)

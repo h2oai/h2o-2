@@ -3,7 +3,6 @@
 # Then, it runs RF with 50 trees, maximum depth of 100, using the iris class as the response
 # Note: This demo runs H2O on localhost:54321
 library(h2o)
-h2o.installDepPkgs()
 myIP = readline("Enter IP address of H2O server: ")
 myPort = readline("Enter port number of H2O server: ")
 remoteH2O = h2o.init(ip = myIP, port = as.numeric(myPort), startH2O = FALSE, silentUpgrade = TRUE, promptUpgrade = FALSE)

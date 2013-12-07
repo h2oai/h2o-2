@@ -8,7 +8,7 @@ zeroList = [
 
 # the first column should use this
 exprList = [
-        'Result<n> = sum(<keyX>[<col1>])',
+        'Result<n> = sum(<keyX>[,<col1>])',
     ]
 
 class Basic(unittest.TestCase):
@@ -34,7 +34,8 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_sum(self):
+    def test_exec2_sum(self):
+        h2o.beta_features = True
         print "Replicating covtype.data by 2x for results comparison to 1x"
         filename1x = 'covtype.data'
         pathname1x = h2i.find_folder_and_filename('datasets', 'UCI/UCI-large/covtype/covtype.data', returnFullPath=True)

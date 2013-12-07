@@ -1,11 +1,9 @@
-import unittest
-import random, sys, time, os
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
-    r2 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
 
     for i in range(rowCount):
@@ -15,15 +13,23 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             rowData.append(ri1)
 
         rowTotal = sum(rowData)
-        result = r2.randint(0,1)
+
+        if (rowTotal > (1.6 * colCount)): 
+            result = 1
+        else:
+            result = 0
 
         ### print colCount, rowTotal, result
         rowDataStr = map(str,rowData)
         rowDataStr.append(str(result))
+        # add the output twice, to try to match to it?
+        rowDataStr.append(str(result))
+
         rowDataCsv = ",".join(rowDataStr)
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
+
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -43,25 +49,27 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_int2cat_factor_factor(self):
+    def test_exec2_int2cat(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10000,  10, 'cA.hex', 100),
-            (10000,  20, 'cB.hex', 200),
-            (10000,  30, 'cC.hex', 300),
-            (10000,  40, 'cD.hex', 400),
-            (10000,  50, 'cE.hex', 500),
+            (100000,  10, 'cA', 100),
+            (100000,  20, 'cB', 100),
+            (100000,  30, 'cC', 100),
+            (100000,  40, 'cD', 100),
+            (100000,  10, 'cE', 100),
+            (100000,  20, 'cF', 100),
+            (100000,  30, 'cG', 100),
+            (100000,  40, 'cH', 100),
             ]
 
         ### h2b.browseTheCloud()
+        lenNodes = len(h2o.nodes)
 
         # we're going to do a special exec across all the columns to turn them into enums
         # including the duplicate of the output!
         exprList = [
-                '<keyX>= colSwap(<keyX>,<col1>,factor(<keyX>[0]))', 
-                ### '<keyX>= colSwap(<keyX>,<col1>,<keyX>[0])',
-                ### '<keyX>= colSwap(<keyX>,<col1>,factor(<keyX>[<col1>]))', 
-                ### '<keyX>= colSwap(<keyX>,<col1>,<keyX>[<col1>])',
+                '<keyX>[,<col1>] = factor(<keyX>[,<col1>])',
             ]
 
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
@@ -71,8 +79,7 @@ class Basic(unittest.TestCase):
 
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=90)
-            print csvFilename, 'parse time:', parseResult['response']['time']
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
@@ -80,7 +87,7 @@ class Basic(unittest.TestCase):
 
             print "\nNow running the int 2 enum exec command across all input cols"
             colResultList = h2e.exec_expr_list_across_cols(None, exprList, hex_key, maxCol=colCount, 
-                timeoutSecs=90, incrementingResult=False)
+                timeoutSecs=4, incrementingResult=False)
             print "\nexec colResultList", colResultList
 
             if not h2o.browse_disable:

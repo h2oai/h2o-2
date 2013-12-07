@@ -47,7 +47,6 @@ This method should only be used to parse raw data imported using \code{\link{h2o
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
 prostate.raw = h2o.importFile.VA(localH2O, path = prosPath, parse = FALSE)

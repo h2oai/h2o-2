@@ -68,7 +68,6 @@ For more information see: http://docs.0xdata.com
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2o.init(ip = "localhost", port = 54321, 
 + startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 # Run classification GBM on CAPSULE ~ AGE + RACE + PSA + DCAPS
