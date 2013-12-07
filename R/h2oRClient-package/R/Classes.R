@@ -7,7 +7,6 @@ setClass("H2OClient", representation(ip="character", port="numeric"), prototype(
 setClass("H2ORawData", representation(h2o="H2OClient", key="character", env="environment"))
 # setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
 setClass("H2OParsedData", representation(h2o="H2OClient", key="character", env="environment"))
-setClass("H2OLogicalData", contains="H2OParsedData")
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 
@@ -142,7 +141,7 @@ setMethod("show", "H2OKMeansModel", function(object) {
 
 setMethod("show", "H2ONNModel", function(object) {
   print(object@data)
-  cat("NN Model Key:", object@key)
+  cat("Neural Net Model Key:", object@key)
   
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
@@ -209,7 +208,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     if(is.character(j)) { 
       # return(do.call("$", c(x, j)))
       myCol = colnames(x)
-      if(any(!(j %in% myCol))) stop("undefined columns selected")
+      if(any(!(j %in% myCol))) stop("Undefined columns selected")
       j = match(j, myCol)
     }
     # if(is.logical(j)) j = -which(!j)
@@ -239,7 +238,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     if(is.character(j)) { 
       # return(do.call("$", c(x, j)))
       myCol = colnames(x)
-      if(any(!(j %in% myCol))) stop("undefined columns selected")
+      if(any(!(j %in% myCol))) stop("Undefined columns selected")
       j = match(j, myCol)
     }
     # if(is.logical(j)) j = -which(!j)
@@ -318,10 +317,16 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
 })
 
 setMethod("$<-", "H2OParsedData", function(x, name, value) {
-  lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
+  myNames = colnames(x)
+  idx = match(name, myNames)
+  if(is.na(idx)) {
+    stop("Unimplemented: undefined column name specified")
+    lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
+    # TODO: Set column name of ncol(x) + 1 to name
+  } else
+    lhs = paste(x@key, "[,", idx, "]", sep="")
   rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
-  # TODO: Set column name of ncol(x) + 1 to name
   return(x)
 })
 
