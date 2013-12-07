@@ -158,6 +158,7 @@ function(ipPort) {
     if (!file.exists(wrapPath))
       stop(paste("h2o package does not exist at", wrapPath));
     print(paste("Installing h2o package from", wrapPath))
+    installDepPkgs()
     install.packages(wrapPath, repos = NULL, type = "source")
   }
 

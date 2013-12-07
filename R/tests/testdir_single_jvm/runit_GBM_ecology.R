@@ -45,7 +45,7 @@ test.GBM.ecology <- function(conn) {
   ecology.h2o <- h2o.gbm(x = 3:13, 
                         y = "Angaus", 
                      data = ecology.hex, 
-                  n.trees = 100, 
+                  n.trees = n.trees, 
         interaction.depth = 5, 
            n.minobsinnode = 10, 
                 shrinkage = 0.1)
@@ -54,7 +54,7 @@ test.GBM.ecology <- function(conn) {
   
   #Train R GBM Model: Using Gaussian loss function for binary outcome OK... Also more comparable to H2O, which uses MSE
   ecology.r <- gbm(Angaus ~ ., data = ecology.data[,-1], distribution = "gaussian", 
-                  n.trees = 100,
+                  n.trees = n.trees,
                   interaction.depth = 5, 
                   n.minobsinnode = 10, 
                   shrinkage = 0.1,
