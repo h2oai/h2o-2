@@ -241,8 +241,13 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             coefficients = GLMModel['coefficients'].copy()
 
     if h2o.beta_features:
-        column_names = GLMModel['_names']
+        # 'beta' has to use 'idxs' to index into these names
+        coefficients_names = GLMModel['coefficients_names']
+        idxs = GLMModel['idxs']
+        for i in idxs:
+            column_names = coefficient_names[i]
         print "column_names:", column_names
+        intercept = coefficients.pop('Intercept', None)
     else:
         column_names = GLMModel['column_names']
         # get the intercept out of there into it's own dictionary
@@ -286,7 +291,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # print in order using col_names
     # column_names is input only now..same for header or no header, or expanded enums
     for c in column_names:
-        cString = add_to_coefficient_list_and_string(c,cList,cString)
+        cString = add_to_coefficient_list_and_string(c, cList, cString)
 
     if prettyPrint: 
         print "\nH2O intercept:\t\t%.5e" % intercept

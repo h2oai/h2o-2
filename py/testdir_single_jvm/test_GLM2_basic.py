@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_prostate(self):
+    def test_GLM2_basic(self):
         h2o.beta_features=True
         importFolderPath = "logreg"
         csvFilename = 'prostate.csv'
@@ -76,6 +76,7 @@ class Basic(unittest.TestCase):
 
         glm_model = a['glm_model']
         _names = glm_model['_names']
+        coefficients_names = glm_model['coefficients_names']
         submodels = glm_model['submodels'][0]
 
         beta = submodels['beta']
@@ -90,6 +91,8 @@ class Basic(unittest.TestCase):
         residual_deviance = validation['residual_deviance']
 
         print '_names', _names
+        print 'WARNING: have to reorder using idxs'
+        print 'coefficients_name', coefficients_names
         print 'beta', beta
         print 'iteration', iteration
         print 'avg_err', avg_err

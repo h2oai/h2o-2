@@ -2,7 +2,7 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2j as h2o_jobs
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -78,8 +78,10 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             timeoutSecs = 1800
             start = time.time()
-            rfView = h2o_cmd.runRF(parseResult=parseResult, rfView=True,
+            rfView = h2o_cmd.runRF(parseResult=parseResult, rfView=True, noPoll=True,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2, **kwargs)
+            h2j.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2)
+
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

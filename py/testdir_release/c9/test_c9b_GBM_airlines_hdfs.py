@@ -15,7 +15,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 ]
 
         for importFolderPath, csvFilename, trainKey, timeoutSecs, response in files:
-            h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             csvPathname = importFolderPath + "/" + csvFilename
             
@@ -43,7 +42,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
-                h2o.beta_features = True
                 start = time.time()
                 print "Start time is: ", time.time()
                 #noPoll -> False when GBM finished
