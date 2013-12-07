@@ -3,6 +3,7 @@ package water.fvec;
 import java.util.Arrays;
 
 import water.Futures;
+import water.Key;
 import water.fvec.ParseDataset2.FVecDataOut;
 import water.fvec.Vec.VectorGroup;
 import water.parser.Enum;
@@ -10,8 +11,8 @@ import water.parser.Enum;
 
 public class SVMLightFVecDataOut extends FVecDataOut {
   protected final VectorGroup _vg;
-  public SVMLightFVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
-    super(vg,cidx,0,vg.reserveKeys(10000000),enums);
+  public SVMLightFVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Key progress){
+    super(vg,cidx,0,vg.reserveKeys(10000000),progress);
     _nvs = new NewChunk[0];
     _vg = vg;
     _col = 0;

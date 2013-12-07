@@ -9,11 +9,11 @@ import water.Iced;
 import water.nbhm.NonBlockingHashMap;
 
 /**
- * Class for tracking enum columns.
+ * Class for tracking enum & string columns.
  *
  * Basically a wrapper around non blocking hash map.
- * In the first pass, we just collect set of unique strings per column
- * (if there are less than MAX_ENUM_SIZE unique elements).
+ * In the first pass, we just collect set of unique strings per column locally.
+ * Globally we combine all unique strings (until we give it up at the limit).
  *
  * After pass1, the keys are sorted and indexed alphabetically.
  * In the second pass, map is used only for lookup and never updated.
@@ -23,10 +23,9 @@ import water.nbhm.NonBlockingHashMap;
  * @author tomasnykodym
  *
  */
-public final class Enum extends Iced implements Cloneable{
+public final class Enum extends Iced {
   public static final int MAX_ENUM_SIZE = 65000;
   AtomicInteger _id = new AtomicInteger();
-  int _maxId = -1;
   long _nElems;
   volatile NonBlockingHashMap<ValueString, Integer> _map;
   public Enum(){_map = new NonBlockingHashMap<ValueString, Integer>();}
@@ -54,12 +53,11 @@ public final class Enum extends Iced implements Cloneable{
     assert str.get_length() < 65535;      // Length limit so 65535 can be used as a sentinel
     Integer newVal = new Integer(_id.incrementAndGet());
     res = m.putIfAbsent(new ValueString(str.toString()), newVal);
-    if(res != null)return res;
-    if(m.size() > MAX_ENUM_SIZE){
-      kill();
-      return Integer.MAX_VALUE;
-    }
-    return newVal;
+    // No size limit locally.
+    // Also, because of racy inserts, _id.get() != _map.size()  !!!
+    // Two threads can race to insert the same string, tie, and one of the id updates
+    // will get dropped.
+    return res==null ? newVal : res;
   }
   public final boolean containsKey(Object key){return _map.containsKey(key);}
   public void addKey(String str) {
@@ -83,6 +81,9 @@ public final class Enum extends Iced implements Cloneable{
     return I;
   }
 
+  // Merge the other map into this map, but kill this map if it exceeds the
+  // limit.  Propagate the killed notion, so if at any time in a log-tree
+  // rollup the map exceeds the size limit, all future maps are killed.
   public void merge(Enum other){
     if( this == other ) return;
     if( isKilled() ) return;
@@ -96,26 +97,21 @@ public final class Enum extends Iced implements Cloneable{
     }
     kill(); // too many values, enum should be killed!
   }
-  public int maxId(){return _maxId == -1?_id.get():_maxId;}
+  // Warning: size is not equal to the max id, see comment above about racey inserts
   public int size() { return _map.size(); }
+  public int lastId() { return _id.get(); }
+  public Set<ValueString> keySet( ) { return _map.keySet(); }
   public boolean isKilled() { return _map == null; }
   public void kill() { _map = null; }
 
   // assuming single threaded
-  public String [] computeColumnDomain(){
+  public ValueString [] computeColumnDomain(){
     if( isKilled() ) return null;
-    String [] res = new String[_map.size()];
-    Map<ValueString, Integer> oldMap = _map;
-    Iterator<ValueString> it = oldMap.keySet().iterator();
-    for( int i = 0; i < res.length; ++i )
-      res[i] = it.next().toString();
-    Arrays.sort(res);
-    NonBlockingHashMap<ValueString, Integer> newMap = new NonBlockingHashMap<ValueString, Integer>();
-    for( int j = 0; j < res.length; ++j )
-      newMap.put(new ValueString(res[j]), j);
-    oldMap.clear();
-    _map = newMap;
-    return res;
+    ValueString vs[] = _map.keySet().toArray(new ValueString[_map.size()]);
+    Arrays.sort(vs);            // Alpha sort to be nice
+    for( int j = 0; j < vs.length; ++j )
+      _map.put(vs[j], j);       // Renumber in the map
+    return vs;
   }
 
   // Since this is a *concurrent* hashtable, writing it whilst its being
@@ -127,7 +123,7 @@ public final class Enum extends Iced implements Cloneable{
   public AutoBuffer write( AutoBuffer ab ) {
     if( _map == null ) return ab.put1(1); // Killed map marker
     ab.put1(0);                           // Not killed
-    ab.put4(maxId());
+    ab.put4(_id.get());
     for( ValueString key : _map.keySet() )
       ab.put2((char)key.get_length()).putA1(key.get_buf(),key.get_length()).put4(_map.get(key));
     return ab.put2((char)65535); // End of map marker
@@ -137,7 +133,7 @@ public final class Enum extends Iced implements Cloneable{
     assert _map == null || _map.size()==0;
     _map = null;
     if( ab.get1() == 1 ) return this; // Killed?
-    _maxId = ab.get4();
+    _id.set(ab.get4());
     _map = new NonBlockingHashMap<ValueString, Integer>();
     int len = 0;
     while( (len = ab.get2()) != 65535 ) // Read until end-of-map marker

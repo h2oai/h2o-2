@@ -20,6 +20,7 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
     return (a > (1L << y)) ? y+1 : y;
   }
 
+  // Called one time per-Node
   @Override public void init() {
     _lo = 0;
     _hi = _keys.length;

@@ -56,12 +56,19 @@ public class NewChunk extends Chunk {
       }
       _nzCnt=nzs;  _strCnt=ss;  _naCnt=nas;
     }
-    // Now run heuristic for type
+    // Now run heuristic for type.
+    // All NA's:
     if(_naCnt == _len2)
       return AppendableVec.NA;
+    // All Strings or NA's:
     if(_strCnt > 0 && _strCnt + _naCnt == _len2)
       return AppendableVec.ENUM;
-    return AppendableVec.NUMBER;
+    // All numbers or NA's:
+    int numCnt = _len2 - _strCnt - _naCnt;
+    if( numCnt > 0 && numCnt + _naCnt == _len2)
+      return AppendableVec.NUMBER;
+    // We have a mix of numbers & strings.  Majority vote wins.
+    return numCnt >= _strCnt ? AppendableVec.NUMBER : AppendableVec.ENUM;
   }
   protected final boolean isNA(int idx) {
     return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE) : Double.isNaN(_ds[idx]);

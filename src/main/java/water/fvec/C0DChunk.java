@@ -40,6 +40,6 @@ public class C0DChunk extends Chunk {
     return nc;
   }
   // 3.3333333e33
-  public int pformat_len0() { return 22; }
-  public String pformat0() { return "% 21.15e"; }
+  public int pformat_len0() { return (Double.isNaN(_con) || _con==0) ? 1 : 22; }
+  public String pformat0 () { return (Double.isNaN(_con) || _con==0) ? "%1f" : "% 21.15e"; }
 }

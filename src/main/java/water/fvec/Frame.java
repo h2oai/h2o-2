@@ -378,7 +378,10 @@ public class Frame extends Iced {
         w = Math.min(w,10);
         fs[c] = "%"+w+"."+w+"s";
       } else {
-        Chunk C = _vecs[c].elem2BV(0);   // 1st Chunk
+        int cx = 0;
+        Chunk C = _vecs[c].elem2BV(cx);   // 1st Chunk
+        while( !C.hasFloat() && !_vecs[c].isInt() && cx < _vecs[c].nChunks() )
+          C = _vecs[c].elem2BV(cx++);
         String f = fs[c] = C.pformat();  // Printable width
         for( int x=0; x<f.length(); x++ )// Get printable width from format
           if( Character.isDigit(f.charAt(x)) ) w = w*10+(f.charAt(x)-'0');

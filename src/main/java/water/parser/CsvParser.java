@@ -579,7 +579,11 @@ NEXT_CHAR:
       try {
         Double.parseDouble(s);
         return false;       // Number in 1st row guesses: No Column Header
-      } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
+      } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ 
+        // Also attempt time-parse
+        if( water.util.Utils.attemptTimeParse(new ValueString(s)) != Long.MIN_VALUE ) 
+          return false;         // Time in 1st row guesses: No Column Header
+      }
     return true;
   }
   // simple heuristic to determine if we have headers:
