@@ -24,7 +24,7 @@ function(p) {
     p[1] == p[2]
 }
 
-test.binop2.ampersand <- function(conn) {
+test.binop2.pipe <- function(conn) {
   dataSet <- doSelect()
   dataName <- names(dataSet)
   dd <- dataSet[[1]]$ATTRS

@@ -2,7 +2,7 @@ source('./findNSourceUtils.R')
 
 test.eq2.h2o.assign<-
 function(conn) {
-    iris.hex <- h2o.uploadFile(conn, "~/master/h2o/smalldata/iris/iris.csv", "iris.hex")
+    iris.hex <- h2o.uploadFile(conn, locate("smalldata/iris/iris.csv"), "iris.hex")
     dim(iris.hex)
     Log.info("Slicing out some columns and rows from iris.hex")
     Log.info("Slicing out rows 20,40,60,80")
@@ -17,7 +17,7 @@ function(conn) {
     expect_that(irisSlice@key, equals("slicedIris.hex"))
     h2o.removeAll(conn)
 
-    iris.hex <- h2o.uploadFile(conn, "~/master/h2o/smalldata/iris/iris.csv", "iris.hex")
+    iris.hex <- h2o.uploadFile(conn, locate("smalldata/iris/iris.csv"), "iris.hex")
     Log.info("Now slicing out rows 1:50 and columns 2:5")
     dim(iris.hex)
     iris.hex <- iris.hex[c(1:50), c(2,3,4,5)]
