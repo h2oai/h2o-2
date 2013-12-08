@@ -6,7 +6,9 @@ import com.google.gson.JsonObject;
 public class Upload2 extends HTMLOnlyRequest {
   @Override
   protected String build(Response response) {
-    return "<script type='text/javascript' src='jquery.fileupload/js/vendor/jquery.ui.widget.js'></script>"
+    return ""
+    + "<script type='text/javascript' src='jquery.fileupload/js/api_v2.js'></script>"
+    + "<script type='text/javascript' src='jquery.fileupload/js/vendor/jquery.ui.widget.js'></script>"
     + "<script type='text/javascript' src='jquery.fileupload/js/jquery.iframe-transport.js'></script>"
     + "<script type='text/javascript' src='jquery.fileupload/js/jquery.fileupload.js'></script>"
     + "<script type='text/javascript' src='jquery.fileupload/js/main.js'></script>"
