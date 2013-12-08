@@ -122,7 +122,7 @@ abstract trait T_MR[T <: DFrame] {
       }   
     }
     mrt.doAll(f.numCols(), f)
-    val result = copyHeaders(f, mrt._outputFrame, null)
+    val result = mrt.outputFrame(f.names(), f.domains())
     apply(result) // return the DFrame
   }
   
@@ -143,7 +143,7 @@ abstract trait T_MR[T <: DFrame] {
       }   
     }
     mrt.doAll(f.numCols(), f)
-    val result = copyHeaders(f, mrt._outputFrame, null)
+    val result = mrt.outputFrame(f.names(), f.domains())
     apply(result) // return the DFrame
   }
 }

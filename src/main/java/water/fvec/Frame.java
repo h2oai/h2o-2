@@ -439,12 +439,17 @@ public class Frame extends Iced {
     sb.append('\n');
     return sb;
   }
-  public String toStringAll() {
+  public String toStringHead(long h) {
     StringBuilder sb = new StringBuilder();
     String[] fs = toStringHdr(sb);
-    for( int i=0; i<numRows(); i++ )
+    h = Math.min(h, numRows());
+    for( int i=0; i<h; i++ )
       toString(sb,fs,i);
     return sb.toString();
+  }
+
+  public String toStringAll() {
+    return toStringHead(numRows());
   }
 
   // Return the entire Frame as a CSV stream

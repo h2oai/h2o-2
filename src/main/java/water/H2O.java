@@ -9,7 +9,6 @@ import java.util.concurrent.Future;
 
 import jsr166y.*;
 import water.api.dsl.ScAlH2ORepl;
-import water.exec.Function;
 import water.Job.JobCancelledException;
 import water.nbhm.NonBlockingHashMap;
 import water.persist.*;

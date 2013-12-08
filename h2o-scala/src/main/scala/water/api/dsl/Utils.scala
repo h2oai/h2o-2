@@ -113,13 +113,13 @@ object TT {
     }
     // invoke task
     mrTask.doAll(1, inVector)
-    val result = mrTask._outputFrame
-    result._names = Array(outVectorName)
+    val result = mrTask.outputFrame(Array(outVectorName), null)
     
     new DFrame(result)
   }
   
-  // Another way of thinking about view bounds and context bounds is that the first transfers implicit conversions from the caller's scope. The second transfers implicit objects from the caller's scope
+  // Another way of thinking about view bounds and context bounds is that the first transfers implicit conversions from the caller's scope. 
+  // The second transfers implicit objects from the caller's scope
   def test = {
     import H2ODsl._
     implicit val f = parse("../smalldata/cars.csv") 
