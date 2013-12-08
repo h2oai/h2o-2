@@ -5,11 +5,9 @@ import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.apache.poi.hssf.record.PasswordRecord;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com

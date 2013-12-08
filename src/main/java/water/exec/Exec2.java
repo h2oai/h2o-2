@@ -72,7 +72,8 @@ public class Exec2 {
 
     // Parse.  Type-errors get caught here and throw IAE
     int argcnt = global.size();
-    AST ast = new Exec2(str,global).parse();
+    Exec2 ex = new Exec2(str, global);
+    AST ast = ex.parse();
 
     try {
       env.push(global.size()-argcnt);   // Push space for temps

@@ -23,6 +23,7 @@ import water.Job.ModelJob;
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 import water.util.RString;
 import water.util.Utils;
 
@@ -104,6 +105,44 @@ public class GLM2 extends ModelJob {
       _wgiven = beta;
     this.alpha= new double[]{alpha};
     this.n_folds = nfolds;
+    source = dinfo._adaptedFrame;
+    response = dinfo._adaptedFrame.lastVec();
+  }
+
+  static String arrayToString (double[] arr) {
+    if (arr == null) {
+      return "(null)";
+    }
+
+    StringBuffer sb = new StringBuffer();
+    for (int i = 0; i < arr.length; i++) {
+      if (i > 0) {
+        sb.append(", ");
+      }
+      sb.append(arr[i]);
+    }
+    return sb.toString();
+  }
+
+  @Override protected void logStart() {
+    Log.info("Starting GLM2 model build...");
+    super.logStart();
+    Log.info("    max_iter: ", max_iter);
+    Log.info("    standardize: ", standardize);
+    Log.info("    n_folds: ", n_folds);
+    Log.info("    family: ", family);
+    Log.info("    wgiven: " + arrayToString(_wgiven));
+    Log.info("    proximalPenalty: " + _proximalPenalty);
+    Log.info("    runAllLambdas: " + _runAllLambdas);
+    Log.info("    link: " + link);
+    Log.info("    case_mode: " + case_mode);
+    Log.info("    case_val: " + case_val);
+    Log.info("    tweedie_variance_power: " + tweedie_variance_power);
+    Log.info("    tweedie_link_power: " + tweedie_link_power);
+    Log.info("    alpha: " + arrayToString(alpha));
+    Log.info("    lambda: " + arrayToString(lambda));
+    Log.info("    beta_epsilon: " + beta_epsilon);
+    Log.info("    description: " + description);
   }
 
   public GLM2 setCase(CaseMode cm, double cv){
@@ -261,6 +300,8 @@ public class GLM2 extends ModelJob {
     run();
   }
   public void run(){
+    logStart();
+
     assert alpha.length == 1;
     UKV.remove(dest());
     new YMUTask(this, _dinfo, case_mode, case_val, new H2OCallback<YMUTask>() {
