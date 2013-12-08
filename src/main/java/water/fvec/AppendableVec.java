@@ -52,11 +52,10 @@ public class AppendableVec extends Vec {
     _totalCnt += chk._len2;
   }
 
-  // What kind of data did we find?  NA's?  Strings-only?  Floats or Ints?
-  boolean shouldBeEnum() {
-    // TODO: we declare column to be string/enum only if it does not have ANY numbers in it.
-    if( _strCnt > 0 && (_strCnt + _missingCnt) == _totalCnt ) return true;
-    return false;
+  // Enum/String column is strings outnumber parsable numbers (ignoring NAs)
+  boolean shouldBeEnumString() {
+    long numCnt = _totalCnt - _missingCnt - _strCnt;
+    return _strCnt > numCnt;
   }
 
   // Class 'reduce' call on new vectors; to combine the roll-up info.
@@ -92,22 +91,9 @@ public class AppendableVec extends Vec {
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
     DKV.remove(chunkKey(nchunk)); // remove potential trailing key
-    boolean hasNumber = false, hasEnum = false;
-    for(int i = 0; i < nchunk; ++i)
-      if(_chunkTypes[i] == NUMBER){
-        hasNumber = true;
-      } else if(_chunkTypes[i] == ENUM)
-        hasEnum = true;
-    if(hasNumber && hasEnum){ // number wins, we need to go through the enum chunks and declare them all NAs (chunk is considered enum iff it has only enums + possibly some nas)
-      for(int i = 0; i < nchunk; ++i)
-        if(_chunkTypes[i] == ENUM)
-          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
-    }
 
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
-    // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be
-    // an RPC to test Key existence, and return length & other metadata
     long espc[] = new long[nchunk+1]; // Shorter array
     long x=0;                   // Total row count so far
     for( int i=0; i<nchunk; i++ ) {
@@ -115,9 +101,20 @@ public class AppendableVec extends Vec {
       x += _espc[i];            // Raise total elem count
     }
     espc[nchunk]=x;             // Total element count in last
+
+    // All columns could be a blend of ENUM & NUMBER & NA typed chunks.
+    // Pick the column type.  Slam all wrong chunks to NA chunks.
+    boolean isEnumString = shouldBeEnumString();
+    int xtype = isEnumString ? ENUM : NUMBER;
+    for( int i = 0; i < nchunk; ++i )
+      if( _chunkTypes[i] != NA && _chunkTypes[i] != xtype )
+        DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
+
     // Replacement plain Vec for AppendableVec.
     Vec vec = new Vec(_key, espc);
-    vec._domain = _domain;
+    if( !isEnumString ) _domain = null; // No domain for numbers!
+    vec._domain = _domain;              // Save an enum domain
+    vec._isString = isEnumString && _domain==null;
     DKV.put(_key,vec,fs);      // Inject the header
     return vec;
   }

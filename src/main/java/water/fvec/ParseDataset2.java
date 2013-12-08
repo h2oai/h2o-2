@@ -139,33 +139,53 @@ public final class ParseDataset2 extends Job {
       Enum es[] = ENUMS.get(_key);
       _emaps = new int[_vs.length][];
       for( int i = 0; i < _vs.length; ++i ) {
-        ValueString ss[] = _vs[i];
-        if( ss == null ) continue; // Not an enum
         final Enum e = es[i];
-        int [] emap = _emaps[i] = new int[e.lastId()+1];
-        Arrays.fill(emap, -1);  // Only used to assert full assignment
-        for(int j = 0; j < ss.length; ++j)
-          if( e.containsKey(ss[j]) )
-            emap[e.getTokenId(ss[j])] = j;
+        ValueString ss[] = _vs[i];
+        if( vecs(i)._isString ) { // String Column?
+          // For String columns, build a reverse map from the *local* enum
+          // index number to a ValueString.  This will be used to build String
+          // chunks using the correct String.
+          assert ss==null;
+          ss = _vs[i] = new ValueString[e.lastId()+1];
+          for( ValueString vs : e.keySet() )
+            ss[e.getTokenId(vs)] = vs;
+
+        } else if( vecs(i).isEnum() ) {
+          // For Enum columns, build a map from *local* enum index numbers to
+          // the matching *global* enum index numbers.  This will be used remap
+          // all the locally-numbered enum chunks to match a global numbering.
+          assert ss!=null;
+          int [] emap = _emaps[i] = new int[e.lastId()+1];
+          Arrays.fill(emap, -1);  // Only used to assert full assignment
+          for(int j = 0; j < ss.length; ++j)
+            if( e.containsKey(ss[j]) )
+              emap[e.getTokenId(ss[j])] = j;
+        }
       }
     }
 
+    // Renumber Enums and convert String cols to String chunks.
     @Override public void map(Chunk [] chks){
       Enum es[] = ENUMS.get(_key);
       for(int i = 0; i < chks.length; ++i) {
         Chunk chk = chks[i];
-        if(_vs[i] == null) { // killed, replace with all NAs
-          if( es[i].size() > 0 ) { // Was enum, then killed
-            DKV.put(chk._vec.chunkKey(chk.cidx()),new C0DChunk(Double.NaN,chk._len));
-            System.out.println("flip col "+i+" to String");
-          } // Else was just a numeric (non-string non-enum) column
-        } else
+        if( vecs(i).isEnum() ) { // Needs an enum re-mapping?
           for( int j = 0; j < chk._len; ++j) {
             if( chk.isNA0(j) ) continue;
             int x = _emaps[i][(int)chk.at80(j)];
             assert x != -1;     // The missing enum tag
-            chk.set0(j, x);
+            chk.set0(j, x);     // Remap local enums to global enums
           }
+        } else if( vecs(i)._isString ) { // Needs the strings?
+          //DKV.put(chk._vec.chunkKey(chk.cidx()),new C0DChunk(Double.NaN,chk._len));
+          System.out.println("flip col "+i+" to String");
+          ValueString ss[] = _vs[i];
+          for( int j = 0; j < Math.min(chk._len,10); ++j) {
+            if( chk.isNA0(j) ) continue;
+            ValueString vs = ss[(int)chk.at80(j)];
+            System.out.println("row "+(chk._start+j)+" local id="+chk.at80(j)+" "+vs );
+          }
+        }
       }
     }
   }
@@ -245,7 +265,7 @@ public final class ParseDataset2 extends Job {
     AppendableVec vecs[] = uzpt._dout._vecs;
     ValueString ds[][] = new ValueString[vecs.length][];
     for( int i=0; i<vecs.length; i++ ) // Compute the global Enum domains for all cols
-      if( vecs[i].shouldBeEnum() )
+      if( vecs[i].shouldBeEnumString() )
         vecs[i]._domain = ValueString.toString(ds[i] = uzpt._dout._enums[i].computeColumnDomain());
 
     // Close out all the vecs; write them (and domains) into the K/V; get a Frame.

@@ -107,10 +107,9 @@ public final class Enum extends Iced {
   // assuming single threaded
   public ValueString [] computeColumnDomain(){
     if( isKilled() ) return null;
+    if( size() > MAX_ENUM_SIZE ) return null;
     ValueString vs[] = _map.keySet().toArray(new ValueString[_map.size()]);
     Arrays.sort(vs);            // Alpha sort to be nice
-    for( int j = 0; j < vs.length; ++j )
-      _map.put(vs[j], j);       // Renumber in the map
     return vs;
   }
 

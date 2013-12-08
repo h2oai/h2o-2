@@ -8,7 +8,7 @@ import water.*;
 import water.parser.ParseDataset;
 
 public class StringTest extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // ==========================================================================
   @Test public void testBasicCRUD() {

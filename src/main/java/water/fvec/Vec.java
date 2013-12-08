@@ -3,12 +3,13 @@ package water.fvec;
 import java.util.Arrays;
 import java.util.UUID;
 
+import static water.util.Utils.seq;
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
 import water.H2O.H2OEmptyCompleter;
+import water.parser.Enum;
 import water.util.Utils;
-import static water.util.Utils.seq;
 
 /**
  * A single distributed vector column.
@@ -70,8 +71,8 @@ public class Vec extends Iced {
    *  modification.   */
   volatile long _naCnt=-1;
 
-  /** Maximal size of enum domain */
-  public static final int MAX_ENUM_SIZE = 10000;
+  // Contains only String data, no Enums, no numbers.
+  boolean _isString;
 
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
@@ -191,7 +192,7 @@ public class Vec extends Iced {
     int[] domain;
     String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
     int[] domMap = Utils.mapping(domain);
-    if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column is to big to represent an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
+    if( domain.length > Enum.MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column is to big to represent an enum: " + domain.length + " > " + Enum.MAX_ENUM_SIZE);
     return this.makeTransf(domMap, sdomain);
   }
 
