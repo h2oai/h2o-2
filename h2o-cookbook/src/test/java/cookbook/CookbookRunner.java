@@ -86,8 +86,9 @@ public class CookbookRunner {
       // Set up the list of test classes to run.
       //
       List<Class> tests = new ArrayList<Class>();
-      //tests.add(cookbook.Cookbook.class);
-      tests.add(cookbook.CookbookGroupedQuantiles.class);
+      // tests.add(cookbook.Cookbook.class);
+      // tests.add(cookbook.CookbookGroupedQuantiles.class);
+      tests.add(cookbook.FramesCookbook.class);
 
       //
       // Run tests.
