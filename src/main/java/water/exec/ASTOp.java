@@ -70,6 +70,7 @@ public abstract class ASTOp extends AST {
     put(new ASTRunif ());
     put(new ASTCut   ());
     put(new ASTPrint ());
+    put(new ASTLs ());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -794,5 +795,52 @@ class ASTPrint extends ASTOp {
     }
     env.pop(argcnt-2);          // Pop most args
     env.pop_into_stk(-2);       // Pop off fcn, returning 1st arg
+  }
+}
+
+/**
+ * R 'ls' command.
+ *
+ * This method is purely for the console right now.  Print stuff into the string buffer.
+ * JSON response is not configured at all.
+ */
+class ASTLs extends ASTOp {
+  static Type[] newsig() {
+    // It seems like a more appropriate return type would be 'void' or 'none', but that doesn't
+    // look like an option.  So I just copied from 'print'.
+    Type t1 = Type.unbound();
+    return new Type[]{t1};
+  }
+
+  ASTLs() { super(new String[]{"ls"}, newsig()); }
+  @Override String opStr() { return "ls"; }
+  @Override ASTOp make() {return new ASTLs();}
+  @Override void apply(Env env, int argcnt) {
+    // I would assert that (argcnt == 0) here, but that fails.
+    // So don't.
+
+    // Same algorithm as StoreView for selecting which keys to print.
+    for( Key key : H2O.keySet() ) {
+      if( !key.user_allowed() )
+        continue;
+      if( H2O.get(key) == null )
+        continue;
+
+      env._sb.append(key.toString());
+    }
+
+    // It takes four pops to make the ls function signature not print.
+    // Why four?  I don't know.  Arrived at this empirically.
+    // env.popScope() seems like the smarter thing to do here, but that triggers an assertion failure.
+    env.pop();
+    env.pop();
+    env.pop();
+    env.pop();
+
+    // For some reason, env.postWrite *really* want to emit a bunch of stuff that I don't want.
+    // I'd like to just smash the env or something, but it's final.
+    //
+    // [ Can't smash it. ]
+    // env._refcnt = null;
   }
 }
