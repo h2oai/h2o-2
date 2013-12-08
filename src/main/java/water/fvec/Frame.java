@@ -270,6 +270,10 @@ public class Frame extends Iced {
     return res;
   }
 
+  public Vec lastVec() {
+    final Vec [] vecs = vecs();
+    return vecs[vecs.length-1];
+  }
   /** Returns the first readable vector. */
   public Vec anyVec() {
     if( _col0 != null ) return _col0;
