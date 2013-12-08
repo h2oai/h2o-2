@@ -144,7 +144,10 @@ public class Env extends Iced {
     assert _sp==0 || _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
   void pop( ) { pop(this); }
-  void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
+  void pop( int n ) {
+    for( int i=0; i<n; i++ )
+      pop();
+  }
 
   void popScope() {
     assert _tod > 0;            // Something to pop?
