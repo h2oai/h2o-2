@@ -10,7 +10,7 @@ import water.util.RemoveAllKeysTask;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedLong;
 
-public class CookbookGroupedQuantiles extends  TestUtil {
+public class GroupedQuantilesCookbook extends  TestUtil {
   @Before
   public void removeAllKeys() {
     Log.info("Removing all keys...");

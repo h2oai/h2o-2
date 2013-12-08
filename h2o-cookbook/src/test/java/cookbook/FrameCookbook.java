@@ -15,7 +15,7 @@ import java.io.File;
 /**
  * Sample recipes for using H2O's Fluid Vector Frames.
  */
-public class FramesCookbook extends AbstractCookbook {
+public class FrameCookbook extends AbstractCookbook {
     /**
      * Read a frame from a file and print out some basic information.
      */
@@ -59,7 +59,7 @@ public class FramesCookbook extends AbstractCookbook {
 
         //-----------------------------------------------------------
         // Recipe clean up.
-        // The unit test framework will fail a test if it leaks keys in the DKV.
+        // The unit test framework will fail a test if it leaks keys.
         //-----------------------------------------------------------
 
         // Add a sleep if you want to poke around using your Web Browser.
@@ -69,8 +69,12 @@ public class FramesCookbook extends AbstractCookbook {
         // sleepForever();
 
         // UKV (User-visible Key/Value store) is an abstraction over DKV.
-        // When removing through the UKV then subobjects held in the main Frame object
+        //
+        // When removing through the UKV then sub-objects referenced by the main Frame object
         // we created will also get removed.
+        //
+        // If we did a DKV.remove() here instead of UKV.remove(), then the test would fail with
+        // leaked keys.
         UKV.remove(resultFrameKey);
     }
 }
