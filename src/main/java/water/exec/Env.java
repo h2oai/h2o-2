@@ -262,7 +262,7 @@ public class Env extends Iced {
   // Remove everything
   public void remove() {
     // Remove all shallow scopes
-    while( _tod > 1 ) popScope();
+    while( _tod > 0 ) popScope();
     // Push changes at the outer scope into the K/V store
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
