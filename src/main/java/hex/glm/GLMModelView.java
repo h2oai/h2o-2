@@ -154,7 +154,7 @@ public class GLMModelView extends Request2 {
       sb.append("<th>Deviance Explained</th>");
       sb.append("</tr>");
       int i = 0;
-      for(Key k:xval._xvalModels){
+      for(Key k:xval.xval_models){
         Value v = DKV.get(k);
         if(v == null)continue;
         GLMModel m = v.get();
