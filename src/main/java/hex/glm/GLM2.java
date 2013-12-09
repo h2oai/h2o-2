@@ -196,7 +196,7 @@ public class GLM2 extends ModelJob {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());
       fork();
-      return GLMProgressPage2.redirect(this, self(),dest());
+      return GLMModelView.redirect(this, dest());
     }
   }
   private static double beta_diff(double[] b1, double[] b2) {
@@ -328,7 +328,7 @@ public class GLM2 extends ModelJob {
             final ADMMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
             solver._proximalPenalty = _proximalPenalty;
             solver._wgiven = _wgiven;
-            GLMModel model = new GLMModel(dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
+            GLMModel model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,GLM2.this._fjtask));
             firstIter.dfork(_dinfo._adaptedFrame);
           }

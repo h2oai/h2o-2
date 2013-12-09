@@ -6,7 +6,6 @@ import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
 import java.text.DecimalFormat;
-import java.util.Arrays;
 
 import water.*;
 import water.api.DocGen;
@@ -434,7 +433,11 @@ public class GLMModelView extends Request2 {
   @Override protected Response serve() {
     glm_model = DKV.get(_modelKey).get();
     if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
-    return Response.done(this);
+    Job j;
+    if(DKV.get(glm_model.job_key) != null && (j = Job.findJob(glm_model.job_key)) != null)
+      return Response.poll(this, (int) (100 * j.progress()), 100, "_modelKey", _modelKey.toString());
+    else
+      return Response.done(this);
   }
 }
 
