@@ -44,11 +44,11 @@ public class GLMModelView extends Request2 {
 
   @Override public boolean toHTML(StringBuilder sb){
 //      if(title != null && !title.isEmpty())DocGen.HTML.title(sb,title);
-    DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._selfKey);
     if(glm_model == null){
       sb.append("No model yet...");
       return true;
     }
+    DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._selfKey);
     if(glm_model.submodels != null)
       DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._selfKey,"Predict!"));
     String succ = (glm_model.warnings == null || glm_model.warnings.length == 0)?"alert-success":"alert-warning";
