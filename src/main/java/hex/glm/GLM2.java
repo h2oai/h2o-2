@@ -18,14 +18,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.*;
+import water.H2O.H2OCallback;
+import water.H2O.H2OCountedCompleter;
+import water.H2O.JobCompleter;
 import water.Job.ModelJob;
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
-import water.util.RString;
-import water.util.Utils;
+import water.util.*;
 
 public class GLM2 extends ModelJob {
 //  private transient GLM2 [] _subjobs;
