@@ -51,6 +51,9 @@ public class GLMValidation extends Iced {
   final private int _rank;
 
   public static class GLMXValidation extends GLMValidation {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
     @API(help="n-fold models built for cross-validation")
     Key [] xval_models;
     public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx, long nobs) {
