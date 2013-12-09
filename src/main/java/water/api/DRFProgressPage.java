@@ -1,10 +1,9 @@
 package water.api;
 
-import com.google.gson.JsonObject;
 import hex.drf.DRF.DRFModel;
 import water.*;
-import water.api.RequestBuilders.Response;
-import water.api.RequestServer.API_VERSION;
+
+import com.google.gson.JsonObject;
 
 public class DRFProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
@@ -25,5 +24,4 @@ public class DRFProgressPage extends Progress2 {
     else DocGen.HTML.paragraph(sb, "Pending...");
     return true;
   }
-  @Override public API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
 }
