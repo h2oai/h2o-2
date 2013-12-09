@@ -150,10 +150,9 @@ class Basic(unittest.TestCase):
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
-                print "This is crazy!"
                 gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
                     actual=parseTestResult['destination_key'],
-                    vactual=response,
+                    vactual='C' + str(response),
                     predict=predictKey,
                     vpredict='predict', # choices are 0 and 'predict'
                     )

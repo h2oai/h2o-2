@@ -21,6 +21,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="mean of response in the training dataset")
   final double     ymu;
 
+  @API(help="job key assigned to the job building this model")
+  final Key job_key;
+
   @API(help="predicate applied to the response column to turn it into 0/1")
   final CaseMode  _caseMode;
 
@@ -142,8 +145,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
+  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
     super(selfKey,null,dinfo._adaptedFrame);
+    job_key = jobKey;
     this.ymu = ymu;
     this.glm = glm;
     threshold = 0.5;

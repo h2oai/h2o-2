@@ -7,7 +7,7 @@ def define_params(SEED):
     paramDict = {
         # always do grid (see default below)..no destination key should be specified if grid?
         # comma separated or range from:to:step
-        'k': ['c(2,3,4)', 'c(2,4)'],
+        'k': ['2,3,4', '2,4'],
         'initialization': ['None', 'PlusPlus', 'Furthest'],
         # not used in Grid?
         # 'cols': [None, "0", "3", "0,1,2,3,4,5,6"],
