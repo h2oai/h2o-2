@@ -436,6 +436,24 @@ setMethod("colMeans", "H2OParsedData", function(x) {
   temp
 })
 
+setMethod("mean", "H2OParsedData", function(x) {
+  res <- NA
+  if(is.factor(x) || dim(x)[2] != 1) {
+    warning("In H2O mean(x): argument not numeric or logical: returning NA")
+    res
+  }
+  res <- h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  temp <- sapply(res$cols, function(x) x$mean)
+  names(temp) = sapply(res$cols, function(x) x$name)
+  temp[[1]]
+})
+
+setMethod("sd", "H2OParsedData", function(x) {
+  if(dim(x)[2] != 1 || is.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
+  res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
+  res$summaries[[1]]$stats$sd
+})
+
 setMethod("dim", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   as.numeric(c(res$numRows, res$numCols))

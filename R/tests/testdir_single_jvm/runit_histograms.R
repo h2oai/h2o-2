@@ -1,5 +1,7 @@
 source('./findNSourceUtils.R')
 
+setupRandomSeed(1358716575)
+
 test.histogram <- function (conn) {
   print("getting files...")
   bucket <- getBucket('smalldata')
@@ -7,7 +9,9 @@ test.histogram <- function (conn) {
   csv.files <- list.files(bucket, recursive=T, full.names=T, pattern='*.csv$')
   exclude <- c(locate("../../../smalldata//empty.csv"),
                 locate("../../../smalldata//test/test_less_than_65535_unique_names.csv"),
-                locate("../../../smalldata//test/test_more_than_65535_unique_names.csv"))
+                locate("../../../smalldata//test/test_more_than_65535_unique_names.csv"),
+                locate("../../smalldata/iris/iris_header.csv"))
+
   csvtry <- csv.files[!(csv.files %in% exclude)]
   csv.files <- csvtry
   Log.info(csv.files)
@@ -51,3 +55,4 @@ test.histogram <- function (conn) {
 }
 
 doTest("Histogram Test", test.histogram)
+

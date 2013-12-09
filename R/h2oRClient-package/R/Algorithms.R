@@ -230,7 +230,7 @@ h2o.kmeans <- function(data, centers, cols='', iter.max=10) {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMModelView, model=rand_kmeans_key)
     res = res$model
     
-    result = h2o.__getKMResults(res, data, centers)
+    result = h2o.__getKMResults(res, data) #, centers)
     new("H2OKMeansModel", key=res$'_selfKey', data=data, model=result)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
