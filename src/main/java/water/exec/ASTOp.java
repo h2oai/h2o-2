@@ -86,7 +86,7 @@ public abstract class ASTOp extends AST {
     int len=_vars.length;
     for( int i=1; i<len-1; i++ )
       s += _t._ts[i]+" "+_vars[i]+", ";
-    return s + _t._ts[len-1]+" "+_vars[len-1]+")";
+    return s + (len > 1 ? _t._ts[len-1]+" "+_vars[len-1] : "")+")";
   }
   public String toString(boolean verbose) {
     if( !verbose ) return toString(); // Just the fun name& arg names
@@ -805,42 +805,15 @@ class ASTPrint extends ASTOp {
  * JSON response is not configured at all.
  */
 class ASTLs extends ASTOp {
-  static Type[] newsig() {
-    // It seems like a more appropriate return type would be 'void' or 'none', but that doesn't
-    // look like an option.  So I just copied from 'print'.
-    Type t1 = Type.unbound();
-    return new Type[]{t1};
-  }
-
-  ASTLs() { super(new String[]{"ls"}, newsig()); }
+  ASTLs() { super(new String[]{"ls"}, new Type[]{Type.DBL}); }
   @Override String opStr() { return "ls"; }
   @Override ASTOp make() {return new ASTLs();}
   @Override void apply(Env env, int argcnt) {
-    // I would assert that (argcnt == 0) here, but that fails.
-    // So don't.
-
-    // Same algorithm as StoreView for selecting which keys to print.
-    for( Key key : H2O.keySet() ) {
-      if( !key.user_allowed() )
-        continue;
-      if( H2O.get(key) == null )
-        continue;
-
-      env._sb.append(key.toString());
-    }
-
-    // It takes four pops to make the ls function signature not print.
-    // Why four?  I don't know.  Arrived at this empirically.
-    // env.popScope() seems like the smarter thing to do here, but that triggers an assertion failure.
+    for( Key key : H2O.keySet() )
+      if( key.user_allowed() && H2O.get(key) != null )
+        env._sb.append(key.toString());
+    // Pop the self-function and push a zero.
     env.pop();
-    env.pop();
-    env.pop();
-    env.pop();
-
-    // For some reason, env.postWrite *really* want to emit a bunch of stuff that I don't want.
-    // I'd like to just smash the env or something, but it's final.
-    //
-    // [ Can't smash it. ]
-    // env._refcnt = null;
+    env.push(0.0);
   }
 }

@@ -105,6 +105,8 @@ public class GLM2 extends ModelJob {
       _wgiven = beta;
     this.alpha= new double[]{alpha};
     this.n_folds = nfolds;
+    source = dinfo._adaptedFrame;
+    response = dinfo._adaptedFrame.lastVec();
   }
 
   static String arrayToString (double[] arr) {

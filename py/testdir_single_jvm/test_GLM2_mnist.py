@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_jobs
 
 
 DO_HDFS = False
@@ -75,6 +75,7 @@ class Basic(unittest.TestCase):
             ignoreX = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
             print "ignoreX:", ignoreX 
 
+            modelKey = 'GLM_model'
             params = {
                 'ignored_cols': ignoreX, 
                 'response': y,
@@ -88,6 +89,7 @@ class Basic(unittest.TestCase):
                 ## 'weight': 1.0,
                 'n_folds': 1,
                 'beta_epsilon': 1.0E-4,
+                'destination_key': modelKey,
                 }
 
             if DO_ALL_DIGITS:
@@ -102,7 +104,11 @@ class Basic(unittest.TestCase):
 
                 timeoutSecs = 1800
                 start = time.time()
-                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, **kwargs)
+                glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, 
+                    noPoll=True, **kwargs)
+                h2o_jobs.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=5)
+                glm = h2o.nodes[0].glm_view(_modelKey=modelKey)
+
                 elapsed = time.time() - start
                 print "GLM completed in", elapsed, "seconds.", \
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
