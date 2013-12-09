@@ -47,14 +47,13 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global SYNDATASETS_DIR
-        SYNDATASETS_DIR = h2o.make_syn_dir()
-
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2,java_heap_GB=5)
         else:
             h2o_hosts.build_cloud_with_hosts()
+        global SYNDATASETS_DIR
+        SYNDATASETS_DIR = h2o.make_syn_dir()
 
     @classmethod
     def tearDownClass(cls):
