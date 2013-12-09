@@ -102,7 +102,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfv, **params)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 9, delta=1.0, msg="Classification error %s differs too much" % classification_error)
             # Predict (on test)****************************************
             start = time.time()
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=testKey2, timeoutSecs=timeoutSecs)
