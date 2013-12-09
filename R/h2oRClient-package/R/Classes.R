@@ -142,7 +142,7 @@ setMethod("show", "H2OKMeansModel", function(object) {
 setMethod("show", "H2ONNModel", function(object) {
   print(object@data)
   cat("Neural Net Model Key:", object@key)
-  
+
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
   cat("\nTraining square error:", model$train_sqr_error)
@@ -173,9 +173,12 @@ setMethod("show", "H2OPCAModel", function(object) {
 setMethod("show", "H2OGBMModel", function(object) {
   print(object@data)
   cat("GBM Model Key:", object@key)
-  
+
   model = object@model
-  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+  if( model$classification ){
+    cat("\n\nConfusion matrix:\nReported on", object@valid@key, "\n");
+    print(model$confusion)
+  }
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
 

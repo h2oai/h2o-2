@@ -31,16 +31,16 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
     res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
 
-    result = h2o.__getGBMResults(res2$gbm_model)
+    result = h2o.__getGBMResults(res2$gbm_model, distribution == 'multinomial')
+    result$distribution <- distribution
     new("H2OGBMModel", key=destKey, data=data, model=result, valid=validation)
-  }
-  else {
+  } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
-    h2o.gridsearch.internal("GBM", data, res$job_key, res$destination_key, validation)
+    h2o.gridsearch.internal("GBM", data, res$job_key, res$destination_key, validation, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt= (distribution=='multinomial'))
   }
 }
 
-h2o.__getGBMSummary <- function(res) {
+h2o.__getGBMSummary <- function(res, isClassificationAndYesTheBloodyModelShouldReportIt) {
   mySum = list()
   mySum$model_key = res$'_selfKey'
   mySum$ntrees = res$N
@@ -49,14 +49,23 @@ h2o.__getGBMSummary <- function(res) {
   mySum$nbins = res$nbins
   mySum$learn_rate = res$learn_rate
 
-  temp = matrix(unlist(res$cm), nrow = length(res$cm))
-  mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+  if( isClassificationAndYesTheBloodyModelShouldReportIt ){
+    temp = matrix(unlist(res$cm), nrow = length(res$cm))
+    mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+  } else {
+  }
   return(mySum)
 }
 
-h2o.__getGBMResults <- function(res) {
+h2o.__getGBMResults <- function(res, isClassificationAndYesTheBloodyModelShouldReportIt) {
   result = list()
-  result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
+  print(res)
+  if( isClassificationAndYesTheBloodyModelShouldReportIt ){
+    result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
+    result$classification <- T
+  } else
+    result$classification <- F
+
   result$err = res$errs
   return(result)
 }
@@ -658,7 +667,7 @@ verify_dataxy <- function(data, x, y) {
   list(x=x, y=y, x_i=x_i, x_ignore=x_ignore, y_i=y_i)
 }
 
-h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL) {
+h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {
   if(!algo %in% c("GBM", "KM", "RF", "NN")) stop("General grid search not supported for ", algo) 
 
   pb = txtProgressBar(style = 3)
@@ -680,9 +689,9 @@ h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = 
       resH = h2o.__remoteSend(data@h2o, model_view, job_key=allModels[[i]]$job_key, destination_key=allModels[[i]]$destination_key)
     else
       resH = h2o.__remoteSend(data@h2o, model_view, '_modelKey'=allModels[[i]]$destination_key)
-    myModelSum[[i]] = switch(algo, GBM = h2o.__getGBMSummary(resH[[3]]), KM = h2o.__getKMSummary(resH[[3]]), RF = h2o.__getDRFSummary(resH[[3]]), NN = h2o.__getNNSummary(resH))
+    myModelSum[[i]] = switch(algo, GBM = h2o.__getGBMSummary(resH[[3]],forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKMSummary(resH[[3]]), RF = h2o.__getDRFSummary(resH[[3]]), NN = h2o.__getNNSummary(resH))
     myModelSum[[i]]$run_time = allModels[[i]]$end_time - allModels[[i]]$start_time
-    modelOrig = switch(algo, GBM = h2o.__getGBMResults(resH[[3]]), KM = h2o.__getKMResults(resH[[3]], data), RF = h2o.__getDRFResults(resH[[3]]), NN = h2o.__getNNResults(resH))
+    modelOrig = switch(algo, GBM = h2o.__getGBMResults(resH[[3]],forGBMIsClassificationAndYesTheBloodyModelShouldReportIt), KM = h2o.__getKMResults(resH[[3]], data), RF = h2o.__getDRFResults(resH[[3]]), NN = h2o.__getNNResults(resH))
 
     if(algo == "KM")
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig)
