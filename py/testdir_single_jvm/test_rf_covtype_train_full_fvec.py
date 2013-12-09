@@ -5,14 +5,14 @@ import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import as h2i, h2o_rf
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
 paramDict = {
-    'response': 'A55',
-    'ntrees': 30,
+    'response': 'C54',
+    'ntrees': 20,
     'destination_key': 'model_keyA',
     'max_depth': 20,
     'nbins': 100,
-    'ignored_cols_by_name': "A1,A2,A6,A7,A8",
+    # 'ignored_cols_by_name': "A1,A2,A6,A7,A8",
     'sample_rate': 0.80,
-    'validation': 'train.csv.hex'
+    'validation': 'covtype.data.hex'
     }
 
 class Basic(unittest.TestCase):
@@ -24,9 +24,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, java_heap_GB=10)
+            h2o.build_cloud(1, java_heap_GB=14)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=10)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -34,10 +34,10 @@ class Basic(unittest.TestCase):
 
     def test_rf_covtype_train_full(self):
         h2o.beta_features = True
-        csvFilename = 'train.csv'
-        csvPathname = 'bench/covtype/h2o/' + csvFilename
-        parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key=csvFilename + ".hex", 
-            header=1, timeoutSecs=180)
+        csvFilename = 'covtype.data'
+        csvPathname = 'standard/' + csvFilename
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=csvFilename + ".hex", 
+            timeoutSecs=180)
 
         for trial in range(1):
             # params is mutable. This is default.
@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
-            self.assertLess(classification_error, 0.02, "train.csv should have full classification error <0.02")
+            self.assertLess(classification_error, 3, "train.csv should have full classification error: %s < 3" % classification_error)
 
             print "Trial #", trial, "completed"
 

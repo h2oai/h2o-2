@@ -36,7 +36,7 @@ drf1ParamDict = {
 
 drf2ParamDict = {
     'response': [None, 'C54'],
-    'max_depth': [None, 1,10,20,100],
+    'max_depth': [None, 10,20,100],
     'nbins': [None,5,10,100,1000],
     'ignored_cols_by_name': [None,'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
     'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],

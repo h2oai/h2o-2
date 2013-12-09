@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 
 paramDict = {
-    'response': [None,10],
+    'response': [None,'C10'],
     'ntrees': [10, 100,120],
     'destination_key': ['model_keyA', '012345', '__hello'],
     'max_depth': [None, 1,10,20,100],

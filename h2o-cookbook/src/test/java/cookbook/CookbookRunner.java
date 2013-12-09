@@ -87,8 +87,9 @@ public class CookbookRunner {
       //
       List<Class> tests = new ArrayList<Class>();
       // tests.add(cookbook.Cookbook.class);
-      // tests.add(cookbook.CookbookGroupedQuantiles.class);
-      tests.add(cookbook.FramesCookbook.class);
+      tests.add(H2OCookbook.class);
+      tests.add(FrameCookbook.class);
+      tests.add(cookbook.GroupedQuantilesCookbook.class);
 
       //
       // Run tests.
