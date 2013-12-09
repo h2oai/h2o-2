@@ -228,27 +228,32 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     # get a copy, so we don't destroy the original when we pop the intercept
     if h2o.beta_features:
+        coefficients_names = GLMModel['coefficients_names']
+        # 'beta' has to use 'idxs' to index into these names
+        idxs = submodels0['idxs']
+        column_names = [coefficients_names[i] for i in idxs]
+
         if doNormalized:
-            coefficients = submodels0['normalized_beta'].copy()
+            beta = submodels0['normalized_beta']
         else:
-            print "beta:", submodels0['beta']
-            coefficients = list(submodels0['beta']) # copy
+            beta = submodels0['beta']
+
+        coefficients = {}
+        # create a dictionary with name, beta (including intercept) just like v1
+        for n,b in zip(column_names, beta):
+            coefficients[n] = b
+
+        print  "HELLO: coefficients:", coefficients
+        print  "HELLO: beta:", beta
+        intercept = coefficients.pop('Intercept', None)
+        # the last one shoudl be 'Intercept' ?
+        column_names.pop()
 
     else:
         if doNormalized:
             coefficients = GLMModel['normalized_coefficients'].copy()
         else:
             coefficients = GLMModel['coefficients'].copy()
-
-    if h2o.beta_features:
-        # 'beta' has to use 'idxs' to index into these names
-        coefficients_names = GLMModel['coefficients_names']
-        idxs = GLMModel['idxs']
-        for i in idxs:
-            column_names = coefficient_names[i]
-        print "column_names:", column_names
-        intercept = coefficients.pop('Intercept', None)
-    else:
         column_names = GLMModel['column_names']
         # get the intercept out of there into it's own dictionary
         intercept = coefficients.pop('Intercept', None)
