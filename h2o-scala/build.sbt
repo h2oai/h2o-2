@@ -17,6 +17,8 @@ libraryDependencies += "com.google.code.gson" % "gson" % "2.2.2"
 
 libraryDependencies += "org.apache.poi" % "poi-ooxml" % "3.8"
 
+libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "1.1.0"
+
 libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-compiler" % v }
 
 // Test dependencies

@@ -16,7 +16,10 @@ import water.Job
 
 trait TRef {}
 
-/** Trait holding basic Frame' operations. */
+/** Trait holding basic Frame' operations. 
+ *  
+ *  It supports basic algebraic operations and selectors similar to R-like syntax. 
+ */
 trait T_Frame {
   def NHEAD:Int = 10;
   
@@ -188,7 +191,7 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   // We need shutdown for sure ! :-)
   def shutdown() = H2O.CLOUD.shutdown()
   
-  // GLM call
+  // DRF call
 
 }
 
