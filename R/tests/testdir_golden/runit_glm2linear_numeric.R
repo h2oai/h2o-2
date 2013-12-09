@@ -1,7 +1,7 @@
 source('./findNSourceUtils.R')
 
 #import swiss data set to R; import to H2O and parse as FV
-test.glm2linear.numeric <- function(H2Oserver) {
+test.glm2linear.descriptives <- function(H2Oserver) {
   Log.info("Importing swiss.csv data...")
   swiss.hex<- h2o.importFile(H2Oserver, locate("./smalldata/swiss.csv", schema = "local"))
   swiss.df<- read.csv(locate("../../smalldata/swiss.csv"), header=T)
@@ -39,5 +39,5 @@ test.glm2linear.numeric <- function(H2Oserver) {
   testEnd()
 }
 
-doTest("GLM2 Numeric Golden Test", test.glm2linear.numeric)
+doTest("GLM2 Numeric Golden Test", test.glm2linear.descriptives)
 
