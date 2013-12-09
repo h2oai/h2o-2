@@ -33,7 +33,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** The Vectors to work on. */
   public Frame _fr;
   // appendables are treated separately (roll-ups computed in map/reduce style, can not be passed via K/V store).
-  protected AppendableVec [] _appendables; 
+  protected AppendableVec [] _appendables;
   private int _vid;
   private int _noutputs;
 
@@ -254,6 +254,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   // chunks; call user's init.
   private final void setupLocal0() {
     assert _profile==null;
+    _fs = new Futures();
     _profile = new MRProfile(this);
     _profile._localstart = System.currentTimeMillis();
     _topLocal = true;
@@ -274,8 +275,6 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _lo = 0;  _hi = _fr.anyVec().nChunks(); // Do All Chunks
     // If we have any output vectors, make a blockable Futures for them to
     // block on.
-    if( _appendables != null && _appendables.length > 0 )
-      _fs = new Futures();
     // get the Vecs from the K/V store, to avoid racing fetches from the map calls
     _fr.vecs();
     setupLocal();                     // Setup any user's shared local structures
@@ -390,8 +389,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     _profile.gather(mrt._profile,0);
     if( _res == null ) _res = mrt._res;
     else if( mrt._res != null ) _res.reduce4(mrt._res);
-    if( _fs == null ) _fs = mrt._fs;
-    else _fs.add(mrt._fs);
+    // Futures are shared on local node and transient (so no remote updates)
+    assert _fs == mrt._fs;
+//    if( _fs == null ) _fs = mrt._fs;
+//    else _fs.add(mrt._fs);
   }
 
   protected void postGlobal(){}
@@ -403,8 +404,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     reduce3(_nleft);            // Reduce global results from neighbors.
     reduce3(_nrite);
     _profile._remoteBlkDone = System.currentTimeMillis();
-    if( _fs != null )           // Block on all other pending tasks, also
-      _fs.blockForPending();
+    _fs.blockForPending();
     _profile._localBlkDone = System.currentTimeMillis();
     // Finally, must return all results in 'this' because that is the API -
     // what the user expects
@@ -423,7 +423,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   private void reduce3( RPC<T> rpc ) {
     if( rpc == null ) return;
     T mrt = rpc.get();          // This is a blocking remote call
-    assert mrt._fs == null;     // No blockable results from remote
+    assert mrt._fs == null || mrt._fs._pending_cnt == 0;     // No blockable results from remote
     _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( mrt._nodes != -1L )     // Any results at all?
@@ -460,7 +460,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     x._topLocal = false;  // Not a top job
     x._nleft = x._nrite = null;
     x. _left = x. _rite = null;
-    x._fs = null;         // Clone does not depend on extent futures
+    x._fs = _fs;
     x._profile = null;    // Clone needs its own profile
     x.setPendingCount(0); // Volatile write for completer field; reset pending count also
     return x;
