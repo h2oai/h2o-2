@@ -22,7 +22,7 @@ glm2Benign <- function(conn) {
   
   #Check coeffs here
   #tryCatch(expect_that(mFV@model$x, equals(colnames(bhexFV)[X])), error = function(e) Log.warn("Not getting colnames back, just indices"))
-   expect_that(mFV@model$x, equals(X))
+   expect_that(mFV@model$x, equals(colnames(bhexFV)[X]))
 
   testEnd()
 }

@@ -2,7 +2,7 @@ source('./findNSourceUtils.R')
 
 test.slice.colSummary <- function(conn) {
   Log.info("Importing iris.csv data...\n")
-  iris.hex = h2o.importFile(conn, locate("../smalldata/iris/iris_wheader.csv",schema = "local"), "iris.hex")
+  iris.hex <- h2o.importFile(conn, locate("../smalldata/iris/iris_wheader.csv",schema = "local"), "iris.hex")
   Log.info("Check that summary works...")
   
   summary(iris.hex)
@@ -20,27 +20,24 @@ test.slice.colSummary <- function(conn) {
   sepalLength <- iris.hex[,1]
   Log.info("Summary on the first column:\n")
   expect_that(sepalLength, is_a("H2OParsedData"))
-  
+ 
   print(summary(sepalLength))
-  
   Log.info("try mean")
   m <- mean(sepalLength)
-  expect(m, equals(mean(iris$sepalLength)))
-  Log.info("Try mean, min, max, and compare to actual:\n")
-  stats_ <- list("mean"=mean(sepalLength), "min"=min(sepalLength), "max"=max(sepalLength))
-  stats <- list("mean"=mean(iris[,1]), "min"=min(iris[,1]), "max"=max(iris[,1]))
+  cat("\nH2O mean: ", m, "    R mean: ", mean(iris$Sepal.Length), "\n")
   
-  Log.info("Actual mean, min, max:\n")
+  expect_that(m, equals(mean(iris$Sepal.Length)))
+  Log.info("Try mean, min, max, sd, and compare to actual:\n")
+  stats_ <- list("mean"=mean(sepalLength), "min"=min(sepalLength), "max"=max(sepalLength), "sd"=sd(sepalLength))
+  stats <- list("mean"=mean(iris[,1]), "min"=min(iris[,1]), "max"=max(iris[,1]), "sd"=sd(iris[,1]))
+  
+  Log.info("Actual mean, min, max, sd:\n")
   Log.info(stats)
   cat("\n")
-  Log.info("H2O-R's mean, min, max: \n")
+  Log.info("H2O-R's mean, min, max, sd: \n")
   Log.info(stats_)
   cat("\n")
   expect_that(unlist(stats),equals(unlist(stats_)))
-  #tryCatch(expect_that(unlist(stats),equals(unlist(stats_))), error = function(e) e)
-  Log.info("Check standard deviation and variance: ")
-  #tryCatch(sd(sepalLength),error = function(e) print(paste("Cannot perform standard deviation: ",e,sep="")))
-  
   testEnd()
 }
 

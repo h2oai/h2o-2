@@ -9,6 +9,8 @@
 
 source('./findNSourceUtils.R')
 
+#setupRandomSeed(1536380603)
+
 doSelect<-
 function() {
     d <- select()
@@ -18,7 +20,7 @@ function() {
     doSelect()
 }
 
-test.tail.numeric <- function(conn) {
+test.plus.onFrame <- function(conn) {
   dataSet <- doSelect()
   dataName <- names(dataSet)
   dd <- dataSet[[1]]$ATTRS
@@ -58,10 +60,10 @@ test.tail.numeric <- function(conn) {
   Log.info("5 + hex: ")
   print(head(fivePlusHex))
   
-  expect_that(hexPlusFive, equals(fivePlusHex))
+  expect_that(as.data.frame(hexPlusFive), equals(as.data.frame(fivePlusHex)))
 
   testEnd()
 }
 
-doTest("Tail Tests", test.tail.numeric)
+doTest("BINOP2 EXEC2 TEST: '+' with Frames", test.plus.onFrame)
 
