@@ -82,7 +82,7 @@ public class DRF extends SharedTreeModelBuilder {
     @Override protected void toJavaUnifyPreds(SB bodySb) {
       if (isClassifier()) {
         bodySb.i().p("float sum = 0;").nl();
-        bodySb.i().p("for(int i=1;i<preds.length; i++) sum += preds[i];").nl();
+        bodySb.i().p("for(int i=1; i<preds.length; i++) sum += preds[i];").nl();
         bodySb.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
@@ -244,7 +244,7 @@ public class DRF extends SharedTreeModelBuilder {
         if( cy.isNA0(i) ) continue;
         if (classification) {
           int cls = (int)cy.at80(i);
-          chk_work(chks,cls).set0(i,1.0f);
+          chk_work(chks,cls).set0(i,1L);
         } else {
           float pred = (float) cy.at0(i);
           chk_work(chks,0).set0(i,pred);

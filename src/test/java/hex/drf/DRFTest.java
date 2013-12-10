@@ -14,7 +14,7 @@ public class DRFTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
-  private abstract class PrepData { abstract int prep(Frame fr); }
+  abstract static class PrepData { abstract int prep(Frame fr); }
 
   static final String[] s(String...arr)  { return arr; }
   static final long[]   a(long ...arr)   { return arr; }
@@ -148,8 +148,8 @@ public class DRFTest extends TestUtil {
     return drf.response;
   }
 
-  public void basicDRFTestOOBE(String fnametrain, String hexnametrain, PrepData prep, int ntree, long[][] expCM, String[] expRespDom) throws Throwable { basicDRF(fnametrain, hexnametrain, null, null, prep, ntree, expCM, expRespDom); }
-  public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep, int ntree, long[][] expCM, String[] expRespDom) throws Throwable {
+  public void basicDRFTestOOBE(String fnametrain, String hexnametrain, PrepData prep, int ntree, long[][] expCM, String[] expRespDom) throws Throwable { basicDRF(fnametrain, hexnametrain, null, null, prep, ntree, expCM, expRespDom, 10/*max_depth*/); }
+  public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep, int ntree, long[][] expCM, String[] expRespDom, int max_depth) throws Throwable {
     DRF drf = null;
     Frame frTrain = null, frTest = null;
     Key destTrain = Key.make(hexnametrain);
@@ -162,9 +162,9 @@ public class DRFTest extends TestUtil {
       // Configure DRF
       drf.classification = true;
       drf.ntrees = ntree;
-      drf.max_depth = 10;
+      drf.max_depth = max_depth;
       drf.min_rows = 1; // = nodesize
-      drf.nbins = 1024;
+      drf.nbins = 100;
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // Simulated sampling with replacement
       drf.seed = (1L<<32)|2;
