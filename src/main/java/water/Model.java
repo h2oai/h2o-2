@@ -317,16 +317,17 @@ public abstract class Model extends Iced {
     sb.p("//     mkdir tmpdir").nl();
     sb.p("//     cd tmpdir").nl();
     sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/2/").p(this.getClass().getSimpleName()).p("View.java?_modelKey=").pobj(_selfKey).p(" > ").p(modelName).p(".java").nl();
-    sb.p("//     javac -J-Xmx2g -J-XX:MaxPermSize=128m ").p(modelName).p(".java").nl();
-    sb.p("//     java -Xmx2g -XX:MaxPermSize=256m ").p(modelName).nl();
+    sb.p("//     javac -cp h2o.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").p(modelName).p(".java").nl();
+    sb.p("//     java -cp h2o.jar:. -Xmx2g -XX:MaxPermSize=256m ").p(modelName).nl();
     sb.p("//").nl();
     sb.p("//     (Note:  Try java argument -XX:+PrintCompilation to show runtime JIT compiler behavior.)").nl();
     sb.nl();
-    sb.p("class ").p(modelName).p(" {").nl(); // or extends GenerateModel
+    sb.p("class ").p(modelName).p(" extends water.Model.GeneratedModel {").nl(); // or extends GenerateModel
     toJavaInit(sb).nl();
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
     toJavaDOMAINS(sb);
+    toJavaSuper(sb); //
     toJavaPredict(sb, fileContextSB);
     sb.p(TOJAVA_MAP);
     sb.p(TOJAVA_PREDICT_MAP);
@@ -349,8 +350,15 @@ public abstract class Model extends Iced {
     clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP_ALLOC2,clz));
     return clz;
   }
-
-
+  /** Generate implementation for super class. */
+  protected SB toJavaSuper( SB sb ) {
+    sb.nl();
+    sb.ii(1);
+    sb.i().p("public String[] getNames() { return NAMES; } ").nl();
+    sb.i().p("public String[][] getDomainValues() { return DOMAINS; }").nl();
+    sb.di(1);
+    return sb;
+  }
   private SB toJavaNAMES( SB sb ) {
     sb.nl();
     sb.i(1).p("// Names of columns used by model.").nl();
@@ -452,77 +460,74 @@ public abstract class Model extends Iced {
     catch( IllegalAccessException cce ) { throw new Error(cce); }
   }
 
+  public static interface IGeneratedModel {
+    /** The names of the columns used in the model (not including empty and response names). */
+    public String[] getNames();
+
+    /** The name of the response column. */
+    public String getResponseName();
+
+    /** Returns an index of the response column. */
+    public int getResponseIdx();
+
+    /** Get number of classes in in given column.
+     * Return number greater than zero if the column is categorical
+     * or -1 if the column is numeric. */
+    public int getNumClasses(int i);
+
+    /** Return a number of classes in response column. */
+    public int getNumResponseClasses();
+
+    /** Predict the given row and return prediction
+     *
+     * @param data row holding the data. Ordering should follow ordering of columns returned by getNames()
+     * @param preds allocated array to hold a prediction
+     * @return returned preds parameter
+     */
+    public float[] predict(double[] data, float[] preds);
+
+    /** Gets domain of given column.
+     * @param name column name
+     * @return return domain for given column or null if column is numeric.
+     */
+    public String[] getDomainValues(String name);
+    /**
+     * Returns domain values for i-th column.
+     * @param i index of column
+     * @return domain for given enum column or null if columns contains numeric value
+     */
+    public String[] getDomainValues(int i);
+
+    /** Returns domain values for all columns */
+    public String[][] getDomainValues();
+
+    /** Returns index of column with give name or -1 if column is not found. */
+    public int getColIdx(String name);
+  }
+
   /** This is a helper class to support Generated Models.
    * Note: it is not used in the generated code now. But please keep it here
    * since it can be easily used. */
-  public abstract static class GeneratedModel {
-    /** Predict a given row */
-    abstract public float[] predict( double data[], float preds[] );
+  public abstract static class GeneratedModel implements IGeneratedModel {
 
-    /** Return a response class for classifier or null if the model is not classifier
-     * or domain is null. */
-    public String toResponseClass(float[] preds, String[] domain) {
-      if (domain==null) return null;    // Empty domain
-      if (preds.length==1) return null; // It is regression model
-      return domain[(int) preds[0]];
+    @Override public int      getResponseIdx () { return getNames().length - 1; }
+    @Override public String   getResponseName() { return getNames()[getResponseIdx()]; }
+    @Override public String[] getDomainValues(int i) { return getDomainValues()[i]; }
+    @Override public int      getNumResponseClasses() { return getNumClasses(getResponseIdx()); }
+    @Override public int getColIdx(String name) {
+      String[] names = getNames();
+      for (int i=0; i<names.length; i++) if (names[i].equals(name)) return i;
+      return -1;
+    }
+    @Override public int getNumClasses(int i) {
+      String[] domval = getDomainValues(i);
+      return domval!=null?domval.length:-1;
+    }
+    @Override public String[] getDomainValues(String name) {
+      int colIdx = getColIdx(name);
+      return colIdx != -1 ? getDomainValues(colIdx) : null;
     }
 
-    // A simple helper to read a data from a file.
-    public double[][] readData(String file, int ncols) throws IOException {
-      int nrows = 0;
-      BufferedReader ir = null;
-      double[][] result = new double[1000][];
-      try {
-        ir = new BufferedReader(new FileReader(new File(file)));
-        String line = null;
-        while ( (line=ir.readLine()) != null) {
-          String[] row= line.split(",");
-          result[nrows] = new double[ncols];
-          for (int i=0; i<ncols;i++)
-            try { result[nrows][i] = Double.valueOf(row[i]); } catch (NumberFormatException e) { result[nrows][i] = Double.NaN; }
-          nrows++;
-          if (result.length==nrows) result = Arrays.copyOf(result, 2*nrows);
-        }
-      } finally {
-        ir.close();
-      }
-      if (nrows!=result.length) result = Arrays.copyOf(result, nrows);
-      return result;
-    }
-    // Run benchmark
-    public final void bench(long iters, String datafile, float[] preds, int ntrees, int ncols) throws IOException {
-      double[][] data = readData(datafile, ncols);
-      bench(iters,data,preds,ntrees);
-    }
-    public final void bench(long iters, double[][] data, float[] preds, int ntrees) {
-      int rows = data.length;
-      int cols = data[0].length;
-      int levels = preds.length-1;
-      int ntrees_internal = ntrees*levels;
-      System.out.println("# Iterations: " + iters);
-      System.out.println("# Rows      : " + rows);
-      System.out.println("# Cols      : " + cols);
-      System.out.println("# Levels    : " + levels);
-      System.out.println("# Ntrees    : " + ntrees);
-      System.out.println("# Ntrees internal   : " + ntrees_internal);
-      System.out.println("iter,total_time,time_per_row,time_per_tree,time_per_row_tree,time_per_inter_tree,time_per_row_inter_tree");
-      StringBuilder sb = new StringBuilder(100);
-      for (int i=0; i<iters; i++) {
-        long startTime = System.nanoTime();
-        // Run dummy score
-        for (double[] row : data) predict(row, preds);
-        long ttime = System.nanoTime() - startTime;
-        sb.append(i).append(',');
-        sb.append(ttime).append(',');
-        sb.append(ttime/rows).append(',');
-        sb.append(ttime/ntrees).append(',');
-        sb.append(ttime/(ntrees*rows)).append(',');
-        sb.append(ttime/ntrees_internal).append(',');
-        sb.append(ttime/(ntrees_internal*rows)).append('\n');
-        System.out.print(sb.toString());
-        sb.setLength(0);
-      }
-    }
     public static int maxIndex(float[] from, int start) {
       int result = start;
       for (int i = start; i<from.length; ++i)

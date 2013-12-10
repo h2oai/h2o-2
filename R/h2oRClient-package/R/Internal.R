@@ -234,6 +234,13 @@ h2o.__uniqID <- function(prefix = "") {
 #   }
 # }
 
+h2o.__checkForFactors <- function(object) {
+     return(FALSE)
+#    if(class(object) != "H2OParsedData") return(FALSE)
+#    f <- function(idx, hex){ print(is.factor(hex[,idx])); return(is.factor(hex[,idx]))}
+#    any(sapply(seq(ncol(object)),f, object))
+}
+
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
   res$version
@@ -295,6 +302,15 @@ h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
   LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+
+
+  if(class(x) == "H2OParsedData" || class(y) == "H2OParsedData") {
+    anyFactorsX <- h2o.__checkForFactors(x)
+    anyFactorsY <- h2o.__checkForFactors(y)
+    anyFactors <- any(c(anyFactorsX, anyFactorsY))
+    if(anyFactors) warning("Operation not meaningful for factors.")
+  }
+
   RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
   expr = paste(LHS, op, RHS)
   if(class(x) == "H2OParsedData") myClient = x@h2o

@@ -1,5 +1,6 @@
 source('./findNSourceUtils.R')
 
+#setupRandomSeed(1193410486)
 test.slice.colSummary <- function(conn) {
   Log.info("Importing iris.csv data...\n")
   iris.hex <- h2o.importFile(conn, locate("../smalldata/iris/iris_wheader.csv",schema = "local"), "iris.hex")

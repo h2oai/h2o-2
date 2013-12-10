@@ -88,7 +88,7 @@ function(dataName = NULL, bucket = NULL, path = NULL, fullPath = NULL, schema = 
 
 select.help<-
 function() {
-    datajson <- locate(bucket = "tests", path = "smalldata.json", optional_root_parent = "R")
+    datajson <- locate(bucket = "tests", path = "Utils/smalldata.json", optional_root_parent = "R")
     datajson <- fromJSON(paste(readLines(datajson), collapse=""))
     random.dataset.id <- sample(length(datajson$datasets),1)
     ROOTISPARENT <<- FALSE

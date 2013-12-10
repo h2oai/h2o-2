@@ -190,11 +190,21 @@ printenv | grep H2OWrapperDir
 #autoGen RUnits
 #!/bin/bash
 
-for test in $(ls ../../R/tests/*/*.R | grep -v Utils | awk '{gsub("\\.R","",$0); print $0}')
+for test in $(find ../../R/tests/ | grep -v Utils | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
 do
+    if [ -d $test ];
+    then
+        continue
+    fi  
     testName=$(basename $test)
     testDir=$(dirname $test)
-    testDirName=$(basename $testDir)
+    testDirParent=$(dirname $testDir)
+    if [ $(basename $testDirParent) != "tests" ];
+    then
+        testDirName=$(basename $testDirParent)/$(basename $testDir)
+    else
+        testDirName=$(basename $testDir)
+    fi  
     myR $testDirName/$testName 300
 done
 

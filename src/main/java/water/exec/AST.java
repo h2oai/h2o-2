@@ -399,7 +399,10 @@ class ASTAssign extends AST {
     Frame ary = env.frId(id._depth,id._num);
     // Pull the RHS off the stack; do not lower the refcnt
     Frame ary_rhs=null;  double d=Double.NaN;
-    if( env.isDbl() ) d = env.popDbl(); else ary_rhs = env.popAry();
+    if( env.isDbl() )
+        d = env.popDbl();
+    else
+        ary_rhs = env.popAry();
 
     // Typed as a double ==> the row & col selectors are simple constants
     if( slice._t == Type.DBL ) { // Typed as a double?
@@ -416,7 +419,9 @@ class ASTAssign extends AST {
     Object rows = ASTSlice.select(ary.numRows(),slice._rows,env);
 
     // Partial row assignment?
-    if( rows != null ) throw H2O.unimpl();
+    if( rows != null ) {
+        throw H2O.unimpl();
+    }
     assert cols != null; // all/all assignment uses simple-assignment
 
     // Convert constant into a whole vec
