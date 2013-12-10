@@ -56,10 +56,10 @@ public class DRFTest extends TestUtil {
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
         a( a(0,  1, 0, 0, 0),
-           a(1, 55, 0, 3, 0),
+           a(1, 56, 0, 3, 0),
            a(0,  0, 0, 0, 0),
-           a(0,  0, 0,16, 0),
-           a(0,  0, 0, 0,34)),
+           a(0,  1, 0,17, 0),
+           a(0,  0, 0, 0,33)),
         s("3", "4", "5", "6", "8"));
   }
 
@@ -69,11 +69,11 @@ public class DRFTest extends TestUtil {
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         50,
-        a( a(2,   2, 0,  0,   0),
-           a(1, 205, 0,  1,   0),
+        a( a(1,   3, 0,  0,   0),
+           a(1, 206, 0,  0,   0),
            a(0,   2, 0,  1,   0),
            a(0,   4, 0, 79,   1),
-           a(0,   0, 0,  0, 108)),
+           a(0,   0, 1,  0, 107)),
         s("3", "4", "5", "6", "8"));
   }
 
