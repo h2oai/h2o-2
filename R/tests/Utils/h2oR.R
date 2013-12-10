@@ -192,8 +192,6 @@ function() {
 }
 
 Log.info("============== Setting up R-Unit environment... ================")
-Log.info("Time: ")
-Sys.time()
 Log.info("Branch: ")
 system('git branch')
 Log.info("Hash: ")
