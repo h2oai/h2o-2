@@ -8,7 +8,6 @@ import h2o_common
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_GBM_ec2_airlines(self):
-
         h2o.beta_features = True
 
         files = [
@@ -16,7 +15,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 ]
 
         for importFolderPath, csvFilename, trainKey, timeoutSecs, response in files:
-            h2o.beta_features = False #turn off beta_features
             # PARSE train****************************************
             csvPathname = importFolderPath + "/" + csvFilename
             
@@ -42,7 +40,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 }
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
-                h2o.beta_features = True
                 timeoutSecs = 1800
                 start = time.time()
                 print "Start time is: ", time.time()
