@@ -391,8 +391,6 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     else if( mrt._res != null ) _res.reduce4(mrt._res);
     // Futures are shared on local node and transient (so no remote updates)
     assert _fs == mrt._fs;
-//    if( _fs == null ) _fs = mrt._fs;
-//    else _fs.add(mrt._fs);
   }
 
   protected void postGlobal(){}
@@ -423,7 +421,10 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   private void reduce3( RPC<T> rpc ) {
     if( rpc == null ) return;
     T mrt = rpc.get();          // This is a blocking remote call
-    assert mrt._fs == null || mrt._fs._pending_cnt == 0;     // No blockable results from remote
+    // Note: because _fs is transient it is not set or cleared by the RPC.
+    // Because the MRT object is a clone of 'self' it's likely to contain a ptr
+    // to the self _fs which will be not-null and still have local pending
+    // blocks.  Not much can be asserted there.
     _profile.gather(mrt._profile, rpc.size_rez());
     // Unlike reduce2, results are in mrt directly not mrt._res.
     if( mrt._nodes != -1L )     // Any results at all?
