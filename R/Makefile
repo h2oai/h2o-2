@@ -1,6 +1,10 @@
 
 PROJECT_VERSION ?= 99.70
 
+# Do a best-effort attempt to see if the R user has pdflatex installed
+# and avoid running it if they don't.
+#
+# But use the '-' to ignore failures and continue the build even if it does fail.
 PDFLATEX=$(shell which pdflatex)
 
 build_outer:
@@ -9,7 +13,7 @@ build_outer:
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
-	R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
+	-R CMD Rd2pdf --force --output="h2o-package/h2o_package.pdf" --title="Package 'h2o'" --no-index --no-preview h2o-package/man 1> /dev/null
 endif
 	mkdir -p h2o-package/inst/java/
 	cp -f ../target/h2o.jar h2o-package/inst/java/h2o.jar
@@ -24,7 +28,7 @@ build_inner:
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
-	R CMD Rd2pdf --force --output="h2oRClient-package/h2oRClient_package.pdf" --title="Package 'h2oRClient'" --no-index --no-preview h2oRClient-package/man 1> /dev/null
+	-R CMD Rd2pdf --force --output="h2oRClient-package/h2oRClient_package.pdf" --title="Package 'h2oRClient'" --no-index --no-preview h2oRClient-package/man 1> /dev/null
 endif
 	R CMD build h2oRClient-package
 	echo h2oRClient_$(PROJECT_VERSION).tar.gz > info.txt
