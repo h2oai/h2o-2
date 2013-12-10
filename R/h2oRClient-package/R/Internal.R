@@ -235,10 +235,9 @@ h2o.__uniqID <- function(prefix = "") {
 # }
 
 h2o.__checkForFactors <- function(object) {
-     return(FALSE)
-#    if(class(object) != "H2OParsedData") return(FALSE)
-#    f <- function(idx, hex){ print(is.factor(hex[,idx])); return(is.factor(hex[,idx]))}
-#    any(sapply(seq(ncol(object)),f, object))
+    if(class(object) != "H2OParsedData") return(FALSE)
+    f <- function(idx, hex){ print(is.factor(hex[,idx])); return(is.factor(hex[,idx]))}
+    any(sapply(seq(ncol(object)),f, object))
 }
 
 h2o.__version <- function(client) {
