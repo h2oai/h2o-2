@@ -1,6 +1,6 @@
 import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import as h2i, h2o_rf
+import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import as h2i, h2o_rf, h2o_jobs
 
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
@@ -47,7 +47,8 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + kwargs['ntrees'] * 20
             start = time.time()
             print "Note train.csv is used for both train and validation"
-            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+            h2o_jobs.pollStatsWhileBusy(timeoutSecs=timeoutSecs, retryDelaySecs=5)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
