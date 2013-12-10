@@ -41,6 +41,9 @@
                         "norm_beta": { "type":"array", "items": 
                             { "type":"number" }
                         },
+                        "idxs": { "type":"array", "items": 
+                            { "type":"number" }
+                        },
                         "iteration": { "type":"number" },
                         "lambda": { "type":"number" },
                         "run_time": { "type":"number", },
