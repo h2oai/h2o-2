@@ -54,7 +54,8 @@ test.binop2.ampersand <- function(conn) {
   Log.info("TRUE is returned if neither digit being ANDed was a 0, FALSE otherwise.")
   Log.info("This is checked on both the left and the right (which produce the same boolean vec).")
 
-  newHex <- 5 & sliced
+  if(anyEnum) expect_warning(newHex <- 5 & sliced)
+  else newHex <- 5 & sliced
 
   expect_that(dim(newHex), equals(dim(sliced)))
 

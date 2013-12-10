@@ -61,12 +61,12 @@ class Basic(unittest.TestCase):
             if DO_POLL: # not needed
                 pass
             else: 
-                h2o_jobs.pollWaitJobs(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
-            print "FIX! how do we get the GLM result"
-            # hack it!
-            params = {'job_key': jobKey, 'destination_key': modelKey}
-            a = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMProgressPage2.json", params=params)
-            print "GLM result from completion_redirect:", h2o.dump_json(a)
+                h2o_jobs.pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=300, retryDelaySecs=5)
+            # print "FIX! how do we get the GLM result"
+            params = {'_modelKey': modelKey}
+            a = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMModelView.json", params=params)
+
+            # print "GLM result from completion_redirect:", h2o.dump_json(a)
     
         glmFirstResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=not DO_POLL, **kwargs)
         completionHack(glmFirstResult['job_key'], modelKey)
