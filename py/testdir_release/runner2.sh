@@ -82,6 +82,7 @@ myPy() {
 
 # avoid for now
 # myPy c5 test_c5_KMeans_sphere15_180GB.py
+myPy c5 test_c5_KMeans_sphere_26GB.py
 # myPy c1 test_c1_rel.py
 # myPy c2 test_c2_rel.py
 # myPy c3 test_c3_rel.py
