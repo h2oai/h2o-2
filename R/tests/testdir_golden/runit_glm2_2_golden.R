@@ -17,7 +17,7 @@ fitR<- glm(UsingBinom ~ AgeA + AgeC + AgeD + LowEd + MoreYes, family=binomial, d
 Log.info("Print model coefficients for R and H2O... \n")
 H2Ocoeffs<- sort(t(fitH2O@model$coefficients))
 Rcoeffs<- sort(t(fitR$coefficients))
-Log.info(paste("H2O coefficients  : ", fitH2O@model$coefficients,      "\t\t", "R coefficients   : ", fitR$coefficients))
+Log.info(paste("H2O coefficients  : ", H2Ocoeffs,      "\t\t", "R coefficients   : ", Rcoeffs))
 
 
 Log.info("Compare model coefficients in R to model statistics in H2O")
