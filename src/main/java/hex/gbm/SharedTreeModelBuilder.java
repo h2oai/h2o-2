@@ -224,13 +224,13 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     @Override public void map( Chunk[] chks ) {
       // We need private (local) space to gather the histograms.
       // Make local clones of all the histograms that appear in this chunk.
-      _hcs = new DHistogram[_nclass][][];
+      _hcs = new DHistogram[_nclass/*per-tree*/][/*leaves in tree*/][/*ncols*/];
 
       // For all klasses
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
         if( tree == null ) continue; // Ignore unused classes
-        final int leaf   = _leafs[k]; // Number of active leafs per tree for given class
+        final int leaf = _leafs[k]; // Number of active leafs per tree for given class
         // A leaf-biased array of all active histograms
         final DHistogram hcs[][] = _hcs[k] = new DHistogram[tree._len-leaf][];
         final Chunk nids = chk_nids(chks,k);
@@ -364,7 +364,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   public class Score extends MRTask2<Score> {
     long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
     double _sum;                // Sum-squared-error
-    long _snrows;
+    long _snrows;               // Count of voted-on rows
     /* @IN */ boolean _oob;
 
     public double   sum()   { return _sum; }
@@ -403,6 +403,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       Chunk ys = chk_resp(chks); // Response
       _cm = new long[_nclass][_nclass];
       double ds[] = new double[_nclass];
+      int ties[] = new int[_nclass];
       // Score all Rows
       for( int row=0; row<ys._len; row++ ) {
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
@@ -426,9 +427,13 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         }
         _sum += err*err;               // Squared error
         assert !Double.isNaN(_sum);
-        int best=0;                    // Pick highest prob for our prediction
+        // Pick highest prob for our prediction.  Count all ties for best.
+        int best=0, tie_cnt=0;
         for( int c=1; c<_nclass; c++ )
-          if( ds[best] < ds[c] ) best=c;
+          if( ds[best] < ds[c] ) { best=c; ties[  tie_cnt=0]=c; }
+          else if( ds[best] == ds[c] ) {   ties[++tie_cnt  ]=c; }
+        // Break ties psuedo-randomly: (row# mod #ties).
+        if( tie_cnt > 1 ) { best = ties[row%tie_cnt]; }
         _cm[ycls][best]++;      // Bump Confusion Matrix also
         _snrows++;
       }

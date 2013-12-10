@@ -9,7 +9,7 @@
 
 source('./findNSourceUtils.R')
 
-#setupRandomSeed(1536380603)
+#setupRandomSeed(285808201)
 
 doSelect<-
 function() {
@@ -44,15 +44,27 @@ test.plus.onFrame <- function(conn) {
 
   Log.info("5+hex:")
   print(head(as.data.frame(fivePlusHex)))
+  cat("\ndim(as.data.frame(fivePlusHex)) : ")
+  cat(dim(as.data.frame(fivePlusHex)), "\n")
+  cat("\ndim(fivePlusHex) : ")
+  cat(dim(fivePlusHex), "\n\n")
+
+  expect_that(dim(as.data.frame(fivePlusHex)), equals(dim(fivePlusHex)))
 
   Log.info("fivePlusHex - 5: ")
-  print(head(as.data.frame(fivePlusHex - 5)))
+  if(anyEnum) expect_warning(fivePlusHexMinusFive <- fivePlusHex -5)
+  else fivePlusHexMinusFive <- fivePlusHex - 5
+
+  print(head(as.data.frame(fivePlusHexMinusFive)))
+
   expect_that(dim(fivePlusHex), equals(dim(hex)))
   expect_that(head(fivePlusHex), equals(5 + head(hex)))
 
   Log.info("Checking left and right: ")
-  hexPlusFive <- hex + 5
-  fivePlusHex <- 5 + hex
+  if(anyEnum) expect_warning(hexPlusFive <- hex + 5)
+  else hexPlusFive <- hex + 5
+  if(anyEnum) expect_warning(fivePlusHex <- 5 + hex)
+  else fivePlusHex <- 5 + hex
 
   Log.info("hex + 5: ")
   print(head(hexPlusFive))
