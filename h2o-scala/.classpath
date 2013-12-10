@@ -24,6 +24,23 @@
   <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/stax/stax-api/jars/stax-api-1.0.1.jar"/>
   <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/dom4j/dom4j/jars/dom4j-1.6.1.jar"/>
   <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/xml-apis/xml-apis/jars/xml-apis-1.0.b2.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.hadoop/hadoop-client/jars/hadoop-client-1.1.0.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.hadoop/hadoop-core/jars/hadoop-core-1.1.0.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/xmlenc/xmlenc/jars/xmlenc-0.52.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-io/commons-io/jars/commons-io-2.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.apache.commons/commons-math/jars/commons-math-2.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-configuration/commons-configuration/jars/commons-configuration-1.6.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-collections/commons-collections/jars/commons-collections-3.2.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-lang/commons-lang/jars/commons-lang-2.4.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-digester/commons-digester/jars/commons-digester-1.8.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-beanutils/commons-beanutils/jars/commons-beanutils-1.7.0.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-beanutils/commons-beanutils-core/jars/commons-beanutils-core-1.8.0.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-net/commons-net/jars/commons-net-1.4.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/oro/oro/jars/oro-2.0.8.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/commons-el/commons-el/jars/commons-el-1.0.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/hsqldb/hsqldb/jars/hsqldb-1.8.0.10.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.codehaus.jackson/jackson-mapper-asl/jars/jackson-mapper-asl-1.0.1.jar"/>
+  <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.codehaus.jackson/jackson-core-asl/jars/jackson-core-asl-1.0.1.jar"/>
   <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.specs2/specs2_2.10/jars/specs2_2.10-2.2.3.jar"/>
   <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.scalaz/scalaz-core_2.10/bundles/scalaz-core_2.10-7.0.2.jar"/>
   <classpathentry kind="lib" path="/Users/michal/.ivy2/cache/org.scalaz/scalaz-concurrent_2.10/bundles/scalaz-concurrent_2.10-7.0.2.jar"/>
