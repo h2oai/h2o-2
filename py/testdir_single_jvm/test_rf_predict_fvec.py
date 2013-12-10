@@ -11,53 +11,55 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1)
+            h2o.build_cloud(1)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_predict(self):
+    def test_rf_predict_fvec(self):
+        h2o.beta_features = True
         trees = 6
         timeoutSecs = 20
         hex_key = 'iris2.csv.hex'
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put', hex_key=hex_key)
-        h2o_cmd.runRF(parseResult=parseResult, trees=trees, model_key="iris_rf_model", timeoutSecs=timeoutSecs)
+        h2o_cmd.runRF(parseResult=parseResult, ntrees=trees, destination_key="iris_rf_model", timeoutSecs=timeoutSecs)
+
         print "Use H2O GeneratePredictionsPage with a H2O generated model and the same data key. Inspect/Summary result"
 
         start = time.time()
-        predict = h2o.nodes[0].generate_predictions(model_key="iris_rf_model", data_key=hex_key)
+        predict = h2o.nodes[0].generate_predictions(model_key="iris_rf_model", data_key=hex_key, 
+            prediction='predict.hex')
         print "generate_predictions end on ", hex_key, " took", time.time() - start, 'seconds'
+        print "predict:", h2o.dump_json(predict)
+        inspect = h2o_cmd.runInspect(key='predict.hex')
+        print "inspect:", h2o.dump_json(inspect)
 
         # print h2o.dump_json(predict)
         expectedCols = {
-              "base": 0, 
-              "enum_domain_size": 0, 
               "max": 2.0, 
-              "mean": 1.0, 
+              # "mean": 1.0, 
               "min": 0.0, 
-              "num_missing_values": 0, 
-              "offset": 0, 
-              "scale": 1, 
-              "size": 8, 
-              "type": "float", 
-              "variance": 0.816496580927726
+              "naCnt": 0, 
+              # "name": 0, 
+              # Enum or real?
+              # "type": "Real", 
         }
 
-        predictCols = predict['cols'][0]
+        predictCols = inspect['cols'][0]
         diffkeys = [k for k in expectedCols if predictCols[k] != expectedCols[k]]
         for k in diffkeys:
             raise Exception ("Checking H2O summary results, wrong %s: %s, should be: %s" % (k, predictCols[k], expectedCols[k]))
 
         expected = {
-          "num_rows": 150, 
-          "num_cols": 1, 
-          "row_size": 8, 
+          "numRows": 150, 
+          "numCols": 4, 
+          "byteSize": 4022, 
         }
 
-        diffkeys = [k for k in expected if predict[k] != expected[k]]
+        diffkeys = [k for k in expected if inspect[k] != expected[k]]
         for k in diffkeys:
             raise Exception ("%s : %s != %s" % (k, predict[k], expected[k]))
 
