@@ -22,7 +22,8 @@ object ScAlH2ORepl {
     // Launch H2O main
     H2O.main(args);
     // Launch REPL
-    launchRepl
+    //launchRepl
+    TT.test
   }
   
   def launchRepl() = {

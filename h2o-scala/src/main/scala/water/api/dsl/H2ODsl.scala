@@ -77,6 +77,8 @@ class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFr
   
   def ncol() = frame().numCols()
   def nrow() = frame().numRows()
+  def names() = frame().names()
+  
   def apply(cols: Seq[Int]) = new DFrame(ffilterByIdx(frame(), cols))
   def apply(cols: String) = new DFrame(ffilterByName(frame, cols::Nil))
   def apply(rows: Seq[Int], cols: Seq[Int]) = apply(cols)

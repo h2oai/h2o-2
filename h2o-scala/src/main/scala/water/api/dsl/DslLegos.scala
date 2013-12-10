@@ -45,8 +45,8 @@ trait T_Frame {
   def ==(rhs: Number): T_Frame;
   def !=(rhs: Number): T_Frame;
   
-  /** Basic arithmetic ops with another frame */
-//  def +(rhs: TFrame): TFrame;
+  /** Basic arithmetic ops with another frame - R-like semantics. */ 
+//  def +(rhs: T_Frame): T_Frame;
 //  def -(rhs: TFrame): TFrame;
 //  def *(rhs: TFrame): TFrame;
 //  def /(rhs: TFrame): TFrame;
@@ -55,6 +55,7 @@ trait T_Frame {
   
   def ncol():Int;
   def nrow():Long;
+  def names():Array[String];
 }
 
 /** Generic Frame transformer */
@@ -80,6 +81,7 @@ case class Div(lhs:scala.Double) extends T_NV_Transf[scala.Double] {
   def apply(rhs:scala.Double):scala.Double = if (rhs!=0) lhs-rhs else scala.Double.NaN;
 }
 
+/** Partial specialization for types returning boolean. */
 abstract class T_NF_Transf[T] extends Iced with (T => Boolean)
 case class Less(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
   def apply(rhs:scala.Double):Boolean = lhs < rhs
@@ -155,7 +157,7 @@ abstract trait T_MR[T <: DFrame] {
  *  Provides transformation between DSL types and H2O types.
  */
 trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given representation of key
-  //self => def apply(v:Frame):VT
+
   // Parse a dataset
   def parse(s:String):DFrame = {
     val dest: Key = Key.make(s+".hex")

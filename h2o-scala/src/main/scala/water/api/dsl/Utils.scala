@@ -13,9 +13,6 @@ import water.Freezable
  *  original frame but create a new H2O frame. 
  */
 object Utils {
-  def a() = {
-    ffilterByName(null, "A"::Nil)
-  }
   
   def colIdx(f:Frame, cols: Seq[String]) = for ((n,idx) <- f.names().view.zipWithIndex; if cols.contains(n)) yield idx
   // Nasty hack -  How to beat type-erasure by implicit types: http://michid.wordpress.com/2010/06/14/working-around-type-erasure-ambiguities-scala/
@@ -96,9 +93,20 @@ object TT {
 
   // ================== Ad-hoc example of Scala code for map on 1 vec producing one vector
   
-  abstract class IcedFunctor1[T] extends Iced with (T=>T)
+  /* -- SHOULD BE GENERATED -- */
+  abstract class IcedFunctor1[T1] extends Iced with (T1=>T1)
+  abstract class IcedFunctor1to1[T1,R1] extends Iced with (T1=>R1)
+  abstract class IcedFunctor2to1[T1,T2,R1] extends Iced with ((T1,T2)=>R1)
+  abstract class IcedFunctor2to2[T1,T2,R1,R2] extends Iced with ((T1,T2)=>(R1,R2))
   
-  def map_1Vto1V (f:DFrame, t:(Symbol, Symbol))(fc: IcedFunctor1[Double]):DFrame = {
+  implicit def f1toIF1[T1]( f: (T1=>T1) ): IcedFunctor1[T1] = {
+    new IcedFunctor1[T1] {
+      def apply(v1:T1) = f(v1)
+    }
+  }
+  /* ----- */
+  
+  def xmap (f:DFrame, t:(Symbol, Symbol))(fc: IcedFunctor1[Double]):DFrame = {
     val inVectorName = t._1.name
     val outVectorName = t._2.name
     
@@ -113,9 +121,17 @@ object TT {
     }
     // invoke task
     mrTask.doAll(1, inVector)
-    val result = mrTask.outputFrame(Array(outVectorName), null)
+    val result = mrTask.outputFrame(Array(outVectorName), Array(inVector._domain))
     
     new DFrame(result)
+  }
+  
+  def xmap (f:DFrame, t:((Symbol, Symbol), (Symbol,Symbol)))(fc: IcedFunctor2to2[Double,Double,Double,Double]):DFrame = {
+    val inSchema = t._1;
+    val outSchema = t._2;
+    
+    // result
+    new DFrame(new Frame())
   }
   
   // Another way of thinking about view bounds and context bounds is that the first transfers implicit conversions from the caller's scope. 
@@ -124,8 +140,10 @@ object TT {
     import H2ODsl._
     implicit val f = parse("../smalldata/cars.csv") 
     println(f)
-    //val x = map_1Vto1V (f,('cylinders -> 'moreThan4)) { (x:Double) => if (x%2==0) 0.0 else 1.0 }
-    val x = map_1Vto1V (f,('cylinders -> 'moreThan4)) { new IcedFunctor1[Double] { def apply(x:Double) = if (x>4) 1 else 0 } }
+    val x = xmap (f, ('cylinders -> 'moreThan4)) { (x:Double) => ( if (x%2==0) 0.0 else 1.0 ) }
+    val y = xmap (f, ('name, 'cylinders) -> ('name, 'moreThan4) ) { // Explicit use of iced functor since i have no way how to make Function(s) to extend Iced 
+      new IcedFunctor2to2[Double,Double,Double,Double] { def apply(x:Double, y:Double) = (if (x>4) 1 else 0, 0) } 
+    }
     println(x)
     // intention is to have:
     //       |----------------MAP SELECTOR -------| |-------------MAP Implementation ---------------------|
