@@ -45,8 +45,7 @@ test.slice.star <- function(conn) {
   print(h2o.ls(conn))
 
   Log.info("*ing 5 to sliced.hex")
-  if(anyEnum) expect_warning(slicedStarFive <- sliced * 5)
-  else slicedStarFive <- sliced * 5
+  slicedStarFive <- sliced * 5
   slicedStarFive <- h2o.assign(slicedStarFive, "slicedStarFive.hex")
 
   Log.info("Orignal sliced: ")
@@ -57,10 +56,8 @@ test.slice.star <- function(conn) {
   expect_that(as.data.frame(slicedStarFive), equals(5 *  as.data.frame(sliced)))
 
   Log.info("Checking left and right: ")
-  if(anyEnum) expect_warning(slicedStarFive <- sliced * 5)
-  else slicedStarFive <- sliced * 5
-  if(anyEnum) expect_warning(fiveStarSliced <- 5 * sliced)
-  else fiveStarSliced <- 5 * sliced
+  slicedStarFive <- sliced * 5
+  fiveStarSliced <- 5 * sliced
 
   Log.info("sliced * 5: ")
   print(head(slicedStarFive))
@@ -72,8 +69,7 @@ test.slice.star <- function(conn) {
 
   Log.info("Checking the variation of H2OParsedData * H2OParsedData")
 
-  if(anyEnum) expect_warning(hexStarHex <- fiveStarSliced * slicedStarFive)
-  else hexStarHex <- fiveStarSliced * slicedStarFive
+  hexStarHex <- fiveStarSliced * slicedStarFive
 
   Log.info("FiveStarSliced * slicedStarFive: ")
   print(head(hexStarHex))
