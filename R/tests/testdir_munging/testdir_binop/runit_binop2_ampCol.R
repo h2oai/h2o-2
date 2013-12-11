@@ -43,7 +43,7 @@ test.binop2.ampersand <- function(conn) {
   col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col, sep = "", collapse = ""))
   Log.info(paste("Using column: ", col))
  
-  sliced <- hex[,col]
+  sliced <- hex[,col] #expect this to be numeric!
   Log.info("Placing key \"sliced.hex\" into User Store")
   sliced <- h2o.assign(sliced, "sliced.hex")
   print(h2o.ls(conn))
@@ -54,8 +54,7 @@ test.binop2.ampersand <- function(conn) {
   Log.info("TRUE is returned if neither digit being ANDed was a 0, FALSE otherwise.")
   Log.info("This is checked on both the left and the right (which produce the same boolean vec).")
 
-  if(anyEnum) expect_warning(newHex <- 5 & sliced)
-  else newHex <- 5 & sliced
+  newHex <- 5 & sliced
 
   expect_that(dim(newHex), equals(dim(sliced)))
 
