@@ -2130,6 +2130,7 @@ class H2O(object):
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallelism': None,
                 'beta_eps': None,
+                'classification': None,
             } 
         else:
             params_dict = {

@@ -61,6 +61,9 @@ public class Cloud extends Request {
       node.addProperty(MAX_DISK, hb.get_max_disk());
       node.addProperty(NUM_CPUS, (int)hb._num_cpus);
       node.addProperty(SYSTEM_LOAD, hb._system_load_average);
+      if( System.currentTimeMillis() - h2o._last_heard_from > HeartBeatThread.TIMEOUT)
+          h2o._node_healthy = false;
+      node.addProperty(NODE_HEALTH, h2o._node_healthy);
 
       JsonArray fjt = new JsonArray();
       JsonArray fjq = new JsonArray();

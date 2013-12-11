@@ -302,8 +302,7 @@ h2o.__binop2 <- function(op, x, y) {
   #  stop("Can only operate on single column vectors")
   LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
 
-
-  if(class(x) == "H2OParsedData" || class(y) == "H2OParsedData") {
+  if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
     anyFactorsX <- h2o.__checkForFactors(x)
     anyFactorsY <- h2o.__checkForFactors(y)
     anyFactors <- any(c(anyFactorsX, anyFactorsY))

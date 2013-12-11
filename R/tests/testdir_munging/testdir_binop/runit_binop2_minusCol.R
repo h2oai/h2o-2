@@ -45,8 +45,7 @@ test.minus <- function(conn) {
   print(h2o.ls(conn))
 
   Log.info("Minisuing 5 from sliced.hex")
-  if(anyEnum) expect_warning(slicedMinusFive <- sliced - 5)
-  else slicedMinusFive <- sliced - 5
+  slicedMinusFive <- sliced - 5
   slicedMinusFive <- h2o.assign(slicedMinusFive, "slicedMinusFive.hex")
 
   Log.info("Orignal sliced: ")
@@ -57,10 +56,8 @@ test.minus <- function(conn) {
   expect_that(as.data.frame(slicedMinusFive), equals(data.frame(as.data.frame(sliced)) - 5))
 
   Log.info("Checking left and right: ")
-  if(anyEnum) expect_warning(slicedMinusFive <- sliced - 5)
-  else slicedMinusFive <- sliced - 5
-  if(anyEnum) expect_warning(fiveMinusSliced <- 5 - sliced)
-  else fiveMinusSliced <- 5 - sliced
+  slicedMinusFive <- sliced - 5
+  fiveMinusSliced <- 5 - sliced
 
   Log.info("sliced - 5: ")
   print(head(slicedMinusFive))
@@ -68,7 +65,6 @@ test.minus <- function(conn) {
   Log.info("5 - sliced: ")
   print(head(fiveMinusSliced))
   expect_that(abs(as.data.frame(slicedMinusFive)), equals(abs(as.data.frame(fiveMinusSliced))))
-
 
   Log.info("Checking the variation of H2OParsedData - H2OParsedData")
 

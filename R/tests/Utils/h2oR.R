@@ -125,11 +125,23 @@ function() {
     PASSS <<- TRUE
 }
 
+
+withWarnings <- function(expr) {
+    myWarnings <- NULL
+    wHandler <- function(w) {
+        myWarnings <<- c(myWarnings, list(w))
+        invokeRestart("muffleWarning")
+    }
+    val <- withCallingHandlers(expr, warning = wHandler)
+    list(value = val, warnings = myWarnings)
+    for(w in myWarnings) WARN(w)
+}
+
 doTest<-
 function(testDesc, test) {
     Log.info("======================== Begin Test ===========================\n")
     conn <- new("H2OClient", ip=myIP, port=myPort)
-    tryCatch(test_that(testDesc, test(conn)), warning = function(w) WARN(w), error =function(e) FAIL(e))
+    tryCatch(test_that(testDesc, withWarnings(test(conn))), warning = function(w) WARN(w), error =function(e) FAIL(e))
     if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
     PASS()
 }
