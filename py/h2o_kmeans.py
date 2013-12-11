@@ -47,7 +47,7 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
 
     for i,c in enumerate(clusters):
         for n in c:
-            if math.isnan(n):
+            if math.isnan(float(n)):
                 raise Exception("center", i, "has NaN:", n, "center:", c)
 
     # shouldn't have any errors

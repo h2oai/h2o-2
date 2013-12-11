@@ -7,7 +7,7 @@ import h2o_common
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_GBM_ec2_airlines(self):
+    def test_c9b_GBM_airlines_hdfs(self):
         h2o.beta_features = True
 
         files = [
