@@ -45,8 +45,7 @@ test.slice.div <- function(conn) {
   print(h2o.ls(conn))
 
   Log.info("/ing 5 to sliced.hex")
-  if(anyEnum) expect_warning(slicedDivFive <- sliced / 5)
-  else slicedDivFive <- sliced / 5
+  slicedDivFive <- sliced / 5
 
   slicedDivFive <- h2o.assign(slicedDivFive, "slicedDivFive.hex")
 
@@ -58,10 +57,8 @@ test.slice.div <- function(conn) {
   expect_that(as.data.frame(slicedDivFive), equals(as.data.frame(sliced) / 5))
 
   Log.info("Checking left and right: ")
-  if(anyEnum) expect_warning(slicedDivFive <- sliced / 5)
-  else slicedDivFive <- sliced / 5
+  slicedDivFive <- sliced / 5
 
-  if(anyEnum) expect_warning(fiveDivSliced <- 5 / sliced)
   fiveDivSliced <- 5 / sliced
 
   Log.info("sliced / 5: ")
