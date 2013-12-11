@@ -1,16 +1,17 @@
 package hex.gbm;
 
 import hex.rng.MersenneTwisterRNG;
-
 import java.util.Arrays;
 import java.util.Random;
-
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+import jsr166y.RecursiveAction;
+import jsr166y.ForkJoinTask;
 
 public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -227,97 +228,16 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       _hcs = new DHistogram[_nclass/*per-tree*/][/*leaves in tree*/][/*ncols*/];
 
       // For all klasses
+      ForkJoinTask sb1t[] = new ForkJoinTask[_nclass];
       for( int k=0; k<_nclass; k++ ) {
-        final DTree tree = _trees[k];
-        if( tree == null ) continue; // Ignore unused classes
-        final int leaf = _leafs[k]; // Number of active leafs per tree for given class
-        // A leaf-biased array of all active histograms
-        final DHistogram hcs[][] = _hcs[k] = new DHistogram[tree._len-leaf][];
-        final Chunk nids = chk_nids(chks,k);
-        final Chunk wrks = chk_work(chks,k); // What we predict on
-
-        // Pass 1: Score a prior partially-built tree model, and make new Node
-        // assignments to every row.  This involves pulling out the current
-        // assigned DecidedNode, "scoring" the row against that Node's decision
-        // criteria, and assigning the row to a new child UndecidedNode (and
-        // giving it an improved prediction).
-        for( int row=0; row<nids._len; row++ ) { // Over all rows
-          int nid = (int)nids.at80(row); // Get Node to decide from
-          if (isDecidedRow(nid)) continue; // already done
-          if (isOOBRow(nid)) { // sampled away - we track the position in the tree
-            if ( leaf > 0) {
-              int nnid = oob2Nid(nid);
-              DTree.DecidedNode dn = tree.decided(nnid);
-              if( dn._split._col == -1 ) nids.set0(row,nid2Oob(nnid = dn._pid)); // Might have a leftover non-split
-              if( nnid != -1 ) nnid = tree.decided(nnid).ns(chks,row); // Move down the tree 1 level
-              if( nnid != -1 ) nids.set0(row,nid2Oob(nnid));
-            }
-            continue;
-          }
-
-          // Score row against current decisions & assign new split
-          if( leaf > 0 ) {      // Prior pass exists?
-            DTree.DecidedNode dn = tree.decided(nid);
-            if( dn._split._col == -1 ) nids.set0(row,(nid = dn._pid)); // Might have a leftover non-split
-            if( nid != -1 ) nid = tree.decided(nid).ns(chks,row); // Move down the tree 1 level
-            if( nid != -1 ) nids.set0(row,nid);
-          }
-
-          // Pass 1.9
-          if( nid < leaf ) continue; // row already predicts perfectly
-
-          // We need private (local) space to gather the histograms.
-          // Make local clones of all the histograms that appear in this chunk.
-          DHistogram nhs[] = hcs[nid-leaf];
-          if( nhs != null ) continue; // Already have histograms
-          // Lazily manifest this histogram for tree-node 'nid'
-          nhs = hcs[nid-leaf] = new DHistogram[_ncols];
-          DHistogram ohs[] = tree.undecided(nid)._hs; // The existing column of Histograms
-          int sCols[] = tree.undecided(nid)._scoreCols; // Columns to score (null, or a list of selected cols)
-          if( sCols != null ) { // Sub-selecting just some columns?
-            // For just the selected columns make Big Histograms
-            for( int j=0; j<sCols.length; j++ ) { // Make private copies
-              int idx = sCols[j];                 // Just the selected columns
-              nhs[idx] = ohs[idx].bigCopy();
-            }
-            // For all the rest make small Histograms
-            for( int j=0; j<nhs.length; j++ )
-              if( ohs[j] != null && nhs[j]==null )
-                nhs[j] = ohs[j].smallCopy();
-          } else {              // Selecting all columns
-            // Default: make big copies of all
-            for( int j=0; j<nhs.length; j++ )
-                if( ohs[j] != null )
-                  nhs[j] = ohs[j].bigCopy();
-          }
+        if( _trees[k] != null ) { // Ignore unused classes
+          sb1t[k] = new ScoreBuildOneTree(_trees,_leafs,_hcs,chks,k).fork();
         }
-
-        // Pass 2: Build new summary DHistograms on the new child
-        // UndecidedNodes every row got assigned into.  Collect counts, mean,
-        // variance, min, max per bin, per column.
-        for( int row=0; row<nids._len; row++ ) { // For all rows
-          int nid = (int)nids.at80(row);         // Get Node to decide from
-          if( nid<leaf ) continue; // row already predicts perfectly or sampled away
-          if( wrks.isNA0(row) ) continue; // No response, cannot train
-          DHistogram nhs[] = hcs[nid-leaf];
-
-          double y = wrks.at0(row);      // Response for this row
-          for( int j=0; j<_ncols; j++) { // For all columns
-            DHistogram nh = nhs[j];
-            if( nh == null ) continue; // Not tracking this column?
-            float col_data = (float)chks[j].at0(row); // Data stored in the column and put them into histogram
-            if( nh instanceof DBinHistogram ) // Big histogram
-              ((DBinHistogram)nh).incr(row,col_data,y);
-            else              nh .incr(col_data); // Small histogram
-          }
+      }
+      for( int k=0; k<_nclass; k++ ) {
+        if( _trees[k] != null ) { // Ignore unused classes
+          sb1t[k].join();
         }
-
-        // Per-chunk histogram rollups
-        for( DHistogram dbh[] : hcs )
-          if( dbh != null )
-            for( int j=0; j<dbh.length; j++ )
-              if( dbh[j] != null ) // There are two kinds of histograms - small and big
-                (dbh[j]).fini();
       }
     }
 
@@ -339,6 +259,112 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       }
     }
   }
+
+  public class ScoreBuildOneTree extends RecursiveAction {
+    final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
+    final int   _leafs[]; // Number of active leaves (per tree)
+    final DHistogram _hcs[/*tree/klass*/][/*tree-relative node-id*/][/*column*/];
+    final Chunk _chks[];
+    final int _treenum;
+    ScoreBuildOneTree( DTree trees[], int leafs[], DHistogram hcs[][][], Chunk chks[], int treenum ) {
+      _trees = trees; _leafs = leafs; _hcs = hcs; _chks = chks; _treenum = treenum;
+    }
+
+    @Override public void compute() {
+      final int k = _treenum;
+      final Chunk chks[] = _chks;
+      final DTree tree = _trees[k];
+      final int leaf = _leafs[k]; // Number of active leafs per tree for given class
+      // A leaf-biased array of all active histograms
+      final DHistogram hcs[][] = _hcs[k] = new DHistogram[tree._len-leaf][];
+      final Chunk nids = chk_nids(chks,k);
+      final Chunk wrks = chk_work(chks,k); // What we predict on
+
+      // Pass 1: Score a prior partially-built tree model, and make new Node
+      // assignments to every row.  This involves pulling out the current
+      // assigned DecidedNode, "scoring" the row against that Node's decision
+      // criteria, and assigning the row to a new child UndecidedNode (and
+      // giving it an improved prediction).
+      for( int row=0; row<nids._len; row++ ) { // Over all rows
+        int nid = (int)nids.at80(row); // Get Node to decide from
+        if (isDecidedRow(nid)) continue; // already done
+        if (isOOBRow(nid)) { // sampled away - we track the position in the tree
+          if ( leaf > 0) {
+            int nnid = oob2Nid(nid);
+            DTree.DecidedNode dn = tree.decided(nnid);
+            if( dn._split._col == -1 ) nids.set0(row,nid2Oob(nnid = dn._pid)); // Might have a leftover non-split
+            if( nnid != -1 ) nnid = tree.decided(nnid).ns(chks,row); // Move down the tree 1 level
+            if( nnid != -1 ) nids.set0(row,nid2Oob(nnid));
+          }
+          continue;
+        }
+
+        // Score row against current decisions & assign new split
+        if( leaf > 0 ) {      // Prior pass exists?
+          DTree.DecidedNode dn = tree.decided(nid);
+          if( dn._split._col == -1 ) nids.set0(row,(nid = dn._pid)); // Might have a leftover non-split
+          if( nid != -1 ) nid = tree.decided(nid).ns(chks,row); // Move down the tree 1 level
+          if( nid != -1 ) nids.set0(row,nid);
+        }
+
+        // Pass 1.9
+        if( nid < leaf ) continue; // row already predicts perfectly
+
+        // We need private (local) space to gather the histograms.
+        // Make local clones of all the histograms that appear in this chunk.
+        DHistogram nhs[] = hcs[nid-leaf];
+        if( nhs != null ) continue; // Already have histograms
+        // Lazily manifest this histogram for tree-node 'nid'
+        nhs = hcs[nid-leaf] = new DHistogram[_ncols];
+        DHistogram ohs[] = tree.undecided(nid)._hs; // The existing column of Histograms
+        int sCols[] = tree.undecided(nid)._scoreCols; // Columns to score (null, or a list of selected cols)
+        if( sCols != null ) { // Sub-selecting just some columns?
+          // For just the selected columns make Big Histograms
+          for( int j=0; j<sCols.length; j++ ) { // Make private copies
+            int idx = sCols[j];                 // Just the selected columns
+            nhs[idx] = ohs[idx].bigCopy();
+          }
+          // For all the rest make small Histograms
+          for( int j=0; j<nhs.length; j++ )
+            if( ohs[j] != null && nhs[j]==null )
+              nhs[j] = ohs[j].smallCopy();
+        } else {              // Selecting all columns
+          // Default: make big copies of all
+          for( int j=0; j<nhs.length; j++ )
+            if( ohs[j] != null )
+              nhs[j] = ohs[j].bigCopy();
+        }
+      }
+
+      // Pass 2: Build new summary DHistograms on the new child
+      // UndecidedNodes every row got assigned into.  Collect counts, mean,
+      // variance, min, max per bin, per column.
+      for( int row=0; row<nids._len; row++ ) { // For all rows
+        int nid = (int)nids.at80(row);         // Get Node to decide from
+        if( nid<leaf ) continue; // row already predicts perfectly or sampled away
+        if( wrks.isNA0(row) ) continue; // No response, cannot train
+        DHistogram nhs[] = hcs[nid-leaf];
+
+        double y = wrks.at0(row);      // Response for this row
+        for( int j=0; j<_ncols; j++) { // For all columns
+          DHistogram nh = nhs[j];
+          if( nh == null ) continue; // Not tracking this column?
+          float col_data = (float)chks[j].at0(row); // Data stored in the column and put them into histogram
+          if( nh instanceof DBinHistogram ) // Big histogram
+            ((DBinHistogram)nh).incr(row,col_data,y);
+          else              nh .incr(col_data); // Small histogram
+        }
+      }
+
+      // Per-chunk histogram rollups
+      for( DHistogram dbh[] : hcs )
+        if( dbh != null )
+          for( int j=0; j<dbh.length; j++ )
+            if( dbh[j] != null ) // There are two kinds of histograms - small and big
+              (dbh[j]).fini();
+    }
+  }
+
 
   // --------------------------------------------------------------------------
   private static class ClassDist extends MRTask2<ClassDist> {
