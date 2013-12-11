@@ -231,21 +231,42 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         coefficients_names = GLMModel['coefficients_names']
         # 'beta' has to use 'idxs' to index into these names
         idxs = submodels0['idxs']
-        column_names = [coefficients_names[i] for i in idxs]
+        column_names = coefficients_names
 
         if doNormalized:
             beta = submodels0['normalized_beta']
+            if len(column_names)!=len(beta):
+                print len(column_names), len(beta)
+                raise Exception("column_names and normalized_beta from h2o json not same length. column_names: %s normalized_beta: %s" % (column_names, beta))
         else:
             beta = submodels0['beta']
+            if len(column_names)!=len(beta):
+                print len(column_names), len(beta)
+                raise Exception("column_names and beta from h2o json not same length. column_names: %s beta: %s" % (column_names, beta))
 
         coefficients = {}
         # create a dictionary with name, beta (including intercept) just like v1
-        for n,b in zip(column_names, beta):
+
+        for n,b in zip(column_names, beta ):
             coefficients[n] = b
 
         print  "HELLO: coefficients:", coefficients
         print  "HELLO: beta:", beta
+        print "intercept demapping info:", \
+            "column_names[-i]:", column_names[-1], \
+            "idxs[-1]:", idxs[-1], \
+            "coefficient_names[[idxs[-1]]:", coefficients_names[idxs[-1]], \
+            "beta[-1]:", beta[-1], \
+            "coefficients['Intercept']", coefficients['Intercept']
+
+        # idxs has the order for non-zero coefficients, it's shorter than beta and column_names
+        for i in idxs:
+            if beta[i]==0.0:
+                raise Exception("idxs shouldn't point to any 0 coefficients i: %s beta[i]:" (i, beta[i]))
+
         intercept = coefficients.pop('Intercept', None)
+
+        # intercept demapping info: idxs[-1]: 54 coefficient_names[[idxs[-1]]: Intercept beta[-1]: -6.6866753099
         # the last one shoudl be 'Intercept' ?
         column_names.pop()
 
@@ -257,6 +278,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         column_names = GLMModel['column_names']
         # get the intercept out of there into it's own dictionary
         intercept = coefficients.pop('Intercept', None)
+        print "First intercept:", intercept
 
     # have to skip the output col! get it from kwargs
     # better always be there!

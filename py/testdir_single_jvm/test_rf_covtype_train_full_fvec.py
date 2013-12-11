@@ -47,11 +47,18 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + kwargs['ntrees'] * 20
             start = time.time()
             print "Note train.csv is used for both train and validation"
-            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
+            rfv = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
             h2o_jobs.pollStatsWhileBusy(timeoutSecs=timeoutSecs, retryDelaySecs=5)
             elapsed = time.time() - start
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
+
+            job_key = rfv['job_key']
+            model_key = rfv['destination_key']
+            rfv = h2o_cmd.runRFView(data_key=dataKeyTest, model_key=model_key,
+                timeoutSecs=timeoutSecs, retryDelaySecs=1, print_params=True)
+
+
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
             self.assertLess(classification_error, 3, "train.csv should have full classification error: %s < 3" % classification_error)
 
