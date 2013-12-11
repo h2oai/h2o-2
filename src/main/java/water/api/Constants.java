@@ -110,6 +110,7 @@ public class Constants extends Iced {
   public static final String NEG_X                 = "neg_x";
   public static final String NO_CM                 = "no_confusion_matrix";
   public static final String NODE                  = "node";
+  public static final String NODE_HEALTH           = "node_healthy";
   public static final String NODE_NAME             = "node_name";
   public static final String NODES                 = "nodes";
   public static final String NORMALIZE             = "normalize";
