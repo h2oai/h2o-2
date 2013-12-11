@@ -57,7 +57,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'k': 3,
                 'initialization': 'Furthest',
                 'max_iter': 4,
-                'cols': None,
                 'normalize': 0,
                 'destination_key': 'junk.hex',
                 'seed': 265211114317615310,
@@ -69,7 +68,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             # GLM*********************************
             print "\n" + csvFilename
-            kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case_val': 1}
+            kwargs = {
+                'x': 0, 
+                'y': 1, 
+                'n_folds': 0, 
+                'family': 'binomial',
+                'case_mode': '=', 
+                'case_val': 1
+            }
             # one coefficient is checked a little more
             colX = 0
 

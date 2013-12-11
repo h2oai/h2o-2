@@ -93,7 +93,6 @@ class Basic(unittest.TestCase):
         residual_deviance = validation['residual_deviance']
 
         print '_names', _names
-        print 'WARNING: have to reorder using idxs'
         print 'coefficients_name', coefficients_names
         print 'beta', beta
         print 'iteration', iteration
