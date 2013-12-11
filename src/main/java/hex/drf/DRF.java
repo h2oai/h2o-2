@@ -270,9 +270,12 @@ public class DRF extends SharedTreeModelBuilder {
       }
     }
     // Sample - mark the lines by putting 'OUT_OF_BAG' into nid(<klass>) vector
-    for( int k=0; k<_nclass; k++) {
-      if (ktrees[k] != null) new Sample(((DRFTree)ktrees[k]), sample_rate).doAll(vec_nids(fr,k));
-    }
+    Sample ss[] = new Sample[_nclass];
+    for( int k=0; k<_nclass; k++)
+      if (ktrees[k] != null) ss[k] = new Sample((DRFTree)ktrees[k], sample_rate).dfork(vec_nids(fr,k));
+    for( int k=0; k<_nclass; k++)
+      if( ss[k] != null ) ss[k].getResult();
+
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from leafs[i] to tree._len for each tree i
 
     // ----
