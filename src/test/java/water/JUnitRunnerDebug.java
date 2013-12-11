@@ -41,11 +41,20 @@ public class JUnitRunnerDebug {
       // tests = JUnitRunner.all();
       tests.add(hex.NeuralNetSpiralsTest.class);
 
+      // Uncomment this to sleep here and use the browser.
+      // try { Thread.sleep(10000000); } catch (Exception _) {}
+
       JUnitCore junit = new JUnitCore();
       junit.addListener(new LogListener());
       Result result = junit.run(tests.toArray(new Class[0]));
-      if( result.getFailures().size() == 0 )
-        Log.info("Success!");
+      if( result.getFailures().size() == 0 ) {
+        Log.info("SUCCESS!");
+        System.exit(0);
+      }
+      else {
+        Log.info("FAIL!");
+        System.exit(1);
+      }
     }
   }
 
