@@ -109,15 +109,15 @@ h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 
 h2o.__remoteSend <- function(client, page, ...) {
+  h2o.__checkClientHealth(client)
   ip = client@ip
   port = client@port
   myURL = paste("http://", ip, ":", port, "/", page, sep="")
-  
+
   # Log list of parameters sent to H2O
   if(pkg.env$IS_LOGGING) {
     h2o.__logIt(myURL, list(...), "Command")
   }
-  
   # Sends the given arguments as URL arguments to the given page on the specified server
   # temp = postForm(myURL, style = "POST", ...)
   if(length(list(...)) == 0)
@@ -131,12 +131,47 @@ h2o.__remoteSend <- function(client, page, ...) {
   after = gsub('"Infinity"', '"Inf"', temp[1])
   after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)
-  
+
   if (!is.null(res$error)) {
     if(pkg.env$IS_LOGGING) h2o.__writeToFile(res, pkg.env$h2o.__LOG_ERROR)
     stop(paste(myURL," returned the following error:\n", h2o.__formatError(res$error)))
   }
   res
+}
+
+h2o.__cloudSick <- function(node_name = NULL, client) {
+  url <- paste("http://", client@ip, ":", client@port, "/Cloud.html", sep = "")
+  m1 <- "Attempting to execute action on an unhealthy cluster!\n"
+  m2 <- ifelse(node_name != NULL, paste("The sick node is identified to be: ", node_name, "\n", sep = "", collapse = ""), "")
+  m3 <- paste("Check cloud status here: ", url, sep = "", collapse = "")
+  m <- paste(m1, m2, "\n", m3, sep = "")
+  stop(m)
+}
+
+h2o.__checkClientHealth <- function(client) {
+  grabCloudStatus <- function(client) {
+    ip <- client@ip
+    port <- client@port
+    url <- paste("http://", ip, ":", port, "/", h2o.__PAGE_CLOUD, sep = "")
+    if(!url.exists(url)) stop(paste("H2O connection has been severed. Instance no longer up at address ", ip, ":", port, "/", sep = "", collapse = ""))
+    fromJSON(getURLContent(url))
+  }
+  checker <- function(node, client) {
+    status <- node$node_healthy
+    elapsed <- node$elapsed_time
+    nport <- unlist(strsplit(node$name, ":"))[2]
+    if(!status) h2o.__cloudSick(node_name = node$name, client = client)
+    if(elapsed > 35000) h2o.__cloudSick(node_name = NULL, client = client)
+    if(elapsed > 10000) {
+        Sys.sleep(5)
+        lapply(grabCloudStatus(client)$nodes, checker, client)
+    }
+    return(0)
+  }
+  cloudStatus <- grabCloudStatus(client)
+  if(!cloudStatus$cloud_healthy) h2o.__cloudSick(node_name = NULL, client = client)
+  lapply(cloudStatus$nodes, checker, client)
+  return(0)
 }
 
 h2o.__writeToFile <- function(res, fileName) {

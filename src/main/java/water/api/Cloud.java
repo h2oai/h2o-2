@@ -47,6 +47,7 @@ public class Cloud extends Request {
     response.addProperty(CLOUD_NAME, H2O.NAME);
     response.addProperty(NODE_NAME, self.toString());
     response.addProperty(CLOUD_SIZE, cloud._memary.length);
+    response.addProperty(CLOUD_HEALTH, H2O.isHealthy());
     JsonArray nodes = new JsonArray();
     for (H2ONode h2o : cloud._memary) {
       HeartBeat hb = h2o._heartbeat;
@@ -61,9 +62,13 @@ public class Cloud extends Request {
       node.addProperty(MAX_DISK, hb.get_max_disk());
       node.addProperty(NUM_CPUS, (int)hb._num_cpus);
       node.addProperty(SYSTEM_LOAD, hb._system_load_average);
-      if( System.currentTimeMillis() - h2o._last_heard_from > HeartBeatThread.TIMEOUT)
+
+      Long elapsed = System.currentTimeMillis() - h2o._last_heard_from;
+      node.addProperty(ELAPSED, elapsed);
+      if( elapsed > HeartBeatThread.TIMEOUT)
           h2o._node_healthy = false;
       node.addProperty(NODE_HEALTH, h2o._node_healthy);
+
 
       JsonArray fjt = new JsonArray();
       JsonArray fjq = new JsonArray();
