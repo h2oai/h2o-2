@@ -359,9 +359,9 @@ public class DTree extends Iced {
 
     // Bin #.
     public int bin( Chunk chks[], int row ) {
-      if( chks[_split._col].isNA0(row) ) // Missing data?
-        return 0;                        // NAs always to bin 0
       float d = (float)chks[_split._col].at0(row); // Value to split on for this row
+      if( Float.isNaN(d) )               // Missing data?
+        return 0;                        // NAs always to bin 0
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits.
       return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
