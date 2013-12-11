@@ -33,16 +33,7 @@ expect_equal(fitH2O@model$deviance, fitR$deviance, tolerance = 0.01)
 expect_equal(fitH2O@model$df.residual, fitR$df.residual, tolerance = 0.01)
 expect_equal(fitH2O@model$df.null, fitR$df.null, tolerance = 0.01)
 expect_equal(fitH2O@model$aic, fitR$aic, tolerance = 0.01)
- }
- {
-  testEnd()
-}
-
-doTest("GLM Test: Golden GLM2 - Vanilla Gaussian", test.glm2vanilla.golden)
-
- }
- {
-  testEnd()
+   testEnd()
 }
 
 doTest("GLM Test: Golden GLM2 - Vanilla Gaussian", test.glm2vanilla.golden)
