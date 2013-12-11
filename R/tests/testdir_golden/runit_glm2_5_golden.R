@@ -18,7 +18,10 @@ fitR<- glm(Percentuse ~ Age + Ed + Wantsmore, family=gaussian, data=cuseR)
 Log.info("Print model coefficients, and test that number of params returned match for R and H2O... \n")
 countH2Ocoeffs<- length(fitH2O@model$coefficients)
 countRcoeffs<- length(fitR$coefficients)
-expect_equal(H2Ocoeffs, Rcoeffs, tolerance = 0.01)
+H2Ocoeffs<- sort(t(fitH2O@model$coefficients))
+Rcoeffs<- sort(t(fitR$coefficients))
+expect_equal(countH2Ocoeffs, countRcoeffs, tolerance = 0.01)
+Log.info(paste("H2O coeffs       : ", H2Ocoeffs,           "\t\t", "R coeffs        : ", Rcoeffs))
 
 Log.info("Print model statistics for R and H2O... \n")
 Log.info(paste("H2O Deviance  : ", fitH2O@model$deviance,      "\t\t", "R Deviance   : ", fitR$deviance))
@@ -34,8 +37,8 @@ expect_equal(fitH2O@model$deviance, fitR$deviance, tolerance = 0.01)
 expect_equal(fitH2O@model$df.residual, fitR$df.residual, tolerance = 0.01)
 expect_equal(fitH2O@model$df.null, fitR$df.null, tolerance = 0.01)
 expect_equal(fitH2O@model$aic, fitR$aic, tolerance = 0.01)
- }
- {
+ 
+ 
   testEnd()
 }
 

@@ -20,12 +20,11 @@ Rcoeffs<- sort(t(fitR$coefficients))
 Log.info(paste("H2O coefficients  : ", H2Ocoeffs,      "\t\t", "R coefficients   : ", Rcoeffs))
 
 
-Log.info("Compare model coefficients in R to model statistics in H2O")
+Log.info("Compare model coefficients in R to coefficients in H2O")
 H2Ocoeffs<- sort(t(fitH2O@model$coefficients))
 Rcoeffs<- sort(t(fitR$coefficients))
 expect_equal(H2Ocoeffs, Rcoeffs, tolerance = 0.01)
- }
- {
+
   testEnd()
 }
 
