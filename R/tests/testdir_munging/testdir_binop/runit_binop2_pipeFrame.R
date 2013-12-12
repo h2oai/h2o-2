@@ -9,7 +9,7 @@
 
 source('./findNSourceUtils.R')
 
-#setupRandomSeed(42)
+setupRandomSeed(339601269)
 
 doSelect<-
 function() {

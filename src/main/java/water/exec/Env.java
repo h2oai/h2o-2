@@ -107,9 +107,10 @@ public class Env extends Iced {
     int idx = _display[_tod-d]+n;
     subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
-    _ary[idx] = addRef(_ary[_sp-1]);
-    _d  [idx] =       _d   [_sp-1] ;
-    _fcn[idx] = addRef(_fcn[_sp-1]);
+    Frame fr =            addRef(_ary[_sp-1]);
+    _ary[idx] = fr==null ? null : new Frame(fr);
+    _d  [idx] =                 _d   [_sp-1] ;
+    _fcn[idx] =           addRef(_fcn[_sp-1]);
     if( d==0 ) _key[idx] = id;
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
