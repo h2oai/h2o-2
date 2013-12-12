@@ -49,7 +49,7 @@ Defining a K-Means model
   centroids that are not the optimal cluster centers purely by chance
   in the choice of starting points. To mitigate this risk, Plus Plus
   initialization assigns K initial centers by choosing just one center
-  at random, computing the Euclidian norm between that point and all
+  at random, computing the Euclidean norm between that point and all
   other points in the data set, and using the results to define a
   weighted probability distribution from which the next center is
   chosen at random. The process repeats until all centers have been
@@ -158,7 +158,7 @@ Repeat until :math:`K` centers have been chosen.
 
 2. Once :math:`K` initial centers have been chosen calculate the difference
    between each observation :math:`x_{i}` and each of the centers
-   :math:`m_{1},...,m_{K}`, where difference is the squared Euclidian
+   :math:`m_{1},...,m_{K}`, where difference is the squared Euclidean
    distance taken over :math:`p` parameters.  
   
    :math:`d(x_{i}, m_{k})=`

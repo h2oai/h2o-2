@@ -72,32 +72,23 @@ class Basic(unittest.TestCase):
             # always slice from the beginning
             rowsToUse = rowsForPct[trial%10] 
 
+            # test/train split **********************************************8
             h2o_cmd.createTestTrain(srcKey=hex_key, trainDstKey=trainDataKey, testDstKey=testDataKey, trainPercent=90)
             parseResult['destination_key'] = trainDataKey
+            parseKey = trainDataKey
+            # have to change the test dataset to class 4..the case_mode/case_val doesn't get passed correctly
+            h2e.exec_expr(execExpr="Z.hex=rTest;rTest[,54+1]=(rTest[,54+1]==4)", timeoutSecs=30)
 
+            # GLM **********************************************8
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             modelKey = glm['glm_model']['_selfKey']
 
-            if 1==0:
-                start = time.time()
-                glmScore = h2o_cmd.runGLMScore(key=testDataKey, model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-                print "glmScore end on ", testDataKey, 'took', time.time() - start, 'seconds'
-                classErr = glmScore['validation']['classErr']
-                auc = glmScore['validation']['auc']
-                err = glmScore['validation']['err']
-                print "classErr:", classErr
-                print "err:", err
-                print "auc:", auc
-
-            parseKey = parseResult['destination_key']
+            # Score **********************************************
             predictKey = 'Predict.hex'
-            h2e.exec_expr(execExpr="Z.hex=rTest;rTest[,54+1]=(rTest[,54+1]==4)", timeoutSecs=30)
-
             start = time.time()
-            # have to change the test dataset to class 4..the case_mode/case_val doesn't get passed correctly
 
             predictResult = h2o_cmd.runPredict(
                 data_key='Z.hex',

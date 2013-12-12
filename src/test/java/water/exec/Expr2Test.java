@@ -83,6 +83,7 @@ public class Expr2Test extends TestUtil {
       checkStr("function(a){a[];a=1}");
       checkStr("a=1;a=2;function(x){x=a;a=3}");
       checkStr("a=h.hex;function(x){x=a;a=3;nrow(x)*a}(a)");
+      checkStr("a=h.hex;a[,1]=(a[,1]==8)");
       // Higher-order function typing: fun is typed in the body of function(x)
       checkStr("function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)");
       // Filter/selection

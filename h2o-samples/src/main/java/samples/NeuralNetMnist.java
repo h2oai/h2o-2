@@ -23,14 +23,15 @@ import water.util.Utils;
 public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = NeuralNetMnist.class;
-    samples.launchers.CloudLocal.launch(1, job);
-    // samples.launchers.CloudProcess.launch(4, job);
-    // samples.launchers.CloudRemote.launchDefaultIPs(job);
-    // samples.launchers.CloudConnect.launch("localhost:54321", job);
-    // samples.launchers.CloudRemote.launchEC2(job);
+    samples.launchers.CloudLocal.launch(job, 1);
+    //samples.launchers.CloudProcess.launch(job, 4);
+    //samples.launchers.CloudConnect.launch(job, "localhost:54321");
+    //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162");
+    //samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
   protected Vec[] train, test;
+  protected transient volatile Trainer _trainer;
 
   public void load() {
     train = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz").vecs();
@@ -52,11 +53,16 @@ public class NeuralNetMnist extends Job {
     return ls;
   }
 
-  protected Trainer startTraining(Layer[] ls) {
-    Trainer trainer = new Trainer.MapReduce(ls, 0, self());
-    // Trainer trainer = new Trainer.Direct(ls, self());
-    trainer.start();
-    return trainer;
+  protected void startTraining(Layer[] ls) {
+    // Single-thread SGD
+    //_trainer = new Trainer.Direct(ls, 0, self());
+
+    // Single-node parallel
+    //_trainer = new Trainer.Threaded(ls, 0, self());
+
+    // Distributed parallel
+    _trainer = new Trainer.MapReduce(ls, 0, self());
+    _trainer.start();
   }
 
   @Override protected Status exec() {
@@ -70,7 +76,6 @@ public class NeuralNetMnist extends Job {
     test = Utils.remove(test, test.length - 1);
 
     final Layer[] ls = build(train, trainLabels, null, null);
-    final Trainer trainer = startTraining(ls);
 
     // Monitor training
     final Timer timer = new Timer();
@@ -82,7 +87,8 @@ public class NeuralNetMnist extends Job {
           timer.cancel();
         else {
           double time = (System.nanoTime() - start) / 1e9;
-          long processed = trainer.processed();
+          Trainer trainer = _trainer;
+          long processed = trainer == null ? 0 : trainer.processed();
           int ps = (int) (processed / time);
           String text = (int) time + "s, " + processed + " samples (" + (ps) + "/s) ";
 
@@ -93,11 +99,12 @@ public class NeuralNetMnist extends Job {
           Errors e = NeuralNet.eval(temp, 1000, null);
           text += "train: " + e;
           text += ", rate: ";
-          text += String.format("%.5g", ls[0].rate(processed)) + ", ";
+          text += String.format("%.5g", ls[0].rate(processed));
           text += ", momentum: ";
-          text += String.format("%.5g", ls[0].momentum(processed)) + ", ";
+          text += String.format("%.5g", ls[0].momentum(processed));
           System.out.println(text);
-          if( (evals.incrementAndGet() % 8) == 0 ) {
+          if( (evals.incrementAndGet() % 32) == 0 ) {
+            System.out.println("Computing test error");
             temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
             Layer.shareWeights(ls, temp);
             e = NeuralNet.eval(temp, 0, null);
@@ -106,6 +113,7 @@ public class NeuralNetMnist extends Job {
         }
       }
     }, 0, 2000);
+    startTraining(ls);
     return Status.Running;
   }
 
