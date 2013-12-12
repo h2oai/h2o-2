@@ -1,6 +1,5 @@
 package hex;
 
-import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 
 import java.awt.*;
@@ -59,7 +58,7 @@ public class MnistCanvas extends Canvas {
   @Override public void paint(Graphics g) {
     Layer[] ls = _trainer.layers();
     Vec[] vecs = ((VecsInput) ls[0]).vecs;
-    Vec resp = ((VecSoftmax) ls[ls.length - 1]).vec;
+//    Vec resp = ((VecSoftmax) ls[ls.length - 1]).vec;
     int edge = 56, pad = 10;
     int rand = _rand.nextInt((int) vecs[0].length());
 
@@ -76,8 +75,8 @@ public class MnistCanvas extends Canvas {
       g.drawImage(in, pad, pad, null);
 
       // Labels
-      g.drawString("" + resp.at8(rand), 10, 50);
-      g.drawString("RBM " + _level, 10, 70);
+//      g.drawString("" + resp.at8(rand), 10, 50);
+//      g.drawString("RBM " + _level, 10, 70);
     }
 
     // Outputs
