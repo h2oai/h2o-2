@@ -69,8 +69,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             # GLM*********************************
             print "\n" + csvFilename
             kwargs = {
-                'x': 0, 
-                'y': 1, 
+                'response': 'C' + str(1), 
                 'n_folds': 0, 
                 'family': 'binomial',
                 'case_mode': '=', 
