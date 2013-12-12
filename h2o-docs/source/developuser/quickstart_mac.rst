@@ -106,6 +106,10 @@ Installing Hadoop on a Mac
 			<name>mapred.job.tracker</name>
 			<value>localhost:9001</value>
 		</property>
+		<property>
+			<name>mapred.tasktracker.map.tasks.maximum</name>
+			<value>5</value>
+		</property>
 	</configuration>
 	
  Modify ``/usr/local/Cellar/hadoop/1.2.1/libexec/conf/hdfs-site.xml`` to contain the following:
@@ -144,21 +148,22 @@ Installing Hadoop on a Mac
 		81655 DataNode
 		81928 TaskTracker
 
-16. Format HDFS
+16. Format HDFS and leave the safe mode
 	
  ::
 		
-		$ hadoop namenode -format
+	$ hadoop namenode -format
+	$ hadoop dfsadmin -safemode leave
 
 Launching H\ :sub:`2`\ O on Hadoop
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-17. Launch a 2-node H\ :sub:`2`\ O Hadoop cluster (from the h2o directory):
+17. Launch a 5-node H\ :sub:`2`\ O Hadoop cluster (from the h2o directory), assuming you have enough free memory (>5GB)
 
  ::
 		
 		$ hadoop jar target/hadoop/h2odriver_cdh4.jar water.hadoop.h2odriver \
-						 -libjars target/h2o.jar -mapperXmx 1g -nodes 2 -output out
+						 -libjars target/h2o.jar -mapperXmx 1g -nodes 5 -output out
 
 18. Point your web browser to the `HTTP URL http://localhost:54321 <http://localhost:54321>`_; H\ :sub:`2`\ O will run from there.  
 
