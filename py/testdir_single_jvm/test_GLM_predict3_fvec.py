@@ -3,6 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_glm, h2o_exec as h2e
 
 DO_BUG=False
+DO_BUG2=False
 # translate provides the mapping between original and predicted
 # since GLM is binomial, We predict 0 for 0 and 1 for > 0
 def compare_csv_last_col(csvPathname, msg, translate=None, skipHeader=False):
@@ -129,16 +130,25 @@ class Basic(unittest.TestCase):
         # do the binomial conversion with Exec2, for both training and test (h2o won't work otherwise)
         trainKey = parseResult['destination_key']
         y = 54
+        # CLASS=4
+        CLASS=1
         if DO_BUG:
-            # class 4=0, all else 1
-            execExpr="A.hex=%s;A.hex[,%s]=(A.hex[,%s]!=%s)" % (trainKey, y+1, y+1, 4)
+            if DO_BUG2:
+                # class 4=0, all else 1
+                execExpr="A.hex=%s;A.hex[,%s]=(A.hex[,%s]!=%s)" % (trainKey, y+1, y+1, CLASS)
+            else:
+                # class 4=1, all else 0
+                execExpr="A.hex=%s;A.hex[,%s]=(A.hex[,%s]==%s)" % (trainKey, y+1, y+1, CLASS)
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
         else:
             execExpr="A.hex=%s" % trainKey
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-
-            # class 4=0, all else 1
-            execExpr="A.hex[,%s]=(A.hex[,%s]!=%s)" % (y+1, y+1, 4)
+            if DO_BUG2:
+                # class 4=0, all else 1
+                execExpr="A.hex[,%s]=(A.hex[,%s]!=%s)" % (y+1, y+1, CLASS)
+            else:
+                # class 4=1, all else 0
+                execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
 
         max_iter = 8
