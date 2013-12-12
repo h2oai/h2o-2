@@ -52,14 +52,12 @@ h2o.__getGBMSummary <- function(res, isClassificationAndYesTheBloodyModelShouldR
   if( isClassificationAndYesTheBloodyModelShouldReportIt ){
     temp = matrix(unlist(res$cm), nrow = length(res$cm))
     mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-  } else {
   }
   return(mySum)
 }
 
 h2o.__getGBMResults <- function(res, isClassificationAndYesTheBloodyModelShouldReportIt) {
   result = list()
-  print(res)
   if( isClassificationAndYesTheBloodyModelShouldReportIt ){
     result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
@@ -104,12 +102,12 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.
       return(new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list()))
 
     res_xval = list()
-  #   for(i in 1:nfolds) {
-  #     xvalKey = paste(destKey, "_xval", seq(0,nfolds-1), sep="")
-  #     resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
-  #     modelXval = h2o.__getGLM2Results(resX$glm_model, x, y)
-  #     res_xval[[i]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
-  #   }
+    for(i in 1:nfolds) {
+      xvalKey = resModel$submodels[[resModel$best_lambda_idx+1]]$validation$xval_models
+      resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
+      modelXval = h2o.__getGLM2Results(resX$glm_model, x, y)
+      res_xval[[i]] = new("H2OGLMModel", key=xvalKey[i], data=data, model=modelXval, xval=list())
+    }
     new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
   } else
     h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, lambda, tweedie.p)
@@ -126,29 +124,31 @@ h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, lamb
   setTxtProgressBar(pb, 1.0); close(pb)
 
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLM2GridView, grid_key=res$destination_key)
+  destKey = res$destination_key
   allModels = res2$grid$destination_keys
 
   result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
-    resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=allModels[[i]]$destination_key)
+    resH = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=allModels[i])
     myModelSum[[i]] = h2o.__getGLM2Summary(resH$glm_model)
+    x = colnames(data)[-(x_ignore+1)]
     modelOrig = h2o.__getGLM2Results(resH$glm_model, x, y)
 
     # Get results from cross-validation
     if(nfolds < 2)
-      result[[i]] = new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list())
+      result[[i]] = new("H2OGLMModel", key=allModels[i], data=data, model=modelOrig, xval=list())
     else {
       res_xval = list()
-#       for(j in 1:nfolds) {
-#         xvalKey = paste(destKey, "_xval0_", seq(0,nfolds-1), sep="")
-#         resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
-#         modelXval = h2o.__getGLM2Results(resX$glm_model, x, y)
-#         res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
-#       }
-      result[[i]] = new("H2OGLMModel", key=allModels[[i]]$destination_key, data=data, model=modelOrig, xval=res_xval)
+      for(j in 1:nfolds) {
+         xvalKey = resH$glm_model$submodels[[resH$glm_model$best_lambda_idx+1]]$validation$xval_models
+         resX = h2o.__remoteSend(data@h2o, h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
+         modelXval = h2o.__getGLM2Results(resX$glm_model, x, y)
+         res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
+      }
+      result[[i]] = new("H2OGLMModel", key=allModels[i], data=data, model=modelOrig, xval=res_xval)
     }
   }
-  new("H2OGLMGrid", key=dest_key, data=data, model=result, sumtable=myModelSum)
+  new("H2OGLMGrid", key=destKey, data=data, model=result, sumtable=myModelSum)
 }
 
 h2o.__getGLM2Summary <- function(model) {
@@ -157,10 +157,12 @@ h2o.__getGLM2Summary <- function(model) {
   mySum$alpha = model$alpha
   mySum$lambda_min = min(model$lambda)
   mySum$lambda_max = max(model$lambda)
-  mySum$lambda_best = model$lambda[[model$best_lambda_idx]]
-  mySum$iterations = tail(model$submodels,1)[[1]]$iteration
-
-  valid = tail(model$submodels,1)[[1]]$validation
+  mySum$lambda_best = model$lambda[model$best_lambda_idx+1]
+  
+  submod = model$submodels[[model$best_lambda_idx+1]]
+  mySum$iterations = submod$iteration
+  valid = submod$validation
+  
   if(model$glm$family == "binomial")
     mySum$auc = as.numeric(valid$auc)
   mySum$aic = as.numeric(valid$aic)
@@ -170,7 +172,7 @@ h2o.__getGLM2Summary <- function(model) {
 
 # Pretty formatting of H2O GLM2 results
 h2o.__getGLM2Results <- function(model, x, y) {
-  submod = tail(model$submodels,1)[[1]]
+  submod = model$submodels[[model$best_lambda_idx+1]]
   valid = submod$validation
 
   result = list()
@@ -198,7 +200,7 @@ h2o.__getGLM2Results <- function(model, x, y) {
     result$auc = as.numeric(valid$auc)
 
     # Construct confusion matrix
-    cm_ind = trunc(100*result$best_threshold) + 1
+    cm_ind = trunc(100*result$best_threshold) + 2
     temp = data.frame(t(sapply(valid$'_cms'[[cm_ind]]$'_arr', c)))
     temp[,3] = c(temp[1,2], temp[2,1])/apply(temp, 1, sum)
     temp[3,] = c(temp[2,1], temp[1,2], 0)/apply(temp, 2, sum)

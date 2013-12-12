@@ -19,6 +19,10 @@ public class ParamsSearch {
      * Parameter search will move the value relative to origin.
      */
     double origin() default 0;
+
+    double min() default Double.NaN;
+
+    double max() default Double.NaN;
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -28,26 +32,26 @@ public class ParamsSearch {
   Param[] _params;
   Random _rand = new MersenneTwisterRNG(new Random().nextLong());
   double _rate = .1;
-  boolean _booleans;
 
   class Param {
     int _objectIndex;
     Field _field;
+    Info _info;
     double _initial, _best, _last;
 
-    void assertSupported() {
-      Class t = _field.getType();
-      assert t == boolean.class || t == float.class || t == int.class;
-    }
+    @Info
+    public double defaults;
 
-    void modify(Object o) throws IllegalAccessException {
+    void modify(Object o) throws Exception {
       if( _field.getType() == boolean.class ) {
         if( _rand.nextDouble() < _rate ) {
           _last = _best == 0 ? 1 : 0;
           _field.set(o, _last == 1);
         }
       } else {
-        double delta = _best * _rate;
+        if( _info == null )
+          _info = Param.class.getField("defaults").getAnnotation(Info.class);
+        double delta = (_best - _info.origin()) * _rate;
         double min = _best - delta, max = _best + delta;
         _last = min + _rand.nextDouble() * (max - min);
         if( _field.getType() == float.class )
@@ -94,8 +98,11 @@ public class ParamsSearch {
             f.setAccessible(true);
             if( (f.getModifiers() & Modifier.STATIC) == 0 && !ignore(f) ) {
               Object v = f.get(expanded.get(i));
-              if( v instanceof Number || (_booleans && v instanceof Boolean) ) {
+              if( v instanceof Number || v instanceof Boolean ) {
                 Param param = new Param();
+                for( Annotation a : f.getAnnotations() )
+                  if( a.annotationType() == Info.class )
+                    param._info = (Info) a;
                 param._objectIndex = i;
                 param._field = f;
                 if( v instanceof Boolean )
@@ -115,7 +122,7 @@ public class ParamsSearch {
         for( int i = 0; i < _params.length; i++ )
           modify(expanded, i);
       }
-    } catch( IllegalAccessException ex ) {
+    } catch( Exception ex ) {
       throw new RuntimeException(ex);
     }
   }
@@ -134,7 +141,7 @@ public class ParamsSearch {
       getAllFields(fields, type.getSuperclass());
   }
 
-  private void modify(ArrayList<Object> expanded, int i) throws IllegalAccessException {
+  private void modify(ArrayList<Object> expanded, int i) throws Exception {
     Object o = expanded.get(_params[i]._objectIndex);
     _params[i].modify(o);
   }

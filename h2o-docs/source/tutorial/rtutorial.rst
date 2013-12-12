@@ -63,7 +63,7 @@ Summary will return output similar to the following:
 Fit a K-means model. The model specified here sets centers (the number of
 clusters) to 4, and asks for a model on the columns Fertility,
 Agriculture, Examination, Education, Catholic, and
-Infant.Mortaility. Iter.max specifies the maximum number of iterations
+Infant.Mortality. Iter.max specifies the maximum number of iterations
 the algorithm should complete. 
 
 ::
