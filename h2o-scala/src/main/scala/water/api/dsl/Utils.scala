@@ -27,8 +27,50 @@ object Utils {
   // Just inline call to create a new frame
   private def frame(ns:Array[String], vs:Array[Vec]): Frame = new Frame(ns,vs)
   
-  def cbind(lhs:Frame, rhs:Frame):Frame = new Frame(lhs.names()++rhs.names(), lhs.vecs()++rhs.vecs()) 
+  def cbind(lhs:Frame, rhs:Frame):Frame = new Frame(lhs.names()++rhs.names(), lhs.vecs()++rhs.vecs())
+  
+  def readRow(chunks: Array[Chunk], rowIdx:Int, row:Array[Double]): Array[Double] = {
+    for(i <- 0 until chunks.length) row(i) = chunks(i).at0(rowIdx)
+    row 
+  }
 }
+
+class MRICollector[X<:Iced](acc:X, cf: T_T_Collect[X, scala.Double]) extends MRTask2[MRICollector[X]] {
+  var mracc: X = acc
+  
+  override def map(in:Array[Chunk]) = {
+    mracc = acc
+    val rlen = in(0)._len
+    val tmprow = new Array[scala.Double](in.length)
+    for (row:Int <- 0 until rlen ) {
+      val rowdata = Utils.readRow(in,row,tmprow)
+      mracc = cf(mracc, rowdata)
+    }  
+  }
+  override def reduce(o:MRICollector[X]) = {
+    mracc = cf.reduce(mracc, o.mracc)
+  }
+  
+}
+class MRCollector(acc:scala.Double, cf: T_T_Collect[scala.Double, scala.Double]) extends MRTask2[MRCollector] {
+  
+  var mracc: scala.Double = acc
+  
+  override def map(in:Array[Chunk]) = {
+    mracc = acc
+    val rlen = in(0)._len
+    val tmprow = new Array[scala.Double](in.length)
+    for (row:Int <- 0 until rlen ) {
+      val rowdata = Utils.readRow(in,row,tmprow)
+      mracc = cf(mracc, rowdata)
+    }  
+  }
+  override def reduce(o:MRCollector) = {
+    mracc = cf.reduce(mracc, o.mracc)
+  }
+} 
+
+
 
 
 // Sandbox
@@ -135,11 +177,11 @@ object XT {
   // The second transfers implicit objects from the caller's scope
   def test = {
     import H2ODsl._
-    implicit val f = parse("../smalldata/cars.csv") 
+    implicit val f = parse("../private/cars.csv") 
     println(f)
-    //val x = xmap (f, ('cylinders -> 'moreThan4)) { (x:Double) => ( if (x%2==0) 0.0 else 1.0 ) }
+//    val x = xmap (f, ('name, 'cylinders) -> ('name, 'moreThan4) ) { (x:String, y:Int) => ( x, if (x>4) 1 else 0 ) }
     val y = xmap (f, ('name, 'cylinders) -> ('name, 'moreThan4) ) { // Explicit use of iced functor since i have no way how to make Function(s) to extend Iced 
-      new IcedFunctor2to2[Double,Double,Double,Double] { def apply(x:Double, y:Double) = (if (x>4) 1 else 0, 0) } 
+      new IcedFunctor2to2[Double,Double,Double,Double] { def apply(x:Double, y:Double) = (x, if (x>4) 1 else 0) } 
     }
     println(y)
     // intention is to have:
@@ -149,8 +191,19 @@ object XT {
   }
   def test2 = {
     import H2ODsl._
-    implicit val f = parse("../smalldata/cars.csv")
-    println(f)
+    val f = parse("../private/cars.csv")
+    val f5 = f map ( new FAOp {
+      def apply(rhs: Array[scala.Double]):Boolean = rhs(2) > 4;
+    });
+    
+    val f4 = f collect ( 0.0, new CDOp() {
+      override def apply(acc:scala.Double, rhs:Array[scala.Double]) = acc + rhs(2)
+      override def reduce(l:scala.Double,r:scala.Double) = l+r
+    } )
+    
+    println(f4)
+    
+    shutdown
   }
 }
 

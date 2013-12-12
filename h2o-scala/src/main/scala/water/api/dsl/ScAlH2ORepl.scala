@@ -9,6 +9,7 @@ import water.fvec.NFSFileVec
 import water.fvec.Frame
 import water.Boot
 import water.H2O
+import water.api.dsl.examples._
 
 /** Custom H2O REPL.
  *  
@@ -23,7 +24,8 @@ object ScAlH2ORepl {
     H2O.main(args);
     // Launch REPL
     //launchRepl
-    XT.test2
+    //XT.test2
+    Examples.example1();
   }
   
   def launchRepl() = {

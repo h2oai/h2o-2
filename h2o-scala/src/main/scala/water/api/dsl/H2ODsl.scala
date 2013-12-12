@@ -18,7 +18,13 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   type BOp = T_NV_Transf[scala.Double]
   // Filter operator type alias
   type FOp = T_NF_Transf[scala.Double]
- 
+  // Array operator type alias
+  type AOp = T_A2A_Transf[scala.Double,scala.Double]
+  // Array filter type alias
+  type FAOp = T_A2B_Transf[scala.Double]
+  // Double collector
+  type CDOp = T_T_Collect[scala.Double,scala.Double]
+  
   // Dummy tester and H2O launcher - should launch H2O with REPL
   def main(args: Array[String]): Unit = {
     println("Launching H2O...")
@@ -30,11 +36,17 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   
   def frame(kname:String):DFrame = new DFrame(get(kname))
   def echo = println
+  def load(k:HexKey) = new DFrame(get(k))
+  def save(k:HexKey, d:DFrame) = put(k,d)
   
   def example():DFrame = {
     println("""
 == Parsing smalldata/cars.csv""")
     val f = parse("smalldata/cars.csv")
+    val g = load("cars.hex")
+    val g1 = g ++ (g("year") > 80)
+    save("cars.hex", g1)
+    val f1 = f("year") + 1900 
     println("""
 == Number of cylinders - f("cylinders")""")
     println(f("cylinders"))
@@ -43,7 +55,7 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
     val f2 = f(2::3::7::Nil)
     println(f2)
     println("""
-== Using boolean transformation on last column - f("year") > 80 """)
+== Using boolean transformation on the last column - f("year") > 80 """)
     val f3 = f("year") > 80
     println(f3)
     println("""
@@ -57,9 +69,16 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
       def apply(rhs:scala.Double) = { sum += rhs; rhs*rhs / sum; } 
     })  
     println(f4)
+    
+    val f5 = f map ( new FAOp {
+      def apply(rhs: Array[scala.Double]):Boolean = rhs(2) > 4;
+    });
     f
   }
 
+  override def head(d:DFrame, rows:Int) = println(d.toString(rows))
+  override def tail(d:DFrame, rows:Int) = println(d.toString(rows))
+  
   def test():DFrame = {
     val f = parse("../smalldata/cars.csv")
     f("cylinders") map (new BOp { 
@@ -100,14 +119,13 @@ class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFr
   // Append
   def ++(rhs: T_Frame) = new DFrame(cbind(frame(), rhs.frame()))
   override def toString() = frame().toStringHead(NHEAD)
+  def toString(nrows: Int) = frame().toStringHead(nrows)
   
 }
 
 sealed case class HexKey(key: Key) extends TRef {
   def name = key.toString()
 }
-
-// ++ implicit conversions
 
 
 trait H2ODslImplicitConv {
