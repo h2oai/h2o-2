@@ -38,7 +38,7 @@ The original data are the Abalone data set made available by UCI
 Machine Learning repository. They are composed of 4177 observations
 and 7 attributes, and have been split into .90/.10 train/ test sets
 through random assignment. All attributes are real valued continuous,
-except forSex and Rings. Sex is categorical with 3 levels (male,
+except for Sex and Rings. Sex is categorical with 3 levels (male,
 female, and infant), and Rings is discrete. 
 
 Before modeling, parse data into H\ :sub:`2`\ O as follows:
@@ -93,7 +93,7 @@ Building a Model
 
 
 #. Leave lambda and alpha at default (to find detailed information on the
-   specificaiton of tuning parameters see the user guide under
+   specification of tuning parameters see the user guide under
    algorithms in the documentation menu). 
 
 
