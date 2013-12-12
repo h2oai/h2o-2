@@ -269,16 +269,31 @@ public class DRF extends SharedTreeModelBuilder {
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
     final DTree[] ktrees = new DTree[_nclass];
-    // Use for all k-trees the same seed. NOTE: this is only to make a fair view for all k-trees
+
+    // Initial set of histograms.  All trees; one leaf per tree (the root
+    // leaf); all columns
+    DSharedHistogram hcs[][][] = new DSharedHistogram[_nclass][1/*just root leaf*/][_ncols];
+
+    // Use for all k-trees the same seed. NOTE: this is only to make a fair
+    // view for all k-trees
     long rseed = rand.nextLong();
+    // Initially setup as-if an empty-split had just happened
     for( int k=0; k<_nclass; k++ ) {
-      // Initially setup as-if an empty-split had just happened
       assert (_distribution!=null && classification) || (_distribution==null && !classification);
-      if( _distribution == null || _distribution[k] != 0 ) {
+      if( _distribution == null || _distribution[k] != 0 ) { // Ignore missing classes
+        // The initial histogram bins are setup from the Vec rollups.
+        DSharedHistogram hs[] = hcs[k][0];
+        Vec vecs[] = fr.vecs();
+        for( int c=0; c<_ncols; c++ ) {
+          Vec v = fr.vecs()[c];
+          hs[c] = (v.naCnt()==v.length() || v.min()==v.max()) ? null
+            : new DSharedHistogram(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),(float)v.min(),(float)v.max(),v.length());
+        }
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
-        new DRFUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
+        new DRFUndecidedNode(ktrees[k],-1, hs); // The "root" node
       }
     }
+
     // Sample - mark the lines by putting 'OUT_OF_BAG' into nid(<klass>) vector
     Sample ss[] = new Sample[_nclass];
     for( int k=0; k<_nclass; k++)
@@ -307,7 +322,7 @@ public class DRF extends SharedTreeModelBuilder {
       // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs).doAll(fr);
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs,hcs).doAll(fr);
       //System.out.println(sbh.profString());
       memNow = MemoryManager.MEM_ALLOC.get();
       System.out.println("ScoreBuildHistogram; mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
@@ -324,16 +339,22 @@ public class DRF extends SharedTreeModelBuilder {
         int tmax = tree.len();   // Number of total splits in tree K
         for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
           UndecidedNode udn = tree.undecided(leaf);
-          udn._hs = sbh.getFinalHisto(k,leaf);
           //System.out.println("Class "+(domain!=null?domain[k]:k)+",\n  Undecided node:"+udn);
           // Replace the Undecided with the Split decision
-          DRFDecidedNode dn = new DRFDecidedNode((DRFUndecidedNode)udn);
+          DRFDecidedNode dn = new DRFDecidedNode((DRFUndecidedNode)udn,hcs[k][leaf]);
           //System.out.println("--> Decided node: " + dn);
           //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
           if( dn._split.col() == -1 ) udn.do_not_split();
           else did_split = true;
         }
         leafs[k]=tmax;          // Setup leafs for next tree level
+        int new_leafs = tree.len()-tmax;
+        hcs[k] = new DSharedHistogram[new_leafs][/*ncol*/];
+        for( int nl = tmax; nl<tree.len(); nl ++ ) {
+          hcs[k][nl-tmax] = tree.undecided(nl)._hs;
+          tree.undecided(nl)._hs = null;
+        }
+
         tree.depth++;           // Next layer done
       }
 
@@ -516,18 +537,18 @@ public class DRF extends SharedTreeModelBuilder {
   // decision algorithm given complete histograms on all columns.
   // DRF algo: find the lowest error amongst a random mtry columns.
   static class DRFDecidedNode extends DecidedNode<DRFUndecidedNode> {
-    DRFDecidedNode( DRFUndecidedNode n ) { super(n); }
-    @Override public DRFUndecidedNode makeUndecidedNode(DBinHistogram[] nhists ) {
-      return new DRFUndecidedNode(_tree,_nid,nhists);
+    DRFDecidedNode( DRFUndecidedNode n, DSharedHistogram hs[] ) { super(n,hs); }
+    @Override public DRFUndecidedNode makeUndecidedNode( DSharedHistogram hs[] ) {
+      return new DRFUndecidedNode(_tree,_nid, hs);
     }
 
     // Find the column with the best split (lowest score).
-    @Override public DTree.Split bestCol( DRFUndecidedNode u ) {
+    @Override public DTree.Split bestCol( DRFUndecidedNode u, DSharedHistogram hs[] ) {
       DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
-      if( u._hs == null ) return best;
+      if( hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
-        DTree.Split s = u._hs[col].scoreMSE(col);
+        DTree.Split s = hs[col].scoreMSE(col);
         if( s == null ) continue;
         if( s.se() < best.se() ) best = s;
         if( s.se() <= 0 ) break; // No point in looking further!
@@ -540,10 +561,10 @@ public class DRF extends SharedTreeModelBuilder {
   // a list of columns to score on now, and then decide over later.
   // DRF algo: pick a random mtry columns
   static class DRFUndecidedNode extends UndecidedNode {
-    DRFUndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) { super(tree,pid,hs); }
+    DRFUndecidedNode( DTree tree, int pid, DSharedHistogram[] hs ) { super(tree,pid, hs); }
 
     // Randomly select mtry columns to 'score' in following pass over the data.
-    @Override public int[] scoreCols( DHistogram[] hs ) {
+    @Override public int[] scoreCols( DSharedHistogram[] hs ) {
       DRFTree tree = (DRFTree)_tree;
       int[] cols = new int[hs.length];
       int len=0;
@@ -552,7 +573,7 @@ public class DRF extends SharedTreeModelBuilder {
       // histogramed bin min==max (means the predictors are constant).
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null ) continue; // Ignore not-tracked cols
-        if( hs[i].min() == hs[i].max() ) continue; // predictor min==max, does not distinguish
+        if( hs[i]._min == hs[i]._max ) continue; // predictor min==max, does not distinguish
         if( hs[i].nbins() <= 1 ) continue; // cols with 1 bin (will not split)
         cols[len++] = i;        // Gather active column
       }
@@ -561,9 +582,9 @@ public class DRF extends SharedTreeModelBuilder {
         for( int i=0; i<hs.length; i++ ) {
           String s;
           if( hs[i]==null ) s="null";
-          else if( hs[i].min() == hs[i].max() ) s=hs[i].name()+"=min==max=="+hs[i].min();
-          else if( hs[i].nbins() <= 1 )       s=hs[i].name()+"=nbins="    +hs[i].nbins();
-          else                                s=hs[i].name()+"=unk";
+          else if( hs[i]._min == hs[i]._max ) s=hs[i]._name+"=min==max=="+hs[i]._min;
+          else if( hs[i].nbins() <= 1 )       s=hs[i]._name+"=nbins="    +hs[i].nbins();
+          else                                s=hs[i]._name+"=unk";
         }
       }
       assert choices > 0;

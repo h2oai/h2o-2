@@ -19,8 +19,8 @@ public class DRFTest2 extends TestUtil {
     new DRFTest().basicDRF(
         //
         //"../demo/c5/row10000.csv.gz", "c5.hex", null, null, 
-        "../datasets/UCI/UCI-large/covtype/covtype.data", "covtype.hex", null, null, 
-        //"./smalldata/iris/iris_wheader.csv", "iris.hex", null, null, 
+        //"../datasets/UCI/UCI-large/covtype/covtype.data", "covtype.hex", null, null, 
+        "./smalldata/iris/iris_wheader.csv", "iris.hex", null, null, 
         new DRFTest.PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
         10/*ntree*/,
         a( a(199145,   7055,     8,    0,  115,    22,   489), 
