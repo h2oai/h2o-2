@@ -871,7 +871,7 @@ public class DTree extends Iced {
       JCodeGen.toStaticVar(sb, "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 100, "Sample test data.");
 
       // Nasty code - should be provided by a non-generated parent class, BUT ...
-      sb.i(1).p(TO_JAVA_MAX_INDEX_FUNC);
+      //sb.i(1).p(TO_JAVA_MAX_INDEX_FUNC);
 
       return sb;
     }

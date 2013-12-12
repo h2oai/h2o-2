@@ -10,7 +10,7 @@ function info {
     echo INFO: $@ >> results/info.log
 }
 
-curl -s http://localhost:54321 1> /dev/null
+#curl -s http://localhost:54321 1> /dev/null
 if [ $? -ne 0 ]; then
     echo ERROR: could not find h2o at localhost:54321
     exit 1
@@ -24,9 +24,11 @@ fi
 
 #curl http://localhost:54321
 
-for test in $(ls */*.R | grep -v Utils)
+#for test in $(ls */*.R | grep -v Utils)
 #for test in $(ls */*.R | grep -v Utils | grep auto | awk '{gsub(".R","",$0); print $0}')
 #for test in $(ls */*.R | grep -v Utils | awk '{gsub(".R","",$0); print $0}')
+
+for test in $(find . | grep "\.R" | grep -v Utils)
 do
 #    echo "myR $test 300"
 #    continue

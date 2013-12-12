@@ -18,13 +18,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jsr166y.CountedCompleter;
 import water.*;
-import water.H2O.*;
+import water.H2O.H2OCallback;
+import water.H2O.H2OCountedCompleter;
+import water.H2O.JobCompleter;
 import water.Job.ModelJob;
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.RString;
-import water.util.Utils;
+import water.util.*;
 
 public class GLM2 extends ModelJob {
 //  private transient GLM2 [] _subjobs;
@@ -104,6 +105,44 @@ public class GLM2 extends ModelJob {
       _wgiven = beta;
     this.alpha= new double[]{alpha};
     this.n_folds = nfolds;
+    source = dinfo._adaptedFrame;
+    response = dinfo._adaptedFrame.lastVec();
+  }
+
+  static String arrayToString (double[] arr) {
+    if (arr == null) {
+      return "(null)";
+    }
+
+    StringBuffer sb = new StringBuffer();
+    for (int i = 0; i < arr.length; i++) {
+      if (i > 0) {
+        sb.append(", ");
+      }
+      sb.append(arr[i]);
+    }
+    return sb.toString();
+  }
+
+  @Override protected void logStart() {
+    Log.info("Starting GLM2 model build...");
+    super.logStart();
+    Log.info("    max_iter: ", max_iter);
+    Log.info("    standardize: ", standardize);
+    Log.info("    n_folds: ", n_folds);
+    Log.info("    family: ", family);
+    Log.info("    wgiven: " + arrayToString(_wgiven));
+    Log.info("    proximalPenalty: " + _proximalPenalty);
+    Log.info("    runAllLambdas: " + _runAllLambdas);
+    Log.info("    link: " + link);
+    Log.info("    case_mode: " + case_mode);
+    Log.info("    case_val: " + case_val);
+    Log.info("    tweedie_variance_power: " + tweedie_variance_power);
+    Log.info("    tweedie_link_power: " + tweedie_link_power);
+    Log.info("    alpha: " + arrayToString(alpha));
+    Log.info("    lambda: " + arrayToString(lambda));
+    Log.info("    beta_epsilon: " + beta_epsilon);
+    Log.info("    description: " + description);
   }
 
   public GLM2 setCase(CaseMode cm, double cv){
@@ -157,7 +196,7 @@ public class GLM2 extends ModelJob {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());
       fork();
-      return GLMProgressPage2.redirect(this, self(),dest());
+      return GLMModelView.redirect(this, dest());
     }
   }
   private static double beta_diff(double[] b1, double[] b2) {
@@ -261,6 +300,8 @@ public class GLM2 extends ModelJob {
     run();
   }
   public void run(){
+    logStart();
+
     assert alpha.length == 1;
     UKV.remove(dest());
     new YMUTask(this, _dinfo, case_mode, case_val, new H2OCallback<YMUTask>() {
@@ -287,7 +328,7 @@ public class GLM2 extends ModelJob {
             final ADMMSolver solver = new ADMMSolver(lambda[0], alpha[0]);
             solver._proximalPenalty = _proximalPenalty;
             solver._wgiven = _wgiven;
-            GLMModel model = new GLMModel(dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
+            GLMModel model = new GLMModel(self(),dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda,ymut.ymu(),GLM2.this.case_mode,GLM2.this.case_val);
             firstIter.setCompleter(new Iteration(model,solver,_dinfo,GLM2.this._fjtask));
             firstIter.dfork(_dinfo._adaptedFrame);
           }

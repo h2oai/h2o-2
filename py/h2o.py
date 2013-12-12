@@ -1019,11 +1019,16 @@ class H2O(object):
                     # HACK: these are missing the "2/" prefix for now
                     # 'KMeans2Progress' in str(redirect_url) or
                     # 'GLMModelView' in str(redirect_url) or
-                    if 'NeuralNetProgress' in str(redirect_url) or  \
+                    if  'NeuralNetProgress' in str(redirect_url) or \
                         'PCAProgressPage' in str(redirect_url):
-                        print "Hacking in the 2/ prefix..tell cyprien"
                         if "2/" not in str(redirect_url):
+                            print "Hacking in the 2/ prefix..need to fix h2o?"
                             redirect_url = "2/" + redirect_url
+                    if  'DRFProgressPage' in str(redirect_url):
+                        if "2/" not in str(redirect_url):
+                            # already has a leading /?
+                            print "Hacking in the 2/ prefix..need to fix h2o?"
+                            redirect_url = "2" + redirect_url
 
                     if redirect_url:
                         url = self.__url(redirect_url)
@@ -2125,6 +2130,7 @@ class H2O(object):
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallelism': None,
                 'beta_eps': None,
+                'classification': None,
             } 
         else:
             params_dict = {

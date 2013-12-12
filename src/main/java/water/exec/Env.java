@@ -107,9 +107,10 @@ public class Env extends Iced {
     int idx = _display[_tod-d]+n;
     subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
-    _ary[idx] = addRef(_ary[_sp-1]);
-    _d  [idx] =       _d   [_sp-1] ;
-    _fcn[idx] = addRef(_fcn[_sp-1]);
+    Frame fr =            addRef(_ary[_sp-1]);
+    _ary[idx] = fr==null ? null : new Frame(fr);
+    _d  [idx] =                 _d   [_sp-1] ;
+    _fcn[idx] =           addRef(_fcn[_sp-1]);
     if( d==0 ) _key[idx] = id;
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
@@ -144,7 +145,10 @@ public class Env extends Iced {
     assert _sp==0 || _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
   void pop( ) { pop(this); }
-  void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
+  void pop( int n ) {
+    for( int i=0; i<n; i++ )
+      pop();
+  }
 
   void popScope() {
     assert _tod > 0;            // Something to pop?
@@ -259,7 +263,7 @@ public class Env extends Iced {
   // Remove everything
   public void remove() {
     // Remove all shallow scopes
-    while( _tod > 1 ) popScope();
+    while( _tod > 0 ) popScope();
     // Push changes at the outer scope into the K/V store
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?

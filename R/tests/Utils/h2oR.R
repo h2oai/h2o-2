@@ -1,4 +1,5 @@
 options(echo=FALSE)
+local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
 
 grabRemote <- function(myURL, myFile) {
   temp <- tempfile()
@@ -124,11 +125,23 @@ function() {
     PASSS <<- TRUE
 }
 
+
+withWarnings <- function(expr) {
+    myWarnings <- NULL
+    wHandler <- function(w) {
+        myWarnings <<- c(myWarnings, list(w))
+        invokeRestart("muffleWarning")
+    }
+    val <- withCallingHandlers(expr, warning = wHandler)
+    list(value = val, warnings = myWarnings)
+    for(w in myWarnings) WARN(w)
+}
+
 doTest<-
 function(testDesc, test) {
     Log.info("======================== Begin Test ===========================\n")
     conn <- new("H2OClient", ip=myIP, port=myPort)
-    tryCatch(test_that(testDesc, test(conn)), warning = function(w) WARN(w), error =function(e) FAIL(e))
+    tryCatch(test_that(testDesc, withWarnings(test(conn))), warning = function(w) WARN(w), error =function(e) FAIL(e))
     if (!PASSS) FAIL("Did not reach the end of test. Check Rsandbox/errors.log for warnings and errors.")
     PASS()
 }
@@ -158,6 +171,7 @@ function(ipPort) {
     if (!file.exists(wrapPath))
       stop(paste("h2o package does not exist at", wrapPath));
     print(paste("Installing h2o package from", wrapPath))
+    installDepPkgs()
     install.packages(wrapPath, repos = NULL, type = "source")
   }
 
@@ -190,7 +204,12 @@ function() {
 }
 
 Log.info("============== Setting up R-Unit environment... ================")
-defaultPath <- "../../target/R"
+Log.info("Branch: ")
+system('git branch')
+Log.info("Hash: ")
+system('git rev-parse HEAD')
+
+defaultPath <- locate("../../target/R")
 ipPort <- get_args(commandArgs(trailingOnly = TRUE))
 checkNLoadWrapper(ipPort)
 checkNLoadPackages()
@@ -207,10 +226,10 @@ if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
 require(glmnet)
 require(gbm)
 
-
 #Global Variables
 myIP   <- ipPort[[1]]
 myPort <- ipPort[[2]]
 PASSS <- FALSE
 view_max <- 10000 #maximum returned by Inspect.java
 SEED <- NULL
+

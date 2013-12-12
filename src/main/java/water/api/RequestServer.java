@@ -117,13 +117,14 @@ public class RequestServer extends NanoHTTPD {
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new Upload2()),        "Upload2",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
-     }
+    }
 
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
@@ -173,7 +174,7 @@ public class RequestServer extends NanoHTTPD {
     // testing hooks
     registerRequest(new TestPoll());
     registerRequest(new TestRedirect());
-    registerRequest(new GLMProgressPage2());
+//    registerRequest(new GLMProgressPage2());
     registerRequest(new GLMModelView());
     registerRequest(new GLMGridView());
 //    registerRequest(new GLMValidationView());

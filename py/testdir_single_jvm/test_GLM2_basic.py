@@ -12,9 +12,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, java_heap_GB=10)
+            h2o.build_cloud(1, java_heap_GB=10)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=10)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -68,13 +68,15 @@ class Basic(unittest.TestCase):
             job_key = glmResult['job_key']
             # is the job finishing before polling would say it's done?
             params = {'job_key': job_key, 'destination_key': modelKey}
-            a = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMProgressPage2.json", params=params)
+            glm = h2o.nodes[0].completion_redirect(jsonRequest="2/GLMProgressPage2.json", params=params)
             print "GLM result from completion_redirect:", h2o.dump_json(a)
         if 1==1:
-            a = h2o.nodes[0].glm_view(_modelKey=modelKey)
+            glm = h2o.nodes[0].glm_view(_modelKey=modelKey)
             ### print "GLM result from glm_view:", h2o.dump_json(a)
 
-        glm_model = a['glm_model']
+        h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+
+        glm_model = glm['glm_model']
         _names = glm_model['_names']
         coefficients_names = glm_model['coefficients_names']
         submodels = glm_model['submodels'][0]
@@ -91,7 +93,6 @@ class Basic(unittest.TestCase):
         residual_deviance = validation['residual_deviance']
 
         print '_names', _names
-        print 'WARNING: have to reorder using idxs'
         print 'coefficients_name', coefficients_names
         print 'beta', beta
         print 'iteration', iteration

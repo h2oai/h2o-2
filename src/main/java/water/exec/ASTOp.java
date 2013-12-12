@@ -70,6 +70,7 @@ public abstract class ASTOp extends AST {
     put(new ASTRunif ());
     put(new ASTCut   ());
     put(new ASTPrint ());
+    put(new ASTLs ());
   }
   static private void put(ASTOp ast) { OPS.put(ast.opStr(),ast); }
 
@@ -85,7 +86,7 @@ public abstract class ASTOp extends AST {
     int len=_vars.length;
     for( int i=1; i<len-1; i++ )
       s += _t._ts[i]+" "+_vars[i]+", ";
-    return s + _t._ts[len-1]+" "+_vars[len-1]+")";
+    return s + (len > 1 ? _t._ts[len-1]+" "+_vars[len-1] : "")+")";
   }
   public String toString(boolean verbose) {
     if( !verbose ) return toString(); // Just the fun name& arg names
@@ -794,5 +795,25 @@ class ASTPrint extends ASTOp {
     }
     env.pop(argcnt-2);          // Pop most args
     env.pop_into_stk(-2);       // Pop off fcn, returning 1st arg
+  }
+}
+
+/**
+ * R 'ls' command.
+ *
+ * This method is purely for the console right now.  Print stuff into the string buffer.
+ * JSON response is not configured at all.
+ */
+class ASTLs extends ASTOp {
+  ASTLs() { super(new String[]{"ls"}, new Type[]{Type.DBL}); }
+  @Override String opStr() { return "ls"; }
+  @Override ASTOp make() {return new ASTLs();}
+  @Override void apply(Env env, int argcnt) {
+    for( Key key : H2O.keySet() )
+      if( key.user_allowed() && H2O.get(key) != null )
+        env._sb.append(key.toString());
+    // Pop the self-function and push a zero.
+    env.pop();
+    env.push(0.0);
   }
 }

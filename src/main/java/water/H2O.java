@@ -142,6 +142,7 @@ public final class H2O {
   // Node.  No holes.  Cloud size is _members.length.
   public final H2ONode[] _memary;
   public final int _hash;
+  //public boolean _healthy;
 
   // A dense integer identifier that rolls over rarely. Rollover limits the
   // number of simultaneous nested Clouds we are operating on in-parallel.
@@ -157,6 +158,14 @@ public final class H2O {
     assert (0 <= nnn && nnn <= 255);
     assert (0 <= old && old <= 255);
     return ((nnn-old)&0xFF) < 64;
+  }
+
+  static public boolean isHealthy() {
+      H2O cloud = H2O.CLOUD;
+      for (H2ONode h2o : cloud._memary) {
+          if(!h2o._node_healthy) return false;
+      }
+      return true;
   }
 
   // Static list of acceptable Cloud members

@@ -6,8 +6,7 @@ MAX_INSPECT_VIEW = 10000
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character", env="environment"))
 # setClass("H2OParsedData", representation(h2o="H2OClient", key="character"))
-setClass("H2OParsedData", representation(h2o="H2OClient", key="character", env="environment"))
-setClass("H2OLogicalData", contains="H2OParsedData")
+setClass("H2OParsedData", representation(h2o="H2OClient", key="character", env="environment", logic="logical"), prototype(logic=FALSE))
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 
@@ -142,8 +141,8 @@ setMethod("show", "H2OKMeansModel", function(object) {
 
 setMethod("show", "H2ONNModel", function(object) {
   print(object@data)
-  cat("NN Model Key:", object@key)
-  
+  cat("Neural Net Model Key:", object@key)
+
   model = object@model
   cat("\n\nTraining classification error:", model$train_class_error)
   cat("\nTraining square error:", model$train_sqr_error)
@@ -174,9 +173,12 @@ setMethod("show", "H2OPCAModel", function(object) {
 setMethod("show", "H2OGBMModel", function(object) {
   print(object@data)
   cat("GBM Model Key:", object@key)
-  
+
   model = object@model
-  cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+  if( model$classification ){
+    cat("\n\nConfusion matrix:\nReported on", object@valid@key, "\n");
+    print(model$confusion)
+  }
   cat("\nMean Squared error by tree:\n"); print(model$err)
 })
 
@@ -197,7 +199,7 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
   title(main = paste("h2o.prcomp(", x@data@key, ")", sep=""), ylab = "Variances")
 })
 
-# i are the rows, j are the columns. These can be vectors of integers or character strings, or a single H2OLogicalData2 object.
+# i are the rows, j are the columns. These can be vectors of integers or character strings, or a single logical data object
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   numRows = nrow(x); numCols = ncol(x)
   if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
@@ -209,13 +211,14 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     if(is.character(j)) { 
       # return(do.call("$", c(x, j)))
       myCol = colnames(x)
-      if(any(!(j %in% myCol))) stop("undefined columns selected")
+      if(any(!(j %in% myCol))) stop("Undefined columns selected")
       j = match(j, myCol)
     }
     # if(is.logical(j)) j = -which(!j)
     if(is.logical(j)) j = which(j)
 
-    if(class(j) == "H2OLogicalData")
+    # if(class(j) == "H2OLogicalData")
+    if(class(j) == "H2OParsedData" && j@logic)
       expr = paste(x@key, "[", j@key, ",]", sep="")
     else if(is.numeric(j) || is.integer(j))
       expr = paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
@@ -223,7 +226,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   } else if(!missing(i) && missing(j)) {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
-    if(class(i) == "H2OLogicalData")
+    # if(class(i) == "H2OLogicalData")
+    if(class(i) == "H2OParsedData" && i@logic)
       expr = paste(x@key, "[", i@key, ",]", sep="")
     else if(is.numeric(i) || is.integer(i))
       expr = paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
@@ -231,7 +235,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
-    if(class(i) == "H2OLogicalData") rind = i@key
+    # if(class(i) == "H2OLogicalData") rind = i@key
+    if(class(i) == "H2OParsedData" && i@logic) rind = i@key
     else if(is.numeric(i) || is.integer(i))
       rind = paste("c(", paste(i, collapse=","), ")", sep="")
     else stop(paste("Row index of type", class(i), "unsupported!"))
@@ -239,12 +244,13 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     if(is.character(j)) { 
       # return(do.call("$", c(x, j)))
       myCol = colnames(x)
-      if(any(!(j %in% myCol))) stop("undefined columns selected")
+      if(any(!(j %in% myCol))) stop("Undefined columns selected")
       j = match(j, myCol)
     }
     # if(is.logical(j)) j = -which(!j)
     if(is.logical(j)) j = which(j)
-    if(class(j) == "H2OLogicalData") cind = j@key
+    # if(class(j) == "H2OLogicalData") cind = j@key
+    if(class(j) == "H2OParsedData" && j@logic) cind = j@key
     else if(is.numeric(j) || is.integer(j))
       cind = paste("c(", paste(j, collapse=","), ")", sep="")
     else stop(paste("Column index of type", class(j), "unsupported!"))
@@ -318,10 +324,16 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
 })
 
 setMethod("$<-", "H2OParsedData", function(x, name, value) {
-  lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
+  myNames = colnames(x)
+  idx = match(name, myNames)
+  if(is.na(idx)) {
+    stop("Unimplemented: undefined column name specified")
+    lhs = paste(x@key, "[,", ncol(x)+1, "]", sep = "")
+    # TODO: Set column name of ncol(x) + 1 to name
+  } else
+    lhs = paste(x@key, "[,", idx, "]", sep="")
   rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
-  # TODO: Set column name of ncol(x) + 1 to name
   return(x)
 })
 
@@ -389,7 +401,6 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
 })
 
 h2o.table <- function(x) { h2o.__unop2("table", x) }
-h2o.factor <- function(x) { h2o.__unop2("factor", x) }
 h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
@@ -426,6 +437,24 @@ setMethod("colMeans", "H2OParsedData", function(x) {
   temp = sapply(res$cols, function(x) { x$mean })
   names(temp) = sapply(res$cols, function(x) { x$name })
   temp
+})
+
+setMethod("mean", "H2OParsedData", function(x) {
+  res <- NA
+  if(is.factor(x) || dim(x)[2] != 1) {
+    warning("In H2O mean(x): argument not numeric or logical: returning NA")
+    res
+  }
+  res <- h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+  temp <- sapply(res$cols, function(x) x$mean)
+  names(temp) = sapply(res$cols, function(x) x$name)
+  temp[[1]]
+})
+
+setMethod("sd", "H2OParsedData", function(x) {
+  if(dim(x)[2] != 1 || is.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
+  res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
+  res$summaries[[1]]$stats$sd
 })
 
 setMethod("dim", "H2OParsedData", function(x) {
@@ -473,6 +502,8 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
   x.df
 })
+
+setMethod("as.factor", "H2OParsedData", function(x) { h2o.__unop2("factor", x) })
 
 setMethod("is.factor", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)

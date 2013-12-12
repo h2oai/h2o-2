@@ -11,7 +11,7 @@ def write_syn_dataset(csvPathname, rowCount, rowDataTrue, rowDataFalse, outputTr
         dsf.write(rowDataFalse + ',' + outputFalse + "\n")
     dsf.close()
 
-class GLM_twovalues(unittest.TestCase):
+class test_NN_twovalues(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 

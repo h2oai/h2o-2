@@ -6,7 +6,6 @@ import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
 import java.text.DecimalFormat;
-import java.util.Arrays;
 
 import water.*;
 import water.api.DocGen;
@@ -45,7 +44,11 @@ public class GLMModelView extends Request2 {
 
   @Override public boolean toHTML(StringBuilder sb){
 //      if(title != null && !title.isEmpty())DocGen.HTML.title(sb,title);
-   DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._selfKey);
+    if(glm_model == null){
+      sb.append("No model yet...");
+      return true;
+    }
+    DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._selfKey);
     if(glm_model.submodels != null)
       DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._selfKey,"Predict!"));
     String succ = (glm_model.warnings == null || glm_model.warnings.length == 0)?"alert-success":"alert-warning";
@@ -154,7 +157,7 @@ public class GLMModelView extends Request2 {
       sb.append("<th>Deviance Explained</th>");
       sb.append("</tr>");
       int i = 0;
-      for(Key k:xval._xvalModels){
+      for(Key k:xval.xval_models){
         Value v = DKV.get(k);
         if(v == null)continue;
         GLMModel m = v.get();
@@ -432,9 +435,16 @@ public class GLMModelView extends Request2 {
   }
 
   @Override protected Response serve() {
-    glm_model = DKV.get(_modelKey).get();
+    Value v = DKV.get(_modelKey);
+    if(v == null)
+      return Response.poll(this, 0, 100, "_modelKey", _modelKey.toString());
+    glm_model = v.get();
     if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
-    return Response.done(this);
+    Job j;
+    if(DKV.get(glm_model.job_key) != null && (j = Job.findJob(glm_model.job_key)) != null)
+      return Response.poll(this, (int) (100 * j.progress()), 100, "_modelKey", _modelKey.toString());
+    else
+      return Response.done(this);
   }
 }
 
