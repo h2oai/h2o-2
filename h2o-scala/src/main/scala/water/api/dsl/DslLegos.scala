@@ -13,6 +13,7 @@ import water.fvec.NFSFileVec
 import java.io.File
 import water.fvec.ParseDataset2
 import water.Job
+import hex.drf.DRF
 
 trait TRef {}
 
@@ -258,7 +259,17 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def shutdown() = H2O.CLOUD.shutdown()
   
   // DRF call
-
+  
+  def drf(f: VT, response: VT, ntrees: Int): DRF.DRFModel = {
+    val drf:DRF = new DRF()
+    val response = f.frame().vecs()(0)
+    response.rollupStats()
+    drf.source = new Frame(f.frame().names() ++ Array("response"), f.frame.vecs()++Array(response))
+    drf.response = response
+    drf.classification = false
+    drf.invoke()
+    return UKV.get(drf.dest())
+  }
 }
 
 /** Trait representing provided global environment in R-like style.

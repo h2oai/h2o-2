@@ -32,6 +32,19 @@ object Examples {
     println("Average of 2. column is: " + r.sum / r.cnt);
     shutdown()
   }
+  
+  def example2() = {
+    
+    import water.api.dsl.H2ODsl._
+    val f = parse("../private/cars.csv")
+    val source = f(1) ++ f(3 to 7)
+    val response = f(2)
+    
+    val model = drf(source, response, 1)
+    println(model)
+    
+    shutdown()
+  }
  
 }
 

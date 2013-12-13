@@ -75,6 +75,54 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
     });
     f
   }
+  
+  def demo() = {
+    println("""
+=== DEMO ===
+val f = parse("private/cars.csv")
+f(*,0)
+f(0)
+f(0::2::7::Nill)
+f("year")
+f("year")+1900
+val f4 = f map ( new AOp {
+      def apply(rhs: Array[scala.Double]):Array[scala.Double] = { rhs(2) = -1; rhs; }
+    });
+        
+f("cylinders") > 4
+val f5 = f map ( new FAOp {
+      def apply(rhs: Array[scala.Double]):Boolean = rhs(2) > 4;
+    });
+nrows(f5)
+        
+val f6 = f filter ( new FAOp {
+      def apply(rhs: Array[scala.Double]):Boolean = rhs(2) > 4;
+    });
+nrows(f5)
+
+val f7 = f collect ( 0.0, new CDOp() {
+      override def apply(acc:scala.Double, rhs:Array[scala.Double]) = acc + rhs(2)
+      override def reduce(l:scala.Double,r:scala.Double) = l+r
+} )
+
+class Avg(var sum:scala.Double, var cnt:Int) extends Iced;
+val f8 = f collect ( new Avg(0,0), 
+  new T_T_Collect[Avg,scala.Double] {
+      override def apply(acc:Avg, rhs:Array[scala.Double]):Avg = {
+        acc.sum += rhs(2)
+        acc.cnt += 1
+        return acc
+      }
+      override def reduce(l:Avg,r:Avg) = new Avg(l.sum+r.sum, l.cnt+r.cnt)
+	} )       
+        
+
+val source = f(1) ++ f(3 to 7)
+val response = f(2)
+val model = drf(source, response, 1)
+        
+""")
+  }
 
   override def head(d:DFrame, rows:Int) = println(d.toString(rows))
   override def tail(d:DFrame, rows:Int) = println(d.toString(rows))

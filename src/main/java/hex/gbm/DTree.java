@@ -697,6 +697,9 @@ public class DTree extends Iced {
           meanLeaves = (int) (sumLeaves / numTrees);
         }
       }
+      @Override public String toString() {
+        return "Depth (min/mean/max) " + minDepth + "/" + meanDepth + "/" + maxDepth + "\n" + "Leaves (min/mean/max) " + + minLeaves + "/" + meanLeaves + "/" + maxLeaves + "\n" ;
+      }
     }
 
     // --------------------------------------------------------------------------

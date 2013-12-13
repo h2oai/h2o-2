@@ -25,7 +25,7 @@ object ScAlH2ORepl {
     // Launch REPL
     //launchRepl
     //XT.test2
-    Examples.example1();
+    Examples.example2();
   }
   
   def launchRepl() = {

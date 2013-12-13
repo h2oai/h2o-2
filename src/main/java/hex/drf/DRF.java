@@ -86,6 +86,18 @@ public class DRF extends SharedTreeModelBuilder {
         bodySb.i().p("for(int i=1; i<preds.length; i++) preds[i] = (float) preds[i] / sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
+    @Override public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("DRFModel:");
+      sb.append("\n  input: " + Arrays.toString(_names));
+      sb.append("\n  sample rate: " + _sample_rate);
+      sb.append("\n  mtry : " + _mtries);
+      sb.append("\n  classifier  : " + isClassifier());
+      sb.append("\n  MSE  : " + Arrays.toString(errs));
+      sb.append("\n\nTree stats: \n" + treeStats);
+      sb.append("\n");
+      return sb.toString();
+    }
   }
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
