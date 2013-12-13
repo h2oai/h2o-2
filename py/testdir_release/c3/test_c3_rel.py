@@ -11,6 +11,7 @@ print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def sub_c3_rel_long(self):
+        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
