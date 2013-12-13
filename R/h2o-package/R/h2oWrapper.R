@@ -23,10 +23,10 @@ setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logica
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip=="localhost" || ip=="127.0.0.1") {
       print("H2O is not running yet, starting it now.")
-      # h2oWrapper.startLauncher()
-      # invisible(readline("Start H2O, then hit <Return> to continue: "))
-      h2o.startJar()
-      count = 0; while(!url.exists(myURL) && count < 10) { Sys.sleep(1); count = count + 1 }
+      h2oWrapper.startLauncher()
+      invisible(readline("Start H2O, then hit <Return> to continue: "))
+      # h2o.startJar()
+      # count = 0; while(!url.exists(myURL) && count < 10) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
   }
@@ -82,21 +82,36 @@ setMethod("h2o.shutdown", signature(object="ANY", prompt="ANY"),
 })
 
 #-------------------------------- Helper Methods --------------------------------#
+# NB: if H2OVersion matches \.99999$ is a development version, so pull package info out of file.  yes this is a hack
+#     but it makes development versions properly prompt upgrade
 h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
   temp = postForm(paste(myURL, h2o.__PAGE_RPACKAGE, sep="/"), style = "POST")
   res = fromJSON(temp)
   if (!is.null(res$error))
     stop(paste(myURL," returned the following error:\n", h2oWrapper.__formatError(res$error)))
-  
+
   H2OVersion = res$version
   myFile = res$filename
   serverMD5 = res$md5_hash
-  
-  myPackages = rownames(installed.packages())
-  if("h2oRClient" %in% myPackages && packageVersion("h2oRClient") == H2OVersion)
+
+  if( grepl('\\.99999$', H2OVersion) ){
+    H2OVersion <- sub('\\.tar\\.gz$', '', sub('.*_', '', myFile))
+  }
+
+  # sigh.  I so wish people would occasionally listen to me; R expects a version to be %d.%d.%d.%d and will ignore anything after
+  packages <- installed.packages()[,1]
+  needs_upgrade <- F
+  if( 'h2oRClient' %in% packages ){
+    ver <- unclass( packageVersion('h2oRClient') )
+    ver <- paste( ver[[1]], collapse='.' )
+
+    needs_upgrade <- !(ver == H2OVersion)
+  }
+
+  if( !needs_upgrade )
     cat("H2O R package and server version", H2OVersion, "match\n")
-  else if(h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {    
-    if("h2oRClient" %in% myPackages) {
+  else if(h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {
+    if("h2oRClient" %in% packages) {
       cat("Removing old H2O R package version", toString(packageVersion("h2oRClient")), "\n")
       remove.packages("h2oRClient")
     }
@@ -104,7 +119,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
     # download.file(paste(myURL, "R", myFile, sep="/"), destfile = paste(getwd(), myFile, sep="/"), mode = "wb")
     temp = getBinaryURL(paste(myURL, "R", myFile, sep="/"))
     writeBin(temp, paste(getwd(), myFile, sep="/"))
-    
+
     if(as.character(serverMD5) != as.character(md5sum(paste(getwd(), myFile, sep="/"))))
       warning("Mismatched MD5 hash! Check you have downloaded complete R package.")
     install.packages(paste(getwd(), myFile, sep="/"), repos = NULL, type = "source")
