@@ -106,9 +106,9 @@ buildCloudNRunTests() {
   echo "All nodes up! Let's roll!"
 
   doTasks
-  wait
+  #wait
   rm1
-  tearDown
+  #tearDown
 }
 
 doTasks() {
