@@ -21,8 +21,6 @@ paramDict = {
     'importance': [None,0,1],
     'classification': [None,0,1],
     'validation': [None, 'poker1000.hex'],
-    'model_key': [None, 'poker1000_model']
-
     }
 
 class Basic(unittest.TestCase):
