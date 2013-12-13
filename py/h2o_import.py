@@ -363,7 +363,7 @@ def find_key(pattern=None):
 # supposed to be the same? In any case
 # pattern can't be regex to h2o?
 # None should be same as no pattern
-def delete_keys(node=None, pattern=None, timeoutSecs=90):
+def delete_keys(node=None, pattern=None, timeoutSecs=120):
     if not node: node = h2o.nodes[0]
     kwargs = {'filter': pattern}
     deletedCnt = 0
@@ -374,12 +374,12 @@ def delete_keys(node=None, pattern=None, timeoutSecs=90):
         if not keys:
             break
         for k in keys:
-            node.remove_key(k['key'])
+            node.remove_key(k['key'], timeoutSecs=timeoutSecs)
         deletedCnt += len(keys)
         # print "Deleted", deletedCnt, "keys at %s:%s" % (node.http_addr, node.port)
     return deletedCnt
 
-def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=90):
+def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
     if not node: node = h2o.nodes[0]
     totalDeletedCnt = 0
     # do it in reverse order, since we always talk to 0 for other stuff

@@ -13,11 +13,11 @@ paramDict = {
     # 'ntrees': 1,
     # 'max_depth': 30,
     # 'nbins': 100,
-    'ntrees': 1,
-    'max_depth': 10,
+    'ntrees': 10,
+    'max_depth': 20,
     
-    'min_rows': 2, # normally 1 for classification, 5 for regression
-    'nbins': 2000,
+    'min_rows': 1, # normally 1 for classification, 5 for regression
+    'nbins': 200,
     'mtries': None,
     'sample_rate': 0.66,
     'importance': 0,
@@ -26,8 +26,8 @@ paramDict = {
 
 DO_OOBE = False
 DO_PLOT = True
-TRY = 'max_depth'
-TRY = 'ntrees'
+# TRY = 'max_depth'
+# TRY = 'ntrees'
 TRY = 'nbins'
 
 class Basic(unittest.TestCase):
@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3, java_heap_GB=4)
+            h2o.build_cloud(1, java_heap_GB=12)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
