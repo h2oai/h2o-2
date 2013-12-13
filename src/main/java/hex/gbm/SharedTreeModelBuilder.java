@@ -3,6 +3,8 @@ package hex.gbm;
 import hex.rng.MersenneTwisterRNG;
 import java.util.Arrays;
 import java.util.Random;
+import jsr166y.ForkJoinTask;
+import jsr166y.RecursiveAction;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
@@ -10,8 +12,6 @@ import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-import jsr166y.RecursiveAction;
-import jsr166y.ForkJoinTask;
 
 public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -212,34 +212,35 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     @Override public void setupLocal( ) { 
       // Init all the internal tree fields after shipping over the wire
       for( DTree dt : _trees ) if( dt != null ) dt.init_tree(); 
-    }
-
-    public DSharedHistogram[] getFinalHisto( int k, int nid ) {
-      DSharedHistogram hs[] = _hcs[k][nid-_leafs[k]];
-      //if( hs == null ) return null; // Can happen if the split is all NA's
-      // Having gather min/max/mean/class/etc on all the data, we can now
-      // tighten the min & max numbers.
-      for( int j=0; j<hs.length; j++ ) {
-        DSharedHistogram h = hs[j];    // Old histogram of column
-        //if( h != null ) h.tightenMinMax();
-        throw H2O.unimpl();
+      // Allocate local shared memory histograms
+      for( int k=0; k<_nclass; k++ ) {
+        if( _trees[k] != null ) { // Ignore unused classes
+          for( int l=_leafs[k]; l<_trees[k]._len; l++ ) {
+            DTree.UndecidedNode udn = _trees[k].undecided(l);
+            DSharedHistogram hs[] = udn._hs;
+            int sCols[] = udn._scoreCols;
+            if( sCols != null ) { // Sub-selecting just some columns?
+              for( int j=0; j<sCols.length; j++) // For tracked cols
+                hs[sCols[j]].init();
+            } else {                // Else all columns
+              for( int j=0; j<_ncols; j++) // For all columns
+                if( hs[j] != null )        // Tracking this column?
+                  hs[j].init();
+            }
+          }
+        }
       }
-      return hs;
     }
 
     @Override public void map( Chunk[] chks ) {
       // For all klasses
       ForkJoinTask sb1t[] = new ForkJoinTask[_nclass];
-      for( int k=0; k<_nclass; k++ ) {
-        if( _trees[k] != null ) { // Ignore unused classes
+      for( int k=0; k<_nclass; k++ )
+        if( _trees[k] != null ) // Ignore unused classes
           sb1t[k] = new ScoreBuildOneTree(_trees,_leafs,_hcs,chks,k).fork();
-        }
-      }
-      for( int k=0; k<_nclass; k++ ) {
-        if( _trees[k] != null ) { // Ignore unused classes
+      for( int k=0; k<_nclass; k++ )
+        if( _trees[k] != null ) // Ignore unused classes
           sb1t[k].join();
-        }
-      }
     }
 
     @Override public void reduce( ScoreBuildHistogram sbh ) {
@@ -314,15 +315,20 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         if( nid < leaf ) continue; // row already predicts perfectly
 
         // Pass 2.0
-        if( wrks.isNA0(row) ) continue; // No response, cannot train
+        double y = wrks.at0(row);       // Response for this row
+        if( Double.isNaN(y) ) continue; // No response, cannot train
         DSharedHistogram nhs[] = hcs[nid-leaf];
+        int sCols[] = tree.undecided(nid)._scoreCols; // Columns to score (null, or a list of selected cols)
 
-        double y = wrks.at0(row);      // Response for this row
-        for( int j=0; j<_ncols; j++) { // For all columns
-          DSharedHistogram nh = nhs[j];
-          if( nh == null ) continue;   // Not tracking this column?
-          float col_data = (float)chks[j].at0(row); // Data stored in the column and put them into histogram
-          nh.incr(col_data,y);
+        if( sCols != null ) { // Sub-selecting just some columns?
+          for( int j=0; j<sCols.length; j++) { // For tracked cols
+            final int c = sCols[j];
+            nhs[c].incr((float)chks[c].at0(row),y); // Histogram row/col
+          }
+        } else {                // Else all columns
+          for( int j=0; j<_ncols; j++) // for all columns
+            if( nhs[j] != null )       // Tracking this column?
+              nhs[j].incr((float)chks[j].at0(row),y); // Histogram row/col
         }
       }
     }

@@ -156,7 +156,11 @@ public class DTree extends Iced {
         if( h == null ) continue;        // Column was not being tracked?
         // min & max come from the original column data, since splitting on an
         // unrelated column will not change the j'th columns min/max.
-        float min = h._min, max = h._max;
+        // Tighten min/max based on actual observed data for tracked columns
+        float max, min = h.find_min();
+        if( Float.isNaN(min) ) { min = h._min; max = h._max; }
+        else max = h.find_max();
+
         // Tighter bounds on the column getting split: exactly each new
         // DSharedHistogram's bound are the bins' min & max.
         if( _col==j ) {
@@ -169,6 +173,7 @@ public class DTree extends Iced {
         }
         if( min == max ) continue; // This column will not split again
         if( min >  max ) continue; // Happens for all-NA subsplits
+        assert min < max && n > 1;
         nhists[j] = new DSharedHistogram(h._name,nbins,h._isInt,min,max,n);
         cnt++;                    // At least some chance of splitting
       }
@@ -243,7 +248,7 @@ public class DTree extends Iced {
       final int ncols = _hs.length;
       for( int j=0; j<ncols; j++ )
         if( _hs[j] != null )
-          p(sb,_hs[j]._name+String.format(", %4.1f",_hs[j]._min),colW).append(colPad);
+          p(sb,_hs[j]._name+String.format(", %4.1f-%4.1f",_hs[j]._min,_hs[j]._max),colW).append(colPad);
       sb.append('\n');
       for( int j=0; j<ncols; j++ ) {
         if( _hs[j] == null ) continue;
@@ -263,8 +268,8 @@ public class DTree extends Iced {
       for( int i=0; i<nbins; i++ ) {
         for( int j=0; j<ncols; j++ ) {
           DSharedHistogram h = _hs[j];
-          //if( h == null ) continue;
-          if( i < h.nbins() ) {
+          if( h == null ) continue;
+          if( i < h.nbins() && h._bins != null ) {
             p(sb, h.bins(i),cntW).append('/');
             p(sb, h.mins(i),mmmW).append('/');
             p(sb, h.maxs(i),mmmW).append('/');

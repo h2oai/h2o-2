@@ -266,7 +266,6 @@ public class DRF extends SharedTreeModelBuilder {
   // --------------------------------------------------------------------------
   // Build the next random k-trees
   private DTree[] buildNextKTrees(Frame fr, int mtrys, float sample_rate, Random rand, long memStart) {
-    String domain[] = response.domain();
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
     final DTree[] ktrees = new DTree[_nclass];
@@ -340,7 +339,7 @@ public class DRF extends SharedTreeModelBuilder {
         int tmax = tree.len();   // Number of total splits in tree K
         for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
           UndecidedNode udn = tree.undecided(leaf);
-          //System.out.println("Class "+(domain!=null?domain[k]:k)+",\n  Undecided node:"+udn);
+          //System.out.println("Class "+(response._domain[k])+",\n  Undecided node:"+udn);
           // Replace the Undecided with the Split decision
           DRFDecidedNode dn = new DRFDecidedNode((DRFUndecidedNode)udn,hcs[k][leaf-leafs[k]]);
           //System.out.println("--> Decided node: " + dn);
@@ -351,11 +350,8 @@ public class DRF extends SharedTreeModelBuilder {
         leafs[k]=tmax;          // Setup leafs for next tree level
         int new_leafs = tree.len()-tmax;
         hcs[k] = new DSharedHistogram[new_leafs][/*ncol*/];
-        for( int nl = tmax; nl<tree.len(); nl ++ ) {
+        for( int nl = tmax; nl<tree.len(); nl ++ )
           hcs[k][nl-tmax] = tree.undecided(nl)._hs;
-          tree.undecided(nl)._hs = null;
-        }
-
         tree.depth++;           // Next layer done
       }
 
@@ -569,25 +565,13 @@ public class DRF extends SharedTreeModelBuilder {
       DRFTree tree = (DRFTree)_tree;
       int[] cols = new int[hs.length];
       int len=0;
-      // Gather all active columns to choose from.  Ignore columns we
-      // previously ignored, or columns with 1 bin (nothing to split), or
-      // histogramed bin min==max (means the predictors are constant).
+      // Gather all active columns to choose from.
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null ) continue; // Ignore not-tracked cols
-        if( hs[i]._min == hs[i]._max ) continue; // predictor min==max, does not distinguish
-        if( hs[i].nbins() <= 1 ) continue; // cols with 1 bin (will not split)
+        assert hs[i]._min < hs[i]._max && hs[i].nbins() > 1;
         cols[len++] = i;        // Gather active column
       }
       int choices = len;        // Number of columns I can choose from
-      if( choices == 0 ) {
-        for( int i=0; i<hs.length; i++ ) {
-          String s;
-          if( hs[i]==null ) s="null";
-          else if( hs[i]._min == hs[i]._max ) s=hs[i]._name+"=min==max=="+hs[i]._min;
-          else if( hs[i].nbins() <= 1 )       s=hs[i]._name+"=nbins="    +hs[i].nbins();
-          else                                s=hs[i]._name+"=unk";
-        }
-      }
       assert choices > 0;
 
       // Draw up to mtry columns at random without replacement.

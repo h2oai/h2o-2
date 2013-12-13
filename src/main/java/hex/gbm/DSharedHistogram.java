@@ -36,11 +36,12 @@ import java.util.Arrays;
 public class DSharedHistogram extends Iced {
   public final String _name;      // Column name (for debugging)
   public final byte _isInt;       // 0: float col, 1: int col, 2: enum & int col
+  public final char _nbin;        // Bin count
   public final float  _step;      // Linear interpolation step per bin
   public final float  _min, _max; // Conservative Min/Max over whole collection
-  public final AtomicLongArray _bins;// Bins, shared, atomically incremented
-  public final AtomicFloatArray _mins, _maxs; // Min/Max, shared, atomically updated
-  public final AtomicDoubleArray _sums, _ssqs;// Sums & square-sums, shared, atomically incremented
+  public       AtomicLongArray _bins;// Bins, shared, atomically incremented
+  public       AtomicFloatArray _mins, _maxs; // Min/Max, shared, atomically updated
+  public       AtomicDoubleArray _sums, _ssqs;// Sums & square-sums, shared, atomically incremented
 
   public DSharedHistogram( String name, final int nbins, byte isInt, float min, float max, long nelems ) {
     assert nelems > 0;
@@ -63,16 +64,9 @@ public class DSharedHistogram extends Iced {
       if( step == 0 ) { assert max==min; step = 1.0f; }
       assert step > 0;
     }
-    int [] mins = MemoryManager.malloc4(xbins);
-    int [] maxs = MemoryManager.malloc4(xbins);
-    Arrays.fill(mins,Float.floatToRawIntBits( Float.MAX_VALUE));
-    Arrays.fill(maxs,Float.floatToRawIntBits(-Float.MAX_VALUE));
     _step = 1.0f/step;
-    _bins = new AtomicLongArray(xbins);
-    _mins = new AtomicFloatArray(mins);
-    _maxs = new AtomicFloatArray(maxs);
-    _sums = new AtomicDoubleArray(xbins);
-    _ssqs = new AtomicDoubleArray(xbins);
+    _nbin = (char)xbins;
+    // Do not allocate the big arrays here; wait for scoreCols to pick which cols will be used.
   }
 
   // Interpolate d to find bin#
@@ -85,21 +79,38 @@ public class DSharedHistogram extends Iced {
   }
   float binAt( int b ) { return _min+b/_step; }
 
-  public int nbins() { return _bins.length(); }
+  public int nbins() { return _nbin; }
   public long bins(int b) { return _bins.get(b); }
   public float mins(int b) { return _mins.getf(b); }
   public float maxs(int b) { return _maxs.getf(b); }
-  public double mean(int b) { return _sums.getd(b)/_bins.get(b); }
+  public double mean(int b) { 
+    long n = _bins.get(b);
+    return n>0 ? _sums.getd(b)/n : 0;
+  }
   public double var (int b) { 
     long n = _bins.get(b);
     if( n<=1 ) return 0;
     return (_ssqs.getd(b) - _sums.getd(b)*_sums.getd(b)/n)/(n-1);
   }
 
+  // Big allocation of arrays
+  final void init() { 
+    assert _bins == null;
+    int [] mins = MemoryManager.malloc4(_nbin);
+    int [] maxs = MemoryManager.malloc4(_nbin);
+    Arrays.fill(mins,Float.floatToRawIntBits( Float.MAX_VALUE));
+    Arrays.fill(maxs,Float.floatToRawIntBits(-Float.MAX_VALUE));
+    _bins = new AtomicLongArray(_nbin);
+    _mins = new AtomicFloatArray(mins);
+    _maxs = new AtomicFloatArray(maxs);
+    _sums = new AtomicDoubleArray(_nbin);
+    _ssqs = new AtomicDoubleArray(_nbin);
+  }
+
   // Add one row to a bin found via simple linear interpolation.
   // Compute bin min/max.
   // Compute response mean & variance.
-  void incr( float col_data, double y ) {
+  final void incr( float col_data, double y ) {
     int b = bin(col_data);      // Compute bin# via linear interpolation
     _bins.incrementAndGet(b);   // Bump count in bin
     // Track actual lower/upper bound per-bin
@@ -109,6 +120,19 @@ public class DSharedHistogram extends Iced {
       _sums.add(b,y);
       _ssqs.add(b,y*y);
     }
+  }
+
+  public float find_min() {
+    if( _bins == null ) return Float.NaN;
+    int n = 0;
+    while( n < _nbin && _bins.get(n)==0 ) n++; // First non-empty bin
+    if( n == _nbin ) return Float.NaN;         // All bins are empty???
+    return _mins.getf(n);       // Take min from 1st non-empty bin
+  }
+  public float find_max() {
+    int x = _nbin-1;              // Last bin
+    while( _bins.get(x)==0 ) x--; // Last non-empty bin
+    return _maxs.getf(x);         // Take max from last non-empty bin
   }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
@@ -168,7 +192,8 @@ public class DSharedHistogram extends Iced {
       double se1 = ssqs1[b] - sums1[b]*sums1[b]/ns1[b];
       if( (se0+se1 < best_se0+best_se1) || // Strictly less error?
           // Or tied MSE, then pick split towards middle bins
-          (se0+se1 == best_se0+best_se1 && best < (nbins>>1)) ) {
+          (se0+se1 == best_se0+best_se1 && 
+           Math.abs(b -(nbins>>1)) < Math.abs(best-(nbins>>1))) ) {
         best_se0 = se0;   best_se1 = se1;
         best = b;
       }
@@ -179,7 +204,7 @@ public class DSharedHistogram extends Iced {
         _max-_min+1 > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
       for( int b=1; b<=nbins-1; b++ ) {
         if( _bins.get(b) == 0 ) continue; // Ignore empty splits
-        assert _mins.get(b) == _maxs.get(b) : "int col, step of 1.0 "+_mins.get(b)+".."+_maxs.get(b)+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
+        assert _mins.getf(b) == _maxs.getf(b) : "int col, step of 1.0 "+_mins.getf(b)+".."+_maxs.getf(b)+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
         long k0 = ns0[b+0], k1 = ns1[b+1];
         if( k0==0 && k1==0 ) continue;
         double se0 = k0==0 ? 0 : ssqs0[b+0] - sums0[b+0]*sums0[b+0]/k0; // Upto, excluding 'b'
@@ -220,7 +245,7 @@ public class DSharedHistogram extends Iced {
     sb.append(_name).append(":").append(_min).append("-").append(_max).append(" step="+(1/_step)+" nbins="+_bins.length());
     if( _bins != null ) {
       for( int b=0; b<_bins.length(); b++ ) {
-        sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins.get(b),_mins.get(b),_maxs.get(b)));
+        sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins.get(b),_mins.getf(b),_maxs.getf(b)));
         sb.append(String.format("%6.2f/%6.2f,", mean(b), var(b)));
       }
       sb.append('\n');
