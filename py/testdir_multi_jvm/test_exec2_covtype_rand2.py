@@ -3,8 +3,17 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
 zeroList = [
-        'Result0 = 0',
-        'Result = 0',
+        'Result9 = c(0)',
+        'Result8 = c(0)',
+        'Result7 = c(0)',
+        'Result6 = c(0)',
+        'Result5 = c(0)',
+        'Result4 = c(0)',
+        'Result3 = c(0)',
+        'Result2 = c(0)',
+        'Result1 = c(0)',
+        'Result0 = c(0)',
+        'Result = c(0)',
 ]
 
 # randomBitVector
@@ -14,12 +23,11 @@ zeroList = [
 # bug?
 #        ['Result<n> = slice(c.hex[<col1>],<row>)',
 exprList = [
-        'Result<n> = colSwap(c.hex,<col1>,(c.hex[2]==0 ? 54321 : 54321))',
-        'Result<n> = c.hex[<col1>]',
-        'Result<n> = min(c.hex[<col1>])',
-        'Result<n> = max(c.hex[<col1>]) + Result[0]',
-        'Result<n> = mean(c.hex[<col1>]) + Result[0]',
-        'Result<n> = sum(c.hex[<col1>]) + Result[0]',
+        'Result<n>[,<col1>] = (c.hex[,2]==0) ? 54321 : 54321',
+        'Result<n> = c.hex[,<col1>]',
+        'Result<n> = min(c.hex[,<col1>])',
+        'Result<n> = max(c.hex[,<col1>]) + Result[,1]',
+        'Result<n> = sum(c.hex[,<col1>]) + Result[,1]',
     ]
 
 class Basic(unittest.TestCase):
@@ -43,6 +51,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_loop_random_exec_covtype(self):
+        h2o.beta_features = True
         csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='put', hex_key='c.hex', timeoutSecs=15)
         print "\nParse key is:", parseResult['destination_key']
