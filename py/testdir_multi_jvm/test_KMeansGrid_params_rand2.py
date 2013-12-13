@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
             for trial in range(3):
                 # default
                 destinationKey = csvFilename + "_" + str(trial) + '.hex'
-                params = {'k': 'c(2,3)', 'destination_key': destinationKey}
+                params = {'k': '2,3', 'destination_key': destinationKey}
 
                 h2o_kmeans.pickRandKMeansParams(paramDict, params)
                 kwargs = params.copy()

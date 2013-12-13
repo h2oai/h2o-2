@@ -20,21 +20,21 @@ def write_syn_dataset(csvPathname, rowCount, SEED):
     dsf.close()
 
 zeroList = [
-        'Result2 = 0',
-        'Result1 = 0',
-        'Result0 = 0',
-        'Result.hex = 0',
+        'Result2 = c(0)',
+        'Result1 = c(0)',
+        'Result0 = c(0)',
+        'Result.hex = c(0)',
 ]
 
 exprList = [
-        'Result<n> = factor(<keyX>[0])',
-        'Result<n> = factor(<keyX>[1])',
-        'Result<n> = factor(<keyX>[2])',
-        'Result<n> = factor(<keyX>[3])',
-        'Result<n> = factor(<keyX>[4])',
-        'Result<n> = factor(<keyX>[5])',
-        'Result<n> = factor(<keyX>[6])',
-        'Result<n> = factor(<keyX>[7])',
+        'Result<n> = factor(<keyX>[,1])',
+        'Result<n> = factor(<keyX>[,2])',
+        'Result<n> = factor(<keyX>[,3])',
+        'Result<n> = factor(<keyX>[,4])',
+        'Result<n> = factor(<keyX>[,5])',
+        'Result<n> = factor(<keyX>[,6])',
+        'Result<n> = factor(<keyX>[,7])',
+        'Result<n> = factor(<keyX>[,8])',
     ]
 
 class Basic(unittest.TestCase):
