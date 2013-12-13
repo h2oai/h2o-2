@@ -37,7 +37,8 @@ PSA.outliers = prostate.hex[prostate.hex$PSA <= prostate.qs[2] | prostate.hex$PS
 # PSA.outliers = prostate.hex[PSA.outliers.ind,]
 PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
 nrow(PSA.outliers)
-head(PSA.outliers); tail(PSA.outliers)
+head(PSA.outliers)
+tail(PSA.outliers)
 
 # Drop outliers from data
 prostate.trim = prostate.hex[prostate.hex$PSA > prostate.qs[2] & prostate.hex$PSA < prostate.qs[10],]
@@ -68,3 +69,6 @@ head(prostate.hex)
 # prostate.hex[,11] = prostate.hex$PSA >= prostate.qs["75%",]
 prostate.glm.lin = h2o.glm.FV(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex, family = "binomial")
 print(prostate.glm.lin)
+
+# Shutdown local H2O instance
+h2o.shutdown(localH2O)
