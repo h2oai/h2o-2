@@ -91,9 +91,9 @@ public abstract class Trainer {
     Thread _thread;
     Key _job;
 
-    public Direct(Layer[] ls, int epochs, Key job) {
+    public Direct(Layer[] ls, double epochs, Key job) {
       super(ls);
-      _limit = epochs * ((Input) ls[0])._len;
+      _limit = (long) (epochs * ((Input) ls[0])._len);
       _job = job;
     }
 
@@ -436,8 +436,6 @@ public abstract class Trainer {
           clones[y]._b = _node._bs[y];
           clones[y]._wm = _node._wm[y];
           clones[y]._bm = _node._bm[y];
-          clones[y]._wp = _node._wp[y];
-          clones[y]._bp = _node._bp[y];
           clones[y]._training = new Training() {
             @Override long processed() {
               return _node._total;
@@ -461,7 +459,6 @@ public abstract class Trainer {
     float[][] _ws, _bs; // Current weights
     float[][] _wi, _bi; // Initial weights, for synchronization
     float[][] _wm, _bm; // Momentums
-    float[][] _wp, _bp; // Per-weights
     Key _key;
     ConcurrentHashMap<Integer, Integer> _counters;
     MapReduce _trainer;
@@ -477,18 +474,12 @@ public abstract class Trainer {
       _bi = new float[bs.length][];
       _wm = new float[ws.length][];
       _bm = new float[bs.length][];
-      _wp = new float[ws.length][];
-      _bp = new float[bs.length][];
       for( int y = 1; y < _ws.length; y++ ) {
         _wi[y] = ws[y].clone();
         _bi[y] = bs[y].clone();
         if( ls[y].momentum_start != 0 || ls[y].momentum_stable != 0 ) {
           _wm[y] = new float[ws[y].length];
           _bm[y] = new float[bs[y].length];
-        }
-        if( ls[y].per_weight ) {
-          _wp[y] = new float[ws[y].length];
-          _bp[y] = new float[bs[y].length];
         }
       }
       _trainer = MapReduce._instances.get(_key);

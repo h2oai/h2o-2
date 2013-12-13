@@ -13,10 +13,12 @@ import water.fvec.*;
  */
 public class MapReduce extends Job {
   public static void main(String[] args) throws Exception {
-    samples.launchers.CloudLocal.launch(1, MapReduce.class);
-    // samples.launchers.CloudProcess.launch(2, MapReduce.class);
-    // samples.launchers.CloudConnect.launch("localhost:54321", MapReduce.class);
-    // samples.launchers.CloudRemote.launchDefaultIPs(MapReduce.class);
+    Class job = MapReduce.class;
+    samples.launchers.CloudLocal.launch(job, 1);
+    //samples.launchers.CloudProcess.launch(job, 2);
+    //samples.launchers.CloudConnect.launch(job, "localhost:54321");
+    //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162");
+    //samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
   @Override protected Status exec() {

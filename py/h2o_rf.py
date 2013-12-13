@@ -224,7 +224,7 @@ def trainRF(trainParseResult, **kwargs):
     return trainResult
 
 # vactual only needed for v2?
-def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
+def scoreRF(scoreParseResult, trainResult, vactual=None, timeoutSecs=120, **kwargs):
     # Run validation on dataset
 
     parseKey = scoreParseResult['destination_key']
@@ -237,7 +237,7 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
             data_key=parseKey,
             model_key=rfModelKey,
             destination_key=predictKey,
-            timeoutSecs=30)
+            timeoutSecs=timeoutSecs, **kwargs)
 
         h2o_cmd.runInspect(key='Predict.hex', verbose=True)
 
@@ -246,7 +246,8 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, **kwargs):
             vactual=vactual,
             predict=predictKey,
             vpredict='predict', 
-            )
+            timeoutSecs=timeoutSecs, **kwargs)
+            
         rftime      = time.time()-start 
 
         cm = predictCMResult['cm']

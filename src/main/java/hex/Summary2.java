@@ -32,8 +32,8 @@ public class Summary2 extends Iced {
   // INPUTS
   final           long     _nrow;
   final           int      _type; // 0 - real; 1 - int; 2 - enum
-  final           double[] _mins;
-  final           double[] _maxs;
+                  double[] _mins;
+                  double[] _maxs;
                   long     _zeros;
                   long     _rows;
   final transient double   _min;
@@ -96,12 +96,43 @@ public class Summary2 extends Iced {
   @API(help="histogram headers" ) public String[]  hbrk;
   @API(help="histogram bin values") public long[]  hcnt;
 
+  public static class BasicSummaryTask extends MRTask2<BasicSummaryTask> {
+    public double _finite_min[];
+    public double _finite_max[];
+    @Override public void map(Chunk[] cs) {
+      _finite_min = new double[cs.length];
+      _finite_max = new double[cs.length];
+      for (int c = 0; c < cs.length; c++) {
+        _finite_min[c] = Double.NaN;
+        _finite_max[c] = Double.NaN;
+        for (int i = 0; i < cs[c]._len; i++) {
+          if (!cs[c].isNA0(i)) {
+            double v = cs[c].at0(i);
+            if (!Double.isInfinite(v)) {
+              _finite_min[c] = Double.isNaN(_finite_min[c]) ? v : Math.min(v, _finite_min[c]);
+              _finite_max[c] = Double.isNaN(_finite_max[c]) ? v : Math.max(v, _finite_max[c]);
+            }
+          }
+        }
+      }
+    }
+    @Override public void reduce(BasicSummaryTask other){
+      for (int c = 0; c < _finite_min.length; c++) {
+        double min = _finite_min[c];
+        double max = _finite_max[c];
+        _finite_min[c] = Double.isNaN(min) ? other._finite_min[c] : Math.min(min, other._finite_min[c]);
+        _finite_max[c] = Double.isNaN(max) ? other._finite_max[c] : Math.max(max, other._finite_max[c]);
+      }
+    }
+  }
   public static class SummaryTask2 extends MRTask2<SummaryTask2> {
+    private double[] _mins, _maxs;
     public Summary2 _summaries[];
+    public SummaryTask2 (double[] mins, double[] maxs) { _mins=mins; _maxs = maxs;}
     @Override public void map(Chunk[] cs) {
       _summaries = new Summary2[cs.length];
       for (int i = 0; i < cs.length; i++) {
-        (_summaries[i]=new Summary2(_fr.vecs()[i], _fr.names()[i])).add(cs[i]);
+        (_summaries[i]=new Summary2(_fr.vecs()[i], _fr.names()[i], _mins[i], _maxs[i])).add(cs[i]);
       }
     }
     @Override public void reduce(SummaryTask2 other) {
@@ -128,7 +159,7 @@ public class Summary2 extends Iced {
       Vec[] vecs = _fr.vecs();
       Summary2 sums[] = new Summary2[vecs.length];
       for( int i=0; i<vecs.length; i++ )
-        sums[i] = new Summary2(vecs[i],_fr._names[i]);
+        sums[i] = new Summary2(vecs[i],_fr._names[i], vecs[i].min(), vecs[i].max());
       return new SummaryPerRow(_fr,sums);
     }
     @Override public String toString() {
@@ -160,6 +191,19 @@ public class Summary2 extends Iced {
   public void finishUp(Vec vec) {
     computePercentiles();
     computeMajorities();
+    // dedup mins and maxs, only happens when all are infinite values
+    for (int i = 0; i < _mins.length-1; i++) {
+      if (Double.isNaN(_mins[i])) {
+        _mins = Arrays.copyOf(_mins, i);
+        break;
+      }
+    }
+    for (int i = 0; i < _maxs.length-1; i++) {
+      if (Double.isNaN(_maxs[i])) {
+        _maxs = Arrays.copyOf(_maxs, i);
+        break;
+      }
+    }
     for (int i = 0; i < _maxs.length>>>1; i++) {
       double t = _maxs[i]; _maxs[i] = _maxs[_maxs.length-1-i]; _maxs[_maxs.length-1-i] = t;
     }
@@ -173,11 +217,11 @@ public class Summary2 extends Iced {
       this.hstep  = _binsz;
       this.hbrk = new String[hcnt.length];
       for (int i = 0; i < hbrk.length; i++)
-        hbrk[i] = Utils.p2d(binValue(i));
+        hbrk[i] = Utils.p2d(i==0?_start:binValue(i));
     }
   }
 
-  public Summary2(Vec vec, String name) {
+  public Summary2(Vec vec, String name, double finite_min, double finite_max) {
     this.colname = name;
     this._type = vec.isEnum()?2:vec.isInt()?1:0;
     this.nacnt = vec.naCnt();
@@ -187,20 +231,19 @@ public class Summary2 extends Iced {
     if ( _type != T_ENUM ) {
       this._mins = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
       this._maxs = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
-      Arrays.fill(_mins, Double.POSITIVE_INFINITY);
-      Arrays.fill(_maxs, Double.NEGATIVE_INFINITY);
+      Arrays.fill(_mins, Double.NaN);
+      Arrays.fill(_maxs, Double.NaN);
     } else {
       _mins = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
       _maxs = MemoryManager.malloc8d(Math.min(_domain.length,NMAX));
     }
-
     _min = vec.min();_max = vec.max();
-    double span = vec.max()-vec.min() + 1;
+    double span = finite_max - finite_min + 1;
     if( vec.isEnum() && span < MAX_HIST_SZ ) {
-      _start = vec.min();
+      _start = finite_min;
       _binsz = 1;
       hcnt = new long[(int)span];
-    } else {
+    } else if (!Double.isNaN(finite_min)) {
       // guard against improper parse (date type) or zero c._sigma
       double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(_nrow));
       double d = Math.pow(10, Math.floor(Math.log10(b)));
@@ -212,10 +255,14 @@ public class Summary2 extends Iced {
       // tweak for integers
       if (d < 1. && vec.isInt()) d = 1.;
       _binsz = d;
-      _start = _binsz * Math.floor(vec.min()/_binsz);
-      int nbin = (int)(Math.round((vec.max() + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
+      _start = _binsz * Math.floor(finite_min/_binsz);
+      int nbin = (int)(Math.round((finite_max + (vec.isInt()?.5:0) - _start)*1000000.0/_binsz)/1000000L) + 1;
       assert nbin > 0;
       hcnt = new long[nbin];
+    } else { // vec does not contain finite numbers
+      _start = vec.min();
+      _binsz = Double.POSITIVE_INFINITY;
+      hcnt = new long[1];
     }
   }
 
@@ -229,17 +276,36 @@ public class Summary2 extends Iced {
     assert val <= _max : "ERROR: ON COLUMN " + colname + "   VALUE " + val + " > VEC.MAX " + _max;
     if ( _type != T_ENUM ) {
       if (val == 0.) _zeros++;
+      int index;
       // update min/max
+      if (Double.isNaN(_mins[_mins.length-1])) {
+        index = Arrays.binarySearch(_mins, val);
+        if (index < 0) {
+          index = -(index + 1);
+          for (int j = _mins.length -1; j > index; j--)
+            _mins[j] = _mins[j-1];
+          _mins[index] = val;
+        }
+      }
       if (val < _mins[_mins.length-1]) {
-        int index = Arrays.binarySearch(_mins, val);
+        index = Arrays.binarySearch(_mins, val);
         if (index < 0) {
           index = -(index + 1);
           for (int j = _mins.length-1; j > index; j--) _mins[j] = _mins[j-1];
           _mins[index] = val;
         }
       }
-      if (val > _maxs[0]) {
-        int index = Arrays.binarySearch(_maxs, val);
+      if (Double.isNaN(_maxs[_maxs.length-1])) {
+        index = Arrays.binarySearch(_maxs, val);
+        if (index < 0) {
+          index = -(index + 1);
+          for (int j = _maxs.length -1; j > index; j--)
+            _maxs[j] = _maxs[j-1];
+          _maxs[index] = val;
+        }
+      }
+      else if (val > _maxs[0]) {
+        index = Arrays.binarySearch(_maxs, val);
         if (index < 0) {
           index = -(index + 1);
           for (int j = 0; j < index-1; j++) _maxs[j] = _maxs[j+1];
@@ -248,27 +314,31 @@ public class Summary2 extends Iced {
       }
     }
     // update histogram
-    long binIdx = Math.round((val-_start)*1000000.0/_binsz)/1000000;
+    long binIdx = val == Double.NEGATIVE_INFINITY ? 0
+            : val == Double.POSITIVE_INFINITY ? hcnt.length-1
+            : Math.round((val-_start)*1000000.0/_binsz)/1000000;
     ++hcnt[(int)binIdx];
     ++_rows;
   }
 
   public Summary2 add(Summary2 other) {
     _zeros += other._zeros;
-    Utils.add(hcnt, other.hcnt);
+    if (hcnt != null)
+      Utils.add(hcnt, other.hcnt);
     _rows += other._rows;
     if (_type == T_ENUM) return this;
 
     double[] ds = MemoryManager.malloc8d(_mins.length);
     int i = 0, j = 0;
     for (int k = 0; k < ds.length; k++)
-      ds[k] = _mins[i] < other._mins[j] ? _mins[i++] : other._mins[j++];
+      ds[k] = _mins[i] < other._mins[j] ? _mins[i++] : Double.isNaN(other._mins[j]) ? _mins[i++] : other._mins[j++];
     System.arraycopy(ds,0,_mins,0,ds.length);
 
     i = j = _maxs.length - 1;
     for (int k = ds.length - 1; k >= 0; k--)
-      ds[k] = _maxs[i] > other._maxs[j] ? _maxs[i--] : other._maxs[j--];
+      ds[k] = _maxs[i] > other._maxs[j] ? _maxs[i--] : Double.isNaN(other._maxs[j]) ? _maxs[i--] : other._maxs[j--];
     System.arraycopy(ds,0,_maxs,0,ds.length);
+
     return this;
   }
 
@@ -345,12 +415,10 @@ public class Summary2 extends Iced {
       sb.append("<th>zeros</th><td>" + stats.zeros + "</td>");
       sb.append("<th>min[" + stats.mins.length + "]</th>");
       for( double min : stats.mins ) {
-        if (min == Double.POSITIVE_INFINITY) break;
         sb.append("<td>" + Utils.p2d(min) + "</td>");
       }
       sb.append("<th>max[" + stats.maxs.length + "]</th>");
       for( double max : stats.maxs ) {
-        if (max == Double.NEGATIVE_INFINITY) continue;
         sb.append("<td>" + Utils.p2d(max) + "</td>");
       }
       // End of base stats
@@ -372,7 +440,7 @@ public class Summary2 extends Iced {
     if ( _type == T_ENUM )
        for( int i=0; i<len; i++ ) sb.append("<th>" + vec.domain(i) + "</th>");
     else
-       for( int i=0; i<len; i++ ) sb.append("<th>" + Utils.p2d(binValue(i)) + "</th>");
+       for( int i=0; i<len; i++ ) sb.append("<th>" + Utils.p2d(i==0?_start:binValue(i)) + "</th>");
     sb.append("</tr>");
     sb.append("<tr>");
     for( int i=0; i<len; i++ ) sb.append("<td>" + hcnt[i] + "</td>");

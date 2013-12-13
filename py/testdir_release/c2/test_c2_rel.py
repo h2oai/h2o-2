@@ -84,6 +84,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                     GLMkwargs = {
                         'ignored_cols': ignore_x, 
+                        'family': 'binomial',
                         'response': 'C378', 
                         'case_val': 15, 
                         'case_mode': '>',

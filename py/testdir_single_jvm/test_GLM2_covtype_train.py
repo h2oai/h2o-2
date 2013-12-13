@@ -27,15 +27,25 @@ class Basic(unittest.TestCase):
         csvPathname = importFolderPath + "/" + csvFilename
         hex_key = csvFilename + ".hex"
 
-        print "\nUsing header=0 on the normal covtype.data"
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key,
-            header=0, timeoutSecs=180)
+        # Parse and Exec************************************************
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=180)
 
-        inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
+        execExpr="A.hex=%s" % parseResult['destination_key']
+        h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+
+        # use exec to change the output col to binary, case_mode/case_val doesn't work if we use predict
+        # will have to live with random extract. will create variance
+        # class 4 = 1, everything else 0
+        y = 54
+        execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, 4)
+        h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+
+        inspect = h2o_cmd.runInspect(key="A.hex")
         print "\n" + csvPathname, \
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
 
+        # Split Test/Train************************************************
         # how many rows for each pct?
         numRows = inspect['numRows']
         pct10 = int(numRows * .1)
@@ -52,18 +62,16 @@ class Basic(unittest.TestCase):
         testDataKey = "rTest"
         # start at 90% rows + 1
         
-        h2o_cmd.createTestTrain(srcKey=hex_key, trainDstKey=trainDataKey, testDstKey=testDataKey, trainPercent=90)
-        # will have to live with random extract. will create variance
-
+        # GLM, predict, CM*******************************************************8
         kwargs = {
-            'response': 'C54', 
+            'response': 'C' + str(y),
             'max_iter': 20, 
             'n_folds': 0, 
             'alpha': 0.1, 
             'lambda': 1e-5, 
             'family': 'binomial',
-            'case_mode': '=', 
-            'case_val': 4,
+            # 'case_mode': '=', 
+            # 'case_val': 4,
             'classification': 1,
         }
         timeoutSecs = 60
@@ -73,15 +81,13 @@ class Basic(unittest.TestCase):
             rowsToUse = rowsForPct[trial%10] 
 
             # test/train split **********************************************8
-            h2o_cmd.createTestTrain(srcKey=hex_key, trainDstKey=trainDataKey, testDstKey=testDataKey, trainPercent=90)
-            parseResult['destination_key'] = trainDataKey
+            h2o_cmd.createTestTrain(srcKey='A.hex', trainDstKey=trainDataKey, testDstKey=testDataKey, trainPercent=90)
+            aHack = {'destination_key': trainDataKey}
             parseKey = trainDataKey
-            # have to change the test dataset to class 4..the case_mode/case_val doesn't get passed correctly
-            h2e.exec_expr(execExpr="Z.hex=rTest;rTest[,54+1]=(rTest[,54+1]==4)", timeoutSecs=30)
 
             # GLM **********************************************8
             start = time.time()
-            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             modelKey = glm['glm_model']['_selfKey']
@@ -91,14 +97,14 @@ class Basic(unittest.TestCase):
             start = time.time()
 
             predictResult = h2o_cmd.runPredict(
-                data_key='Z.hex',
+                data_key=testDataKey,
                 model_key=modelKey,
                 destination_key=predictKey,
                 timeoutSecs=timeoutSecs)
 
             predictCMResult = h2o.nodes[0].predict_confusion_matrix(
-                actual='Z.hex',
-                vactual='C54',
+                actual=testDataKey,
+                vactual='C' + str(y),
                 predict=predictKey,
                 vpredict='predict',
                 )
