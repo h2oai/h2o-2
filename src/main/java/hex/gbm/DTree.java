@@ -16,11 +16,11 @@ import water.util.*;
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
 
-   This class defines an explicit Tree structure, as a collection of {@code
-   DTree} {@code Node}s.  The Nodes are numbered with a unique {@code _nid}.
-   Users need to maintain their own mapping from their data to a {@code _nid},
-   where the obvious technique is to have a Vec of {@code _nid}s (ints), one
-   per each element of the data Vecs.
+   This class defines an explicit Tree structure, as a collection of {@code DTree} 
+   {@code Node}s.  The Nodes are numbered with a unique {@code _nid}.  Users
+   need to maintain their own mapping from their data to a {@code _nid}, where
+   the obvious technique is to have a Vec of {@code _nid}s (ints), one per each
+   element of the data Vecs.
 
    Each {@code Node} has a {@code DSharedHistogram}, describing summary data about the
    rows.  The DSharedHistogram requires a pass over the data to be filled in, and we

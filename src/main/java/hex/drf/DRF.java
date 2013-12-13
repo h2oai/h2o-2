@@ -137,7 +137,6 @@ public class DRF extends SharedTreeModelBuilder {
   }
 
   @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
-    long memNow, memStart = MemoryManager.MEM_ALLOC.get();
 
     DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, seed);
     DKV.put(outputKey, model);
@@ -154,14 +153,11 @@ public class DRF extends SharedTreeModelBuilder {
     TreeStats tstats = new TreeStats();
     // Build trees until we hit the limit
     for( tid=0; tid<ntrees; tid++) {
-      memNow = MemoryManager.MEM_ALLOC.get();
-      System.out.println("Starting on tree "+tid+", mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
-      memStart = memNow;
       // At each iteration build K trees (K = nclass = response column domain size)
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
       Timer t_kTrees = new Timer();
-      ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand, memStart);
+      ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
       Log.info(Sys.DRF__, "Tree "+(tid+1)+"x"+_nclass+" produced in "+t_kTrees);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
@@ -169,9 +165,6 @@ public class DRF extends SharedTreeModelBuilder {
       tstats.updateBy(ktrees);
       model = doScoring(model, outputKey, fr, ktrees, tid, tstats,false);
     }
-    memNow = MemoryManager.MEM_ALLOC.get();
-    System.out.println("Final scoring, mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
-    memStart = memNow;
     // Do final scoring with all the trees.
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats,true);
     // Compute variable importance if required
@@ -184,9 +177,6 @@ public class DRF extends SharedTreeModelBuilder {
     }
 
     cleanUp(fr,t_build); // Shared cleanup
-    memNow = MemoryManager.MEM_ALLOC.get();
-    System.out.println("Post cleanup, mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
-    memStart = memNow;
   }
 
   private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
@@ -265,7 +255,7 @@ public class DRF extends SharedTreeModelBuilder {
 
   // --------------------------------------------------------------------------
   // Build the next random k-trees
-  private DTree[] buildNextKTrees(Frame fr, int mtrys, float sample_rate, Random rand, long memStart) {
+  private DTree[] buildNextKTrees(Frame fr, int mtrys, float sample_rate, Random rand) {
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
     final DTree[] ktrees = new DTree[_nclass];
@@ -302,9 +292,6 @@ public class DRF extends SharedTreeModelBuilder {
       if( ss[k] != null ) ss[k].getResult();
 
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from leafs[i] to tree._len for each tree i
-    long memNow = MemoryManager.MEM_ALLOC.get();
-    System.out.println("Tree init; OOBEE Sampling; mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
-    memStart = memNow;
 
     // ----
     // One Big Loop till the ktrees are of proper depth.
@@ -324,9 +311,6 @@ public class DRF extends SharedTreeModelBuilder {
       // per column.
       ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs,hcs).doAll(fr);
       //System.out.println(sbh.profString());
-      memNow = MemoryManager.MEM_ALLOC.get();
-      System.out.println("ScoreBuildHistogram; mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
-      memStart = memNow;
 
       // Build up the next-generation tree splits from the current histograms.
       // Nearly all leaves will split one more level.  This loop nest is
@@ -384,9 +368,6 @@ public class DRF extends SharedTreeModelBuilder {
         }
       }
     } // -- k-trees are done
-    memNow = MemoryManager.MEM_ALLOC.get();
-    System.out.println("Inserted leaf nodes; mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
-    memStart = memNow;
 
     // ----
     // Collect votes for the tree.
@@ -401,9 +382,6 @@ public class DRF extends SharedTreeModelBuilder {
         ((LeafNode)tree.node(leafs[k]+i)).pred( gp._voters[k][i] > 0 ? gp._votes[k][i] / gp._voters[k][i] : 0);
       }
     }
-    memNow = MemoryManager.MEM_ALLOC.get();
-    System.out.println("Collecting votes; mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
-    memStart = memNow;
 
     // ----
     // Tree <== f(Tree)
@@ -430,9 +408,6 @@ public class DRF extends SharedTreeModelBuilder {
         }
       }
     }.doAll(fr);
-    memNow = MemoryManager.MEM_ALLOC.get();
-    System.out.println("Store OOBEE predictions; mem consumed size last: "+PrettyPrint.bytes(memNow-memStart));
-    memStart = memNow;
 
     // Collect leaves stats
     for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];

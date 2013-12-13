@@ -1,13 +1,12 @@
 package hex.gbm;
 
-import water.*;
-import water.util.SB;
-import java.util.concurrent.atomic.*;
 import java.util.Arrays;
-//import water.*;
-//import water.fvec.*;
-//import water.util.Log;
-//import water.util.Utils;
+import java.util.concurrent.atomic.*;
+import sun.misc.Unsafe;
+import water.*;
+import water.nbhm.UtilUnsafe;
+import water.util.SB;
+import water.util.Utils;
 
 /**
    A Histogram, computed in parallel over a Vec.
@@ -39,9 +38,9 @@ public class DSharedHistogram extends Iced {
   public final char _nbin;        // Bin count
   public final float  _step;      // Linear interpolation step per bin
   public final float  _min, _max; // Conservative Min/Max over whole collection
-  public       AtomicLongArray _bins;// Bins, shared, atomically incremented
-  public       AtomicFloatArray _mins, _maxs; // Min/Max, shared, atomically updated
-  public       AtomicDoubleArray _sums, _ssqs;// Sums & square-sums, shared, atomically incremented
+  public       long   _bins[];    // Bins, shared, atomically incremented
+  private      float  _mins[], _maxs[]; // Min/Max, shared, atomically updated
+  private      double _sums[], _ssqs[]; // Sums & square-sums, shared, atomically incremented
 
   public DSharedHistogram( String name, final int nbins, byte isInt, float min, float max, long nelems ) {
     assert nelems > 0;
@@ -74,37 +73,35 @@ public class DSharedHistogram extends Iced {
     if( Float.isNaN(col_data) ) return 0; // Always NAs to bin 0
     assert col_data <= _max : "Coldata out of range "+col_data+" "+this;
     int idx1  = (int)((col_data-_min)*_step);
-    int idx2  = Math.max(Math.min(idx1,_bins.length()-1),0); // saturate at bounds
+    int idx2  = Math.max(Math.min(idx1,_bins.length-1),0); // saturate at bounds
     return idx2;
   }
   float binAt( int b ) { return _min+b/_step; }
 
   public int nbins() { return _nbin; }
-  public long bins(int b) { return _bins.get(b); }
-  public float mins(int b) { return _mins.getf(b); }
-  public float maxs(int b) { return _maxs.getf(b); }
+  public long  bins(int b) { return _bins[b]; }
+  public float mins(int b) { return _mins[b]; }
+  public float maxs(int b) { return _maxs[b]; }
   public double mean(int b) { 
-    long n = _bins.get(b);
-    return n>0 ? _sums.getd(b)/n : 0;
+    long n = _bins[b];
+    return n>0 ? _sums[b]/n : 0;
   }
   public double var (int b) { 
-    long n = _bins.get(b);
+    long n = _bins[b];
     if( n<=1 ) return 0;
-    return (_ssqs.getd(b) - _sums.getd(b)*_sums.getd(b)/n)/(n-1);
+    return (_ssqs[b] - _sums[b]*_sums[b]/n)/(n-1);
   }
 
   // Big allocation of arrays
   final void init() { 
     assert _bins == null;
-    int [] mins = MemoryManager.malloc4(_nbin);
-    int [] maxs = MemoryManager.malloc4(_nbin);
-    Arrays.fill(mins,Float.floatToRawIntBits( Float.MAX_VALUE));
-    Arrays.fill(maxs,Float.floatToRawIntBits(-Float.MAX_VALUE));
-    _bins = new AtomicLongArray(_nbin);
-    _mins = new AtomicFloatArray(mins);
-    _maxs = new AtomicFloatArray(maxs);
-    _sums = new AtomicDoubleArray(_nbin);
-    _ssqs = new AtomicDoubleArray(_nbin);
+    _bins = MemoryManager.malloc8 (_nbin);
+    _mins = MemoryManager.malloc4f(_nbin);
+    Arrays.fill(_mins,Float.floatToRawIntBits( Float.MAX_VALUE));
+    _maxs = MemoryManager.malloc4f(_nbin);
+    Arrays.fill(_maxs,Float.floatToRawIntBits(-Float.MAX_VALUE));
+    _sums = MemoryManager.malloc8d(_nbin);
+    _ssqs = MemoryManager.malloc8d(_nbin);
   }
 
   // Add one row to a bin found via simple linear interpolation.
@@ -112,27 +109,41 @@ public class DSharedHistogram extends Iced {
   // Compute response mean & variance.
   final void incr( float col_data, double y ) {
     int b = bin(col_data);      // Compute bin# via linear interpolation
-    _bins.incrementAndGet(b);   // Bump count in bin
+    AtomicLongArray.incr(_bins,b); // Bump count in bin
     // Track actual lower/upper bound per-bin
-    _mins.setMin(b,col_data);
-    _maxs.setMax(b,col_data);
+    AtomicFloatArray.setMin(_mins,b,col_data);
+    AtomicFloatArray.setMax(_maxs,b,col_data);
     if( y != 0 ) {
-      _sums.add(b,y);
-      _ssqs.add(b,y*y);
+      AtomicDoubleArray.add(_sums,b,y);
+      AtomicDoubleArray.add(_ssqs,b,y*y);
     }
+  }
+
+  // Merge two equal histograms together.  Done in a F/J reduce, so no
+  // synchronization needed.
+  void add( DSharedHistogram dsh ) {
+    assert _isInt == dsh._isInt && _nbin == dsh._nbin && _step == dsh._step && 
+      _min == dsh._min && _max == dsh._max;
+    assert (_bins == null && dsh._bins == null) || (_bins != null && dsh._bins != null);
+    if( _bins == null ) return;
+    Utils.add(_bins,dsh._bins);
+    Utils.add(_sums,dsh._sums);
+    Utils.add(_ssqs,dsh._ssqs);
+    for( int i=0; i<_nbin; i++ ) if( dsh._mins[i] < _mins[i] ) _mins[i] = dsh._mins[i];
+    for( int i=0; i<_nbin; i++ ) if( dsh._maxs[i] > _maxs[i] ) _maxs[i] = dsh._maxs[i];
   }
 
   public float find_min() {
     if( _bins == null ) return Float.NaN;
     int n = 0;
-    while( n < _nbin && _bins.get(n)==0 ) n++; // First non-empty bin
-    if( n == _nbin ) return Float.NaN;         // All bins are empty???
-    return _mins.getf(n);       // Take min from 1st non-empty bin
+    while( n < _nbin && _bins[n]==0 ) n++; // First non-empty bin
+    if( n == _nbin ) return Float.NaN;     // All bins are empty???
+    return _mins[n];            // Take min from 1st non-empty bin
   }
   public float find_max() {
-    int x = _nbin-1;              // Last bin
-    while( _bins.get(x)==0 ) x--; // Last non-empty bin
-    return _maxs.getf(x);         // Take max from last non-empty bin
+    int x = _nbin-1;            // Last bin
+    while( _bins[x]==0 ) x--;   // Last non-empty bin
+    return _maxs[x];            // Take max from last non-empty bin
   }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
@@ -148,9 +159,9 @@ public class DSharedHistogram extends Iced {
     double ssqs0[] = MemoryManager.malloc8d(nbins+1);
     long     ns0[] = MemoryManager.malloc8 (nbins+1);
     for( int b=1; b<=nbins; b++ ) {
-      double m0 = sums0[b-1],  m1 = _sums.getd(b-1);
-      double s0 = ssqs0[b-1],  s1 = _ssqs.getd(b-1);
-      long   k0 = ns0  [b-1],  k1 = _bins.get (b-1);
+      double m0 = sums0[b-1],  m1 = _sums[b-1];
+      double s0 = ssqs0[b-1],  s1 = _ssqs[b-1];
+      long   k0 = ns0  [b-1],  k1 = _bins[b-1];
       if( k0==0 && k1==0 ) continue;
       sums0[b] = m0+m1;
       ssqs0[b] = s0+s1;
@@ -167,9 +178,9 @@ public class DSharedHistogram extends Iced {
     double ssqs1[] = MemoryManager.malloc8d(nbins+1);
     long     ns1[] = MemoryManager.malloc8 (nbins+1);
     for( int b=nbins-1; b>=0; b-- ) {
-      double m0 = sums1[b+1],  m1 = _sums.getd(b);
-      double s0 = ssqs1[b+1],  s1 = _ssqs.getd(b);
-      long   k0 = ns1  [b+1],  k1 = _bins.get (b);
+      double m0 = sums1[b+1],  m1 = _sums[b];
+      double s0 = ssqs1[b+1],  s1 = _ssqs[b];
+      long   k0 = ns1  [b+1],  k1 = _bins[b];
       if( k0==0 && k1==0 ) continue;
       sums1[b] = m0+m1;
       ssqs1[b] = s0+s1;
@@ -187,7 +198,7 @@ public class DSharedHistogram extends Iced {
     double best_se1=Double.MAX_VALUE;   // Best squared error
     boolean equal=false;                // Ranged check
     for( int b=1; b<=nbins-1; b++ ) {
-      if( _bins.get(b) == 0 ) continue;    // Ignore empty splits
+      if( _bins[b] == 0 ) continue; // Ignore empty splits
       double se0 = ssqs0[b] - sums0[b]*sums0[b]/ns0[b];
       double se1 = ssqs1[b] - sums1[b]*sums1[b]/ns1[b];
       if( (se0+se1 < best_se0+best_se1) || // Strictly less error?
@@ -203,14 +214,14 @@ public class DSharedHistogram extends Iced {
     if( _isInt > 0 && _step == 1.0f &&    // For any integral (not float) column
         _max-_min+1 > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
       for( int b=1; b<=nbins-1; b++ ) {
-        if( _bins.get(b) == 0 ) continue; // Ignore empty splits
-        assert _mins.getf(b) == _maxs.getf(b) : "int col, step of 1.0 "+_mins.getf(b)+".."+_maxs.getf(b)+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
+        if( _bins[b] == 0 ) continue; // Ignore empty splits
+        assert _mins[b] == _maxs[b] : "int col, step of 1.0 "+_mins[b]+".."+_maxs[b]+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
         long k0 = ns0[b+0], k1 = ns1[b+1];
         if( k0==0 && k1==0 ) continue;
         double se0 = k0==0 ? 0 : ssqs0[b+0] - sums0[b+0]*sums0[b+0]/k0; // Upto, excluding 'b'
         double se1 = k1==0 ? 0 : ssqs1[b+1] - sums1[b+1]*sums1[b+1]/k1; // From 'b+1' to end
         double si  = se0+se1;   // Inclusive left & right, excluding 'b'
-        double sx  = _ssqs.getd(b) - _sums.getd(b)*_sums.getd(b)/_bins.get(b); // Just 'b'
+        double sx  = _ssqs[b] - _sums[b]*_sums[b]/_bins[b]; // Just 'b'
         if( si+sx < best_se0+best_se1 ) { // Strictly less error?
           best_se0 = si;   best_se1 = sx;
           best = b;        equal = true; // Equality check
@@ -221,15 +232,15 @@ public class DSharedHistogram extends Iced {
     if( best==0 ) return null;  // No place to split
     assert best > 0 : "Must actually pick a split "+best;
     long n0 = !equal ? ns0[best] : ns0[best]+ns1[best+1];
-    long n1 = !equal ? ns1[best] : _bins.get(best)      ;
+    long n1 = !equal ? ns1[best] : _bins[best]          ;
     return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1);
   }
 
   // Check for a constant response variable
   public boolean isConstantResponse() {
     double m = Double.NaN;
-    for( int b=0; b<_bins.length(); b++ ) {
-      if( _bins.get(b) == 0 ) continue;
+    for( int b=0; b<_bins.length; b++ ) {
+      if( _bins[b] == 0 ) continue;
       if( var(b) > 1e-16 ) return false;
       double mean = mean(b);
       if( mean != m )
@@ -242,10 +253,10 @@ public class DSharedHistogram extends Iced {
   // Pretty-print a histogram
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(_name).append(":").append(_min).append("-").append(_max).append(" step="+(1/_step)+" nbins="+_bins.length());
+    sb.append(_name).append(":").append(_min).append("-").append(_max).append(" step="+(1/_step)+" nbins="+_bins.length);
     if( _bins != null ) {
-      for( int b=0; b<_bins.length(); b++ ) {
-        sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins.get(b),_mins.getf(b),_maxs.getf(b)));
+      for( int b=0; b<_bins.length; b++ ) {
+        sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));
         sb.append(String.format("%6.2f/%6.2f,", mean(b), var(b)));
       }
       sb.append('\n');
@@ -257,69 +268,72 @@ public class DSharedHistogram extends Iced {
     long sum = 8+8;             // Self header
     sum += 4+4+4;               //step,min,max
     // + 8(ptr) + 32(AtomicXXXArray) + 20(array header) + len<<2 (array body)
-    sum += 8+32+20+_bins.length()<<2;
-    sum += 8+32+20+_mins.length()<<2;
-    sum += 8+32+20+_maxs.length()<<2;
-    sum += 8+32+24+_sums.length()<<3;
-    sum += 8+32+24+_ssqs.length()<<3;
+    sum += 8+32+20+_bins.length<<2;
+    sum += 8+32+20+_mins.length<<2;
+    sum += 8+32+20+_maxs.length<<2;
+    sum += 8+32+24+_sums.length<<3;
+    sum += 8+32+24+_ssqs.length<<3;
     return sum;
   }
 
-  // --------------------------------------------------------------------------
-  // Atomically-updated float array, backs over int array
-  private static class AtomicFloatArray extends AtomicIntegerArray {
-    public AtomicFloatArray( int[] is ) { super(is); }
-    float getf( int i ) { return Float.intBitsToFloat(get(i)); }
-    boolean compareAndSet( int i, float expect, float update ) {  
-      return compareAndSet( i, Float.floatToRawIntBits(expect), Float.floatToRawIntBits(update)); 
+  // Atomically-updated float array
+  private static class AtomicFloatArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Fbase  = _unsafe.arrayBaseOffset(float[].class);
+    private static final int _Fscale = _unsafe.arrayIndexScale(float[].class);
+    private static long rawIndex(final float[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Fbase + idx * _Fscale;
     }
-    void setMin( int i, float min ) {
-      float old = getf(i);
-      while( min < old && !compareAndSet(i,old,min) )
-        old = getf(i);
+    static void setMin( float fs[], int i, float min ) {
+      float old = fs[i];
+      while( min < old && !_unsafe.compareAndSwapInt(fs,rawIndex(fs,i), Float.floatToRawIntBits(old), Float.floatToRawIntBits(min) ) )
+        old = fs[i];
     }
-    void setMax( int i, float max ) {
-      float old = getf(i);
-      while( max > old && !compareAndSet(i,old,max) )
-        old = getf(i);
+    static void setMax( float fs[], int i, float max ) {
+      float old = fs[i];
+      while( max > old && !_unsafe.compareAndSwapInt(fs,rawIndex(fs,i), Float.floatToRawIntBits(old), Float.floatToRawIntBits(max) ) )
+        old = fs[i];
     }
-    @Override public String toString() {
+    static public String toString( float fs[] ) {
       SB sb = new SB();
       sb.p('[');
-      final int len = length();
-      for( int i=0; i<len; i++ ) {
-        float f= getf(i);
+      for( float f : fs )
         sb.p(f==Float.MAX_VALUE ? "max": (f==-Float.MAX_VALUE ? "min": Float.toString(f))).p(',');
-      }
       return sb.p(']').toString();
     }
   }
-
-  // Atomically-updated double array, backs over long array
-  private static class AtomicDoubleArray extends AtomicLongArray {
-    public AtomicDoubleArray( int len ) { super(len); }
-    double getd( int i ) { return Double.longBitsToDouble(get(i)); }
-    boolean compareAndSet( int i, double expect, double update ) {  
-      return compareAndSet( i, Double.doubleToRawLongBits(expect), Double.doubleToRawLongBits(update)); 
+ 
+  // Atomically-updated double array
+  private static class AtomicDoubleArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Dbase  = _unsafe.arrayBaseOffset(double[].class);
+    private static final int _Dscale = _unsafe.arrayIndexScale(double[].class);
+    private static long rawIndex(final double[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Dbase + idx * _Dscale;
     }
-    void add( int i, double y ) {
-      double old = getd(i);
-      while( !compareAndSet(i,old,old+y) )
-        old = getd(i);
-    }
-    @Override public String toString() {
-      SB sb = new SB();
-      sb.p('[');
-      final int len = length();
-      for( int i=0; i<len; i++ ) {
-        double d= getd(i);
-        sb.p(d==Double.MAX_VALUE ? "max": (d==-Double.MAX_VALUE ? "min": Double.toString(d))).p(',');
-      }
-      return sb.p(']').toString();
+    static void add( double ds[], int i, double y ) {
+      double old = ds[i];
+      while( !_unsafe.compareAndSwapLong(ds,rawIndex(ds,i), Double.doubleToRawLongBits(old), Double.doubleToRawLongBits(old+y) ) )
+        old = ds[i];
     }
   }
-
-  @Override public AutoBuffer write(AutoBuffer bb) { throw H2O.unimpl(); }
-  @Override public <T extends Freezable> T read(AutoBuffer bb) { throw H2O.unimpl(); }
-  @Override public <T extends Freezable> T newInstance() { throw H2O.unimpl(); }
+ 
+  // Atomically-updated long array.  Instead of using the similar JDK pieces,
+  // allows the bare array to be exposed for fast readers.
+  private static class AtomicLongArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Lbase  = _unsafe.arrayBaseOffset(long[].class);
+    private static final int _Lscale = _unsafe.arrayIndexScale(long[].class);
+    private static long rawIndex(final long[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Lbase + idx * _Lscale;
+    }
+    static void incr( long ls[], int i ) {
+      long old = ls[i];
+      while( !_unsafe.compareAndSwapLong(ls,rawIndex(ls,i), old, old+1) )
+        old = ls[i];
+    }
+  }
 }

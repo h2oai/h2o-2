@@ -20,7 +20,7 @@ public class DRFTest extends TestUtil {
   static final long[]   a(long ...arr)   { return arr; }
   static final long[][] a(long[] ...arr) { return arr; }
 
-//  @Ignore
+  @Ignore
   @Test public void testClassIris1() throws Throwable {
 
     // iris ntree=1
@@ -35,7 +35,7 @@ public class DRFTest extends TestUtil {
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-//  @Ignore
+  @Ignore
   @Test public void testClassIris50() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
@@ -44,7 +44,7 @@ public class DRFTest extends TestUtil {
           50,
           a( a(30, 0,  0),
              a(0, 31,  3),
-             a(0,  2, 34)),
+             a(0,  3, 33)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -63,17 +63,17 @@ public class DRFTest extends TestUtil {
         s("3", "4", "5", "6", "8"));
   }
 
-//  @Ignore
+  @Ignore
   @Test public void testClassCars50() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         50,
-        a( a(1,   3, 0,  0,   0),
-           a(1, 206, 0,  0,   0),
+        a( a(0,   4, 0,  0,   0),
+           a(0, 207, 0,  0,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   4, 0, 79,   1),
-           a(0,   0, 1,  0, 107)),
+           a(0,   5, 0, 78,   1),
+           a(0,   0, 1,  2, 105)),
         s("3", "4", "5", "6", "8"));
   }
 

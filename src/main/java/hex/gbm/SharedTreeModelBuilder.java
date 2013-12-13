@@ -217,7 +217,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         if( _trees[k] != null ) { // Ignore unused classes
           for( int l=_leafs[k]; l<_trees[k]._len; l++ ) {
             DTree.UndecidedNode udn = _trees[k].undecided(l);
-            DSharedHistogram hs[] = udn._hs;
+            DSharedHistogram hs[] = _hcs[k][l-_leafs[k]];
             int sCols[] = udn._scoreCols;
             if( sCols != null ) { // Sub-selecting just some columns?
               for( int j=0; j<sCols.length; j++) // For tracked cols
@@ -246,21 +246,20 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     @Override public void reduce( ScoreBuildHistogram sbh ) {
       // Merge histograms
       if( sbh._hcs == _hcs ) return;
-      throw H2O.unimpl();
-      //assert _hcs.length==_nclass; // One tree per class
-      //for( int k=0; k<_nclass; k++ ) {
-      //  DHistogram hcs[/*leaf#*/][/*col*/] = _hcs[k];
-      //  if( hcs == null ) _hcs[k] = sbh._hcs[k];
-      //  else for( int i=0; i<hcs.length; i++ ) {
-      //    DHistogram hs1[] = hcs[i], hs2[] = sbh._hcs[k][i];
-      //    if( hs1 == null ) hcs[i] = hs2;
-      //    else if( hs2 != null )
-      //      for( int j=0; j<hs1.length; j++ )
-      //        if( hs1[j] == null ) hs1[j] = hs2[j];
-      //        else if( hs2[j] != null )
-      //          hs1[j].add(hs2[j]);
-      //  }
-      //}
+      assert _hcs.length==_nclass; // One tree per class
+      for( int k=0; k<_nclass; k++ ) {
+        DSharedHistogram hcs[/*leaf#*/][/*col*/] = _hcs[k];
+        if( hcs == null ) _hcs[k] = sbh._hcs[k];
+        else for( int i=0; i<hcs.length; i++ ) {
+          DSharedHistogram hs1[] = hcs[i], hs2[] = sbh._hcs[k][i];
+          if( hs1 == null ) hcs[i] = hs2;
+          else if( hs2 != null )
+            for( int j=0; j<hs1.length; j++ )
+              if( hs1[j] == null ) hs1[j] = hs2[j];
+              else if( hs2[j] != null )
+                hs1[j].add(hs2[j]);
+        }
+      }
     }
   }
 
