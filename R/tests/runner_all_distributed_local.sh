@@ -35,7 +35,7 @@ tearDown() {
 
 startJVM() {
   $JAVA $HEAP -jar $pathToH2O -port $1 -name port$1 2&>1 > results/jvmAt$1.out &
-  isUp $1
+#  isUp $1
 }
 
 runTest() {
@@ -144,9 +144,10 @@ doTasks() {
 main() {
   echo "Specify number of $h GB JVMS to build..."
   echo
-  read -p "How many $h GB JVMS do ya want builded, homie? " -n 1 -r
+  read -p "How many $h GB JVMS do ya want builded, homie? " -n 2 -r
   echo 
   numNodes=$REPLY
+  echo "num Nodes is $numNodes"
   
 #  if [[ $REPLY =~ ^[Yy]$ ]]
 #  then
