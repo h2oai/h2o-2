@@ -144,7 +144,7 @@ doTasks() {
 main() {
   echo "Specify number of $h GB JVMS to build..."
   echo
-  read -p "How many $h GB JVMS do ya want builded, sir? " -n 1 -r
+  read -p "How many $h GB JVMS do ya want builded, homie? " -n 1 -r
   echo 
   numNodes=$REPLY
   
