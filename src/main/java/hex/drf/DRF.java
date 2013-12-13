@@ -266,6 +266,7 @@ public class DRF extends SharedTreeModelBuilder {
   // --------------------------------------------------------------------------
   // Build the next random k-trees
   private DTree[] buildNextKTrees(Frame fr, int mtrys, float sample_rate, Random rand, long memStart) {
+    String domain[] = response.domain();
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
     final DTree[] ktrees = new DTree[_nclass];
@@ -341,7 +342,7 @@ public class DRF extends SharedTreeModelBuilder {
           UndecidedNode udn = tree.undecided(leaf);
           //System.out.println("Class "+(domain!=null?domain[k]:k)+",\n  Undecided node:"+udn);
           // Replace the Undecided with the Split decision
-          DRFDecidedNode dn = new DRFDecidedNode((DRFUndecidedNode)udn,hcs[k][leaf]);
+          DRFDecidedNode dn = new DRFDecidedNode((DRFUndecidedNode)udn,hcs[k][leaf-leafs[k]]);
           //System.out.println("--> Decided node: " + dn);
           //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
           if( dn._split.col() == -1 ) udn.do_not_split();

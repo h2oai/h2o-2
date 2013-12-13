@@ -244,6 +244,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
     @Override public void reduce( ScoreBuildHistogram sbh ) {
       // Merge histograms
+      if( sbh._hcs == _hcs ) return;
       throw H2O.unimpl();
       //assert _hcs.length==_nclass; // One tree per class
       //for( int k=0; k<_nclass; k++ ) {
@@ -319,7 +320,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         double y = wrks.at0(row);      // Response for this row
         for( int j=0; j<_ncols; j++) { // For all columns
           DSharedHistogram nh = nhs[j];
-          //if( nh == null ) continue; // Not tracking this column?
+          if( nh == null ) continue;   // Not tracking this column?
           float col_data = (float)chks[j].at0(row); // Data stored in the column and put them into histogram
           nh.incr(col_data,y);
         }

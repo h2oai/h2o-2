@@ -239,15 +239,14 @@ public class DTree extends Iced {
       StringBuilder sb = new StringBuilder();
       sb.append("Nid# ").append(_nid).append(", ");
       printLine(sb).append("\n");
-      DSharedHistogram hs[] = null;
-      if( hs == null ) return sb.append("hs==null").toString();
-      final int ncols = hs.length;
+      if( _hs == null ) return sb.append("_hs==null").toString();
+      final int ncols = _hs.length;
       for( int j=0; j<ncols; j++ )
-        if( hs[j] != null )
-          p(sb,String.format(", %4.1f",hs[j]._min),colW).append(colPad);
+        if( _hs[j] != null )
+          p(sb,_hs[j]._name+String.format(", %4.1f",_hs[j]._min),colW).append(colPad);
       sb.append('\n');
       for( int j=0; j<ncols; j++ ) {
-        if( hs[j] == null ) continue;
+        if( _hs[j] == null ) continue;
         p(sb,"cnt" ,cntW).append('/');
         p(sb,"min" ,mmmW).append('/');
         p(sb,"max" ,mmmW).append('/');
@@ -259,11 +258,11 @@ public class DTree extends Iced {
       // Max bins
       int nbins=0;
       for( int j=0; j<ncols; j++ )
-        if( hs[j] != null && hs[j].nbins() > nbins ) nbins = hs[j].nbins();
+        if( _hs[j] != null && _hs[j].nbins() > nbins ) nbins = _hs[j].nbins();
 
       for( int i=0; i<nbins; i++ ) {
         for( int j=0; j<ncols; j++ ) {
-          DSharedHistogram h = hs[j];
+          DSharedHistogram h = _hs[j];
           //if( h == null ) continue;
           if( i < h.nbins() ) {
             p(sb, h.bins(i),cntW).append('/');

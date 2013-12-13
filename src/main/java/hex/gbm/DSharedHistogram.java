@@ -92,7 +92,8 @@ public class DSharedHistogram extends Iced {
   public double mean(int b) { return _sums.getd(b)/_bins.get(b); }
   public double var (int b) { 
     long n = _bins.get(b);
-    return n>1 ? _ssqs.getd(b)/(n-1) : 0;
+    if( n<=1 ) return 0;
+    return (_ssqs.getd(b) - _sums.getd(b)*_sums.getd(b)/n)/(n-1);
   }
 
   // Add one row to a bin found via simple linear interpolation.
@@ -174,23 +175,21 @@ public class DSharedHistogram extends Iced {
     }
 
     // If the min==max, we can also try an equality-based split
-    if( _isInt > 0 && _step == 1.0f ) { // For any integral (not float) column
+    if( _isInt > 0 && _step == 1.0f &&    // For any integral (not float) column
+        _max-_min+1 > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
       for( int b=1; b<=nbins-1; b++ ) {
         if( _bins.get(b) == 0 ) continue; // Ignore empty splits
         assert _mins.get(b) == _maxs.get(b) : "int col, step of 1.0 "+_mins.get(b)+".."+_maxs.get(b)+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
-        throw H2O.unimpl();
-        //double m0 = MS0[2*(b+0)+0],  m1 = MS1[2*(b+1)+0];
-        //double s0 = MS0[2*(b+0)+1],  s1 = MS1[2*(b+1)+1];
-        //long   k0 = ns0[   b+0   ],  k1 = ns1[   b+1   ];
-        //if( k0==0 && k1==0 ) continue;
-        //double delta=m1-m0;
-        //double mi = (k0*m0+k1*m1)/(k0+k1); // Mean of included set
-        //double si = s0+s1+delta*delta*k0*k1/(k0+k1); // 2nd moment of included set
-        //double sx = _MSs[2*(b+0)+1];                 // The excluded single bin
-        //if( si+sx < best_se0+best_se1 ) { // Strictly less error?
-        //  best_se0 = si;   best_se1 = sx;
-        //  best = b;        equal = true; // Equality check
-        //}
+        long k0 = ns0[b+0], k1 = ns1[b+1];
+        if( k0==0 && k1==0 ) continue;
+        double se0 = k0==0 ? 0 : ssqs0[b+0] - sums0[b+0]*sums0[b+0]/k0; // Upto, excluding 'b'
+        double se1 = k1==0 ? 0 : ssqs1[b+1] - sums1[b+1]*sums1[b+1]/k1; // From 'b+1' to end
+        double si  = se0+se1;   // Inclusive left & right, excluding 'b'
+        double sx  = _ssqs.getd(b) - _sums.getd(b)*_sums.getd(b)/_bins.get(b); // Just 'b'
+        if( si+sx < best_se0+best_se1 ) { // Strictly less error?
+          best_se0 = si;   best_se1 = sx;
+          best = b;        equal = true; // Equality check
+        }
       }
     }
     
