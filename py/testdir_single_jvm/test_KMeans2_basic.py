@@ -40,7 +40,8 @@ class Basic(unittest.TestCase):
         # loop, to see if we get same centers
         for trial in range(2):
             params = {'k': 3, 
-                      'initialization': 'Furthest', 
+                      # 'initialization': 'Furthest', 
+                      'initialization': 'PlusPlus', 
                       'ignored_cols' : None, 
                       'destination_key': 'benign_k.hex',
                       'max_iter': 50,
