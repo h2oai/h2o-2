@@ -57,11 +57,12 @@ trait T_Frame extends T_H20_Frame {
   
   def ncol():Int;
   def nrow():Long;
-  def names():Array[String];
+
 }
 
 trait T_H20_Frame {
   def frame() : Frame;
+  def names():Array[String];
 }
 
 /** Generic Frame transformer */

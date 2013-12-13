@@ -145,7 +145,21 @@ object XT {
   abstract class IcedFunctor2to1[T1,T2,R1] extends Iced with ((T1,T2)=>R1)
   abstract class IcedFunctor2to2[T1,T2,R1,R2] extends Iced with ((T1,T2)=>(R1,R2))
   
+
   def xmap (f:DFrame, t:(Symbol, Symbol))(fc: IcedFunctor1[Double]):DFrame = {
+  /* -- SHOULD BE GENERATED -- */
+  abstract class IcedFunctor1[T1] extends Iced with (T1=>T1)
+  abstract class IcedFunctor1to1[T1,R1] extends Iced with (T1=>R1)
+  abstract class IcedFunctor2to1[T1,T2,R1] extends Iced with ((T1,T2)=>R1)
+  abstract class IcedFunctor2to2[T1,T2,R1,R2] extends Iced with ((T1,T2)=>(R1,R2))
+  
+  implicit def f1toIF1[T1]( f: (T1=>T1) ): IcedFunctor1[T1] = {
+    new IcedFunctor1[T1] {
+      def apply(v1:T1) = f(v1)
+    }
+  }
+  /* ----- */
+  
     val inVectorName = t._1.name
     val outVectorName = t._2.name
     
