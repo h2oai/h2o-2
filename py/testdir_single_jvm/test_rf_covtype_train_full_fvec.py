@@ -55,7 +55,8 @@ class Basic(unittest.TestCase):
 
             job_key = rfv['job_key']
             model_key = rfv['destination_key']
-            rfv = h2o_cmd.runRFView(data_key=dataKeyTest, model_key=model_key,
+            rfv = h2o_cmd.runRFView(data_key=parseResult['destination_key'], 
+                model_key=model_key,
                 timeoutSecs=timeoutSecs, retryDelaySecs=1, print_params=True)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
