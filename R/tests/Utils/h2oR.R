@@ -68,7 +68,7 @@ function(m) {
   cat(sprintf("[%s] %s\n", Sys.time(),m))
 }
 
-PASS<- 
+PASS_BANNER<-
 function() {
   cat("######     #     #####   #####  \n")
   cat("#     #   # #   #     # #     # \n")
@@ -77,8 +77,13 @@ function() {
   cat("#       #######       #       # \n")
   cat("#       #     # #     # #     # \n")
   cat("#       #     #  #####   #####  \n")
-
+  
   Log.info("TEST PASSED")
+}
+
+PASS<- 
+function() {
+  PASS_BANNER()
   q("no",0,FALSE)
 }
 
