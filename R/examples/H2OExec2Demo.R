@@ -17,15 +17,12 @@ summary(prostate.hex)
 
 # Display count of a column's levels
 age.count = h2o.table(prostate.hex$AGE)    # Note: Currently only works on a single integer/factor column
-# head(age.count)
-as.data.frame(age.count)
+head(age.count)
 
 # Extract small sample (without replacement)
 prostate.samp = prostate.hex[sample(1:nrow(prostate.hex), 50),]
 prostate.samp.df = as.data.frame(prostate.samp)    # Pull into R as a data frame
-# glm(CAPSULE ~ AGE + PSA + VOL + GLEASON, family = binomial(), data = prostate.samp.df)
-prostate.glm = h2o.glm.FV(x = c("AGE", "RACE", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.samp, family = "binomial")
-print(prostate.glm)
+glm(CAPSULE ~ AGE + PSA + VOL + GLEASON, family = binomial(), data = prostate.samp.df)
 
 # Get quantiles and examine outliers
 prostate.qs = quantile(prostate.hex$PSA)
@@ -66,5 +63,5 @@ tail(prostate.pred)
 prostate.hex[,10] = prostate.hex$PSA <= prostate.qs["25%",]
 head(prostate.hex)
 # prostate.hex[,11] = prostate.hex$PSA >= prostate.qs["75%",]
-prostate.glm.lin = h2o.glm.FV(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex, family = "binomial")
-print(prostate.glm.lin)
+prostate.rf = h2o.randomForest(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex)
+print(prostate.glm)
