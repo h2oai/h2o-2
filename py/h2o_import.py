@@ -331,7 +331,8 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
     h2o.verboseprint("parseResult:", h2o.dump_json(parseResult))
 
     # do SummaryPage here too, just to get some coverage
-    if doSummary:
+    # only if not noPoll. otherwise parse isn't done
+    if doSummary and not noPoll:
         # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
         h2o.check_sandbox_for_errors()
         node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs)
