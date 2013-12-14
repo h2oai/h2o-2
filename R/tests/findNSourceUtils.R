@@ -1,3 +1,4 @@
+.origEchoValue <- getOption("echo")
 options(echo=FALSE)
 
 ##
@@ -149,3 +150,6 @@ sandbox()
 #This random seed is overwritten by any seed set in a test
 setupRandomSeed(suppress = TRUE)
 h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))
+
+options(echo=.origEchoValue)
+rm(list=c(".origEchoValue"))
