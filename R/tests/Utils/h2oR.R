@@ -70,20 +70,20 @@ function(m) {
 
 PASS_BANNER<-
 function() {
+  cat("")
   cat("######     #     #####   #####  \n")
   cat("#     #   # #   #     # #     # \n")
   cat("#     #  #   #  #       #       \n")
   cat("######  #     #  #####   #####  \n")
   cat("#       #######       #       # \n")
   cat("#       #     # #     # #     # \n")
-  cat("#       #     #  #####   #####  \n")
-  
-  Log.info("TEST PASSED")
+  cat("#       #     #  #####   #####  \n")  
 }
 
 PASS<- 
 function() {
   PASS_BANNER()
+  Log.info("TEST PASSED")
   q("no",0,FALSE)
 }
 
