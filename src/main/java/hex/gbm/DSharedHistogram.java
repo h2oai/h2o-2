@@ -7,21 +7,29 @@ import water.*;
 import water.nbhm.UtilUnsafe;
 import water.util.SB;
 import water.util.Utils;
+import water.fvec.Frame;
+import water.fvec.Vec;
 
 /**
    A Histogram, computed in parallel over a Vec.
    <p>
-   A {@code DBinHistogram} bins every value added to it, and computes a the vec
-   min & max (for use in the next split), and response mean & variance for each
-   bin.  {@code DBinHistogram}s are initialized with a min, max and number-of-
-   elements to be added (all of which are generally available from a Vec).
-   Bins run from min to max in uniform sizes.  If the {@code DBinHistogram} can
-   determine that fewer bins are needed (e.g. boolean columns run from 0 to 1,
-   but only ever take on 2 values, so only 2 bins are needed), then fewer bins
-   are used.
+   A {@code DSharedHistogram} bins every value added to it, and computes a the
+   vec min & max (for use in the next split), and response mean & variance for
+   each bin.  {@code DSharedHistogram}s are initialized with a min, max and
+   number-of- elements to be added (all of which are generally available from a
+   Vec).  Bins run from min to max in uniform sizes.  If the {@code
+   DSharedHistogram} can determine that fewer bins are needed (e.g. boolean
+   columns run from 0 to 1, but only ever take on 2 values, so only 2 bins are
+   needed), then fewer bins are used.
+   <p>
+   {@code DSharedHistogram} are shared per-node, and atomically updated.
+   There's an {@code add} call to help cross-node reductions.  The data is
+   stored in primitive arrays, so it can be sent over the wire.  The {@code
+   AtomicXXXArray} classes are local utility classes for atomically updating
+   primitive arrays.
    <p>
    If we are successively splitting rows (e.g. in a decision tree), then a
-   fresh {@code DBinHistogram} for each split will dynamically re-bin the data.
+   fresh {@code DSharedHistogram} for each split will dynamically re-bin the data.
    Each successive split will logarithmically divide the data.  At the first
    split, outliers will end up in their own bins - but perhaps some central
    bins may be very full.  At the next split(s), the full bins will get split,
@@ -82,18 +90,18 @@ public class DSharedHistogram extends Iced {
   public long  bins(int b) { return _bins[b]; }
   public float mins(int b) { return _mins[b]; }
   public float maxs(int b) { return _maxs[b]; }
-  public double mean(int b) { 
+  public double mean(int b) {
     long n = _bins[b];
     return n>0 ? _sums[b]/n : 0;
   }
-  public double var (int b) { 
+  public double var (int b) {
     long n = _bins[b];
     if( n<=1 ) return 0;
     return (_ssqs[b] - _sums[b]*_sums[b]/n)/(n-1);
   }
 
   // Big allocation of arrays
-  final void init() { 
+  final void init() {
     assert _bins == null;
     _bins = MemoryManager.malloc8 (_nbin);
     _mins = MemoryManager.malloc4f(_nbin);
@@ -122,7 +130,7 @@ public class DSharedHistogram extends Iced {
   // Merge two equal histograms together.  Done in a F/J reduce, so no
   // synchronization needed.
   void add( DSharedHistogram dsh ) {
-    assert _isInt == dsh._isInt && _nbin == dsh._nbin && _step == dsh._step && 
+    assert _isInt == dsh._isInt && _nbin == dsh._nbin && _step == dsh._step &&
       _min == dsh._min && _max == dsh._max;
     assert (_bins == null && dsh._bins == null) || (_bins != null && dsh._bins != null);
     if( _bins == null ) return;
@@ -172,7 +180,7 @@ public class DSharedHistogram extends Iced {
     // column.  Normally this situation is cut out before we even try to split, but we might
     // have NA's in THIS column...
     if( ssqs0[nbins] == 0 ) { assert isConstantResponse(); return null; }
-    
+
     // Compute mean/var for cumulative bins from nbins to 0 inclusive.
     double sums1[] = MemoryManager.malloc8d(nbins+1);
     double ssqs1[] = MemoryManager.malloc8d(nbins+1);
@@ -187,7 +195,7 @@ public class DSharedHistogram extends Iced {
       ns1  [b] = k0+k1;
       assert ns0[b]+ns1[b]==tot;
     }
-    
+
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
     // not-equal to some value.  Equal/not-equal makes sense for catagoricals
@@ -209,7 +217,7 @@ public class DSharedHistogram extends Iced {
       double se1 = ssqs1[b] - sums1[b]*sums1[b]/ns1[b];
       if( (se0+se1 < best_se0+best_se1) || // Strictly less error?
           // Or tied MSE, then pick split towards middle bins
-          (se0+se1 == best_se0+best_se1 && 
+          (se0+se1 == best_se0+best_se1 &&
            Math.abs(b -(nbins>>1)) < Math.abs(best-(nbins>>1))) ) {
         best_se0 = se0;   best_se1 = se1;
         best = b;
@@ -234,12 +242,23 @@ public class DSharedHistogram extends Iced {
         }
       }
     }
-    
+
     if( best==0 ) return null;  // No place to split
     assert best > 0 : "Must actually pick a split "+best;
     long n0 = !equal ? ns0[best] : ns0[best]+ns1[best+1];
     long n1 = !equal ? ns1[best] : _bins[best]          ;
     return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1);
+  }
+
+  // The initial histogram bins are setup from the Vec rollups.
+  static public DSharedHistogram[] initialHist(Frame fr, int ncols, int nbins, DSharedHistogram hs[]) {
+    Vec vecs[] = fr.vecs();
+    for( int c=0; c<ncols; c++ ) {
+      Vec v = vecs[c];
+      hs[c] = (v.naCnt()==v.length() || v.min()==v.max()) ? null
+        : new DSharedHistogram(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),(float)v.min(),(float)v.max(),v.length());
+    }
+    return hs;
   }
 
   // Check for a constant response variable
@@ -309,7 +328,7 @@ public class DSharedHistogram extends Iced {
       return sb.p(']').toString();
     }
   }
- 
+
   // Atomically-updated double array
   private static class AtomicDoubleArray {
     private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
@@ -325,7 +344,7 @@ public class DSharedHistogram extends Iced {
         old = ds[i];
     }
   }
- 
+
   // Atomically-updated long array.  Instead of using the similar JDK pieces,
   // allows the bare array to be exposed for fast readers.
   private static class AtomicLongArray {

@@ -16,7 +16,7 @@ import water.util.*;
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
 
-   This class defines an explicit Tree structure, as a collection of {@code DTree} 
+   This class defines an explicit Tree structure, as a collection of {@code DTree}
    {@code Node}s.  The Nodes are numbered with a unique {@code _nid}.  Users
    need to maintain their own mapping from their data to a {@code _nid}, where
    the obvious technique is to have a Vec of {@code _nid}s (ints), one per each
@@ -348,7 +348,7 @@ public class DTree extends Iced {
       _splat = _split.splat(hs); // Split-at value
       final char nbins   = _tree._nbins;
       final int min_rows = _tree._min_rows;
-      
+
       for( int b=0; b<2; b++ ) { // For all split-points
         // Setup for children splits
         DSharedHistogram nhists[] = _split.split(b,nbins,min_rows,hs);

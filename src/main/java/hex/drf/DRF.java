@@ -271,16 +271,8 @@ public class DRF extends SharedTreeModelBuilder {
     for( int k=0; k<_nclass; k++ ) {
       assert (_distribution!=null && classification) || (_distribution==null && !classification);
       if( _distribution == null || _distribution[k] != 0 ) { // Ignore missing classes
-        // The initial histogram bins are setup from the Vec rollups.
-        DSharedHistogram hs[] = hcs[k][0];
-        Vec vecs[] = fr.vecs();
-        for( int c=0; c<_ncols; c++ ) {
-          Vec v = fr.vecs()[c];
-          hs[c] = (v.naCnt()==v.length() || v.min()==v.max()) ? null
-            : new DSharedHistogram(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),(float)v.min(),(float)v.max(),v.length());
-        }
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
-        new DRFUndecidedNode(ktrees[k],-1, hs); // The "root" node
+        new DRFUndecidedNode(ktrees[k],-1, DSharedHistogram.initialHist(fr,_ncols,nbins,hcs[k][0]) ); // The "root" node
       }
     }
 
@@ -357,10 +349,8 @@ public class DRF extends SharedTreeModelBuilder {
             if( cnid == -1 || // Bottomed out (predictors or responses known constant)
                 tree.node(cnid) instanceof UndecidedNode || // Or chopped off for depth
                 (tree.node(cnid) instanceof DecidedNode &&  // Or not possible to split
-                 ((DecidedNode)tree.node(cnid))._split.col()==-1) ) {
-              DRFLeafNode nleaf = new DRFLeafNode(tree,nid);
-              dn._nids[i] = nleaf.nid(); // Mark a leaf here
-            }
+                 ((DecidedNode)tree.node(cnid))._split.col()==-1) )
+              dn._nids[i] = new DRFLeafNode(tree,nid).nid(); // Mark a leaf here
           }
           // Handle the trivial non-splitting tree
           if( nid==0 && dn._split.col() == -1 )

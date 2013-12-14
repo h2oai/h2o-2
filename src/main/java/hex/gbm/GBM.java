@@ -217,137 +217,146 @@ public class GBM extends SharedTreeModelBuilder {
   // Build the next k-trees, which is trying to correct the residual error from
   // the prior trees.  From LSE2, page 387.  Step 2b ii, iii.
   private DTree[] buildNextKTrees(Frame fr) {
-    throw H2O.unimpl();
-    //// We're going to build K (nclass) trees - each focused on correcting
-    //// errors for a single class.
-    //final DTree[] ktrees = new DTree[_nclass];
-    //for( int k=0; k<_nclass; k++ ) {
-    //  // Initially setup as-if an empty-split had just happened
-    //  if( _distribution == null || _distribution[k] != 0 ) {
-    //    ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
-    //    new GBMUndecidedNode(ktrees[k],-1,DBinHistogram.initialHist(fr,_ncols,(char)nbins)); // The "root" node
-    //  }
-    //}
-    //int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
-    //
-    //// ----
-    //// ESL2, page 387.  Step 2b ii.
-    //// One Big Loop till the ktrees are of proper depth.
-    //// Adds a layer to the trees each pass.
-    //int depth=0;
-    //for( ; depth<max_depth; depth++ ) {
-    //  if( cancelled() ) return null;
-    //
-    //  // Build K trees, one per class.
-    //  // Fuse 2 conceptual passes into one:
-    //  // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments
-    //  // to every row.  This involves pulling out the current assigned Node,
-    //  // "scoring" the row against that Node's decision criteria, and assigning
-    //  // the row to a new child Node (and giving it an improved prediction).
-    //  // Pass 2: Build new summary DHistograms on the new child Nodes every row
-    //  // got assigned into.  Collect counts, mean, variance, min, max per bin,
-    //  // per column.
-    //  ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs).doAll(fr);
-    //  //System.out.println(sbh.profString());
-    //
-    //  // Build up the next-generation tree splits from the current histograms.
-    //  // Nearly all leaves will split one more level.  This loop nest is
-    //  //           O( #active_splits * #bins * #ncols )
-    //  // but is NOT over all the data.
-    //  boolean did_split=false;
-    //  for( int k=0; k<_nclass; k++ ) {
-    //    DTree tree = ktrees[k]; // Tree for class K
-    //    if( tree == null ) continue;
-    //    int tmax = tree._len;   // Number of total splits in tree K
-    //    for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
-    //      UndecidedNode udn = tree.undecided(leaf);
-    //      udn._hs = sbh.getFinalHisto(k,leaf);
-    //      //System.out.println(udn);
-    //      // Replace the Undecided with the Split decision
-    //      GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn);
-    //      if( dn._split._col == -1 ) udn.do_not_split();
-    //      else did_split = true;
-    //    }
-    //    tree.depth++;
-    //    leafs[k]=tmax;          // Setup leafs for next tree level
-    //  }
-    //
-    //  // If we did not make any new splits, then the tree is split-to-death
-    //  if( !did_split ) break;
-    //}
-    //
-    //// Each tree bottomed-out in a DecidedNode; go 1 more level and insert
-    //// LeafNodes to hold predictions.
-    //for( int k=0; k<_nclass; k++ ) {
-    //  DTree tree = ktrees[k];
-    //  if( tree == null ) continue;
-    //  int leaf = leafs[k] = tree._len;
-    //  for( int nid=0; nid<leaf; nid++ ) {
-    //    if( tree.node(nid) instanceof DecidedNode ) {
-    //      DecidedNode dn = tree.decided(nid);
-    //      for( int i=0; i<dn._nids.length; i++ ) {
-    //        int cnid = dn._nids[i];
-    //        if( cnid == -1 || // Bottomed out (predictors or responses known constant)
-    //            tree.node(cnid) instanceof UndecidedNode || // Or chopped off for depth
-    //            (tree.node(cnid) instanceof DecidedNode &&  // Or not possible to split
-    //             ((DecidedNode)tree.node(cnid))._split._col==-1) )
-    //          dn._nids[i] = new GBMLeafNode(tree,nid)._nid; // Mark a leaf here
-    //      }
-    //      // Handle the trivial non-splitting tree
-    //      if( nid==0 && dn._split._col == -1 )
-    //        new GBMLeafNode(tree,-1,0);
-    //    }
-    //  }
-    //}
-    //
-    //// ----
-    //// ESL2, page 387.  Step 2b iii.  Compute the gammas, and store them back
-    //// into the tree leaves.  Includes learn_rate.
-    ////    gamma_i_k = (nclass-1)/nclass * (sum res_i / sum (|res_i|*(1-|res_i|)))
-    //// For regression:
-    ////    gamma_i_k = sum res_i / count(res_i)
-    //GammaPass gp = new GammaPass(ktrees,leafs).doAll(fr);
-    //double m1class = _nclass > 1 ? (double)(_nclass-1)/_nclass : 1.0; // K-1/K
-    //for( int k=0; k<_nclass; k++ ) {
-    //  final DTree tree = ktrees[k];
-    //  if( tree == null ) continue;
-    //  for( int i=0; i<tree._len-leafs[k]; i++ ) {
-    //    double g = gp._gss[k][i] == 0 // Constant response?
-    //      ? 1000                      // Cap (exponential) learn, instead of dealing with Inf
-    //      : learn_rate*m1class*gp._rss[k][i]/gp._gss[k][i];
-    //    assert !Double.isNaN(g);
-    //    ((LeafNode)tree.node(leafs[k]+i))._pred = g;
-    //  }
-    //}
-    //
-    //// ----
-    //// ESL2, page 387.  Step 2b iv.  Cache the sum of all the trees, plus the
-    //// new tree, in the 'tree' columns.  Also, zap the NIDs for next pass.
-    //// Tree <== f(Tree)
-    //// Nids <== 0
-    //new MRTask2() {
-    //  @Override public void map( Chunk chks[] ) {
-    //    // For all tree/klasses
-    //    for( int k=0; k<_nclass; k++ ) {
-    //      final DTree tree = ktrees[k];
-    //      if( tree == null ) continue;
-    //      final Chunk nids = chk_nids(chks,k);
-    //      final Chunk ct   = chk_tree(chks,k);
-    //      for( int row=0; row<nids._len; row++ ) {
-    //        int nid = (int)nids.at80(row);
-    //        ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
-    //        nids.set0(row,0);
-    //      }
-    //    }
-    //  }
-    //}.doAll(fr);
-    //
-    //// Collect leaves stats
-    //for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
-    //// DEBUG: Print the generated K trees
-    ////printGenerateTrees(ktrees);
-    //
-    //return ktrees;
+    // We're going to build K (nclass) trees - each focused on correcting
+    // errors for a single class.
+    final DTree[] ktrees = new DTree[_nclass];
+
+    // Initial set of histograms.  All trees; one leaf per tree (the root
+    // leaf); all columns
+    DSharedHistogram hcs[][][] = new DSharedHistogram[_nclass][1/*just root leaf*/][_ncols];
+
+    for( int k=0; k<_nclass; k++ ) {
+      // Initially setup as-if an empty-split had just happened
+      if( _distribution == null || _distribution[k] != 0 ) {
+        ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
+        new GBMUndecidedNode(ktrees[k],-1,DSharedHistogram.initialHist(fr,_ncols,nbins,hcs[k][0]) ); // The "root" node
+      }
+    }
+    int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
+
+    // ----
+    // ESL2, page 387.  Step 2b ii.
+    // One Big Loop till the ktrees are of proper depth.
+    // Adds a layer to the trees each pass.
+    int depth=0;
+    for( ; depth<max_depth; depth++ ) {
+      if( cancelled() ) return null;
+
+      // Build K trees, one per class.
+      // Fuse 2 conceptual passes into one:
+      // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments
+      // to every row.  This involves pulling out the current assigned Node,
+      // "scoring" the row against that Node's decision criteria, and assigning
+      // the row to a new child Node (and giving it an improved prediction).
+      // Pass 2: Build new summary DHistograms on the new child Nodes every row
+      // got assigned into.  Collect counts, mean, variance, min, max per bin,
+      // per column.
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs,hcs).doAll(fr);
+      //System.out.println(sbh.profString());
+
+      // Build up the next-generation tree splits from the current histograms.
+      // Nearly all leaves will split one more level.  This loop nest is
+      //           O( #active_splits * #bins * #ncols )
+      // but is NOT over all the data.
+      boolean did_split=false;
+      for( int k=0; k<_nclass; k++ ) {
+        DTree tree = ktrees[k]; // Tree for class K
+        if( tree == null ) continue;
+        int tmax = tree.len();   // Number of total splits in tree K
+        for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
+          UndecidedNode udn = tree.undecided(leaf);
+          //System.out.println("Class "+(response._domain[k])+",\n  Undecided node:"+udn);
+          // Replace the Undecided with the Split decision
+          GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn,hcs[k][leaf-leafs[k]]);
+          //System.out.println("--> Decided node: " + dn);
+          //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
+          if( dn._split.col() == -1 ) udn.do_not_split();
+          else did_split = true;
+        }
+        leafs[k]=tmax;          // Setup leafs for next tree level
+        int new_leafs = tree.len()-tmax;
+        hcs[k] = new DSharedHistogram[new_leafs][/*ncol*/];
+        for( int nl = tmax; nl<tree.len(); nl ++ )
+          hcs[k][nl-tmax] = tree.undecided(nl)._hs;
+        tree.depth++;           // Next layer done
+      }
+
+      // If we did not make any new splits, then the tree is split-to-death
+      if( !did_split ) break;
+    }
+
+    // Each tree bottomed-out in a DecidedNode; go 1 more level and insert
+    // LeafNodes to hold predictions.
+    for( int k=0; k<_nclass; k++ ) {
+      DTree tree = ktrees[k];
+      if( tree == null ) continue;
+      int leaf = leafs[k] = tree.len();
+      for( int nid=0; nid<leaf; nid++ ) {
+        if( tree.node(nid) instanceof DecidedNode ) {
+          DecidedNode dn = tree.decided(nid);
+          for( int i=0; i<dn._nids.length; i++ ) {
+            int cnid = dn._nids[i];
+            if( cnid == -1 || // Bottomed out (predictors or responses known constant)
+                tree.node(cnid) instanceof UndecidedNode || // Or chopped off for depth
+                (tree.node(cnid) instanceof DecidedNode &&  // Or not possible to split
+                 ((DecidedNode)tree.node(cnid))._split.col()==-1) )
+              dn._nids[i] = new GBMLeafNode(tree,nid).nid(); // Mark a leaf here
+          }
+          // Handle the trivial non-splitting tree
+          if( nid==0 && dn._split.col() == -1 )
+            new GBMLeafNode(tree,-1,0);
+        }
+      }
+    } // -- k-trees are done
+
+    // ----
+    // ESL2, page 387.  Step 2b iii.  Compute the gammas, and store them back
+    // into the tree leaves.  Includes learn_rate.
+    //    gamma_i_k = (nclass-1)/nclass * (sum res_i / sum (|res_i|*(1-|res_i|)))
+    // For regression:
+    //    gamma_i_k = sum res_i / count(res_i)
+    GammaPass gp = new GammaPass(ktrees,leafs).doAll(fr);
+    double m1class = _nclass > 1 ? (double)(_nclass-1)/_nclass : 1.0; // K-1/K
+    for( int k=0; k<_nclass; k++ ) {
+      final DTree tree = ktrees[k];
+      if( tree == null ) continue;
+      for( int i=0; i<tree._len-leafs[k]; i++ ) {
+        double g = gp._gss[k][i] == 0 // Constant response?
+          ? 1000                      // Cap (exponential) learn, instead of dealing with Inf
+          : learn_rate*m1class*gp._rss[k][i]/gp._gss[k][i];
+        assert !Double.isNaN(g);
+        ((LeafNode)tree.node(leafs[k]+i))._pred = g;
+      }
+    }
+
+    // ----
+    // ESL2, page 387.  Step 2b iv.  Cache the sum of all the trees, plus the
+    // new tree, in the 'tree' columns.  Also, zap the NIDs for next pass.
+    // Tree <== f(Tree)
+    // Nids <== 0
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        // For all tree/klasses
+        for( int k=0; k<_nclass; k++ ) {
+          final DTree tree = ktrees[k];
+          if( tree == null ) continue;
+          final Chunk nids = chk_nids(chks,k);
+          final Chunk ct   = chk_tree(chks,k);
+          for( int row=0; row<nids._len; row++ ) {
+            int nid = (int)nids.at80(row);
+            ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
+            nids.set0(row,0);
+          }
+        }
+      }
+    }.doAll(fr);
+
+    // Collect leaves stats
+    for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
+    // DEBUG: Print the generated K trees
+    // printGenerateTrees(ktrees);
+
+    return ktrees;
   }
 
 
