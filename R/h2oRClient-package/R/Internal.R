@@ -6,7 +6,7 @@ pkg.env$temp_count = 0
 pkg.env$IS_LOGGING = FALSE
 TEMP_KEY = "Last.value"
 RESULT_MAX = 200
-LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!")
+LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!", "is.na")
 
 # Initialize functions for R logging
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
