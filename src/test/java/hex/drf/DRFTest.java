@@ -20,7 +20,7 @@ public class DRFTest extends TestUtil {
   static final long[]   a(long ...arr)   { return arr; }
   static final long[][] a(long[] ...arr) { return arr; }
 
-  @Ignore
+//  @Ignore
   @Test public void testClassIris1() throws Throwable {
 
     // iris ntree=1
@@ -31,11 +31,11 @@ public class DRFTest extends TestUtil {
           1,
           a( a(6, 0,  0),
              a(0, 7,  0),
-             a(0, 2, 11)),
+             a(0, 3, 10)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-  @Ignore
+//  @Ignore
   @Test public void testClassIris50() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
@@ -56,24 +56,24 @@ public class DRFTest extends TestUtil {
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
         a( a(0,  1, 0, 0, 0),
-           a(1, 56, 0, 3, 0),
+           a(0, 54, 0, 1, 0),
            a(0,  0, 0, 0, 0),
-           a(0,  1, 0,17, 0),
+           a(0,  1, 0,17, 1),
            a(0,  0, 0, 0,33)),
         s("3", "4", "5", "6", "8"));
   }
 
-  @Ignore
+//  @Ignore
   @Test public void testClassCars50() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         50,
-        a( a(0,   4, 0,  0,   0),
-           a(0, 207, 0,  0,   0),
+        a( a(1,   3, 0,  0,   0),
+           a(0, 206, 0,  1,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   5, 0, 78,   1),
-           a(0,   0, 1,  2, 105)),
+           a(0,   4, 0, 80,   0),
+           a(0,   0, 0,  5, 103)),
         s("3", "4", "5", "6", "8"));
   }
 
@@ -164,7 +164,7 @@ public class DRFTest extends TestUtil {
       drf.ntrees = ntree;
       drf.max_depth = max_depth;
       drf.min_rows = 1; // = nodesize
-      drf.nbins = 100;
+      drf.nbins = 20;
       drf.mtries = -1;
       drf.sample_rate = 0.66667f;   // Simulated sampling with replacement
       drf.seed = (1L<<32)|2;

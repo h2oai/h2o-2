@@ -199,6 +199,12 @@ public class DSharedHistogram extends Iced {
     boolean equal=false;                // Ranged check
     for( int b=1; b<=nbins-1; b++ ) {
       if( _bins[b] == 0 ) continue; // Ignore empty splits
+      // We're making an unbiased estimator, so that MSE==Var.
+      // Then Squared Error = MSE*N = Var*N
+      //                    = (ssqs/N - mean^2)*N
+      //                    = ssqs - N*mean^2
+      //                    = ssqs - N*(sum/N)(sum/N)
+      //                    = ssqs - sum^2/N
       double se0 = ssqs0[b] - sums0[b]*sums0[b]/ns0[b];
       double se1 = ssqs1[b] - sums1[b]*sums1[b]/ns1[b];
       if( (se0+se1 < best_se0+best_se1) || // Strictly less error?
@@ -216,12 +222,12 @@ public class DSharedHistogram extends Iced {
       for( int b=1; b<=nbins-1; b++ ) {
         if( _bins[b] == 0 ) continue; // Ignore empty splits
         assert _mins[b] == _maxs[b] : "int col, step of 1.0 "+_mins[b]+".."+_maxs[b]+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
-        long k0 = ns0[b+0], k1 = ns1[b+1];
-        if( k0==0 && k1==0 ) continue;
-        double se0 = k0==0 ? 0 : ssqs0[b+0] - sums0[b+0]*sums0[b+0]/k0; // Upto, excluding 'b'
-        double se1 = k1==0 ? 0 : ssqs1[b+1] - sums1[b+1]*sums1[b+1]/k1; // From 'b+1' to end
-        double si  = se0+se1;   // Inclusive left & right, excluding 'b'
-        double sx  = _ssqs[b] - _sums[b]*_sums[b]/_bins[b]; // Just 'b'
+        long N =        ns0[b+0] + ns1[b+1];
+        double sums = sums0[b+0]+sums1[b+1];
+        double ssqs = ssqs0[b+0]+ssqs1[b+1];
+        if( N == 0 ) continue;
+        double si =  ssqs    -  sums   * sums   /   N    ; // Left+right, excluding 'b'
+        double sx = _ssqs[b] - _sums[b]*_sums[b]/_bins[b]; // Just 'b'
         if( si+sx < best_se0+best_se1 ) { // Strictly less error?
           best_se0 = si;   best_se1 = sx;
           best = b;        equal = true; // Equality check
