@@ -283,7 +283,7 @@ setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", p
     } else stop("All files failed to import!")
 })
 
-setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", pattern="character", key="ANY", parse="ANY", sep="ANY"),
+setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", pattern="ANY", key="ANY", parse="ANY", sep="ANY"),
   function(object, path, pattern, key, parse, sep) {
     if(!(missing(pattern) || class(pattern) == "character"))
       stop(paste("pattern cannot be of class", class(pattern)))
@@ -293,7 +293,7 @@ setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", p
       stop(paste("parse cannot be of class", class(parse)))
     if(!(missing(sep) || class(sep) == "character"))
       stop(paste("sep cannot be of class", class(sep)))
-    h2o.importHDFS.VA(object, path, key, parse, sep)
+    h2o.importHDFS.VA(object, path, pattern, key, parse, sep)
 })
 
 setMethod("h2o.uploadFile.VA", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character", silent="logical"), {

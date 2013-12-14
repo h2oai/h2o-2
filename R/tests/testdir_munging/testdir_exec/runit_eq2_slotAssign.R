@@ -7,7 +7,7 @@
 
 source('./findNSourceUtils.R')
 
-setupRandomSeed(1689636624)
+#setupRandomSeed(1689636624)
 
 test.column.assignment <- function(conn) {
   dataSet <- select()

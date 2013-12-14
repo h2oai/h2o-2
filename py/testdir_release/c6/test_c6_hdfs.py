@@ -1,6 +1,6 @@
 import unittest, time, sys, time, random, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common, h2o_jobs as h2j
 
 DO_RANDOM_SAMPLE = True
 DO_RF = False
@@ -71,21 +71,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             timeoutSecs = 1000
             # do an import first, because we want to get the size of the file
-            (importResult, importPattern) = h2i.import_only(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs)
-            keys = importResult['keys']
-            if len(keys) < 1:
-                raise Exception("Should have imported at least 1 key for %s" % csvPathname)
-
-            # just do a search
-            foundIt = None
-            for f in keys:
-                if csvPathname in f:
-                    foundIt = f
-                    break
-
-            if not foundIt:
-                raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
-
             print "Loading", csvFilename, 'from hdfs'
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema="hdfs", timeoutSecs=timeoutSecs,
@@ -119,8 +104,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print l
                 h2o.cloudPerfH2O.message(l)
 
-            print "Deleting all keys, to make sure our parse times don't include spills"
-            h2i.delete_keys_at_all_nodes()
+            if 1==0:
+                print "Deleting all keys, to make sure our parse times don't include spills"
+                h2i.delete_keys_at_all_nodes()
+
             trial += 1
 
 if __name__ == '__main__':

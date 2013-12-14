@@ -1400,13 +1400,13 @@ class H2O(object):
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
     # after parse
-    def remove_key(self, key, timeoutSecs=30):
+    def remove_key(self, key, timeoutSecs=120):
         a = self.__do_json_request('Remove.json', 
             params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
         return a
 
     # this removes all keys!
-    def remove_all_keys(self, timeoutSecs=30):
+    def remove_all_keys(self, timeoutSecs=120):
         a = self.__do_json_request('2/RemoveAll.json', timeout=timeoutSecs)
         return a
 
@@ -2130,6 +2130,7 @@ class H2O(object):
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallelism': None,
                 'beta_eps': None,
+                'classification': None,
             } 
         else:
             params_dict = {

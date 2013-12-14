@@ -109,7 +109,7 @@ Log in to the machine where H\ :sub:`2`\ O will run using ssh
 **Step 2**
 
 Start an instance of H\ :sub:`2` \O by locating the working directory and 
-callinga java command similar to the following ( the port number chosen here
+calling a java command similar to the following ( the port number chosen here
 is arbitrary and users might choose something different). 
 ::
 
@@ -154,7 +154,7 @@ specified port numbers and IP address will be different)
 Check cluster status
 
 You are now using H\ :sub:`2` \O from localhost:55577, but the
-instance of H\ :sub:`2` \O isrunning on the remote server (in this
+instance of H\ :sub:`2` \O is running on the remote server (in this
 case the server with the ip address 192.168.1.xxx) at port number 55599. 
 
 To see this in action note that the web UI is pointed at

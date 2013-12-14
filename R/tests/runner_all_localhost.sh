@@ -30,8 +30,8 @@ fi
 
 for test in $(find . | grep "\.R" | grep -v Utils)
 do
-    echo "myR $test 300"
-    continue
+#    echo "myR $test 300"
+#    continue
     echo "----------------------------------------------------------------------"
     echo "Starting $test"
     echo "----------------------------------------------------------------------"

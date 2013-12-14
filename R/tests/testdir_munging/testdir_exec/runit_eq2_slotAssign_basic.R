@@ -12,6 +12,10 @@ test.basic.slot.assignment <- function(conn) {
   hex <- h2o.uploadFile(conn, locate("smalldata/iris/iris.csv"), "iris.hex")
   oldVal <- hex[1,1]
 
+  Log.info("Changing the first element in the first column of iris")
+  Log.info("Initial value is: ")
+  Log.info(head(oldVal))
+
   hex[1,1] <- 48
   hex$Sepal.Length[2] <- 90
 

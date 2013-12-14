@@ -86,7 +86,7 @@ public class LaunchJar extends Request2 {
       task.invokeOnAllNodes();
 
       // Start job
-      Class c = Class.forName(job_class + "_" + uid);
+      Class c = Class.forName(job_class + uid);
       job = (Job) c.newInstance();
       job.fork();
     } catch( Exception ex ) {

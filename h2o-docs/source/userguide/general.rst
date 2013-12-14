@@ -53,7 +53,7 @@ For step by step instructions on how to carry out data ingestion and
 parse, please see the Data section of this user guide. 
 
 Supported input data file formats include CSV, Gzip-compressed CSV, MS
-Excel (XLS), ARRF, HIVE file format, and others. 
+Excel (XLS), ARFF, SVM-Light, HIVE file format, and others. 
 
 
 Using H\ :sub:`2`\ O

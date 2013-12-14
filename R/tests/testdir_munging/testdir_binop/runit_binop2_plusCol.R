@@ -57,6 +57,7 @@ test.tail.numeric <- function(conn) {
 
   Log.info("Checking left and right: ")
   slicedPlusFive <- sliced + 5
+
   fivePlusSliced <- 5 + sliced
 
   Log.info("sliced + 5: ")

@@ -46,6 +46,7 @@ test.slice.div <- function(conn) {
 
   Log.info("/ing 5 to sliced.hex")
   slicedDivFive <- sliced / 5
+
   slicedDivFive <- h2o.assign(slicedDivFive, "slicedDivFive.hex")
 
   Log.info("Orignal sliced: ")
@@ -57,6 +58,7 @@ test.slice.div <- function(conn) {
 
   Log.info("Checking left and right: ")
   slicedDivFive <- sliced / 5
+
   fiveDivSliced <- 5 / sliced
 
   Log.info("sliced / 5: ")

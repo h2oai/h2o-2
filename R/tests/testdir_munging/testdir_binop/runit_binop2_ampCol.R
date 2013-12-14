@@ -43,7 +43,7 @@ test.binop2.ampersand <- function(conn) {
   col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col, sep = "", collapse = ""))
   Log.info(paste("Using column: ", col))
  
-  sliced <- hex[,col]
+  sliced <- hex[,col] #expect this to be numeric!
   Log.info("Placing key \"sliced.hex\" into User Store")
   sliced <- h2o.assign(sliced, "sliced.hex")
   print(h2o.ls(conn))

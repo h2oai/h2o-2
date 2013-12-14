@@ -79,11 +79,17 @@ nightly_build_stuff:
 	@echo
 	@echo Build completed successfully.
 
+MILLIS_SINCE_EPOCH = $(shell date '+%s')
+
 build:
 	@echo
 	@echo "PHASE: Building R inner package..."
 	@echo
+ifeq ($(BUILD_NUMBER),99999)
+	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION).$(MILLIS_SINCE_EPOCH)
+else
 	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION)
+endif
 	@echo
 	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
 	@echo
@@ -147,6 +153,7 @@ build_package:
 	cp -rp target/hadoop target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o.jar target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o-sources.jar target/h2o-$(PROJECT_VERSION)
+	cp -p target/h2o-model.jar target/h2o-$(PROJECT_VERSION)
 	cp -p packaging/README.txt target/h2o-$(PROJECT_VERSION)
 	sed "s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g" packaging/index.html > target/index.html
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)

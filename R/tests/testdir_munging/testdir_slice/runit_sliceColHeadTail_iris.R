@@ -1,11 +1,8 @@
 source('./findNSourceUtils.R')
 
-Log.info("======================== Begin Test ===========================\n")
-
-
 test.slice.colTail <- function(conn) {
   Log.info("Importing iris.csv data...\n")
-  iris.hex <- h2o.importFile(conn, locate("../smalldata/iris/iris_wheader.csv", schema="local"))
+  iris.hex <- h2o.uploadFile(conn, locate("../../../smalldata/iris/iris_wheader.csv"),key="iris.hex")
   
   iris_nrows <- nrow(iris.hex)
   iris_ncols <- ncol(iris.hex)
@@ -38,9 +35,9 @@ test.slice.colTail <- function(conn) {
   Log.info("Try to slice out a single element from a column")
   
   tryCatch(iris.hex[1,1],error=function(e) print(paste("Could not perform head(iris.hex[1,1]",e)))
-  Log.info("End of test.")
+
+  testEnd()
 }
 
-conn <- new("H2OClient", ip=myIP, port=myPort)
-tryCatch(test_that("sliceTestsColTail",test.slice.colTail(conn)), warning = function(w) WARN(w), error = function(e) FAIL(e))
-PASS()
+doTest("Slice Test: Tail of a column sliced out ", test.slice.colTail)
+

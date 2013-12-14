@@ -66,7 +66,6 @@ test.minus <- function(conn) {
   print(head(fiveMinusSliced))
   expect_that(abs(as.data.frame(slicedMinusFive)), equals(abs(as.data.frame(fiveMinusSliced))))
 
-
   Log.info("Checking the variation of H2OParsedData - H2OParsedData")
 
   hexMinusHex <- fiveMinusSliced - slicedMinusFive

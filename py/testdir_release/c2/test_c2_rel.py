@@ -82,8 +82,18 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     x = ",".join(map(lambda x: "C" + str(x), x))
                     ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
 
-                    GLMkwargs = {'ignored_cols': ignore_x, 'response': 'C378', 'case_val': 15, 'case_mode': '>',
-                        'max_iter': 4, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                    GLMkwargs = {
+                        'ignored_cols': ignore_x, 
+                        'family': 'binomial',
+                        'response': 'C378', 
+                        'case_val': 15, 
+                        'case_mode': '>',
+                        'max_iter': 4, 
+                        'n_folds': 1, 
+                        'family': 'binomial',
+                        'alpha': 0.2, 
+                        'lambda': 1e-5
+                    }
 
                     start = time.time()
                     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)

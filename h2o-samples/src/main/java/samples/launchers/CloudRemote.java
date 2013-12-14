@@ -15,7 +15,6 @@ import water.util.Log;
 public class CloudRemote {
   public static void main(String[] args) throws Exception {
     launchEC2(null, 4);
-    // launchDefaultIPs(null);
   }
 
   /**
@@ -26,14 +25,6 @@ public class CloudRemote {
     ec2.boxes = boxes;
     Cloud c = ec2.resize();
     launch(c, job);
-  }
-
-  public static void launchDefaultIPs(Class<? extends Job> job) throws Exception {
-    launchIPs(job, //
-        "192.168.1.161", //
-        "192.168.1.162", //
-        "192.168.1.163", //
-        "192.168.1.164");
   }
 
   /**
@@ -76,8 +67,7 @@ public class CloudRemote {
   }
 
   public static class UserCode {
-    @SuppressWarnings("unchecked")
-    public static void userMain(String[] args) throws Exception {
+    @SuppressWarnings("unchecked") public static void userMain(String[] args) throws Exception {
       Log.info("Java location: " + System.getProperty("java.home"));
 
       String job = args[0].equals("null") ? null : args[0];

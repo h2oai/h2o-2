@@ -10,7 +10,8 @@ print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def sub_c2_rel_long(self):
+    def sub_c3_rel_long(self):
+        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
@@ -83,8 +84,16 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     x = ",".join(map(lambda x: "C" + str(x), x))
                     ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
 
-                    GLMkwargs = {'ignored_cols': ignore_x, 'response': 'C378', 'case_val': 15, 'case_mode': '>',
-                        'max_iter': 4, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+                    GLMkwargs = {
+                        'ignored_cols': ignore_x, 
+                        'response': 'C378', 
+                        'case_val': 15, 'case_mode': '>',
+                        'max_iter': 4, 
+                        'n_folds': 1, 
+                        'family': 'binomial',
+                        'alpha': 0.2, 
+                        'lambda': 1e-5
+                    }
 
                     start = time.time()
                     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
@@ -102,9 +111,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-    def test_B_c2_rel_long(self):
+    def test_B_c3_rel_long(self):
         h2o.beta_features = True
-        self.sub_c2_rel_long()
+        self.sub_c3_rel_long()
 
 if __name__ == '__main__':
     h2o.unit_main()

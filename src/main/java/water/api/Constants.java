@@ -43,6 +43,7 @@ public class Constants extends Iced {
   public static final String CASE_MODE             = "case_mode";
   public static final String CHUNK                 = "chunk";
   public static final String CLASS                 = "response_variable";
+  public static final String CLOUD_HEALTH          = "cloud_healthy";
   public static final String CLOUD_NAME            = "cloud_name";
   public static final String CLOUD_SIZE            = "cloud_size";
   public static final String CLUSTERS              = "clusters";
@@ -57,6 +58,7 @@ public class Constants extends Iced {
   public static final String DESCRIPTION           = "description";
   public static final String DEST_KEY              = "destination_key";
   public static final String DTHRESHOLDS           = "thresholds";
+  public static final String ELAPSED               = "elapsed_time";
   public static final String END_TIME              = "end_time";
   public static final String ENUM_DOMAIN_SIZE      = "enum_domain_size";
   public static final String ERROR                 = "error";
@@ -110,6 +112,7 @@ public class Constants extends Iced {
   public static final String NEG_X                 = "neg_x";
   public static final String NO_CM                 = "no_confusion_matrix";
   public static final String NODE                  = "node";
+  public static final String NODE_HEALTH           = "node_healthy";
   public static final String NODE_NAME             = "node_name";
   public static final String NODES                 = "nodes";
   public static final String NORMALIZE             = "normalize";
