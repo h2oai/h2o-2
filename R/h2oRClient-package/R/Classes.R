@@ -391,6 +391,16 @@ setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
 setMethod("sum", "H2OParsedData", function(x) { h2o.__unop2("sum", x) })
 setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
 
+setGeneric("as.h2o", function(h2o, object) { standardGeneric("as.h2o") })
+setMethod("as.h2o", signature(h2o="H2OClient", object="data.frame"),
+ function(h2o, object) {
+   tmpf <- tempfile(fileext=".csv") 
+   write.csv(object, file=tmpf, quote=F, row.names=F)
+   h2f <- h2o.uploadFile(h2o, tmpf)
+   unlink(tmpf)
+   h2f
+ })
+
 setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
 setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x, breaks) {
   nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
