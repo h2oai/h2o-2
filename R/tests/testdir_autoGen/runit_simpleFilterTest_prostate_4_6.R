@@ -20,10 +20,6 @@
                      filterHex <- hex[hex[,c(8)] < 6.85324484218,]
                     Log.info("Perform filtering with the '$' sign also")
                     filterHex <- hex[hex$"8" < 6.85324484218,]
-                Log.info("Filtering out rows by < from dataset prostate_4 and column \"4\" using value 1.96186748456")
-                     filterHex <- hex[hex[,c(4)] < 1.96186748456,]
-                    Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"4" < 1.96186748456,]
                 Log.info("Filtering out rows by < from dataset prostate_4 and column \"1\" using value 0.933859932591")
                      filterHex <- hex[hex[,c(1)] < 0.933859932591,]
                     Log.info("Perform filtering with the '$' sign also")

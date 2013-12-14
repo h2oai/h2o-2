@@ -9,7 +9,8 @@
 
 source('./findNSourceUtils.R')
 
-#setupRandomSeed(285808201)
+
+#setupRandomSeed(2078846715)
 
 doSelect<-
 function() {
@@ -38,7 +39,7 @@ test.plus.onFrame <- function(conn) {
   Log.info("Try adding scalar to frame: 5 + hex")
   if(anyEnum) expect_warning(fivePlusHex <- 5 + hex)
   else fivePlusHex <- 5 + hex
-
+  
   Log.info("Original frame: ")
   print(head(as.data.frame(hex)))
 
@@ -58,7 +59,14 @@ test.plus.onFrame <- function(conn) {
   print(head(as.data.frame(fivePlusHexMinusFive)))
 
   expect_that(dim(fivePlusHex), equals(dim(hex)))
-  expect_that(head(fivePlusHex), equals(5 + head(hex)))
+  Log.info("Expect that this frame: ")
+  print(fivePlusHexHead <- fivePlusHex[1:6,])
+  Log.info("Equals this one: ")
+  fivePlusAsData <- 5 + as.data.frame(hex[1:6,])
+  print(fivePlusAsData)
+  #expect_that(fivePlusHexHead, equals(fivePlusAsData))
+  expect_that(as.data.frame(fivePlusAsData), equals(as.data.frame(fivePlusHexHead)))
+
 
   Log.info("Checking left and right: ")
   if(anyEnum) expect_warning(hexPlusFive <- hex + 5)
@@ -73,6 +81,14 @@ test.plus.onFrame <- function(conn) {
   print(head(fivePlusHex))
   
   expect_that(as.data.frame(hexPlusFive), equals(as.data.frame(fivePlusHex)))
+
+  Log.info("Try to add two frames: hex + hex")
+  hexPlusHex <- hex + hex
+  print(head(hexPlusHex))
+  hd <- as.data.frame(hex)
+  hdPlushd <- hd + hd
+  print(head(hdPlushd))
+  expect_that(hd + hd, equals(as.data.frame(hexPlusHex)))
 
   testEnd()
 }

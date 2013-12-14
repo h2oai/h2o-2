@@ -10,7 +10,8 @@ print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def sub_c2_rel_long(self):
+    def sub_c3_rel_long(self):
+        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
@@ -110,9 +111,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-    def test_B_c2_rel_long(self):
+    def test_B_c3_rel_long(self):
         h2o.beta_features = True
-        self.sub_c2_rel_long()
+        self.sub_c3_rel_long()
 
 if __name__ == '__main__':
     h2o.unit_main()

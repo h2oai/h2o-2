@@ -59,7 +59,9 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
                     try: 
                         statSum[stat] += n[stat]
                     except TypeError:
-                        raise Exception("statSum[stat] should be number %s %s" % (statSum[stat], stat))
+                        # raise Exception("statSum[stat] should be number %s %s" % (statSum[stat], stat, n[stat]))
+                        print "ERROR: statSum[stat] should be number %s %s %s" % (statSum[stat], stat, n[stat])
+                        # do nothing
                 else:
                     try: 
                         statSum[stat] = n[stat] + 0.0

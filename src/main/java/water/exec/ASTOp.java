@@ -302,8 +302,12 @@ abstract class ASTBinOp extends ASTOp {
             Chunk c0= !lf ? null : chks[i];
             Chunk c1= !rf ? null : chks[i+(lf?nchks.length:0)];
             int rlen = (lf ? c0 : c1)._len;
-            for( int r=0; r<rlen; r++ )
-              n.addNum(bin.op(lf ? c0.at0(r) : fd0, rf ? c1.at0(r) : fd1));
+            for( int r=0; r<rlen; r++ ) {
+              if(chks[i]._vec.isEnum())
+                n.addNA(); //slam in NA if op on enum; same as R
+              else
+                n.addNum(bin.op(lf ? c0.at0(r) : fd0, rf ? c1.at0(r) : fd1));
+            }
           }
         }
       }.doAll(ncols,fr).outputFrame((lf ? fr0 : fr1)._names,(lf ? fr0 : fr1).domains());
@@ -313,6 +317,7 @@ abstract class ASTBinOp extends ASTOp {
     env.push(fr2);
   }
 }
+
 class ASTPlus extends ASTBinOp { String opStr(){ return "+"  ;} ASTOp make() {return new ASTPlus();} double op(double d0, double d1) { return d0+d1;}}
 class ASTSub  extends ASTBinOp { String opStr(){ return "-"  ;} ASTOp make() {return new ASTSub ();} double op(double d0, double d1) { return d0-d1;}}
 class ASTMul  extends ASTBinOp { String opStr(){ return "*"  ;} ASTOp make() {return new ASTMul ();} double op(double d0, double d1) { return d0*d1;}}

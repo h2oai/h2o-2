@@ -45,8 +45,7 @@ test.tail.numeric <- function(conn) {
   print(h2o.ls(conn))
 
   Log.info("Adding 5 to sliced.hex")
-  if (anyEnum) expect_warning(slicedPlusFive <- sliced + 5)
-  else slicedPlusFive <- sliced + 5
+  slicedPlusFive <- sliced + 5
   slicedPlusFive <- h2o.assign(slicedPlusFive, "slicedPlusFive.hex")
 
   Log.info("Orignal sliced: ")
@@ -57,11 +56,9 @@ test.tail.numeric <- function(conn) {
   expect_that(as.data.frame(slicedPlusFive), equals(5 + as.data.frame(sliced)))
 
   Log.info("Checking left and right: ")
-  if(anyEnum) expect_warning(  slicedPlusFive <- sliced + 5)
-  else slicedPlusFive <- sliced + 5
+  slicedPlusFive <- sliced + 5
 
-  if(anyEnum) expect_warning(fivePlusSliced <- 5 + sliced)
-  else fivePlusSliced <- 5 + sliced
+  fivePlusSliced <- 5 + sliced
 
   Log.info("sliced + 5: ")
   print(head(slicedPlusFive))

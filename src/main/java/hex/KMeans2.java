@@ -8,6 +8,7 @@ import water.*;
 import water.Job.ColumnsJob;
 import water.api.*;
 import water.fvec.Chunk;
+import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Utils;
 
@@ -49,12 +50,12 @@ public class KMeans2 extends ColumnsJob {
     for( int i = 0; i < cols.length; i++ )
       names[i] = source._names[cols[i]];
     Vec[] vecs = selectVecs(source);
-    // Fill-in response based on K
+    // Fill-in response based on K99
     String[] domain = new String[k];
     for( int i = 0; i < domain.length; i++ )
       domain[i] = "Cluster " + i;
     String[] namesResp = Utils.append(names, "response");
-    String[][] domaiResp = (String[][]) Utils.append(source.domains(), (Object) domain);
+    String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
     model.k = k; model.normalized = normalize;
 
