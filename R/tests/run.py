@@ -5,6 +5,9 @@ import os
 import shutil
 import signal
 import time
+import random
+import getpass
+import re
 
 
 class H2OCloudNode:
@@ -14,9 +17,11 @@ class H2OCloudNode:
     port: The actual port chosen at run time.
     pid: The process id of the node.
     """
-    def __init__(self, cloud_num, node_num, h2o_jar, base_port, xmx, output_dir):
+    def __init__(self, cloud_num, nodes_per_cloud, node_num, cloud_name, h2o_jar, base_port, xmx, output_dir):
         self.cloud_num = cloud_num
+        self.nodes_per_cloud = nodes_per_cloud
         self.node_num = node_num
+        self.cloud_name = cloud_name
         self.h2o_jar = h2o_jar
         self.base_port = base_port
         self.xmx = xmx
@@ -25,9 +30,18 @@ class H2OCloudNode:
         self.terminated = False
         self.port = -1
         self.pid = -1
+        self.my_base_port = self.base_port + \
+                            (self.cloud_num * self.nodes_per_cloud * 2) + \
+                            (self.node_num * 2)
 
     def start(self):
-        pass
+        cmd = ["java",
+               "-Xmx"+self.xmx,
+               "-ea",
+               "-jar", self.h2o_jar,
+               "-name", self.cloud_name,
+               "-base_port", self.my_base_port]
+        print(cmd)
 
     def stop(self):
         pass
@@ -36,14 +50,15 @@ class H2OCloudNode:
         self.terminated = True
         if (self.pid > 0):
             print("Killing JVM with PID {}".format(self.pid))
-            os.kill(self.pid)
+            os.kill(self.pid, signal.SIGTERM)
 
     def __str__(self):
         s = ""
-        s += "    cloud {} code {}\n".format(self.cloud_num, self.node_num)
-        s += "        xmx:  {}\n".format(self.xmx)
-        s += "        port: {}\n".format(self.port)
-        s += "        pid:  {}\n".format(self.pid)
+        s += "    cloud {} ({}) node {}\n".format(self.cloud_num, self.cloud_name, self.node_num)
+        s += "        xmx:          {}\n".format(self.xmx)
+        s += "        my_base_port: {}\n".format(self.my_base_port)
+        s += "        port:         {}\n".format(self.port)
+        s += "        pid:          {}\n".format(self.pid)
         return s
 
 
@@ -59,16 +74,23 @@ class H2OCloud:
         self.xmx = xmx
         self.output_dir = output_dir
 
+        n = random.randint(10000, 99999)
+        user = getpass.getuser()
+        user = ''.join(user.split())
+
+        self.cloud_name = "H2O_runit_{}_{}".format(user, n)
         self.terminated = False
         self.nodes = []
         self.jobs_run = 0
 
         for i in range(self.nodes_per_cloud):
-            node = H2OCloudNode(self.cloud_num, i, h2o_jar, self.base_port, self.xmx, self.output_dir)
+            node = H2OCloudNode(self.cloud_num, self.nodes_per_cloud, i, self.cloud_name,
+                                self.h2o_jar, self.base_port, self.xmx, self.output_dir)
             self.nodes.append(node)
 
     def start(self):
-        pass
+        for node in self.nodes:
+            node.start()
 
     def stop(self):
         pass
@@ -81,6 +103,7 @@ class H2OCloud:
     def __str__(self):
         s = ""
         s += "cloud {}\n".format(self.cloud_num)
+        s += "    name:     {}\n".format(self.cloud_name)
         s += "    jobs_run: {}\n".format(self.jobs_run)
         for node in self.nodes:
             s += str(node)
@@ -111,12 +134,21 @@ class Test:
     def terminate(self):
         if (self.pid > 0):
             print("Killing Test with PID {}".format(self.pid))
-            os.kill(self.pid)
+            os.kill(self.pid, signal.SIGTERM)
+
+    def __str__(self):
+        s = ""
+        s += "Test: {}/{}\n".format(self.test_dir, self.test_name)
+        return s
 
 
 class RUnitRunner:
     """
     A class for running the RUnit tests.
+
+    The tests list contains an object for every test.
+    The tests_not_started list acts as a job queue.
+    The tests_running list is polled for jobs that have finished.
     """
 
     def __init__(self, test_root_dir, num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir):
@@ -143,30 +175,45 @@ class RUnitRunner:
         self.clouds = []
         self.tests = []
         self.tests_not_started = []
+        self.tests_running = []
+        self.create_output_dir()
 
         for i in range(self.num_clouds):
             cloud = H2OCloud(i, self.nodes_per_cloud, h2o_jar, self.base_port, xmx, self.output_dir)
             self.clouds.append(cloud)
 
-    def run(self):
+    def build_test_list(self):
         """
-        Do the work.
-
-        @return: none
+        Recursively find the list of tests to run and store them in the object.
+        @return:  none
         """
-        if (not self.terminated):
-            self.create_output_dir()
+        if (self.terminated):
+            return
 
-        if (not self.terminated):
-            self.build_test_list()
+        for root, dirs, files in os.walk(self.test_root_dir):
+            if (root.endswith("Util")):
+                continue
 
-        if (not self.terminated):
-            self.start_clouds()
+            for f in files:
+                if (not re.search("runit", f)):
+                    continue
 
-        if (not self.terminated):
-            self.run_tests()
+                test = Test(root, f, self.output_dir)
+                self.tests.append(test)
+                self.tests_not_started.append(test)
 
-        self.stop_clouds()
+    def start_clouds(self):
+        if (self.terminated):
+            return
+        for cloud in self.clouds:
+            cloud.start()
+
+    def run_tests(self):
+        if (self.terminated):
+            return
+
+    def stop_clouds(self):
+        pass
 
     def terminate(self):
         self.terminated = True
@@ -194,22 +241,6 @@ class RUnitRunner:
             print("")
             sys.exit(1)
 
-    def build_test_list(self):
-        """
-        Recursively find the list of tests to run and store them in the object.
-        @return:  none
-        """
-        pass
-
-    def start_clouds(self):
-        pass
-
-    def run_tests(self):
-        pass
-
-    def stop_clouds(self):
-        pass
-
     def __str__(self):
         s = "\n"
         s += "test_root_dir:    {}\n".format(self.test_root_dir)
@@ -221,6 +252,9 @@ class RUnitRunner:
         s += "\n"
         for c in self.clouds:
             s += str(c)
+        s += "\n"
+        for t in self.tests:
+            s += str(t)
         return s
 
 
@@ -228,11 +262,13 @@ class RUnitRunner:
 # Main program
 #--------------------------------------------------------------------
 
+# Global variables that can be set by the user.
 base_port = 40000
 num_clouds = 3
+
+# Global variables that are set internally.
+output_dir = None
 wipe_output_dir = False
-output_dir = ""
-h2o_jar = ""
 runner = None
 handling_signal = False
 
@@ -260,7 +296,7 @@ def usage():
     print("usage:  $0 [--baseport port] [--numclouds n] [--wipe]")
     print("")
     print("    --wipe wipes the output dir before starting")
-    print("    (Default output dir is: " + output_dir + ")")
+    print("    (Output dir is: " + output_dir + ")")
     print("")
     sys.exit(1)
 
@@ -279,7 +315,7 @@ def parse_args(argv):
             if (i > len(argv)):
                 usage()
             base_port = argv[i]
-        elif (s == "--numjvms"):
+        elif (s == "--numclouds"):
             i += 1
             if (i > len(argv)):
                 usage()
@@ -293,14 +329,22 @@ def parse_args(argv):
 
 
 def main(argv):
+    global output_dir
     global runner
 
+    # Calculate global variables.
     test_root_dir = os.path.dirname(os.path.realpath(__file__))
     output_dir = test_root_dir + "/" + "results"
+
+    # Calculate and set other variables.
+    nodes_per_cloud = 1
+    xmx = "2g"
     h2o_jar = os.path.abspath(test_root_dir + "/../../target/h2o.jar")
 
+    # Override any defaults with the user's choices.
     parse_args(argv)
 
+    # Set up output directory.
     if (not os.path.exists(h2o_jar)):
         print("")
         print("h2o jar not found: {}".format(h2o_jar))
@@ -319,14 +363,23 @@ def main(argv):
             print("")
             sys.exit(1)
 
-    nodes_per_cloud = 1
-    xmx = "2g"
+    # Create runner object.
     runner = RUnitRunner(test_root_dir, num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir)
+
+    # Handle killing the runner.
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    runner.run()
+
+    # Run.
+    runner.build_test_list()
+    runner.start_clouds()
+    runner.run_tests()
+    runner.stop_clouds()
+
     print str(runner)
 
 if __name__ == "__main__":
     main(sys.argv)
-    time.sleep(100)
+
+    # Test Ctrl-C.
+    # time.sleep(100)
