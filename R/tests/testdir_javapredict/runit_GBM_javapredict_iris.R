@@ -1,19 +1,40 @@
+#----------------------------------------------------------------------
+# Purpose:  This test exercises the GBM model downloaded as java code
+#           for the iris data set.
+#
+# Notes:    Assumes unix environment.
+#           curl, javac, java must be installed.
+#           java must be at least 1.6.
+#----------------------------------------------------------------------
+
 # setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_javapredict")
 
+options(echo=FALSE)
 TEST_ROOT_DIR <- ".."
 source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
 
-heading("BEGIN TEST")
-conn <- new("H2OClient", ip=myIP, port=myPort)
+
+#----------------------------------------------------------------------
+# Parameters for the test.
+#----------------------------------------------------------------------
+
 n.trees <- 100 
 interaction.depth <- 5
 n.minobsinnode <- 10
 shrinkage <- 0.1
+train <- locate("smalldata/iris/iris_train.csv")
+test <- locate("smalldata/iris/iris_test.csv")
 x = c("sepal_len","sepal_wid","petal_len","petal_wid");
 y = "species"
 
+#----------------------------------------------------------------------
+
+
+heading("BEGIN TEST")
+conn <- new("H2OClient", ip=myIP, port=myPort)
+
 heading("Uploading train data to H2O")
-iris_train.hex <- h2o.uploadFile(conn, locate("smalldata/iris/iris_train.csv"))
+iris_train.hex <- h2o.uploadFile(conn, train)
 
 heading("Creating GBM model in H2O")
 iris.gbm.h2o <- h2o.gbm(x = x, y = y, data = iris_train.hex, n.trees = n.trees, interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode, shrinkage = shrinkage)
@@ -30,17 +51,17 @@ cmd <- sprintf("curl -o %s/%s.java http://%s:%d/2/GBMModelView.java?_modelKey=%s
 safeSystem(cmd)
 
 heading("Uploading test data to H2O")
-iris_test.hex <- h2o.uploadFile(conn, locate("smalldata/iris/iris_test.csv"))
+iris_test.hex <- h2o.uploadFile(conn, test)
 
 heading("Predicting in H2O")
 iris.gbm.pred <- h2o.predict(iris.gbm.h2o, iris_test.hex)
 summary(iris.gbm.pred)
 head(iris.gbm.pred)
-p1 <- as.data.frame(iris.gbm.pred)
+prediction1 <- as.data.frame(iris.gbm.pred)
 
 heading("Setting up for Java POJO")
-iris_test_with_response <- read.csv(locate("smalldata/iris/iris_test.csv"), header=T)
-iris_test_without_response <- subset(iris_test_with_response, select=-c(species))
+iris_test_with_response <- read.csv(test, header=T)
+iris_test_without_response <- iris_test_with_response[,setdiff(names(iris_test_with_response), y)]
 write.csv(iris_test_without_response, file = sprintf("%s/in.csv", tmpdir_name), row.names=F)
 cmd <- sprintf("cp main.java %s", tmpdir_name)
 safeSystem(cmd)
@@ -52,6 +73,37 @@ cmd <- sprintf("java -cp %s/h2o-model.jar:%s -Xmx2g -XX:MaxPermSize=256m main --
 safeSystem(cmd)
 
 heading("Comparing predictions between H2O and Java POJO")
+prediction2 <- read.csv(sprintf("%s/out.csv", tmpdir_name), header=T)
+if (nrow(prediction1) != nrow(prediction2)) {
+  warning("Prediction mismatch")
+  print(paste("Rows from H2O", nrow(prediction1)))
+  print(paste("Rows from Java POJO", nrow(prediction2)))
+  stop("Number of rows mismatch")
+}
+
+match <- all(prediction1 == prediction2)
+if (! match) {
+  for (i in 1:nrow(prediction1)) {
+    rowmatches <- all(prediction1[i,] == prediction2[i,])
+    if (! rowmatches) {
+      print("")
+      print(paste("Prediction mismatch on row", i, "of test file", test))
+      print("")
+      print("H2O")
+      print("")
+      print(prediction1[i,])
+      print("")
+      print("Java POJO")
+      print("")
+      print(prediction2[i,])
+      print("")
+      print("")
+      stop("Prediction mismatch")
+    }
+  }
+
+  stop("Paranoid; should not reach here")
+}
 
 heading("Cleaning up tmp files")
 cmd <- sprintf("rm -fr %s", tmpdir_name)
