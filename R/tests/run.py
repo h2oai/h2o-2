@@ -2,6 +2,7 @@
 
 import sys
 import os
+import shutil
 
 
 class H2OCloudNode:
@@ -211,11 +212,10 @@ def main(argv):
 
     if (wipe_output_dir):
         try:
-            if os.path.isdir(output_dir):
-                os.rmdir(output_dir)
+            shutil.rmtree(output_dir)
         except OSError as e:
             print("")
-            print("rmdir failed (errno {0}): {1}".format(e.errno, e.strerror))
+            print("removing directory failed (errno {0}): {1}".format(e.errno, e.strerror))
             print("    " + output_dir)
             print("")
             sys.exit(1)
