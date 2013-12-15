@@ -87,7 +87,7 @@ class main {
         output.write("predict");
         for (int i = 0; i < model.getNumResponseClasses(); i++) {
             output.write(",");
-            output.write(model.getNames()[i]);
+            output.write(model.getDomainValues(model.getResponseIdx())[i]);
         }
         output.write("\n");
 
@@ -129,10 +129,30 @@ class main {
 
             // Emit the result to the output file.
             for (int i = 0; i < preds.length; i++) {
-                if (i > 0) {
-                    output.write(",");
+                if (i == 0) {
+                    // See if there is a domain to map this output value to.
+                    String[] domainValues = model.getDomainValues(model.getResponseIdx());
+                    if (domainValues != null) {
+                        // Classification.
+                        double value = preds[i];
+                        int valueAsInt = (int)value;
+                        if (value != (int)valueAsInt) {
+                            System.out.println("ERROR: Line " + lineno + " has non-integer output for classification (" + value + ")");
+                            System.exit(1);
+                        }
+
+                        String predictedOutputClassLevel = domainValues[valueAsInt];
+                        output.write(predictedOutputClassLevel);
+                    }
+                    else {
+                        // Regression.
+                        output.write(Double.toString(preds[i]));
+                    }
                 }
-                output.write(Double.toString(preds[i]));
+                else {
+                    output.write(",");
+                    output.write(Double.toString(preds[i]));
+                }
             }
             output.write("\n");
 
