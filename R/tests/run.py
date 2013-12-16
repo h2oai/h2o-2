@@ -441,7 +441,7 @@ class RUnitRunner:
         self.tests = []
         self.tests_not_started = []
         self.tests_running = []
-        self.create_output_dir()
+        self._create_output_dir()
 
         for i in range(self.num_clouds):
             cloud = H2OCloud(i, self.nodes_per_cloud, h2o_jar, self.base_port, xmx, self.output_dir)
@@ -510,27 +510,27 @@ class RUnitRunner:
         for i in range(start_count):
             cloud = self.clouds[i]
             port = cloud.get_port()
-            self.start_next_test_on_port(port)
+            self._start_next_test_on_port(port)
 
         # As each test finishes, send a new one to the cloud that just freed up.
         while (len(self.tests_not_started) > 0):
             if (self.terminated):
                 return
-            completed_test = self.wait_for_one_test_to_complete()
+            completed_test = self._wait_for_one_test_to_complete()
             if (self.terminated):
                 return
-            self.report_test_result(completed_test)
+            self._report_test_result(completed_test)
             port_of_completed_test = completed_test.get_port()
-            self.start_next_test_on_port(port_of_completed_test)
+            self._start_next_test_on_port(port_of_completed_test)
 
         # Wait for remaining running tests to complete.
         while (len(self.tests_running) > 0):
             if (self.terminated):
                 return
-            completed_test = self.wait_for_one_test_to_complete()
+            completed_test = self._wait_for_one_test_to_complete()
             if (self.terminated):
                 return
-            self.report_test_result(completed_test)
+            self._report_test_result(completed_test)
 
     def stop_clouds(self):
         """
@@ -563,17 +563,17 @@ class RUnitRunner:
                 else:
                     notrun += 1
             total += 1
-        self.log("")
-        self.log("----------------------------------------------------------------------")
-        self.log("")
-        self.log("SUMMARY OF RESULTS")
-        self.log("")
-        self.log("----------------------------------------------------------------------")
-        self.log("")
-        self.log("Total tests:      " + str(total))
-        self.log("Passed:           " + str(passed))
-        self.log("Did not pass:     " + str(failed))
-        self.log("Did not complete: " + str(notrun))
+        self._log("")
+        self._log("----------------------------------------------------------------------")
+        self._log("")
+        self._log("SUMMARY OF RESULTS")
+        self._log("")
+        self._log("----------------------------------------------------------------------")
+        self._log("")
+        self._log("Total tests:      " + str(total))
+        self._log("Passed:           " + str(passed))
+        self._log("Did not pass:     " + str(failed))
+        self._log("Did not complete: " + str(notrun))
 
     def terminate(self):
         """
@@ -596,7 +596,7 @@ class RUnitRunner:
     # Private methods below this line.
     #--------------------------------------------------------------------
 
-    def create_output_dir(self):
+    def _create_output_dir(self):
         try:
             os.makedirs(self.output_dir)
         except OSError as e:
@@ -608,13 +608,13 @@ class RUnitRunner:
             print("")
             sys.exit(1)
 
-    def start_next_test_on_port(self, port):
+    def _start_next_test_on_port(self, port):
         test = self.tests_not_started.pop(0)
         self.tests_running.append(test)
         ip = "127.0.0.1"
         test.start(ip, port)
 
-    def wait_for_one_test_to_complete(self):
+    def _wait_for_one_test_to_complete(self):
         while (True):
             for test in self.tests_running:
                 if (self.terminated):
@@ -626,22 +626,22 @@ class RUnitRunner:
                 return
             time.sleep(1)
 
-    def report_test_result(self, test):
+    def _report_test_result(self, test):
         port = test.get_port()
         if (test.get_passed()):
             s = "PASS      %d %-70s" % (port, test.get_test_name())
-            self.log(s)
+            self._log(s)
         else:
             s = "     FAIL %d %-70s %s" % (port, test.get_test_name(), test.get_output_dir_file_name())
-            self.log(s)
+            self._log(s)
 
-    def log(self, s):
-        f = self.get_summary_filehandle_for_appending()
+    def _log(self, s):
+        f = self._get_summary_filehandle_for_appending()
         print(s)
         f.write(s + "\n")
         f.close()
 
-    def get_summary_filehandle_for_appending(self):
+    def _get_summary_filehandle_for_appending(self):
         summary_file_name = os.path.join(self.output_dir, "summary.txt")
         f = open(summary_file_name, "a")
         return f
@@ -670,10 +670,10 @@ class RUnitRunner:
 # Global variables that can be set by the user.
 base_port = 40000
 num_clouds = 3
+wipe_output_dir = False
 
 # Global variables that are set internally.
 output_dir = None
-wipe_output_dir = False
 runner = None
 handling_signal = False
 
@@ -690,7 +690,7 @@ def signal_handler(signum, stackframe):
     print("")
     print("----------------------------------------------------------------------")
     print("")
-    print("SIGNAL CAUGHT.  SHUTTING DOWN NOW.")
+    print("SIGNAL CAUGHT (" + str(signum) + ").  SHUTTING DOWN NOW.")
     print("")
     print("----------------------------------------------------------------------")
     runner.terminate()
