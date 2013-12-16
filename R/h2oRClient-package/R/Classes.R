@@ -541,13 +541,7 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
 })
 
 setMethod("as.factor", "H2OParsedData", function(x) { h2o.__unop2("factor", x) })
-
-setMethod("is.factor", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  # temp = sapply(res$summaries, function(x) { is.null(x$domains) })
-  temp = sapply(res$summaries, function(x) { x$stats$type != "Enum" })
-  return(!any(temp))
-})
+setMethod("is.factor", "H2OParsedData", function(x) { as.logical(h2o.__unop2("is.factor", x)) })
 
 setMethod("quantile", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
