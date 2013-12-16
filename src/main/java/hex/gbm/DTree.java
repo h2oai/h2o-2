@@ -31,7 +31,6 @@ import water.util.*;
    @author Cliff Click
 */
 public class DTree extends Iced {
-  static public final boolean CRUNK=false;
   final String[] _names; // Column names
   final int _ncols;      // Active training columns
   final char _nbins;     // Max number of bins to split over
@@ -106,11 +105,13 @@ public class DTree extends Iced {
     final int _col, _bin;       // Column to split, bin where being split
     final boolean _equal;       // Split is < or == ?
     final double _se0, _se1;    // Squared error of each subsplit
-    final long _n0, _n1;        // Rows in each final split
+    final long    _n0,  _n1;    // Rows in each final split
+    final double  _p0,  _p1;    // Predicted value for each split
 
-    public Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1 ) {
+    public Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
       _col = col;  _bin = bin;  _equal = equal;
       _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
+      _p0 = p0;  _p1 = p1;
     }
     public final double se() { return _se0+_se1; }
     public final int   col() { return _col; }
@@ -370,6 +371,8 @@ public class DTree extends Iced {
 
     public int ns( Chunk chks[], int row ) { return _nids[bin(chks,row)]; }
 
+    public double pred( int nid ) { return nid==0 ? _split._p0 : _split._p1; }
+
     @Override public String toString() {
       if( _split._col == -1 ) return "Decided has col = -1";
       int col = _split._col;
@@ -463,7 +466,7 @@ public class DTree extends Iced {
   }
 
   public static abstract class LeafNode extends Node {
-    double _pred;
+    public double _pred;
     public LeafNode( DTree tree, int pid ) { super(tree,pid); }
     public LeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
     @Override public String toString() { return "Leaf#"+_nid+" = "+_pred; }

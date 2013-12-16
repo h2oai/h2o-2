@@ -41,7 +41,7 @@ import water.fvec.Vec;
    @author Cliff Click
 */
 public class DSharedHistogram extends Iced {
-  public final String _name;      // Column name (for debugging)
+  public final transient String _name; // Column name (for debugging)
   public final byte _isInt;       // 0: float col, 1: int col, 2: enum & int col
   public final char _nbin;        // Bin count
   public final float  _step;      // Linear interpolation step per bin
@@ -245,9 +245,11 @@ public class DSharedHistogram extends Iced {
 
     if( best==0 ) return null;  // No place to split
     assert best > 0 : "Must actually pick a split "+best;
-    long n0 = !equal ? ns0[best] : ns0[best]+ns1[best+1];
-    long n1 = !equal ? ns1[best] : _bins[best]          ;
-    return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1);
+    long   n0 = !equal ?   ns0[best] :   ns0[best]+  ns1[best+1];
+    long   n1 = !equal ?   ns1[best] : _bins[best]              ;
+    double p0 = !equal ? sums0[best] : sums0[best]+sums1[best+1];
+    double p1 = !equal ? sums1[best] : _sums[best]              ;
+    return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
   }
 
   // The initial histogram bins are setup from the Vec rollups.
@@ -289,15 +291,18 @@ public class DSharedHistogram extends Iced {
     return sb.toString();
   }
 
-  long byteSize() {
+  public long byteSize() {
     long sum = 8+8;             // Self header
-    sum += 4+4+4;               //step,min,max
-    // + 8(ptr) + 32(AtomicXXXArray) + 20(array header) + len<<2 (array body)
-    sum += 8+32+20+_bins.length<<2;
-    sum += 8+32+20+_mins.length<<2;
-    sum += 8+32+20+_maxs.length<<2;
-    sum += 8+32+24+_sums.length<<3;
-    sum += 8+32+24+_ssqs.length<<3;
+    sum += 1+2;                 // enum; nbin
+    sum += 4+4+4;               // step,min,max
+    sum += 8*5;                 // 5 internal arrays
+    if( _bins == null ) return sum;
+    // + 20(array header) + len<<2 (array body)
+    sum += 24+_bins.length<<3;
+    sum += 20+_mins.length<<2;
+    sum += 20+_maxs.length<<2;
+    sum += 24+_sums.length<<3;
+    sum += 24+_ssqs.length<<3;
     return sum;
   }
 

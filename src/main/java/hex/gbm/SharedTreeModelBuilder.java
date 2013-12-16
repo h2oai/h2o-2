@@ -210,6 +210,19 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
     // Once-per-node shared init
     @Override public void setupLocal( ) { 
+      long sum=0;
+      int cnt=0;
+      for( DSharedHistogram hss[][] : _hcs )
+        if( hss != null )
+          for( DSharedHistogram hs[] : hss )
+            if( hs != null )
+              for( DSharedHistogram h : hs )
+                if( h != null ) { sum += h.byteSize(); cnt++; }
+      int sumlf=0;
+      for( int k=0; k<_nclass; k++ )
+        if( _trees[k] != null ) // Ignore unused classes
+          sumlf += _trees[k]._len-_leafs[k];
+      System.out.println("Going to ship "+PrettyPrint.bytes(sum)+" in "+cnt+" Histograms"+" leafs="+sumlf);
       // Init all the internal tree fields after shipping over the wire
       for( DTree dt : _trees ) if( dt != null ) dt.init_tree(); 
       // Allocate local shared memory histograms
@@ -230,6 +243,17 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
           }
         }
       }
+    }
+    @Override public void closeLocal() {
+      long sum=0;
+      int cnt=0;
+      for( DSharedHistogram hss[][] : _hcs )
+        if( hss != null )
+          for( DSharedHistogram hs[] : hss )
+            if( hs != null )
+              for( DSharedHistogram h : hs )
+                if( h != null ) { sum += h.byteSize(); cnt++; }
+      System.out.println("Going to ship "+PrettyPrint.bytes(sum)+" in "+cnt+" Histograms");
     }
 
     @Override public void map( Chunk[] chks ) {

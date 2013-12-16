@@ -137,9 +137,22 @@ public class GBM extends SharedTreeModelBuilder {
     cleanUp(fr,t_build); // Shared cleanup
   }
 
+  transient long _timeLastScoreStart, _timeLastScoreEnd;
   private GBMModel doScoring(GBMModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
-    Score sc = new Score().doIt(model,fr,validation).report(Sys.GBM__,tid,ktrees);
-    model = new GBMModel(model, finalScoring?null:ktrees, (float)sc._sum/_nrows, sc._cm, tstats);
+    long now = System.currentTimeMillis();
+    long sinceLastScore = now-_timeLastScoreStart;
+    Score sc = null;
+    if( finalScoring ||
+        // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
+        (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
+         (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
+      _timeLastScoreStart = now;
+      sc = new Score().doIt(model, fr, validation).report(Sys.GBM__,tid,ktrees);
+      _timeLastScoreEnd = System.currentTimeMillis();
+    }
+    model = new GBMModel(model, finalScoring?null:ktrees, 
+                         sc==null ? Float.NaN : (float)sc._sum/_nrows, 
+                         sc==null ? null : sc._cm, tstats);
     DKV.put(outputKey, model);
     return model;
   }
@@ -179,7 +192,7 @@ public class GBM extends SharedTreeModelBuilder {
   @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
     if( _nclass == 1 )          // Classification?
       return chk_tree(chks,0).at0(row);
-    if( DTree.CRUNK && _nclass == 2 ) // The Boolean Optimization
+    if( _nclass == 2 )          // The Boolean Optimization
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
       ds[1] = -ds[0];
@@ -236,7 +249,7 @@ public class GBM extends SharedTreeModelBuilder {
         // This optimization assumes the 2nd tree of a 2-class system is the
         // inverse of the first.  This is false for DRF (and true for GBM) -
         // DRF picks a random different set of columns for the 2nd tree.  
-        if( DTree.CRUNK && k==1 && _nclass==2 ) continue;
+        if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
         new GBMUndecidedNode(ktrees[k],-1,DSharedHistogram.initialHist(fr,_ncols,nbins,hcs[k][0]) ); // The "root" node
       }
@@ -441,7 +454,7 @@ public class GBM extends SharedTreeModelBuilder {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override public DTree.Split bestCol( GBMUndecidedNode u, DSharedHistogram[] hs ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
+      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;

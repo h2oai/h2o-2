@@ -179,9 +179,22 @@ public class DRF extends SharedTreeModelBuilder {
     cleanUp(fr,t_build); // Shared cleanup
   }
 
+  transient long _timeLastScoreStart, _timeLastScoreEnd;
   private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
-    Score sc = new Score().doIt(model, fr, validation, validation==null).report(Sys.DRF__,tid,ktrees);
-    model = new DRFModel(model, finalScoring?null:ktrees, (float)sc.sum()/sc.nrows(), sc.cm(), tstats);
+    long now = System.currentTimeMillis();
+    long sinceLastScore = now-_timeLastScoreStart;
+    Score sc = null;
+    if( finalScoring ||
+        // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
+        (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
+         (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
+      _timeLastScoreStart = now;
+      sc = new Score().doIt(model, fr, validation, validation==null).report(Sys.DRF__,tid,ktrees);
+      _timeLastScoreEnd = System.currentTimeMillis();
+    }
+    model = new DRFModel(model, finalScoring?null:ktrees, 
+                         sc==null ? Float.NaN : (float)sc.sum()/sc.nrows(), 
+                         sc==null ? null : sc.cm(), tstats);
     DKV.put(outputKey, model);
     return model;
   }
@@ -354,8 +367,11 @@ public class DRF extends SharedTreeModelBuilder {
             if( cnid == -1 || // Bottomed out (predictors or responses known constant)
                 tree.node(cnid) instanceof UndecidedNode || // Or chopped off for depth
                 (tree.node(cnid) instanceof DecidedNode &&  // Or not possible to split
-                 ((DecidedNode)tree.node(cnid))._split.col()==-1) )
-              dn._nids[i] = new DRFLeafNode(tree,nid).nid(); // Mark a leaf here
+                 ((DecidedNode)tree.node(cnid))._split.col()==-1) ) {
+              LeafNode ln = new DRFLeafNode(tree,nid);
+              ln._pred = dn.pred(i);  // Set prediction into the leaf
+              dn._nids[i] = ln.nid(); // Mark a leaf here
+            }
           }
           // Handle the trivial non-splitting tree
           if( nid==0 && dn._split.col() == -1 )
@@ -365,44 +381,13 @@ public class DRF extends SharedTreeModelBuilder {
     } // -- k-trees are done
 
     // ----
-    // Collect votes for the tree.
+    // Move rows into the final leaf rows
+    int sumlf=0;
+    for( int k=0; k<_nclass; k++ )
+      if( ktrees[k] != null ) // Ignore unused classes
+        sumlf += ktrees[k].len()-leafs[k];
+    System.out.println("Final leafs="+sumlf);
     CollectPreds gp = new CollectPreds(ktrees,leafs).doAll(fr);
-    for( int k=0; k<_nclass; k++ ) {
-      final DTree tree = ktrees[k];
-      if( tree == null ) continue;
-      for( int i=0; i<tree.len()-leafs[k]; i++ ) {
-        // setup prediction for k-tree's i-th leaf
-        // for classification it is a weight of votes for the i-th class
-        // for regression it is mean of rows' predictions in the leaf
-        ((LeafNode)tree.node(leafs[k]+i)).pred( gp._voters[k][i] > 0 ? gp._votes[k][i] / gp._voters[k][i] : 0);
-      }
-    }
-
-    // ----
-    // Tree <== f(Tree)
-    // Nids <== 0
-    new MRTask2() {
-      @Override public void map( Chunk chks[] ) {
-        // For all tree/klasses
-        for( int k=0; k<_nclass; k++ ) {
-          final DTree tree = ktrees[k];
-          if( tree == null ) continue;
-          final Chunk nids = chk_nids(chks,k);
-          final Chunk ct   = chk_tree(chks,k);
-          for( int row=0; row<nids._len; row++ ) {
-            int nid = (int)nids.at80(row);
-            // Track only prediction for oob rows
-            if (isOOBRow(nid)) {
-              nid = oob2Nid(nid);
-              // Setup Tree(i) - on the fly prediction of i-tree for row-th row
-              ct.set0(row, (float)(ct.at0 (row) + ((LeafNode)tree.node(nid)).pred() ));
-            }
-            // reset help column
-            nids.set0(row,0);
-          }
-        }
-      }
-    }.doAll(fr);
 
     // Collect leaves stats
     for (int i=0; i<ktrees.length; i++) 
@@ -428,55 +413,36 @@ public class DRF extends SharedTreeModelBuilder {
   private class CollectPreds extends MRTask2<CollectPreds> {
     final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leafs[]; // Number of active leaves (per tree)
-    // Per leaf: sum(votes);
-    float _votes[/*tree/klass*/][/*tree-relative node-id*/];
-    long   _voters[/*tree/klass*/][/*tree-relative node-id*/];
     CollectPreds(DTree trees[], int leafs[]) { _leafs=leafs; _trees=trees; }
     @Override public void map( Chunk[] chks ) {
-      _votes  = new float[_nclass][];
-      _voters = new long  [_nclass][];
       // For all tree/klasses
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
         final int   leaf = _leafs[k];
         if( tree == null ) continue; // Empty class is ignored
-        // A leaf-biased array of all active Tree leaves.
-        final float  votes [] = _votes [k] = new float[tree.len()-leaf];
-        final long   voters[] = _voters[k] = new long [tree.len()-leaf];
-        final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
-        final Chunk vss  = chk_work(chks,k); // Votes for this tree/class (saved as float by SetWrkTask!)
         // If we have all constant responses, then we do not split even the
         // root and the residuals should be zero.
         if( tree.root() instanceof LeafNode ) continue;
+        final Chunk nids = chk_nids(chks,k); // Node-ids  for this tree/class
+        final Chunk ct   = chk_tree(chks,k);
         for( int row=0; row<nids._len; row++ ) { // For all rows
           int nid = (int)nids.at80(row);         // Get Node to decide from
-          boolean oobrow = false;
-          if (isOOBRow(nid)) { oobrow = true; nid = oob2Nid(nid); } // This is out-of-bag row - but we would like to track on-the-fly prediction for the row
-          if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
-            nid = tree.node(nid).pid();                 // Then take parent's decision
-          DecidedNode dn = tree.decided(nid);           // Must have a decision point
-          if( dn._split.col() == -1 )     // Unable to decide?
-            dn = tree.decided(nid = tree.node(nid).pid()); // Then take parent's decision
-          int leafnid = dn.ns(chks,row); // Decide down to a leafnode
-          assert leaf <= leafnid && leafnid < tree.len(); // we cannot obtain unknown leaf
-          assert tree.node(leafnid) instanceof LeafNode;
-          nids.set0(row,(oobrow ? nid2Oob(leafnid) : leafnid));
-          // Note: I can which leaf/region I end up in, but I do not care for
-          // the prediction presented by the tree.  For GBM, we compute the
-          // sum-of-residuals (and sum/abs/mult residuals) for all rows in the
-          // leaf, and get our prediction from that.
-          if (!oobrow) {
-            float v = (float) vss.at0(row); // !!! SetWrkTask put info wrk columns only floats => so use them only here
-            // How many rows in this leaf has predicted k-class.
-            votes [leafnid-leaf] += v; // v=1 for classification if class == k else 0 (classification), regression v=response(Y)
-            voters[leafnid-leaf] ++; // compute all rows in this leaf (perhaps we do not treat voters per k-tree since we sample inside k-trees with same sampling rate)
+          // This is out-of-bag row - but we would like to track on-the-fly prediction for the row
+          if( isOOBRow(nid) ) { 
+            nid = oob2Nid(nid); 
+            if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
+              nid = tree.node(nid).pid();                 // Then take parent's decision
+            DecidedNode dn = tree.decided(nid);           // Must have a decision point
+            if( dn._split.col() == -1 )     // Unable to decide?
+              dn = tree.decided(nid = tree.node(nid).pid()); // Then take parent's decision
+            int leafnid = dn.ns(chks,row); // Decide down to a leafnode
+            // Setup Tree(i) - on the fly prediction of i-tree for row-th row
+            ct.set0(row, (float)(ct.at0 (row) + ((LeafNode)tree.node(leafnid)).pred() ));
           }
+          // reset help column
+          nids.set0(row,0);
         }
       }
-    }
-    @Override public void reduce( CollectPreds gp ) {
-      Utils.add(_votes,gp._votes);
-      Utils.add(_voters,gp._voters);
     }
   }
 
@@ -513,7 +479,7 @@ public class DRF extends SharedTreeModelBuilder {
 
     // Find the column with the best split (lowest score).
     @Override public DTree.Split bestCol( DRFUndecidedNode u, DSharedHistogram hs[] ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L);
+      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
       if( hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
