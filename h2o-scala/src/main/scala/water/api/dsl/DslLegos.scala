@@ -259,8 +259,7 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   // We need shutdown for sure ! :-)
   def shutdown() = H2O.CLOUD.shutdown()
   
-  // DRF call
-  
+  // DRF API call
   def drf(f: VT, response: VT, ntrees: Int): DRF.DRFModel = {
     val drf:DRF = new DRF()
     val response = f.frame().vecs()(0)
@@ -268,6 +267,7 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     drf.source = new Frame(f.frame().names() ++ Array("response"), f.frame.vecs()++Array(response))
     drf.response = response
     drf.classification = false
+    drf.ntrees = ntrees;
     drf.invoke()
     return UKV.get(drf.dest())
   }
@@ -284,6 +284,7 @@ trait T_R_Env[T<:T_Frame] {
   def head (d: T, rows:Int = NHEAD) = println(d)
   def tail (d: T, rows:Int = NTAIL) = println(d)
   def length(d: T) = if (ncol(d) > 1) ncol(d) else nrow(d)
+  def names(d: T): Array[String] = d.names
   def helpme = help
   def help = println("""
 *** Welcome into world of SkAlH2O ***
