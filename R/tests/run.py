@@ -634,6 +634,7 @@ class RUnitRunner:
             total += 1
         end_seconds = time.time()
         delta_seconds = end_seconds - self.start_seconds
+        run = total - notrun
         self._log("")
         self._log("----------------------------------------------------------------------")
         self._log("")
@@ -647,7 +648,10 @@ class RUnitRunner:
         self._log("Did not complete:     " + str(notrun))
         self._log("")
         self._log("Total time:           %.2f sec" % delta_seconds)
-        self._log("Time/completed test:  %.2f sec" % (delta_seconds / (total - notrun)))
+        if (run > 0):
+            self._log("Time/completed test:  %.2f sec" % (delta_seconds / run))
+        else:
+            self._log("Time/completed test:  N/A")
         self._log("")
 
     def terminate(self):
