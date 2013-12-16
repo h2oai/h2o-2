@@ -792,7 +792,7 @@ def signal_handler(signum, stackframe):
 
 def usage():
     print("")
-    print("usage:  " + g_script_name +
+    print("Usage:  " + g_script_name +
           " [--wipe]"
           " [--baseport port]"
           " [--numclouds n]"
@@ -832,8 +832,9 @@ def usage():
     print("        "+g_script_name+" --wipe --numclouds 1 --test path/to/test.R")
     print("")
     print("    Rerunning failures from a previous run:")
-    print("        cp ./results/failures.txt .        # Otherwise, --wipe removes the list.")
-    print("        "+g_script_name+" --wipe --numclouds 16 --testlist ./failures.txt")
+    print("        # Copy failures.txt, otherwise --wipe removes the directory with the list!")
+    print("        cp " + os.path.join(g_output_dir, "failures.txt") + " .")
+    print("        "+g_script_name+" --wipe --numclouds 16 --testlist failures.txt")
     print("")
     sys.exit(1)
 
