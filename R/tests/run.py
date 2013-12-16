@@ -745,6 +745,7 @@ class RUnitRunner:
 #--------------------------------------------------------------------
 
 # Global variables that can be set by the user.
+g_script_name = ""
 g_base_port = 40000
 g_num_clouds = 3
 g_wipe_output_dir = False
@@ -785,7 +786,7 @@ def signal_handler(signum, stackframe):
 
 def usage():
     print("")
-    print("usage:  $0"
+    print("usage:  " + g_script_name +
           " [--wipe]"
           " [--baseport port]"
           " [--numclouds n]"
@@ -808,6 +809,25 @@ def usage():
     print("")
     print("    If neither --test nor --testlist is specified, then the list of tests is")
     print("    discovered automatically as files matching '*runit*.R'.")
+    print("")
+    print("")
+    print("Examples:")
+    print("")
+    print("    Just accept the defaults and go (note: output dir must not exist):")
+    print("        "+g_script_name)
+    print("")
+    print("    On a powerful laptop with 8 cores:")
+    print("        "+g_script_name+" --wipe --numclouds 5")
+    print("")
+    print("    On a big server with 32 cores:")
+    print("        "+g_script_name+" --wipe --numclouds 16")
+    print("")
+    print("    Run one specific test:")
+    print("        "+g_script_name+" --wipe --numclouds 1 --test path/to/test.R")
+    print("")
+    print("    Rerunning failures from a previous run:")
+    print("        cp ./results/failures.txt .        # Otherwise, --wipe removes the list.")
+    print("        "+g_script_name+" --wipe --numclouds 16 --testlist ./failures.txt")
     print("")
     sys.exit(1)
 
@@ -857,11 +877,13 @@ def main(argv):
 
     @return: none
     """
+    global g_script_name
     global g_output_dir
     global g_test_to_run
     global g_test_list_file
     global g_runner
 
+    g_script_name = os.path.basename(argv[0])
     test_root_dir = os.path.dirname(os.path.realpath(__file__))
 
     # Calculate global variables.
@@ -881,7 +903,6 @@ def main(argv):
     if (not os.path.exists(h2o_jar)):
         print("")
         print("H2O jar not found: {}".format(h2o_jar))
-        print("    " + g_output_dir)
         print("")
         sys.exit(1)
 
