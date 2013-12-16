@@ -389,7 +389,17 @@ setMethod("floor", "H2OParsedData", function(x) { h2o.__unop2("floor", x) })
 setMethod("log", "H2OParsedData", function(x) { h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
 setMethod("sum", "H2OParsedData", function(x) { h2o.__unop2("sum", x) })
-setMethod("is.na", "H2OParsedData", function(x) { tmp = h2o.__unop2("is.na", x) })
+setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
+
+setGeneric("as.h2o", function(h2o, object) { standardGeneric("as.h2o") })
+setMethod("as.h2o", signature(h2o="H2OClient", object="data.frame"),
+ function(h2o, object) {
+   tmpf <- tempfile(fileext=".csv") 
+   write.csv(object, file=tmpf, quote=F, row.names=F)
+   h2f <- h2o.uploadFile(h2o, tmpf)
+   unlink(tmpf)
+   h2f
+ })
 
 setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
 setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x, breaks) {
@@ -478,7 +488,7 @@ setMethod("colMeans", "H2OParsedData", function(x) {
 
 setMethod("mean", "H2OParsedData", function(x) {
   res <- NA
-  if(is.factor(x) || dim(x)[2] != 1) {
+  if(any(is.factor(x)) || dim(x)[2] != 1) {
     warning("In H2O mean(x): argument not numeric or logical: returning NA")
     res
   }
@@ -489,7 +499,7 @@ setMethod("mean", "H2OParsedData", function(x) {
 })
 
 setMethod("sd", "H2OParsedData", function(x) {
-  if(dim(x)[2] != 1 || is.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
+  if(dim(x)[2] != 1 || any(is.factor(x))) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
   res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
   res$summaries[[1]]$stats$sd
 })

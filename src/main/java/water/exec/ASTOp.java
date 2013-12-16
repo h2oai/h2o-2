@@ -161,6 +161,25 @@ class ASTLog  extends ASTUniOp { String opStr(){ return "log";   } ASTOp make() 
 class ASTExp  extends ASTUniOp { String opStr(){ return "exp";   } ASTOp make() {return new ASTExp ();} double op(double d) { return Math.exp(d);}}
 class ASTIsNA extends ASTUniOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
 class ASTNot  extends ASTUniOp { String opStr(){ return "!";     } ASTOp make() {return new ASTNot(); } double op(double d) { return d==0?1:0; }}
+
+class ASTIsFactor extends ASTUniOp {
+  ASTIsFactor() { super(VARS, new Type[]{Type.ARY, Type.ARY}); }
+  @Override String opStr() { return "is.factor"; }
+  @Override ASTOp  make () { return this; }
+  @Override void   apply(Env env, int argcnt) {
+    Frame fr = env.popAry();
+    String skey = env.key();
+    AppendableVec av = new AppendableVec(Key.make());
+    NewChunk nc = new NewChunk(av, 0);
+    for (Vec v : fr.vecs())
+      nc.addNum(v.isEnum()?1:0);
+    nc.close(0,null);
+    Vec res = av.close(null);
+    env.subRef(fr,skey);
+    env.pop();
+    env.push(new Frame(new String[]{"is.factor"}, new Vec[]{res}));
+  }
+}
 class ASTNrow extends ASTUniOp {
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }
