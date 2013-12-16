@@ -458,8 +458,6 @@ class RUnitRunner:
         if (self.terminated):
             return
 
-        abs_test_root_dir = os.path.abspath(self.test_root_dir)
-
         for root, dirs, files in os.walk(self.test_root_dir):
             if (root.endswith("Util")):
                 continue
@@ -467,15 +465,34 @@ class RUnitRunner:
             for f in files:
                 if (not re.search("runit.*\.[rR]$", f)):
                     continue
+                self.add_test(os.path.join(root, f))
 
-                test_short_dir = root
-                prefix = os.path.join(abs_test_root_dir, "")
-                if (test_short_dir.startswith(prefix)):
-                    test_short_dir = test_short_dir.replace(prefix, "", 1)
+    def add_test(self, test_path):
+        """
+        Add one test to the list of tests to run.
 
-                test = Test(root, test_short_dir, f, self.output_dir)
-                self.tests.append(test)
-                self.tests_not_started.append(test)
+        @param test_path: File system path to the test.
+        @return: none
+        """
+        abs_test_root_dir = os.path.abspath(self.test_root_dir)
+        abs_test_path = os.path.abspath(test_path)
+        abs_test_dir = os.path.dirname(abs_test_path)
+        test_file = os.path.basename(abs_test_path)
+
+        if (not os.path.exists(abs_test_path)):
+            print("")
+            print("ERROR: Test does not exist (" + abs_test_path + ")")
+            print("")
+            sys.exit(1)
+
+        test_short_dir = abs_test_path
+        prefix = os.path.join(abs_test_root_dir, "")
+        if (test_short_dir.startswith(prefix)):
+            test_short_dir = test_short_dir.replace(prefix, "", 1)
+
+        test = Test(abs_test_dir, test_short_dir, test_file, self.output_dir)
+        self.tests.append(test)
+        self.tests_not_started.append(test)
 
     def start_clouds(self):
         """
@@ -688,6 +705,8 @@ class RUnitRunner:
 g_base_port = 40000
 g_num_clouds = 3
 g_wipe_output_dir = False
+g_test_to_run = None
+g_test_list_file = None
 
 # Global variables that are set internally.
 g_output_dir = None
@@ -715,7 +734,7 @@ def signal_handler(signum, stackframe):
     print("")
     print("----------------------------------------------------------------------")
     print("")
-    print("SIGNAL CAUGHT (" + str(signum) + ").  SHUTTING DOWN NOW.")
+    print("SIGNAL CAUGHT (" + str(signum) + ").  TEARING DOWN CLOUDS.")
     print("")
     print("----------------------------------------------------------------------")
     g_runner.terminate()
@@ -723,10 +742,22 @@ def signal_handler(signum, stackframe):
 
 def usage():
     print("")
-    print("usage:  $0 [--baseport port] [--numclouds n] [--wipe]")
+    print("usage:  $0"
+          " [--wipe]"
+          " [--baseport port]"
+          " [--numclouds n]"
+          " [--test path/to/test.R]"
+          " [--testlist path/to/list/file]")
     print("")
-    print("    --wipe wipes the output dir before starting")
     print("    (Output dir is: " + g_output_dir + ")")
+    print("")
+    print("    --wipe        Wipes the output dir before starting.")
+    print("    --baseport    The port at which H2O starts searching for ports")
+    print("    --numclouds   The number of clouds to start.")
+    print("                  Each test is randomly assigned to a cloud.")
+    print("    --test        If you only want to run one test, specify it like this.")
+    print("    --testlist    A file containing a list of tests to run (for example the")
+    print("                  'failed' file from the output directory).")
     print("")
     sys.exit(1)
 
@@ -735,6 +766,8 @@ def parse_args(argv):
     global g_base_port
     global g_num_clouds
     global g_wipe_output_dir
+    global g_test_to_run
+    global g_test_list_file
 
     i = 1
     while (i < len(argv)):
@@ -752,6 +785,16 @@ def parse_args(argv):
             g_num_clouds = int(argv[i])
         elif (s == "--wipe"):
             g_wipe_output_dir = True
+        elif (s == "--test"):
+            i += 1
+            if (i > len(argv)):
+                usage()
+            g_test_to_run = argv[i]
+        elif (s == "--testlist"):
+            i += 1
+            if (i > len(argv)):
+                usage()
+            g_test_list_file = argv[i]
         else:
             usage()
 
@@ -765,6 +808,8 @@ def main(argv):
     @return: none
     """
     global g_output_dir
+    global g_test_to_run
+    global g_test_list_file
     global g_runner
 
     test_root_dir = os.path.dirname(os.path.realpath(__file__))
@@ -785,7 +830,7 @@ def main(argv):
     # Set up output directory.
     if (not os.path.exists(h2o_jar)):
         print("")
-        print("h2o jar not found: {}".format(h2o_jar))
+        print("H2O jar not found: {}".format(h2o_jar))
         print("    " + g_output_dir)
         print("")
         sys.exit(1)
@@ -796,7 +841,7 @@ def main(argv):
                 shutil.rmtree(g_output_dir)
         except OSError as e:
             print("")
-            print("removing directory failed (errno {0}): {1}".format(e.errno, e.strerror))
+            print("Removing directory failed (errno {0}): {1}".format(e.errno, e.strerror))
             print("    " + g_output_dir)
             print("")
             sys.exit(1)
@@ -804,12 +849,19 @@ def main(argv):
     # Create runner object.
     g_runner = RUnitRunner(test_root_dir, g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, xmx, g_output_dir)
 
+    # Build test list.
+    if (g_test_list_file is not None):
+        g_runner.read_test_list_file(g_test_list_file)
+    elif (g_test_to_run is not None):
+        g_runner.add_test(g_test_to_run)
+    else:
+        g_runner.build_test_list()
+
     # Handle killing the runner.
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Run.
-    g_runner.build_test_list()
     g_runner.start_clouds()
     g_runner.run_tests()
     g_runner.stop_clouds()
