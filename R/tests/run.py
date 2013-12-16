@@ -484,12 +484,19 @@ class RUnitRunner:
         """
         if (self.terminated):
             return
+
+        print("")
+        print("Starting clouds...")
+        print("")
+
         for cloud in self.clouds:
             if (self.terminated):
                 return
             cloud.start()
 
+        print("")
         print("Waiting for H2O nodes to come up...")
+        print("")
 
         for cloud in self.clouds:
             if (self.terminated):
@@ -504,6 +511,10 @@ class RUnitRunner:
         """
         if (self.terminated):
             return
+
+        print("")
+        print("Starting tests...")
+        print("")
 
         # Start the first n tests, where n is the lesser of the total number of tests and the total number of clouds.
         start_count = min(len(self.tests_not_started), len(self.clouds))
@@ -540,7 +551,9 @@ class RUnitRunner:
         """
         if (self.terminated):
             return
+        print("")
         print("All tests completed; tearing down clouds...")
+        print("")
         for cloud in self.clouds:
             cloud.stop()
 
