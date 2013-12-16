@@ -340,6 +340,7 @@ public class Utils {
     return a;
   }
   public static long[] add(long[] a, long[] b) {
+    if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
@@ -348,6 +349,7 @@ public class Utils {
     return a;
   }
   public static float[] add(float[] a, float[] b) {
+    if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }

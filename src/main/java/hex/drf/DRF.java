@@ -271,6 +271,11 @@ public class DRF extends SharedTreeModelBuilder {
     for( int k=0; k<_nclass; k++ ) {
       assert (_distribution!=null && classification) || (_distribution==null && !classification);
       if( _distribution == null || _distribution[k] != 0 ) { // Ignore missing classes
+        // The Boolean Optimization
+        // This optimization assumes the 2nd tree of a 2-class system is the
+        // inverse of the first.  This is false for DRF (and true for GBM) -
+        // DRF picks a random different set of columns for the 2nd tree.  
+        //if( DTree.CRUNK && k==1 && _nclass==2 ) continue;
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
         new DRFUndecidedNode(ktrees[k],-1, DSharedHistogram.initialHist(fr,_ncols,nbins,hcs[k][0]) ); // The "root" node
       }
@@ -400,7 +405,9 @@ public class DRF extends SharedTreeModelBuilder {
     }.doAll(fr);
 
     // Collect leaves stats
-    for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
+    for (int i=0; i<ktrees.length; i++) 
+      if( ktrees[i] != null ) 
+        ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
     // printGenerateTrees(ktrees);
 

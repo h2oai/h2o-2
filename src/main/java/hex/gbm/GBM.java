@@ -177,8 +177,12 @@ public class GBM extends SharedTreeModelBuilder {
   // ds[] array, and return the sum.  Dividing any ds[] element by the sum
   // turns the results into a probability distribution.
   @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
-    if( _nclass == 1 )                                       // Classification?
+    if( _nclass == 1 )          // Classification?
       return chk_tree(chks,0).at0(row);
+    if( DTree.CRUNK && _nclass == 2 ) // The Boolean Optimization
+      // This optimization assumes the 2nd tree of a 2-class system is the
+      // inverse of the first.  Fill in the missing tree
+      ds[1] = -ds[0];
     double sum=0;
     for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
       sum+=(ds[k]=Math.exp(chk_tree(chks,k).at0(row)));
@@ -228,6 +232,11 @@ public class GBM extends SharedTreeModelBuilder {
     for( int k=0; k<_nclass; k++ ) {
       // Initially setup as-if an empty-split had just happened
       if( _distribution == null || _distribution[k] != 0 ) {
+        // The Boolean Optimization
+        // This optimization assumes the 2nd tree of a 2-class system is the
+        // inverse of the first.  This is false for DRF (and true for GBM) -
+        // DRF picks a random different set of columns for the 2nd tree.  
+        if( DTree.CRUNK && k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
         new GBMUndecidedNode(ktrees[k],-1,DSharedHistogram.initialHist(fr,_ncols,nbins,hcs[k][0]) ); // The "root" node
       }
@@ -352,7 +361,9 @@ public class GBM extends SharedTreeModelBuilder {
     }.doAll(fr);
 
     // Collect leaves stats
-    for (int i=0; i<ktrees.length; i++) ktrees[i].leaves = ktrees[i].len() - leafs[i];
+    for (int i=0; i<ktrees.length; i++) 
+      if( ktrees[i] != null ) 
+        ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
     // printGenerateTrees(ktrees);
 

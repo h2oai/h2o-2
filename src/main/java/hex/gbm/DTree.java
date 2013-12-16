@@ -31,6 +31,7 @@ import water.util.*;
    @author Cliff Click
 */
 public class DTree extends Iced {
+  static public final boolean CRUNK=false;
   final String[] _names; // Column names
   final int _ncols;      // Active training columns
   final char _nbins;     // Max number of bins to split over
@@ -672,12 +673,12 @@ public class DTree extends Iced {
     public static class TreeStats extends Iced {
       static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
       static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-      @API(help="Minimal tree depth.") int minDepth = Integer.MAX_VALUE;
-      @API(help="Maximum tree depth.") int maxDepth = Integer.MIN_VALUE;
-      @API(help="Average tree depth.") int meanDepth;
-      @API(help="Minimal num. of leaves.") int minLeaves = Integer.MAX_VALUE;
-      @API(help="Maximum num. of leaves.") int maxLeaves = Integer.MIN_VALUE;
-      @API(help="Average num. of leaves.") int meanLeaves;
+      @API(help="Minimal tree depth.") public int minDepth = Integer.MAX_VALUE;
+      @API(help="Maximum tree depth.") public int maxDepth = Integer.MIN_VALUE;
+      @API(help="Average tree depth.") public float meanDepth;
+      @API(help="Minimal num. of leaves.") public int minLeaves = Integer.MAX_VALUE;
+      @API(help="Maximum num. of leaves.") public int maxLeaves = Integer.MIN_VALUE;
+      @API(help="Average num. of leaves.") public float meanLeaves;
 
       transient long sumDepth  = 0;
       transient long sumLeaves = 0;
@@ -686,6 +687,7 @@ public class DTree extends Iced {
         if (ktrees==null) return;
         for (int i=0; i<ktrees.length; i++) {
           DTree tree = ktrees[i];
+          if( tree == null ) continue;
           if (minDepth > tree.depth) minDepth = tree.depth;
           if (maxDepth < tree.depth) maxDepth = tree.depth;
           if (minLeaves > tree.leaves) minLeaves = tree.leaves;
@@ -693,8 +695,8 @@ public class DTree extends Iced {
           sumDepth += tree.depth;
           sumLeaves += tree.leaves;
           numTrees++;
-          meanDepth = (int) (sumDepth / numTrees);
-          meanLeaves = (int) (sumLeaves / numTrees);
+          meanDepth = ((float)sumDepth / numTrees);
+          meanLeaves = ((float)sumLeaves / numTrees);
         }
       }
     }
