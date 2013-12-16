@@ -14,11 +14,31 @@ import subprocess
 class H2OCloudNode:
     """
     A class representing one node in an H2O cloud.
+    Note that the base_port is only a request for H2O.
+    H2O may choose to igore our request and pick any port it likes.
+    So we have to scrape the real port number from stdout as part of cloud startup.
 
     port: The actual port chosen at run time.
     pid: The process id of the node.
+    output_file_name: Where stdout and stderr go.  They are merged.
+    child: subprocess.Popen object.
+    terminated: Only from a signal.  Not normal shutdown.
     """
+
     def __init__(self, cloud_num, nodes_per_cloud, node_num, cloud_name, h2o_jar, base_port, xmx, output_dir):
+        """
+        Create a node in a cloud.
+
+        @param cloud_num: Dense 0-based cloud index number.
+        @param nodes_per_cloud: How many H2O java instances are in a cloud.  Clouds are symmetric.
+        @param node_num: This node's dense 0-based node index number.
+        @param cloud_name: The H2O -name command-line argument.
+        @param h2o_jar: Path to H2O jar file.
+        @param base_port: The starting port number we are trying to get our nodes to listen on.
+        @param xmx: Java memory parameter.
+        @param output_dir: The directory where we can create an output file for this process.
+        @return: The node object.
+        """
         self.cloud_num = cloud_num
         self.nodes_per_cloud = nodes_per_cloud
         self.node_num = node_num
@@ -34,6 +54,8 @@ class H2OCloudNode:
         self.child = None
         self.terminated = False
 
+        # Choose my base port number here.  All math is done here.  Every node has the same
+        # base_port and calculates it's own my_base_port.
         ports_per_node = 2
         self.my_base_port = \
             self.base_port + \
@@ -41,6 +63,12 @@ class H2OCloudNode:
             (self.node_num * ports_per_node)
 
     def start(self):
+        """
+        Start one node of H2O.
+        (Stash away the self.child and self.pid internally here.)
+
+        @return: none
+        """
         cmd = ["java",
                "-Xmx" + self.xmx,
                "-ea",
@@ -61,7 +89,10 @@ class H2OCloudNode:
         """
         Look at the stdout log and figure out which port the JVM chose.
         Write this to self.port.
-        Exit if it failed.
+        This call is blocking.
+        Exit if this fails.
+
+        @return: none
         """
         retries = 30
         while (retries > 0):
@@ -95,6 +126,12 @@ class H2OCloudNode:
         sys.exit(1)
 
     def stop(self):
+        """
+        Normal node shutdown.
+        Ignore failures for now.
+
+        @return: none
+        """
         if (self.pid > 0):
             print("Killing JVM with PID {}".format(self.pid))
             try:
@@ -104,10 +141,16 @@ class H2OCloudNode:
             self.pid = -1
 
     def terminate(self):
+        """
+        Terminate a running node.  (Due to a signal.)
+
+        @return: none
+        """
         self.terminated = True
         self.stop()
 
     def get_port(self):
+        """ Return the port this node is really listening on. """
         return self.port
 
     def __str__(self):
@@ -124,7 +167,14 @@ class H2OCloud:
     """
     A class representing one of the H2O clouds.
     """
+
     def __init__(self, cloud_num, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir):
+        """
+        Create a cloud.
+        See node definition above for argument descriptions.
+
+        @return: The cloud object.
+        """
         self.cloud_num = cloud_num
         self.nodes_per_cloud = nodes_per_cloud
         self.h2o_jar = h2o_jar
@@ -147,6 +197,12 @@ class H2OCloud:
             self.nodes.append(node)
 
     def start(self):
+        """
+        Start H2O cloud.
+        The cloud is not up until wait_for_cloud_to_be_up() is called and returns.
+
+        @return: none
+        """
         if (self.nodes_per_cloud > 1):
             print("ERROR: Unimplemented wait for cloud size > 1")
             sys.exit(1)
@@ -154,21 +210,40 @@ class H2OCloud:
         for node in self.nodes:
             node.start()
 
-    def scrape_port_from_stdout(self):
-        for node in self.nodes:
-            node.scrape_port_from_stdout()
+    def wait_for_cloud_to_be_up(self):
+        """
+        Blocking call ensuring the cloud is available.
+
+        @return: none
+        """
+        self._scrape_port_from_stdout()
 
     def stop(self):
+        """
+        Normal cloud shutdown.
+
+        @return: none
+        """
         for node in self.nodes:
             node.stop()
 
     def terminate(self):
+        """
+        Terminate a running cloud.  (Due to a signal.)
+
+        @return: none
+        """
         for node in self.nodes:
             node.terminate()
 
     def get_port(self):
+        """ Return a port to use to talk to this cloud. """
         node = self.nodes[0]
         return node.get_port()
+
+    def _scrape_port_from_stdout(self):
+        for node in self.nodes:
+            node.scrape_port_from_stdout()
 
     def __str__(self):
         s = ""
@@ -183,11 +258,32 @@ class H2OCloud:
 class Test:
     """
     A class representing one Test.
+
+    cancelled: Don't start this test.
+    terminated: Test killed due to signal.
+    returncode: Exit code of child.
+    pid: Process id of the test.
+    ip: IP of cloud to run test.
+    port: Port of cloud to run test.
+    child: subprocess.Popen object.
     """
+
     def TEST_DID_NOT_COMPLETE(self):
+        """
+        returncode marker to know if the test ran or not.
+        """
         return -9999999
 
     def __init__(self, test_dir, test_short_dir, test_name, output_dir):
+        """
+        Create a Test.
+
+        @param test_dir: Full absolute path to the test directory.
+        @param test_short_dir: Path from h2o/R/tests to the test directory.
+        @param test_name: Test filename with the directory removed.
+        @param output_dir: The directory where we can create an output file for this process.
+        @return: The test object.
+        """
         self.test_dir = test_dir
         self.test_short_dir = test_short_dir
         self.test_name = test_name
@@ -238,6 +334,8 @@ class Test:
 
         This has side effects and MUST be called for the normal test queueing to work.
         Specifically, child.poll().
+
+        @return: True if the test completed, False otherwise.
         """
         child = self.child
         if (child is None):
@@ -250,10 +348,20 @@ class Test:
         return True
 
     def cancel(self):
+        """
+        Mark this test as cancelled so it never tries to start.
+
+        @return: none
+        """
         if (self.pid <= 0):
             self.cancelled = True
 
     def terminate(self):
+        """
+        Terminate a running test.  (Due to a signal.)
+
+        @return: none
+        """
         self.terminated = True
         if (self.pid > 0):
             print("Killing Test with PID {}".format(self.pid))
@@ -264,18 +372,33 @@ class Test:
         self.pid = -1
 
     def get_test_name(self):
+        """
+        @return: The file name (no directory) of this test.
+        """
         return self.test_name
 
     def get_port(self):
+        """
+        @return: Integer port number of the cloud where this test ran.
+        """
         return int(self.port)
 
     def get_passed(self):
+        """
+        @return: True if the test passed, False otherwise.
+        """
         return (self.returncode == 0)
 
     def get_completed(self):
+        """
+        @return: True if the test completed (pass or fail), False otherwise.
+        """
         return (self.returncode > self.TEST_DID_NOT_COMPLETE())
 
     def get_output_dir_file_name(self):
+        """
+        @return: Full path to the output file which you can paste to a terminal window.
+        """
         return (os.path.join(self.output_dir, self.output_file_name))
 
     def __str__(self):
@@ -304,7 +427,7 @@ class RUnitRunner:
         @param base_port: Base H2O port (e.g. 54321) to start choosing from.
         @param xmx: Java -Xmx parameter.
         @param output_dir: Directory for output files.
-        @return: The object.
+        @return: The runner object.
         """
         self.test_root_dir = test_root_dir
         self.num_clouds = num_clouds
@@ -327,6 +450,8 @@ class RUnitRunner:
     def build_test_list(self):
         """
         Recursively find the list of tests to run and store them in the object.
+        Fills in self.tests and self.tests_not_started.
+
         @return:  none
         """
         if (self.terminated):
@@ -352,6 +477,11 @@ class RUnitRunner:
                 self.tests_not_started.append(test)
 
     def start_clouds(self):
+        """
+        Start all H2O clouds.
+
+        @return: none
+        """
         if (self.terminated):
             return
         for cloud in self.clouds:
@@ -364,9 +494,14 @@ class RUnitRunner:
         for cloud in self.clouds:
             if (self.terminated):
                 return
-            cloud.scrape_port_from_stdout()
+            cloud.wait_for_cloud_to_be_up()
 
     def run_tests(self):
+        """
+        Run all tests.
+
+        @return: none
+        """
         if (self.terminated):
             return
 
@@ -398,6 +533,11 @@ class RUnitRunner:
             self.report_test_result(completed_test)
 
     def stop_clouds(self):
+        """
+        Stop all H2O clouds.
+
+        @return: none
+        """
         if (self.terminated):
             return
         print("All tests completed; tearing down clouds...")
@@ -405,6 +545,11 @@ class RUnitRunner:
             cloud.stop()
 
     def report_summary(self):
+        """
+        Report some summary information when the tests have finished running.
+
+        @return: none
+        """
         passed = 0
         failed = 0
         notrun = 0
@@ -431,6 +576,11 @@ class RUnitRunner:
         self.log("Did not complete: " + str(notrun))
 
     def terminate(self):
+        """
+        Terminate all running clouds.  (Due to a signal.)
+
+        @return: none
+        """
         self.terminated = True
 
         for test in self.tests:
@@ -584,6 +734,11 @@ def parse_args(argv):
 
 
 def main(argv):
+    """
+    Main program.
+
+    @return: none
+    """
     global output_dir
     global runner
 
