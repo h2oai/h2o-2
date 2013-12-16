@@ -360,14 +360,19 @@ def infoFromSummary(summaryResult, noPrint=False):
             nacnt = column['nacnt']
 
             stats = column['stats']
-            stattype= stats['type']
-            mean = stats['mean']
-            sd = stats['sd']
-            zeros = stats['zeros']
-            mins = stats['mins']
-            maxs = stats['maxs']
-            pct = stats['pct']
-            pctile = stats['pctile']
+            stattype = stats['type']
+
+            if stattype == 'Enum':
+                cardinality = stats['cardinality']
+                
+            else:
+                mean = stats['mean']
+                sd = stats['sd']
+                zeros = stats['zeros']
+                mins = stats['mins']
+                maxs = stats['maxs']
+                pct = stats['pct']
+                pctile = stats['pctile']
 
             hstart = column['hstart']
             hstep = column['hstep']
@@ -381,13 +386,16 @@ def infoFromSummary(summaryResult, noPrint=False):
                 print "nacnt:", nacnt
 
                 print "stattype:", stattype
-                print "mean:", mean
-                print "sd:", sd
-                print "zeros:", zeros
-                print "mins:", mins
-                print "maxs:", maxs
-                print "pct:", pct
-                print "pctile:", pctile
+                if stattype == 'Enum':
+                    print "cardinality:", cardinality
+                else:
+                    print "mean:", mean
+                    print "sd:", sd
+                    print "zeros:", zeros
+                    print "mins:", mins
+                    print "maxs:", maxs
+                    print "pct:", pct
+                    print "pctile:", pctile
 
                 # histogram stuff
                 print "hstart:", hstart
