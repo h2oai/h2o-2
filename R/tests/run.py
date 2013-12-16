@@ -372,6 +372,12 @@ class Test:
                 pass
         self.pid = -1
 
+    def get_test_dir_file_name(self):
+        """
+        @return: The full absolute path of this test.
+        """
+        return os.path.join(self.test_dir, self.test_name)
+
     def get_test_name(self):
         """
         @return: The file name (no directory) of this test.
@@ -448,6 +454,35 @@ class RUnitRunner:
             cloud = H2OCloud(i, self.nodes_per_cloud, h2o_jar, self.base_port, xmx, self.output_dir)
             self.clouds.append(cloud)
 
+    def read_test_list_file(self, test_list_file):
+        """
+        Read in a test list file line by line.  Each line in the file is a test
+        to add to the test run.
+
+        @param test_list_file: Filesystem path to a file with a list of tests to run.
+        @return: none
+        """
+        try:
+            f = open(test_list_file, "r")
+            s = f.readline()
+            while (len(s) != 0):
+                stripped = s.strip()
+                if (len(stripped) == 0):
+                    s = f.readline()
+                    continue
+                if (stripped.startswith("#")):
+                    s = f.readline()
+                    continue
+                self.add_test(stripped)
+                s = f.readline()
+            f.close()
+        except IOError as e:
+            print("")
+            print("ERROR: Failure reading test list (" + test_list_file + ")")
+            print("       (errno {0}): {1}".format(e.errno, e.strerror))
+            print("")
+            sys.exit(1)
+
     def build_test_list(self):
         """
         Recursively find the list of tests to run and store them in the object.
@@ -463,7 +498,7 @@ class RUnitRunner:
                 continue
 
             for f in files:
-                if (not re.search("runit.*\.[rR]$", f)):
+                if (not re.match(".*runit.*\.[rR]", f)):
                     continue
                 self.add_test(os.path.join(root, f))
 
@@ -485,7 +520,7 @@ class RUnitRunner:
             print("")
             sys.exit(1)
 
-        test_short_dir = abs_test_path
+        test_short_dir = abs_test_dir
         prefix = os.path.join(abs_test_root_dir, "")
         if (test_short_dir.startswith(prefix)):
             test_short_dir = test_short_dir.replace(prefix, "", 1)
@@ -668,6 +703,9 @@ class RUnitRunner:
         else:
             s = "     FAIL %d %-70s %s" % (port, test.get_test_name(), test.get_output_dir_file_name())
             self._log(s)
+            f = self._get_failed_filehandle_for_appending()
+            f.write(test.get_test_dir_file_name() + "\n")
+            f.close()
 
     def _log(self, s):
         f = self._get_summary_filehandle_for_appending()
@@ -677,6 +715,11 @@ class RUnitRunner:
 
     def _get_summary_filehandle_for_appending(self):
         summary_file_name = os.path.join(self.output_dir, "summary.txt")
+        f = open(summary_file_name, "a")
+        return f
+
+    def _get_failed_filehandle_for_appending(self):
+        summary_file_name = os.path.join(self.output_dir, "failed.txt")
         f = open(summary_file_name, "a")
         return f
 
@@ -757,7 +800,7 @@ def usage():
     print("                  Each test is randomly assigned to a cloud.")
     print("    --test        If you only want to run one test, specify it like this.")
     print("    --testlist    A file containing a list of tests to run (for example the")
-    print("                  'failed' file from the output directory).")
+    print("                  'failed.txt' file from the output directory).")
     print("")
     sys.exit(1)
 
