@@ -589,6 +589,7 @@ class RUnitRunner:
         self._log("Passed:           " + str(passed))
         self._log("Did not pass:     " + str(failed))
         self._log("Did not complete: " + str(notrun))
+        self._log("")
 
     def terminate(self):
         """
@@ -759,12 +760,12 @@ def main(argv):
 
     # Calculate global variables.
     test_root_dir = os.path.dirname(os.path.realpath(__file__))
-    output_dir = test_root_dir + "/" + "results"
+    output_dir = os.path.join(test_root_dir, "results")
 
     # Calculate and set other variables.
     nodes_per_cloud = 1
     xmx = "2g"
-    h2o_jar = os.path.abspath(test_root_dir + "/../../target/h2o.jar")
+    h2o_jar = os.path.abspath(os.path.join(os.path.join(os.path.join(os.path.join(test_root_dir, ".."), ".."), "target"), "h2o.jar"))
 
     # Override any defaults with the user's choices.
     parse_args(argv)
