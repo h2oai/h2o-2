@@ -98,8 +98,7 @@ class H2OCloudNode:
         if (self.pid > 0):
             print("Killing JVM with PID {}".format(self.pid))
             try:
-                child = self.child
-                child.terminate()
+                self.child.terminate()
             except OSError:
                 pass
             self.pid = -1
@@ -216,8 +215,8 @@ class Test:
         cmd = ["R",
                "-f",
                self.test_name,
-               self.ip,
-               str(self.port)]
+               "--args",
+               self.ip + ":" + str(self.port)]
         test_short_dir_with_no_slashes = re.sub(r'[\\/]', "_", self.test_short_dir)
         self.output_file_name = \
             os.path.join(self.output_dir, test_short_dir_with_no_slashes + "_" + self.test_name + ".out")
@@ -250,8 +249,7 @@ class Test:
         if (self.pid > 0):
             print("Killing Test with PID {}".format(self.pid))
             try:
-                child = self.child
-                child.terminate()
+                self.child.terminate()
             except OSError:
                 pass
         self.pid = -1
@@ -333,7 +331,7 @@ class RUnitRunner:
                     continue
 
                 test_short_dir = root
-                if (test_short_dir.startswith(abs_test_root_dir)):
+                if (test_short_dir.startswith(abs_test_root_dir + "/")):
                     test_short_dir = test_short_dir.replace(abs_test_root_dir, "", 1)
 
                 test = Test(root, test_short_dir, f, self.output_dir)
@@ -440,11 +438,11 @@ class RUnitRunner:
         summary_file_name = os.path.join(self.output_dir, "summary.txt")
         f = open(summary_file_name, "a")
         if (test.get_passed()):
-            s = "PASS      %d %-50s" % (port, test.get_test_name())
+            s = "PASS      %d %-70s" % (port, test.get_test_name())
             print(s)
             f.write(s + "\n")
         else:
-            s = "     FAIL %d %-50s %s" % (port, test.get_test_name(), test.get_output_dir_file_name())
+            s = "     FAIL %d %-70s %s" % (port, test.get_test_name(), test.get_output_dir_file_name())
             print(s)
             f.write(s + "\n")
         f.close()
@@ -522,12 +520,12 @@ def parse_args(argv):
             i += 1
             if (i > len(argv)):
                 usage()
-            base_port = argv[i]
+            base_port = int(argv[i])
         elif (s == "--numclouds"):
             i += 1
             if (i > len(argv)):
                 usage()
-            num_clouds = argv[i]
+            num_clouds = int(argv[i])
         elif (s == "--wipe"):
             wipe_output_dir = True
         else:
