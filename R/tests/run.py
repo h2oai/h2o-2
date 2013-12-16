@@ -343,8 +343,9 @@ class RUnitRunner:
                     continue
 
                 test_short_dir = root
-                if (test_short_dir.startswith(abs_test_root_dir + "/")):
-                    test_short_dir = test_short_dir.replace(abs_test_root_dir, "", 1)
+                prefix = os.path.join(abs_test_root_dir, "")
+                if (test_short_dir.startswith(prefix)):
+                    test_short_dir = test_short_dir.replace(prefix, "", 1)
 
                 test = Test(root, test_short_dir, f, self.output_dir)
                 self.tests.append(test)
