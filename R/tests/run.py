@@ -872,7 +872,12 @@ def parse_args(argv):
             if (i > len(argv)):
                 usage()
             g_test_list_file = argv[i]
+        elif (s == "-h" or s == "--h" or s == "-help" or s == "--help"):
+            usage()
         else:
+            print("")
+            print("ERROR: Unknown argument: " + s)
+            print("")
             usage()
 
         i += 1
