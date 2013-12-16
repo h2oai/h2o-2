@@ -30,12 +30,15 @@ class H2OCloudNode:
 
         self.port = -1
         self.pid = -1
-        self.my_base_port = self.base_port + \
-                            (self.cloud_num * self.nodes_per_cloud * 2) + \
-                            (self.node_num * 2)
         self.output_file_name = ""
         self.child = None
         self.terminated = False
+
+        ports_per_node = 2
+        self.my_base_port = \
+            self.base_port + \
+            (self.cloud_num * self.nodes_per_cloud * ports_per_node) + \
+            (self.node_num * ports_per_node)
 
     def start(self):
         cmd = ["java",
@@ -52,7 +55,7 @@ class H2OCloudNode:
                                       stderr=subprocess.STDOUT,
                                       cwd=self.output_dir)
         self.pid = self.child.pid
-        print(cmd)
+        print("+ CMD: " + ' '.join(cmd))
 
     def scrape_port_from_stdout(self):
         """
@@ -73,7 +76,9 @@ class H2OCloudNode:
                     if (port is not None):
                         self.port = port
                         f.close()
-                        print("Node {}_{} started on port {}".format(self.cloud_num, self.node_num, self.port))
+                        print("H2O Cloud {} Node {} started with output file {}".format(self.cloud_num,
+                                                                                        self.node_num,
+                                                                                        self.output_file_name))
                         return
 
                 s = f.readline()
@@ -98,7 +103,7 @@ class H2OCloudNode:
 
     def __str__(self):
         s = ""
-        s += "    cloud {} ({}) node {}\n".format(self.cloud_num, self.cloud_name, self.node_num)
+        s += "    node {}\n".format(self.node_num)
         s += "        xmx:          {}\n".format(self.xmx)
         s += "        my_base_port: {}\n".format(self.my_base_port)
         s += "        port:         {}\n".format(self.port)
@@ -126,15 +131,15 @@ class H2OCloud:
         self.nodes = []
         self.jobs_run = 0
 
-        for i in range(self.nodes_per_cloud):
-            node = H2OCloudNode(self.cloud_num, self.nodes_per_cloud, i, self.cloud_name,
+        for node_num in range(self.nodes_per_cloud):
+            node = H2OCloudNode(self.cloud_num, self.nodes_per_cloud, node_num, self.cloud_name,
                                 self.h2o_jar, self.base_port, self.xmx, self.output_dir)
             self.nodes.append(node)
 
     def start(self):
         if (self.nodes_per_cloud > 1):
             print("ERROR: Unimplemented wait for cloud size > 1")
-            os.exit(1)
+            sys.exit(1)
 
         for node in self.nodes:
             node.start()
@@ -171,19 +176,20 @@ class Test:
         self.test_name = test_name
         self.output_dir = output_dir
 
+        self.terminated = False
         self.exit_status = -9999
         self.pid = -1
 
-    def is_running(self):
-        return (self.pid > 0)
-
     def start(self):
-        pass
+        if (self.terminated):
+            return
 
     def terminate(self):
+        self.terminated = True
         if (self.pid > 0):
             print("Killing Test with PID {}".format(self.pid))
             os.kill(self.pid, signal.SIGTERM)
+            self.pid = -1
 
     def __str__(self):
         s = ""
@@ -258,6 +264,9 @@ class RUnitRunner:
             if (self.terminated):
                 return
             cloud.start()
+
+        print("Waiting for H2O nodes to come up...")
+
         for cloud in self.clouds:
             if (self.terminated):
                 return
@@ -277,8 +286,7 @@ class RUnitRunner:
         self.terminated = True
 
         for test in self.tests:
-            if (test.is_running()):
-                test.terminate()
+            test.terminate()
 
         for cloud in self.clouds:
             cloud.terminate()
@@ -433,7 +441,7 @@ def main(argv):
     runner.start_clouds()
     runner.run_tests()
 
-    print str(runner)
+    # print str(runner)
 
     if (not runner.terminated):
         time.sleep(100)
