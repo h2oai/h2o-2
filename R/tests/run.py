@@ -443,6 +443,7 @@ class RUnitRunner:
         self.base_port = base_port
         self.output_dir = output_dir
 
+        self.start_seconds = time.time()
         self.terminated = False
         self.clouds = []
         self.tests = []
@@ -568,7 +569,7 @@ class RUnitRunner:
         num_tests = len(self.tests)
         num_nodes = len(self.clouds * self.nodes_per_cloud)
         self._log("")
-        self._log("Starting {} tests on {} H2O nodes...".format(num_tests, num_nodes))
+        self._log("Starting {} tests on {} total H2O nodes...".format(num_tests, num_nodes))
         self._log("")
 
         # Start the first n tests, where n is the lesser of the total number of tests and the total number of clouds.
@@ -631,6 +632,8 @@ class RUnitRunner:
                 else:
                     notrun += 1
             total += 1
+        end_seconds = time.time()
+        delta_seconds = end_seconds - self.start_seconds
         self._log("")
         self._log("----------------------------------------------------------------------")
         self._log("")
@@ -638,10 +641,13 @@ class RUnitRunner:
         self._log("")
         self._log("----------------------------------------------------------------------")
         self._log("")
-        self._log("Total tests:      " + str(total))
-        self._log("Passed:           " + str(passed))
-        self._log("Did not pass:     " + str(failed))
-        self._log("Did not complete: " + str(notrun))
+        self._log("Total tests:          " + str(total))
+        self._log("Passed:               " + str(passed))
+        self._log("Did not pass:         " + str(failed))
+        self._log("Did not complete:     " + str(notrun))
+        self._log("")
+        self._log("Total time:           %.2f sec" % delta_seconds)
+        self._log("Time/completed test:  %.2f sec" % (delta_seconds / (total - notrun)))
         self._log("")
 
     def terminate(self):
