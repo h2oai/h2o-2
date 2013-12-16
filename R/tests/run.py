@@ -59,7 +59,9 @@ class H2OCloudNode:
 
     def scrape_port_from_stdout(self):
         """
-        Look at the stdout log and try to
+        Look at the stdout log and figure out which port the JVM chose.
+        Write this to self.port.
+        Exit if it failed.
         """
         retries = 30
         while (retries > 0):
@@ -95,11 +97,19 @@ class H2OCloudNode:
     def stop(self):
         if (self.pid > 0):
             print("Killing JVM with PID {}".format(self.pid))
-            os.kill(self.pid, signal.SIGTERM)
+            try:
+                child = self.child
+                child.terminate()
+            except OSError:
+                pass
+            self.pid = -1
 
     def terminate(self):
         self.terminated = True
         self.stop()
+
+    def get_port(self):
+        return self.port
 
     def __str__(self):
         s = ""
@@ -156,6 +166,10 @@ class H2OCloud:
         for node in self.nodes:
             node.terminate()
 
+    def get_port(self):
+        node = self.nodes[0]
+        return node.get_port()
+
     def __str__(self):
         s = ""
         s += "cloud {}\n".format(self.cloud_num)
@@ -171,25 +185,88 @@ class Test:
     A class representing one Test.
     """
 
-    def __init__(self, test_dir, test_name, output_dir):
+    def __init__(self, test_dir, test_short_dir, test_name, output_dir):
         self.test_dir = test_dir
+        self.test_short_dir = test_short_dir
         self.test_name = test_name
         self.output_dir = output_dir
+        self.output_file_name = ""
 
         self.terminated = False
-        self.exit_status = -9999
+        self.returncode = -9999
         self.pid = -1
+        self.ip = None
+        self.port = -1
+        self.child = None
 
-    def start(self):
+    def start(self, ip, port):
+        """
+        Start the test in a non-blocking fashion.
+
+        @param ip: IP address of cloud to run on.
+        @param port: Port of cloud to run on.
+        @return: none
+        """
         if (self.terminated):
             return
+
+        self.ip = ip
+        self.port = port
+
+        cmd = ["R",
+               "-f",
+               self.test_name,
+               self.ip,
+               str(self.port)]
+        test_short_dir_with_no_slashes = re.sub(r'[\\/]', "_", self.test_short_dir)
+        self.output_file_name = \
+            os.path.join(self.output_dir, test_short_dir_with_no_slashes + "_" + self.test_name + ".out")
+        f = open(self.output_file_name, "w")
+        self.child = subprocess.Popen(args=cmd,
+                                      stdout=f,
+                                      stderr=subprocess.STDOUT,
+                                      cwd=self.test_dir)
+        self.pid = self.child.pid
+        # print("+ CMD: " + ' '.join(cmd))
+
+    def is_completed(self):
+        """
+        Check if test has completed.
+
+        This has side effects and MUST be called for the normal test queueing to work.
+        Specifically, child.poll().
+        """
+        child = self.child
+        if (child is None):
+            return False
+        child.poll()
+        if (child.returncode is None):
+            return False
+        self.returncode = child.returncode
+        return True
 
     def terminate(self):
         self.terminated = True
         if (self.pid > 0):
             print("Killing Test with PID {}".format(self.pid))
-            os.kill(self.pid, signal.SIGTERM)
-            self.pid = -1
+            try:
+                child = self.child
+                child.terminate()
+            except OSError:
+                pass
+        self.pid = -1
+
+    def get_test_name(self):
+        return self.test_name
+
+    def get_port(self):
+        return int(self.port)
+
+    def get_passed(self):
+        return (self.returncode == 0)
+
+    def get_output_dir_file_name(self):
+        return (os.path.join(self.output_dir, self.output_file_name))
 
     def __str__(self):
         s = ""
@@ -208,9 +285,9 @@ class RUnitRunner:
 
     def __init__(self, test_root_dir, num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir):
         """
-        Constructor.
+        Create a runner.
 
-        @param test_root_dir:
+        @param test_root_dir: h2o/R/tests directory.
         @param num_clouds: Number of H2O clouds to start.
         @param nodes_per_cloud: Number of H2O nodes to start per cloud.
         @param h2o_jar: Path to H2O jar file to run.
@@ -245,6 +322,8 @@ class RUnitRunner:
         if (self.terminated):
             return
 
+        abs_test_root_dir = os.path.abspath(self.test_root_dir)
+
         for root, dirs, files in os.walk(self.test_root_dir):
             if (root.endswith("Util")):
                 continue
@@ -253,7 +332,11 @@ class RUnitRunner:
                 if (not re.search("runit", f)):
                     continue
 
-                test = Test(root, f, self.output_dir)
+                test_short_dir = root
+                if (test_short_dir.startswith(abs_test_root_dir)):
+                    test_short_dir = test_short_dir.replace(abs_test_root_dir, "", 1)
+
+                test = Test(root, test_short_dir, f, self.output_dir)
                 self.tests.append(test)
                 self.tests_not_started.append(test)
 
@@ -275,6 +358,33 @@ class RUnitRunner:
     def run_tests(self):
         if (self.terminated):
             return
+
+        # Start the first n tests, where n is the lesser of the total number of tests and the total number of clouds.
+        start_count = min(len(self.tests_not_started), len(self.clouds))
+        for i in range(start_count):
+            cloud = self.clouds[i]
+            port = cloud.get_port()
+            self.start_next_test_on_port(port)
+
+        # As each test finishes, send a new one to the cloud that just freed up.
+        while (len(self.tests_not_started) > 0):
+            if (self.terminated):
+                return
+            completed_test = self.wait_for_one_test_to_complete()
+            if (self.terminated):
+                return
+            self.report_test_result(completed_test)
+            port_of_completed_test = completed_test.get_port()
+            self.start_next_test_on_port(port_of_completed_test)
+
+        # Wait for remaining running tests to complete.
+        while (len(self.tests_running) > 0):
+            if (self.terminated):
+                return
+            completed_test = self.wait_for_one_test_to_complete()
+            if (self.terminated):
+                return
+            self.report_test_result(completed_test)
 
     def stop_clouds(self):
         if (self.terminated):
@@ -306,6 +416,38 @@ class RUnitRunner:
             print("(try adding --wipe)")
             print("")
             sys.exit(1)
+
+    def start_next_test_on_port(self, port):
+        test = self.tests_not_started.pop(0)
+        self.tests_running.append(test)
+        ip = "127.0.0.1"
+        test.start(ip, port)
+
+    def wait_for_one_test_to_complete(self):
+        while (True):
+            for test in self.tests_running:
+                if (self.terminated):
+                    return None
+                if (test.is_completed()):
+                    self.tests_running.remove(test)
+                    return test
+            if (self.terminated):
+                return
+            time.sleep(1)
+
+    def report_test_result(self, test):
+        port = test.get_port()
+        summary_file_name = os.path.join(self.output_dir, "summary.txt")
+        f = open(summary_file_name, "a")
+        if (test.get_passed()):
+            s = "PASS      %d %-50s" % (port, test.get_test_name())
+            print(s)
+            f.write(s + "\n")
+        else:
+            s = "     FAIL %d %-50s %s" % (port, test.get_test_name(), test.get_output_dir_file_name())
+            print(s)
+            f.write(s + "\n")
+        f.close()
 
     def __str__(self):
         s = "\n"
@@ -440,12 +582,6 @@ def main(argv):
     runner.build_test_list()
     runner.start_clouds()
     runner.run_tests()
-
-    # print str(runner)
-
-    if (not runner.terminated):
-        time.sleep(100)
-
     runner.stop_clouds()
 
 
