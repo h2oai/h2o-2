@@ -885,6 +885,7 @@ def main(argv):
     @return: none
     """
     global g_script_name
+    global g_num_clouds
     global g_output_dir
     global g_test_to_run
     global g_test_list_file
@@ -925,13 +926,17 @@ def main(argv):
             sys.exit(1)
 
     # Create runner object.
+    # Just create one cloud if we're only running one test, even if the user specified more.
+    if (g_test_to_run is not None):
+        g_num_clouds = 1
+
     g_runner = RUnitRunner(test_root_dir, g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, xmx, g_output_dir)
 
     # Build test list.
-    if (g_test_list_file is not None):
-        g_runner.read_test_list_file(g_test_list_file)
-    elif (g_test_to_run is not None):
+    if (g_test_to_run is not None):
         g_runner.add_test(g_test_to_run)
+    elif (g_test_list_file is not None):
+        g_runner.read_test_list_file(g_test_list_file)
     else:
         g_runner.build_test_list()
 
