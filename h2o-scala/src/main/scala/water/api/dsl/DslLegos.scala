@@ -274,7 +274,7 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
 }
 
 /** Trait representing provided global environment in R-like style.
- *  Working with first level entities: Frame
+ *  Working with first level entities: DFrame
  */
 trait T_R_Env[T<:T_Frame] {
    // Global methods to support R-style of programming 
@@ -287,7 +287,7 @@ trait T_R_Env[T<:T_Frame] {
   def names(d: T): Array[String] = d.names
   def helpme = help
   def help = println("""
-*** Welcome into world of SkAlH2O ***
+*** Welcome into world of Shalala ***
       
 Available R commands:
       help
