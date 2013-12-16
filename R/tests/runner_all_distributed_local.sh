@@ -12,13 +12,13 @@ NUMTESTS=
 BATCHSIZE=
 
 function error {
-  echo ERROR: $@
-  echo ERROR: $@ >> results/error.log
+  echo "ERROR: $@"
+  echo "ERROR: $@" >> results/error.log
 }
 
 function info {
-  echo INFO: $@
-  echo INFO: $@ >> results/info.log
+  echo "INFO: $@"
+  echo "INFO: $@" >> results/info.log
 }
 
 makeResultsDir() {
@@ -39,22 +39,26 @@ startJVM() {
 }
 
 runTest() {
-  tes=$(basename $1)
+  testName=$(basename $1)
+  testDir=$(dirname $1)
   echo "----------------------------------------------------------------------"
-    echo "Starting $tes"
-    echo "----------------------------------------------------------------------"
-    R -f $1 --args localhost:$2 2>&1 > results/$tes.out
-    RC=${PIPESTATUS[0]}
-    echo exit code $RC
-    if [ $RC -eq 0 ]; then
-       info "test PASSED $tes"
-       echo >> results/$tes.out
-       echo PASSED >> results/$tes.out
-    else
-       info "test FAILED $tes with exit code $RC"
-       echo >> results/$tes.out
-       echo FAILED >> results/$tes.out
-    fi
+  echo "Starting $testName"
+  echo "----------------------------------------------------------------------"
+  origDir=`pwd`
+  cd $testDir
+  R -f $testName --args localhost:$2 2>&1 > $origDir/results/$testName.out
+  RC=${PIPESTATUS[0]}
+  echo exit code $RC
+  cd $origDir
+  if [ $RC -eq 0 ]; then
+     info "test PASSED        $testName"
+     echo >> results/$testName.out
+     echo PASSED >> results/$testName.out
+  else
+     info "test        FAILED $testName with exit code $RC"
+     echo >> results/$testName.out
+     echo FAILED >> results/$testName.out
+  fi
 }
 
 doBatch() {
@@ -106,14 +110,13 @@ buildCloudNRunTests() {
   echo "All nodes up! Let's roll!"
 
   doTasks
-  #wait
   rm1
-  #tearDown
 }
 
 doTasks() {
+  TESTS=$(find . -name '*runit*' -type f | grep -v Utils);
   NUMTESTS=0
-  for test in $(find . | grep -v Utils | grep runit);
+  for test in $TESTS
   do
     NUMTESTS=$(( $NUMTESTS + 1 ))
   done
@@ -122,7 +125,7 @@ doTasks() {
   echo "Batching them into batches of size $BATCHSIZE"
   i=0
   nodeNum=1
-  for test in $(find . | grep -v Utils | grep runit);
+  for test in $TESTS
   do
     BATCH[$i]=$test
     i=$(( $i + 1 ))
@@ -144,7 +147,7 @@ doTasks() {
 main() {
   echo "Specify number of $h GB JVMS to build..."
   echo
-  read -p "How many $h GB JVMS do ya want builded, homie? " -n 2 -r
+  read -p "How many $h GB JVMS to start? " -n 2 -r
   echo 
   numNodes=$REPLY
   echo "num Nodes is $numNodes"
@@ -157,4 +160,3 @@ main() {
 
 echo "Distribute R Tests"
 main
-
