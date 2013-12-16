@@ -67,15 +67,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             'learn_rate': .2,
             'nbins': 1024,
             'ntrees': ntrees,
-            'max_depth': 5,
-            'min_rows': 10,
+            'max_depth': 20,
+            'min_rows': 2,
             'response': response,
             'cols': x,
             # 'ignored_cols_by_name': None,
         }
         print "Using these parameters for GBM: ", params
         kwargs = params.copy()
-        h2o.beta_features = True
         modelKey = 'GBMModelKey'
 
         timeoutSecs = 900
@@ -84,8 +83,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
             noPoll=True, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
         # hack
-        if h2o.beta_features:
-            h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+        h2j.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
         trainElapsed = time.time() - trainStart
         print "GBM training completed in", trainElapsed, "seconds. On dataset: ", trainFilename
 
@@ -109,9 +107,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             model_key=modelKey,
             destination_key=predictKey,
             timeoutSecs=timeoutSecs)
-        
-        if h2o.beta_features:
-            h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
         elapsed = time.time() - start
         print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
