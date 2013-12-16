@@ -132,6 +132,7 @@ class H2OCloud:
         self.xmx = xmx
         self.output_dir = output_dir
 
+        # Randomly choose a five digit cloud number.
         n = random.randint(10000, 99999)
         user = getpass.getuser()
         user = ''.join(user.split())
@@ -183,6 +184,8 @@ class Test:
     """
     A class representing one Test.
     """
+    def TEST_DID_NOT_COMPLETE(self):
+        return -9999999
 
     def __init__(self, test_dir, test_short_dir, test_name, output_dir):
         self.test_dir = test_dir
@@ -191,8 +194,9 @@ class Test:
         self.output_dir = output_dir
         self.output_file_name = ""
 
+        self.cancelled = False
         self.terminated = False
-        self.returncode = -9999
+        self.returncode = self.TEST_DID_NOT_COMPLETE()
         self.pid = -1
         self.ip = None
         self.port = -1
@@ -206,7 +210,7 @@ class Test:
         @param port: Port of cloud to run on.
         @return: none
         """
-        if (self.terminated):
+        if (self.cancelled or self.terminated):
             return
 
         self.ip = ip
@@ -241,8 +245,13 @@ class Test:
         child.poll()
         if (child.returncode is None):
             return False
+        self.pid = -1
         self.returncode = child.returncode
         return True
+
+    def cancel(self):
+        if (self.pid <= 0):
+            self.cancelled = True
 
     def terminate(self):
         self.terminated = True
@@ -262,6 +271,9 @@ class Test:
 
     def get_passed(self):
         return (self.returncode == 0)
+
+    def get_completed(self):
+        return (self.returncode > self.TEST_DID_NOT_COMPLETE())
 
     def get_output_dir_file_name(self):
         return (os.path.join(self.output_dir, self.output_file_name))
@@ -387,11 +399,41 @@ class RUnitRunner:
     def stop_clouds(self):
         if (self.terminated):
             return
+        print("All tests completed; tearing down clouds...")
         for cloud in self.clouds:
             cloud.stop()
 
+    def report_summary(self):
+        passed = 0
+        failed = 0
+        notrun = 0
+        total = 0
+        for test in self.tests:
+            if (test.get_passed()):
+                passed += 1
+            else:
+                if (test.get_completed()):
+                    failed += 1
+                else:
+                    notrun += 1
+            total += 1
+        self.log("")
+        self.log("----------------------------------------------------------------------")
+        self.log("")
+        self.log("SUMMARY OF RESULTS")
+        self.log("")
+        self.log("----------------------------------------------------------------------")
+        self.log("")
+        self.log("Total tests:      " + str(total))
+        self.log("Passed:           " + str(passed))
+        self.log("Did not pass:     " + str(failed))
+        self.log("Did not complete: " + str(notrun))
+
     def terminate(self):
         self.terminated = True
+
+        for test in self.tests:
+            test.cancel()
 
         for test in self.tests:
             test.terminate()
@@ -435,17 +477,23 @@ class RUnitRunner:
 
     def report_test_result(self, test):
         port = test.get_port()
-        summary_file_name = os.path.join(self.output_dir, "summary.txt")
-        f = open(summary_file_name, "a")
         if (test.get_passed()):
             s = "PASS      %d %-70s" % (port, test.get_test_name())
-            print(s)
-            f.write(s + "\n")
+            self.log(s)
         else:
             s = "     FAIL %d %-70s %s" % (port, test.get_test_name(), test.get_output_dir_file_name())
-            print(s)
-            f.write(s + "\n")
+            self.log(s)
+
+    def log(self, s):
+        f = self.get_summary_filehandle_for_appending()
+        print(s)
+        f.write(s + "\n")
         f.close()
+
+    def get_summary_filehandle_for_appending(self):
+        summary_file_name = os.path.join(self.output_dir, "summary.txt")
+        f = open(summary_file_name, "a")
+        return f
 
     def __str__(self):
         s = "\n"
@@ -581,6 +629,7 @@ def main(argv):
     runner.start_clouds()
     runner.run_tests()
     runner.stop_clouds()
+    runner.report_summary()
 
 
 if __name__ == "__main__":
