@@ -443,6 +443,7 @@ class RUnitRunner:
         self.base_port = base_port
         self.output_dir = output_dir
 
+        self.start_seconds = time.time()
         self.terminated = False
         self.clouds = []
         self.tests = []
@@ -568,7 +569,7 @@ class RUnitRunner:
         num_tests = len(self.tests)
         num_nodes = len(self.clouds * self.nodes_per_cloud)
         self._log("")
-        self._log("Starting {} tests on {} H2O nodes...".format(num_tests, num_nodes))
+        self._log("Starting {} tests on {} total H2O nodes...".format(num_tests, num_nodes))
         self._log("")
 
         # Start the first n tests, where n is the lesser of the total number of tests and the total number of clouds.
@@ -631,6 +632,8 @@ class RUnitRunner:
                 else:
                     notrun += 1
             total += 1
+        end_seconds = time.time()
+        delta_seconds = end_seconds - self.start_seconds
         self._log("")
         self._log("----------------------------------------------------------------------")
         self._log("")
@@ -638,10 +641,13 @@ class RUnitRunner:
         self._log("")
         self._log("----------------------------------------------------------------------")
         self._log("")
-        self._log("Total tests:      " + str(total))
-        self._log("Passed:           " + str(passed))
-        self._log("Did not pass:     " + str(failed))
-        self._log("Did not complete: " + str(notrun))
+        self._log("Total tests:          " + str(total))
+        self._log("Passed:               " + str(passed))
+        self._log("Did not pass:         " + str(failed))
+        self._log("Did not complete:     " + str(notrun))
+        self._log("")
+        self._log("Total time:           %.2f sec" % delta_seconds)
+        self._log("Time/completed test:  %.2f sec" % (delta_seconds / (total - notrun)))
         self._log("")
 
     def terminate(self):
@@ -786,7 +792,7 @@ def signal_handler(signum, stackframe):
 
 def usage():
     print("")
-    print("usage:  " + g_script_name +
+    print("Usage:  " + g_script_name +
           " [--wipe]"
           " [--baseport port]"
           " [--numclouds n]"
@@ -826,8 +832,9 @@ def usage():
     print("        "+g_script_name+" --wipe --numclouds 1 --test path/to/test.R")
     print("")
     print("    Rerunning failures from a previous run:")
-    print("        cp ./results/failures.txt .        # Otherwise, --wipe removes the list.")
-    print("        "+g_script_name+" --wipe --numclouds 16 --testlist ./failures.txt")
+    print("        # Copy failures.txt, otherwise --wipe removes the directory with the list!")
+    print("        cp " + os.path.join(g_output_dir, "failures.txt") + " .")
+    print("        "+g_script_name+" --wipe --numclouds 16 --testlist failures.txt")
     print("")
     sys.exit(1)
 
@@ -878,6 +885,7 @@ def main(argv):
     @return: none
     """
     global g_script_name
+    global g_num_clouds
     global g_output_dir
     global g_test_to_run
     global g_test_list_file
@@ -918,13 +926,17 @@ def main(argv):
             sys.exit(1)
 
     # Create runner object.
+    # Just create one cloud if we're only running one test, even if the user specified more.
+    if (g_test_to_run is not None):
+        g_num_clouds = 1
+
     g_runner = RUnitRunner(test_root_dir, g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, xmx, g_output_dir)
 
     # Build test list.
-    if (g_test_list_file is not None):
-        g_runner.read_test_list_file(g_test_list_file)
-    elif (g_test_to_run is not None):
+    if (g_test_to_run is not None):
         g_runner.add_test(g_test_to_run)
+    elif (g_test_list_file is not None):
+        g_runner.read_test_list_file(g_test_list_file)
     else:
         g_runner.build_test_list()
 
