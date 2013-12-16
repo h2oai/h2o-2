@@ -512,9 +512,11 @@ class RUnitRunner:
         if (self.terminated):
             return
 
-        print("")
-        print("Starting tests...")
-        print("")
+        num_tests = len(self.tests)
+        num_nodes = len(self.clouds * self.nodes_per_cloud)
+        self._log("")
+        self._log("Starting {} tests on {} H2O nodes...".format(num_tests, num_nodes))
+        self._log("")
 
         # Start the first n tests, where n is the lesser of the total number of tests and the total number of clouds.
         start_count = min(len(self.tests_not_started), len(self.clouds))
