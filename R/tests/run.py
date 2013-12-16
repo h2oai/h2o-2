@@ -8,6 +8,7 @@ import time
 import random
 import getpass
 import re
+import subprocess
 
 
 class H2OCloudNode:
@@ -27,30 +28,73 @@ class H2OCloudNode:
         self.xmx = xmx
         self.output_dir = output_dir
 
-        self.terminated = False
         self.port = -1
         self.pid = -1
         self.my_base_port = self.base_port + \
                             (self.cloud_num * self.nodes_per_cloud * 2) + \
                             (self.node_num * 2)
+        self.output_file_name = ""
+        self.child = None
+        self.terminated = False
 
     def start(self):
         cmd = ["java",
-               "-Xmx"+self.xmx,
+               "-Xmx" + self.xmx,
                "-ea",
                "-jar", self.h2o_jar,
                "-name", self.cloud_name,
-               "-base_port", self.my_base_port]
+               "-base_port", str(self.my_base_port)]
+        self.output_file_name = \
+            os.path.join(self.output_dir, "java_" + str(self.cloud_num) + "_" + str(self.node_num) + ".out")
+        f = open(self.output_file_name, "w")
+        self.child = subprocess.Popen(args=cmd,
+                                      stdout=f,
+                                      stderr=subprocess.STDOUT,
+                                      cwd=self.output_dir)
+        self.pid = self.child.pid
         print(cmd)
 
-    def stop(self):
-        pass
+    def scrape_port_from_stdout(self):
+        """
+        Look at the stdout log and try to
+        """
+        retries = 30
+        while (retries > 0):
+            if (self.terminated):
+                return
+            f = open(self.output_file_name, "r")
+            s = f.readline()
+            while (len(s) > 0):
+                if (self.terminated):
+                    return
+                match_groups = re.search(r"Listening for HTTP and REST traffic on  http://(\S+):(\d+)", s)
+                if (match_groups is not None):
+                    port = match_groups.group(2)
+                    if (port is not None):
+                        self.port = port
+                        f.close()
+                        print("Node {}_{} started on port {}".format(self.cloud_num, self.node_num, self.port))
+                        return
 
-    def terminate(self):
-        self.terminated = True
+                s = f.readline()
+
+            f.close()
+            retries -= 1
+            if (self.terminated):
+                return
+            time.sleep(1)
+
+        print("ERROR: Too many retries starting cloud.")
+        sys.exit(1)
+
+    def stop(self):
         if (self.pid > 0):
             print("Killing JVM with PID {}".format(self.pid))
             os.kill(self.pid, signal.SIGTERM)
+
+    def terminate(self):
+        self.terminated = True
+        self.stop()
 
     def __str__(self):
         s = ""
@@ -79,7 +123,6 @@ class H2OCloud:
         user = ''.join(user.split())
 
         self.cloud_name = "H2O_runit_{}_{}".format(user, n)
-        self.terminated = False
         self.nodes = []
         self.jobs_run = 0
 
@@ -89,14 +132,22 @@ class H2OCloud:
             self.nodes.append(node)
 
     def start(self):
+        if (self.nodes_per_cloud > 1):
+            print("ERROR: Unimplemented wait for cloud size > 1")
+            os.exit(1)
+
         for node in self.nodes:
             node.start()
 
+    def scrape_port_from_stdout(self):
+        for node in self.nodes:
+            node.scrape_port_from_stdout()
+
     def stop(self):
-        pass
+        for node in self.nodes:
+            node.stop()
 
     def terminate(self):
-        self.terminated = True
         for node in self.nodes:
             node.terminate()
 
@@ -120,13 +171,11 @@ class Test:
         self.test_name = test_name
         self.output_dir = output_dir
 
-        self.terminated = False
-        self.running = False
         self.exit_status = -9999
         self.pid = -1
 
     def is_running(self):
-        return self.running
+        return (self.pid > 0)
 
     def start(self):
         pass
@@ -206,14 +255,23 @@ class RUnitRunner:
         if (self.terminated):
             return
         for cloud in self.clouds:
+            if (self.terminated):
+                return
             cloud.start()
+        for cloud in self.clouds:
+            if (self.terminated):
+                return
+            cloud.scrape_port_from_stdout()
 
     def run_tests(self):
         if (self.terminated):
             return
 
     def stop_clouds(self):
-        pass
+        if (self.terminated):
+            return
+        for cloud in self.clouds:
+            cloud.stop()
 
     def terminate(self):
         self.terminated = True
@@ -253,8 +311,8 @@ class RUnitRunner:
         for c in self.clouds:
             s += str(c)
         s += "\n"
-        for t in self.tests:
-            s += str(t)
+        # for t in self.tests:
+        #     s += str(t)
         return s
 
 
@@ -374,12 +432,14 @@ def main(argv):
     runner.build_test_list()
     runner.start_clouds()
     runner.run_tests()
-    runner.stop_clouds()
 
     print str(runner)
 
+    if (not runner.terminated):
+        time.sleep(100)
+
+    runner.stop_clouds()
+
+
 if __name__ == "__main__":
     main(sys.argv)
-
-    # Test Ctrl-C.
-    # time.sleep(100)
