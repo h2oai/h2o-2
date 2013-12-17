@@ -1,5 +1,5 @@
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
-setGeneric("h2o.init", function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE, mem = 1) { standardGeneric("h2o.init") })
+setGeneric("h2o.init", function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE, Xmx = "2g") { standardGeneric("h2o.init") })
 # setGeneric("h2o.shutdown", function(ip = "127.0.0.1", port = 54321, prompt = TRUE) { standardGeneric("h2o.shutdown") })
 setGeneric("h2o.shutdown", function(object, prompt = TRUE) { standardGeneric("h2o.shutdown") })
 
@@ -15,8 +15,8 @@ setMethod("show", "H2OClient", function(object) {
 # 1) If can't connect and user doesn't want to start H2O, stop immediately
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
-setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logical", silentUpgrade="logical", promptUpgrade="logical", mem="numeric"), 
-          function(ip, port, startH2O, silentUpgrade, promptUpgrade, mem) {
+setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logical", silentUpgrade="logical", promptUpgrade="logical", Xmx="character"), 
+          function(ip, port, startH2O, silentUpgrade, promptUpgrade, Xmx) {
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
     if(!startH2O)
@@ -25,7 +25,7 @@ setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logica
       print("H2O is not running yet, starting it now.")
       # h2oWrapper.startLauncher()
       # invisible(readline("Start H2O, then hit <Return> to continue: "))
-      h2o.startJar(mem)
+      h2o.startJar(Xmx)
       count = 0; while(!url.exists(myURL) && count < 10) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost")
@@ -39,8 +39,8 @@ setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logica
   return(new("H2OClient", ip = ip, port = port))
 })
 
-setMethod("h2o.init", signature(ip="ANY", port="ANY", startH2O="ANY", silentUpgrade="ANY", promptUpgrade="ANY", mem="ANY"), 
-          function(ip, port, startH2O, silentUpgrade, promptUpgrade, mem) {
+setMethod("h2o.init", signature(ip="ANY", port="ANY", startH2O="ANY", silentUpgrade="ANY", promptUpgrade="ANY", Xmx="ANY"), 
+          function(ip, port, startH2O, silentUpgrade, promptUpgrade, Xmx) {
   if(!(missing(ip) || class(ip) == "character"))
     stop(paste("ip cannot be of class", class(ip)))
   if(!(missing(port) || class(port) == "numeric"))
@@ -51,11 +51,9 @@ setMethod("h2o.init", signature(ip="ANY", port="ANY", startH2O="ANY", silentUpgr
     stop(paste("silentUpgrade cannot be of class", class(silentUpgrade)))
   if(!(missing(promptUpgrade) || class(promptUpgrade) == "logical"))
     stop(paste("promptUpgrade cannot be of class", class(promptUpgrade)))
-  if(!(missing(mem) || is.numeric(mem)))
-    stop(paste("mem cannot be of class", class(mem)))
-  if(!missing(mem) && mem <= 0)
-    stop("mem must be greater than zero")
-  h2o.init(ip, port, startH2O, silentUpgrade, promptUpgrade, mem)
+  if(!(missing(Xmx) || is.character(Xmx)))
+    stop(paste("Xmx cannot be of class", class(Xmx)))
+  h2o.init(ip, port, startH2O, silentUpgrade, promptUpgrade, Xmx)
 })
 
 # Shuts down H2O instance running at given IP and port
@@ -175,17 +173,17 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
   packageStartupMessage("\nPlease type h2o.init() to launch H2O, and use h2o.shutdown() to quit H2O. More information can be found at http://docs.0xdata.com/.\n")
 }
 
-h2o.startJar <- function(mem = 1) {
+h2o.startJar <- function(memory = "2g") {
   if(.Platform$OS.type == "windows") {
     runs <- paste(.h2o.pkg.path, "scripts", "h2o.bat", sep = .Platform$file.sep)
     if (!file.exists(runs)) {
-      rs = h2o.__genScript(NULL, mem)
+      rs = h2o.__genScript(NULL, memory)
       wl <- try(writeLines(rs, runs), silent = TRUE)
       if (inherits(wl, "try-error"))
         stop("Cannot create H2O start script! Please check if h2o.bat exists at ", runs)
-      system(paste("chmod a+x '", runs, "'", sep = ""))
+      system(paste("chmod a+x \"", runs, "\"", sep = ""))
     }
-    system(paste("open", runs))
+    system(paste("open \"", runs, "\"", sep = ""))
   }
   else {
     runs <- paste(.h2o.pkg.path, "scripts", "h2o", sep = .Platform$file.sep)
@@ -200,7 +198,7 @@ h2o.startJar <- function(mem = 1) {
   }
 }
 
-h2o.__genScript <- function(target = NULL, memory = 1) {
+h2o.__genScript <- function(target = NULL, memory = "2g") {
   if(.Platform$OS.type == "windows")
     run.template <- paste(.h2o.pkg.path, "scripts", "h2o.bat.TEMPLATE", sep = .Platform$file.sep)
   else

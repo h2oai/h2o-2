@@ -5,4 +5,4 @@ set FLAT_FILE="@FLAT@"
 set MEMORY="@MEM@"
 
 REM Run H2O in the background
-start "h2o" /B "%JAVA%" -Xmx"%MEMORY" -jar "%JAR_FILE%" -ip 127.0.0.1 -port 54321 -flatfile "%FLAT_FILE%"
+start "h2o" /B "%JAVA%" -Xmx%MEMORY% -jar %JAR_FILE% -ip 127.0.0.1 -port 54321 -flatfile "%FLAT_FILE%"
