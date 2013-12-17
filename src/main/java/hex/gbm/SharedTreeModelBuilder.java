@@ -14,7 +14,7 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 import hex.gbm.DTree.*;
 
-public abstract class SharedTreeModelBuilder extends ValidatedJob {
+public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -159,6 +159,26 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     // If we made a response column with toEnum, nuke it.
     if( _gen_enum ) UKV.remove(response._key);
     remove();                   // Remove Job
+  }
+
+  transient long _timeLastScoreStart, _timeLastScoreEnd;
+  protected TM doScoring(TM model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeModel.TreeStats tstats, boolean finalScoring, boolean oob ) {
+    long now = System.currentTimeMillis();
+    long sinceLastScore = now-_timeLastScoreStart;
+    Score sc = null;
+    if( finalScoring ||
+        // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
+        (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
+         (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
+      _timeLastScoreStart = now;
+      sc = new Score().doIt(model, fr, validation, oob).report(logTag(),tid,ktrees);
+      _timeLastScoreEnd = System.currentTimeMillis();
+    }
+    model = makeModel(model, finalScoring?null:ktrees, 
+                      sc==null ? Double.NaN : sc._sum/_nrows, 
+                      sc==null ? null : sc._cm, tstats);
+    DKV.put(outputKey, model);
+    return model;
   }
 
   // --------------------------------------------------------------------------
@@ -438,8 +458,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     public long     nrows() { return _snrows; }
 
     // Compute CM & MSE on either the training or testing dataset
-    public Score doIt(Model model, Frame fr, Frame validation) { return doIt(model,fr,validation,false); }
-    public Score doIt(Model model, Frame fr, Frame validation,boolean oob) {
+    public Score doIt(Model model, Frame fr, Frame validation, boolean oob) {
       assert !oob || validation==null ; // oob => validation==null
       _oob = oob;
       // No validation, so do on training data
@@ -535,6 +554,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
+
+  protected abstract TM makeModel( TM model, DTree ktrees[], double err, long cm[][], TreeModel.TreeStats tstats);
 
   static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }

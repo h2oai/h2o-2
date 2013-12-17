@@ -22,7 +22,7 @@ import water.util.*;
 import water.util.Log.Tag.Sys;
 
 // Random Forest Trees
-public class DRF extends SharedTreeModelBuilder {
+public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -90,6 +90,9 @@ public class DRF extends SharedTreeModelBuilder {
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
+  @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], double err, long cm[][], TreeStats tstats) {
+    return new DRFModel(model, ktrees, err, cm, tstats);
+  }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 50; min_rows = 1; }
 
   /** Return the query link to this page */
@@ -154,19 +157,18 @@ public class DRF extends SharedTreeModelBuilder {
     // Build trees until we hit the limit
     for( tid=0; tid<ntrees; tid++) {
       // At each iteration build K trees (K = nclass = response column domain size)
+
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
-      Timer t_kTrees = new Timer();
       ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand);
-      Log.info(Sys.DRF__, "Tree "+(tid+1)+"x"+_nclass+" produced in "+t_kTrees);
       if( cancelled() ) break; // If canceled during building, do not bulkscore
 
-      // TODO: Do validation or OOBEE scoring only if trees are produced fast enough.
+      // Check latest predictions
       tstats.updateBy(ktrees);
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats,false);
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, validation==null);
     }
-    // Do final scoring with all the trees.
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats,true);
+    // Final scoring
+    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null);
     // Compute variable importance if required
     if (classification && importance) {
       float varimp[] = doVarImp(model, fr);
@@ -177,26 +179,6 @@ public class DRF extends SharedTreeModelBuilder {
     }
 
     cleanUp(fr,t_build); // Shared cleanup
-  }
-
-  transient long _timeLastScoreStart, _timeLastScoreEnd;
-  private DRFModel doScoring(DRFModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
-    long now = System.currentTimeMillis();
-    long sinceLastScore = now-_timeLastScoreStart;
-    Score sc = null;
-    if( finalScoring ||
-        // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
-        (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
-         (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
-      _timeLastScoreStart = now;
-      sc = new Score().doIt(model, fr, validation, validation==null).report(Sys.DRF__,tid,ktrees);
-      _timeLastScoreEnd = System.currentTimeMillis();
-    }
-    model = new DRFModel(model, finalScoring?null:ktrees, 
-                         sc==null ? Float.NaN : (float)sc.sum()/sc.nrows(), 
-                         sc==null ? null : sc.cm(), tstats);
-    DKV.put(outputKey, model);
-    return model;
   }
 
   /* From http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#varimp

@@ -482,7 +482,7 @@ public class DTree extends Iced {
   }
 
   // --------------------------------------------------------------------------
-  public static abstract class TreeModel extends Model {
+  public static abstract class TreeModel extends water.Model {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;

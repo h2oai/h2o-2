@@ -16,7 +16,7 @@ import water.util.Log.Tag.Sys;
 // Gradient Boosted Trees
 //
 // Based on "Elements of Statistical Learning, Second Edition, page 387"
-public class GBM extends SharedTreeModelBuilder {
+public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -34,9 +34,9 @@ public class GBM extends SharedTreeModelBuilder {
       super(key,dataKey,testKey,names,domains,ntrees,max_depth,min_rows,nbins);
       this.learn_rate = learn_rate;
     }
-    public GBMModel(GBMModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
+    public GBMModel(DTree.TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
       super(prior, trees, err, cm, tstats);
-      this.learn_rate = prior.learn_rate;
+      this.learn_rate = ((GBMModel)prior).learn_rate;
     }
 
     @Override protected float[] score0(double[] data, float[] preds) {
@@ -68,6 +68,9 @@ public class GBM extends SharedTreeModelBuilder {
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
+  @Override protected GBMModel makeModel( GBMModel model, DTree ktrees[], double err, long cm[][], TreeStats tstats) {
+    return new GBMModel(model, ktrees, err, cm, tstats);
+  }
   public GBM() { description = "Distributed GBM"; }
 
   /** Return the query link to this page */
@@ -106,9 +109,11 @@ public class GBM extends SharedTreeModelBuilder {
   // assign a split number to it (for next pass).  On *this* pass, use the
   // split-number to build a per-split histogram, with a per-histogram-bucket
   // variance.
-  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
+  @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, Timer t_build ) {
+
     GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees, max_depth, min_rows, nbins, learn_rate);
     DKV.put(outputKey, model);
+
     // Build trees until we hit the limit
     int tid;
     DTree[] ktrees = null;              // Trees
@@ -130,31 +135,11 @@ public class GBM extends SharedTreeModelBuilder {
 
       // Check latest predictions
       tstats.updateBy(ktrees);
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false);
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, false);
     }
     // Final scoring
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true);
+    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, false);
     cleanUp(fr,t_build); // Shared cleanup
-  }
-
-  transient long _timeLastScoreStart, _timeLastScoreEnd;
-  private GBMModel doScoring(GBMModel model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeStats tstats, boolean finalScoring ) {
-    long now = System.currentTimeMillis();
-    long sinceLastScore = now-_timeLastScoreStart;
-    Score sc = null;
-    if( finalScoring ||
-        // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
-        (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
-         (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
-      _timeLastScoreStart = now;
-      sc = new Score().doIt(model, fr, validation).report(Sys.GBM__,tid,ktrees);
-      _timeLastScoreEnd = System.currentTimeMillis();
-    }
-    model = new GBMModel(model, finalScoring?null:ktrees, 
-                         sc==null ? Float.NaN : (float)sc._sum/_nrows, 
-                         sc==null ? null : sc._cm, tstats);
-    DKV.put(outputKey, model);
-    return model;
   }
 
   // --------------------------------------------------------------------------

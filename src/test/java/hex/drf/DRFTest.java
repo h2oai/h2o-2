@@ -12,7 +12,7 @@ import water.fvec.Vec;
 
 public class DRFTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
 
   abstract static class PrepData { abstract int prep(Frame fr); }
 
