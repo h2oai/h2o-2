@@ -12,6 +12,7 @@ import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+import hex.gbm.DTree.*;
 
 public abstract class SharedTreeModelBuilder extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -56,7 +57,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
   @Override public float progress(){
     Value value = DKV.get(dest());
-    DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
+    TreeModel m = value != null ? (TreeModel) value.get() : null;
     return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
   }
 
@@ -229,7 +230,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
       for( int k=0; k<_nclass; k++ ) {
         if( _trees[k] != null ) { // Ignore unused classes
           for( int l=_leafs[k]; l<_trees[k]._len; l++ ) {
-            DTree.UndecidedNode udn = _trees[k].undecided(l);
+            UndecidedNode udn = _trees[k].undecided(l);
             DSharedHistogram hs[] = _hcs[k][l-_leafs[k]];
             int sCols[] = udn._scoreCols;
             if( sCols != null ) { // Sub-selecting just some columns?
@@ -318,7 +319,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
         if (isOOBRow(nid)) { // sampled away - we track the position in the tree
           if ( leaf > 0) {
             int nnid = oob2Nid(nid);
-            DTree.DecidedNode dn = tree.decided(nnid);
+            DecidedNode dn = tree.decided(nnid);
             if( dn._split._col == -1 ) nids.set0(row,nid2Oob(nnid = dn._pid)); // Might have a leftover non-split
             if( nnid != -1 ) nnid = tree.decided(nnid).ns(chks,row); // Move down the tree 1 level
             if( nnid != -1 ) nids.set0(row,nid2Oob(nnid));
@@ -328,7 +329,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
         // Score row against current decisions & assign new split
         if( leaf > 0 ) {      // Prior pass exists?
-          DTree.DecidedNode dn = tree.decided(nid);
+          DecidedNode dn = tree.decided(nid);
           if( dn._split._col == -1 ) nids.set0(row,(nid = dn._pid)); // Might have a leftover non-split
           if( nid != -1 ) nid = tree.decided(nid).ns(chks,row); // Move down the tree 1 level
           if( nid != -1 ) nids.set0(row,nid);
@@ -357,6 +358,53 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     }
   }
 
+  
+  // --------------------------------------------------------------------------
+  // Builder-specific decision node
+  protected abstract DecidedNode makeDecided( UndecidedNode udn, DSharedHistogram hs[] );
+
+  protected boolean buildLayer(Frame fr, DTree ktrees[], int leafs[], DSharedHistogram hcs[][][]) {
+    // Build K trees, one per class.
+    // Fuse 2 conceptual passes into one:
+    // Pass 1: Score a prior DHistogram, and make new Node assignments
+    // to every row.  This involves pulling out the current assigned Node,
+    // "scoring" the row against that Node's decision criteria, and assigning
+    // the row to a new child Node (and giving it an improved prediction).
+    // Pass 2: Build new summary DHistograms on the new child Nodes every row
+    // got assigned into.  Collect counts, mean, variance, min, max per bin,
+    // per column.
+
+    ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs,hcs).doAll(fr);
+    //System.out.println(sbh.profString());
+
+    // Build up the next-generation tree splits from the current histograms.
+    // Nearly all leaves will split one more level.  This loop nest is
+    //           O( #active_splits * #bins * #ncols )
+    // but is NOT over all the data.
+    boolean did_split=false;
+    for( int k=0; k<_nclass; k++ ) {
+      DTree tree = ktrees[k]; // Tree for class K
+      if( tree == null ) continue;
+      int tmax = tree.len();   // Number of total splits in tree K
+      for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
+        UndecidedNode udn = tree.undecided(leaf);
+        //System.out.println("Class "+(response._domain[k])+",\n  Undecided node:"+udn);
+        // Replace the Undecided with the Split decision
+        DecidedNode dn = makeDecided(udn,hcs[k][leaf-leafs[k]]);
+        //System.out.println("--> Decided node: " + dn);
+        //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
+        if( dn._split.col() == -1 ) udn.do_not_split();
+        else did_split = true;
+      }
+      leafs[k]=tmax;          // Setup leafs for next tree level
+      int new_leafs = tree.len()-tmax;
+      hcs[k] = new DSharedHistogram[new_leafs][/*ncol*/];
+      for( int nl = tmax; nl<tree.len(); nl ++ )
+        hcs[k][nl-tmax] = tree.undecided(nl)._hs;
+      tree.depth++;           // Next layer done
+    }
+    return did_split;
+  }
 
   // --------------------------------------------------------------------------
   private static class ClassDist extends MRTask2<ClassDist> {
@@ -479,7 +527,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   @Override public String speedDescription() { return "time/tree"; }
   @Override public long speedValue() {
     Value value = DKV.get(dest());
-    DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
+    TreeModel m = value != null ? (TreeModel) value.get() : null;
     long numTreesBuiltSoFar = m == null ? 0 : m.treeBits.length;
     long sv = (numTreesBuiltSoFar <= 0) ? 0 : (runTimeMs() / numTreesBuiltSoFar);
     return sv;

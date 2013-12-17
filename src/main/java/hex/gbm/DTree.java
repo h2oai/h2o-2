@@ -317,7 +317,7 @@ public class DTree extends Iced {
   // Internal tree nodes which split into several children over a single
   // column.  Includes a split-decision: which child does this Row belong to?
   // Does not contain a histogram describing how the decision was made.
-  public static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
+  public static abstract class DecidedNode extends Node {
     public final Split _split;         // Split: col, equal/notequal/less/greater, nrows, MSE
     public final float _splat;         // Split At point: lower bin-edge of split
     // _equals\_nids[] \   0   1
@@ -330,12 +330,12 @@ public class DTree extends Iced {
     transient int _size = 0;  // Compressed byte size of this subtree
 
     // Make a correctly flavored Undecided
-    public abstract UDN makeUndecidedNode(DSharedHistogram hs[]);
+    public abstract UndecidedNode makeUndecidedNode(DSharedHistogram hs[]);
 
     // Pick the best column from the given histograms
-    public abstract Split bestCol( UDN u, DSharedHistogram hs[] );
+    public abstract Split bestCol( UndecidedNode u, DSharedHistogram hs[] );
 
-    public DecidedNode( UDN n, DSharedHistogram hs[] ) {
+    public DecidedNode( UndecidedNode n, DSharedHistogram hs[] ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
       _nids = new int[2];           // Split into 2 subsets
       _split = bestCol(n,hs);       // Best split-point for this tree

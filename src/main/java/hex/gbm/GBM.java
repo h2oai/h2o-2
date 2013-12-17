@@ -264,44 +264,7 @@ public class GBM extends SharedTreeModelBuilder {
     for( ; depth<max_depth; depth++ ) {
       if( cancelled() ) return null;
 
-      // Build K trees, one per class.
-      // Fuse 2 conceptual passes into one:
-      // Pass 1: Score a prior DHistogram, and make new DTree.Node assignments
-      // to every row.  This involves pulling out the current assigned Node,
-      // "scoring" the row against that Node's decision criteria, and assigning
-      // the row to a new child Node (and giving it an improved prediction).
-      // Pass 2: Build new summary DHistograms on the new child Nodes every row
-      // got assigned into.  Collect counts, mean, variance, min, max per bin,
-      // per column.
-      ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs,hcs).doAll(fr);
-      //System.out.println(sbh.profString());
-
-      // Build up the next-generation tree splits from the current histograms.
-      // Nearly all leaves will split one more level.  This loop nest is
-      //           O( #active_splits * #bins * #ncols )
-      // but is NOT over all the data.
-      boolean did_split=false;
-      for( int k=0; k<_nclass; k++ ) {
-        DTree tree = ktrees[k]; // Tree for class K
-        if( tree == null ) continue;
-        int tmax = tree.len();   // Number of total splits in tree K
-        for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
-          UndecidedNode udn = tree.undecided(leaf);
-          //System.out.println("Class "+(response._domain[k])+",\n  Undecided node:"+udn);
-          // Replace the Undecided with the Split decision
-          GBMDecidedNode dn = new GBMDecidedNode((GBMUndecidedNode)udn,hcs[k][leaf-leafs[k]]);
-          //System.out.println("--> Decided node: " + dn);
-          //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
-          if( dn._split.col() == -1 ) udn.do_not_split();
-          else did_split = true;
-        }
-        leafs[k]=tmax;          // Setup leafs for next tree level
-        int new_leafs = tree.len()-tmax;
-        hcs[k] = new DSharedHistogram[new_leafs][/*ncol*/];
-        for( int nl = tmax; nl<tree.len(); nl ++ )
-          hcs[k][nl-tmax] = tree.undecided(nl)._hs;
-        tree.depth++;           // Next layer done
-      }
+      boolean did_split = buildLayer(fr, ktrees, leafs, hcs);
 
       // If we did not make any new splits, then the tree is split-to-death
       if( !did_split ) break;
@@ -441,19 +404,23 @@ public class GBM extends SharedTreeModelBuilder {
     }
   }
 
+  @Override protected DecidedNode makeDecided( UndecidedNode udn, DSharedHistogram hs[] ) { 
+    return new GBMDecidedNode(udn,hs);
+  }
+
   // ---
   // GBM DTree decision node: same as the normal DecidedNode, but
   // specifies a decision algorithm given complete histograms on all
   // columns.  GBM algo: find the lowest error amongst *all* columns.
-  static class GBMDecidedNode extends DecidedNode<GBMUndecidedNode> {
-    GBMDecidedNode( GBMUndecidedNode n, DSharedHistogram[] hs ) { super(n,hs); }
-    @Override public GBMUndecidedNode makeUndecidedNode(DSharedHistogram[] hs ) {
+  static class GBMDecidedNode extends DecidedNode {
+    GBMDecidedNode( UndecidedNode n, DSharedHistogram[] hs ) { super(n,hs); }
+    @Override public UndecidedNode makeUndecidedNode(DSharedHistogram[] hs ) {
       return new GBMUndecidedNode(_tree,_nid,hs);
     }
 
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
-    @Override public DTree.Split bestCol( GBMUndecidedNode u, DSharedHistogram[] hs ) {
+    @Override public DTree.Split bestCol( UndecidedNode u, DSharedHistogram[] hs ) {
       DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
