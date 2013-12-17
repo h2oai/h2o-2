@@ -9,7 +9,7 @@
 
 source('./findNSourceUtils.R')
 
-#setupRandomSeed(42)
+#setupRandomSeed(365844204)
 doSelect<-
 function() {
     d <- select()
@@ -57,14 +57,25 @@ test.binop2.ampersand <- function(conn) {
   newHex <- 5 & sliced
 
   expect_that(dim(newHex), equals(dim(sliced)))
-
-  expect_that(dim(newHex), equals(dim(data.frame(as.data.frame(sliced) & 5))))
+  
+  Log.info("dim(as.data.frame(newHex)): ")
+  print(dim(as.data.frame(newHex)))
+  
+  Log.info("dim(data.frame(as.data.frame(sliced) & 5)): ")
+  print(dim(data.frame(as.data.frame(sliced))))
+   
+  expect_that(dim(as.data.frame(newHex)), equals(dim(data.frame(as.data.frame(sliced) & 5))))
   Log.info("ANDed hex (should be a column of 1s & 0s)")
   print(head(newHex))
   Log.info("Expected result: as.data.frame(sliced) & 5")
   print(head(as.data.frame(sliced) & 5))
 
   df <- data.frame(h2o = as.data.frame(newHex), R = data.frame(as.data.frame(sliced) & 5))
+  df <- na.omit(df)
+  Log.info("nrow(df)")
+  print(nrow(df))
+  Log.info("sum(apply(df,1,assertEquals))")
+  print(sum(apply(df,1,assertEquals)))
   expect_that(sum(apply(df,1,assertEquals)), equals(nrow(df)))
   
   testEnd()
