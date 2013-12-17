@@ -11,7 +11,12 @@ initList = [
         ('r.hex', 'r.hex=i.hex'),
         ]
 
-exprListSmall = [
+if 1==0:
+    exprListSmall = [
+        "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+    ]
+else:
+    exprListSmall = [
         # 'r<n>[,0] = r0[,0] * r<n-1>[,0]',
         # 'r<n>[0,] = r1[0,] + r<n-1>[0,]',
         # 'r<n> = r1 + r<n-1>',
@@ -36,12 +41,24 @@ exprListSmall = [
         # doesn't work
         # ",1.23 + 2.34 * 3" #  10.71, L2R eval order
         ## ",1.23 2.34"   #  Syntax error
-        "1.23 < 2.34", #  1
+        "1.23<2.34", #  1
+        "1.23<=2.34", #  1
+        "1.23>2.34", #  0
+        "1.23>=2.34", #  0
+        "1.23==2.34", #  0
+        "1.23!=2.34", #  1
+        "1.23 <2.34", #  1
         "1.23 <=2.34", #  1
-        "1.23 > 2.34", #  0
+        "1.23 >2.34", #  0
         "1.23 >=2.34", #  0
         "1.23 ==2.34", #  0
         "1.23 !=2.34", #  1
+        "1.23< 2.34", #  1
+        "1.23<= 2.34", #  1
+        "1.23> 2.34", #  0
+        "1.23>= 2.34", #  0
+        "1.23== 2.34", #  0
+        "1.23!= 2.34", #  1
         "r.hex",       #  Simple ref
         "+(1.23,2.34)",#  prefix 3.57
         ## "+(1.23)",     #  Syntax error, not enuf args
@@ -130,7 +147,8 @@ exprListSmall = [
         # "apply(r.hex,1,function(x){x=1;r.hex})",
         # doesn't work
         # "apply(r.hex,1,function(x){r.hex})",
-        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+        # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
 
         #  Conditional selection; 
         "ifelse(0,1,2)",
