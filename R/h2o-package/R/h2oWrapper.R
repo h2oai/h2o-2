@@ -22,7 +22,8 @@ setMethod("h2o.init", signature(ip="character", port="numeric", startH2O="logica
     if(!startH2O)
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip=="localhost" || ip=="127.0.0.1") {
-      print("H2O is not running yet, starting it now.")
+      cat("\n")
+      cat("H2O is not running yet, starting it now...\n")
       # h2oWrapper.startLauncher()
       # invisible(readline("Start H2O, then hit <Return> to continue: "))
       h2o.startJar(Xmx)
@@ -170,10 +171,36 @@ h2oWrapper.__formatError <- function(error, prefix="  ") {
 }
 
 .onAttach <- function(libname, pkgname) {
-  packageStartupMessage("\nPlease type h2o.init() to launch H2O, and use h2o.shutdown() to quit H2O. More information can be found at http://docs.0xdata.com/.\n")
+  msg = paste(
+    "\n",
+    "----------------------------------------------------------------------\n",
+    "\n",
+    "Your next step is to start H2O and get a connection object (named\n",
+    "'localH2O', for example):\n",
+    "    > localH2O = h2o.init()\n",
+    "\n",
+    "For H2O package documentation, first call init() and then ask for help:\n",
+    "    > localH2O = h2o.init()\n",
+    "    > ??h2o\n",
+    "\n",
+    "To stop H2O you must explicitly call shutdown (either from R, as shown\n",
+    "here, or from the Web UI):\n",
+    "    > h2o.shutdown(localH2O)\n",
+    "\n",
+    "After starting H2O, you can use the Web UI at http://localhost:54321\n",
+    "For more information visit http://docs.0xdata.com\n",
+    "\n",
+    "----------------------------------------------------------------------\n",
+    sep = "")
+  packageStartupMessage(msg)
 }
 
 h2o.startJar <- function(memory = "2g") {
+  # TODO: validate memory is sane.
+  #
+  #       1.  it's a character something
+  #       2.  This is the regexp: "^[1-9][0-9]*[gG]$"
+  
   if(.Platform$OS.type == "windows") {
     runs <- paste(.h2o.pkg.path, "scripts", "h2o.bat", sep = .Platform$file.sep)
     if (!file.exists(runs)) {
@@ -186,15 +213,35 @@ h2o.startJar <- function(memory = "2g") {
     system(paste("open \"", runs, "\"", sep = ""))
   }
   else {
-    runs <- paste(.h2o.pkg.path, "scripts", "h2o", sep = .Platform$file.sep)
-    if (!file.exists(runs)) {
-      rs = h2o.__genScript(NULL, memory)
-      wl <- try(writeLines(rs, runs), silent = TRUE)
-      if (inherits(wl, "try-error"))
-        stop("Cannot create H2O start script! Please check if h2o exists at ", runs)
-      system(paste("chmod a+x '", runs, "'", sep = ""))
+    command <- Sys.which("java")
+    #
+    # TODO: tmp files should be user-independent
+    #
+    stdout <- "/tmp/h2o_started_from_r.out"
+    stderr <- "/tmp/h2o_started_from_r.err"
+        
+    jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
+    args <- c(paste("-Xmx", memory, sep=""),
+              "-jar", jar_file,
+              "-name", "H2O_started_from_R",
+              "-ip", "127.0.0.1",
+              "-port", "54321"
+              )
+    cat("\n")
+    cat(        "Note:  In case of errors look at the following log files:\n")
+    cat(sprintf("           %s\n", stdout))
+    cat(sprintf("           %s\n", stderr))
+    cat("\n")
+    system2(command, c("-version"))
+    cat("\n")
+    rc = system2(command,
+                 args=args,
+                 stdout=stdout,
+                 stderr=stderr,
+                 wait=FALSE)
+    if (rc != 0) {
+      stop(sprintf("Failed to exec %s", jar_file))
     }
-    system(paste("sh", runs, "&"))
   }
 }
 
