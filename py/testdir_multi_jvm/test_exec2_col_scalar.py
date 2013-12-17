@@ -3,15 +3,21 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 zeroList = [
-        'ScalarRes0 = c(0)',
-        'ScalarRes1 = c(0)',
-        'ScalarRes2 = c(0)',
-        'ScalarRes3 = c(0)',
-        # FIX! how can this work? no size specified??, so scalar?
-        'ColumnRes0 = c(0)',
-        'ColumnRes1 = c(0)',
-        'ColumnRes2 = c(0)',
-        'ColumnRes3 = c(0)',
+        # this is an error case
+        # 'ScalarRes0 = cA[0,0]',
+
+        # shouldn't this create a key?
+        'ScalarRes0 = cA[1,1]',
+        # 'ScalarRes0 = c(cA[1,1])',
+        'ScalarRes1 = c(cA[1,1])',
+        'ScalarRes2 = c(cA[1,1])',
+        'ScalarRes3 = c(cA[1,1])',
+        # this is an error case
+        # 'ColumnRes0 = cA[,0]',
+        'ColumnRes0 = cA[,1]',
+        'ColumnRes1 = cA[,1]',
+        'ColumnRes2 = cA[,1]',
+        'ColumnRes3 = cA[,1]',
         ]
 
 # 'randomBitVector'
