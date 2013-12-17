@@ -3,17 +3,17 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
 zeroList = [
-        'Result9 = c(0)',
-        'Result8 = c(0)',
-        'Result7 = c(0)',
-        'Result6 = c(0)',
-        'Result5 = c(0)',
-        'Result4 = c(0)',
-        'Result3 = c(0)',
-        'Result2 = c(0)',
-        'Result1 = c(0)',
-        'Result0 = c(0)',
-        'Result = c(0)',
+        'Result9 = c.hex',
+        'Result8 = c.hex',
+        'Result7 = c.hex',
+        'Result6 = c.hex',
+        'Result5 = c.hex',
+        'Result4 = c.hex',
+        'Result3 = c.hex',
+        'Result2 = c.hex',
+        'Result1 = c.hex',
+        'Result0 = c.hex',
+        'Result = c.hex',
 ]
 
 # randomBitVector

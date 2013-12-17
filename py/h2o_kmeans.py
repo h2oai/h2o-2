@@ -106,7 +106,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     tupleResultList = []
     print "\nerror: ", error
     for i,c in enumerate(centers):
-        print "\ncenters["+str(i)+"]: ", centers[i]
+        print "\ncenters["+str(i)+"]: ", [round(c,2) for c in centers[i]]
         print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
         print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
         tupleResultList.append( (centers[i], rows_per_cluster[i], sqr_error_per_cluster[i]) )
