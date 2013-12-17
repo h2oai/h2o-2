@@ -56,6 +56,7 @@ print ("VA import worked")
 
 
 heading("Testing single file importHDFS for FV")
+url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_iris_file)
 iris.FV.hex <- h2o.importFile(conn, url)
 head(iris.FV.hex)
 tail(iris.FV.hex)
@@ -75,7 +76,7 @@ print ("FV import worked")
 
 heading("Testing directory importHDFS for VA")
 url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_iris_dir)
-iris.VA.dir.hex <- h2o.importHDFS.VA(conn, url)
+iris.VA.dir.hex <- h2o.importHDFS.VA(conn, url, pattern="*.csv")
 head(iris.VA.dir.hex)
 tail(iris.VA.dir.hex)
 n <- nrow(iris.VA.dir.hex)
@@ -90,7 +91,8 @@ print ("VA import worked")
 
 
 heading("Testing directory importHDFS for FV")
-iris.FV.dir.hex <- h2o.importFile(conn, url)
+url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_iris_dir)
+iris.FV.dir.hex <- h2o.importFolder(conn, url, pattern="*.csv")
 head(iris.FV.dir.hex)
 tail(iris.FV.dir.hex)
 n <- nrow(iris.FV.dir.hex)
