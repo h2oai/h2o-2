@@ -122,7 +122,9 @@ class H2OCloudNode:
                 return
             time.sleep(1)
 
+        print("")
         print("ERROR: Too many retries starting cloud.")
+        print("")
         sys.exit(1)
 
     def stop(self):
@@ -204,7 +206,9 @@ class H2OCloud:
         @return: none
         """
         if (self.nodes_per_cloud > 1):
-            print("ERROR: Unimplemented wait for cloud size > 1")
+            print("")
+            print("ERROR: Unimplemented: wait for cloud size > 1.")
+            print("")
             sys.exit(1)
 
         for node in self.nodes:
@@ -479,7 +483,7 @@ class RUnitRunner:
             f.close()
         except IOError as e:
             print("")
-            print("ERROR: Failure reading test list (" + test_list_file + ")")
+            print("ERROR: Failure reading test list: " + test_list_file)
             print("       (errno {0}): {1}".format(e.errno, e.strerror))
             print("")
             sys.exit(1)
@@ -517,7 +521,7 @@ class RUnitRunner:
 
         if (not os.path.exists(abs_test_path)):
             print("")
-            print("ERROR: Test does not exist (" + abs_test_path + ")")
+            print("ERROR: Test does not exist: " + abs_test_path)
             print("")
             sys.exit(1)
 
@@ -757,7 +761,7 @@ class RUnitRunner:
 # Global variables that can be set by the user.
 g_script_name = ""
 g_base_port = 40000
-g_num_clouds = 3
+g_num_clouds = 5
 g_wipe_output_dir = False
 g_test_to_run = None
 g_test_list_file = None
@@ -919,7 +923,7 @@ def main(argv):
     # Set up output directory.
     if (not os.path.exists(h2o_jar)):
         print("")
-        print("H2O jar not found: {}".format(h2o_jar))
+        print("ERROR: H2O jar not found: " + h2o_jar)
         print("")
         sys.exit(1)
 
@@ -929,8 +933,8 @@ def main(argv):
                 shutil.rmtree(g_output_dir)
         except OSError as e:
             print("")
-            print("Removing directory failed (errno {0}): {1}".format(e.errno, e.strerror))
-            print("    " + g_output_dir)
+            print("ERROR: Removing output directory failed: " + g_output_dir)
+            print("       (errno {0}): {1}".format(e.errno, e.strerror))
             print("")
             sys.exit(1)
 
