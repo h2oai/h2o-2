@@ -5,5 +5,8 @@ trait DefaultEnv[K <: HexKey, T <: DFrame] {
   
   def cars() = parse("../private/cars.csv");
   
+  def source() = cars()(2 to 7)
+  def response() = cars()("cylinders")
+  
   //def drf(t : T): = drf(t, t(2), 2)
 }

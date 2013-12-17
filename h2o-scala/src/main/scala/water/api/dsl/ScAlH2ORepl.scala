@@ -10,6 +10,7 @@ import water.fvec.Frame
 import water.Boot
 import water.H2O
 import water.api.dsl.examples._
+import hex.gbm.DTree.TreeModel.TreeStats
 
 /** Custom H2O REPL.
  *  
@@ -55,6 +56,7 @@ object ScAlH2ORepl {
     addThunk(intp.beQuietDuring {
       intp.addImports("water.api.dsl.H2ODsl._")
       intp.addImports("water.api.dsl._")
+      intp.addImports("water.api.Request.API")
     })
     
     override def printWelcome() {

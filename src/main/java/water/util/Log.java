@@ -70,7 +70,7 @@ public abstract class Log {
   static public void wrap() {
     ///Turning off wrapping for now...  If this breaks stuff will put it back on.
     /// System.setOut(new Wrapper(System.out));
-    System.setErr(new Wrapper(System.err));
+    //System.setErr(new Wrapper(System.err));
   }
   /** Local log file */
 

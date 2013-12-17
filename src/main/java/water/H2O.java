@@ -1748,6 +1748,8 @@ public final class H2O {
 
   private static void initializeScalaRepl() {
     if (!OPT_ARGS.scala_repl) return;
+    // Preload classes
+    new hex.gbm.DTree.TreeModel.TreeStats();
     ScAlH2ORepl.launchRepl();
   }
 }

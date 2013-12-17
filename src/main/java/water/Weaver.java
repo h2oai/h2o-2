@@ -18,6 +18,8 @@ public class Weaver {
   public static java.lang.reflect.Method _onLoad;
   public static volatile String[] _packages = new String[] { "water", "hex", "org.junit" };
 
+  public static volatile boolean DEBUG_PRINT = false;
+
   Weaver() {
     try {
       _pool = ClassPool.getDefault();
@@ -435,7 +437,7 @@ public class Weaver {
     StringBuilder sb = new StringBuilder();
     sb.append(header);
     if( callsuper ) sb.append(supers);
-    boolean debug_print = false;
+    boolean debug_print = DEBUG_PRINT;
     boolean first = !callsuper;
     for( CtField ctf : ctfs ) {
       int mods = ctf.getModifiers();
