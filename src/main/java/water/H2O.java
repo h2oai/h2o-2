@@ -5,10 +5,9 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.Future;
 
 import jsr166y.*;
-import water.api.dsl.ScAlH2ORepl;
+import water.api.dsl.ShalalaRepl;
 import water.Job.JobCancelledException;
 import water.nbhm.NonBlockingHashMap;
 import water.persist.*;
@@ -1750,6 +1749,6 @@ public final class H2O {
     if (!OPT_ARGS.scala_repl) return;
     // Preload classes
     new hex.gbm.DTree.TreeModel.TreeStats();
-    ScAlH2ORepl.launchRepl();
+    ShalalaRepl.launchRepl();
   }
 }

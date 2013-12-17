@@ -17,16 +17,16 @@ import hex.gbm.DTree.TreeModel.TreeStats
  *  It reconfigures default REPL and  
  *  @see http://www.michaelpollmeier.com/create-your-custom-scala-repl/
  */
-object ScAlH2ORepl {
+object ShalalaRepl {
   // Simple REPL launcher - expect to be executed from water.Boot 
   //  - hence it configures REPL classpath according the Boot
   def main(args: Array[String]): Unit = {
     // Launch H2O main
     H2O.main(args);
     // Launch REPL
-    launchRepl
+    //launchRepl
     //XT.test2
-    //Examples.example2();
+    Examples.example2();
   }
   
   def launchRepl() = {

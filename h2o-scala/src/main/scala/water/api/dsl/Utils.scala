@@ -33,6 +33,24 @@ object Utils {
     for(i <- 0 until chunks.length) row(i) = chunks(i).at0(rowIdx)
     row 
   }
+  
+  def combine[T<:T_Frame](f1:T, f2:T, t:T_Chunk_Combinator): DFrame = {
+		assert(f1.ncol == f2.ncol && f1.nrow == f2.nrow)
+		val f = f1 ++ f2
+		val r = new MRTask2() {
+		  override def map(ic: Array[Chunk], oc: Array[NewChunk]) = {
+		    val half = ic.length / 2
+		    for (i <- 0 until half) {
+		      val ic1 = ic(i)
+		      val ic2 = ic(i+half)
+		      val o   = oc(i)
+		      t.apply(ic1, ic2, o)
+		    }
+		  }
+		}
+		r.doAll(f1.ncol, f.frame)
+		new DFrame(r.outputFrame(f1.frame.names(), f1.frame.domains()))
+	}
 }
 
 class MRICollector[X<:Iced](acc:X, cf: T_T_Collect[X, scala.Double]) extends MRTask2[MRICollector[X]] {

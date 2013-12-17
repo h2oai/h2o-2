@@ -54,5 +54,21 @@ public class MRUtils {
 
 		return r;
 	}
+	
+	public static Frame pow(Frame fr, final double d) {
+		Frame r = new MRTask2() {
+			@Override
+			public void map(Chunk[] cs, NewChunk[] ncs) {
+				for (int i = 0; i < ncs.length; i++) {
+					NewChunk nc = ncs[i];
+					Chunk c = cs[i];
+					for (int r = 0; r < c._len; r++)
+						nc.addNum(Math.pow(c.at0(r), d));
+				}
+			}
+		}.doAll(fr.numCols(), fr).outputFrame(fr.names(), fr.domains());
+
+		return r;
+	}
 		
 }

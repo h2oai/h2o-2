@@ -15,6 +15,7 @@ import water.fvec.ParseDataset2
 import water.Job
 import hex.drf.DRF
 import water.Weaver
+import water.fvec.NewChunk
 
 trait TRef {}
 
@@ -39,6 +40,7 @@ trait T_Frame extends T_H20_Frame {
   def -(rhs: Number): T_Frame;
   def *(rhs: Number): T_Frame;
   def /(rhs: Number): T_Frame;
+  def ^(rhs: Number): T_Frame
   
   def <(rhs: Number): T_Frame;
   def <=(rhs: Number): T_Frame;
@@ -48,12 +50,13 @@ trait T_Frame extends T_H20_Frame {
   def !=(rhs: Number): T_Frame;
   
   /** Basic arithmetic ops with another frame - R-like semantics. */ 
-//  def +(rhs: T_Frame): T_Frame;
-//  def -(rhs: TFrame): TFrame;
+  def +(rhs: T_Frame): T_Frame;
+  def -(rhs: T_Frame): T_Frame;
 //  def *(rhs: TFrame): TFrame;
 //  def /(rhs: TFrame): TFrame;
 //  
 //  def %*%(rhs: TFrame): TFrame;
+  /** Append given frames */
   def ++(rhs: T_Frame): T_Frame;
   
   def ncol():Int;
@@ -114,6 +117,24 @@ case class Equal(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
 }
 case class NEqual(lhs:scala.Double) extends T_NF_Transf[scala.Double] {
   def apply(rhs:scala.Double):Boolean = lhs != rhs
+}
+
+/** Chunk combinator for 2 frames 
+ *  
+ *  TODO: use a monad to express internal operation between chunks (+,-)
+ */
+abstract class T_Chunk_Combinator extends Iced with ( (Chunk, Chunk, NewChunk) => Unit );
+case class CAdd() extends T_Chunk_Combinator {
+  def apply(ic1:Chunk, ic2:Chunk, oc:NewChunk) = {
+    for (row <- 0 until ic1._len) 
+		        if (ic1.isNA0(row) || ic2.isNA0(row)) oc.addNA() else oc.addNum(ic1.at0(row)+ic2.at0(row))
+  }
+}
+case class CSub() extends T_Chunk_Combinator {
+  def apply(ic1:Chunk, ic2:Chunk, oc:NewChunk) = {
+    for (row <- 0 until ic1._len) 
+		        if (ic1.isNA0(row) || ic2.isNA0(row)) oc.addNA() else oc.addNum(ic1.at0(row)-ic2.at0(row))
+  }
 }
 
 /** Support for M/R operation for frame - expect that frame contains all vector which we are operating on. */
@@ -261,13 +282,13 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
   def shutdown() = H2O.CLOUD.shutdown()
   
   // DRF API call
-  def drf(f: VT, response: VT, ntrees: Int): DRF.DRFModel = {
+  def drf(f: VT, r: VT, ntrees: Int = 50, classification:Boolean = false): DRF.DRFModel = {
     val drf:DRF = new DRF()
-    val response = f.frame().vecs()(0)
+    val response = r.frame().vecs()(0)
     response.rollupStats()
     drf.source = new Frame(f.frame().names() ++ Array("response"), f.frame.vecs()++Array(response))
     drf.response = response
-    drf.classification = false
+    drf.classification = classification
     drf.ntrees = ntrees;
     drf.invoke()
     return UKV.get(drf.dest())

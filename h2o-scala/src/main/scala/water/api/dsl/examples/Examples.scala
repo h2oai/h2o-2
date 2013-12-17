@@ -2,6 +2,8 @@ package water.api.dsl.examples
 
 import water.Iced
 import water.api.dsl.T_T_Collect
+import water.api.dsl.DFrame
+import water.api.dsl.DFrame
 
 /**
  * Ideas:
@@ -33,6 +35,7 @@ object Examples {
     shutdown()
   }
   
+  /** Call DRF, make a model, predict on a train data, compute MSE. */ 
   def example2() = {
     
     import water.api.dsl.H2ODsl._
@@ -40,8 +43,24 @@ object Examples {
     val source = f(1) ++ f(3 to 7)
     val response = f(2)
     
-    val model = drf(source, response, 1)
-    println(model)
+    // build a model
+    val model = drf(source, response, 10, false)  // doing regression
+    println("The DRF model is: \n" + model)
+    // make a prediction
+    val predict:DFrame = model.score(source.frame())
+    
+    println("Prediction on train data: \n" + predict)
+    
+    // compute squared errors
+    val serr = (response - predict)^2
+    println("Errors per row: " + serr)
+    // make a sum
+    val rss = serr collect (0.0, new CDOp() {
+      def apply(acc:scala.Double, rhs:Array[scala.Double]) = acc + rhs(0)
+      def reduce(acc1:scala.Double, acc2:scala.Double) = acc1+acc2
+    })
+
+    println("RSS: " + rss)
     
     shutdown()
   }

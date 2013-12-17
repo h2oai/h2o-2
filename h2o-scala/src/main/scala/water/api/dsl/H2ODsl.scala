@@ -155,15 +155,20 @@ class DFrame(private val _frame:Frame = new Frame) extends T_Frame with T_MR[DFr
   def +(rhs: Number) = map(Add(rhs.doubleValue()))
   def -(rhs: Number) = map(Sub(rhs.doubleValue()))
   def *(rhs: Number) = map(Mul(rhs.doubleValue()))
+  // another way how to deal with map is to call Java low-leve API directly
   def /(rhs: Number) = apply(MRUtils.div(frame(), rhs.doubleValue()))
+  def ^(rhs: Number) = apply(MRUtils.pow(frame(), rhs.doubleValue()))
 
-  def <(rhs: Number)  = map(Greater(rhs.doubleValue()))
+  def < (rhs: Number) = map(Greater(rhs.doubleValue()))
   def >=(rhs: Number) = map(LessOrEqual(rhs.doubleValue()))
-  def >(rhs: Number)  = map(Less(rhs.doubleValue()))
+  def > (rhs: Number) = map(Less(rhs.doubleValue()))
   def <=(rhs: Number) = map(GreaterOrEqual(rhs.doubleValue()))
   def ==(rhs: Number) = map(Equal(rhs.doubleValue()))
   def !=(rhs: Number) = map(NEqual(rhs.doubleValue()))
   
+  // Operations between frames - always return a new frame holding new data
+  def +(rhs: T_Frame) = Utils.combine(this, rhs, CAdd())
+  def -(rhs: T_Frame) = Utils.combine(this, rhs, CSub())
   // Append
   def ++(rhs: T_Frame) = new DFrame(cbind(frame(), rhs.frame()))
   override def toString() = frame().toStringHead(NHEAD)
@@ -178,8 +183,10 @@ sealed case class HexKey(key: Key) extends TRef {
 
 trait H2ODslImplicitConv {
   // Implicit conversion from Int to Range
-  implicit def Int2Range(n: Int): Range = Range(n, n + 1, 1);
-  implicit def String2HexKey(s: String): HexKey = HexKey(Key.make(s));
-  //  implicit def String2DFrame(s: String): DFrame = DFrame(s);
+  implicit def Int2Range(n: Int): Range = Range(n, n + 1, 1)
+  implicit def String2HexKey(s: String): HexKey = HexKey(Key.make(s))
+  //  implicit def String2DFrame(s: String): DFrame = DFrame(s)
+  implicit def DFrame2Frame(d: DFrame):Frame = d.frame()
+  implicit def Frame2DFrame(f: Frame):DFrame = new DFrame(f)
 } 
 
