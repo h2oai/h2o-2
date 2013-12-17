@@ -428,9 +428,9 @@ public class DTree extends Iced {
       res += lsz;
       if( left instanceof LeafNode ) _nodeType |= (byte)(24 << 0*2);
       else {
-        int slen = lsz < 256 ? 1 : (lsz < 65535 ? 2 : 3);
+        int slen = lsz < 256 ? 0 : (lsz < 65535 ? 1 : (lsz<(1<<24) ? 2 : 3));
         _nodeType |= slen; // Set the size-skip bits
-        res += slen;
+        res += (slen+1); //
       }
 
       Node rite = _tree.node(_nids[1]);
@@ -450,11 +450,12 @@ public class DTree extends Iced {
       ab.put2((short)_split._col);
       ab.put4f(_splat);
       Node left = _tree.node(_nids[0]);
-      if( (_nodeType&3) > 0 ) { // Size bits are optional for leaves
+      if( (_nodeType&24) == 0 ) { // Size bits are optional for left leaves !
         int sz = left.size();
-        if(sz < 256)         ab.put1(       sz);
-        else if (sz < 65535) ab.put2((short)sz);
-        else                 ab.put3(       sz);
+        if(sz < 256)            ab.put1(       sz);
+        else if (sz < 65535)    ab.put2((short)sz);
+        else if (sz < (1<<24))  ab.put3(       sz);
+        else                    ab.put4(       sz); // 1<<31-1
       }
       // now write the subtree in
       left.compress(ab);
@@ -735,9 +736,10 @@ public class DTree extends Iced {
           int rmask = (nodeType & 0x60) >> 2;
           int skip = 0;
           switch(lmask) {
-          case 1:  skip = ab.get1();  break;
-          case 2:  skip = ab.get2();  break;
-          case 3:  skip = ab.get3();  break; // skip 3bytes value ~ 16MB for left subtree ~ we support 32MB trees now
+          case 0:  skip = ab.get1();  break;
+          case 1:  skip = ab.get2();  break;
+          case 2:  skip = ab.get3();  break;
+          case 3:  skip = ab.get4();  break;
           case 8:  skip = _nclass < 256?1:2;  break; // Small leaf
           case 24: skip = 4;          break; // skip the prediction
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
@@ -799,9 +801,10 @@ public class DTree extends Iced {
         int rmask = (nodeType & 0x60) >> 2;
         int skip = 0;
         switch(lmask) {
-        case 1:  skip = _ts.get1();  break;
-        case 2:  skip = _ts.get2();  break;
-        case 3:  skip = _ts.get3();  break;
+        case 0:  skip = _ts.get1();  break;
+        case 1:  skip = _ts.get2();  break;
+        case 2:  skip = _ts.get3();  break;
+        case 3:  skip = _ts.get4();  break;
         case 8:  skip = _ct._nclass < 256?1:2;  break; // Small leaf
         case 24: skip = _ct._nclass*4;  break; // skip the p-distribution
         default: assert false:"illegal lmask value " + lmask;
