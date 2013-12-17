@@ -9,7 +9,7 @@ source('./findNSourceUtils.R')
 
 test.basic.slot.assignment <- function(conn) {
   Log.info("Uploading iris data...")
-  hex <- h2o.uploadFile(conn, locate("smalldata/iris/iris.csv"), "iris.hex")
+  hex <- h2o.uploadFile(conn, locate("smalldata/iris/iris_wheader.csv"), "iris.hex")
   oldVal <- hex[1,1]
 
   Log.info("Changing the first element in the first column of iris")
@@ -17,11 +17,11 @@ test.basic.slot.assignment <- function(conn) {
   Log.info(head(oldVal))
 
   hex[1,1] <- 48
-  hex$Sepal.Length[2] <- 90
+  hex$sepal_len[2] <- 90
 
   expect_false(hex[1,1], equals(oldVal))
   expect_that(hex[1,1], equals(48))
-  expect_that(hex$Sepal.Length[2], equals(90))
+  expect_that(hex$sepal_len[2], equals(90))
   testEnd()
 
 }
