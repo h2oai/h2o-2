@@ -37,17 +37,20 @@ test.lt.frame <- function(conn) {
   Log.info("Expectation is a frame of booleans")
   
   Log.info("Try hex < 5 : ")
-  if(anyEnum) expect_warning(hexLTFive <- hex < 5)
-  else hexLTFive <- hex < 5
+  # if(anyEnum) expect_warning(hexLTFive <- hex < 5)
+  # else hexLTFive <- hex < 5
+  hexLTFive <- hex < 5
   
   Log.info("Don't expect commutativity, but expect operation to work when operands switched: 5 < hex ")
-  if(anyEnum) expect_warning(fiveLTHex <- 5 < hex)
-  else fiveLTHex <- 5 < hex
+  # if(anyEnum) expect_warning(fiveLTHex <- 5 < hex)
+  # else fiveLTHex <- 5 < hex
+  fiveLTHex <- 5 < hex
   
   Log.info("Try < the frame by itself: hex < hex")
-  if(anyEnum) expect_warning(hexLTHex <- hex < hex)
-  else hexLTHex <- hex < hex
-
+  # if(anyEnum) expect_warning(hexLTHex <- hex < hex)
+  # else hexLTHex <- hex < hex
+  hexLTHex <- hex < hex
+  
   testEnd()
 }
 

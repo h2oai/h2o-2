@@ -67,18 +67,18 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ExportHdfs()),  "Export HDFS",                "Data");
     Request.addToNavbar(registerRequest(new Upload()),      "Upload",                     "Data");
     Request.addToNavbar(registerRequest(new Get()),         "Download",                   "Data");
-    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Data");
 
+    Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
+    Request.addToNavbar(registerRequest(new PCA()),         "PCA",                        "Model");
     Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
-    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2",                    "Model");
-    Request.addToNavbar(registerRequest(new PCA()),         "PCA (Beta)",                 "Model");
-    Request.addToNavbar(registerRequest(new GBM()),         "GBM (Beta)",                 "Model");
+    Request.addToNavbar(registerRequest(new GBM()),         "GBM",                        "Model");
+    Request.addToNavbar(registerRequest(new RF()),          "Single Node RF",             "Model");
+    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
     Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
-    Request.addToNavbar(registerRequest(new DRF()),         "Random Forest (Beta)",       "Model");
-    Request.addToNavbar(registerRequest(new RF()),          "DRF1 (Deprecated)",          "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
