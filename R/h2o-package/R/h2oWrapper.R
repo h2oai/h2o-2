@@ -188,7 +188,7 @@ h2o.startJar <- function(memory = "2g") {
   else {
     runs <- paste(.h2o.pkg.path, "scripts", "h2o", sep = .Platform$file.sep)
     if (!file.exists(runs)) {
-      rs = h2o.__genScript()
+      rs = h2o.__genScript(NULL, memory)
       wl <- try(writeLines(rs, runs), silent = TRUE)
       if (inherits(wl, "try-error"))
         stop("Cannot create H2O start script! Please check if h2o exists at ", runs)

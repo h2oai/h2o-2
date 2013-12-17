@@ -8,7 +8,7 @@ Connect to H2O and Install R Package
 Connects to a H2O instance and checks the local H2O R package is the correct version.
 }
 \usage{
-h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
+h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE, Xmx = "2g")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -19,14 +19,17 @@ Object of class \code{"character"} representing the IP address of the H2O server
 Object of class \code{"numeric"} representing the port number of the H2O server.
 }
   \item{startH2O}{
-A logical value indicating whether to start the H2O launcher GUI if no connection with H2O is detected. This is only possible if H2O was installed from the InstallBuilder executable and \code{ip = "localhost"} or \code{ip = "127.0.0.1"}.
+(Optional) A logical value indicating whether to start the H2O launcher GUI if no connection with H2O is detected. This is only possible if H2O was installed from the InstallBuilder executable and \code{ip = "localhost"} or \code{ip = "127.0.0.1"}.
 }
   \item{silentUpgrade}{
-A logical value indicating whether to automatically install the H2O R package from the H2O server if a version mismatch is detected.
+(Optional) A logical value indicating whether to automatically install the H2O R package from the H2O server if a version mismatch is detected.
 }
   \item{promptUpgrade}{
-A logical value indicating whether to prompt the user to install the H2O R package from the H2O server if a version mismatch is detected. Ignored when \code{silentUpgrade = TRUE}.
+(Optional) A logical value indicating whether to prompt the user to install the H2O R package from the H2O server if a version mismatch is detected. Ignored when \code{silentUpgrade = TRUE}.
 }
+  \item{Xmx}{
+(Optional) A string specifying the maximum size, in bytes, of the memory allocation pool to H2O. This value must a multiple of 1024 greater than 2MB. Append the letter m or M to indicate megabytes, or g or G to indicate gigabytes. 
+  }
 }
 \details{
 This method first checks if H2O is connectable. If it cannot connect and \code{startH2O = TRUE} with IP of localhost, it will attempt to start the H2O launcher GUI, which is installed with the H2O InstallBuilder executable. Otherwise, it stops immediately with an error. Once connected, the method checks to see if the local H2O R package version matches the version of H2O running on the server. If there is a mismatch and the user indicates she wishes to upgrade, it will remove the local H2O R package and download/install the H2O R package from the server.
