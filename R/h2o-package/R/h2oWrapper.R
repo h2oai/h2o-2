@@ -111,7 +111,7 @@ h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
     needs_upgrade <- T
   }
 
-  if( !needs_upgrade )
+  if("h2oRClient" %in% packages && !needs_upgrade )
     cat("H2O R package and server version", H2OVersion, "match\n")
   else if(h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {
     if("h2oRClient" %in% packages) {

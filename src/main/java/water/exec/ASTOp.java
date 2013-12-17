@@ -28,6 +28,7 @@ public abstract class ASTOp extends AST {
     put(new ASTNot());
     put(new ASTScale());
     put(new ASTFactor());
+    put(new ASTIsFactor());
 
     put(new ASTCos());  // Trigonometric functions
     put(new ASTSin());
@@ -160,6 +161,7 @@ class ASTLog  extends ASTUniOp { String opStr(){ return "log";   } ASTOp make() 
 class ASTExp  extends ASTUniOp { String opStr(){ return "exp";   } ASTOp make() {return new ASTExp ();} double op(double d) { return Math.exp(d);}}
 class ASTIsNA extends ASTUniOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
 class ASTNot  extends ASTUniOp { String opStr(){ return "!";     } ASTOp make() {return new ASTNot(); } double op(double d) { return d==0?1:0; }}
+
 class ASTNrow extends ASTUniOp {
   ASTNrow() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "nrow"; }
@@ -172,6 +174,7 @@ class ASTNrow extends ASTUniOp {
     env.poppush(d);
   }
 }
+
 class ASTNcol extends ASTUniOp {
   ASTNcol() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
   @Override String opStr() { return "ncol"; }
@@ -180,6 +183,24 @@ class ASTNcol extends ASTUniOp {
     Frame fr = env.popAry();
     String skey = env.key();
     double d = fr.numCols();
+    env.subRef(fr,skey);
+    env.poppush(d);
+  }
+}
+
+class ASTIsFactor extends ASTUniOp {
+  ASTIsFactor() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "is.factor"; }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt) {
+    if(!env.isAry()) { env.poppush(0); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = 1;
+    Vec[] v = fr.vecs();
+    for(int i = 0; i < v.length; i++) {
+      if(!v[i].isEnum()) { d = 0; break; }
+    }
     env.subRef(fr,skey);
     env.poppush(d);
   }
@@ -768,7 +789,7 @@ class ASTFactor extends ASTOp {
   @Override ASTOp make() {return new ASTFactor();}
   @Override void apply(Env env, int argcnt) {
     Frame ary = env.popAry();   // Ary pulled from stack, keeps +1 refcnt
-    if( ary.numCols() != 1 ) 
+    if( ary.numCols() != 1 )
       throw new IllegalArgumentException("factor requires a single column");
     Vec v0 = ary.vecs()[0];
     if( !v0.isEnum() ) {        // Frame on the stack is already a factor

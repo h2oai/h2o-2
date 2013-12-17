@@ -48,7 +48,7 @@ test.minus <- function(conn) {
   slicedMinusFive <- sliced - 5
   slicedMinusFive <- h2o.assign(slicedMinusFive, "slicedMinusFive.hex")
 
-  Log.info("Orignal sliced: ")
+  Log.info("Original sliced: ")
   print(head(as.data.frame(sliced)))
 
   Log.info("Sliced - 5: ")

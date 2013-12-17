@@ -391,6 +391,16 @@ setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
 setMethod("sum", "H2OParsedData", function(x) { h2o.__unop2("sum", x) })
 setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
 
+setGeneric("as.h2o", function(h2o, object) { standardGeneric("as.h2o") })
+setMethod("as.h2o", signature(h2o="H2OClient", object="data.frame"),
+ function(h2o, object) {
+   tmpf <- tempfile(fileext=".csv") 
+   write.csv(object, file=tmpf, quote=F, row.names=F)
+   h2f <- h2o.uploadFile(h2o, tmpf)
+   unlink(tmpf)
+   h2f
+ })
+
 setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
 setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x, breaks) {
   nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
@@ -410,6 +420,8 @@ setMethod("colnames", "H2OParsedData", function(x) {
 })
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
+# setMethod("nrow", "H2OParsedData", function(x) { h2o.__unop2("nrow", x) })
+# setMethod("ncol", "H2OParsedData", function(x) { h2o.__unop2("ncol", x) })
 
 setMethod("nrow", "H2OParsedData", function(x) { 
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numRows) })
@@ -417,15 +429,49 @@ setMethod("nrow", "H2OParsedData", function(x) {
 setMethod("ncol", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key); as.numeric(res$numCols) })
 
-setMethod("min", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
-  min(sapply(res$cols, function(x) { x$min }))
-})
+# setMethod("min", "H2OParsedData", function(x, ..., na.rm = FALSE) {
+#   if(na.rm) stop("Unimplemented")
+#   # res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+#   # min(..., sapply(res$cols, function(x) { x$min }), na.rm)
+#   min(..., h2o.__unop2("min", x), na.rm)
+# })
+# 
+# setMethod("max", "H2OParsedData", function(x, ..., na.rm = FALSE) {
+#   if(na.rm) stop("Unimplemented")
+#   # res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
+#   # max(..., sapply(res$cols, function(x) { x$max }), na.rm)
+#   max(..., h2o.__unop2("max", x), na.rm)
+# })
 
-setMethod("max", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
-  max(sapply(res$cols, function(x) { x$max }))
-})
+min.internal <- min
+min <- function(..., na.rm = FALSE) {
+  idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
+  
+  if(any(idx)) {
+    if(na.rm) stop("Unimplemented")
+    myVals = c(...); myData = myVals[idx]
+    myKeys = sapply(myData, function(y) { y@key })
+    expr = paste("min(", paste(myKeys, collapse=","), ")", sep = "")
+    res = h2o.__exec2(myData[[1]]@h2o, expr)
+    .Primitive("min")(unlist(myVals[!idx]), res$scalar, na.rm = na.rm)
+  } else
+    .Primitive("min")(..., na.rm = na.rm)
+}
+
+max.internal <- max
+max <- function(..., na.rm = FALSE) {
+  idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
+  
+  if(any(idx)) {
+    if(na.rm) stop("Unimplemented")
+    myVals = c(...); myData = myVals[idx]
+    myKeys = sapply(myData, function(y) { y@key })
+    expr = paste("max(", paste(myKeys, collapse=","), ")", sep = "")
+    res = h2o.__exec2(myData[[1]]@h2o, expr)
+    .Primitive("max")(unlist(myVals[!idx]), res$scalar, na.rm = na.rm)
+  } else
+    .Primitive("max")(..., na.rm = na.rm)
+}
 
 setMethod("range", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
@@ -442,7 +488,7 @@ setMethod("colMeans", "H2OParsedData", function(x) {
 
 setMethod("mean", "H2OParsedData", function(x) {
   res <- NA
-  if(is.factor(x) || dim(x)[2] != 1) {
+  if(any(is.factor(x)) || dim(x)[2] != 1) {
     warning("In H2O mean(x): argument not numeric or logical: returning NA")
     res
   }
@@ -453,7 +499,7 @@ setMethod("mean", "H2OParsedData", function(x) {
 })
 
 setMethod("sd", "H2OParsedData", function(x) {
-  if(dim(x)[2] != 1 || is.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
+  if(dim(x)[2] != 1 || any(is.factor(x))) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
   res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
   res$summaries[[1]]$stats$sd
 })
@@ -505,13 +551,7 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
 })
 
 setMethod("as.factor", "H2OParsedData", function(x) { h2o.__unop2("factor", x) })
-
-setMethod("is.factor", "H2OParsedData", function(x) {
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  # temp = sapply(res$summaries, function(x) { is.null(x$domains) })
-  temp = sapply(res$summaries, function(x) { x$stats$type != "Enum" })
-  return(!any(temp))
-})
+setMethod("is.factor", "H2OParsedData", function(x) { as.logical(h2o.__unop2("is.factor", x)) })
 
 setMethod("quantile", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
@@ -594,6 +634,20 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
   expr = paste("apply(", paste(params, collapse=","), ")", sep="")
   res = h2o.__exec2(X@h2o, expr)
   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
+})
+
+setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
+  if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
+    stop("Unimplemented")
+  if(!test@logic) stop(test@key, " is not a H2O logical data type")
+  yes = ifelse(class(yes) == "H2OParsedData", yes@key, yes)
+  no = ifelse(class(no) == "H2OParsedData", no@key, no)
+  expr = paste("ifelse(", test@key, ",", yes, ",", no, ")", sep="")
+  res = h2o.__exec2(test@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
+    res$scalar
+  else
+    new("H2OParsedData", h2o=test@h2o, key=res$dest_key, logic=FALSE)
 })
 
 #--------------------------------- ValueArray ----------------------------------#
