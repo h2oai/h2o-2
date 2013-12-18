@@ -160,6 +160,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAck());
     registerRequest(new RunScript());
     registerRequest(new SetColumnNames());
+    registerRequest(new LogAndEcho());
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
     registerRequest(new TypeaheadGLMModelKeyRequest());

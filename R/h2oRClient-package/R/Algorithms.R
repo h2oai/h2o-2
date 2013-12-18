@@ -26,14 +26,15 @@ h2o.gbm <- function(x, y, distribution='multinomial', data, n.trees=10, interact
   cols = paste(args$x_i - 1, collapse=",")
 
   if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1) {
-    destKey = h2o.__uniqID("GBMModel")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
+    # destKey = h2o.__uniqID("GBMModel")
+    # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=destKey)
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBMModelView, '_modelKey'=res$destination_key)
 
     result = h2o.__getGBMResults(res2$gbm_model, distribution == 'multinomial')
     result$distribution <- distribution
-    new("H2OGBMModel", key=destKey, data=data, model=result, valid=validation)
+    new("H2OGBMModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, validation=validation@key)
     h2o.gridsearch.internal("GBM", data, res$job_key, res$destination_key, validation, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt= (distribution=='multinomial'))
@@ -69,7 +70,6 @@ h2o.__getGBMResults <- function(res, isClassificationAndYesTheBloodyModelShouldR
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-# TODO: Cross-validation results currently not showing because keys aren't being returned in the JSON
 h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
   args <- verify_dataxy(data, x, y)
 
@@ -235,14 +235,15 @@ h2o.kmeans <- function(data, centers, cols='', iter.max=10) {
   myIgnore <- ifelse(cols == '' || length(temp) == 0, '', paste(temp, sep=','))
 
   if(length(centers) == 1 && length(iter.max) == 1) {
-    rand_kmeans_key = h2o.__uniqID("KMeansModel")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, destination_key=rand_kmeans_key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
+    # rand_kmeans_key = h2o.__uniqID("KMeansModel")
+    # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, destination_key=rand_kmeans_key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMModelView, model=rand_kmeans_key)
-    res = res$model
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMModelView, model=res$destination_key)
+    res2 = res2$model
 
-    result = h2o.__getKMResults(res, data) #, centers)
-    new("H2OKMeansModel", key=res$'_selfKey', data=data, model=result)
+    result = h2o.__getKMResults(res2, data) #, centers)
+    new("H2OKMeansModel", key=res2$'_selfKey', data=data, model=result)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=myIgnore, k=centers, max_iter=iter.max)
     h2o.gridsearch.internal("KM", data, res$job_key, res$destination_key)
@@ -301,15 +302,18 @@ h2o.nn <- function(x, y,  data, classification=T, activation='Tanh', layers=500,
 
   # BUG: Resulting numbers are off from browser. I don't think the algorithm is finished even when progress = -1
   if(length(layers) == 1 && length(rate) == 1 && length(l1_reg) == 1 && length(l2_reg) == 1 && length(epoch) == 1) {
-    destKey = h2o.__uniqID("NNModel")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
+    # destKey = h2o.__uniqID("NNModel")
+    # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, destination_key=destKey, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
+    #    classification=as.numeric(classification), activation=activation, rate=rate,
+    #    hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, epochs=epoch, validation=validation@key)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
         classification=as.numeric(classification), activation=activation, rate=rate,
         hidden=paste(layers, sep="", collapse=","), l1=l1_reg, l2=l2_reg, epochs=epoch, validation=validation@key)
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, destination_key=destKey)
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_NNModelView, destination_key=res$destination_key)
 
     result = h2o.__getNNResults(res2)
-    new("H2ONNModel", key=destKey, data=data, model=result, valid=validation)
+    new("H2ONNModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_NN, source=data@key, response=args$y, cols=paste(args$x_i - 1, collapse=','),
                            classification=as.numeric(classification), activation=activation, rate=rate,
@@ -444,13 +448,14 @@ h2o.randomForest <- function(x, y, data, ntree=50, depth=50, nodesize=1, sample.
   cols <- paste(args$x_i - 1, collapse=',')
 
   if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1) {
-    destKey = h2o.__uniqID("DRFModel")
-    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins)
+    # destKey = h2o.__uniqID("DRFModel")
+    # res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, destination_key=destKey, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins)
+    res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins)
     while(h2o.__poll(data@h2o, res$job_key) != -1) { Sys.sleep(1) }
-    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRFModelView, '_modelKey'=destKey)
+    res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRFModelView, '_modelKey'=res$destination_key)
 
     result = h2o.__getDRFResults(res2$drf_model)
-    new("H2ODRFModel", key=destKey, data=data, model=result, valid=validation)
+    new("H2ODRFModel", key=res$destination_key, data=data, model=result, valid=validation)
   } else {
     res = h2o.__remoteSend(data@h2o, h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins)
     h2o.gridsearch.internal("RF", data, res$job_key, res$destination_key, validation)
@@ -708,7 +713,8 @@ build_cm <- function(cm, cf_names) {
   cf_matrix = t(matrix(unlist(cm), nrow=categories))
 
   cf_total = apply(cf_matrix, 2, sum)
-  cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
+  # cf_error = c(apply(cf_matrix, 1, sum)/diag(cf_matrix)-1, 1-sum(diag(cf_matrix))/sum(cf_matrix))
+  cf_error = c(1-diag(cf_matrix)/apply(cf_matrix,1,sum), 1-sum(diag(cf_matrix))/sum(cf_matrix))
   cf_matrix = rbind(cf_matrix, cf_total)
   cf_matrix = cbind(cf_matrix, round(cf_error, 3))
 

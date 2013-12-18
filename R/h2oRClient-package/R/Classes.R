@@ -203,8 +203,7 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
 # i are the rows, j are the columns. These can be vectors of integers or character strings, or a single logical data object
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   numRows = nrow(x); numCols = ncol(x)
-  if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
-     (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
+  if (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols))
     stop("Array index out of bounds")
   
   if(missing(i) && missing(j)) return(x)
@@ -396,9 +395,11 @@ setMethod("as.h2o", signature(h2o="H2OClient", object="data.frame"),
  function(h2o, object) {
    tmpf <- tempfile(fileext=".csv") 
    write.csv(object, file=tmpf, quote=F, row.names=F)
-   h2f <- h2o.uploadFile(h2o, tmpf)
+   destKey = paste(TEMP_KEY, ".", pkg.env$temp_count, sep="")
+   pkg.env$temp_count = (pkg.env$temp_count + 1) %% RESULT_MAX
+   h2f <- h2o.uploadFile(h2o, tmpf, key=destKey)
    unlink(tmpf)
-   h2f
+   return(h2f)
  })
 
 setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
@@ -488,7 +489,7 @@ setMethod("colMeans", "H2OParsedData", function(x) {
 
 setMethod("mean", "H2OParsedData", function(x) {
   res <- NA
-  if(any(is.factor(x)) || dim(x)[2] != 1) {
+  if(any.factor(x) || dim(x)[2] != 1) {
     warning("In H2O mean(x): argument not numeric or logical: returning NA")
     res
   }
@@ -499,7 +500,7 @@ setMethod("mean", "H2OParsedData", function(x) {
 })
 
 setMethod("sd", "H2OParsedData", function(x) {
-  if(dim(x)[2] != 1 || any(is.factor(x))) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
+  if(dim(x)[2] != 1 || any.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
   res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
   res$summaries[[1]]$stats$sd
 })
@@ -552,6 +553,12 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
 
 setMethod("as.factor", "H2OParsedData", function(x) { h2o.__unop2("factor", x) })
 setMethod("is.factor", "H2OParsedData", function(x) { as.logical(h2o.__unop2("is.factor", x)) })
+
+any.factor <- function(x) {
+  if(class(x) != "H2OParsedData")
+    stop("x must be an H2OParsedData object")
+  as.logical(h2o.__unop2("any.factor", x))
+}
 
 setMethod("quantile", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)

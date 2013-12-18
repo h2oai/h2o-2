@@ -25,7 +25,7 @@ h2o.startLauncher <- function() {
   else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
   myFiles = list.files(verPath)
   if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
-  # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
+  # TODO: Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
   
   # Get H2O with latest version number
   # If latest isn't working, maybe go down list to earliest until one executes?
@@ -393,3 +393,15 @@ setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
     if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
       stop("Currently unimplemented!"); return(x)
     })
+
+# ----------------------- Log helper ----------------------- #
+h2o.logAndEcho <- function(conn, message) {
+  if (class(conn) != "H2OClient")
+      stop("conn must be an H2OClient")
+  if (class(message) != "character")
+      stop("message must be a character string")
+  
+  res = h2o.__remoteSend(conn, h2o.__PAGE_LOG_AND_ECHO, message=message)
+  echo_message = res$message
+  return (echo_message)
+}

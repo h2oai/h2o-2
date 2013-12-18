@@ -90,6 +90,7 @@ h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 h2o.__PAGE_PARSE2 = "2/Parse2.json"
 h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
+h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
 
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFModelView = "2/DRFModelView.json"
@@ -118,12 +119,21 @@ h2o.__remoteSend <- function(client, page, ...) {
   if(pkg.env$IS_LOGGING) {
     h2o.__logIt(myURL, list(...), "Command")
   }
+  
   # Sends the given arguments as URL arguments to the given page on the specified server
-  # temp = postForm(myURL, style = "POST", ...)
-  if(length(list(...)) == 0)
-    temp = getURLContent(myURL)
-  else
-    temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
+  #
+  # Re-enable POST since we found the bug in NanoHTTPD which was causing POST
+  # payloads to be dropped.
+  #
+  temp = postForm(myURL, style = "POST", ...)
+  
+  # The GET code that we used temporarily while NanoHTTPD POST was known to be busted.
+  #
+  #if(length(list(...)) == 0)
+  #  temp = getURLContent(myURL)
+  #else
+  #  temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
+  
   # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
   # after = gsub("NaN", "\"NaN\"", after)
   # after = gsub("-Infinity", "\"-Inf\"", temp[1])
@@ -243,7 +253,7 @@ h2o.__pollAll <- function(client, timeout) {
 }
 
 h2o.__uniqID <- function(prefix = "") {
-  if("uuid" %in% installed.packages()) {
+  if("uuid" %in% installed.packages()[,1]) {
     library(uuid)
     temp = UUIDgenerate()
   } else {
@@ -271,7 +281,7 @@ h2o.__uniqID <- function(prefix = "") {
 
 h2o.__checkForFactors <- function(object) {
     if(class(object) != "H2OParsedData") return(FALSE)
-    any(is.factor(object))
+    any.factor(object)
 }
 
 h2o.__version <- function(client) {

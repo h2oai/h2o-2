@@ -587,8 +587,30 @@ public class Frame extends Iced {
 
     // Do Da Slice
     // orows is either a long[] or a Vec
-    if( orows == null || orows instanceof long[] )
+    if (orows == null)
       return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    else if (orows instanceof long[]) {
+      final long CHK_ROWS=1000000;
+      long[] rows = (long[])orows;
+      if (rows.length==0)
+        return new DeepSlice(rows,c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
+      // Vec'ize the index array
+      AppendableVec av = new AppendableVec("rownames");
+      int r = 0;
+      int c = 0;
+      while (r < rows.length) {
+        NewChunk nc = new NewChunk(av, c);
+        long end = Math.min(r+CHK_ROWS, rows.length);
+        for (; r < end; r++) {
+          nc.addNum(rows[r]);
+        }
+        nc.close(c++, null);
+      }
+      Vec c0 = av.close(null);   // c0 is the row index vec
+      return new Slice(c2, this).doAll(c2.length,new Frame(new String[]{"rownames"}, new Vec[]{c0}))
+              .outputFrame(names(c2), domains(c2));
+      //return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+    }
     Frame frows = (Frame)orows;
     Vec vrows = frows.anyVec();
     // It's a compatible Vec; use it as boolean selector.
@@ -602,6 +624,44 @@ public class Frame extends Iced {
     vecs[c2.length] = vrows;
     names[c2.length] = "predicate";
     return new DeepSelect().doAll(c2.length,new Frame(names,vecs)).outputFrame(names(c2),domains(c2));
+  }
+
+  // Slice and return in the form of new chunks.
+  private static class Slice extends MRTask2<Slice> {
+    final Frame  _base;   // the base frame to slice from
+    final int[]  _cols;
+    Slice(int[] cols, Frame base) { _cols = cols; _base = base; }
+    @Override public void map(Chunk[] ix, NewChunk[] ncs) {
+      final Vec[] vecs = new Vec[_cols.length];
+      final Vec   anyv = _base.anyVec();
+      final long  nrow = anyv.length();
+            long  r    = ix[0].at80(0);
+      int   last_ci = anyv.elem2ChunkIdx(r<nrow?r:0); // memoize the last chunk index
+      long  last_c0 = anyv._espc[last_ci];            // ...         last chunk start
+      long  last_c1 = anyv._espc[last_ci + 1];        // ...         last chunk end
+      Chunk[] last_cs = new Chunk[vecs.length];       // ...         last chunks
+      for (int c = 0; c < _cols.length; c++) {
+        vecs[c] = _base.vecs()[_cols[c]];
+        last_cs[c] = vecs[c].elem2BV(last_ci);
+      }
+      for (int i = 0; i < ix[0]._len; i++) {
+        // select one row
+        r = ix[0].at80(i) - 1;   // next row to select
+        if (r >= nrow) {
+          for (int c = 0; c < vecs.length; c++) ncs[c].addNum(Double.NaN);
+        } else {
+          if (r < last_c0 || r >= last_c1) {
+            last_ci = anyv.elem2ChunkIdx(r);
+            last_c0 = anyv._espc[last_ci];
+            last_c1 = anyv._espc[last_ci + 1];
+            for (int c = 0; c < vecs.length; c++)
+              last_cs[c] = vecs[c].elem2BV(last_ci);
+          }
+          for (int c = 0; c < vecs.length; c++)
+            ncs[c].addNum(last_cs[c].at(r));
+        }
+      }
+    }
   }
 
   // Bulk (expensive) copy from 2nd cols into 1st cols.
