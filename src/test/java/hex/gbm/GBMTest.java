@@ -43,16 +43,16 @@ public class GBMTest extends TestUtil {
     basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
              new PrepData() { int prep(Frame fr) { return fr.find("IsDepDelayed"); }
              });
-    basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
-             new PrepData() {
-               int prep(Frame fr) {
-                 assertEquals(581012,fr.numRows());
-                 for( int ign : IGNS )
-                   UKV.remove(fr.remove("C"+Integer.toString(ign))._key);
-                 // Covtype: predict on last column
-                 return fr.numCols()-1;
-               }
-             });
+    //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
+    //         new PrepData() {
+    //           int prep(Frame fr) {
+    //             assertEquals(581012,fr.numRows());
+    //             for( int ign : IGNS )
+    //               UKV.remove(fr.remove("C"+Integer.toString(ign))._key);
+    //             // Covtype: predict on last column
+    //             return fr.numCols()-1;
+    //           }
+    //         });
   }
 
   // covtype ignorable columns
