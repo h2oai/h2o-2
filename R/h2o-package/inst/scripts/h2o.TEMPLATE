@@ -1,9 +1,0 @@
-#!/bin/sh
-
-# Set up environment variables
-JAVA="@JAVA_PROG@"
-JAR_FILE="@H2O_JAR@"
-FLAT_FILE="@FLAT@"
-
-# Run H2O in the background
-"${JAVA}" -ea -Xmx128m -jar "${JAR_FILE}" -ip 127.0.0.1 -port 54321 -flatfile "${FLAT_FILE}" 1> /tmp/h2olauncher.out 2> /tmp/h2olauncher.err

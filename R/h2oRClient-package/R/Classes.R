@@ -348,8 +348,8 @@ setMethod("<", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__bin
 setMethod("!=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
 setMethod(">=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
 setMethod("<=", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
-setMethod("&", c("H2OParsedData", "H2OParsedData"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
-setMethod("|", c("H2OParsedData", "H2OParsedData"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
+setMethod("&", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { h2o.__binop2("||", e1, e2) })
 
 setMethod("+", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
 setMethod("-", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("-", e1, e2) })
@@ -362,8 +362,8 @@ setMethod("<", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("<
 setMethod("!=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
 setMethod(">=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
 setMethod("<=", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
-setMethod("&", c("numeric", "H2OParsedData"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
-setMethod("|", c("numeric", "H2OParsedData"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
+setMethod("&", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("numeric", "H2OParsedData"), function(e1, e2) { h2o.__binop2("||", e1, e2) })
 
 setMethod("+", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("+", e1, e2) })
 setMethod("-", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("-", e1, e2) })
@@ -376,8 +376,8 @@ setMethod("<", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("<
 setMethod("!=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("!=", e1, e2) })
 setMethod(">=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2(">=", e1, e2) })
 setMethod("<=", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("<=", e1, e2) })
-setMethod("&", c("H2OParsedData", "numeric"), function(e1, e2) {h2o.__binop2("&&", e1, e2) })
-setMethod("|", c("H2OParsedData", "numeric"), function(e1, e2) {h2o.__binop2("||", e1, e2) })
+setMethod("&", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("&&", e1, e2) })
+setMethod("|", c("H2OParsedData", "numeric"), function(e1, e2) { h2o.__binop2("||", e1, e2) })
 
 setMethod("!", "H2OParsedData", function(x) { h2o.__unop2("!", x) })
 setMethod("abs", "H2OParsedData", function(x) { h2o.__unop2("abs", x) })
@@ -513,7 +513,7 @@ setMethod("dim", "H2OParsedData", function(x) {
 setMethod("as.data.frame", "H2OParsedData", function(x) {
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
   ttt <- getURL(url)
-  read.csv(textConnection(ttt))
+  read.csv(textConnection(ttt), blank.lines.skip = FALSE)    # Substitute NAs for blank cells rather than skipping
 })
 
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) { 

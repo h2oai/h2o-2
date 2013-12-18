@@ -37,9 +37,10 @@ test.plus.onFrame <- function(conn) {
   if(any(dd$TYPES == "enum")) anyEnum <- TRUE
 
   Log.info("Try adding scalar to frame: 5 + hex")
-  if(anyEnum) expect_warning(fivePlusHex <- 5 + hex)
-  else fivePlusHex <- 5 + hex
-  
+  # if(anyEnum) expect_warning(fivePlusHex <- 5 + hex)
+  # else fivePlusHex <- 5 + hex
+  fivePlusHex <- 5 + hex  
+
   Log.info("Original frame: ")
   print(head(as.data.frame(hex)))
 
@@ -53,8 +54,9 @@ test.plus.onFrame <- function(conn) {
   expect_that(dim(as.data.frame(fivePlusHex)), equals(dim(fivePlusHex)))
 
   Log.info("fivePlusHex - 5: ")
-  if(anyEnum) expect_warning(fivePlusHexMinusFive <- fivePlusHex -5)
-  else fivePlusHexMinusFive <- fivePlusHex - 5
+  # if(anyEnum) expect_warning(fivePlusHexMinusFive <- fivePlusHex -5)
+  # else fivePlusHexMinusFive <- fivePlusHex - 5
+  fivePlusHexMinusFive <- fivePlusHex - 5
 
   print(head(as.data.frame(fivePlusHexMinusFive)))
 
@@ -69,10 +71,12 @@ test.plus.onFrame <- function(conn) {
 
 
   Log.info("Checking left and right: ")
-  if(anyEnum) expect_warning(hexPlusFive <- hex + 5)
-  else hexPlusFive <- hex + 5
-  if(anyEnum) expect_warning(fivePlusHex <- 5 + hex)
-  else fivePlusHex <- 5 + hex
+  # if(anyEnum) expect_warning(hexPlusFive <- hex + 5)
+  # else hexPlusFive <- hex + 5
+  hexPlusFive <- hex + 5
+  # if(anyEnum) expect_warning(fivePlusHex <- 5 + hex)
+  # else fivePlusHex <- 5 + hex
+  fivePlusHex <- 5 + hex
 
   Log.info("hex + 5: ")
   print(head(hexPlusFive))

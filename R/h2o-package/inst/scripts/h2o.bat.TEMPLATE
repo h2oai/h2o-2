@@ -1,7 +1,0 @@
-REM Set up environment variables
-set JAVA="@JAVA_PROG@"
-set JAR_FILE="@H2O_JAR@"
-set FLAT_FILE="@FLAT@"
-
-REM Run H2O in the background
-start "h2o" /B "%JAVA%" -ea -Xmx128m -jar "%JAR_FILE%" -ip 127.0.0.1 -port 54321 -flatfile "%FLAT_FILE%"

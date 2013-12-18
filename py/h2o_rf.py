@@ -9,8 +9,15 @@ def pickRandRfParams(paramDict, params):
         randomKey = random.choice(paramDict.keys())
         randomV = paramDict[randomKey]
         randomValue = random.choice(randomV)
+
         # note it updates params, so any default values will still be there
         params[randomKey] = randomValue
+
+        # can't have both
+        if 'cols' in params and 'ignored_cols_by_name' in params:
+            if params['cols'] and params['ignored_cols_by_name']:
+                params['cols'] = None
+
         if (randomKey=='x'):
             colX = randomValue
         # temp hack to avoid CM=0 results if 100% sample and using OOBEE
