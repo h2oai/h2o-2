@@ -2,7 +2,7 @@ H\ :sub:`2`\ O on EC2
 =====================
 
 The H\ :sub:`2`\ O platform is regression tested nightly in EC2
-in both single-node and multi-node configurations.
+for both single-node and multi-node configurations.
 
 For people that want to quickly give it a try, we provide an AMI that
 you can start from.
