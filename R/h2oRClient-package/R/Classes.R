@@ -203,8 +203,7 @@ setMethod("plot", "H2OPCAModel", function(x, y, ...) {
 # i are the rows, j are the columns. These can be vectors of integers or character strings, or a single logical data object
 setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
   numRows = nrow(x); numCols = ncol(x)
-  if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) || 
-     (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
+  if (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols))
     stop("Array index out of bounds")
   
   if(missing(i) && missing(j)) return(x)
@@ -396,9 +395,11 @@ setMethod("as.h2o", signature(h2o="H2OClient", object="data.frame"),
  function(h2o, object) {
    tmpf <- tempfile(fileext=".csv") 
    write.csv(object, file=tmpf, quote=F, row.names=F)
-   h2f <- h2o.uploadFile(h2o, tmpf)
+   destKey = paste(TEMP_KEY, ".", pkg.env$temp_count, sep="")
+   pkg.env$temp_count = (pkg.env$temp_count + 1) %% RESULT_MAX
+   h2f <- h2o.uploadFile(h2o, tmpf, key=destKey)
    unlink(tmpf)
-   h2f
+   return(h2f)
  })
 
 setGeneric("h2o.cut", function(x, breaks) { standardGeneric("h2o.cut") })
