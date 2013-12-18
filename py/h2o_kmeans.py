@@ -31,7 +31,6 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
         destination_key = kmeans["destination_key"]
         kmeansResult = h2o_cmd.runInspect(key=destination_key)
 
-
     if h2o.beta_features:
         model = kmeansResult['model']
         clusters = model["clusters"]
@@ -107,7 +106,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     tupleResultList = []
     print "\nerror: ", error
     for i,c in enumerate(centers):
-        print "\ncenters["+str(i)+"]: ", centers[i]
+        print "\ncenters["+str(i)+"]: ", [round(c,2) for c in centers[i]]
         print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
         print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
         tupleResultList.append( (centers[i], rows_per_cluster[i], sqr_error_per_cluster[i]) )
@@ -146,7 +145,7 @@ def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=
 
             for (a,b) in zip(expCenter, actCenter): # compare list of floats
                 absAllowedDelta = allowedDelta[0] * a
-                self.assertAlmostEqual(a, b, delta=allowedDelta,
+                self.assertAlmostEqual(a, b, delta=absAllowedDelta,
                     msg="Trial %d Center expected: %s actual: %s delta > %s" % (trial, expCenter, actCenter, absAllowedDelta))
 
             absAllowedDelta = allowedDelta[1] * expRows

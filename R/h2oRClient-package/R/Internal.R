@@ -6,7 +6,7 @@ pkg.env$temp_count = 0
 pkg.env$IS_LOGGING = FALSE
 TEMP_KEY = "Last.value"
 RESULT_MAX = 200
-LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!")
+LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!", "is.na")
 
 # Initialize functions for R logging
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
@@ -271,8 +271,7 @@ h2o.__uniqID <- function(prefix = "") {
 
 h2o.__checkForFactors <- function(object) {
     if(class(object) != "H2OParsedData") return(FALSE)
-    f <- function(idx, hex){ return(is.factor(hex[,idx]))} #print(is.factor(hex[,idx])); return(is.factor(hex[,idx]))}
-    any(sapply(seq(ncol(object)),f, object))
+    any(is.factor(object))
 }
 
 h2o.__version <- function(client) {

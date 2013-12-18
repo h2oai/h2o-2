@@ -418,6 +418,20 @@ class ASTAssign extends AST {
     Object cols = ASTSlice.select(ary.numCols(),slice._cols,env);
     Object rows = ASTSlice.select(ary.numRows(),slice._rows,env);
 
+    long[] cs1; long[] rs1;
+    if(cols != null && rows != null && (cs1 = (long[])cols).length == 1 && (rs1 = (long[])rows).length == 1) {
+      assert ary_rhs == null;
+        long row = rs1[0]-1;
+        int col = (int)cs1[0]-1;
+        if(col >= ary.numCols() || row >= ary.numRows())
+          throw H2O.unimpl();
+        if(ary.vecs()[col].isEnum())
+          throw new IllegalArgumentException("Currently can only set numeric columns");
+        ary.vecs()[col].set(row,d);
+        env.push(d);
+        return;
+    }
+
     // Partial row assignment?
     if( rows != null ) {
         throw H2O.unimpl();
@@ -429,7 +443,7 @@ class ASTAssign extends AST {
       ary_rhs = new Frame(env.addRef(ary.anyVec().makeCon(d)));
     // Make sure we either have 1 col (repeated) or exactly a matching count
     long[] cs = (long[]) cols;  // Columns to act on
-    if( ary_rhs.numCols() != 1 && 
+    if( ary_rhs.numCols() != 1 &&
         ary_rhs.numCols() != cs.length )
       throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign "+ary_rhs.numCols()+" cols over "+cs.length+" cols");
     // Replace the LHS cols with the RHS cols

@@ -68,16 +68,21 @@ function(m) {
   cat(sprintf("[%s] %s\n", Sys.time(),m))
 }
 
-PASS<- 
+PASS_BANNER<-
 function() {
+  cat("")
   cat("######     #     #####   #####  \n")
   cat("#     #   # #   #     # #     # \n")
   cat("#     #  #   #  #       #       \n")
   cat("######  #     #  #####   #####  \n")
   cat("#       #######       #       # \n")
   cat("#       #     # #     # #     # \n")
-  cat("#       #     #  #####   #####  \n")
+  cat("#       #     #  #####   #####  \n")  
+}
 
+PASS<- 
+function() {
+  PASS_BANNER()
   Log.info("TEST PASSED")
   q("no",0,FALSE)
 }
@@ -98,6 +103,44 @@ function(e) {
 WARN<-
 function(w) {
   Log.warn(w)
+}
+
+#----------------------------------------------------------------------
+# Print out a message with clear whitespace.
+#
+# Parameters:  x -- Message to print out.
+#              n -- (optional) Step number.
+#
+# Returns:     none
+#----------------------------------------------------------------------
+heading <- function(x, n = -1) {
+  Log.info("")
+  Log.info("")
+  if (n < 0) {
+    Log.info(sprintf("STEP: %s", x))
+  }
+  else {
+    Log.info(sprintf("STEP %2d: %s", n, x))
+  }
+  Log.info("")
+  Log.info("")
+}
+
+#----------------------------------------------------------------------
+# "Safe" system.  Error checks process exit status code.  stop() if it failed.
+#
+# Parameters:  x -- String of command to run (passed to system()).
+#
+# Returns:     none
+#----------------------------------------------------------------------
+safeSystem <- function(x) {
+  print(sprintf("+ CMD: %s", x))
+  res <- system(x)
+  print(res)
+  if (res != 0) {
+    msg <- sprintf("SYSTEM COMMAND FAILED (exit status %d)", res)
+    stop(msg)
+  }
 }
 
 get_args<-

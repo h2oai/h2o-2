@@ -1,3 +1,4 @@
+.origEchoValue <- getOption("echo")
 options(echo=FALSE)
 
 ##
@@ -149,3 +150,12 @@ sandbox()
 #This random seed is overwritten by any seed set in a test
 setupRandomSeed(suppress = TRUE)
 h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))
+
+# Set up some directories.
+if (exists("TEST_ROOT_DIR")) {
+  H2O_JAR_DIR = sprintf("%s/../../target", TEST_ROOT_DIR)
+}
+  
+# Clean up any temporary variables to avoid polluting the user's workspace.
+options(echo=.origEchoValue)
+rm(list=c(".origEchoValue"))
