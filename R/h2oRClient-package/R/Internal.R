@@ -243,7 +243,7 @@ h2o.__pollAll <- function(client, timeout) {
 }
 
 h2o.__uniqID <- function(prefix = "") {
-  if("uuid" %in% installed.packages()) {
+  if("uuid" %in% installed.packages()[,1]) {
     library(uuid)
     temp = UUIDgenerate()
   } else {

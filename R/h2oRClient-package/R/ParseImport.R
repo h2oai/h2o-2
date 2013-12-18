@@ -25,7 +25,7 @@ h2o.startLauncher <- function() {
   else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
   myFiles = list.files(verPath)
   if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
-  # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
+  # TODO: Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
   
   # Get H2O with latest version number
   # If latest isn't working, maybe go down list to earliest until one executes?
