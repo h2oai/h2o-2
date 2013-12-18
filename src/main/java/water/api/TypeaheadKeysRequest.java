@@ -14,10 +14,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
 
 public class TypeaheadKeysRequest extends TypeaheadRequest {
-  final int _typeid;            // Also filter for Keys of this type
+  final String _cname;
+  int _typeid;                  // Also filter for Keys of this type
   public TypeaheadKeysRequest(String msg, String filter, Class C) {
     super(msg, filter);
-    _typeid = C==null ? 0 : TypeMap.onIce(C.getName());
+    _cname = C == null ? null : C.getName();
   }
 
   @Override
@@ -46,6 +47,9 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
   }
 
   protected boolean matchesType(Value val) {
+    // One-shot monotonic racey update from 0 to the known fixed typeid.
+    // Since all writers write the same typeid, there is no race.
+    if( _typeid == 0 && _cname != null ) _typeid = TypeMap.onIce(_cname);
     return _typeid == 0 || val.type() == _typeid;
   }
 

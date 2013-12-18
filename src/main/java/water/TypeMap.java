@@ -14,13 +14,12 @@ public class TypeMap {
   static final public String BOOTSTRAP_CLASSES[] = {
     " BAD",
     "[B",
-    "water.FetchClazz",
-    "water.FetchId",
-    "water.H2O$CheckTypes",
-    "water.ValueArray",
-    "water.fvec.C1NChunk",
-    "water.fvec.Frame",
-    "water.fvec.Vec",
+    "water.FetchClazz",   // used to fetch IDs from leader
+    "water.FetchId",      // used to fetch IDs from leader
+    "water.ValueArray",   // used in TypeaheadKeys
+    "water.fvec.C1NChunk",// used as constant in parser
+    "water.fvec.Frame",   // used in TypeaheadKeys & Exec2
+    "water.Job$List",     // First Key which locks the cloud for all JUnit tests
   };
   // String -> ID mapping
   static private final NonBlockingHashMap<String, Integer> MAP = new NonBlockingHashMap();
@@ -59,6 +58,7 @@ public class TypeMap {
   // get either the old or new arrays.  However readers are all reader with
   // smaller type ids, and these will work fine in either old or new arrays.
   synchronized static private int install( String className, int id ) {
+    Paxos.lockCloud();
     if( id == -1 ) id = IDS++;  // Leader will get an ID under lock
     MAP.put(className,id);       // No race on insert, since under lock
     // Expand lists to handle new ID, as needed
