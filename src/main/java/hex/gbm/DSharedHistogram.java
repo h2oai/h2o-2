@@ -105,9 +105,9 @@ public class DSharedHistogram extends Iced {
     assert _bins == null;
     _bins = MemoryManager.malloc8 (_nbin);
     _mins = MemoryManager.malloc4f(_nbin);
-    Arrays.fill(_mins,Float.floatToRawIntBits( Float.MAX_VALUE));
+    Arrays.fill(_mins, Float.MAX_VALUE);
     _maxs = MemoryManager.malloc4f(_nbin);
-    Arrays.fill(_maxs,Float.floatToRawIntBits(-Float.MAX_VALUE));
+    Arrays.fill(_maxs,-Float.MAX_VALUE);
     _sums = MemoryManager.malloc8d(_nbin);
     _ssqs = MemoryManager.malloc8d(_nbin);
   }
