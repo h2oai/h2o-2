@@ -29,6 +29,7 @@ public abstract class ASTOp extends AST {
     put(new ASTScale());
     put(new ASTFactor());
     put(new ASTIsFactor());
+    put(new ASTAnyFactor());   // For Runit testing
 
     put(new ASTCos());  // Trigonometric functions
     put(new ASTSin());
@@ -200,6 +201,25 @@ class ASTIsFactor extends ASTUniOp {
     Vec[] v = fr.vecs();
     for(int i = 0; i < v.length; i++) {
       if(!v[i].isEnum()) { d = 0; break; }
+    }
+    env.subRef(fr,skey);
+    env.poppush(d);
+  }
+}
+
+// Added to facilitate Runit testing
+class ASTAnyFactor extends ASTUniOp {
+  ASTAnyFactor() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "any.factor"; }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt) {
+    if(!env.isAry()) { env.poppush(0); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = 0;
+    Vec[] v = fr.vecs();
+    for(int i = 0; i < v.length; i++) {
+      if(v[i].isEnum()) { d = 1; break; }
     }
     env.subRef(fr,skey);
     env.poppush(d);
