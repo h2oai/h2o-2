@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys, itertools, os, re
 
-def check_sandbox_for_errors(LOG_DIR=None, python_test_name='Invalid',
+def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
     cloudShutdownIsError=False, sandboxIgnoreErrors=False):
     # show the parameters
     ### print "check_sandbox_for_errors:", locals()
