@@ -20,7 +20,7 @@ public class DRFTest extends TestUtil {
   static final long[]   a(long ...arr)   { return arr; }
   static final long[][] a(long[] ...arr) { return arr; }
 
-//  @Ignore
+  //  @Ignore
   @Test public void testClassIris1() throws Throwable {
 
     // iris ntree=1
@@ -35,7 +35,7 @@ public class DRFTest extends TestUtil {
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-//  @Ignore
+  //  @Ignore
   @Test public void testClassIris50() throws Throwable {
     // iris ntree=50
     basicDRFTestOOBE(
@@ -48,7 +48,7 @@ public class DRFTest extends TestUtil {
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-//  @Ignore
+  //  @Ignore
   @Test public void testClassCars1() throws Throwable {
     // cars ntree=1
     basicDRFTestOOBE(
@@ -63,7 +63,7 @@ public class DRFTest extends TestUtil {
         s("3", "4", "5", "6", "8"));
   }
 
-//  @Ignore
+  //  @Ignore
   @Test public void testClassCars50() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
