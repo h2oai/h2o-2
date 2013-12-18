@@ -15,6 +15,7 @@ print "-------------------------------------------------------------------------
 print "BUILDING CLOUD"
 print "--------------------------------------------------------------------------------"
 
+h2o.parse_our_args()
 h2o.build_cloud(node_count=2, java_heap_GB=2)
 
 # False == Use VA form of algorithms (when available) (e.g. RF1).
