@@ -12,9 +12,8 @@ import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-import hex.gbm.DTree.*;
 
-public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends ValidatedJob {
+public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -57,7 +56,7 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
 
   @Override public float progress(){
     Value value = DKV.get(dest());
-    TreeModel m = value != null ? (TreeModel) value.get() : null;
+    DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
     return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
   }
 
@@ -162,7 +161,7 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd;
-  protected TM doScoring(TM model, Key outputKey, Frame fr, DTree[] ktrees, int tid, TreeModel.TreeStats tstats, boolean finalScoring, boolean oob ) {
+  protected TM doScoring(TM model, Key outputKey, Frame fr, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob ) {
     long now = System.currentTimeMillis();
     long sinceLastScore = now-_timeLastScoreStart;
     Score sc = null;
@@ -231,26 +230,13 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
 
     // Once-per-node shared init
     @Override public void setupLocal( ) { 
-      long sum=0;
-      int cnt=0;
-      for( DSharedHistogram hss[][] : _hcs )
-        if( hss != null )
-          for( DSharedHistogram hs[] : hss )
-            if( hs != null )
-              for( DSharedHistogram h : hs )
-                if( h != null ) { sum += h.byteSize(); cnt++; }
-      int sumlf=0;
-      for( int k=0; k<_nclass; k++ )
-        if( _trees[k] != null ) // Ignore unused classes
-          sumlf += _trees[k]._len-_leafs[k];
-      System.out.println("Going to ship "+PrettyPrint.bytes(sum)+" in "+cnt+" Histograms"+" leafs="+sumlf);
       // Init all the internal tree fields after shipping over the wire
       for( DTree dt : _trees ) if( dt != null ) dt.init_tree(); 
       // Allocate local shared memory histograms
       for( int k=0; k<_nclass; k++ ) {
         if( _trees[k] != null ) { // Ignore unused classes
           for( int l=_leafs[k]; l<_trees[k]._len; l++ ) {
-            UndecidedNode udn = _trees[k].undecided(l);
+            DTree.UndecidedNode udn = _trees[k].undecided(l);
             DSharedHistogram hs[] = _hcs[k][l-_leafs[k]];
             int sCols[] = udn._scoreCols;
             if( sCols != null ) { // Sub-selecting just some columns?
@@ -264,17 +250,6 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
           }
         }
       }
-    }
-    @Override public void closeLocal() {
-      long sum=0;
-      int cnt=0;
-      for( DSharedHistogram hss[][] : _hcs )
-        if( hss != null )
-          for( DSharedHistogram hs[] : hss )
-            if( hs != null )
-              for( DSharedHistogram h : hs )
-                if( h != null ) { sum += h.byteSize(); cnt++; }
-      System.out.println("Going to ship "+PrettyPrint.bytes(sum)+" in "+cnt+" Histograms");
     }
 
     @Override public void map( Chunk[] chks ) {
@@ -339,7 +314,7 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
         if (isOOBRow(nid)) { // sampled away - we track the position in the tree
           if ( leaf > 0) {
             int nnid = oob2Nid(nid);
-            DecidedNode dn = tree.decided(nnid);
+            DTree.DecidedNode dn = tree.decided(nnid);
             if( dn._split._col == -1 ) nids.set0(row,nid2Oob(nnid = dn._pid)); // Might have a leftover non-split
             if( nnid != -1 ) nnid = tree.decided(nnid).ns(chks,row); // Move down the tree 1 level
             if( nnid != -1 ) nids.set0(row,nid2Oob(nnid));
@@ -349,7 +324,7 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
 
         // Score row against current decisions & assign new split
         if( leaf > 0 ) {      // Prior pass exists?
-          DecidedNode dn = tree.decided(nid);
+          DTree.DecidedNode dn = tree.decided(nid);
           if( dn._split._col == -1 ) nids.set0(row,(nid = dn._pid)); // Might have a leftover non-split
           if( nid != -1 ) nid = tree.decided(nid).ns(chks,row); // Move down the tree 1 level
           if( nid != -1 ) nids.set0(row,nid);
@@ -381,9 +356,9 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
   
   // --------------------------------------------------------------------------
   // Builder-specific decision node
-  protected abstract DecidedNode makeDecided( UndecidedNode udn, DSharedHistogram hs[] );
+  protected abstract DTree.DecidedNode makeDecided( DTree.UndecidedNode udn, DSharedHistogram hs[] );
 
-  protected boolean buildLayer(Frame fr, DTree ktrees[], int leafs[], DSharedHistogram hcs[][][]) {
+  protected DSharedHistogram[][][] buildLayer(Frame fr, DTree ktrees[], int leafs[], DSharedHistogram hcs[][][]) {
     // Build K trees, one per class.
     // Fuse 2 conceptual passes into one:
     // Pass 1: Score a prior DHistogram, and make new Node assignments
@@ -396,6 +371,7 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
 
     ScoreBuildHistogram sbh = new ScoreBuildHistogram(ktrees,leafs,hcs).doAll(fr);
     //System.out.println(sbh.profString());
+    hcs = sbh._hcs;             // Get the new histograms
 
     // Build up the next-generation tree splits from the current histograms.
     // Nearly all leaves will split one more level.  This loop nest is
@@ -407,10 +383,10 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
       if( tree == null ) continue;
       int tmax = tree.len();   // Number of total splits in tree K
       for( int leaf=leafs[k]; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
-        UndecidedNode udn = tree.undecided(leaf);
+        DTree.UndecidedNode udn = tree.undecided(leaf);
         //System.out.println("Class "+(response._domain[k])+",\n  Undecided node:"+udn);
         // Replace the Undecided with the Split decision
-        DecidedNode dn = makeDecided(udn,hcs[k][leaf-leafs[k]]);
+        DTree.DecidedNode dn = makeDecided(udn,hcs[k][leaf-leafs[k]]);
         //System.out.println("--> Decided node: " + dn);
         //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
         if( dn._split.col() == -1 ) udn.do_not_split();
@@ -423,7 +399,7 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
         hcs[k][nl-tmax] = tree.undecided(nl)._hs;
       tree.depth++;           // Next layer done
     }
-    return did_split;
+    return did_split ? hcs : null;
   }
 
   // --------------------------------------------------------------------------
@@ -546,7 +522,7 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
   @Override public String speedDescription() { return "time/tree"; }
   @Override public long speedValue() {
     Value value = DKV.get(dest());
-    TreeModel m = value != null ? (TreeModel) value.get() : null;
+    DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
     long numTreesBuiltSoFar = m == null ? 0 : m.treeBits.length;
     long sv = (numTreesBuiltSoFar <= 0) ? 0 : (runTimeMs() / numTreesBuiltSoFar);
     return sv;
@@ -555,7 +531,7 @@ public abstract class SharedTreeModelBuilder<TM extends TreeModel> extends Valid
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
 
-  protected abstract TM makeModel( TM model, DTree ktrees[], double err, long cm[][], TreeModel.TreeStats tstats);
+  protected abstract TM makeModel( TM model, DTree ktrees[], double err, long cm[][], DTree.TreeModel.TreeStats tstats);
 
   static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }

@@ -292,10 +292,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     for( ; depth<max_depth; depth++ ) {
       if( cancelled() ) return null;
 
-      boolean did_split = buildLayer(fr, ktrees, leafs, hcs);
+      hcs = buildLayer(fr, ktrees, leafs, hcs);
 
       // If we did not make any new splits, then the tree is split-to-death
-      if( !did_split ) break;
+      if( hcs == null ) break;
     }
 
     // Each tree bottomed-out in a DecidedNode; go 1 more level and insert
@@ -327,11 +327,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     // ----
     // Move rows into the final leaf rows
-    int sumlf=0;
-    for( int k=0; k<_nclass; k++ )
-      if( ktrees[k] != null ) // Ignore unused classes
-        sumlf += ktrees[k].len()-leafs[k];
-    System.out.println("Final leafs="+sumlf);
     CollectPreds gp = new CollectPreds(ktrees,leafs).doAll(fr);
 
     // Collect leaves stats
