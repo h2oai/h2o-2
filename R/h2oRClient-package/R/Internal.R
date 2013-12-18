@@ -271,7 +271,7 @@ h2o.__uniqID <- function(prefix = "") {
 
 h2o.__checkForFactors <- function(object) {
     if(class(object) != "H2OParsedData") return(FALSE)
-    any(is.factor(object))
+    any.factor(object)
 }
 
 h2o.__version <- function(client) {

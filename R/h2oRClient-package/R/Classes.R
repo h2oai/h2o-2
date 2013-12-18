@@ -489,7 +489,7 @@ setMethod("colMeans", "H2OParsedData", function(x) {
 
 setMethod("mean", "H2OParsedData", function(x) {
   res <- NA
-  if(any(is.factor(x)) || dim(x)[2] != 1) {
+  if(any.factor(x) || dim(x)[2] != 1) {
     warning("In H2O mean(x): argument not numeric or logical: returning NA")
     res
   }
@@ -500,7 +500,7 @@ setMethod("mean", "H2OParsedData", function(x) {
 })
 
 setMethod("sd", "H2OParsedData", function(x) {
-  if(dim(x)[2] != 1 || any(is.factor(x))) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
+  if(dim(x)[2] != 1 || any.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
   res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
   res$summaries[[1]]$stats$sd
 })
