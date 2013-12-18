@@ -900,10 +900,13 @@ class H2O(object):
                 h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
                 time.sleep(2)
                 check_sandbox_for_errors();
+            log_rest("")
+            log_rest("EXCEPTION CAUGHT DOING REQUEST: " + str(e.message))
             raise exc_info[1], None, exc_info[2]
 
-        log_rest("HTTP STATUS CODE: " + str(r.status_code))
-        log_rest(json.dumps(r.text))
+        log_rest("")
+        log_rest("HTTP status code: " + str(r.status_code))
+        log_rest(r.text)
 
         # fatal if no response
         if not beta_features and not r:
