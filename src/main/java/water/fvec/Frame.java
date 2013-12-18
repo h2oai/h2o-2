@@ -588,10 +588,12 @@ public class Frame extends Iced {
     // Do Da Slice
     // orows is either a long[] or a Vec
     if (orows == null)
-      return new DeepSlice((long[])null,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+      return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
       long[] rows = (long[])orows;
+      if (rows.length==0)
+        return new DeepSlice(rows,c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
       // Vec'ize the index array
       AppendableVec av = new AppendableVec("rownames");
       int r = 0;
@@ -605,7 +607,6 @@ public class Frame extends Iced {
         nc.close(c++, null);
       }
       Vec c0 = av.close(null);   // c0 is the row index vec
-
       return new Slice(c2, this).doAll(c2.length,new Frame(new String[]{"rownames"}, new Vec[]{c0}))
               .outputFrame(names(c2), domains(c2));
       //return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
