@@ -1,4 +1,5 @@
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../../findNSourceUtils.R')
 
 test.as.factor.basic <- function(conn) {
   hex <- h2o.uploadFile(conn, locate("../smalldata/cars.csv"), key = "cars.hex")

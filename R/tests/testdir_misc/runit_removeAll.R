@@ -2,7 +2,8 @@
 # Generate lots of keys then remove them
 ##
 
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../findNSourceUtils.R')
 
 test <- function(conn) {
   arrests.hex = h2o.uploadFile(conn, locate("../../../smalldata/pca_test/USArrests.csv"), "arrests.hex")

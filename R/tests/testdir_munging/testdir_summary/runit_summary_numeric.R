@@ -1,4 +1,5 @@
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../../findNSourceUtils.R')
 
 test.summary.numeric <- function(conn) {
   Log.info("Importing USArrests.csv data...\n")
