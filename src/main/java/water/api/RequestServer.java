@@ -69,6 +69,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Get()),         "Download",                   "Data");
 
     Request.addToNavbar(registerRequest(new SummaryPage()), "Summary",                    "Model");
+    Request.addToNavbar(registerRequest(new OneHot()),      "One Hot",                    "Model");
     Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
     Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
     Request.addToNavbar(registerRequest(new PCA()),         "PCA",                        "Model");
