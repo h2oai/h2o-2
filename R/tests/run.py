@@ -927,7 +927,7 @@ def main(argv):
 
     # Calculate and set other variables.
     nodes_per_cloud = 1
-    xmx = "2g"
+    xmx = "1g"
     h2o_jar = os.path.abspath(
         os.path.join(os.path.join(os.path.join(os.path.join(
             test_root_dir, ".."), ".."), "target"), "h2o.jar"))

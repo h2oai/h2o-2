@@ -413,7 +413,7 @@ public class Boot extends ClassLoader {
   private final Class loadClass2( String name ) throws ClassNotFoundException {
     Class z = findLoadedClass(name); // Look for pre-existing class
     if( z != null ) return z;
-    if( _weaver == null ) (_weaver = new Weaver()).initTypeMap(this);
+    if( _weaver == null ) _weaver = new Weaver();
     z = _weaver.weaveAndLoad(name, this);    // Try the Happy Class Loader
     if( z != null ) {
       // Occasionally it's useful to print out class names that are actually Weaved.
