@@ -570,11 +570,31 @@ class RUnitRunner:
         if (self.terminated):
             return
 
+        self._log("")
+        self._log("Setting up R H2O package...")
         if (True):
+            out = open(os.path.join(self.output_dir, "runnerSetupPackage.out"), "w")
             cloud = self.clouds[0]
             port = cloud.get_port()
-            cmd = "R --quiet -f Utils/runnerSetupPackage.R --args 127.0.0.1:{}".format(port)
-            os.system(cmd)
+            cmd = ["R",
+                   "--quiet",
+                   "-f",
+                   os.path.join(os.path.dirname(os.path.realpath(__file__)), "Utils/runnerSetupPackage.R"),
+                   "--args",
+                   "127.0.0.1:" + str(port)];
+            child = subprocess.Popen(args=cmd,
+                                     stdout=out,
+                                     stderr=subprocess.STDOUT)
+            rv = child.wait()
+            if (self.terminated):
+                return
+            if (rv != 0):
+                print("")
+                print("ERROR: Utils/runnerSetupPackage.R failed.")
+                print("       (See " + out + ")")
+                print("")
+                sys.exit(1)
+            out.close()
 
         num_tests = len(self.tests)
         num_nodes = len(self.clouds * self.nodes_per_cloud)
@@ -853,6 +873,25 @@ def usage():
     sys.exit(1)
 
 
+def find_test(test_to_run):
+    """
+    Be nice and try to help find the test if possible.
+    If the test is actually found without looking, then just use it.
+    Otherwise, search from the script's down directory down.
+    """
+    if (os.path.exists(test_to_run)):
+        abspath_test = os.path.abspath(test_to_run)
+        return abspath_test
+
+    for d, subdirs, files in os.walk(os.path.dirname(os.path.realpath(__file__))):
+        for f in files:
+            if (f == test_to_run):
+                return os.path.join(d, f)
+
+    # Not found, return the file, which will result in an error downstream when it can't be found.
+    return file
+
+
 def parse_args(argv):
     global g_base_port
     global g_num_clouds
@@ -880,7 +919,7 @@ def parse_args(argv):
             i += 1
             if (i > len(argv)):
                 usage()
-            g_test_to_run = locate(argv[i])
+            g_test_to_run = find_test(argv[i])
         elif (s == "--testlist"):
             i += 1
             if (i > len(argv)):
@@ -896,15 +935,6 @@ def parse_args(argv):
 
         i += 1
 
-def locate(file):
-    """
-    Returns the path if the file is under current working directory
-    """
-    if os.path.isabs(file):
-        return file
-    for dir, subdirs, files in os.walk(os.getcwd()):
-        if file in files:
-            return os.path.join(dir, file) 
 
 def main(argv):
     """

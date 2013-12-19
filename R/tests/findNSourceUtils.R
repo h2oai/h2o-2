@@ -151,6 +151,11 @@ if (distance < 0) {
 sandbox()
 #This random seed is overwritten by any seed set in a test
 setupRandomSeed(suppress = TRUE)
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), " ")
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), paste("STARTING TEST: ", R.utils::commandArgs(asValues=TRUE)$"-f"))
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), " ")
+h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
 h2o.removeAll(new("H2OClient", ip=myIP, port=myPort))
 
 # Set up some directories.
