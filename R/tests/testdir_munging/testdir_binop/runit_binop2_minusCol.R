@@ -54,7 +54,7 @@ test.minus <- function(conn) {
 
   Log.info("Sliced - 5: ")
   print(head(as.data.frame(slicedMinusFive)))
-  expect_that(as.data.frame(slicedMinusFive), equals(data.frame(as.data.frame(sliced)) - 5))
+  expect_that(as.data.frame(slicedMinusFive), equals(as.data.frame(sliced) - 5))
 
   Log.info("Checking left and right: ")
   slicedMinusFive <- sliced - 5

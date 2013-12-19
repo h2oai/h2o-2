@@ -10,7 +10,7 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source('../../findNSourceUtils.R')
 
-#setupRandomSeed(365844204)
+setupRandomSeed(1519946107)
 doSelect<-
 function() {
     d <- select()
@@ -57,15 +57,15 @@ test.binop2.ampersand <- function(conn) {
 
   newHex <- 5 & sliced
 
-  expect_that(dim(newHex), equals(dim(sliced)))
+  expect_that(length(as.data.frame(newHex)), equals(length(as.data.frame(sliced))))
   
-  Log.info("dim(as.data.frame(newHex)): ")
-  print(dim(as.data.frame(newHex)))
+  Log.info("length(as.data.frame(newHex)): ")
+  print(length(as.data.frame(newHex)))
   
   Log.info("dim(data.frame(as.data.frame(sliced) & 5)): ")
   print(dim(data.frame(as.data.frame(sliced))))
    
-  expect_that(dim(as.data.frame(newHex)), equals(dim(data.frame(as.data.frame(sliced) & 5))))
+  expect_that(dim(data.frame(as.data.frame(newHex))), equals(dim(data.frame(as.data.frame(sliced) & 5))))
   Log.info("ANDed hex (should be a column of 1s & 0s)")
   print(head(newHex))
   Log.info("Expected result: as.data.frame(sliced) & 5")

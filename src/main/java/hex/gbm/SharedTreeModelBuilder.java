@@ -1,18 +1,19 @@
 package hex.gbm;
 
 import hex.rng.MersenneTwisterRNG;
-
 import java.util.Arrays;
 import java.util.Random;
-
+import jsr166y.ForkJoinTask;
+import jsr166y.RecursiveAction;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-public abstract class SharedTreeModelBuilder extends ValidatedJob {
+public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
@@ -159,19 +160,36 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     remove();                   // Remove Job
   }
 
+  transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
+  protected TM doScoring(TM model, Key outputKey, Frame fr, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob ) {
+    long now = System.currentTimeMillis();
+    if( _firstScore == 0 ) _firstScore=now;
+    long sinceLastScore = now-_timeLastScoreStart;
+    Score sc = null;
+    if( finalScoring ||
+        (now-_firstScore < 4000) || // Score every time for 4 secs
+        // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
+        (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
+         (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
+      _timeLastScoreStart = now;
+      sc = new Score().doIt(model, fr, validation, oob).report(logTag(),tid,ktrees);
+      _timeLastScoreEnd = System.currentTimeMillis();
+    }
+    model = makeModel(model, finalScoring?null:ktrees, 
+                      sc==null ? Double.NaN : sc._sum/sc._snrows, 
+                      sc==null ? null : sc._cm, tstats);
+    DKV.put(outputKey, model);
+    return model;
+  }
+
   // --------------------------------------------------------------------------
   // Convenvience accessor for a complex chunk layout.
   // Wish I could name the array elements nicer...
-  private Chunk[] chk_check( Chunk chks[] ) {
-    assert chks.length == _ncols+1/*response*/+_nclass/*prob dist so far*/+_nclass/*tmp*/+_nclass/*NIDs, one tree per class*/;
-    return chks;
-  }
   protected Chunk chk_resp( Chunk chks[]        ) { return chks[_ncols]; }
   protected Chunk chk_tree( Chunk chks[], int c ) { return chks[_ncols+1+c]; }
   protected Chunk chk_work( Chunk chks[], int c ) { return chks[_ncols+1+_nclass+c]; }
   protected Chunk chk_nids( Chunk chks[], int t ) { return chks[_ncols+1+_nclass+_nclass+t]; }
 
-  protected final Vec vec_work( Frame fr, int c) { return fr.vecs()[_ncols+1+_nclass+c]; }
   protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
 
   // --------------------------------------------------------------------------
@@ -183,162 +201,208 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
   //         decision criteria, and assigning the row to a new child
   //         UndecidedNode (and giving it an improved prediction).
   //
-  // Pass 2: Build new summary DHistograms on the new child UndecidedNodes every
-  //         row got assigned into.  Collect counts, mean, variance, min, max
-  //         per bin, per column.
+  // Pass 2: Build new summary DSharedHistograms on the new child
+  //         UndecidedNodes every row got assigned into.  Collect counts, mean,
+  //         variance, min, max per bin, per column.
   //
-  // The result is a set of DHistogram arrays; one DHistogram array for each
-  // unique 'leaf' in the tree being histogramed in parallel.  These have node
-  // ID's (nids) from 'leaf' to 'tree._len'.  Each DHistogram array is for all
-  // the columns in that 'leaf'.
+  // The result is a set of DSharedHistogram arrays; one DSharedHistogram array
+  // for each unique 'leaf' in the tree being histogramed in parallel.  These
+  // have node ID's (nids) from 'leaf' to 'tree._len'.  Each DSharedHistogram
+  // array is for all the columns in that 'leaf'.
   //
   // The other result is a prediction "score" for the whole dataset, based on
   // the previous passes' DHistograms.
   public class ScoreBuildHistogram extends MRTask2<ScoreBuildHistogram> {
-    final DTree _trees[]; // Read-only, shared (except at the histograms in the Nodes)
-    final int   _leafs[]; // Number of active leaves (per tree)
+    final int   _k;    // Which tree
+    final DTree _tree; // Read-only, shared (except at the histograms in the Nodes)
+    final int   _leaf; // Number of active leaves (per tree)
     // Histograms for every tree, split & active column
-    DHistogram _hcs[/*tree/klass*/][/*tree-relative node-id*/][/*column*/];
-    public ScoreBuildHistogram(DTree trees[], int leafs[]) {
-      assert trees.length==_nclass; // One tree per-class
-      assert leafs.length==_nclass; // One count of leaves per-class
-      _trees=trees;
-      _leafs=leafs;
+    final DSharedHistogram _hcs[/*tree-relative node-id*/][/*column*/];
+    public ScoreBuildHistogram(int k, DTree tree, int leaf, DSharedHistogram hcs[][]) {
+      _k   = k;
+      _tree= tree;
+      _leaf= leaf;
+      _hcs = hcs;
     }
 
-    // Init all the internal tree fields after shipping over the wire
-    @Override public void setupLocal( ) { for( DTree dt : _trees ) if( dt != null ) dt.init_tree(); }
-
-    public DHistogram[] getFinalHisto( int k, int nid ) {
-      DHistogram hs[] = _hcs[k][nid-_leafs[k]];
-      if( hs == null ) return null; // Can happen if the split is all NA's
-      // Having gather min/max/mean/class/etc on all the data, we can now
-      // tighten the min & max numbers.
-      for( int j=0; j<hs.length; j++ ) {
-        DHistogram h = hs[j];    // Old histogram of column
-        if( h != null ) h.tightenMinMax();
+    // Once-per-node shared init
+    @Override public void setupLocal( ) { 
+      // Init all the internal tree fields after shipping over the wire
+      _tree.init_tree(); 
+      // Allocate local shared memory histograms
+      for( int l=_leaf; l<_tree._len; l++ ) {
+        DTree.UndecidedNode udn = _tree.undecided(l);
+        DSharedHistogram hs[] = _hcs[l-_leaf];
+        int sCols[] = udn._scoreCols;
+        if( sCols != null ) { // Sub-selecting just some columns?
+          for( int j=0; j<sCols.length; j++) // For tracked cols
+            hs[sCols[j]].init();
+        } else {                // Else all columns
+          for( int j=0; j<_ncols; j++) // For all columns
+            if( hs[j] != null )        // Tracking this column?
+              hs[j].init();
+        }
       }
-      return hs;
     }
 
     @Override public void map( Chunk[] chks ) {
-      // We need private (local) space to gather the histograms.
-      // Make local clones of all the histograms that appear in this chunk.
-      _hcs = new DHistogram[_nclass/*per-tree*/][/*leaves in tree*/][/*ncols*/];
+      assert chks.length==_ncols+4;
+      final Chunk tree = chks[_ncols+1];
+      final Chunk wrks = chks[_ncols+2];
+      final Chunk nids = chks[_ncols+3];
 
-      // For all klasses
-      for( int k=0; k<_nclass; k++ ) {
-        final DTree tree = _trees[k];
-        if( tree == null ) continue; // Ignore unused classes
-        final int leaf = _leafs[k]; // Number of active leafs per tree for given class
-        // A leaf-biased array of all active histograms
-        final DHistogram hcs[][] = _hcs[k] = new DHistogram[tree._len-leaf][];
-        final Chunk nids = chk_nids(chks,k);
-        final Chunk wrks = chk_work(chks,k); // What we predict on
-
-        // Pass 1: Score a prior partially-built tree model, and make new Node
-        // assignments to every row.  This involves pulling out the current
-        // assigned DecidedNode, "scoring" the row against that Node's decision
-        // criteria, and assigning the row to a new child UndecidedNode (and
-        // giving it an improved prediction).
-        for( int row=0; row<nids._len; row++ ) { // Over all rows
-          int nid = (int)nids.at80(row); // Get Node to decide from
-          if (isDecidedRow(nid)) continue; // already done
-          if (isOOBRow(nid)) { // sampled away - we track the position in the tree
-            if ( leaf > 0) {
-              int nnid = oob2Nid(nid);
-              DTree.DecidedNode dn = tree.decided(nnid);
-              if( dn._split._col == -1 ) nids.set0(row,nid2Oob(nnid = dn._pid)); // Might have a leftover non-split
-              if( nnid != -1 ) nnid = tree.decided(nnid).ns(chks,row); // Move down the tree 1 level
-              if( nnid != -1 ) nids.set0(row,nid2Oob(nnid));
-            }
-            continue;
+      // Pass 1: Score a prior partially-built tree model, and make new Node
+      // assignments to every row.  This involves pulling out the current
+      // assigned DecidedNode, "scoring" the row against that Node's decision
+      // criteria, and assigning the row to a new child UndecidedNode (and
+      // giving it an improved prediction).
+      for( int row=0; row<nids._len; row++ ) { // Over all rows
+        int nid = (int)nids.at80(row); // Get Node to decide from
+        if( isDecidedRow(nid)) continue; // already done
+        if( isOOBRow(nid)) { // sampled away - we track the position in the tree
+          if( _leaf > 0) {
+            int nnid = oob2Nid(nid);
+            DTree.DecidedNode dn = _tree.decided(nnid);
+            if( dn._split._col == -1 ) nids.set0(row,nid2Oob(nnid = dn._pid)); // Might have a leftover non-split
+            if( nnid != -1 ) nnid = _tree.decided(nnid).ns(chks,row); // Move down the tree 1 level
+            if( nnid != -1 ) nids.set0(row,nid2Oob(nnid));
           }
-
-          // Score row against current decisions & assign new split
-          if( leaf > 0 ) {      // Prior pass exists?
-            DTree.DecidedNode dn = tree.decided(nid);
-            if( dn._split._col == -1 ) nids.set0(row,(nid = dn._pid)); // Might have a leftover non-split
-            if( nid != -1 ) nid = tree.decided(nid).ns(chks,row); // Move down the tree 1 level
-            if( nid != -1 ) nids.set0(row,nid);
-          }
-
-          // Pass 1.9
-          if( nid < leaf ) continue; // row already predicts perfectly
-
-          // We need private (local) space to gather the histograms.
-          // Make local clones of all the histograms that appear in this chunk.
-          DHistogram nhs[] = hcs[nid-leaf];
-          if( nhs != null ) continue; // Already have histograms
-          // Lazily manifest this histogram for tree-node 'nid'
-          nhs = hcs[nid-leaf] = new DHistogram[_ncols];
-          DHistogram ohs[] = tree.undecided(nid)._hs; // The existing column of Histograms
-          int sCols[] = tree.undecided(nid)._scoreCols; // Columns to score (null, or a list of selected cols)
-          if( sCols != null ) { // Sub-selecting just some columns?
-            // For just the selected columns make Big Histograms
-            for( int j=0; j<sCols.length; j++ ) { // Make private copies
-              int idx = sCols[j];                 // Just the selected columns
-              nhs[idx] = ohs[idx].bigCopy();
-            }
-            // For all the rest make small Histograms
-            for( int j=0; j<nhs.length; j++ )
-              if( ohs[j] != null && nhs[j]==null )
-                nhs[j] = ohs[j].smallCopy();
-          } else {              // Selecting all columns
-            // Default: make big copies of all
-            for( int j=0; j<nhs.length; j++ )
-                if( ohs[j] != null )
-                  nhs[j] = ohs[j].bigCopy();
-          }
+          continue;
         }
 
-        // Pass 2: Build new summary DHistograms on the new child
-        // UndecidedNodes every row got assigned into.  Collect counts, mean,
-        // variance, min, max per bin, per column.
-        for( int row=0; row<nids._len; row++ ) { // For all rows
-          int nid = (int)nids.at80(row);         // Get Node to decide from
-          if( nid<leaf ) continue; // row already predicts perfectly or sampled away
-          if( wrks.isNA0(row) ) continue; // No response, cannot train
-          DHistogram nhs[] = hcs[nid-leaf];
-
-          double y = wrks.at0(row);      // Response for this row
-          for( int j=0; j<_ncols; j++) { // For all columns
-            DHistogram nh = nhs[j];
-            if( nh == null ) continue; // Not tracking this column?
-            float col_data = (float)chks[j].at0(row); // Data stored in the column and put them into histogram
-            if( nh instanceof DBinHistogram ) // Big histogram
-              ((DBinHistogram)nh).incr(row,col_data,y);
-            else              nh .incr(col_data); // Small histogram
-          }
+        // Score row against current decisions & assign new split
+        if( _leaf > 0 ) {      // Prior pass exists?
+          DTree.DecidedNode dn = _tree.decided(nid);
+          if( dn._split._col == -1 ) nids.set0(row,(nid = dn._pid)); // Might have a leftover non-split
+          if( nid != -1 ) nid = _tree.decided(nid).ns(chks,row); // Move down the tree 1 level
+          if( nid != -1 ) nids.set0(row,nid);
         }
 
-        // Per-chunk histogram rollups
-        for( DHistogram dbh[] : hcs )
-          if( dbh != null )
-            for( int j=0; j<dbh.length; j++ )
-              if( dbh[j] != null ) // There are two kinds of histograms - small and big
-                (dbh[j]).fini();
+        // Pass 1.9
+        if( nid < _leaf ) continue; // row already predicts perfectly
+
+        // Pass 2.0
+        double y = wrks.at0(row);       // Response for this row
+        if( Double.isNaN(y) ) continue; // No response, cannot train
+        DSharedHistogram nhs[] = _hcs[nid-_leaf];
+        int sCols[] = _tree.undecided(nid)._scoreCols; // Columns to score (null, or a list of selected cols)
+
+        if( sCols != null ) { // Sub-selecting just some columns?
+          for( int j=0; j<sCols.length; j++) { // For tracked cols
+            final int c = sCols[j];
+            nhs[c].incr((float)chks[c].at0(row),y); // Histogram row/col
+          }
+        } else {                // Else all columns
+          for( int j=0; j<_ncols; j++) // for all columns
+            if( nhs[j] != null )       // Tracking this column?
+              nhs[j].incr((float)chks[j].at0(row),y); // Histogram row/col
+        }
       }
+
     }
 
     @Override public void reduce( ScoreBuildHistogram sbh ) {
       // Merge histograms
-      assert _hcs.length==_nclass; // One tree per class
-      for( int k=0; k<_nclass; k++ ) {
-        DHistogram hcs[/*leaf#*/][/*col*/] = _hcs[k];
-        if( hcs == null ) _hcs[k] = sbh._hcs[k];
-        else for( int i=0; i<hcs.length; i++ ) {
-          DHistogram hs1[] = hcs[i], hs2[] = sbh._hcs[k][i];
-          if( hs1 == null ) hcs[i] = hs2;
-          else if( hs2 != null )
-            for( int j=0; j<hs1.length; j++ )
-              if( hs1[j] == null ) hs1[j] = hs2[j];
-              else if( hs2[j] != null )
-                hs1[j].add(hs2[j]);
-        }
+      if( sbh._hcs == _hcs ) return;
+      for( int i=0; i<_hcs.length; i++ ) {
+        DSharedHistogram hs1[] = _hcs[i], hs2[] = sbh._hcs[i];
+        if( hs1 == null ) _hcs[i] = hs2;
+        else if( hs2 != null )
+          for( int j=0; j<hs1.length; j++ )
+            if( hs1[j] == null ) hs1[j] = hs2[j];
+            else if( hs2[j] != null )
+              hs1[j].add(hs2[j]);
       }
     }
   }
+
+ 
+  // --------------------------------------------------------------------------
+  // Build an entire layer of all K trees
+  protected DSharedHistogram[][][] buildLayer(final Frame fr, final DTree ktrees[], final int leafs[], final DSharedHistogram hcs[][][]) {
+    // Build K trees, one per class.
+
+    // Build up the next-generation tree splits from the current histograms.
+    // Nearly all leaves will split one more level.  This loop nest is
+    //           O( #active_splits * #bins * #ncols )
+    // but is NOT over all the data.
+    H2OCountedCompleter sb1ts[] = new H2OCountedCompleter[_nclass];
+    Vec vecs[] = fr.vecs();
+    for( int k=0; k<_nclass; k++ ) {
+      final DTree tree = ktrees[k]; // Tree for class K
+      if( tree == null ) continue;
+      // Build a frame with just a single tree (& work & nid) columns, so the
+      // nested MRTask2 ScoreBuildHistogram in ScoreBuildOneTree does not try
+      // to close other tree's Vecs when run in parallel.
+      Frame fr2 = new Frame(Arrays.copyOf(fr._names,_ncols+1), Arrays.copyOf(vecs,_ncols+1));
+      fr2.add(fr._names[_ncols+1+k],vecs[_ncols+1+k]);
+      fr2.add(fr._names[_ncols+1+_nclass+k],vecs[_ncols+1+_nclass+k]);
+      fr2.add(fr._names[_ncols+1+_nclass+_nclass+k],vecs[_ncols+1+_nclass+_nclass+k]);
+      // Start building one of the K trees in parallel
+      H2O.submitTask(sb1ts[k] = new ScoreBuildOneTree(k,tree,leafs,hcs,fr2));
+    }
+    // Block for all K trees to complete.
+    boolean did_split=false;
+    for( int k=0; k<_nclass; k++ ) {
+      final DTree tree = ktrees[k]; // Tree for class K
+      if( tree == null ) continue;
+      sb1ts[k].join();
+      if( ((ScoreBuildOneTree)sb1ts[k])._did_split ) did_split=true;
+    }
+    // The layer is done.
+    return did_split ? hcs : null;
+  }
+
+  private class ScoreBuildOneTree extends H2OCountedCompleter {
+    final int _k;               // The tree
+    final DTree _tree;
+    final int _leafs[/*nclass*/];
+    final DSharedHistogram _hcs[/*nclass*/][][];
+    final Frame _fr2;
+    boolean _did_split;
+    ScoreBuildOneTree( int k, DTree tree, int leafs[], DSharedHistogram hcs[][][], Frame fr2 ) {
+      _k    = k;
+      _tree = tree;
+      _leafs= leafs;
+      _hcs  = hcs;
+      _fr2  = fr2;
+    }
+    @Override public void compute2() {
+      int leafk = _leafs[_k];
+      // Fuse 2 conceptual passes into one:
+      // Pass 1: Score a prior DHistogram, and make new Node assignments
+      // to every row.  This involves pulling out the current assigned Node,
+      // "scoring" the row against that Node's decision criteria, and assigning
+      // the row to a new child Node (and giving it an improved prediction).
+      // Pass 2: Build new summary DHistograms on the new child Nodes every row
+      // got assigned into.  Collect counts, mean, variance, min, max per bin,
+      // per column.
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(_k,_tree,leafk,_hcs[_k]).doAll(_fr2);
+      //System.out.println(sbh.profString());
+
+      int tmax = _tree.len();   // Number of total splits in tree K
+      for( int leaf=leafk; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
+        DTree.UndecidedNode udn = _tree.undecided(leaf);
+        //System.out.println("Class "+(response._domain[k])+",\n  Undecided node:"+udn);
+        // Replace the Undecided with the Split decision
+        DTree.DecidedNode dn = makeDecided(udn,sbh._hcs[leaf-leafk]);
+        //System.out.println("--> Decided node: " + dn);
+        //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
+        if( dn._split.col() == -1 ) udn.do_not_split();
+        else _did_split = true;
+      }
+      _leafs[_k]=tmax;          // Setup leafs for next tree level
+      int new_leafs = _tree.len()-tmax;
+      _hcs[_k] = new DSharedHistogram[new_leafs][/*ncol*/];
+      for( int nl = tmax; nl<_tree.len(); nl ++ )
+        _hcs[_k][nl-tmax] = _tree.undecided(nl)._hs;
+      _tree.depth++;            // Next layer done
+      tryComplete();
+    }
+  }
+
+  // Builder-specific decision node
+  protected abstract DTree.DecidedNode makeDecided( DTree.UndecidedNode udn, DSharedHistogram hs[] );
 
   // --------------------------------------------------------------------------
   private static class ClassDist extends MRTask2<ClassDist> {
@@ -372,8 +436,7 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
     public long     nrows() { return _snrows; }
 
     // Compute CM & MSE on either the training or testing dataset
-    public Score doIt(Model model, Frame fr, Frame validation) { return doIt(model,fr,validation,false); }
-    public Score doIt(Model model, Frame fr, Frame validation,boolean oob) {
+    public Score doIt(Model model, Frame fr, Frame validation, boolean oob) {
       assert !oob || validation==null ; // oob => validation==null
       _oob = oob;
       // No validation, so do on training data
@@ -469,6 +532,8 @@ public abstract class SharedTreeModelBuilder extends ValidatedJob {
 
   protected abstract water.util.Log.Tag.Sys logTag();
   protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
+
+  protected abstract TM makeModel( TM model, DTree ktrees[], double err, long cm[][], DTree.TreeModel.TreeStats tstats);
 
   static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }

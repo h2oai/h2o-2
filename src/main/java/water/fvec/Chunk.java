@@ -12,10 +12,9 @@ import water.parser.DParseTask;
 public abstract class Chunk extends Iced implements Cloneable {
   public long _start;         // Start element; filled after AutoBuffer.read
   public int _len;            // Number of elements in this chunk
-  protected Chunk _chk;       // Normally==this, changed if chunk is written to
+  protected Chunk _chk2;      // Normally==null, changed if chunk is written to
   public Vec _vec;            // Owning Vec; filled after AutoBuffer.read
   byte[] _mem; // Short-cut to the embedded memory; WARNING: holds onto a large array
-  Chunk() { _chk=this; }
 
   public final boolean readable( ) { return _vec.readable(); }
   public final boolean writable( ) { return _vec.writable(); }
@@ -62,9 +61,9 @@ public abstract class Chunk extends Iced implements Cloneable {
    *  over the data than the generic at() API.  Probably no gain on larger
    *  loops.  The row reference is zero-based on the chunk, and should
    *  range-check by the JIT as expected.  */
-  public final double  at0  ( int i ) { return _chk. atd_impl(i); }
-  public final long    at80 ( int i ) { return _chk. at8_impl(i); }
-  public final boolean isNA0( int i ) { return _chk.isNA_impl(i); }
+  public final double  at0  ( int i ) { return _chk2 == null ? atd_impl(i) : _chk2. atd_impl(i); }
+  public final long    at80 ( int i ) { return _chk2 == null ? at8_impl(i) : _chk2. at8_impl(i); }
+  public final boolean isNA0( int i ) { return _chk2 == null ?isNA_impl(i) : _chk2.isNA_impl(i); }
 
 
   /** Slightly slower than 'at0' inside a chunk; goes (very) slow outside the
@@ -91,11 +90,11 @@ public abstract class Chunk extends Iced implements Cloneable {
   public final boolean setNA( long i )       { long x = i-_start; return (0 <= x && x < _len) ? setNA0((int)x) : _vec.setNA(i); }
   
   private void setWrite() {
-    if( _chk!=this ) return;
+    if( _chk2 != null ) return; // Already setWrite
     assert !(this instanceof NewChunk) : "Cannot direct-write into a NewChunk, only append";
     _vec.preWriting();          // One-shot writing-init
-    _chk = clone();             // Flag this chunk as having been written into
-    _chk._chk = _chk;           // Clone has NOT been written into
+    _chk2 = clone();            // Flag this chunk as having been written into
+    assert _chk2._chk2 == null; // Clone has NOT been written into
   }
 
   /**
@@ -110,40 +109,41 @@ public abstract class Chunk extends Iced implements Cloneable {
    */
   public final long set0(int idx, long l) {
     setWrite();
-    if( _chk.set_impl(idx,l) ) return l;
-    (_chk = inflate_impl(new NewChunk(this))).set_impl(idx,l);
+    if( _chk2.set_impl(idx,l) ) return l;
+    (_chk2 = inflate_impl(new NewChunk(this))).set_impl(idx,l);
     return l;
   }
 
   /** Set a double element in a chunk given a 0-based chunk local index. */
   public final double set0(int idx, double d) {
     setWrite();
-    if( _chk.set_impl(idx,d) ) return d;
-    (_chk = inflate_impl(new NewChunk(this))).set_impl(idx,d);
+    if( _chk2.set_impl(idx,d) ) return d;
+    (_chk2 = inflate_impl(new NewChunk(this))).set_impl(idx,d);
     return d;
   }
 
   /** Set a floating element in a chunk given a 0-based chunk local index. */
   public final float set0(int idx, float f) {
     setWrite();
-    if( _chk.set_impl(idx,f) ) return f;
-    (_chk = inflate_impl(new NewChunk(this))).set_impl(idx,f);
+    if( _chk2.set_impl(idx,f) ) return f;
+    (_chk2 = inflate_impl(new NewChunk(this))).set_impl(idx,f);
     return f;
   }
 
   /** Set the element in a chunk as missing given a 0-based chunk local index. */
   public final boolean setNA0(int idx) {
     setWrite();
-    if( _chk.setNA_impl(idx) ) return true;
-    (_chk = inflate_impl(new NewChunk(this))).setNA_impl(idx);
+    if( _chk2.setNA_impl(idx) ) return true;
+    (_chk2 = inflate_impl(new NewChunk(this))).setNA_impl(idx);
     return true;
   }
 
   /** After writing we must call close() to register the bulk changes */
   public void close( int cidx, Futures fs ) {
-    if( _chk instanceof NewChunk ) _chk = ((NewChunk)_chk).new_close(fs);
-    if( _chk == this ) return;            // No change?
-    DKV.put(_vec.chunkKey(cidx),_chk,fs); // Write updated chunk back into K/V
+    if( this  instanceof NewChunk ) _chk2 = this;
+    if( _chk2 == null ) return;          // No change?
+    if( _chk2 instanceof NewChunk ) _chk2 = ((NewChunk)_chk2).new_close(fs);
+    DKV.put(_vec.chunkKey(cidx),_chk2,fs); // Write updated chunk back into K/V
   }
 
   public int cidx() { return _vec.elem2ChunkIdx(_start); }
@@ -204,7 +204,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   public long byteSize() {
     long s= _mem == null ? 0 : _mem.length;
     s += (2+5)*8 + 12; // 2 hdr words, 5 other words, @8bytes each, plus mem array hdr
-    if( _chk != null && _chk != this ) s += _chk.byteSize();
+    if( _chk2 != null ) s += _chk2.byteSize();
     return s;
   }
 }

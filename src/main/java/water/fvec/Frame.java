@@ -607,9 +607,10 @@ public class Frame extends Iced {
         nc.close(c++, null);
       }
       Vec c0 = av.close(null);   // c0 is the row index vec
-      return new Slice(c2, this).doAll(c2.length,new Frame(new String[]{"rownames"}, new Vec[]{c0}))
+      Frame fr2 = new Slice(c2, this).doAll(c2.length,new Frame(new String[]{"rownames"}, new Vec[]{c0}))
               .outputFrame(names(c2), domains(c2));
-      //return new DeepSlice((long[])orows,c2).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+      UKV.remove(c0._key);      // Remove hidden vector
+      return fr2;
     }
     Frame frows = (Frame)orows;
     Vec vrows = frows.anyVec();

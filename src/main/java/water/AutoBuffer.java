@@ -589,7 +589,7 @@ public final class AutoBuffer {
 
   public AutoBuffer put(Freezable f) {
     if( f == null ) return put2(TypeMap.NULL);
-    assert f.frozenType() > 0;
+    assert f.frozenType() > 0 : "No TypeMap for "+f.getClass().getName();
     put2((short)f.frozenType());
     return f.write(this);
   }
