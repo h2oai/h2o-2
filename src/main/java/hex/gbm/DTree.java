@@ -56,8 +56,9 @@ public class DTree extends Iced {
   public final   DecidedNode   decided( int i ) { return (  DecidedNode)node(i); }
 
   // Get a new node index, growing innards on demand
-  private int newIdx() {
+  private synchronized int newIdx(Node n) {
     if( _len == _ns.length ) _ns = Arrays.copyOf(_ns,_len<<1);
+    _ns[_len] = n;
     return _len++;
   }
   // Return a deterministic chunk-local RNG.  Can be kinda expensive.
@@ -82,7 +83,11 @@ public class DTree extends Iced {
       _pid=pid;
       tree._ns[_nid=nid] = this;
     }
-    Node( DTree tree, int pid ) { this(tree,pid,tree.newIdx()); }
+    Node( DTree tree, int pid ) { 
+      _tree = tree;
+      _pid=pid;
+      _nid = tree.newIdx(this);
+    }
 
     // Recursively print the decision-line from tree root to this child.
     StringBuilder printLine(StringBuilder sb ) {
@@ -217,7 +222,7 @@ public class DTree extends Iced {
     public transient DSharedHistogram[] _hs;
     public final int _scoreCols[];      // A list of columns to score; could be null for all
     public UndecidedNode( DTree tree, int pid, DSharedHistogram[] hs ) {
-      super(tree,pid,tree.newIdx());
+      super(tree,pid);
       assert hs.length==tree._ncols;
       _scoreCols = scoreCols(_hs=hs);
     }
