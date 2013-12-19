@@ -983,7 +983,7 @@ class H2O(object):
         return a
 
     def h2o_log_msg(self, message=None):
-        if 1==1:
+        if 1==0:
             return
         if not message:
             message = "\n"
