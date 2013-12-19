@@ -161,6 +161,7 @@ sleep_at_tear_down = False
 abort_after_import = False
 clone_cloud_json = None
 disable_time_stamp = False
+debug_rest = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 python_cmd_ip = get_ip_address()
@@ -186,12 +187,13 @@ def parse_our_args():
     parser.add_argument('-aai', '--abort_after_import', help='abort the test after printing the full path to the first dataset used by import_parse/import_only', action='store_true')
     parser.add_argument('-ccj', '--clone_cloud_json', type=str, help='a h2o-nodes.json file can be passed (see build_cloud(create_json=True). This will create a cloned set of node objects, so any test that builds a cloud, can also be run on an existing cloud without changing the test')
     parser.add_argument('-dts', '--disable_time_stamp', help='Disable the timestamp on all stdout. Useful when trying to capture some stdout (like json prints) for use elsewhere', action='store_true')
+    parser.add_argument('-debug_rest', '--debug_rest', help='Print REST API interactions to rest.log', action='store_true')
 
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -206,6 +208,7 @@ def parse_our_args():
     abort_after_import = args.abort_after_import
     clone_cloud_json = args.clone_cloud_json
     disable_time_stamp = args.disable_time_stamp
+    debug_rest = args.debug_rest
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -825,6 +828,16 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
     node.stabilize(test, error=('A cloud of size %d' % node_count),
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
 
+
+def log_rest(s):
+    if not debug_rest:
+        return
+    rest_log_file = open(os.path.join(LOG_DIR, "rest.log"), "a")
+    rest_log_file.write(s)
+    rest_log_file.write("\n")
+    rest_log_file.close()
+
+
 class H2O(object):
     def __url(self, loc, port=None):
         # always use the new api port
@@ -833,6 +846,7 @@ class H2O(object):
         else: delim = '/'
         u = 'http://%s:%d%s%s' % (self.http_addr, port, delim, loc)
         return u
+
 
     def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, returnFast=False,
         cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorCheck=False, **kwargs): 
@@ -858,12 +872,23 @@ class H2O(object):
         else:
             log('Start ' + url + paramsStr)
 
+        log_rest("")
+        log_rest("----------------------------------------------------------------------\n")
+        if extraComment:
+            log_rest("# Extra comment info about this request: " + extraComment)
+        if cmd == 'get':
+            log_rest("GET")
+        else:
+            log_rest("POST")
+        log_rest(url + paramsStr)
+
         # file get passed thru kwargs here
         try:
             if cmd=='post':
                 r = requests.post(url, timeout=timeout, params=params, **kwargs)
             else:
                 r = requests.get(url, timeout=timeout, params=params, **kwargs)
+
         except Exception, e:
             # rethrow the exception after we've checked for stack trace from h2o
             # out of memory errors maybe don't show up right away? so we should wait for h2o
@@ -875,7 +900,13 @@ class H2O(object):
                 h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
                 time.sleep(2)
                 check_sandbox_for_errors();
+            log_rest("")
+            log_rest("EXCEPTION CAUGHT DOING REQUEST: " + str(e.message))
             raise exc_info[1], None, exc_info[2]
+
+        log_rest("")
+        log_rest("HTTP status code: " + str(r.status_code))
+        log_rest(r.text)
 
         # fatal if no response
         if not beta_features and not r:
