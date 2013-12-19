@@ -419,8 +419,10 @@ setMethod("colnames", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   unlist(lapply(res$cols, function(y) y$name))
 })
+setMethod("colnames<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
 setMethod("names", "H2OParsedData", function(x) { colnames(x) })
+setMethod("names<-", "H2OParsedData", function(x, value) { names(x) <- value })
 # setMethod("nrow", "H2OParsedData", function(x) { h2o.__unop2("nrow", x) })
 # setMethod("ncol", "H2OParsedData", function(x) { h2o.__unop2("ncol", x) })
 
@@ -499,7 +501,8 @@ setMethod("mean", "H2OParsedData", function(x) {
   temp[[1]]
 })
 
-setMethod("sd", "H2OParsedData", function(x) {
+setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
+  if(na.rm) stop("Unimplemented")
   if(dim(x)[2] != 1 || any.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
   res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
   res$summaries[[1]]$stats$sd
@@ -509,11 +512,13 @@ setMethod("dim", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   as.numeric(c(res$numRows, res$numCols))
 })
+setMethod("dim<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
 setMethod("as.data.frame", "H2OParsedData", function(x) {
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
   ttt <- getURL(url)
-  read.csv(textConnection(ttt), blank.lines.skip = FALSE)    # Substitute NAs for blank cells rather than skipping
+  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)    # Substitute NAs for blank cells rather than skipping
+  df[-nrow(df),]    # Drop last row since it's always a newline
 })
 
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) { 
@@ -560,19 +565,22 @@ any.factor <- function(x) {
   as.logical(h2o.__unop2("any.factor", x))
 }
 
-setMethod("quantile", "H2OParsedData", function(x) {
+setMethod("quantile", "H2OParsedData", function(x, probs = c(0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99), na.rm = FALSE, names = TRUE) {
+  if(any.factor(x)) stop("factors are not allowed")
+  if(na.rm) stop("Unimplemented")
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  # temp = sapply(res$summaries, function(x) { x$percentileValues })
   temp = sapply(res$summaries, function(x) { x$stats$pctile })
-  filt = !sapply(temp, is.null)
-  temp = temp[filt]
+  # filt = !sapply(temp, is.null)
+  # temp = temp[filt]
   if(length(temp) == 0) return(NULL)
   
   # myFeat = res$names[filt[1:length(res$names)]]
   # myQuantiles = c(1, 5, 10, 25, 33, 50, 66, 75, 90, 95, 99)
   myFeat = sapply(res$summaries, function(x) { x$colname })
-  myQuantiles = 100 * res$summaries[[1]]$stats$pct
-  matrix(unlist(temp), ncol = length(myFeat), dimnames = list(paste(myQuantiles, "%", sep=""), myFeat))
+  myQuantiles = res$summaries[[1]]$stats$pct
+  if(any(!probs %in% myQuantiles)) stop("Only the following quantiles are supported: ", paste(myQuantiles, collapse=", "))
+  temp2 = matrix(unlist(temp), ncol = length(myFeat), dimnames = list(paste(100*myQuantiles, "%", sep=""), myFeat))
+  temp2[match(probs, myQuantiles),]
 })
 
 setGeneric("histograms", function(object) { standardGeneric("histograms") })
@@ -636,13 +644,6 @@ setMethod("summary", "H2OParsedData", function(object) {
   result
 })
 
-setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
-  params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
-  expr = paste("apply(", paste(params, collapse=","), ")", sep="")
-  res = h2o.__exec2(X@h2o, expr)
-  new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
-})
-
 setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
   if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
     stop("Unimplemented")
@@ -656,6 +657,14 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
   else
     new("H2OParsedData", h2o=test@h2o, key=res$dest_key, logic=FALSE)
 })
+
+#----------------------------- Work in Progress -------------------------------#
+# setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
+#   params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
+#   expr = paste("apply(", paste(params, collapse=","), ")", sep="")
+#   res = h2o.__exec2(X@h2o, expr)
+#   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
+# })
 
 #--------------------------------- ValueArray ----------------------------------#
 setMethod("show", "H2ORawDataVA", function(object) {

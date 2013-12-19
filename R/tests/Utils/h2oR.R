@@ -1,5 +1,8 @@
-options(echo=FALSE)
-local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
+##                                       ##
+#                                         #  
+#  Various Utility Functions for R Units  #
+#                                         #
+##                                       ##
 
 grabRemote <- function(myURL, myFile) {
   temp <- tempfile()
@@ -246,16 +249,17 @@ function() {
   require(testthat)
 }
 
-Log.info("============== Setting up R-Unit environment... ================")
-Log.info("Branch: ")
-system('git branch')
-Log.info("Hash: ")
-system('git rev-parse HEAD')
-
-defaultPath <- locate("../../target/R")
-ipPort <- get_args(commandArgs(trailingOnly = TRUE))
-checkNLoadWrapper(ipPort)
-checkNLoadPackages()
+#
+#Log.info("============== Setting up R-Unit environment... ================")
+#Log.info("Branch: ")
+#system('git branch')
+#Log.info("Hash: ")
+#system('git rev-parse HEAD')
+#
+#defaultPath <- locate("../../target/R")
+#ipPort <- get_args(commandArgs(trailingOnly = TRUE))
+#checkNLoadWrapper(ipPort)
+#checkNLoadPackages()
 
 h2o.removeAll <-
 function(object) {
@@ -263,16 +267,17 @@ function(object) {
   h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
 }
 
-Log.info("Loading other required test packages")
-if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
-if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
-require(glmnet)
-require(gbm)
-
-#Global Variables
-myIP   <- ipPort[[1]]
-myPort <- ipPort[[2]]
-PASSS <- FALSE
-view_max <- 10000 #maximum returned by Inspect.java
-SEED <- NULL
+#Log.info("Loading other required test packages")
+#if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
+#if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
+#require(glmnet)
+#require(gbm)
+#
+##Global Variables
+#myIP   <- ipPort[[1]]
+#myPort <- ipPort[[2]]
+#PASSS <- FALSE
+#view_max <- 10000 #maximum returned by Inspect.java
+#SEED <- NULL
+#
 

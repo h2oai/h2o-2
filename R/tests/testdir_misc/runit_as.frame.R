@@ -2,7 +2,8 @@
 # Testing number of rows in as.data.frame 
 ##
 
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../findNSourceUtils.R')
 
 test <- function(conn) {
 	Log.info("Reading iris into R")	
@@ -17,3 +18,4 @@ test <- function(conn) {
         testEnd()
 }
 doTest("Test data frame", test)
+

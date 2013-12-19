@@ -1,4 +1,5 @@
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../findNSourceUtils.R')
 
 test.glm2binregression2.golden <- function(H2Oserver) {
 	
@@ -29,3 +30,4 @@ expect_equal(H2Ocoeffs, Rcoeffs, tolerance = 0.01)
 }
 
 doTest("GLM Test: Golden GLM2 - Coefficients for factors as predictors", test.glm2binregression2.golden)
+
