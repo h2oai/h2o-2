@@ -880,7 +880,7 @@ def parse_args(argv):
             i += 1
             if (i > len(argv)):
                 usage()
-            g_test_to_run = argv[i]
+            g_test_to_run = locate(argv[i])
         elif (s == "--testlist"):
             i += 1
             if (i > len(argv)):
@@ -896,6 +896,15 @@ def parse_args(argv):
 
         i += 1
 
+def locate(file):
+    """
+    Returns the path if the file is under current working directory
+    """
+    if os.path.isabs(file):
+        return file
+    for dir, subdirs, files in os.walk(os.getcwd()):
+        if file in files:
+            return os.path.join(dir, file) 
 
 def main(argv):
     """

@@ -647,6 +647,7 @@ public class Frame extends Iced {
       for (int i = 0; i < ix[0]._len; i++) {
         // select one row
         r = ix[0].at80(i) - 1;   // next row to select
+        if (r < 0) continue;
         if (r >= nrow) {
           for (int c = 0; c < vecs.length; c++) ncs[c].addNum(Double.NaN);
         } else {
