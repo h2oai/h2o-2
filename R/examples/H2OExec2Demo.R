@@ -64,9 +64,9 @@ head(prostate.pred)
 tail(prostate.pred)
 
 # Create new column based on 25% and 75% quantiles
-prostate.hex[,10] = prostate.hex$PSA <= prostate.qs["25%",]
+prostate.hex[,10] = prostate.hex$PSA <= prostate.qs["25%"]
 head(prostate.hex)
-# prostate.hex[,11] = prostate.hex$PSA >= prostate.qs["75%",]
+# prostate.hex[,11] = prostate.hex$PSA >= prostate.qs["75%"]
 prostate.glm.lin = h2o.glm.FV(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex, family = "binomial")
 print(prostate.glm.lin)
 
