@@ -2,7 +2,7 @@
 ;;(setq debug-on-error t)
 
 ;; TAGS!!!
-;;rm TAGS; ctags -e --recurse=yes --extra=+q --fields=+fksaiS
+;;rm TAGS; ctags -e --recurse=yes --extra=+q --fields=+fksaiS src
 
 ;; JavaDoc help on F1
 (require 'javadoc-help)
