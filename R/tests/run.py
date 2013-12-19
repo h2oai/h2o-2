@@ -570,6 +570,12 @@ class RUnitRunner:
         if (self.terminated):
             return
 
+        if (True):
+            cloud = self.clouds[0]
+            port = cloud.get_port()
+            cmd = "R --quiet -f Utils/runnerSetupPackage.R --args 127.0.0.1:{}".format(port)
+            os.system(cmd)
+
         num_tests = len(self.tests)
         num_nodes = len(self.clouds * self.nodes_per_cloud)
         self._log("")

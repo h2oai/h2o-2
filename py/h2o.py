@@ -520,6 +520,8 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     h2p.red_print("Ingested from json:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
     print ""
     nodes[:] = nodeList
+    # put the test start message in the h2o log, to create a marker
+    nodes[0].h2o_log_msg()
     return nodeList
 
 def setup_benchmark_log():
@@ -617,19 +619,21 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
             # verify_cloud_size(nodeList)
 
         # best to check for any errors due to cloud building right away?
-        check_sandbox_for_errors()
+        check_sandbox_for_errors(python_test_name=python_test_name)
 
     except:
         if cleanup:
             for n in nodeList: n.terminate()
         else:
             nodes[:] = nodeList
-        check_sandbox_for_errors()
+        check_sandbox_for_errors(python_test_name=python_test_name)
         raise
 
     # this is just in case they don't assign the return to the nodes global?
     nodes[:] = nodeList
     print len(nodeList), "total jvms in H2O cloud"
+    # put the test start message in the h2o log, to create a marker
+    nodes[0].h2o_log_msg()
 
     if config_json:
         # like cp -p. Save the config file, to sandbox
@@ -712,7 +716,7 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
-def check_sandbox_for_errors(cloudShutdownIsError=False, sandboxIgnoreErrors=False):
+def check_sandbox_for_errors(cloudShutdownIsError=False, sandboxIgnoreErrors=False, python_test_name=''):
     # dont' have both tearDown and tearDownClass report the same found error
     # only need the first
     if nodes and nodes[0].sandbox_error_report(): # gets current state
@@ -744,7 +748,7 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
     finally:
-        check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors)
+        check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
         nodeList[:] = []
 
 # don't need any more?
@@ -899,7 +903,7 @@ class H2O(object):
             if not noExtraErrorCheck: # use this to ignore the initial connection errors during build cloud when h2o is coming up
                 h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
                 time.sleep(2)
-                check_sandbox_for_errors();
+                check_sandbox_for_errors(python_test_name=python_test_name);
             log_rest("")
             log_rest("EXCEPTION CAUGHT DOING REQUEST: " + str(e.message))
             raise exc_info[1], None, exc_info[2]
@@ -977,6 +981,17 @@ class H2O(object):
             "\tlocked: ", locked,
             ))
         return a
+
+    def h2o_log_msg(self, message=None):
+        if 1==0:
+            return
+        if not message:
+            message = "\n"
+            message += "\n#***********************"
+            message += "\npython_test_name: " + python_test_name
+            message += "\n#***********************"
+        params = {'message': message}
+        self.__do_json_request('2/LogAndEcho', params=params)
 
     def get_timeline(self):
         return self.__do_json_request('Timeline.json')
@@ -1152,7 +1167,7 @@ class H2O(object):
             verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(response))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             if ((count%6)==0):
-                check_sandbox_for_errors()
+                check_sandbox_for_errors(python_test_name=python_test_name)
 
             if (create_noise):
                 # this guarantees the loop is done, so we don't need to worry about
@@ -2314,7 +2329,7 @@ class H2O(object):
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?. can check_sandbox_for_errors at any time
             if ((numberOfRetries%50)==0):
-                check_sandbox_for_errors()
+                check_sandbox_for_errors(python_test_name=python_test_name)
 
         else:
             timeTakenSecs = time.time() - start

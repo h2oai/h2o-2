@@ -28,7 +28,8 @@ def writeSimpleSliceTestTask(FU, data, dataPath, FUParams):
             # SEED: {6}
   
             ##
-            source('./findNSourceUtils.R')
+            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+            source('../findNSourceUtils.R')
 
             {3} <- function(conn) {{
                 Log.info("A munge-task R unit test on data <{0}> testing the functional unit <{1}> ")
@@ -162,7 +163,8 @@ def writeSimpleNumericFilterTestTask(FU, data, dataPath, FUParams):
             # gitHash: {5}
             # SEED: {6}
             ##
-            source('./findNSourceUtils.R')
+            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+            source('../findNSourceUtils.R') 
 
             {3} <- function(conn) {{
                 Log.info("A munge-task R unit test on data <{0}> testing the functional unit <{1}> ")
@@ -265,7 +267,8 @@ def writeCompoundFilterTestTask(FU, data, dataPath, FUParams):
             # SEED: {6}
            
             ##
-            source('./findNSourceUtils.R')
+            setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+            source('../findNSourceUtils.R')
 
             {3} <- function(conn) {{
                 Log.info("A munge-task R unit test on data <{0}> testing the functional unit <{1}> ")

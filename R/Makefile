@@ -53,3 +53,4 @@ clean:
 	rm -f h2o-package/man/h2o-package.Rd
 	rm -f h2o-package/inst/java/h2o.jar
 	rm -f h2o_*.tar.gz
+	rm -rf ../lib/resources/R

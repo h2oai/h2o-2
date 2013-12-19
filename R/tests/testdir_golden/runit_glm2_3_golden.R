@@ -1,4 +1,5 @@
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../findNSourceUtils.R')
 
 test.glm2collinearfeatures.golden <- function(H2Oserver) {
 	
@@ -40,3 +41,4 @@ expect_equal(fitH2O@model$aic, fitR$aic, tolerance = 0.01)
 }
 
 doTest("GLM Test: Golden GLM2 - Treatment of Collinear Cols", test.glm2collinearfeatures.golden)
+
