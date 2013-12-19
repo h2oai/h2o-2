@@ -22,6 +22,12 @@ public abstract class GeneratedModel implements IGeneratedModel {
     int colIdx = getColIdx(name);
     return colIdx != -1 ? getDomainValues(colIdx) : null;
   }
+  @Override public int mapEnum(int colIdx, String enumValue) {
+    String[] domain = getDomainValues(colIdx);
+    if (domain==null || domain.length==0) return -1;
+    for (int i=0; i<domain.length;i++) if (enumValue.equals(domain[i])) return i;
+    return -1;
+  }
 
   public static int maxIndex(float[] from, int start) {
     int result = start;
@@ -29,4 +35,5 @@ public abstract class GeneratedModel implements IGeneratedModel {
       if (from[i]>from[result]) result = i;
     return result;
   }
+
 }

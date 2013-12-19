@@ -49,4 +49,8 @@ public interface IGeneratedModel {
 
     /** Returns index of column with give name or -1 if column is not found. */
     public int getColIdx(String name);
+
+    /** Maps given column's enum to integer used by this model.
+     * Returns -1 if mapping is not found. */
+    public int mapEnum(int colIdx, String enumValue);
 }
