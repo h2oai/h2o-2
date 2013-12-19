@@ -30,6 +30,12 @@ test.basic.minmax <- function(conn) {
   expect_that(min(hex[,-5], 4, -5), equals(min(-5, 4, hex[,-5])))
   expect_that(max(hex[,1], 5, 3), equals(max(3, 5, hex[,1])))
   expect_that(max(hex[,-5], 1:10, 3), equals(max(1:10, hex[,-5], -3)))
+
+  Log.info("min and max corretness")
+  df <- data.frame(c(1,-0.1,0))
+  expect_that(min(as.h2o(conn, df)), equals(min(df)))
+  expect_that(max(as.h2o(conn, df)), equals(max(df)))
+  
   testEnd()
 }
 
