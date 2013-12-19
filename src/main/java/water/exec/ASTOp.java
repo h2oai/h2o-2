@@ -376,11 +376,15 @@ class ASTLO   extends ASTBinOp { String opStr(){ return "||" ;} ASTOp make() {re
 
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
-  ASTReducerOp( ) { super(new String[]{"","dbls"},
-                          new Type[]{Type.DBL,Type.varargs(Type.dblary())}); }
+  final double _init;
+  ASTReducerOp( double init ) {
+    super(new String[]{"","dbls"},
+          new Type[]{Type.DBL,Type.varargs(Type.dblary())});
+    _init = init;
+  }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env, int argcnt) {
-    double sum=0;
+    double sum=_init;
     for( int i=0; i<argcnt-1; i++ )
       if( env.isDbl() ) sum = op(sum,env.popDbl());
       else {
@@ -394,7 +398,7 @@ abstract class ASTReducerOp extends ASTOp {
 
   private static class RedOp extends MRTask2<RedOp> {
     final ASTReducerOp _bin;
-    RedOp( ASTReducerOp bin ) { _bin = bin; }
+    RedOp( ASTReducerOp bin ) { _bin = bin; _d = bin._init; }
     double _d;
     @Override public void map( Chunk chks[] ) {
       for( int i=0; i<chks.length; i++ ) {
@@ -408,9 +412,9 @@ abstract class ASTReducerOp extends ASTOp {
   }
 }
 
-class ASTSum extends ASTReducerOp { String opStr(){ return "sum"  ;} ASTOp make() {return new ASTSum();} double op(double d0, double d1) { return d0+d1;}}
-class ASTMax extends ASTReducerOp { String opStr(){ return "max"  ;} ASTOp make() {return new ASTMax();} double op(double d0, double d1) { return Math.max(d0,d1);}}
-class ASTMin extends ASTReducerOp { String opStr(){ return "min"  ;} ASTOp make() {return new ASTMin();} double op(double d0, double d1) { return Math.min(d0,d1);}}
+class ASTSum extends ASTReducerOp { ASTSum( ) {super(0);                       } String opStr(){ return "sum"  ;} ASTOp make() {return new ASTSum();} double op(double d0, double d1) { return d0+d1;}}
+class ASTMax extends ASTReducerOp { ASTMax( ) {super(Double.NEGATIVE_INFINITY);} String opStr(){ return "max"  ;} ASTOp make() {return new ASTMax();} double op(double d0, double d1) { return Math.max(d0,d1);}}
+class ASTMin extends ASTReducerOp { ASTMin( ) {super(Double.POSITIVE_INFINITY);} String opStr(){ return "min"  ;} ASTOp make() {return new ASTMin();} double op(double d0, double d1) { return Math.min(d0,d1);}}
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
