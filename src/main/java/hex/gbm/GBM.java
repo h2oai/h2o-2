@@ -177,10 +177,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected double score0( Chunk chks[], double ds[/*nclass*/], int row ) {
     if( _nclass == 1 )          // Classification?
       return chk_tree(chks,0).at0(row);
-    if( _nclass == 2 )          // The Boolean Optimization
+    if( _nclass == 2 ) {        // The Boolean Optimization
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
-      ds[1] = -ds[0];
+      double d0 = chk_tree(chks,0).at0(row);
+      ds[0] = Math.exp(d0);
+      ds[1] = 1/ds[0];
+      return ds[0]+ds[1];
+    }
     double sum=0;
     for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
       sum+=(ds[k]=Math.exp(chk_tree(chks,k).at0(row)));

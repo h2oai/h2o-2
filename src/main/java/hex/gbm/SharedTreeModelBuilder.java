@@ -176,7 +176,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _timeLastScoreEnd = System.currentTimeMillis();
     }
     model = makeModel(model, finalScoring?null:ktrees, 
-                      sc==null ? Double.NaN : sc._sum/_nrows, 
+                      sc==null ? Double.NaN : sc._sum/sc._snrows, 
                       sc==null ? null : sc._cm, tstats);
     DKV.put(outputKey, model);
     return model;
