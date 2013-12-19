@@ -2,7 +2,12 @@
 ;;(setq debug-on-error t)
 
 ;; TAGS!!!
-;;rm TAGS; ctags -e --recurse=yes --extra=+q --fields=+fksaiS
+;;rm TAGS; ctags -e --recurse=yes --extra=+q --fields=+fksaiS src
+
+;; JavaDoc help on F1
+(require 'javadoc-help)
+(global-set-key [(f1)]          'javadoc-lookup)  ; F1 to lookup
+(global-set-key [(shift f1)]    'javadoc-help)    ; Shift-F1 to bring up menu
 
 ;; JDEE.  For me: mostly the debugger
 (add-to-list 'load-path (expand-file-name "~/Desktop/Dropbox/Programs/Emacs/jdee-2.4.0.1/lisp"))

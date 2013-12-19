@@ -340,6 +340,7 @@ public class Utils {
     return a;
   }
   public static long[] add(long[] a, long[] b) {
+    if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
@@ -348,6 +349,7 @@ public class Utils {
     return a;
   }
   public static float[] add(float[] a, float[] b) {
+    if( b==null ) return a;
     for(int i = 0; i < a.length; i++ ) a[i] += b[i];
     return a;
   }
@@ -523,10 +525,6 @@ public class Utils {
    * @param <T>
    */
   public static class IcedArrayList<T extends Iced> extends ArrayList<T> implements Freezable {
-    private static final int I;
-    static {
-      I = TypeMap.onLoad(IcedArrayList.class.getName());
-    }
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
       for(T t:this)
@@ -543,8 +541,9 @@ public class Utils {
     @Override public <T2 extends Freezable> T2 newInstance() {
       return (T2)new IcedArrayList<T>();
     }
+    private static int _frozen$type;
     @Override public int frozenType() {
-      return I;
+      return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedArrayList.class.getName())) : _frozen$type;
     }
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       return bb;
@@ -578,10 +577,6 @@ public class Utils {
    * @param <T>
    */
   public static class IcedHashMap<K extends Iced, V extends Iced> extends HashMap<K,V> implements Freezable {
-    private static final int I;
-    static {
-      I = TypeMap.onLoad(IcedHashMap.class.getName());
-    }
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
       for(Map.Entry<K, V> e:entrySet())bb.put(e.getKey()).put(e.getValue());
@@ -597,8 +592,9 @@ public class Utils {
     @Override public <T2 extends Freezable> T2 newInstance() {
       return (T2)new IcedHashMap<K,V>();
     }
+    private static int _frozen$type;
     @Override public int frozenType() {
-      return I;
+      return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedHashMap.class.getName())) : _frozen$type;
     }
     @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
       return bb;
