@@ -513,7 +513,8 @@ setMethod("dim", "H2OParsedData", function(x) {
 setMethod("as.data.frame", "H2OParsedData", function(x) {
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
   ttt <- getURL(url)
-  read.csv(textConnection(ttt), blank.lines.skip = FALSE)    # Substitute NAs for blank cells rather than skipping
+  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)    # Substitute NAs for blank cells rather than skipping
+  df[-nrow(df),]    # Drop last row since it's always a newline
 })
 
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) { 
