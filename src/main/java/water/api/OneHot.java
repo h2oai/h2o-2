@@ -13,7 +13,7 @@ public class OneHot extends Request2 {
     public Frame source;
 
     @API(help = "Destination key", required = false, filter = Default.class)
-    protected final Key _dest = Key.make("__OneHot_" + Key.make());
+    protected final Key destination_key = Key.make("__OneHot_" + Key.make());
 
     @API(help = "Ignored columns by name and zero-based index", filter=colsNamesIdxFilter.class, displayName="Ignored columns")
     public int[] ignored_cols = new int[0];
@@ -33,11 +33,11 @@ public class OneHot extends Request2 {
             fr.remove(ignored_cols);
             Frame oneHotFrame = hex.OneHot.expandDataset(fr);
             for (int i : ignored_cols) oneHotFrame.add(source._names[i], source.vecs()[i]);
-            UKV.put(_dest, oneHotFrame);
+            UKV.put(destination_key, oneHotFrame);
         } catch(Throwable t) {
             Log.err(t);
             Response.error(t.getMessage());
         }
-        return Inspect2.redirect(this, _dest.toString());
+        return Inspect2.redirect(this, destination_key.toString());
     }
 }
