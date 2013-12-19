@@ -493,11 +493,11 @@ h2o.__getDRFResults <- function(res) {
 #setMethod("h2o.predict", signature(object="H2OModel", newdata="H2OParsedData"),
 h2o.predict <- function(object, newdata) {
   if( missing(object) ) stop('must specify object')
-  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel', 'H2OGLMModelVA') )) stop('object must be an H2OModel')
+  if(!( class(object) %in% c('H2OPCAModel', 'H2OGBMModel', 'H2OKMeansModel', 'H2OModel', 'H2OGLMModel', 'H2ODRFModel', 'H2OGLMModelVA', 'H2ORFModelVA') )) stop('object must be an H2OModel')
   if( missing(newdata) ) newdata <- object@data
   if(!class(newdata) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('newdata must be h2o data')
 
-  if(class(object) == "H2OGLMModelVA") {
+  if(class(object) %in% c("H2OGLMModelVA", "H2ORFModelVA")) {
     if(class(newdata) != 'H2OParsedDataVA')
       stop("Prediction requires newdata to be type H2OParsedDataVA")
     res = h2o.__remoteSend(object@data@h2o, h2o.__PAGE_PREDICT, model_key=object@key, data_key=newdata@key)
@@ -637,6 +637,36 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
     if(!missing(tweedie.p)) print('Tweedie variance power not available in GLM grid search')
     h2o.glmgrid.internal(args$x_i - 1, args$y, data, family, nfolds, alpha, lambda)
   }
+}
+
+h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL) {
+  if(class(data) != "H2OParsedDataVA")
+    stop("h2o.randomForest.VA only works under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
+  args <- verify_dataxy(data, x, y)
+  if(!is.numeric(ntree)) stop("ntree must be numeric")
+  if(ntree <= 0) stop("ntree must be > 0")
+  if(!is.numeric(depth)) stop("depth must be numeric")
+  if(depth < 0) stop("depth must be >= 0")
+  if(!is.numeric(sample.rate)) stop("sample.rate must be numeric")
+  if(sample.rate < 0 || sample.rate > 1) stop("sample.rate must be in [0,1]")
+  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=args$x_ignore, ntree=ntree, depth=depth, sample=round(100*sample.rate), class_weights=classwt)
+  while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
+  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=res$destination_key, data_key=data@key, out_of_bag_error_estimate=1)
+  modelOrig = h2o.__getRFResults(res2)
+  new("H2ORFModelVA", key=res$destination_key, data=data, model=modelOrig)
+}
+
+h2o.__getRFResults <- function(model) {
+  result = list()
+  result$ntree = model$ntree
+  result$classification_error = model$confusion_matrix$classification_error
+  result$confusion = build_cm(model$confusion_matrix$scores, model$confusion_matrix$header)
+  result$depth_sum = unlist(model$trees$depth)
+  result$leaves_sum = unlist(model$trees$leaves)
+  result$tree_sum = matrix(c(model$trees$depth, model$trees$leaves), nrow=2, dimnames=list(c("Depth", "Leaves"), c("Min", "Mean", "Max")))
+  return(result)
 }
 
 # Used to verify data, x, y and turn into the appropriate things

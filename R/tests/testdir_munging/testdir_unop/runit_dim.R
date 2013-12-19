@@ -47,9 +47,9 @@ test.dim <- function(conn) {
   expect_that(dim(RColAmpFive), equals(dim(h2oColAmpFive)))
   
   Log.info("Final check: data frame h2oCol then perform operation, should be the same as others...")
-  Log.info("as.data.frame(h2oCol)")
-  print(as.data.frame(h2oCol))
-  h2oTOR <- as.data.frame(h2oCol) & 5
+  Log.info("data.frame(as.data.frame(h2oCol))")
+  print(data.frame(as.data.frame(h2oCol)))
+  h2oTOR <- data.frame(as.data.frame(h2oCol) & 5)
   Log.info("as.data.frame(h2oCol) & 5")
   expect_that(dim(h2oTOR), equals(dim(h2oColAmpFive)))
   testEnd()

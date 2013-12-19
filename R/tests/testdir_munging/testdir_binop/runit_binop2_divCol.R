@@ -10,7 +10,7 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source('../../findNSourceUtils.R')
 
-#setupRandomSeed(1472703948)
+setupRandomSeed(857122247)
 
 doSelect<-
 function() {
@@ -75,8 +75,8 @@ test.slice.div <- function(conn) {
   print(head(hexDivHex))
   Log.info("head(as.data.frame(fiveDivSliced)/as.data.frame(slicedDivFive))")
   print(head(as.data.frame(fiveDivSliced)/as.data.frame(slicedDivFive)))
-  A <- data.frame(as.data.frame(hexDivHex))
-  B <- data.frame(as.data.frame(fiveDivSliced) / as.data.frame(slicedDivFive) ) 
+  A <- data.frame(na.omit(as.data.frame(hexDivHex)))
+  B <- data.frame(na.omit(as.data.frame(fiveDivSliced)) / na.omit(as.data.frame(slicedDivFive) ) )
   C <- sum(A == B)
   expect_that(C, equals(nrow(A)))
 
