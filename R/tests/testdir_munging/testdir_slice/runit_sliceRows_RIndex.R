@@ -1,4 +1,5 @@
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../../findNSourceUtils.R')
 
 #setupRandomSeed(1193410486)
 test.slice.rows <- function(conn) {
@@ -46,3 +47,4 @@ test.slice.rows <- function(conn) {
 }
 
 doTest("Slice Tests: Row slice using R index", test.slice.rows)
+
