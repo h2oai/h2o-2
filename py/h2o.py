@@ -988,7 +988,7 @@ class H2O(object):
         if not message:
             message = "\n"
             message += "\n#***********************"
-            message += "\nTest Start: " + python_test_name
+            message += "\npython_test_name: " + python_test_name
             message += "\n#***********************"
         params = {'message': message}
         self.__do_json_request('2/LogAndEcho', params=params)
