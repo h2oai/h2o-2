@@ -119,8 +119,8 @@ public abstract class Paxos {
     synchronized(Paxos.class) {
       while( !_commonKnowledge )
         try { Paxos.class.wait(); } catch( InterruptedException ie ) { }
+      _cloudLocked = true;
     }
-    _cloudLocked = true;
   }
 
 

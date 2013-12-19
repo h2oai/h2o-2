@@ -570,11 +570,32 @@ class RUnitRunner:
         if (self.terminated):
             return
 
+        self._log("")
+        self._log("Setting up R H2O package...")
         if (True):
+            out_file_name = os.path.join(self.output_dir, "runnerSetupPackage.out")
+            out = open(out_file_name, "w")
             cloud = self.clouds[0]
             port = cloud.get_port()
-            cmd = "R --quiet -f Utils/runnerSetupPackage.R --args 127.0.0.1:{}".format(port)
-            os.system(cmd)
+            cmd = ["R",
+                   "--quiet",
+                   "-f",
+                   os.path.join(os.path.dirname(os.path.realpath(__file__)), "Utils/runnerSetupPackage.R"),
+                   "--args",
+                   "127.0.0.1:" + str(port)]
+            child = subprocess.Popen(args=cmd,
+                                     stdout=out,
+                                     stderr=subprocess.STDOUT)
+            rv = child.wait()
+            if (self.terminated):
+                return
+            if (rv != 0):
+                print("")
+                print("ERROR: Utils/runnerSetupPackage.R failed.")
+                print("       (See " + out_file_name + ")")
+                print("")
+                sys.exit(1)
+            out.close()
 
         num_tests = len(self.tests)
         num_nodes = len(self.clouds * self.nodes_per_cloud)
@@ -853,6 +874,25 @@ def usage():
     sys.exit(1)
 
 
+def find_test(test_to_run):
+    """
+    Be nice and try to help find the test if possible.
+    If the test is actually found without looking, then just use it.
+    Otherwise, search from the script's down directory down.
+    """
+    if (os.path.exists(test_to_run)):
+        abspath_test = os.path.abspath(test_to_run)
+        return abspath_test
+
+    for d, subdirs, files in os.walk(os.path.dirname(os.path.realpath(__file__))):
+        for f in files:
+            if (f == test_to_run):
+                return os.path.join(d, f)
+
+    # Not found, return the file, which will result in an error downstream when it can't be found.
+    return file
+
+
 def parse_args(argv):
     global g_base_port
     global g_num_clouds
@@ -880,7 +920,7 @@ def parse_args(argv):
             i += 1
             if (i > len(argv)):
                 usage()
-            g_test_to_run = argv[i]
+            g_test_to_run = find_test(argv[i])
         elif (s == "--testlist"):
             i += 1
             if (i > len(argv)):
@@ -918,7 +958,7 @@ def main(argv):
 
     # Calculate and set other variables.
     nodes_per_cloud = 1
-    xmx = "2g"
+    xmx = "1g"
     h2o_jar = os.path.abspath(
         os.path.join(os.path.join(os.path.join(os.path.join(
             test_root_dir, ".."), ".."), "target"), "h2o.jar"))

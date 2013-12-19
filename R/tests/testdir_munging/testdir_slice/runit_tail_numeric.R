@@ -8,7 +8,8 @@
 # task:
 ##
 
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../../findNSourceUtils.R')
 
 test.tail.numeric <- function(conn) {
   Log.info("Importing USArrests.csv data...")

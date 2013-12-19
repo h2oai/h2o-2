@@ -632,10 +632,11 @@ public final class H2O {
   public static int hiQPoolSize(int i) { return FJPS[i+MIN_HI_PRIORITY].getPoolSize();             }
 
   // Submit to the correct priority queue
-  public static void submitTask( H2OCountedCompleter task ) {
+  public static H2OCountedCompleter submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
     assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY;
     FJPS[priority].submit(task);
+    return task;
   }
 
   // Simple wrapper over F/J CountedCompleter to support priority queues.  F/J
