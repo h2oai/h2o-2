@@ -1,4 +1,5 @@
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../../findNSourceUtils.R')
 
 test.summary2 <- function(conn) {
   Log.info("Importing iris.csv data...\n")

@@ -22,3 +22,4 @@ function(seed = NULL, suppress = FALSE) {
         set.seed(seed)
     }
 }
+

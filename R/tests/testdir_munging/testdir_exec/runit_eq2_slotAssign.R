@@ -5,7 +5,8 @@
 # Author: Spencer
 ##
 
-source('./findNSourceUtils.R')
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
+source('../../findNSourceUtils.R')
 
 #setupRandomSeed(1689636624)
 
