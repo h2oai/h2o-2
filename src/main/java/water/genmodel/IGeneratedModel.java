@@ -4,7 +4,10 @@ package water.genmodel;
  * A generic interface to access generated models.
  */
 public interface IGeneratedModel {
-    /** The names of the columns used in the model. */
+    /** Returns number of columns used as input for training (i.e., exclude response column). */
+    public int getNumCols();
+
+    /** The names of columns used in the model. It contains names of input columns and a name of response column. */
     public String[] getNames();
 
     /** The name of the response column. */
