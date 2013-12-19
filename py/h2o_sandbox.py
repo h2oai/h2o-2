@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys, itertools, os, re
 
-def check_sandbox_for_errors(LOG_DIR=None, python_test_name='Invalid',
+def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
     cloudShutdownIsError=False, sandboxIgnoreErrors=False):
     # show the parameters
     ### print "check_sandbox_for_errors:", locals()
@@ -64,15 +64,18 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='Invalid',
             for line in sandFile:
                 currentLine += 1
 
-                if line.startswith('python_test_name: '): 
-                    log_python_test_name = line[17:]
+                m = re.search('(python_test_name:) (.*)', line)
+                if m:
+                    log_python_test_name = m.group(2)
+                    # if log_python_test_name == python_test_name):
+                    #    print "Found log_python_test_name:", log_python_test_name
 
                 # don't check if we've already checked
                 if currentLine <= doneToLine:
                     continue
 
-                if log_python_test_name and (log_python_test_name != python_test_name):
-                    print "h2o_sandbox.py: ignoring because wrong test name:", currentLine
+                # if log_python_test_name and (log_python_test_name != python_test_name):
+                #     print "h2o_sandbox.py: ignoring because wrong test name:", currentLine
 
                 # JIT reporting looks like this..don't detect that as an error
                 printSingleWarning = False
