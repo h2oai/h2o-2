@@ -30,6 +30,7 @@ setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", m
 setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
 setClass("H2OGLMModelVA", contains="H2OModelVA", representation(xval="list"))
 setClass("H2OGLMGridVA", contains="H2OGridVA")
+setClass("H2ORFModelVA", contains="H2OModelVA")
 
 # Register finalizers for H2O data and model objects
 # setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
@@ -716,6 +717,16 @@ setMethod("show", "H2OGLMGridVA", function(object) {
   
   temp = data.frame(t(sapply(object@sumtable, c)))
   cat("\nSummary\n"); print(temp)
+})
+
+setMethod("show", "H2ORFModelVA", function(object) {
+  print(object@data)
+  cat("Random Forest Model Key:", object@key)
+  
+  model = object@model
+  cat("\n\nClassification Error:", model$classification_error)
+  cat("\nConfusion Matrix:\n"); print(model$confusion)
+  cat("\nTree Stats:\n"); print(model$tree_sum)
 })
 
 setMethod("colnames", "H2OParsedDataVA", function(x) {

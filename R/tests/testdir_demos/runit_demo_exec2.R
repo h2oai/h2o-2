@@ -19,6 +19,7 @@ test.exec2.demo <- function(conn) {
   
   Log.info("Convert RACE column from numeric to factor variable")
   prostate.hex$RACE = as.factor(prostate.hex$RACE)
+  expect_true(is.factor(prostate.hex$RACE))
   print(summary(prostate.hex))
   
   Log.info("Display count of AGE column levels")
@@ -30,6 +31,8 @@ test.exec2.demo <- function(conn) {
   Log.info("y = CAPSULE, x = AGE, RACE, PSA, VOL, GLEASON")
   prostate.samp = prostate.hex[sample(1:nrow(prostate.hex), 50),]
   prostate.samp.df = as.data.frame(prostate.samp)    # Pull into R as a data frame
+  expect_that(nrow(prostate.samp), equals(50))
+  expect_that(nrow(prostate.samp.df), equals(50))
   # glm(CAPSULE ~ AGE + PSA + VOL + GLEASON, family = binomial(), data = prostate.samp.df)
   prostate.glm = h2o.glm.FV(x = c("AGE", "RACE", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.samp, family = "binomial")
   print(prostate.glm)

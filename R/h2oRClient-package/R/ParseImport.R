@@ -256,7 +256,7 @@ setMethod("h2o.importFolder.VA", signature(object="H2OClient", path="character",
 })
 
 setMethod("h2o.importFile.VA", signature(object="H2OClient", path="character", key="missing", parse="ANY", sep="ANY"), 
-  function(object, path, parse, sep) { h2o.importFolder.VA(object, path, "", parse, sep) })
+  function(object, path, parse, sep) { h2o.importFolder.VA(object, path, "", "", parse, sep) })
 
 setMethod("h2o.importFile.VA", signature(object="H2OClient", path="character", key="character", parse="ANY", sep="ANY"), 
   function(object, path, key, parse, sep) { h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, sep) })
