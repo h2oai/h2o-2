@@ -573,7 +573,8 @@ class RUnitRunner:
         self._log("")
         self._log("Setting up R H2O package...")
         if (True):
-            out = open(os.path.join(self.output_dir, "runnerSetupPackage.out"), "w")
+            out_file_name = os.path.join(self.output_dir, "runnerSetupPackage.out")
+            out = open(out_file_name, "w")
             cloud = self.clouds[0]
             port = cloud.get_port()
             cmd = ["R",
@@ -581,7 +582,7 @@ class RUnitRunner:
                    "-f",
                    os.path.join(os.path.dirname(os.path.realpath(__file__)), "Utils/runnerSetupPackage.R"),
                    "--args",
-                   "127.0.0.1:" + str(port)];
+                   "127.0.0.1:" + str(port)]
             child = subprocess.Popen(args=cmd,
                                      stdout=out,
                                      stderr=subprocess.STDOUT)
@@ -591,7 +592,7 @@ class RUnitRunner:
             if (rv != 0):
                 print("")
                 print("ERROR: Utils/runnerSetupPackage.R failed.")
-                print("       (See " + out + ")")
+                print("       (See " + out_file_name + ")")
                 print("")
                 sys.exit(1)
             out.close()

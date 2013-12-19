@@ -6,7 +6,7 @@ import water.util.Log;
 public class LogAndEcho extends Request {
   @Override public RequestServer.API_VERSION[] supportedVersions() { return SUPPORTS_V1_V2; }
 
-  protected final Str _message = new Str("message");
+  protected final Str _message = new Str("message", "");
 
   @Override
   protected Response serve() {
