@@ -138,7 +138,7 @@ public class DRF extends SharedTreeModelBuilder {
 
   @Override protected void buildModel( final Frame fr, String names[], String domains[][], final Key outputKey, final Key dataKey, final Key testKey, final Timer t_build ) {
 
-    DRFModel model = new DRFModel(outputKey,dataKey,testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, seed);
+    DRFModel model = new DRFModel(outputKey,dataKey,validation==null?null:testKey,names,domains,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, seed);
     DKV.put(outputKey, model);
 
     // The RNG used to pick split columns

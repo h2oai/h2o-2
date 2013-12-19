@@ -567,10 +567,10 @@ public class DTree extends Iced {
       if( cm != null && nclasses() > 1 ) {
         assert cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
-        if( testKey.equals(_dataKey) ) {
+        if( testKey == null ) {
           sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
         } else {
-          RString rs = new RString("Reported on <a href='Inspect2.html?src_key=%$key'>%key</a>");
+          RString rs = new RString("<div class=\"alert\">Reported on <a href='Inspect2.html?src_key=%$key'>%key</a></div>");
           rs.replace("key", testKey);
           DocGen.HTML.paragraph(sb,rs.toString());
         }
