@@ -23,7 +23,7 @@ exprList = [
         # "z.hex=1.23 >=2.34;",
 
         # temp
-        "z.hex=0;",
+        # "z.hex=0;",
         ]
 
 class Basic(unittest.TestCase):
@@ -43,14 +43,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_exec2_env_pop_fail(self):
         h2b.browseTheCloud()
 
         if DO_FAIL:
-            bucket = '../testdata'
-            csvPathname = 'year2013.csv'
+            bucket = 'home-0xdiag-datasets'
+            csvPathname = 'airlines/year2013.csv'
         else:
             bucket = 'smalldata'
             csvPathname = 'iris/iris2.csv'
@@ -58,8 +59,11 @@ class Basic(unittest.TestCase):
 
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
         for execExpr in exprList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10000)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
             h2o.check_sandbox_for_errors()
+
+        print "Sleeping"
+        h2o.sleep(3600)
 
 
 if __name__ == '__main__':
