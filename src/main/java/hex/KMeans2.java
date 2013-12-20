@@ -120,7 +120,7 @@ public class KMeans2 extends ColumnsJob {
       task._means = means;
       task._mults = mults;
       task.doAll(vecs);
-      model.clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
+      model.clusters = clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
       double[] variances = new double[task._cSqrs.length];
       for( int clu = 0; clu < task._cSqrs.length; clu++ )
         for( int col = 0; col < task._cSqrs[clu].length; col++ )
