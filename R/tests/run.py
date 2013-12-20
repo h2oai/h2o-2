@@ -459,6 +459,24 @@ class RUnitRunner:
             cloud = H2OCloud(i, self.nodes_per_cloud, h2o_jar, self.base_port, xmx, self.output_dir)
             self.clouds.append(cloud)
 
+    def find_test(self, test_to_run):
+        """
+        Be nice and try to help find the test if possible.
+        If the test is actually found without looking, then just use it.
+        Otherwise, search from the script's down directory down.
+        """
+        if (os.path.exists(test_to_run)):
+            abspath_test = os.path.abspath(test_to_run)
+            return abspath_test
+
+        for d, subdirs, files in os.walk(os.path.dirname(os.path.realpath(__file__))):
+            for f in files:
+                if (f == test_to_run):
+                    return os.path.join(d, f)
+
+        # Not found, return the file, which will result in an error downstream when it can't be found.
+        return file
+
     def read_test_list_file(self, test_list_file):
         """
         Read in a test list file line by line.  Each line in the file is a test
@@ -478,7 +496,8 @@ class RUnitRunner:
                 if (stripped.startswith("#")):
                     s = f.readline()
                     continue
-                self.add_test(stripped)
+                found_stripped = self.find_test(stripped)
+                self.add_test(found_stripped)
                 s = f.readline()
             f.close()
         except IOError as e:
@@ -874,25 +893,6 @@ def usage():
     sys.exit(1)
 
 
-def find_test(test_to_run):
-    """
-    Be nice and try to help find the test if possible.
-    If the test is actually found without looking, then just use it.
-    Otherwise, search from the script's down directory down.
-    """
-    if (os.path.exists(test_to_run)):
-        abspath_test = os.path.abspath(test_to_run)
-        return abspath_test
-
-    for d, subdirs, files in os.walk(os.path.dirname(os.path.realpath(__file__))):
-        for f in files:
-            if (f == test_to_run):
-                return os.path.join(d, f)
-
-    # Not found, return the file, which will result in an error downstream when it can't be found.
-    return file
-
-
 def parse_args(argv):
     global g_base_port
     global g_num_clouds
@@ -920,7 +920,7 @@ def parse_args(argv):
             i += 1
             if (i > len(argv)):
                 usage()
-            g_test_to_run = find_test(argv[i])
+            g_test_to_run = g_runner.find_test(argv[i])
         elif (s == "--testlist"):
             i += 1
             if (i > len(argv)):
