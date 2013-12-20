@@ -11,6 +11,7 @@ class Basic(unittest.TestCase):
         # Uses your username specific json: pytest_config-<username>.json
         global localhost
         localhost = h2o.decide_if_localhost()
+        h2o.beta_features = True
         if (localhost):
             h2o.build_cloud(1, use_hdfs=True, 
             hdfs_name_node='192.168.1.176', hdfs_version='cdh3',
