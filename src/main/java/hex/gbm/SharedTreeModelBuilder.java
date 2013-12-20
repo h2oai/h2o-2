@@ -161,7 +161,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  protected TM doScoring(TM model, Key outputKey, Frame fr, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean copy_data ) {
+  protected TM doScoring(TM model, Key outputKey, Frame fr, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
@@ -172,7 +172,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
          (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
-      sc = new Score().doIt(model, fr, validation, oob, copy_data).report(logTag(),tid,ktrees);
+      sc = new Score().doIt(model, fr, validation, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
     model = makeModel(model, finalScoring?null:ktrees, 
@@ -319,7 +319,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
  
   // --------------------------------------------------------------------------
   // Build an entire layer of all K trees
-  protected DSharedHistogram[][][] buildLayer(final Frame fr, final DTree ktrees[], final int leafs[], final DSharedHistogram hcs[][][], boolean copy_data) {
+  protected DSharedHistogram[][][] buildLayer(final Frame fr, final DTree ktrees[], final int leafs[], final DSharedHistogram hcs[][][], boolean build_tree_per_node) {
     // Build K trees, one per class.
 
     // Build up the next-generation tree splits from the current histograms.
@@ -339,7 +339,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       fr2.add(fr._names[_ncols+1+_nclass+k],vecs[_ncols+1+_nclass+k]);
       fr2.add(fr._names[_ncols+1+_nclass+_nclass+k],vecs[_ncols+1+_nclass+_nclass+k]);
       // Start building one of the K trees in parallel
-      H2O.submitTask(sb1ts[k] = new ScoreBuildOneTree(k,tree,leafs,hcs,fr2, copy_data));
+      H2O.submitTask(sb1ts[k] = new ScoreBuildOneTree(k,tree,leafs,hcs,fr2, build_tree_per_node));
     }
     // Block for all K trees to complete.
     boolean did_split=false;
@@ -359,15 +359,15 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     final int _leafs[/*nclass*/];
     final DSharedHistogram _hcs[/*nclass*/][][];
     final Frame _fr2;
-    final boolean _copy_data;
+    final boolean _build_tree_per_node;
     boolean _did_split;
-    ScoreBuildOneTree( int k, DTree tree, int leafs[], DSharedHistogram hcs[][][], Frame fr2, boolean copy_data ) {
+    ScoreBuildOneTree( int k, DTree tree, int leafs[], DSharedHistogram hcs[][][], Frame fr2, boolean build_tree_per_node ) {
       _k    = k;
       _tree = tree;
       _leafs= leafs;
       _hcs  = hcs;
       _fr2  = fr2;
-      _copy_data = copy_data;
+      _build_tree_per_node = build_tree_per_node;
     }
     @Override public void compute2() {
       int leafk = _leafs[_k];
@@ -379,7 +379,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Pass 2: Build new summary DHistograms on the new child Nodes every row
       // got assigned into.  Collect counts, mean, variance, min, max per bin,
       // per column.
-      ScoreBuildHistogram sbh = new ScoreBuildHistogram(_k,_tree,leafk,_hcs[_k]).doAll(_fr2,_copy_data);
+      ScoreBuildHistogram sbh = new ScoreBuildHistogram(_k,_tree,leafk,_hcs[_k]).doAll(_fr2,_build_tree_per_node);
       //System.out.println(sbh.profString());
 
       int tmax = _tree.len();   // Number of total splits in tree K
@@ -438,11 +438,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     public long     nrows() { return _snrows; }
 
     // Compute CM & MSE on either the training or testing dataset
-    public Score doIt(Model model, Frame fr, Frame validation, boolean oob, boolean copy_data) {
+    public Score doIt(Model model, Frame fr, Frame validation, boolean oob, boolean build_tree_per_node) {
       assert !oob || validation==null ; // oob => validation==null
       _oob = oob;
       // No validation, so do on training data
-      if( validation == null ) return doAll(fr, copy_data);
+      if( validation == null ) return doAll(fr, build_tree_per_node);
       // Validation: need to score the set, getting a probability distribution for each class
       // Frame has nclass vectors (nclass, or 1 for regression)
       Frame res = model.score(validation);
@@ -457,7 +457,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         adapValidation.add("Work"+0,res.vecs()[0]);
       }
       // Compute a CM & MSE
-      doAll(adapValidation, copy_data);
+      doAll(adapValidation, build_tree_per_node);
       // Remove the extra adapted Vecs
       frs[1].remove();
       // Remove temporary result

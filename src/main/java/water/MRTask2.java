@@ -37,7 +37,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   private int _vid;
   private int _noutputs;
   // If TRUE, run entirely local - which will pull all the data locally.
-  private boolean _copy_data;
+  private boolean _run_local;
 
   public Frame outputFrame(String [] names, String [][] domains){
     Futures fs = new Futures();
@@ -196,11 +196,11 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
 
   /** Invokes the map/reduce computation over the given Frame.  This call is
    *  blocking.  */
-  public final T doAll( Frame fr, boolean copy_data) { return doAll(0,fr, copy_data); }
+  public final T doAll( Frame fr, boolean run_local) { return doAll(0,fr, run_local); }
   public final T doAll( Frame fr ) { return doAll(0,fr, false); }
   public final T doAll( int outputs, Frame fr) {return doAll(outputs,fr,false);}
-  public final T doAll( int outputs, Frame fr, boolean copy_data) {
-    dfork(outputs,fr, copy_data);
+  public final T doAll( int outputs, Frame fr, boolean run_local) {
+    dfork(outputs,fr, run_local);
     return getResult();
   }
 
@@ -212,13 +212,13 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   public final T dfork( int outputs, Vec... vecs) {
     return dfork(outputs,new Frame(vecs),false);
   }
-  public final T dfork( int outputs, Frame fr, boolean copy_data) {
+  public final T dfork( int outputs, Frame fr, boolean run_local) {
     // Use first readable vector to gate home/not-home
     fr.checkCompatible();       // Check for compatible vectors
     if((_noutputs = outputs) > 0)_vid = fr.anyVec().group().reserveKeys(outputs);
     _fr = fr;                   // Record vectors to work on
     _nodes = (1L<<H2O.CLOUD.size())-1; // Do Whole Cloud
-    _copy_data = copy_data;     // Run locally by copying data, or run globally?
+    _run_local = run_local;     // Run locally by copying data, or run globally?
     setupLocal0();              // Local setup
     H2O.submitTask(this);       // Begin normal execution on a FJ thread
     return self();
@@ -264,7 +264,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // Check for global vs local work
     int selfidx = H2O.SELF.index();
     _nodes &= ~(1L<<selfidx);   // Remove self from work set
-    if( !_copy_data && _nodes != 0 ) { // Have global work?
+    if( !_run_local && _nodes != 0 ) { // Have global work?
       int bc = Long.bitCount(_nodes);  // How many nodes to hand out work to
       long xs=_nodes;
       for( int i=0; i<bc>>1; i++ ) xs &= (xs-1); // Remove 1/2 the bits
@@ -319,7 +319,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
     // Zero or 1 chunks, and further chunk might not be homed here
     if( _hi > _lo ) {           // Single chunk?
       Vec v0 = _fr.anyVec();
-      if( _copy_data || v0.chunkKey(_lo).home() ) { // And chunk is homed here?
+      if( _run_local || v0.chunkKey(_lo).home() ) { // And chunk is homed here?
 
         // Make decompression chunk headers for these chunks
         Vec vecs[] = _fr.vecs();
@@ -327,7 +327,7 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
         NewChunk [] appendableChunks = null;
         for( int i=0; i<vecs.length; i++ )
           if( vecs[i] != null ) {
-            assert _copy_data || vecs[i].chunkKey(_lo).home()
+            assert _run_local || vecs[i].chunkKey(_lo).home()
               : "Chunk="+_lo+" v0="+v0+", k="+v0.chunkKey(_lo)+"   v["+i+"]="+vecs[i]+", k="+vecs[i].chunkKey(_lo);
             bvs[i] = vecs[i].elem2BV(_lo);
           }
