@@ -126,6 +126,8 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
 
+    //Column Expand
+    registerRequest(new OneHot());
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new Cancel());

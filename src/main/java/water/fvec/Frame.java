@@ -24,7 +24,7 @@ public class Frame extends Iced {
   transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
 
-  public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = fr._col0; }
+  public Frame( Frame fr ) { this(fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) {
     // assert names==null || names.length == vecs.length : "Number of columns does not match to number of cols' names.";

@@ -21,6 +21,8 @@ exprList = [
         # "z.hex=is.na(i.hex);",
         # "z.hex=i.hex",
         # "z.hex=1.23 >=2.34;",
+
+        # temp
         "z.hex=0;",
         ]
 
@@ -30,6 +32,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        h2o.beta_features = True
         global SEED, localhost
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
@@ -40,10 +43,12 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_exec2_env_pop_fail(self):
-        h2o.beta_features = True
+        h2b.browseTheCloud()
+
         if DO_FAIL:
             bucket = 'home-0xdiag-datasets'
             csvPathname = 'airlines/year2013.csv'
@@ -56,6 +61,9 @@ class Basic(unittest.TestCase):
         for execExpr in exprList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
             h2o.check_sandbox_for_errors()
+
+        # print "Sleeping"
+        # h2o.sleep(3600)
 
 
 if __name__ == '__main__':
