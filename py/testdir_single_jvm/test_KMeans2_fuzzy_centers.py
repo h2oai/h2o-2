@@ -151,6 +151,8 @@ class Basic(unittest.TestCase):
             print "trial:", trial, "genDistances:", genDistances
             print "trial:", trial, "centers:", centers
             print "trial:", trial, "error:", error
+            if (abs(genDistances - error)) > (.001 * genDistances):
+                raise Exception("genDistances: %s error: %s are too different" % (genDistances, error))
     
             if not bestError or error < bestError:
                 print 'Found smaller error:', error
