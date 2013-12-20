@@ -23,7 +23,7 @@ exprList = [
         # "z.hex=1.23 >=2.34;",
 
         # temp
-        # "z.hex=0;",
+        "z.hex=0;",
         ]
 
 class Basic(unittest.TestCase):
@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        h2o.sleep(3600)
+        # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_exec2_env_pop_fail(self):
@@ -62,8 +62,8 @@ class Basic(unittest.TestCase):
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
             h2o.check_sandbox_for_errors()
 
-        print "Sleeping"
-        h2o.sleep(3600)
+        # print "Sleeping"
+        # h2o.sleep(3600)
 
 
 if __name__ == '__main__':
