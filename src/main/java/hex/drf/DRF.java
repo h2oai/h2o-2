@@ -64,12 +64,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       _sample_rate = prior._sample_rate;
       _seed = prior._seed;
     }
-    public DRFModel(DRFModel prior, float[] varimp) {
-      super(prior, varimp);
-      _mtries = prior._mtries;
-      _sample_rate = prior._sample_rate;
-      _seed = prior._seed;
-    }
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);
       int ntrees = numTrees();
@@ -178,7 +172,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       float varimp[] = doVarImp(model, fr);
       Log.info(Sys.DRF__,"Var. importance: "+Arrays.toString(varimp));
       // Update the model
-      model = new DRFModel(model, varimp);
+      model.varimp = varimp;
       DKV.put(outputKey, model);
     }
 

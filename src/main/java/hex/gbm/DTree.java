@@ -500,35 +500,25 @@ public class DTree extends Iced {
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be seperate).
     @API(help="Testing key for cm and errs") public final Key testKey;
-    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
-    @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
+    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cms[/*CM-per-tree*/][][];
+    @API(help="Unscaled variable importance for individual input variables.") public float[] varimp;
     @API(help="Tree statistics") public final TreeStats treeStats;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
-      this.testKey = testKey;  this.cm = null;
+      this.testKey = testKey; this.cms = new long[0][][];
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       treeBits = new CompressedTree[0][];
-      varimp = null;
       treeStats = null;
-    }
-    public TreeModel(TreeModel prior, float[] varimp) {
-      super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
-      this.N = prior.N; this.testKey = prior.testKey; this.cm = prior.cm;
-      this.errs = prior.errs;
-      this.treeBits = prior.treeBits;
-      this.varimp = varimp;
-      this.treeStats = prior.treeStats;
-      this.max_depth = prior.max_depth;
-      this.min_rows = prior.min_rows;
-      this.nbins = prior.nbins;
     }
     public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
-      this.N = prior.N; this.testKey = prior.testKey; this.cm = cm;
+      this.N = prior.N; this.testKey = prior.testKey;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
       errs[errs.length-1] = err;
+      cms = Arrays.copyOf(prior.cms,prior.cms.length+1);
+      cms[errs.length-1] = cm;
       if(trees == null)treeBits = prior.treeBits;
       else {
         assert trees.length == nclasses(): "Trees="+trees.length+" nclasses()="+nclasses();
@@ -538,7 +528,6 @@ public class DTree extends Iced {
           if( trees[c] != null )
               ts[c] = trees[c].compress();
       }
-      varimp = null;
       treeStats = tstats;
       this.max_depth = prior.max_depth;
       this.min_rows = prior.min_rows;
@@ -547,8 +536,8 @@ public class DTree extends Iced {
 
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
-
-    @Override public ConfusionMatrix cm() { return cm == null ? null : new ConfusionMatrix(cm); }
+    // Most recent ConfusionMatrix
+    @Override public ConfusionMatrix cm() { return cms == null ? null : new ConfusionMatrix(cms[cms.length-1]); }
     @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
 
     @Override protected float[] score0(double data[], float preds[]) {
@@ -572,9 +561,17 @@ public class DTree extends Iced {
       generateModelDescription(sb);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
       String[] domain = _domains[_domains.length-1]; // Domain of response col
+      
+      // Generate a display using the last scored Model.  Not all models are
+      // scored immediately (since scoring can be a big part of model building).
+      long cm[][] = null;
+      int last = cms.length-1;
+      while( last > 0 && cms[last]==null ) last--;
+      cm = 0 <= last && last < cms.length ? cms[last] : null;
 
-      // Top row of CM
-      if( cm != null && nclasses() > 1 ) {
+      // Display the CM
+      if( cm != null ) {
+        // Top row of CM
         assert cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey == null ) {
@@ -627,11 +624,11 @@ public class DTree extends Iced {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Trees</th>");
-        for( int i=errs.length-1; i>=0; i-- )
+        for( int i=last; i>=0; i-- )
           sb.append("<td>").append(i).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>MSE</th>");
-        for( int i=errs.length-1; i>=0; i-- )
+        for( int i=last; i>=0; i-- )
           sb.append(String.format("<td>%5.3f</td>",errs[i]));
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
