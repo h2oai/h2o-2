@@ -135,10 +135,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
       // Check latest predictions
       tstats.updateBy(ktrees);
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, false);
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, false, false);
     }
     // Final scoring
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, false);
+    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, false, false);
     cleanUp(fr,t_build); // Shared cleanup
   }
 
@@ -253,7 +253,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     for( ; depth<max_depth; depth++ ) {
       if( cancelled() ) return null;
 
-      hcs = buildLayer(fr, ktrees, leafs, hcs);
+      hcs = buildLayer(fr, ktrees, leafs, hcs, false);
 
       // If we did not make any new splits, then the tree is split-to-death
       if( hcs == null ) break;

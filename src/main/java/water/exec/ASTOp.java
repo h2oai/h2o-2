@@ -287,7 +287,7 @@ class ASTScale extends ASTUniOp {
           _ind[_nums+(ccnt++)] = i;
       }
       assert ncnt == _nums && (ncnt + ccnt == vecs.length);
-      return dfork(outputs, fr);
+      return dfork(outputs, fr, false);
     }
   }
 }

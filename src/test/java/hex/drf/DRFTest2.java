@@ -15,7 +15,7 @@ public class DRFTest2 extends TestUtil {
   static final long[][] a(long[] ...arr) { return arr; }
 
   // A bigger DRF test, useful for tracking memory issues.
-  /*@Test*/ public void testAirlines() throws Throwable {
+  @Test public void testAirlines() throws Throwable {
     new DRFTest().basicDRF(
         //
         //"../demo/c5/row10000.csv.gz", "c5.hex", null, null, 

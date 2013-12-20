@@ -155,6 +155,9 @@ public abstract class Request2 extends Request {
       super(key);
     }
   }
+  public class DRFCopyDataBoolean extends Dependent {
+    protected DRFCopyDataBoolean(String key) { super(key); }
+  }
 
   /**
    * Iterates over fields and their annotations, and creates argument handlers.
@@ -221,6 +224,8 @@ public abstract class Request2 extends Request {
             } else if( d instanceof DoClassBoolean ) {
               FrameClassVec response = classVecs.get(d._ref);
               arg = new ClassifyBool(f.getName(), response);
+            } else if( d instanceof DRFCopyDataBoolean ) {
+              arg = new DRFCopyDataBool(f.getName(), (TypeaheadKey)ref);
             }
           }
 

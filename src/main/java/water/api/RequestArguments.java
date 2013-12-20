@@ -1459,6 +1459,37 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
+  public class DRFCopyDataBool extends Bool {
+    private TypeaheadKey _frkey;
+    public DRFCopyDataBool(String name, TypeaheadKey frkey) {
+      super(name,false,"Use a (lot) more memory in exchange for speed when running distributed.");
+      addPrerequisite(_frkey=frkey);
+      setRefreshOnChange();
+    }
+    protected Frame fr() {
+      Value v = DKV.get(_frkey.value());
+      if(v != null)
+        return ValueArray.asFrame(v);
+      return null;
+    }
+    @Override public Boolean parse(String input) {
+      boolean b=false;
+      if( false ) ;
+      else if (input.equals("1"))     b= true;
+      else if (input.equals("0"))     b= false;
+      else if (input.equals("true"))  b= true;
+      else if (input.equals("false")) b= false;
+      else throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
+      return b;
+    }
+    @Override protected Boolean defaultValue() {
+      long bs = fr().byteSize();
+      boolean b = MemoryManager.tryReserveTaskMem(bs); // Can we allocate ALL of the dataset locally?
+      if( b ) MemoryManager.freeTaskMem(bs);
+      return b;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // EnumClass
   // ---------------------------------------------------------------------------

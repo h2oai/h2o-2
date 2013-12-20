@@ -38,6 +38,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
   boolean importance = false; // compute variable importance
 
+  @API(help="Use a (lot) more memory in exchange for speed when running distributed.", filter=myClassFilter.class)
+  public boolean copy_data = false;
+  class myClassFilter extends DRFCopyDataBoolean { myClassFilter() { super("source"); } }
+
   @API(help = "Computed number of split features")
   protected int _mtry;
 
@@ -165,10 +169,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
       // Check latest predictions
       tstats.updateBy(ktrees);
-      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, validation==null);
+      model = doScoring(model, outputKey, fr, ktrees, tid, tstats, false, validation==null, copy_data);
     }
     // Final scoring
-    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null);
+    model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null, copy_data);
     // Compute variable importance if required
     if (classification && importance) {
       float varimp[] = doVarImp(model, fr);
@@ -279,7 +283,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Sample - mark the lines by putting 'OUT_OF_BAG' into nid(<klass>) vector
     Sample ss[] = new Sample[_nclass];
     for( int k=0; k<_nclass; k++)
-      if (ktrees[k] != null) ss[k] = new Sample((DRFTree)ktrees[k], sample_rate).dfork(vec_nids(fr,k));
+      if (ktrees[k] != null) ss[k] = new Sample((DRFTree)ktrees[k], sample_rate).dfork(0,new Frame(vec_nids(fr,k)), copy_data);
     for( int k=0; k<_nclass; k++)
       if( ss[k] != null ) ss[k].getResult();
 
@@ -292,7 +296,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     for( ; depth<max_depth; depth++ ) {
       if( cancelled() ) return null;
 
-      hcs = buildLayer(fr, ktrees, leafs, hcs);
+      hcs = buildLayer(fr, ktrees, leafs, hcs, copy_data);
 
       // If we did not make any new splits, then the tree is split-to-death
       if( hcs == null ) break;
@@ -327,7 +331,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     // ----
     // Move rows into the final leaf rows
-    CollectPreds gp = new CollectPreds(ktrees,leafs).doAll(fr);
+    CollectPreds gp = new CollectPreds(ktrees,leafs).doAll(fr,copy_data);
 
     // Collect leaves stats
     for (int i=0; i<ktrees.length; i++) 
