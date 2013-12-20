@@ -153,7 +153,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     if h2o.beta_features:
         if 'validation' not in submodels0:
-            raise Exception("Should be a 'validations' key in submodels0: %s" % h2o.dump_json(submodels0))
+            raise Exception("Should be a 'validation' key in submodels0: %s" % h2o.dump_json(submodels0))
         validationsList = submodels0['validation']
         validations = validationsList
         
@@ -250,8 +250,8 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         for n,b in zip(column_names, beta ):
             coefficients[n] = b
 
-        print  "HELLO: coefficients:", coefficients
-        print  "HELLO: beta:", beta
+        print  "coefficients:", coefficients
+        print  "beta:", beta
         print "intercept demapping info:", \
             "column_names[-i]:", column_names[-1], \
             "idxs[-1]:", idxs[-1], \

@@ -42,8 +42,7 @@ def write_syn_dataset(csvPathname, rowCount, centers, SEED):
         for i in range(rowCount):
             rowData = []
             for c in center:
-                r = random.randint(-2,2)
-                r = random.randint(0,2)
+                r = random.randint(-1,1)
                 # doesn't fail
                 # r = 0
                 rowData.append(c + r)
@@ -100,7 +99,7 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        rowCount = 4
+        rowCount = 10000
         expected = [(g, rowCount, None) for g in genCenters]
         allowedDelta = (0.2, 0.2, 0.2, 0.2, 0.2, 0.2)
         allowedDelta = (0.2, 0.2)

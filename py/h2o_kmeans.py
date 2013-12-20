@@ -62,6 +62,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
         model = kmeans['model']
         model_key = model['_selfKey']
         centers = model['clusters']
+        cluster_variances = model["cluster_variances"]
         error = model["error"]
         kmeansResult = kmeans
     else:
@@ -81,8 +82,8 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
         summaryResult = h2o.nodes[0].summary_page(key=predictKey)
         hcnt = summaryResult['summaries'][0]['hcnt'] # histogram
         rows_per_cluster = hcnt
-        # have to figure out how to get this with fvec
-        sqr_error_per_cluster = [0 for h in hcnt]
+        # FIX! does the cluster order/naming match, compared to cluster variances
+        sqr_error_per_cluster = cluster_variances
     
     else:
         kmeansApplyResult = h2o.nodes[0].kmeans_apply(
