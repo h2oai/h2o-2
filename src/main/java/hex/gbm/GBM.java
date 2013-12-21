@@ -180,9 +180,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     if( _nclass == 2 ) {        // The Boolean Optimization
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
-      double d0 = chk_tree(chks,0).at0(row);
-      ds[0] = Math.exp(d0);
-      ds[1] = 1/ds[0];
+      ds[0] = Math.exp(chk_tree(chks,0).at0(row));
+      ds[1] = 1.0/ds[0]; // exp(-d) === 1/d
       return ds[0]+ds[1];
     }
     double sum=0;

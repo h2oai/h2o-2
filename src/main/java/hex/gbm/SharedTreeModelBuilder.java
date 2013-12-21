@@ -432,6 +432,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     double _sum;                // Sum-squared-error
     long _snrows;               // Count of voted-on rows
     /* @IN */ boolean _oob;
+    /* @IN */ boolean _validation;
 
     public double   sum()   { return _sum; }
     public long[][] cm ()   { return _cm;  }
@@ -443,6 +444,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _oob = oob;
       // No validation, so do on training data
       if( validation == null ) return doAll(fr, build_tree_per_node);
+      _validation = true;
       // Validation: need to score the set, getting a probability distribution for each class
       // Frame has nclass vectors (nclass, or 1 for regression)
       Frame res = model.score(validation);
@@ -452,9 +454,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // All columns including response of validation frame are already adapted to model
       if (_nclass>1) { // Classification
         for( int i=0; i<_nclass; i++ )
-          adapValidation.add("Work"+i,res.vecs()[i+1]);
+          adapValidation.add("ClassDist"+i,res.vecs()[i+1]);
       } else { // Regression
-        adapValidation.add("Work"+0,res.vecs()[0]);
+        adapValidation.add("Prediction",res.vecs()[0]);
       }
       // Compute a CM & MSE
       doAll(adapValidation, build_tree_per_node);
@@ -472,7 +474,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Score all Rows
       for( int row=0; row<ys._len; row++ ) {
         if( ys.isNA0(row) ) continue; // Ignore missing response vars
-        double sum = score0(chks,ds,row);
+        double sum;
+        if( _validation ) {     // Passed in a class distribution from scoring
+          sum = 1.0;            // Sum of a distribution is 1.0
+          for( int i=0; i<_nclass; i++ )
+            ds[i] = chks[i+_ncols+1].at0(row);  // Get the class distros
+        } else {                // Passed in the model-specific columns
+          sum = score0(chks,ds,row);
+        }
         double err;  int ycls=0;
         if( _nclass > 1 ) {    // Classification
           if( sum == 0 ) {       // This tree does not predict this row *at all*?
@@ -493,12 +502,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         _sum += err*err;               // Squared error
         assert !Double.isNaN(_sum);
         // Pick highest prob for our prediction.  Count all ties for best.
-        int best=0, tie_cnt=0;
+        int best=0, tie_cnt=0;  ties[tie_cnt] = 0;
         for( int c=1; c<_nclass; c++ )
           if( ds[best] < ds[c] ) { best=c; ties[  tie_cnt=0]=c; }
           else if( ds[best] == ds[c] ) {   ties[++tie_cnt  ]=c; }
         // Break ties psuedo-randomly: (row# mod #ties).
-        if( tie_cnt > 1 ) { best = ties[row%tie_cnt]; }
+        if( tie_cnt >= 1 ) { best = ties[row%(tie_cnt+1)]; }
         _cm[ycls][best]++;      // Bump Confusion Matrix also
         _snrows++;
       }
