@@ -87,6 +87,7 @@ public class Inspect2 extends Request2 {
                         (naCnt== 0 ? "no":PrettyPrint.bytes(naCnt))+" missing elements");
 
     sb.append("<div class='alert'>" +
+              "<br/> Expand factors using " + OneHot.link(skey, "One Hot Expansion") +
               //"View " + SummaryPage2.link(key, "Summary") +
               "<br/>Build models using " +
               DRF.link(skey, "Distributed Random Forest") +", "+

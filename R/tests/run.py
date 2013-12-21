@@ -11,6 +11,71 @@ import re
 import subprocess
 
 
+class H2OUseCloudNode:
+    """
+    A class representing one node in an H2O cloud which was specified by the user.
+    Don't try to build or tear down this kind of node.
+
+    use_ip: The given ip of the cloud.
+    use_port: The given port of the cloud.
+    """
+
+    def __init__(self, use_ip, use_port):
+        self.use_ip = use_ip
+        self.use_port = use_port
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def terminate(self):
+        pass
+
+    def get_ip(self):
+        return self.use_ip
+
+    def get_port(self):
+        return self.use_port
+
+
+class H2OUseCloud:
+    """
+    A class representing an H2O clouds which was specified by the user.
+    Don't try to build or tear down this kind of cloud.
+    """
+
+    def __init__(self, cloud_num, use_ip, use_port):
+        self.cloud_num = cloud_num
+        self.use_ip = use_ip
+        self.use_port = use_port
+
+        self.nodes = []
+        node = H2OUseCloudNode(self.use_ip, self.use_port)
+        self.nodes.append(node)
+
+    def start(self):
+        pass
+
+    def wait_for_cloud_to_be_up(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def terminate(self):
+        pass
+
+    def get_ip(self):
+        node = self.nodes[0]
+        return node.get_ip()
+
+    def get_port(self):
+        node = self.nodes[0]
+        return node.get_port()
+
+
 class H2OCloudNode:
     """
     A class representing one node in an H2O cloud.
@@ -25,7 +90,7 @@ class H2OCloudNode:
     terminated: Only from a signal.  Not normal shutdown.
     """
 
-    def __init__(self, cloud_num, nodes_per_cloud, node_num, cloud_name, h2o_jar, base_port, xmx, output_dir):
+    def __init__(self, cloud_num, nodes_per_cloud, node_num, cloud_name, h2o_jar, ip, base_port, xmx, output_dir):
         """
         Create a node in a cloud.
 
@@ -44,6 +109,7 @@ class H2OCloudNode:
         self.node_num = node_num
         self.cloud_name = cloud_name
         self.h2o_jar = h2o_jar
+        self.ip = ip
         self.base_port = base_port
         self.xmx = xmx
         self.output_dir = output_dir
@@ -151,6 +217,10 @@ class H2OCloudNode:
         self.terminated = True
         self.stop()
 
+    def get_ip(self):
+        """ Return the ip address this node is really listening on. """
+        return self.ip
+
     def get_port(self):
         """ Return the port this node is really listening on. """
         return self.port
@@ -194,8 +264,11 @@ class H2OCloud:
         self.jobs_run = 0
 
         for node_num in range(self.nodes_per_cloud):
-            node = H2OCloudNode(self.cloud_num, self.nodes_per_cloud, node_num, self.cloud_name,
-                                self.h2o_jar, self.base_port, self.xmx, self.output_dir)
+            node = H2OCloudNode(self.cloud_num, self.nodes_per_cloud, node_num,
+                                self.cloud_name,
+                                self.h2o_jar,
+                                "127.0.0.1", self.base_port,
+                                self.xmx, self.output_dir)
             self.nodes.append(node)
 
     def start(self):
@@ -239,6 +312,11 @@ class H2OCloud:
         """
         for node in self.nodes:
             node.terminate()
+
+    def get_ip(self):
+        """ Return an ip to use to talk to this cloud. """
+        node = self.nodes[0]
+        return node.get_ip()
 
     def get_port(self):
         """ Return a port to use to talk to this cloud. """
@@ -388,6 +466,12 @@ class Test:
         """
         return self.test_name
 
+    def get_ip(self):
+        """
+        @return: IP of the cloud where this test ran.
+        """
+        return self.ip
+
     def get_port(self):
         """
         @return: Integer port number of the cloud where this test ran.
@@ -427,11 +511,17 @@ class RUnitRunner:
     The tests_running list is polled for jobs that have finished.
     """
 
-    def __init__(self, test_root_dir, num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir):
+    def __init__(self,
+                 test_root_dir,
+                 use_cloud, use_ip, use_port,
+                 num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir):
         """
         Create a runner.
 
         @param test_root_dir: h2o/R/tests directory.
+        @param use_cloud: Use this one user-specified cloud.  Overrides num_clouds.
+        @param use_ip: (if use_cloud) IP of one cloud to use.
+        @param use_port: (if use_cloud) Port of one cloud to use.
         @param num_clouds: Number of H2O clouds to start.
         @param nodes_per_cloud: Number of H2O nodes to start per cloud.
         @param h2o_jar: Path to H2O jar file to run.
@@ -441,6 +531,14 @@ class RUnitRunner:
         @return: The runner object.
         """
         self.test_root_dir = test_root_dir
+
+        self.use_cloud = use_cloud
+
+        # Valid if use_cloud is True
+        self.use_ip = use_ip
+        self.use_port = use_port
+
+        # Valid if use_cloud is False
         self.num_clouds = num_clouds
         self.nodes_per_cloud = nodes_per_cloud
         self.h2o_jar = h2o_jar
@@ -455,9 +553,36 @@ class RUnitRunner:
         self.tests_running = []
         self._create_output_dir()
 
-        for i in range(self.num_clouds):
-            cloud = H2OCloud(i, self.nodes_per_cloud, h2o_jar, self.base_port, xmx, self.output_dir)
+        if (use_cloud):
+            node_num = 0
+            cloud = H2OUseCloud(node_num, use_ip, use_port)
             self.clouds.append(cloud)
+        else:
+            for i in range(self.num_clouds):
+                cloud = H2OCloud(i, self.nodes_per_cloud, h2o_jar, self.base_port, xmx, self.output_dir)
+                self.clouds.append(cloud)
+
+    @staticmethod
+    def find_test(test_to_run):
+        """
+        Be nice and try to help find the test if possible.
+        If the test is actually found without looking, then just use it.
+        Otherwise, search from the script's down directory down.
+        """
+        if (os.path.exists(test_to_run)):
+            abspath_test = os.path.abspath(test_to_run)
+            return abspath_test
+
+        for d, subdirs, files in os.walk(os.path.dirname(os.path.realpath(__file__))):
+            for f in files:
+                if (f == test_to_run):
+                    return os.path.join(d, f)
+
+        # Not found, return the file, which will result in an error downstream when it can't be found.
+        print("")
+        print("ERROR: Test does not exist: " + test_to_run)
+        print("")
+        sys.exit(1)
 
     def read_test_list_file(self, test_list_file):
         """
@@ -478,7 +603,8 @@ class RUnitRunner:
                 if (stripped.startswith("#")):
                     s = f.readline()
                     continue
-                self.add_test(stripped)
+                found_stripped = RUnitRunner.find_test(stripped)
+                self.add_test(found_stripped)
                 s = f.readline()
             f.close()
         except IOError as e:
@@ -543,6 +669,9 @@ class RUnitRunner:
         if (self.terminated):
             return
 
+        if (self.use_cloud):
+            return
+
         print("")
         print("Starting clouds...")
         print("")
@@ -600,15 +729,19 @@ class RUnitRunner:
         num_tests = len(self.tests)
         num_nodes = len(self.clouds * self.nodes_per_cloud)
         self._log("")
-        self._log("Starting {} tests on {} total H2O nodes...".format(num_tests, num_nodes))
+        if (self.use_cloud):
+            self._log("Starting {} tests...".format(num_tests))
+        else:
+            self._log("Starting {} tests on {} total H2O nodes...".format(num_tests, num_nodes))
         self._log("")
 
         # Start the first n tests, where n is the lesser of the total number of tests and the total number of clouds.
         start_count = min(len(self.tests_not_started), len(self.clouds))
         for i in range(start_count):
             cloud = self.clouds[i]
+            ip = cloud.get_ip()
             port = cloud.get_port()
-            self._start_next_test_on_port(port)
+            self._start_next_test_on_ip_port(ip, port)
 
         # As each test finishes, send a new one to the cloud that just freed up.
         while (len(self.tests_not_started) > 0):
@@ -618,8 +751,9 @@ class RUnitRunner:
             if (self.terminated):
                 return
             self._report_test_result(completed_test)
+            ip_of_completed_test = completed_test.get_ip()
             port_of_completed_test = completed_test.get_port()
-            self._start_next_test_on_port(port_of_completed_test)
+            self._start_next_test_on_ip_port(ip_of_completed_test, port_of_completed_test)
 
         # Wait for remaining running tests to complete.
         while (len(self.tests_running) > 0):
@@ -638,6 +772,13 @@ class RUnitRunner:
         """
         if (self.terminated):
             return
+
+        if (self.use_cloud):
+            print("")
+            print("All tests completed...")
+            print("")
+            return
+
         print("")
         print("All tests completed; tearing down clouds...")
         print("")
@@ -718,10 +859,9 @@ class RUnitRunner:
             print("")
             sys.exit(1)
 
-    def _start_next_test_on_port(self, port):
+    def _start_next_test_on_ip_port(self, ip, port):
         test = self.tests_not_started.pop(0)
         self.tests_running.append(test)
-        ip = "127.0.0.1"
         test.start(ip, port)
 
     def _wait_for_one_test_to_complete(self):
@@ -792,6 +932,9 @@ g_num_clouds = 5
 g_wipe_output_dir = False
 g_test_to_run = None
 g_test_list_file = None
+g_use_cloud = False
+g_use_ip = None
+g_use_port = None
 
 # Global variables that are set internally.
 g_output_dir = None
@@ -832,7 +975,8 @@ def usage():
           " [--baseport port]"
           " [--numclouds n]"
           " [--test path/to/test.R]"
-          " [--testlist path/to/list/file]")
+          " [--testlist path/to/list/file]"
+          " [--usecloud ip:port]")
     print("")
     print("    (Output dir is: " + g_output_dir + ")")
     print("")
@@ -848,6 +992,9 @@ def usage():
     print("    --testlist    A file containing a list of tests to run (for example the")
     print("                  'failed.txt' file from the output directory).")
     print("")
+    print("    --usecloud    ip:port of cloud to send tests to instead of starting clouds.")
+    print("                  (When this is specified, numclouds is ignored.)")
+    print("")
     print("    If neither --test nor --testlist is specified, then the list of tests is")
     print("    discovered automatically as files matching '*runit*.R'.")
     print("")
@@ -857,10 +1004,10 @@ def usage():
     print("    Just accept the defaults and go (note: output dir must not exist):")
     print("        "+g_script_name)
     print("")
-    print("    On a powerful laptop with 8 cores:")
+    print("    For a powerful laptop with 8 cores:")
     print("        "+g_script_name+" --wipe --numclouds 5")
     print("")
-    print("    On a big server with 32 cores:")
+    print("    For a big server with 32 cores:")
     print("        "+g_script_name+" --wipe --numclouds 16")
     print("")
     print("    Run one specific test:")
@@ -871,26 +1018,17 @@ def usage():
     print("        cp " + os.path.join(g_output_dir, "failures.txt") + " .")
     print("        "+g_script_name+" --wipe --numclouds 16 --testlist failures.txt")
     print("")
+    print("    Run tests on a pre-existing cloud (e.g. in a debugger):")
+    print("        "+g_script_name+" --wipe --usecloud ip:port")
+    print("")
     sys.exit(1)
 
 
-def find_test(test_to_run):
-    """
-    Be nice and try to help find the test if possible.
-    If the test is actually found without looking, then just use it.
-    Otherwise, search from the script's down directory down.
-    """
-    if (os.path.exists(test_to_run)):
-        abspath_test = os.path.abspath(test_to_run)
-        return abspath_test
-
-    for d, subdirs, files in os.walk(os.path.dirname(os.path.realpath(__file__))):
-        for f in files:
-            if (f == test_to_run):
-                return os.path.join(d, f)
-
-    # Not found, return the file, which will result in an error downstream when it can't be found.
-    return file
+def unknown_arg(s):
+    print("")
+    print("ERROR: Unknown argument: " + s)
+    print("")
+    usage()
 
 
 def parse_args(argv):
@@ -899,6 +1037,9 @@ def parse_args(argv):
     global g_wipe_output_dir
     global g_test_to_run
     global g_test_list_file
+    global g_use_cloud
+    global g_use_ip
+    global g_use_port
 
     i = 1
     while (i < len(argv)):
@@ -920,19 +1061,28 @@ def parse_args(argv):
             i += 1
             if (i > len(argv)):
                 usage()
-            g_test_to_run = find_test(argv[i])
+            g_test_to_run = RUnitRunner.find_test(argv[i])
         elif (s == "--testlist"):
             i += 1
             if (i > len(argv)):
                 usage()
             g_test_list_file = argv[i]
+        elif (s == "--usecloud"):
+            i += 1
+            if (i > len(argv)):
+                usage()
+            s = argv[i]
+            m = re.match(r'(\S+):([1-9][0-9]*)', s)
+            if (m is None):
+                unknown_arg(s)
+            g_use_cloud = True
+            g_use_ip = m.group(1)
+            portString = m.group(2)
+            g_use_port = int(portString)
         elif (s == "-h" or s == "--h" or s == "-help" or s == "--help"):
             usage()
         else:
-            print("")
-            print("ERROR: Unknown argument: " + s)
-            print("")
-            usage()
+            unknown_arg(s)
 
         i += 1
 
@@ -989,7 +1139,9 @@ def main(argv):
     if (g_test_to_run is not None):
         g_num_clouds = 1
 
-    g_runner = RUnitRunner(test_root_dir, g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, xmx, g_output_dir)
+    g_runner = RUnitRunner(test_root_dir,
+                           g_use_cloud, g_use_ip, g_use_port,
+                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, xmx, g_output_dir)
 
     # Build test list.
     if (g_test_to_run is not None):

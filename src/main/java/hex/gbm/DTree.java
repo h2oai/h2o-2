@@ -83,7 +83,7 @@ public class DTree extends Iced {
       _pid=pid;
       tree._ns[_nid=nid] = this;
     }
-    Node( DTree tree, int pid ) { 
+    Node( DTree tree, int pid ) {
       _tree = tree;
       _pid=pid;
       _nid = tree.newIdx(this);
@@ -630,6 +630,8 @@ public class DTree extends Iced {
         sb.append("<tr><th class='warning'>MSE</th>");
         for( int i=last; i>=0; i-- )
           sb.append(String.format("<td>%5.3f</td>",errs[i]));
+        for( int i=last; i>=0; i-- )
+          sb.append(!Double.isNaN(errs[i]) ? String.format("<td>%5.3f</td>",errs[i]) : "<td>---</td>");
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
       }
@@ -848,17 +850,18 @@ public class DTree extends Iced {
         String modelName = JCodeGen.toJavaId(_selfKey.toString());
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");
+        sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_selfKey).append(" > ").append(modelName).append(".java\n");
-        sb.append("     javac -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
-        sb.append("     java -Xmx2g -XX:MaxPermSize=256m ").append(modelName).append('\n');
+        sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
+        sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m ").append(modelName).append('\n');
         sb.append("*/");
       } else
         DocGen.HTML.escape(sb,toJava());
       sb.append("</code></pre></div>");
     }
 
-    @Override protected SB toJavaInit(SB sb) {
-      sb = super.toJavaInit(sb);
+    @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
+      sb = super.toJavaInit(sb, fileContextSB);
 
       String modelName = JCodeGen.toJavaId(_selfKey.toString());
 
@@ -870,7 +873,7 @@ public class DTree extends Iced {
       sb.i().p("public static void main(String[] args) throws Exception {").nl();
       sb.i(1).p("int iters = args.length > 0 ? Integer.valueOf(args[0]) : DEFAULT_ITERATIONS;").nl();
       sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
-      sb.i(1).p("model.bench(iters, DATA, new float[NCLASSES+1], NTREES);").nl();
+      sb.i(1).p("model.bench(iters, DataSample.DATA, new float[NCLASSES+1], NTREES);").nl();
       sb.i().p("}").nl();
       sb.di(1);
       sb.p(TO_JAVA_BENCH_FUNC);
@@ -878,10 +881,8 @@ public class DTree extends Iced {
       JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
-      JCodeGen.toStaticVar(sb, "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 100, "Sample test data.");
-
-      // Nasty code - should be provided by a non-generated parent class, BUT ...
-      //sb.i(1).p(TO_JAVA_MAX_INDEX_FUNC);
+      // Generate a data in separated class since we do not want to influence size of constant pool of model class
+      JCodeGen.toClass(fileContextSB, "//Sample of data used by benchmark\nclass DataSample", "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 100, "Sample test data.");
 
       return sb;
     }

@@ -18,14 +18,14 @@ public abstract class ASTOp extends AST {
     put(new ASTIsNA());
     put(new ASTNrow());
     put(new ASTNcol());
-    put(new ASTAbs());
+    put(new ASTAbs ());
     put(new ASTSgn ());
     put(new ASTSqrt());
     put(new ASTCeil());
-    put(new ASTFlr());
-    put(new ASTLog());
-    put(new ASTExp());
-    put(new ASTNot());
+    put(new ASTFlr ());
+    put(new ASTLog ());
+    put(new ASTExp ());
+    put(new ASTNot ());
     put(new ASTScale());
     put(new ASTFactor());
     put(new ASTIsFactor());
@@ -543,7 +543,7 @@ class ASTTable extends ASTOp {
     // Build output vecs
     Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(2);
     AppendableVec v0 = new AppendableVec(keys[0]);
-    v0._domain = fr.vecs()[0].domain();
+    v0._domain = fr.vecs()[0].domain() == null ? null : fr.vecs()[0].domain().clone();
     NewChunk c0 = new NewChunk(v0,0);
     for( int i=0; i<domain.length; i++ ) c0.addNum((double) domain[i]);
     c0.close(0,null);

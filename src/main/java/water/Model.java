@@ -317,6 +317,7 @@ public abstract class Model extends Iced {
     sb.p("// How to download, compile and execute:").nl();
     sb.p("//     mkdir tmpdir").nl();
     sb.p("//     cd tmpdir").nl();
+    sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/h2o-model.jar > h2o-model.jar").nl();
     sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/2/").p(this.getClass().getSimpleName()).p("View.java?_modelKey=").pobj(_selfKey).p(" > ").p(modelName).p(".java").nl();
     sb.p("//     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").p(modelName).p(".java").nl();
     sb.p("//     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m ").p(modelName).nl();
@@ -324,7 +325,7 @@ public abstract class Model extends Iced {
     sb.p("//     (Note:  Try java argument -XX:+PrintCompilation to show runtime JIT compiler behavior.)").nl();
     sb.nl();
     sb.p("public class ").p(modelName).p(" extends water.genmodel.GeneratedModel {").nl(); // or extends GenerateModel
-    toJavaInit(sb).nl();
+    toJavaInit(sb, fileContextSB).nl();
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
     toJavaDOMAINS(sb);
@@ -391,7 +392,7 @@ public abstract class Model extends Iced {
     return sb.i(1).p("};").nl();
   }
   // Override in subclasses to provide some top-level model-specific goodness
-  protected SB toJavaInit(SB sb) { return sb; };
+  protected SB toJavaInit(SB sb, SB fileContextSB) { return sb; };
   protected void toJavaInit(CtClass ct) { };
   // Override in subclasses to provide some inside 'predict' call goodness
   // Method returns code which should be appended into generated top level class after

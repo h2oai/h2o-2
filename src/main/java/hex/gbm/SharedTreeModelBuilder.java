@@ -1,10 +1,10 @@
 package hex.gbm;
 
 import hex.rng.MersenneTwisterRNG;
+
 import java.util.Arrays;
 import java.util.Random;
-import jsr166y.ForkJoinTask;
-import jsr166y.RecursiveAction;
+
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
@@ -28,6 +28,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
   public int nbins = 100;
+
+  @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class)
+  public boolean score_each_iteration = false;
 
   // Overall prediction Mean Squared Error as I add trees
   transient protected double _errs[];
@@ -166,7 +169,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
     Score sc = null;
-    if( finalScoring ||
+    if( score_each_iteration ||
+        finalScoring ||
         (now-_firstScore < 4000) || // Score every time for 4 secs
         // Throttle scoring to keep the cost sane; limit to a 10% duty cycle & every 4 secs
         (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
@@ -175,8 +179,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       sc = new Score().doIt(model, fr, validation, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
     }
-    model = makeModel(model, finalScoring?null:ktrees, 
-                      sc==null ? Double.NaN : sc._sum/sc._snrows, 
+    model = makeModel(model, finalScoring?null:ktrees,
+                      sc==null ? Double.NaN : sc._sum/sc._snrows,
                       sc==null ? null : sc._cm, tstats);
     DKV.put(outputKey, model);
     return model;
@@ -226,9 +230,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     }
 
     // Once-per-node shared init
-    @Override public void setupLocal( ) { 
+    @Override public void setupLocal( ) {
       // Init all the internal tree fields after shipping over the wire
-      _tree.init_tree(); 
+      _tree.init_tree();
       // Allocate local shared memory histograms
       for( int l=_leaf; l<_tree._len; l++ ) {
         DTree.UndecidedNode udn = _tree.undecided(l);
@@ -316,7 +320,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     }
   }
 
- 
+
   // --------------------------------------------------------------------------
   // Build an entire layer of all K trees
   protected DSharedHistogram[][][] buildLayer(final Frame fr, final DTree ktrees[], final int leafs[], final DSharedHistogram hcs[][][], boolean build_tree_per_node) {

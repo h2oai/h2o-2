@@ -5,6 +5,12 @@ import water.fvec.Vec;
 
 public class JCodeGen {
 
+  public static SB toClass(SB sb, String classSig, String varname, Frame f, int nrows, String comment) {
+    sb.p(classSig).p(" {").nl().ii(1);
+    toStaticVar(sb, varname, f, nrows, comment).di(1);
+    return sb.p("}").nl();
+  }
+
   /**
    * Outputs given frame as static variable with given name.
    */

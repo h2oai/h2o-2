@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_glm_predict3(self):
+    def test_GLM_predict3_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -132,6 +132,7 @@ class Basic(unittest.TestCase):
         y = 54
         # CLASS=4
         CLASS=1
+
         if DO_BUG:
             if DO_BUG2:
                 # class 4=0, all else 1
@@ -151,44 +152,76 @@ class Basic(unittest.TestCase):
                 execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, CLASS)
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
 
-        max_iter = 8
+        # does GLM2 take more iterations?
+        max_iter = 50
         kwargs = {
+            'standardize': 1,
             'classification': 1,
             'response': 'C' + str(y),
             'family': 'binomial',
             'n_folds': 1,
-            # 'case_mode': '>',
+
+            # FIX! temporary 
+            # 'case_mode': '=',
             # 'case_val': 1, # zero should predict to 0, 2-7 should predict to 1
             'max_iter': max_iter,
             'beta_epsilon': 1e-3}
 
         timeoutSecs = 120
 
-        aHack = {'destination_key': 'A.hex'}
+        if 1==1:
+            aHack = {'destination_key': 'A.hex'}
+        else:
+            aHack = {'destination_key': 'covtype.data.hex'}
+
         if 1==0:
             start = time.time()
-            kwargs.update({'alpha': 0, 'lambda': 0})
+            kwargs.update({'alpha': 0, 'lambda': 0}) 
             glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (L2) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, 'C13', **kwargs)
+            (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+
             modelKey = glm['glm_model']['_selfKey']
             predict_and_compare_csvs(model_key=modelKey)
 
-            # Elastic
-            kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
+            kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, **kwargs)
             print "glm (Elastic) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-            h2o_glm.simpleCheckGLM(self, glm, 'C13', **kwargs)
+            (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             modelKey = glm['glm_model']['_selfKey']
             predict_and_compare_csvs(model_key=modelKey)
 
-        # L1
-        kwargs.update({'alpha': 1, 'lambda': 1e-4})
+        kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
         start = time.time()
         glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, **kwargs)
         print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'
-        h2o_glm.simpleCheckGLM(self, glm, 'C13', **kwargs)
+        # we get the non-normalized coefficients
+        (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+
+        avg_err = glm['glm_model']['submodels'][0]['validation']['avg_err']
+        auc = glm['glm_model']['submodels'][0]['validation']['auc']
+        best_threshold = glm['glm_model']['submodels'][0]['validation']['best_threshold']
+        # coefficients is a list.
+        C34 = coefficients[34]
+
+        # compare to known values GLM1 got for class 1 case, with these parameters
+        aucExpected = 0.8428
+        self.assertAlmostEqual(auc, aucExpected, delta=0.001, msg='auc %s is too different from %s' % (auc, aucExpected))
+
+        interceptExpected = -16.603
+        print "intercept pct delta:", 100 * (abs(intercept) - abs(interceptExpected))/abs(interceptExpected)
+        self.assertAlmostEqual(intercept, interceptExpected, delta=0.001, msg='intercept %s is too different from %s' % (intercept, interceptExpected))
+
+        avg_errExpected = 0.2463
+        self.assertAlmostEqual(avg_err, avg_errExpected, delta=0.001, msg='avg_err %s is too different from %s' % (avg_err, avg_errExpected))
+
+        C34expected = 3.541
+        print "C34 pct delta:", "%0.2f" % 100 * (abs(C34) - abs(C34expected))/abs(C34expected)
+        self.assertAlmostEqual(C34, C34expected, delta=0.001, msg='coefficient 34 %s is too different from %s' % (C34, C34expected))
+        
+        self.assertAlmostEqual(best_threshold, 0.35, delta=0.001, msg='best_threshold %s is too different from %s' % (best_threshold, 0.35))
+
         modelKey = glm['glm_model']['_selfKey']
         predict_and_compare_csvs(model_key=modelKey)
 

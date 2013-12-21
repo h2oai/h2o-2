@@ -4,7 +4,10 @@ package water.genmodel;
  * A generic interface to access generated models.
  */
 public interface IGeneratedModel {
-    /** The names of the columns used in the model. */
+    /** Returns number of columns used as input for training (i.e., exclude response column). */
+    public int getNumCols();
+
+    /** The names of columns used in the model. It contains names of input columns and a name of response column. */
     public String[] getNames();
 
     /** The name of the response column. */
@@ -46,4 +49,8 @@ public interface IGeneratedModel {
 
     /** Returns index of column with give name or -1 if column is not found. */
     public int getColIdx(String name);
+
+    /** Maps given column's enum to integer used by this model.
+     * Returns -1 if mapping is not found. */
+    public int mapEnum(int colIdx, String enumValue);
 }

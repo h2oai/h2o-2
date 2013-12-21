@@ -1,4 +1,4 @@
-import unittest, time, sys
+import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_exec as h2e
 
@@ -80,15 +80,21 @@ class Basic(unittest.TestCase):
 
         # all are multipliers of expected tuple value
         allowedDelta = (0.1, 0.1, 0.1)
-        for trial in range(5):
+        # try saving best!
+        bestError = None
+        for trial in range(10):
+
+            seed = random.randint(0, sys.maxint)
+            # seed = 7509839924844349324
+
             if h2o.beta_features:
                 params = {'k': 3, 
                          # 'initialization': 'Furthest', 
                          'initialization': 'PlusPlus',
                          'ignored_cols': "ID",
                          'destination_key': 'prostate_k.hex',
-                         'max_iter': 100,
-                         'seed': 265211114
+                         'max_iter': 1000,
+                         'seed': seed
                         }
             else:
                 params = {'k': 3, 
@@ -97,13 +103,26 @@ class Basic(unittest.TestCase):
                          'cols': 'CAPSULE, AGE, RACE, DPROS, DCAPS, PSA, VOL, GLEASON',
                          'destination_key': 'prostate_k.hex',
                          'max_iter': 100,
-                         'seed': 265211114
+                         'seed': seed
                         }
 
             kwargs = params.copy()
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
             # h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
+            error = kmeans['model']['error']
+            if not bestError or error < bestError:
+                print 'Found smaller error:', error
+                bestError = error
+                bestCenters = centers
+                bestSeed = seed
+                bestTrial = trial
+            
+        print "bestTrial:", bestTrial
+        print "bestError:", bestError
+        print "bestCenters:", bestCenters
+        print "bestSeed:", bestSeed
+
 
 if __name__ == '__main__':
     h2o.unit_main()

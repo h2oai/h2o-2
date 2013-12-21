@@ -111,7 +111,7 @@ public class Env extends Iced {
     _ary[idx] = fr==null ? null : new Frame(fr);
     _d  [idx] =                 _d   [_sp-1] ;
     _fcn[idx] =           addRef(_fcn[_sp-1]);
-    if( d==0 ) _key[idx] = id;
+    _key[idx] = d==0 && fr!=null ? id : null;
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
   // Copy from TOS into stack.  Pop's all intermediate.
