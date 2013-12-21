@@ -22,10 +22,10 @@ import water.util.*;
    the obvious technique is to have a Vec of {@code _nid}s (ints), one per each
    element of the data Vecs.
 
-   Each {@code Node} has a {@code DSharedHistogram}, describing summary data about the
-   rows.  The DSharedHistogram requires a pass over the data to be filled in, and we
+   Each {@code Node} has a {@code DRealHistogram}, describing summary data about the
+   rows.  The DRealHistogram requires a pass over the data to be filled in, and we
    expect to fill in all rows for Nodes at the same depth at the same time.
-   i.e., a single pass over the data will fill in all leaf Nodes' DSharedHistograms
+   i.e., a single pass over the data will fill in all leaf Nodes' DRealHistograms
    at once.
 
    @author Cliff Click
@@ -129,8 +129,8 @@ public class DTree extends Iced {
     // min/max - which would allow values outside the stated bin-range into the
     // split sub-bins.  Always go for a value which splits the nearest two
     // elements.
-    float splat(DSharedHistogram hs[]) {
-      DSharedHistogram h = hs[_col];
+    float splat(DRealHistogram hs[]) {
+      DRealHistogram h = hs[_col];
       assert _bin > 0 && _bin < h.nbins();
       if( _equal ) { assert h.bins(_bin)!=0 && h.mins(_bin)==h.maxs(_bin); return h.mins(_bin); }
       int x=_bin-1;
@@ -142,14 +142,14 @@ public class DTree extends Iced {
       return (h.maxs(x)+h.mins(n))/2;
     }
 
-    // Split a DSharedHistogram.  Return null if there is no point in splitting
+    // Split a DRealHistogram.  Return null if there is no point in splitting
     // this bin further (such as there's fewer than min_row elements, or zero
-    // error in the response column).  Return an array of DSharedHistograms (one
+    // error in the response column).  Return an array of DRealHistograms (one
     // per column), which are bounded by the split bin-limits.  If the column
-    // has constant data, or was not being tracked by a prior DSharedHistogram
+    // has constant data, or was not being tracked by a prior DRealHistogram
     // (for being constant data from a prior split), then that column will be
     // null in the returned array.
-    public DSharedHistogram[] split( int splat, char nbins, int min_rows, DSharedHistogram hs[] ) {
+    public DRealHistogram[] split( int splat, char nbins, int min_rows, DRealHistogram hs[] ) {
       long n = splat==0 ? _n0 : _n1;
       if( n < min_rows || n <= 1 ) return null; // Too few elements
       double se = splat==0 ? _se0 : _se1;
@@ -157,9 +157,9 @@ public class DTree extends Iced {
 
       // Build a next-gen split point from the splitting bin
       int cnt=0;                  // Count of possible splits
-      DSharedHistogram nhists[] = new DSharedHistogram[hs.length]; // A new histogram set
+      DRealHistogram nhists[] = new DRealHistogram[hs.length]; // A new histogram set
       for( int j=0; j<hs.length; j++ ) { // For every column in the new split
-        DSharedHistogram h = hs[j];            // old histogram of column
+        DRealHistogram h = hs[j];            // old histogram of column
         if( h == null ) continue;        // Column was not being tracked?
         // min & max come from the original column data, since splitting on an
         // unrelated column will not change the j'th columns min/max.
@@ -169,7 +169,7 @@ public class DTree extends Iced {
         else max = h.find_max();
 
         // Tighter bounds on the column getting split: exactly each new
-        // DSharedHistogram's bound are the bins' min & max.
+        // DRealHistogram's bound are the bins' min & max.
         if( _col==j ) {
           if( _equal ) {        // Equality split; no change on unequals-side
             if( splat == 1 ) max=min = h.mins(_bin); // but know exact bounds on equals-side
@@ -181,7 +181,7 @@ public class DTree extends Iced {
         if( min == max ) continue; // This column will not split again
         if( min >  max ) continue; // Happens for all-NA subsplits
         assert min < max && n > 1;
-        nhists[j] = new DSharedHistogram(h._name,nbins,h._isInt,min,max,n);
+        nhists[j] = new DRealHistogram(h._name,nbins,h._isInt,min,max,n);
         cnt++;                    // At least some chance of splitting
       }
       return cnt == 0 ? null : nhists;
@@ -215,13 +215,13 @@ public class DTree extends Iced {
   }
 
   // --------------------------------------------------------------------------
-  // An UndecidedNode: Has a DSharedHistogram which is filled in (in parallel
+  // An UndecidedNode: Has a DRealHistogram which is filled in (in parallel
   // with other histograms) in a single pass over the data.  Does not contain
   // any split-decision.
   public static abstract class UndecidedNode extends Node {
-    public transient DSharedHistogram[] _hs;
+    public transient DRealHistogram[] _hs;
     public final int _scoreCols[];      // A list of columns to score; could be null for all
-    public UndecidedNode( DTree tree, int pid, DSharedHistogram[] hs ) {
+    public UndecidedNode( DTree tree, int pid, DRealHistogram[] hs ) {
       super(tree,pid);
       assert hs.length==tree._ncols;
       _scoreCols = scoreCols(_hs=hs);
@@ -229,7 +229,7 @@ public class DTree extends Iced {
 
     // Pick a random selection of columns to compute best score.
     // Can return null for 'all columns'.
-    abstract public int[] scoreCols( DSharedHistogram[] hs );
+    abstract public int[] scoreCols( DRealHistogram[] hs );
 
     // Make the parent of this Node use a -1 NID to prevent the split that this
     // node otherwise induces.  Happens if we find out too-late that we have a
@@ -274,7 +274,7 @@ public class DTree extends Iced {
 
       for( int i=0; i<nbins; i++ ) {
         for( int j=0; j<ncols; j++ ) {
-          DSharedHistogram h = _hs[j];
+          DRealHistogram h = _hs[j];
           if( h == null ) continue;
           if( i < h.nbins() && h._bins != null ) {
             p(sb, h.bins(i),cntW).append('/');
@@ -335,12 +335,12 @@ public class DTree extends Iced {
     transient int _size = 0;  // Compressed byte size of this subtree
 
     // Make a correctly flavored Undecided
-    public abstract UndecidedNode makeUndecidedNode(DSharedHistogram hs[]);
+    public abstract UndecidedNode makeUndecidedNode(DRealHistogram hs[]);
 
     // Pick the best column from the given histograms
-    public abstract Split bestCol( UndecidedNode u, DSharedHistogram hs[] );
+    public abstract Split bestCol( UndecidedNode u, DRealHistogram hs[] );
 
-    public DecidedNode( UndecidedNode n, DSharedHistogram hs[] ) {
+    public DecidedNode( UndecidedNode n, DRealHistogram hs[] ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
       _nids = new int[2];           // Split into 2 subsets
       _split = bestCol(n,hs);       // Best split-point for this tree
@@ -358,7 +358,7 @@ public class DTree extends Iced {
 
       for( int b=0; b<2; b++ ) { // For all split-points
         // Setup for children splits
-        DSharedHistogram nhists[] = _split.split(b,nbins,min_rows,hs);
+        DRealHistogram nhists[] = _split.split(b,nbins,min_rows,hs);
         assert nhists==null || nhists.length==_tree._ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(nhists)._nid;
       }

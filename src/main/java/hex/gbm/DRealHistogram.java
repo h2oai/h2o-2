@@ -13,23 +13,23 @@ import water.fvec.Vec;
 /**
    A Histogram, computed in parallel over a Vec.
    <p>
-   A {@code DSharedHistogram} bins every value added to it, and computes a the
+   A {@code DRealHistogram} bins every value added to it, and computes a the
    vec min & max (for use in the next split), and response mean & variance for
-   each bin.  {@code DSharedHistogram}s are initialized with a min, max and
+   each bin.  {@code DRealHistogram}s are initialized with a min, max and
    number-of- elements to be added (all of which are generally available from a
    Vec).  Bins run from min to max in uniform sizes.  If the {@code
-   DSharedHistogram} can determine that fewer bins are needed (e.g. boolean
+   DRealHistogram} can determine that fewer bins are needed (e.g. boolean
    columns run from 0 to 1, but only ever take on 2 values, so only 2 bins are
    needed), then fewer bins are used.
    <p>
-   {@code DSharedHistogram} are shared per-node, and atomically updated.
+   {@code DRealHistogram} are shared per-node, and atomically updated.
    There's an {@code add} call to help cross-node reductions.  The data is
    stored in primitive arrays, so it can be sent over the wire.  The {@code
    AtomicXXXArray} classes are local utility classes for atomically updating
    primitive arrays.
    <p>
    If we are successively splitting rows (e.g. in a decision tree), then a
-   fresh {@code DSharedHistogram} for each split will dynamically re-bin the data.
+   fresh {@code DRealHistogram} for each split will dynamically re-bin the data.
    Each successive split will logarithmically divide the data.  At the first
    split, outliers will end up in their own bins - but perhaps some central
    bins may be very full.  At the next split(s), the full bins will get split,
@@ -40,7 +40,7 @@ import water.fvec.Vec;
    <p>
    @author Cliff Click
 */
-public class DSharedHistogram extends Iced {
+public class DRealHistogram extends Iced {
   public final transient String _name; // Column name (for debugging)
   public final byte _isInt;       // 0: float col, 1: int col, 2: enum & int col
   public final char _nbin;        // Bin count
@@ -50,7 +50,7 @@ public class DSharedHistogram extends Iced {
   private      float  _mins[], _maxs[]; // Min/Max, shared, atomically updated
   private      double _sums[], _ssqs[]; // Sums & square-sums, shared, atomically incremented
 
-  public DSharedHistogram( String name, final int nbins, byte isInt, float min, float max, long nelems ) {
+  public DRealHistogram( String name, final int nbins, byte isInt, float min, float max, long nelems ) {
     assert nelems > 0;
     assert nbins >= 1;
     assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
@@ -129,7 +129,7 @@ public class DSharedHistogram extends Iced {
 
   // Merge two equal histograms together.  Done in a F/J reduce, so no
   // synchronization needed.
-  void add( DSharedHistogram dsh ) {
+  void add( DRealHistogram dsh ) {
     assert _isInt == dsh._isInt && _nbin == dsh._nbin && _step == dsh._step &&
       _min == dsh._min && _max == dsh._max;
     assert (_bins == null && dsh._bins == null) || (_bins != null && dsh._bins != null);
@@ -253,12 +253,12 @@ public class DSharedHistogram extends Iced {
   }
 
   // The initial histogram bins are setup from the Vec rollups.
-  static public DSharedHistogram[] initialHist(Frame fr, int ncols, int nbins, DSharedHistogram hs[]) {
+  static public DRealHistogram[] initialHist(Frame fr, int ncols, int nbins, DRealHistogram hs[]) {
     Vec vecs[] = fr.vecs();
     for( int c=0; c<ncols; c++ ) {
       Vec v = vecs[c];
       hs[c] = (v.naCnt()==v.length() || v.min()==v.max()) ? null
-        : new DSharedHistogram(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),(float)v.min(),(float)v.max(),v.length());
+        : new DRealHistogram(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),(float)v.min(),(float)v.max(),v.length());
     }
     return hs;
   }
