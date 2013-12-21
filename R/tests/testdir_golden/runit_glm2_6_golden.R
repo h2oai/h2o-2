@@ -4,7 +4,7 @@ source('../findNSourceUtils.R')
 test.glm2asfactor.golden <- function(H2Oserver) {
 	
 #Import data: 
-Log.info("Importing CUSE data...") 
+Log.info("Importing DRUGS data...") 
 drugsH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/drugs.csv"), key="drugsH2O")
 drugsR<- read.csv(locate("smalldata/drugs.csv"), header=T)
 

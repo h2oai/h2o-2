@@ -42,8 +42,7 @@ def write_syn_dataset(csvPathname, rowCount, centers, SEED):
         for i in range(rowCount):
             rowData = []
             for c in center:
-                r = random.randint(-2,2)
-                r = random.randint(0,2)
+                r = random.randint(-1,1)
                 # doesn't fail
                 # r = 0
                 rowData.append(c + r)
@@ -100,7 +99,7 @@ class Basic(unittest.TestCase):
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        rowCount = 4
+        rowCount = 10000
         expected = [(g, rowCount, None) for g in genCenters]
         allowedDelta = (0.2, 0.2, 0.2, 0.2, 0.2, 0.2)
         allowedDelta = (0.2, 0.2)
@@ -152,6 +151,8 @@ class Basic(unittest.TestCase):
             print "trial:", trial, "genDistances:", genDistances
             print "trial:", trial, "centers:", centers
             print "trial:", trial, "error:", error
+            if (abs(genDistances - error)) > (.001 * genDistances):
+                raise Exception("genDistances: %s error: %s are too different" % (genDistances, error))
     
             if not bestError or error < bestError:
                 print 'Found smaller error:', error
