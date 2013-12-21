@@ -13,6 +13,8 @@ Log.info("Test H2O treatment vanilla GLM - continuious real predictors, gaussian
 Log.info("Run matching models in R and H2O")
 fitH2O<- h2o.glm.FV(x=c("nofish","livebait","camper"), y="count", family="tweedie", tweedie.p=1.5, nfolds=0, alpha=0, lambda=0, data=zinabH2O)
 fitR<- glm(count ~ nofish + livebait+ camper, family=tweedie(var.power=1.5), data=zinabR)
+H2Ocoeffs<- sort(t(fitH2O@model$coefficients))
+Rcoeffs<- sort(t(fitR$coefficients))
 
 Log.info("Print model statistics for R and H2O... \n")
 #Log.info(paste("H2O Deviance  : ", fitH2O@model$deviance,      "\t\t", "R Deviance   : ", fitR$deviance))
@@ -28,8 +30,6 @@ Log.info("Compare model coefficients in R to model statistics in H2O")
 #expect_equal(fitH2O@model$deviance, fitR$deviance, tolerance = 0.01)
 #expect_equal(fitH2O@model$df.residual, fitR$df.residual, tolerance = 0.01)
 #expect_equal(fitH2O@model$df.null, fitR$df.null, tolerance = 0.01)
-H2Ocoeffs<- sort(t(fitH2O@model$coefficients))
-Rcoeffs<- sort(t(fitR$coefficients))
 expect_equal(H2Ocoeffs, Rcoeffs, tolerance = 0.01)
 
 
