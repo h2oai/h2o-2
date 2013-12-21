@@ -12,7 +12,7 @@ import water.fvec.Vec;
 
 public class DRFTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(2); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   abstract static class PrepData { abstract int prep(Frame fr); }
 
@@ -31,7 +31,7 @@ public class DRFTest extends TestUtil {
           1,
           a( a(6, 0,  0),
              a(0, 7,  0),
-             a(0, 3, 10)),
+             a(0, 2, 11)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -44,7 +44,7 @@ public class DRFTest extends TestUtil {
           50,
           a( a(30, 0,  0),
              a(0, 31,  3),
-             a(0,  3, 33)),
+             a(0,  2, 34)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -56,7 +56,7 @@ public class DRFTest extends TestUtil {
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
         a( a(0,  1, 0, 0, 0),
-           a(0, 54, 0, 1, 0),
+           a(0, 52, 0, 3, 0),
            a(0,  0, 0, 0, 0),
            a(0,  1, 0,17, 1),
            a(0,  0, 0, 0,33)),
