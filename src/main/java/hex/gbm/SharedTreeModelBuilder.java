@@ -205,13 +205,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   //         decision criteria, and assigning the row to a new child
   //         UndecidedNode (and giving it an improved prediction).
   //
-  // Pass 2: Build new summary DRealHistograms on the new child UndecidedNodes
+  // Pass 2: Build new summary DHistograms on the new child UndecidedNodes
   //         every row got assigned into.  Collect counts, mean, variance, min,
   //         max per bin, per column.
   //
-  // The result is a set of DRealHistogram arrays; one DRealHistogram array for
+  // The result is a set of DHistogram arrays; one DHistogram array for
   // each unique 'leaf' in the tree being histogramed in parallel.  These have
-  // node ID's (nids) from 'leaf' to 'tree._len'.  Each DRealHistogram array is
+  // node ID's (nids) from 'leaf' to 'tree._len'.  Each DHistogram array is
   // for all the columns in that 'leaf'.
   //
   // The other result is a prediction "score" for the whole dataset, based on
@@ -221,8 +221,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     final DTree _tree; // Read-only, shared (except at the histograms in the Nodes)
     final int   _leaf; // Number of active leaves (per tree)
     // Histograms for every tree, split & active column
-    final DRealHistogram _hcs[/*tree-relative node-id*/][/*column*/];
-    public ScoreBuildHistogram(int k, DTree tree, int leaf, DRealHistogram hcs[][]) {
+    final DHistogram _hcs[/*tree-relative node-id*/][/*column*/];
+    public ScoreBuildHistogram(int k, DTree tree, int leaf, DHistogram hcs[][]) {
       _k   = k;
       _tree= tree;
       _leaf= leaf;
@@ -236,7 +236,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Allocate local shared memory histograms
       for( int l=_leaf; l<_tree._len; l++ ) {
         DTree.UndecidedNode udn = _tree.undecided(l);
-        DRealHistogram hs[] = _hcs[l-_leaf];
+        DHistogram hs[] = _hcs[l-_leaf];
         int sCols[] = udn._scoreCols;
         if( sCols != null ) { // Sub-selecting just some columns?
           for( int j=0; j<sCols.length; j++) // For tracked cols
@@ -288,7 +288,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         // Pass 2.0
         double y = wrks.at0(row);       // Response for this row
         if( Double.isNaN(y) ) continue; // No response, cannot train
-        DRealHistogram nhs[] = _hcs[nid-_leaf];
+        DHistogram nhs[] = _hcs[nid-_leaf];
         int sCols[] = _tree.undecided(nid)._scoreCols; // Columns to score (null, or a list of selected cols)
 
         if( sCols != null ) { // Sub-selecting just some columns?
@@ -309,7 +309,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       // Merge histograms
       if( sbh._hcs == _hcs ) return;
       for( int i=0; i<_hcs.length; i++ ) {
-        DRealHistogram hs1[] = _hcs[i], hs2[] = sbh._hcs[i];
+        DHistogram hs1[] = _hcs[i], hs2[] = sbh._hcs[i];
         if( hs1 == null ) _hcs[i] = hs2;
         else if( hs2 != null )
           for( int j=0; j<hs1.length; j++ )
@@ -323,7 +323,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   // --------------------------------------------------------------------------
   // Build an entire layer of all K trees
-  protected DRealHistogram[][][] buildLayer(final Frame fr, final DTree ktrees[], final int leafs[], final DRealHistogram hcs[][][], boolean build_tree_per_node) {
+  protected DHistogram[][][] buildLayer(final Frame fr, final DTree ktrees[], final int leafs[], final DHistogram hcs[][][], boolean build_tree_per_node) {
     // Build K trees, one per class.
 
     // Build up the next-generation tree splits from the current histograms.
@@ -361,11 +361,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     final int _k;               // The tree
     final DTree _tree;
     final int _leafs[/*nclass*/];
-    final DRealHistogram _hcs[/*nclass*/][][];
+    final DHistogram _hcs[/*nclass*/][][];
     final Frame _fr2;
     final boolean _build_tree_per_node;
     boolean _did_split;
-    ScoreBuildOneTree( int k, DTree tree, int leafs[], DRealHistogram hcs[][][], Frame fr2, boolean build_tree_per_node ) {
+    ScoreBuildOneTree( int k, DTree tree, int leafs[], DHistogram hcs[][][], Frame fr2, boolean build_tree_per_node ) {
       _k    = k;
       _tree = tree;
       _leafs= leafs;
@@ -399,7 +399,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       }
       _leafs[_k]=tmax;          // Setup leafs for next tree level
       int new_leafs = _tree.len()-tmax;
-      _hcs[_k] = new DRealHistogram[new_leafs][/*ncol*/];
+      _hcs[_k] = new DHistogram[new_leafs][/*ncol*/];
       for( int nl = tmax; nl<_tree.len(); nl ++ )
         _hcs[_k][nl-tmax] = _tree.undecided(nl)._hs;
       _tree.depth++;            // Next layer done
@@ -408,7 +408,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   // Builder-specific decision node
-  protected abstract DTree.DecidedNode makeDecided( DTree.UndecidedNode udn, DRealHistogram hs[] );
+  protected abstract DTree.DecidedNode makeDecided( DTree.UndecidedNode udn, DHistogram hs[] );
 
   // --------------------------------------------------------------------------
   private static class ClassDist extends MRTask2<ClassDist> {

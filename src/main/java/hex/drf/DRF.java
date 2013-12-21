@@ -255,7 +255,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     // Initial set of histograms.  All trees; one leaf per tree (the root
     // leaf); all columns
-    DRealHistogram hcs[][][] = new DRealHistogram[_nclass][1/*just root leaf*/][_ncols];
+    DHistogram hcs[][][] = new DHistogram[_nclass][1/*just root leaf*/][_ncols];
 
     // Use for all k-trees the same seed. NOTE: this is only to make a fair
     // view for all k-trees
@@ -270,7 +270,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         // DRF picks a random different set of columns for the 2nd tree.  
         //if( DTree.CRUNK && k==1 && _nclass==2 ) continue;
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
-        new DRFUndecidedNode(ktrees[k],-1, DRealHistogram.initialHist(fr,_ncols,nbins,hcs[k][0]) ); // The "root" node
+        new DRFUndecidedNode(ktrees[k],-1, DHistogram.initialHist(fr,_ncols,nbins,hcs[k][0],false) ); // The "root" node
       }
     }
 
@@ -406,7 +406,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
   }
 
-  @Override protected DecidedNode makeDecided( UndecidedNode udn, DRealHistogram hs[] ) { 
+  @Override protected DecidedNode makeDecided( UndecidedNode udn, DHistogram hs[] ) { 
     return new DRFDecidedNode(udn,hs);
   }
 
@@ -414,13 +414,13 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // decision algorithm given complete histograms on all columns.
   // DRF algo: find the lowest error amongst a random mtry columns.
   static class DRFDecidedNode extends DecidedNode {
-    DRFDecidedNode( UndecidedNode n, DRealHistogram hs[] ) { super(n,hs); }
-    @Override public DRFUndecidedNode makeUndecidedNode( DRealHistogram hs[] ) {
+    DRFDecidedNode( UndecidedNode n, DHistogram hs[] ) { super(n,hs); }
+    @Override public DRFUndecidedNode makeUndecidedNode( DHistogram hs[] ) {
       return new DRFUndecidedNode(_tree,_nid, hs);
     }
 
     // Find the column with the best split (lowest score).
-    @Override public DTree.Split bestCol( UndecidedNode u, DRealHistogram hs[] ) {
+    @Override public DTree.Split bestCol( UndecidedNode u, DHistogram hs[] ) {
       DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
       if( hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
@@ -438,10 +438,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   // a list of columns to score on now, and then decide over later.
   // DRF algo: pick a random mtry columns
   static class DRFUndecidedNode extends UndecidedNode {
-    DRFUndecidedNode( DTree tree, int pid, DRealHistogram[] hs ) { super(tree,pid, hs); }
+    DRFUndecidedNode( DTree tree, int pid, DHistogram[] hs ) { super(tree,pid, hs); }
 
     // Randomly select mtry columns to 'score' in following pass over the data.
-    @Override public int[] scoreCols( DRealHistogram[] hs ) {
+    @Override public int[] scoreCols( DHistogram[] hs ) {
       DRFTree tree = (DRFTree)_tree;
       int[] cols = new int[hs.length];
       int len=0;

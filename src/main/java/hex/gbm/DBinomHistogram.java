@@ -7,47 +7,44 @@ import water.util.Utils;
 /**
    A Histogram, computed in parallel over a Vec.
    <p>
-   Sums & sums-of-squares of doubles
+   Sums (& sums-of-squares) of binomials - 0 or 1.  Sums-of-squares==sums in this case.
    <p>
    @author Cliff Click
 */
-public class DRealHistogram extends DHistogram<DRealHistogram> {
-  private double _sums[], _ssqs[]; // Sums & square-sums, shared, atomically incremented
+public class DBinomHistogram extends DHistogram<DBinomHistogram> {
+  private long _sums[]; // Sums (& square-sums since only 0 & 1 allowed), shared, atomically incremented
 
-  public DRealHistogram( String name, final int nbins, byte isInt, float min, float max, long nelems ) {
+  public DBinomHistogram( String name, final int nbins, byte isInt, float min, float max, long nelems ) {
     super(name,nbins,isInt,min,max,nelems);
   }
-  @Override boolean isBinom() { return false; }
+  @Override boolean isBinom() { return true; }
 
   @Override public double mean(int b) {
     long n = _bins[b];
-    return n>0 ? _sums[b]/n : 0;
+    return n>0 ? (double)_sums[b]/n : 0;
   }
   @Override public double var (int b) {
     long n = _bins[b];
     if( n<=1 ) return 0;
-    return (_ssqs[b] - _sums[b]*_sums[b]/n)/(n-1);
+    return (_sums[b] - (double)_sums[b]*_sums[b]/n)/(n-1);
   }
 
   // Big allocation of arrays
   @Override void init0() {
-    _sums = MemoryManager.malloc8d(_nbin);
-    _ssqs = MemoryManager.malloc8d(_nbin);
+    _sums = MemoryManager.malloc8(_nbin);
   }
 
   // Add one row to a bin found via simple linear interpolation.
   // Compute bin min/max.
   // Compute response mean & variance.
   @Override void incr0( int b, double y ) {
-    Utils.AtomicDoubleArray.add(_sums,b,y);
-    Utils.AtomicDoubleArray.add(_ssqs,b,y*y);
+    Utils.AtomicLongArray.incr(_sums,b);
   }
 
   // Merge two equal histograms together.  Done in a F/J reduce, so no
   // synchronization needed.
-  @Override void add0( DRealHistogram dsh ) {
+  @Override void add0( DBinomHistogram dsh ) {
     Utils.add(_sums,dsh._sums);
-    Utils.add(_ssqs,dsh._ssqs);
   }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
@@ -59,37 +56,32 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
     assert nbins > 1;
 
     // Compute mean/var for cumulative bins from 0 to nbins inclusive.
-    double sums0[] = MemoryManager.malloc8d(nbins+1);
-    double ssqs0[] = MemoryManager.malloc8d(nbins+1);
-    long     ns0[] = MemoryManager.malloc8 (nbins+1);
+    long sums0[] = MemoryManager.malloc8(nbins+1);
+    long   ns0[] = MemoryManager.malloc8(nbins+1);
     for( int b=1; b<=nbins; b++ ) {
-      double m0 = sums0[b-1],  m1 = _sums[b-1];
-      double s0 = ssqs0[b-1],  s1 = _ssqs[b-1];
-      long   k0 = ns0  [b-1],  k1 = _bins[b-1];
+      long m0 = sums0[b-1],  m1 = _sums[b-1];
+      long k0 = ns0  [b-1],  k1 = _bins[b-1];
       if( k0==0 && k1==0 ) continue;
       sums0[b] = m0+m1;
-      ssqs0[b] = s0+s1;
       ns0  [b] = k0+k1;
     }
     long tot = ns0[nbins];
     // If we see zero variance, we must have a constant response in this
     // column.  Normally this situation is cut out before we even try to split, but we might
     // have NA's in THIS column...
-    if( ssqs0[nbins]*tot - sums0[nbins]*sums0[nbins] == 0 ) {
-      assert isConstantResponse(); return null; 
+    if( sums0[nbins] == 0 || sums0[nbins] == tot ) {
+      throw water.H2O.unimpl();       // oops need to test
+      //assert isConstantResponse(); return null; 
     }
 
     // Compute mean/var for cumulative bins from nbins to 0 inclusive.
-    double sums1[] = MemoryManager.malloc8d(nbins+1);
-    double ssqs1[] = MemoryManager.malloc8d(nbins+1);
-    long     ns1[] = MemoryManager.malloc8 (nbins+1);
+    long sums1[] = MemoryManager.malloc8(nbins+1);
+    long   ns1[] = MemoryManager.malloc8(nbins+1);
     for( int b=nbins-1; b>=0; b-- ) {
-      double m0 = sums1[b+1],  m1 = _sums[b];
-      double s0 = ssqs1[b+1],  s1 = _ssqs[b];
-      long   k0 = ns1  [b+1],  k1 = _bins[b];
+      long m0 = sums1[b+1],  m1 = _sums[b];
+      long k0 = ns1  [b+1],  k1 = _bins[b];
       if( k0==0 && k1==0 ) continue;
       sums1[b] = m0+m1;
-      ssqs1[b] = s0+s1;
       ns1  [b] = k0+k1;
       assert ns0[b]+ns1[b]==tot;
     }
@@ -111,8 +103,10 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
       //                    = ssqs - N*mean^2
       //                    = ssqs - N*(sum/N)(sum/N)
       //                    = ssqs - sum^2/N
-      double se0 = ssqs0[b] - sums0[b]*sums0[b]/ns0[b];
-      double se1 = ssqs1[b] - sums1[b]*sums1[b]/ns1[b];
+      // For binomial, ssqs == sum, so further reduces:
+      //                    = sum  - sum^2/N
+      double se0 = sums0[b];  se0 -= se0*se0/ns0[b];
+      double se1 = sums1[b];  se1 -= se1*se1/ns1[b];
       if( (se0+se1 < best_se0+best_se1) || // Strictly less error?
           // Or tied MSE, then pick split towards middle bins
           (se0+se1 == best_se0+best_se1 &&
@@ -129,11 +123,11 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
         if( _bins[b] == 0 ) continue; // Ignore empty splits
         assert _mins[b] == _maxs[b] : "int col, step of 1.0 "+_mins[b]+".."+_maxs[b]+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
         long N =        ns0[b+0] + ns1[b+1];
-        double sums = sums0[b+0]+sums1[b+1];
-        double ssqs = ssqs0[b+0]+ssqs1[b+1];
         if( N == 0 ) continue;
-        double si =  ssqs    -  sums   * sums   /   N    ; // Left+right, excluding 'b'
-        double sx = _ssqs[b] - _sums[b]*_sums[b]/_bins[b]; // Just 'b'
+        double sums = sums0[b+0]+sums1[b+1];
+        double sumb = _sums[b+0];
+        double si = sums - sums*sums/   N    ; // Left+right, excluding 'b'
+        double sx = sumb - sumb*sumb/_bins[b]; // Just 'b'
         if( si+sx < best_se0+best_se1 ) { // Strictly less error?
           best_se0 = si;   best_se1 = sx;
           best = b;        equal = true; // Equality check
@@ -151,8 +145,7 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
   }
 
   @Override public long byteSize0() {
-    return 8*2 +                // 2 more internal arrays
-      24+_sums.length<<3 +
-      24+_ssqs.length<<3 ;
+    return 8*1 +                // 1 more internal arrays
+      24+_sums.length<<3;
   }
 }
