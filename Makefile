@@ -241,10 +241,7 @@ else
 ifeq ($(PDFUNITE),)
 	@echo pdfunite not found, skipping...
 else
-	if ( test -f R/h2o-package/h2o_package.pdf ) \
-        then \
-	    pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf \
-	fi
+	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
 endif
 endif
 
