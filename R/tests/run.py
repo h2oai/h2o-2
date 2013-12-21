@@ -579,7 +579,10 @@ class RUnitRunner:
                     return os.path.join(d, f)
 
         # Not found, return the file, which will result in an error downstream when it can't be found.
-        return file
+        print("")
+        print("ERROR: Test does not exist: " + test_to_run)
+        print("")
+        sys.exit(1)
 
     def read_test_list_file(self, test_list_file):
         """
