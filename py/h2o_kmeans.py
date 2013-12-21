@@ -145,7 +145,7 @@ def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=
             for (a,b) in zip(expCenter, actCenter): # compare list of floats
                 absAllowedDelta = allowedDelta[0] * a
                 self.assertAlmostEqual(a, b, delta=absAllowedDelta,
-                    msg="Trial %d Center expected: %s actual: %s delta > %s" % (trial, expCenter, actCenter, absAllowedDelta))
+                    msg="Trial %d Center value expected: %s actual: %s delta > %s" % (trial, a, b, absAllowedDelta))
 
             absAllowedDelta = allowedDelta[1] * expRows
             self.assertAlmostEqual(expRows, actRows, delta=absAllowedDelta,
