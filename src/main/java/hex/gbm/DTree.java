@@ -629,8 +629,6 @@ public class DTree extends Iced {
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>MSE</th>");
         for( int i=last; i>=0; i-- )
-          sb.append(String.format("<td>%5.3f</td>",errs[i]));
-        for( int i=last; i>=0; i-- )
           sb.append(!Double.isNaN(errs[i]) ? String.format("<td>%5.3f</td>",errs[i]) : "<td>---</td>");
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
