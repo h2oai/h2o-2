@@ -3,7 +3,7 @@ source('../../findNSourceUtils.R')
 
 test.RF.VA.covtype_class <- function(conn) {
   covtype.hex = h2o.uploadFile.VA(conn, locate( "smalldata/covtype/covtype.20k.data"), "covtype.hex")
-  covtype.rf = h2o.randomForest.VA(y = 54, x = seq(1,53), data = covtype.hex, ntree = 50, depth = 100) 
+  covtype.rf = h2o.randomForest.VA(y = 55, x = seq(1,54), data = covtype.hex, ntree = 50, depth = 100) 
   print(covtype.rf)
   testEnd()
 }
