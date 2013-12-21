@@ -179,7 +179,9 @@ public class DSharedHistogram extends Iced {
     // If we see zero variance, we must have a constant response in this
     // column.  Normally this situation is cut out before we even try to split, but we might
     // have NA's in THIS column...
-    if( ssqs0[nbins] == 0 ) { assert isConstantResponse(); return null; }
+    if( ssqs0[nbins]*tot - sums0[nbins]*sums0[nbins] == 0 ) { 
+      assert isConstantResponse(); return null; 
+    }
 
     // Compute mean/var for cumulative bins from nbins to 0 inclusive.
     double sums1[] = MemoryManager.malloc8d(nbins+1);
