@@ -232,12 +232,17 @@ dw_3:
 # Note:  to get pdfunite on a mac, try:
 #     $ brew install poppler
 #
+PDFLATEX=$(shell which pdflatex)
 PDFUNITE=$(shell which pdfunite)
 dw_4:
+ifeq ($(PDFLATEX),)
+	@echo pdflatex not found, skipping...
+else
 ifeq ($(PDFUNITE),)
 	@echo pdfunite not found, skipping...
 else
 	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
+endif
 endif
 
 #
