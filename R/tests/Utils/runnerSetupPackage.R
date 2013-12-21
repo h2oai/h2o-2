@@ -1,4 +1,5 @@
 options(echo=F)
+if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source("h2oR.R")
 
