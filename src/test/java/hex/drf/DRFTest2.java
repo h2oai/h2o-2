@@ -53,7 +53,7 @@ public class DRFTest2 extends TestUtil {
 
         99/*max_depth*/,
         20/*nbins*/,
-        /*0=compute per-bin, 2=not compute*/((i+1)&1)*3 /*optflag*/  );
+        0 /*optflag*/  );
     }
   }
 }
