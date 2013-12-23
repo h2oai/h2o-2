@@ -544,7 +544,7 @@ def showGBMGridResults(GBMResult, expectedErrorMax, classification=True):
         print "jobnum:", jobnum, h2o.dump_json(gbmTrainView)
 
         if classification:
-            cm = gbmTrainView['gbm_model']['cms']
+            cm = gbmTrainView['gbm_model']['cms'][5] # take the midpoint one?
             pctWrongTrain = pp_cm_summary(cm);
             if pctWrongTrain > expectedErrorMax:
                 raise Exception("Should have < %s error here. pctWrongTrain: %s" % (expectedErrorMax, pctWrongTrain))
