@@ -32,10 +32,10 @@ class Basic(unittest.TestCase):
         # FIX! have to fill in expected rows and error here
         # this is from sklearn.cluster.KMeans, with NA's converted to 0
         expected = [
-            ([ 8.86,  2.43, 35.53,  0.31, 13.22,  1.47,  1.33, 20.06, 13.08,  0.53,  2.12, 128.61, 35.33,  1.57], 0, 0),
-            ([33.47,  2.29, 50.92,  0.34, 12.82,  1.33,  1.36, 21.43, 13.30,  0.37,  2.52, 125.40, 43.91,  1.79], 0, 0),
-            ([27.64,  2.87, 48.11,  0.09, 11.80,  0.98,  1.51, 21.02, 12.53,  0.58,  2.89, 171.27, 42.73,  1.53], 0, 0),
-            ([26.00,  2.67, 46.67,  0.00, 13.00,  1.33,  1.67, 21.56, 11.44,  0.22,  2.89, 234.56, 39.22,  1.56], 0, 0),
+            ([ 8.86,  2.43, 35.53,  0.31, 13.22,  1.47,  1.33, 20.06, 13.08,  0.53,  2.12, 128.61, 35.33,  1.57], None, None),
+            ([33.47,  2.29, 50.92,  0.34, 12.82,  1.33,  1.36, 21.43, 13.30,  0.37,  2.52, 125.40, 43.91,  1.79], None, None),
+            ([27.64,  2.87, 48.11,  0.09, 11.80,  0.98,  1.51, 21.02, 12.53,  0.58,  2.89, 171.27, 42.73,  1.53], None, None),
+            ([26.00,  2.67, 46.67,  0.00, 13.00,  1.33,  1.67, 21.56, 11.44,  0.22,  2.89, 234.56, 39.22,  1.56], None, None),
             ]
 
         
@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
                       'initialization': 'PlusPlus', 
                       'destination_key': 'benign_k.hex',
                       'max_iter': 100,
-                      # 'seed': 265211114317615310,
+                      'seed': 265211114317615310,
                      }
             kwargs = params.copy()
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
@@ -73,9 +73,9 @@ class Basic(unittest.TestCase):
         # loop, to see if we get same centers
         # this was sklearn.cluster.Kmeans with first col removed. num_rows and error is 0 here 
         expected = [
-            ([0.37, 65.77,  1.07,  2.23,  1.11, 10.49,  4.24,  6.31], 0, 0), 
-            ([0.36, 66.44,  1.09,  2.21,  1.06, 10.84, 34.16,  6.31], 0, 0),
-            ([0.83, 66.17,  1.21,  2.86,  1.34, 73.30, 15.57,  7.31], 0, 0),
+            ([0.36, 66.44,  1.09,  2.21,  1.06, 10.84, 34.16,  6.31], 136, 46045),
+            ([0.37, 65.77,  1.07,  2.23,  1.11, 10.49,  4.24,  6.31], 215, 36956), 
+            ([0.83, 66.17,  1.21,  2.86,  1.34, 73.30, 15.57,  7.31], 29,  33412),
             ]
 
         # all are multipliers of expected tuple value
@@ -85,7 +85,7 @@ class Basic(unittest.TestCase):
         for trial in range(10):
 
             seed = random.randint(0, sys.maxint)
-            # seed = 7509839924844349324
+            seed = 7509839924844349324
 
             if h2o.beta_features:
                 params = {'k': 3, 
@@ -109,7 +109,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
-            # h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
+            h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
             error = kmeans['model']['error']
             if not bestError or error < bestError:
                 print 'Found smaller error:', error
