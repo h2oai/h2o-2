@@ -184,7 +184,7 @@ class Basic(unittest.TestCase):
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cm']
+                cm = gbmTrainView['gbm_model']['cms']
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
                 print "\nTrain\n==========\n"
                 print h2o_gbm.pp_cm(cm)

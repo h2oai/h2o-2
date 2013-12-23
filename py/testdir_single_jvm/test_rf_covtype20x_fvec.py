@@ -176,7 +176,7 @@ class Basic(unittest.TestCase):
                 vpredict='predict',
                 )
 
-            cm = predictCMResult['cm']
+            cm = predictCMResult['cms']
 
             # These will move into the h2o_gbm.py
             pctWrong = h2o_gbm.pp_cm_summary(cm);
