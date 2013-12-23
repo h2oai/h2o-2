@@ -228,7 +228,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
     // Initial set of histograms.  All trees; one leaf per tree (the root
     // leaf); all columns
-    DSharedHistogram hcs[][][] = new DSharedHistogram[_nclass][1/*just root leaf*/][_ncols];
+    DHistogram hcs[][][] = new DHistogram[_nclass][1/*just root leaf*/][_ncols];
 
     for( int k=0; k<_nclass; k++ ) {
       // Initially setup as-if an empty-split had just happened
@@ -239,7 +239,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // DRF picks a random different set of columns for the 2nd tree.  
         if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
-        new GBMUndecidedNode(ktrees[k],-1,DSharedHistogram.initialHist(fr,_ncols,nbins,hcs[k][0]) ); // The "root" node
+        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,nbins,hcs[k][0],false) ); // The "root" node
       }
     }
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
@@ -392,7 +392,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     }
   }
 
-  @Override protected DecidedNode makeDecided( UndecidedNode udn, DSharedHistogram hs[] ) { 
+  @Override protected DecidedNode makeDecided( UndecidedNode udn, DHistogram hs[] ) { 
     return new GBMDecidedNode(udn,hs);
   }
 
@@ -401,14 +401,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   // specifies a decision algorithm given complete histograms on all
   // columns.  GBM algo: find the lowest error amongst *all* columns.
   static class GBMDecidedNode extends DecidedNode {
-    GBMDecidedNode( UndecidedNode n, DSharedHistogram[] hs ) { super(n,hs); }
-    @Override public UndecidedNode makeUndecidedNode(DSharedHistogram[] hs ) {
+    GBMDecidedNode( UndecidedNode n, DHistogram[] hs ) { super(n,hs); }
+    @Override public UndecidedNode makeUndecidedNode(DHistogram[] hs ) {
       return new GBMUndecidedNode(_tree,_nid,hs);
     }
 
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
-    @Override public DTree.Split bestCol( UndecidedNode u, DSharedHistogram[] hs ) {
+    @Override public DTree.Split bestCol( UndecidedNode u, DHistogram[] hs ) {
       DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
@@ -427,10 +427,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   // a list of columns to score on now, and then decide over later.
   // GBM algo: use all columns
   static class GBMUndecidedNode extends UndecidedNode {
-    GBMUndecidedNode( DTree tree, int pid, DSharedHistogram hs[] ) { super(tree,pid,hs); }
+    GBMUndecidedNode( DTree tree, int pid, DHistogram hs[] ) { super(tree,pid,hs); }
     // Randomly select mtry columns to 'score' in following pass over the data.
     // In GBM, we use all columns (as opposed to RF, which uses a random subset).
-    @Override public int[] scoreCols( DSharedHistogram[] hs ) { return null; }
+    @Override public int[] scoreCols( DHistogram[] hs ) { return null; }
   }
 
   // ---

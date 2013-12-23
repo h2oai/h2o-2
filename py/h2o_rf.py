@@ -42,10 +42,10 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     # v2 doesn't have the response variable, so removed looking at it
     if h2o.beta_features:
         # if we are checking after confusion_matrix for predict, the jsonschema is different
-        if 'cm' in rfv:
-            cm = rfv['cm']
+        if 'cms' in rfv:
+            cm = rfv['cms']
         else:
-            cm = rfv['drf_model']['cm']
+            cm = rfv['drf_model']['cms']
         scoresList = cm
     else:
         cm = rfv['confusion_matrix']
@@ -257,7 +257,7 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, timeoutSecs=120, **kwar
             
         rftime      = time.time()-start 
 
-        cm = predictCMResult['cm']
+        cm = predictCMResult['cms']
 
         # These will move into the h2o_gbm.py
         pctWrong = h2o_gbm.pp_cm_summary(cm);
