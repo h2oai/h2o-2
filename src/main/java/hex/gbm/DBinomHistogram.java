@@ -3,6 +3,7 @@ package hex.gbm;
 import java.util.Arrays;
 import water.MemoryManager;
 import water.util.Utils;
+import hex.drf.DRF;
 
 /**
    A Histogram, computed in parallel over a Vec.
@@ -69,10 +70,7 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
     // If we see zero variance, we must have a constant response in this
     // column.  Normally this situation is cut out before we even try to split, but we might
     // have NA's in THIS column...
-    if( sums0[nbins] == 0 || sums0[nbins] == tot ) {
-      throw water.H2O.unimpl();       // oops need to test
-      //assert isConstantResponse(); return null; 
-    }
+    if( sums0[nbins] == 0 || sums0[nbins] == tot ) { assert isConstantResponse(); return null; }
 
     // Compute mean/var for cumulative bins from nbins to 0 inclusive.
     long sums1[] = MemoryManager.malloc8(nbins+1);
@@ -121,7 +119,7 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
         _max-_min+1 > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
       for( int b=1; b<=nbins-1; b++ ) {
         if( _bins[b] == 0 ) continue; // Ignore empty splits
-        assert _mins[b] == _maxs[b] : "int col, step of 1.0 "+_mins[b]+".."+_maxs[b]+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
+        assert DRF._optflags!=0 || _mins[b] == _maxs[b] : "int col, step of 1.0 "+_mins[b]+".."+_maxs[b]+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
         long N =        ns0[b+0] + ns1[b+1];
         if( N == 0 ) continue;
         double sums = sums0[b+0]+sums1[b+1];

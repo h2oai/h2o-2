@@ -45,6 +45,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @API(help = "Computed number of split features")
   protected int _mtry;
 
+  transient static public int _optflags;
+
   /** DRF model holding serialized tree and implementing logic for scoring a row */
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -91,7 +93,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], double err, long cm[][], TreeStats tstats) {
     return new DRFModel(model, ktrees, err, cm, tstats);
   }
-  public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 50; min_rows = 1; }
+  public DRF(int optflags) { description = "Distributed RF"; ntrees = 50; max_depth = 50; min_rows = 1; 
+    _optflags=optflags; 
+    System.out.println("optflags="+_optflags);
+  }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -167,6 +172,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
     // Final scoring
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null, build_tree_per_node);
+    System.out.println("Avg depth="+model.treeStats.meanDepth);
     // Compute variable importance if required
     if (classification && importance) {
       float varimp[] = doVarImp(model, fr);
@@ -270,7 +276,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         // DRF picks a random different set of columns for the 2nd tree.  
         //if( DTree.CRUNK && k==1 && _nclass==2 ) continue;
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
-        new DRFUndecidedNode(ktrees[k],-1, DHistogram.initialHist(fr,_ncols,nbins,hcs[k][0],false) ); // The "root" node
+        boolean isBinom = classification;
+        new DRFUndecidedNode(ktrees[k],-1, DHistogram.initialHist(fr,_ncols,nbins,hcs[k][0],isBinom) ); // The "root" node
       }
     }
 

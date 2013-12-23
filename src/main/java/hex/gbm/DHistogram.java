@@ -1,12 +1,13 @@
 package hex.gbm;
 
+import hex.drf.DRF;
 import java.util.Arrays;
 import java.util.concurrent.atomic.*;
 import water.*;
-import water.util.SB;
-import water.util.Utils;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.SB;
+import water.util.Utils;
 
 /**
    A Histogram, computed in parallel over a Vec.
@@ -45,7 +46,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   public       long   _bins[];    // Bins, shared, atomically incremented
   protected    float  _mins[], _maxs[]; // Min/Max, shared, atomically updated
 
-  public DHistogram( String name, final int nbins, byte isInt, float min, float max, long nelems ) {
+  public DHistogram( String name, final int nbins, final byte isInt, final float min, final float max, long nelems ) {
     assert nelems > 0;
     assert nbins >= 1;
     assert max > min : "Caller ensures "+max+">"+min+", since if max==min== the column "+name+" is all constants";
@@ -94,10 +95,12 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   final void init() {
     assert _bins == null;
     _bins = MemoryManager.malloc8 (_nbin);
-    _mins = MemoryManager.malloc4f(_nbin);
-    Arrays.fill(_mins, Float.MAX_VALUE);
-    _maxs = MemoryManager.malloc4f(_nbin);
-    Arrays.fill(_maxs,-Float.MAX_VALUE);
+    if( DRF._optflags == 0 ) {
+      _mins = MemoryManager.malloc4f(_nbin);
+      Arrays.fill(_mins, Float.MAX_VALUE);
+      _maxs = MemoryManager.malloc4f(_nbin);
+      Arrays.fill(_maxs,-Float.MAX_VALUE);
+    }
     init0();
   }
 
@@ -106,11 +109,14 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   // Compute response mean & variance.
   abstract void incr0( int b, double y );
   final void incr( float col_data, double y ) {
+    assert _min <= col_data && col_data <= _max;
     int b = bin(col_data);      // Compute bin# via linear interpolation
     Utils.AtomicLongArray.incr(_bins,b); // Bump count in bin
     // Track actual lower/upper bound per-bin
-    Utils.AtomicFloatArray.setMin(_mins,b,col_data);
-    Utils.AtomicFloatArray.setMax(_maxs,b,col_data);
+    if( DRF._optflags == 0 ) {
+      Utils.AtomicFloatArray.setMin(_mins,b,col_data);
+      Utils.AtomicFloatArray.setMax(_maxs,b,col_data);
+    }
     if( y != 0 ) incr0(b,y);
   }
 
@@ -123,8 +129,10 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     assert (_bins == null && dsh._bins == null) || (_bins != null && dsh._bins != null);
     if( _bins == null ) return;
     Utils.add(_bins,dsh._bins);
-    for( int i=0; i<_nbin; i++ ) if( dsh._mins[i] < _mins[i] ) _mins[i] = dsh._mins[i];
-    for( int i=0; i<_nbin; i++ ) if( dsh._maxs[i] > _maxs[i] ) _maxs[i] = dsh._maxs[i];
+    if( DRF._optflags == 0 ) {
+      for( int i=0; i<_nbin; i++ ) if( dsh._mins[i] < _mins[i] ) _mins[i] = dsh._mins[i];
+      for( int i=0; i<_nbin; i++ ) if( dsh._maxs[i] > _maxs[i] ) _maxs[i] = dsh._maxs[i];
+    }
     add0(dsh);
   }
 
@@ -133,12 +141,20 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     int n = 0;
     while( n < _nbin && _bins[n]==0 ) n++; // First non-empty bin
     if( n == _nbin ) return Float.NaN;     // All bins are empty???
-    return _mins[n];            // Take min from 1st non-empty bin
+    if( DRF._optflags==0 ) return _mins[n];// Take min from 1st non-empty bin
+    if( n==0 ) return _min;
+    float min = binAt(n);
+    if( _isInt > 0 ) min = (float)Math.ceil(min);
+    return min;
   }
   public float find_max() {
     int x = _nbin-1;            // Last bin
     while( _bins[x]==0 ) x--;   // Last non-empty bin
-    return _maxs[x];            // Take max from last non-empty bin
+    if( DRF._optflags==0 ) return _maxs[x];// Take min from 1st non-empty bin
+    if( x== _nbin-1 ) return _max;
+    float max = binAt(x+1);
+    if( _isInt > 0 ) max = (float)Math.floor(max);
+    return max;
   }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
@@ -181,7 +197,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   // Pretty-print a histogram
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(_name).append(":").append(_min).append("-").append(_max).append(" step="+(1/_step)+" nbins="+_bins.length);
+    sb.append(_name).append(":").append(_min).append("-").append(_max).append(" step="+(1/_step)+" nbins="+nbins()+" isInt="+_isInt);
     if( _bins != null ) {
       for( int b=0; b<_bins.length; b++ ) {
         sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));
