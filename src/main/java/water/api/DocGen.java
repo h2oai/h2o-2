@@ -40,7 +40,7 @@ public abstract class DocGen {
 
     createFile("Parse2.rst", new Parse2().ReSTHelp());
     createFile("GBM.rst", new GBM().ReSTHelp());
-    createFile("DRF2.rst", new DRF(0).ReSTHelp());
+    createFile("DRF2.rst", new DRF().ReSTHelp());
     createFile("GLM2.rst", new GLM2().ReSTHelp());
     createFile("KMeans2.rst", new KMeans2().ReSTHelp());
   }

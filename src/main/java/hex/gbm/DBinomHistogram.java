@@ -119,7 +119,6 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
         _max-_min+1 > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
       for( int b=1; b<=nbins-1; b++ ) {
         if( _bins[b] == 0 ) continue; // Ignore empty splits
-        assert DRF._optflags!=0 || _mins[b] == _maxs[b] : "int col, step of 1.0 "+_mins[b]+".."+_maxs[b]+" "+this+" "+Arrays.toString(sums0)+":"+Arrays.toString(ns0);
         long N =        ns0[b+0] + ns1[b+1];
         if( N == 0 ) continue;
         double sums = sums0[b+0]+sums1[b+1];

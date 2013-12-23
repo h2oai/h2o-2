@@ -140,7 +140,7 @@ public class DRFModelAdaptTest extends TestUtil {
   }
 
   private DRFModel runDRF(Frame data, PrepData dprep) {
-    DRF drf = new DRF(0);
+    DRF drf = new DRF();
     drf.source = data;
     drf.response = dprep.prep(data);
     drf.ntrees = 1;

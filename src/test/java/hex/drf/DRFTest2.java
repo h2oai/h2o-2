@@ -15,7 +15,7 @@ public class DRFTest2 extends TestUtil {
   static final long[][] a(long[] ...arr) { return arr; }
 
   // A bigger DRF test, useful for tracking memory issues.
-  @Test public void testAirlines() throws Throwable {
+  /*@Test*/ public void testAirlines() throws Throwable {
     for( int i=0; i<10; i++ ) {
       new DRFTest().basicDRF(
         //
@@ -51,9 +51,9 @@ public class DRFTest2 extends TestUtil {
         //s("0","1"),
 
 
-        50/*max_depth*/,
+        99/*max_depth*/,
         20/*nbins*/,
-        (i+1)&1 /*optflag*/  );
+        /*0=compute per-bin, 2=not compute*/((i+1)&1)*3 /*optflag*/  );
     }
   }
 }

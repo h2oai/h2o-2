@@ -134,20 +134,27 @@ public class DTree extends Iced {
       DHistogram h = hs[_col];
       assert _bin > 0 && _bin < h.nbins();
       if( _equal ) { assert h.bins(_bin)!=0; return h.binAt(_bin); }
+      // Find highest non-empty bin below the split
       int x=_bin-1;
       while( x >= 0 && h.bins(x)==0 ) x--;
+      // Find lowest  non-empty bin above the split
       int n=_bin;
       while( n < h.nbins() && h.bins(n)==0 ) n++;
-      if( DRF._optflags==0 ) {
-        if( x <          0 ) return h.mins(n);
-        if( n >= h.nbins() ) return h.maxs(x);
-        return (h.maxs(x)+h.mins(n))/2;
-      } else {
-        float lo = h.binAt(x+1);
-        float hi = h.binAt(n  );
-        if( h._isInt > 0 && h._step == 1 ) lo=lo-1;
-        return (lo+hi)/2.0f;
-      }
+      // Lo is the high-side of the low non-empty bin, rounded to int for int columns
+      // Hi is the low -side of the hi  non-empty bin, rounded to int for int columns
+
+      // Example: Suppose there are no empty bins, and we are splitting an
+      // integer column at 48.4 (more than nbins, so step != 1.0, perhaps
+      // step==1.8).  The next lowest non-empty bin is from 46.6 to 48.4, and
+      // we set lo=48.4.  The next highest non-empty bin is from 48.4 to 50.2
+      // and we set hi=48.4.  Since this is an integer column, we round lo to
+      // 48 (largest integer below the split) and hi to 49 (smallest integer
+      // above the split).  Finally we average them, and split at 48.5.
+      float lo = h.binAt(x+1);
+      float hi = h.binAt(n  );
+      if( h._isInt > 0 ) lo = h._step==1 ? lo-1 : (float)Math.floor(lo);
+      if( h._isInt > 0 ) hi = h._step==1 ? hi   : (float)Math.ceil (hi);
+      return (lo+hi)/2.0f;
     }
 
     // Split a DHistogram.  Return null if there is no point in splitting
@@ -182,13 +189,10 @@ public class DTree extends Iced {
           if( _equal ) {        // Equality split; no change on unequals-side
             if( splat == 1 ) max=min = h.binAt(_bin); // but know exact bounds on equals-side
           } else {              // Less-than split
-            if( DRF._optflags == 0 ) {
-              if( splat == 0 ) max = h.maxs(_bin-1); // Max from next-smallest bin
-              else             min = h.mins(_bin  ); // Min from this bin
-            } else {
-              if( splat == 0 ) { max = h.binAt(_bin); if( h._isInt > 0 ) max = h._step==1 ? max-1 : (float)Math.floor(max); }
-              else             { min = h.binAt(_bin); if( h._isInt > 0 ) min = (float)Math.ceil (min); }
-            }
+            if( h._bins[_bin]==0 )
+              throw H2O.unimpl(); // Here I should walk up & down same as split() above.
+            if( splat == 0 ) { max = h.binAt(_bin); if( h._isInt > 0 ) max = h._step==1 ? max-1 : (float)Math.floor(max); } 
+            else {             min = h.binAt(_bin); if( h._isInt > 0 ) min = h._step==1 ? min   : (float)Math.ceil (min); }
           }
         }
         if( min == max ) continue; // This column will not split again

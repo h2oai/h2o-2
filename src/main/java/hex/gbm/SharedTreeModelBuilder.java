@@ -18,7 +18,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
-  public int ntrees = 100;
+  public int ntrees = 50;
 
   @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
   public int max_depth = 5;
@@ -26,8 +26,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1)
   public int min_rows = 10;
 
-  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=100000)
-  public int nbins = 100;
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000)
+  public int nbins = 20;
 
   @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class)
   public boolean score_each_iteration = false;

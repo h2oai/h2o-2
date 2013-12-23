@@ -3,9 +3,11 @@ package hex.gbm;
 import hex.drf.DRF;
 import java.util.Arrays;
 import java.util.concurrent.atomic.*;
+import sun.misc.Unsafe;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.nbhm.UtilUnsafe;
 import water.util.SB;
 import water.util.Utils;
 
@@ -44,7 +46,31 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   public final float  _step;      // Linear interpolation step per bin
   public final float  _min, _max; // Conservative Min/Max over whole collection
   public       long   _bins[];    // Bins, shared, atomically incremented
-  protected    float  _mins[], _maxs[]; // Min/Max, shared, atomically updated
+
+  // Atomically updated float min/max
+  protected    float  _min2, _max2; // Min/Max, shared, atomically updated
+  private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+  static private final long _min2Offset;
+  static private final long _max2Offset;
+  static { 
+    try {
+      _min2Offset = _unsafe.objectFieldOffset(DHistogram.class.getDeclaredField("_min2"));
+      _max2Offset = _unsafe.objectFieldOffset(DHistogram.class.getDeclaredField("_max2"));
+    } catch( Exception e ) {
+      throw H2O.fail();
+    }
+  }
+
+  public void setMin( float min ) {
+    float old = _min2;
+    while( min < old && !_unsafe.compareAndSwapInt(this, _min2Offset, Float.floatToRawIntBits(old), Float.floatToRawIntBits(min) ) )
+      old = _min2;
+  }
+  public void setMax( float max ) {
+    float old = _max2;
+    while( max > old && !_unsafe.compareAndSwapInt(this, _max2Offset, Float.floatToRawIntBits(old), Float.floatToRawIntBits(max) ) )
+      old = _max2;
+  }
 
   public DHistogram( String name, final int nbins, final byte isInt, final float min, final float max, long nelems ) {
     assert nelems > 0;
@@ -54,6 +80,8 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     _name = name;
     _min=min;
     _max=max;
+    _min2 =  Float.MAX_VALUE;
+    _max2 = -Float.MAX_VALUE;
     // See if we can show there are fewer unique elements than nbins.
     // Common for e.g. boolean columns, or near leaves.
     int xbins = nbins;
@@ -85,8 +113,8 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
 
   public int nbins() { return _nbin; }
   public long  bins(int b) { return _bins[b]; }
-  public float mins(int b) { return _mins[b]; }
-  public float maxs(int b) { return _maxs[b]; }
+  public float mins(int b) { return _min2; }
+  public float maxs(int b) { return _max2; }
   abstract public double mean(int b);
   abstract public double var (int b);
 
@@ -95,12 +123,6 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   final void init() {
     assert _bins == null;
     _bins = MemoryManager.malloc8 (_nbin);
-    if( DRF._optflags == 0 ) {
-      _mins = MemoryManager.malloc4f(_nbin);
-      Arrays.fill(_mins, Float.MAX_VALUE);
-      _maxs = MemoryManager.malloc4f(_nbin);
-      Arrays.fill(_maxs,-Float.MAX_VALUE);
-    }
     init0();
   }
 
@@ -109,14 +131,12 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   // Compute response mean & variance.
   abstract void incr0( int b, double y );
   final void incr( float col_data, double y ) {
-    assert _min <= col_data && col_data <= _max;
+    assert Double.isNaN(col_data) || (_min <= col_data && col_data <= _max);
     int b = bin(col_data);      // Compute bin# via linear interpolation
     Utils.AtomicLongArray.incr(_bins,b); // Bump count in bin
     // Track actual lower/upper bound per-bin
-    if( DRF._optflags == 0 ) {
-      Utils.AtomicFloatArray.setMin(_mins,b,col_data);
-      Utils.AtomicFloatArray.setMax(_maxs,b,col_data);
-    }
+    setMin(col_data);
+    setMax(col_data);
     if( y != 0 ) incr0(b,y);
   }
 
@@ -129,33 +149,16 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     assert (_bins == null && dsh._bins == null) || (_bins != null && dsh._bins != null);
     if( _bins == null ) return;
     Utils.add(_bins,dsh._bins);
-    if( DRF._optflags == 0 ) {
-      for( int i=0; i<_nbin; i++ ) if( dsh._mins[i] < _mins[i] ) _mins[i] = dsh._mins[i];
-      for( int i=0; i<_nbin; i++ ) if( dsh._maxs[i] > _maxs[i] ) _maxs[i] = dsh._maxs[i];
-    }
+    if( _min2 < _min2 ) _min2 = dsh._min2;
+    if( _max2 > _max2 ) _max2 = dsh._max2;
     add0(dsh);
   }
 
   public float find_min() {
     if( _bins == null ) return Float.NaN;
-    int n = 0;
-    while( n < _nbin && _bins[n]==0 ) n++; // First non-empty bin
-    if( n == _nbin ) return Float.NaN;     // All bins are empty???
-    if( DRF._optflags==0 ) return _mins[n];// Take min from 1st non-empty bin
-    if( n==0 ) return _min;
-    float min = binAt(n);
-    if( _isInt > 0 ) min = (float)Math.ceil(min);
-    return min;
+    return _min2;
   }
-  public float find_max() {
-    int x = _nbin-1;            // Last bin
-    while( _bins[x]==0 ) x--;   // Last non-empty bin
-    if( DRF._optflags==0 ) return _maxs[x];// Take min from 1st non-empty bin
-    if( x== _nbin-1 ) return _max;
-    float max = binAt(x+1);
-    if( _isInt > 0 ) max = (float)Math.floor(max);
-    return max;
-  }
+  public float find_max() { return _max2; }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // Score is the sum of the MSEs when the data is split at a single point.
@@ -200,7 +203,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     sb.append(_name).append(":").append(_min).append("-").append(_max).append(" step="+(1/_step)+" nbins="+nbins()+" isInt="+_isInt);
     if( _bins != null ) {
       for( int b=0; b<_bins.length; b++ ) {
-        sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],_mins[b],_maxs[b]));
+        sb.append(String.format("\ncnt=%d, min=%f, max=%f, mean/var=", _bins[b],mins(b),maxs(b)));
         sb.append(String.format("%6.2f/%6.2f,", mean(b), var(b)));
       }
       sb.append('\n');
@@ -212,13 +215,11 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   public long byteSize() {
     long sum = 8+8;             // Self header
     sum += 1+2;                 // enum; nbin
-    sum += 4+4+4;               // step,min,max
-    sum += 8*3;                 // 3 internal arrays
+    sum += 4+4+4+4+4;           // step,min,max,min2,max2
+    sum += 8*1;                 // 1 internal arrays
     if( _bins == null ) return sum;
     // + 20(array header) + len<<2 (array body)
     sum += 24+_bins.length<<3;
-    sum += 20+_mins.length<<2;
-    sum += 20+_maxs.length<<2;
     sum += byteSize0();
     return sum;
   }

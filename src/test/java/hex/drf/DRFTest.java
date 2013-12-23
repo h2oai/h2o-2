@@ -156,7 +156,7 @@ public class DRFTest extends TestUtil {
     Key destTest  = hexnametest!=null?Key.make(hexnametest):null;
     Frame pred = null;
     try {
-      drf = new DRF(optflags);
+      drf = new DRF();
       frTrain = drf.source = parseFrame(destTrain, fnametrain);
       unifyFrame(drf, frTrain, prep);
       // Configure DRF

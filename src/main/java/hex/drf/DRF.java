@@ -45,8 +45,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @API(help = "Computed number of split features")
   protected int _mtry;
 
-  transient static public int _optflags;
-
   /** DRF model holding serialized tree and implementing logic for scoring a row */
   public static class DRFModel extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -93,10 +91,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], double err, long cm[][], TreeStats tstats) {
     return new DRFModel(model, ktrees, err, cm, tstats);
   }
-  public DRF(int optflags) { description = "Distributed RF"; ntrees = 50; max_depth = 50; min_rows = 1; 
-    _optflags=optflags; 
-    System.out.println("optflags="+_optflags);
-  }
+  public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 999; min_rows = 1; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -172,7 +167,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
     // Final scoring
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, validation==null, build_tree_per_node);
-    System.out.println("Avg depth="+model.treeStats.meanDepth);
     // Compute variable importance if required
     if (classification && importance) {
       float varimp[] = doVarImp(model, fr);
