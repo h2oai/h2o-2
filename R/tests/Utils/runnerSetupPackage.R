@@ -2,6 +2,7 @@ options(echo=F)
 if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source("h2oR.R")
+source("utilsR.R")
 
 ipPort <- get_args(commandArgs(trailingOnly = TRUE))
 failed <<- F
@@ -56,4 +57,17 @@ h2o.init(ip            = ipPort[[1]],
          port          = ipPort[[2]], 
          startH2O      = FALSE, 
          silentUpgrade = TRUE)
+
+##generate master_seed
+
+seed <- NULL
+MASTER_SEED <- FALSE
+if (file.exists("../master_seed")) {
+    MASTER_SEED <<- TRUE
+    seed <- read.table("../master_seed")[[1]]
+}
+seed <- setupRandomSeed(seed, suppress = TRUE)
+if (! file.exists("../master_seed")) {
+    write.table(seed, "../master_seed", row.names = F, col.names = F)
+}
 

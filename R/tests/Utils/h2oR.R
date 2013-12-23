@@ -29,10 +29,12 @@ function(exdir) {
 
 sandbox<-
 function() {
-  unlink("./Rsandbox", TRUE)
-  dir.create("./Rsandbox")
-  h2o.__LOG_COMMAND <- "./Rsandbox/"
-  h2o.__LOG_ERROR   <- "./Rsandbox/"
+  test_name <- R.utils::commandArgs(asValues=TRUE)$"-f"
+  Rsandbox <- paste("./Rsandbox_", test_name, sep = "")
+  unlink(Rsandbox, TRUE)
+  dir.create(Rsandbox)
+  h2o.__LOG_COMMAND <- paste(Rsandbox, "/", sep = "") 
+  h2o.__LOG_ERROR   <- paste(Rsandbox, "/", sep = "") 
   h2o.__changeCommandLog(normalizePath(h2o.__LOG_COMMAND))
   h2o.__changeErrorLog(normalizePath(h2o.__LOG_ERROR))
   h2o.__startLogging()
