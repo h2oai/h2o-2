@@ -20,6 +20,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_predict_fvec(self):
+        SYNDATASETS_DIR = h2o.make_syn_dir()
+
         h2o.beta_features = True
         trees = 6
         timeoutSecs = 20
@@ -34,6 +36,9 @@ class Basic(unittest.TestCase):
             prediction='predict.hex')
         print "generate_predictions end on ", hex_key, " took", time.time() - start, 'seconds'
         print "predict:", h2o.dump_json(predict)
+        csvPredictPathname = SYNDATASETS_DIR + "/" + "iris2.predict.csv"
+        h2o.nodes[0].csv_download(src_key='predict.hex', csvPathname=csvPredictPathname)
+
         inspect = h2o_cmd.runInspect(key='predict.hex')
         print "inspect:", h2o.dump_json(inspect)
 
@@ -49,19 +54,20 @@ class Basic(unittest.TestCase):
         }
 
         predictCols = inspect['cols'][0]
-        diffkeys = [k for k in expectedCols if predictCols[k] != expectedCols[k]]
-        for k in diffkeys:
+        diffKeys = [k for k in expectedCols if predictCols[k] != expectedCols[k]]
+        for k in diffKeys:
             raise Exception ("Checking H2O summary results, wrong %s: %s, should be: %s" % (k, predictCols[k], expectedCols[k]))
 
         expected = {
           "numRows": 150, 
           "numCols": 4, 
-          "byteSize": 4022, 
+          "byteSize": 2843, 
         }
 
-        diffkeys = [k for k in expected if inspect[k] != expected[k]]
-        for k in diffkeys:
-            raise Exception ("%s : %s != %s" % (k, predict[k], expected[k]))
+        diffKeys = [k for k in expected if inspect[k] != expected[k]]
+        print "diffKeys", diffKeys
+        for k in diffKeys:
+            raise Exception ("%s : %s != %s" % (k, inspect[k], expected[k]))
 
 if __name__ == '__main__':
     h2o.unit_main()

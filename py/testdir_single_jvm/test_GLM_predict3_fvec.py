@@ -211,16 +211,16 @@ class Basic(unittest.TestCase):
 
         interceptExpected = -16.603
         print "intercept pct delta:", 100 * (abs(intercept) - abs(interceptExpected))/abs(interceptExpected)
-        self.assertAlmostEqual(intercept, interceptExpected, delta=0.001, msg='intercept %s is too different from %s' % (intercept, interceptExpected))
+        self.assertAlmostEqual(intercept, interceptExpected, delta=0.01, msg='intercept %s is too different from %s' % (intercept, interceptExpected))
 
         avg_errExpected = 0.2463
-        self.assertAlmostEqual(avg_err, avg_errExpected, delta=0.001, msg='avg_err %s is too different from %s' % (avg_err, avg_errExpected))
+        self.assertAlmostEqual(avg_err, avg_errExpected, delta=0.01*avg_errExpected, msg='avg_err %s is too different from %s' % (avg_err, avg_errExpected))
 
         C34expected = 3.541
         print "C34 pct delta:", "%0.2f" % 100 * (abs(C34) - abs(C34expected))/abs(C34expected)
-        self.assertAlmostEqual(C34, C34expected, delta=0.001, msg='coefficient 34 %s is too different from %s' % (C34, C34expected))
+        self.assertAlmostEqual(C34, C34expected, delta=0.001*C34expected, msg='coefficient 34 %s is too different from %s' % (C34, C34expected))
         
-        self.assertAlmostEqual(best_threshold, 0.35, delta=0.001, msg='best_threshold %s is too different from %s' % (best_threshold, 0.35))
+        self.assertAlmostEqual(best_threshold, 0.35, delta=0.01*best_threshold, msg='best_threshold %s is too different from %s' % (best_threshold, 0.35))
 
         modelKey = glm['glm_model']['_selfKey']
         predict_and_compare_csvs(model_key=modelKey)

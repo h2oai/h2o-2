@@ -27,7 +27,7 @@ def checkScalarResult(resultInspect, resultKey):
         num_cols = resultInspect0["num_cols"]
         num_rows = resultInspect0["num_rows"]
         cols = resultInspect0["cols"]
-        print "cols:", h2o.dump_json(cols)
+        # print "cols:", h2o.dump_json(cols)
 
     if emsg:
         print "\nKey: '" + str(resultKey) + "' inspect result:\n", h2o.dump_json(resultInspect)
