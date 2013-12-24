@@ -132,13 +132,25 @@ class ASTApply extends AST {
 
   // Parse an infix boolean operator
   static AST parseInfix(Exec2 E, AST ast) {
-    AST inf = null;
+    ASTOp[] nextop = new ASTOp[1];
+    AST inf = parseInfixR(E,ast,1,nextop);
+    return inf == ast ? null : inf;
+  }
+  static AST parseInfixR(Exec2 E, AST ast, int curr_prec, ASTOp[] nextOp) {
+    AST inf = ast;
+    ASTOp[] nextop = new ASTOp[1];
     while( true ) {
-      ASTOp op = ASTOp.parse(E);
-      if( op == null || op._vars.length != 3 ) return inf;
+      ASTOp op = nextop[0] == null ? ASTOp.parse(E) : nextop[0];
+      if( op == null || op._vars.length != 3
+              || op._precedence < curr_prec
+              || (op.leftAssociate() && op._precedence == curr_prec) ) {
+        nextOp[0] = op;
+        return inf;
+      }
       int x = E._x;
-      AST rite = ASTSlice.parse(E);
-      if( rite==null ) E.throwErr("Missing expr or unknown ID",x);
+      AST opr = ASTSlice.parse(E);
+      if( opr==null ) E.throwErr("Missing expr or unknown ID",x);
+      AST rite = parseInfixR(E, opr, op._precedence, nextop);
       ast = inf = make(new AST[]{op,ast,rite},E,x);
     }
   }

@@ -12,7 +12,9 @@ public class ASTFunc extends ASTOp {
   final AST _body;
   final int _tmps;
   Env _env;                     // Captured environment at each apply point
-  ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) { super(vars,vtypes); _body = body; _tmps=tmps; }
+  ASTFunc( String vars[], Type vtypes[], AST body, int tmps ) {
+    super(vars,vtypes,false,OPP_PREFIX,OPA_RIGHT); _body = body; _tmps=tmps;
+  }
   @Override String opStr() { return "fun"; }
   @Override ASTOp make() { throw H2O.fail();} 
   static ASTOp parseFcn(Exec2 E ) {
