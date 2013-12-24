@@ -43,9 +43,14 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     if h2o.beta_features:
         # if we are checking after confusion_matrix for predict, the jsonschema is different
         if 'cms' in rfv:
-            cm = rfv['cms'][5] # take the midpoint one
+            midpoint = len(cms)/2
+            cm = rfv['cms'][-1] # take the last one
         else:
-            cm = rfv['drf_model']['cms'][5] # take the midpoint one
+            cms = rfv['drf_model']['cms']
+            print "number of cms:", len(cms)
+            print "cms[0]:", cms[0]
+            midpoint = len(cms)/2
+            cm = cms[-1] # take the last one
         scoresList = cm
     else:
         cm = rfv['confusion_matrix']
