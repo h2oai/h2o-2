@@ -139,7 +139,7 @@ class Basic(unittest.TestCase):
             ## print "rfView:", h2o.dump_json(rfView)
 
             rf_model = rfView['drf_model']
-            cm = rf_model['cm']
+            cm = rf_model['cms']
             ### print "cm:", h2o.dump_json(cm)
             ntrees = rf_model['N']
             errs = rf_model['errs']

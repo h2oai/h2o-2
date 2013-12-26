@@ -124,7 +124,7 @@ class Basic(unittest.TestCase):
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cm']
+                cm = gbmTrainView['gbm_model']['cms'][-1] # use the last one
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
                 print "Last line of this cm might be NAs, not CM"
                 print "\nTrain\n==========\n"
@@ -155,7 +155,7 @@ class Basic(unittest.TestCase):
 
                     # errrs from end of list? is that the last tree?
                     # all we get is cm
-                    cm = gbmPredictCMResult['cm']
+                    cm = gbmPredictCMResult['cms'][-1] # use the last one
 
                     # These will move into the h2o_gbm.py
                     pctWrong = h2o_gbm.pp_cm_summary(cm);

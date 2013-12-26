@@ -171,7 +171,7 @@ h2o.__checkClientHealth <- function(client) {
     elapsed <- node$elapsed_time
     nport <- unlist(strsplit(node$name, ":"))[2]
     if(!status) h2o.__cloudSick(node_name = node$name, client = client)
-    if(elapsed > 35000) h2o.__cloudSick(node_name = NULL, client = client)
+    if(elapsed > 45000) h2o.__cloudSick(node_name = NULL, client = client)
     if(elapsed > 10000) {
         Sys.sleep(5)
         lapply(grabCloudStatus(client)$nodes, checker, client)

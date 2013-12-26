@@ -74,7 +74,7 @@ class Basic(unittest.TestCase):
         for (execExpr, expectedResult) in zip(exprList, resultList):
             resultKey = "R" + str(trial)
             (execResultInspect, min_value) = h2e.exec_expr(None, resultKey + '=' + execExpr, 
-                resultKey=resultKey, timeoutSecs=4)
+                resultKey=None, timeoutSecs=4)
 
             print "trial: #" + str(trial), min_value, execExpr
             print "min_value: %s  expectedResult: %s" % (min_value, expectedResult)

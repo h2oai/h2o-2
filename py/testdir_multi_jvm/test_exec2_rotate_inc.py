@@ -80,11 +80,12 @@ class Basic(unittest.TestCase):
 
                 print "min_value:", min_value, "execExpr:", execExpr, "number:", number
                 h2o.verboseprint("min: ", min_value, "trial:", trial)
-                self.assertEqual(int(min_value), int(number),
-                    'Although the memory model allows write atomicity to be violated,' +
-                    'this test was passing with an assumption of multi-jvm write atomicity' + 
-                    'Be interesting if ever fails. Can disable assertion if so, and run without check')
-
+                self.assertEqual(int(min_value), int(number))
+                # we're talking to just one node. ignore this comment
+                #    'Although the memory model allows write atomicity to be violated,' +
+                #    'this test was passing with an assumption of multi-jvm write atomicity' + 
+                #    'Be interesting if ever fails. Can disable assertion if so, and run without check')
+#
                 ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
                 trial += 1
 

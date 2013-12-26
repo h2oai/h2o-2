@@ -3,7 +3,6 @@ package water.util;
 import hex.rng.*;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
-
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
@@ -11,11 +10,13 @@ import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.zip.*;
+import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen.FieldDoc;
+import water.nbhm.UtilUnsafe;
+import water.parser.ParseDataset.Compression;
 import water.parser.ParseDataset;
 import water.parser.ValueString;
-import water.parser.ParseDataset.Compression;
 
 public class Utils {
   /** Returns the index of the largest value in the array.
@@ -872,5 +873,67 @@ public class Utils {
       for (int j=0; j<cs.length(); j++)
         if (s.charAt(i) == cs.charAt(j)) return true;
     return false;
+  }
+
+
+  // Atomically-updated float array
+  public static class AtomicFloatArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Fbase  = _unsafe.arrayBaseOffset(float[].class);
+    private static final int _Fscale = _unsafe.arrayIndexScale(float[].class);
+    private static long rawIndex(final float[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Fbase + idx * _Fscale;
+    }
+    static public void setMin( float fs[], int i, float min ) {
+      float old = fs[i];
+      while( min < old && !_unsafe.compareAndSwapInt(fs,rawIndex(fs,i), Float.floatToRawIntBits(old), Float.floatToRawIntBits(min) ) )
+        old = fs[i];
+    }
+    static public void setMax( float fs[], int i, float max ) {
+      float old = fs[i];
+      while( max > old && !_unsafe.compareAndSwapInt(fs,rawIndex(fs,i), Float.floatToRawIntBits(old), Float.floatToRawIntBits(max) ) )
+        old = fs[i];
+    }
+    static public String toString( float fs[] ) {
+      SB sb = new SB();
+      sb.p('[');
+      for( float f : fs )
+        sb.p(f==Float.MAX_VALUE ? "max": (f==-Float.MAX_VALUE ? "min": Float.toString(f))).p(',');
+      return sb.p(']').toString();
+    }
+  }
+
+  // Atomically-updated double array
+  public static class AtomicDoubleArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Dbase  = _unsafe.arrayBaseOffset(double[].class);
+    private static final int _Dscale = _unsafe.arrayIndexScale(double[].class);
+    private static long rawIndex(final double[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Dbase + idx * _Dscale;
+    }
+    static public void add( double ds[], int i, double y ) {
+      double old = ds[i];
+      while( !_unsafe.compareAndSwapLong(ds,rawIndex(ds,i), Double.doubleToRawLongBits(old), Double.doubleToRawLongBits(old+y) ) )
+        old = ds[i];
+    }
+  }
+
+  // Atomically-updated long array.  Instead of using the similar JDK pieces,
+  // allows the bare array to be exposed for fast readers.
+  public static class AtomicLongArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Lbase  = _unsafe.arrayBaseOffset(long[].class);
+    private static final int _Lscale = _unsafe.arrayIndexScale(long[].class);
+    private static long rawIndex(final long[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Lbase + idx * _Lscale;
+    }
+    static public void incr( long ls[], int i ) {
+      long old = ls[i];
+      while( !_unsafe.compareAndSwapLong(ls,rawIndex(ls,i), old, old+1) )
+        old = ls[i];
+    }
   }
 }

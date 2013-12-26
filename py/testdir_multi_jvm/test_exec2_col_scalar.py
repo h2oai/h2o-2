@@ -7,8 +7,8 @@ zeroList = [
         # 'ScalarRes0 = cA[0,0]',
 
         # shouldn't this create a key?
-        'ScalarRes0 = cA[1,1]',
-        # 'ScalarRes0 = c(cA[1,1])',
+        # 'ScalarRes0 = cA[1,1]',
+        'ScalarRes0 = c(cA[1,1])',
         'ScalarRes1 = c(cA[1,1])',
         'ScalarRes2 = c(cA[1,1])',
         'ScalarRes3 = c(cA[1,1])',
