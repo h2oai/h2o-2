@@ -197,9 +197,9 @@ class ASTTan  extends ASTPrefixOp { String opStr(){ return "tan";   } ASTOp make
 class ASTACos extends ASTPrefixOp { String opStr(){ return "acos";  } ASTOp make() {return new ASTACos();} double op(double d) { return Math.acos(d);}}
 class ASTASin extends ASTPrefixOp { String opStr(){ return "asin";  } ASTOp make() {return new ASTASin();} double op(double d) { return Math.asin(d);}}
 class ASTATan extends ASTPrefixOp { String opStr(){ return "atan";  } ASTOp make() {return new ASTATan();} double op(double d) { return Math.atan(d);}}
-class ASTCosh  extends ASTPrefixOp { String opStr(){ return "cosh";   } ASTOp make() {return new ASTCosh ();} double op(double d) { return Math.cosh(d);}}
-class ASTSinh  extends ASTPrefixOp { String opStr(){ return "sinh";   } ASTOp make() {return new ASTSinh ();} double op(double d) { return Math.sinh(d);}}
-class ASTTanh  extends ASTPrefixOp { String opStr(){ return "tanh";   } ASTOp make() {return new ASTTanh ();} double op(double d) { return Math.tanh(d);}}
+class ASTCosh extends ASTPrefixOp { String opStr(){ return "cosh";  } ASTOp make() {return new ASTCosh ();} double op(double d) { return Math.cosh(d);}}
+class ASTSinh extends ASTPrefixOp { String opStr(){ return "sinh";  } ASTOp make() {return new ASTSinh ();} double op(double d) { return Math.sinh(d);}}
+class ASTTanh extends ASTPrefixOp { String opStr(){ return "tanh";  } ASTOp make() {return new ASTTanh ();} double op(double d) { return Math.tanh(d);}}
 
 class ASTAbs  extends ASTPrefixOp { String opStr(){ return "abs";   } ASTOp make() {return new ASTAbs ();} double op(double d) { return Math.abs(d);}}
 class ASTSgn  extends ASTPrefixOp { String opStr(){ return "sgn" ;  } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}

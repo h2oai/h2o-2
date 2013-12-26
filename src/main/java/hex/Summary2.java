@@ -331,14 +331,38 @@ public class Summary2 extends Iced {
     double[] ds = MemoryManager.malloc8d(_mins.length);
     int i = 0, j = 0;
     for (int k = 0; k < ds.length; k++)
-      ds[k] = _mins[i] < other._mins[j] ? _mins[i++] : Double.isNaN(other._mins[j]) ? _mins[i++] : other._mins[j++];
+      if (_mins[i] < other._mins[j])
+        ds[k] = _mins[i++];
+      else if (Double.isNaN(other._mins[j]))
+        ds[k] = _mins[i++];
+      else {            // _min[i] >= other._min[j]
+        if (_mins[i] == other._mins[j]) i++;
+        ds[k] = other._mins[j++];
+      }
     System.arraycopy(ds,0,_mins,0,ds.length);
 
-    i = j = _maxs.length - 1;
-    for (int k = ds.length - 1; k >= 0; k--)
-      ds[k] = _maxs[i] > other._maxs[j] ? _maxs[i--] : Double.isNaN(other._maxs[j]) ? _maxs[i--] : other._maxs[j--];
-    System.arraycopy(ds,0,_maxs,0,ds.length);
+    for (i = _maxs.length - 1; Double.isNaN(_maxs[i]); i--) if (i == 0) {i--; break;}
+    for (j = _maxs.length - 1; Double.isNaN(other._maxs[j]); j--) if (j == 0) {j--; break;}
 
+    ds = MemoryManager.malloc8d(i + j + 2);
+    // merge two maxs, meanwhile deduplicating
+    int k = 0, ii = 0, jj = 0;
+    while (ii <= i && jj <= j) {
+      if (_maxs[ii] < other._maxs[jj])
+        ds[k] = _maxs[ii++];
+      else if (_maxs[ii] > other._maxs[jj])
+        ds[k] = other._maxs[jj++];
+      else { // _maxs[ii] == other.maxs[jj]
+        ds[k] = _maxs[ii++];
+        jj++;
+      }
+      k++;
+    }
+    while (ii <= i) ds[k++] = _maxs[ii++];
+    while (jj <= j) ds[k++] = other._maxs[jj++];
+
+    System.arraycopy(ds,Math.max(0, k - _maxs.length),_maxs,0,Math.min(k,_maxs.length));
+    for (int t = k; t < _maxs.length; t++) _maxs[t] = Double.NaN;
     return this;
   }
 
