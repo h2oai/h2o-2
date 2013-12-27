@@ -44,7 +44,7 @@ public class DRFTest extends TestUtil {
           50,
           a( a(30, 0,  0),
              a(0, 31,  3),
-             a(0,  2, 34)),
+             a(0,  3, 33)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -55,10 +55,10 @@ public class DRFTest extends TestUtil {
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
-        a( a(0,  1, 0, 0, 0),
-           a(0, 52, 0, 3, 0),
+        a( a(0,  2, 0, 0, 0),
+           a(0, 52, 0, 3, 1),
            a(0,  0, 0, 0, 0),
-           a(0,  1, 0,17, 1),
+           a(0,  2, 0,16, 2),
            a(0,  0, 0, 0,33)),
         s("3", "4", "5", "6", "8"));
   }
@@ -69,11 +69,11 @@ public class DRFTest extends TestUtil {
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         50,
-        a( a(1,   3, 0,  0,   0),
-           a(0, 206, 0,  1,   0),
+        a( a(0,   4, 0,  0,   0),
+           a(0, 207, 0,  0,   0),
            a(0,   2, 0,  1,   0),
            a(0,   4, 0, 80,   0),
-           a(0,   0, 0,  5, 103)),
+           a(0,   0, 0,  4, 104)),
         s("3", "4", "5", "6", "8"));
   }
 
@@ -174,14 +174,13 @@ public class DRFTest extends TestUtil {
       // Get the model
       DRFModel model = UKV.get(drf.dest());
       // And compare CMs
-      //assertCM(expCM, model.cms[model.cms.length-1]);
+      assertCM(expCM, model.cms[model.cms.length-1]);
       Assert.assertEquals("Number of trees differs!", ntree, model.errs.length-1);
       String[] cmDom = model._domains[model._domains.length-1];
       Assert.assertArrayEquals("CM domain differs!", expRespDom, cmDom);
-      System.out.println("OOBEE "+ Arrays.deepToString(model.cms[model.cms.length-1]));
 
-      //frTest = fnametest!=null ? parseFrame(destTest, fnametest) : null;
-      //pred = drf.score(frTest!=null?frTest:drf.source);
+      frTest = fnametest!=null ? parseFrame(destTest, fnametest) : null;
+      pred = drf.score(frTest!=null?frTest:drf.source);
 
     } catch (Throwable t) {
       t.printStackTrace();
