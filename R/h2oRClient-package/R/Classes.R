@@ -616,21 +616,22 @@ setMethod("histograms", "H2OParsedData", function(object) {
 })
 
 setMethod("summary", "H2OParsedData", function(object) {
+  digits = 12L
   res = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source=object@key)
   cols <- sapply(res$summaries, function(col) {
     if(col$stats$type != 'Enum') { # numeric column
       if(is.null(col$stats$mins) || length(col$stats$mins) == 0) col$stats$mins = NaN
       if(is.null(col$stats$maxs) || length(col$stats$maxs) == 0) col$stats$maxs = NaN
       if(is.null(col$stats$pctile))
-        params = format(rep(round(as.numeric(col$stats$mean), 3), 6), nsmall = 3)
+        params = format(rep(signif(as.numeric(col$stats$mean), digits), 6), digits = 4)
       else
-        params = format(round(as.numeric(c(
+        params = format(signif(as.numeric(c(
           col$stats$mins[1],
           col$stats$pctile[4],
           col$stats$pctile[6],
           col$stats$mean,
           col$stats$pctile[8],
-          col$stats$maxs[1])), 3), nsmall = 3)
+          col$stats$maxs[1])), digits), digits = 4)
       result = c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
                  paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
                  paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep=""))
@@ -780,9 +781,9 @@ setMethod("summary", "H2OParsedDataVA", function(object) {
       if(is.null(res[[i]]$max) || length(res[[i]]$max) == 0) res[[i]]$max = NaN
       if(is.null(res[[i]]$mean) || length(res[[i]]$mean) == 0) res[[i]]$mean = NaN
       if(is.null(res[[i]]$percentiles))
-        params = format(rep(round(as.numeric(res[[i]]$mean), 3), 6), nsmall = 3)
+        params = format(rep(round(as.numeric(res[[i]]$mean), 3), 6))
       else
-        params = format(round(as.numeric(c(res[[i]]$min[1], res[[i]]$percentiles$values[4], res[[i]]$percentiles$values[6], res[[i]]$mean, res[[i]]$percentiles$values[8], res[[i]]$max[1])), 3), nsmall = 3)
+        params = format(round(as.numeric(c(res[[i]]$min[1], res[[i]]$percentiles$values[4], res[[i]]$percentiles$values[6], res[[i]]$mean, res[[i]]$percentiles$values[8], res[[i]]$max[1])), 3))
       result = cbind(result, c(paste("Min.   :", params[1], "  ", sep=""), paste("1st Qu.:", params[2], "  ", sep=""),
                                paste("Median :", params[3], "  ", sep=""), paste("Mean   :", params[4], "  ", sep=""),
                                paste("3rd Qu.:", params[5], "  ", sep=""), paste("Max.   :", params[6], "  ", sep="")))
