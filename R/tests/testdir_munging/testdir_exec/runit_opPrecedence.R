@@ -16,9 +16,9 @@ test.op.precedence <- function(conn) {
     s1 = a + b * c
     s2 = a - b - c
     s3 = a ^ 2 ^ 3
-    s4 = a == b && c
+    s4 = a == b & c
     s5 = a == b + c
-    s6 = a || b && c
+    s6 = a | b & c
 
     Log.info("Check A + B * C.")
     S1 = as.data.frame(get.eval.result(conn, "A + B * C"))
@@ -32,16 +32,16 @@ test.op.precedence <- function(conn) {
     S3 = as.data.frame(get.eval.result(conn, "A ^ 2 ^ 3"))
     expect_that(all(S3 == s3), equals(T))
 
-    Log.info("Check A == B && C.")
-    S4 = as.data.frame(get.eval.result(conn, "A == B && C"))
+    Log.info("Check A == B & C.")
+    S4 = as.data.frame(get.eval.result(conn, "A == B & C"))
     expect_that(all(S4 == s4), equals(T))
 
     Log.info("Check A == B + C.")
     S5 = as.data.frame(get.eval.result(conn, "A == B + C"))
     expect_that(all(S5 == s5), equals(T))
 
-    Log.info("Check A || B && C.")
-    S6 = as.data.frame(get.eval.result(conn, "A || B && C"))
+    Log.info("Check A | B & C.")
+    S6 = as.data.frame(get.eval.result(conn, "A | B & C"))
     expect_that(all(S6 == s6), equals(T))
 
     testEnd()

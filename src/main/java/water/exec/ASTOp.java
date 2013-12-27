@@ -423,8 +423,8 @@ class ASTGT   extends ASTBinOp { ASTGT()   { super(OPP_GT,     OPA_LEFT); } Stri
 class ASTGE   extends ASTBinOp { ASTGE()   { super(OPP_GE,     OPA_LEFT); } String opStr(){ return ">=" ;} ASTOp make() {return new ASTGE  ();} double op(double d0, double d1) { return d0>=d1?1:0;}}
 class ASTEQ   extends ASTBinOp { ASTEQ()   { super(OPP_EQ,     OPA_LEFT); } String opStr(){ return "==" ;} ASTOp make() {return new ASTEQ  ();} double op(double d0, double d1) { return d0==d1?1:0;}}
 class ASTNE   extends ASTBinOp { ASTNE()   { super(OPP_NE,     OPA_LEFT); } String opStr(){ return "!=" ;} ASTOp make() {return new ASTNE  ();} double op(double d0, double d1) { return d0!=d1?1:0;}}
-class ASTLA   extends ASTBinOp { ASTLA()   { super(OPP_AND,    OPA_LEFT); } String opStr(){ return "&&" ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0)?1:0;}}
-class ASTLO   extends ASTBinOp { ASTLO()   { super(OPP_OR,     OPA_LEFT); } String opStr(){ return "||" ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0)?0:1;}}
+class ASTLA   extends ASTBinOp { ASTLA()   { super(OPP_AND,    OPA_LEFT); } String opStr(){ return "&" ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0)?1:0;}}
+class ASTLO   extends ASTBinOp { ASTLO()   { super(OPP_OR,     OPA_LEFT); } String opStr(){ return "|" ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0)?0:1;}}
 
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
