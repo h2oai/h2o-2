@@ -241,7 +241,7 @@ public class Vec extends Iced {
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
     } else {                 // KV store reports we need to recompute
       RollupStats rs = new RollupStats().dfork(this);
-      if(fs != null) fs.add(rs); else rs.getResult();
+      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult()); 
     }
     return this;
   }
