@@ -3,6 +3,7 @@
 
 ;; TAGS!!!
 ;;rm TAGS; ctags -e --recurse=yes --extra=+q --fields=+fksaiS src
+(setq confirm-kill-emacs 'yes-or-no-p)
 
 ;; JavaDoc help on F1
 (require 'javadoc-help)

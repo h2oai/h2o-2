@@ -389,7 +389,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       int tmax = _tree.len();   // Number of total splits in tree K
       for( int leaf=leafk; leaf<tmax; leaf++ ) { // Visit all the new splits (leaves)
         DTree.UndecidedNode udn = _tree.undecided(leaf);
-        //System.out.println("Class "+(_fr2.vecs()[_ncols]._domain[_k])+",\n  Undecided node:"+udn);
+        //System.out.println((_nclass==1?"Regression":("Class "+_fr2.vecs()[_ncols]._domain[_k]))+",\n  Undecided node:"+udn);
         // Replace the Undecided with the Split decision
         DTree.DecidedNode dn = makeDecided(udn,sbh._hcs[leaf-leafk]);
         //System.out.println("--> Decided node: " + dn);

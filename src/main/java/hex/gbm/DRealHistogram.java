@@ -14,8 +14,8 @@ import water.util.Utils;
 public class DRealHistogram extends DHistogram<DRealHistogram> {
   private double _sums[], _ssqs[]; // Sums & square-sums, shared, atomically incremented
 
-  public DRealHistogram( String name, final int nbins, byte isInt, float min, float max, long nelems ) {
-    super(name,nbins,isInt,min,max,nelems);
+  public DRealHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems ) {
+    super(name,nbins,isInt,min,maxEx,nelems);
   }
   @Override boolean isBinom() { return false; }
 
@@ -124,7 +124,7 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
 
     // If the min==max, we can also try an equality-based split
     if( _isInt > 0 && _step == 1.0f &&    // For any integral (not float) column
-        _max-_min+1 > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
+        _maxEx-_min > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
       for( int b=1; b<=nbins-1; b++ ) {
         if( _bins[b] == 0 ) continue; // Ignore empty splits
         long N =        ns0[b+0] + ns1[b+1];

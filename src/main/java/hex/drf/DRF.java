@@ -449,7 +449,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       // Gather all active columns to choose from.
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null ) continue; // Ignore not-tracked cols
-        assert hs[i]._min < hs[i]._max && hs[i].nbins() > 1;
+        assert hs[i]._min < hs[i]._maxEx && hs[i].nbins() > 1 : "broken histo range "+hs[i];
         cols[len++] = i;        // Gather active column
       }
       int choices = len;        // Number of columns I can choose from

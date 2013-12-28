@@ -179,26 +179,35 @@ public class DTree extends Iced {
         // min & max come from the original column data, since splitting on an
         // unrelated column will not change the j'th columns min/max.
         // Tighten min/max based on actual observed data for tracked columns
-        float max, min = h.find_min();
-        if( Float.isNaN(min) ) { min = h._min; max = h._max; }
-        else max = h.find_max();
+        float min, maxEx;
+        if( h._bins == null ) { // Not tracked this last pass?
+          min = h._min;         // Then no improvement over last go
+          maxEx = h._maxEx;
+        } else {                // Else pick up tighter observed bounds
+          min = h.find_min();   // Tracked inclusive lower bound
+          if( h.find_maxIn() == min ) continue; // This column will not split again
+          maxEx = h.find_maxEx(); // Exclusive max
+        }
 
         // Tighter bounds on the column getting split: exactly each new
         // DHistogram's bound are the bins' min & max.
         if( _col==j ) {
           if( _equal ) {        // Equality split; no change on unequals-side
-            if( splat == 1 ) max=min = h.binAt(_bin); // but know exact bounds on equals-side
+            if( splat == 1 ) continue; // but know exact bounds on equals-side - and this col will not split again
           } else {              // Less-than split
             if( h._bins[_bin]==0 )
               throw H2O.unimpl(); // Here I should walk up & down same as split() above.
-            if( splat == 0 ) { max = h.binAt(_bin); if( h._isInt > 0 ) max = h._step==1 ? max-1 : (float)Math.floor(max); } 
-            else {             min = h.binAt(_bin); if( h._isInt > 0 ) min = h._step==1 ? min   : (float)Math.ceil (min); }
+            float split = h.binAt(_bin);
+            if( h._isInt > 0 && h._step != 1 ) split = (float)Math.ceil(split);
+            if( splat == 0 ) maxEx= split;
+            else             min  = split;
           }
         }
-        if( min == max ) continue; // This column will not split again
-        if( min >  max ) continue; // Happens for all-NA subsplits
-        assert min < max && n > 1;
-        nhists[j] = DHistogram.make(h._name,nbins,h._isInt,min,max,n,h.isBinom());
+        if( min == maxEx ) continue; // This column will not split again
+        if( h._isInt > 0 && !(min+1 < maxEx ) ) continue; // This column will not split again
+        if( min >  maxEx ) continue; // Happens for all-NA subsplits
+        assert min < maxEx && n > 1 : ""+min+"<"+maxEx+" n="+n;
+        nhists[j] = DHistogram.make(h._name,nbins,h._isInt,min,maxEx,n,h.isBinom());
         cnt++;                    // At least some chance of splitting
       }
       return cnt == 0 ? null : nhists;
@@ -272,7 +281,7 @@ public class DTree extends Iced {
       final int ncols = _hs.length;
       for( int j=0; j<ncols; j++ )
         if( _hs[j] != null )
-          p(sb,_hs[j]._name+String.format(", %4.1f-%4.1f",_hs[j]._min,_hs[j]._max),colW).append(colPad);
+          p(sb,_hs[j]._name+String.format(", %4.1f-%4.1f",_hs[j]._min,_hs[j]._maxEx),colW).append(colPad);
       sb.append('\n');
       for( int j=0; j<ncols; j++ ) {
         if( _hs[j] == null ) continue;
@@ -295,8 +304,8 @@ public class DTree extends Iced {
           if( h == null ) continue;
           if( i < h.nbins() && h._bins != null ) {
             p(sb, h.bins(i),cntW).append('/');
-            p(sb, h.mins(i),mmmW).append('/');
-            p(sb, h.maxs(i),mmmW).append('/');
+            p(sb, h.binAt(i),mmmW).append('/');
+            p(sb, h.binAt(i+1),mmmW).append('/');
             p(sb, h.mean(i),menW).append('/');
             p(sb, h.var (i),varW).append(colPad);
           } else {
@@ -321,7 +330,7 @@ public class DTree extends Iced {
       if( s.length() <= w ) return p(sb,s,w);
       s = String.format("% 4.2f",d);
       if( s.length() > w )
-        s = String.format("% 4.1f",d);
+        s = String.format("%4.1f",d);
       if( s.length() > w )
         s = String.format("%4.0f",d);
       return p(sb,s,w);
