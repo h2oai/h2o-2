@@ -118,10 +118,18 @@ public class Summary2 extends Iced {
     }
     @Override public void reduce(BasicSummaryTask other){
       for (int c = 0; c < _finite_min.length; c++) {
-        double min = _finite_min[c];
-        double max = _finite_max[c];
-        _finite_min[c] = Double.isNaN(min) ? other._finite_min[c] : Math.min(min, other._finite_min[c]);
-        _finite_max[c] = Double.isNaN(max) ? other._finite_max[c] : Math.max(max, other._finite_max[c]);
+        double min1 = _finite_min[c];
+        double max1 = _finite_max[c];
+        double min2 = other._finite_min[c];
+        double max2 = other._finite_max[c];
+        if (Double.isNaN(min1))
+          _finite_min[c] = min2;
+        else if (!Double.isNaN(min2))
+          _finite_min[c] = Math.min(min1, min2);
+        if (Double.isNaN(max1))
+          _finite_max[c] = max2;
+        else if (!Double.isNaN(max2))
+          _finite_max[c] = Math.max(max1, max2);
       }
     }
   }
@@ -239,10 +247,10 @@ public class Summary2 extends Iced {
     }
     _min = vec.min();_max = vec.max();
     double span = finite_max - finite_min + 1;
-    if( vec.isEnum() && span < MAX_HIST_SZ ) {
-      _start = finite_min;
+    if( vec.isEnum() && _domain.length < MAX_HIST_SZ ) {
+      _start = 0;
       _binsz = 1;
-      hcnt = new long[(int)span];
+      hcnt = new long[_domain.length];
     } else if (!Double.isNaN(finite_min)) {
       // guard against improper parse (date type) or zero c._sigma
       double b = Math.max(1e-4,3.5 * sigma/ Math.cbrt(_nrow));
@@ -317,6 +325,9 @@ public class Summary2 extends Iced {
     long binIdx = val == Double.NEGATIVE_INFINITY ? 0
             : val == Double.POSITIVE_INFINITY ? hcnt.length-1
             : Math.round((val-_start)*1000000.0/_binsz)/1000000;
+    if ((int)binIdx >= hcnt.length) {
+      assert false;
+    }
     ++hcnt[(int)binIdx];
     ++_rows;
   }
@@ -404,10 +415,17 @@ public class Summary2 extends Iced {
       }
     }
     for (int i = 0; i < _mins.length - 1; i++)
-      for (int j = 0; j < i; j++)
+      for (int j = 0; j < i; j++) {
+        if ((int)_mins[j] >= hcnt.length) {
+          System.out.println();
+        }
+        if ((int)_mins[j+1] >= hcnt.length) {
+          System.out.println();
+        }
         if (hcnt[(int)_mins[j]] > hcnt[(int)_mins[j+1]]) {
           double t = _mins[j]; _mins[j] = _mins[j+1]; _mins[j+1] = t;
         }
+      }
     for (int i = 0; i < _maxs.length - 1; i++)
       for (int j = 0; j < i; j++)
         if (hcnt[(int)_maxs[j]] < hcnt[(int)_maxs[j+1]]) {
