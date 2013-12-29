@@ -286,7 +286,7 @@ public class Summary2 extends Iced {
       if (val == 0.) _zeros++;
       int index;
       // update min/max
-      if (Double.isNaN(_mins[_mins.length-1])) {
+      if (val < _mins[_mins.length-1] || Double.isNaN(_mins[_mins.length-1])) {
         index = Arrays.binarySearch(_mins, val);
         if (index < 0) {
           index = -(index + 1);
@@ -295,29 +295,20 @@ public class Summary2 extends Iced {
           _mins[index] = val;
         }
       }
-      if (val < _mins[_mins.length-1]) {
-        index = Arrays.binarySearch(_mins, val);
-        if (index < 0) {
-          index = -(index + 1);
-          for (int j = _mins.length-1; j > index; j--) _mins[j] = _mins[j-1];
-          _mins[index] = val;
-        }
-      }
-      if (Double.isNaN(_maxs[_maxs.length-1])) {
+      boolean hasNan = Double.isNaN(_maxs[_maxs.length-1]);
+      if (val > _maxs[0] || hasNan) {
         index = Arrays.binarySearch(_maxs, val);
         if (index < 0) {
           index = -(index + 1);
-          for (int j = _maxs.length -1; j > index; j--)
-            _maxs[j] = _maxs[j-1];
-          _maxs[index] = val;
-        }
-      }
-      else if (val > _maxs[0]) {
-        index = Arrays.binarySearch(_maxs, val);
-        if (index < 0) {
-          index = -(index + 1);
-          for (int j = 0; j < index-1; j++) _maxs[j] = _maxs[j+1];
-          _maxs[index-1] = val;
+          if (hasNan) {
+            for (int j = _maxs.length -1; j > index; j--)
+              _maxs[j] = _maxs[j-1];
+            _maxs[index] = val;
+          } else {
+            for (int j = 0; j < index-1; j++)
+              _maxs[j] = _maxs[j+1];
+            _maxs[index-1] = val;
+          }
         }
       }
     }
