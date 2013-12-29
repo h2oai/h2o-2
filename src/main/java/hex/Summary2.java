@@ -416,12 +416,6 @@ public class Summary2 extends Iced {
     }
     for (int i = 0; i < _mins.length - 1; i++)
       for (int j = 0; j < i; j++) {
-        if ((int)_mins[j] >= hcnt.length) {
-          System.out.println();
-        }
-        if ((int)_mins[j+1] >= hcnt.length) {
-          System.out.println();
-        }
         if (hcnt[(int)_mins[j]] > hcnt[(int)_mins[j+1]]) {
           double t = _mins[j]; _mins[j] = _mins[j+1]; _mins[j+1] = t;
         }
