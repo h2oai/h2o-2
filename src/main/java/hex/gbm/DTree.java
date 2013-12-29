@@ -3,10 +3,10 @@ package hex.gbm;
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
-import hex.drf.DRF;
+import hex.gbm.DTree.TreeModel.CompressedTree;
+import hex.gbm.DTree.TreeModel.TreeVisitor;
 
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 import water.*;
 import water.api.DocGen;
@@ -587,7 +587,7 @@ public class DTree extends Iced {
       generateModelDescription(sb);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
       String[] domain = _domains[_domains.length-1]; // Domain of response col
-      
+
       // Generate a display using the last scored Model.  Not all models are
       // scored immediately (since scoring can be a big part of model building).
       long cm[][] = null;
@@ -806,7 +806,8 @@ public class DTree extends Iced {
       protected final TreeModel _tm;
       protected final CompressedTree _ct;
       private final AutoBuffer _ts;
-      protected int _depth;
+      protected int _depth; // actual depth
+      protected int _nodes; // number of visited nodes
       public TreeVisitor( TreeModel tm, CompressedTree ct ) {
         _tm = tm;
         _ts = new AutoBuffer((_ct=ct)._bits);
@@ -844,6 +845,7 @@ public class DTree extends Iced {
         if( (rmask & 0x8)==8 ) leaf2(rmask);  else  visit();
         _depth--;
         post(col,fcmp,equal);
+        _nodes++;
       }
     }
 
@@ -965,49 +967,13 @@ public class DTree extends Iced {
     }
 
     // Produce prediction code for one tree
-    protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int tidx, int c) {
+    protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int treeIdx, int classIdx) {
+      // generate top-leve class definition
       sb.nl();
-      sb.i().p("// Tree predictor for ").p(tidx).p("-tree and ").p(c).p("-class").nl();
-      sb.i().p("class Tree_").p(tidx).p("_class_").p(c).p(" {").nl().ii(1);
-      sb.i().p("static final float predict(double[] data) {").nl().ii(1); // predict method for one tree
-      sb.i().p("float pred = ");
-      new TreeVisitor<RuntimeException>(this,cts) {
-        byte _bits[] = new byte[100];
-        float _fs[] = new float[100];
-        @Override protected void pre( int col, float fcmp, boolean equal ) {
-          if( _depth > 0 ) {
-            int b = _bits[_depth-1];
-            assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
-            if( b==1         ) _bits[_depth-1]=3;
-            if( b==1 || b==2 ) sb.p('\n').i(_depth).p("?");
-            if( b==2         ) sb.p(' ').pj(_fs[_depth-1]); // Dump the leaf containing float value
-            if( b==2 || b==3 ) sb.p('\n').i(_depth).p(":");
-          }
-          sb.p(" (data[").p(col).p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
-          assert _bits[_depth]==0;
-          _bits[_depth]=1;
-        }
-        @Override protected void leaf( float pred  ) {
-          assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
-          if( _depth==0) { // it is de-generated tree
-            sb.pj(pred);
-          } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
-            _bits[_depth-1]=2; _fs[_depth-1]=pred;
-          } else {          // Else==2 (prior leaf) or 3 (prior tree)
-            if( _bits[_depth-1] == 2 ) sb.p(" ? ").pj(_fs[_depth-1]).p(" ");
-            else                       sb.p('\n').i(_depth);
-            sb.p(": ").pj(pred);
-          }
-        }
-        @Override protected void post( int col, float fcmp, boolean equal ) {
-          sb.p(')');
-          _bits[_depth]=0;
-        }
-      }.visit();
-      sb.p(";").nl();
-      sb.i(1).p("return pred;").nl().di(1);
-      sb.i().p("}").nl().di(1);
-      sb.i().p("}").nl();
+      sb.i().p("// Tree predictor for ").p(treeIdx).p("-tree and ").p(classIdx).p("-class").nl();
+      sb.i().p("class Tree_").p(treeIdx).p("_class_").p(classIdx).p(" {").nl().ii(1);
+      new TreeJCodeGen(this,cts, sb).generate();
+      sb.i().p("}").nl(); // close the class
     }
   }
 
@@ -1094,6 +1060,89 @@ public class DTree extends Iced {
       p("    System.out.println(\"samplesPredicted: \" + samplesPredicted);").nl().
       p("    System.out.println(\"samplesPredictedPerSecond: \" + samplesPredictedPerSecond);").nl().
       p("  }").nl().
-
   nl();
+
+  static class TreeJCodeGen extends TreeVisitor<RuntimeException> {
+    public static final int MAX_NODES = (1 << 12) / 4; // limit of decision nodes
+    final byte  _bits[]  = new byte [100];
+    final float _fs  []  = new float[100];
+    final SB    _sbs []  = new SB   [100];
+    final int   _nodesCnt[] = new int  [100];
+    SB _sb;
+    SB _csb;
+
+    int _subtrees = 0;
+
+    public TreeJCodeGen(TreeModel tm, CompressedTree ct, SB sb) {
+      super(tm, ct);
+      _sb = sb;
+      _csb = new SB();
+    }
+
+    // code preambule
+    protected void preamble(SB sb, int subtree) throws RuntimeException {
+      String subt = subtree>0?String.valueOf(subtree):"";
+      sb.i().p("static final float predict").p(subt).p("(double[] data) {").nl().ii(1); // predict method for one tree
+      sb.i().p("float pred = ");
+    }
+
+    // close the code
+    protected void closure(SB sb) throws RuntimeException {
+      sb.p(";").nl();
+      sb.i(1).p("return pred;").nl().di(1);
+      sb.i().p("}").nl().di(1);
+    };
+
+    @Override protected void pre( int col, float fcmp, boolean equal ) {
+      if( _depth > 0 ) {
+        int b = _bits[_depth-1];
+        assert b > 0 : Arrays.toString(_bits)+"\n"+_sb.toString();
+        if( b==1         ) _bits[_depth-1]=3;
+        if( b==1 || b==2 ) _sb.p('\n').i(_depth).p("?");
+        if( b==2         ) _sb.p(' ').pj(_fs[_depth-1]); // Dump the leaf containing float value
+        if( b==2 || b==3 ) _sb.p('\n').i(_depth).p(":");
+      }
+      if (_nodes>MAX_NODES) {
+        _sb.p("predict").p(_subtrees).p("(data)");
+        _nodesCnt[_depth] = _nodes;
+        _sbs[_depth] = _sb;
+        _sb = new SB();
+        _nodes = 0;
+        preamble(_sb, _subtrees);
+        _subtrees++;
+      }
+      _sb.p(" (data[").p(col).p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      assert _bits[_depth]==0;
+      _bits[_depth]=1;
+    }
+    @Override protected void leaf( float pred  ) {
+      assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
+      if( _depth==0) { // it is de-generated tree
+        _sb.pj(pred);
+      } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+        _bits[_depth-1]=2; _fs[_depth-1]=pred;
+      } else {          // Else==2 (prior leaf) or 3 (prior tree)
+        if( _bits[_depth-1] == 2 ) _sb.p(" ? ").pj(_fs[_depth-1]).p(" ");
+        else                       _sb.p('\n').i(_depth);
+        _sb.p(": ").pj(pred);
+      }
+    }
+    @Override protected void post( int col, float fcmp, boolean equal ) {
+      _sb.p(')');
+      _bits[_depth]=0;
+      if (_sbs[_depth]!=null) {
+        closure(_sb);
+        _csb.p(_sb);
+        _sb = _sbs[_depth];
+        _nodes = _nodesCnt[_depth];
+        _sbs[_depth] = null;
+      }
+    }
+    public void generate() {
+      preamble(_sb, _subtrees++);
+      visit();
+      closure(_sb);
+      _sb.p(_csb);
+    }
+  }
 }
