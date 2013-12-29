@@ -17,7 +17,7 @@ paramDict = {
     # all the allowed features it says I can. So I'll live with 3 here.
     'mtries': [None,1,2,3],
     # only works on new
-    'min_rows': [None,0,3,5],
+    'min_rows': [None,1,3,5],
     'importance': [None,0,1],
     'classification': [None,0,1],
     'validation': [None, 'poker1000.hex'],
