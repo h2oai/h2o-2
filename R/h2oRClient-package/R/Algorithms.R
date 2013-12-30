@@ -60,7 +60,7 @@ h2o.__getGBMSummary <- function(res, isClassificationAndYesTheBloodyModelShouldR
 h2o.__getGBMResults <- function(res, isClassificationAndYesTheBloodyModelShouldReportIt) {
   result = list()
   if( isClassificationAndYesTheBloodyModelShouldReportIt ){
-    result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
+    result$confusion = build_cm(tail(res$cm, 1)[[1]], tail(res$'_domains', 1)[[1]])  #res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
   } else
     result$classification <- F
@@ -483,7 +483,7 @@ h2o.__getDRFResults <- function(res) {
   rownames(rf_matrix) = c("Depth", "Leaves")
   result$forest = rf_matrix
 
-  result$confusion = build_cm(res$cm, res$'_domains'[[length(res$'_domains')]])
+  result$confusion = build_cm(tail(res$cm, 1)[[1]], tail(res$'_domains', 1)[[1]])  #res$'_domains'[[length(res$'_domains')]])
   result$mse = res$errs
   result$ntree = res$N
   return(result)
@@ -739,6 +739,7 @@ h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = 
 }
 
 build_cm <- function(cm, cf_names) {
+  #browser()
   categories = length(cm)
   cf_matrix = t(matrix(unlist(cm), nrow=categories))
 
@@ -752,3 +753,4 @@ build_cm <- function(cm, cf_names) {
   dimnames(cf_matrix) = list(Actual = c(cf_names, "Totals"), Predicted = c(cf_names, "Error"))
   return(cf_matrix)
 }
+
