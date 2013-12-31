@@ -252,7 +252,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     for( ; depth<max_depth; depth++ ) {
       if( cancelled() ) return null;
 
-      hcs = buildLayer(fr, ktrees, leafs, hcs, false);
+      hcs = buildLayer(fr, ktrees, leafs, hcs, false, false);
 
       // If we did not make any new splits, then the tree is split-to-death
       if( hcs == null ) break;
