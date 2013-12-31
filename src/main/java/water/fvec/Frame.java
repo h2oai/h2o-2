@@ -594,6 +594,8 @@ public class Frame extends Iced {
       long[] rows = (long[])orows;
       if (rows.length==0)
         return new DeepSlice(rows,c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
+      if (rows[0] < 0)
+        return new DeepSlice(rows, c2).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
       // Vec'ize the index array
       AppendableVec av = new AppendableVec("rownames");
       int r = 0;
