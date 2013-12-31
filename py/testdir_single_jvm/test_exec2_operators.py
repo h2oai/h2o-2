@@ -16,14 +16,14 @@ if 1==0:
     exprListSmall = [
     # apply: return vector or array or list of values..applying function to margins of array or matrix
     # margins: either rows(1), coluns(2) or both(1:2)
-        'apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
+        'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
         # doesn't work. Should work according to earl
         # 'r.hex[is.na(r.hex)]<-0',
         "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
     ]
 else:
     exprListSmall = [
-        'apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
+        'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
         'cct.hex=runif(r.hex);rTrain=r.hex[cct.hex<=0.9,];rTest=r.hex[cct.hex>0.9,]',
 
         # 'r<n>[,0] = r0[,0] * r<n-1>[,0]',

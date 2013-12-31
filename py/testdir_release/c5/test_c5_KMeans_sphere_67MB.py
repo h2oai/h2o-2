@@ -77,13 +77,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             h2o.cloudPerfH2O.message(l)
 
             # clear out all NAs (walk across cols)..clear to 0
-            execExpr = 'apply(%s,2,function(x){ifelse(is.na(x),0,x)})' % hex_key
+            execExpr = '%s=apply(%s,2,function(x){ifelse(is.na(x),0,x)})' % (hex_key, hex_key)
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
             inspect = h2o_cmd.runInspect(key=hex_key, timeoutSecs=500)
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             summary = h2o_cmd.runSummary(key=hex_key, timeoutSecs=500)
             h2o_cmd.infoFromSummary(summary)
-
 
             # KMeans ****************************************
             if not DO_KMEANS:
@@ -98,6 +97,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'destination_key': 'junk.hex', 
                 # reuse the same seed, to get deterministic results
                 'seed': 265211114317615310,
+                # 'ignored_cols': 'C0', # get NaNs if col with all NAs is left in. the exec2 clear doesn't seem to work
                 }
 
             if (trial%3)==0:
