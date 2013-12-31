@@ -18,8 +18,9 @@ public class Expr2Test extends TestUtil {
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
 
-      //checkStr("-1");
-      //checkStr("-(1)");
+      checkStr("a=cbind(c(1,2,3), c(4,5,6))");
+      checkStr("-1");
+      checkStr("-(1)");
       checkStr("-T");
       checkStr("-(x = 3)");
       checkStr("1.23");         // 1.23

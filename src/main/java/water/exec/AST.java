@@ -21,7 +21,7 @@ abstract public class AST extends Iced {
     AST ast2, ast = ASTApply.parseInfix(E,null,0);
     if( ast == null ) return ASTAssign.parseNew(E);
     // In case of a slice, try match an assignment
-    if( ast instanceof ASTSlice )
+    if( ast instanceof ASTSlice || ast instanceof ASTId )
       if( (ast2 = ASTAssign.parse(E,ast)) != null ) return ast2;
     // Next try match an IFELSE statement
     if( (ast2 = ASTIfElse.parse(E,ast)) != null ) return ast2;
@@ -139,10 +139,11 @@ class ASTApply extends AST {
       if (op1 != null) {
         if( (ast = parseInfix(E,null,op1._precedence)) == null)
           E.throwErr("Missing expr or unknown ID",E._x);
-        ast = inf = make(new AST[]{op1,ast},E,x);
+        ast = make(new AST[]{op1,ast},E,x);
       } else if( (ast = ASTSlice.parse(E)) == null ) {
-        E.throwErr("Missing expr or unknown ID",E._x);
+        E._x = x; return null;
       }
+      inf = ast;
     }
     while( true ) {
       int op_x = E._x;
@@ -151,7 +152,9 @@ class ASTApply extends AST {
        || op._precedence < curr_prec
        || (op.leftAssociate() && op._precedence == curr_prec) )
       { E._x = op_x; return inf; }
+      op_x = E._x;
       AST rite = parseInfix(E,null,op._precedence);
+      if (rite == null) E.throwErr("Missing expr or unknown ID", op_x);
       ast = inf = make(new AST[]{op,ast,rite},E,x);
     }
   }
