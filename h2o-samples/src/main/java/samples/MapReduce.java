@@ -4,9 +4,11 @@ import java.io.File;
 
 import org.junit.Assert;
 
-import water.*;
+import water.Job;
+import water.MRTask2;
 import water.deploy.VM;
-import water.fvec.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
 
 /**
  * Demonstration of H2O's map-reduce API. This task sums the elements of a column.
@@ -21,11 +23,11 @@ public class MapReduce extends Job {
     //samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
-  @Override protected Status exec() {
+  @Override
+  protected Status exec() {
     // Parse a dataset into a Frame, H2O's distributed table-like data structure
     File file = new File(VM.h2oFolder(), "smalldata/iris/iris.csv");
-    Key fkey = NFSFileVec.make(file);
-    Frame frame = ParseDataset2.parse(Key.make(file.getName()), new Key[] { fkey });
+    Frame frame = Frames.parse(file);
 
     // Create an instance of our custom map-reduce class.
     Sum sum = new Sum();
@@ -61,7 +63,8 @@ public class MapReduce extends Job {
     /**
      * This method is invoked on each chunk of the distributed data structure.
      */
-    @Override public void map(Chunk chunk) {
+    @Override
+    public void map(Chunk chunk) {
       Assert.assertEquals("blah", myInput);
 
       for( int row = 0; row < chunk._len; row++ )
@@ -75,7 +78,8 @@ public class MapReduce extends Job {
     /**
      * This operation will be invoked for each MRTask, to add together sums for each chunk.
      */
-    @Override public void reduce(Sum other) {
+    @Override
+    public void reduce(Sum other) {
       value += other.value;
     }
   }

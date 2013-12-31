@@ -60,4 +60,10 @@ summary(h2o.toy)
 h2o.fit<- h2o.kmeans(h2o.toy, centers=2, cols=c("C0", "C1"), iter.max = 100)
 h2o.fit
 
+
+testEnd()
+}
+
+doTest("K Means example", example.km2toy.golden)
+
 #submitted by AILang, dec 2013 as a quick overview of how the basics of kmeans work in a mathy sense 
