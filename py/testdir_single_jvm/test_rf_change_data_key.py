@@ -85,11 +85,9 @@ class Basic(unittest.TestCase):
         # unless the no_confusion_matrix works
 
         # params is mutable. This is default.
-        print "RF with no_confusion_matrix=1, so we can 'time' the RFView separately after job completion?"
         params = {
             'ntree': 6, 
             'out_of_bag_error_estimate': 0, 
-            'no_confusion_matrix': 1,
             'model_key': 'RF_model'
         }
 
