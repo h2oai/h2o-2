@@ -137,6 +137,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         GLMParams = GLMModel['glm']
     else:
         GLMParams = GLMModel["GLMParams"]
+
     family = GLMParams["family"]
 
     if h2o.beta_features:
@@ -203,6 +204,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     # threshold only there if binomial?
     # auc only for binomial
+    print "kbn family:", family
     if family=="binomial":
         print "%15s %s" % ("auc:\t", validations['auc'])
         if h2o.beta_features:
