@@ -1,6 +1,7 @@
 package water.api;
 
 import water.Boot;
+import water.exec.ASTOp;
 import water.util.RString;
 
 public class Console extends HTMLOnlyRequest {
@@ -15,7 +16,7 @@ public class Console extends HTMLOnlyRequest {
     sb.append("jqconsole.Write(");
     sb.append("'Access keys directly by name (for example `iris.hex`).\\n' +");
     sb.append("'Available functions are:'+");
-    for(String s : water.exec.ASTOp.OPS.keySet())
+    for(String s : ASTOp.UNI_INFIX_OPS.keySet())
       sb.append("'\\n\\t").append(s).append("' +");
     sb.append("'\\n', 'jqconsole-output');");
     return sb.toString();

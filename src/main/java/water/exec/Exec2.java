@@ -30,8 +30,10 @@ public class Exec2 {
   //           id[] := cxexpr      // Deep-copy, then slice assignment
   //           iexpr ? cxexpr : cxexpr  // exprs must have equal types
   //   iexpr := 
-  //           slice {op2 slice}*  // Infix notation, evals LEFT TO RIGHT
-  //   slice := 
+  //           term {op2 term}*  // Infix notation, evals LEFT TO RIGHT
+  //   term  :=
+  //           op1* slice
+  //   slice :=
   //           expr                // Can be a dbl or fcn or ary
   //           expr[]              // whole ary val
   //           expr[,]             // whole ary val
@@ -43,6 +45,7 @@ public class Exec2 {
   //           val(cxexpr,...)*    // Prefix function application, evals LEFT TO RIGHT
   //   val :=
   //           ( cxexpr )          // Ordering evaluation
+  //           { statements }      // compound statement
   //           id                  // any visible var; will be typed
   //           num                 // Scalars, treated as 1x1
   //           op                  // Built-in functions

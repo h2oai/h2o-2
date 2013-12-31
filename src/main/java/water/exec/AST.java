@@ -18,15 +18,15 @@ abstract public class AST extends Iced {
   final transient Type _t;
   AST( Type t ) { assert t != null; _t = t; }
   static AST parseCXExpr(Exec2 E ) {
-    AST ast2, ast = ASTSlice.parse(E);
+    AST ast2, ast = ASTApply.parseInfix(E,null,0);
     if( ast == null ) return ASTAssign.parseNew(E);
-    // Can find an infix: {op expr}*
-    if( (ast2 = ASTApply.parseInfix(E,ast)) != null ) return ast2;
-    // Can find '=' between expressions
-    if( (ast2 = ASTAssign.parse    (E,ast)) != null ) return ast2;
-    // Infix trinary
-    if( (ast2 = ASTIfElse.parse    (E,ast)) != null ) return ast2;
-    return ast;                 // Else a simple slice/expr
+    // In case of a slice, try match an assignment
+    if( ast instanceof ASTSlice )
+      if( (ast2 = ASTAssign.parse(E,ast)) != null ) return ast2;
+    // Next try match an IFELSE statement
+    if( (ast2 = ASTIfElse.parse(E,ast)) != null ) return ast2;
+    // Return the infix: op1* expr {op2 op1* expr}*
+    return ast;
   }
 
   static AST parseVal(Exec2 E ) {
@@ -131,26 +131,27 @@ class ASTApply extends AST {
   }
 
   // Parse an infix boolean operator
-  static AST parseInfix(Exec2 E, AST ast) {
-    ASTOp[] nextop = new ASTOp[1];
-    AST inf = parseInfixR(E,ast,1,nextop);
-    return inf == ast ? null : inf;
-  }
-  static AST parseInfixR(Exec2 E, AST ast, int curr_prec, ASTOp[] nextOp) {
-    AST inf = ast;
-    ASTOp[] nextop = new ASTOp[1];
-    while( true ) {
-      ASTOp op = nextop[0] == null ? ASTOp.parse(E) : nextop[0];
-      if( op == null || op._vars.length != 3
-              || op._precedence < curr_prec
-              || (op.leftAssociate() && op._precedence == curr_prec) ) {
-        nextOp[0] = op;
-        return inf;
+  static AST parseInfix(Exec2 E, AST ast, int curr_prec) {
+    int x = E._x;
+    AST inf = null;
+    if (ast == null) {
+      ASTOp op1 = ASTOp.parseUniInfixOp(E);
+      if (op1 != null) {
+        if( (ast = parseInfix(E,null,op1._precedence)) == null)
+          E.throwErr("Missing expr or unknown ID",E._x);
+        ast = inf = make(new AST[]{op1,ast},E,x);
+      } else if( (ast = ASTSlice.parse(E)) == null ) {
+        E.throwErr("Missing expr or unknown ID",E._x);
       }
-      int x = E._x;
-      AST opr = ASTSlice.parse(E);
-      if( opr==null ) E.throwErr("Missing expr or unknown ID",x);
-      AST rite = parseInfixR(E, opr, op._precedence, nextop);
+    }
+    while( true ) {
+      int op_x = E._x;
+      ASTOp op = ASTOp.parseBinInfixOp(E);
+      if( op == null
+       || op._precedence < curr_prec
+       || (op.leftAssociate() && op._precedence == curr_prec) )
+      { E._x = op_x; return inf; }
+      AST rite = parseInfix(E,null,op._precedence);
       ast = inf = make(new AST[]{op,ast,rite},E,x);
     }
   }
@@ -284,7 +285,7 @@ class ASTId extends AST {
     String var = E.isID();
     if( var == null ) return null;
     // Built-in ops parse as ops, not vars
-    if( ASTOp.OPS.containsKey(var) ) { E._x=x; return null; }
+    if( ASTOp.isOp(var) ) { E._x=x; return null; }
     // See if pre-existing
     for( int d=E.lexical_depth(); d >=0; d-- ) {
       ArrayList<ASTId> asts = E._env.get(d);
@@ -305,7 +306,7 @@ class ASTId extends AST {
     String id = E.isID();
     if( id == null ) return null;
     // Built-in ops parse as ops, not vars
-    if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
+    if( ASTOp.isOp(id) ) { E._x=x; return null; }
     return id;
   }
   @Override void exec(Env env) {
