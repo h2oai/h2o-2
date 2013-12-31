@@ -66,11 +66,11 @@ class Basic(unittest.TestCase):
         # we're going to do a special exec across all the columns to turn them into enums
         # including the duplicate of the output!
         exprList = [
-                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);' + \
-                '<keyX>[,<col1>] = factor(<keyX>[,1]);'  + \
-                '<keyX>[,1] = factor(<keyX>[,<col2>]);'  + \
-                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);' + \
-                '<keyX>[,<col1>] = factor(<keyX>[,1]);'  + \
+                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);',
+                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
+                '<keyX>[,1] = factor(<keyX>[,<col2>]);',
+                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);',
+                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
                 '<keyX>[,1] = factor(<keyX>[,<col2>]);' \
                 ]
 
