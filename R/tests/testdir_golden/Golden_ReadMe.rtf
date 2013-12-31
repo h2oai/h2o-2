@@ -20,6 +20,8 @@ Test: glm2:6 using drugs data (from http://faculty.ucr.edu/~hanneman/linear_mode
 \
 Test: glm2:7 tests tweedie dist on zero inflated poisson and import from url through H2O\
 \
+Test: glm2:8 tests regularized gaussian model between R and glm 2 - currently not expected to pass because deviance statistics, and coefficients are not being correctly specified in H2O. (Jira filed HEX-1465)\
+\
 Test: km2:1 tests vanilla kmeans by clustering on real valued cols from iris, and comparing ordered values of within cluster ss for k=3 \
 \
 Test: km2:2: tests vanilla kmeans by clustering on artificial data (\'93dummydata.csv\'94) with an expected answer. Tests kmeans model descriptives against expected values including the trivial k=1 case, the baseline case that is used by analysts to determine how well the partitioning of k=n accounts for variance observed.  \
