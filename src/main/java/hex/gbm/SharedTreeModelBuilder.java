@@ -266,6 +266,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       int nnids[] = new int[nids._len];
       if( _leaf > 0)            // Prior pass exists?
         score_decide(chks,nids,wrks,tree,nnids);
+      else                      // Just flag all the NA rows
+        for( int row=0; row<nids._len; row++ )
+          if( isDecidedRow((int)nids.at0(row)) ) nnids[row] = -1;
 
       // Pass 2: accumulate all rows, cols into histograms
       if( _subset ) accum_subset(chks,nids,wrks,nnids);
@@ -295,7 +298,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     private void score_decide(Chunk chks[], Chunk nids, Chunk wrks, Chunk tree, int nnids[]) {
       for( int row=0; row<nids._len; row++ ) { // Over all rows
         int nid = (int)nids.at80(row);         // Get Node to decide from
-        if( isDecidedRow(nid)) continue;       // already done
+        if( isDecidedRow(nid)) {               // already done
+          nnids[row] = nid;
+          continue;
+        }
         // Score row against current decisions & assign new split
         boolean oob = isOOBRow(nid);
         if( oob ) nid = oob2Nid(nid); // sampled away - we track the position in the tree

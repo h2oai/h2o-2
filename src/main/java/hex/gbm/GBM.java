@@ -114,6 +114,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     GBMModel model = new GBMModel(outputKey, dataKey, testKey, names, domains, ntrees, max_depth, min_rows, nbins, learn_rate);
     DKV.put(outputKey, model);
 
+    // Tag out rows missing the response column
+    new ExcludeNAResponse().doAll(fr);
+
     // Build trees until we hit the limit
     int tid;
     DTree[] ktrees = null;              // Trees
@@ -140,6 +143,18 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Final scoring
     model = doScoring(model, outputKey, fr, ktrees, tid, tstats, true, false, false);
     cleanUp(fr,t_build); // Shared cleanup
+  }
+
+  // --------------------------------------------------------------------------
+  // Tag out rows missing the response column
+  class ExcludeNAResponse extends MRTask2<ExcludeNAResponse> {
+    @Override public void map( Chunk chks[] ) {
+      Chunk ys = chk_resp(chks);
+      for( int row=0; row<ys._len; row++ )
+        if( ys.isNA0(row) )
+          for( int t=0; t<_nclass; t++ )
+            chk_nids(chks,t).set0(row,-1);
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -317,6 +332,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
           final Chunk ct   = chk_tree(chks,k);
           for( int row=0; row<nids._len; row++ ) {
             int nid = (int)nids.at80(row);
+            if( nid < 0 ) continue;
             ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
             nids.set0(row,0);
           }
@@ -364,7 +380,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         if( tree.root() instanceof LeafNode ) continue;
         for( int row=0; row<nids._len; row++ ) { // For all rows
           int nid = (int)nids.at80(row);         // Get Node to decide from
-          int oldnid = nid;
+          if( nid < 0 ) continue;                // Missing response
           if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
             nid = tree.node(nid)._pid;                  // Then take parent's decision
           DecidedNode dn = tree.decided(nid);           // Must have a decision point
@@ -378,7 +394,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
           // sum-of-residuals (and sum/abs/mult residuals) for all rows in the
           // leaf, and get our prediction from that.
           nids.set0(row,leafnid);
-          if( ress.isNA0(row) ) continue;
+          assert !ress.isNA0(row);
           double res = ress.at0(row);
           double ares = Math.abs(res);
           gs[leafnid-leaf] += _nclass > 1 ? ares*(1-ares) : 1;

@@ -156,8 +156,8 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     assert (_bins == null && dsh._bins == null) || (_bins != null && dsh._bins != null);
     if( _bins == null ) return;
     Utils.add(_bins,dsh._bins);
-    if( _min2  < _min2  ) _min2  = dsh._min2 ;
-    if( _maxIn > _maxIn ) _maxIn = dsh._maxIn;
+    if( _min2  > dsh._min2  ) _min2  = dsh._min2 ;
+    if( _maxIn < dsh._maxIn ) _maxIn = dsh._maxIn;
     add0(dsh);
   }
 

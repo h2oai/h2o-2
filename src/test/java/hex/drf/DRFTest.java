@@ -31,7 +31,7 @@ public class DRFTest extends TestUtil {
           1,
           a( a(6, 0,  0),
              a(0, 7,  0),
-             a(0, 2, 11)),
+             a(0, 3, 10)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -44,7 +44,7 @@ public class DRFTest extends TestUtil {
           50,
           a( a(30, 0,  0),
              a(0, 31,  3),
-             a(0,  3, 33)),
+             a(0,  4, 32)),
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
@@ -56,7 +56,7 @@ public class DRFTest extends TestUtil {
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
         a( a(0,  2, 0, 0, 0),
-           a(0, 52, 0, 3, 1),
+           a(1, 51, 0, 3, 1),
            a(0,  0, 0, 0, 0),
            a(0,  2, 0,16, 2),
            a(0,  0, 0, 0,33)),
@@ -72,8 +72,8 @@ public class DRFTest extends TestUtil {
         a( a(0,   4, 0,  0,   0),
            a(0, 207, 0,  0,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   4, 0, 80,   0),
-           a(0,   0, 0,  4, 104)),
+           a(0,   4, 0, 79,   1),
+           a(0,   0, 1,  3, 104)),
         s("3", "4", "5", "6", "8"));
   }
 
