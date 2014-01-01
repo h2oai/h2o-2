@@ -29,7 +29,8 @@ class Basic(unittest.TestCase):
             print "RF start on ", csvPathname
             dataKeyTrain = 'rTrain.hex'
             start = time.time()
-            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=dataKeyTrain, schema='put')            
+            parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=dataKeyTrain, schema='put',
+                timeoutSecs=120)            
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             print "\n" + csvPathname, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
