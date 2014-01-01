@@ -199,7 +199,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       final int variable = var;
       // WARNING: The code is shuffling all rows not only OOB rows.
       // Hence, after shuffling an OOB row can contain in shuffled column value from non-OOB row
-      // The question is if it affects significatly var imp
+      // The question is if it affects significantly resulting variable importance
       computers[var] = new H2OCountedCompleter() {
         @Override public void compute2() {
           Frame wf = new Frame(f); // create a copy of frame
@@ -267,7 +267,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         // The Boolean Optimization
         // This optimization assumes the 2nd tree of a 2-class system is the
         // inverse of the first.  This is false for DRF (and true for GBM) -
-        // DRF picks a random different set of columns for the 2nd tree.  
+        // DRF picks a random different set of columns for the 2nd tree.
         //if( DTree.CRUNK && k==1 && _nclass==2 ) continue;
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
         boolean isBinom = classification;
@@ -329,8 +329,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     CollectPreds gp = new CollectPreds(ktrees,leafs).doAll(fr,build_tree_per_node);
 
     // Collect leaves stats
-    for (int i=0; i<ktrees.length; i++) 
-      if( ktrees[i] != null ) 
+    for (int i=0; i<ktrees.length; i++)
+      if( ktrees[i] != null )
         ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
     // printGenerateTrees(ktrees);
@@ -367,8 +367,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         for( int row=0; row<nids._len; row++ ) { // For all rows
           int nid = (int)nids.at80(row);         // Get Node to decide from
           // This is out-of-bag row - but we would like to track on-the-fly prediction for the row
-          if( isOOBRow(nid) ) { 
-            nid = oob2Nid(nid); 
+          if( isOOBRow(nid) ) {
+            nid = oob2Nid(nid);
             if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
               nid = tree.node(nid).pid();                 // Then take parent's decision
             DecidedNode dn = tree.decided(nid);           // Must have a decision point
@@ -407,7 +407,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
   }
 
-  @Override protected DecidedNode makeDecided( UndecidedNode udn, DHistogram hs[] ) { 
+  @Override protected DecidedNode makeDecided( UndecidedNode udn, DHistogram hs[] ) {
     return new DRFDecidedNode(udn,hs);
   }
 
