@@ -673,6 +673,7 @@ public class Frame extends Iced {
   private static class DeepSlice extends MRTask2<DeepSlice> {
     final int  _cols[];
     final long _rows[];
+    boolean _ex = true;
     DeepSlice( long rows[], int cols[]) { _cols=cols; _rows=rows;}
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       long rstart = chks[0]._start;
@@ -687,14 +688,22 @@ public class Frame extends Iced {
           if( r < 0 ) {          // Row exclusion
             long er = Math.abs(r) - 2;
             if ( er < rstart) continue;
-            rlo = (int)(er + 1 - rstart);
-            //TODO: handle jumbled row indices ( e.g. -c(1,5,3) )
-            while(rx < _rows.length && (_rows[rx] + 1 == _rows[rx - 1] && rlo < rlen)) {
+            //scoop up all of the rows before the first exclusion
+            if (rx == 1 && ( (int)(er + 1 - rstart)) > 0 && _ex) {
+              rlo = (int)rstart;
+              rhi = (int)(er - rstart);
+              _ex = false;
+              rx--;
+            } else {
+              rlo = (int)(er + 1 - rstart);
+              //TODO: handle jumbled row indices ( e.g. -c(1,5,3) )
+              while(rx < _rows.length && (_rows[rx] + 1 == _rows[rx - 1] && rlo < rlen)) {
+                if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
+                rx++; rlo++;    //Exclude consecutive rows
+              }
+              rhi = rx >= _rows.length ? rlen : (int)Math.abs(_rows[rx] - 1) - 2;
               if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
-              rx++; rlo++;    //Exclude consecutive rows
             }
-            rhi = rx >= _rows.length ? rlen : (int)Math.abs(_rows[rx] - 1) - 2;
-            if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
           } else {              // Positive row list?
             if( r < rstart ) continue;
             rlo = (int)(r-rstart);
