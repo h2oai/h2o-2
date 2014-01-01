@@ -262,7 +262,7 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, timeoutSecs=120, **kwar
             
         rftime      = time.time()-start 
 
-        cm = predictCMResult['cms'][5] # take the midepoint one
+        cm = predictCMResult['cm']
 
         # These will move into the h2o_gbm.py
         pctWrong = h2o_gbm.pp_cm_summary(cm);
