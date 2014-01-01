@@ -140,7 +140,7 @@ public class Exec2 {
 
   // Return an ID string, or null if we get weird stuff or numbers.  Valid IDs
   // include all the operators, except parens (function application) and assignment.
-  // Valid IDs: +   ++   <=  > ! [ ] joe123 ABC 
+  // Valid IDs: + - <=  > ! [ ] joe123 ABC
   // Invalid  : +++ 0joe ( = ) 123.45 1e3
   String isID() {
     skipWS();
@@ -161,7 +161,7 @@ public class Exec2 {
     }
 
     // If first char is special, accept 1 or 2 special chars.
-    // i.e. allow ++ != >= == <= but not = alone
+    // i.e. allow != >= == <= but not = alone
     if( _x>=_buf.length ) return _str.substring(_x-1,_x);
     char c2=_buf[_x];
     if( isDigit(c2) || isLetter(c2) || isWS(c2) || isReserved(c2) ) {
@@ -169,6 +169,12 @@ public class Exec2 {
       return _str.substring(_x-1,_x);
     }
     if( c=='<' && c2=='-' ) { _x--; return null; } // The other assignment operator
+    // Must accept as single letters to avoid ambiguity
+    if( c=='+' || c=='-' ) return _str.substring(_x-1,_x);
+    // One letter look ahead to decide on what to accept
+    if( c=='=' || c=='!' || c=='<' || c =='>' )
+      if ( c2 =='=' ) return _str.substring(++_x-2,_x);
+      else return _str.substring(_x-1,_x);
     _x++;                       // Else accept e.g. <= >= ++ != == etc...
     return _str.substring(_x-2,_x);
   }

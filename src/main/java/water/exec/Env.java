@@ -229,6 +229,10 @@ public class Env extends Iced {
     Integer I = _refcnt.get(vec);
     assert I==null || I>0;
     assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
+    if (I==null) {
+      Vec vmaster = vec.masterVec();
+      if (vmaster!=null) addRef(vmaster);
+    }
     _refcnt.put(vec,I==null?1:I+1);
     return vec;
   }

@@ -18,11 +18,24 @@ public class Expr2Test extends TestUtil {
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
 
-      checkStr("a=cbind(c(1,2,3), c(4,5,6))");
       checkStr("-1");
       checkStr("-(1)");
       checkStr("-T");
       checkStr("-(x = 3)");
+      checkStr("x=c(0,1);!x+1");       // ! has lower precedence
+      checkStr("x=c(1,-2);-+---x");
+      checkStr("x=c(1,-2);--!--x");
+      checkStr("!(y = c(3,4))");
+      checkStr("!x!=1");
+      checkStr("(!x)!=1");
+      checkStr("1+x^2");
+      checkStr("1+x**2");
+      checkStr("x + 2/y");
+      checkStr("x + (2/y)");
+      checkStr("-x + y");
+      checkStr("-(x + y)");
+      checkStr("-x % y");
+      checkStr("-(x % y)");
       checkStr("1.23");         // 1.23
       checkStr(" 1.23 + 2.34"); // 3.57
       checkStr(" 1.23 + 2.34 * 3"); // 10.71, L2R eval order
@@ -122,6 +135,8 @@ public class Expr2Test extends TestUtil {
       checkStr("table(h.hex[,3])");
       checkStr("h.hex[,4] != 29 | h.hex[,2] < 305 & h.hex[,2] < 81");
       checkStr("a=cbind(c(1,2,3), c(4,5,6))");
+      checkStr("a[,1] = factor(a[,1])");
+      checkStr("a[,1] = factor(a[,1])");
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
@@ -134,7 +149,7 @@ public class Expr2Test extends TestUtil {
       //checkStr("map(function(a,b,d){a+b+d},h.hex,h.hex,1)");
       //checkStr("map(function(a,b){a+ncol(b)},h.hex,h.hex)");
 
-      checkStr("a=0;x=0");      // Delete keys from global scope
+      checkStr("a=0;x=0;y=0");      // Delete keys from global scope
 
     } finally {
       UKV.remove(dest);         // Remove original hex frame key

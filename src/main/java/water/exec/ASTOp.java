@@ -50,6 +50,7 @@ public abstract class ASTOp extends AST {
     // Unary infix ops
     putUniInfix(new ASTUniPlus());
     putUniInfix(new ASTUniMinus());
+    putUniInfix(new ASTNot());
     // Binary infix ops
     putBinInfix(new ASTPlus());
     putBinInfix(new ASTSub());
@@ -78,7 +79,6 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTFlr ());
     putPrefix(new ASTLog ());
     putPrefix(new ASTExp ());
-    putPrefix(new ASTNot ());
     putPrefix(new ASTScale());
     putPrefix(new ASTFactor());
     putPrefix(new ASTIsFactor());
@@ -954,13 +954,16 @@ class ASTFactor extends ASTOp {
   @Override ASTOp make() {return new ASTFactor();}
   @Override void apply(Env env, int argcnt) {
     Frame ary = env.popAry();   // Ary pulled from stack, keeps +1 refcnt
+    String skey = env.key();
     if( ary.numCols() != 1 )
       throw new IllegalArgumentException("factor requires a single column");
     Vec v0 = ary.vecs()[0];
     if( !v0.isEnum() ) {        // Frame on the stack is already a factor
       Vec v1 = v0.toEnum();
       Vec vmaster = v1.masterVec(); // Maybe v1 is built over v0?
-      ary = env.addRef(new Frame(ary._names,new Vec[]{v1}));
+      Frame newary = env.addRef(new Frame(ary._names,new Vec[]{v1}));
+      env.subRef(ary,skey);
+      ary = newary;
     }
     env.pop();                  // Pop fcn
     env.push(1);                // Put ary back on stack with same refcnt
