@@ -20,7 +20,11 @@ Test: glm2:6 using drugs data (from http://faculty.ucr.edu/~hanneman/linear_mode
 \
 Test: glm2:7 tests tweedie dist on zero inflated poisson and import from url through H2O\
 \
-Test: glm2:8 tests regularized gaussian model between R and glm 2 - currently not expected to pass because deviance statistics, and coefficients are not being correctly specified in H2O. (Jira filed HEX-1465)\
+\
+Test: glm2:9 **see glm2:10 - which addresses basic matching between glm, glmnet, and h2o glm2.\
+glm2:9 runs a basic gaussian model on 2 predictors and a continuous real dependent, with regularization. does not match as of this writing. See JIRA Hex 1465)\
+\
+Test: glm2:10 tests non regularized glm2 against both glmnet and r\'92s standard glm. We should keep comparison to both r glm tools as a baseline for comparison as we move toward comparing regularized models\
 \
 Test: km2:1 tests vanilla kmeans by clustering on real valued cols from iris, and comparing ordered values of within cluster ss for k=3 \
 \

@@ -48,10 +48,9 @@ Import data files, and inspect the data.
 
 ::
 
-  swiss.hex<- h2o.importFile(H2Oconn, "../smalldata/swiss.csv",
-  + key="swiss.hex")
+  swiss<- h2o.importFile(H2Oconn, "https://raw.github.com/0xdata/h2o/master/smalldata/swiss.csv", key="swiss.hex")
 
-  summary(swiss.hex)
+  summary(swiss)
 
 Summary will return output similar to the following: 
  

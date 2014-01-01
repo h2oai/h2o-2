@@ -41,11 +41,11 @@ import water.util.Utils;
 */
 public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   public final transient String _name; // Column name (for debugging)
-  public final byte _isInt;       // 0: float col, 1: int col, 2: enum & int col
-  public final char _nbin;        // Bin count
-  public final float  _step;      // Linear interpolation step per bin
-  public final float  _min, _maxEx; // Conservative Min/Max over whole collection.  _maxEx is Exclusive.
-  public       long   _bins[];    // Bins, shared, atomically incremented
+  public final byte  _isInt;    // 0: float col, 1: int col, 2: enum & int col
+  public final char  _nbin;     // Bin count
+  public final float _step;     // Linear interpolation step per bin
+  public final float _min, _maxEx; // Conservative Min/Max over whole collection.  _maxEx is Exclusive.
+  public       int   _bins[];   // Bins, shared, atomically incremented
 
   // Atomically updated float min/max
   protected    float  _min2, _maxIn; // Min/Max, shared, atomically updated.  _maxIn is Inclusive.
@@ -62,14 +62,16 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   }
 
   public void setMin( float min ) {
+    int imin = Float.floatToRawIntBits(min);
     float old = _min2;
-    while( min < old && !_unsafe.compareAndSwapInt(this, _min2Offset, Float.floatToRawIntBits(old), Float.floatToRawIntBits(min) ) )
+    while( min < old && !_unsafe.compareAndSwapInt(this, _min2Offset, Float.floatToRawIntBits(old), imin ) )
       old = _min2;
   }
   // Find Inclusive _max2
   public void setMax( float max ) {
+    int imax = Float.floatToRawIntBits(max);
     float old = _maxIn;
-    while( max > old && !_unsafe.compareAndSwapInt(this, _max2Offset, Float.floatToRawIntBits(old), Float.floatToRawIntBits(max) ) )
+    while( max > old && !_unsafe.compareAndSwapInt(this, _max2Offset, Float.floatToRawIntBits(old), imax ) )
       old = _maxIn;
   }
 
@@ -117,7 +119,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   float binAt( int b ) { return _min+b/_step; }
 
   public int nbins() { return _nbin; }
-  public long  bins(int b) { return _bins[b]; }
+  public int bins(int b) { return _bins[b]; }
   public float mins(int b) { return _min2; }
   public float maxsIn(int b) { return _maxIn; } // Always an Inclusive max
   abstract public double mean(int b);
@@ -127,7 +129,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   abstract void init0();
   final void init() {
     assert _bins == null;
-    _bins = MemoryManager.malloc8 (_nbin);
+    _bins = MemoryManager.malloc4(_nbin);
     init0();
   }
 
@@ -138,7 +140,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   final void incr( float col_data, double y ) {
     assert Float.isNaN(col_data) || (_min <= col_data && col_data < _maxEx) : "col_data "+col_data+" out of range "+this;
     int b = bin(col_data);      // Compute bin# via linear interpolation
-    Utils.AtomicLongArray.incr(_bins,b); // Bump count in bin
+    Utils.AtomicIntArray.incr(_bins,b); // Bump count in bin
     // Track actual lower/upper bound per-bin
     setMin(col_data);
     setMax(col_data);
@@ -154,8 +156,8 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     assert (_bins == null && dsh._bins == null) || (_bins != null && dsh._bins != null);
     if( _bins == null ) return;
     Utils.add(_bins,dsh._bins);
-    if( _min2  < _min2  ) _min2  = dsh._min2 ;
-    if( _maxIn > _maxIn ) _maxIn = dsh._maxIn;
+    if( _min2  > dsh._min2  ) _min2  = dsh._min2 ;
+    if( _maxIn < dsh._maxIn ) _maxIn = dsh._maxIn;
     add0(dsh);
   }
 

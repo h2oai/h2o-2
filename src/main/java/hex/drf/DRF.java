@@ -278,7 +278,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Sample - mark the lines by putting 'OUT_OF_BAG' into nid(<klass>) vector
     Sample ss[] = new Sample[_nclass];
     for( int k=0; k<_nclass; k++)
-      if (ktrees[k] != null) ss[k] = new Sample((DRFTree)ktrees[k], sample_rate).dfork(0,new Frame(vec_nids(fr,k)), build_tree_per_node);
+      if (ktrees[k] != null) ss[k] = new Sample((DRFTree)ktrees[k], sample_rate).dfork(0,new Frame(vec_nids(fr,k),vec_resp(fr,k)), build_tree_per_node);
     for( int k=0; k<_nclass; k++)
       if( ss[k] != null ) ss[k].getResult();
 
@@ -291,7 +291,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     for( ; depth<max_depth; depth++ ) {
       if( cancelled() ) return null;
 
-      hcs = buildLayer(fr, ktrees, leafs, hcs, build_tree_per_node);
+      hcs = buildLayer(fr, ktrees, leafs, hcs, true, build_tree_per_node);
 
       // If we did not make any new splits, then the tree is split-to-death
       if( hcs == null ) break;
@@ -482,10 +482,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     final DRFTree _tree;
     final float _rate;
     Sample( DRFTree tree, float rate ) { _tree = tree; _rate = rate; }
-    @Override public void map( Chunk nids ) {
+    @Override public void map( Chunk nids, Chunk ys ) {
       Random rand = _tree.rngForChunk(nids.cidx());
       for( int row=0; row<nids._len; row++ )
-        if( rand.nextFloat() >= _rate )
+        if( rand.nextFloat() >= _rate || Double.isNaN(ys.at0(row)) )
           nids.set0(row, OUT_OF_BAG);     // Flag row as being ignored by sampling
     }
   }

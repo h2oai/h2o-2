@@ -914,8 +914,9 @@ public class Utils {
       return _Dbase + idx * _Dscale;
     }
     static public void add( double ds[], int i, double y ) {
+      long adr = rawIndex(ds,i);
       double old = ds[i];
-      while( !_unsafe.compareAndSwapLong(ds,rawIndex(ds,i), Double.doubleToRawLongBits(old), Double.doubleToRawLongBits(old+y) ) )
+      while( !_unsafe.compareAndSwapLong(ds,adr, Double.doubleToRawLongBits(old), Double.doubleToRawLongBits(old+y) ) )
         old = ds[i];
     }
   }
@@ -931,9 +932,27 @@ public class Utils {
       return _Lbase + idx * _Lscale;
     }
     static public void incr( long ls[], int i ) {
+      long adr = rawIndex(ls,i);
       long old = ls[i];
-      while( !_unsafe.compareAndSwapLong(ls,rawIndex(ls,i), old, old+1) )
+      while( !_unsafe.compareAndSwapLong(ls,adr, old, old+1) )
         old = ls[i];
+    }
+  }
+  // Atomically-updated int array.  Instead of using the similar JDK pieces,
+  // allows the bare array to be exposed for fast readers.
+  public static class AtomicIntArray {
+    private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
+    private static final int _Ibase  = _unsafe.arrayBaseOffset(int[].class);
+    private static final int _Iscale = _unsafe.arrayIndexScale(int[].class);
+    private static long rawIndex(final int[] ary, final int idx) {
+      assert idx >= 0 && idx < ary.length;
+      return _Ibase + idx * _Iscale;
+    }
+    static public void incr( int is[], int i ) {
+      long adr = rawIndex(is,i);
+      int old = is[i];
+      while( !_unsafe.compareAndSwapInt(is,adr, old, old+1) )
+        old = is[i];
     }
   }
 }
