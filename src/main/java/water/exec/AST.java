@@ -24,7 +24,7 @@ abstract public class AST extends Iced {
     if( (ast2 = ASTApply.parseInfix(E,ast)) != null ) return ast2;
     // Can find '=' between expressions
     if( (ast2 = ASTAssign.parse    (E,ast)) != null ) return ast2;
-    // Infix trinay
+    // Infix trinary
     if( (ast2 = ASTIfElse.parse    (E,ast)) != null ) return ast2;
     return ast;                 // Else a simple slice/expr
   }

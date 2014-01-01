@@ -87,6 +87,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'normalize': 1,
                 'initialization': 'Furthest',
                 'destination_key': 'junk.hex', 
+                # we get NaNs if whole col is NA
+                'ignored_cols': 'C0',
                 # reuse the same seed, to get deterministic results
                 'seed': 265211114317615310,
                 }

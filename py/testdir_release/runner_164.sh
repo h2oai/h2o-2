@@ -70,20 +70,25 @@ myPy() {
 }
 
 
-# $DOIT c5/test_c5_KMeans_sphere15_180GB.py || true
-myPy c1 test_c1_rel.py
-myPy c2 test_c2_rel.py
-myPy c3 test_c3_rel.py
-myPy c4 test_c4_four_billion_rows.py
-myPy c8 test_c8_rf_airlines_hdfs.py
-# fails with summary. currently disable summary
-myPy c7 test_c7_rel.py
-# known failure last
-myPy c6 test_c6_hdfs.py
+if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
+then
+    myPy c1 test_c1_rel.py
+    myPy c2 test_c2_rel.py
+    myPy c3 test_c3_rel.py
+    myPy c4 test_c4_four_billion_rows.py
+    myPy c8 test_c8_rf_airlines_hdfs.py
+    # fails with summary. currently disable summary
+    myPy c7 test_c7_rel.py
+    # known failure last
+    myPy c6 test_c6_hdfs.py
 
-# If this one fails, fail this script so the bash dies 
-# We don't want to hang waiting for the cloud to terminate.
-myPy shutdown test_shutdown.py
+    # If this one fails, fail this script so the bash dies 
+    # We don't want to hang waiting for the cloud to terminate.
+    myPy shutdown test_shutdown.py
+else
+    myPy $TESTDIR $TEST
+fi
+
 
 if ps -p $CLOUD_PID > /dev/null
 then

@@ -199,7 +199,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       final int variable = var;
       // WARNING: The code is shuffling all rows not only OOB rows.
       // Hence, after shuffling an OOB row can contain in shuffled column value from non-OOB row
-      // The question is if it affects significatly var imp
+      // The question is if it affects significantly resulting variable importance
       computers[var] = new H2OCountedCompleter() {
         @Override public void compute2() {
           Frame wf = new Frame(f); // create a copy of frame
@@ -267,7 +267,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         // The Boolean Optimization
         // This optimization assumes the 2nd tree of a 2-class system is the
         // inverse of the first.  This is false for DRF (and true for GBM) -
-        // DRF picks a random different set of columns for the 2nd tree.  
+        // DRF picks a random different set of columns for the 2nd tree.
         //if( DTree.CRUNK && k==1 && _nclass==2 ) continue;
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
         boolean isBinom = classification;
@@ -278,7 +278,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Sample - mark the lines by putting 'OUT_OF_BAG' into nid(<klass>) vector
     Sample ss[] = new Sample[_nclass];
     for( int k=0; k<_nclass; k++)
-      if (ktrees[k] != null) ss[k] = new Sample((DRFTree)ktrees[k], sample_rate).dfork(0,new Frame(vec_nids(fr,k)), build_tree_per_node);
+      if (ktrees[k] != null) ss[k] = new Sample((DRFTree)ktrees[k], sample_rate).dfork(0,new Frame(vec_nids(fr,k),vec_resp(fr,k)), build_tree_per_node);
     for( int k=0; k<_nclass; k++)
       if( ss[k] != null ) ss[k].getResult();
 
@@ -291,7 +291,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     for( ; depth<max_depth; depth++ ) {
       if( cancelled() ) return null;
 
-      hcs = buildLayer(fr, ktrees, leafs, hcs, build_tree_per_node);
+      hcs = buildLayer(fr, ktrees, leafs, hcs, true, build_tree_per_node);
 
       // If we did not make any new splits, then the tree is split-to-death
       if( hcs == null ) break;
@@ -329,8 +329,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     CollectPreds gp = new CollectPreds(ktrees,leafs).doAll(fr,build_tree_per_node);
 
     // Collect leaves stats
-    for (int i=0; i<ktrees.length; i++) 
-      if( ktrees[i] != null ) 
+    for (int i=0; i<ktrees.length; i++)
+      if( ktrees[i] != null )
         ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
     // printGenerateTrees(ktrees);
@@ -367,8 +367,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         for( int row=0; row<nids._len; row++ ) { // For all rows
           int nid = (int)nids.at80(row);         // Get Node to decide from
           // This is out-of-bag row - but we would like to track on-the-fly prediction for the row
-          if( isOOBRow(nid) ) { 
-            nid = oob2Nid(nid); 
+          if( isOOBRow(nid) ) {
+            nid = oob2Nid(nid);
             if( tree.node(nid) instanceof UndecidedNode ) // If we bottomed out the tree
               nid = tree.node(nid).pid();                 // Then take parent's decision
             DecidedNode dn = tree.decided(nid);           // Must have a decision point
@@ -407,7 +407,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
   }
 
-  @Override protected DecidedNode makeDecided( UndecidedNode udn, DHistogram hs[] ) { 
+  @Override protected DecidedNode makeDecided( UndecidedNode udn, DHistogram hs[] ) {
     return new DRFDecidedNode(udn,hs);
   }
 
@@ -482,10 +482,10 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     final DRFTree _tree;
     final float _rate;
     Sample( DRFTree tree, float rate ) { _tree = tree; _rate = rate; }
-    @Override public void map( Chunk nids ) {
+    @Override public void map( Chunk nids, Chunk ys ) {
       Random rand = _tree.rngForChunk(nids.cidx());
       for( int row=0; row<nids._len; row++ )
-        if( rand.nextFloat() >= _rate )
+        if( rand.nextFloat() >= _rate || Double.isNaN(ys.at0(row)) )
           nids.set0(row, OUT_OF_BAG);     // Flag row as being ignored by sampling
     }
   }
