@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=28)
+            h2o.build_cloud(3, java_heap_GB=28)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -109,7 +109,7 @@ class Basic(unittest.TestCase):
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cms'][5] # use the mid point
+                cm = gbmTrainView['gbm_model']['cms'][-1]
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
                 print "Last line of this cm might be NAs, not CM"
                 print "\nTrain\n==========\n"
@@ -139,7 +139,7 @@ class Basic(unittest.TestCase):
 
                 # errrs from end of list? is that the last tree?
                 # all we get is cm
-                cm = gbmPredictCMResult['cms'][-1] # use the last one
+                cm = gbmPredictCMResult['cm']
 
                 # These will move into the h2o_gbm.py
                 pctWrong = h2o_gbm.pp_cm_summary(cm);

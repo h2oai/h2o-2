@@ -155,7 +155,7 @@ class Basic(unittest.TestCase):
 
                     # errrs from end of list? is that the last tree?
                     # all we get is cm
-                    cm = gbmPredictCMResult['cms'][-1] # use the last one
+                    cm = gbmPredictCMResult['cm']
 
                     # These will move into the h2o_gbm.py
                     pctWrong = h2o_gbm.pp_cm_summary(cm);

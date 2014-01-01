@@ -1,6 +1,6 @@
 import unittest, time, sys, random, math, json
 sys.path.extend(['.','..','../..','py'])
-import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_common
+import h2o, h2o_cmd, h2o_kmeans, h2o_hosts, h2o_import as h2i, h2o_common, h2o_exec as h2e
 import socket
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -16,7 +16,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # a kludge
         h2o.setup_benchmark_log()
 
-        csvFilename = 'syn_sphere_gen_h1m.csv'
+        csvFilename = 'syn_sphere_gen_h1m_no_na.csv'
         totalBytes = 67306997
         if FROM_HDFS:
             importFolderPath = "datasets/kmeans_big"
@@ -76,6 +76,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 
+            # clear out all NAs (walk across cols)..clear to 0
+            execExpr = '%s=apply(%s,2,function(x){ifelse(is.na(x),0,x)})' % (hex_key, hex_key)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
+            inspect = h2o_cmd.runInspect(key=hex_key, timeoutSecs=500)
+            h2o_cmd.infoFromInspect(inspect, csvPathname)
+            summary = h2o_cmd.runSummary(key=hex_key, timeoutSecs=500)
+            h2o_cmd.infoFromSummary(summary)
+
             # KMeans ****************************************
             if not DO_KMEANS:
                 continue
@@ -89,6 +97,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 'destination_key': 'junk.hex', 
                 # reuse the same seed, to get deterministic results
                 'seed': 265211114317615310,
+                # 'ignored_cols': 'C0', # get NaNs if col with all NAs is left in. the exec2 clear doesn't seem to work
                 }
 
             if (trial%3)==0:

@@ -65,7 +65,7 @@ setMethod("h2o.ls", signature(object="H2OClient", pattern="character"), function
   res = h2o.__remoteSend(object, h2o.__PAGE_VIEWALL, filter=pattern)
   if(length(res$keys) == 0) return(list())
   myList = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
-  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, byrow = TRUE))
+  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, ncol=2,byrow = TRUE))
   colnames(temp) = c("Key", "Bytesize")
   temp$Key = as.character(temp$Key)
   temp$Bytesize = as.numeric(as.character(temp$Bytesize))
