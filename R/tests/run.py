@@ -614,11 +614,12 @@ class RUnitRunner:
             print("")
             sys.exit(1)
 
-    def build_test_list(self, group = None):
+    def build_test_list(self, test_group=None):
         """
         Recursively find the list of tests to run and store them in the object.
         Fills in self.tests and self.tests_not_started.
 
+        @param test_group: Name of the test group of tests to run.
         @return:  none
         """
         if (self.terminated):
@@ -631,9 +632,9 @@ class RUnitRunner:
             for f in files:
                 if (not re.match(".*runit.*\.[rR]", f)):
                     continue
-                if (group is not None):
-                  if group.lower() not in root: #(not re.match(".*" + group.lower() + ".*", f)):
-                    continue
+                if (test_group is not None):
+                    if test_group.lower() not in root:
+                        continue
                 self.add_test(os.path.join(root, f))
 
     def add_test(self, test_path):
@@ -929,16 +930,16 @@ class RUnitRunner:
 #--------------------------------------------------------------------
 
 # Global variables that can be set by the user.
-g_script_name     = ""
-g_base_port       = 40000
-g_num_clouds      = 5
+g_script_name = ""
+g_base_port = 40000
+g_num_clouds = 5
 g_wipe_output_dir = False
-g_test_to_run     = None
-g_test_list_file  = None
-g_test_group      = None
-g_use_cloud       = False
-g_use_ip          = None
-g_use_port        = None
+g_test_to_run = None
+g_test_list_file = None
+g_test_group = None
+g_use_cloud = False
+g_use_ip = None
+g_use_port = None
 
 # Global variables that are set internally.
 g_output_dir = None
@@ -1001,7 +1002,7 @@ def usage():
     print("                  (When this is specified, numclouds is ignored.)")
     print("")
     print("    --testgroup   Test a group of tests by function:")
-    print("                    pca, glm, kmeans, gbm, rf, algos, golden, munging")
+    print("                  pca, glm, kmeans, gbm, rf, algos, golden, munging")
     print("")
     print("    If neither --test nor --testlist is specified, then the list of tests is")
     print("    discovered automatically as files matching '*runit*.R'.")
@@ -1079,7 +1080,7 @@ def parse_args(argv):
         elif (s == "--testgroup"):
             i += 1
             if (i > len(argv)):
-              usage()
+                usage()
             g_test_group = argv[i]
         elif (s == "--usecloud"):
             i += 1
@@ -1091,14 +1092,15 @@ def parse_args(argv):
                 unknown_arg(s)
             g_use_cloud = True
             g_use_ip = m.group(1)
-            portString = m.group(2)
-            g_use_port = int(portString)
+            port_string = m.group(2)
+            g_use_port = int(port_string)
         elif (s == "-h" or s == "--h" or s == "-help" or s == "--help"):
             usage()
         else:
             unknown_arg(s)
 
         i += 1
+
 
 def main(argv):
     """
@@ -1157,8 +1159,6 @@ def main(argv):
                            g_use_cloud, g_use_ip, g_use_port,
                            g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, xmx, g_output_dir)
 
-    
-    
     # Build test list.
     if (g_test_to_run is not None):
         g_runner.add_test(g_test_to_run)
