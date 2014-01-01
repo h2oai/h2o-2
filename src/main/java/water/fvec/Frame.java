@@ -686,6 +686,7 @@ public class Frame extends Iced {
           if( rx >= _rows.length ) break; // All done with row selections
           long r = _rows[rx++]-1;// Next row selector
           if( r < 0 ) {          // Row exclusion
+            if(rx > 0 && _rows[rx - 1] < _rows[rx]) throw H2O.unimpl();
             long er = Math.abs(r) - 2;
             if ( er < rstart) continue;
             //scoop up all of the rows before the first exclusion
