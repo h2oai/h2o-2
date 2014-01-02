@@ -62,12 +62,14 @@ An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, an
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+# Run an RF model on iris data
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
-h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, ntree = 50, depth = 100, 
-classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
+h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, ntree = 50, depth = 100, classwt = c("Iris-versicolor" = 20.0, "Iris-virginica" = 30.0))
+
+# Run an RF model on covtype data
 covPath = system.file("extdata", "covtype.csv", package="h2oRClient")
 covtype.hex = h2o.importFile(localH2O, path = covPath, key = "covtype.hex")
 h2o.randomForest(y = "Cover_Type", x = setdiff(colnames(covtype.hex), c("Cover_Type", "Aspect", "Hillshade_9am")), data = covtype.hex, ntree = 50, depth = 150)
