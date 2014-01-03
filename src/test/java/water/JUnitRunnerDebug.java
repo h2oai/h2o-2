@@ -40,6 +40,7 @@ public class JUnitRunnerDebug {
       // Classes to test:
       // tests = JUnitRunner.all();
       tests.add(hex.NeuralNetSpiralsTest.class);
+      tests.add(hex.NeuralNetIrisTest.class);
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}
