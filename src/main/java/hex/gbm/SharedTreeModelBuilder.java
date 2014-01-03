@@ -13,6 +13,17 @@ import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
+// Build (distributed) Trees.  Used for both Gradiant Boosted Method and Random
+// Forest, and really could be used for any decision-tree builder.
+// 
+// While this is a wholly H2O-design, we found these papers afterwards that
+// describes our design fairly well.
+//   Parallel GBRT http://www.cse.wustl.edu/~kilian/papers/fr819-tyreeA.pdf
+//   Streaming parallel decision tree http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
+// Note that our dynamic Histogram technique is different (surely faster, and
+// probably less mathematically clean).  I'm sure a host of other smaller details 
+// differ also - but in the Big Picture the paper and our algorithm are similar.
+
 public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -272,7 +283,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
       // Pass 2: accumulate all rows, cols into histograms
       if( _subset ) accum_subset(chks,nids,wrks,nnids);
-      else          accum_all   (chks,nids,wrks,nnids);
+      else          accum_all   (chks,     wrks,nnids);
     }
 
     @Override public void reduce( ScoreBuildHistogram sbh ) {
@@ -299,7 +310,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       for( int row=0; row<nids._len; row++ ) { // Over all rows
         int nid = (int)nids.at80(row);         // Get Node to decide from
         if( isDecidedRow(nid)) {               // already done
-          nnids[row] = nid;
+          nnids[row] = (nid-_leaf);
           continue;
         }
         // Score row against current decisions & assign new split
@@ -308,23 +319,31 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         DTree.DecidedNode dn = _tree.decided(nid);
         if( dn._split._col == -1 ) { // Might have a leftover non-split
           nid = dn._pid;             // Use the parent split decision then
-          nids.set0(row, (nnids[row] = oob ? nid2Oob(nid) : nid)); 
+          int xnid = oob ? nid2Oob(nid) : nid;
+          nids.set0(row, xnid); 
+          nnids[row] = xnid-_leaf;
           dn = _tree.decided(nid); // Parent steers us
         }
         assert !isDecidedRow(nid);
         nid = dn.ns(chks,row); // Move down the tree 1 level
-        if( !isDecidedRow(nid) ) nids.set0(row, (nnids[row] = oob ? nid2Oob(nid) : nid));
+        if( !isDecidedRow(nid) ) {
+          int xnid = oob ? nid2Oob(nid) : nid;
+          nids.set0(row, xnid);
+          nnids[row] = xnid-_leaf;
+        } else {
+          nnids[row] = nid-_leaf;
+        }
       }
     }
 
     // All rows, some cols, accumulate histograms
     private void accum_subset(Chunk chks[], Chunk nids, Chunk wrks, int nnids[]) {
-      for( int row=0; row<nids._len; row++ ) { // Over all rows
-        int nid = nnids[row];                  // Get Node to decide from
-        if( nid >= _leaf ) {    // row already predicts perfectly or OOB
+      for( int row=0; row<nnids.length; row++ ) { // Over all rows
+        int nid = nnids[row];                     // Get Node to decide from
+        if( nid >= 0 ) {        // row already predicts perfectly or OOB
           assert !Double.isNaN(wrks.at0(row)); // Already marked as sampled-away
-          DHistogram nhs[] = _hcs[nid-_leaf];
-          int sCols[] = _tree.undecided(nid)._scoreCols; // Columns to score (null, or a list of selected cols)
+          DHistogram nhs[] = _hcs[nid];
+          int sCols[] = _tree.undecided(nid+_leaf)._scoreCols; // Columns to score (null, or a list of selected cols)
           for( int j=0; j<sCols.length; j++) { // For tracked cols
             final int c = sCols[j];
             nhs[c].incr((float)chks[c].at0(row),wrks.at0(row)); // Histogram row/col
@@ -333,20 +352,79 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       }
     }
 
-    // All rows, all cols, accumulate histograms
-    private void accum_all(Chunk chks[], Chunk nids, Chunk wrks, int nnids[]) {
+    // All rows, all cols, accumulate histograms.  This is the hot hot inner
+    // loop of GBM, so we do some non-standard optimizations.  The rows in this
+    // chunk are spread out amongst a modest set of NodeIDs/splits.  Normally
+    // we would visit the rows in row-order, but this visits the NIDs in random
+    // order.  The hot-part of this code updates the histograms racily (via
+    // atomic updates) - once-per-row.  This optimized version updates the
+    // histograms once-per-NID, but requires pre-sorting the rows by NID.
+    private void accum_all(Chunk chks[], Chunk wrks, int nnids[]) {
+      final DHistogram hcs[][] = _hcs;
+      // Sort the rows by NID, so we visit all the same NIDs in a row
+      // Find the count of unique NIDs in this chunk
+      int nh[] = new int[hcs.length+1];
+      for( int i : nnids ) if( i >= 0 ) nh[i+1]++;
+      // Rollup the histogram of rows-per-NID in this chunk
+      for( int i=0; i<hcs.length; i++ ) nh[i+1] += nh[i];
+      // Splat the rows into NID-groups
+      int rows[] = new int[nnids.length];
+      for( int row=0; row<nnids.length; row++ )
+        if( nnids[row] >= 0 )
+          rows[nh[nnids[row]]++] = row;
+      // rows[] has Chunk-local ROW-numbers now, in-order, grouped by NID.
+      // nh[] lists the start of each new NID, and is indexed by NID+1.
+      accum_all2(chks,wrks,nh,rows);
+    }
+
+    // For all columns, for all NIDs, for all ROWS...
+    private void accum_all2(Chunk chks[], Chunk wrks, int nh[], int[] rows) {
+      final DHistogram hcs[][] = _hcs;
+      // Local temp arrays, no atomic updates.
+      int    bins[] = new int   [nbins];
+      double sums[] = new double[nbins];
+      double ssqs[] = new double[nbins];
+      // For All Columns
       for( int c=0; c<_ncols; c++) { // for all columns
         Chunk chk = chks[c];
-        for( int row=0; row<nids._len; row++ ) { // Over all rows
-          int nid = nnids[row];                  // Get Node to decide from
-          if( nid >= _leaf ) {  // row already predicts perfectly or OOB
-            assert !Double.isNaN(wrks.at0(row)); // Already marked as sampled-away
-            DHistogram h = _hcs[nid-_leaf][c];
-            if( h != null ) {   // Tracking this column?
-              float col_data = (float)chk.at0(row);
-              double resp          = wrks.at0(row);
-              ((DRealHistogram)h).incr(col_data,resp); // Histogram row/col
-            }
+        // For All NIDs
+        for( int n=0; n<hcs.length; n++ ) {
+          final DRealHistogram rh = ((DRealHistogram)hcs[n][c]);
+          if( rh==null ) continue; // Ignore untracked columns in this split
+          final int lo = n==0 ? 0 : nh[n-1];
+          final int hi = nh[n];
+          float min = rh._min2;
+          float max = rh._maxIn;
+          // While most of the time we are limited to nbins, we allow more bins
+          // in a few cases (top-level splits have few total bins across all
+          // the (few) splits) so it's safe to bin more; also categoricals want
+          // to split one bin-per-level no matter how many levels).
+          if( rh._bins.length >= bins.length ) { // Grow bins if needed
+            bins = new int   [rh._bins.length];
+            sums = new double[rh._bins.length];
+            ssqs = new double[rh._bins.length];
+          }
+            
+          // Gather all the data for this set of rows, for 1 column and 1 split/NID
+          // Gather min/max, sums and sum-squares.
+          for( int xrow=lo; xrow<hi; xrow++ ) {
+            int row = rows[xrow];
+            float col_data = (float)chk.at0(row);
+            if( col_data < min ) min = col_data;
+            if( col_data > max ) max = col_data;
+            int b = rh.bin(col_data); // Compute bin# via linear interpolation
+            bins[b]++;                // Bump count in bin
+            double resp = wrks.at0(row);
+            sums[b] += resp;
+            ssqs[b] += resp*resp;
+          }
+
+          // Add all the data into the Histogram (atomically add)
+          rh.setMin(min);       // Track actual lower/upper bound per-bin
+          rh.setMax(max);
+          for( int b=0; b<rh._bins.length; b++ ) { // Bump counts in bins
+            if( bins[b] != 0 ) { Utils.AtomicIntArray.add(rh._bins,b,bins[b]); bins[b]=0; }
+            if( ssqs[b] != 0 ) { rh.incr1(b,sums[b],ssqs[b]); sums[b]=ssqs[b]=0; }
           }
         }
       }

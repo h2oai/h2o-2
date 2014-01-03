@@ -269,7 +269,7 @@ public abstract class VM {
           String path = new File(s).getCanonicalPath();
           if( path.startsWith(h2o) )
             path = path.substring(h2o.length() + 1);
-          cp += path.replace('\\', '/');
+          cp += path.replace('\\', '/').replace(" ", "\\ ");
         }
       } catch( IOException e ) {
         throw Log.errRTExcept(e);

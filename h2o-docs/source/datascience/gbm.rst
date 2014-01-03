@@ -72,8 +72,8 @@ Defining a GBM Model
   as the end points of each bin, and the one versus many split for
   each bin. 
 
-  For example, if the factor is split
-  into 5 bins, then the split between the first and second bin, the
+  For example, if the factor is split into 5 bins, H2O orders the bins by 
+  bin number, and then the split between the first and second bin, the
   second and third, the third and fourth, and the fourth and fifth are 
   considered. Additionally the split that comes of splitting the first
   bin from the other four, and all analogous splits for the other four

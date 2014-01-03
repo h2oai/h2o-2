@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
         GBMResult = h2o_cmd.runGBM(parseResult=parseResult, **kwargs)
         elapsed = time.time() - start
         print "GBM training completed in", elapsed, "seconds."
-        h2o_gbm.showGBMGridResults(GBMResult, 10)
+        h2o_gbm.showGBMGridResults(GBMResult, 15)
 
 
 if __name__ == '__main__':

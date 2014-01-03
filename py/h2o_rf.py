@@ -41,16 +41,28 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     #****************************
     # v2 doesn't have the response variable, so removed looking at it
     if h2o.beta_features:
+        rf_model = rfv['drf_model']
+        used_trees = rf_model['N']
+        errs = rf_model['errs']
+        print "errs[0]:", errs[0]
+        print "errs[-1]:", errs[-1]
+        print "errs:", errs
         # if we are checking after confusion_matrix for predict, the jsonschema is different
         if 'cm' in rfv:
             cm = rfv['cm'] # only one
         else:
-            cms = rfv['drf_model']['cms']
+            cms = rf_model['cms']
             print "number of cms:", len(cms)
             print "cms[0]:", cms[0]
-            midpoint = len(cms)/2
             cm = cms[-1] # take the last one
         scoresList = cm
+        # if we got the ntree for comparison. Not always there in kwargs though!
+        param_ntrees = kwargs.get('ntrees',None)
+        if (param_ntrees is not None and used_trees != param_ntrees):
+            raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
+        if (used_trees+1)!=len(cms) or (used_trees+1)!=len(errs):
+            raise Exception("len(cms): %s and len(errs): %s should be one more than N %s trees" % (len(cms), len(errs), N))
+
     else:
         cm = rfv['confusion_matrix']
         header = cm['header'] # list
@@ -61,17 +73,13 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
             print "classification_error * 100 (pct):", classification_error * 100
             print "rows_skipped:", rows_skipped
             print "type:", cm_type
-
-        used_trees = cm['used_trees']
-        if (used_trees <= 0):
-            raise Exception("used_trees should be >0. used_trees:", used_trees)
-
-        # if we got the ntree for comparison. Not always there in kwargs though!
-        ntree = kwargs.get('ntree',None)
-        if (ntree is not None and used_trees != ntree):
-            raise Exception("used_trees should == ntree. used_trees:", used_trees)
-
         scoresList = cm['scores'] # list
+        used_trees = cm['used_trees']
+        # if we got the ntree for comparison. Not always there in kwargs though!
+        param_ntree = kwargs.get('ntree',None)
+        if (param_ntree is not None and used_trees != param_ntree):
+            raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
+
 
     #****************************
     totalScores = 0
@@ -133,17 +141,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
 
     if h2o.beta_features:
-        rf_model = rfv['drf_model']
-        used_trees = rf_model['N']
-        if (used_trees <= 0):
-            raise Exception("used_trees should be >0. used_trees:", used_trees)
         varimp = rf_model['varimp']
-        errs = rf_model['errs']
-
-        print "errs[0]:", errs[0]
-        print "errs[-1]:", errs[-1]
-        print "errs:", errs
-
         treeStats = rf_model['treeStats']
         data_key = rf_model['_dataKey']
         model_key = rf_model['_selfKey']
@@ -165,11 +163,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
                     )
     
     else:
-        type = cm['type']
-        used_trees = cm['used_trees']
-        if (used_trees<=0 or used_trees>20000):
-            raise Exception("used_trees in RFView seems wrong. used_trees:", used_trees)
-
+        cmtype = cm['type']
         data_key = rfv['data_key']
         model_key = rfv['model_key']
         ntree = rfv['ntree']

@@ -77,8 +77,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             h2o.cloudPerfH2O.message(l)
 
             # clear out all NAs (walk across cols)..clear to 0
-            execExpr = '%s=apply(%s,2,function(x){ifelse(is.na(x),0,x)})' % (hex_key, hex_key)
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
+            # temp
+            ## execExpr = '%s=apply(%s,2,function(x){ifelse(is.na(x),0,x)})' % (hex_key, hex_key)
+            ## h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
+
             inspect = h2o_cmd.runInspect(key=hex_key, timeoutSecs=500)
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             summary = h2o_cmd.runSummary(key=hex_key, timeoutSecs=500)

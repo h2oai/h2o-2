@@ -948,10 +948,11 @@ public class Utils {
       assert idx >= 0 && idx < ary.length;
       return _Ibase + idx * _Iscale;
     }
-    static public void incr( int is[], int i ) {
+    static public void incr( int is[], int i ) { add(is,i,1); }
+    static public void add( int is[], int i, int x ) {
       long adr = rawIndex(is,i);
       int old = is[i];
-      while( !_unsafe.compareAndSwapInt(is,adr, old, old+1) )
+      while( !_unsafe.compareAndSwapInt(is,adr, old, old+x) )
         old = is[i];
     }
   }
