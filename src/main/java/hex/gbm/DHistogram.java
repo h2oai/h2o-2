@@ -165,9 +165,11 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   public float find_min  () { return _min2 ; }
   public float find_maxIn() { return _maxIn; }
   // Exclusive max
-  public float find_maxEx() {
-    if( _isInt > 0 ) return _maxIn+1;
-    return _maxIn+Math.ulp(_maxIn); 
+  public float find_maxEx() { return find_maxEx(_maxIn,_isInt); }
+  static public float find_maxEx(float maxIn, int isInt ) {
+    float ulp = Math.ulp(maxIn);
+    if( isInt > 0 && 1 > ulp ) ulp = 1;
+    return maxIn+ulp;
   }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
@@ -181,8 +183,8 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     Vec vecs[] = fr.vecs();
     for( int c=0; c<ncols; c++ ) {
       Vec v = vecs[c];
-      float maxIn = (float)v.max();
-      float maxEx = v.isInt() ? maxIn+1 : maxIn+Math.ulp(maxIn);
+      final float maxIn = (float)v.max();
+      final float maxEx = find_maxEx(maxIn,v.isInt()?1:0);
       hs[c] = v.naCnt()==v.length() || v.min()==v.max() ? null :
         make(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),(float)v.min(),maxEx,v.length(),isBinom);
     }
