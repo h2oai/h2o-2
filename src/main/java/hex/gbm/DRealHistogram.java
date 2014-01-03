@@ -36,15 +36,20 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
   }
 
   // Add one row to a bin found via simple linear interpolation.
-  // Compute bin min/max.
   // Compute response mean & variance.
+  // Done racily instead F/J map calls, so atomic
   @Override void incr0( int b, double y ) {
     Utils.AtomicDoubleArray.add(_sums,b,y);
     Utils.AtomicDoubleArray.add(_ssqs,b,y*y);
   }
+  // Same, except square done by caller
+  void incr1( int b, double y, double yy ) {
+    Utils.AtomicDoubleArray.add(_sums,b,y);
+    Utils.AtomicDoubleArray.add(_ssqs,b,yy);
+  }
 
-  // Merge two equal histograms together.  Done in a F/J reduce, so no
-  // synchronization needed.
+  // Merge two equal histograms together.  
+  // Done in a F/J reduce, so no synchronization needed.
   @Override void add0( DRealHistogram dsh ) {
     Utils.add(_sums,dsh._sums);
     Utils.add(_ssqs,dsh._ssqs);
