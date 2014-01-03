@@ -135,7 +135,6 @@ if (distance < 0) {
     source(paste(path, "h2oRClient-package/R/ParseImport.R", sep = ""))
     source(paste(path, "h2oRClient-package/R/Internal.R", sep = ""))
 } else {
-    distance <- calcPath(getwd(), "tests")
     dots     <- genDots(distance)
     source(paste(dots, "Utils/h2oR.R", sep = ""))
     source(paste(dots, "Utils/setupR.R", sep = ""))
