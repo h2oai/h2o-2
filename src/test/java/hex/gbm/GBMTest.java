@@ -14,6 +14,8 @@ public class GBMTest extends TestUtil {
 
   private abstract class PrepData { abstract int prep(Frame fr); }
 
+  static final String ignored_aircols[] = new String[] { "DepTime", "ArrTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay", "IsDepDelayed"};
+
   @Test
   public void testBasicGBM() {
     // Regression tests
@@ -41,7 +43,9 @@ public class GBMTest extends TestUtil {
              new PrepData() { int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); }
              });
     basicGBM("./smalldata/airlines/allyears2k_headers.zip","air.hex",
-             new PrepData() { int prep(Frame fr) { return fr.find("IsDepDelayed"); }
+             new PrepData() { int prep(Frame fr) { 
+               for( String s : ignored_aircols ) UKV.remove(fr.remove(s)._key);
+               return fr.find("IsArrDelayed"); }
              });
     //basicGBM("../datasets/UCI/UCI-large/covtype/covtype.data","covtype.hex",
     //         new PrepData() {
