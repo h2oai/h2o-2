@@ -534,6 +534,7 @@ def goodXFromColumnInfo(y,
 def showGBMGridResults(GBMResult, expectedErrorMax, classification=True):
     # print "GBMResult:", h2o.dump_json(GBMResult)
     jobs = GBMResult['jobs']
+    print "GBM jobs:", jobs
     for jobnum, j in enumerate(jobs):
         _distribution = j['_distribution']
         model_key = j['destination_key']
