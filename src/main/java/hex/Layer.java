@@ -56,7 +56,7 @@ public abstract class Layer extends Iced {
 
   // Previous and input layers
   protected transient Layer _previous;
-  protected transient Input _input;
+  transient Input _input;
 
   /**
    * Start of refactoring in specification & running data, for layers and trainers.
@@ -97,7 +97,7 @@ public abstract class Layer extends Iced {
   /**
    * Apply gradient g to unit u with rate r and momentum m.
    */
-  protected final void bprop(int u, float g, float r, float m) {
+  final void bprop(int u, float g, float r, float m) {
     float r2 = 0;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = u * _previous._a.length + i;
@@ -237,8 +237,7 @@ public abstract class Layer extends Iced {
 
     static int expand(Vec[] vecs) {
       int n = 0;
-      for( int i = 0; i < vecs.length; i++ )
-        n += categories(vecs[i]);
+      for (Vec vec : vecs) n += categories(vec);
       return n;
     }
 
@@ -322,10 +321,11 @@ public abstract class Layer extends Iced {
   }
 
   static class ChunksInput extends Input {
-    transient Chunk[] _chunks;
-    float[] _subs, _muls;
-    int[] _categoricals_lens;
-    int[] _categoricals_mins;
+    final transient Chunk[] _chunks;
+    final float[] _subs;
+    final float[] _muls;
+    final int[] _categoricals_lens;
+    final int[] _categoricals_mins;
 
     public ChunksInput(Chunk[] chunks, VecsInput stats) {
       units = stats.subs.length;
@@ -418,8 +418,7 @@ public abstract class Layer extends Iced {
       int label = target();
       for( int u = 0; u < _a.length; u++ ) {
         float t = u == label ? 1 : 0;
-        float e = t - _a[u];
-        float g = e;
+        float g = t - _a[u];
         if( loss == Loss.MeanSquare )
           g *= (1 - _a[u]) * _a[u];
         bprop(u, g, r, m);
@@ -458,7 +457,7 @@ public abstract class Layer extends Iced {
   }
 
   static class ChunkSoftmax extends Softmax {
-    transient Chunk _chunk;
+    final transient Chunk _chunk;
 
     public ChunkSoftmax(Chunk chunk, VecSoftmax stats) {
       units = stats.units;
@@ -528,7 +527,7 @@ public abstract class Layer extends Iced {
   }
 
   static class ChunkLinear extends Linear {
-    transient Chunk _chunk;
+    final transient Chunk _chunk;
     transient float[] _values;
 
     public ChunkLinear(Chunk chunk, VecLinear stats) {
@@ -875,7 +874,7 @@ public abstract class Layer extends Iced {
     return (Layer) super.clone();
   }
 
-  public static void shareWeights(Layer src, Layer dst) {
+  private static void shareWeights(Layer src, Layer dst) {
     dst._w = src._w;
     dst._b = src._b;
     dst._wm = src._wm;
