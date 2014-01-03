@@ -151,7 +151,6 @@ if (distance < 0) {
     source(paste(rdots, "h2oRClient-package/R/ParseImport.R", sep = ""))
     source(paste(rdots, "h2oRClient-package/R/Internal.R", sep = ""))
 }
-sandbox()
 
 #The master seed is set by the runnerSetup.R script.
 #It serves as a way to reproduce all of the tests 
@@ -163,7 +162,7 @@ if (file.exists(ms))  {
     seed <- read.table(ms)[[1]]
 }
 setupRandomSeed(seed, suppress = FALSE)
-
+sandbox()
 
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "")
