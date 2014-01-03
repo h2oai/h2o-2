@@ -596,7 +596,7 @@ public class DTree extends Iced {
       cm = 0 <= last && last < cms.length ? cms[last] : null;
 
       // Display the CM
-      if( cm != null ) {
+      if( cm != null && domain != null ) {
         // Top row of CM
         assert cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
