@@ -41,27 +41,29 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     #****************************
     # v2 doesn't have the response variable, so removed looking at it
     if h2o.beta_features:
-        rf_model = rfv['drf_model']
-        used_trees = rf_model['N']
-        errs = rf_model['errs']
-        print "errs[0]:", errs[0]
-        print "errs[-1]:", errs[-1]
-        print "errs:", errs
         # if we are checking after confusion_matrix for predict, the jsonschema is different
         if 'cm' in rfv:
             cm = rfv['cm'] # only one
         else:
-            cms = rf_model['cms']
+            cms = rfv['drf_model']['cms']
             print "number of cms:", len(cms)
             print "cms[0]:", cms[0]
             cm = cms[-1] # take the last one
         scoresList = cm
-        # if we got the ntree for comparison. Not always there in kwargs though!
-        param_ntrees = kwargs.get('ntrees',None)
-        if (param_ntrees is not None and used_trees != param_ntrees):
-            raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
-        if (used_trees+1)!=len(cms) or (used_trees+1)!=len(errs):
-            raise Exception("len(cms): %s and len(errs): %s should be one more than N %s trees" % (len(cms), len(errs), N))
+
+        if not checkScoringOnly:
+            rf_model = rfv['drf_model']
+            used_trees = rf_model['N']
+            errs = rf_model['errs']
+            print "errs[0]:", errs[0]
+            print "errs[-1]:", errs[-1]
+            print "errs:", errs
+            # if we got the ntree for comparison. Not always there in kwargs though!
+            param_ntrees = kwargs.get('ntrees',None)
+            if (param_ntrees is not None and used_trees != param_ntrees):
+                raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
+            if (used_trees+1)!=len(cms) or (used_trees+1)!=len(errs):
+                raise Exception("len(cms): %s and len(errs): %s should be one more than N %s trees" % (len(cms), len(errs), N))
 
     else:
         cm = rfv['confusion_matrix']
