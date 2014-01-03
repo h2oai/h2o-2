@@ -10,6 +10,7 @@ function(seed = NULL, suppress = FALSE) {
     possible_seed_path <- paste("./Rsandbox_", test_name, "/seed", sep = "")
     if (file.exists(possible_seed_path)) {
         fileseed <- read.table(possible_seed_path)[[1]]
+        cat("\n\n\n", paste("[INFO]: Reusing seed for this test from test's Rsandbox", fileseed), "\n\n\n\n")
         SEED <<- fileseed
         set.seed(fileseed)
         return(fileseed)
