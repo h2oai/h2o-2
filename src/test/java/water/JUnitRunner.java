@@ -15,6 +15,7 @@ import org.junit.runner.notification.Failure;
 
 import water.deploy.Node;
 import water.deploy.NodeVM;
+import water.exec.Expr2Test;
 import water.parser.ParseFolderTestBig;
 import water.util.Log;
 import water.util.Utils;
