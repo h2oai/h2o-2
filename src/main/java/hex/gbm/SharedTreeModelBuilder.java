@@ -13,6 +13,17 @@ import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
+// Build (distributed) Trees.  Used for both Gradiant Boosted Method and Random
+// Forest, and really could be used for any decision-tree builder.
+// 
+// While this is a wholly H2O-design, we found these papers afterwards that
+// describes our design fairly well.
+//   Parallel GBRT http://www.cse.wustl.edu/~kilian/papers/fr819-tyreeA.pdf
+//   Streaming parallel decision tree http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
+// Note that our dynamic Histogram technique is different (surely faster, and
+// probably less mathematically clean).  I'm sure a host of other smaller details 
+// differ also - but in the Big Picture the paper and our algorithm are similar.
+
 public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
