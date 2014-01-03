@@ -532,8 +532,32 @@ setMethod("dim<-", "H2OParsedData", function(x, value) { stop("Unimplemented") }
 setMethod("as.data.frame", "H2OParsedData", function(x) {
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', x@key, sep='')
   ttt <- getURL(url)
-  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)    # Substitute NAs for blank cells rather than skipping
-  df[-nrow(df),]    # Drop last row since it's always a newline
+  n = nchar(ttt)
+
+  # Delete last 1 or 2 characters if it's a newline.
+  # Handle \r\n (for windows) or just \n (for not windows).
+  chars_to_trim = 0
+  if (n >= 2) {
+      c = substr(ttt, n, n)
+      if (c == "\n") {
+          chars_to_trim = chars_to_trim + 1
+      }
+      if (chars_to_trim > 0) {
+          c = substr(ttt, n-1, n-1)
+          if (c == "\r") {
+              chars_to_trim = chars_to_trim + 1
+          }
+      }    
+  }
+
+  if (chars_to_trim > 0) {
+      ttt2 = substr(ttt, 1, n-chars_to_trim)
+      # Is this going to use an extra copy?  Or should we assign directly to ttt?
+      ttt = ttt2
+  }
+  
+  # Substitute NAs for blank cells rather than skipping.
+  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)
 })
 
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
