@@ -24,12 +24,11 @@ def kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows, timeoutSecs=30
     parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=csvFilename + ".hex", timeoutSecs=10)
     # hastie has two values, 1 and -1.
     # we could not specify cols, but this is more fun
-    cols = ",".join(map(str,range(11)))
     kwargs = {
         'k': 1, 
         'initialization': 'Furthest',
-        'cols': cols, 
         'destination_key': 'KMeansModel.hex',
+        'max_iter': 25,
         # reuse the same seed, to get deterministic results (otherwise sometimes fails
         'seed': 265211114317615310,
     }
@@ -83,7 +82,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     clusters1 = {}
-    def test_1mx10_hastie_10_2_cat_and_shuffle(self):
+    def test_KMeans_hastie_shuffle_fvec(self):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)

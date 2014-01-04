@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_KMeans_fuzzy_centers(self):
+    def test_KMeans_fuzzy_centers_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 

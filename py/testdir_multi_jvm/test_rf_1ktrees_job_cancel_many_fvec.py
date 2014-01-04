@@ -18,7 +18,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_1ktrees_job_cancel_many(self):
+    def test_1ktrees_job_cancel_many_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 

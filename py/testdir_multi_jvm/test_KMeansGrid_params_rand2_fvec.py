@@ -37,7 +37,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_KMeansGrid_params_rand2(self):
+    def test_KMeansGrid_params_rand2_fvec(self):
+        h2o.beta_features = True
         if localhost:
             csvFilenameList = [
                 # ('covtype.data', 60),
@@ -55,8 +56,8 @@ class Basic(unittest.TestCase):
                 timeoutSecs=2000, pollTimeoutSecs=60)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             paramDict = define_params(SEED)
             h2o.beta_features = True # no grid for VA

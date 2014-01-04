@@ -19,7 +19,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_KMeans_twit(self):
+    def test_KMeans_twit_fvec(self):
+        h2o.beta_features = True
         csvFilename = "Twitter2DB.txt"
         print "\nStarting", csvFilename
 
@@ -48,7 +49,6 @@ class Basic(unittest.TestCase):
                 'k': 3, 
                 'max_iter': 50,
                 'normalize': 0,
-                'cols': '0,1',
                 'initialization': 'Furthest', 
                 # 'initialization': 'PlusPlus',
                 'destination_key': 'kmeans_dest_key',
@@ -59,17 +59,10 @@ class Basic(unittest.TestCase):
             kwargs['initialization'] = init_choices[trial % len(init_choices)]
 
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
-            inspect = h2o_cmd.runInspect(None, key=kmeans['destination_key'], verbose=True)
+            # can't inspect a kmeans2 model?
+            # inspect = h2o_cmd.runInspect(None, key=kmeans['model']['_selfKey'], verbose=True)
 
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvFilename, parseResult, 'd', **kwargs)
-
-            if 1==0:
-                h2b.browseJsonHistoryAsUrlLastMatch("KMeansScore")
-                h2b.browseJsonHistoryAsUrlLastMatch("KMeansApply")
-                h2b.browseJsonHistoryAsUrlLastMatch("KMeans")
-                # Comment sleep out to get a clean grep.
-                # time.sleep(3600)
-
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected2, allowedDelta, trial=trial)
 
 

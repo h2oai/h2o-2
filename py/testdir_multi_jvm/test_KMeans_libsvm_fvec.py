@@ -23,7 +23,8 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_parse_bounds_libsvm(self):
+    def test_parse_bounds_libsvm_fvec(self):
+        h2o.beta_features = True
         # just do the import folder once
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
@@ -61,7 +62,6 @@ class Basic(unittest.TestCase):
             # creates csvFilename.hex from file in importFolder dir 
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, 
                 hex_key=hex_key, timeoutSecs=2000)
-            print csvPathname, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # INSPECT******************************************
@@ -69,14 +69,16 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvFilename)
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
 
             # KMEANS******************************************
             for trial in range(1):
                 kwargs = {
                     'k': 3, 
                     'initialization': 'Furthest',
-                    'cols': range(10),
-                    # 'max_iter': 10,
+                    'ignored_cols': range(11, numCols),
+                    'max_iter': 10,
                     # 'normalize': 0,
                     # reuse the same seed, to get deterministic results (otherwise sometimes fails
                     'seed': 265211114317615310,
