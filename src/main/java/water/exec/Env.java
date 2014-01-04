@@ -78,7 +78,7 @@ public class Env extends Iced {
       _fcn= Arrays.copyOf(_fcn,len<<=1);
     }
   }
-  void push( Frame fr ) { push(1); _ary[_sp-1] = addRef(fr); assert check_all_refcnts();}
+  void push( Frame fr ) { push(1); _ary[_sp-1] = addRef(fr); assert _ary[0]==null||check_refcnt(_ary[0].anyVec());}
   void push( double d ) { push(1); _d  [_sp-1] = d  ; }
   void push( ASTOp fcn) { push(1); _fcn[_sp-1] = addRef(fcn); }
   void push( Frame fr, String key ) { push(fr); _key[_sp-1]=key; }
@@ -209,15 +209,13 @@ public class Env extends Iced {
   }
 
   public Futures subRef( Vec vec, Futures fs ) {
-
+    if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
     int cnt = _refcnt.get(vec)-1;
     if( cnt > 0 ) _refcnt.put(vec,cnt);
     else {
       if( fs == null ) fs = new Futures();
-      Vec vmaster = vec.masterVec();
       UKV.remove(vec._key,fs);
       _refcnt.remove(vec);
-      if( vmaster != null ) subRef(vmaster,fs);
     }
     return fs;
   }
@@ -248,11 +246,8 @@ public class Env extends Iced {
     Integer I = _refcnt.get(vec);
     assert I==null || I>0;
     assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
-    if (I==null) {
-      Vec vmaster = vec.masterVec();
-      if (vmaster!=null) addRef(vmaster);
-    }
     _refcnt.put(vec,I==null?1:I+1);
+    if (vec.masterVec()!=null) addRef(vec.masterVec());
     return vec;
   }
   // Add a refcnt to all vecs in this frame
@@ -323,8 +318,11 @@ public class Env extends Iced {
     HashSet<Vec> refs = new HashSet<Vec>();
     for( int i=0; i<_sp; i++ )
       if( _ary[i] != null) {
-        for (Vec v : _ary[i].vecs()) if (v.equals(vec)) cnt++;
-        refs.addAll(_ary[i].findWithMaster(vec));
+        for (Vec v : _ary[i].vecs()) {
+          Vec vm;
+          if (v.equals(vec)) cnt++;
+          else if ((vm = v.masterVec()) !=null && vm.equals(vec)) cnt++;
+        }
       }
       else if( _fcn[i] != null && (_fcn[i] instanceof ASTFunc) )
         cnt += ((ASTFunc)_fcn[i])._env.compute_refcnt(vec);
