@@ -65,8 +65,7 @@ public class Cloud extends Request {
 
       Long elapsed = System.currentTimeMillis() - h2o._last_heard_from;
       node.addProperty(ELAPSED, elapsed);
-      if( elapsed > HeartBeatThread.TIMEOUT)
-          h2o._node_healthy = false;
+      h2o._node_healthy = elapsed > HeartBeatThread.TIMEOUT ? false : true;
       node.addProperty(NODE_HEALTH, h2o._node_healthy);
 
 
