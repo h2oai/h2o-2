@@ -12,10 +12,13 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
+import water.UKV;
+
 import water.Job;
 import water.TestUtil;
 import water.fvec.*;
 import water.util.Utils;
+import water.api.FrameSplit;
 
 /**
  * Runs a neural network on the MNIST dataset.
@@ -26,23 +29,41 @@ public class NeuralNetMnist extends Job {
     samples.launchers.CloudLocal.launch(job, 1);
     //samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
-    //samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 4);
   }
 
-  protected Vec[] train, test;
+  private Vec[] train, test;
   protected transient volatile Trainer _trainer;
 
-  public void load() {
-    train = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz").vecs();
-    test = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz").vecs();
+  void load(double fraction, long seed) {
+    assert(fraction > 0 && fraction <= 1);
+    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
+    Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
+    if (fraction < 1) {
+      System.out.println("Sampling " + fraction*100 + "% of data with random seed: " + seed + ".");
+      FrameSplit split = new FrameSplit();
+      final double[] ratios = {fraction, 1-fraction};
+      trainf = split.splitFrame(trainf, ratios, seed)[0];
+      testf = split.splitFrame(testf, ratios, seed)[0];
+
+      // for debugging only
+      if (false) {
+        UKV.put(water.Key.make("train"+fraction), trainf);
+        UKV.put(water.Key.make("test"+fraction), testf);
+        //try { Thread.sleep(10000000); } catch (Exception _) {}
+      }
+    }
+    train = trainf.vecs();
+    test = testf.vecs();
     NeuralNet.reChunk(train);
   }
 
   protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
     Layer[] ls = new Layer[3];
-    ls[0] = new VecsInput(data, inputStats);
-    ls[1] = new Tanh(500);
+    ls[0] = new VecsInput(data, inputStats, 0.2);
+//    ls[1] = new Tanh(500);
+    ls[1] = new Layer.RectifierDropout(500);
     ls[2] = new VecSoftmax(labels, outputStats);
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].rate = .005f;
@@ -55,19 +76,20 @@ public class NeuralNetMnist extends Job {
 
   protected void startTraining(Layer[] ls) {
     // Single-thread SGD
-    //_trainer = new Trainer.Direct(ls, 0, self());
+//    _trainer = new Trainer.Direct(ls, 0, self());
 
     // Single-node parallel
-    //_trainer = new Trainer.Threaded(ls, 0, self());
+    _trainer = new Trainer.Threaded(ls, 0, self());
 
     // Distributed parallel
-    _trainer = new Trainer.MapReduce(ls, 0, self());
+//    _trainer = new Trainer.MapReduce(ls, 0, self());
     _trainer.start();
   }
 
   @Override protected Status exec() {
-    load();
-    System.out.println("Loaded data");
+    final double fraction = 1.0;
+    final long seed = 0xC0FFEE;
+    load(fraction, seed);
 
     // Labels are on last column for this dataset
     final Vec trainLabels = train[train.length - 1];
@@ -112,7 +134,7 @@ public class NeuralNetMnist extends Job {
           }
         }
       }
-    }, 0, 2000);
+    }, 0, 10000);
     startTraining(ls);
     return Status.Running;
   }
@@ -126,7 +148,7 @@ public class NeuralNetMnist extends Job {
     csv("../smalldata/mnist/test.csv", "t10k-images-idx3-ubyte.gz", "t10k-labels-idx1-ubyte.gz");
   }
 
-  static void csv(String dest, String images, String labels) throws Exception {
+  private static void csv(String dest, String images, String labels) throws Exception {
     DataInputStream imagesBuf = new DataInputStream(new GZIPInputStream(new FileInputStream(new File(images))));
     DataInputStream labelsBuf = new DataInputStream(new GZIPInputStream(new FileInputStream(new File(labels))));
 
