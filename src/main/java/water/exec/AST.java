@@ -473,14 +473,13 @@ class ASTAssign extends AST {
         ary_rhs.numCols() != cs.length )
       throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign "+ary_rhs.numCols()+" cols over "+cs.length+" cols");
     // Replace the LHS cols with the RHS cols
-    Frame lhs = new Frame(ary);
     Vec rvecs[] = ary_rhs.vecs();
     Futures fs = null;
     for( long i : cs ) {
       int cidx = (int)i-1;      // Convert 1-based to 0-based
-      Vec rv = rvecs[rvecs.length==1?0:cidx];
-      if( cidx == lhs.numCols() ) lhs.add("C"+cidx,rv);
-      else lhs.replace(cidx,rv);
+      Vec rv = env.addRef(rvecs[rvecs.length==1?0:cidx]);
+      if( cidx == ary.numCols() ) ary.add("C"+cidx,rv);
+      else env.subRef(ary.replace(cidx,rv),fs);
     }
     if( fs != null )  fs.blockForPending();
 
@@ -488,7 +487,7 @@ class ASTAssign extends AST {
     int narg = 1;
     if( rows!= null ) narg++;
     if( cols!= null ) narg++;
-    env.poppush(narg,lhs,null);
+    env.poppush(narg,ary,null);
   }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {

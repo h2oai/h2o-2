@@ -209,8 +209,10 @@ public class Env extends Iced {
   }
 
   public Futures subRef( Vec vec, Futures fs ) {
+
     if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
     int cnt = _refcnt.get(vec)-1;
+    //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);
     if( cnt > 0 ) _refcnt.put(vec,cnt);
     else {
       if( fs == null ) fs = new Futures();
@@ -247,6 +249,11 @@ public class Env extends Iced {
     assert I==null || I>0;
     assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
     _refcnt.put(vec,I==null?1:I+1);
+    //Log.info(" +++ " + vec._key.toString() + " RC=" + (I==null?1:I+1));
+    //if (I!=null&&I==1)
+    //  for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+    //    System.out.println(ste);
+    //  }
     if (vec.masterVec()!=null) addRef(vec.masterVec());
     return vec;
   }

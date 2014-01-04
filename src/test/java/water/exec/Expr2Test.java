@@ -145,7 +145,8 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[,4] != 29 | h.hex[,2] < 305 & h.hex[,2] < 81");
       checkStr("a=cbind(c(1,2,3), c(4,5,6))");
       checkStr("a[,1] = factor(a[,1])");
-      checkStr("a[,1] = factor(a[,1])");
+      //checkStr("a[,1] = factor(a[,1])");
+      checkStr("is.factor(a[,1])");
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");
