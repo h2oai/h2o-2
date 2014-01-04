@@ -130,6 +130,7 @@ class Basic(unittest.TestCase):
         print "\nTrain1\n=========="
         h2o_rf.simpleCheckRFScore(node=None, rfv=trainResult1, noPrint=False, **kwargs)
         print "\nScore1\n=========+"
+        print h2o.dump_json(scoreResult1)
         h2o_rf.simpleCheckRFScore(node=None, rfv=scoreResult1, noPrint=False, **kwargs)
 
         # train2

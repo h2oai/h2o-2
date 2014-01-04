@@ -31,13 +31,19 @@ sandbox<-
 function() {
   test_name <- R.utils::commandArgs(asValues=TRUE)$"-f"
   Rsandbox <- paste("./Rsandbox_", test_name, sep = "")
-  unlink(Rsandbox, TRUE)
-  dir.create(Rsandbox)
+  dir.create(Rsandbox, showWarnings = FALSE)
+  commandsLog <- paste(Rsandbox, "/commands.log", sep = "")
+  errorsLog <- paste(Rsandbox, "/errors.log", sep = "")
+  if(file.exists(commandsLog)) file.remove(commandsLog)
+  if(file.exists(errorsLog)) file.remove(errorsLog)
+  write.table(SEED, paste(Rsandbox, "/seed", sep = ""), row.names = F, col.names = F)
   h2o.__LOG_COMMAND <- paste(Rsandbox, "/", sep = "") 
   h2o.__LOG_ERROR   <- paste(Rsandbox, "/", sep = "") 
   h2o.__changeCommandLog(normalizePath(h2o.__LOG_COMMAND))
   h2o.__changeErrorLog(normalizePath(h2o.__LOG_ERROR))
   h2o.__startLogging()
+  
+  
 }
 
 Log.info<-

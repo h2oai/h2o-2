@@ -1,6 +1,6 @@
 import java.io.*;
 
-class main {
+class PredictCSV {
     private static String modelClassName;
     private static String inputCSVFileName;
     private static String outputCSVFileName;
@@ -8,7 +8,7 @@ class main {
 
     private static void usage() {
         System.out.println("");
-        System.out.println("usage:  java [...java args...] main (--header | --noheader) --model modelClassName --input inputCSVFileName --output outputCSVFileName");
+        System.out.println("usage:  java [...java args...] PredictCSV (--header | --noheader) --model modelClassName --input inputCSVFileName --output outputCSVFileName");
         System.out.println("");
         System.out.println("        model class name is something like GBMModel_blahblahblahblah.");
         System.out.println("");
