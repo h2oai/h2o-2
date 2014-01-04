@@ -73,8 +73,7 @@ public abstract class Trainer {
     }
 
     final void fprop() {
-      for( int i = 0; i < _ls.length; i++ )
-        _ls[i].fprop(true);
+      for (Layer _l : _ls) _l.fprop(true);
     }
 
     final void bprop() {
@@ -87,9 +86,10 @@ public abstract class Trainer {
    * Trains NN on current thread.
    */
   public static class Direct extends Base {
-    long _processed, _limit;
+    long _processed;
+    final long _limit;
     Thread _thread;
-    Key _job;
+    final Key _job;
 
     public Direct(Layer[] ls, double epochs, Key job) {
       super(ls);
@@ -107,8 +107,7 @@ public abstract class Trainer {
           return _processed;
         }
       };
-      for( int i = 0; i < _ls.length; i++ )
-        _ls[i]._training = training;
+      for (Layer _l : _ls) _l._training = training;
 
       Input input = (Input) _ls[0];
       for( ; _limit == 0 || _processed < _limit; _processed++ ) {
@@ -211,15 +210,14 @@ public abstract class Trainer {
     }
 
     @Override public void start() {
-      for( int t = 0; t < _threads.length; t++ )
-        _threads[t].start();
+      for (Thread _thread : _threads) _thread.start();
     }
 
     @Override public void join() {
-      for( int i = 0; i < _threads.length; i++ ) {
+      for (Thread _thread : _threads) {
         try {
-          _threads[i].join();
-        } catch( InterruptedException e ) {
+          _thread.join();
+        } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
       }
@@ -256,11 +254,11 @@ public abstract class Trainer {
   public static class MapReduce extends Trainer {
     static final ConcurrentHashMap<Key, MapReduce> _instances = new ConcurrentHashMap<Key, MapReduce>();
 
-    Layer[] _ls;
-    int _epochs;
-    Key _job;
+    final Layer[] _ls;
+    final int _epochs;
+    final Key _job;
     AtomicIntegerArray _counts;
-    transient Key _key;
+    final transient Key _key;
     transient Descent _task;
 
     public MapReduce(Layer[] ls, int epochs, Key job) {
@@ -354,10 +352,10 @@ public abstract class Trainer {
               _node.sync();
             else {
               _node._total = _node._trainer.processed();
-              try {
-                Thread.sleep(1);
-              } catch( InterruptedException ex ) {
-              }
+//              try {
+//                Thread.sleep(1);
+//              } catch( InterruptedException ignored) {
+//              }
             }
           }
         }
@@ -453,15 +451,18 @@ public abstract class Trainer {
   }
 
   static class NodeDescent {
-    ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
-    Key _job;
-    Layer[] _ls;
-    float[][] _ws, _bs; // Current weights
-    float[][] _wi, _bi; // Initial weights, for synchronization
-    float[][] _wm, _bm; // Momentums
-    Key _key;
+    final ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
+    final Key _job;
+    final Layer[] _ls;
+    final float[][] _ws;
+    final float[][] _bs; // Current weights
+    final float[][] _wi;
+    final float[][] _bi; // Initial weights, for synchronization
+    final float[][] _wm;
+    final float[][] _bm; // Momentums
+    final Key _key;
     ConcurrentHashMap<Integer, Integer> _counters;
-    MapReduce _trainer;
+    final MapReduce _trainer;
     long _total;
 
     NodeDescent(Key job, Layer[] ls, float[][] ws, float[][] bs, Key key) {
@@ -506,7 +507,7 @@ public abstract class Trainer {
       }
     }
 
-    boolean sync() {
+    void sync() {
       assert !_key.home();
       int[] counts = new int[10];
       int n = 0;
@@ -555,9 +556,7 @@ public abstract class Trainer {
             _bs[y][i] = s._b[y][i] + d;
           }
         }
-        return true;
       }
-      return false;
     }
 
     static class Shuttle extends Atomic {
@@ -646,7 +645,7 @@ public abstract class Trainer {
         }
         int group = device.getMaxWorkGroupSize();
         Input input = (Input) _ls[0];
-        for( ;; ) {
+        while (true) {
           input.fprop(true);
           for( int i = 0; i < input._a.length; i++ )
             a[0].getBuffer().put(i, input._a[i]);

@@ -40,6 +40,9 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Activation function", filter = Default.class)
   public Activation activation = Activation.Tanh;
 
+  @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)", filter = Default.class)
+  public float input_dropout_ratio = 0;
+
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
   public int[] hidden = new int[] { 500 };
 
@@ -101,7 +104,7 @@ public class NeuralNet extends ValidatedJob {
     final Vec trainResp = classification ? vecs[vecs.length - 1].toEnum() : vecs[vecs.length - 1];
 
     final Layer[] ls = new Layer[hidden.length + 2];
-    ls[0] = new VecsInput(train, null);
+    ls[0] = new VecsInput(train, null, input_dropout_ratio);
     for( int i = 0; i < hidden.length; i++ ) {
       switch( activation ) {
         case Tanh:
@@ -148,7 +151,8 @@ public class NeuralNet extends ValidatedJob {
     UKV.put(destination_key, model);
 
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
-    final Trainer trainer = new Trainer.MapReduce(ls, epochs, self());
+    //final Trainer trainer = new Trainer.MapReduce(ls, epochs, self()); //TODO: Bring this back
+    final Trainer trainer = new Trainer.Threaded(ls, epochs, self()); //HACK: won't work in multi-node clusters
 
     // Use a separate thread for monitoring (blocked most of the time)
     Thread thread = new Thread() {
@@ -444,6 +448,9 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Activation function")
     public Activation activation;
 
+    @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)")
+    public float input_dropout_ratio;
+
     @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)")
     public int[] hidden;
 
@@ -494,6 +501,7 @@ public class NeuralNet extends ValidatedJob {
       NeuralNet job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
       if( job != null ) {
         activation = job.activation;
+        input_dropout_ratio = job.input_dropout_ratio;
         hidden = job.hidden;
         rate = job.rate;
         rate_annealing = job.rate_annealing;

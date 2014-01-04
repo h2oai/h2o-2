@@ -94,6 +94,8 @@ public abstract class Layer extends Iced {
 
   protected abstract void bprop();
 
+  boolean isInput() { return false; }
+
   /**
    * Apply gradient g to unit u with rate r and momentum m.
    */
@@ -171,6 +173,14 @@ public abstract class Layer extends Iced {
       throw new UnsupportedOperationException();
     }
 
+    @Override
+    protected boolean isInput() {
+      return true;
+    }
+
+    @API(help = "Dropout rate for the input layer")
+    double _dropout_rate;
+
     public final long move() {
       return _pos = _pos == _len - 1 ? 0 : _pos + 1;
     }
@@ -203,7 +213,16 @@ public abstract class Layer extends Iced {
       return o;
     }
 
+    public VecsInput(Vec[] vecs, VecsInput train, double dropout_rate) {
+      _dropout_rate = dropout_rate;
+      Init(vecs, train);
+    }
+
     public VecsInput(Vec[] vecs, VecsInput train) {
+      Init(vecs, train);
+    }
+
+    public void Init(Vec[] vecs, VecsInput train) {
       units = train != null ? train.subs.length : expand(vecs);
       this.vecs = vecs;
       _len = vecs[0].length();
@@ -385,10 +404,11 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
       super.init(ls, index, weights, step, rand);
       if( weights ) {
-        float min = (float) -Math.sqrt(6. / (_previous.units + units));
-        float max = (float) +Math.sqrt(6. / (_previous.units + units));
+        // C.f. deeplearning.net tutorial
+        //final float range = 4.f * (float)Math.sqrt(6. / (_previous.units + units)); //TODO: Try this factor of 4
+        final float range = (float)Math.sqrt(6. / (_previous.units + units));
         for( int i = 0; i < _w.length; i++ )
-          _w[i] = rand(rand, min, max);
+          _w[i] = rand(rand, -range, range);
       }
     }
 
@@ -565,10 +585,9 @@ public abstract class Layer extends Iced {
       super.init(ls, index, weights, step, rand);
       if( weights ) {
         // C.f. deeplearning.net tutorial
-        float min = (float) -Math.sqrt(6. / (_previous.units + units));
-        float max = (float) +Math.sqrt(6. / (_previous.units + units));
+        final float range = (float)Math.sqrt(6. / (_previous.units + units));
         for( int i = 0; i < _w.length; i++ )
-          _w[i] = rand(rand, min, max);
+          _w[i] = rand(rand, -range, range);
       }
     }
 
@@ -673,10 +692,10 @@ public abstract class Layer extends Iced {
 //            _w[w] = rand(rand, min, max);
 //          }
 //        }
-        float min = (float) -Math.sqrt(6. / (_previous.units + units));
-        float max = (float) +Math.sqrt(6. / (_previous.units + units));
+        // C.f. deeplearning.net tutorial
+        final float range = (float)Math.sqrt(6. / (_previous.units + units));
         for( int i = 0; i < _w.length; i++ )
-          _w[i] = rand(rand, min, max);
+          _w[i] = rand(rand, -range, range);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -742,10 +761,9 @@ public abstract class Layer extends Iced {
 //            _w[w] = rand(rand, min, max);
 //          }
 //        }
-        float min = (float) -Math.sqrt(6. / (_previous.units + units));
-        float max = (float) +Math.sqrt(6. / (_previous.units + units));
+        final float range = (float)Math.sqrt(6. / (_previous.units + units));
         for( int i = 0; i < _w.length; i++ )
-          _w[i] = rand(rand, min, max);
+          _w[i] = rand(rand, -range, range);
 
 //        for( int i = 0; i < _w.length; i++ )
 //          _w[i] = rand(rand, -.01f, .01f);
@@ -778,14 +796,23 @@ public abstract class Layer extends Iced {
   }
 
   public static class RectifierDropout extends Rectifier {
-    transient Random _rand;
+    transient Random _rand, _rand2;
     transient byte[] _bits;
+    transient java.util.BitSet _skip_input; // which input features to skip
 
-    RectifierDropout() {
+    private RectifierDropout() {
     }
 
     public RectifierDropout(int units) {
       super(units);
+    }
+
+    // keep random generators thread-local
+    @Override public Layer clone() {
+      _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      _rand2 = new Random();
+      _bits = new byte[(units + 7) / 8];
+      return super.clone();
     }
 
     @Override protected void fprop(boolean training) {
@@ -794,18 +821,75 @@ public abstract class Layer extends Iced {
         _bits = new byte[(units + 7) / 8];
       }
       _rand.nextBytes(_bits);
+
+      if( _rand2 == null ) {
+        _rand2 = new Random();
+      }
+
+      final boolean input_dropout = (_previous.isInput() && training);
+      if (input_dropout) {
+        final double rate = ((Input)_previous)._dropout_rate;
+        if (rate > 0) {
+          if (_skip_input == null || _skip_input.size() < _previous._a.length)
+            _skip_input = new java.util.BitSet(_previous._a.length);
+          for( int i = 0; i < _previous._a.length; i++ ) {
+            _skip_input.set(i, _rand2.nextFloat() < rate);
+          }
+        }
+      }
+
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
+        // use bitmask for dropout on hidden layer
         boolean b = (_bits[o / 8] & (1 << (o % 8))) != 0;
         if( !training || b ) {
-          for( int i = 0; i < _previous._a.length; i++ )
+          // perform dropout on input layer
+          for( int i = 0; i < _previous._a.length; i++ ) {
+            //Option 1: use the same input units for all hidden units
+            if (_skip_input != null && _skip_input.get(i)) continue;
+            //Option 2: use different input units for each hidden unit
+            //if (_skip_input != null && _skip_input.get((o * 13071976 + i) % _previous._a.length)) continue;
+
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
+          }
           _a[o] += _b[o];
           if( _a[o] < 0 )
             _a[o] = 0;
           else if( !training )
             _a[o] *= .5f;
         }
+      }
+    }
+  }
+
+  public static class RectifierDropoutSpike extends Rectifier {
+    transient Random _rand;
+
+    private RectifierDropoutSpike() {
+    }
+
+    public RectifierDropoutSpike(int units) {
+      super(units);
+    }
+
+    @Override
+    protected void fprop(boolean training) {
+      if( _rand == null ) {
+        _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      }
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        for( int i = 0; i < _previous._a.length; i++ ) {
+          final double prob = _rand.nextDouble();
+          if (_previous._a[i] <= prob) {
+            _a[o] += _w[o * _previous._a.length + i] * 0.5f;
+          }
+        }
+        _a[o] += _b[o];
+        if( _a[o] < 0 )
+          _a[o] = 0;
+        else if( !training )
+          _a[o] *= .5f;
       }
     }
   }
@@ -856,7 +940,7 @@ public abstract class Layer extends Iced {
           r2 += _w[w] * _w[w];
         }
         if( r2 > 15 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-          float scale = (float) Math.sqrt(15 / r2);
+          final float scale = (float) Math.sqrt(15 / r2);
           for( int i = 0; i < _previous._a.length; i++ ) {
             int w = i * _a.length + u;
             _w[w] *= scale;
