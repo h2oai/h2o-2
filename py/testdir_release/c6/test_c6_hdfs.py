@@ -40,6 +40,16 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "leads.csv",
             "prostate_long_1G.csv",
         ]
+        csvFilenameAll = [
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+            "covtype4x.shuffle.data",
+        ]
 
         # find_cloud.py won't set these correctly. Let's just set them here
         # we have two cdh's though. I guess we're going to use whatever got setup
