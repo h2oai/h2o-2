@@ -30,7 +30,7 @@ function(seed = NULL, suppress = FALSE) {
         SEED <<- seed
         set.seed(seed)
         cat("\n\n\n", paste("[INFO]: Using user defined SEED: ", seed), "\n\n\n\n")
-        h2o.__logIt("[User-SEED] :", seed, "Command")
+        cat("\n\n\n [User-SEED] :", seed, "\n\n\n")
         return(seed)
     } else {
         maxInt <- .Machine$integer.max
@@ -38,7 +38,8 @@ function(seed = NULL, suppress = FALSE) {
         SEED <<- seed
         if(!suppress) {
           cat("\n\n\n", paste("[INFO]: Using SEED: ", seed), "\n\n\n\n")
-          h2o.__logIt("[SEED] :", seed, "Command")
+          #h2o.__logIt("[SEED] :", seed, "Command")
+          cat("\n\n\n [SEED] : ", seed, "\n\n\n")
         }
         set.seed(seed)
         return(seed)
