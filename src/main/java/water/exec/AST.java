@@ -426,9 +426,9 @@ class ASTAssign extends AST {
     // Pull the RHS off the stack; do not lower the refcnt
     Frame ary_rhs=null;  double d=Double.NaN;
     if( env.isDbl() )
-        d = env.popDbl();
+      d = env.popDbl();
     else
-        ary_rhs = env.popAry();
+      ary_rhs = env.peekAry();
 
     // Typed as a double ==> the row & col selectors are simple constants
     if( slice._t == Type.DBL ) { // Typed as a double?
@@ -466,28 +466,29 @@ class ASTAssign extends AST {
 
     // Convert constant into a whole vec
     if( ary_rhs == null )
-      ary_rhs = new Frame(env.addRef(ary.anyVec().makeCon(d)));
+      ary_rhs = new Frame(ary.anyVec().makeCon(d));
     // Make sure we either have 1 col (repeated) or exactly a matching count
     long[] cs = (long[]) cols;  // Columns to act on
     if( ary_rhs.numCols() != 1 &&
         ary_rhs.numCols() != cs.length )
       throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign "+ary_rhs.numCols()+" cols over "+cs.length+" cols");
     // Replace the LHS cols with the RHS cols
+    Frame lhs = new Frame(ary);
     Vec rvecs[] = ary_rhs.vecs();
     Futures fs = null;
     for( long i : cs ) {
       int cidx = (int)i-1;      // Convert 1-based to 0-based
-      Vec rv = env.addRef(rvecs[rvecs.length==1?0:cidx]);
-      if( cidx == ary.numCols() ) ary.add("C"+cidx,rv);
-      else fs = env.subRef(ary.replace(cidx,rv),fs);
+      Vec rv = rvecs[rvecs.length==1?0:cidx];
+      if( cidx == lhs.numCols() ) lhs.add("C"+cidx,rv);
+      else lhs.replace(cidx,rv);
     }
     if( fs != null )  fs.blockForPending();
 
     // After slicing, pop all expressions (cannot lower refcnt till after all uses)
-    if( rows!= null ) env.pop();
-    if( cols!= null ) env.pop();
-    env.subRef(ary_rhs,null);
-    env.push(ary);
+    int narg = 1;
+    if( rows!= null ) narg++;
+    if( cols!= null ) narg++;
+    env.poppush(narg,lhs,null);
   }
   @Override public String toString() { return "="; }
   @Override public StringBuilder toString( StringBuilder sb, int d ) {

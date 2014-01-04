@@ -100,6 +100,17 @@ public class Frame extends Iced {
     return -1;
   }
 
+  /** Find the number of Vecs derived from the given master Vec */
+  public HashSet<Vec> findWithMaster( Vec master ) {
+    HashSet<Vec> vecs = new HashSet<Vec>();
+    for( int i=0; i<_vecs.length; i++ ) {
+      Vec vm;
+      if (((vm = _vecs[i].masterVec()) != null) && vm.equals(master))
+        vecs.add(_vecs[i]);
+    }
+    return vecs;
+  }
+
  /** Appends a named column, keeping the last Vec as the response */
   public void add( String name, Vec vec ) {
     assert _vecs.length == 0 || anyVec().group().equals(vec.group());

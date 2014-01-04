@@ -4,6 +4,7 @@ import java.util.*;
 
 import water.*;
 import water.fvec.*;
+import water.util.Log;
 import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -822,26 +823,28 @@ class ASTRApply extends ASTOp {
       for( int i=0; i<ncols; i++ ) {
         env.push(op);
         env.push(new Frame(new String[]{fr._names[i]},new Vec[]{vecs[i]}));
-        env.fcn(-2).apply(env,2);
+        env.fcn(-2).apply(env, 2);
         Vec v;
         if( keys != null ) {    // Doubles or Frame results?
           // Jam the double into a Vec of its own
           AppendableVec av = new AppendableVec(keys[i]);
           NewChunk nc = new NewChunk(av,0);
           nc.addNum(env.popDbl());
-          nc.close(0,null);
-          env.addRef(v = av.close(null));
+          nc.close(0, null);
+          env.push(new Frame(v = av.close(null)));
         } else {                      // Frame results
           if( env.ary(-1).numCols() != 1 )
             throw new IllegalArgumentException("apply requires that "+op+" return 1 column");
-          v = env.popAry().anyVec();// Remove without lowering refcnt
+          // Leave the ary on stack
+          //v = env.popAry().anyVec();// Remove without lowering refcnt
         }
-        fr2.add(fr._names[i],v); // Add, with refcnt already +1
+        //fr2.add(fr._names[i],v); // Add, with refcnt already +1
       }
-      // At this point, fr2 has refcnt++ already, and the stack is still full.
-      env.pop(4);
-      env.push(1);
-      env._ary[env._sp-1] = fr2;
+      for( int i=0; i<ncols; i++ )
+        fr2.add(fr._names[i], env.ary(-ncols+i).anyVec());
+
+      int narg = env._sp - oldsp + 4;
+      env.poppush(narg, fr2, null);
       assert env.isAry();
       assert env._sp == oldsp-4+1;
       return;
@@ -952,21 +955,17 @@ class ASTFactor extends ASTOp {
   @Override String opStr() { return "factor"; }
   @Override ASTOp make() {return new ASTFactor();}
   @Override void apply(Env env, int argcnt) {
-    Frame ary = env.popAry();   // Ary pulled from stack, keeps +1 refcnt
-    String skey = env.key();
+    Frame ary = env.peekAry();   // Ary on top of stack, keeps +1 refcnt
+    String skey = env.peekKey();
     if( ary.numCols() != 1 )
       throw new IllegalArgumentException("factor requires a single column");
     Vec v0 = ary.vecs()[0];
-    if( !v0.isEnum() ) {        // Frame on the stack is already a factor
-      Vec v1 = v0.toEnum();
-      Vec vmaster = v1.masterVec(); // Maybe v1 is built over v0?
-      Frame newary = env.addRef(new Frame(ary._names,new Vec[]{v1}));
-      env.subRef(ary,skey);
-      ary = newary;
+    Vec v1 = v0.isEnum() ? null : v0.toEnum();
+    if (v1 != null) {
+      ary = new Frame(ary._names,new Vec[]{v1});
+      skey = null;
     }
-    env.pop();                  // Pop fcn
-    env.push(1);                // Put ary back on stack with same refcnt
-    env._ary[env._sp-1] = ary;
+    env.poppush(2, ary, skey);
   }
 }
 
