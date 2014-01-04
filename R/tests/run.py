@@ -633,7 +633,8 @@ class RUnitRunner:
                 if (not re.match(".*runit.*\.[rR]", f)):
                     continue
                 if (test_group is not None):
-                    if test_group.lower() not in root:
+                    test_short_dir = self._calc_test_short_dir(os.path.join(root, f))
+                    if test_group.lower() not in test_short_dir:
                         continue
                 self.add_test(os.path.join(root, f))
 
@@ -644,7 +645,6 @@ class RUnitRunner:
         @param test_path: File system path to the test.
         @return: none
         """
-        abs_test_root_dir = os.path.abspath(self.test_root_dir)
         abs_test_path = os.path.abspath(test_path)
         abs_test_dir = os.path.dirname(abs_test_path)
         test_file = os.path.basename(abs_test_path)
@@ -655,10 +655,7 @@ class RUnitRunner:
             print("")
             sys.exit(1)
 
-        test_short_dir = abs_test_dir
-        prefix = os.path.join(abs_test_root_dir, "")
-        if (test_short_dir.startswith(prefix)):
-            test_short_dir = test_short_dir.replace(prefix, "", 1)
+        test_short_dir = self._calc_test_short_dir(test_path)
 
         test = Test(abs_test_dir, test_short_dir, test_file, self.output_dir)
         self.tests.append(test)
@@ -850,6 +847,24 @@ class RUnitRunner:
     #--------------------------------------------------------------------
     # Private methods below this line.
     #--------------------------------------------------------------------
+
+    def _calc_test_short_dir(self, test_path):
+        """
+        Calculate directory of test relative to test_root_dir.
+
+        @param test_path: Path to test file.
+        @return: test_short_dir, relative directory containing test (relative to test_root_dir).
+        """
+        abs_test_root_dir = os.path.abspath(self.test_root_dir)
+        abs_test_path = os.path.abspath(test_path)
+        abs_test_dir = os.path.dirname(abs_test_path)
+
+        test_short_dir = abs_test_dir
+        prefix = os.path.join(abs_test_root_dir, "")
+        if (test_short_dir.startswith(prefix)):
+            test_short_dir = test_short_dir.replace(prefix, "", 1)
+
+        return test_short_dir
 
     def _create_output_dir(self):
         try:
@@ -1120,7 +1135,7 @@ def main(argv):
     test_root_dir = os.path.dirname(os.path.realpath(__file__))
 
     # Calculate global variables.
-    g_output_dir = os.path.join(test_root_dir, "results")
+    g_output_dir = os.path.join(test_root_dir, str("results"))
 
     # Calculate and set other variables.
     nodes_per_cloud = 1

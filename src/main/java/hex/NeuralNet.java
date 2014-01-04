@@ -554,9 +554,9 @@ public class NeuralNet extends ValidatedJob {
         sb.append("<th>Training Time</th>");
         sb.append("<th>Training Samples</th>");
         sb.append("<th>Training MSE</th>");
-        sb.append("<th>Training Classification</th>");
+        sb.append("<th>Training Classification Error</th>");
         sb.append("<th>Validation MSE</th>");
-        sb.append("<th>Validation Classification</th>");
+        sb.append("<th>Validation Classification Error</th>");
         sb.append("</tr>");
         Errors[] trains = model.training_errors;
         for( int i = trains.length - 1; i >= 0; i-- ) {

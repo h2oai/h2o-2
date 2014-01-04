@@ -18,14 +18,22 @@ public class Expr2Test extends TestUtil {
       ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
 
+      checkStr("* + 1");
+      checkStr("x<-+;x(2)");     // Error, + is binary if used as prefix
+      checkStr("x<-+;x(1,2)");   // 3
+      checkStr("x<-*;x(2,3)");   // 6
+      checkStr("!1");
+      checkStr("(!)(1)");
+      checkStr("(!!)(1)");
       checkStr("-1");
       checkStr("-(1)");
+      checkStr("(-)(1)");
       checkStr("-T");
       checkStr("-(x = 3)");
       checkStr("x=c(0,1);!x+1");       // ! has lower precedence
       checkStr("x=c(1,-2);-+---x");
       checkStr("x=c(1,-2);--!--x");
-      checkStr("!(y = c(3,4))");
+      checkStr("!(y=c(3,4))");
       checkStr("!x!=1");
       checkStr("(!x)!=1");
       checkStr("1+x^2");
@@ -108,7 +116,8 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[h.hex[,2]>4,]");
       checkStr("a=c(1,2,3);a[a[,1]>10,1]");
       checkStr("apply(h.hex,2,sum)");
-      checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
+      //checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
+      checkStr("z=5;apply(h.hex,2,function(x){x[]+z})");
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("apply(h.hex,2,function(x){h.hex})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");

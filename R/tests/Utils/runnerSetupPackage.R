@@ -66,6 +66,7 @@ MASTER_SEED <- FALSE
 if (file.exists("../master_seed")) {
     MASTER_SEED <<- TRUE
     seed <- read.table("../master_seed")[[1]]
+    SEED <<- seed
 }
 seed <- setupRandomSeed(seed, suppress = TRUE)
 if (! file.exists("../master_seed")) {

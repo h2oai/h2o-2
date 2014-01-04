@@ -137,14 +137,23 @@ class ASTApply extends AST {
     if (ast == null) {
       ASTOp op1 = ASTOp.parseUniInfixOp(E);
       if (op1 != null) {
-        if( (ast = parseInfix(E,null,op1._precedence)) == null)
-          E.throwErr("Missing expr or unknown ID",E._x);
-        ast = make(new AST[]{op1,ast},E,x);
-      } else if( (ast = ASTSlice.parse(E)) == null ) {
-        E._x = x; return null;
+        // CASE 1 ~ INFIX1 := [] OP INFIX
+        if ((ast = parseInfix(E,null,op1._precedence)) != null)
+          ast = make(new AST[]{op1,ast},E,x);
+        else {
+          // CASE 2 ~ INFIX1 := [] OP
+          E._x = x;
+          ast = ASTSlice.parse(E);
+        }
+      } else {
+        // CASE 3 ~ INFIX1 := [] SLICE
+        ast = ASTSlice.parse(E);
       }
+      // CASE 0 ~ []
+      if (ast == null) return null;
       inf = ast;
     }
+    // INFIX := INFIX1 OP INFIX
     while( true ) {
       int op_x = E._x;
       ASTOp op = ASTOp.parseBinInfixOp(E);
@@ -154,7 +163,8 @@ class ASTApply extends AST {
       { E._x = op_x; return inf; }
       op_x = E._x;
       AST rite = parseInfix(E,null,op._precedence);
-      if (rite == null) E.throwErr("Missing expr or unknown ID", op_x);
+      if (rite == null)
+        E.throwErr("Missing expr or unknown ID", op_x);
       ast = inf = make(new AST[]{op,ast,rite},E,x);
     }
   }

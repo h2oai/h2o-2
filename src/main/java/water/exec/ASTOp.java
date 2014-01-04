@@ -163,9 +163,10 @@ public abstract class ASTOp extends AST {
     String id = E.isID();
     if( id == null ) return null;
     ASTOp op;
+    // This order matters. If used as a prefix OP, `+` and `-` are binary only.
     if( (op = PREFIX_OPS.get(id))    != null
-     || (op = UNI_INFIX_OPS.get(id)) != null
-     || (op = BIN_INFIX_OPS.get(id)) != null)
+     || (op = BIN_INFIX_OPS.get(id)) != null
+     || (op = UNI_INFIX_OPS.get(id)) != null)
       return op.make();
     E._x = x;
     return ASTFunc.parseFcn(E);
@@ -191,8 +192,7 @@ public abstract class ASTOp extends AST {
     ASTOp op = UNI_INFIX_OPS.get(id);
     if( op != null) return op.make();
     E._x = x;                 // Roll back, no parse happened
-    // Attempt a user-mode function parse
-    return ASTFunc.parseFcn(E);
+    return null;
   }
 
   // Parse a binary infix OP or return null.
@@ -203,8 +203,7 @@ public abstract class ASTOp extends AST {
     ASTOp op = BIN_INFIX_OPS.get(id);
     if( op != null) return op.make();
     E._x = x;                 // Roll back, no parse happened
-    // Attempt a user-mode function parse
-    return ASTFunc.parseFcn(E);
+    return null;
   }
 
 

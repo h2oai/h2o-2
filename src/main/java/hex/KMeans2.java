@@ -25,7 +25,7 @@ public class KMeans2 extends ColumnsJob {
   @API(help = "Clusters initialization", filter = Default.class)
   public Initialization initialization = Initialization.None;
 
-  @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 2, lmax = 100000)
+  @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 1, lmax = 100000)
   public int k = 2;
 
   @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000)
@@ -106,7 +106,7 @@ public class KMeans2 extends ColumnsJob {
         if( cancelled() )
           return Status.Done;
         model.clusters = normalize ? denormalize(clusters, vecs) : clusters;
-        model.error = sqr._sqr;
+        model.total_within_SS = sqr._sqr;
         model.iterations++;
         UKV.put(destination_key, model);
       }
@@ -121,12 +121,18 @@ public class KMeans2 extends ColumnsJob {
       task._mults = mults;
       task.doAll(vecs);
       model.clusters = clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
+      model.between_cluster_variances = task._betwnSqrs;
       double[] variances = new double[task._cSqrs.length];
       for( int clu = 0; clu < task._cSqrs.length; clu++ )
         for( int col = 0; col < task._cSqrs[clu].length; col++ )
           variances[clu] += task._cSqrs[clu][col];
-      model.cluster_variances = variances;
-      model.error = task._sqr;
+      double between_cluster_SS = 0.0;
+      for (int clu = 0; clu < task._betwnSqrs.length; clu++)
+          between_cluster_SS += task._betwnSqrs[clu];
+      model.between_cluster_SS = between_cluster_SS;
+      model.within_cluster_variances = variances;
+      model.total_within_SS = task._sqr;
+      model.total_SS = model.total_within_SS + model.between_cluster_SS;
       model.iterations++;
       UKV.put(destination_key, model);
       if( model.iterations >= max_iter )
@@ -175,15 +181,52 @@ public class KMeans2 extends ColumnsJob {
 
     @Override public boolean toHTML(StringBuilder sb) {
       if( model != null ) {
-        DocGen.HTML.section(sb, "Error: " + model.error);
+        DocGen.HTML.section(sb, "Cluster Centers: "); //"Total Within Cluster Sum of Squares: " + model.total_within_SS);
         table(sb, "Clusters", model._names, model.clusters);
-        double[][] rows = new double[model.cluster_variances.length][1];
+        double[][] rows = new double[model.within_cluster_variances.length][1];
         for( int i = 0; i < rows.length; i++ )
-          rows[i][0] = model.cluster_variances[i];
-        table(sb, "In-cluster variances", model._names, rows);
+          rows[i][0] = model.within_cluster_variances[i];
+        //sb.append("<br />");
+        DocGen.HTML.section(sb, "Cluster Variances: ");
+        table(sb, "Clusters", new String[]{"Within Cluster Variances"}, rows);
+        columnHTML(sb, "Between Cluster Variances", model.between_cluster_variances);
+        sb.append("<br />");
+        DocGen.HTML.section(sb, "Overall Totals: ");
+        double[] row = new double[]{model.total_SS, model.total_within_SS, model.between_cluster_SS};
+        rowHTML(sb, new String[]{"Total Sum of Squares", "Total Within Cluster Sum of Squares", "Between Cluster Sum of Squares"}, row);
         return true;
       }
       return false;
+    }
+
+    private static void rowHTML(StringBuilder sb, String[] header, double[] ro) {
+        sb.append("<span style='display: inline-block; '>");
+        sb.append("<table class='table table-striped table-bordered'>");
+        sb.append("<tr>");
+        for(int i = 0; i < header.length; i++)
+            sb.append("<th>").append(header[i]).append("</th>");
+        sb.append("</tr>");
+        sb.append("<tr>");
+        for (double row : ro) {
+            sb.append("<td>").append(ElementBuilder.format(row)).append("</td>");
+        }
+        sb.append("</tr>");
+        sb.append("</table></span>");
+    }
+
+    private static void columnHTML(StringBuilder sb, String name, double[] rows) {
+        sb.append("<span style='display: inline-block; '>");
+        sb.append("<table class='table table-striped table-bordered'>");
+        sb.append("<tr>");
+        sb.append("<th>").append(name).append("</th>");
+        sb.append("</tr>");
+        sb.append("<tr>");
+        for (double row : rows) {
+            sb.append("<tr>");
+            sb.append("<td>").append(ElementBuilder.format(row)).append("</td>");
+            sb.append("</tr>");
+        }
+        sb.append("</table></span>");
     }
 
     private static void table(StringBuilder sb, String title, String[] names, double[][] rows) {
@@ -212,8 +255,14 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "Cluster centers, always denormalized")
     public double[][] clusters;
 
-    @API(help = "Sum of min square distances")
-    public double error;
+    @API(help = "Sum of within cluster sum of squares")
+    public double total_within_SS;
+
+    @API(help = "Between cluster sum of square distances")
+    public double between_cluster_SS;
+
+    @API(help = "Total Sum of squares = total_within_SS + betwen_cluster_SS")
+    public double total_SS;
 
     @API(help = "Number of clusters")
     public int k;
@@ -227,8 +276,11 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "Iterations the algorithm ran")
     public int iterations;
 
-    @API(help = "Sum of square distances per cluster")
-    public double[] cluster_variances;
+    @API(help = "Within cluster sum of squares per cluster")
+    public double[] within_cluster_variances;
+
+    @API(help = "Between Cluster square distances per cluster")
+    public double[] between_cluster_variances;
 
     // Normalization caches
     private transient double[][] _normClust;
@@ -335,13 +387,17 @@ public class KMeans2 extends ColumnsJob {
 
     // OUT
     double[][] _cMeans, _cSqrs; // Means and sum of squares for each cluster
+    double[] _betwnSqrs;        // Between cluster squares
+    double[] _gm;               // Grand Mean (mean of means)
     long[] _rows;               // Rows per cluster
     double _sqr;                // Total sqr distance
 
     @Override public void map(Chunk[] cs) {
       _cMeans = new double[_clusters.length][_clusters[0].length];
       _cSqrs = new double[_clusters.length][_clusters[0].length];
+      _betwnSqrs = new double[_clusters.length];
       _rows = new long[_clusters.length];
+      _gm = new double[_clusters[0].length];
 
       // Find closest cluster for each row
       double[] values = new double[_clusters[0].length];
@@ -361,8 +417,18 @@ public class KMeans2 extends ColumnsJob {
         _rows[clu]++;
       }
       for( int clu = 0; clu < _cMeans.length; clu++ )
-        for( int col = 0; col < _cMeans[clu].length; col++ )
+        for( int col = 0; col < _cMeans[clu].length; col++ ) {
           _cMeans[clu][col] /= _rows[clu];
+          _gm[col] += _cMeans[clu][col];
+        }
+      for (int col = 0; col < _gm.length; col++)
+          _gm[col] /= _cMeans.length;
+
+      for (int clu = 0; clu < _cMeans.length; clu++)
+          for (int col = 0; col < _gm.length; col++) {
+              double mean_delta = _cMeans[clu][col] - _gm[col];
+              _betwnSqrs[clu] += (double)_rows[clu] * mean_delta * mean_delta;
+          }
       // Second pass for in-cluster variances
       for( int row = 0; row < cs[0]._len; row++ ) {
         int clu = clusters[row];

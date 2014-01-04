@@ -131,7 +131,7 @@ public class Exec2 {
 
   static boolean isDigit(char c) { return c>='0' && c<= '9'; }
   static boolean isWS(char c) { return c<=' '; }
-  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':'; }
+  static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
     if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
