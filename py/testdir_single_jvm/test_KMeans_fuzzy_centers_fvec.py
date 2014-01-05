@@ -137,9 +137,9 @@ class Basic(unittest.TestCase):
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
             if h2o.beta_features:
-                error = kmeans['model']['error']
-                cluster_variances = kmeans['model']['cluster_variances']
-                print "trial:", trial, "cluster_variances:", cluster_variances
+                error = kmeans['model']['total_within_SS']
+                within_cluster_variances = kmeans['model']['within_cluster_variances']
+                print "trial:", trial, "within_cluster_variances:", within_cluster_variances
             else:
                 model_key = kmeans["destination_key"]
                 kmeansResult = h2o_cmd.runInspect(key=model_key)

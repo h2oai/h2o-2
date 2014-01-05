@@ -21,7 +21,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_B_kmeans_benign(self):
+    def notest_B_kmeans_benign(self):
         h2o.beta_features = True # fvec
         importFolderPath = "logreg"
         csvFilename = "benign.csv"
@@ -68,10 +68,10 @@ class Basic(unittest.TestCase):
         h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
         model = modelView['model']
         clusters = model['clusters']
-        cluster_variances = model['cluster_variances']
-        error = model['error']
-        print "cluster_variances:", cluster_variances
-        print "error:", error
+        within_cluster_variances = model['within_cluster_variances']
+        total_within_SS = model['total_within_SS']
+        print "within_cluster_variances:", within_cluster_variances
+        print "total_within_SS:", total_within_SS
 
         # make this fvec legal?
         (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
@@ -117,13 +117,13 @@ class Basic(unittest.TestCase):
 
         model = modelView['model']
         clusters = model['clusters']
-        cluster_variances = model['cluster_variances']
-        error = model['error']
-        print "cluster_variances:", cluster_variances
-        print "error:", error
+        within_cluster_variances = model['within_cluster_variances']
+        total_within_SS = model['total_within_SS']
+        print "within_cluster_variances:", within_cluster_variances
+        print "total_within_SS:", total_within_SS
         # variance of 0 might be legal with duplicated rows. wasn't able to remove the duplicate rows of NAs at 
         # bottom of benign.csv in ec2
-        # for i,c in enumerate(cluster_variances):
+        # for i,c in enumerate(within_cluster_variances):
         #    if c < 0.1:
         #        raise Exception("cluster_variance %s for cluster %s is too small. Doesn't make sense. Ladies and gentlemen, this is Chewbacca. Chewbacca is a Wookiee from the planet Kashyyyk. But Chewbacca lives on the planet Endor. Now think about it...that does not make sense!" % (c, i))
         
