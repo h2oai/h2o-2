@@ -710,7 +710,7 @@ class RUnitRunner:
             cmd = ["R",
                    "--quiet",
                    "-f",
-                   os.path.join(os.path.dirname(os.path.realpath(__file__)), "Utils/runnerSetupPackage.R"),
+                   os.path.join(self.test_root_dir, "Utils/runnerSetupPackage.R"),
                    "--args",
                    "127.0.0.1:" + str(port)]
             child = subprocess.Popen(args=cmd,
@@ -948,6 +948,7 @@ class RUnitRunner:
 g_script_name = ""
 g_base_port = 40000
 g_num_clouds = 5
+g_wipe_test_state = False
 g_wipe_output_dir = False
 g_test_to_run = None
 g_test_list_file = None
@@ -955,6 +956,7 @@ g_test_group = None
 g_use_cloud = False
 g_use_ip = None
 g_use_port = None
+g_no_run = False
 
 # Global variables that are set internally.
 g_output_dir = None
@@ -991,17 +993,25 @@ def signal_handler(signum, stackframe):
 def usage():
     print("")
     print("Usage:  " + g_script_name +
+          " [--wipeall]"
           " [--wipe]"
           " [--baseport port]"
           " [--numclouds n]"
           " [--test path/to/test.R]"
           " [--testlist path/to/list/file]"
+          " [--testgroup group]"
           " [--usecloud ip:port]"
-          " [--testgroup group]")
+          " [--norun]")
     print("")
     print("    (Output dir is: " + g_output_dir + ")")
+    print("    (Default number of clouds is: " + str(g_num_clouds) + ")")
     print("")
-    print("    --wipe        Wipes the output dir before starting.")
+    print("    --wipeall     Remove all prior test state before starting, particularly")
+    print("                  random seeds.")
+    print("                  (Removes master_seed file and all Rsandbox directories.")
+    print("                  Also wipes the output dir before starting.)")
+    print("")
+    print("    --wipe        Wipes the output dir before starting.  Keeps old random seeds.")
     print("")
     print("    --baseport    The first port at which H2O starts searching for free ports.")
     print("")
@@ -1013,11 +1023,13 @@ def usage():
     print("    --testlist    A file containing a list of tests to run (for example the")
     print("                  'failed.txt' file from the output directory).")
     print("")
+    print("    --testgroup   Test a group of tests by function:")
+    print("                  pca, glm, kmeans, gbm, rf, algos, golden, munging")
+    print("")
     print("    --usecloud    ip:port of cloud to send tests to instead of starting clouds.")
     print("                  (When this is specified, numclouds is ignored.)")
     print("")
-    print("    --testgroup   Test a group of tests by function:")
-    print("                  pca, glm, kmeans, gbm, rf, algos, golden, munging")
+    print("    --norun       Perform side effects like wipe, but don't actually run tests.")
     print("")
     print("    If neither --test nor --testlist is specified, then the list of tests is")
     print("    discovered automatically as files matching '*runit*.R'.")
@@ -1028,21 +1040,21 @@ def usage():
     print("    Just accept the defaults and go (note: output dir must not exist):")
     print("        "+g_script_name)
     print("")
-    print("    For a powerful laptop with 8 cores:")
-    print("        "+g_script_name+" --wipe --numclouds 5")
+    print("    For a powerful laptop with 8 cores (keep default numclouds):")
+    print("        "+g_script_name+" --wipeall")
     print("")
     print("    For a big server with 32 cores:")
-    print("        "+g_script_name+" --wipe --numclouds 16")
+    print("        "+g_script_name+" --wipeall --numclouds 16")
     print("")
-    print("    Run one specific test:")
-    print("        "+g_script_name+" --wipe --numclouds 1 --test path/to/test.R")
+    print("    Run one specific test, keeping old random seeds:")
+    print("        "+g_script_name+" --wipe --test path/to/test.R")
     print("")
-    print("    Rerunning failures from a previous run:")
+    print("    Rerunning failures from a previous run, keeping old random seeds:")
     print("        # Copy failures.txt, otherwise --wipe removes the directory with the list!")
     print("        cp " + os.path.join(g_output_dir, "failures.txt") + " .")
     print("        "+g_script_name+" --wipe --numclouds 16 --testlist failures.txt")
     print("")
-    print("    Run tests on a pre-existing cloud (e.g. in a debugger):")
+    print("    Run tests on a pre-existing cloud (e.g. in a debugger), keeping old random seeds:")
     print("        "+g_script_name+" --wipe --usecloud ip:port")
     print("")
     sys.exit(1)
@@ -1058,6 +1070,7 @@ def unknown_arg(s):
 def parse_args(argv):
     global g_base_port
     global g_num_clouds
+    global g_wipe_test_state
     global g_wipe_output_dir
     global g_test_to_run
     global g_test_list_file
@@ -1065,6 +1078,7 @@ def parse_args(argv):
     global g_use_cloud
     global g_use_ip
     global g_use_port
+    global g_no_run
 
     i = 1
     while (i < len(argv)):
@@ -1080,6 +1094,9 @@ def parse_args(argv):
             if (i > len(argv)):
                 usage()
             g_num_clouds = int(argv[i])
+        elif (s == "--wipeall"):
+            g_wipe_test_state = True
+            g_wipe_output_dir = True
         elif (s == "--wipe"):
             g_wipe_output_dir = True
         elif (s == "--test"):
@@ -1109,12 +1126,56 @@ def parse_args(argv):
             g_use_ip = m.group(1)
             port_string = m.group(2)
             g_use_port = int(port_string)
+        elif (s == "--norun"):
+            g_no_run = True
         elif (s == "-h" or s == "--h" or s == "-help" or s == "--help"):
             usage()
         else:
             unknown_arg(s)
 
         i += 1
+
+
+def wipe_output_dir():
+    print("")
+    print("Wiping output directory...")
+    try:
+        if (os.path.exists(g_output_dir)):
+            shutil.rmtree(g_output_dir)
+    except OSError as e:
+        print("")
+        print("ERROR: Removing output directory failed: " + g_output_dir)
+        print("       (errno {0}): {1}".format(e.errno, e.strerror))
+        print("")
+        sys.exit(1)
+
+
+def wipe_test_state(test_root_dir):
+    print("")
+    print("Wiping test state (including random seeds)...")
+    if (True):
+        possible_seed_file = os.path.join(test_root_dir, str("master_seed"))
+        if (os.path.exists(possible_seed_file)):
+            try:
+                os.remove(possible_seed_file)
+            except OSError as e:
+                print("")
+                print("ERROR: Removing seed file failed: " + possible_seed_file)
+                print("       (errno {0}): {1}".format(e.errno, e.strerror))
+                print("")
+                sys.exit(1)
+    for d, subdirs, files in os.walk(test_root_dir):
+        for s in subdirs:
+            if ("Rsandbox" in s):
+                rsandbox_dir = os.path.join(d, s)
+                try:
+                    shutil.rmtree(rsandbox_dir)
+                except OSError as e:
+                    print("")
+                    print("ERROR: Removing RSandbox directory failed: " + rsandbox_dir)
+                    print("       (errno {0}): {1}".format(e.errno, e.strerror))
+                    print("")
+                    sys.exit(1)
 
 
 def main(argv):
@@ -1147,23 +1208,13 @@ def main(argv):
     # Override any defaults with the user's choices.
     parse_args(argv)
 
-    # Set up output directory.
-    if (not os.path.exists(h2o_jar)):
-        print("")
-        print("ERROR: H2O jar not found: " + h2o_jar)
-        print("")
-        sys.exit(1)
-
+    # Wipe output directory if requested.
     if (g_wipe_output_dir):
-        try:
-            if (os.path.exists(g_output_dir)):
-                shutil.rmtree(g_output_dir)
-        except OSError as e:
-            print("")
-            print("ERROR: Removing output directory failed: " + g_output_dir)
-            print("       (errno {0}): {1}".format(e.errno, e.strerror))
-            print("")
-            sys.exit(1)
+        wipe_output_dir()
+
+    # Wipe persistent test state if requested.
+    if (g_wipe_test_state):
+        wipe_test_state(test_root_dir)
 
     # Create runner object.
     # Just create one cloud if we're only running one test, even if the user specified more.
@@ -1184,9 +1235,20 @@ def main(argv):
     else:
         g_runner.build_test_list()
 
+    # If no run is specified, then do an early exit here.
+    if (g_no_run):
+        sys.exit(0)
+
     # Handle killing the runner.
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+
+    # Sanity check existence of H2O jar file before starting the cloud.
+    if (not os.path.exists(h2o_jar)):
+        print("")
+        print("ERROR: H2O jar not found: " + h2o_jar)
+        print("")
+        sys.exit(1)
 
     # Run.
     g_runner.start_clouds()
