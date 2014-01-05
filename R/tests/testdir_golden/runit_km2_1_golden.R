@@ -12,6 +12,11 @@ irisR<- read.csv(locate("smalldata/iris/iris.csv"), header=F)
 fitR<- kmeans(irisR[,1:4], centers=3, iter.max=1000, nstart=10)
 fitH2O<- h2o.kmeans(irisH2O, centers=3, cols=c("C0", "C1", "C2", "C3"))
 
+# Sanity check to make sure required fields are actually present in the model that gets returned.
+if (! ('withinss' %in% names(fitH2O@model))) {
+  stop("H2O model has no component 'withinss'")
+}
+
 wssR<-sort.int(fitR$withinss)
 wssH2O<- sort.int(fitH2O@model$withinss)
 
