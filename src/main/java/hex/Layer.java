@@ -796,9 +796,8 @@ public abstract class Layer extends Iced {
   }
 
   public static class RectifierDropout extends Rectifier {
-    transient Random _rand, _rand2;
+    transient Random _rand;
     transient byte[] _bits;
-    transient java.util.BitSet _skip_input; // which input features to skip
 
     private RectifierDropout() {
     }
@@ -810,7 +809,6 @@ public abstract class Layer extends Iced {
     // keep random generators thread-local
     @Override public Layer clone() {
       _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      _rand2 = new Random();
       _bits = new byte[(units + 7) / 8];
       return super.clone();
     }
@@ -822,34 +820,19 @@ public abstract class Layer extends Iced {
       }
       _rand.nextBytes(_bits);
 
-      if( _rand2 == null ) {
-        _rand2 = new Random();
-      }
-
-      final boolean input_dropout = (_previous.isInput() && training);
-      if (input_dropout) {
+      // input dropout: set some input layer feature values to 0
+      if (_previous.isInput() && training) {
         final double rate = ((Input)_previous)._dropout_rate;
-        if (rate > 0) {
-          if (_skip_input == null || _skip_input.size() < _previous._a.length)
-            _skip_input = new java.util.BitSet(_previous._a.length);
-          for( int i = 0; i < _previous._a.length; i++ ) {
-            _skip_input.set(i, _rand2.nextFloat() < rate);
-          }
+        for( int i = 0; i < _previous._a.length; i++ ) {
+          if (_rand.nextFloat() < rate) _previous._a[i] = 0;
         }
       }
 
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        // use bitmask for dropout on hidden layer
         boolean b = (_bits[o / 8] & (1 << (o % 8))) != 0;
         if( !training || b ) {
-          // perform dropout on input layer
           for( int i = 0; i < _previous._a.length; i++ ) {
-            //Option 1: use the same input units for all hidden units
-            if (_skip_input != null && _skip_input.get(i)) continue;
-            //Option 2: use different input units for each hidden unit
-            //if (_skip_input != null && _skip_input.get((o * 13071976 + i) % _previous._a.length)) continue;
-
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           }
           _a[o] += _b[o];
@@ -858,38 +841,6 @@ public abstract class Layer extends Iced {
           else if( !training )
             _a[o] *= .5f;
         }
-      }
-    }
-  }
-
-  public static class RectifierDropoutSpike extends Rectifier {
-    transient Random _rand;
-
-    private RectifierDropoutSpike() {
-    }
-
-    public RectifierDropoutSpike(int units) {
-      super(units);
-    }
-
-    @Override
-    protected void fprop(boolean training) {
-      if( _rand == null ) {
-        _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-      }
-      for( int o = 0; o < _a.length; o++ ) {
-        _a[o] = 0;
-        for( int i = 0; i < _previous._a.length; i++ ) {
-          final double prob = _rand.nextDouble();
-          if (_previous._a[i] <= prob) {
-            _a[o] += _w[o * _previous._a.length + i] * 0.5f;
-          }
-        }
-        _a[o] += _b[o];
-        if( _a[o] < 0 )
-          _a[o] = 0;
-        else if( !training )
-          _a[o] *= .5f;
       }
     }
   }
