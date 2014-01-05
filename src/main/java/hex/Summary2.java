@@ -312,13 +312,26 @@ public class Summary2 extends Iced {
         }
       }
     }
+
     // update histogram
-    long binIdx = val == Double.NEGATIVE_INFINITY ? 0
-            : val == Double.POSITIVE_INFINITY ? hcnt.length-1
-            : Math.round((val-_start)*1000000.0/_binsz)/1000000;
+    long binIdx;
+    if (hcnt.length == 1) {
+      binIdx = 0;
+    }
+    else if (val == Double.NEGATIVE_INFINITY) {
+      binIdx = 0;
+    }
+    else if (val == Double.POSITIVE_INFINITY) {
+      binIdx = hcnt.length-1;
+    }
+    else {
+      binIdx = Math.round(((val - _start) * 1000000.0) / _binsz) / 1000000;
+    }
+
     if ((int)binIdx >= hcnt.length) {
       assert false;
     }
+
     ++hcnt[(int)binIdx];
     ++_rows;
   }
