@@ -20,7 +20,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_KMeans_covtype20x(self):
+    def test_KMeans_covtype20x_fvec(self):
+        h2o.beta_features = True
         if localhost:
             csvFilenameList = [
                 # 68 secs on my laptop?
@@ -45,11 +46,11 @@ class Basic(unittest.TestCase):
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             kwargs = {
-                'cols': None,
+                'max_iter': 25,
                 'initialization': 'Furthest',
                 'k': 2, 
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails

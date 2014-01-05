@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_params_rand2(self):
+    def test_rf_params_rand2_fvec(self):
         h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         for trial in range(10):

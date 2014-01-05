@@ -3,9 +3,12 @@ package water.exec;
 import java.text.*;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+
 import water.*;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
+import water.util.Log;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -75,7 +78,7 @@ public class Env extends Iced {
       _fcn= Arrays.copyOf(_fcn,len<<=1);
     }
   }
-  void push( Frame fr ) { push(1); _ary[_sp-1] = addRef(fr) ; assert check_refcnt(fr.anyVec()); }
+  void push( Frame fr ) { push(1); _ary[_sp-1] = addRef(fr); assert _ary[0]==null||check_refcnt(_ary[0].anyVec());}
   void push( double d ) { push(1); _d  [_sp-1] = d  ; }
   void push( ASTOp fcn) { push(1); _fcn[_sp-1] = addRef(fcn); }
   void push( Frame fr, String key ) { push(fr); _key[_sp-1]=key; }
@@ -98,7 +101,7 @@ public class Env extends Iced {
     global._ary[gidx] = global.addRef(_ary[idx]);
     global._d  [gidx] =               _d  [idx] ;
     global._fcn[gidx] = global.addRef(_fcn[idx]);
-    assert global.check_refcnt(global._ary[0].anyVec());
+    assert _ary[0]==null || global.check_refcnt(_ary[0].anyVec());
   }
   // Copy from TOS into a slot.  Does NOT pop results.
   void tos_into_slot( int d, int n, String id ) {
@@ -107,9 +110,9 @@ public class Env extends Iced {
     int idx = _display[_tod-d]+n;
     subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
-    Frame fr =            addRef(_ary[_sp-1]);
-    _ary[idx] = fr==null ? null : new Frame(fr);
-    _d  [idx] =                 _d   [_sp-1] ;
+    Frame fr =                   _ary[_sp-1];
+    _ary[idx] = fr==null ? null : addRef(new Frame(fr));
+    _d  [idx] =                  _d  [_sp-1] ;
     _fcn[idx] =           addRef(_fcn[_sp-1]);
     _key[idx] = d==0 && fr!=null ? id : null;
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
@@ -144,8 +147,8 @@ public class Env extends Iced {
     _ary[_sp]=global.subRef(_ary[_sp],_key[_sp]);
     assert _sp==0 || _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
-  void pop( ) { pop(this); }
-  void pop( int n ) {
+  public void pop( ) { pop(this); }
+  public void pop( int n ) {
     for( int i=0; i<n; i++ )
       pop();
   }
@@ -159,11 +162,26 @@ public class Env extends Iced {
 
   // Pop & return a Frame or Fcn; ref-cnt of all things remains unchanged.
   // Caller is responsible for tracking lifetime.
-  public double popDbl() { assert isDbl(); return _d  [--_sp]; }
-  public ASTOp  popFcn() { assert isFcn(); ASTOp op = _fcn[--_sp]; _fcn[_sp]=null; return op; }
-  public Frame  popAry() { assert isAry(); Frame fr = _ary[--_sp]; _ary[_sp]=null; assert allAlive(fr); return fr; }
-  public String key()    { return _key[_sp]; }
+  public double popDbl()  { assert isDbl(); return _d  [--_sp]; }
+  public ASTOp  popFcn()  { assert isFcn(); ASTOp op = _fcn[--_sp]; _fcn[_sp]=null; return op; }
+  public Frame  popAry()  { assert isAry(); Frame fr = _ary[--_sp]; _ary[_sp]=null; assert allAlive(fr); return fr; }
+  public Frame  peekAry() { assert isAry(); Frame fr = _ary[_sp-1]; assert allAlive(fr); return fr; }
+  public ASTOp  peekFcn() { assert isFcn(); ASTOp op = _fcn[_sp-1]; return op; }
+  public String peekKey() { return _key[_sp-1]; }
+  public String key()     { return _key[_sp]; }
 
+  // Replace a function invocation with it's result
+  public void poppush( int n, Frame ary, String key) {
+    addRef(ary);
+    for( int i=0; i<n; i++ ) {
+      assert _sp > 0;
+      _sp--;
+      _fcn[_sp] = subRef(_fcn[_sp]);
+      _ary[_sp] = subRef(_ary[_sp], _key[_sp]);
+    }
+    push(1); _ary[_sp-1] = ary; _key[_sp-1] = key;
+    assert check_all_refcnts();
+  }
   // Replace a function invocation with it's result
   public void poppush(double d) { pop(); push(d); }
 
@@ -191,14 +209,15 @@ public class Env extends Iced {
   }
 
   public Futures subRef( Vec vec, Futures fs ) {
+
+    if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
     int cnt = _refcnt.get(vec)-1;
+    //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);
     if( cnt > 0 ) _refcnt.put(vec,cnt);
     else {
       if( fs == null ) fs = new Futures();
-      Vec vmaster = vec.masterVec();
       UKV.remove(vec._key,fs);
       _refcnt.remove(vec);
-      if( vmaster != null ) subRef(vmaster,fs);
     }
     return fs;
   }
@@ -229,11 +248,13 @@ public class Env extends Iced {
     Integer I = _refcnt.get(vec);
     assert I==null || I>0;
     assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
-    if (I==null) {
-      Vec vmaster = vec.masterVec();
-      if (vmaster!=null) addRef(vmaster);
-    }
     _refcnt.put(vec,I==null?1:I+1);
+    //Log.info(" +++ " + vec._key.toString() + " RC=" + (I==null?1:I+1));
+    //if (I!=null&&I==1)
+    //  for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+    //    System.out.println(ste);
+    //  }
+    if (vec.masterVec()!=null) addRef(vec.masterVec());
     return vec;
   }
   // Add a refcnt to all vecs in this frame
@@ -271,7 +292,7 @@ public class Env extends Iced {
     // Push changes at the outer scope into the K/V store
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?
-        Frame fr = popAry();  // Pop w/out lower refcnt & delete
+        Frame fr = popAry();    // Pop w/o lowering refcnt
         Frame fr2=fr;
         String skey = key();
         for( int i=0; i<fr.numCols(); i++ ) {
@@ -283,6 +304,7 @@ public class Env extends Iced {
             Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
             fr2.replace(i,v2);  // Replace with private deep-copy
             subRef(v,null);     // Now lower refcnt for good assertions
+            addRef(v2);
           } // But not down to zero (do not delete items in global scope)
         }
         UKV.put(Key.make(_key[_sp]),fr2);
@@ -300,11 +322,18 @@ public class Env extends Iced {
   // Count references the "hard way" - used to check refcnting math.
   int compute_refcnt( Vec vec ) {
     int cnt=0;
+    HashSet<Vec> refs = new HashSet<Vec>();
     for( int i=0; i<_sp; i++ )
-      if( _ary[i] != null && _ary[i].find(vec) != -1 ) cnt++;
+      if( _ary[i] != null) {
+        for (Vec v : _ary[i].vecs()) {
+          Vec vm;
+          if (v.equals(vec)) cnt++;
+          else if ((vm = v.masterVec()) !=null && vm.equals(vec)) cnt++;
+        }
+      }
       else if( _fcn[i] != null && (_fcn[i] instanceof ASTFunc) )
         cnt += ((ASTFunc)_fcn[i])._env.compute_refcnt(vec);
-    return cnt;
+    return cnt + refs.size();
   }
   boolean check_refcnt( Vec vec ) {
     Integer I = _refcnt.get(vec);
@@ -315,6 +344,12 @@ public class Env extends Iced {
     return false;
   }
 
+  boolean check_all_refcnts() {
+    for (Vec v : _refcnt.keySet())
+      if (check_refcnt(v) == false)
+        return false;
+    return true;
+  }
 
   // Pop and return the result as a string
   public String resultString( ) {

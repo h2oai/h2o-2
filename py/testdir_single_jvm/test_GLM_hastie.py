@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
 
     validations1 = {}
 
-    def test_A_1mx10_hastie_10_2(self):
+    def test_GLM_hastie(self):
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)

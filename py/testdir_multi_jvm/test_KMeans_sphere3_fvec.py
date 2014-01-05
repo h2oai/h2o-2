@@ -80,7 +80,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_kmeans_sphere3(self):
+    def test_kmeans_sphere3_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = 'syn_spheres3_' + str(SEED) + '.csv'
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -93,8 +94,8 @@ class Basic(unittest.TestCase):
             # reuse the same seed, to get deterministic results (otherwise sometimes fails
             kwargs = {
                 'k': 3, 
+                'max_iter': 25,
                 'initialization': 'Furthest',
-                'cols': None, 
                 'destination_key': 'spheres3.hex', 
                 # 'seed': 265211114317615310,
                 'seed': 0,

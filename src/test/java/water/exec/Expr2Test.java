@@ -116,8 +116,8 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[h.hex[,2]>4,]");
       checkStr("a=c(1,2,3);a[a[,1]>10,1]");
       checkStr("apply(h.hex,2,sum)");
-      //checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
-      checkStr("z=5;apply(h.hex,2,function(x){x[]+z})");
+      checkStr("y=5;apply(h.hex,2,function(x){x[]+y})");
+      //checkStr("z=5;apply(h.hex,2,function(x){x[]+z})");
       checkStr("apply(h.hex,2,function(x){x=1;h.hex})");
       checkStr("apply(h.hex,2,function(x){h.hex})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
@@ -145,7 +145,8 @@ public class Expr2Test extends TestUtil {
       checkStr("h.hex[,4] != 29 | h.hex[,2] < 305 & h.hex[,2] < 81");
       checkStr("a=cbind(c(1,2,3), c(4,5,6))");
       checkStr("a[,1] = factor(a[,1])");
-      checkStr("a[,1] = factor(a[,1])");
+      //checkStr("a[,1] = factor(a[,1])");
+      checkStr("is.factor(a[,1])");
       //checkStr("h.hex[h.hex[,2]>4,]=-99");
       //checkStr("h.hex[2,]=h.hex[7,]");
       //checkStr("h.hex[c(1,3,5),1] = h.hex[c(2,4,6),2]");

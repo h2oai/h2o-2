@@ -40,7 +40,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
 
-    def test_KMeans2_enum(self):
+    def test_KMeans_enum_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 11, 'cA', 5),
@@ -66,7 +67,12 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=csvFilename + ".hex")
             print "Parse result['destination_key']:", parseResult['destination_key']
 
-            kwargs = {'k': 2, 'initialization': 'Furthest', 'cols': None, 'destination_key': 'benign_k.hex'}
+            kwargs = {
+                'k': 2, 
+                'initialization': 'Furthest', 
+                'destination_key': 'benign_k.hex',
+                'max_iter': 20,
+            }
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
             h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
