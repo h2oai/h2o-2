@@ -37,6 +37,13 @@ public class NeuralNet extends ValidatedJob {
     Tanh, Rectifier, RectifierWithDropout, Maxout
   };
 
+  public enum ExecutionMode {
+    Serial, Threaded_Hogwild, MapReduce_Hogwild
+  };
+
+  @API(help = "Execution Mode", filter = Default.class)
+  public ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
+
   @API(help = "Activation function", filter = Default.class)
   public Activation activation = Activation.Tanh;
 
@@ -151,8 +158,18 @@ public class NeuralNet extends ValidatedJob {
     UKV.put(destination_key, model);
 
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
-    //final Trainer trainer = new Trainer.MapReduce(ls, epochs, self()); //TODO: Bring this back
-    final Trainer trainer = new Trainer.Threaded(ls, epochs, self()); //HACK: won't work in multi-node clusters
+    final Trainer trainer;
+
+    if (mode == ExecutionMode.Serial) {
+      System.out.println("Serial execution mode");
+      trainer = new Trainer.Direct(ls, epochs, self());
+    } else if (mode == ExecutionMode.Threaded_Hogwild) {
+      System.out.println("Threaded (Hogwild) execution mode");
+      trainer = new Trainer.Threaded(ls, epochs, self());
+    } else {
+      System.out.println("MapReduce + Threaded (Hogwild) execution mode");
+      trainer = new Trainer.MapReduce(ls, epochs, self());
+    }
 
     // Use a separate thread for monitoring (blocked most of the time)
     Thread thread = new Thread() {
