@@ -12,4 +12,5 @@ Walk-Through Tutorials
    pca
    gbm
    gbmgrid
+   rtutorial
    

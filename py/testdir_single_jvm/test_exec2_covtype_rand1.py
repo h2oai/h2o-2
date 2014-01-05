@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_loop_random_exec_covtype(self):
+    def test_exec2_covtype_rand1(self):
         h2o.beta_features = True
         csvPathname = 'UCI/UCI-large/covtype/covtype.data'
         parseResult = h2i.import_parse(bucket='datasets', path=csvPathname, schema='local', hex_key='c.hex', timeoutSecs=15)

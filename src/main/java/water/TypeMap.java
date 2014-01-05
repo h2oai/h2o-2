@@ -3,6 +3,7 @@ package water;
 import java.util.Arrays;
 import water.nbhm.NonBlockingHashMap;
 import water.util.Log;
+import water.H2O;
 
 public class TypeMap {
   static public final short NULL = (short) -1;
@@ -13,55 +14,12 @@ public class TypeMap {
   static final public String BOOTSTRAP_CLASSES[] = {
     " BAD",
     "[B",
-    "hex.DGLM$GLMModel",
-    "hex.DLSM$ADMMSolver",
-    "hex.DLSM$GeneralizedGradientSolver",
-    "hex.KMeans",
-    "hex.KMeansModel",
-    "hex.rf.DRF$DRFParams",
-    "hex.rf.RFModel",
-    "hex.Summary2",
-    "water.AutoSerialTest",
-    "water.FetchClazz",
-    "water.FetchId",
-    "water.H2ONode",
-    "water.HeartBeat",
-    "water.Job",
-    "water.Job$Fail",
-    "water.Job$List",
-    "water.Key",
-    "water.Model$ModelDataAdaptor",
-    "water.Value",
-    "water.ValueArray",
-    "water.ValueArray$Column",
-    "water.api.Constants",
-    "water.api.RequestArguments",
-    "water.api.RequestArguments$FrameKeyVec",
-    "water.api.RequestArguments$FrameClassVec",
-    "water.api.RequestArguments$HexColumnSelect",
-    "water.api.RequestArguments$HexAllColumnSelect",
-    "water.api.RequestBuilders",
-    "water.api.RequestBuilders$ResponseInfo",
-    "water.api.RequestQueries",
-    "water.api.RequestStatics",
-    "water.api.Script$Done",
-    "water.fvec.AppendableVec",
-    "water.fvec.ByteVec",
-    "water.fvec.C1NChunk",
-    "water.fvec.Frame",
-    "water.fvec.Vec",
-    "water.parser.ParseDataset",
-    "water.parser.ParseDataset$Progress",
-    "water.util.JStackCollectorTask",
-    "water.util.Log$1",
-    "water.util.Log$LogStr",
-    // Classes required by tests - this is really nasty hack since it introduce
-    // dependency from core code into tests !!!!
-    "hex.DGLM$GLMParams",
-    "hex.NewRowVecTask$DataFrame",
-    "hex.drf.DRF",
-    "water.AutoSerialTest",
-    "water.KVTest$Atomic2",
+    "water.FetchClazz",   // used to fetch IDs from leader
+    "water.FetchId",      // used to fetch IDs from leader
+    "water.ValueArray",   // used in TypeaheadKeys
+    "water.fvec.C1NChunk",// used as constant in parser
+    "water.fvec.Frame",   // used in TypeaheadKeys & Exec2
+    "water.Job$List",     // First Key which locks the cloud for all JUnit tests
   };
   // String -> ID mapping
   static private final NonBlockingHashMap<String, Integer> MAP = new NonBlockingHashMap();
@@ -73,24 +31,24 @@ public class TypeMap {
   static private int IDS;
   static {
     CLAZZES = BOOTSTRAP_CLASSES;
+    GOLD = new Freezable[BOOTSTRAP_CLASSES.length];
     int id=0;
     for( String s : CLAZZES )
       MAP.put(s,id++);
     IDS = id;
-    C1NCHUNK    = (short)onLoad("water.fvec.C1NChunk");
-    FRAME       = (short)onLoad("water.fvec.Frame");
-    VALUE_ARRAY = (short)onLoad("water.ValueArray");
-    GOLD = new Freezable[BOOTSTRAP_CLASSES.length];
+    C1NCHUNK    = (short)onIce("water.fvec.C1NChunk");
+    FRAME       = (short)onIce("water.fvec.Frame");
+    VALUE_ARRAY = (short)onIce("water.ValueArray");
   }
 
-  // During ClassLoading / Weaving, get a globally unique class ID for a className
-  static public int onLoad(String className) {
+  // During first Icing, get a globally unique class ID for a className
+  static public int onIce(String className) {
     Integer I = MAP.get(className);
     if( I != null ) return I;
     // Need to install a new cloud-wide type ID for className
     assert H2O.CLOUD.size() > 0 : "No cloud when getting type id for "+className;
     int id = -1;
-    if( H2O.CLOUD.leader() != H2O.SELF ) // Leader?
+    if( H2O.CLOUD.leader() != H2O.SELF ) // Not leader?
       id = FetchId.fetchId(className);
     return install(className,id);
   }
@@ -100,6 +58,7 @@ public class TypeMap {
   // get either the old or new arrays.  However readers are all reader with
   // smaller type ids, and these will work fine in either old or new arrays.
   synchronized static private int install( String className, int id ) {
+    Paxos.lockCloud();
     if( id == -1 ) id = IDS++;  // Leader will get an ID under lock
     MAP.put(className,id);       // No race on insert, since under lock
     // Expand lists to handle new ID, as needed
@@ -133,7 +92,9 @@ public class TypeMap {
     Freezable f = GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Freezable) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw Log.errRTExcept(e); }
+      catch( Exception e ) {
+        throw Log.errRTExcept(e);
+      }
     }
     return f.newInstance();
   }

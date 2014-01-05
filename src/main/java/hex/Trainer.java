@@ -91,9 +91,9 @@ public abstract class Trainer {
     Thread _thread;
     Key _job;
 
-    public Direct(Layer[] ls, int epochs, Key job) {
+    public Direct(Layer[] ls, double epochs, Key job) {
       super(ls);
-      _limit = epochs * ((Input) ls[0])._len;
+      _limit = (long) (epochs * ((Input) ls[0])._len);
       _job = job;
     }
 

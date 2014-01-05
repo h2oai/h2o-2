@@ -14,7 +14,6 @@ paramDict = {
     # 'stat_type': 'ENTROPY',
     # 'depth': 2147483647, 
     # 'bin_limit': 10000,
-    # 'parallel': 1,
     ## 'seed': 3,
     ## 'features': 30,
     ## 'exclusive_split_limit': 0,

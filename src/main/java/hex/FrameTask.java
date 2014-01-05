@@ -51,15 +51,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * @param cats     - indexes of categoricals into the expanded beta-vector.
    * @param response - numeric value for the response
    */
-  protected void processRow(double [] nums, int ncats, int [] cats, double response){throw new RuntimeException("should've been overriden!");}
-  protected void processRow(double [] nums, int ncats, int [] cats){throw new RuntimeException("should've been overriden!");}
-  protected void processRow(double [] nums, int ncats, int [] cats, double response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
-  protected void processRow(double [] nums, int ncats, int [] cats, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
 
 
   public static class DataInfo extends Iced {
     public final Frame _adaptedFrame;
-    public final boolean _hasResponse;
+    public final int _responses; // number of responses
     public final boolean _standardize;
     public final int _nums;
     public final int _cats;
@@ -71,7 +69,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
     private DataInfo(DataInfo dinfo,int foldId, int nfolds){
       _standardize = dinfo._standardize;
-      _hasResponse = dinfo._hasResponse;
+      _responses = dinfo._responses;
       _nums = dinfo._nums;
       _cats = dinfo._cats;
       _adaptedFrame = dinfo._adaptedFrame;
@@ -81,20 +79,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _foldId = foldId;
       _nfolds = nfolds;
     }
-    public DataInfo(Frame fr, boolean hasResponse, double [] normSub, double [] normMul){
-      this(fr,hasResponse,normSub != null && normMul != null);
+    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul){
+      this(fr,hasResponses,normSub != null && normMul != null);
       assert (normSub == null) == (normMul == null);
       if(normSub != null && normMul != null){
         System.arraycopy(normSub, 0, _normSub, 0, normSub.length);
         System.arraycopy(normMul, 0, _normMul, 0, normMul.length);
       }
     }
-    public DataInfo(Frame fr, boolean hasResponse, boolean standardize){
+    public DataInfo(Frame fr, int nResponses, boolean standardize){
       _nfolds = _foldId = 0;
       _standardize = standardize;
-      _hasResponse = hasResponse;
+      _responses = nResponses;
       final Vec [] vecs = fr.vecs();
-      final int n = vecs.length-(hasResponse?1:0); // -1 for response
+      final int n = vecs.length-_responses;
       int [] nums = MemoryManager.malloc4(n);
       int [] cats = MemoryManager.malloc4(n);
       int nnums = 0, ncats = 0;
@@ -138,6 +136,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         }
       }
       _adaptedFrame = new Frame(names,vecs2);
+    }
+    public String toString(){
+      return "";
     }
     public DataInfo getFold(int foldId, int nfolds){
       return new DataInfo(this, foldId, nfolds);
@@ -186,6 +187,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     final int nrows = chunks[0]._len;
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
+    double [] response = MemoryManager.malloc8d(_dinfo._responses);
 
     OUTER:
     for(int r = 0; r < nrows; ++r){
@@ -196,19 +198,18 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         int c = (int)chunks[i].at80(r);
         if(c != 0)cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
       }
-      final int n = _dinfo._hasResponse?chunks.length-1:chunks.length;
+      final int n = chunks.length-_dinfo._responses;
       for(;i < n;++i){
         double d = chunks[i].at0(r);
         if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
         nums[i-_dinfo._cats] = d;
       }
-      if(outputs != null && outputs.length > 0){
-        if(!_dinfo._hasResponse) processRow(nums, ncats, cats,outputs);
-        else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r),outputs);
-      } else {
-        if(!_dinfo._hasResponse) processRow(nums, ncats, cats);
-        else processRow(nums, ncats, cats,chunks[chunks.length-1].at0(r));
-      }
+      for(i = 0; i < _dinfo._responses; ++i)
+        response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
+      if(outputs != null && outputs.length > 0)
+        processRow(nums, ncats, cats,response,outputs);
+      else
+        processRow(nums, ncats, cats,response);
     }
     chunkDone();
   }

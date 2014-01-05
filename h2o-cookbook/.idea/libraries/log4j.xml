@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="log4j">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/../lib/log4j" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../lib/log4j" />
+    </SOURCES>
+    <jarDirectory url="file://$PROJECT_DIR$/../lib/log4j" recursive="false" />
+    <jarDirectory url="file://$PROJECT_DIR$/../lib/log4j" recursive="false" type="SOURCES" />
+  </library>
+</component>

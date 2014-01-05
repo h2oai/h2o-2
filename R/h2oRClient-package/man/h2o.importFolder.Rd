@@ -56,8 +56,8 @@ WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = FALSE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
+ + silentUpgrade = TRUE, promptUpgrade = FALSE)
 myPath = paste(path.package("h2oRClient"), "extdata", sep="/")
 all_files.hex = h2o.importFolder(localH2O, path = myPath)
 for(i in 1:length(all_files.hex))

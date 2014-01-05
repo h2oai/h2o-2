@@ -25,7 +25,7 @@ h2o.startLauncher <- function() {
   else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
   myFiles = list.files(verPath)
   if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
-  # Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
+  # TODO: Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
   
   # Get H2O with latest version number
   # If latest isn't working, maybe go down list to earliest until one executes?
@@ -65,7 +65,7 @@ setMethod("h2o.ls", signature(object="H2OClient", pattern="character"), function
   res = h2o.__remoteSend(object, h2o.__PAGE_VIEWALL, filter=pattern)
   if(length(res$keys) == 0) return(list())
   myList = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
-  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, byrow = TRUE))
+  temp = data.frame(matrix(unlist(myList), nrow = res$num_keys, ncol=2,byrow = TRUE))
   colnames(temp) = c("Key", "Bytesize")
   temp$Key = as.character(temp$Key)
   temp$Bytesize = as.numeric(as.character(temp$Bytesize))
@@ -256,7 +256,7 @@ setMethod("h2o.importFolder.VA", signature(object="H2OClient", path="character",
 })
 
 setMethod("h2o.importFile.VA", signature(object="H2OClient", path="character", key="missing", parse="ANY", sep="ANY"), 
-  function(object, path, parse, sep) { h2o.importFolder.VA(object, path, "", parse, sep) })
+  function(object, path, parse, sep) { h2o.importFolder.VA(object, path, "", "", parse, sep) })
 
 setMethod("h2o.importFile.VA", signature(object="H2OClient", path="character", key="character", parse="ANY", sep="ANY"), 
   function(object, path, key, parse, sep) { h2o.importURL.VA(object, paste("file:///", path, sep=""), key, parse, sep) })
@@ -283,7 +283,7 @@ setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", p
     } else stop("All files failed to import!")
 })
 
-setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", pattern="character", key="ANY", parse="ANY", sep="ANY"),
+setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", pattern="ANY", key="ANY", parse="ANY", sep="ANY"),
   function(object, path, pattern, key, parse, sep) {
     if(!(missing(pattern) || class(pattern) == "character"))
       stop(paste("pattern cannot be of class", class(pattern)))
@@ -293,7 +293,7 @@ setMethod("h2o.importHDFS.VA", signature(object="H2OClient", path="character", p
       stop(paste("parse cannot be of class", class(parse)))
     if(!(missing(sep) || class(sep) == "character"))
       stop(paste("sep cannot be of class", class(sep)))
-    h2o.importHDFS.VA(object, path, key, parse, sep)
+    h2o.importHDFS.VA(object, path, pattern, key, parse, sep)
 })
 
 setMethod("h2o.uploadFile.VA", signature(object="H2OClient", path="character", key="character", parse="logical", sep="character", silent="logical"), {
@@ -393,3 +393,15 @@ setMethod("colnames<-", signature(x="H2OParsedDataVA", value="character"),
     if(length(value) != ncol(x)) stop("Mismatched column dimensions!")
       stop("Currently unimplemented!"); return(x)
     })
+
+# ----------------------- Log helper ----------------------- #
+h2o.logAndEcho <- function(conn, message) {
+  if (class(conn) != "H2OClient")
+      stop("conn must be an H2OClient")
+  if (class(message) != "character")
+      stop("message must be a character string")
+  
+  res = h2o.__remoteSend(conn, h2o.__PAGE_LOG_AND_ECHO, message=message)
+  echo_message = res$message
+  return (echo_message)
+}

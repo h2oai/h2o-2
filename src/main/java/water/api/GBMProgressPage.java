@@ -1,10 +1,9 @@
 package water.api;
 
-import com.google.gson.JsonObject;
 import hex.gbm.GBM.GBMModel;
 import water.*;
-import water.api.RequestBuilders.Response;
-import water.api.RequestServer.API_VERSION;
+
+import com.google.gson.JsonObject;
 
 public class GBMProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */

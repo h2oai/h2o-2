@@ -27,6 +27,7 @@ public class H2ONode extends Iced implements Comparable {
   public boolean _announcedLostContact;  // True if heartbeat published a no-contact msg
   public volatile HeartBeat _heartbeat;  // My health info.  Changes 1/sec.
   public int _tcp_readers;               // Count of started TCP reader threads
+  public boolean _node_healthy;
 
   // A JVM is uniquely named by machine IP address and port#
   public H2Okey _key;
@@ -77,6 +78,7 @@ public class H2ONode extends Iced implements Comparable {
     _unique_idx = unique_idx;
     _last_heard_from = System.currentTimeMillis();
     _heartbeat = new HeartBeat();
+    _node_healthy = true;
   }
 
   // ---------------

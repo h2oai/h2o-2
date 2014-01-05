@@ -15,7 +15,6 @@ def generate_scipy_comparison(csvPathname):
         dtype='int16');
 
     print "csv read for training, done"
-
     # we're going to strip just the last column for percentile work
     # used below
     NUMCLASSES = 10
@@ -121,13 +120,6 @@ class Basic(unittest.TestCase):
             if h2o.verbose:
                 print "summaryResult:", h2o.dump_json(summaryResult)
 
-            # pct: [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
-            # pctile: [1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 6.0, 7.0]
-            # hstart: 1.0
-            # hstep: 1.0
-            # hbrk: [u'1', u'2', u'3', u'4', u'5', u'6', u'7']
-            # hcnt: [4236800, 5666020, 715080, 54940, 189860, 347340, 410200]
-
             summaries = summaryResult['summaries']
             for column in summaries:
                 colname = column['colname']
@@ -157,36 +149,15 @@ class Basic(unittest.TestCase):
                 print "pctile:", pctile
                 print "maxs:", maxs
                 self.assertEqual(maxs[0], expectedMax)
-                # self.assertEqual(maxs[1], expectedMax-1)
-                # self.assertEqual(maxs[2], expectedMax-2)
-                # self.assertEqual(maxs[3], expectedMax-3)
-                # self.assertEqual(maxs[4], expectedMax-4)
-                
                 print "mins:", mins
                 self.assertEqual(mins[0], expectedMin)
-                # self.assertEqual(mins[1], expectedMin+1)
-                # self.assertEqual(mins[2], expectedMin+2)
-                # self.assertEqual(mins[3], expectedMin+3)
-                # self.assertEqual(mins[4], expectedMin+4)
 
-                # apparently our 'percentile estimate" uses interpolation, so this check is not met by h2o
                 for v in pctile:
-                    ##    self.assertIn(v,legalValues,"Value in percentile 'percentileValues' is not present in the dataset") 
-                    # but: you would think it should be within the min-max range?
                     self.assertTrue(v >= expectedMin, 
                         "Percentile value %s should all be >= the min dataset value %s" % (v, expectedMin))
                     self.assertTrue(v <= expectedMax, 
                         "Percentile value %s should all be <= the max dataset value %s" % (v, expectedMax))
             
-                # self.assertAlmostEqual(mean, (expectedMax+expectedMin)/2.0, delta=0.1)
-                # self.assertAlmostEqual(sigma, 2.9, delta=0.1)
-                
-                # since we distribute the outputs evenly from 0 to 9, we can check 
-                # that the value is equal to the threshold (within some delta
-
-                # is this right?
-                # if thresholds   = [0.01, 0.05, 0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 0.95, 0.99]
-                # percentileValues = [   0,    0,   1,    2,    3,   5,    7,    7,   9,    9,    10]
                 eV1 = [1.0, 1.0, 1.0, 3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 10.0]
                 if expectedMin==1:
                     eV = eV1
@@ -196,11 +167,6 @@ class Basic(unittest.TestCase):
                     eV = [e+1 for e in eV1]
                 else:
                     raise Exception("Test doesn't have the expected percentileValues for expectedMin: %s" % expectedMin)
-
-                if 1==0:
-                    for v,e in zip(pctile, eV):
-                        m = "Percentile: value %s should ~= %s" % (v, e)
-                        self.assertAlmostEqual(v, e, delta=0.5, msg=m)
 
             trial += 1
 

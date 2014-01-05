@@ -2,7 +2,6 @@
 # It imports a data set, parses it, and prints a summary
 # Then, it runs GLM with a binomial link function using 10-fold cross-validation
 library(h2o)
-h2o.installDepPkgs()
 myIP = readline("Enter IP address of H2O server: ")
 myPort = readline("Enter port number of H2O server: ")
 remoteH2O = h2o.init(ip = myIP, port = as.numeric(myPort), startH2O = FALSE, silentUpgrade = TRUE, promptUpgrade = FALSE)

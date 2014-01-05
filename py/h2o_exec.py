@@ -27,7 +27,7 @@ def checkScalarResult(resultInspect, resultKey):
         num_cols = resultInspect0["num_cols"]
         num_rows = resultInspect0["num_rows"]
         cols = resultInspect0["cols"]
-        print "cols:", h2o.dump_json(cols)
+        # print "cols:", h2o.dump_json(cols)
 
     if emsg:
         print "\nKey: '" + str(resultKey) + "' inspect result:\n", h2o.dump_json(resultInspect)
@@ -65,8 +65,10 @@ def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, 
     # just a string? 
     execExpr = exprTemplate
     if colX is not None:
-        execExpr = re.sub('<col1>', str(colX), execExpr)
-        execExpr = re.sub('<col2>', str(colX+1), execExpr)
+        print "Assume colX %s is zero-based..added 1 for R based exec2" % colX
+        execExpr = re.sub('<col1>', str(colX+1), execExpr)
+        # this is just another value
+        execExpr = re.sub('<col2>', str(colX+2), execExpr)
     if n is not None:
         execExpr = re.sub('<n>', str(n), execExpr)
         execExpr = re.sub('<n-1>', str(n-1), execExpr)
@@ -93,23 +95,31 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
     resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
     h2o.verboseprint('exec took', time.time() - start, 'seconds')
     h2o.verboseprint(resultExec)
-    # inspect a result key?
-    if resultKey is not None:
-        kwargs = {'str': resultKey} 
-        resultExec2 = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
-        h2o.verboseprint("resultExec2:", h2o.dump_json(resultExec2))
 
-        # maybe return 'scalar' in some cases?
-        return resultExec2, resultExec2['cols'][0]['min']
-    else:
-        if 'scalar' in resultExec:
-            result = resultExec['scalar']
-        elif 'result' in resultExec:
-            result = resultExec['result']
+    if 'cols' in resultExec and resultExec['cols']: # not null
+        if 'funstr' in resultExec and resultExec['funstr']: # not null
+            raise Exception("cols and funstr shouldn't both be in resultExec: %s" % h2o.dump_json(resultExec))
         else:
-            result = None
+            # Frame
+            # if test said to look at a resultKey, it's should be in h2o k/v store
+            # inspect a result key?
+            if resultKey is not None:
+                kwargs = {'str': resultKey} 
+                resultExec = h2o_cmd.runExec(node, timeoutSecs=timeoutSecs, ignoreH2oError=ignoreH2oError, **kwargs)
+                h2o.verboseprint("resultExec2:", h2o.dump_json(resultExec))
 
-        return resultExec, result
+            # handles the 1x1 data frame result. Not really interesting if bigger than 1x1?
+            result = resultExec['cols'][0]['min']
+        
+    else: 
+        if 'funstr' in resultExec and resultExec['funstr']: # not null
+            # function return 
+            result = resultExec['funstr']
+        else:
+            # scalar
+            result = resultExec['scalar']
+            
+    return resultExec, result
 
 
 
@@ -170,7 +180,6 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
     colResultList = []
     for colX in range(minCol, maxCol):
         for i, exprTemplate in enumerate(exprList):
-            print "HELLO:", i
 
             # do each expression at a random node, to facilate key movement
             # UPDATE: all execs are to a single node. No mixed node streams

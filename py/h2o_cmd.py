@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys, socket
 import h2o
-import h2o_browse as h2b, h2o_rf as h2f
+import h2o_browse as h2b, h2o_rf as h2f, h2o_exec
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
@@ -360,14 +360,19 @@ def infoFromSummary(summaryResult, noPrint=False):
             nacnt = column['nacnt']
 
             stats = column['stats']
-            stattype= stats['type']
-            mean = stats['mean']
-            sd = stats['sd']
-            zeros = stats['zeros']
-            mins = stats['mins']
-            maxs = stats['maxs']
-            pct = stats['pct']
-            pctile = stats['pctile']
+            stattype = stats['type']
+
+            if stattype == 'Enum':
+                cardinality = stats['cardinality']
+                
+            else:
+                mean = stats['mean']
+                sd = stats['sd']
+                zeros = stats['zeros']
+                mins = stats['mins']
+                maxs = stats['maxs']
+                pct = stats['pct']
+                pctile = stats['pctile']
 
             hstart = column['hstart']
             hstep = column['hstep']
@@ -381,13 +386,16 @@ def infoFromSummary(summaryResult, noPrint=False):
                 print "nacnt:", nacnt
 
                 print "stattype:", stattype
-                print "mean:", mean
-                print "sd:", sd
-                print "zeros:", zeros
-                print "mins:", mins
-                print "maxs:", maxs
-                print "pct:", pct
-                print "pctile:", pctile
+                if stattype == 'Enum':
+                    print "cardinality:", cardinality
+                else:
+                    print "mean:", mean
+                    print "sd:", sd
+                    print "zeros:", zeros
+                    print "mins:", mins
+                    print "maxs:", maxs
+                    print "pct:", pct
+                    print "pctile:", pctile
 
                 # histogram stuff
                 print "hstart:", hstart
@@ -472,3 +480,40 @@ def sleep_with_dot(sec, message=None):
         time.sleep(1)
         dot()
         count += 1
+
+def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent, 
+    outputClass=None, outputCol=None, changeToBinomial=False):
+    # will have to live with random extract. will create variance
+
+    print "train: get random", trainPercent
+    print "test: get remaining", 100 - trainPercent
+    if changeToBinomial:
+        print "change class", outputClass, "to 1, everything else to 0. factor() to turn real to int (for rf)"
+
+    boundary = (trainPercent + 0.0)/100
+
+    execExpr = ""
+    execExpr += "cct.hex=runif(%s);" % srcKey
+    execExpr += "%s=%s[cct.hex<=%s,];" % (trainDstKey, srcKey, boundary)
+    if changeToBinomial:
+        execExpr += "%s[,%s]=%s[,%s]==%s;" % (trainDstKey, outputCol+1, trainDstKey, outputCol+1, outputClass)
+        execExpr +=  "factor(%s[, %s]);" % (trainDstKey, outputCol+1)
+
+    h2o_exec.exec_expr(None, execExpr, resultKey=trainDstKey, timeoutSecs=15)
+
+    inspect = runInspect(key=trainDstKey)
+    infoFromInspect(inspect, "%s after mungeDataset on %s" % (trainDstKey, srcKey) )
+
+    print "test: same, but use the same runif() random result, complement comparison"
+
+    execExpr = ""
+    execExpr += "%s=%s[cct.hex>%s,];" % (testDstKey, srcKey, boundary)
+    if changeToBinomial:
+        execExpr += "%s[,%s]=%s[,%s]==%s;" % (testDstKey, outputCol+1, testDstKey, outputCol+1, outputClass)
+        execExpr +=  "factor(%s[, %s])" % (testDstKey, outputCol+1)
+    h2o_exec.exec_expr(None, execExpr, resultKey=testDstKey, timeoutSecs=10)
+
+    inspect = runInspect(key=testDstKey)
+    infoFromInspect(inspect, "%s after mungeDataset on %s" % (testDstKey, srcKey) )
+
+

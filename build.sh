@@ -36,6 +36,7 @@ DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
 JAR_FILE="${OUTDIR}/h2o.jar"
 SRC_JAR_FILE="${OUTDIR}/h2o-sources.jar"
+IMODEL_JAR_FILE="${OUTDIR}/h2o-model.jar"
 
 JAVA=`which java`||echo 'Missing java, please install jdk'
 JAVAC=`which javac`||echo 'Missing javac, please install jdk'
@@ -117,6 +118,7 @@ function clean() {
 function build_classes() {
     echo "building classes..."
     local CLASSPATH="${JAR_ROOT}${SEP}${DEPENDENCIES}${SEP}${JAR_ROOT}/hadoop/${DEFAULT_HADOOP_VERSION}/*"
+    echo $CLASSPATH > target/classpath
     "$JAVAC" ${JAVAC_ARGS} \
         -cp "${CLASSPATH}" \
         -sourcepath "$SRC" \
@@ -165,6 +167,13 @@ function build_src_jar() {
     "$JAR" uf ${SRC_JAR_FILE} -C "${TESTSRC}" .
 }
 
+function build_imodel_jar() {
+    echo "creating imodel jar file... ${IMODEL_JAR_FILE}"
+    "$JAR" cf ${IMODEL_JAR_FILE} -C "${CLASSES}" "water/genmodel"
+    [ -d "$CLASSES/resources/" ] || mkdir -p "$CLASSES/resources/"
+    cp "${IMODEL_JAR_FILE}" "$CLASSES/resources/"
+}
+
 function build_samples() {
     echo "building samples..."
     mkdir -p h2o-samples/target/classes
@@ -200,6 +209,7 @@ if [ "$1" = "clean" ]; then exit 0; fi
 build_classes
 if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
+build_imodel_jar
 build_jar
 build_src_jar
 build_samples

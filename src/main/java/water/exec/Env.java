@@ -107,10 +107,11 @@ public class Env extends Iced {
     int idx = _display[_tod-d]+n;
     subRef(_ary[idx], _key[idx]);
     subRef(_fcn[idx]);
-    _ary[idx] = addRef(_ary[_sp-1]);
-    _d  [idx] =       _d   [_sp-1] ;
-    _fcn[idx] = addRef(_fcn[_sp-1]);
-    if( d==0 ) _key[idx] = id;
+    Frame fr =            addRef(_ary[_sp-1]);
+    _ary[idx] = fr==null ? null : new Frame(fr);
+    _d  [idx] =                 _d   [_sp-1] ;
+    _fcn[idx] =           addRef(_fcn[_sp-1]);
+    _key[idx] = d==0 && fr!=null ? id : null;
     assert _ary[0]== null || check_refcnt(_ary[0].anyVec());
   }
   // Copy from TOS into stack.  Pop's all intermediate.
@@ -144,7 +145,10 @@ public class Env extends Iced {
     assert _sp==0 || _ary[0]==null || check_refcnt(_ary[0].anyVec());
   }
   void pop( ) { pop(this); }
-  void pop( int n ) { for( int i=0; i<n; i++ ) pop(); }
+  void pop( int n ) {
+    for( int i=0; i<n; i++ )
+      pop();
+  }
 
   void popScope() {
     assert _tod > 0;            // Something to pop?
@@ -225,6 +229,10 @@ public class Env extends Iced {
     Integer I = _refcnt.get(vec);
     assert I==null || I>0;
     assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
+    if (I==null) {
+      Vec vmaster = vec.masterVec();
+      if (vmaster!=null) addRef(vmaster);
+    }
     _refcnt.put(vec,I==null?1:I+1);
     return vec;
   }
@@ -259,7 +267,7 @@ public class Env extends Iced {
   // Remove everything
   public void remove() {
     // Remove all shallow scopes
-    while( _tod > 1 ) popScope();
+    while( _tod > 0 ) popScope();
     // Push changes at the outer scope into the K/V store
     while( _sp > 0 ) {
       if( isAry() && _key[_sp-1] != null ) { // Has a K/V mapping?

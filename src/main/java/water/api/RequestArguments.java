@@ -16,6 +16,7 @@ import water.*;
 import water.Request2.TypeaheadKey;
 import water.ValueArray.Column;
 import water.api.Request.Filter;
+import water.api.Request.Validator;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Check;
@@ -251,6 +252,9 @@ public class RequestArguments extends RequestStatics {
      * For keys. If specified, the key must exist.
      */
     public boolean _mustExist;
+
+    /** Value validator. */
+    public Validator<T> _validator;
 
     /** Override this method to provide parsing of the input string to the Java
      * expected value. The input is guaranteed to be non-empty when this method
@@ -1232,8 +1236,8 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected Long parse(String input) throws IllegalArgumentException {
       long i;
-      try { 
-        i = Long.parseLong(input); 
+      try {
+        i = Long.parseLong(input);
       } catch (NumberFormatException e) {
         double d = Double.parseDouble(input);
         i = (long)d;
@@ -1452,6 +1456,37 @@ public class RequestArguments extends RequestStatics {
     }
     @Override protected Boolean defaultValue() {
       return _fcv.value().isInt(); // Allows only float columns for regression
+    }
+  }
+
+  public class DRFCopyDataBool extends Bool {
+    private TypeaheadKey _frkey;
+    public DRFCopyDataBool(String name, TypeaheadKey frkey) {
+      super(name,false,"Use a (lot) more memory in exchange for speed when running distributed.");
+      addPrerequisite(_frkey=frkey);
+      setRefreshOnChange();
+    }
+    protected Frame fr() {
+      Value v = DKV.get(_frkey.value());
+      if(v != null)
+        return ValueArray.asFrame(v);
+      return null;
+    }
+    @Override public Boolean parse(String input) {
+      boolean b=false;
+      if( false ) ;
+      else if (input.equals("1"))     b= true;
+      else if (input.equals("0"))     b= false;
+      else if (input.equals("true"))  b= true;
+      else if (input.equals("false")) b= false;
+      else throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
+      return b;
+    }
+    @Override protected Boolean defaultValue() {
+      long bs = fr().byteSize();
+      boolean b = MemoryManager.tryReserveTaskMem(bs); // Can we allocate ALL of the dataset locally?
+      if( b ) MemoryManager.freeTaskMem(bs);
+      return b;
     }
   }
 

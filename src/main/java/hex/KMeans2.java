@@ -8,6 +8,7 @@ import water.*;
 import water.Job.ColumnsJob;
 import water.api.*;
 import water.fvec.Chunk;
+import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Utils;
 
@@ -24,7 +25,7 @@ public class KMeans2 extends ColumnsJob {
   @API(help = "Clusters initialization", filter = Default.class)
   public Initialization initialization = Initialization.None;
 
-  @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 2, lmax = 100000)
+  @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 2, lmax = 100000)
   public int k = 2;
 
   @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000)
@@ -49,13 +50,14 @@ public class KMeans2 extends ColumnsJob {
     for( int i = 0; i < cols.length; i++ )
       names[i] = source._names[cols[i]];
     Vec[] vecs = selectVecs(source);
-    // Fill-in response based on K
+    // Fill-in response based on K99
     String[] domain = new String[k];
     for( int i = 0; i < domain.length; i++ )
       domain[i] = "Cluster " + i;
     String[] namesResp = Utils.append(names, "response");
-    String[][] domaiResp = (String[][]) Utils.append(source.domains(), (Object) domain);
+    String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
     KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
+    model.k = k; model.normalized = normalize;
 
     // TODO remove when stats are propagated with vecs?
     double[] means = new double[vecs.length];
@@ -118,7 +120,7 @@ public class KMeans2 extends ColumnsJob {
       task._means = means;
       task._mults = mults;
       task.doAll(vecs);
-      model.clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
+      model.clusters = clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
       double[] variances = new double[task._cSqrs.length];
       for( int clu = 0; clu < task._cSqrs.length; clu++ )
         for( int col = 0; col < task._cSqrs[clu].length; col++ )
@@ -212,6 +214,9 @@ public class KMeans2 extends ColumnsJob {
 
     @API(help = "Sum of min square distances")
     public double error;
+
+    @API(help = "Number of clusters")
+    public int k;
 
     @API(help = "Whether data was normalized")
     public boolean normalized;

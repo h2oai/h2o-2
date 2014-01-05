@@ -15,7 +15,6 @@ drf1ParamDict = {
     'stat_type': [None, 'ENTROPY', 'GINI'],
     'depth': [None, 1,10,20,100],
     'bin_limit': [None,5,10,100,1000],
-    'parallel': [None,0,1],
     'ignore': [None,0,1,2,3,4,5,6,7,8,9],
     'sample': [None,20,40,60,80,90],
     'seed': [None,'0','1','11111','19823134','1231231'],
@@ -37,7 +36,7 @@ drf1ParamDict = {
 
 drf2ParamDict = {
     'response': [None, 'C54'],
-    'max_depth': [None, 1,10,20,100],
+    'max_depth': [None, 10,20,100],
     'nbins': [None,5,10,100,1000],
     'ignored_cols_by_name': [None,'C0','C1','C2','C3','C4','C5','C6','C7','C8','C9'],
     'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
@@ -115,7 +114,6 @@ class Basic(unittest.TestCase):
             paramDict = drf1ParamDict
             params = {
                 'ntree': 6, 
-                'parallel': 1, 
                 'out_of_bag_error_estimate': 0, 
                 'model_key': 'RF_model'
             }
@@ -126,7 +124,7 @@ class Basic(unittest.TestCase):
         if h2o.beta_features:
             timeoutSecs = 30 + kwargs['ntrees'] * 60
         else:
-            timeoutSecs = 30 + kwargs['ntree'] * 60 * (kwargs['parallel'] and 1 or 5)
+            timeoutSecs = 30 + kwargs['ntree'] * 60 
 
         start = time.time()
         rf = h2o_cmd.runRF(parseResult=parseResultTrain,

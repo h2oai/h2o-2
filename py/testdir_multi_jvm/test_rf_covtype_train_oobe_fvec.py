@@ -19,39 +19,6 @@ paramDict = {
     # 'mtries': 6, 
     }
 
-def createTestTrain(srcKey, trainDstKey, testDstKey, percent, outputClass, numCols):
-    # will have to live with random extract. will create variance
-    print "train: get random %. change class 4 to 1, everything else to 0. factor() to turn real to int (for rf)"
-
-
-    # Create complexity for no good reason!. Do the same thing 5 times in the single exec expressions
-    execExpr = ""
-    STUPID_REPEAT = 20
-    for i in range(STUPID_REPEAT):
-        execExpr += "a.hex=runif(%s);" % srcKey
-        execExpr += "%s=%s[a.hex%s,];" % (trainDstKey, srcKey, '<=0.9')
-        if not DO_MULTINOMIAL:
-            execExpr += "%s[,%s]=%s[,%s]==%s;" % (trainDstKey, numCols, trainDstKey, numCols, outputClass)
-            execExpr +=  "factor(%s[, %s]);" % (trainDstKey, numCols)
-
-    h2o_exec.exec_expr(None, execExpr, resultKey=trainDstKey, timeoutSecs=STUPID_REPEAT * 15)
-
-    inspect = h2o_cmd.runInspect(key=trainDstKey)
-    h2o_cmd.infoFromInspect(inspect, "%s after mungeDataset on %s" % (trainDstKey, srcKey) )
-
-    print "test: same, but use the same runif() random result, complement"
-
-    execExpr = "a.hex=runif(%s);" % srcKey
-    execExpr += "%s=%s[a.hex%s,];" % (testDstKey, srcKey, '>0.9')
-    if not DO_MULTINOMIAL:
-        execExpr += "%s[,%s]=%s[,%s]==%s;" % (testDstKey, numCols, testDstKey, numCols, outputClass)
-        execExpr +=  "factor(%s[, %s])" % (testDstKey, numCols)
-    h2o_exec.exec_expr(None, execExpr, resultKey=testDstKey, timeoutSecs=10)
-
-    inspect = h2o_cmd.runInspect(key=testDstKey)
-    h2o_cmd.infoFromInspect(inspect, "%s after mungeDataset on %s" % (testDstKey, srcKey) )
-
-
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -112,7 +79,8 @@ class Basic(unittest.TestCase):
             # just do random split for now
             dataKeyTrain = 'rTrain.hex'
             dataKeyTest = 'rTest.hex'
-            createTestTrain(hex_key, dataKeyTrain, dataKeyTest, percent=0.90, outputClass=4, numCols=numCols)
+            h2o_cmd.createTestTrain(hex_key, dataKeyTrain, dataKeyTest, trainPercent=90, outputClass=4, 
+                outputCol=numCols-1, changeToBinomial=not DO_MULTINOMIAL)
             sliceResult = {'destination_key': dataKeyTrain}
 
             # adjust timeoutSecs with the number of trees
@@ -200,8 +168,8 @@ class Basic(unittest.TestCase):
         self.assertAlmostEqual(ce1, ce2, delta=0.5, msg="classification error %s isn't close to that when sorted %s" % (ce1, ce2))
         self.assertAlmostEqual(ce1, ce3, delta=0.5, msg="classification error %s isn't close to that when sorted %s" % (ce1, ce3))
 
-        self.assertAlmostEqual(ce1pct1, ce2pct1, delta=0.5, msg="classErrorPctList[1] %s isn't close to that when sorted %s" % (ce1pct1, ce2pct1))
-        self.assertAlmostEqual(ce1pct1, ce3pct1, delta=0.5, msg="classErrorPctList[1] %s isn't close to that when sorted %s" % (ce1pct1, ce3pct1))
+        self.assertAlmostEqual(ce1pct1, ce2pct1, delta=1.0, msg="classErrorPctList[1] %s isn't close to that when sorted %s" % (ce1pct1, ce2pct1))
+        self.assertAlmostEqual(ce1pct1, ce3pct1, delta=1.0, msg="classErrorPctList[1] %s isn't close to that when sorted %s" % (ce1pct1, ce3pct1))
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -46,7 +46,6 @@ The particular tree to retrieve. (Must be an integer between 1 and \code{ntree})
 }
 \examples{
 library(h2o)
-h2o.installDepPkgs()
 localH2O = h2oWrapper.init(ip = "localhost", port = 54321, startH2O = TRUE, 
 + silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", package="h2oRClient")

@@ -21,20 +21,20 @@ public class CloudConnect {
   /**
    * Build a jar file from project classes, and launch the job.
    */
-  public static void launch(String host, Class<? extends Job> job) throws Exception {
-    launch(host, job, new File(VM.h2oFolder(), "h2o-samples/target/classes"));
+  public static void launch(Class<? extends Job> job, String host) throws Exception {
+    launch(job, host, new File(VM.h2oFolder(), "h2o-samples/target/classes"));
   }
 
-  public static void launch(String host, Class<? extends Job> job, File classes) throws Exception {
+  public static void launch(Class<? extends Job> job, String host, File classes) throws Exception {
     File jar = File.createTempFile("h2o", ".jar");
     jar(jar, classes);
-    launch(host, job.getName(), jar);
+    launch(job.getName(), host, jar);
   }
 
   /**
    * Upload jars to an existing cloud and launches a custom job. Uses the Web API.
    */
-  public static void launch(String host, String job, File... jars) throws Exception {
+  public static void launch(String job, String host, File... jars) throws Exception {
     HttpClient client = new HttpClient();
     String args = "job_class=" + job + "&jars=";
     for( File f : jars ) {

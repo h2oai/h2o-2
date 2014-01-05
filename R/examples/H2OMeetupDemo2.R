@@ -1,6 +1,5 @@
 # Initialize H2O and check/install correct version of H2O R package
 library(h2o)
-h2o.installDepPkgs(optional = FALSE)
 localH2O = h2o.init(ip = "127.0.0.1", port = 54321)
 # localH2O = new("H2OClient", ip = "127.0.0.1", port = 54321)
 
@@ -9,7 +8,8 @@ localH2O = h2o.init(ip = "127.0.0.1", port = 54321)
 library(h2oRClient)
 airlines.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/allyears2k_headers.zip", key = "airlines.hex")
 summary(airlines.hex)
-x_ignore = c("IsArrDelayed", "ActualElapsedTime", "ArrDelay", "DepDelay", "Canceled", "Diverted", "IsDepDelayed")
+x_ignore = c("IsArrDelayed", "ActualElapsedTime", "ArrDelay", "DepDelay", "Canceled", "Diverted", "IsDepDelayed", "DepTime","ArrTime", "Cancelled", "CancellationCode", "CarrierDelay", "WeatherDelay","NASDelay", "SecurityDelay","TailNum", "LateAircraftDelay", "TaxiIn","TaxiOut")
+
 myX = setdiff(colnames(airlines.hex), x_ignore)
 airlines.glm = h2o.glm(x = myX, y = "IsArrDelayed", data = airlines.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 print(airlines.glm)

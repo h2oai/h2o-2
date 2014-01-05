@@ -79,11 +79,17 @@ nightly_build_stuff:
 	@echo
 	@echo Build completed successfully.
 
+MILLIS_SINCE_EPOCH = $(shell date '+%s')
+
 build:
 	@echo
-	@echo "PHASE: Building R packages..."
+	@echo "PHASE: Building R inner package..."
 	@echo
-	$(MAKE) -C R build PROJECT_VERSION=$(PROJECT_VERSION)
+ifeq ($(BUILD_NUMBER),99999)
+	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION).$(MILLIS_SINCE_EPOCH)
+else
+	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION)
+endif
 	@echo
 	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
 	@echo
@@ -92,6 +98,10 @@ build:
 	@echo "PHASE: Building H2O..."
 	@echo
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
+	@echo
+	@echo "PHASE: Building R outer package..."
+	@echo
+	$(MAKE) -C R build_outer PROJECT_VERSION=$(PROJECT_VERSION)
 	@echo
 	@echo "PHASE: Building hadoop driver..."
 	@echo
@@ -115,6 +125,7 @@ BUILD_DESCRIBE=$(shell git describe --always --dirty)
 BUILD_ON=$(shell date)
 BUILD_BY=$(shell whoami | sed 's/.*\\\\//')
 BUILD_VERSION_JAVA_FILE = src/main/java/water/BuildVersion.java
+GA_FILE=lib/resources/h2o/js/ga
 
 build_version:
 	@rm -f ${BUILD_VERSION_JAVA_FILE}
@@ -128,9 +139,11 @@ build_version:
 	@echo "    public String compiledBy()     { return \"$(BUILD_BY)\"; }"        >> ${BUILD_VERSION_JAVA_FILE}.tmp
 	@echo "}"                                                                     >> ${BUILD_VERSION_JAVA_FILE}.tmp
 	mv ${BUILD_VERSION_JAVA_FILE}.tmp ${BUILD_VERSION_JAVA_FILE}
+	cp ${GA_FILE}.release.js ${GA_FILE}.js
 
 build_h2o:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
+	git checkout -- ${GA_FILE}.js
 
 build_package:
 	echo $(PROJECT_VERSION) > target/project_version
@@ -140,6 +153,7 @@ build_package:
 	cp -rp target/hadoop target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o.jar target/h2o-$(PROJECT_VERSION)
 	cp -p target/h2o-sources.jar target/h2o-$(PROJECT_VERSION)
+	cp -p target/h2o-model.jar target/h2o-$(PROJECT_VERSION)
 	cp -p packaging/README.txt target/h2o-$(PROJECT_VERSION)
 	sed "s/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/g" packaging/index.html > target/index.html
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
@@ -158,6 +172,12 @@ build_installer:
 
 test:
 	./build.sh
+
+# Run Cookbook tests.
+# Add to make test once they are reliable.
+testcb:
+	$(MAKE) -C h2o-cookbook build
+	$(MAKE) -C h2o-cookbook test
 
 TOPDIR:=$(CURDIR)
 BUILD_WEBSITE_DIR=$(TOPDIR)/target/docs-website
@@ -212,12 +232,17 @@ dw_3:
 # Note:  to get pdfunite on a mac, try:
 #     $ brew install poppler
 #
+PDFLATEX=$(shell which pdflatex)
 PDFUNITE=$(shell which pdfunite)
 dw_4:
+ifeq ($(PDFLATEX),)
+	@echo pdflatex not found, skipping...
+else
 ifeq ($(PDFUNITE),)
 	@echo pdfunite not found, skipping...
 else
 	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
+endif
 endif
 
 #

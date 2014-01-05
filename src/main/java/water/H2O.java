@@ -5,12 +5,11 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Future;
 
 import jsr166y.*;
 import water.Job.JobCancelledException;
 import water.nbhm.NonBlockingHashMap;
-import water.parser.ParseDataset;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -35,7 +34,7 @@ public final class H2O {
   public static String NAME;
 
   // The default port for finding a Cloud
-  public static final int DEFAULT_PORT = 54321;
+  public static int DEFAULT_PORT = 54321;
   public static int UDP_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
@@ -137,6 +136,7 @@ public final class H2O {
   // Node.  No holes.  Cloud size is _members.length.
   public final H2ONode[] _memary;
   public final int _hash;
+  //public boolean _healthy;
 
   // A dense integer identifier that rolls over rarely. Rollover limits the
   // number of simultaneous nested Clouds we are operating on in-parallel.
@@ -152,6 +152,14 @@ public final class H2O {
     assert (0 <= nnn && nnn <= 255);
     assert (0 <= old && old <= 255);
     return ((nnn-old)&0xFF) < 64;
+  }
+
+  static public boolean isHealthy() {
+      H2O cloud = H2O.CLOUD;
+      for (H2ONode h2o : cloud._memary) {
+          if(!h2o._node_healthy) return false;
+      }
+      return true;
   }
 
   // Static list of acceptable Cloud members
@@ -624,10 +632,11 @@ public final class H2O {
   public static int hiQPoolSize(int i) { return FJPS[i+MIN_HI_PRIORITY].getPoolSize();             }
 
   // Submit to the correct priority queue
-  public static void submitTask( H2OCountedCompleter task ) {
+  public static H2OCountedCompleter submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
     assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY;
     FJPS[priority].submit(task);
+    return task;
   }
 
   // Simple wrapper over F/J CountedCompleter to support priority queues.  F/J
@@ -689,7 +698,13 @@ public final class H2O {
     public H2OCallback(){this(null);}
     public H2OCallback(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){callback((T)caller);}
+    @Override public void onCompletion(CountedCompleter caller){
+      try {
+        callback((T)caller);
+      } catch(Throwable ex){
+        completeExceptionally(ex);
+      }
+    }
     public abstract void callback(T t);
   }
 
@@ -715,6 +730,7 @@ public final class H2O {
   public static class OptArgs extends Arguments.Opt {
     public String name; // set_cloud_name_and_mcast()
     public String flatfile; // set_cloud_name_and_mcast()
+    public int base_port; // starting number to search for open ports
     public int port; // set_cloud_name_and_mcast()
     public String ip; // Named IP4/IP6 address instead of the default
     public String network; // Network specification for acceptable interfaces to bind to.
@@ -805,32 +821,35 @@ public final class H2O {
 
   public static boolean IS_SYSTEM_RUNNING = false;
 
+  /** Load a h2o build version or return default unknown version
+   * @return never returns null
+   */
+  public static AbstractBuildVersion getBuildVersion() {
+    try {
+      Class klass = Class.forName("water.BuildVersion");
+      java.lang.reflect.Constructor constructor = klass.getConstructor();
+      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
+      return abv;
+      // it exists on the classpath
+    } catch (Exception e) {
+      return AbstractBuildVersion.UNKNOWN_VERSION;
+    }
+  }
+
   /**
    * If logging has not been setup yet, then Log.info will only print to stdout.
    * This allows for early processing of the '-version' option without unpacking
    * the jar file and other startup stuff.
    */
   public static void printAndLogVersion() {
-    String build_branch = "(unknown)";
-    String build_hash = "(unknown)";
-    String build_describe = "(unknown)";
-    String build_project_version = "(unknown)";
-    String build_by = "(unknown)";
-    String build_on = "(unknown)";
-    try {
-      Class klass = Class.forName("water.BuildVersion");
-      java.lang.reflect.Constructor constructor = klass.getConstructor();
-      AbstractBuildVersion abv = (AbstractBuildVersion) constructor.newInstance();
-      build_branch = abv.branchName();
-      build_hash = abv.lastCommitHash();
-      build_describe = abv.describe();
-      build_project_version = abv.projectVersion();
-      build_by = abv.compiledBy();
-      build_on = abv.compiledOn();
-      // it exists on the classpath
-    } catch (Exception e) {
-      // it does not exist on the classpath
-    }
+    // Try to load a version
+    AbstractBuildVersion abv = getBuildVersion();
+    String build_branch = abv.branchName();
+    String build_hash = abv.lastCommitHash();
+    String build_describe = abv.describe();
+    String build_project_version = abv.projectVersion();
+    String build_by = abv.compiledBy();
+    String build_on = abv.compiledOn();
 
     Log.info ("----- H2O started -----");
     Log.info ("Build git branch: " + build_branch);
@@ -879,6 +898,10 @@ public final class H2O {
     ARGS = arguments.toStringArray();
 
     printAndLogVersion();
+
+    if (OPT_ARGS.base_port != 0) {
+      DEFAULT_PORT = OPT_ARGS.base_port;
+    }
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT();

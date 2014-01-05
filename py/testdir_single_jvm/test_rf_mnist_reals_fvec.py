@@ -79,29 +79,33 @@ class Basic(unittest.TestCase):
             print "Trying rf"
             timeoutSecs = 1800
             start = time.time()
-            rfView = h2o_cmd.runRF(parseResult=parseResult, rfView=True,
+            rfv = h2o_cmd.runRF(parseResult=parseResult, rfView=True,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2, **kwargs)
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            h2o_rf.simpleCheckRFView(None, rfView, **params)
-            modelKey = rfView['model_key']
+            h2o_rf.simpleCheckRFView(None, rfv, **params)
+            rf_model = rfv['drf_model']
+            used_trees = rf_model['N']
+            data_key = rf_model['_dataKey']
+            model_key = rf_model['_selfKey']
+
 
             # RFView (score on test)****************************************
             start = time.time()
             # FIX! 1 on oobe causes stack trace?
             kwargs = {'response_variable': y}
-            rfView = h2o_cmd.runRFView(data_key=testKey2, model_key=modelKey, ntrees=ntrees, out_of_bag_error_estimate=0, 
+            rfv = h2o_cmd.runRFView(data_key=testKey2, model_key=model_key, ntrees=ntrees, out_of_bag_error_estimate=0, 
                 timeoutSecs=60, pollTimeoutSecs=60, noSimpleCheck=False, **kwargs)
             elapsed = time.time() - start
             print "RFView in",  elapsed, "secs", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
-            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfv, **params)
+            self.assertAlmostEqual(classification_error, 9, delta=1.0, msg="Classification error %s differs too much" % classification_error)
             # Predict (on test)****************************************
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=testKey2, timeoutSecs=timeoutSecs)
+            predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "generate_predictions in",  elapsed, "secs", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

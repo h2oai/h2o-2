@@ -1,0 +1,23 @@
+<body>
+
+Package cookbook contains H2O Java API source code examples that you can run.
+
+Use the main in CookbookRunner to run the example code.
+
+<p>
+
+The first test you should look at is FramesCookbook::frame_001().
+
+<h3>A note about classloaders in H2O</h3>
+
+H2O uses an internal classloader.  This classloader primarily exists to enable byte code weaving.
+Each H2O node gets its own classloader.  Most of the code that is classloader aware lives in water.Boot
+and water.Weaver.
+
+Objects that need to be passed between nodes (i.e. serialized objects) need to be weaved.
+
+The weaver acts on code that lives in the packages listed in water.Weaver._packages.  Look at the code
+in the variants of water.Boot.main (especially the calls to Weaver.registerPackage()) to see how to add
+packages to that list.  By default, the package containing userMain will be woven (see userMain in CookbookRunner).
+
+</body>

@@ -6,7 +6,7 @@ pkg.env$temp_count = 0
 pkg.env$IS_LOGGING = FALSE
 TEMP_KEY = "Last.value"
 RESULT_MAX = 200
-LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&&", "||", "!")
+LOGICAL_OPERATORS = c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
 
 # Initialize functions for R logging
 myPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep="/")
@@ -38,15 +38,18 @@ h2o.__openErrLog <- function() {
   else system(paste("open '", pkg.env$h2o.__LOG_ERROR, "'", sep=""))
 }
 
-h2o.__logIt<-
-function(m, tmp, commandOrErr) {
+h2o.__logIt <- function(m, tmp, commandOrErr) {
   #m is a url if commandOrErr == "Command"
-  if(is.null(tmp)) s <- m
+  if(is.null(tmp) || is.null(get("tmp"))) s <- m
   else {
     tmp <- get("tmp"); nams = names(tmp)
-    s <- rep(" ", length(tmp))
-    for(i in seq_along(tmp))
-      s[i] <- paste(nams[i], ": ", tmp[[i]], sep="")
+    if(length(nams) != length(tmp)) {
+        if (is.null(nams) && commandOrErr != "Command") nams = "[WARN/ERROR]"
+    }
+    s <- rep(" ", max(length(tmp), length(nams)))
+    for(i in seq_along(tmp)){
+      s[i] <- paste(nams[i], ": ", tmp[[i]], sep="", collapse = " ")
+    }
     s <- paste(m, ' \t', paste(s, collapse=", "))
   }
   if (commandOrErr != "Command") s <- paste(s, '\n')
@@ -87,39 +90,50 @@ h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 h2o.__PAGE_PARSE2 = "2/Parse2.json"
 h2o.__PAGE_PREDICT2 = "2/Predict.json"
 h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
+h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
 
 h2o.__PAGE_DRF = "2/DRF.json"
 h2o.__PAGE_DRFModelView = "2/DRFModelView.json"
 h2o.__PAGE_GBM = "2/GBM.json"
-h2o.__PAGE_GBMGrid = "2/GBMGrid.json"
+h2o.__PAGE_GRIDSEARCH = "2/GridSearchProgress.json"
 h2o.__PAGE_GBMModelView = "2/GBMModelView.json"
 h2o.__PAGE_GLM2 = "2/GLM2.json"
 h2o.__PAGE_GLMModelView = "2/GLMModelView.json"
 h2o.__PAGE_GLMValidView = "2/GLMValidationView.json"
+h2o.__PAGE_GLM2GridView = "2/GLMGridView.json"
 h2o.__PAGE_KMEANS2 = "2/KMeans2.json"
 h2o.__PAGE_KMModelView = "2/KMeans2ModelView.json"
 h2o.__PAGE_NN = "2/NeuralNet.json"
-h2o.__PAGE_NNModelView = "2/ExportModel.json"
+h2o.__PAGE_NNModelView = "2/NeuralNetProgress.json"
 h2o.__PAGE_PCA = "2/PCA.json"
 h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 
 h2o.__remoteSend <- function(client, page, ...) {
+  h2o.__checkClientHealth(client)
   ip = client@ip
   port = client@port
   myURL = paste("http://", ip, ":", port, "/", page, sep="")
-  
+
   # Log list of parameters sent to H2O
   if(pkg.env$IS_LOGGING) {
     h2o.__logIt(myURL, list(...), "Command")
   }
   
   # Sends the given arguments as URL arguments to the given page on the specified server
-  # temp = postForm(myURL, style = "POST", ...)
-  if(length(list(...)) == 0)
-    temp = getURLContent(myURL)
-  else
-    temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
+  #
+  # Re-enable POST since we found the bug in NanoHTTPD which was causing POST
+  # payloads to be dropped.
+  #
+  temp = postForm(myURL, style = "POST", ...)
+  
+  # The GET code that we used temporarily while NanoHTTPD POST was known to be busted.
+  #
+  #if(length(list(...)) == 0)
+  #  temp = getURLContent(myURL)
+  #else
+  #  temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
+  
   # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
   # after = gsub("NaN", "\"NaN\"", after)
   # after = gsub("-Infinity", "\"-Inf\"", temp[1])
@@ -127,12 +141,47 @@ h2o.__remoteSend <- function(client, page, ...) {
   after = gsub('"Infinity"', '"Inf"', temp[1])
   after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)
-  
+
   if (!is.null(res$error)) {
     if(pkg.env$IS_LOGGING) h2o.__writeToFile(res, pkg.env$h2o.__LOG_ERROR)
     stop(paste(myURL," returned the following error:\n", h2o.__formatError(res$error)))
   }
   res
+}
+
+h2o.__cloudSick <- function(node_name = NULL, client) {
+  url <- paste("http://", client@ip, ":", client@port, "/Cloud.html", sep = "")
+  m1 <- "Attempting to execute action on an unhealthy cluster!\n"
+  m2 <- ifelse(node_name != NULL, paste("The sick node is identified to be: ", node_name, "\n", sep = "", collapse = ""), "")
+  m3 <- paste("Check cloud status here: ", url, sep = "", collapse = "")
+  m <- paste(m1, m2, "\n", m3, sep = "")
+  stop(m)
+}
+
+h2o.__checkClientHealth <- function(client) {
+  grabCloudStatus <- function(client) {
+    ip <- client@ip
+    port <- client@port
+    url <- paste("http://", ip, ":", port, "/", h2o.__PAGE_CLOUD, sep = "")
+    if(!url.exists(url)) stop(paste("H2O connection has been severed. Instance no longer up at address ", ip, ":", port, "/", sep = "", collapse = ""))
+    fromJSON(getURLContent(url))
+  }
+  checker <- function(node, client) {
+    status <- node$node_healthy
+    elapsed <- node$elapsed_time
+    nport <- unlist(strsplit(node$name, ":"))[2]
+    if(!status) h2o.__cloudSick(node_name = node$name, client = client)
+    if(elapsed > 45000) h2o.__cloudSick(node_name = NULL, client = client)
+    if(elapsed > 10000) {
+        Sys.sleep(5)
+        lapply(grabCloudStatus(client)$nodes, checker, client)
+    }
+    return(0)
+  }
+  cloudStatus <- grabCloudStatus(client)
+  if(!cloudStatus$cloud_healthy) h2o.__cloudSick(node_name = NULL, client = client)
+  lapply(cloudStatus$nodes, checker, client)
+  return(0)
 }
 
 h2o.__writeToFile <- function(res, fileName) {
@@ -184,7 +233,7 @@ h2o.__poll <- function(client, keyName) {
       prog = res[[i]]
   }
   if(is.null(prog)) stop("Job key ", keyName, " not found in job queue")
-  if(prog$end_time == -1) stop("Job key ", keyName, " has been cancelled")
+  if(prog$end_time == -1 || prog$progress == -2.0) stop("Job key ", keyName, " has been cancelled")
   prog$progress
 }
 
@@ -204,7 +253,7 @@ h2o.__pollAll <- function(client, timeout) {
 }
 
 h2o.__uniqID <- function(prefix = "") {
-  if("uuid" %in% installed.packages()) {
+  if("uuid" %in% installed.packages()[,1]) {
     library(uuid)
     temp = UUIDgenerate()
   } else {
@@ -214,7 +263,7 @@ h2o.__uniqID <- function(prefix = "") {
       paste(sample(hex_digits, 8, replace=TRUE), collapse='', sep=''),
       paste(sample(hex_digits, 4, replace=TRUE), collapse='', sep=''),
       paste('4', paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep=''),
-      paste(sample(y_digits,1), paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse=''),
+      paste(sample(y_digits,1), paste(sample(hex_digits, 3, replace=TRUE), collapse='', sep=''), collapse='', sep = ''),
       paste(sample(hex_digits, 12, replace=TRUE), collapse='', sep=''), sep='-')
   }
   temp = gsub("-", "", temp)
@@ -229,6 +278,11 @@ h2o.__uniqID <- function(prefix = "") {
 #       h2o.__remoteSend(key_env$h2o, h2o.__PAGE_REMOVE, key=key_env$key)
 #   }
 # }
+
+h2o.__checkForFactors <- function(object) {
+    if(class(object) != "H2OParsedData") return(FALSE)
+    any.factor(object)
+}
 
 h2o.__version <- function(client) {
   res = h2o.__remoteSend(client, h2o.__PAGE_CLOUD)
@@ -275,32 +329,40 @@ h2o.__exec2_dest_key <- function(client, expr, destKey) {
 
 h2o.__unop2 <- function(op, x) {
   if(missing(x)) stop("Must specify data set")
-  if(class(x) != "H2OParsedData") stop("Data must be an H2O data set")
+  if(!(class(x) %in% c("H2OParsedData","H2OParsedDataVA"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
     
   expr = paste(op, "(", x@key, ")", sep = "")
   res = h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData", h2o=x@h2o, key=res$dest_key)
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
   else
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
+    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
 }
 
 h2o.__binop2 <- function(op, x, y) {
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData" || class(x) == "H2OLogicalData", x@key, x)
-  RHS = ifelse(class(y) == "H2OParsedData" || class(y) == "H2OLogicalData", y@key, y)
+  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+
+  if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
+    anyFactorsX <- h2o.__checkForFactors(x)
+    anyFactorsY <- h2o.__checkForFactors(y)
+    anyFactors <- any(c(anyFactorsX, anyFactorsY))
+    if(anyFactors) warning("Operation not meaningful for factors.")
+  }
+
+  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
   expr = paste(LHS, op, RHS)
-  if(class(x) == "H2OParsedData" || class(x) == "H2OLogicalData") myClient = x@h2o
+  if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 
   if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
     return(res$scalar)
   if(op %in% LOGICAL_OPERATORS)
-    new("H2OLogicalData", h2o=myClient, key=res$dest_key)
+    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
   else
-    new("H2OParsedData", h2o=myClient, key=res$dest_key)
+    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=FALSE)
 }

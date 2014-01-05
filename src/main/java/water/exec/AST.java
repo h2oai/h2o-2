@@ -18,15 +18,15 @@ abstract public class AST extends Iced {
   final transient Type _t;
   AST( Type t ) { assert t != null; _t = t; }
   static AST parseCXExpr(Exec2 E ) {
-    AST ast2, ast = ASTSlice.parse(E);
+    AST ast2, ast = ASTApply.parseInfix(E,null,0);
     if( ast == null ) return ASTAssign.parseNew(E);
-    // Can find an infix: {op expr}*
-    if( (ast2 = ASTApply.parseInfix(E,ast)) != null ) return ast2;
-    // Can find '=' between expressions
-    if( (ast2 = ASTAssign.parse    (E,ast)) != null ) return ast2;
-    // Infix trinay
-    if( (ast2 = ASTIfElse.parse    (E,ast)) != null ) return ast2;
-    return ast;                 // Else a simple slice/expr
+    // In case of a slice, try match an assignment
+    if( ast instanceof ASTSlice || ast instanceof ASTId )
+      if( (ast2 = ASTAssign.parse(E,ast)) != null ) return ast2;
+    // Next try match an IFELSE statement
+    if( (ast2 = ASTIfElse.parse(E,ast)) != null ) return ast2;
+    // Return the infix: op1* expr {op2 op1* expr}*
+    return ast;
   }
 
   static AST parseVal(Exec2 E ) {
@@ -131,14 +131,30 @@ class ASTApply extends AST {
   }
 
   // Parse an infix boolean operator
-  static AST parseInfix(Exec2 E, AST ast) {
+  static AST parseInfix(Exec2 E, AST ast, int curr_prec) {
+    int x = E._x;
     AST inf = null;
+    if (ast == null) {
+      ASTOp op1 = ASTOp.parseUniInfixOp(E);
+      if (op1 != null) {
+        if( (ast = parseInfix(E,null,op1._precedence)) == null)
+          E.throwErr("Missing expr or unknown ID",E._x);
+        ast = make(new AST[]{op1,ast},E,x);
+      } else if( (ast = ASTSlice.parse(E)) == null ) {
+        E._x = x; return null;
+      }
+      inf = ast;
+    }
     while( true ) {
-      ASTOp op = ASTOp.parse(E);
-      if( op == null || op._vars.length != 3 ) return inf;
-      int x = E._x;
-      AST rite = ASTSlice.parse(E);
-      if( rite==null ) E.throwErr("Missing expr or unknown ID",x);
+      int op_x = E._x;
+      ASTOp op = ASTOp.parseBinInfixOp(E);
+      if( op == null
+       || op._precedence < curr_prec
+       || (op.leftAssociate() && op._precedence == curr_prec) )
+      { E._x = op_x; return inf; }
+      op_x = E._x;
+      AST rite = parseInfix(E,null,op._precedence);
+      if (rite == null) E.throwErr("Missing expr or unknown ID", op_x);
       ast = inf = make(new AST[]{op,ast,rite},E,x);
     }
   }
@@ -272,7 +288,7 @@ class ASTId extends AST {
     String var = E.isID();
     if( var == null ) return null;
     // Built-in ops parse as ops, not vars
-    if( ASTOp.OPS.containsKey(var) ) { E._x=x; return null; }
+    if( ASTOp.isOp(var) ) { E._x=x; return null; }
     // See if pre-existing
     for( int d=E.lexical_depth(); d >=0; d-- ) {
       ArrayList<ASTId> asts = E._env.get(d);
@@ -293,7 +309,7 @@ class ASTId extends AST {
     String id = E.isID();
     if( id == null ) return null;
     // Built-in ops parse as ops, not vars
-    if( ASTOp.OPS.containsKey(id) ) { E._x=x; return null; }
+    if( ASTOp.isOp(id) ) { E._x=x; return null; }
     return id;
   }
   @Override void exec(Env env) {
@@ -399,7 +415,10 @@ class ASTAssign extends AST {
     Frame ary = env.frId(id._depth,id._num);
     // Pull the RHS off the stack; do not lower the refcnt
     Frame ary_rhs=null;  double d=Double.NaN;
-    if( env.isDbl() ) d = env.popDbl(); else ary_rhs = env.popAry();
+    if( env.isDbl() )
+        d = env.popDbl();
+    else
+        ary_rhs = env.popAry();
 
     // Typed as a double ==> the row & col selectors are simple constants
     if( slice._t == Type.DBL ) { // Typed as a double?
@@ -415,8 +434,24 @@ class ASTAssign extends AST {
     Object cols = ASTSlice.select(ary.numCols(),slice._cols,env);
     Object rows = ASTSlice.select(ary.numRows(),slice._rows,env);
 
+    long[] cs1; long[] rs1;
+    if(cols != null && rows != null && (cs1 = (long[])cols).length == 1 && (rs1 = (long[])rows).length == 1) {
+      assert ary_rhs == null;
+        long row = rs1[0]-1;
+        int col = (int)cs1[0]-1;
+        if(col >= ary.numCols() || row >= ary.numRows())
+          throw H2O.unimpl();
+        if(ary.vecs()[col].isEnum())
+          throw new IllegalArgumentException("Currently can only set numeric columns");
+        ary.vecs()[col].set(row,d);
+        env.push(d);
+        return;
+    }
+
     // Partial row assignment?
-    if( rows != null ) throw H2O.unimpl();
+    if( rows != null ) {
+        throw H2O.unimpl();
+    }
     assert cols != null; // all/all assignment uses simple-assignment
 
     // Convert constant into a whole vec
@@ -424,7 +459,7 @@ class ASTAssign extends AST {
       ary_rhs = new Frame(env.addRef(ary.anyVec().makeCon(d)));
     // Make sure we either have 1 col (repeated) or exactly a matching count
     long[] cs = (long[]) cols;  // Columns to act on
-    if( ary_rhs.numCols() != 1 && 
+    if( ary_rhs.numCols() != 1 &&
         ary_rhs.numCols() != cs.length )
       throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign "+ary_rhs.numCols()+" cols over "+cs.length+" cols");
     // Replace the LHS cols with the RHS cols
@@ -461,15 +496,208 @@ class ASTNum extends AST {
   ASTNum(double d) { super(Type.DBL); _d=d; }
   // Parse a number, or throw a parse error
   static ASTNum parse(Exec2 E) {
-    ParsePosition pp = new ParsePosition(E._x);
-    Number N = NF.parse(E._str,pp);
-    if( pp.getIndex()==E._x ) return null;
-    assert N instanceof Double || N instanceof Long;
-    E._x = pp.getIndex();
-    double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
-    return new ASTNum(d);
+    int startPosition = E._x;
+    MyInteger charactersConsumed = new MyInteger();
+    Double D = parseNumberWithScientificNotationProperlyHandled(E._str, startPosition, charactersConsumed);
+    if( charactersConsumed._val == 0 ) return null;
+    E._x = startPosition + charactersConsumed._val;
+    return new ASTNum(D.doubleValue());
   }
   boolean isPosConstant() { return _d >= 0; }
   @Override void exec(Env env) { env.push(_d); }
   @Override public String toString() { return Double.toString(_d); }
+
+  /**
+   * Wrap an integer so that it can be modified by a called method.
+   * i.e. Pass-by-reference.
+   */
+  static class MyInteger {
+    public int _val;
+    MyInteger () { _val = 0; }
+  }
+
+  /**
+   * Parse a scientific number more correctly for commands passed in from R.
+   * Unfortunately, NumberFormat.parse doesn't get the job done.
+   * It expects 'E' and can't handle 'e' or 'E+nnn'.
+   *
+   * @param s String to parse
+   * @param startPosition Starting position in the string to parse from.
+   * @param charactersConsumed [output] Characters consumed.
+   * @return The parsed value if one was found, null otherwise.  If a value was parsed, charactersConsumed will be set to something greater than 0.  If no value was parsed, charactersConsumed will be 0.
+   */
+  static private Double parseNumberWithScientificNotationProperlyHandled (String s, final int startPosition, MyInteger charactersConsumed) {
+    charactersConsumed._val = 0;    // Paranoid.
+
+    ParsePosition pp = new ParsePosition(startPosition);
+    Number N = NF.parse(s, pp);
+
+    if ( pp.getIndex()==startPosition ) {
+      // If no number was found, just return null immediately.
+      return null;
+    }
+
+    assert N instanceof Double || N instanceof Long;
+
+    // Check if the number we just parsed had an 'e' or 'E' in it.  So it's scientific already.
+    for (int i = startPosition; i < pp.getIndex(); i++) {
+      char c = s.charAt(i);
+      if ((c == 'e') || (c == 'E')) {
+        // We already got a scientific number.  Return it.
+        charactersConsumed._val = pp.getIndex() - startPosition;
+        double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
+        return new Double(d);
+      }
+    }
+
+    // If we consumed all of str, then just return the value now.
+    assert (pp.getIndex() <= s.length());
+    if (pp.getIndex() >= s.length()) {
+      charactersConsumed._val = pp.getIndex() - startPosition;
+      double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
+      return new Double(d);
+    }
+
+    // If the lookahead character is not 'e' then just return the value now.
+    char lookaheadChar = s.charAt(pp.getIndex());
+    if ((lookaheadChar != 'e') && (lookaheadChar != 'E')) {
+      charactersConsumed._val = pp.getIndex() - startPosition;
+      double d = (N instanceof Double) ? (double)(Double)N : (double)(Long)N;
+      return new Double(d);
+    }
+
+    // The lookahead character is 'e'.  Find the remaining trailing numbers
+    // and attach them to this token.
+    // Start with sb as stuff from NF.parse plus the 'e'.
+    StringBuffer sb = new StringBuffer();
+    sb.append(s.substring(startPosition, pp.getIndex() + 1));
+    boolean first = true;
+    for (int i = pp.getIndex() + 1; i < s.length(); i++) {
+      char c = s.charAt(i);
+
+      // The first character after the 'e' might be a '+' or '-'.
+      if (first && ((c=='+') || (c=='-'))) {
+        sb.append(c);
+        first = false;
+        continue;
+      }
+      first = false;
+
+      // Only digits allowed after that.
+      if (Character.isDigit(c)) {
+        sb.append(c);
+      }
+      else {
+        break;
+      }
+    }
+
+    // Really parse the double now.  If we fail here, just bail out and don't
+    // consider it a number.
+    double d;
+    try {
+      d = Double.valueOf(sb.toString());
+    }
+    catch (Exception e) {
+      return null;
+    }
+
+    charactersConsumed._val = sb.length();
+    return new Double(d);
+  }
+
+  public static void main (String[] args) {
+    // Unit tests for horrible Double.valueOf parsing hack.
+
+    {
+      String s = "fooo1.23e+154";
+      int i = 4;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      assert D.doubleValue() == 1.23e+154;
+      assert C._val == 9;
+      System.out.println (D);
+    }
+
+    {
+      String s = "fooo1.23e+154blah";
+      int i = 4;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      assert D.doubleValue() == 1.23e+154;
+      assert C._val == 9;
+      System.out.println (D);
+    }
+
+    {
+      String s = "fooo1.23e14blah";
+      int i = 4;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      assert D.doubleValue() == 1.23e14;
+      assert C._val == 7;
+      System.out.println (D);
+    }
+
+    {
+      String s = "fooo1.23e";
+      int i = 4;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      assert D == null;
+      assert C._val == 0;
+      System.out.println (D);
+    }
+
+    {
+      String s = "fooo1.23E-10";
+      int i = 4;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      assert D == 1.23E-10;
+      assert C._val == 8;
+      System.out.println (D);
+    }
+
+    {
+      String s = "1.23E-10";
+      int i = 0;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      assert D == 1.23E-10;
+      assert C._val == 8;
+      System.out.println (D);
+    }
+
+    {
+      String s = "1.23E10E22";
+      int i = 0;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      assert D == 1.23E10;
+      assert C._val == 7;
+      System.out.println (D);
+    }
+
+    {
+      String s = "hex[( hex[,c(5)] <= 1.97872258214 ) & ( hex[,c(6)] <= 32.8571773789 ) & ( ( hex[,c(2)] <= 72.2154196079 )) ,]";
+      int i = 20;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      System.out.println (D);
+      assert D == 1.97872258214;
+      assert C._val == 13;
+    }
+
+    {
+      String s = "1    ";
+      int i = 0;
+      MyInteger C = new MyInteger();
+      Double D = parseNumberWithScientificNotationProperlyHandled(s, i, C);
+      System.out.println (D);
+      System.out.println ("C._val is " + C._val);
+      assert D == 1;
+      assert C._val == 1;
+    }
+  }
 }

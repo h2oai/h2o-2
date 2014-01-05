@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 
 paramDict = {
-    'response': [None,10],
+    'response': [None,'C10'],
     'ntrees': [10, 100,120],
     'destination_key': ['model_keyA', '012345', '__hello'],
     'max_depth': [None, 1,10,20,100],
@@ -17,12 +17,10 @@ paramDict = {
     # all the allowed features it says I can. So I'll live with 3 here.
     'mtries': [None,1,2,3],
     # only works on new
-    'min_rows': [None,0,3,5],
+    'min_rows': [None,1,3,5],
     'importance': [None,0,1],
     'classification': [None,0,1],
     'validation': [None, 'poker1000.hex'],
-    'model_key': [None, 'poker1000_model']
-
     }
 
 class Basic(unittest.TestCase):
@@ -48,13 +46,13 @@ class Basic(unittest.TestCase):
         csvPathname = 'poker/poker1000'
         for trial in range(10):
             # params is mutable. This is default.
-            params = {'ntree': 63}
+            params = {'ntrees': 63}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
             print kwargs
             # slower if parallel=0
-            timeoutSecs = 30 + kwargs['ntree'] * 30
+            timeoutSecs = 30 + kwargs['ntrees'] * 30
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs)
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "Trial #", trial, "completed"

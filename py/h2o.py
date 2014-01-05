@@ -161,6 +161,7 @@ sleep_at_tear_down = False
 abort_after_import = False
 clone_cloud_json = None
 disable_time_stamp = False
+debug_rest = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
 python_cmd_ip = get_ip_address()
@@ -186,12 +187,13 @@ def parse_our_args():
     parser.add_argument('-aai', '--abort_after_import', help='abort the test after printing the full path to the first dataset used by import_parse/import_only', action='store_true')
     parser.add_argument('-ccj', '--clone_cloud_json', type=str, help='a h2o-nodes.json file can be passed (see build_cloud(create_json=True). This will create a cloned set of node objects, so any test that builds a cloud, can also be run on an existing cloud without changing the test')
     parser.add_argument('-dts', '--disable_time_stamp', help='Disable the timestamp on all stdout. Useful when trying to capture some stdout (like json prints) for use elsewhere', action='store_true')
+    parser.add_argument('-debug_rest', '--debug_rest', help='Print REST API interactions to rest.log', action='store_true')
 
     parser.add_argument('unittest_args', nargs='*')
 
     args = parser.parse_args()
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest
 
     browse_disable = args.browse_disable or getpass.getuser()=='jenkins'
     browse_json = args.browse_json
@@ -206,6 +208,7 @@ def parse_our_args():
     abort_after_import = args.abort_after_import
     clone_cloud_json = args.clone_cloud_json
     disable_time_stamp = args.disable_time_stamp
+    debug_rest = args.debug_rest
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
     # FIX! this isn't working to grab the args we don't care about
@@ -517,6 +520,8 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
     h2p.red_print("Ingested from json:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
     print ""
     nodes[:] = nodeList
+    # put the test start message in the h2o log, to create a marker
+    nodes[0].h2o_log_msg()
     return nodeList
 
 def setup_benchmark_log():
@@ -614,19 +619,21 @@ def build_cloud(node_count=2, base_port=54321, hosts=None,
             # verify_cloud_size(nodeList)
 
         # best to check for any errors due to cloud building right away?
-        check_sandbox_for_errors()
+        check_sandbox_for_errors(python_test_name=python_test_name)
 
     except:
         if cleanup:
             for n in nodeList: n.terminate()
         else:
             nodes[:] = nodeList
-        check_sandbox_for_errors()
+        check_sandbox_for_errors(python_test_name=python_test_name)
         raise
 
     # this is just in case they don't assign the return to the nodes global?
     nodes[:] = nodeList
     print len(nodeList), "total jvms in H2O cloud"
+    # put the test start message in the h2o log, to create a marker
+    nodes[0].h2o_log_msg()
 
     if config_json:
         # like cp -p. Save the config file, to sandbox
@@ -709,7 +716,7 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
-def check_sandbox_for_errors(cloudShutdownIsError=False, sandboxIgnoreErrors=False):
+def check_sandbox_for_errors(cloudShutdownIsError=False, sandboxIgnoreErrors=False, python_test_name=''):
     # dont' have both tearDown and tearDownClass report the same found error
     # only need the first
     if nodes and nodes[0].sandbox_error_report(): # gets current state
@@ -741,7 +748,7 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
     finally:
-        check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors)
+        check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
         nodeList[:] = []
 
 # don't need any more?
@@ -825,6 +832,16 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
     node.stabilize(test, error=('A cloud of size %d' % node_count),
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
 
+
+def log_rest(s):
+    if not debug_rest:
+        return
+    rest_log_file = open(os.path.join(LOG_DIR, "rest.log"), "a")
+    rest_log_file.write(s)
+    rest_log_file.write("\n")
+    rest_log_file.close()
+
+
 class H2O(object):
     def __url(self, loc, port=None):
         # always use the new api port
@@ -833,6 +850,7 @@ class H2O(object):
         else: delim = '/'
         u = 'http://%s:%d%s%s' % (self.http_addr, port, delim, loc)
         return u
+
 
     def __do_json_request(self, jsonRequest=None, fullUrl=None, timeout=10, params=None, returnFast=False,
         cmd='get', extraComment=None, ignoreH2oError=False, noExtraErrorCheck=False, **kwargs): 
@@ -858,12 +876,23 @@ class H2O(object):
         else:
             log('Start ' + url + paramsStr)
 
+        log_rest("")
+        log_rest("----------------------------------------------------------------------\n")
+        if extraComment:
+            log_rest("# Extra comment info about this request: " + extraComment)
+        if cmd == 'get':
+            log_rest("GET")
+        else:
+            log_rest("POST")
+        log_rest(url + paramsStr)
+
         # file get passed thru kwargs here
         try:
             if cmd=='post':
                 r = requests.post(url, timeout=timeout, params=params, **kwargs)
             else:
                 r = requests.get(url, timeout=timeout, params=params, **kwargs)
+
         except Exception, e:
             # rethrow the exception after we've checked for stack trace from h2o
             # out of memory errors maybe don't show up right away? so we should wait for h2o
@@ -874,8 +903,14 @@ class H2O(object):
             if not noExtraErrorCheck: # use this to ignore the initial connection errors during build cloud when h2o is coming up
                 h2p.red_print("ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
                 time.sleep(2)
-                check_sandbox_for_errors();
+                check_sandbox_for_errors(python_test_name=python_test_name);
+            log_rest("")
+            log_rest("EXCEPTION CAUGHT DOING REQUEST: " + str(e.message))
             raise exc_info[1], None, exc_info[2]
+
+        log_rest("")
+        log_rest("HTTP status code: " + str(r.status_code))
+        log_rest(r.text)
 
         # fatal if no response
         if not beta_features and not r:
@@ -947,6 +982,17 @@ class H2O(object):
             ))
         return a
 
+    def h2o_log_msg(self, message=None):
+        if 1==0:
+            return
+        if not message:
+            message = "\n"
+            message += "\n#***********************"
+            message += "\npython_test_name: " + python_test_name
+            message += "\n#***********************"
+        params = {'message': message}
+        self.__do_json_request('2/LogAndEcho', params=params)
+
     def get_timeline(self):
         return self.__do_json_request('Timeline.json')
 
@@ -1017,12 +1063,18 @@ class H2O(object):
                 if response_info['status'] != 'done':
                     redirect_url = response_info['redirect_url']
                     # HACK: these are missing the "2/" prefix for now
-                    if 'NeuralNetProgress' in str(redirect_url) or  \
-                            'KMeans2Progress' in str(redirect_url) or \
-                            'GLMModelView' in str(redirect_url):
-                        print "Hacking in the 2/ prefix..tell cyprien"
+                    # 'KMeans2Progress' in str(redirect_url) or
+                    # 'GLMModelView' in str(redirect_url) or
+                    if  'NeuralNetProgress' in str(redirect_url) or \
+                        'PCAProgressPage' in str(redirect_url):
                         if "2/" not in str(redirect_url):
+                            print "Hacking in the 2/ prefix..need to fix h2o?"
                             redirect_url = "2/" + redirect_url
+                    if  'DRFProgressPage' in str(redirect_url):
+                        if "2/" not in str(redirect_url):
+                            # already has a leading /?
+                            print "Hacking in the 2/ prefix..need to fix h2o?"
+                            redirect_url = "2" + redirect_url
 
                     if redirect_url:
                         url = self.__url(redirect_url)
@@ -1115,7 +1167,7 @@ class H2O(object):
             verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(response))
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             if ((count%6)==0):
-                check_sandbox_for_errors()
+                check_sandbox_for_errors(python_test_name=python_test_name)
 
             if (create_noise):
                 # this guarantees the loop is done, so we don't need to worry about
@@ -1394,13 +1446,13 @@ class H2O(object):
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
     # after parse
-    def remove_key(self, key, timeoutSecs=30):
+    def remove_key(self, key, timeoutSecs=120):
         a = self.__do_json_request('Remove.json', 
             params={"key": key}, ignoreH2oError=True, timeout=timeoutSecs)
         return a
 
     # this removes all keys!
-    def remove_all_keys(self, timeoutSecs=30):
+    def remove_all_keys(self, timeoutSecs=120):
         a = self.__do_json_request('2/RemoveAll.json', timeout=timeoutSecs)
         return a
 
@@ -1522,7 +1574,6 @@ class H2O(object):
                 'stat_type': None,
                 'depth': None,
                 'bin_limit': None,
-                'parallel': None,
                 'ignore': None,
                 'sample': None,
                 'seed': None,
@@ -2125,6 +2176,7 @@ class H2O(object):
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallelism': None,
                 'beta_eps': None,
+                'classification': None,
             } 
         else:
             params_dict = {
@@ -2159,7 +2211,7 @@ class H2O(object):
 
     def GLM(self, key,
         timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
-        noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_$python_0_default_0',**kwargs):
+        noise=None, benchmarkLogging=None, noPoll=False, destination_key='GLM_model_python_0_default_0',**kwargs):
         parentName = "2/GLM2" if beta_features else "GLM"
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName ,destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
@@ -2277,7 +2329,7 @@ class H2O(object):
             # hey, check the sandbox if we've been waiting a long time...rather than wait for timeout
             # to find the badness?. can check_sandbox_for_errors at any time
             if ((numberOfRetries%50)==0):
-                check_sandbox_for_errors()
+                check_sandbox_for_errors(python_test_name=python_test_name)
 
         else:
             timeTakenSecs = time.time() - start

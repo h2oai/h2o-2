@@ -3,9 +3,10 @@ package hex.gbm;
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
 import hex.ConfusionMatrix;
 import hex.VariableImportance;
+import hex.gbm.DTree.TreeModel.CompressedTree;
+import hex.gbm.DTree.TreeModel.TreeVisitor;
 
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 import water.*;
 import water.api.DocGen;
@@ -16,11 +17,11 @@ import water.util.*;
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
 
-   This class defines an explicit Tree structure, as a collection of {@code
-   DTree} {@code Node}s.  The Nodes are numbered with a unique {@code _nid}.
-   Users need to maintain their own mapping from their data to a {@code _nid},
-   where the obvious technique is to have a Vec of {@code _nid}s (ints), one
-   per each element of the data Vecs.
+   This class defines an explicit Tree structure, as a collection of {@code DTree}
+   {@code Node}s.  The Nodes are numbered with a unique {@code _nid}.  Users
+   need to maintain their own mapping from their data to a {@code _nid}, where
+   the obvious technique is to have a Vec of {@code _nid}s (ints), one per each
+   element of the data Vecs.
 
    Each {@code Node} has a {@code DHistogram}, describing summary data about the
    rows.  The DHistogram requires a pass over the data to be filled in, and we
@@ -56,8 +57,9 @@ public class DTree extends Iced {
   public final   DecidedNode   decided( int i ) { return (  DecidedNode)node(i); }
 
   // Get a new node index, growing innards on demand
-  private int newIdx() {
+  private synchronized int newIdx(Node n) {
     if( _len == _ns.length ) _ns = Arrays.copyOf(_ns,_len<<1);
+    _ns[_len] = n;
     return _len++;
   }
   // Return a deterministic chunk-local RNG.  Can be kinda expensive.
@@ -82,7 +84,11 @@ public class DTree extends Iced {
       _pid=pid;
       tree._ns[_nid=nid] = this;
     }
-    Node( DTree tree, int pid ) { this(tree,pid,tree.newIdx()); }
+    Node( DTree tree, int pid ) {
+      _tree = tree;
+      _pid=pid;
+      _nid = tree.newIdx(this);
+    }
 
     // Recursively print the decision-line from tree root to this child.
     StringBuilder printLine(StringBuilder sb ) {
@@ -105,11 +111,13 @@ public class DTree extends Iced {
     final int _col, _bin;       // Column to split, bin where being split
     final boolean _equal;       // Split is < or == ?
     final double _se0, _se1;    // Squared error of each subsplit
-    final long _n0, _n1;        // Rows in each final split
+    final long    _n0,  _n1;    // Rows in each final split
+    final double  _p0,  _p1;    // Predicted value for each split
 
-    public Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1 ) {
+    public Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
       _col = col;  _bin = bin;  _equal = equal;
       _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
+      _p0 = p0;  _p1 = p1;
     }
     public final double se() { return _se0+_se1; }
     public final int   col() { return _col; }
@@ -123,26 +131,40 @@ public class DTree extends Iced {
     // split sub-bins.  Always go for a value which splits the nearest two
     // elements.
     float splat(DHistogram hs[]) {
-      DBinHistogram h = ((DBinHistogram)hs[_col]);
-      assert _bin > 0 && _bin < h._nbins;
-      if( _equal ) { assert h._bins[_bin]!=0 && h._mins[_bin]==h._maxs[_bin]; return h._mins[_bin]; }
+      DHistogram h = hs[_col];
+      assert _bin > 0 && _bin < h.nbins();
+      if( _equal ) { assert h.bins(_bin)!=0; return h.binAt(_bin); }
+      // Find highest non-empty bin below the split
       int x=_bin-1;
-      while( x >= 0 && h._bins[x]==0 ) x--;
+      while( x >= 0 && h.bins(x)==0 ) x--;
+      // Find lowest  non-empty bin above the split
       int n=_bin;
-      while( n < h._bins.length && h._bins[n]==0 ) n++;
-      if( x <               0 ) return h._mins[n];
-      if( n >= h._bins.length ) return h._maxs[x];
-      return (h._maxs[x]+h._mins[n])/2;
+      while( n < h.nbins() && h.bins(n)==0 ) n++;
+      // Lo is the high-side of the low non-empty bin, rounded to int for int columns
+      // Hi is the low -side of the hi  non-empty bin, rounded to int for int columns
+
+      // Example: Suppose there are no empty bins, and we are splitting an
+      // integer column at 48.4 (more than nbins, so step != 1.0, perhaps
+      // step==1.8).  The next lowest non-empty bin is from 46.6 to 48.4, and
+      // we set lo=48.4.  The next highest non-empty bin is from 48.4 to 50.2
+      // and we set hi=48.4.  Since this is an integer column, we round lo to
+      // 48 (largest integer below the split) and hi to 49 (smallest integer
+      // above the split).  Finally we average them, and split at 48.5.
+      float lo = h.binAt(x+1);
+      float hi = h.binAt(n  );
+      if( h._isInt > 0 ) lo = h._step==1 ? lo-1 : (float)Math.floor(lo);
+      if( h._isInt > 0 ) hi = h._step==1 ? hi   : (float)Math.ceil (hi);
+      return (lo+hi)/2.0f;
     }
 
-    // Split a DBinHistogram.  Return null if there is no point in splitting
+    // Split a DHistogram.  Return null if there is no point in splitting
     // this bin further (such as there's fewer than min_row elements, or zero
-    // error in the response column).  Return an array of DBinHistograms (one
+    // error in the response column).  Return an array of DHistograms (one
     // per column), which are bounded by the split bin-limits.  If the column
-    // has constant data, or was not being tracked by a prior DBinHistogram
+    // has constant data, or was not being tracked by a prior DHistogram
     // (for being constant data from a prior split), then that column will be
     // null in the returned array.
-    public DBinHistogram[] split( int splat, char nbins, int min_rows, DHistogram hs[] ) {
+    public DHistogram[] split( int splat, char nbins, int min_rows, DHistogram hs[] ) {
       long n = splat==0 ? _n0 : _n1;
       if( n < min_rows || n <= 1 ) return null; // Too few elements
       double se = splat==0 ? _se0 : _se1;
@@ -150,26 +172,42 @@ public class DTree extends Iced {
 
       // Build a next-gen split point from the splitting bin
       int cnt=0;                  // Count of possible splits
-      DBinHistogram nhists[] = new DBinHistogram[hs.length]; // A new histogram set
+      DHistogram nhists[] = new DHistogram[hs.length]; // A new histogram set
       for( int j=0; j<hs.length; j++ ) { // For every column in the new split
         DHistogram h = hs[j];            // old histogram of column
         if( h == null ) continue;        // Column was not being tracked?
         // min & max come from the original column data, since splitting on an
         // unrelated column will not change the j'th columns min/max.
-        float min = h._min, max = h._max;
+        // Tighten min/max based on actual observed data for tracked columns
+        float min, maxEx;
+        if( h._bins == null ) { // Not tracked this last pass?
+          min = h._min;         // Then no improvement over last go
+          maxEx = h._maxEx;
+        } else {                // Else pick up tighter observed bounds
+          min = h.find_min();   // Tracked inclusive lower bound
+          if( h.find_maxIn() == min ) continue; // This column will not split again
+          maxEx = h.find_maxEx(); // Exclusive max
+        }
+
         // Tighter bounds on the column getting split: exactly each new
-        // DBinHistogram's bound are the bins' min & max.
+        // DHistogram's bound are the bins' min & max.
         if( _col==j ) {
           if( _equal ) {        // Equality split; no change on unequals-side
-            if( splat == 1 ) max=min = h.mins(_bin); // but know exact bounds on equals-side
+            if( splat == 1 ) continue; // but know exact bounds on equals-side - and this col will not split again
           } else {              // Less-than split
-            if( splat == 0 ) max = h.maxs(_bin-1); // Max from next-smallest bin
-            else             min = h.mins(_bin  ); // Min from this bin
+            if( h._bins[_bin]==0 )
+              throw H2O.unimpl(); // Here I should walk up & down same as split() above.
+            float split = h.binAt(_bin);
+            if( h._isInt > 0 && h._step != 1 ) split = (float)Math.ceil(split);
+            if( splat == 0 ) maxEx= split;
+            else             min  = split;
           }
         }
-        if( min == max ) continue; // This column will not split again
-        if( min >  max ) continue; // Happens for all-NA subsplits
-        nhists[j] = new DBinHistogram(h._name,nbins,h._isInt,min,max,n);
+        if( min == maxEx ) continue; // This column will not split again
+        if( h._isInt > 0 && !(min+1 < maxEx ) ) continue; // This column will not split again
+        if( min >  maxEx ) continue; // Happens for all-NA subsplits
+        assert min < maxEx && n > 1 : ""+min+"<"+maxEx+" n="+n;
+        nhists[j] = DHistogram.make(h._name,nbins,h._isInt,min,maxEx,n,h.isBinom());
         cnt++;                    // At least some chance of splitting
       }
       return cnt == 0 ? null : nhists;
@@ -203,17 +241,16 @@ public class DTree extends Iced {
   }
 
   // --------------------------------------------------------------------------
-  // An UndecidedNode: Has a DHistogram which is filled in (in parallel with other
-  // histograms) in a single pass over the data.  Does not contain any
-  // split-decision.
+  // An UndecidedNode: Has a DHistogram which is filled in (in parallel
+  // with other histograms) in a single pass over the data.  Does not contain
+  // any split-decision.
   public static abstract class UndecidedNode extends Node {
-    public DHistogram _hs[];      // DHistograms per column
-    public int _scoreCols[];      // A list of columns to score; could be null for all
-    public UndecidedNode( DTree tree, int pid, DBinHistogram hs[] ) {
-      super(tree,pid,tree.newIdx());
-      _hs=hs;
+    public transient DHistogram[] _hs;
+    public final int _scoreCols[];      // A list of columns to score; could be null for all
+    public UndecidedNode( DTree tree, int pid, DHistogram[] hs ) {
+      super(tree,pid);
       assert hs.length==tree._ncols;
-      _scoreCols = scoreCols(hs);
+      _scoreCols = scoreCols(_hs=hs);
     }
 
     // Pick a random selection of columns to compute best score.
@@ -232,9 +269,6 @@ public class DTree extends Iced {
       throw H2O.fail();
     }
 
-    public final DHistogram[] hs() { return _hs; }
-    public final int[] scoreCols() { return _scoreCols; }
-
     @Override public String toString() {
       final int nclass = _tree._nclass;
       final String colPad="  ";
@@ -247,7 +281,7 @@ public class DTree extends Iced {
       final int ncols = _hs.length;
       for( int j=0; j<ncols; j++ )
         if( _hs[j] != null )
-          p(sb,_hs[j]._name+String.format(", %4.1f",_hs[j]._min),colW).append(colPad);
+          p(sb,_hs[j]._name+String.format(", %4.1f-%4.1f",_hs[j]._min,_hs[j]._maxEx),colW).append(colPad);
       sb.append('\n');
       for( int j=0; j<ncols; j++ ) {
         if( _hs[j] == null ) continue;
@@ -268,10 +302,10 @@ public class DTree extends Iced {
         for( int j=0; j<ncols; j++ ) {
           DHistogram h = _hs[j];
           if( h == null ) continue;
-          if( i < h.nbins() ) {
+          if( i < h.nbins() && h._bins != null ) {
             p(sb, h.bins(i),cntW).append('/');
-            p(sb, h.mins(i),mmmW).append('/');
-            p(sb, h.maxs(i),mmmW).append('/');
+            p(sb, h.binAt(i),mmmW).append('/');
+            p(sb, h.binAt(i+1),mmmW).append('/');
             p(sb, h.mean(i),menW).append('/');
             p(sb, h.var (i),varW).append(colPad);
           } else {
@@ -296,7 +330,7 @@ public class DTree extends Iced {
       if( s.length() <= w ) return p(sb,s,w);
       s = String.format("% 4.2f",d);
       if( s.length() > w )
-        s = String.format("% 4.1f",d);
+        s = String.format("%4.1f",d);
       if( s.length() > w )
         s = String.format("%4.0f",d);
       return p(sb,s,w);
@@ -314,28 +348,28 @@ public class DTree extends Iced {
   // Internal tree nodes which split into several children over a single
   // column.  Includes a split-decision: which child does this Row belong to?
   // Does not contain a histogram describing how the decision was made.
-  public static abstract class DecidedNode<UDN extends UndecidedNode> extends Node {
+  public static abstract class DecidedNode extends Node {
     public final Split _split;         // Split: col, equal/notequal/less/greater, nrows, MSE
     public final float _splat;         // Split At point: lower bin-edge of split
     // _equals\_nids[] \   0   1
     // ----------------+----------
     //       F         |   <   >=
     //       T         |  !=   ==
-    public final int _nids[];          // Children NIDS for the split
+    public final int _nids[];          // Children NIDS for the split LEFT, RIGHT
 
     transient byte _nodeType; // Complex encoding: see the compressed struct comments
     transient int _size = 0;  // Compressed byte size of this subtree
 
     // Make a correctly flavored Undecided
-    public abstract UDN makeUndecidedNode(DBinHistogram[] nhists );
+    public abstract UndecidedNode makeUndecidedNode(DHistogram hs[]);
 
     // Pick the best column from the given histograms
-    public abstract Split bestCol( UDN udn );
+    public abstract Split bestCol( UndecidedNode u, DHistogram hs[] );
 
-    public DecidedNode( UDN n ) {
+    public DecidedNode( UndecidedNode n, DHistogram hs[] ) {
       super(n._tree,n._pid,n._nid); // Replace Undecided with this DecidedNode
       _nids = new int[2];           // Split into 2 subsets
-      _split = bestCol(n);          // Best split-point for this tree
+      _split = bestCol(n,hs);       // Best split-point for this tree
       if( _split._col == -1 ) {     // No good split?
         // Happens because the predictor columns cannot split the responses -
         // which might be because all predictor columns are now constant, or
@@ -344,14 +378,13 @@ public class DTree extends Iced {
         Arrays.fill(_nids,-1);
         return;
       }
-
-      _splat = _split.splat(n._hs); // Split-at value
+      _splat = _split.splat(hs); // Split-at value
       final char nbins   = _tree._nbins;
       final int min_rows = _tree._min_rows;
 
       for( int b=0; b<2; b++ ) { // For all split-points
         // Setup for children splits
-        DBinHistogram nhists[] = _split.split(b,nbins,min_rows,n._hs);
+        DHistogram nhists[] = _split.split(b,nbins,min_rows,hs);
         assert nhists==null || nhists.length==_tree._ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(nhists)._nid;
       }
@@ -359,15 +392,17 @@ public class DTree extends Iced {
 
     // Bin #.
     public int bin( Chunk chks[], int row ) {
-      if( chks[_split._col].isNA0(row) ) // Missing data?
-        return 0;                        // NAs always to bin 0
       float d = (float)chks[_split._col].at0(row); // Value to split on for this row
+      if( Float.isNaN(d) )               // Missing data?
+        return 0;                        // NAs always to bin 0
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits.
       return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
     public int ns( Chunk chks[], int row ) { return _nids[bin(chks,row)]; }
+
+    public double pred( int nid ) { return nid==0 ? _split._p0 : _split._p1; }
 
     @Override public String toString() {
       if( _split._col == -1 ) return "Decided has col = -1";
@@ -424,9 +459,9 @@ public class DTree extends Iced {
       res += lsz;
       if( left instanceof LeafNode ) _nodeType |= (byte)(24 << 0*2);
       else {
-        int slen = lsz < 256 ? 1 : (lsz < 65535 ? 2 : 3);
+        int slen = lsz < 256 ? 0 : (lsz < 65535 ? 1 : (lsz<(1<<24) ? 2 : 3));
         _nodeType |= slen; // Set the size-skip bits
-        res += slen;
+        res += (slen+1); //
       }
 
       Node rite = _tree.node(_nids[1]);
@@ -446,11 +481,12 @@ public class DTree extends Iced {
       ab.put2((short)_split._col);
       ab.put4f(_splat);
       Node left = _tree.node(_nids[0]);
-      if( (_nodeType&3) > 0 ) { // Size bits are optional for leaves
+      if( (_nodeType&24) == 0 ) { // Size bits are optional for left leaves !
         int sz = left.size();
-        if(sz < 256)         ab.put1(       sz);
-        else if (sz < 65535) ab.put2((short)sz);
-        else                 ab.put3(       sz);
+        if(sz < 256)            ab.put1(       sz);
+        else if (sz < 65535)    ab.put2((short)sz);
+        else if (sz < (1<<24))  ab.put3(       sz);
+        else                    ab.put4(       sz); // 1<<31-1
       }
       // now write the subtree in
       left.compress(ab);
@@ -462,7 +498,7 @@ public class DTree extends Iced {
   }
 
   public static abstract class LeafNode extends Node {
-    double _pred;
+    public double _pred;
     public LeafNode( DTree tree, int pid ) { super(tree,pid); }
     public LeafNode( DTree tree, int pid, int nid ) { super(tree,pid,nid); }
     @Override public String toString() { return "Leaf#"+_nid+" = "+_pred; }
@@ -477,7 +513,7 @@ public class DTree extends Iced {
   }
 
   // --------------------------------------------------------------------------
-  public static abstract class TreeModel extends Model {
+  public static abstract class TreeModel extends water.Model {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
@@ -490,35 +526,25 @@ public class DTree extends Iced {
     // For classification models, we'll do a Confusion Matrix right in the
     // model (for now - really should be seperate).
     @API(help="Testing key for cm and errs") public final Key testKey;
-    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cm[][];
-    @API(help="Unscaled variable importance for individual input variables.") public final float[] varimp;
+    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cms[/*CM-per-tree*/][][];
+    @API(help="Unscaled variable importance for individual input variables.") public float[] varimp;
     @API(help="Tree statistics") public final TreeStats treeStats;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
-      this.testKey = testKey;  this.cm = null;
+      this.testKey = testKey; this.cms = new long[0][][];
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       treeBits = new CompressedTree[0][];
-      varimp = null;
       treeStats = null;
-    }
-    public TreeModel(TreeModel prior, float[] varimp) {
-      super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
-      this.N = prior.N; this.testKey = prior.testKey; this.cm = prior.cm;
-      this.errs = prior.errs;
-      this.treeBits = prior.treeBits;
-      this.varimp = varimp;
-      this.treeStats = prior.treeStats;
-      this.max_depth = prior.max_depth;
-      this.min_rows = prior.min_rows;
-      this.nbins = prior.nbins;
     }
     public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
       super(prior._selfKey,prior._dataKey,prior._names,prior._domains);
-      this.N = prior.N; this.testKey = prior.testKey; this.cm = cm;
+      this.N = prior.N; this.testKey = prior.testKey;
       errs = Arrays.copyOf(prior.errs,prior.errs.length+1);
       errs[errs.length-1] = err;
+      cms = Arrays.copyOf(prior.cms,prior.cms.length+1);
+      cms[errs.length-1] = cm;
       if(trees == null)treeBits = prior.treeBits;
       else {
         assert trees.length == nclasses(): "Trees="+trees.length+" nclasses()="+nclasses();
@@ -528,7 +554,6 @@ public class DTree extends Iced {
           if( trees[c] != null )
               ts[c] = trees[c].compress();
       }
-      varimp = null;
       treeStats = tstats;
       this.max_depth = prior.max_depth;
       this.min_rows = prior.min_rows;
@@ -537,8 +562,8 @@ public class DTree extends Iced {
 
     // Number of trees actually in the model (instead of expected/planned)
     public int numTrees() { return treeBits.length; }
-
-    @Override public ConfusionMatrix cm() { return cm == null ? null : new ConfusionMatrix(cm); }
+    // Most recent ConfusionMatrix
+    @Override public ConfusionMatrix cm() { return cms == null ? null : new ConfusionMatrix(cms[cms.length-1]); }
     @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
 
     @Override protected float[] score0(double data[], float preds[]) {
@@ -563,14 +588,22 @@ public class DTree extends Iced {
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_selfKey,"Predict!"));
       String[] domain = _domains[_domains.length-1]; // Domain of response col
 
-      // Top row of CM
-      if( cm != null && nclasses() > 1 ) {
+      // Generate a display using the last scored Model.  Not all models are
+      // scored immediately (since scoring can be a big part of model building).
+      long cm[][] = null;
+      int last = cms.length-1;
+      while( last > 0 && cms[last]==null ) last--;
+      cm = 0 <= last && last < cms.length ? cms[last] : null;
+
+      // Display the CM
+      if( cm != null && domain != null ) {
+        // Top row of CM
         assert cm.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
-        if( testKey.equals(_dataKey) ) {
+        if( testKey == null ) {
           sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
         } else {
-          RString rs = new RString("Reported on <a href='Inspect2.html?src_key=%$key'>%key</a>");
+          RString rs = new RString("<div class=\"alert\">Reported on <a href='Inspect2.html?src_key=%$key'>%key</a></div>");
           rs.replace("key", testKey);
           DocGen.HTML.paragraph(sb,rs.toString());
         }
@@ -617,12 +650,12 @@ public class DTree extends Iced {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr><th>Trees</th>");
-        for( int i=errs.length-1; i>=0; i-- )
+        for( int i=last; i>=0; i-- )
           sb.append("<td>").append(i).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>MSE</th>");
-        for( int i=errs.length-1; i>=0; i-- )
-          sb.append(String.format("<td>%5.3f</td>",errs[i]));
+        for( int i=last; i>=0; i-- )
+          sb.append(!Double.isNaN(errs[i]) ? String.format("<td>%5.3f</td>",errs[i]) : "<td>---</td>");
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
       }
@@ -672,12 +705,12 @@ public class DTree extends Iced {
     public static class TreeStats extends Iced {
       static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
       static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-      @API(help="Minimal tree depth.") int minDepth = Integer.MAX_VALUE;
-      @API(help="Maximum tree depth.") int maxDepth = Integer.MIN_VALUE;
-      @API(help="Average tree depth.") int meanDepth;
-      @API(help="Minimal num. of leaves.") int minLeaves = Integer.MAX_VALUE;
-      @API(help="Maximum num. of leaves.") int maxLeaves = Integer.MIN_VALUE;
-      @API(help="Average num. of leaves.") int meanLeaves;
+      @API(help="Minimal tree depth.") public int minDepth = Integer.MAX_VALUE;
+      @API(help="Maximum tree depth.") public int maxDepth = Integer.MIN_VALUE;
+      @API(help="Average tree depth.") public float meanDepth;
+      @API(help="Minimal num. of leaves.") public int minLeaves = Integer.MAX_VALUE;
+      @API(help="Maximum num. of leaves.") public int maxLeaves = Integer.MIN_VALUE;
+      @API(help="Average num. of leaves.") public float meanLeaves;
 
       transient long sumDepth  = 0;
       transient long sumLeaves = 0;
@@ -686,6 +719,7 @@ public class DTree extends Iced {
         if (ktrees==null) return;
         for (int i=0; i<ktrees.length; i++) {
           DTree tree = ktrees[i];
+          if( tree == null ) continue;
           if (minDepth > tree.depth) minDepth = tree.depth;
           if (maxDepth < tree.depth) maxDepth = tree.depth;
           if (minLeaves > tree.leaves) minLeaves = tree.leaves;
@@ -693,8 +727,8 @@ public class DTree extends Iced {
           sumDepth += tree.depth;
           sumLeaves += tree.leaves;
           numTrees++;
-          meanDepth = (int) (sumDepth / numTrees);
-          meanLeaves = (int) (sumLeaves / numTrees);
+          meanDepth = ((float)sumDepth / numTrees);
+          meanLeaves = ((float)sumLeaves / numTrees);
         }
       }
     }
@@ -730,9 +764,10 @@ public class DTree extends Iced {
           int rmask = (nodeType & 0x60) >> 2;
           int skip = 0;
           switch(lmask) {
-          case 1:  skip = ab.get1();  break;
-          case 2:  skip = ab.get2();  break;
-          case 3:  skip = ab.get3();  break; // skip 3bytes value ~ 16MB for left subtree ~ we support 32MB trees now
+          case 0:  skip = ab.get1();  break;
+          case 1:  skip = ab.get2();  break;
+          case 2:  skip = ab.get3();  break;
+          case 3:  skip = ab.get4();  break;
           case 8:  skip = _nclass < 256?1:2;  break; // Small leaf
           case 24: skip = 4;          break; // skip the prediction
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
@@ -741,7 +776,7 @@ public class DTree extends Iced {
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
             if( ( equal && ((float)row[colId]) == splitVal) ||
                 (!equal && ((float)row[colId]) >= splitVal) ) {
-              ab.position(ab.position()+skip); // Skip right subtree
+              ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
           } else { ab.position(ab.position()+skip); lmask = rmask; }
@@ -771,7 +806,8 @@ public class DTree extends Iced {
       protected final TreeModel _tm;
       protected final CompressedTree _ct;
       private final AutoBuffer _ts;
-      protected int _depth;
+      protected int _depth; // actual depth
+      protected int _nodes; // number of visited nodes
       public TreeVisitor( TreeModel tm, CompressedTree ct ) {
         _tm = tm;
         _ts = new AutoBuffer((_ct=ct)._bits);
@@ -794,9 +830,10 @@ public class DTree extends Iced {
         int rmask = (nodeType & 0x60) >> 2;
         int skip = 0;
         switch(lmask) {
-        case 1:  skip = _ts.get1();  break;
-        case 2:  skip = _ts.get2();  break;
-        case 3:  skip = _ts.get3();  break;
+        case 0:  skip = _ts.get1();  break;
+        case 1:  skip = _ts.get2();  break;
+        case 2:  skip = _ts.get3();  break;
+        case 3:  skip = _ts.get4();  break;
         case 8:  skip = _ct._nclass < 256?1:2;  break; // Small leaf
         case 24: skip = _ct._nclass*4;  break; // skip the p-distribution
         default: assert false:"illegal lmask value " + lmask;
@@ -808,6 +845,7 @@ public class DTree extends Iced {
         if( (rmask & 0x8)==8 ) leaf2(rmask);  else  visit();
         _depth--;
         post(col,fcmp,equal);
+        _nodes++;
       }
     }
 
@@ -838,17 +876,18 @@ public class DTree extends Iced {
         String modelName = JCodeGen.toJavaId(_selfKey.toString());
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");
+        sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_selfKey).append(" > ").append(modelName).append(".java\n");
-        sb.append("     javac -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
-        sb.append("     java -Xmx2g -XX:MaxPermSize=256m ").append(modelName).append('\n');
+        sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
+        sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m ").append(modelName).append('\n');
         sb.append("*/");
       } else
         DocGen.HTML.escape(sb,toJava());
       sb.append("</code></pre></div>");
     }
 
-    @Override protected SB toJavaInit(SB sb) {
-      sb = super.toJavaInit(sb);
+    @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
+      sb = super.toJavaInit(sb, fileContextSB);
 
       String modelName = JCodeGen.toJavaId(_selfKey.toString());
 
@@ -860,7 +899,7 @@ public class DTree extends Iced {
       sb.i().p("public static void main(String[] args) throws Exception {").nl();
       sb.i(1).p("int iters = args.length > 0 ? Integer.valueOf(args[0]) : DEFAULT_ITERATIONS;").nl();
       sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
-      sb.i(1).p("model.bench(iters, DATA, new float[NCLASSES+1], NTREES);").nl();
+      sb.i(1).p("model.bench(iters, DataSample.DATA, new float[NCLASSES+1], NTREES);").nl();
       sb.i().p("}").nl();
       sb.di(1);
       sb.p(TO_JAVA_BENCH_FUNC);
@@ -868,10 +907,8 @@ public class DTree extends Iced {
       JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
-      JCodeGen.toStaticVar(sb, "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 100, "Sample test data.");
-
-      // Nasty code - should be provided by a non-generated parent class, BUT ...
-      sb.i(1).p(TO_JAVA_MAX_INDEX_FUNC);
+      // Generate a data in separated class since we do not want to influence size of constant pool of model class
+      JCodeGen.toClass(fileContextSB, "//Sample of data used by benchmark\nclass DataSample", "DATA", ValueArray.asFrame(DKV.get(_dataKey)).subframe(_names), 10, "Sample test data.");
 
       return sb;
     }
@@ -930,49 +967,13 @@ public class DTree extends Iced {
     }
 
     // Produce prediction code for one tree
-    protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int tidx, int c) {
+    protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int treeIdx, int classIdx) {
+      // generate top-leve class definition
       sb.nl();
-      sb.i().p("// Tree predictor for ").p(tidx).p("-tree and ").p(c).p("-class").nl();
-      sb.i().p("class Tree_").p(tidx).p("_class_").p(c).p(" {").nl().ii(1);
-      sb.i().p("static final float predict(double[] data) {").nl().ii(1); // predict method for one tree
-      sb.i().p("float pred = ");
-      new TreeVisitor<RuntimeException>(this,cts) {
-        byte _bits[] = new byte[100];
-        float _fs[] = new float[100];
-        @Override protected void pre( int col, float fcmp, boolean equal ) {
-          if( _depth > 0 ) {
-            int b = _bits[_depth-1];
-            assert b > 0 : Arrays.toString(_bits)+"\n"+sb.toString();
-            if( b==1         ) _bits[_depth-1]=3;
-            if( b==1 || b==2 ) sb.p('\n').i(_depth).p("?");
-            if( b==2         ) sb.p(' ').pj(_fs[_depth]); // Dump the leaf containing float value
-            if( b==2 || b==3 ) sb.p('\n').i(_depth).p(":");
-          }
-          sb.p(" (data[").p(col).p("] ").p(equal?"== ":"< ").pj(fcmp);
-          assert _bits[_depth]==0;
-          _bits[_depth]=1;
-        }
-        @Override protected void leaf( float pred  ) {
-          assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
-          if( _depth==0) { // it is de-generated tree
-            sb.pj(pred);
-          } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
-            _bits[_depth-1]=2; _fs[_depth-1]=pred;
-          } else {          // Else==2 (prior leaf) or 3 (prior tree)
-            if( _bits[_depth-1] == 2 ) sb.p(" ? ").pj(_fs[_depth-1]).p(" ");
-            else                       sb.p('\n').i(_depth);
-            sb.p(": ").pj(pred);
-          }
-        }
-        @Override protected void post( int col, float fcmp, boolean equal ) {
-          sb.p(')');
-          _bits[_depth]=0;
-        }
-      }.visit();
-      sb.p(";").nl();
-      sb.i(1).p("return pred;").nl().di(1);
-      sb.i().p("}").nl().di(1);
-      sb.i().p("}").nl();
+      sb.i().p("// Tree predictor for ").p(treeIdx).p("-tree and ").p(classIdx).p("-class").nl();
+      sb.i().p("class Tree_").p(treeIdx).p("_class_").p(classIdx).p(" {").nl().ii(1);
+      new TreeJCodeGen(this,cts, sb).generate();
+      sb.i().p("}").nl(); // close the class
     }
   }
 
@@ -1059,6 +1060,89 @@ public class DTree extends Iced {
       p("    System.out.println(\"samplesPredicted: \" + samplesPredicted);").nl().
       p("    System.out.println(\"samplesPredictedPerSecond: \" + samplesPredictedPerSecond);").nl().
       p("  }").nl().
-
   nl();
+
+  static class TreeJCodeGen extends TreeVisitor<RuntimeException> {
+    public static final int MAX_NODES = (1 << 12) / 4; // limit of decision nodes
+    final byte  _bits[]  = new byte [100];
+    final float _fs  []  = new float[100];
+    final SB    _sbs []  = new SB   [100];
+    final int   _nodesCnt[] = new int  [100];
+    SB _sb;
+    SB _csb;
+
+    int _subtrees = 0;
+
+    public TreeJCodeGen(TreeModel tm, CompressedTree ct, SB sb) {
+      super(tm, ct);
+      _sb = sb;
+      _csb = new SB();
+    }
+
+    // code preambule
+    protected void preamble(SB sb, int subtree) throws RuntimeException {
+      String subt = subtree>0?String.valueOf(subtree):"";
+      sb.i().p("static final float predict").p(subt).p("(double[] data) {").nl().ii(1); // predict method for one tree
+      sb.i().p("float pred = ");
+    }
+
+    // close the code
+    protected void closure(SB sb) throws RuntimeException {
+      sb.p(";").nl();
+      sb.i(1).p("return pred;").nl().di(1);
+      sb.i().p("}").nl().di(1);
+    };
+
+    @Override protected void pre( int col, float fcmp, boolean equal ) {
+      if( _depth > 0 ) {
+        int b = _bits[_depth-1];
+        assert b > 0 : Arrays.toString(_bits)+"\n"+_sb.toString();
+        if( b==1         ) _bits[_depth-1]=3;
+        if( b==1 || b==2 ) _sb.p('\n').i(_depth).p("?");
+        if( b==2         ) _sb.p(' ').pj(_fs[_depth-1]); // Dump the leaf containing float value
+        if( b==2 || b==3 ) _sb.p('\n').i(_depth).p(":");
+      }
+      if (_nodes>MAX_NODES) {
+        _sb.p("predict").p(_subtrees).p("(data)");
+        _nodesCnt[_depth] = _nodes;
+        _sbs[_depth] = _sb;
+        _sb = new SB();
+        _nodes = 0;
+        preamble(_sb, _subtrees);
+        _subtrees++;
+      }
+      _sb.p(" (data[").p(col).p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      assert _bits[_depth]==0;
+      _bits[_depth]=1;
+    }
+    @Override protected void leaf( float pred  ) {
+      assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
+      if( _depth==0) { // it is de-generated tree
+        _sb.pj(pred);
+      } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+        _bits[_depth-1]=2; _fs[_depth-1]=pred;
+      } else {          // Else==2 (prior leaf) or 3 (prior tree)
+        if( _bits[_depth-1] == 2 ) _sb.p(" ? ").pj(_fs[_depth-1]).p(" ");
+        else                       _sb.p('\n').i(_depth);
+        _sb.p(": ").pj(pred);
+      }
+    }
+    @Override protected void post( int col, float fcmp, boolean equal ) {
+      _sb.p(')');
+      _bits[_depth]=0;
+      if (_sbs[_depth]!=null) {
+        closure(_sb);
+        _csb.p(_sb);
+        _sb = _sbs[_depth];
+        _nodes = _nodesCnt[_depth];
+        _sbs[_depth] = null;
+      }
+    }
+    public void generate() {
+      preamble(_sb, _subtrees++);
+      visit();
+      closure(_sb);
+      _sb.p(_csb);
+    }
+  }
 }

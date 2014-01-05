@@ -21,6 +21,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="mean of response in the training dataset")
   final double     ymu;
 
+  @API(help="job key assigned to the job building this model")
+  final Key job_key;
+
   @API(help="predicate applied to the response column to turn it into 0/1")
   final CaseMode  _caseMode;
 
@@ -102,6 +105,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @API(help="Beta vector containing normalized coefficients (coefficients obtained on normalized data).") double []  norm_beta;
 
     final int rank;
+
+    @API(help="Indexes to the coefficient_names array containing names (and order) of the non-zero coefficients in this model.")
     final int [] idxs;
 
     public Submodel(double [] beta, double [] norm_beta, long run_time, int iteration){
@@ -140,8 +145,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
+  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
     super(selfKey,null,dinfo._adaptedFrame);
+    job_key = jobKey;
     this.ymu = ymu;
     this.glm = glm;
     threshold = 0.5;

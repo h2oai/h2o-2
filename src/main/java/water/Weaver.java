@@ -15,7 +15,6 @@ public class Weaver {
   private final CtClass _fielddoc;
   private final CtClass _arg;
   public static Class _typeMap;
-  public static java.lang.reflect.Method _onLoad;
   public static volatile String[] _packages = new String[] { "water", "hex", "org.junit" };
 
   Weaver() {
@@ -158,18 +157,6 @@ public class Weaver {
     }
   }
 
-  // The Weaver is called from the SystemLoader, and if it directly calls
-  // TypeMap we end up calling a version of TypeMap loaded through the
-  // SystemLoader - this is a separate version of TypeMap loaded *through* the
-  // weaver... and may have different type mappings.  So we avoid the issue by
-  // forcing a call to the pre-woven TypeMap.
-  public Weaver initTypeMap( ClassLoader boot ) {
-    _typeMap = weaveAndLoad("water.TypeMap",boot);
-    try { _onLoad = _typeMap.getMethod("onLoad",String.class); }
-    catch( NoSuchMethodException nsme ) { throw new RuntimeException(nsme); }
-    return this;
-  }
-
   // Serialized types support a unique dense integer per-class, so we can do
   // simple array lookups to get class info.  The integer is cluster-wide
   // unique and determined lazily.
@@ -177,23 +164,11 @@ public class Weaver {
     CtMethod ccms[] = cc.getDeclaredMethods();
     if( !javassist.Modifier.isAbstract(cc.getModifiers()) &&
         !hasExisting("frozenType", "()I", ccms) ) {
-      // Horrible Reflective Call
-      // Make a horrible reflective call to TypeMap.onLoad because....
-      // The Weaver is called from the SystemLoader, and if it directly calls
-      // TypeMap we end up calling a version of TypeMap loaded through the
-      // SystemLoader - this is a separate version of TypeMap loaded *through*
-      // the weaver... and may have different type mappings.  So we avoid the
-      // issue by forcing a call to the pre-woven TypeMap.
-      if( _onLoad == null )
-        throw new RuntimeException("Weaver not booted, loading class "+cc.getName()+", add to the BOOTSTRAP_CLASSES list");
-      Integer I;
-      try { I = (Integer)_onLoad.invoke(null,cc.getName()); }
-      catch( IllegalAccessException iae ) { throw new RuntimeException( iae); }
-      catch( InvocationTargetException ite) { throw new RuntimeException(ite.getTargetException()); }
-      // Build a simple method returning the type token
+      // Build a simple field & method returning the type token
+      cc.addField(new CtField(CtClass.intType, "_frozen$type", cc));
       cc.addMethod(CtNewMethod.make("public int frozenType() {" +
-                                    "  return " + I + ";" +
-                                    "}", cc));
+                                    "  return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(\""+cc.getName()+"\")) : _frozen$type;" +
+                                    "}",cc));
     }
   }
 

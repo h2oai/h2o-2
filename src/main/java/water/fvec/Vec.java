@@ -242,7 +242,7 @@ public class Vec extends Iced {
       _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
     } else {                 // KV store reports we need to recompute
       RollupStats rs = new RollupStats().dfork(this);
-      if(fs != null) fs.add(rs); else rs.getResult();
+      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult()); 
     }
     return this;
   }
@@ -611,6 +611,8 @@ public class Vec extends Iced {
         _dom[ycls] = 1; // Only write to shared array
       }
     }
+
+    @Override public void reduce(CollectDomain mrt) { Utils.or(this._dom, mrt._dom); }
 
     /** Returns exact numeric domain of given vector computed by this task.
      * The domain is always sorted. Hence:

@@ -14,26 +14,43 @@ echo "current PID: $$"
 # do some bash parameters, just in case we have future expansion
 # -n is no download of the jar
 NO_DOWNLOAD=0
+USE_EXISTING=0
 BRANCH=master
 TESTDIR=
-while getopts nb:d: flag
+while getopts hunb:d:t: flag
 do
     case $flag in
+        u)
+            echo "Use existing target/h2o.jar and R stuff?"
+            USE_EXISTING=1
+            NO_DOWNLOAD=1
+            ;;
         n)
             echo "Won't download the h2o.jar from S3. Assume target/h2o.jar exists"
             NO_DOWNLOAD=1
             ;;
         b)
             BRANCH=$OPTARG
-            echo "test is $BRANCH"
+            echo "branch is $BRANCH"
             ;;
         d)
             TESTDIR=$OPTARG
             echo "testdir is $TESTDIR"
             ;;
-        ?)
+        t)
+            TEST=$OPTARG
+            echo "test is $TEST"
+            ;;
+        h)
+            echo "-u will use existing"
+            echo "-n will reuse existing download of h2o stuff from s3"
+            echo "-b <BRANCH> will use that branch for download"
+            echo "-d <dir> -t <python test> will run a single test"
             exit
+            ;;
+        ?)
             echo "Something wrong with the args to runner_setup.sh"
+            exit
             ;;
     esac
 done

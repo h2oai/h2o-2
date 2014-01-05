@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3,java_heap_GB=1)
+            h2o.build_cloud(1,java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -57,7 +57,8 @@ class Basic(unittest.TestCase):
             (100, 5000, 'cF', 600),
             ]
 
-        FILEREPL = 200
+        # FILEREPL = 200
+        FILEREPL = 2
         DOSUMMARY = True
         # h2b.browseTheCloud()
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
@@ -99,7 +100,7 @@ class Basic(unittest.TestCase):
 
             print "Inspecting.."
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=timeoutSecs)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             num_rows = inspect['num_rows']
             num_cols = inspect['num_cols']

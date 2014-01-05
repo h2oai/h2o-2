@@ -69,12 +69,13 @@ public class ImportFiles2 extends Request2 {
         else serveLocalDisk();
       }
       return Response.done(this);
-    } catch( IOException e ) {
+    } catch( Exception e ) {
       StringBuilder sb = new StringBuilder();
       PrintWriter pw = new PrintWriter(Streams.writerForAppendable(sb));
       e.printStackTrace(pw);
       Log.err(e);
-      return Response.error("Got exception " + pw.toString());
+      String message = "Got exception: " + e.getMessage(); //+ "\n" + e.toString() + "\n" + pw.toString();
+      return Response.error(message);
     }
   }
 

@@ -70,7 +70,7 @@ public class TreeVotes extends MRTask2<TreeVotes> {
 
   private Chunk chk_resp( Chunk chks[] ) { return chks[chks.length-1]; }
   private Random rngForTree(CompressedTree[] ts, int cidx) {
-    return _oob ? ts[0].rngForChunk(cidx) : new DummyRandom();
+    return _oob ? ts[0].rngForChunk(cidx) : new DummyRandom(); // k-class set of trees shares the same random number
   }
 
   public static TreeVotes varimp(TreeModel tmodel, Frame f, float rate) {

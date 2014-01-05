@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
 
-    def test_many_cols_with_syn(self):
+    def test_KMeans2_enum(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 11, 'cA', 5),

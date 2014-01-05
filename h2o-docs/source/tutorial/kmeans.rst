@@ -59,7 +59,7 @@ Building a Model
 #. Note that data can be normalized, though it is not done for this
    analysis. 
 
-#. Specify Initialization. Plus Plus initialization chooses one initial center and random, and weights the random selection of subsequent centers so that points furthest from the first center are more likely to be chosen. Furthest initialization chooses one initial center at random, and then chooses the next center to be point furthest away in terms of Euclidian distance. No selection results in K initial centers being chosen independently at random.  
+#. Specify Initialization. Plus Plus initialization chooses one initial center and random, and weights the random selection of subsequent centers so that points furthest from the first center are more likely to be chosen. Furthest initialization chooses one initial center at random, and then chooses the next center to be point furthest away in terms of Euclidean distance. No selection results in K initial centers being chosen independently at random.  
 
 #. Specify Max Iter (short for maximum iterations), which allows the user to specify
    the maximum number of iterations the algorithm processes.

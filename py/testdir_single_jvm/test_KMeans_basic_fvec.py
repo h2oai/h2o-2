@@ -23,13 +23,14 @@ class Basic(unittest.TestCase):
 
     def test_B_kmeans_benign(self):
         h2o.beta_features = True # fvec
-        importFolderPath = "standard"
+        importFolderPath = "logreg"
         csvFilename = "benign.csv"
         hex_key = "benign.hex"
 
         csvPathname = importFolderPath + "/" + csvFilename
         # FIX! hex_key isn't working with Parse2 ? parseResult['destination_key'] not right?
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, header=1, 
+        print "\nStarting", csvFilename
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, header=1, 
             timeoutSecs=180, noPoll=not DO_POLL, doSummary=False)
 
         if not DO_POLL:
@@ -80,11 +81,11 @@ class Basic(unittest.TestCase):
     def test_C_kmeans_prostate(self):
         h2o.beta_features = True # fvec
 
-        importFolderPath = "standard"
+        importFolderPath = "logreg"
         csvFilename = "prostate.csv"
         hex_key = "prostate.hex"
         csvPathname = importFolderPath + "/" + csvFilename
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, header=1, timeoutSecs=180)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, header=1, timeoutSecs=180)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\nStarting", csvFilename
 

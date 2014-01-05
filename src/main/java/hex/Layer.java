@@ -1,7 +1,6 @@
 package hex;
 
 import hex.rng.MersenneTwisterRNG;
-import hex.rng.XorShiftRNG;
 
 import java.util.Random;
 
@@ -13,7 +12,7 @@ import water.fvec.Vec;
 
 /**
  * Neural network layer.
- *
+ * 
  * @author cypof
  */
 public abstract class Layer extends Iced {
@@ -21,6 +20,7 @@ public abstract class Layer extends Iced {
   public static DocGen.FieldDoc[] DOC_FIELDS;
 
   @API(help = "Number of neurons")
+  @ParamsSearch.Ignore
   public int units;
 
   @API(help = "Learning rate")
@@ -29,29 +29,34 @@ public abstract class Layer extends Iced {
   @API(help = "Learning rate annealing")
   public float rate_annealing;
 
+  @API(help = "L1 regularisation")
+  public float l1;
+
   @API(help = "L2 regularisation")
   public float l2;
 
-  // TODO disabled for now, not enough testing
-  public float momentum_start;
+  @API(help = "Initial momentum value")
   @ParamsSearch.Info(origin = 1)
-  public long momentum_ramp;
-  public float momentum_stable;
+  public float momentum_start;
 
-  // TODO
-  float _perWeight;
-  float _perWeightAnnealing;
+  @API(help = "Number of samples during which momentum value varies")
+  public long momentum_ramp;
+
+  @API(help = "Momentum value once ramp is over")
+  @ParamsSearch.Info(origin = 1)
+  public float momentum_stable;
 
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
+  // TODO extract transients & code in separate one-shot trees to avoid cloning
   protected transient float[] _w, _b, _a, _e;
 
   // Momentum for weights and biases
   protected transient float[] _wm, _bm;
 
   // Previous and input layers
-  transient Layer _previous;
-  transient Input _input;
+  protected transient Layer _previous;
+  protected transient Input _input;
 
   /**
    * Start of refactoring in specification & running data, for layers and trainers.
@@ -80,21 +85,6 @@ public abstract class Layer extends Iced {
         _bm = new float[_b.length];
       }
     }
-
-    if( _perWeight != 0 ) {
-//      _wInit = new float[_w.length];
-//      _wMult = new float[_w.length];
-//      for( int i = 0; i < _w.length; i++ ) {
-//        _wInit[i] = _w[i];
-//        _wMult[i] = 1;
-//      }
-//      _bInit = new float[_b.length];
-//      _bMult = new float[_b.length];
-//      for( int i = 0; i < _b.length; i++ ) {
-//        _bInit[i] = _b[i];
-//        _bMult[i] = 1;
-//      }
-    }
   }
 
   public void close() {
@@ -113,7 +103,25 @@ public abstract class Layer extends Iced {
       int w = u * _previous._a.length + i;
       if( _previous._e != null )
         _previous._e[i] += g * _w[w];
-      float d = g * _previous._a[i] - _w[w] * l2;
+      float d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+
+      // TODO finish per-weight acceleration, doesn't help for now
+//      if( _wp != null && d != 0 ) {
+//        boolean sign = _wp[w] >= 0;
+//        float mult = Math.abs(_wp[w]);
+//        // If the gradient kept its sign, increase
+//        if( (d >= 0) == sign )
+//          mult += .05f;
+//        else {
+//          if( mult > 1 )
+//            mult *= .95f;
+//          else
+//            sign = !sign;
+//        }
+//        d *= mult;
+//        _wp[w] = sign ? mult : -mult;
+//      }
+
       if( _wm != null ) {
         _wm[w] *= m;
         _wm[w] = d = _wm[w] + d;
@@ -151,40 +159,8 @@ public abstract class Layer extends Iced {
     return m;
   }
 
-  private final void adjust(int i, float[] w, float[] prev, float[] init, float[] mult) {
-    float coef = 1;
-
-    if( init != null ) {
-      float g = w[i] - init[i];
-      boolean sign = g > 0;
-      boolean last = mult[i] > 0;
-      coef = Math.abs(mult[i]);
-      // If the gradient kept its sign, increase
-      if( sign == last ) {
-        if( coef < 4 )
-          coef += _perWeight;
-      } else
-        coef *= 1 - _perWeight;
-      mult[i] = sign ? coef : -coef;
-      w[i] = init[i] + coef * g;
-    }
-
-    if( prev != null ) {
-      // Nesterov's Accelerated Gradient
-//      float v = (w[i] - prev[i]) * _m;
-//      prev[i] = w[i];
-//      w[i] += coef * v;
-//      if( w == _w )
-//        _wSpeed[i] = v;
-//      else
-//        _bSpeed[i] = v;
-    }
-
-    if( init != null )
-      init[i] = w[i];
-  }
-
   public static abstract class Input extends Layer {
+    @ParamsSearch.Ignore
     protected long _pos, _len;
 
     @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
@@ -220,6 +196,13 @@ public abstract class Layer extends Iced {
     VecsInput() {
     }
 
+    @Override public Layer clone() {
+      VecsInput o = (VecsInput) super.clone();
+      if( o._chunks != null )
+        o._chunks = new Chunk[o._chunks.length];
+      return o;
+    }
+
     public VecsInput(Vec[] vecs, VecsInput train) {
       units = train != null ? train.subs.length : expand(vecs);
       this.vecs = vecs;
@@ -248,9 +231,8 @@ public abstract class Layer extends Iced {
     }
 
     static int categories(Vec vec) {
-      if( vec.domain() == null )
-        return 1;
-      return (int) (vec.max() - vec.min());
+      String[] dom = vec.domain();
+      return dom == null ? 1 : dom.length - 1;
     }
 
     static int expand(Vec[] vecs) {
@@ -400,6 +382,16 @@ public abstract class Layer extends Iced {
   public static abstract class Softmax extends Output {
     protected abstract int target();
 
+    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
+      super.init(ls, index, weights, step, rand);
+      if( weights ) {
+        float min = (float) -Math.sqrt(6. / (_previous.units + units));
+        float max = (float) +Math.sqrt(6. / (_previous.units + units));
+        for( int i = 0; i < _w.length; i++ )
+          _w[i] = rand(rand, min, max);
+      }
+    }
+
     @Override protected void fprop(boolean training) {
       float max = Float.NEGATIVE_INFINITY;
       for( int o = 0; o < _a.length; o++ ) {
@@ -421,8 +413,8 @@ public abstract class Layer extends Iced {
 
     @Override protected void bprop() {
       long processed = _training.processed();
-      float r = rate(processed);
       float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       int label = target();
       for( int u = 0; u < _a.length; u++ ) {
         float t = u == label ? 1 : 0;
@@ -478,8 +470,7 @@ public abstract class Layer extends Iced {
       momentum_start = stats.momentum_start;
       momentum_stable = stats.momentum_stable;
       momentum_ramp = stats.momentum_ramp;
-      _perWeight = stats._perWeight;
-      _perWeightAnnealing = stats._perWeightAnnealing;
+      l1 = stats.l1;
       l2 = stats.l2;
     }
 
@@ -504,8 +495,8 @@ public abstract class Layer extends Iced {
 
     @Override protected void bprop() {
       long processed = _training.processed();
-      float r = rate(processed);
       float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       float[] v = target();
       for( int u = 0; u < _a.length; u++ ) {
         float e = v[u] - _a[u];
@@ -550,8 +541,7 @@ public abstract class Layer extends Iced {
       momentum_start = stats.momentum_start;
       momentum_stable = stats.momentum_stable;
       momentum_ramp = stats.momentum_ramp;
-      _perWeight = stats._perWeight;
-      _perWeightAnnealing = stats._perWeightAnnealing;
+      l1 = stats.l1;
       l2 = stats.l2;
     }
 
@@ -594,14 +584,18 @@ public abstract class Layer extends Iced {
         // float a = Math.abs(_a[o]);
         // float b = 12 + a * (6 + a * (3 + a));
         // _a[o] = (_a[o] * b) / (a * b + 24);
+
+        // Other approx to try
+        // _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
+
         _a[o] = (float) Math.tanh(_a[o]);
       }
     }
 
     @Override protected void bprop() {
       long processed = _training.processed();
-      float r = rate(processed);
       float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
         float g = _e[u] * (1 - _a[u] * _a[u]);
@@ -639,7 +633,8 @@ public abstract class Layer extends Iced {
 
     @Override protected void bprop() {
       long processed = _training.processed();
-      float r = rate(processed);
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       for( int o = 0; o < _a.length; o++ ) {
         assert _previous._previous.units == units;
         float e = _previous._previous._a[o] - _a[o];
@@ -716,8 +711,8 @@ public abstract class Layer extends Iced {
 
     @Override protected void bprop() {
       long processed = _training.processed();
-      float r = rate(processed);
       float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         float g = _e[u];
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
@@ -753,13 +748,14 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _w.length; i++ )
           _w[i] = rand(rand, min, max);
 
+//        for( int i = 0; i < _w.length; i++ )
+//          _w[i] = rand(rand, -.01f, .01f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
     }
 
     @Override protected void fprop(boolean training) {
-      float max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
         for( int i = 0; i < _previous._a.length; i++ )
@@ -767,12 +763,7 @@ public abstract class Layer extends Iced {
         _a[o] += _b[o];
         if( _a[o] < 0 )
           _a[o] = 0;
-        if( max < _a[o] )
-          max = _a[o];
       }
-      if( max > 1 )
-        for( int o = 0; o < _a.length; o++ )
-          _a[o] /= max;
     }
 
     @Override protected void bprop() {
@@ -781,9 +772,8 @@ public abstract class Layer extends Iced {
       float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         float g = _e[u];
-        if( _a[u] < 0 )
-          g = 0;
-        bprop(u, g, r, m);
+        if( _a[u] > 0 )
+          bprop(u, g, r, m);
       }
     }
   }
@@ -801,15 +791,13 @@ public abstract class Layer extends Iced {
 
     @Override protected void fprop(boolean training) {
       if( _rand == null ) {
-        //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
-        _rand = new XorShiftRNG(0x9afa938d554f4e76L);
-        _bits = new byte[units / 8 + 1];
+        _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        _bits = new byte[(units + 7) / 8];
       }
       _rand.nextBytes(_bits);
-      float max = 0;
       for( int o = 0; o < _a.length; o++ ) {
         _a[o] = 0;
-        boolean b = (_bits[o >> 3] & (1 << o)) != 0;
+        boolean b = (_bits[o / 8] & (1 << (o % 8))) != 0;
         if( !training || b ) {
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
@@ -818,13 +806,8 @@ public abstract class Layer extends Iced {
             _a[o] = 0;
           else if( !training )
             _a[o] *= .5f;
-          if( max < _a[o] )
-            max = _a[o];
         }
       }
-      if( max > 1 )
-        for( int o = 0; o < _a.length; o++ )
-          _a[o] /= max;
     }
   }
 
@@ -857,18 +840,31 @@ public abstract class Layer extends Iced {
 
     @Override protected void bprop() {
       long processed = _training.processed();
-      float r = rate(processed);
-      for( int o = 0; o < _a.length; o++ ) {
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
+      for( int u = 0; u < _a.length; u++ ) {
         assert _previous._previous.units == units;
-        float e = _previous._previous._a[o] - _a[o];
-        float g = e;//* (1 - _a[o]) * _a[o]; // Square error
+        float e = _previous._previous._a[u] - _a[u];
+        float g = e;//* (1 - _a[o]) * _a[o];
+        //float g = e * (1 - _a[o]) * _a[o]; // Square error
+        float r2 = 0;
         for( int i = 0; i < _previous._a.length; i++ ) {
-          int w = i * _a.length + o;
+          int w = i * _a.length + u;
           if( _previous._e != null )
             _previous._e[i] += g * _w[w];
-          _w[w] += r * (g * _previous._a[i] - _w[w] * l2);
+          float d = g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1;
+          _w[w] += r * d;
+          r2 += _w[w] * _w[w];
         }
-        _b[o] += r * g;
+        if( r2 > 15 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+          float scale = (float) Math.sqrt(15 / r2);
+          for( int i = 0; i < _previous._a.length; i++ ) {
+            int w = i * _a.length + u;
+            _w[w] *= scale;
+          }
+        }
+        float d = g;
+        _b[u] += r * d;
       }
     }
   }
@@ -890,69 +886,6 @@ public abstract class Layer extends Iced {
     for( int y = 1; y < src.length; y++ )
       shareWeights(src[y], dst[y]);
   }
-
-  // If layer is a RBM
-
-  /**
-   * TODO inject noise in units <br>
-   * mean 0 and variance 1 / ( 1 + e-x )
-   */
-  void contrastiveDivergence(float[] in) {
-//    float[] v1 = in;
-//    float[] h1 = new float[_b.length];
-//    fprop(v1, h1);
-//    float[] v2 = generate(h1);
-//    float[] h2 = new float[_b.length];
-//    fprop(v2, h2);
-
-//    for( int o = 0; o < _b.length; o++ )
-//      for( int i = 0; i < _v.length; i++ )
-//        _gw[o * _v.length + i] += _rate * ((h1[o] * v1[i]) - (h2[o] * v2[i]));
-//
-//    for( int o = 0; o < _gb.length; o++ )
-//      _gb[o] += _rate * (h1[o] - h2[o]);
-
-//    for( int i = 0; i < _gv.length; i++ )
-//      _gv[i] += _rate * (v1[i] - v2[i]);
-  }
-
-//
-//  final void adjustVisible() {
-//    if( _gv != null ) {
-//      for( int v = 0; v < _gv.length; v++ ) {
-//        _v[v] += _gv[v];
-//        _gv[v] *= 1 - _momentum;
-//      }
-//    }
-//  }
-//
-//  float[] generate(float[] hidden) {
-//    assert hidden.length == _b.length;
-//    float[] visible = new float[_v.length];
-//    for( int o = 0; o < hidden.length; o++ )
-//      for( int i = 0; i < _in._a.length; i++ )
-//        visible[i] += _w[o * _in._a.length + i] * hidden[o];
-//    for( int i = 0; i < visible.length; i++ ) {
-//      visible[i] += _v[i];
-//      if( visible[i] < 0 )
-//        visible[i] = 0;
-//    }
-//    return visible;
-//  }
-
-//  float freeEnergy(float[] in) {
-//    float energy = 0.0f;
-//    for( int i = 0; i < in.length; i++ )
-//      energy -= in[i] * _v[i];
-//    for( int o = 0; o < _b.length; o++ ) {
-//      float out = 0;
-//      for( int i = 0; i < in.length; i++ )
-//        out += _w[o * in.length + i] * in[i];
-//      out += _b[o];
-//      energy -= Math.log(1 + Math.exp(out));
-//    }
-//    return energy;
-//  }
 
   private static float rand(Random rand, float min, float max) {
     return min + rand.nextFloat() * (max - min);

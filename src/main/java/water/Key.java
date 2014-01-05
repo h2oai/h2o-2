@@ -56,6 +56,9 @@ public final class Key extends Iced implements Comparable {
 
   public static final byte USER_KEY = 32;
 
+  /** List of illegal characters which are not allowed in user keys. */
+  public static final CharSequence ILLEGAL_USER_KEY_CHARS = " !@#$%^&*()+={}[]|\\;:\"'<>,/?";
+
   // 64 bits of Cloud-specific cached stuff. It is changed atomically by any
   // thread that visits it and has the wrong Cloud. It has to be read *in the
   // context of a specific Cloud*, since a re-read may be for another Cloud.

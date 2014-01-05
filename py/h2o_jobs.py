@@ -9,6 +9,8 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
     start = time.time()
     polls = 0
     statSum = {}
+    # just init for worst case 32 nodes?
+    lastUsedMemBytes = [1 for i in range(32)]
     while busy:
         polls += 1
         # get utilization and print it
@@ -23,20 +25,46 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
 
         cloudStatus = h2o.nodes[0].get_cloud(timeoutSecs=timeoutSecs)
         nodes = cloudStatus['nodes']
-        print "\n"
         for i,n in enumerate(nodes):
+
+            # check for drop in tot_mem_bytes, and report as "probably post GC"
+            totMemBytes = n['tot_mem_bytes']
+            maxMemBytes = n['max_mem_bytes']
+            freeMemBytes = n['free_mem_bytes']
+
+            usedMemBytes = totMemBytes - freeMemBytes
+            availMemBytes = maxMemBytes - usedMemBytes
             print 'Node %s:' % i, \
                 'num_cpus:', n['num_cpus'],\
                 'my_cpu_%:', n['my_cpu_%'],\
                 'sys_cpu_%:', n['sys_cpu_%'],\
-                'system_load:', n['system_load']
+                'system_load:', n['system_load'],\
+                'tot_mem_bytes: {:,}'.format(totMemBytes),\
+                'max_mem_bytes: {:,}'.format(maxMemBytes),\
+                'free_mem_bytes: {:,}'.format(freeMemBytes),\
+                'usedMemBytes: {:,}'.format(usedMemBytes)
+
+            decrease = round((0.0 + lastUsedMemBytes[i] - usedMemBytes) / lastUsedMemBytes[i], 3)
+            if decrease > .05:
+                print
+                print "\nProbably GC at Node {:}: usedMemBytes decreased by {:f} pct.. {:,} {:,}".format(i, 100 * decrease, lastUsedMemBytes[i], usedMemBytes)
+                lastUsedMemBytes[i] = usedMemBytes
+            # don't update lastUsedMemBytes if we're decreasing
+            if usedMemBytes > lastUsedMemBytes[i]:
+                lastUsedMemBytes[i] = usedMemBytes
+            
             # sum all individual stats
             for stat in n:
                 if stat in statSum:
-                    statSum[stat] += n[stat]
+                    try: 
+                        statSum[stat] += n[stat]
+                    except TypeError:
+                        # raise Exception("statSum[stat] should be number %s %s" % (statSum[stat], stat, n[stat]))
+                        print "ERROR: statSum[stat] should be number %s %s %s" % (statSum[stat], stat, n[stat])
+                        # do nothing
                 else:
                     try: 
-                        statSum[stat] = n[stat]  + 0.0
+                        statSum[stat] = n[stat] + 0.0
                     except TypeError:
                         pass # ignore non-numbers
 
@@ -57,6 +85,7 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
         print "mean", s + ':', statMean[s]
 
     return  statMean
+    # statMean['tot_mem_bytes'],
     # statMean['num_cpus'],
     # statMean['my_cpu_%'],
     # statMean['sys_cpu_%'],

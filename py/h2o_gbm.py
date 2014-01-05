@@ -53,6 +53,7 @@ def pp_cm(jcm, header=None):
         lineSum  = sum(line)
         if c < 0 or c >= len(line):
             raise Exception("Error in h2o_gbm.pp_cm. c: %s line: %s len(line): %s jcm: %s" % (c, line, len(line), h2o.dump_json(jcm)))
+        print "c:", c, "line:", line
         errorSum = lineSum - line[c]
         if (lineSum>0):
             err = float(errorSum) / lineSum
@@ -79,22 +80,25 @@ def pp_cm_summary(cm):
         if classSum == 0 :
             # why would the number of scores for a class be 0? 
             # in any case, tolerate. (it shows up in test.py on poker100)
-            print "class:", classIndex, "classSum", classSum, "<- why 0?"
+            print "classIndex:", classIndex, "classSum", classSum, "<- why 0?"
         else:
+            if classIndex >= len(s):
+                print "Why is classindex:", classIndex, 'for s:"', s
+            else:
             # H2O should really give me this since it's in the browser, but it doesn't
-            classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
-            totalRight += s[classIndex]
-            classErrorPct = 100 - classRightPct
-            classErrorPctList.append(classErrorPct)
-            ### print "s:", s, "classIndex:", classIndex
-            print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
+                classRightPct = ((s[classIndex] + 0.0)/classSum) * 100
+                totalRight += s[classIndex]
+                classErrorPct = 100 - classRightPct
+                classErrorPctList.append(classErrorPct)
+                ### print "s:", s, "classIndex:", classIndex
+                print "class:", classIndex, "classSum", classSum, "classErrorPct:", "%4.2f" % classErrorPct
 
-            # gather info for prediction summary
-            for pIndex,p in enumerate(s):
-                if pIndex not in predictedClassDict:
-                    predictedClassDict[pIndex] = p
-                else:
-                    predictedClassDict[pIndex] += p
+                # gather info for prediction summary
+                for pIndex,p in enumerate(s):
+                    if pIndex not in predictedClassDict:
+                        predictedClassDict[pIndex] = p
+                    else:
+                        predictedClassDict[pIndex] += p
 
         totalScores += classSum
 
@@ -530,6 +534,7 @@ def goodXFromColumnInfo(y,
 def showGBMGridResults(GBMResult, expectedErrorMax, classification=True):
     # print "GBMResult:", h2o.dump_json(GBMResult)
     jobs = GBMResult['jobs']
+    print "GBM jobs:", jobs
     for jobnum, j in enumerate(jobs):
         _distribution = j['_distribution']
         model_key = j['destination_key']
@@ -540,7 +545,7 @@ def showGBMGridResults(GBMResult, expectedErrorMax, classification=True):
         print "jobnum:", jobnum, h2o.dump_json(gbmTrainView)
 
         if classification:
-            cm = gbmTrainView['gbm_model']['cm']
+            cm = gbmTrainView['gbm_model']['cms'][-1] # take the last one
             pctWrongTrain = pp_cm_summary(cm);
             if pctWrongTrain > expectedErrorMax:
                 raise Exception("Should have < %s error here. pctWrongTrain: %s" % (expectedErrorMax, pctWrongTrain))

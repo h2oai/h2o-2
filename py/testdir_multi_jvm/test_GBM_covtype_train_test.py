@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=28)
+            h2o.build_cloud(3, java_heap_GB=28)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -109,7 +109,7 @@ class Basic(unittest.TestCase):
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cm']
+                cm = gbmTrainView['gbm_model']['cms'][-1]
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
                 print "Last line of this cm might be NAs, not CM"
                 print "\nTrain\n==========\n"
@@ -130,7 +130,6 @@ class Basic(unittest.TestCase):
                 elapsed = time.time() - start
                 print "GBM predict completed in", elapsed, "seconds. On dataset: ", testFilename
 
-                print "This is crazy!"
                 gbmPredictCMResult =h2o.nodes[0].predict_confusion_matrix(
                     actual=parseTestResult['destination_key'],
                     vactual=response,
