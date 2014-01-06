@@ -11,8 +11,8 @@ Note that H2O parsed data objects can be quite large, and are therefore often di
 }
 \value{
 A maxtrix describing the percentiles at the 1st, 5th, 10th, 25th, 33, 50, 66, 75, 90, 95, 99th, for each column in an \code{\linkS4class{H2OParsedData} object (or the requested subset of comumns).  
-}
-}
+}}
+
 \examples{
 Request quantiles for an H2O parsed data set: 
 
