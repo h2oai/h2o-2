@@ -5,8 +5,7 @@
 \usage{as.data.frame(x, row.names = NULL, optional = FALSE, ...)}
 \arguments{
   \item{x}{ An \code{\linkS4class{H2OParsedData} object.}
-  \item{row.names}{A vector containing the row names of observations in the data frame.}
-}
+ }
 }
 \value{
 Returns a data frame
