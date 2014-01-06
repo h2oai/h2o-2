@@ -25,7 +25,7 @@ import water.util.Utils;
    <p>
    {@code DHistogram} are shared per-node, and atomically updated.  There's an
    {@code add} call to help cross-node reductions.  The data is stored in
-   primitive arrays, so it can be sent over the wire.  
+   primitive arrays, so it can be sent over the wire.
    <p>
    If we are successively splitting rows (e.g. in a decision tree), then a
    fresh {@code DHistogram} for each split will dynamically re-bin the data.
@@ -52,7 +52,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
   static private final long _min2Offset;
   static private final long _max2Offset;
-  static { 
+  static {
     try {
       _min2Offset = _unsafe.objectFieldOffset(DHistogram.class.getDeclaredField("_min2"));
       _max2Offset = _unsafe.objectFieldOffset(DHistogram.class.getDeclaredField("_maxIn"));
@@ -96,7 +96,10 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
       step = 1.0f;                            // Fixed stepsize
     } else {
       step = (maxEx-min)/nbins; // Step size for linear interpolation
-      assert step > 0;
+      boolean b = (step > 0);
+      if (! b) {
+        assert (b);
+      }
     }
     _step = 1.0f/step; // Use multiply instead of division during frequent binning math
     _nbin = (char)xbins;
@@ -171,6 +174,31 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     if( isInt > 0 && 1 > ulp ) ulp = 1;
     return maxIn+ulp;
   }
+  static public boolean equalsWithinOneUlp(float a, float b) {
+    float ulp_a = Math.ulp(a);
+    float ulp_b = Math.ulp(b);
+    float absdiff_a_b = Math.abs(a - b);
+    float absdiff_b_a = Math.abs(b - a);
+
+    if (absdiff_a_b <= ulp_a) {
+      return true;
+    }
+    if (absdiff_a_b <= ulp_b) {
+      return true;
+    }
+
+    // This second set of checks is being paranoid.  I don't think this is necessary
+    // since the FPU subtractor should produce the same abs value regardless of which
+    // operand is first.  But I don't want to think about it.
+    if (absdiff_b_a <= ulp_a) {
+      return true;
+    }
+    if (absdiff_b_a <= ulp_b) {
+      return true;
+    }
+
+    return false;
+  }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).
   // Score is the sum of the MSEs when the data is split at a single point.
@@ -192,7 +220,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   }
 
   static public DHistogram make( String name, final int nbins, byte isInt, float min, float maxEx, long nelems, boolean isBinom ) {
-    return isBinom 
+    return isBinom
       ? new DBinomHistogram(name,nbins,isInt,min,maxEx,nelems)
       : new  DRealHistogram(name,nbins,isInt,min,maxEx,nelems);
   }
