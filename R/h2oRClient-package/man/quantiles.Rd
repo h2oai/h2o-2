@@ -9,7 +9,6 @@
 \details{
 Note that H2O parsed data objects can be quite large, and are therefore often distributed across multiple nodes in an H2O cluster. As a result, percentiles at the 1st, 5th, 10th, 25th, 33, 50, 66, 75, 90, 95, 99th, and other values cannot be returned. This range includes the 1st quantile at the 25th percentile, median at the 50th percentile, and 3rd quantile at the 75th percentile. 
 }
-}
 \value{
 A maxtrix describing the percentiles at the 1st, 5th, 10th, 25th, 33, 50, 66, 75, 90, 95, 99th, for each column in an \code{\linkS4class{H2OParsedData} object (or the requested subset of comumns).  
 }
@@ -28,5 +27,4 @@ quantile(prostate.hex)
 Request quantiles for a subset of columns in an H2O parsed data set 
 
 quantile(prostate.hex[,3:5])
-}
 }
