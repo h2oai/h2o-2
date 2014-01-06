@@ -174,26 +174,30 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     if( isInt > 0 && 1 > ulp ) ulp = 1;
     return maxIn+ulp;
   }
-  static public boolean equalsWithinOneUlp(float a, float b) {
+
+  /**
+   * Compare two numbers to see if they are within one ulp of the smaller decade.
+   * Order of the arguments does not matter.
+   *
+   * @param a First number
+   * @param b Second number
+   * @return true if a and b are essentially equal, false otherwise.
+   */
+  static public boolean equalsWithinOneSmallUlp(float a, float b) {
     float ulp_a = Math.ulp(a);
     float ulp_b = Math.ulp(b);
+    float small_ulp = Math.min(ulp_a, ulp_b);
     float absdiff_a_b = Math.abs(a - b);
     float absdiff_b_a = Math.abs(b - a);
 
-    if (absdiff_a_b <= ulp_a) {
-      return true;
-    }
-    if (absdiff_a_b <= ulp_b) {
+    if (absdiff_a_b <= small_ulp) {
       return true;
     }
 
-    // This second set of checks is being paranoid.  I don't think this is necessary
+    // This second check is being paranoid.  I don't think this is necessary
     // since the FPU subtractor should produce the same abs value regardless of which
     // operand is first.  But I don't want to think about it.
-    if (absdiff_b_a <= ulp_a) {
-      return true;
-    }
-    if (absdiff_b_a <= ulp_b) {
+    if (absdiff_b_a <= small_ulp) {
       return true;
     }
 
