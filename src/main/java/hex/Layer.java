@@ -46,6 +46,9 @@ public abstract class Layer extends Iced {
   @ParamsSearch.Info(origin = 1)
   public float momentum_stable;
 
+  @API(help = "Constraint for squared sum of incoming weights per unit")
+  public float max_w2;
+
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
   // TODO extract transients & code in separate one-shot trees to avoid cloning
@@ -131,8 +134,8 @@ public abstract class Layer extends Iced {
       _w[w] += r * d;
       r2 += _w[w] * _w[w];
     }
-    if( r2 > 15 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-      float scale = (float) Math.sqrt(15 / r2);
+    if( r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+      float scale = (float) Math.sqrt(max_w2 / r2);
       for( int i = 0; i < _previous._a.length; i++ ) {
         int w = u * _previous._a.length + i;
         _w[w] *= scale;
@@ -890,8 +893,8 @@ public abstract class Layer extends Iced {
           _w[w] += r * d;
           r2 += _w[w] * _w[w];
         }
-        if( r2 > 15 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
-          final float scale = (float) Math.sqrt(15 / r2);
+        if( r2 >  max_w2) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+          final float scale = (float) Math.sqrt(max_w2 / r2);
           for( int i = 0; i < _previous._a.length; i++ ) {
             int w = i * _a.length + u;
             _w[w] *= scale;

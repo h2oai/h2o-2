@@ -32,6 +32,7 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
       ls[i].momentum_ramp = 60000 * 30; //TODO: try 300 epochs
       ls[i].momentum_stable = .99f;
       ls[i].l1 = .00001f;
+      ls[i].max_w2 = 15; //cf. hinton for Mnist
       ls[i].init(ls, i);
     }
     return ls;

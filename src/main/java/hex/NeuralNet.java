@@ -59,6 +59,9 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class)
   public double rate_annealing = 1 / 1e6;
 
+  @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class)
+  public float max_w2 = 15;
+
   @API(help = "Momentum at the beggining of training", filter = Default.class)
   public double momentum_start = .5;
 
@@ -143,6 +146,7 @@ public class NeuralNet extends ValidatedJob {
     ls[ls.length - 1].rate_annealing = (float) rate_annealing;
     ls[ls.length - 1].l1 = (float) l1;
     ls[ls.length - 1].l2 = (float) l2;
+    ls[ls.length - 1].max_w2 = max_w2;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
 
@@ -468,6 +472,9 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)")
     public float input_dropout_ratio;
 
+    @API(help = "Constraint for squared sum of incoming weights per unit")
+    public float max_w2;
+
     @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)")
     public int[] hidden;
 
@@ -519,6 +526,7 @@ public class NeuralNet extends ValidatedJob {
       if( job != null ) {
         activation = job.activation;
         input_dropout_ratio = job.input_dropout_ratio;
+        max_w2 = job.max_w2;
         hidden = job.hidden;
         rate = job.rate;
         rate_annealing = job.rate_annealing;

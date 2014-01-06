@@ -1,7 +1,6 @@
 package samples;
 
 import hex.*;
-import hex.Layer.Tanh;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.NeuralNet.Errors;
@@ -27,7 +26,7 @@ public class NeuralNetMnist extends Job {
   public static void main(String[] args) throws Exception {
     Class job = NeuralNetMnist.class;
     samples.launchers.CloudLocal.launch(job, 1);
-    //samples.launchers.CloudProcess.launch(job, 4);
+//    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 4);
@@ -69,6 +68,7 @@ public class NeuralNetMnist extends Job {
       ls[i].rate = .005f;
       ls[i].rate_annealing = 1 / 1e6f;
       ls[i].l2 = .001f;
+      ls[i].max_w2 = 15; //cf. hinton for Mnist
       ls[i].init(ls, i);
     }
     return ls;
@@ -125,7 +125,7 @@ public class NeuralNetMnist extends Job {
           text += ", momentum: ";
           text += String.format("%.5g", ls[0].momentum(processed));
           System.out.println(text);
-          if( (evals.incrementAndGet() % 32) == 0 ) {
+          if( (evals.incrementAndGet() % 5) == 0 ) {
             System.out.println("Computing test error");
             temp = build(test, testLabels, (VecsInput) ls[0], (VecSoftmax) ls[ls.length - 1]);
             Layer.shareWeights(ls, temp);

@@ -330,8 +330,6 @@ public abstract class Trainer {
   }
 
   static class Descent extends MRTask2<Descent> {
-    static final int BATCH = 16;
-
     Key _job;
     Layer[] _ls;
     float[][] _ws, _bs;
