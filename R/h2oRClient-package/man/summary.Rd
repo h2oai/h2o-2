@@ -9,8 +9,10 @@ Summarizes the columns of an H2O parsed object or subset of columns and rows usi
   \item{object}{
 An \code{\linkS4class{H2OParsedData} object.
 }}
+}
 \value{
 A matrix displaying the minimum, 1st quartile, median, mean, 3rd quartile and maximum for each numeric column included in the request call,a summary of the levels and member counts for each factor column.  and a the levels and member counts of the elements in factor columns for all of the columns specified in the summary call. 
+}
 }
 \examples{
 library(h2o)
