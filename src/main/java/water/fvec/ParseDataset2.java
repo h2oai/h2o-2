@@ -17,8 +17,6 @@ import water.parser.CustomParser.StreamDataOut;
 import water.parser.ParseDataset.Compression;
 import water.parser.Enum;
 import water.util.*;
-import water.util.Utils.IcedHashMap;
-import water.util.Utils.IcedInt;
 
 public final class ParseDataset2 extends Job {
   // Local enum results for all parses
@@ -98,7 +96,7 @@ public final class ParseDataset2 extends Job {
     public void setException(DException ex){_ex = ex;}
     public DException getException(){return _ex;}
   }
-  static final void onProgress(final long len, final Key progress) {
+  static void onProgress(final long len, final Key progress) {
     new TAtomic<ParseProgress>() {
       @Override public ParseProgress atomic(ParseProgress old) {
         if (old == null) return null;
@@ -117,8 +115,6 @@ public final class ParseDataset2 extends Job {
     DKV.remove(_progress);
     super.remove();
   }
-
-  public enum ColType {I, F, E}
 
   /**
    * Task to update enum values to match the global numbering scheme.  Performs
@@ -139,9 +135,9 @@ public final class ParseDataset2 extends Job {
       Enum es[] = ENUMS.get(_key);
       _emaps = new int[_vs.length][];
       for( int i = 0; i < _vs.length; ++i ) {
-        final Enum e = es[i];
         ValueString ss[] = _vs[i];
         if( vecs(i)._isString ) { // String Column?
+          final Enum e = es[i];
           // For String columns, build a reverse map from the *local* enum
           // index number to a ValueString.  This will be used to build String
           // chunks using the correct String.
@@ -151,6 +147,7 @@ public final class ParseDataset2 extends Job {
             ss[e.getTokenId(vs)] = vs;
 
         } else if( vecs(i).isEnum() ) {
+          final Enum e = es[i];
           // For Enum columns, build a map from *local* enum index numbers to
           // the matching *global* enum index numbers.  This will be used remap
           // all the locally-numbered enum chunks to match a global numbering.
@@ -166,7 +163,6 @@ public final class ParseDataset2 extends Job {
 
     // Renumber Enums and convert String cols to String chunks.
     @Override public void map(Chunk [] chks){
-      Enum es[] = ENUMS.get(_key);
       for(int i = 0; i < chks.length; ++i) {
         Chunk chk = chks[i];
         if( vecs(i).isEnum() ) { // Needs an enum re-mapping?
@@ -286,13 +282,6 @@ public final class ParseDataset2 extends Job {
     job.remove();
   }
 
-  public static ParserSetup guessSetup(Key key, ParserSetup setup, boolean checkHeader){
-    ByteVec vec = (ByteVec) getVec(key);
-    byte [] bits = vec.elem2BV(0)._mem;
-    Compression cpr = Utils.guessCompressionMethod(bits);
-    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader)._setup;
-  }
-
   public static class ParseProgressMonitor extends Iced implements Job.ProgressMonitor {
     final Key _progressKey;
     private long _progress;
@@ -360,7 +349,6 @@ public final class ParseDataset2 extends Job {
           // Then treat as no-headers, i.e., parse it as a normal row
           localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false);
       }
-      final int ncols = _setup._ncols;
 
       // Parse the file
       try {
@@ -480,7 +468,7 @@ public final class ParseDataset2 extends Job {
   public static class FVecDataOut extends Iced implements CustomParser.StreamDataOut {
     transient NewChunk [] _nvs;
     AppendableVec []_vecs;
-    final Enum [] _enums;
+    Enum [] _enums;
     final Key _progress;
     final byte [] _ctypes;
     long _nLines;
@@ -508,7 +496,7 @@ public final class ParseDataset2 extends Job {
       _ctypes = MemoryManager.malloc1(ncols);
       _progress = progress;
       _enums = ENUMS.get(progress);
-      assert _enums != null && _enums.length == ncols;
+      assert (_enums != null && _enums.length == ncols) || ncols==0;
     }
 
     public FVecDataOut reduce(StreamDataOut sdout){
@@ -536,6 +524,9 @@ public final class ParseDataset2 extends Job {
           ENUMS.put(_progress,es);
         }
         // Now merge into the Enum rollup
+        if( dout._enums.length > _enums.length ) {
+          Enum[] tmp = _enums;  _enums = dout._enums; dout._enums = tmp;
+        }
         for( int i=0; i<this._enums.length; i++ )
           this._enums[i].merge(dout._enums[i]);
       }
@@ -578,7 +569,6 @@ public final class ParseDataset2 extends Job {
       }
       _col = -1;
     }
-    protected long linenum(){return _nLines;}
     @Override public void addNumCol(int colIdx, long number, int exp) {
       if(colIdx < _nCols)_nvs[_col = colIdx].addNum(number,exp);
       // else System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + ":" + number + "," + exp + ") on line " + linenum());
@@ -612,11 +602,7 @@ public final class ParseDataset2 extends Job {
       } //else System.err.println("additional column (" + colIdx + ":" + str + ") on line " + linenum());
     }
 
-    /** Adds double value to the column.
-    *
-    * @param colIdx
-    * @param value
-    */
+    /** Adds double value to the column.  */
     public void addNumCol(int colIdx, double value) {
       if (Double.isNaN(value)) {
         addInvalidCol(colIdx);
@@ -664,8 +650,5 @@ public final class ParseDataset2 extends Job {
     }
     @Override public int  getChunkDataStart(int cidx) { return -1; }
     @Override public void setChunkDataStart(int cidx, int offset) { }
-  }
-  public static class ParseException extends RuntimeException {
-    public ParseException(String msg) { super(msg); }
   }
 }

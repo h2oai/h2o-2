@@ -4,8 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import water.*;
-import water.fvec.FVecTest;
-import water.fvec.ParseDataset2;
+import water.fvec.*;
 
 public class ParserTest extends TestUtil {
 
@@ -14,21 +13,7 @@ public class ParserTest extends TestUtil {
   private final double NaN = Double.NaN;
   private final char[] SEPARATORS = new char[] {',', ' '};
 
-  private Key k(String kname, String... data) {
-    Key[] keys = new Key[data.length];
-    int[] rpc  = new int[data.length];
-    for( int i = 0; i < data.length; ++i)
-      rpc[i] = data[i].length();
-    Key k = Key.make(kname);
-    ValueArray va = new ValueArray(k, rpc, 1, new ValueArray.Column[]{new ValueArray.Column(1)});
-    DKV.put(k, va);
-    for (int i = 0; i < data.length; ++i) {
-      keys[i] = va.getChunkKey(i);
-      DKV.put(keys[i], new Value(keys[i], data[i]));
-    }
-    DKV.write_barrier();
-    return k;
-  }
+  private Key k(String kname, String... data) { return ByteVec.make(kname,data); }
 
   public static boolean compareDoubles(double a, double b, double threshold){
     int e1 = 0;
@@ -47,19 +32,19 @@ public class ParserTest extends TestUtil {
     testParsed(k,expected,inputkey,expected.length);
   }
   public static void testParsed(Key k, double[][] expected, Key inputkey, int len) {
-    ValueArray va = DKV.get(k).get();
-    Assert.assertEquals(len,va._numrows);
-    Assert.assertEquals(expected[0].length,va._cols.length);
+    Frame va = DKV.get(k).get();
+    Assert.assertEquals(len,va.numRows());
+    Assert.assertEquals(expected[0].length,va.numCols());
     for (int i = 0; i < expected.length; ++i)
-      for (int j = 0; j < va._cols.length; ++j) {
-        double pval = va.datad(i, j);
+      for (int j = 0; j < va.numCols(); ++j) {
+        double pval = va.vecs()[j].at(i);
         if (Double.isNaN(expected[i][j]))
-          Assert.assertFalse(i+" -- "+j, !va.isNA(i,j));
+          Assert.assertTrue(i+" -- "+j, Double.isNaN(pval));
         else
-          Assert.assertTrue(expected[i][j]+" -- "+va.datad(i,j),compareDoubles(expected[i][j],va.datad(i,j),0.001));
+          Assert.assertTrue(expected[i][j]+" -- "+pval,compareDoubles(expected[i][j],pval,0.001));
       }
     UKV.remove(k);
-    UKV.remove(inputkey);
+    if( inputkey != null ) UKV.remove(inputkey);
   }
 
   @Test public void testBasic() {
@@ -86,17 +71,16 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       StringBuilder sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
-      Key k = Key.make();
-      UKV.put(k, new Value(k, sb.toString()));
+      Key k1 = ByteVec.make("test1",sb.toString());
       Key r1 = Key.make("r1");
-      ParseDataset.parse(r1, new Key[]{k});
-      testParsed(r1,exp,k);
+      ParseDataset2.parse(r1, new Key[]{k1});
+      testParsed(r1,exp,k1);
       sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
-      UKV.put(k, new Value(k, sb.toString()));
+      Key k2 = ByteVec.make("test1",sb.toString());
       Key r2 = Key.make("r2");
-      ParseDataset.parse(r2, new Key[]{k});
-      testParsed(r2,exp,k);
+      ParseDataset2.parse(r2, new Key[]{k2});
+      testParsed(r2,exp,k2);
     }
   }
 
@@ -130,7 +114,7 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key k = k("ChunkBoundaries",dataset);
       Key r3 = Key.make();
-      ParseDataset.parse(r3,new Key[]{k});
+      ParseDataset2.parse(r3,new Key[]{k});
       testParsed(r3,exp,k);
     }
   }
@@ -161,7 +145,7 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key k = k("ChunkBoundariesMixedLineEndings",dataset);
       Key r4 = Key.make();
-      ParseDataset.parse(r4,new Key[]{k});
+      ParseDataset2.parse(r4,new Key[]{k});
       testParsed(r4,exp,k);
     }
   }
@@ -212,9 +196,9 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = k("NondecimalColumns",dataset);
       Key r = Key.make();
-      ParseDataset.parse(r,new Key[]{key});
-      ValueArray va = DKV.get(r).get();
-      String[] cd = va._cols[2]._domain;
+      ParseDataset2.parse(r,new Key[]{key});
+      Frame va = DKV.get(r).get();
+      String[] cd = va.vecs()[2]._domain;
       Assert.assertEquals(" four",cd[0]);
       Assert.assertEquals("one",cd[1]);
       Assert.assertEquals("three",cd[2]);
@@ -233,7 +217,7 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = k("NumberFormats",dataset);
       Key r = Key.make();
-      ParseDataset.parse(r,new Key[]{key});
+      ParseDataset2.parse(r,new Key[]{key});
       testParsed(r, expDouble,key);
     }
   }
@@ -262,13 +246,13 @@ public class ParserTest extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = k("MultipleNondecimalColumns",dataset);
       Key r = Key.make();
-      ParseDataset.parse(r,new Key[]{key});
-      ValueArray va = DKV.get(r).get();
-      String[] cd = va._cols[2]._domain;
+      ParseDataset2.parse(r,new Key[]{key});
+      Frame va = DKV.get(r).get();
+      String[] cd = va.vecs()[2]._domain;
       Assert.assertEquals("one",cd[0]);
       Assert.assertEquals("three",cd[1]);
       Assert.assertEquals("two",cd[2]);
-      cd = va._cols[0]._domain;
+      cd = va.vecs()[0]._domain;
       Assert.assertEquals("bar",cd[0]);
       Assert.assertEquals("foo",cd[1]);
       Assert.assertEquals("foobar",cd[2]);
@@ -310,9 +294,9 @@ public class ParserTest extends TestUtil {
     String[] dataset = getDataForSeparator(separator, data);
     Key key = k("EmptyColumnValues",dataset);
     Key r = Key.make();
-    ParseDataset.parse(r,new Key[]{key});
-    ValueArray va = DKV.get(r).get();
-    String[] cd = va._cols[3]._domain;
+    ParseDataset2.parse(r,new Key[]{key});
+    Frame va = DKV.get(r).get();
+    String[] cd = va.vecs()[3]._domain;
     Assert.assertEquals("bar",cd[0]);
     Assert.assertEquals("foo",cd[1]);
     testParsed(r, expDouble,key);
@@ -343,10 +327,9 @@ public class ParserTest extends TestUtil {
       int i = 0;
       StringBuilder sb = new StringBuilder();
       for( i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
-      Key k = Key.make();
-      UKV.put(k, new Value(k, sb.toString()));
+      Key k = ByteVec.make("test1",sb.toString());
       Key r5 = Key.make();
-      ParseDataset.parse(r5, new Key[]{k});
+      ParseDataset2.parse(r5, new Key[]{k});
       testParsed(r5, exp,k);
     }
   }
@@ -363,11 +346,9 @@ public class ParserTest extends TestUtil {
   }
 
   @Test public void testTimeParse() {
-    Key fkey = load_test_file("smalldata/kaggle/bestbuy_train_10k.csv.gz");
     Key okey = Key.make("bestbuy.hex");
-    ParseDataset.parse(okey,new Key[]{fkey});
-    UKV.remove(fkey);
-    ValueArray va = DKV.get(okey).get();
+    parseFrame(okey,find_test_file("smalldata/kaggle/bestbuy_train_10k.csv.gz"));
+    Frame va = DKV.get(okey).get();
     UKV.remove(okey);
   }
 
@@ -381,10 +362,9 @@ public class ParserTest extends TestUtil {
       d(NaN, NaN, NaN),
       d(NaN, NaN,   6),
     };
-    Key fkey = load_test_file("smalldata/test/is_NA.csv");
     Key okey = Key.make("NA.hex");
-    ParseDataset.parse(okey,new Key[]{fkey});
-    testParsed(okey,exp,fkey,25);
+    parseFrame(okey,find_test_file("smalldata/test/is_NA.csv"));
+    testParsed(okey,exp,null,25);
   }
 
   @Test public void testSVMLight() {
@@ -404,9 +384,7 @@ public class ParserTest extends TestUtil {
     for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
     Key k = k(Key.make().toString(),sb.toString());
     Key r1 = Key.make("r1");
-    ParseDataset.parse(r1, new Key[]{k});
+    ParseDataset2.parse(r1, new Key[]{k});
     testParsed(r1,exp,k);
   }
-
-
 }

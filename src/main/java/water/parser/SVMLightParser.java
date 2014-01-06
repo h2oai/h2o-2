@@ -5,8 +5,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.apache.poi.ss.formula.ptg.PowerPtg;
-
 import water.Iced;
 
 /**
@@ -15,8 +13,6 @@ import water.Iced;
  *
  */
 public class SVMLightParser extends CustomParser{
-  final boolean isWhiteSpace(char c){return c == ' '  || c == '\t';}
-  final boolean isNewLine(char c)   {return c == '\r' || c == '\n';}
   private static final byte SKIP_LINE = 0;
   private static final byte EXPECT_COND_LF = 1;
   private static final byte EOL = 2;
@@ -44,7 +40,6 @@ public class SVMLightParser extends CustomParser{
   final static char DECIMAL_SEP = '.';
   int _failedLines = 0;
 
-  public SVMLightParser() {super(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, false));}
   public SVMLightParser(ParserSetup setup) {super(setup);}
   @Override
   public SVMLightParser clone(){return new SVMLightParser(_setup);}
@@ -88,7 +83,7 @@ public class SVMLightParser extends CustomParser{
       byte c = bits[offset];
       // skip comments for the first chunk (or if not a chunk)
       if( cidx == 0 ) {
-        while (c == '#') {
+        while (c == COMMENT_CHR) {
           while ((offset   < bits.length) && (bits[offset] != CHAR_CR) && (bits[offset  ] != CHAR_LF)) ++offset;
           if    ((offset+1 < bits.length) && (bits[offset] == CHAR_CR) && (bits[offset+1] == CHAR_LF)) ++offset;
           ++offset;
@@ -97,9 +92,8 @@ public class SVMLightParser extends CustomParser{
           c = bits[offset];
         }
       }
-      //dout.newLine();
+
       int linestart = 0;
-//      String linePrefix = "";
   MAIN_LOOP:
       while (true) {
   NEXT_CHAR:

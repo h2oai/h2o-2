@@ -1,27 +1,23 @@
 package water.parser;
 
 import static org.junit.Assert.assertTrue;
-
+import java.util.Arrays;
 import org.junit.Test;
-
 import water.*;
+import water.fvec.Frame;
 
 public class ParseCompressedAndXLSTest extends TestUtil {
 
   @Test public void  testIris(){
     Key k1 = null,k2 = null,k3 = null, k4 = null;
     try {
-      k1 = loadAndParseFile("csv.hex","smalldata/iris/iris_wheader.csv");
-      k2 = loadAndParseFile("xls.hex","smalldata/iris/iris.xls");
-      k3 = loadAndParseFile("gzip.hex","smalldata/iris/iris_wheader.csv.gz");
-      k4 = loadAndParseFile("zip.hex","smalldata/iris/iris_wheader.csv.zip");
-      Value v1 = DKV.get(k1);
-      Value v2 = DKV.get(k2);
-      Value v3 = DKV.get(k3);
-      Value v4 = DKV.get(k4);
-      assertTrue(v1.isBitIdentical(v2));
-      assertTrue(v2.isBitIdentical(v3));
-      assertTrue(v3.isBitIdentical(v4));
+      Frame fr1 = parseFrame(k1 = Key.make( "csv.hex"),"smalldata/iris/iris_wheader.csv");
+      Frame fr2 = parseFrame(k2 = Key.make( "xls.hex"),"smalldata/iris/iris.xls");
+      Frame fr3 = parseFrame(k3 = Key.make("gzip.hex"),"smalldata/iris/iris_wheader.csv.gz");
+      Frame fr4 = parseFrame(k4 = Key.make( "zip.hex"),"smalldata/iris/iris_wheader.csv.zip");
+      assertTrue(fr1.dataEquals(fr2));
+      assertTrue(fr2.dataEquals(fr3));
+      assertTrue(fr3.dataEquals(fr4));
     } finally {
       if(k1 != null)UKV.remove(k1);
       if(k2 != null)UKV.remove(k2);

@@ -22,7 +22,7 @@ public class DRFTest2 extends TestUtil {
         //"../demo/c5/row10000.csv.gz", "c5.hex", null, null, 
 
         "../datasets/UCI/UCI-large/covtype/covtype.data", "covtype.hex", null, null,
-        new DRFTest.PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
+        new DRFTest.PrepData() { @Override public int prep(Frame fr) { return fr.numCols()-1; } },
         10/*ntree*/,
         a( a( 199019,   7697,    15,    0,  180,    45,   546), 
            a(   8012, 267788,   514,    7,  586,   329,   181), 
@@ -53,6 +53,8 @@ public class DRFTest2 extends TestUtil {
 
         99/*max_depth*/,
         20/*nbins*/,
+        0.666667f/*sample_rate*/,
+        true/*print_throws*/,
         0 /*optflag*/  );
     }
   }

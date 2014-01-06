@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import water.Job.ProgressMonitor;
-import water.Key;
+import water.*;
 
 /**
  * A vector of plain Bytes.
@@ -12,6 +12,21 @@ import water.Key;
 public class ByteVec extends Vec {
 
   ByteVec( Key key, long espc[] ) { super(key,espc); }
+
+  // A factory for making specific chunks of bytes, for testing
+  static public Key make(String kname, String... data) {
+    long[] rpc  = new long[data.length+1];
+    for( int i = 0; i < data.length; ++i)
+      rpc[i+1] = rpc[i]+data[i].length();
+    Key k = newKey(Key.make(kname));
+    ByteVec va = new ByteVec(k,rpc);
+    Futures fs = new Futures();
+    DKV.put(k, va,fs);
+    for (int i = 0; i < data.length; ++i)
+      DKV.put(va.chunkKey(i), new C1NChunk(data[i].getBytes()), fs);
+    fs.blockForPending();
+    return k;
+  }
 
   public C1NChunk elem2BV( int cidx ) { return (C1NChunk)super.elem2BV(cidx); }
 

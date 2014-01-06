@@ -114,7 +114,8 @@ public class Frame extends Iced {
 
   /** Appends an entire Frame */
   public Frame add( Frame fr ) {
-    assert anyVec().group().equals(fr.anyVec().group());
+    assert anyVec().group().equals(fr.anyVec().group()) || 
+      (anyVec().nChunks()==1 && fr.anyVec().nChunks()==1);
     final int len0=    _names.length;
     final int len1= fr._names.length;
     final int len = len0+len1;
@@ -282,6 +283,32 @@ public class Frame extends Iced {
         return (_col0 = v);
     return null;
   }
+
+  // Equals on all data, excluding Key names.
+  public boolean dataEquals( Frame fr ) {
+    int ncols = fr.numCols();
+    if( fr.numCols() != numCols() ) return false;
+    if( fr.numRows() != numRows() ) return false;
+    for( int i=0; i<ncols; i++ )
+      if( !_names[i].equals(fr._names[i]) )
+        return false;
+    int len = (int)fr.numRows();
+    Vec vs0[] = vecs();
+    Vec vs1[] = fr.vecs();
+    double d0, d1;
+    for( int c=0; c<ncols; c++ )
+      for( int r=0; r<len; r++ )
+        if( (d0=vs0[c].at(r))!=(d1=vs1[c].at(r)) &&
+            (Math.abs(d0-d1) > Math.ulp(d0)) ) {
+          double e0 = Math.ulp(d0);
+          double e1 = Math.ulp(d1);
+          Chunk c0 = vs0[c].chunk(r); // For debugging...
+          Chunk c1 = vs1[c].chunk(r);
+          return false;
+        }
+    return true;
+  }
+
 
   /** Check that the vectors are all compatible.  All Vecs have their content
    *  sharded using same number of rows per chunk.  */

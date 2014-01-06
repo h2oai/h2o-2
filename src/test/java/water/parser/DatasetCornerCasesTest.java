@@ -2,59 +2,56 @@ package water.parser;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
-import hex.rf.*;
-import hex.rf.DRF.DRFJob;
-import hex.rf.Tree.StatType;
 
+import hex.drf.DRFTest;
+import hex.drf.DRFTest.PrepData;
 import org.junit.Test;
-
-import water.*;
 import water.api.Constants.Extensions;
-import water.parser.ParseDataset;
+import water.*;
+import water.fvec.Frame;
 
 public class DatasetCornerCasesTest extends TestUtil {
+
+  static final String[] s(String...arr)  { return arr; }
+  static final long[]   a(long ...arr)   { return arr; }
+  static final long[][] a(long[] ...arr) { return arr; }
 
   /*
    * HTWO-87 bug test
    *
    *  - two lines dataset (one line is a comment) throws assertion java.lang.AssertionError: classOf no dists > 0? 1
    */
-  @Test public void testTwoLineDataset() throws Exception {
-    Key fkey = load_test_file("smalldata/test/HTWO-87-two-lines-dataset.csv");
-    Key okey = Key.make("HTWO-87-two-lines-dataset.hex");
-    ParseDataset.parse(okey,new Key[]{fkey});
-    UKV.remove(fkey);
-    ValueArray val = DKV.get(okey).get();
+  @Test public void testTwoLineDataset() throws Throwable {
+    String hexnametrain = "HTWO-87-two-lines-dataset.hex";
+    String fnametrain = "smalldata/test/HTWO-87-two-lines-dataset.csv";
+    Key okey = Key.make(hexnametrain);
+    Frame val = parseFrame(okey,fnametrain);
 
     // Check parsed dataset
-    assertEquals("Number of chunks == 1", 1, val.chunks());
-    assertEquals("Number of rows   == 2", 2, val._numrows);
-    assertEquals("Number of cols   == 9", 9, val._cols.length);
-
-    // setup default values for DRF
-    int ntrees  = 5;
-    int depth   = 30;
-    int gini    = StatType.GINI.ordinal();
-    long seed   =  42L;
-    StatType statType = StatType.values()[gini];
-    final int num_cols = val.numCols();
-    final int classcol = num_cols-1; // Classify the last column
-    int cols[] = new int[]{0,1,2,3,4,5,6,7,8};
-
-    // Start the distributed Random Forest
-    try {
-      final Key modelKey = Key.make("model");
-      DRFJob result = hex.rf.DRF.execute(modelKey, cols, val,
-                                   ntrees,depth,1024,statType,seed,true,null,-1,Sampling.Strategy.RANDOM,1.0f,null,0,0,false);
-      // Just wait little bit
-      RFModel model = result.get();
-      assertEquals("Number of classes == 1", 1,  model.classes());
-      assertTrue("Number of trees > 0 ", model.size()> 0);
-      model.deleteKeys();
-    } catch( IllegalArgumentException e ) {
-      assertEquals("java.lang.IllegalArgumentException: Found 1 classes: Response column must be an integer in the interval [2,254]",e.toString());
-    }
+    assertEquals("Number of chunks == 1", 1, val.anyVec().nChunks());
+    assertEquals("Number of rows   == 2", 2, val.numRows());
+    assertEquals("Number of cols   == 9", 9, val.numCols());
     UKV.remove(okey);
+
+    // DRF2 - a little more complete inspection of data
+    try { 
+      new DRFTest().basicDRF(
+        fnametrain, hexnametrain, null, null,
+        new hex.drf.DRFTest.PrepData() { @Override public int prep(Frame fr) { return fr.numCols()-1; } },
+        5/*ntree*/,
+        a( a( 0, 0 ),
+           a( 0, 0 )),
+        s("1", "2"),
+
+        30/*max_depth*/,
+        1024/*nbins*/,
+        1.0f/*sample_rate*/,
+        false/*print_throws*/,
+        0 /*optflag*/  );
+      assertTrue(false);
+    } catch( IllegalArgumentException iae ) {
+      assertEquals("java.lang.IllegalArgumentException: Constant response column!",iae.toString());
+    }
   }
 
   /* The following tests deal with one line dataset ended by different number of newlines. */
@@ -84,16 +81,12 @@ public class DatasetCornerCasesTest extends TestUtil {
   }
 
   private void testOneLineDataset(String filename, String keyname) {
-    Key fkey = load_test_file(filename);
     Key okey = Key.make(keyname);
-    ParseDataset.parse(okey,new Key[]{fkey});
+    Frame val = parseFrame(okey,filename);
+    assertEquals(filename + ": number of chunks == 1", 1, val.anyVec().nChunks());
+    assertEquals(filename + ": number of rows   == 2", 2, val.numRows());
+    assertEquals(filename + ": number of cols   == 9", 9, val.numCols());
 
-    ValueArray val = DKV.get(okey).get();
-    assertEquals(filename + ": number of chunks == 1", 1, val.chunks());
-    assertEquals(filename + ": number of rows   == 2", 2, val._numrows);
-    assertEquals(filename + ": number of cols   == 9", 9, val._cols.length);
-
-    UKV.remove(fkey);
     UKV.remove(okey);
   }
 }

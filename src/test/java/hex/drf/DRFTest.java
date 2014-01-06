@@ -14,7 +14,7 @@ public class DRFTest extends TestUtil {
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
-  abstract static class PrepData { abstract int prep(Frame fr); }
+  abstract public static class PrepData { abstract public int prep(Frame fr); }
 
   static final String[] s(String...arr)  { return arr; }
   static final long[]   a(long ...arr)   { return arr; }
@@ -27,7 +27,7 @@ public class DRFTest extends TestUtil {
     // the DRF should  use only subset of rows since it is using oob validation
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
-          new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
+          new PrepData() { @Override public int prep(Frame fr) { return fr.numCols()-1; } },
           1,
           a( a(6, 0,  0),
              a(0, 7,  0),
@@ -40,7 +40,7 @@ public class DRFTest extends TestUtil {
     // iris ntree=50
     basicDRFTestOOBE(
           "./smalldata/iris/iris_train.csv","iris_train.hex",
-          new PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
+          new PrepData() { @Override public int prep(Frame fr) { return fr.numCols()-1; } },
           50,
           a( a(30, 0,  0),
              a(0, 31,  3),
@@ -53,7 +53,7 @@ public class DRFTest extends TestUtil {
     // cars ntree=1
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
-        new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
+        new PrepData() { @Override public int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
         a( a(0,  2, 0, 0, 0),
            a(1, 51, 0, 3, 1),
@@ -67,7 +67,7 @@ public class DRFTest extends TestUtil {
   @Test public void testClassCars50() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
-        new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
+        new PrepData() { @Override public int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         50,
         a( a(0,   4, 0,  0,   0),
            a(0, 207, 0,  0,   0),
@@ -81,7 +81,7 @@ public class DRFTest extends TestUtil {
   public void testCreditSample1() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/kaggle/creditsample-training.csv.gz","credit.hex",
-        new PrepData() { @Override int prep(Frame fr) {
+        new PrepData() { @Override public int prep(Frame fr) {
           UKV.remove(fr.remove("MonthlyIncome")._key); return fr.find("SeriousDlqin2yrs");
           } },
         1,
@@ -96,7 +96,7 @@ public class DRFTest extends TestUtil {
   public void testCreditProstate1() throws Throwable {
     basicDRFTestOOBE(
         "./smalldata/logreg/prostate.csv","prostate.hex",
-        new PrepData() { @Override int prep(Frame fr) {
+        new PrepData() { @Override public int prep(Frame fr) {
           UKV.remove(fr.remove("ID")._key); return fr.find("CAPSULE");
           } },
         1,
@@ -111,7 +111,7 @@ public class DRFTest extends TestUtil {
     basicDRFTestOOBE(
         "./smalldata/airlines/allyears2k_headers.zip","airlines.hex",
         new PrepData() {
-          @Override int prep(Frame fr) {
+          @Override public int prep(Frame fr) {
             UKV.remove(fr.remove("DepTime")._key);
             UKV.remove(fr.remove("ArrTime")._key);
             UKV.remove(fr.remove("ActualElapsedTime")._key);
@@ -148,8 +148,8 @@ public class DRFTest extends TestUtil {
     return drf.response;
   }
 
-  public void basicDRFTestOOBE(String fnametrain, String hexnametrain, PrepData prep, int ntree, long[][] expCM, String[] expRespDom) throws Throwable { basicDRF(fnametrain, hexnametrain, null, null, prep, ntree, expCM, expRespDom, 10/*max_depth*/, 20/*nbins*/, 0/*optflag*/); }
-  public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep, int ntree, long[][] expCM, String[] expRespDom, int max_depth, int nbins, int optflags) throws Throwable {
+  public void basicDRFTestOOBE(String fnametrain, String hexnametrain, PrepData prep, int ntree, long[][] expCM, String[] expRespDom) throws Throwable { basicDRF(fnametrain, hexnametrain, null, null, prep, ntree, expCM, expRespDom, 10/*max_depth*/, 20/*nbins*/, 0.666667f/*sample_rate*/, true/*print_throws*/, 0/*optflag*/); }
+  public void basicDRF(String fnametrain, String hexnametrain, String fnametest, String hexnametest, PrepData prep, int ntree, long[][] expCM, String[] expRespDom, int max_depth, int nbins, float sample_rate, boolean print_throws, int optflags) throws Throwable {
     DRF drf = null;
     Frame frTrain = null, frTest = null;
     Key destTrain = Key.make(hexnametrain);
@@ -166,7 +166,7 @@ public class DRFTest extends TestUtil {
       drf.min_rows = 1; // = nodesize
       drf.nbins = nbins;
       drf.mtries = -1;
-      drf.sample_rate = 0.66667f;   // Simulated sampling with replacement
+      drf.sample_rate = sample_rate;   // Simulated sampling with replacement
       drf.seed = (1L<<32)|2;
       drf.destination_key = Key.make("DRF_model_4_" + hexnametrain);
       // Invoke DRF and block till the end
@@ -183,7 +183,7 @@ public class DRFTest extends TestUtil {
       pred = drf.score(frTest!=null?frTest:drf.source);
 
     } catch (Throwable t) {
-      t.printStackTrace();
+      if( print_throws ) t.printStackTrace();
       throw t;
     } finally {
       frTrain.remove();

@@ -371,6 +371,23 @@ public class TestUtil {
     }
   }
 
+  public static Frame parseFolder(Key okey, File folder) {
+    assert folder.isDirectory();
+    ArrayList<Key> akeys = new ArrayList<Key>();
+    for( File f : folder.listFiles() ) {
+      if( f.isFile() )
+        akeys.add(NFSFileVec.make(f));
+    }
+    Key[] keys = new Key[akeys.size()];
+    akeys.toArray(keys);
+    try {
+      return ParseDataset2.parse(okey, keys);
+    } finally {
+      for( Key k : keys ) UKV.remove(k);
+    }
+  }
+
+
   public static Frame frame(String[] names, double[]... rows) {
     assert names == null || names.length == rows[0].length;
     Futures fs = new Futures();

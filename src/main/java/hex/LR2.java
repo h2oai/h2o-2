@@ -14,27 +14,27 @@ public class LR2 extends Request2 {
   static final String DOC_GET = "Linear Regression between 2 columns";
 
   @API(help="Data Frame", required=true, filter=Default.class)
-  Frame source;
+  public Frame source;
 
   @API(help="Column X", required=true, filter=LR2VecSelect.class)
-  Vec vec_x;
+  public Vec vec_x;
 
   @API(help="Column Y", required=true, filter=LR2VecSelect.class)
-  Vec vec_y;
+  public Vec vec_y;
   class LR2VecSelect extends VecSelect { LR2VecSelect() { super("source"); } }
 
-  @API(help="Pass 1 msec")     long pass1time;
-  @API(help="Pass 2 msec")     long pass2time;
-  @API(help="Pass 3 msec")     long pass3time;
-  @API(help="nrows")           long nrows;
-  @API(help="beta0")           double beta0;
-  @API(help="beta1")           double beta1;
-  @API(help="r-squared")       double r2;
-  @API(help="SSTO")            double ssto;
-  @API(help="SSE")             double sse;
-  @API(help="SSR")             double ssr;
-  @API(help="beta0 Std Error") double beta0stderr;
-  @API(help="beta1 Std Error") double beta1stderr;
+  @API(help="Pass 1 msec")     public long pass1time;
+  @API(help="Pass 2 msec")     public long pass2time;
+  @API(help="Pass 3 msec")     public long pass3time;
+  @API(help="nrows")           public long nrows;
+  @API(help="beta0")           public double beta0;
+  @API(help="beta1")           public double beta1;
+  @API(help="r-squared")       public double r2;
+  @API(help="SSTO")            public double ssto;
+  @API(help="SSE")             public double sse;
+  @API(help="SSR")             public double ssr;
+  @API(help="beta0 Std Error") public double beta0stderr;
+  @API(help="beta1 Std Error") public double beta1stderr;
 
   @Override public Response serve() {
     // Pass 1: compute sums & sums-of-squares
