@@ -1,30 +1,30 @@
-\name{as.data.frame}
-\alias{as.data.frame}
+\name{as.factor}
+\alias{as.factor}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Converts a parsed H2O object to a data frame. 
+Converts a column from numeric to factor
 }
 \description{
-Converts a parsed H2O object to a data frame. 
-Convert a parsed H2O object to an H2O data frame, which allows subsequent data frame operations (like head(), and tail())
+Specify a colum type to be factor (also called categorical or enumerative), rather than numeric. 
 }
 \usage{
-as.data.frame(x, row.names = NULL, optional = FALSE, ...)
+as.factor(x)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
-An \code{\linkS4class{H2OParsedData} object.
-}
-  \item{row.names}{
-A vector containing the row names of observations in the data frame. 
+A column in an object of class \code{\linkS4class{H2OParsedData}}, or data frame. 
 }
 }
-
+\details{
+%%  ~~ If necessary, more details than the description above ~~
+}
 \value{
-returns a data frame
+Returns the originalobject of class \code{\linkS4class{H2OParsedData}}, with the requested column specified as a factor, rather than numeric. 
 }
 
+
+\examples{
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, 
@@ -32,11 +32,9 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE,
 prosPath = system.file("extdata", "prostate.csv", 
  + package="h2oRClient")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
-prostate.data.frame<- as.data.frame(prostate.hex)
-summary(prostate.data.frame)
-head(prostate.data.frame)
+prostate.hex[,4]=as.factor(prostate.hex[,4])
+summary(prostate.hex)
 }
-
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
