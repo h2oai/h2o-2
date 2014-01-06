@@ -13,7 +13,7 @@ heading("BEGIN TEST")
 conn <- new("H2OClient", ip=myIP, port=myPort)
 
 path = locate("smalldata/logreg/prostate.csv")
-prostate.hex = h2o.uploadFile.VA(conn, locate("smalldata/logreg/prostate.csv"), key="prostate.hex")
+prostate.hex = h2o.uploadFile.VA(conn, path, key="prostate.hex")
 h2o.ls(conn)
     
 rf = h2o.randomForest.VA(x=c(1,4), y="CAPSULE", data=prostate.hex, ntree=5)
