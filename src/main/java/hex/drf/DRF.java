@@ -16,7 +16,6 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.api.DRFProgressPage;
 import water.api.DocGen;
-import water.api.Request.API;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -148,7 +147,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Prepare working columns
     new SetWrkTask().doAll(fr);
 
-    int tid = 0;
+    int tid;
     DTree[] ktrees = null;
     // Prepare tree statistics
     TreeStats tstats = new TreeStats();
@@ -326,7 +325,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     // ----
     // Move rows into the final leaf rows
-    CollectPreds gp = new CollectPreds(ktrees,leafs).doAll(fr,build_tree_per_node);
+    new CollectPreds(ktrees,leafs).doAll(fr,build_tree_per_node);
 
     // Collect leaves stats
     for (int i=0; i<ktrees.length; i++)
@@ -357,7 +356,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       // For all tree/klasses
       for( int k=0; k<_nclass; k++ ) {
         final DTree tree = _trees[k];
-        final int   leaf = _leafs[k];
         if( tree == null ) continue; // Empty class is ignored
         // If we have all constant responses, then we do not split even the
         // root and the residuals should be zero.
@@ -373,7 +371,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
               nid = tree.node(nid).pid();                 // Then take parent's decision
             DecidedNode dn = tree.decided(nid);           // Must have a decision point
             if( dn._split.col() == -1 )     // Unable to decide?
-              dn = tree.decided(nid = tree.node(nid).pid()); // Then take parent's decision
+              dn = tree.decided(tree.node(nid).pid()); // Then take parent's decision
             int leafnid = dn.ns(chks,row); // Decide down to a leafnode
             // Setup Tree(i) - on the fly prediction of i-tree for row-th row
             ct.set0(row, (float)(ct.at0 (row) + ((LeafNode)tree.node(leafnid)).pred() ));
