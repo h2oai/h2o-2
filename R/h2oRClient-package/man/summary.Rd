@@ -2,7 +2,7 @@
 \alias{summary}
 \title{ Summarizes the columns of an H2O parsed object or data set. }
 \description{
-Summarizes the columns of an H2O parsed object or subset of columns and rows using vector notation (eg dataset[row, col])
+Summarizes the columns of an H2O parsed object or subset of columns and rows using vector notation (e.g. dataset[row, col])
 }
 \usage{summary(object, ...)}
 \arguments{

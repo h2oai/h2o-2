@@ -10,7 +10,7 @@ h2o.rm(object, keys)
   \item{object}{An \code{\linkS4class{H2OClient}} object containing the IP address and port of the server running H2O.}
   \item{keys}{the hex key associated with the object to be removed.}
 }
-\note{Users may wish to remove an H2O object on the server that is associated with an object in the R environment. Reccomended behavior is to also remove the object in the R enironment. See the second example at the end of this section.}
+\note{Users may wish to remove an H2O object on the server that is associated with an object in the R environment. Recommended behavior is to also remove the object in the R environment. See the second example at the end of this section.}
 
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 

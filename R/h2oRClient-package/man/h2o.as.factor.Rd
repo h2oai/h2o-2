@@ -2,7 +2,7 @@
 \alias{as.factor}
 \title{Converts a column from numeric to factor}
 \description{ 
-	Specify a colum type to be factor (also called categorical or enumerative), rather than numeric.
+	Specify a column type to be factor (also called categorical or enumerative), rather than numeric.
 	}
 \usage{as.factor(x)}
 
@@ -10,7 +10,7 @@
   \item{x}{A column in an object of class \code{\linkS4class{H2OParsedData}}, or data frame.}
 }
 \value{
-Returns the originalobject of class \code{\linkS4class{H2OParsedData}}, with the requested column specified as a factor, rather than numeric. 
+Returns the original object of class \code{\linkS4class{H2OParsedData}}, with the requested column specified as a factor, rather than numeric. 
 }
 \examples{
 library(h2o)
