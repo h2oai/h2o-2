@@ -385,9 +385,11 @@ public class Summary2 extends Iced {
       Utils.add(hcnt, other.hcnt);
     _rows += other._rows;
     // merge samples
-    System.arraycopy(other._samples, 0, _samples, _samples.length, other._samples.length);
+    double merged[] = new double[_samples.length+other._samples.length];
+    System.arraycopy(_samples,0,merged,0,_samples.length);
+    System.arraycopy(other._samples,0,merged,_samples.length,other._samples.length);
+    _samples = merged;
     if (_type == T_ENUM) return this;
-
     double[] ds = MemoryManager.malloc8d(_mins.length);
     int i = 0, j = 0;
     for (int k = 0; k < ds.length; k++)
