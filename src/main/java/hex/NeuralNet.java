@@ -45,53 +45,73 @@ public class NeuralNet extends ValidatedJob {
     Auto, Uniform, Normal
   }
 
-  @API(help = "Execution Mode", json = true, filter = Default.class)
+  @API(help = "Execution Mode", filter = Default.class)
   public ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
 
-  @API(help = "Activation function", json = true, filter = Default.class)
+  @API(help = "Activation function", filter = Default.class)
   public Activation activation = Activation.Tanh;
 
-  @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)", json = true, filter = Default.class, dmin = 0, dmax = 1)
+  @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1)
   public float input_dropout_ratio = 0;
 
-  @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", json = true, filter = Default.class)
+  @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
   public int[] hidden = new int[] { 500 };
 
-  @API(help = "Weight Initialization", json = true, filter = Default.class, dmin = 0)
+  @API(help = "Weight Initialization", filter = Default.class, dmin = 0)
   public WeightInitialization weight_initialization = WeightInitialization.Auto;
 
-  @API(help = "Initial weight (Uniform: -value...value, Normal: stddev)", json = true, filter = Default.class, dmin = 0)
+  @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0)
   public double initial_weight = 0.01;
 
-  @API(help = "Learning rate", json = true, filter = Default.class, dmin = 0)
+  @API(help = "Learning rate", filter = Default.class, dmin = 0)
   public double rate = .005;
 
-  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", json = true, filter = Default.class)
+  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class)
   public double rate_annealing = 1 / 1e6;
 
-  @API(help = "Constraint for squared sum of incoming weights per unit", json = true, filter = Default.class)
+  @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class)
   public float max_w2 = 15;
 
-  @API(help = "Momentum at the beginning of training", json = true, filter = Default.class)
+  @API(help = "Momentum at the beginning of training", filter = Default.class)
   public double momentum_start = .5;
 
-  @API(help = "Number of samples for which momentum increases", json = true, filter = Default.class)
+  @API(help = "Number of samples for which momentum increases", filter = Default.class)
   public long momentum_ramp = 300 * 60000;
 
-  @API(help = "Momentum once the initial increase is over", json = true, filter = Default.class, dmin = 0)
+  @API(help = "Momentum once the initial increase is over", filter = Default.class, dmin = 0)
   public double momentum_stable = .99;
 
-  @API(help = "L1 regularization", json = true, filter = Default.class, dmin = 0)
+  @API(help = "L1 regularization", filter = Default.class, dmin = 0)
   public double l1;
 
-  @API(help = "L2 regularization", json = true, filter = Default.class, dmin = 0)
+  @API(help = "L2 regularization", filter = Default.class, dmin = 0)
   public double l2 = .001;
 
-  @API(help = "How many times the dataset should be iterated", json = true, filter = Default.class, lmin = 0)
+  @API(help = "How many times the dataset should be iterated", filter = Default.class, lmin = 0)
   public int epochs = 100;
 
-  @API(help = "Seed for the random number generator", json = true, filter = Default.class)
+  @API(help = "Seed for the random number generator", filter = Default.class)
   public long seed = new Random().nextLong();
+
+  @Override
+  protected void registered(RequestServer.API_VERSION ver) {
+    super.registered(ver);
+    for (Argument a : _arguments) {
+      if (a._name.equals("activation") || a._name.equals("weight_initialization")) {
+         a.setRefreshOnChange();
+      }
+    }
+  }
+
+  @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
+    super.queryArgumentValueSet(arg, inputArgs);
+    if(arg._name.equals("input_dropout_ratio") && activation != Activation.RectifierWithDropout) {
+      arg.disable("Only with RectifierWithDropout", inputArgs);
+    }
+    if(arg._name.equals("initial_weight") && weight_initialization == WeightInitialization.Auto) {
+      arg.disable("Only with non-automatic weight initialization", inputArgs);
+    }
+  }
 
   public NeuralNet() {
     description = DOC_GET;
@@ -491,7 +511,7 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Weight Initialization")
     public WeightInitialization weight_initialization;
 
-    @API(help = "Initial weight (Uniform: -value...value, Normal: stddev)")
+    @API(help = "Uniform: -value...value, Normal: stddev)")
     public double initial_weight;
 
     @API(help = "Learning rate")

@@ -448,7 +448,7 @@ public class RequestArguments extends RequestStatics {
      * If you want this behavior to be disabled for the argument, overwrite this
      * method to error.
      */
-    protected void setRefreshOnChange() {
+    public void setRefreshOnChange() {
       _refreshOnChange = true;
     }
 
