@@ -19,7 +19,7 @@ public class NeuralNetMLPReference {
   float[][] _testData;
   NeuralNetwork _nn;
 
-  void init() {
+  void init(NeuralNetwork.Activation activation) {
     double[][] ds = new double[150][];
     int r = 0;
     ds[r++] = new double[] { 5.1, 3.5, 1.4, 0.2, 0, 0, 1 };
@@ -215,7 +215,7 @@ public class NeuralNetMLPReference {
     int numInput = 4;
     int numHidden = 7;
     int numOutput = 3;
-    _nn = new NeuralNetwork(numInput, numHidden, numOutput);
+    _nn = new NeuralNetwork(NeuralNetwork.Activation.tanh, numInput, numHidden, numOutput);
     _nn.InitializeWeights();
   }
 
@@ -284,6 +284,8 @@ public class NeuralNetMLPReference {
   }
 
   public static class NeuralNetwork {
+    enum Activation { tanh, rectifier };
+    Activation activation = Activation.tanh;
     int numInput;
     int numHidden;
     int numOutput;
@@ -309,7 +311,8 @@ public class NeuralNetMLPReference {
     float[][] hoPrevWeightsDelta;
     float[] oPrevBiasesDelta;
 
-    public NeuralNetwork(int numInput, int numHidden, int numOutput) {
+    public NeuralNetwork(Activation activationType, int numInput, int numHidden, int numOutput) {
+      this.activation = activationType;
       this.numInput = numInput;
       this.numHidden = numHidden;
       this.numOutput = numOutput;
@@ -511,7 +514,11 @@ public class NeuralNetMLPReference {
 
       for( int i = 0; i < numHidden; ++i )
         // apply activation
-        this.hOutputs[i] = HyperTanFunction(hSums[i]); // hard-coded
+        if (activation == Activation.tanh) {
+          this.hOutputs[i] = HyperTanFunction(hSums[i]);
+        } else if (activation == Activation.rectifier) {
+          this.hOutputs[i] = Rectifier(hSums[i]);
+        } else throw new RuntimeException("invalid activation.");
 
       for( int j = 0; j < numOutput; ++j )
         // compute h-o sum of weights * hOutputs
@@ -533,6 +540,10 @@ public class NeuralNetMLPReference {
 
     private static float HyperTanFunction(float x) {
       return (float) Math.tanh(x);
+    }
+
+    private static float Rectifier(float x) {
+      return Math.max(x, 0.0f);
     }
 
     private static float[] Softmax(float[] oSums) {
@@ -577,8 +588,13 @@ public class NeuralNetMLPReference {
 
       // 2. compute hidden gradients
       for( int i = 0; i < hGrads.length; ++i ) {
-        float derivative = (1 - hOutputs[i]) * (1 + hOutputs[i]); // derivative of tanh = (1 - y) *
-// (1 + y)
+        float derivative = 1;
+        if (activation == Activation.tanh) {
+          derivative = (1 - hOutputs[i]) * (1 + hOutputs[i]); // derivative of tanh (y) = (1 - y) * (1 + y)
+        } else if (activation == Activation.rectifier) {
+          derivative = hOutputs[i] < 0 ? 0 : 1;
+        } else throw new RuntimeException("invalid activation.");
+
         float sum = 0;
         for( int j = 0; j < numOutput; ++j ) // each hidden delta is the sum of numOutput terms
         {

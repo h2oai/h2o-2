@@ -1,6 +1,6 @@
 package hex;
 
-import hex.Layer.Output.Loss;
+import hex.Layer.Loss;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.rng.MersenneTwisterRNG;
@@ -27,7 +27,10 @@ public class NeuralNetIrisTest extends TestUtil {
 
   @Test public void compare() throws Exception {
     NeuralNetMLPReference ref = new NeuralNetMLPReference();
-    ref.init();
+
+    // Select tanh or rectifier
+    ref.init(NeuralNetMLPReference.NeuralNetwork.Activation.tanh);
+    //ref.init(NeuralNetMLPReference.NeuralNetwork.Activation.rectifier);
 
     // Parse Iris and shuffle the same way as ref
     Key file = NFSFileVec.make(new File(PATH));
@@ -63,7 +66,11 @@ public class NeuralNetIrisTest extends TestUtil {
     output.loss = Loss.MeanSquare;
     Layer[] ls = new Layer[3];
     ls[0] = input;
+
+    // Select tanh or rectifier
     ls[1] = new Layer.Tanh(7);
+    //ls[1] = new Layer.Rectifier(7);
+
     ls[1].rate = rate;
     ls[2] = output;
     ls[2].rate = rate;
