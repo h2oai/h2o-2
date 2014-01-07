@@ -23,6 +23,12 @@ public abstract class Layer extends Iced {
   @ParamsSearch.Ignore
   public int units;
 
+  @API(help = "Weight Initialization")
+  public hex.NeuralNet.WeightInitialization weight_initialization;
+
+  @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
+  public double initial_weight;
+
   @API(help = "Learning rate")
   public float rate;
 
@@ -86,6 +92,39 @@ public abstract class Layer extends Iced {
       if( momentum_start != 0 || momentum_stable != 0 ) {
         _wm = new float[_w.length];
         _bm = new float[_b.length];
+      }
+    }
+  }
+
+  /**
+   *
+   // helper to initialize weights
+   // automatic initialization defaults to sqrt(6 / (units_input_layer + units_this_layer))
+   * @param rng random generator to use
+   * @param prefactor prefactor for initialization
+   */
+  // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
+  void randomize(Random rng, float prefactor) {
+    if (weight_initialization == NeuralNet.WeightInitialization.Auto) {
+      final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
+      for( int i = 0; i < _w.length; i++ )
+        _w[i] = (float)rand(rng, -range, range);
+    }
+    else if (weight_initialization == NeuralNet.WeightInitialization.Uniform) {
+      for( int i = 0; i < _w.length; i++ )
+        _w[i] = (float)rand(rng, -initial_weight, initial_weight);
+    }
+    else if (weight_initialization == NeuralNet.WeightInitialization.Normal) {
+      // fill all but possibly the last element, fill two values at once
+      for( int i = 0; i < _w.length - _w.length % 2;) {
+        final double[] normal = randn(rng, 0, initial_weight);
+        _w[i++] = (float)normal[0];
+        _w[i++] = (float)normal[1];
+      }
+      // check for last element
+      if (_w.length % 2 == 1) {
+        final double[] normal = randn(rng, 0, initial_weight);
+        _w[_w.length-1] = (float)normal[0];
       }
     }
   }
@@ -407,11 +446,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
       super.init(ls, index, weights, step, rand);
       if( weights ) {
-        // C.f. deeplearning.net tutorial
-        //final float range = 4.f * (float)Math.sqrt(6. / (_previous.units + units)); //TODO: Try this factor of 4
-        final float range = (float)Math.sqrt(6. / (_previous.units + units));
-        for( int i = 0; i < _w.length; i++ )
-          _w[i] = rand(rand, -range, range);
+        randomize(rand, 1.0f);
       }
     }
 
@@ -587,10 +622,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
       super.init(ls, index, weights, step, rand);
       if( weights ) {
-        // C.f. deeplearning.net tutorial
-        final float range = (float)Math.sqrt(6. / (_previous.units + units));
-        for( int i = 0; i < _w.length; i++ )
-          _w[i] = rand(rand, -range, range);
+        randomize(rand, 1.0f);
       }
     }
 
@@ -659,7 +691,8 @@ public abstract class Layer extends Iced {
       for( int o = 0; o < _a.length; o++ ) {
         assert _previous._previous.units == units;
         float e = _previous._previous._a[o] - _a[o];
-        float g = e; // * (1 - _a[o]) * _a[o]; // Square error
+        float g = e;
+//        float g = e * (1 - _a[o]) * _a[o]; // Square error
         for( int i = 0; i < _previous._a.length; i++ ) {
           int w = i * _a.length + o;
           if( _previous._e != null )
@@ -695,10 +728,7 @@ public abstract class Layer extends Iced {
 //            _w[w] = rand(rand, min, max);
 //          }
 //        }
-        // C.f. deeplearning.net tutorial
-        final float range = (float)Math.sqrt(6. / (_previous.units + units));
-        for( int i = 0; i < _w.length; i++ )
-          _w[i] = rand(rand, -range, range);
+        randomize(rand, 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -764,12 +794,7 @@ public abstract class Layer extends Iced {
 //            _w[w] = rand(rand, min, max);
 //          }
 //        }
-        final float range = (float)Math.sqrt(6. / (_previous.units + units));
-        for( int i = 0; i < _w.length; i++ )
-          _w[i] = rand(rand, -range, range);
-
-//        for( int i = 0; i < _w.length; i++ )
-//          _w[i] = rand(rand, -.01f, .01f);
+        randomize(rand, 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
@@ -791,9 +816,10 @@ public abstract class Layer extends Iced {
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
-        float g = _e[u];
-        if( _a[u] > 0 )
+        if( _a[u] > 0 ) {
+          float g = _e[u];
           bprop(u, g, r, m);
+        }
       }
     }
   }
@@ -882,7 +908,7 @@ public abstract class Layer extends Iced {
       for( int u = 0; u < _a.length; u++ ) {
         assert _previous._previous.units == units;
         float e = _previous._previous._a[u] - _a[u];
-        float g = e;//* (1 - _a[o]) * _a[o];
+        float g = e;
         //float g = e * (1 - _a[o]) * _a[o]; // Square error
         float r2 = 0;
         for( int i = 0; i < _previous._a.length; i++ ) {
@@ -924,8 +950,19 @@ public abstract class Layer extends Iced {
       shareWeights(src[y], dst[y]);
   }
 
-  private static float rand(Random rand, float min, float max) {
-    return min + rand.nextFloat() * (max - min);
+  private static double rand(Random rand, double min, double max) {
+    return min + rand.nextDouble() * (max - min);
+  }
+
+//  Box-Mueller transform, create two normally distributed numbers from two uniformly distributed numbers in 0..1
+// (this original version is probably just as fast as the polar version, and stability should be fine)
+  private static double[] randn(Random rand, double mean, double sigma) {
+    final double u1 = rand.nextDouble();
+    final double u2 = rand.nextDouble();
+    final double z0 = Math.sqrt(-2.0f * Math.log(u1)) * Math.cos(2.0f * Math.PI * u2);
+    final double z1 = Math.sqrt(-2.0f * Math.log(u1)) * Math.sin(2.0f * Math.PI * u2);
+    double[] ret = {mean + sigma * z0, mean + sigma * z1};
+    return ret;
   }
 
   @Override public AutoBuffer writeJSON(AutoBuffer bb) {

@@ -26,6 +26,8 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
     ls[3] = new Layer.RectifierDropout(2048);
     ls[4] = new VecSoftmax(labels, outputStats);
     for( int i = 0; i < ls.length; i++ ) {
+      ls[i].weight_initialization = NeuralNet.WeightInitialization.Auto;
+      //ls[i].initial_weight = 0.01;
       ls[i].rate = .01f;
       ls[i].rate_annealing = 1e-6f;
       ls[i].momentum_start = .5f;
@@ -41,10 +43,10 @@ public class NeuralNetMnistDrednet extends NeuralNetMnist {
   @Override protected void startTraining(Layer[] ls) {
     // Initial training on one thread to increase stability
     // If the net still produces NaNs, reduce learning rate //TODO: Automate this
-    System.out.println("Initial single-threaded training");
-    _trainer = new Trainer.Direct(ls, 0.1, self());
-    _trainer.start();
-    _trainer.join();
+//    System.out.println("Initial single-threaded training");
+//    _trainer = new Trainer.Direct(ls, 0.1, self());
+//    _trainer.start();
+//    _trainer.join();
 
     System.out.println("Main training");
 

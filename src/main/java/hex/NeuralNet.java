@@ -35,52 +35,62 @@ public class NeuralNet extends ValidatedJob {
 
   public enum Activation {
     Tanh, Rectifier, RectifierWithDropout, Maxout
-  };
+  }
 
   public enum ExecutionMode {
     Serial, Threaded_Hogwild, MapReduce_Hogwild
-  };
+  }
 
-  @API(help = "Execution Mode", filter = Default.class)
+  public enum WeightInitialization {
+    Auto, Uniform, Normal
+  }
+
+  @API(help = "Execution Mode", json = true, filter = Default.class)
   public ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
 
-  @API(help = "Activation function", filter = Default.class)
+  @API(help = "Activation function", json = true, filter = Default.class)
   public Activation activation = Activation.Tanh;
 
-  @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)", filter = Default.class)
+  @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)", json = true, filter = Default.class, dmin = 0, dmax = 1)
   public float input_dropout_ratio = 0;
 
-  @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
+  @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", json = true, filter = Default.class)
   public int[] hidden = new int[] { 500 };
 
-  @API(help = "Learning rate", filter = Default.class)
+  @API(help = "Weight Initialization", json = true, filter = Default.class, dmin = 0)
+  public WeightInitialization weight_initialization = WeightInitialization.Auto;
+
+  @API(help = "Initial weight (Uniform: -value...value, Normal: stddev)", json = true, filter = Default.class, dmin = 0)
+  public double initial_weight = 0.01;
+
+  @API(help = "Learning rate", json = true, filter = Default.class, dmin = 0)
   public double rate = .005;
 
-  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class)
+  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", json = true, filter = Default.class)
   public double rate_annealing = 1 / 1e6;
 
-  @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class)
+  @API(help = "Constraint for squared sum of incoming weights per unit", json = true, filter = Default.class)
   public float max_w2 = 15;
 
-  @API(help = "Momentum at the beggining of training", filter = Default.class)
+  @API(help = "Momentum at the beginning of training", json = true, filter = Default.class)
   public double momentum_start = .5;
 
-  @API(help = "Number of samples for which momentum increases", filter = Default.class)
+  @API(help = "Number of samples for which momentum increases", json = true, filter = Default.class)
   public long momentum_ramp = 300 * 60000;
 
-  @API(help = "Momentum once the initial increase is over", filter = Default.class)
+  @API(help = "Momentum once the initial increase is over", json = true, filter = Default.class, dmin = 0)
   public double momentum_stable = .99;
 
-  @API(help = "L1 regularization", filter = Default.class)
+  @API(help = "L1 regularization", json = true, filter = Default.class, dmin = 0)
   public double l1;
 
-  @API(help = "L2 regularization", filter = Default.class)
+  @API(help = "L2 regularization", json = true, filter = Default.class, dmin = 0)
   public double l2 = .001;
 
-  @API(help = "How many times the dataset should be iterated", filter = Default.class)
+  @API(help = "How many times the dataset should be iterated", json = true, filter = Default.class, lmin = 0)
   public int epochs = 100;
 
-  @API(help = "Seed for the random number generator", filter = Default.class)
+  @API(help = "Seed for the random number generator", json = true, filter = Default.class)
   public long seed = new Random().nextLong();
 
   public NeuralNet() {
@@ -142,6 +152,8 @@ public class NeuralNet extends ValidatedJob {
       ls[ls.length - 1] = new VecSoftmax(trainResp, null);
     else
       ls[ls.length - 1] = new VecLinear(trainResp, null);
+    ls[ls.length - 1].weight_initialization = weight_initialization;
+    ls[ls.length - 1].initial_weight = initial_weight;
     ls[ls.length - 1].rate = (float) rate;
     ls[ls.length - 1].rate_annealing = (float) rate_annealing;
     ls[ls.length - 1].l1 = (float) l1;
@@ -184,6 +196,7 @@ public class NeuralNet extends ValidatedJob {
           Vec[] valid = null;
           Vec validResp = null;
           if( validation != null ) {
+            assert adapted != null;
             final Vec[] vs = adapted[0].vecs();
             valid = Arrays.copyOf(vs, vs.length - 1);
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
@@ -296,8 +309,7 @@ public class NeuralNet extends ValidatedJob {
     Softmax output = (Softmax) ls[ls.length - 1];
     if( output.target() == -1 )
       return false;
-    for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop(false);
+    for (Layer l : ls) l.fprop(false);
     float[] out = ls[ls.length - 1]._a;
     int target = output.target();
     for( int o = 0; o < out.length; o++ ) {
@@ -321,8 +333,7 @@ public class NeuralNet extends ValidatedJob {
   // TODO extract to layer
   private static void error(Layer[] ls, Errors e) {
     Linear linear = (Linear) ls[ls.length - 1];
-    for( int i = 0; i < ls.length; i++ )
-      ls[i].fprop(false);
+    for (Layer l : ls) l.fprop(false);
     float[] output = ls[ls.length - 1]._a;
     float[] target = linear.target();
     for( int o = 0; o < output.length; o++ ) {
@@ -438,8 +449,7 @@ public class NeuralNet extends ValidatedJob {
         clones[y].init(clones, y, false, 0, null);
       }
       ((Input) clones[0])._pos = rowInChunk;
-      for( int i = 0; i < clones.length; i++ )
-        clones[i].fprop(false);
+      for (Layer clone : clones) clone.fprop(false);
       float[] out = clones[clones.length - 1]._a;
       assert out.length == preds.length;
       return out;
@@ -466,17 +476,23 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "Execution Mode")
+    public ExecutionMode mode;
+
     @API(help = "Activation function")
     public Activation activation;
 
     @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)")
     public float input_dropout_ratio;
 
-    @API(help = "Constraint for squared sum of incoming weights per unit")
-    public float max_w2;
-
     @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)")
     public int[] hidden;
+
+    @API(help = "Weight Initialization")
+    public WeightInitialization weight_initialization;
+
+    @API(help = "Initial weight (Uniform: -value...value, Normal: stddev)")
+    public double initial_weight;
 
     @API(help = "Learning rate")
     public double rate;
@@ -484,7 +500,10 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)")
     public double rate_annealing;
 
-    @API(help = "Momentum at the beggining of training")
+    @API(help = "Constraint for squared sum of incoming weights per unit")
+    public float max_w2;
+
+    @API(help = "Momentum at the beginning of training")
     public double momentum_start;
 
     @API(help = "Number of samples for which momentum increases")
@@ -524,12 +543,15 @@ public class NeuralNet extends ValidatedJob {
     @Override protected Response serve() {
       NeuralNet job = job_key == null ? null : (NeuralNet) Job.findJob(job_key);
       if( job != null ) {
+        mode = job.mode;
         activation = job.activation;
         input_dropout_ratio = job.input_dropout_ratio;
-        max_w2 = job.max_w2;
         hidden = job.hidden;
+        weight_initialization = job.weight_initialization;
+        initial_weight = job.initial_weight;
         rate = job.rate;
         rate_annealing = job.rate_annealing;
+        max_w2 = job.max_w2;
         momentum_start = job.momentum_start;
         momentum_ramp = job.momentum_ramp;
         momentum_stable = job.momentum_stable;
@@ -711,8 +733,7 @@ public class NeuralNet extends ValidatedJob {
         sumError += error;
       }
       sb.append("<tr><th>Totals</th>");
-      for( int i = 0; i < totals.length; ++i )
-        sb.append("<td>" + totals[i] + "</td>");
+      for (long total : totals) sb.append("<td>" + total + "</td>");
       sb.append("<td><b>");
       sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
       sb.append("</b></td></tr>");
