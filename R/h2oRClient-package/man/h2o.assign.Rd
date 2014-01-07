@@ -7,7 +7,6 @@
   \item{data}{An \code{\linkS4class{H2OParsedData} object}}
   \item{key}{The hex key to be associated with the H2O parsed data object}
   }
-}
 \value{The function returns an object of class \code{\linkS4class{H2OParsedData}} 
 }
 
