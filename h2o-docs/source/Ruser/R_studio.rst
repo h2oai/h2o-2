@@ -46,21 +46,7 @@ Start the H\ :sub:`2`\ O package by clicking the check box next to the package n
 
 
 
-
-**STEP 4** 
-
-
-Install dependencies for the R package by typing in the call: 
-
-::
-
-  >h2o.installDepPkgs()
-  
-
-.. image:: Rinstalldep.png
-   :width: 70%
-
-**STEP 6**
+**STEP 4**
 
 Get R Studio talking to your instance of H\ :sub:`2`\ O by typing in the call: 
 
