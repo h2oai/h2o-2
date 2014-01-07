@@ -1,4 +1,4 @@
-package fi.iki.elonen;
+package water;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -131,6 +131,22 @@ public abstract class NanoHTTPD {
         setAsyncRunner(new DefaultAsyncRunner());
     }
 
+    /**
+     * Starts a HTTP server to given port.<p>
+     * Throws an IOException if the socket is already in use
+     */
+    public NanoHTTPD(ServerSocket socket) {
+        this.myServerSocket = socket;
+        this.hostname = socket.getInetAddress().getHostName();
+        this.myPort = socket.getLocalPort();
+        try {
+            this.myServerSocket.setReuseAddress(true);
+        }
+        catch (Exception e_) {}
+        setTempFileManagerFactory(new DefaultTempFileManagerFactory());
+        setAsyncRunner(new DefaultAsyncRunner());
+    }
+
     private static final void safeClose(ServerSocket serverSocket) {
         if (serverSocket != null) {
             try {
@@ -164,8 +180,10 @@ public abstract class NanoHTTPD {
      * @throws IOException if the socket is in use.
      */
     public void start() throws IOException {
-        myServerSocket = new ServerSocket();
-        myServerSocket.bind((hostname != null) ? new InetSocketAddress(hostname, myPort) : new InetSocketAddress(myPort));
+        if (myServerSocket == null) {
+            myServerSocket = new ServerSocket();
+            myServerSocket.bind((hostname != null) ? new InetSocketAddress(hostname, myPort) : new InetSocketAddress(myPort));
+        }
 
         myThread = new Thread(new Runnable() {
             @Override
