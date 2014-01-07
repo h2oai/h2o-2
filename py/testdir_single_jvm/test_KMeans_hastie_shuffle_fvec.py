@@ -48,13 +48,11 @@ def kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows, timeoutSecs=30
     allowedDelta = (0.01, 0.01, 0.01)
     h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=0)
 
-
-
     # compare this kmeans to the first one. since the files are replications, the results
     # should be similar?
     inspect = h2o_cmd.runInspect(None, key=kmeans['destination_key'])
     KMeansModel = inspect['KMeansModel']
-    clusters = KMeansModel['clusters'][0]
+    clusters = KMeansModel['centers'][0]
     print "clusters:", h2o.dump_json(clusters)
     
     if self.clusters1:

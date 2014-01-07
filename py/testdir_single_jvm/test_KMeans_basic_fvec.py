@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
         modelView = h2o.nodes[0].kmeans_model_view(model='benign_k.hex')
         h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
         model = modelView['model']
-        clusters = model['clusters']
+        clusters = model['centers']
         within_cluster_variances = model['within_cluster_variances']
         total_within_SS = model['total_within_SS']
         print "within_cluster_variances:", within_cluster_variances
@@ -110,7 +110,7 @@ class Basic(unittest.TestCase):
         h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
 
         model = modelView['model']
-        clusters = model['clusters']
+        clusters = model['centers']
         within_cluster_variances = model['within_cluster_variances']
         total_within_SS = model['total_within_SS']
         print "within_cluster_variances:", within_cluster_variances

@@ -18,7 +18,8 @@ function(seed = NULL, suppress = FALSE) {
     if (MASTER_SEED) {
         #SEED <<- seed
         cat("\n\n\n", paste("[INFO]: Using master SEED to generate a new seed for this test: ", seed), "\n\n\n\n")
-        h2o.__logIt("[Master-SEED] :", seed, "Command")
+        #h2o.__logIt("[Master-SEED] :", seed, "Command")
+        cat("\n\n\n [Master-SEED] :", seed, "\n\n\n")
         maxInt <- .Machine$integer.max
         newseed <- sample(maxInt, 1)
         cat("\n\n\n", paste("[INFO]: Using seed for this test ", newseed), "\n\n\n\n")
