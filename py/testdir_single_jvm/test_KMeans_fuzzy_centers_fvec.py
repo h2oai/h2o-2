@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
                 'initialization': 'PlusPlus', 
                 'destination_key': 'k.hex', 
                 'max_iter': 1000 }
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=60, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
             # save the predicted
             h2o.nodes[0].csv_download(src_key='d', csvPathname='kmeans_predict.csv')
