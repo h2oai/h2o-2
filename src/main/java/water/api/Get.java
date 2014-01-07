@@ -25,7 +25,7 @@ public class Get extends Request {
       if (!key.user_allowed())
         return wrap(server,build(Response.error("Not a user key: " + key)));
       // HTML file save of Value
-      NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY,val.openStream());
+      NanoHTTPD.Response res = new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK,RequestServer.MIME_DEFAULT_BINARY,val.openStream());
       res.addHeader("Content-Length", Long.toString(val.length()));
       res.addHeader("Content-Disposition", "attachment; filename="+key.toString());
       return res;

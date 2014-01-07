@@ -57,7 +57,7 @@ public class Script extends Request {
           throw Log.errRTExcept(e);
         }
         // Unknown mime prompts "Save As" of the script
-        return server.new Response(NanoHTTPD.HTTP_OK, "application/x-unknown", in);
+        return new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK, "application/x-unknown", in);
       }
       default:
         throw new RuntimeException();

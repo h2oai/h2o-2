@@ -38,7 +38,7 @@ public class HTTP500 extends Request {
       }
     }
     water.NanoHTTPD.Response r = super.serve(server, parms, type);
-    r.status = NanoHTTPD.HTTP_INTERNALERROR;
+    r.setStatus(NanoHTTPD.Response.Status.INTERNAL_ERROR);
     return r;
   }
 

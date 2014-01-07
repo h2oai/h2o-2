@@ -37,7 +37,7 @@ public class RPackage extends Request {
         throw new RuntimeException(e);
       }
 
-      NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_DEFAULT_BINARY, new ByteArrayInputStream(result));
+      NanoHTTPD.Response res = new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK, RequestServer.MIME_DEFAULT_BINARY, new ByteArrayInputStream(result));
       res.addHeader("Content-Length", Long.toString(result.length));
       res.addHeader("Content-Disposition", "attachment; filename=" + fname);
       return res;

@@ -50,7 +50,7 @@ public class LogView extends Request {
         // put the exception into output log
         result = e.toString().getBytes();
       }
-      NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY, new ByteArrayInputStream(result));
+      NanoHTTPD.Response res = new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK,RequestServer.MIME_DEFAULT_BINARY, new ByteArrayInputStream(result));
       res.addHeader("Content-Length", Long.toString(result.length));
       res.addHeader("Content-Disposition", "attachment; filename="+outputFileStem + ".zip");
       return res;

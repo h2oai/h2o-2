@@ -14,6 +14,7 @@ import hex.pca.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,6 +22,7 @@ import water.*;
 import water.api.Script.RunScript;
 import water.api.Upload.PostFile;
 import water.deploy.LaunchJar;
+import water.fvec.UploadFileVec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 import water.util.Utils.ExpectedExceptionForDebug;
@@ -30,6 +32,33 @@ import com.google.common.io.Closeables;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
+  /**
+   * Some HTTP response status codes
+   */
+  public static final String
+          HTTP_OK = "200 OK",
+          HTTP_PARTIALCONTENT = "206 Partial Content",
+          HTTP_RANGE_NOT_SATISFIABLE = "416 Requested Range Not Satisfiable",
+          HTTP_REDIRECT = "301 Moved Permanently",
+          HTTP_NOTMODIFIED = "304 Not Modified",
+          HTTP_FORBIDDEN = "403 Forbidden",
+          HTTP_UNAUTHORIZED = "401 Unauthorized",
+          HTTP_NOTFOUND = "404 Not Found",
+          HTTP_BADREQUEST = "400 Bad Request",
+          HTTP_TOOLONGREQUEST = "414 Request-URI Too Long",
+          HTTP_INTERNALERROR = "500 Internal Server Error",
+          HTTP_NOTIMPLEMENTED = "501 Not Implemented";
+
+  /**
+   * Common mime types for dynamic content
+   */
+  public static final String
+          MIME_PLAINTEXT = "text/plain",
+          MIME_HTML = "text/html",
+          MIME_JSON = "application/json",
+          MIME_DEFAULT_BINARY = "application/octet-stream",
+          MIME_XML = "text/xml";
+
   public enum API_VERSION {
     V_1(1, "/"),
     V_2(2, "/2/"); // FIXME: better should be /v2/
@@ -208,13 +237,14 @@ public class RequestServer extends NanoHTTPD {
   }
 
   // Keep spinning until we get to launch the NanoHTTPD
-  public static void start() {
+  public static void mystart() {
     new Thread( new Runnable() {
         @Override public void run()  {
           while( true ) {
             try {
               // Try to get the NanoHTTP daemon started
               SERVER = new RequestServer(H2O._apiSocket);
+              SERVER.start();
               break;
             } catch ( Exception ioe ) {
               Log.err(Sys.HTTPD,"Launching NanoHTTP server got ",ioe);
@@ -225,8 +255,58 @@ public class RequestServer extends NanoHTTPD {
       }, "Request Server launcher").start();
   }
 
-  // uri serve -----------------------------------------------------------------
-  @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
+  @Override public Response serve(IHTTPSession session) {
+    Map<String, String> files = new HashMap<String, String>();
+    Method method = session.getMethod();
+    if (Method.PUT.equals(method) || Method.POST.equals(method)) {
+      try {
+        session.parseBody(files);
+      } catch (IOException ioe) {
+        return new Response(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
+      } catch (ResponseException re) {
+        return new Response(re.getStatus(), MIME_PLAINTEXT, re.getMessage());
+      }
+    }
+
+    Map<String, String> parmsMap = session.getParms();
+    Properties parms = new Properties();
+    parms.putAll(parmsMap);
+    String uri = session.getUri();
+
+    if (Method.POST.equals(method)) {
+      boolean va_postfile = uri.matches("/PostFile.*");
+      boolean fvec_postfile = uri.matches("/\\d+/PostFile.*");
+      if (va_postfile || fvec_postfile) {
+        if (files.size() > 0) {
+          String fileName = (String) files.values().toArray()[0];
+          String key = parms.getProperty("key");
+          if (key != null) {
+            FileInputStream fis = null;
+            try {
+              fis = new FileInputStream(fileName);
+              if (va_postfile) {
+                ValueArray.readPut(key, fis);
+              }
+              else {
+                assert (fvec_postfile);
+                UploadFileVec.readPut(key, fis);
+              }
+            }
+            catch (Exception e) {
+              // This should never happen, since the file is created by NanoHTTPD.
+              Log.err(e);
+              Log.err("NanoHTTPD POST failed to write file " + fileName + " (" + e.getMessage() + ")");
+            }
+            finally {
+              if (fis != null) {
+                try { fis.close(); } catch (Exception _) {}
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
     // update arguments and determine control variables
@@ -249,13 +329,13 @@ public class RequestServer extends NanoHTTPD {
       if(!(e instanceof ExpectedExceptionForDebug))
         e.printStackTrace();
       // make sure that no Exception is ever thrown out from the request
-      parms.setProperty(Request.ERROR,e.getClass().getSimpleName()+": "+e.getMessage());
+      parms.put(Request.ERROR, e.getClass().getSimpleName() + ": " + e.getMessage());
       return _http500.serve(this,parms,type);
     }
   }
 
   private RequestServer( ServerSocket socket ) throws IOException {
-    super(socket,null);
+    super(socket);
   }
 
   // Resource loading ----------------------------------------------------------
@@ -281,12 +361,12 @@ public class RequestServer extends NanoHTTPD {
       parms.setProperty(Request.ERROR,uri);
       return _http404.serve(this,parms,Request.RequestType.www);
     }
-    String mime = NanoHTTPD.MIME_DEFAULT_BINARY;
+    String mime = RequestServer.MIME_DEFAULT_BINARY;
     if (uri.endsWith(".css"))
       mime = "text/css";
     else if (uri.endsWith(".html"))
       mime = "text/html";
-    return new NanoHTTPD.Response(NanoHTTPD.HTTP_OK,mime,new ByteArrayInputStream(bytes));
+    return new NanoHTTPD.Response(Response.Status.OK,mime,new ByteArrayInputStream(bytes));
   }
 
 }

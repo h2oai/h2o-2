@@ -183,6 +183,7 @@ public abstract class DocGen {
     paragraph(sb,"200 OK");
     paragraph(sb,"Success and error responses are identical.");
 
+/*
     String s[] = R.DocExampleSucc();
     if( s != null ) {
       section(sb,"Success Example");
@@ -200,6 +201,7 @@ public abstract class DocGen {
       paraTail(sb);
       paragraph(sb,serve(name,f));
     }
+*/
 
     bodyTail(sb);
     return sb.toString();
@@ -238,6 +240,7 @@ public abstract class DocGen {
     return sb.append('\n');
   }
 
+/*
   private static String serve( String name, String[] parms ) {
     Properties p = new Properties();
     for( int i=0; i<parms.length; i+= 2 )
@@ -253,6 +256,7 @@ public abstract class DocGen {
       return null;
     }
   }
+*/
 
   // --------------------------------------------------------------------------
   // HTML flavored help text

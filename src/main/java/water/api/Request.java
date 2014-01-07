@@ -151,18 +151,18 @@ public abstract class Request extends RequestBuilders {
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String response) {
     RString html = new RString(htmlTemplate());
     html.replace("CONTENTS", response);
-    return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_HTML, html.toString());
+    return new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK, NanoHTTPD.MIME_HTML, html.toString());
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, JsonObject response) {
-    return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON, response.toString());
+    return new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK, RequestServer.MIME_JSON, response.toString());
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String value, RequestType type) {
     if( type == RequestType.json )
-      return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON, value);
+      return new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK, RequestServer.MIME_JSON, value);
     if (type == RequestType.java)
-      return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_PLAINTEXT, value);
+      return new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, value);
     return wrap(server, value);
   }
 
