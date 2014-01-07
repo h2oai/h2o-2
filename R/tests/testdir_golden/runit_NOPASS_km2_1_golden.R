@@ -2,7 +2,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source('../findNSourceUtils.R')
 
 test.km2vanilla.golden <- function(H2Oserver) {
-
+# withinss addressed in JIRA 1489
 #Import data: 
 Log.info("Importing IRIS data...") 
 irisH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/iris/iris.csv"), key="irisH2O")

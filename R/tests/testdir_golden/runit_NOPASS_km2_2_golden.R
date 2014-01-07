@@ -2,7 +2,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"-f")))
 source('../findNSourceUtils.R')
 
 test.km2vanilla.golden <- function(H2Oserver) {
-
+#within ss addressed in JIRA 1489
 #Import Data:
 dummyH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/dummydata.csv"), key="dummyH2O")
 dummyR<- read.csv(locate("smalldata/dummydata.csv"), header=T)
