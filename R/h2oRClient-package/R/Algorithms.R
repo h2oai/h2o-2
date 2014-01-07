@@ -260,17 +260,22 @@ h2o.__getKMSummary <- function(res) {
 }
 
 h2o.__getKMResults <- function(res, data) {
-  rand_pred_key = h2o.__uniqID("KMeansClusters")
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
+  #rand_pred_key = h2o.__uniqID("KMeansClusters")
+  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
+  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
 
+  clusters_key <- paste(res$'_clustersKey', sep = "")
   result = list()
-  result$cluster = new("H2OParsedData", h2o=data@h2o, key=rand_pred_key)
+  result$cluster = new("H2OParsedData", h2o=data@h2o, key=clusters_key)
   feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
-  result$centers = t(matrix(unlist(res$clusters), ncol = res$k))
+  result$centers = t(matrix(unlist(res$centers), ncol = res$k))
   dimnames(result$centers) = list(seq(1,res$k), feat)
-  result$withinss = res$cluster_variances        # TODO: Not sure if this is within or between SS?
-  result$size = res2$summaries[[1]]$hcnt
+  result$totss <- res$total_SS
+  result$withinss <- res$within_cluster_variances
+  result$tot.withinss <- res$total_within_SS
+  result$betweenss <- res$between_cluster_SS
+  result$size <- res$size
+  #result$size = res2$summaries[[1]]$hcnt
   return(result)
 }
 
