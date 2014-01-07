@@ -1,5 +1,5 @@
-\name{h2o.randomForest}
-\alias{h2o.randomForest}
+\name{h2o.randomForest.VA}
+\alias{h2o.randomForest.VA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 H2O: Random Forest
@@ -8,7 +8,7 @@ H2O: Random Forest
 Performs random forest classification on a parsed data set.
 }
 \usage{
-h2o.randomForest(x, y, data, ntree = 50, depth = 50, nodesize = 1, sample.rate = 2/3, nbins = 100, validation)
+h2o.randomForest.VA(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, use_non_local = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -19,7 +19,7 @@ The name or index of the response variable. If the data does not contain a heade
 A vector containing the names or indices of the predictor variables to use in building the random forest model.
 }
   \item{data}{
-An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
+An \code{\linkS4class{H2OParsedDataVA}} object containing the variables in the model.
 }
   \item{ntree}{
 Number of trees to grow. (Must be a nonnegative integer).
@@ -27,26 +27,23 @@ Number of trees to grow. (Must be a nonnegative integer).
   \item{depth}{
   Maximum depth to grow the tree.
   }
-  \item{nodesize}{
-  Number of nodes to use for computation.
-  }
   \item{sample.rate}{
   Sampling rate for constructing data from which individual trees are grown.
   }
-  \item{nbins}{
-  Build a histogram of this many bins, then split at best point.
-  }
-\item{validation}{
-  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
+\item{classwt}{
+  (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.}
+}
+\item{use_non_local}{
+  (Optional) A logical value indicating whether to use non-local data for building the model.
 }
 \details{
-This method runs distributed random forest, and requires the user import data with \code{\link{h2o.importFile}} or \code{\link{h2o.importFolder}}.
+This method runs single-node random forest, and requires the user import data with \code{\link{h2o.importFile.VA}} or \code{\link{h2o.importFolder.VA}}. Currently, only classification trees are supported.
 }
 \value{
-An object of class \code{\linkS4class{H2ODRFModel}} with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2ORFModelVA}} with slots key, data, and model, where the last is a list of the following components:
 \item{ntree }{Number of trees grown.}
-\item{mse }{Mean-squared error for each tree.}
-\item{forest }{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
+\item{classification_error }{Classification error rate.}
+\item{tree_sum}{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
 \item{confusion }{Confusion matrix of the prediction.}
 %%  ~Describe the value returned
 %%  If it is a LIST, use
@@ -76,16 +73,16 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE,
  + silentUpgrade = TRUE, promptUpgrade = FALSE)
 irisPath = system.file("extdata", "iris.csv", 
  + package="h2oRClient")
-iris.hex = h2o.importFile(localH2O, path = irisPath, 
+iris.hex = h2o.importFile.VA(localH2O, path = irisPath, 
  + key = "iris.hex")
-h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, 
+h2o.randomForest.VA(y = 5, x = c(2,3,4), data = iris.hex, 
  + ntree = 50, depth = 100)
 
 # Run an RF model on covtype data
 covPath = system.file("extdata", "covtype.csv", package="h2oRClient")
-covtype.hex = h2o.importFile(localH2O, path = covPath, 
+covtype.hex = h2o.importFile.VA(localH2O, path = covPath, 
 + key = "covtype.hex")
-h2o.randomForest(y = "Cover_Type",  
+h2o.randomForest.VA(y = "Cover_Type",  
  + x = setdiff(colnames(covtype.hex), c("Cover_Type", "Aspect", "Hillshade_9am")), 
  + data = covtype.hex, ntree = 50, depth = 150)
 }
