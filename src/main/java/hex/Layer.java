@@ -446,7 +446,7 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
       super.init(ls, index, weights, step, rand);
       if( weights ) {
-        randomize(rand, 1.0f);
+        randomize(rand, 4.0f);
       }
     }
 
@@ -728,7 +728,7 @@ public abstract class Layer extends Iced {
 //            _w[w] = rand(rand, min, max);
 //          }
 //        }
-        randomize(rand, 1.0f);
+        randomize(rand, 4.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
       }
