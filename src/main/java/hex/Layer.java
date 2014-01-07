@@ -23,11 +23,11 @@ public abstract class Layer extends Iced {
   @ParamsSearch.Ignore
   public int units;
 
-  @API(help = "Weight Initialization")
-  public hex.NeuralNet.WeightInitialization weight_initialization;
+  @API(help = "Initial Weight Distribution")
+  public NeuralNet.InitialWeightDistribution initial_weight_distribution;
 
   @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
-  public double initial_weight;
+  public double initial_weight_scale;
 
   @API(help = "Learning rate")
   public float rate;
@@ -99,31 +99,31 @@ public abstract class Layer extends Iced {
   /**
    *
    // helper to initialize weights
-   // automatic initialization defaults to sqrt(6 / (units_input_layer + units_this_layer))
+   // adaptive initialization uses prefactor * sqrt(6 / (units_input_layer + units_this_layer))
    * @param rng random generator to use
-   * @param prefactor prefactor for initialization
+   * @param prefactor prefactor for initialization (typical value: 1.0)
    */
   // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
   void randomize(Random rng, float prefactor) {
-    if (weight_initialization == NeuralNet.WeightInitialization.Auto) {
+    if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
       final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
         _w[i] = (float)rand(rng, -range, range);
     }
-    else if (weight_initialization == NeuralNet.WeightInitialization.Uniform) {
+    else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Uniform) {
       for( int i = 0; i < _w.length; i++ )
-        _w[i] = (float)rand(rng, -initial_weight, initial_weight);
+        _w[i] = (float)rand(rng, -initial_weight_scale, initial_weight_scale);
     }
-    else if (weight_initialization == NeuralNet.WeightInitialization.Normal) {
+    else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Normal) {
       // fill all but possibly the last element, fill two values at once
       for( int i = 0; i < _w.length - _w.length % 2;) {
-        final double[] normal = randn(rng, 0, initial_weight);
+        final double[] normal = randn(rng, 0, initial_weight_scale);
         _w[i++] = (float)normal[0];
         _w[i++] = (float)normal[1];
       }
       // check for last element
       if (_w.length % 2 == 1) {
-        final double[] normal = randn(rng, 0, initial_weight);
+        final double[] normal = randn(rng, 0, initial_weight_scale);
         _w[_w.length-1] = (float)normal[0];
       }
     }
@@ -657,6 +657,93 @@ public abstract class Layer extends Iced {
     }
   }
 
+  public static class TanhDropout extends Layer {
+    transient Random _rand;
+    transient byte[] _bits;
+
+    TanhDropout() {
+    }
+
+    public TanhDropout(int units) {
+      this.units = units;
+    }
+
+    // keep random generators thread-local
+    @Override public Layer clone() {
+      _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      _bits = new byte[(units + 7) / 8];
+      return super.clone();
+    }
+
+    @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
+      super.init(ls, index, weights, step, rand);
+      if( weights ) {
+        randomize(rand, 1.0f);
+      }
+    }
+
+    @Override protected void fprop(boolean training) {
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        for( int i = 0; i < _previous._a.length; i++ )
+          _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
+        _a[o] += _b[o];
+
+      }
+
+      if( _rand == null ) {
+        _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        _bits = new byte[(units + 7) / 8];
+      }
+      _rand.nextBytes(_bits);
+      // input dropout: set some input layer feature values to 0
+      if (_previous.isInput() && training) {
+        final double rate = ((Input)_previous)._dropout_rate;
+        for( int i = 0; i < _previous._a.length; i++ ) {
+          if (_rand.nextFloat() < rate) _previous._a[i] = 0;
+        }
+      }
+
+      for( int o = 0; o < _a.length; o++ ) {
+        _a[o] = 0;
+        boolean b = (_bits[o / 8] & (1 << (o % 8))) != 0;
+        if( !training || b ) {
+          for( int i = 0; i < _previous._a.length; i++ ) {
+            _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
+          }
+          // same effect as multiplying weights with p=0.5 above
+          if( !training )
+            _a[o] *= .5f;
+
+          _a[o] += _b[o];
+
+          // tanh approx, slightly faster, untested
+          // float a = Math.abs(_a[o]);
+          // float b = 12 + a * (6 + a * (3 + a));
+          // _a[o] = (_a[o] * b) / (a * b + 24);
+
+          // Other approx to try
+          // _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
+
+          _a[o] = (float) Math.tanh(_a[o]);
+        }
+      }
+    }
+
+    @Override protected void bprop() {
+      long processed = _training.processed();
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
+      for( int u = 0; u < _a.length; u++ ) {
+        // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
+        float g = _e[u] * (1 - _a[u] * _a[u]);
+        bprop(u, g, r, m);
+      }
+
+    }
+  }
+
+
   /**
    * Apply tanh to the weights' transpose. Used for auto-encoders.
    */
@@ -864,11 +951,12 @@ public abstract class Layer extends Iced {
           for( int i = 0; i < _previous._a.length; i++ ) {
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           }
+          if (!training) {
+            _a[o] *= .5f;
+          }
           _a[o] += _b[o];
           if( _a[o] < 0 )
             _a[o] = 0;
-          else if( !training )
-            _a[o] *= .5f;
         }
       }
     }

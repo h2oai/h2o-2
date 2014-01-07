@@ -34,34 +34,34 @@ public class NeuralNet extends ValidatedJob {
   public static final String DOC_GET = "Neural Network";
 
   public enum Activation {
-    Tanh, Rectifier, RectifierWithDropout, Maxout
+    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
   }
 
   public enum ExecutionMode {
     Serial, Threaded_Hogwild, MapReduce_Hogwild
   }
 
-  public enum WeightInitialization {
-    Auto, Uniform, Normal
+  public enum InitialWeightDistribution {
+    UniformAdaptive, Uniform, Normal
   }
 
   @API(help = "Execution Mode", filter = Default.class)
   public ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
 
   @API(help = "Activation function", filter = Default.class)
-  public Activation activation = Activation.Tanh;
+  public Activation activation = Activation.RectifierWithDropout;
 
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1)
-  public float input_dropout_ratio = 0;
+  public double input_dropout_ratio = 0.2;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
   public int[] hidden = new int[] { 500 };
 
-  @API(help = "Weight Initialization", filter = Default.class, dmin = 0)
-  public WeightInitialization weight_initialization = WeightInitialization.Auto;
+  @API(help = "Initial Weight Distribution", filter = Default.class, dmin = 0)
+  public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0)
-  public double initial_weight = 0.01;
+  public double initial_weight_scale = 0.01;
 
   @API(help = "Learning rate", filter = Default.class, dmin = 0)
   public double rate = .005;
@@ -93,23 +93,26 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Seed for the random number generator", filter = Default.class)
   public long seed = new Random().nextLong();
 
-  @Override
-  protected void registered(RequestServer.API_VERSION ver) {
+  @Override protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
-    for (Argument a : _arguments) {
-      if (a._name.equals("activation") || a._name.equals("weight_initialization")) {
-         a.setRefreshOnChange();
+    for (Argument arg : _arguments) {
+      if (arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")) {
+         arg.setRefreshOnChange();
       }
     }
   }
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
-    if(arg._name.equals("input_dropout_ratio") && activation != Activation.RectifierWithDropout) {
-      arg.disable("Only with RectifierWithDropout", inputArgs);
+    if (arg._name.equals("input_dropout_ratio") &&
+            (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
+            ) {
+      arg.disable("Only with Dropout", inputArgs);
     }
-    if(arg._name.equals("initial_weight") && weight_initialization == WeightInitialization.Auto) {
-      arg.disable("Only with non-automatic weight initialization", inputArgs);
+    if(arg._name.equals("initial_weight_scale") &&
+            (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
+            ) {
+      arg.disable("Only with Uniform or Normal initial weight distributions", inputArgs);
     }
   }
 
@@ -172,8 +175,8 @@ public class NeuralNet extends ValidatedJob {
       ls[ls.length - 1] = new VecSoftmax(trainResp, null);
     else
       ls[ls.length - 1] = new VecLinear(trainResp, null);
-    ls[ls.length - 1].weight_initialization = weight_initialization;
-    ls[ls.length - 1].initial_weight = initial_weight;
+    ls[ls.length - 1].initial_weight_distribution = initial_weight_distribution;
+    ls[ls.length - 1].initial_weight_scale = initial_weight_scale;
     ls[ls.length - 1].rate = (float) rate;
     ls[ls.length - 1].rate_annealing = (float) rate_annealing;
     ls[ls.length - 1].l1 = (float) l1;
@@ -191,6 +194,22 @@ public class NeuralNet extends ValidatedJob {
     NeuralNetModel model = new NeuralNetModel(destination_key, sourceKey, frame, ls);
     model.training_errors = trainErrors0;
     model.validation_errors = validErrors0;
+
+    model.mode = mode;
+    model.activation = activation;
+    model.input_dropout_ratio = input_dropout_ratio;
+    model.initial_weight_distribution = initial_weight_distribution;
+    model.initial_weight_scale = initial_weight_scale;
+    model.rate = rate;
+    model.rate_annealing = rate_annealing;
+    model.max_w2 = max_w2;
+    model.momentum_start = momentum_start;
+    model.momentum_ramp = momentum_ramp;
+    model.momentum_stable = momentum_stable;
+    model.l1 = l1;
+    model.l2 = l2;
+    model.seed = seed;
+
     UKV.put(destination_key, model);
 
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
@@ -254,6 +273,21 @@ public class NeuralNet extends ValidatedJob {
         model.training_errors = trainErrors;
         model.validation_errors = validErrors;
         model.confusion_matrix = cm;
+        // also copy model parameters
+        model.mode = mode;
+        model.activation = activation;
+        model.input_dropout_ratio = input_dropout_ratio;
+        model.initial_weight_distribution = initial_weight_distribution;
+        model.initial_weight_scale = initial_weight_scale;
+        model.rate = rate;
+        model.rate_annealing = rate_annealing;
+        model.max_w2 = max_w2;
+        model.momentum_start = momentum_start;
+        model.momentum_ramp = momentum_ramp;
+        model.momentum_stable = momentum_stable;
+        model.l1 = l1;
+        model.l2 = l2;
+        model.seed = seed;
         UKV.put(model._selfKey, model);
       }
 
@@ -426,6 +460,48 @@ public class NeuralNet extends ValidatedJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "Execution Mode")
+    public ExecutionMode mode;
+
+    @API(help = "Activation function")
+    public Activation activation;
+
+    @API(help = "Input layer dropout ratio")
+    public double input_dropout_ratio;
+
+    @API(help = "Initial Weight Distribution")
+    public InitialWeightDistribution initial_weight_distribution;
+
+    @API(help = "Uniform: -value...value, Normal: stddev)")
+    public double initial_weight_scale;
+
+    @API(help = "Learning rate")
+    public double rate;
+
+    @API(help = "Learning rate annealing")
+    public double rate_annealing;
+
+    @API(help = "Constraint for squared sum of incoming weights per unit")
+    public float max_w2;
+
+    @API(help = "Momentum at the beginning of training")
+    public double momentum_start;
+
+    @API(help = "Number of samples for which momentum increases")
+    public long momentum_ramp;
+
+    @API(help = "Momentum once the initial increase is over")
+    public double momentum_stable;
+
+    @API(help = "L1 regularization")
+    public double l1;
+
+    @API(help = "L2 regularization")
+    public double l2;
+
+    @API(help = "Seed for the random number generator")
+    public long seed;
+
     @API(help = "Layers")
     public Layer[] layers;
 
@@ -503,16 +579,16 @@ public class NeuralNet extends ValidatedJob {
     public Activation activation;
 
     @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)")
-    public float input_dropout_ratio;
+    public double input_dropout_ratio;
 
     @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)")
     public int[] hidden;
 
-    @API(help = "Weight Initialization")
-    public WeightInitialization weight_initialization;
+    @API(help = "Initial Weight Distribution")
+    public InitialWeightDistribution initial_weight_distribution;
 
     @API(help = "Uniform: -value...value, Normal: stddev)")
-    public double initial_weight;
+    public double initial_weight_scale;
 
     @API(help = "Learning rate")
     public double rate;
@@ -567,8 +643,8 @@ public class NeuralNet extends ValidatedJob {
         activation = job.activation;
         input_dropout_ratio = job.input_dropout_ratio;
         hidden = job.hidden;
-        weight_initialization = job.weight_initialization;
-        initial_weight = job.initial_weight;
+        initial_weight_distribution = job.initial_weight_distribution;
+        initial_weight_scale = job.initial_weight_scale;
         rate = job.rate;
         rate_annealing = job.rate_annealing;
         max_w2 = job.max_w2;
