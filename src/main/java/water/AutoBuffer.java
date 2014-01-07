@@ -21,6 +21,7 @@ import water.util.Log;
  *
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
+@SuppressWarnings("deprecation")
 public final class AutoBuffer {
   public static final int TCP_WRITE_ATTEMPTS = 2;
   // The direct ByteBuffer for schlorping data about
