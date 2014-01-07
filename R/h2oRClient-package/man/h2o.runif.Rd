@@ -9,7 +9,6 @@
   \item{max}{An integer specifying the upper bound of the distribution.} 
   }
 \value{A vector of random, uniformly distributed numbers. The elements are btween 0 and 1 unless otherwise specified.}
-}
 \examples{
 localH2O = h2o.init()
 prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
