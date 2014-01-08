@@ -1,14 +1,10 @@
 package hex.gbm;
 
-import hex.drf.DRF;
-import java.util.Arrays;
-import java.util.concurrent.atomic.*;
 import sun.misc.Unsafe;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.nbhm.UtilUnsafe;
-import water.util.SB;
 import water.util.Utils;
 
 /**
@@ -96,10 +92,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
       step = 1.0f;                            // Fixed stepsize
     } else {
       step = (maxEx-min)/nbins; // Step size for linear interpolation
-      boolean b = (step > 0);
-      if (! b) {
-        assert (b);
-      }
+      assert step > 0;
     }
     _step = 1.0f/step; // Use multiply instead of division during frequent binning math
     _nbin = (char)xbins;
@@ -187,21 +180,8 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     float ulp_a = Math.ulp(a);
     float ulp_b = Math.ulp(b);
     float small_ulp = Math.min(ulp_a, ulp_b);
-    float absdiff_a_b = Math.abs(a - b);
-    float absdiff_b_a = Math.abs(b - a);
-
-    if (absdiff_a_b <= small_ulp) {
-      return true;
-    }
-
-    // This second check is being paranoid.  I don't think this is necessary
-    // since the FPU subtractor should produce the same abs value regardless of which
-    // operand is first.  But I don't want to think about it.
-    if (absdiff_b_a <= small_ulp) {
-      return true;
-    }
-
-    return false;
+    float absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
+    return absdiff_a_b <= small_ulp;
   }
 
   // Compute a "score" for a column; lower score "wins" (is a better split).

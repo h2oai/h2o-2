@@ -3,7 +3,29 @@
 <!--This file belongs in the final build output directory living on S3.-->
 <html>
 <head>
+  <style type="text/css">
+.myhelp {
+width:915px;
+margin-left:auto;
+margin-right:auto;
+display:block;
+}
+  </style>
+
   <script>
+    function autoResize(id){
+        var newheight;
+        var newwidth;
+
+        if(document.getElementById){
+            newheight=document.getElementById(id).contentWindow.document .body.scrollHeight;
+            newwidth=document.getElementById(id).contentWindow.document .body.scrollWidth;
+        }
+
+        document.getElementById(id).height= (newheight) + "px";
+        document.getElementById(id).width= (newwidth) + "px";
+    }
+
     function load(id) {
       //var res = "SUBST_PROJECT_VERSION".split(".");
       //resource = "./".concat(res[res.length-1]).concat("/").concat(
@@ -139,6 +161,10 @@ Documentation
 
 <br />
 <br />
+
+<br>
+<br />
+<iframe src="docs-website/newuser/quickstart_jar.html" frameborder="0" class="myhelp" id="iframe1" onLoad="autoResize('iframe1');"></iframe>
 
 
 <div id="bench" style="display: none;">
