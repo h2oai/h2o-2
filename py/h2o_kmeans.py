@@ -40,8 +40,9 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
         normalized = model["normalized"]
         max_iter = model["max_iter"]
     else:
-        model = kmeansResult["KMeansModel"]
-        clusters = model["centers"]
+        h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
+        model = kmeansResult['KMeansModel']
+        clusters = model['clusters']
         error = model["error"]
 
     for i,c in enumerate(clusters):
@@ -68,6 +69,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     else:
         model_key = kmeans["destination_key"]
         kmeansResult = h2o_cmd.runInspect(key=model_key)
+        h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
         model = kmeansResult['KMeansModel']
         centers = model['centers']
         error = model["error"]
