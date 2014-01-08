@@ -568,12 +568,12 @@ setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
   if(n == 0) return(data.frame())
   
   x.slice = as.data.frame(x[seq_len(n),])
-#   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-#   x.lev = lapply(res$summaries, function(x) { x$hbrk })
-#   for(i in 1:ncol(x)) {
-#     if(res$summaries[[i]]$stats$type == 'Enum')
-#       levels(x.slice[,i]) <- as.factor(res$summaries[[i]]$hbrk)
-#   }
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  x.lev = lapply(res$summaries, function(x) { x$hbrk })
+  for(i in 1:ncol(x)) {
+    if(res$summaries[[i]]$stats$type == 'Enum')
+      x.slice[,i] <- factor(x.slice[,i], levels = res$summaries[[i]]$hbrk)
+  }
   return(x.slice)
 })
 
@@ -586,12 +586,12 @@ setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
   idx = seq.int(to = nrx, length.out = n)
   x.slice = as.data.frame(x[idx,])
   rownames(x.slice) = idx
-#   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-#   x.lev = lapply(res$summaries, function(x) { x$hbrk })
-#   for(i in 1:ncol(x)) {
-#     if(res$summaries[[i]]$stats$type == 'Enum')
-#       levels(x.slice[,i]) <- as.factor(res$summaries[[i]]$hbrk)
-#   }
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  x.lev = lapply(res$summaries, function(x) { x$hbrk })
+  for(i in 1:ncol(x)) {
+    if(res$summaries[[i]]$stats$type == 'Enum')
+      x.slice[,i] <- factor(x.slice[,i], levels = res$summaries[[i]]$hbrk)
+  }
   return(x.slice)
 })
 
@@ -836,12 +836,12 @@ setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
   if(is.null(temp)) return(temp)
   x.slice = do.call(rbind, temp)
   
-#   res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-#   x.lev = lapply(res2$summaries, function(x) { x$hbrk })
-#   for(i in 1:ncol(x)) {
-#     if(res2$summaries[[i]]$stats$type == 'Enum')
-#       levels(x.slice[,i]) <- as.factor(res2$summaries[[i]]$hbrk)
-#   }
+  res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  x.lev = lapply(res2$summaries, function(x) { x$hbrk })
+  for(i in 1:ncol(x)) {
+    if(res2$summaries[[i]]$stats$type == 'Enum')
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$summaries[[i]]$hbrk)
+  }
   return(x.slice)
 })
 
@@ -859,12 +859,12 @@ setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
   x.slice = do.call(rbind, temp)
   rownames(x.slice) = idx
   
-#   res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
-#   x.lev = lapply(res2$summaries, function(x) { x$hbrk })
-#   for(i in 1:ncol(x)) {
-#     if(res2$summaries[[i]]$stats$type == 'Enum')
-#       levels(x.slice[,i]) <- as.factor(res2$summaries[[i]]$hbrk)
-#   }
+  res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  x.lev = lapply(res2$summaries, function(x) { x$hbrk })
+  for(i in 1:ncol(x)) {
+    if(res2$summaries[[i]]$stats$type == 'Enum')
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$summaries[[i]]$hbrk)
+  }
   return(x.slice)
 })
 
