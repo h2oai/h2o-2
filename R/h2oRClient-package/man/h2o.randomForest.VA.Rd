@@ -30,12 +30,13 @@ Number of trees to grow. (Must be a nonnegative integer).
   \item{sample.rate}{
   Sampling rate for constructing data from which individual trees are grown.
   }
-\item{classwt}{
-  (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.}
-}
-\item{use_non_local}{
+  \item{classwt}{
+  (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.
+  }
+  \item{use_non_local}{
   (Optional) A logical value indicating whether to use non-local data for building the model.
-}}
+  }
+}
 \details{
 This method runs single-node random forest, and requires the user import data with \code{\link{h2o.importFile.VA}} or \code{\link{h2o.importFolder.VA}}. Currently, only classification trees are supported.
 }
