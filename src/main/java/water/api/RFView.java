@@ -230,7 +230,7 @@ public class RFView extends /* Progress */ Request {
         stats(sb, t.get(TREE_LEAVES)).append(".<br>");
         for( int i = 0; i < n; ++i ) {
           sb.append(RFTreeView.link(_modelKey.value(), i,
-              _dataKey.value(), _classCol.value(),
+              _dataKey.value(),
               Integer.toString(i+1))).append(" ");
         }
       } else {
