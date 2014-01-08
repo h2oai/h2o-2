@@ -24,7 +24,7 @@ public abstract class Layer extends Iced {
   public int units;
 
   @API(help = "Initial Weight Distribution")
-  public NeuralNet.InitialWeightDistribution initial_weight_distribution;
+  public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
   public double initial_weight_scale;
@@ -55,6 +55,14 @@ public abstract class Layer extends Iced {
   @API(help = "Constraint for squared sum of incoming weights per unit")
   public float max_w2;
 
+  public enum Loss {
+    MeanSquare, CrossEntropy
+  }
+
+  @API(help = "Loss function")
+  public Loss loss = Loss.CrossEntropy;
+
+
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
   // TODO extract transients & code in separate one-shot trees to avoid cloning
@@ -66,6 +74,14 @@ public abstract class Layer extends Iced {
   // Previous and input layers
   protected transient Layer _previous;
   transient Input _input;
+
+  public enum Activation {
+    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
+  }
+
+  public enum InitialWeightDistribution {
+    UniformAdaptive, Uniform, Normal
+  }
 
   /**
    * Start of refactoring in specification & running data, for layers and trainers.
@@ -104,30 +120,36 @@ public abstract class Layer extends Iced {
    * @param prefactor prefactor for initialization (typical value: 1.0)
    */
   // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
-  void randomize(Random rng, float prefactor) {
-    if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.UniformAdaptive) {
+  public void randomize(Random rng, float prefactor) {
+    if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
       final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
         _w[i] = (float)rand(rng, -range, range);
     }
-    else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Uniform) {
-      for( int i = 0; i < _w.length; i++ )
-        _w[i] = (float)rand(rng, -initial_weight_scale, initial_weight_scale);
-    }
-    else if (initial_weight_distribution == NeuralNet.InitialWeightDistribution.Normal) {
-      // fill all but possibly the last element, fill two values at once
-      for( int i = 0; i < _w.length - _w.length % 2;) {
-        final double[] normal = randn(rng, 0, initial_weight_scale);
-        _w[i++] = (float)normal[0];
-        _w[i++] = (float)normal[1];
-      }
-      // check for last element
-      if (_w.length % 2 == 1) {
-        final double[] normal = randn(rng, 0, initial_weight_scale);
-        _w[_w.length-1] = (float)normal[0];
+    else {
+      if (initial_weight_distribution == InitialWeightDistribution.Uniform) {
+        for (int i = 0; i < _w.length; i++) {
+          _w[i] = (float) rand(rng, -initial_weight_scale, initial_weight_scale);
+        }
+      } else if (initial_weight_distribution == InitialWeightDistribution.Normal) {
+        for (int i = 0; i < _w.length; i++) {
+          _w[i] = (float) (0 + rng.nextGaussian() * initial_weight_scale);
+        }
       }
     }
   }
+
+    // TODO: Add "subset randomize" function
+//        int count = Math.min(15, _previous.units);
+//        float min = -.1f, max = +.1f;
+//        //float min = -1f, max = +1f;
+//        for( int o = 0; o < units; o++ ) {
+//          for( int n = 0; n < count; n++ ) {
+//            int i = rand.nextInt(_previous.units);
+//            int w = o * _previous.units + i;
+//            _w[w] = rand(rand, min, max);
+//          }
+//        }
 
   public void close() {
   }
@@ -142,6 +164,11 @@ public abstract class Layer extends Iced {
    * Apply gradient g to unit u with rate r and momentum m.
    */
   final void bprop(int u, float g, float r, float m) {
+    if (loss == Loss.CrossEntropy) {
+      //nothing else needed
+    } else if (loss == Loss.MeanSquare) {
+      g *= (1 - _a[u]) * _a[u];
+    }
     float r2 = 0;
     for( int i = 0; i < _previous._a.length; i++ ) {
       int w = u * _previous._a.length + i;
@@ -428,13 +455,6 @@ public abstract class Layer extends Iced {
     static final int API_WEAVER = 1;
     public static DocGen.FieldDoc[] DOC_FIELDS;
 
-    public enum Loss {
-      MeanSquare, CrossEntropy
-    }
-
-    @API(help = "Loss function")
-    public Loss loss = Loss.CrossEntropy;
-
     protected final long pos() {
       return _input._pos;
     }
@@ -475,10 +495,9 @@ public abstract class Layer extends Iced {
       float r = rate(processed) * (1 - m);
       int label = target();
       for( int u = 0; u < _a.length; u++ ) {
-        float t = u == label ? 1 : 0;
-        float g = t - _a[u];
-        if( loss == Loss.MeanSquare )
-          g *= (1 - _a[u]) * _a[u];
+        //output unit u should be 1.0 if u is the class label for the training point
+        float targetval = (u == label ? 1 : 0);
+        float g = targetval - _a[u]; //error
         bprop(u, g, r, m);
       }
     }
@@ -557,7 +576,7 @@ public abstract class Layer extends Iced {
       float[] v = target();
       for( int u = 0; u < _a.length; u++ ) {
         float e = v[u] - _a[u];
-        float g = e * (1 - _a[u]) * _a[u]; // Square error
+        float g = e;
         bprop(u, g, r, m);
       }
     }
@@ -651,7 +670,7 @@ public abstract class Layer extends Iced {
       float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
-        float g = _e[u] * (1 - _a[u] * _a[u]);
+        float g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-x^2
         bprop(u, g, r, m);
       }
     }
@@ -736,7 +755,7 @@ public abstract class Layer extends Iced {
       float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         // Gradient is error * derivative of hyperbolic tangent: (1 - x^2)
-        float g = _e[u] * (1 - _a[u] * _a[u]);
+        float g = _e[u] * (1 - _a[u]) * (1 + _a[u]); //more numerically stable than 1-x^2
         bprop(u, g, r, m);
       }
 
@@ -778,13 +797,18 @@ public abstract class Layer extends Iced {
       for( int o = 0; o < _a.length; o++ ) {
         assert _previous._previous.units == units;
         float e = _previous._previous._a[o] - _a[o];
+
         float g = e;
-//        float g = e * (1 - _a[o]) * _a[o]; // Square error
+        if (loss == Loss.CrossEntropy) {
+          //nothing else needed
+        } else if (loss == Loss.MeanSquare) {
+          g *= (1 - _a[o]) * _a[o];
+        }
         for( int i = 0; i < _previous._a.length; i++ ) {
           int w = i * _a.length + o;
           if( _previous._e != null )
             _previous._e[i] += g * _w[w];
-          _w[w] += r * (g * _previous._a[i] - _w[w] * l2);
+          _w[w] += r * (g * _previous._a[i] - _w[w] * l2 - Math.signum(_w[w]) * l1);
         }
         _b[o] += r * g;
       }
@@ -805,16 +829,6 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
       super.init(ls, index, weights, step, rand);
       if( weights ) {
-//        int count = Math.min(15, _previous.units);
-//        //float min = -.1f, max = +.1f;
-//        float min = -1f, max = +1f;
-//        for( int o = 0; o < units; o++ ) {
-//          for( int n = 0; n < count; n++ ) {
-//            int i = rand.nextInt(_previous.units);
-//            int w = o * _previous.units + i;
-//            _w[w] = rand(rand, min, max);
-//          }
-//        }
         randomize(rand, 4.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
@@ -871,16 +885,6 @@ public abstract class Layer extends Iced {
     @Override public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
       super.init(ls, index, weights, step, rand);
       if( weights ) {
-//        int count = Math.min(15, _previous.units);
-//        float min = -.1f, max = +.1f;
-//        //float min = -1f, max = +1f;
-//        for( int o = 0; o < units; o++ ) {
-//          for( int n = 0; n < count; n++ ) {
-//            int i = rand.nextInt(_previous.units);
-//            int w = o * _previous.units + i;
-//            _w[w] = rand(rand, min, max);
-//          }
-//        }
         randomize(rand, 1.0f);
         for( int i = 0; i < _b.length; i++ )
           _b[i] = 1;
@@ -893,8 +897,7 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _previous._a.length; i++ )
           _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
         _a[o] += _b[o];
-        if( _a[o] < 0 )
-          _a[o] = 0;
+        _a[o] = Math.max(0, _a[o]);
       }
     }
 
@@ -1026,7 +1029,7 @@ public abstract class Layer extends Iced {
     return (Layer) super.clone();
   }
 
-  private static void shareWeights(Layer src, Layer dst) {
+  public static void shareWeights(Layer src, Layer dst) {
     dst._w = src._w;
     dst._b = src._b;
     dst._wm = src._wm;
@@ -1040,17 +1043,6 @@ public abstract class Layer extends Iced {
 
   private static double rand(Random rand, double min, double max) {
     return min + rand.nextDouble() * (max - min);
-  }
-
-//  Box-Mueller transform, create two normally distributed numbers from two uniformly distributed numbers in 0..1
-// (this original version is probably just as fast as the polar version, and stability should be fine)
-  private static double[] randn(Random rand, double mean, double sigma) {
-    final double u1 = rand.nextDouble();
-    final double u2 = rand.nextDouble();
-    final double z0 = Math.sqrt(-2.0f * Math.log(u1)) * Math.cos(2.0f * Math.PI * u2);
-    final double z1 = Math.sqrt(-2.0f * Math.log(u1)) * Math.sin(2.0f * Math.PI * u2);
-    double[] ret = {mean + sigma * z0, mean + sigma * z1};
-    return ret;
   }
 
   @Override public AutoBuffer writeJSON(AutoBuffer bb) {

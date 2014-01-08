@@ -33,65 +33,62 @@ public class NeuralNet extends ValidatedJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Neural Network";
 
-  public enum Activation {
-    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout
-  }
-
   public enum ExecutionMode {
     Serial, Threaded_Hogwild, MapReduce_Hogwild
   }
 
-  public enum InitialWeightDistribution {
-    UniformAdaptive, Uniform, Normal
-  }
-
   @API(help = "Execution Mode", filter = Default.class)
-  public ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
+  private final ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
 
   @API(help = "Activation function", filter = Default.class)
-  public Activation activation = Activation.RectifierWithDropout;
+  private final Layer.Activation activation = Layer.Activation.RectifierWithDropout;
 
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1)
-  public double input_dropout_ratio = 0.2;
+  private final double input_dropout_ratio = 0.2;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
-  public int[] hidden = new int[] { 500 };
+  private final int[] hidden = new int[] { 500 };
 
   @API(help = "Initial Weight Distribution", filter = Default.class, dmin = 0)
-  public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
+  private final Layer.InitialWeightDistribution initial_weight_distribution = Layer.InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0)
-  public double initial_weight_scale = 0.01;
+  private final double initial_weight_scale = 0.01;
 
   @API(help = "Learning rate", filter = Default.class, dmin = 0)
-  public double rate = .005;
+  private final double rate = .005;
 
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class)
-  public double rate_annealing = 1 / 1e6;
+  private final double rate_annealing = 1 / 1e6;
 
   @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class)
-  public float max_w2 = 15;
+  private final float max_w2 = 15;
 
   @API(help = "Momentum at the beginning of training", filter = Default.class)
-  public double momentum_start = .5;
+  private final double momentum_start = .5;
 
   @API(help = "Number of samples for which momentum increases", filter = Default.class)
-  public long momentum_ramp = 300 * 60000;
+  private final long momentum_ramp = 300 * 60000;
 
   @API(help = "Momentum once the initial increase is over", filter = Default.class, dmin = 0)
-  public double momentum_stable = .99;
+  private final double momentum_stable = .99;
 
   @API(help = "L1 regularization", filter = Default.class, dmin = 0)
-  public double l1;
+  private double l1;
 
   @API(help = "L2 regularization", filter = Default.class, dmin = 0)
-  public double l2 = .001;
+  private final double l2 = .001;
 
-  @API(help = "How many times the dataset should be iterated", filter = Default.class, lmin = 0)
-  public int epochs = 100;
+  //TODO: add a ramp down to 0 for l1 and l2
+
+  @API(help = "Loss function", filter =Default.class)
+  private final Layer.Loss loss = Layer.Loss.CrossEntropy;
+
+  @API(help = "How many times the dataset should be iterated", filter = Default.class, lmin = 1)
+  private final int epochs = 100;
 
   @API(help = "Seed for the random number generator", filter = Default.class)
-  public long seed = new Random().nextLong();
+  private final long seed = new Random().nextLong();
 
   @Override protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
@@ -105,12 +102,12 @@ public class NeuralNet extends ValidatedJob {
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
     if (arg._name.equals("input_dropout_ratio") &&
-            (activation != Activation.RectifierWithDropout && activation != Activation.TanhWithDropout)
+            (activation != Layer.Activation.RectifierWithDropout && activation != Layer.Activation.TanhWithDropout)
             ) {
       arg.disable("Only with Dropout", inputArgs);
     }
     if(arg._name.equals("initial_weight_scale") &&
-            (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
+            (initial_weight_distribution == Layer.InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Only with Uniform or Normal initial weight distributions", inputArgs);
     }
@@ -139,7 +136,7 @@ public class NeuralNet extends ValidatedJob {
     return this;
   }
 
-  public void startTrain() {
+  void startTrain() {
     Vec[] vecs = Utils.append(_train, response);
     reChunk(vecs);
     final Vec[] train = new Vec[vecs.length - 1];
@@ -163,6 +160,8 @@ public class NeuralNet extends ValidatedJob {
           ls[i + 1] = new Layer.Maxout(hidden[i]);
           break;
       }
+      ls[i + 1].initial_weight_distribution = initial_weight_distribution;
+      ls[i + 1].initial_weight_scale = initial_weight_scale;
       ls[i + 1].rate = (float) rate;
       ls[i + 1].rate_annealing = (float) rate_annealing;
       ls[i + 1].momentum_start = (float) momentum_start;
@@ -170,6 +169,7 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1].momentum_stable = (float) momentum_stable;
       ls[i + 1].l1 = (float) l1;
       ls[i + 1].l2 = (float) l2;
+      ls[i + 1].loss = loss;
     }
     if( classification )
       ls[ls.length - 1] = new VecSoftmax(trainResp, null);
@@ -182,6 +182,8 @@ public class NeuralNet extends ValidatedJob {
     ls[ls.length - 1].l1 = (float) l1;
     ls[ls.length - 1].l2 = (float) l2;
     ls[ls.length - 1].max_w2 = max_w2;
+    ls[ls.length - 1].loss = loss;
+
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
 
@@ -304,7 +306,7 @@ public class NeuralNet extends ValidatedJob {
 
   @Override public float progress() {
     NeuralNetModel model = UKV.get(destination_key);
-    if( model != null && source != null && epochs > 0 ) {
+    if( model != null && source != null) {
       Errors e = model.training_errors[model.training_errors.length - 1];
       return 0.1f + Math.min(1, e.training_samples / (float) (epochs * source.numRows()));
     }
@@ -320,7 +322,7 @@ public class NeuralNet extends ValidatedJob {
     return eval(ls, new VecsInput(vecs, (VecsInput) ls[0]), output, n, cm);
   }
 
-  public static Errors eval(Layer[] ls, Input input, Output output, long n, long[][] cm) {
+  private static Errors eval(Layer[] ls, Input input, Output output, long n, long[][] cm) {
     Layer[] clones = new Layer[ls.length];
     clones[0] = input;
     for( int y = 1; y < clones.length - 1; y++ )
@@ -464,13 +466,13 @@ public class NeuralNet extends ValidatedJob {
     public ExecutionMode mode;
 
     @API(help = "Activation function")
-    public Activation activation;
+    public Layer.Activation activation;
 
     @API(help = "Input layer dropout ratio")
     public double input_dropout_ratio;
 
     @API(help = "Initial Weight Distribution")
-    public InitialWeightDistribution initial_weight_distribution;
+    public Layer.InitialWeightDistribution initial_weight_distribution;
 
     @API(help = "Uniform: -value...value, Normal: stddev)")
     public double initial_weight_scale;
@@ -503,10 +505,12 @@ public class NeuralNet extends ValidatedJob {
     public long seed;
 
     @API(help = "Layers")
-    public Layer[] layers;
+    public final Layer[] layers;
 
     @API(help = "Layer weights")
-    public float[][] weights, biases;
+    public final float[][] weights;
+    @API(help = "Layer weights")
+    public final float[][] biases;
 
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
@@ -576,7 +580,7 @@ public class NeuralNet extends ValidatedJob {
     public ExecutionMode mode;
 
     @API(help = "Activation function")
-    public Activation activation;
+    public Layer.Activation activation;
 
     @API(help = "Dropout ratio for the input layer (for RectifierWithDropout)")
     public double input_dropout_ratio;
@@ -585,7 +589,7 @@ public class NeuralNet extends ValidatedJob {
     public int[] hidden;
 
     @API(help = "Initial Weight Distribution")
-    public InitialWeightDistribution initial_weight_distribution;
+    public Layer.InitialWeightDistribution initial_weight_distribution;
 
     @API(help = "Uniform: -value...value, Normal: stddev)")
     public double initial_weight_scale;
@@ -857,7 +861,7 @@ public class NeuralNet extends ValidatedJob {
         long rows = vecs[0].length();
         Chunk cache = null;
         for( int split = 0; split < splits; split++ ) {
-          long off = rows * (split + 0) / splits;
+          long off = rows * split / splits;
           long lim = rows * (split + 1) / splits;
           NewChunk chunk = new NewChunk(vec, split);
           for( long r = off; r < lim; r++ ) {
