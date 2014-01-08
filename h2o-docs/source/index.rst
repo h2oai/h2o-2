@@ -20,6 +20,7 @@ This section is for new users, and provides information about how to install and
    deployment/hadoop
    deployment/multinode
    Ruser/R_studio
+   Ruser/Rinstall
    Ruser/Rh2opackage
    newuser/ec2
 

@@ -164,10 +164,10 @@ public class DTree extends Iced {
     // has constant data, or was not being tracked by a prior DHistogram
     // (for being constant data from a prior split), then that column will be
     // null in the returned array.
-    public DHistogram[] split( int splat, char nbins, int min_rows, DHistogram hs[] ) {
-      long n = splat==0 ? _n0 : _n1;
+    public DHistogram[] split( int way, char nbins, int min_rows, DHistogram hs[], float splat ) {
+      long n = way==0 ? _n0 : _n1;
       if( n < min_rows || n <= 1 ) return null; // Too few elements
-      double se = splat==0 ? _se0 : _se1;
+      double se = way==0 ? _se0 : _se1;
       if( se <= 1e-30 ) return null; // No point in splitting a perfect prediction
 
       // Build a next-gen split point from the splitting bin
@@ -193,14 +193,14 @@ public class DTree extends Iced {
         // DHistogram's bound are the bins' min & max.
         if( _col==j ) {
           if( _equal ) {        // Equality split; no change on unequals-side
-            if( splat == 1 ) continue; // but know exact bounds on equals-side - and this col will not split again
+            if( way == 1 ) continue; // but know exact bounds on equals-side - and this col will not split again
           } else {              // Less-than split
             if( h._bins[_bin]==0 )
               throw H2O.unimpl(); // Here I should walk up & down same as split() above.
-            float split = h.binAt(_bin);
-            if( h._isInt > 0 && h._step != 1 ) split = (float)Math.ceil(split);
-            if( splat == 0 ) maxEx= split;
-            else             min  = split;
+            float split = splat;
+            if( h._isInt > 0 ) split = (float)Math.ceil(split);
+            if( way == 0 ) maxEx= split;
+            else           min  = split;
           }
         }
         if( DHistogram.equalsWithinOneSmallUlp(min, maxEx) ) continue; // This column will not split again
@@ -384,7 +384,7 @@ public class DTree extends Iced {
 
       for( int b=0; b<2; b++ ) { // For all split-points
         // Setup for children splits
-        DHistogram nhists[] = _split.split(b,nbins,min_rows,hs);
+        DHistogram nhists[] = _split.split(b,nbins,min_rows,hs,_splat);
         assert nhists==null || nhists.length==_tree._ncols;
         _nids[b] = nhists == null ? -1 : makeUndecidedNode(nhists)._nid;
       }

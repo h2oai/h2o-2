@@ -698,13 +698,49 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
     new("H2OParsedData", h2o=test@h2o, key=res$dest_key, logic=FALSE)
 })
 
+setMethod("levels", "H2OParsedData", function(x) {
+  if(ncol(x) != 1) stop("levels only operates on a single column")
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  if(res$summaries[[1]]$stats$type != 'Enum') return(NULL)
+  res$summaries[[1]]$hbrk
+})
+
 #----------------------------- Work in Progress -------------------------------#
+# TODO: Substitute in key names for H2OParsedData variables
 # setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
 #   params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
 #   expr = paste("apply(", paste(params, collapse=","), ")", sep="")
 #   res = h2o.__exec2(X@h2o, expr)
 #   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
 # })
+
+str.H2OParsedData <- function(object, ...) {
+  if (length(l <- list(...)) && any("give.length" == names(l))) 
+    invisible(NextMethod("str", ...))
+  else invisible(NextMethod("str", give.length = FALSE, ...))
+  
+  if(class(object) != "H2OParsedData")
+    stop("object must be of class H2OParsedData")
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_INSPECT, key = object@key)
+  cat("\nH2O dataset '", object@key, "':\t", res$num_rows, " obs. of  ", (p <- res$num_cols), 
+      " variable", if(p != 1) "s", if(p > 0) ":", "\n", sep = "")
+  
+  cc <- unlist(lapply(res$cols, function(y) y$name))
+  width <- max(nchar(cc))
+  rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
+  res2 = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source = object@key)
+  for(i in 1:p) {
+    cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
+    rhead <- sapply(rows, function(x) { x[i+1] })
+    if(res2$summaries[[i]]$stats$type != 'Enum')
+      cat("num  ", paste(rhead, collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
+    else {
+      rlevels = res2$summaries[[i]]$hbrk
+      cat("Factor w/ ", (count <- length(rlevels)), " level", if(count != 1) "s", ' "', paste(rlevels[1:min(count, 2)], collapse = '","'), '"', if(count > 2) ",..", ": ", sep = "")
+      cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
+    }
+  }
+}
 
 #--------------------------------- ValueArray ----------------------------------#
 setMethod("show", "H2ORawDataVA", function(object) {

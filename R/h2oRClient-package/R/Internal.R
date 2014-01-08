@@ -333,8 +333,8 @@ h2o.__unop2 <- function(op, x) {
     
   expr = paste(op, "(", x@key, ")", sep = "")
   res = h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
-    return(res$scalar)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(ifelse(op %in% LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
   if(op %in% LOGICAL_OPERATORS)
     new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
   else
@@ -359,8 +359,8 @@ h2o.__binop2 <- function(op, x, y) {
   else myClient = y@h2o
   res = h2o.__exec2(myClient, expr)
 
-  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
-    return(res$scalar)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(ifelse(op %in% LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
   if(op %in% LOGICAL_OPERATORS)
     new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
   else
