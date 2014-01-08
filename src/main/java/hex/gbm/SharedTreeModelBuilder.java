@@ -505,8 +505,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         //System.out.println((_nclass==1?"Regression":("Class "+_fr2.vecs()[_ncols]._domain[_k]))+",\n  Undecided node:"+udn);
         // Replace the Undecided with the Split decision
         DTree.DecidedNode dn = makeDecided(udn,sbh._hcs[leaf-leafk]);
-        //System.out.println("--> Decided node: " + dn);
-        //System.out.println("  > Split: " + dn._split + " Total rows: " + (dn._split.rowsLeft()+dn._split.rowsRight()));
+        //System.out.println("--> Decided node: " + dn + 
+        //                   "  > Split: " + dn._split + " L/R:" + dn._split.rowsLeft()+" + "+dn._split.rowsRight());
         if( dn._split.col() == -1 ) udn.do_not_split();
         else _did_split = true;
       }
