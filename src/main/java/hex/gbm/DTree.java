@@ -203,7 +203,7 @@ public class DTree extends Iced {
             else           min  = split;
           }
         }
-        if( DHistogram.equalsWithinOneSmallUlp(min, maxEx) ) continue; // This column will not split again
+        if( Utils.equalsWithinOneSmallUlp(min, maxEx) ) continue; // This column will not split again
         if( h._isInt > 0 && !(min+1 < maxEx ) ) continue; // This column will not split again
         if( min >  maxEx ) continue; // Happens for all-NA subsplits
         assert min < maxEx && n > 1 : ""+min+"<"+maxEx+" n="+n;
