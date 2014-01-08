@@ -737,7 +737,7 @@ str.H2OParsedData <- function(object, ...) {
     else {
       rlevels = res2$summaries[[i]]$hbrk
       cat("Factor w/ ", (count <- length(rlevels)), " level", if(count != 1) "s", ' "', paste(rlevels[1:min(count, 2)], collapse = '","'), '"', if(count > 2) ",..", ": ", sep = "")
-      cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", sep = "")
+      cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
     }
   }
 }
