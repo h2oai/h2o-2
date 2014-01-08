@@ -38,7 +38,7 @@ public class Exec2 extends Request2 {
       if( env.sp() == 0 ) {      // Empty stack
       } else if( env.isAry() ) {
         Frame fr = env.peekAry();
-        String skey = env.key();
+        String skey = env.peekKey();
         num_rows = fr.numRows();
         num_cols = fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];

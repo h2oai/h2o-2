@@ -39,6 +39,9 @@ class Basic(unittest.TestCase):
             timeoutSecs = 180
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
+            rfSeed = random.randint(0, sys.maxint)
+            kwargs.update('seed': rfSeed)
+        
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start
             print "Trial #", trial, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

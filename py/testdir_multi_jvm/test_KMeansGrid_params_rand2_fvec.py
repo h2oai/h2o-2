@@ -60,7 +60,6 @@ class Basic(unittest.TestCase):
                 "    numCols:", "{:,}".format(inspect['numCols'])
 
             paramDict = define_params(SEED)
-            h2o.beta_features = True # no grid for VA
             for trial in range(3):
                 # default
                 destinationKey = csvFilename + "_" + str(trial) + '.hex'
