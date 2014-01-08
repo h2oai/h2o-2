@@ -73,13 +73,13 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Momentum once the initial increase is over", filter = Default.class, dmin = 0)
   private final double momentum_stable = .99;
 
+  //TODO: add a ramp down to 0 for l1 and l2
+
   @API(help = "L1 regularization", filter = Default.class, dmin = 0)
-  private double l1;
+  private double l1 = 0;
 
   @API(help = "L2 regularization", filter = Default.class, dmin = 0)
   private final double l2 = .001;
-
-  //TODO: add a ramp down to 0 for l1 and l2
 
   @API(help = "Loss function", filter =Default.class)
   private final Layer.Loss loss = Layer.Loss.CrossEntropy;
@@ -214,6 +214,7 @@ public class NeuralNet extends ValidatedJob {
     model.momentum_stable = momentum_stable;
     model.l1 = l1;
     model.l2 = l2;
+    model.loss = loss;
     model.seed = seed;
 
     UKV.put(destination_key, model);
@@ -293,6 +294,7 @@ public class NeuralNet extends ValidatedJob {
         model.momentum_stable = momentum_stable;
         model.l1 = l1;
         model.l2 = l2;
+        model.loss = loss;
         model.seed = seed;
         UKV.put(model._selfKey, model);
       }
@@ -505,6 +507,9 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "L2 regularization")
     public double l2;
 
+    @API(help = "Loss function")
+    public Layer.Loss loss;
+
     @API(help = "Seed for the random number generator")
     public long seed;
 
@@ -622,6 +627,9 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "L2 regularization")
     public double l2;
 
+    @API(help = "Loss function")
+    public Layer.Loss loss;
+
     @API(help = "How many times the dataset should be iterated")
     public int epochs;
 
@@ -661,6 +669,7 @@ public class NeuralNet extends ValidatedJob {
         momentum_stable = job.momentum_stable;
         l1 = job.l1;
         l2 = job.l2;
+        loss = job.loss;
         epochs = job.epochs;
         seed = job.seed;
       }
