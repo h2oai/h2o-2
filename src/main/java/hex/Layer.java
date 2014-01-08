@@ -1,14 +1,13 @@
 package hex;
 
 import hex.rng.MersenneTwisterRNG;
-
-import java.util.Random;
-
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Vec;
+
+import java.util.Random;
 
 /**
  * Neural network layer.
@@ -733,9 +732,9 @@ public abstract class Layer extends Iced {
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           }
           // same effect as multiplying weights with p=0.5 above
-          if( !training )
+          if( !training ) {
             _a[o] *= .5f;
-
+          }
           _a[o] += _b[o];
 
           // tanh approx, slightly faster, untested
@@ -851,9 +850,10 @@ public abstract class Layer extends Iced {
           _a[o] = Float.NEGATIVE_INFINITY;
           for( int i = 0; i < _previous._a.length; i++ )
             _a[o] = Math.max(_a[o], _w[o * _previous._a.length + i] * _previous._a[i]);
-          _a[o] += _b[o];
-          if( !training )
+          if( !training ) {
             _a[o] *= .5f;
+          }
+          _a[o] += _b[o];
           if( max < _a[o] )
             max = _a[o];
         }
@@ -956,7 +956,7 @@ public abstract class Layer extends Iced {
           for( int i = 0; i < _previous._a.length; i++ ) {
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           }
-          if (!training) {
+          if( !training ) {
             _a[o] *= .5f;
           }
           _a[o] += _b[o];
