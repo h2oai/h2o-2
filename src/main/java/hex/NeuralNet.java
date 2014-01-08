@@ -31,59 +31,60 @@ public class NeuralNet extends ValidatedJob {
   }
 
   @API(help = "Execution Mode", filter = Default.class)
-  private final ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
+  public ExecutionMode mode = ExecutionMode.Threaded_Hogwild;
 
   @API(help = "Activation function", filter = Default.class)
-  private final Layer.Activation activation = Layer.Activation.RectifierWithDropout;
+  public Activation activation = Activation.Tanh;
 
   @API(help = "Input layer dropout ratio", filter = Default.class, dmin = 0, dmax = 1)
-  private final double input_dropout_ratio = 0.2;
+  public float input_dropout_ratio = 0;
 
   @API(help = "Hidden layer sizes, e.g. 1000, 1000. Grid search: (100, 100), (200, 200)", filter = Default.class)
-  private final int[] hidden = new int[] { 500 };
+  public int[] hidden = new int[] { 500 };
 
   @API(help = "Initial Weight Distribution", filter = Default.class, dmin = 0)
-  private final Layer.InitialWeightDistribution initial_weight_distribution = Layer.InitialWeightDistribution.UniformAdaptive;
+  public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0)
-  private final double initial_weight_scale = 0.01;
+  public double initial_weight_scale = 0.01;
 
   @API(help = "Learning rate", filter = Default.class, dmin = 0)
-  private final double rate = .005;
+  public double rate = .005;
 
   @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class)
-  private final double rate_annealing = 1 / 1e6;
+  public double rate_annealing = 1 / 1e6;
 
   @API(help = "Constraint for squared sum of incoming weights per unit", filter = Default.class)
-  private final float max_w2 = 15;
+  public float max_w2 = 15;
 
   @API(help = "Momentum at the beginning of training", filter = Default.class)
-  private final double momentum_start = .5;
+  public double momentum_start = .5;
 
   @API(help = "Number of samples for which momentum increases", filter = Default.class)
-  private final long momentum_ramp = 300 * 60000;
+  public long momentum_ramp = 300 * 60000;
 
   @API(help = "Momentum once the initial increase is over", filter = Default.class, dmin = 0)
-  private final double momentum_stable = .99;
+  public double momentum_stable = .99;
 
   //TODO: add a ramp down to 0 for l1 and l2
 
   @API(help = "L1 regularization", filter = Default.class, dmin = 0)
-  private double l1 = 0;
+  public double l1;
 
   @API(help = "L2 regularization", filter = Default.class, dmin = 0)
-  private final double l2 = .001;
+  public double l2 = .001;
 
   @API(help = "Loss function", filter =Default.class)
   private final Layer.Loss loss = Layer.Loss.CrossEntropy;
 
-  @API(help = "How many times the dataset should be iterated", filter = Default.class, lmin = 1)
-  private final int epochs = 100;
+  @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
+  public double epochs = 100;
 
   @API(help = "Seed for the random number generator", filter = Default.class)
-  private final long seed = new Random().nextLong();
+  public long seed = new Random().nextLong();
 
-  @Override protected void registered(RequestServer.API_VERSION ver) {
+  @Override
+  protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
     for (Argument arg : _arguments) {
       if (arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")) {
@@ -106,13 +107,16 @@ public class NeuralNet extends ValidatedJob {
     }
   }
 
+  // used to stop the monitor thread
+  private static volatile boolean running = true;
+
   public NeuralNet() {
     description = DOC_GET;
   }
 
   @Override public Job fork() {
     init();
-    H2OCountedCompleter start = new H2OCountedCompleter() {
+    H2OCountedCompleter jobRemoval = new H2OCountedCompleter() {
       @Override public void compute2() {
         startTrain();
       }
@@ -124,8 +128,8 @@ public class NeuralNet extends ValidatedJob {
         return super.onExceptionalCompletion(ex, caller);
       }
     };
-    start(start);
-    H2O.submitTask(start);
+    start(jobRemoval);
+    H2O.submitTask(jobRemoval);
     return this;
   }
 
@@ -225,9 +229,10 @@ public class NeuralNet extends ValidatedJob {
       System.out.println("MapReduce + Threaded (Hogwild) execution mode");
       trainer = new Trainer.MapReduce(ls, epochs, self());
     }
+    System.out.println("Running for " + epochs + " epochs.");
 
     // Use a separate thread for monitoring (blocked most of the time)
-    Thread thread = new Thread() {
+    Thread monitor = new Thread() {
       Errors[] trainErrors = trainErrors0, validErrors = validErrors0;
 
       @Override public void run() {
@@ -241,10 +246,10 @@ public class NeuralNet extends ValidatedJob {
             System.arraycopy(adapted[0].vecs(), 0, valid, 0, valid.length);
             validResp = vs[vs.length - 1];
           }
-          while( !cancelled() ) {
+          while( !cancelled() && running) {
             eval(valid, validResp);
             try {
-              Thread.sleep(2000);
+              Thread.sleep(5000); //sleep for 5 seconds before evaluating again
             } catch( InterruptedException e ) {
               throw new RuntimeException(e);
             }
@@ -300,7 +305,15 @@ public class NeuralNet extends ValidatedJob {
       }
     };
     trainer.start();
-    thread.start();
+    monitor.start();
+    trainer.join();
+    running = false; //tell the monitor thread to finish too
+    try {
+      monitor.join();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+    System.out.println("Training finished.");
   }
 
   @Override public float progress() {
@@ -624,7 +637,7 @@ public class NeuralNet extends ValidatedJob {
     public Layer.Loss loss;
 
     @API(help = "How many times the dataset should be iterated")
-    public int epochs;
+    public double epochs;
 
     @API(help = "Seed for the random number generator")
     public long seed;

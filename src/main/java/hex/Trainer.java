@@ -1,31 +1,26 @@
 package hex;
 
-import hex.Layer.ChunkLinear;
-import hex.Layer.ChunkSoftmax;
-import hex.Layer.ChunksInput;
-import hex.Layer.Input;
-import hex.Layer.Training;
-import hex.Layer.VecLinear;
-import hex.Layer.VecSoftmax;
-import hex.Layer.VecsInput;
+import com.jogamp.opencl.*;
+import com.jogamp.opencl.CLMemory.Mem;
+import hex.Layer.*;
+import jsr166y.CountedCompleter;
+import water.*;
+import water.H2O.H2OCountedCompleter;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
+import water.util.Utils;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.Arrays;
 import java.util.Map.Entry;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
-
-import jsr166y.CountedCompleter;
-import water.*;
-import water.H2O.H2OCountedCompleter;
-import water.fvec.*;
-import water.util.Log;
-import water.util.Utils;
-
-import com.jogamp.opencl.*;
-import com.jogamp.opencl.CLMemory.Mem;
 
 /**
  * Trains a neural network.
@@ -261,9 +256,9 @@ public abstract class Trainer {
     final transient Key _key;
     transient Descent _task;
 
-    public MapReduce(Layer[] ls, int epochs, Key job) {
+    public MapReduce(Layer[] ls, double epochs, Key job) {
       _ls = ls;
-      _epochs = epochs;
+      _epochs = (int)Math.ceil(epochs);
       _job = job;
 
       _key = Key.make((byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
