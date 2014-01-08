@@ -427,7 +427,7 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
-h2o.table <- function(x) { h2o.__unop2("table", x) }
+h2o.table <- function(...) { if(length(c(...)) > 1) stop("Unimplemented"); h2o.__unop2("table", ...) }
 h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
