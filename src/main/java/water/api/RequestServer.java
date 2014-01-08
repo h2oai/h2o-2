@@ -268,16 +268,32 @@ public class RequestServer extends NanoHTTPD {
       }
     }
 
-    Map<String, String> parmsMap = session.getParms();
-    parmsMap.remove("fileData");
-    parmsMap.remove("files[]");
+    String uri = session.getUri();
+    boolean va_postfile = uri.matches("/PostFile.*");
+    boolean fvec_postfile = uri.matches("/\\d+/PostFile.*");
+    Map<String, String> parmsMap = new HashMap<String, String>();
+    if (va_postfile || fvec_postfile) {
+      // RequestArguments path is very sensitive and cannot tolerate the extra argument
+      // that triggers the file inclusion, which is a weird API bug.  Tolerate this for now.
+      //
+      // e.g.  curl -v -F "file=@allyears2k_headers.zip" "http://localhost:54321/PostFile.json?key=a.zip"
+      //
+      // The 'key' argument is used to specify the key name.  The 'file' argument is used to
+      // provide the file, but the RequestArguments flow rejects it.  So forcibly purge all
+      // arguments not named 'key' here.
+      String key = "key";
+      String value = session.getParms().get(key);
+      if (value != null) {
+        parmsMap.put(key, value);
+      }
+    }
+    else {
+      parmsMap = session.getParms();
+    }
     Properties parms = new Properties();
     parms.putAll(parmsMap);
-    String uri = session.getUri();
 
     if (Method.POST.equals(method)) {
-      boolean va_postfile = uri.matches("/PostFile.*");
-      boolean fvec_postfile = uri.matches("/\\d+/PostFile.*");
       if (va_postfile || fvec_postfile) {
         if (files.size() > 0) {
           String fileName = (String) files.values().toArray()[0];
