@@ -19,7 +19,7 @@ public class NeuralNetMLPReference {
   float[][] _testData;
   NeuralNetwork _nn;
 
-  void init(NeuralNetwork.Activation activation) {
+  void init(Layer.Activation activation) {
     double[][] ds = new double[150][];
     int r = 0;
     ds[r++] = new double[] { 5.1, 3.5, 1.4, 0.2, 0, 0, 1 };
@@ -219,8 +219,8 @@ public class NeuralNetMLPReference {
     _nn.InitializeWeights();
   }
 
-  void train(int maxEpochs, float learnRate) {
-    _nn.Train(_trainData, maxEpochs, learnRate, 0);
+  void train(int maxEpochs, float learnRate, Layer.Loss loss) {
+    _nn.Train(_trainData, maxEpochs, learnRate, 0, loss);
   }
 
   void MakeTrainTest(float[][] allData, float[][] trainData, float[][] testData) {
@@ -284,8 +284,7 @@ public class NeuralNetMLPReference {
   }
 
   public static class NeuralNetwork {
-    enum Activation { tanh, rectifier };
-    Activation activation = Activation.tanh;
+    Layer.Activation activation = Layer.Activation.Tanh;
     int numInput;
     int numHidden;
     int numOutput;
@@ -311,7 +310,7 @@ public class NeuralNetMLPReference {
     float[][] hoPrevWeightsDelta;
     float[] oPrevBiasesDelta;
 
-    public NeuralNetwork(Activation activationType, int numInput, int numHidden, int numOutput) {
+    public NeuralNetwork(Layer.Activation activationType, int numInput, int numHidden, int numOutput) {
       this.activation = activationType;
       this.numInput = numInput;
       this.numHidden = numHidden;
@@ -514,9 +513,9 @@ public class NeuralNetMLPReference {
 
       for( int i = 0; i < numHidden; ++i )
         // apply activation
-        if (activation == Activation.tanh) {
+        if (activation == Layer.Activation.Tanh) {
           hOutputs[i] = HyperTanFunction(hSums[i]);
-        } else if (activation == Activation.rectifier) {
+        } else if (activation == Layer.Activation.Rectifier) {
           hOutputs[i] = Rectifier(hSums[i]);
         } else throw new RuntimeException("invalid activation.");
 
@@ -568,7 +567,7 @@ public class NeuralNetMLPReference {
 
     // ----------------------------------------------------------------------------------------
 
-    private void UpdateWeights(float[] tValues, float learnRate, float momentum) {
+    private void UpdateWeights(float[] tValues, float learnRate, float momentum, Layer.Loss loss) {
       // update the weights and biases using back-propagation, with target values, eta (learning
 // rate),
       // alpha (momentum)
@@ -582,17 +581,21 @@ public class NeuralNetMLPReference {
       for( int i = 0; i < oGrads.length; ++i ) {
         // derivative of softmax = (1 - y) * y (same as log-sigmoid)
         float derivative = (1 - outputs[i]) * outputs[i];
-        // 'mean squared error version'. research suggests cross-entropy is better here . . .
-        oGrads[i] = derivative * (tValues[i] - outputs[i]);
+        if (loss == Layer.Loss.CrossEntropy) {
+          oGrads[i] = tValues[i] - outputs[i];
+        } else if (loss == Layer.Loss.MeanSquare) {
+          // 'mean squared error version'. research suggests cross-entropy is better here . . .
+          oGrads[i] = derivative * (tValues[i] - outputs[i]);
+        } else throw new RuntimeException("invalid loss function");
       }
 
       // 2. compute hidden gradients
       for( int i = 0; i < hGrads.length; ++i ) {
         float derivative = 1;
-        if (activation == Activation.tanh) {
+        if (activation == Layer.Activation.Tanh) {
           derivative = (1 - hOutputs[i]) * (1 + hOutputs[i]); // derivative of tanh (y) = (1 - y) * (1 + y)
-        } else if (activation == Activation.rectifier) {
-          derivative = hOutputs[i] < 0 ? 0 : 1;
+        } else if (activation == Layer.Activation.Rectifier) {
+          derivative = hOutputs[i] <= 0 ? 0 : 1;
         } else throw new RuntimeException("invalid activation.");
 
         float sum = 0;
@@ -654,7 +657,7 @@ public class NeuralNetMLPReference {
 
     // ----------------------------------------------------------------------------------------
 
-    public void Train(float[][] trainData, int maxEprochs, float learnRate, float momentum) {
+    public void Train(float[][] trainData, int maxEprochs, float learnRate, float momentum, Layer.Loss loss) {
       // train a back-prop style NN classifier using learning rate and momentum
       // no weight decay
       int epoch = 0;
@@ -672,7 +675,7 @@ public class NeuralNetMLPReference {
           System.arraycopy(trainData[idx], 0, xValues, 0, numInput); // extract x's and y's.
           System.arraycopy(trainData[idx], numInput, tValues, 0, numOutput);
           ComputeOutputs(xValues); // copy xValues in, compute outputs (and store them internally)
-          UpdateWeights(tValues, learnRate, momentum); // use back-prop to find better weights
+          UpdateWeights(tValues, learnRate, momentum, loss); // use back-prop to find better weights
         } // each training tuple
         ++epoch;
       }

@@ -1,15 +1,16 @@
 package water;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.junit.internal.TextListener;
-import org.junit.runner.*;
+import org.junit.runner.Description;
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
-
 import water.deploy.NodeCL;
 import water.util.Log;
 import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class JUnitRunnerDebug {
   public static final int NODES = 3;
