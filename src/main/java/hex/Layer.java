@@ -96,7 +96,7 @@ public abstract class Layer extends Iced {
     init(ls, index, true, 0, new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS));
   }
 
-  public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
+  protected void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
     _a = new float[units];
     _e = new float[units];
     _previous = ls[index - 1];
@@ -121,6 +121,8 @@ public abstract class Layer extends Iced {
    */
   // cf. http://machinelearning.wustl.edu/mlpapers/paper_files/AISTATS2010_GlorotB10.pdf
   public void randomize(Random rng, float prefactor) {
+    if (_w == null) return;
+
     if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
       final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )

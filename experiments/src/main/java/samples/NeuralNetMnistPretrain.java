@@ -33,7 +33,6 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
       ls[i].momentum_stable = .99f;
       //ls[i].l1 = .005f;
       ls[i].init(ls, i);
-      if (i>=1) ls[i].randomize(new java.util.Random(), 1.0f);
     }
     return ls;
   }

@@ -150,6 +150,9 @@ public class NeuralNet extends ValidatedJob {
         case Tanh:
           ls[i + 1] = new Layer.Tanh(hidden[i]);
           break;
+        case TanhWithDropout:
+          ls[i + 1] = new Layer.TanhDropout(hidden[i]);
+          break;
         case Rectifier:
           ls[i + 1] = new Layer.Rectifier(hidden[i]);
           break;
@@ -169,6 +172,7 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1].momentum_stable = (float) momentum_stable;
       ls[i + 1].l1 = (float) l1;
       ls[i + 1].l2 = (float) l2;
+      ls[i + 1].max_w2 = max_w2;
       ls[i + 1].loss = loss;
     }
     if( classification )
