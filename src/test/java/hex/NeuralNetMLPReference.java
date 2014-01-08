@@ -215,7 +215,7 @@ public class NeuralNetMLPReference {
     int numInput = 4;
     int numHidden = 7;
     int numOutput = 3;
-    _nn = new NeuralNetwork(NeuralNetwork.Activation.tanh, numInput, numHidden, numOutput);
+    _nn = new NeuralNetwork(activation, numInput, numHidden, numOutput);
     _nn.InitializeWeights();
   }
 
@@ -515,9 +515,9 @@ public class NeuralNetMLPReference {
       for( int i = 0; i < numHidden; ++i )
         // apply activation
         if (activation == Activation.tanh) {
-          this.hOutputs[i] = HyperTanFunction(hSums[i]);
+          hOutputs[i] = HyperTanFunction(hSums[i]);
         } else if (activation == Activation.rectifier) {
-          this.hOutputs[i] = Rectifier(hSums[i]);
+          hOutputs[i] = Rectifier(hSums[i]);
         } else throw new RuntimeException("invalid activation.");
 
       for( int j = 0; j < numOutput; ++j )

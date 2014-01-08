@@ -4,18 +4,21 @@ import hex.Layer.Loss;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
 import hex.rng.MersenneTwisterRNG;
-
-import java.io.File;
-
 import junit.framework.Assert;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import water.*;
-import water.fvec.*;
+import water.JUnitRunnerDebug;
+import water.Key;
+import water.TestUtil;
+import water.UKV;
+import water.fvec.Frame;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
+import water.fvec.Vec;
 import water.util.Log;
 import water.util.Utils;
+
+import java.io.File;
 
 public class NeuralNetIrisTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
@@ -30,7 +33,7 @@ public class NeuralNetIrisTest extends TestUtil {
 
     // Select tanh or rectifier
     ref.init(NeuralNetMLPReference.NeuralNetwork.Activation.tanh);
-    //ref.init(NeuralNetMLPReference.NeuralNetwork.Activation.rectifier);
+//    ref.init(NeuralNetMLPReference.NeuralNetwork.Activation.rectifier);
 
     // Parse Iris and shuffle the same way as ref
     Key file = NFSFileVec.make(new File(PATH));
@@ -64,12 +67,12 @@ public class NeuralNetIrisTest extends TestUtil {
     Layer[] ls = new Layer[3];
     ls[0] = new VecsInput(data, null);
     ls[1] = new Layer.Tanh(7);
-    //ls[1] = new Layer.Rectifier(7);
+//    ls[1] = new Layer.Rectifier(7);
     ls[2] = new VecSoftmax(labels, null);
 
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].rate = rate;
-      ls[i].loss = Loss.MeanSquare;
+      ls[i].loss = (i == ls.length-1) ? Loss.MeanSquare : Loss.CrossEntropy;
       ls[i].max_w2 = Float.MAX_VALUE; //effectively turning it off
 //      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Uniform;
 //      ls[i].initial_weight_scale = 0.01f;
