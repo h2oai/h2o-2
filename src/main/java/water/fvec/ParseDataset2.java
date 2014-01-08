@@ -421,7 +421,7 @@ public final class ParseDataset2 extends Job {
           // Zipped file; no parallel decompression;
           ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
           _dout = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,_vecIdStart, chunkStartIdx,pmon);
-          // set this node as the one which rpocessed all the chunks
+          // set this node as the one which processed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
             _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
           break;

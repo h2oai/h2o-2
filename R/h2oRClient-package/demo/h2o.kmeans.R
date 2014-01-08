@@ -19,16 +19,16 @@ if("fpc" %in% rownames(installed.packages())) {
   library(fpc)
 
   par(mfrow=c(1,1))
-  plotcluster(prostate.data, prostate.clus$predict)
+  plotcluster(prostate.data, prostate.clus[,1])
   title("K-Means Classification for k = 10")
 }
 
 # if(!"cluster" %in% rownames(installed.packages())) install.packages("cluster")
 if("cluster" %in% rownames(installed.packages())) {
   library(cluster)
-  clusplot(prostate.data, prostate.clus$predict, color = TRUE, shade = TRUE)
+  clusplot(prostate.data, prostate.clus[,1], color = TRUE, shade = TRUE)
 }
-pairs(prostate.data[,c(2,3,7,8)], col=prostate.clus$predict)
+pairs(prostate.data[,c(2,3,7,8)], col=prostate.clus[,1])
 
 # Plot k-means centers
 par(mfrow = c(1,2))
