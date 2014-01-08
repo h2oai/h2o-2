@@ -48,6 +48,7 @@ public class DownloadDataset extends Request2 {
     if( !suggested_fname.endsWith(".csv") )
       suggested_fname = suggested_fname+".csv";
     res.addHeader("Content-Disposition", "filename=" + suggested_fname);
+    res.setChunkedTransfer(true);
     return res;
   }
 
