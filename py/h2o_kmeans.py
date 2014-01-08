@@ -71,7 +71,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
         kmeansResult = h2o_cmd.runInspect(key=model_key)
         h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
         model = kmeansResult['KMeansModel']
-        centers = model['centers']
+        centers = model['clusters']
         error = model["error"]
 
     if h2o.beta_features:
