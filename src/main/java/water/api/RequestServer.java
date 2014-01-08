@@ -269,6 +269,8 @@ public class RequestServer extends NanoHTTPD {
     }
 
     Map<String, String> parmsMap = session.getParms();
+    parmsMap.remove("fileData");
+    parmsMap.remove("files[]");
     Properties parms = new Properties();
     parms.putAll(parmsMap);
     String uri = session.getUri();
@@ -308,7 +310,7 @@ public class RequestServer extends NanoHTTPD {
     }
 
     // Jack priority for user-visible requests
-    Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
+    Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 1);
     // update arguments and determine control variables
     if( uri.isEmpty() || uri.equals("/") ) uri = "/Tutorials.html";
     // determine the request type

@@ -51,11 +51,6 @@ public class RequestQueries extends RequestArguments {
         boolean found = false;
         String key = (String) en.nextElement();
         for (Argument arg: _arguments) {
-          if (key.equals("files[]")) {
-            // Injected by NanoHTTPD.parseBody().
-            found = true;
-            break;
-          }
           if (arg._name.equals(key)) {
             found = true;
             break;
