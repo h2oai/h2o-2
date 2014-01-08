@@ -56,27 +56,27 @@ public class NeuralNetIrisTest extends TestUtil {
     _test = frame(null, Utils.subarray(rows, limit, (int) frame.numRows() - limit));
     UKV.remove(pars);
 
-    //
     float rate = 0.01f;
     int epochs = 1000;
     Vec[] data = Utils.remove(_train.vecs(), _train.vecs().length - 1);
     Vec labels = _train.vecs()[_train.vecs().length - 1];
-    VecsInput input = new VecsInput(data, null);
-    VecSoftmax output = new VecSoftmax(labels, null);
-    output.loss = Loss.MeanSquare;
-    Layer[] ls = new Layer[3];
-    ls[0] = input;
 
-    // Select tanh or rectifier
+    Layer[] ls = new Layer[3];
+    ls[0] = new VecsInput(data, null);
     ls[1] = new Layer.Tanh(7);
     //ls[1] = new Layer.Rectifier(7);
+    ls[2] = new VecSoftmax(labels, null);
 
-    ls[1].rate = rate;
-    ls[2] = output;
-    ls[2].rate = rate;
-    for( int i = 0; i < ls.length; i++ )
+    for( int i = 0; i < ls.length; i++ ) {
+      ls[i].rate = rate;
+      ls[i].loss = Loss.MeanSquare;
+      ls[i].max_w2 = Float.MAX_VALUE; //effectively turning it off
+//      ls[i].initial_weight_distribution = Layer.InitialWeightDistribution.Uniform;
+//      ls[i].initial_weight_scale = 0.01f;
       ls[i].init(ls, i);
+    }
 
+    // use the same random weights for the reference implementation
     Layer l = ls[1];
     for( int o = 0; o < l._a.length; o++ ) {
       for( int i = 0; i < l._previous._a.length; i++ )
@@ -119,6 +119,7 @@ public class NeuralNetIrisTest extends TestUtil {
     NeuralNet.Errors train = NeuralNet.eval(ls, 0, null);
     data = Utils.remove(_test.vecs(), _test.vecs().length - 1);
     labels = _test.vecs()[_test.vecs().length - 1];
+    VecsInput input = (VecsInput) ls[0];
     input.vecs = data;
     input._len = data[0].length();
     ((VecSoftmax) ls[2]).vec = labels;
