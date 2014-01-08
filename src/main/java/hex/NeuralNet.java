@@ -1,27 +1,20 @@
 package hex;
 
-import hex.Layer.ChunkLinear;
-import hex.Layer.ChunkSoftmax;
-import hex.Layer.ChunksInput;
-import hex.Layer.Input;
-import hex.Layer.Linear;
-import hex.Layer.Output;
-import hex.Layer.Softmax;
-import hex.Layer.VecLinear;
-import hex.Layer.VecSoftmax;
-import hex.Layer.VecsInput;
-
-import java.util.Arrays;
-import java.util.Random;
-
+import hex.Layer.*;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
-import water.api.*;
+import water.api.DocGen;
+import water.api.Progress2;
+import water.api.Request;
+import water.api.RequestServer;
 import water.fvec.*;
 import water.util.RString;
 import water.util.Utils;
+
+import java.util.Arrays;
+import java.util.Random;
 
 /**
  * Neural network.
