@@ -11,7 +11,7 @@ import java.util.Random;
 
 /**
  * Neural network layer.
- * 
+ *
  * @author cypof
  */
 public abstract class Layer extends Iced {
@@ -97,7 +97,9 @@ public abstract class Layer extends Iced {
 
   protected void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
     _a = new float[units];
-    _e = new float[units];
+    if (!(this instanceof Output)) {
+      _e = new float[units];
+    }
     _previous = ls[index - 1];
     _input = (Input) ls[0];
 
@@ -576,8 +578,7 @@ public abstract class Layer extends Iced {
       float r = rate(processed) * (1 - m);
       float[] v = target();
       for( int u = 0; u < _a.length; u++ ) {
-        float e = v[u] - _a[u];
-        float g = e;
+        float g = v[u] - _a[u];
         bprop(u, g, r, m);
       }
     }
@@ -899,7 +900,8 @@ public abstract class Layer extends Iced {
         for( int i = 0; i < _previous._a.length; i++ )
           _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
         _a[o] += _b[o];
-        _a[o] = Math.max(0, _a[o]);
+        if (_a[o] < 0)
+          _a[o] = 0;
       }
     }
 
@@ -908,10 +910,13 @@ public abstract class Layer extends Iced {
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
-        if( _a[u] > 0 ) {
-          float g = _e[u];
-          bprop(u, g, r, m);
-        }
+        //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
+        float g = 0;
+        if( _a[u] > 0 ) { // don't use >=
+          g = _e[u];
+        } else if (l1 == 0 && l2 == 0) continue; //nothing to do
+
+        bprop(u, g, r, m);
       }
     }
   }
