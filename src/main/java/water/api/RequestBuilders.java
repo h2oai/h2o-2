@@ -1,18 +1,25 @@
 package water.api;
 
+import com.google.gson.*;
+import water.AutoBuffer;
+import water.H2O;
+import water.Iced;
+import water.PrettyPrint;
+import water.api.Request.API;
+import water.api.RequestBuilders.Response.Status;
+import water.util.JsonUtil;
+import water.util.Log;
+import water.util.RString;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
-
-import water.*;
-import water.api.Request.API;
-import water.api.RequestBuilders.Response.Status;
-import water.util.*;
-
-import com.google.gson.*;
 
 /** Builders & response object.
  *
@@ -181,7 +188,7 @@ public class RequestBuilders extends RequestQueries {
         int pct = (int) ((double)response._pollProgress / response._pollProgressElements * 100);
         result.replace("BUTTON","<button class='btn btn-primary' onclick='redirect()'>"+response._status.toString()+"</button>");
         result.replace("TEXT","<div style='margin-bottom:0px;padding-bottom:0xp;height:5px;' class='progress progress-stripped'><div class='bar' style='width:"+pct+"%;'></div></div>"
-                + "Request was successful, but the process is not yet finished.  The page will refresh each 5 seconds, or you can any time click the button"
+                + "Request was successful, but the process has not yet finished.  The page will refresh every 5 seconds, or you can click the button"
                 + " on the left.  If you want you can <a href='#' onclick='countdown_stop()'>disable the automatic refresh</a>.");
         break;
       default:
