@@ -99,10 +99,10 @@ public abstract class ASTOp extends AST {
     // More generic reducers
     putPrefix(new ASTMin ());
     putPrefix(new ASTMax ());
+    putPrefix(new ASTSum ());
     putPrefix(new ASTMinNaRm());
     putPrefix(new ASTMaxNaRm());
-    putPrefix(new ASTSum ());
-
+    putPrefix(new ASTSumNaRm());
     // Misc
     putPrefix(new ASTCat   ());
     putPrefix(new ASTCbind ());
@@ -495,13 +495,15 @@ class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,   
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
   final double _init;
-  ASTReducerOp( double init ) {
+  final boolean _narm;
+  ASTReducerOp( double init, boolean narm ) {
     super(new String[]{"","dbls"},
           new Type[]{Type.DBL,Type.varargs(Type.dblary())},
           OPF_PREFIX,
           OPP_PREFIX,
           OPA_RIGHT);
     _init = init;
+    _narm = narm;
   }
   abstract double op( double d0, double d1 );
   @Override void apply(Env env, int argcnt) {
@@ -511,7 +513,7 @@ abstract class ASTReducerOp extends ASTOp {
       else {
         Frame fr = env.popAry();
         String skey = env.key();
-        sum = op(sum,new RedOp(this).doAll(fr)._d);
+        sum = op(sum,_narm?new NaRmRedOp(this).doAll(fr)._d:new RedOp(this).doAll(fr)._d);
         env.subRef(fr,skey);
       }
     env.poppush(sum);
@@ -531,11 +533,26 @@ abstract class ASTReducerOp extends ASTOp {
     }
     @Override public void reduce( RedOp s ) { _d = _bin.op(_d,s._d); }
   }
+
+  private static class NaRmRedOp extends MRTask2<NaRmRedOp> {
+    final ASTReducerOp _bin;
+    NaRmRedOp( ASTReducerOp bin ) { _bin = bin; _d = bin._init; }
+    double _d;
+    @Override public void map( Chunk chks[] ) {
+      for( int i=0; i<chks.length; i++ ) {
+        Chunk C = chks[i];
+        for( int r=0; r<C._len; r++ )
+          if (!Double.isNaN(C.at0(r)))
+            _d = _bin.op(_d,C.at0(r));
+        if( Double.isNaN(_d) ) break;
+      }
+    }
+    @Override public void reduce( NaRmRedOp s ) { _d = _bin.op(_d,s._d); }
+  }
 }
 
-class ASTSum extends ASTReducerOp { ASTSum( ) {super(0);                       } String opStr(){ return "sum"  ;} ASTOp make() {return new ASTSum();} double op(double d0, double d1) { return d0+d1;}}
-//class ASTMax extends ASTReducerOp { ASTMax( ) {super(Double.NEGATIVE_INFINITY);} String opStr(){ return "max"  ;} ASTOp make() {return new ASTMax();} double op(double d0, double d1) { return Math.max(d0,d1);}}
-//class ASTMin extends ASTReducerOp { ASTMin( ) {super(Double.POSITIVE_INFINITY);} String opStr(){ return "min"  ;} ASTOp make() {return new ASTMin();} double op(double d0, double d1) { return Math.min(d0,d1);}}
+class ASTSum     extends ASTReducerOp { ASTSum( )     {super(0,false);} String opStr(){ return "sum"      ;} ASTOp make() {return new ASTSum();} double op(double d0, double d1) { return d0+d1;}}
+class ASTSumNaRm extends ASTReducerOp { ASTSumNaRm( ) {super(0,true) ;} String opStr(){ return "sum.na.rm";} ASTOp make() {return new ASTSumNaRm();} double op(double d0, double d1) { return d0+d1;}}
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};

@@ -110,6 +110,8 @@ public class Expr2Test extends TestUtil {
       checkStr("sum(c(1,3,5))");
       checkStr("sum(4,c(1,3,5),2,6)");
       checkStr("sum(1,h.hex,3)");
+      checkStr("sum(c(NA,-1,1))");
+      checkStr("sum.na.rm(c(NA,-1,1))");
       checkStr("h.hex[,c(1,3,5)]");
       checkStr("h.hex[c(1,3,5),]");
       checkStr("a=c(11,22,33,44,55,66); a[c(2,6,1),]");
