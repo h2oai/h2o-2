@@ -267,7 +267,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         // This optimization assumes the 2nd tree of a 2-class system is the
         // inverse of the first.  This is false for DRF (and true for GBM) -
         // DRF picks a random different set of columns for the 2nd tree.
-        //if( DTree.CRUNK && k==1 && _nclass==2 ) continue;
+        //if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
         boolean isBinom = classification;
         new DRFUndecidedNode(ktrees[k],-1, DHistogram.initialHist(fr,_ncols,nbins,hcs[k][0],isBinom) ); // The "root" node
