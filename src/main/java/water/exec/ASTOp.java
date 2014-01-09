@@ -85,6 +85,8 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTFactor());
     putPrefix(new ASTIsFactor());
     putPrefix(new ASTAnyFactor());   // For Runit testing
+    putPrefix(new ASTAnyNA());
+    putPrefix(new ASTIsTRUE());
 
     putPrefix(new ASTCos());  // Trigonometric functions
     putPrefix(new ASTSin());
@@ -100,6 +102,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMin ());
     putPrefix(new ASTMax ());
     putPrefix(new ASTSum ());
+    putPrefix(new ASTSdev());
     putPrefix(new ASTMinNaRm());
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
@@ -335,6 +338,35 @@ class ASTAnyFactor extends ASTUniPrefixOp {
     }
     env.subRef(fr,skey);
     env.poppush(d);
+  }
+}
+
+class ASTAnyNA extends ASTUniPrefixOp {
+  ASTAnyNA() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "any.na"; }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt) {
+    if(!env.isAry()) { env.poppush(0); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = 0;
+    Vec[] v = fr.vecs();
+    for(int i = 0; i < v.length; i++) {
+      if(v[i].naCnt() > 0) { d = 1; break; }
+    }
+    env.subRef(fr, skey);
+    env.poppush(d);
+  }
+}
+
+class ASTIsTRUE extends ASTUniPrefixOp {
+  ASTIsTRUE() {super(VARS,new Type[]{Type.DBL,Type.unbound()});}
+  @Override String opStr() { return "isTRUE"; }
+  @Override ASTOp make() {return new ASTIsTRUE();}  // to make sure fcn get bound at each new context
+  @Override void apply(Env env, int argcnt) {
+    double res = env.isDbl() && env.popDbl()==1.0 ? 1:0;
+    env.pop();
+    env.poppush(res);
   }
 }
 
@@ -686,7 +718,7 @@ class ASTMin extends ASTOp {
   @Override void apply(Env env, int argcnt) {
     double min = Double.POSITIVE_INFINITY;
     for( int i=0; i<argcnt-1; i++ )
-      if( env.isDbl() ) min = Math.min(min,env.popDbl());
+      if( env.isDbl() ) min = Math.min(min, env.popDbl());
       else {
         Frame fr = env.peekAry();
         for (Vec v : fr.vecs())
@@ -724,21 +756,26 @@ class ASTMax extends ASTOp {
 }
 
 
-// Variable length; instances will be created of required length
+// Variable length; flatten all the component arys
 class ASTCat extends ASTOp {
   @Override String opStr() { return "c"; }
   ASTCat( ) { super(new String[]{"cat","dbls"},
-                    new Type[]{Type.ARY,Type.varargs(Type.DBL)},
-                    OPF_PREFIX,
-                    OPP_PREFIX,
-                    OPA_RIGHT); }
+          new Type[]{Type.ARY,Type.varargs(Type.dblary())},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT); }
   @Override ASTOp make() {return this;}
   @Override void apply(Env env, int argcnt) {
     Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
     AppendableVec av = new AppendableVec(key);
     NewChunk nc = new NewChunk(av,0);
-    for( int i=0; i<argcnt-1; i++ )
-      nc.addNum(env.dbl(-argcnt+1+i));
+    for( int i=0; i<argcnt-1; i++ ) {
+      if (env.isAry(i-argcnt+1)) for (Vec vec : env.ary(i-argcnt+1).vecs()) {
+        if (vec.nChunks() > 1) H2O.unimpl();
+        for (int r = 0; r < vec.length(); r++) nc.addNum(vec.at(r));
+      }
+      else nc.addNum(env.dbl(i-argcnt+1));
+    }
     nc.close(0,null);
     Vec v = av.close(null);
     env.pop(argcnt);
@@ -784,6 +821,25 @@ class ASTRunif extends ASTOp {
     env.subRef(fr,skey);
     env.pop();
     env.push(new Frame(new String[]{"rnd"},new Vec[]{randVec}));
+  }
+}
+
+class ASTSdev extends ASTOp {
+  ASTSdev() { super(new String[]{"sd", "ary"}, new Type[]{Type.DBL,Type.ARY},
+                    OPF_PREFIX,
+                    OPP_PREFIX,
+                    OPA_RIGHT); }
+  @Override String opStr() { return "sd"; }
+  @Override ASTOp make() { return new ASTSdev(); }
+  @Override void apply(Env env, int argcnt) {
+    Frame fr = env.peekAry();
+    if (fr.vecs().length > 1)
+      throw new IllegalArgumentException("sd does not apply to multiple cols.");
+    if (fr.vecs()[0].isEnum())
+      throw new IllegalArgumentException("sd only applies to numeric vector.");
+    double sig = fr.vecs()[0].sigma();
+    env.pop();
+    env.poppush(sig);
   }
 }
 

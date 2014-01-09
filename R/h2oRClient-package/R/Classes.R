@@ -388,7 +388,7 @@ setMethod("ceiling", "H2OParsedData", function(x) { h2o.__unop2("ceil", x) })
 setMethod("floor", "H2OParsedData", function(x) { h2o.__unop2("floor", x) })
 setMethod("log", "H2OParsedData", function(x) { h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
-setMethod("sum", "H2OParsedData", function(x,na.rm=F) { ifelse(na.rm, h2o.unop2("sum.na.rm", x), h2o.__unop2("sum", x)) })
+# setMethod("sum", "H2OParsedData", function(x,na.rm=F) { ifelse(na.rm, h2o.unop2("sum.na.rm", x), h2o.__unop2("sum", x)) })
 setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
 
 setGeneric("as.h2o", function(h2o, object) { standardGeneric("as.h2o") })
@@ -491,6 +491,21 @@ max <- function(..., na.rm = FALSE) {
     .Primitive("max")(..., na.rm = na.rm)
 }
 
+sum.internal <- sum
+sum <- function(..., na.rm = FALSE) {
+  idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
+  
+  if(any(idx)) {
+    hex.op = ifelse(na.rm, "sum.na.rm", "sum")
+    myVals = c(...); myData = myVals[idx]
+    myKeys = sapply(myData, function(y) { y@key })
+    expr = paste(hex.op, "(", paste(myKeys, collapse=","), ")", sep = "")
+    res = h2o.__exec2(myData[[1]]@h2o, expr)
+    .Primitive("sum")(unlist(myVals[!idx]), res$scalar, na.rm = na.rm)
+  } else
+    .Primitive("sum")(..., na.rm = na.rm)
+}
+
 setMethod("range", "H2OParsedData", function(x) {
   res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT2, src_key=x@key)
   temp = sapply(res$cols, function(x) { c(x$min, x$max) })
@@ -517,10 +532,9 @@ setMethod("mean", "H2OParsedData", function(x) {
 })
 
 setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
-  if(na.rm) stop("Unimplemented")
   if(dim(x)[2] != 1 || any.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
-  res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  res$summaries[[1]]$stats$sd
+  if(!na.rm && h2o.__unop2("any.na", x)) return(NA)
+  h2o.__unop2("sd", x)
 })
 
 setMethod("dim", "H2OParsedData", function(x) {
@@ -707,12 +721,19 @@ setMethod("levels", "H2OParsedData", function(x) {
 
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Substitute in key names for H2OParsedData variables
-# setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
-#   params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
-#   expr = paste("apply(", paste(params, collapse=","), ")", sep="")
-#   res = h2o.__exec2(X@h2o, expr)
-#   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
-# })
+setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
+  myfun = deparse(substitute(FUN))
+  len = length(myfun)
+
+  if(len > 2 && myfun[len] == "}")
+    myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), myfun[len])
+  else
+    myfun = paste(myfun, collapse = "")
+  params = c(X@key, MARGIN, myfun)
+  expr = paste("apply(", paste(params, collapse = ","), ")", sep="")
+  res = h2o.__exec2(X@h2o, expr)
+  new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
+})
 
 str.H2OParsedData <- function(object, ...) {
   if (length(l <- list(...)) && any("give.length" == names(l))) 
