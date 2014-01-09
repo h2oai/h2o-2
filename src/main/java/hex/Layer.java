@@ -1,6 +1,5 @@
 package hex;
 
-import hex.rng.MersenneTwisterRNG;
 import water.*;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -92,7 +91,8 @@ public abstract class Layer extends Iced {
   transient Training _training;
 
   public final void init(Layer[] ls, int index) {
-    init(ls, index, true, 0, new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS));
+    //init(ls, index, true, 0, new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS));
+    init(ls, index, true, 0, new Random(NeuralNet.seed));
   }
 
   public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
@@ -127,7 +127,7 @@ public abstract class Layer extends Iced {
     if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
       final float range = prefactor * (float)Math.sqrt(6. / (_previous.units + units));
       for( int i = 0; i < _w.length; i++ )
-        _w[i] = (float)rand(rng, -range, range);
+        _w[i] = (float) rand(rng, -range, range);
     }
     else {
       if (initial_weight_distribution == InitialWeightDistribution.Uniform) {
@@ -698,7 +698,8 @@ public abstract class Layer extends Iced {
 
     // keep random generators thread-local
     @Override public Layer clone() {
-      _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      _rand = new Random(NeuralNet.seed);
       _bits = new byte[(units + 7) / 8];
       return super.clone();
     }
@@ -720,7 +721,8 @@ public abstract class Layer extends Iced {
       }
 
       if( _rand == null ) {
-        _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        _rand = new Random(NeuralNet.seed);
         _bits = new byte[(units + 7) / 8];
       }
       _rand.nextBytes(_bits);
@@ -846,7 +848,8 @@ public abstract class Layer extends Iced {
 
     @Override protected void fprop(boolean training) {
       if( _rand == null ) {
-        _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        _rand = new Random(NeuralNet.seed);
         _bits = new byte[units / 8 + 1];
       }
       _rand.nextBytes(_bits);
@@ -941,14 +944,16 @@ public abstract class Layer extends Iced {
 
     // keep random generators thread-local
     @Override public Layer clone() {
-      _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+      _rand = new Random(NeuralNet.seed);
       _bits = new byte[(units + 7) / 8];
       return super.clone();
     }
 
     @Override protected void fprop(boolean training) {
       if( _rand == null ) {
-        _rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        //_rand = new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS);
+        _rand = new Random(NeuralNet.seed);
         _bits = new byte[(units + 7) / 8];
       }
       _rand.nextBytes(_bits);

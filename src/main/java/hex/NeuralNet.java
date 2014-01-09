@@ -81,7 +81,7 @@ public class NeuralNet extends ValidatedJob {
   public double epochs = 100;
 
   @API(help = "Seed for the random number generator", filter = Default.class)
-  public long seed = new Random().nextLong();
+  public static long seed = new Random().nextLong();
 
   @Override
   protected void registered(RequestServer.API_VERSION ver) {
@@ -220,6 +220,16 @@ public class NeuralNet extends ValidatedJob {
     final Frame[] adapted = validation == null ? null : model.adapt(validation, false);
     final Trainer trainer;
 
+    final long num_rows = source.numRows();
+    // work on first batch of points serially for better reproducibility
+    if (mode != ExecutionMode.Serial) {
+      final long serial_rows = 1000l;
+      System.out.println("Training the first " + serial_rows + " rows serially.");
+      Trainer pretrainer = new Trainer.Direct(ls, (double)serial_rows/num_rows, self());
+      pretrainer.start();
+      pretrainer.join();
+    }
+
     if (mode == ExecutionMode.Serial) {
       System.out.println("Serial execution mode");
       trainer = new Trainer.Direct(ls, epochs, self());
@@ -250,13 +260,13 @@ public class NeuralNet extends ValidatedJob {
           }
 
           //validate continuously
-          final long total_samples = (long) (epochs * ((Input) ls[0])._len);
+          final long total_samples = (long) (epochs * num_rows);
           long eval_samples = 0;
           while(!cancelled() && running) {
             eval_samples = eval(valid, validResp);
           }
           // make sure to do the final eval on a regular run (don't know how many samples to do globally for M/R)
-          if (!cancelled() && (eval_samples < total_samples || mode == ExecutionMode.MapReduce_Hogwild)) {
+          if (!cancelled() && eval_samples < total_samples) {
             eval(valid, validResp);
           }
           // remove validation data
