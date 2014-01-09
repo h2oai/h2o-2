@@ -249,7 +249,7 @@ public abstract class Trainer {
     static final ConcurrentHashMap<Key, MapReduce> _instances = new ConcurrentHashMap<Key, MapReduce>();
 
     Layer[] _ls;
-    int _epochs;
+    double _epochs;
     Key _job;
     AtomicIntegerArray _counts;
     transient Key _key;
@@ -257,7 +257,7 @@ public abstract class Trainer {
 
     public MapReduce(Layer[] ls, double epochs, Key job) {
       _ls = ls;
-      _epochs = (int)Math.ceil(epochs);
+      _epochs = epochs;
       _job = job;
 
       _key = Key.make((byte) 1, Key.DFJ_INTERNAL_USER, H2O.SELF);
@@ -328,7 +328,7 @@ public abstract class Trainer {
     Layer[] _ls;
     float[][] _ws, _bs;
     Key _key;
-    int _epochs;
+    double _epochs;
     transient NodeDescent _node;
     transient volatile boolean _done;
 
@@ -345,7 +345,7 @@ public abstract class Trainer {
             else {
               _node._total = _node._trainer.processed();
               try {
-                Thread.sleep(1);
+                Thread.sleep(10); //sleep for 10 ms
               } catch( InterruptedException ex ) {
               }
             }
@@ -361,7 +361,7 @@ public abstract class Trainer {
       // between chunks diverge quickly
       DescentEpoch epoch = new DescentEpoch();
       epoch._node = _node;
-      epoch._count = _epochs == 0 ? -1 : _epochs;
+      epoch._count = _epochs == 0. ? -1 : (int)Math.ceil(_epochs);
       H2O.submitTask(epoch);
       _ls = null;
       _ws = _bs = null;

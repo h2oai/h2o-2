@@ -265,10 +265,18 @@ public class NeuralNet extends ValidatedJob {
           while(!cancelled() && running) {
             eval_samples = eval(valid, validResp);
           }
-          // make sure to do the final eval on a regular run (don't know how many samples to do globally for M/R)
-          if (!cancelled() && eval_samples < total_samples) {
-            eval(valid, validResp);
+          // make sure to do the final eval on a regular run
+          if (mode != ExecutionMode.MapReduce_Hogwild && !cancelled() && eval_samples < total_samples) {
+            eval_samples = eval(valid, validResp);
           }
+          // hack for MapReduce, which calls cancel() from outside, but doesn't set running to false
+          if (cancelled() && mode == ExecutionMode.MapReduce_Hogwild && running) {
+            eval_samples = eval(valid, validResp);
+            running = false;
+          }
+          // make sure we we finished properly
+          assert(eval_samples == total_samples || (cancelled() && !running));
+
           // remove validation data
           if( adapted != null && adapted[1] != null )
             adapted[1].remove();
@@ -338,9 +346,9 @@ public class NeuralNet extends ValidatedJob {
       if( task != null )
         task.tryComplete();
       this.remove();
+      System.out.println("Training finished.");
     }
 
-    System.out.println("Training finished.");
   }
 
   @Override public float progress() {
@@ -425,7 +433,10 @@ public class NeuralNet extends ValidatedJob {
       final float t = hitpos ? 1 : 0;
       final float d = t - out[o];
       e.mean_square += d * d;
-      e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
+
+      double ce_err = hitpos ? -Math.log(out[o]) : 0; //this is -log(y) if we expected to predict y=1 or 0 otherwise
+      ce_err = Math.min(ce_err, 1e10); //cap cross entropy error at 1e10 per total misclassification (0 instead of 1)
+      e.cross_entropy += ce_err;
     }
     float max = out[0];
     int idx = 0;
@@ -722,7 +733,7 @@ public class NeuralNet extends ValidatedJob {
         l2 = job.l2;
         loss = job.loss;
         epochs = job.epochs;
-        seed = job.seed;
+        seed = NeuralNet.seed;
       }
       NeuralNetModel model = UKV.get(destination_key);
       if( model != null ) {
