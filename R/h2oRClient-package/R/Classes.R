@@ -532,10 +532,9 @@ setMethod("mean", "H2OParsedData", function(x) {
 })
 
 setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
-  if(na.rm) stop("Unimplemented")
   if(dim(x)[2] != 1 || any.factor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
-  res  <- h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source=x@key)
-  res$summaries[[1]]$stats$sd
+  if(!na.rm && h2o.__unop2("any.na", x)) return(NA)
+  h2o.__unop2("sd", x)
 })
 
 setMethod("dim", "H2OParsedData", function(x) {

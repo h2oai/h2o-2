@@ -85,6 +85,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTFactor());
     putPrefix(new ASTIsFactor());
     putPrefix(new ASTAnyFactor());   // For Runit testing
+    putPrefix(new ASTAnyNA());
 
     putPrefix(new ASTCos());  // Trigonometric functions
     putPrefix(new ASTSin());
@@ -100,6 +101,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMin ());
     putPrefix(new ASTMax ());
     putPrefix(new ASTSum ());
+    putPrefix(new ASTSdev());
     putPrefix(new ASTMinNaRm());
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
@@ -332,6 +334,24 @@ class ASTAnyFactor extends ASTUniPrefixOp {
     Vec[] v = fr.vecs();
     for(int i = 0; i < v.length; i++) {
       if(v[i].isEnum()) { d = 1; break; }
+    }
+    env.subRef(fr,skey);
+    env.poppush(d);
+  }
+}
+
+class ASTAnyNA extends ASTUniPrefixOp {
+  ASTAnyNA() { super(VARS,new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "any.na"; }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt) {
+    if(!env.isAry()) { env.poppush(0); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = 0;
+    Vec[] v = fr.vecs();
+    for(int i = 0; i < v.length; i++) {
+      if(v[i].naCnt() > 0) { d = 1; break; }
     }
     env.subRef(fr,skey);
     env.poppush(d);
@@ -784,6 +804,25 @@ class ASTRunif extends ASTOp {
     env.subRef(fr,skey);
     env.pop();
     env.push(new Frame(new String[]{"rnd"},new Vec[]{randVec}));
+  }
+}
+
+class ASTSdev extends ASTOp {
+  ASTSdev() { super(new String[]{"sd", "ary"}, new Type[]{Type.DBL,Type.ARY},
+                    OPF_PREFIX,
+                    OPP_PREFIX,
+                    OPA_RIGHT); }
+  @Override String opStr() { return "sd"; }
+  @Override ASTOp make() { return new ASTSdev(); }
+  @Override void apply(Env env, int argcnt) {
+    Frame fr = env.peekAry();
+    if (fr.vecs().length > 1)
+      throw new IllegalArgumentException("sd does not apply to multiple cols.");
+    if (fr.vecs()[0].isEnum())
+      throw new IllegalArgumentException("sd only applies to numeric vector.");
+    double sig = fr.vecs()[0].sigma();
+    env.pop();
+    env.poppush(sig);
   }
 }
 

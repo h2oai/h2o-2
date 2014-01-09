@@ -909,8 +909,21 @@ class H2O(object):
             raise exc_info[1], None, exc_info[2]
 
         log_rest("")
-        log_rest("HTTP status code: " + str(r.status_code))
-        log_rest(r.text)
+        try:
+            if r is None:
+                log_rest("r is None")
+            else:
+                log_rest("HTTP status code: " + str(r.status_code))
+                if hasattr(r, 'text'):
+                    if r.text is None:
+                        log_rest("r.text is None")
+                    else:
+                        log_rest(r.text)
+                else:
+                    log_rest("r does not have attr text")
+        except Exception, e:
+            # Paranoid exception catch.  Ignore logging exceptions in the case that the above error checking isn't sufficient.
+            pass
 
         # fatal if no response
         if not beta_features and not r:
