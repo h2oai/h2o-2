@@ -707,12 +707,19 @@ setMethod("levels", "H2OParsedData", function(x) {
 
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Substitute in key names for H2OParsedData variables
-# setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
-#   params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
-#   expr = paste("apply(", paste(params, collapse=","), ")", sep="")
-#   res = h2o.__exec2(X@h2o, expr)
-#   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
-# })
+setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
+  myfun = deparse(substitute(FUN))
+  len = length(myfun)
+
+  if(len > 2 && myfun[len] == "}")
+    myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), myfun[len])
+  else
+    myfun = paste(myfun, collapse = "")
+  params = c(X@key, MARGIN, myfun)
+  expr = paste("apply(", paste(params, collapse = ","), ")", sep="")
+  res = h2o.__exec2(X@h2o, expr)
+  new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
+})
 
 str.H2OParsedData <- function(object, ...) {
   if (length(l <- list(...)) && any("give.length" == names(l))) 
