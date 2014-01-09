@@ -10,7 +10,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            r = "a"
+            r = random.choice(['a', 'b', 'c', 'd'])
             rowData.append(r)
 
         r = random.randint(0,2)
@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
 
-    def test_KMeans_enum_fvec(self):
+    def test_KMeans2_enum(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -71,7 +71,7 @@ class Basic(unittest.TestCase):
                 'k': 2, 
                 'initialization': 'Furthest', 
                 'destination_key': 'benign_k.hex',
-                'max_iter': 20,
+                'max_iter': 10,
             }
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
             h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)

@@ -1,14 +1,10 @@
 package hex.gbm;
 
-import hex.drf.DRF;
-import java.util.Arrays;
-import java.util.concurrent.atomic.*;
 import sun.misc.Unsafe;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.nbhm.UtilUnsafe;
-import water.util.SB;
 import water.util.Utils;
 
 /**
@@ -25,7 +21,7 @@ import water.util.Utils;
    <p>
    {@code DHistogram} are shared per-node, and atomically updated.  There's an
    {@code add} call to help cross-node reductions.  The data is stored in
-   primitive arrays, so it can be sent over the wire.  
+   primitive arrays, so it can be sent over the wire.
    <p>
    If we are successively splitting rows (e.g. in a decision tree), then a
    fresh {@code DHistogram} for each split will dynamically re-bin the data.
@@ -52,7 +48,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   private static final Unsafe _unsafe = UtilUnsafe.getUnsafe();
   static private final long _min2Offset;
   static private final long _max2Offset;
-  static { 
+  static {
     try {
       _min2Offset = _unsafe.objectFieldOffset(DHistogram.class.getDeclaredField("_min2"));
       _max2Offset = _unsafe.objectFieldOffset(DHistogram.class.getDeclaredField("_maxIn"));
@@ -192,7 +188,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   }
 
   static public DHistogram make( String name, final int nbins, byte isInt, float min, float maxEx, long nelems, boolean isBinom ) {
-    return isBinom 
+    return isBinom
       ? new DBinomHistogram(name,nbins,isInt,min,maxEx,nelems)
       : new  DRealHistogram(name,nbins,isInt,min,maxEx,nelems);
   }

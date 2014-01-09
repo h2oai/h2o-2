@@ -3,6 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_glm, h2o_exec as h2e
 
 USE_EXEC = False
+DO_SWAP_LAMBA_ALPHA = False
 # translate provides the mapping between original and predicted
 # since GLM is binomial, We predict 0 for 0 and 1 for > 0
 def compare_csv_last_col(csvPathname, msg, translate=None, skipHeader=False):
@@ -191,7 +192,11 @@ class Basic(unittest.TestCase):
             kwargs.update({'case_mode': '=', 'case_val': 1})
             aHack = {'destination_key': 'covtype.data.hex'}
 
-        kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
+        if DO_SWAP_LAMBA_ALPHA:
+            kwargs.update({'alpha': 1e-5, 'lambda': 0.5})
+        else:
+            kwargs.update({'alpha': 0.5, 'lambda': 1e-5})
+
 #        kwargs.update({'alpha': 0.0, 'lambda': 0})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})
         # kwargs.update({'alpha': 0.5, 'lambda': 1e-4})

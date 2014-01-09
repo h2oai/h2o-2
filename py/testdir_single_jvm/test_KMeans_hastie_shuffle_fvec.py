@@ -48,13 +48,11 @@ def kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows, timeoutSecs=30
     allowedDelta = (0.01, 0.01, 0.01)
     h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=0)
 
-
-
     # compare this kmeans to the first one. since the files are replications, the results
     # should be similar?
     inspect = h2o_cmd.runInspect(None, key=kmeans['destination_key'])
     KMeansModel = inspect['KMeansModel']
-    clusters = KMeansModel['clusters'][0]
+    clusters = KMeansModel['centers'][0]
     print "clusters:", h2o.dump_json(clusters)
     
     if self.clusters1:
@@ -83,6 +81,7 @@ class Basic(unittest.TestCase):
 
     clusters1 = {}
     def test_KMeans_hastie_shuffle_fvec(self):
+        h2o.beta_features = True
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)

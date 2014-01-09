@@ -33,15 +33,16 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
 
     if h2o.beta_features:
         model = kmeansResult['model']
-        clusters = model["clusters"]
+        clusters = model["centers"]
         cluster_variances = model["within_cluster_variances"]
         error = model["total_within_SS"]
         iterations = model["iterations"]
         normalized = model["normalized"]
         max_iter = model["max_iter"]
     else:
-        model = kmeansResult["KMeansModel"]
-        clusters = model["clusters"]
+        h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
+        model = kmeansResult['KMeansModel']
+        clusters = model['clusters']
         error = model["error"]
 
     for i,c in enumerate(clusters):
@@ -61,13 +62,14 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
         # can't use inspect on a model key? now?
         model = kmeans['model']
         model_key = model['_selfKey']
-        centers = model['clusters']
+        centers = model['centers']
         cluster_variances = model["within_cluster_variances"]
         error = model["total_within_SS"]
         kmeansResult = kmeans
     else:
         model_key = kmeans["destination_key"]
         kmeansResult = h2o_cmd.runInspect(key=model_key)
+        h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
         model = kmeansResult['KMeansModel']
         centers = model['clusters']
         error = model["error"]

@@ -427,7 +427,7 @@ setMethod("h2o.cut", signature(x="H2OParsedData", breaks="numeric"), function(x,
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
 })
 
-h2o.table <- function(x) { h2o.__unop2("table", x) }
+h2o.table <- function(...) { if(length(c(...)) > 1) stop("Unimplemented"); h2o.__unop2("table", ...) }
 h2o.runif <- function(x) { h2o.__unop2("runif", x) }
 
 setMethod("colnames", "H2OParsedData", function(x) {
@@ -558,41 +558,41 @@ setMethod("as.data.frame", "H2OParsedData", function(x) {
   
   # Substitute NAs for blank cells rather than skipping.
   df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)
+  return(df)
 })
 
 setMethod("head", "H2OParsedData", function(x, n = 6L, ...) {
-  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
-  n = round(n)
-  # if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
   numRows = nrow(x)
-  if(n < 0 && abs(n) >= numRows) return(data.frame())
-  myView = ifelse(n > 0, min(n, numRows), numRows+n)
-  if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
-
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=myView)
-  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
-  if(is.null(temp)) return(temp)
-  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
-  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
-  x.df
+  stopifnot(length(n) == 1L)
+  n <- ifelse(n < 0L, max(numRows + n, 0L), min(n, numRows))
+  if(n == 0) return(data.frame())
+  
+  x.slice = as.data.frame(x[seq_len(n),])
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  x.lev = lapply(res$summaries, function(x) { x$hbrk })
+  for(i in 1:ncol(x)) {
+    if(res$summaries[[i]]$stats$type == 'Enum')
+      x.slice[,i] <- factor(x.slice[,i], levels = res$summaries[[i]]$hbrk)
+  }
+  return(x.slice)
 })
 
 setMethod("tail", "H2OParsedData", function(x, n = 6L, ...) {
-  if(n == 0 || !is.numeric(n)) stop("n must be a non-zero integer")
-  n = round(n)
-  # if(abs(n) > nrow(x)) stop(paste("n must be between 1 and", nrow(x)))
-  numRows = nrow(x)
-  if(n < 0 && abs(n) >= numRows) return(data.frame())
-  myOff = ifelse(n > 0, max(0, numRows-n), abs(n))
-  myView = ifelse(n > 0, min(n, numRows), numRows+n)
-  if(myView > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
-
-  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=myOff, view=myView)
-  temp = unlist(lapply(res$rows, function(y) { y$row = NULL; y }))
-  if(is.null(temp)) return(temp)
-  x.df = data.frame(matrix(temp, nrow = myView, byrow = TRUE))
-  colnames(x.df) = unlist(lapply(res$cols, function(y) y$name))
-  x.df
+  stopifnot(length(n) == 1L)
+  nrx <- nrow(x)
+  n <- ifelse(n < 0L, max(nrx + n, 0L), min(n, nrx))
+  if(n == 0) return(data.frame())
+  
+  idx = seq.int(to = nrx, length.out = n)
+  x.slice = as.data.frame(x[idx,])
+  rownames(x.slice) = idx
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  x.lev = lapply(res$summaries, function(x) { x$hbrk })
+  for(i in 1:ncol(x)) {
+    if(res$summaries[[i]]$stats$type == 'Enum')
+      x.slice[,i] <- factor(x.slice[,i], levels = res$summaries[[i]]$hbrk)
+  }
+  return(x.slice)
 })
 
 setMethod("as.factor", "H2OParsedData", function(x) { h2o.__unop2("factor", x) })
@@ -698,13 +698,49 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
     new("H2OParsedData", h2o=test@h2o, key=res$dest_key, logic=FALSE)
 })
 
+setMethod("levels", "H2OParsedData", function(x) {
+  if(ncol(x) != 1) stop("levels only operates on a single column")
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  if(res$summaries[[1]]$stats$type != 'Enum') return(NULL)
+  res$summaries[[1]]$hbrk
+})
+
 #----------------------------- Work in Progress -------------------------------#
+# TODO: Substitute in key names for H2OParsedData variables
 # setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
 #   params = c(X@key, MARGIN, paste(deparse(substitute(FUN)), collapse=""))
 #   expr = paste("apply(", paste(params, collapse=","), ")", sep="")
 #   res = h2o.__exec2(X@h2o, expr)
 #   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
 # })
+
+str.H2OParsedData <- function(object, ...) {
+  if (length(l <- list(...)) && any("give.length" == names(l))) 
+    invisible(NextMethod("str", ...))
+  else invisible(NextMethod("str", give.length = FALSE, ...))
+  
+  if(class(object) != "H2OParsedData")
+    stop("object must be of class H2OParsedData")
+  res = h2o.__remoteSend(object@h2o, h2o.__PAGE_INSPECT, key = object@key)
+  cat("\nH2O dataset '", object@key, "':\t", res$num_rows, " obs. of  ", (p <- res$num_cols), 
+      " variable", if(p != 1) "s", if(p > 0) ":", "\n", sep = "")
+  
+  cc <- unlist(lapply(res$cols, function(y) y$name))
+  width <- max(nchar(cc))
+  rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
+  res2 = h2o.__remoteSend(object@h2o, h2o.__PAGE_SUMMARY2, source = object@key)
+  for(i in 1:p) {
+    cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
+    rhead <- sapply(rows, function(x) { x[i+1] })
+    if(res2$summaries[[i]]$stats$type != 'Enum')
+      cat("num  ", paste(rhead, collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
+    else {
+      rlevels = res2$summaries[[i]]$hbrk
+      cat("Factor w/ ", (count <- length(rlevels)), " level", if(count != 1) "s", ' "', paste(rlevels[1:min(count, 2)], collapse = '","'), '"', if(count > 2) ",..", ": ", sep = "")
+      cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
+    }
+  }
+}
 
 #--------------------------------- ValueArray ----------------------------------#
 setMethod("show", "H2ORawDataVA", function(object) {
@@ -786,12 +822,50 @@ setMethod("dim", "H2OParsedDataVA", function(x) {
   as.numeric(c(res$num_rows, res$num_cols))
 })
 
+setMethod("length", "H2OParsedData", function(x) { ncol(x) })
+
 setMethod("head", "H2OParsedDataVA", function(x, n = 6L, ...) {
-  head(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
+  numRows = nrow(x)
+  stopifnot(length(n) == 1L)
+  n <- ifelse(n < 0L, max(numRows + n, 0L), min(n, numRows))
+  if(n == 0) return(data.frame())
+  if(n > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
+  
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=0, view=n)
+  temp = lapply(res$rows, function(y) { y$row = NULL; as.data.frame(y) })
+  if(is.null(temp)) return(temp)
+  x.slice = do.call(rbind, temp)
+  
+  res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  x.lev = lapply(res2$summaries, function(x) { x$hbrk })
+  for(i in 1:ncol(x)) {
+    if(res2$summaries[[i]]$stats$type == 'Enum')
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$summaries[[i]]$hbrk)
+  }
+  return(x.slice)
 })
 
 setMethod("tail", "H2OParsedDataVA", function(x, n = 6L, ...) {
-  tail(new("H2OParsedData", h2o=x@h2o, key=x@key), n, ...)
+  stopifnot(length(n) == 1L)
+  nrx <- nrow(x)
+  n <- ifelse(n < 0L, max(nrx + n, 0L), min(n, nrx))
+  if(n == 0) return(data.frame())
+  if(n > MAX_INSPECT_VIEW) stop(paste("Cannot view more than", MAX_INSPECT_VIEW, "rows"))
+  
+  idx = seq.int(to = nrx, length.out = n)
+  res = h2o.__remoteSend(x@h2o, h2o.__PAGE_INSPECT, key=x@key, offset=idx[1], view=length(idx))
+  temp = lapply(res$rows, function(y) { y$row = NULL; as.data.frame(y) })
+  if(is.null(temp)) return(temp)
+  x.slice = do.call(rbind, temp)
+  rownames(x.slice) = idx
+  
+  res2 = h2o.__remoteSend(x@h2o, h2o.__PAGE_SUMMARY2, source = x@key)
+  x.lev = lapply(res2$summaries, function(x) { x$hbrk })
+  for(i in 1:ncol(x)) {
+    if(res2$summaries[[i]]$stats$type == 'Enum')
+      x.slice[,i] <- factor(x.slice[,i], levels = res2$summaries[[i]]$hbrk)
+  }
+  return(x.slice)
 })
 
 setMethod("summary", "H2OParsedDataVA", function(object) {

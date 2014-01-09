@@ -260,17 +260,22 @@ h2o.__getKMSummary <- function(res) {
 }
 
 h2o.__getKMResults <- function(res, data) {
-  rand_pred_key = h2o.__uniqID("KMeansClusters")
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
-  res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
+  #rand_pred_key = h2o.__uniqID("KMeansClusters")
+  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_PREDICT2, model=res$'_selfKey', data=data@key, prediction=rand_pred_key)
+  #res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_SUMMARY2, source=rand_pred_key, cols=0)
 
+  clusters_key <- paste(res$'_clustersKey', sep = "")
   result = list()
-  result$cluster = new("H2OParsedData", h2o=data@h2o, key=rand_pred_key)
+  result$cluster = new("H2OParsedData", h2o=data@h2o, key=clusters_key)
   feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
-  result$centers = t(matrix(unlist(res$clusters), ncol = res$k))
+  result$centers = t(matrix(unlist(res$centers), ncol = res$k))
   dimnames(result$centers) = list(seq(1,res$k), feat)
-  result$withinss = res$cluster_variances        # TODO: Not sure if this is within or between SS?
-  result$size = res2$summaries[[1]]$hcnt
+  result$totss <- res$total_SS
+  result$withinss <- res$within_cluster_variances
+  result$tot.withinss <- res$total_within_SS
+  result$betweenss <- res$between_cluster_SS
+  result$size <- res$size
+  #result$size = res2$summaries[[1]]$hcnt
   return(result)
 }
 
@@ -621,9 +626,8 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
   if(class(data) != "H2OParsedDataVA")
     stop("GLM currently only working under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   args <- verify_dataxy(data, x, y)
-  if( nfolds < 0 ) stop('nfolds must be >= 0')
-  if( alpha < 0 ) stop('alpha must be >= 0')
-  if( lambda < 0 ) stop('lambda must be >= 0')
+  if( any(alpha < 0) ) stop('alpha must be >= 0')
+  if( any(lambda < 0) ) stop('lambda must be >= 0')
   if( epsilon < 0 ) stop('epsilon must be >= 0')
   if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
@@ -639,7 +643,7 @@ h2o.glm <- function(x, y, data, family, nfolds=10, alpha=0.5, lambda=1e-5, epsil
   }
 }
 
-h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL) {
+h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL, use_non_local=T) {
   if(class(data) != "H2OParsedDataVA")
     stop("h2o.randomForest.VA only works under ValueArray. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
   args <- verify_dataxy(data, x, y)
@@ -650,8 +654,9 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
   if(!is.numeric(sample.rate)) stop("sample.rate must be numeric")
   if(sample.rate < 0 || sample.rate > 1) stop("sample.rate must be in [0,1]")
   if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  if(!is.logical(use_non_local)) stop("use_non_local must be logical indicating whether to use non-local data")
   
-  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=args$x_ignore, ntree=ntree, depth=depth, sample=round(100*sample.rate), class_weights=classwt)
+  res = h2o.__remoteSend(data@h2o, h2o.__PAGE_RF, data_key=data@key, response_variable=args$y, ignore=args$x_ignore, ntree=ntree, depth=depth, sample=round(100*sample.rate), class_weights=classwt, use_non_local_data=as.numeric(use_non_local))
   while(h2o.__poll(data@h2o, res$response$redirect_request_args$job) != -1) { Sys.sleep(1) }
   res2 = h2o.__remoteSend(data@h2o, h2o.__PAGE_RFVIEW, model_key=res$destination_key, data_key=data@key, out_of_bag_error_estimate=1)
   modelOrig = h2o.__getRFResults(res2)

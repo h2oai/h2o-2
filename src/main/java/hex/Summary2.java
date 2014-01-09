@@ -10,6 +10,7 @@ import water.util.Utils;
 import water.util.Log;
 
 import java.util.Arrays;
+import java.util.Random;
 
 /**
  * Summary of a column.
@@ -23,25 +24,28 @@ public class Summary2 extends Iced {
   static final String DOC_GET = "Returns a summary of a fluid-vec frame";
 
   public static final int MAX_HIST_SZ = water.parser.Enum.MAX_ENUM_SIZE;
+  public static final int RESAMPLE_SZ = 1000;
   public static final double [] DEFAULT_PERCENTILES = {0.01,0.05,0.10,0.25,0.33,0.50,0.66,0.75,0.90,0.95,0.99};
   public static final int NMAX = 5;
   private static final int T_REAL = 0;
   private static final int T_INT  = 1;
   private static final int T_ENUM = 2;
   
-  // INPUTS
   final           long     _nrow;
   final           int      _type; // 0 - real; 1 - int; 2 - enum
                   double[] _mins;
                   double[] _maxs;
+                  double[] _samples;
                   long     _zeros;
                   long     _rows;
   final transient double   _min;
   final transient double   _max;
+  final transient double   _lambda;
   final transient String[] _domain;
   final transient double   _start;
   final transient double   _binsz;
         transient double[] _pctile;
+
 
   static abstract class Stats extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -197,16 +201,29 @@ public class Summary2 extends Iced {
   }
 
   public void finishUp(Vec vec) {
-    computePercentiles();
+    // Use all in place of resample if vec size is smaller than RESAMPLE_SZ
+    if (vec.length() - vec.naCnt() <= RESAMPLE_SZ) {
+      int rs = 0; _samples = new double[(int)(vec.length() - vec.naCnt())];
+      for (int r = 0; r < vec.length(); r++) {
+        double v = vec.at(r); if(!Double.isNaN(v)) _samples[rs++] = v;
+      }
+      _samples = Arrays.copyOf(_samples, rs);
+    }
+    Arrays.sort(_samples);
+    // Compute percentiles for numeric data
+    _pctile = new double[DEFAULT_PERCENTILES.length];
+    for (int i = 0; i < _pctile.length; i++)
+      _pctile[i] = quantile(DEFAULT_PERCENTILES[i]);
+    // Compute majority items for enum data
     computeMajorities();
-    // dedup mins and maxs, only happens when all are infinite values
-    for (int i = 0; i < _mins.length-1; i++) {
+    // remove the trailing NaNs
+    for (int i = 0; i < _mins.length; i++) {
       if (Double.isNaN(_mins[i])) {
         _mins = Arrays.copyOf(_mins, i);
         break;
       }
     }
-    for (int i = 0; i < _maxs.length-1; i++) {
+    for (int i = 0; i < _maxs.length; i++) {
       if (Double.isNaN(_maxs[i])) {
         _maxs = Arrays.copyOf(_maxs, i);
         break;
@@ -230,15 +247,17 @@ public class Summary2 extends Iced {
   }
 
   public Summary2(Vec vec, String name, double finite_min, double finite_max) {
-    this.colname = name;
-    this._type = vec.isEnum()?2:vec.isInt()?1:0;
-    this.nacnt = vec.naCnt();
-    this._domain = vec.isEnum() ? vec.domain() : null;
-    this._nrow = vec.length() - vec.naCnt();
+    colname = name;
+    _type = vec.isEnum()?2:vec.isInt()?1:0;
+    nacnt = vec.naCnt();
+    _domain = vec.isEnum() ? vec.domain() : null;
+    _nrow = vec.length() - vec.naCnt();
+    _lambda = (double)vec.length()/RESAMPLE_SZ;
+    _samples = new double[16];
     double sigma = Double.isNaN(vec.sigma()) ? 0 : vec.sigma(); 
     if ( _type != T_ENUM ) {
-      this._mins = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
-      this._maxs = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
+      _mins = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
+      _maxs = MemoryManager.malloc8d((int)Math.min(vec.length(),NMAX));
       Arrays.fill(_mins, Double.NaN);
       Arrays.fill(_maxs, Double.NaN);
     } else {
@@ -274,9 +293,33 @@ public class Summary2 extends Iced {
     }
   }
 
+  private static int nextPoission(Random rgr, double lambda) {
+    double L = Math.exp(-lambda);
+    double p = 1.0;
+    int k = 0;
+    do {
+      k++; p *= rgr.nextDouble();
+    } while (p > L);
+    return k - 1;
+  }
+
+  public void resample(Chunk chk) {
+    Random r = new Random(chk._start);
+    int row = 0;
+    int ns = 0;
+    while ((row += nextPoission(r, _lambda)) < chk._len) {
+      if (!chk.isNA0(row)) {
+        if (ns == _samples.length) _samples = Arrays.copyOf(_samples,_samples.length*2+1);
+        _samples[ns++] = chk.at0(row);
+      }
+    }
+    _samples = Arrays.copyOf(_samples, ns);
+  }
+
   public void add(Chunk chk) {
     for (int i = 0; i < chk._len; i++)
       add(chk.at0(i));
+    resample(chk);
   }
   public void add(double val) {
     if( Double.isNaN(val) ) return;
@@ -312,13 +355,26 @@ public class Summary2 extends Iced {
         }
       }
     }
+
     // update histogram
-    long binIdx = val == Double.NEGATIVE_INFINITY ? 0
-            : val == Double.POSITIVE_INFINITY ? hcnt.length-1
-            : Math.round((val-_start)*1000000.0/_binsz)/1000000;
+    long binIdx;
+    if (hcnt.length == 1) {
+      binIdx = 0;
+    }
+    else if (val == Double.NEGATIVE_INFINITY) {
+      binIdx = 0;
+    }
+    else if (val == Double.POSITIVE_INFINITY) {
+      binIdx = hcnt.length-1;
+    }
+    else {
+      binIdx = Math.round(((val - _start) * 1000000.0) / _binsz) / 1000000;
+    }
+
     if ((int)binIdx >= hcnt.length) {
       assert false;
     }
+
     ++hcnt[(int)binIdx];
     ++_rows;
   }
@@ -328,8 +384,12 @@ public class Summary2 extends Iced {
     if (hcnt != null)
       Utils.add(hcnt, other.hcnt);
     _rows += other._rows;
+    // merge samples
+    double merged[] = new double[_samples.length+other._samples.length];
+    System.arraycopy(_samples,0,merged,0,_samples.length);
+    System.arraycopy(other._samples,0,merged,_samples.length,other._samples.length);
+    _samples = merged;
     if (_type == T_ENUM) return this;
-
     double[] ds = MemoryManager.malloc8d(_mins.length);
     int i = 0, j = 0;
     for (int k = 0; k < ds.length; k++)
@@ -371,6 +431,11 @@ public class Summary2 extends Iced {
   // _start of each bin
   public double binValue(int b) { return _start + b*_binsz; }
 
+  private double quantile(final double threshold) {
+    assert .0 <= threshold && threshold <= 1.0;
+    int ix = (int)(_samples.length * threshold);
+    return _samples[ix];
+  }
   private void computePercentiles(){
     _pctile = new double [DEFAULT_PERCENTILES.length];
     if( hcnt.length == 0 ) return;

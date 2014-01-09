@@ -3,12 +3,14 @@
 H\ :sub:`2`\ O in R Studio
 ---------------------------
 
+Installation of H\ :sub:`2`\ O Package in R
+“”””””””””””””””””””””””””””””””””””””””””””
 
 These instructions assume you are using R Studio 2.14.0 or later.  
 
 **STEP 1**
 
-The download package can be obtained by clicking on the button Download H\ :sub:`2`\ O at `http://0xdata.com/h2o <http://0xdata.com/h2o>`_.
+The download package can be obtained by clicking on the button Download H\ :sub:`2`\ O at `http://0xdata.com/downloadtable <http://0xdata.com/downloadtable/>`_.
 
 Unzip the downloaded H\ :sub:`2`\ O zip file.
 
@@ -44,21 +46,7 @@ Start the H\ :sub:`2`\ O package by clicking the check box next to the package n
 
 
 
-
-**STEP 4** 
-
-
-Install dependencies for the R package by typing in the call: 
-
-::
-
-  >h2o.installDepPkgs()
-  
-
-.. image:: Rinstalldep.png
-   :width: 70%
-
-**STEP 6**
+**STEP 4**
 
 Get R Studio talking to your instance of H\ :sub:`2`\ O by typing in the call: 
 
@@ -73,8 +61,11 @@ Your IP and port may be different, depending on whether you are running H\ :sub:
    :width: 70%
 
 
+Upgrading the H\ :sub:`2`\ O R Packages
+“”””””””””””””””””””””””””””””””””””””””
 
 
+Users may wish to manually upgrade their R packages. For instance, if you are running the bleeding edge developer build, it’s possible that the code has changed, but that the revision number has not, in which case manually upgrading ensures the most current version of not only the H2O code, but the corresponding R code as well.
 
  
 

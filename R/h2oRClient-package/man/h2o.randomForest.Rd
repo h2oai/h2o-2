@@ -8,7 +8,7 @@ H2O: Random Forest
 Performs random forest classification on a parsed data set.
 }
 \usage{
-h2o.randomForest(y, x, data, ntree = 50, depth = 2147483647, classwt = as.numeric(NA))
+h2o.randomForest(x, y, data, ntree = 50, depth = 50, nodesize = 1, sample.rate = 2/3, nbins = 100, validation)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -27,17 +27,25 @@ Number of trees to grow. (Must be a nonnegative integer).
   \item{depth}{
   Maximum depth to grow the tree.
   }
-\item{classwt}{
-  (Optional) Priors of the classes. Need not add up to one. If missing, defaults to all weights set at 1.0.}
+  \item{nodesize}{
+  Number of nodes to use for computation.
+  }
+  \item{sample.rate}{
+  Sampling rate for constructing data from which individual trees are grown.
+  }
+  \item{nbins}{
+  Build a histogram of this many bins, then split at best point.
+  }
+\item{validation}{
+  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
 }
 \details{
-Currently, only classification trees are supported. Note that indexing begins at zero, so for example, to specify the first column as the response variable, set \code{y = 0}.
+This method runs distributed random forest, and requires the user import data with \code{\link{h2o.importFile}} or \code{\link{h2o.importFolder}}.
 }
 \value{
-An object of class \code{\linkS4class{H2ORForestModel}} with slots key, data, and model, where the last is a list of the following components:
-\item{type }{The type of the tree, which at this point must be classification.}
+An object of class \code{\linkS4class{H2ODRFModel}} with slots key, data, and model, where the last is a list of the following components:
 \item{ntree }{Number of trees grown.}
-\item{oob_err }{Out of bag error rate.}
+\item{mse }{Mean-squared error for each tree.}
 \item{forest }{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}
 \item{confusion }{Confusion matrix of the prediction.}
 %%  ~Describe the value returned
