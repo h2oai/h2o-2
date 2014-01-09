@@ -136,7 +136,7 @@ public class Exec2 {
   static boolean isReserved(char c) { return c=='(' || c==')' || c=='[' || c==']' || c==',' || c==':' || c==';'; }
   static boolean isLetter(char c) { return (c>='a'&&c<='z') || (c>='A' && c<='Z') || c=='_';  }
   static boolean isLetter2(char c) { 
-    if( c=='.' || c==':' || c=='\\' || c=='/' ) return true;
+    if( c=='.' || c==':' || c=='\\' ) return true;
     return isDigit(c) || isLetter(c);
   }
 
