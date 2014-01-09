@@ -924,9 +924,9 @@ public abstract class Layer extends Iced {
         float g = 0;
         if( _a[u] > 0 ) { // don't use >=
           g = _e[u];
-        } else if (l1 == 0 && l2 == 0) continue; //nothing to do
+          bprop(u, g, r, m);
+        }
 
-        bprop(u, g, r, m);
       }
     }
   }
@@ -973,10 +973,10 @@ public abstract class Layer extends Iced {
           for( int i = 0; i < _previous._a.length; i++ ) {
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           }
-          _a[o] += _b[o];
           if( !training ) {
             _a[o] *= .5f;
           }
+          _a[o] += _b[o];
           if( _a[o] < 0 )
             _a[o] = 0;
         }
