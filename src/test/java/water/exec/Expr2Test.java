@@ -71,7 +71,14 @@ public class Expr2Test extends TestUtil {
       checkStr("(1.23+h.hex)-h.hex");
       checkStr("min(h.hex,1+2)");
       checkStr("max(h.hex,1+2)");
+      checkStr("min.na.rm(h.hex,NA)"); // 0
+      checkStr("max.na.rm(h.hex,NA)"); // 211.3375
+      checkStr("min.na.rm(c(NA, 1), -1)"); // -1
+      checkStr("max.na.rm(c(NA, 1), -1)"); // 1
+      checkStr("max(c(Inf,1),2)");     // Infinity
+      checkStr("min(c(Inf,1),-Inf)");  // -Infinity
       checkStr("is.na(h.hex)");
+      checkStr("sum(is.na(h.hex))");
       checkStr("nrow(h.hex)*3");
       checkStr("h.hex[nrow(h.hex)-1,ncol(h.hex)-1]");
       checkStr("1=2");
@@ -103,6 +110,8 @@ public class Expr2Test extends TestUtil {
       checkStr("sum(c(1,3,5))");
       checkStr("sum(4,c(1,3,5),2,6)");
       checkStr("sum(1,h.hex,3)");
+      checkStr("sum(c(NA,-1,1))");
+      checkStr("sum.na.rm(c(NA,-1,1))");
       checkStr("h.hex[,c(1,3,5)]");
       checkStr("h.hex[c(1,3,5),]");
       checkStr("a=c(11,22,33,44,55,66); a[c(2,6,1),]");
