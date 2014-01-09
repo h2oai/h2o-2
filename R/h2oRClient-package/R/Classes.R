@@ -388,7 +388,7 @@ setMethod("ceiling", "H2OParsedData", function(x) { h2o.__unop2("ceil", x) })
 setMethod("floor", "H2OParsedData", function(x) { h2o.__unop2("floor", x) })
 setMethod("log", "H2OParsedData", function(x) { h2o.__unop2("log", x) })
 setMethod("exp", "H2OParsedData", function(x) { h2o.__unop2("exp", x) })
-setMethod("sum", "H2OParsedData", function(x) { h2o.__unop2("sum", x) })
+setMethod("sum", "H2OParsedData", function(x,na.rm=F) { ifelse(na.rm, h2o.unop2("sum.na.rm", x), h2o.__unop2("sum", x)) })
 setMethod("is.na", "H2OParsedData", function(x) { h2o.__unop2("is.na", x) })
 
 setGeneric("as.h2o", function(h2o, object) { standardGeneric("as.h2o") })
@@ -466,10 +466,10 @@ min <- function(..., na.rm = FALSE) {
   idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
 
   if(any(idx)) {
-    if(na.rm) stop("Unimplemented")
+    hex.op = ifelse(na.rm, "min.na.rm", "min")
     myVals = c(...); myData = myVals[idx]
     myKeys = sapply(myData, function(y) { y@key })
-    expr = paste("min(", paste(myKeys, collapse=","), ")", sep = "")
+    expr = paste(hex.op, "(", paste(myKeys, collapse=","), ")", sep = "")
     res = h2o.__exec2(myData[[1]]@h2o, expr)
     .Primitive("min")(unlist(myVals[!idx]), res$scalar, na.rm = na.rm)
   } else
@@ -481,10 +481,10 @@ max <- function(..., na.rm = FALSE) {
   idx = sapply(c(...), function(y) { class(y) == "H2OParsedData" })
 
   if(any(idx)) {
-    if(na.rm) stop("Unimplemented")
+    hex.op = ifelse(na.rm, "max.na.rm", "max")
     myVals = c(...); myData = myVals[idx]
     myKeys = sapply(myData, function(y) { y@key })
-    expr = paste("max(", paste(myKeys, collapse=","), ")", sep = "")
+    expr = paste(hex.op, "(", paste(myKeys, collapse=","), ")", sep = "")
     res = h2o.__exec2(myData[[1]]@h2o, expr)
     .Primitive("max")(unlist(myVals[!idx]), res$scalar, na.rm = na.rm)
   } else
