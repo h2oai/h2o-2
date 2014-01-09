@@ -25,6 +25,7 @@ public abstract class Layer extends Iced {
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   @API(help = "Initial weight (Uniform: amplitude, Normal: stddev)")
+  @ParamsSearch.Info(origin = 0.01)
   public double initial_weight_scale;
 
   @API(help = "Learning rate")
@@ -60,6 +61,8 @@ public abstract class Layer extends Iced {
   @API(help = "Loss function")
   public Loss loss = Loss.CrossEntropy;
 
+  @API(help = "Fast mode (minor approximation)")
+  public boolean fast_mode;
 
   // Weights, biases, activity, error
   // TODO hold transients only for current two layers
@@ -741,10 +744,6 @@ public abstract class Layer extends Iced {
           for( int i = 0; i < _previous._a.length; i++ ) {
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           }
-          // same effect as multiplying weights with p=0.5 above
-          if( !training ) {
-            _a[o] *= .5f;
-          }
           _a[o] += _b[o];
 
           // tanh approx, slightly faster, untested
@@ -756,6 +755,12 @@ public abstract class Layer extends Iced {
           // _a[o] = -1 + (2 / (1 + Math.exp(-2 * _a[o])));
 
           _a[o] = (float) Math.tanh(_a[o]);
+
+          //compensate for dropout probability during testing
+          //(twice as many neurons are active, so their activation must be halved)
+          if( !training ) {
+            _a[o] *= .5f;
+          }
         }
       }
     }
@@ -917,16 +922,41 @@ public abstract class Layer extends Iced {
 
     @Override protected void bprop() {
       long processed = _training.processed();
-      float m = momentum(processed);
-      float r = rate(processed) * (1 - m);
+      final float m = momentum(processed);
+      final float r = rate(processed) * (1 - m);
       for( int u = 0; u < _a.length; u++ ) {
         //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
         float g = 0;
         if( _a[u] > 0 ) { // don't use >=
-          g = _e[u];
+          g = _e[u]; // * 1.0 (from derivative of rectifier)
           bprop(u, g, r, m);
-        }
+        } else if (fast_mode || (l1 == 0 && l2 == 0 && _wm == null && _bm == null)) {
+          continue; // g = _e[u] * 0.0 = 0 and no other contributions to weights, and no momenta
+        } else {
+          // g = 0, but still keep updating with momenta and L1/L2 regularizers
+          float r2 = 0;
+          for( int i = 0; i < _previous._a.length; i++ ) {
+            final int w = u * _previous._a.length + i;
+            float d = - _w[w] * l2 - Math.signum(_w[w]) * l1;
 
+            if( _wm != null ) {
+              _wm[w] *= m;
+              _wm[w] = d = _wm[w] + d;
+            }
+            _w[w] += r * d;
+            r2 += _w[w] * _w[w];
+          }
+          if( r2 > max_w2 ) { // C.f. Improving neural networks by preventing co-adaptation of feature detectors
+            float scale = (float) Math.sqrt(max_w2 / r2);
+            for( int i = 0; i < _previous._a.length; i++ ) {
+              int w = u * _previous._a.length + i;
+              _w[w] *= scale;
+            }
+          }
+          if( _bm != null ) {
+            _bm[u] *= m;
+          }
+        }
       }
     }
   }
@@ -973,12 +1003,14 @@ public abstract class Layer extends Iced {
           for( int i = 0; i < _previous._a.length; i++ ) {
             _a[o] += _w[o * _previous._a.length + i] * _previous._a[i];
           }
-          if( !training ) {
-            _a[o] *= .5f;
-          }
           _a[o] += _b[o];
           if( _a[o] < 0 )
             _a[o] = 0;
+          else if( !training ) {
+            //compensate for dropout probability during testing
+            //(twice as many neurons are active, so their activation must be halved)
+            _a[o] *= .5f;
+          }
         }
       }
     }

@@ -77,6 +77,9 @@ public class NeuralNet extends ValidatedJob {
   @API(help = "Loss function", filter =Default.class)
   private Layer.Loss loss = Layer.Loss.CrossEntropy;
 
+  @API(help = "Fast mode (minor approximation)", filter = Default.class)
+  public boolean fast_mode = true;
+
   @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
   public double epochs = 100;
 
@@ -87,7 +90,12 @@ public class NeuralNet extends ValidatedJob {
   protected void registered(RequestServer.API_VERSION ver) {
     super.registered(ver);
     for (Argument arg : _arguments) {
-      if (arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")) {
+      if (       arg._name.equals("activation")
+              || arg._name.equals("initial_weight_distribution")
+              || arg._name.equals("l1")
+              || arg._name.equals("l2")
+              || arg._name.equals("momentum_start")
+              || arg._name.equals("momentum_stable")) {
          arg.setRefreshOnChange();
       }
     }
@@ -104,6 +112,11 @@ public class NeuralNet extends ValidatedJob {
             (initial_weight_distribution == Layer.InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Only with Uniform or Normal initial weight distributions", inputArgs);
+    }
+    if (arg._name.equals("fast_mode") &&
+            (l1 == 0 && l2 == 0 && momentum_start == 0 && momentum_stable == 0)
+            ) {
+      arg.disable("Only needed if L1/L2 regularization or momentum is active.", inputArgs);
     }
   }
 
@@ -172,6 +185,7 @@ public class NeuralNet extends ValidatedJob {
       ls[i + 1].l2 = (float) l2;
       ls[i + 1].max_w2 = max_w2;
       ls[i + 1].loss = loss;
+      ls[i + 1].fast_mode = fast_mode;
     }
     if( classification )
       ls[ls.length - 1] = new VecSoftmax(trainResp, null);
@@ -185,6 +199,7 @@ public class NeuralNet extends ValidatedJob {
     ls[ls.length - 1].l2 = (float) l2;
     ls[ls.length - 1].max_w2 = max_w2;
     ls[ls.length - 1].loss = loss;
+    ls[ls.length - 1].fast_mode = fast_mode;
 
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i);
@@ -213,6 +228,7 @@ public class NeuralNet extends ValidatedJob {
     model.l1 = l1;
     model.l2 = l2;
     model.loss = loss;
+    model.fast_mode = fast_mode;
     model.seed = seed;
 
     UKV.put(destination_key, model);
@@ -316,6 +332,7 @@ public class NeuralNet extends ValidatedJob {
         model.l1 = l1;
         model.l2 = l2;
         model.loss = loss;
+        model.fast_mode = fast_mode;
         model.seed = seed;
         UKV.put(model._selfKey, model);
         return e.training_samples;
@@ -571,6 +588,9 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Loss function")
     public Layer.Loss loss;
 
+    @API(help = "Fast mode (minor approximation)")
+    public boolean fast_mode;
+
     @API(help = "Seed for the random number generator")
     public long seed;
 
@@ -689,11 +709,14 @@ public class NeuralNet extends ValidatedJob {
     @API(help = "Loss function")
     public Layer.Loss loss;
 
-    @API(help = "How many times the dataset should be iterated")
-    public double epochs;
+    @API(help = "Fast mode (minor approximation)")
+    public boolean fast_mode;
 
     @API(help = "Seed for the random number generator")
     public long seed;
+
+    @API(help = "How many times the dataset should be iterated")
+    public double epochs;
 
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
@@ -729,6 +752,7 @@ public class NeuralNet extends ValidatedJob {
         l1 = job.l1;
         l2 = job.l2;
         loss = job.loss;
+        fast_mode = job.fast_mode;
         epochs = job.epochs;
         seed = NeuralNet.seed;
       }
