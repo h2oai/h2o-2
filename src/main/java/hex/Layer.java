@@ -550,6 +550,10 @@ public abstract class Layer extends Iced {
       momentum_ramp = stats.momentum_ramp;
       l1 = stats.l1;
       l2 = stats.l2;
+      initial_weight_distribution = stats.initial_weight_distribution;
+      initial_weight_scale = stats.initial_weight_scale;
+      max_w2 = stats.max_w2;
+      loss = stats.loss;
     }
 
     @Override protected int target() {
@@ -620,6 +624,10 @@ public abstract class Layer extends Iced {
       momentum_ramp = stats.momentum_ramp;
       l1 = stats.l1;
       l2 = stats.l2;
+      initial_weight_distribution = stats.initial_weight_distribution;
+      initial_weight_scale = stats.initial_weight_scale;
+      max_w2 = stats.max_w2;
+      loss = stats.loss;
     }
 
     @Override float[] target() {

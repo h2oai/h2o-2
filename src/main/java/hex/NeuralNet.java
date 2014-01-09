@@ -313,10 +313,10 @@ public class NeuralNet extends ValidatedJob {
     trainer.start();
     monitor.start();
     trainer.join();
-    running = false; //tell the monitor thread to finish too
 
     // hack to gracefully terminate the job submitted via H2O web API
     if (mode != ExecutionMode.MapReduce_Hogwild) {
+      running = false; //tell the monitor thread to finish too
       try {
         monitor.join();
       } catch (InterruptedException e) {
