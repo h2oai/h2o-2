@@ -433,10 +433,7 @@ public class NeuralNet extends ValidatedJob {
       final float t = hitpos ? 1 : 0;
       final float d = t - out[o];
       e.mean_square += d * d;
-
-      double ce_err = hitpos ? -Math.log(out[o]) : 0; //this is -log(y) if we expected to predict y=1 or 0 otherwise
-      ce_err = Math.min(ce_err, 1e10); //cap cross entropy error at 1e10 per total misclassification (0 instead of 1)
-      e.cross_entropy += ce_err;
+      e.cross_entropy += hitpos ? -Math.log(out[o]) : 0;
     }
     float max = out[0];
     int idx = 0;
