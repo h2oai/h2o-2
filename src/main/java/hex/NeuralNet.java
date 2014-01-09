@@ -75,7 +75,7 @@ public class NeuralNet extends ValidatedJob {
   public double l2 = .001;
 
   @API(help = "Loss function", filter =Default.class)
-  private final Layer.Loss loss = Layer.Loss.CrossEntropy;
+  private Layer.Loss loss = Layer.Loss.CrossEntropy;
 
   @API(help = "How many times the dataset should be iterated", filter = Default.class, dmin = 0)
   public double epochs = 100;
@@ -116,7 +116,7 @@ public class NeuralNet extends ValidatedJob {
 
   @Override public Job fork() {
     init();
-    H2OCountedCompleter jobRemoval = new H2OCountedCompleter() {
+    H2OCountedCompleter job = new H2OCountedCompleter() {
       @Override public void compute2() {
         startTrain();
       }
@@ -128,8 +128,8 @@ public class NeuralNet extends ValidatedJob {
         return super.onExceptionalCompletion(ex, caller);
       }
     };
-    start(jobRemoval);
-    H2O.submitTask(jobRemoval);
+    start(job);
+    H2O.submitTask(job);
     return this;
   }
 
@@ -537,12 +537,10 @@ public class NeuralNet extends ValidatedJob {
     public long seed;
 
     @API(help = "Layers")
-    public final Layer[] layers;
+    public Layer[] layers;
 
     @API(help = "Layer weights")
-    public final float[][] weights;
-    @API(help = "Layer weights")
-    public final float[][] biases;
+    public float[][] weights, biases;
 
     @API(help = "Errors on the training set")
     public Errors[] training_errors;
@@ -869,7 +867,8 @@ public class NeuralNet extends ValidatedJob {
         sumError += error;
       }
       sb.append("<tr><th>Totals</th>");
-      for (long total : totals) sb.append("<td>" + total + "</td>");
+      for( int i = 0; i < totals.length; ++i )
+        sb.append("<td>" + totals[i] + "</td>");
       sb.append("<td><b>");
       sb.append(String.format("%5.3f = %d / %d", (double) sumError / sumTotal, sumError, sumTotal));
       sb.append("</b></td></tr>");

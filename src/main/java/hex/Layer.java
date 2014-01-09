@@ -95,7 +95,7 @@ public abstract class Layer extends Iced {
     init(ls, index, true, 0, new MersenneTwisterRNG(MersenneTwisterRNG.SEEDS));
   }
 
-  protected void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
+  public void init(Layer[] ls, int index, boolean weights, long step, Random rand) {
     _a = new float[units];
     if (!(this instanceof Output)) {
       _e = new float[units];
@@ -412,11 +412,10 @@ public abstract class Layer extends Iced {
   }
 
   static class ChunksInput extends Input {
-    final transient Chunk[] _chunks;
-    final float[] _subs;
-    final float[] _muls;
-    final int[] _categoricals_lens;
-    final int[] _categoricals_mins;
+    transient Chunk[] _chunks;
+    float[] _subs, _muls;
+    int[] _categoricals_lens;
+    int[] _categoricals_mins;
 
     public ChunksInput(Chunk[] chunks, VecsInput stats) {
       units = stats.subs.length;
@@ -499,7 +498,7 @@ public abstract class Layer extends Iced {
       int label = target();
       for( int u = 0; u < _a.length; u++ ) {
         //output unit u should be 1.0 if u is the class label for the training point
-        float targetval = (u == label ? 1 : 0);
+        final float targetval = (u == label ? 1 : 0);
         float g = targetval - _a[u]; //error
         bprop(u, g, r, m);
       }
@@ -537,7 +536,7 @@ public abstract class Layer extends Iced {
   }
 
   static class ChunkSoftmax extends Softmax {
-    final transient Chunk _chunk;
+    transient Chunk _chunk;
 
     public ChunkSoftmax(Chunk chunk, VecSoftmax stats) {
       units = stats.units;
@@ -606,7 +605,7 @@ public abstract class Layer extends Iced {
   }
 
   static class ChunkLinear extends Linear {
-    final transient Chunk _chunk;
+    transient Chunk _chunk;
     transient float[] _values;
 
     public ChunkLinear(Chunk chunk, VecLinear stats) {

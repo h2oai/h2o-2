@@ -81,10 +81,9 @@ public abstract class Trainer {
    * Trains NN on current thread.
    */
   public static class Direct extends Base {
-    long _processed;
-    final long _limit;
+    long _processed, _limit;
     Thread _thread;
-    final Key _job;
+    Key _job;
 
     public Direct(Layer[] ls, double epochs, Key job) {
       super(ls);
@@ -249,11 +248,11 @@ public abstract class Trainer {
   public static class MapReduce extends Trainer {
     static final ConcurrentHashMap<Key, MapReduce> _instances = new ConcurrentHashMap<Key, MapReduce>();
 
-    final Layer[] _ls;
-    final int _epochs;
-    final Key _job;
+    Layer[] _ls;
+    int _epochs;
+    Key _job;
     AtomicIntegerArray _counts;
-    final transient Key _key;
+    transient Key _key;
     transient Descent _task;
 
     public MapReduce(Layer[] ls, double epochs, Key job) {
@@ -345,10 +344,10 @@ public abstract class Trainer {
               _node.sync();
             else {
               _node._total = _node._trainer.processed();
-//              try {
-//                Thread.sleep(1);
-//              } catch( InterruptedException ignored) {
-//              }
+              try {
+                Thread.sleep(1);
+              } catch( InterruptedException ex ) {
+              }
             }
           }
         }
@@ -444,18 +443,15 @@ public abstract class Trainer {
   }
 
   static class NodeDescent {
-    final ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
-    final Key _job;
-    final Layer[] _ls;
-    final float[][] _ws;
-    final float[][] _bs; // Current weights
-    final float[][] _wi;
-    final float[][] _bi; // Initial weights, for synchronization
-    final float[][] _wm;
-    final float[][] _bm; // Momentums
-    final Key _key;
+    ConcurrentLinkedQueue<Chunk[]> _chunks = new ConcurrentLinkedQueue<Chunk[]>();
+    Key _job;
+    Layer[] _ls;
+    float[][] _ws, _bs; // Current weights
+    float[][] _wi, _bi; // Initial weights, for synchronization
+    float[][] _wm, _bm; // Momentums
+    Key _key;
     ConcurrentHashMap<Integer, Integer> _counters;
-    final MapReduce _trainer;
+    MapReduce _trainer;
     long _total;
 
     NodeDescent(Key job, Layer[] ls, float[][] ws, float[][] bs, Key key) {
@@ -500,7 +496,7 @@ public abstract class Trainer {
       }
     }
 
-    void sync() {
+    boolean sync() {
       assert !_key.home();
       int[] counts = new int[10];
       int n = 0;
@@ -549,7 +545,9 @@ public abstract class Trainer {
             _bs[y][i] = s._b[y][i] + d;
           }
         }
+        return true;
       }
+      return false;
     }
 
     static class Shuttle extends Atomic {
