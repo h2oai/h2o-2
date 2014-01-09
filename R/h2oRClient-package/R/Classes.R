@@ -763,6 +763,10 @@ str.H2OParsedData <- function(object, ...) {
   }
 }
 
+str.H2OParsedDataVA <- function(object, ...) {
+  str(new("H2OParsedData", h2o=object@h2o, key=object@key), ...)
+}
+
 #--------------------------------- ValueArray ----------------------------------#
 setMethod("show", "H2ORawDataVA", function(object) {
   print(object@h2o)
