@@ -81,6 +81,7 @@ class Basic(unittest.TestCase):
 
     clusters1 = {}
     def test_KMeans_hastie_shuffle_fvec(self):
+        h2o.beta_features = True
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)

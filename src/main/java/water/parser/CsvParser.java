@@ -445,7 +445,10 @@ NEXT_CHAR:
       dout.rollbackLine();
     // If offset is still validly within the buffer, save it so the next pass
     // can start from there.
-    if( offset+1 < bits.length ) din.setChunkDataStart(cidx+1, offset+1 );
+    if( offset+1 < bits.length ) {
+      if( state == EXPECT_COND_LF && bits[offset+1] == CHAR_LF ) offset++;
+      if( offset+1 < bits.length ) din.setChunkDataStart(cidx+1, offset+1 );
+    }
     return dout;
   }
 
