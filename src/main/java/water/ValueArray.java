@@ -1,15 +1,19 @@
 package water;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import water.H2O.H2OCountedCompleter;
 import water.Job.ProgressMonitor;
-import water.fvec.*;
+import water.fvec.AppendableVec;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
 import water.util.Log;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
 * Large Arrays & Arraylets
@@ -563,7 +567,7 @@ public class ValueArray extends Iced implements Cloneable {
         if( !v2.isFrame() ) {
           throw new IllegalArgumentException(k2 + " is not a frame.");
         }
-        Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
+        //Log.info("Using existing cached Frame conversion (" + frameKeyString + ").");
         return v2.get();
       }
 
