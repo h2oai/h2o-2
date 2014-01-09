@@ -924,9 +924,9 @@ public abstract class Layer extends Iced {
         float g = 0;
         if( _a[u] > 0 ) { // don't use >=
           g = _e[u];
-          bprop(u, g, r, m);
-        }
+        } else if (l1 == 0 && l2 == 0) continue; //nothing to do
 
+        bprop(u, g, r, m);
       }
     }
   }
